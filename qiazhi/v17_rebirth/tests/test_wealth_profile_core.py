@@ -87,9 +87,21 @@ def test_resolve_wealth_profile_decodes_output_to_wealth_sample() -> None:
     assert profile["visibility"] == "explicit_wealth"
     assert profile["primary_channels"][0]["id"] in {"output_to_wealth", "stable_income"}
     assert any(row["id"] == "output_to_wealth" for row in profile["primary_channels"])
-    assert any("十神财富簇" in item for item in profile["evidence"])
-    assert any("食伤" in item or "输出" in item for item in profile["bridge_requirements"])
+    assert any("财富结构" in item for item in profile["evidence"])
+    assert any("产品" in item or "技能" in item for item in profile["bridge_requirements"])
     assert "必发财" in profile["assertion_style"]["must_avoid"]
+    public_text = " ".join(
+        [
+            *profile["strengths"],
+            *profile["risks"],
+            *profile["contradictions"],
+            *profile["bridge_requirements"],
+            *profile["evidence"],
+            *profile["llm_prompt_focus"],
+        ]
+    )
+    for term in ("财星", "食伤", "比劫", "官杀", "体用", "桥接神"):
+        assert term not in public_text
 
 
 def test_resolve_wealth_profile_marks_taboo_and_competition_risks() -> None:
@@ -120,8 +132,8 @@ def test_resolve_wealth_profile_marks_taboo_and_competition_risks() -> None:
     assert profile["usable_state"] == "wealth_as_taboo"
     assert profile["risk"] >= 0.38
     assert profile["stance"] == "volatile"
-    assert any("比劫" in item for item in profile["risks"])
-    assert any("体用忌侧" in item for item in profile["contradictions"])
+    assert any("合作" in item or "分账" in item for item in profile["risks"])
+    assert any("压力" in item for item in profile["contradictions"])
     assert profile["assertion_style"]["tone"] in {"cautious", "risk_first"}
 
 
@@ -153,7 +165,7 @@ def test_resolve_wealth_profile_identifies_hidden_wealth_path() -> None:
     assert profile["visibility"] == "hidden_wealth"
     assert profile["usable_state"] == "wealth_needs_bridge"
     assert profile["primary_channels"][0]["id"] == "output_to_wealth"
-    assert any("不是现成财库" in item for item in profile["contradictions"])
+    assert any("不是一开始就有现成收益" in item for item in profile["contradictions"])
 
 
 def test_normalize_wealth_profile_meta_accepts_plain_dict() -> None:
@@ -170,7 +182,7 @@ def test_normalize_wealth_profile_meta_accepts_plain_dict() -> None:
     )
 
     assert profile["contract"] == "v17.topic.wealth_profile.v1"
-    assert profile["primary_channels"][0]["label"] == "稳定现金流"
+    assert profile["primary_channels"][0]["label"] == "稳定收入"
 
 
 def test_wealth_profile_plugin_emits_read_only_fact() -> None:
@@ -195,5 +207,5 @@ def test_physics_canonical_materializes_wealth_profile_lines() -> None:
 
     lines = PhysicsCanonicalService.materialize_prompt_lines(pt)
 
-    assert any("财富画像合同" in line for line in lines)
-    assert any("财富主通道" in line for line in lines)
+    assert any("财富解读合同" in line for line in lines)
+    assert any("主要赚钱方式" in line for line in lines)

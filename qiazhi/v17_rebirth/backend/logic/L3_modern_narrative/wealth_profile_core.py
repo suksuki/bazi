@@ -52,12 +52,12 @@ _SEAL_GODS = ("正印", "偏印")
 _PEER_GODS = ("比肩", "劫财")
 
 _CHANNEL_LABELS: Dict[str, str] = {
-    "stable_income": "稳定现金流",
-    "opportunity_income": "机会型收入",
-    "output_to_wealth": "输出变现",
-    "authority_income": "平台/职位收入",
-    "knowledge_asset": "知识资产",
-    "resource_integration": "资源整合",
+    "stable_income": "稳定收入",
+    "opportunity_income": "项目机会",
+    "output_to_wealth": "技能变现",
+    "authority_income": "职位/平台收入",
+    "knowledge_asset": "专业资产",
+    "resource_integration": "合作资源",
 }
 
 _WEALTH_KEYWORDS = (
@@ -72,6 +72,86 @@ _WEALTH_KEYWORDS = (
     "比劫夺财",
     "现金流",
     "输出换财",
+)
+
+_GOD_PUBLIC_LABELS: Dict[str, str] = {
+    "正财": "稳定收入",
+    "偏财": "项目机会",
+    "食神": "稳定输出",
+    "伤官": "表达与销售转化",
+    "正官": "平台规则",
+    "七杀": "高压竞争",
+    "正印": "资质信用",
+    "偏印": "专业方法",
+    "比肩": "同辈合作",
+    "劫财": "竞争分利",
+}
+
+_KEYWORD_PUBLIC_LABELS: Dict[str, str] = {
+    "正财格": "稳定收入线索",
+    "偏财格": "项目机会线索",
+    "食伤生财": "技能变现线索",
+    "伤官生财": "表达/销售变现线索",
+    "从财": "市场机会线索",
+    "财官": "职位/平台收入线索",
+    "财印": "专业资产线索",
+    "劫财夺财": "合作分账风险",
+    "比劫夺财": "竞争分利风险",
+    "现金流": "现金流",
+    "输出换财": "技能变现线索",
+}
+
+_PUBLIC_PHRASE_REPLACEMENTS: tuple[tuple[str, str], ...] = (
+    ("wealth_profile 判定", ""),
+    ("食伤生财", "技能变现"),
+    ("伤官生财", "表达/销售变现"),
+    ("输出换财", "技能变现"),
+    ("正财格", "稳定收入线索"),
+    ("偏财格", "项目机会线索"),
+    ("财官", "职位/平台收入"),
+    ("财印", "专业资产"),
+    ("劫财夺财", "合作分账风险"),
+    ("比劫夺财", "竞争分利风险"),
+    ("从财", "市场机会线索"),
+    ("十神财富簇", "财富结构"),
+    ("宏观象财富", "财富主题"),
+    ("体用状态", "机会状态"),
+    ("体用顺侧", "机会比较顺"),
+    ("体用忌侧", "机会伴随压力"),
+    ("忌侧", "压力侧"),
+    ("顺侧", "较顺"),
+    ("通关", "需要中间条件"),
+    ("桥接神", "中间条件"),
+    ("财星落在机会比较顺", "赚钱机会比较容易落地"),
+    ("财星在压力侧", "赚钱机会会带来压力"),
+    ("财富需要中间条件承接", "需要先靠能力、平台或专业资质把赚钱机会接住"),
+    ("比劫贴近财星", "合作与竞争离钱很近"),
+    ("食伤强于财星", "能力输出强于直接收入"),
+    ("不是现成财库", "不是一来就有现成收益"),
+    ("财势显性", "赚钱机会明显"),
+    ("财印同显", "短期变现和长期专业积累同时出现"),
+    ("伤官与官杀同场", "销售表达和规则压力同时出现"),
+    ("调候张力", "环境压力"),
+    ("财富表达", "赚钱方式"),
+    ("盲派主线", "经验派线索"),
+    ("调候条件", "环境条件"),
+    ("象法事件", "事件线索"),
+    ("运行关系", "阶段变化"),
+    ("财星", "赚钱机会"),
+    ("食伤", "技能/表达"),
+    ("比劫", "合作/竞争"),
+    ("官杀", "规则/压力"),
+    ("印星", "资质/信用"),
+    ("正财", "稳定收入"),
+    ("偏财", "项目机会"),
+    ("食神", "稳定输出"),
+    ("伤官", "表达与销售转化"),
+    ("正官", "平台规则"),
+    ("七杀", "高压竞争"),
+    ("正印", "资质信用"),
+    ("偏印", "专业方法"),
+    ("比肩", "同辈合作"),
+    ("劫财", "竞争分利"),
 )
 
 
@@ -96,6 +176,47 @@ def _clean_str_list(values: Sequence[Any] | None, *, limit: int = 8) -> List[str
         if len(rows) >= limit:
             break
     return rows
+
+
+def _public_phrase(value: Any, *, limit: int = 180) -> str:
+    text = _clean_label(value, limit=limit)
+    if not text:
+        return ""
+    for source, target in _PUBLIC_PHRASE_REPLACEMENTS:
+        text = text.replace(source, target)
+    while "  " in text:
+        text = text.replace("  ", " ")
+    text = text.replace("： /", "：").replace("：/", "：").strip(" ，；、")
+    return text
+
+
+def _public_str_list(values: Sequence[Any] | None, *, limit: int = 8) -> List[str]:
+    return [_public_phrase(item) for item in _clean_str_list(values, limit=limit) if _public_phrase(item)]
+
+
+def _public_god_list(gods: Sequence[Any], *, limit: int = 3) -> str:
+    labels = []
+    for god in _clean_str_list(gods, limit=limit):
+        labels.append(_GOD_PUBLIC_LABELS.get(god, god))
+    return " / ".join(dict.fromkeys(label for label in labels if label))
+
+
+def _public_keyword_hits(hits: Sequence[str], *, limit: int = 4) -> List[str]:
+    labels = []
+    for hit in hits[:limit]:
+        labels.append(_KEYWORD_PUBLIC_LABELS.get(hit, hit))
+    return list(dict.fromkeys(label for label in labels if label))
+
+
+def _public_usable_state(value: str) -> str:
+    key = str(value or "").strip()
+    if key == "wealth_as_use":
+        return "赚钱机会比较容易落地"
+    if key == "wealth_as_taboo":
+        return "赚钱机会伴随压力，需要先管风险"
+    if key == "wealth_needs_bridge":
+        return "需要先靠能力、平台或专业资质把机会接住"
+    return "先观察收入来源是否稳定"
 
 
 def _safe_float(value: Any, fallback: float = 0.0) -> float:
@@ -228,9 +349,9 @@ class WealthChannel:
     def to_meta(self) -> Dict[str, Any]:
         return {
             "id": _clean_label(self.id),
-            "label": _clean_label(self.label),
+            "label": _public_phrase(self.label),
             "score": round(_clamp(self.score), 3),
-            "evidence": _clean_str_list(self.evidence, limit=5),
+            "evidence": _public_str_list(self.evidence, limit=5),
         }
 
 
@@ -270,16 +391,16 @@ class WealthProfileResult:
                 for key, value in dict(self.source_gods or {}).items()
                 if _clean_label(key, limit=40)
             },
-            "strengths": _clean_str_list(self.strengths, limit=8),
-            "risks": _clean_str_list(self.risks, limit=8),
-            "contradictions": _clean_str_list(self.contradictions, limit=8),
-            "bridge_requirements": _clean_str_list(self.bridge_requirements, limit=8),
-            "timing_hooks": _clean_str_list(self.timing_hooks, limit=6),
-            "evidence": _clean_str_list(self.evidence, limit=10),
-            "llm_prompt_focus": _clean_str_list(self.llm_prompt_focus, limit=8),
+            "strengths": _public_str_list(self.strengths, limit=8),
+            "risks": _public_str_list(self.risks, limit=8),
+            "contradictions": _public_str_list(self.contradictions, limit=8),
+            "bridge_requirements": _public_str_list(self.bridge_requirements, limit=8),
+            "timing_hooks": _public_str_list(self.timing_hooks, limit=6),
+            "evidence": _public_str_list(self.evidence, limit=10),
+            "llm_prompt_focus": _public_str_list(self.llm_prompt_focus, limit=8),
             "assertion_style": {
                 "tone": _clean_label((self.assertion_style or {}).get("tone")),
-                "must_include": _clean_str_list((self.assertion_style or {}).get("must_include"), limit=8),
+                "must_include": _public_str_list((self.assertion_style or {}).get("must_include"), limit=8),
                 "must_avoid": _clean_str_list((self.assertion_style or {}).get("must_avoid"), limit=8),
             },
             "learning_hooks": [
@@ -371,28 +492,31 @@ def resolve_wealth_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
 
     evidence: List[str] = [
         (
-            "十神财富簇："
-            f"财{_score_sum(scores, _WEALTH_GODS):.1f}"
-            f" / 食伤{_score_sum(scores, _OUTPUT_GODS):.1f}"
-            f" / 比劫{_score_sum(scores, _PEER_GODS):.1f}"
-            f" / 官杀{_score_sum(scores, _OFFICER_GODS):.1f}"
-            f" / 印{_score_sum(scores, _SEAL_GODS):.1f}"
+            "财富结构："
+            f"直接收入{_score_sum(scores, _WEALTH_GODS):.1f}"
+            f" / 技能转化{_score_sum(scores, _OUTPUT_GODS):.1f}"
+            f" / 合作竞争{_score_sum(scores, _PEER_GODS):.1f}"
+            f" / 平台规则{_score_sum(scores, _OFFICER_GODS):.1f}"
+            f" / 专业信用{_score_sum(scores, _SEAL_GODS):.1f}"
         )
     ]
     if macro_wealth:
         evidence.append(
-            f"宏观象财富：{round(_safe_float(macro_wealth.get('score'), 0.0) * 100)}%，"
+            f"财富主题：{round(_safe_float(macro_wealth.get('score'), 0.0) * 100)}%，"
             f"风险{round(_safe_float(macro_wealth.get('risk'), 0.0) * 100)}%"
         )
     if use_gods or taboo_gods or tongguan_gods:
+        favorable_text = _public_god_list(use_gods[:3])
+        pressure_text = _public_god_list(taboo_gods[:3])
+        bridge_text = _public_god_list(tongguan_gods[:3])
         evidence.append((
-            "体用状态："
-            + (f"用 {'/'.join(use_gods[:3])} " if use_gods else "")
-            + (f"忌 {'/'.join(taboo_gods[:3])} " if taboo_gods else "")
-            + (f"通关 {'/'.join(tongguan_gods[:3])}" if tongguan_gods else "")
+            "机会状态："
+            + (f"适合发挥 {favorable_text} " if favorable_text else "")
+            + (f"需要小心 {pressure_text} " if pressure_text else "")
+            + (f"中间条件 {bridge_text}" if bridge_text else "")
         ).strip())
     if hits:
-        evidence.append("结构命中：" + " / ".join(hits[:4]))
+        evidence.append("财富路径线索：" + " / ".join(_public_keyword_hits(hits[:4])))
 
     stable_score = 0.18 + zhengcai_share * 2.2 + officer_share * 0.16
     opportunity_score = 0.16 + piancai_share * 2.2 + shangguan_share * 0.28
@@ -425,12 +549,12 @@ def resolve_wealth_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
         knowledge_score += 0.1
 
     channels = [
-        _channel("stable_income", stable_score, ["正财主稳定收入与长期现金流", *(["正财格候选"] if "正财格" in hits else [])]),
-        _channel("opportunity_income", opportunity_score, ["偏财主项目、市场与流动机会", *(["偏财/从财结构命中"] if {"偏财格", "从财"} & set(hits) else [])]),
-        _channel("output_to_wealth", output_score, ["食伤把技能、产品、表达转成财富", *(["食伤生财/伤官生财命中"] if {"食伤生财", "伤官生财", "输出换财"} & set(hits) else [])]),
-        _channel("authority_income", authority_score, ["财官看平台、职位、规则与合同承接", *(["财官结构命中"] if "财官" in hits else [])]),
-        _channel("knowledge_asset", knowledge_score, ["财印看知识、资质、IP 与专业壁垒", *(["财印结构命中"] if "财印" in hits else [])]),
-        _channel("resource_integration", integration_score, ["偏财与比劫牵动资源整合、合伙与分利", *(["从财或资源场命中"] if "从财" in hits else [])]),
+        _channel("stable_income", stable_score, ["适合稳定收入、长期客户和固定现金流", *(["稳定收入线索明显"] if "正财格" in hits else [])]),
+        _channel("opportunity_income", opportunity_score, ["适合项目机会、市场波动和资源撮合", *(["项目/市场机会线索明显"] if {"偏财格", "从财"} & set(hits) else [])]),
+        _channel("output_to_wealth", output_score, ["适合把技能、内容、产品或表达转成收入", *(["技能变现线索明显"] if {"食伤生财", "伤官生财", "输出换财"} & set(hits) else [])]),
+        _channel("authority_income", authority_score, ["收入更依赖平台、职位、规则和合同", *(["职位/平台收入线索明显"] if "财官" in hits else [])]),
+        _channel("knowledge_asset", knowledge_score, ["适合靠知识、资质、IP 或专业壁垒赚钱", *(["专业资产线索明显"] if "财印" in hits else [])]),
+        _channel("resource_integration", integration_score, ["钱容易从资源整合、合伙项目和分利中出现", *(["资源合作线索明显"] if "从财" in hits else [])]),
     ]
     ranked_channels = sorted(channels, key=lambda row: row.score, reverse=True)
     primary_channels = tuple(channel for channel in ranked_channels if channel.score >= 0.26)[:4] or tuple(ranked_channels[:2])
@@ -457,9 +581,9 @@ def resolve_wealth_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
     for channel in primary_channels[:3]:
         strengths.append(f"{channel.label}：{round(channel.score * 100)}%")
     if wealth_use:
-        strengths.append("财星落在体用顺侧：" + " / ".join(wealth_use[:2]))
+        strengths.append("赚钱机会比较容易落地：" + _public_god_list(wealth_use[:2]))
     if bridge_gods:
-        strengths.append("财富需要桥接神承接：" + " / ".join(bridge_gods[:3]))
+        strengths.append("需要先靠这些条件把机会接住：" + _public_god_list(bridge_gods[:3]))
 
     risks: List[str] = []
     contradictions: List[str] = []
@@ -468,27 +592,27 @@ def resolve_wealth_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
 
     if wealth_taboo:
         risk += 0.22
-        risks.append("财星在忌侧，财富强也可能带压力、牵扯或判断失衡")
-        contradictions.append("财富显性与体用忌侧并存")
+        risks.append("赚钱机会会带来压力，越有机会越要控制承诺、预算和判断节奏")
+        contradictions.append("机会很明显，但压力也会跟着变大")
     if wealth_share > 0.18 and peer_share >= wealth_share * 0.72:
         risk += 0.16
-        risks.append("比劫贴近财星，合伙、竞争、分利和破财风险抬高")
+        risks.append("合作、竞争和分账容易影响收入，合伙项目尤其要先算清楚")
         contradictions.append("财富机会与同辈竞争同时出现")
         bridge_requirements.append("合伙、分账和资源边界必须先写清")
     if output_share >= 0.24 and wealth_share < 0.16:
-        contradictions.append("食伤强于财星，财富更像输出转化路径，不是现成财库")
+        contradictions.append("能力和表达很强，但钱要靠产品、服务或持续交付转出来，不是一开始就有现成收益")
         bridge_requirements.append("先把技能、产品或表达做成可持续交付")
     if wealth_share >= 0.26 and peer_share + seal_share < 0.16:
         risk += 0.12
-        risks.append("财势显性但承载侧偏弱，机会越多消耗越明显")
+        risks.append("赚钱机会明显，但承载能力偏弱，机会越多越容易被消耗")
         bridge_requirements.append("先控制节奏、现金流和承载边界")
     if wealth_share >= 0.18 and seal_share >= 0.18:
         risk += 0.08
-        risks.append("财印同显，短期资源与长期资质/口碑之间需要取舍")
+        risks.append("短期变现和长期口碑/资质都重要，不能只追快钱")
         contradictions.append("资源变现与知识/资质积累存在拉扯")
     if shangguan_share >= 0.16 and officer_share >= 0.14:
         risk += 0.09
-        risks.append("伤官与官杀同场，销售表达和规则风控要同步处理")
+        risks.append("销售表达和规则压力同时出现，越会卖越要注意合同、合规和边界")
         bridge_requirements.append("项目、合同、合规和对外表达需要同框管理")
 
     relation_rows = energy_meta.get("relation_dynamics_summary") if isinstance(energy_meta.get("relation_dynamics_summary"), list) else []
@@ -500,32 +624,32 @@ def resolve_wealth_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
         label = _clean_label(row.get("label"))
         axis = _clean_label(row.get("energy_axis"))
         if label:
-            timing_hooks.append(f"运行关系：{label}{axis or '触发'}")
+            timing_hooks.append(f"阶段变化：{label}{axis or '触发'}，容易影响收入节奏")
         if stability_delta < -0.05:
             risk += min(0.14, abs(stability_delta) * 0.55)
-            risks.append(f"{label or '运行关系'}降低稳定度，现金流或合作节奏需防波动")
+            risks.append(f"{label or '阶段变化'}会降低稳定度，现金流或合作节奏需防波动")
             break
 
     blind_route = _clean_label(blind.get("primary_route")) if blind else ""
     if blind_route:
-        evidence.append("盲派主线：" + blind_route)
+        evidence.append("经验派线索：" + _public_phrase(blind_route))
     climate_state = _clean_label(climate.get("state")) if climate else ""
     climate_tension = _safe_float(climate.get("climate_tension"), 0.0) if climate else 0.0
     if climate_state:
-        evidence.append("调候条件：" + climate_state)
+        evidence.append("环境条件：" + _public_phrase(climate_state))
     if climate_tension > 0.65:
         risk += 0.05
-        risks.append(f"调候张力{climate_tension:.2f}，财富表达需先看环境承接")
+        risks.append(f"环境压力{climate_tension:.2f}，赚钱方式要先看现实条件能不能接住")
     xiangfa_frames = xiangfa.get("event_framing") if isinstance(xiangfa.get("event_framing"), list) else []
     if xiangfa_frames:
-        evidence.append("象法事件：" + " / ".join(_clean_str_list(xiangfa_frames, limit=2)))
+        evidence.append("事件线索：" + " / ".join(_public_str_list(xiangfa_frames, limit=2)))
 
     top_channel = primary_channels[0] if primary_channels else ranked_channels[0]
     bridge_requirements.extend(
         {
-            "stable_income": ["把稳定现金流、预算和长期经营节奏作为主承接"],
+            "stable_income": ["把固定收入、预算和长期经营节奏先稳住"],
             "opportunity_income": ["机会型收入必须配风控、退出条件和现金流缓冲"],
-            "output_to_wealth": ["先把输出做成产品、服务或可复购交付"],
+            "output_to_wealth": ["先把技能、内容或产品做成服务与可复购交付"],
             "authority_income": ["用平台、合同、职位和规则承接财富机会"],
             "knowledge_asset": ["用资质、知识产权、方法论或专业壁垒承接财富"],
             "resource_integration": ["资源整合要先定义权责、分利和边界"],
@@ -543,19 +667,19 @@ def resolve_wealth_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
     if not risks and risk >= 0.32:
         risks.append("财富机会伴随结构波动，需要带条件解释")
     if not strengths:
-        strengths.append("财富信号偏弱，暂以观察和条件解释为主")
+        strengths.append("赚钱信号偏弱，先观察收入来源是否稳定")
 
     if pt.get("luck_pillar") or pt.get("flow_pillar") or pt.get("flow_year"):
-        timing_hooks.append("大运/流年可作为财富触发窗口观察，但本画像不直接下时间断语")
+        timing_hooks.append("十年阶段和年度变化可以作为收入机会窗口观察，但这里先不直接下年份断语")
 
     tone = "risk_first" if risk >= 0.48 else "cautious" if usable_state == "wealth_as_taboo" or risk >= 0.36 else "opportunity" if score >= 0.66 else "practical"
     must_include = [
-        f"主财富渠道：{top_channel.label}",
-        f"可用状态：{usable_state}",
-        "同时写机会、风险和承接条件",
+        f"主要赚钱方式：{top_channel.label}",
+        f"机会状态：{_public_usable_state(usable_state)}",
+        "同时写钱怎么来、哪里会漏钱、要先做到什么",
     ]
     if risks:
-        must_include.append("首要风险：" + risks[0])
+        must_include.append("最需要避开的坑：" + risks[0])
     assertion_style = {
         "tone": tone,
         "must_include": must_include,
@@ -584,10 +708,10 @@ def resolve_wealth_profile(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
         timing_hooks=tuple(dict.fromkeys(timing_hooks)),
         evidence=tuple(dict.fromkeys(evidence)),
         llm_prompt_focus=(
-            "财富断言只基于 wealth_profile，不直接自由解释原始八字。",
-            f"先写财富来源：{top_channel.label}",
-            f"再写可用状态：{usable_state}",
-            "最后写风险、承接条件和行动建议。",
+            "写给普通用户，只讲财富语言，不讲命理术语。",
+            f"先写主要赚钱方式：{top_channel.label}",
+            f"再写机会状态：{_public_usable_state(usable_state)}",
+            "最后写现金流风险、要避开的坑和下一步行动。",
         ),
         assertion_style=assertion_style,
     ).to_meta()

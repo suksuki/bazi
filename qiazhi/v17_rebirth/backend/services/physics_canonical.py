@@ -329,7 +329,7 @@ def _wealth_profile_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     if not wealth_profile:
         return []
     rows = [
-        "财富画像合同：财富画像是 L3 专题解码层，只读微观事实、体用、格局、宏观象和关系动力；LLM 只能基于 wealth_profile 写财富断言，不得自行改写来源、风险或置信度。",
+        "财富解读合同：财富画像是 L3 专题解码层，只读底层事实；面向用户时必须翻译成收入来源、赚钱方式、现金流、合作、合同和风险控制，不得自行改写来源、风险或置信度。",
     ]
     score = _safe_float(wealth_profile.get("score"), 0.0)
     confidence = _safe_float(wealth_profile.get("confidence"), 0.0)
@@ -338,9 +338,9 @@ def _wealth_profile_prompt_lines(pt: Dict[str, Any]) -> List[str]:
     visibility = str(wealth_profile.get("visibility") or "").strip()
     usable = str(wealth_profile.get("usable_state") or "").strip()
     rows.append(
-        "财富画像摘要："
-        f"激活{round(score * 100):.0f}%"
-        f"；置信{round(confidence * 100):.0f}%"
+        "财富分析摘要："
+        f"收入机会{round(score * 100):.0f}%"
+        f"；参考度{round(confidence * 100):.0f}%"
         f"；风险{round(risk * 100):.0f}%"
         + (f"；状态{stance}" if stance else "")
         + (f"；显性{visibility}" if visibility else "")
@@ -356,13 +356,13 @@ def _wealth_profile_prompt_lines(pt: Dict[str, Any]) -> List[str]:
         if label:
             channel_bits.append(f"{label}{round(channel_score * 100):.0f}%")
     if channel_bits:
-        rows.append("财富主通道：" + "；".join(channel_bits))
+        rows.append("主要赚钱方式：" + "；".join(channel_bits))
     risks = wealth_profile.get("risks") if isinstance(wealth_profile.get("risks"), list) else []
     bridges = wealth_profile.get("bridge_requirements") if isinstance(wealth_profile.get("bridge_requirements"), list) else []
     if risks:
-        rows.append("财富风险：" + "；".join(str(item).strip() for item in risks[:3] if str(item).strip()))
+        rows.append("要避开的坑：" + "；".join(str(item).strip() for item in risks[:3] if str(item).strip()))
     if bridges:
-        rows.append("财富承接条件：" + "；".join(str(item).strip() for item in bridges[:3] if str(item).strip()))
+        rows.append("要先做到：" + "；".join(str(item).strip() for item in bridges[:3] if str(item).strip()))
     return rows
 
 

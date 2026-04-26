@@ -35,33 +35,33 @@ function percentLabel(value: unknown): string {
 
 function localizedWealthStance(value: unknown, ui: LocalizeText): string {
   const key = String(value || "").trim();
-  if (key === "active") return ui("活跃", "Active", "활성");
-  if (key === "volatile") return ui("波动", "Volatile", "변동");
-  if (key === "watch") return ui("观察", "Watch", "관찰");
-  if (key === "latent") return ui("潜伏", "Latent", "잠재");
+  if (key === "active") return ui("机会明显", "Clear opportunity", "기회 뚜렷");
+  if (key === "volatile") return ui("机会有波动", "Volatile opportunity", "기회 변동");
+  if (key === "watch") return ui("需要观察", "Needs watching", "관찰 필요");
+  if (key === "latent") return ui("信号偏弱", "Weak signal", "신호 약함");
   return ui("未定", "Pending", "미정");
 }
 
 function localizedWealthUsableState(value: unknown, ui: LocalizeText): string {
   const key = String(value || "").trim();
-  if (key === "wealth_as_use") return ui("顺侧可用", "Usable", "사용 가능");
-  if (key === "wealth_as_taboo") return ui("忌侧承压", "Pressure", "압박");
-  if (key === "wealth_needs_bridge") return ui("需要桥接", "Needs bridge", "연결 필요");
+  if (key === "wealth_as_use") return ui("容易落地", "Easier to land", "실현 쉬움");
+  if (key === "wealth_as_taboo") return ui("先控风险", "Risk first", "위험 우선");
+  if (key === "wealth_needs_bridge") return ui("先补条件", "Build conditions", "조건 필요");
   return ui("待观察", "Watch", "관찰");
 }
 
 function localizedWealthVisibility(value: unknown, ui: LocalizeText): string {
   const key = String(value || "").trim();
-  if (key === "explicit_wealth") return ui("显性财富", "Explicit", "명시 재물");
-  if (key === "hidden_wealth") return ui("暗线财富", "Hidden", "숨은 재물");
-  if (key === "indirect_wealth") return ui("间接财富", "Indirect", "간접 재물");
+  if (key === "explicit_wealth") return ui("收入机会清晰", "Clear income path", "수입 경로 명확");
+  if (key === "hidden_wealth") return ui("靠能力转化", "Skill conversion", "능력 전환");
+  if (key === "indirect_wealth") return ui("靠平台/专业", "Platform/profession", "플랫폼/전문성");
   return ui("弱信号", "Weak signal", "약한 신호");
 }
 
 function wealthResultReasonLabel(value: unknown, ui: LocalizeText): string {
   const reason = String(value || "").trim();
-  if (reason === "execute_llm_disabled") return ui("仅生成合同", "Contract only", "계약만 생성");
-  if (reason === "missing_wealth_profile") return ui("缺少财富画像", "Missing profile", "프로필 없음");
+  if (reason === "execute_llm_disabled") return ui("仅生成提示词", "Prompt only", "프롬프트만 생성");
+  if (reason === "missing_wealth_profile") return ui("缺少财富分析", "Missing analysis", "분석 없음");
   if (reason === "llm_config_incomplete") return ui("模型未配置", "Model not configured", "모델 미설정");
   if (reason === "llm_dispatch_failed") return ui("调用失败", "Dispatch failed", "호출 실패");
   if (reason === "not_dispatched") return ui("未调用", "Not dispatched", "미호출");
@@ -70,21 +70,21 @@ function wealthResultReasonLabel(value: unknown, ui: LocalizeText): string {
 
 function localizedTimelineStance(value: unknown, ui: LocalizeText): string {
   const key = String(value || "").trim();
-  if (key === "opportunity_with_pressure") return ui("机会带压", "Opportunity with pressure", "기회와 압박");
-  if (key === "opportunity_period") return ui("机会大运", "Opportunity decade", "기회 대운");
-  if (key === "pressure_period") return ui("压力大运", "Pressure decade", "압박 대운");
-  if (key === "conversion_period") return ui("转化大运", "Conversion decade", "전환 대운");
-  if (key === "steady_observation") return ui("稳态观察", "Steady watch", "안정 관찰");
-  return ui("待推演", "Pending", "대기");
+  if (key === "opportunity_with_pressure") return ui("有机会也要控风险", "Opportunity with risk", "기회와 위험 관리");
+  if (key === "opportunity_period") return ui("收入机会较多", "More income chances", "수입 기회 많음");
+  if (key === "pressure_period") return ui("先守现金流", "Protect cash flow", "현금흐름 우선");
+  if (key === "conversion_period") return ui("能力变现期", "Skill monetization", "능력 수익화");
+  if (key === "steady_observation") return ui("稳步经营", "Steady building", "안정 운영");
+  return ui("待生成", "Pending", "대기");
 }
 
 function localizedAttentionType(value: unknown, ui: LocalizeText): string {
   const key = String(value || "").trim();
-  if (key === "opportunity_with_risk") return ui("机会与风险", "Opportunity + risk", "기회와 위험");
-  if (key === "opportunity") return ui("机会窗口", "Opportunity", "기회");
-  if (key === "risk_watch") return ui("风险关注", "Risk watch", "위험 관찰");
-  if (key === "conversion_watch") return ui("转化关注", "Conversion", "전환 관찰");
-  if (key === "steady_watch") return ui("稳态观察", "Steady", "안정 관찰");
+  if (key === "opportunity_with_risk") return ui("机会+风控", "Opportunity + risk", "기회+위험");
+  if (key === "opportunity") return ui("收入机会", "Income chance", "수입 기회");
+  if (key === "risk_watch") return ui("防漏钱", "Leak watch", "돈 새는 곳 주의");
+  if (key === "conversion_watch") return ui("变现机会", "Monetization", "수익화");
+  if (key === "steady_watch") return ui("稳步经营", "Steady", "안정 운영");
   return ui("关注", "Watch", "관찰");
 }
 
@@ -197,7 +197,7 @@ export function V17_WealthAssertionPreviewPanel({
     if (!ok || data.ok === false || !Object.keys(nextPreview).length) {
       setErrorState({
         resetKey,
-        message: requestError || String(data.detail || "") || ui("财富预览生成失败。", "Failed to create wealth preview.", "재물 미리보기를 만들지 못했습니다."),
+        message: requestError || String(data.detail || "") || ui("财富解读生成失败。", "Failed to create wealth reading.", "재물 해석을 만들지 못했습니다."),
       });
       return;
     }
@@ -228,7 +228,7 @@ export function V17_WealthAssertionPreviewPanel({
     if (!ok || data.ok === false || !Object.keys(nextPreview).length) {
       setErrorState({
         resetKey,
-        message: requestError || String(data.detail || "") || ui("财富时间窗推演失败。", "Failed to build wealth timeline.", "재물 시간 창 추론에 실패했습니다."),
+        message: requestError || String(data.detail || "") || ui("十年参考生成失败。", "Failed to build decade notes.", "10년 참고 생성에 실패했습니다."),
       });
       return;
     }
@@ -248,17 +248,17 @@ export function V17_WealthAssertionPreviewPanel({
                 {ui("财富专题", "Wealth Topic", "재물 주제")}
               </p>
               <h3 className="mt-0.5 text-base font-semibold text-zinc-50">
-                {ui("财富断言预览", "Wealth Assertion Preview", "재물 단언 미리보기")}
+                {ui("财富机会与风险", "Wealth Opportunity & Risk", "재물 기회와 위험")}
               </h3>
             </div>
           </div>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <span className="rounded-full border border-emerald-300/20 bg-emerald-400/10 px-2 py-1 text-[10px] text-emerald-100">
-            {hasProfile ? `${ui("画像", "Profile", "프로필")} ${score}` : ui("画像待定", "Profile pending", "프로필 대기")}
+            {hasProfile ? `${ui("收入机会", "Income chance", "수입 기회")} ${score}` : ui("等待分析", "Pending", "대기")}
           </span>
           <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] text-amber-100">
-            {hasPreview ? ui("已有审计", "Audited", "감사 있음") : ui("未预览", "No preview", "미리보기 없음")}
+            {hasPreview ? ui("已有解读", "Reading ready", "해석 있음") : ui("未生成", "Not generated", "미생성")}
           </span>
         </div>
       </div>
@@ -268,7 +268,7 @@ export function V17_WealthAssertionPreviewPanel({
           <div className="space-y-3">
             <div className="flex flex-wrap gap-1.5">
               {[
-                `${ui("置信", "Confidence", "신뢰")} ${confidence}`,
+                `${ui("参考度", "Confidence", "신뢰")} ${confidence}`,
                 `${ui("风险", "Risk", "위험")} ${risk}`,
                 localizedWealthStance(profile.stance, ui),
                 localizedWealthUsableState(profile.usable_state, ui),
@@ -282,7 +282,7 @@ export function V17_WealthAssertionPreviewPanel({
 
             {topChannel.id || topChannel.label ? (
               <div>
-                <p className="text-[11px] text-zinc-500">{ui("主财富通道", "Primary channel", "주 재물 경로")}</p>
+                <p className="text-[11px] text-zinc-500">{ui("主要赚钱方式", "Main money path", "주 수입 방식")}</p>
                 <p className="mt-1 text-sm font-semibold text-zinc-100">
                   {term(String(topChannel.label || topChannel.id || ""))}
                   <span className="ml-2 text-[11px] font-medium text-emerald-200">{percentLabel(topChannel.score)}</span>
@@ -319,7 +319,7 @@ export function V17_WealthAssertionPreviewPanel({
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-amber-200" />
                   <p className="text-[12px] font-semibold text-amber-50">
-                    {ui("财富断言", "Wealth assertion", "재물 단언")}
+                    {ui("财富解读", "Wealth reading", "재물 해석")}
                   </p>
                 </div>
                 <p className="mt-2 whitespace-pre-line text-sm leading-7 text-zinc-100">{reply}</p>
@@ -329,20 +329,20 @@ export function V17_WealthAssertionPreviewPanel({
                 <p className="text-[12px] font-semibold text-zinc-100">
                   {hasPreview
                     ? wealthResultReasonLabel(llmResult.reason, ui)
-                    : ui("等待财富预览", "Preview pending", "미리보기 대기")}
+                    : ui("等待财富解读", "Reading pending", "해석 대기")}
                 </p>
                 <p className="mt-1 text-[12px] leading-5 text-zinc-500">
                   {String(profile.llm_prompt_focus ? asStringList(profile.llm_prompt_focus)[0] : "") ||
-                    ui("财富画像已就绪。", "Wealth profile is ready.", "재물 프로필이 준비되었습니다.")}
+                    ui("财富分析已就绪。", "Wealth analysis is ready.", "재물 분석이 준비되었습니다.")}
                 </p>
               </div>
             )}
 
             <div className="grid gap-2 sm:grid-cols-3">
               {[
-                { key: "strengths", label: ui("优势", "Strengths", "강점"), values: strengths },
-                { key: "bridge", label: ui("承接", "Bridge", "연결"), values: bridgeRequirements },
-                { key: "risks", label: ui("风险", "Risks", "위험"), values: risks },
+                { key: "strengths", label: ui("可以发挥", "Use this", "활용점"), values: strengths },
+                { key: "bridge", label: ui("要先做到", "Build first", "먼저 할 것"), values: bridgeRequirements },
+                { key: "risks", label: ui("要避开的坑", "Avoid", "피할 점"), values: risks },
               ].map((group) => (
                 <div key={group.key} className="min-w-0">
                   <p className="text-[11px] text-zinc-500">{group.label}</p>
@@ -362,7 +362,7 @@ export function V17_WealthAssertionPreviewPanel({
         </div>
       ) : (
         <p className="mt-4 text-[12px] leading-5 text-zinc-500">
-          {ui("等待财富画像进入命盘快照。", "Waiting for wealth profile in the chart snapshot.", "명반 스냅샷에 재물 프로필이 들어오기를 기다립니다.")}
+          {ui("正在等待财富分析数据。", "Waiting for wealth analysis data.", "재물 분석 데이터를 기다립니다.")}
         </p>
       )}
 
@@ -376,10 +376,10 @@ export function V17_WealthAssertionPreviewPanel({
                 </span>
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.2em] text-cyan-300">
-                    {ui("大运/流年", "Luck / Flow", "대운 / 세운")}
+                    {ui("十年/今年", "Decade / Year", "10년 / 올해")}
                   </p>
                   <h4 className="mt-0.5 text-sm font-semibold text-zinc-50">
-                    {ui("财富时间窗", "Wealth Timeline", "재물 시간 창")}
+                    {ui("财富关注时间", "Money Timing", "재물 시기")}
                   </h4>
                 </div>
               </div>
@@ -391,7 +391,7 @@ export function V17_WealthAssertionPreviewPanel({
                 </span>
               ) : null}
               <span className="rounded-full border border-cyan-300/20 bg-cyan-400/10 px-2 py-1 text-[10px] text-cyan-100">
-                {timelineReady ? ui("已推演", "Ready", "준비됨") : ui("待推演", "Pending", "대기")}
+                {timelineReady ? ui("已生成", "Ready", "준비됨") : ui("待生成", "Pending", "대기")}
               </span>
               {luckWindow.stance ? (
                 <span className="rounded-full border border-amber-300/20 bg-amber-400/10 px-2 py-1 text-[10px] text-amber-100">
@@ -407,7 +407,7 @@ export function V17_WealthAssertionPreviewPanel({
                 <div className="rounded-lg border border-white/10 bg-black/20 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div>
-                      <p className="text-[11px] text-zinc-500">{ui("当前大运", "Current luck decade", "현재 대운")}</p>
+                      <p className="text-[11px] text-zinc-500">{ui("当前十年阶段", "Current decade", "현재 10년 흐름")}</p>
                       <p className="mt-1 text-sm font-semibold text-zinc-100">
                         {String(luckWindow.luck_pillar || "—")}
                         <span className="ml-2 text-[11px] font-medium text-cyan-200">
@@ -416,7 +416,7 @@ export function V17_WealthAssertionPreviewPanel({
                       </p>
                     </div>
                     <div className="text-right text-[11px] text-zinc-400">
-                      <p>{ui("机会", "Signal", "신호")} {percentLabel(luckWindow.score)}</p>
+                      <p>{ui("收入机会", "Income", "수입 기회")} {percentLabel(luckWindow.score)}</p>
                       <p>{ui("风险", "Risk", "위험")} {percentLabel(luckWindow.risk)}</p>
                     </div>
                   </div>
@@ -437,7 +437,7 @@ export function V17_WealthAssertionPreviewPanel({
                 <div className="rounded-lg border border-white/10 bg-black/20 p-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div>
-                      <p className="text-[11px] text-zinc-500">{ui("本年流年", "Current flow year", "올해 세운")}</p>
+                      <p className="text-[11px] text-zinc-500">{ui("今年重点", "This year", "올해 초점")}</p>
                       <p className="mt-1 text-sm font-semibold text-zinc-100">
                         {String(currentFlow.year || "—")} {String(currentFlow.flow_pillar || "—")}
                       </p>
@@ -468,7 +468,7 @@ export function V17_WealthAssertionPreviewPanel({
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-amber-200" />
                     <p className="text-[12px] font-semibold text-amber-50">
-                      {ui("十年关注流年", "Decade watch years", "10년 주목 세운")}
+                      {ui("未来十年重点年份", "Key years in this decade", "10년 주요 연도")}
                     </p>
                   </div>
                   <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
@@ -509,7 +509,7 @@ export function V17_WealthAssertionPreviewPanel({
               {decadeYears.length ? (
                 <details className="group">
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] text-zinc-400">
-                    <span>{ui("完整十年序列", "Full decade sequence", "전체 10년 흐름")}</span>
+                    <span>{ui("逐年参考", "Year-by-year notes", "연도별 참고")}</span>
                     <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
                   </summary>
                   <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
@@ -528,7 +528,7 @@ export function V17_WealthAssertionPreviewPanel({
             <p className="mt-3 text-[12px] leading-5 text-zinc-500">
               {hasTimeline
                 ? ui("时间窗材料不足，等待服务端快照补齐。", "Timeline material is incomplete.", "시간 창 자료가 부족합니다.")
-                : ui("可基于当前财富画像推演本步大运与十年流年关注窗口。", "Build the current luck decade and flow-year watch list from the wealth profile.", "현재 재물 프로필로 대운과 10년 세운 주목 창을 추론할 수 있습니다.")}
+                : ui("可以基于当前财富分析，生成未来十年的收入机会与风险参考。", "Build income-opportunity and risk notes for this decade.", "현재 재물 분석으로 10년 수입 기회와 위험 참고를 생성할 수 있습니다.")}
             </p>
           )}
         </div>
@@ -555,7 +555,7 @@ export function V17_WealthAssertionPreviewPanel({
             className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-cyan-300/30 bg-cyan-400/10 px-3 py-2 text-[12px] font-semibold text-cyan-50 transition hover:border-cyan-200/55 hover:bg-cyan-400/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <CalendarRange className="h-3.5 w-3.5" />
-            {timelinePending ? ui("推演中", "Building", "추론 중") : ui("推演十年", "Timeline", "10년 추론")}
+            {timelinePending ? ui("生成中", "Building", "생성 중") : ui("生成十年参考", "Decade notes", "10년 참고 생성")}
           </button>
           <button
             type="button"
@@ -564,7 +564,7 @@ export function V17_WealthAssertionPreviewPanel({
             className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-zinc-600/50 bg-zinc-900/70 px-3 py-2 text-[12px] font-semibold text-zinc-200 transition hover:border-emerald-300/45 hover:text-emerald-50 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <FileSearch className="h-3.5 w-3.5" />
-            {pendingMode === "contract" ? ui("生成中", "Building", "생성 중") : ui("看合同", "Contract", "계약")}
+            {pendingMode === "contract" ? ui("生成中", "Building", "생성 중") : ui("看提示词", "Prompt", "프롬프트")}
           </button>
           <button
             type="button"
@@ -573,14 +573,14 @@ export function V17_WealthAssertionPreviewPanel({
             className="inline-flex min-h-9 items-center justify-center gap-1.5 rounded-lg border border-amber-300/30 bg-amber-400/10 px-3 py-2 text-[12px] font-semibold text-amber-50 transition hover:border-amber-200/55 hover:bg-amber-400/15 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Sparkles className="h-3.5 w-3.5" />
-            {pendingMode === "llm" ? ui("生成中", "Writing", "작성 중") : ui("生成预览", "Preview", "미리보기")}
+            {pendingMode === "llm" ? ui("生成中", "Writing", "작성 중") : ui("生成解读", "Write", "해석 생성")}
           </button>
         </div>
       </div>
 
       {!canRequest ? (
         <p className="mt-2 text-[11px] text-zinc-500">
-          {ui("后台预览仅管理员可调用。", "Backstage preview requires admin access.", "백스테이지 미리보기는 관리자만 호출할 수 있습니다.")}
+          {ui("财富解读生成仅管理员可调用。", "Wealth reading generation requires admin access.", "재물 해석 생성은 관리자만 호출할 수 있습니다.")}
         </p>
       ) : null}
       {error ? (
@@ -592,7 +592,7 @@ export function V17_WealthAssertionPreviewPanel({
       {promptText || Object.keys(promptContract).length ? (
         <details className="group mt-3 border-t border-white/10 pt-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-[11px] text-zinc-400">
-            <span>{ui("审计材料", "Audit material", "감사 자료")}</span>
+            <span>{ui("后台材料", "Backstage material", "백스테이지 자료")}</span>
             <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
           </summary>
           <div className="mt-2 max-h-80 overflow-auto rounded-lg border border-white/10 bg-black/25 p-3">

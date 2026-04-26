@@ -59,13 +59,16 @@ def test_wealth_assertion_prompt_text_is_domain_specific_and_bounded() -> None:
     profile = resolve_wealth_profile(_tensor())["wealth_profile"]
     text = build_wealth_assertion_prompt_text(wealth_profile=profile, output_language="zh")
 
-    assert "V17 财富专题断言器" in text
+    assert "V17 财富解读写作者" in text
     assert "只基于输入的 wealth_profile" in text
     assert "不得自由重读原始八字" in text
-    assert "【财富总断】【财富来源】【可用与承接】【风险】【行动】" in text
+    assert "【总体判断】【钱怎么来】【能不能接住】【要避开的坑】【接下来怎么做】" in text
+    assert "收入来源、赚钱方式、现金流" in text
+    assert "用户正文里不要出现正财、偏财" in text
     assert "至少引用 2 条" in text
     assert "确定金额" in text
     assert "primary_channels" in text
+    assert "plain_summary" in text
 
 
 def test_wealth_assertion_prompt_can_resolve_from_physics_tensor() -> None:
@@ -74,7 +77,7 @@ def test_wealth_assertion_prompt_can_resolve_from_physics_tensor() -> None:
 
     assert "guaranteed fortune" in bundle["output_contract"]["forbidden_claims"]
     assert "V17 wealth-topic assertion writer" in text
-    assert "[Wealth Verdict]" in text
+    assert "[Overall]" in text
     assert "do not read raw chart data freely" in text
     assert "wealth_profile" in text
     assert "guaranteed fortune" in text
@@ -87,8 +90,8 @@ def test_wealth_assertion_prompt_localizes_korean_boundary() -> None:
 
     assert "정확한 금액" in bundle["output_contract"]["forbidden_claims"]
     assert "재물 주제 단언 작성자" in text
-    assert "[재물 총단]" in text
-    assert "[재물 출처]" in text
+    assert "[전체 판단]" in text
+    assert "[돈이 들어오는 방식]" in text
     assert "정확한 금액" in text
 
 
@@ -98,4 +101,4 @@ def test_wealth_assertion_prompt_missing_profile_refuses_assertion() -> None:
 
     assert bundle["profile_present"] is False
     assert "缺少 wealth_profile" in text
-    assert "不能生成财富断言" in text
+    assert "不能生成财富解读" in text

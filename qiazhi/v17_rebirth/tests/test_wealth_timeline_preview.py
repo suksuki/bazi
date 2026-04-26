@@ -91,6 +91,7 @@ def test_wealth_timeline_preview_builds_current_luck_decade() -> None:
     serialized = json.dumps(preview, ensure_ascii=False)
     assert '"four_pillars"' not in serialized
     assert "birth_time_solar" not in serialized
+    assert "flow_ten_gods" not in serialized
 
 
 def test_wealth_timeline_preview_marks_years_with_attention_reasons() -> None:
@@ -100,6 +101,7 @@ def test_wealth_timeline_preview_marks_years_with_attention_reasons() -> None:
     assert all(row["focus"] for row in rows)
     assert all(row["reasons"] for row in rows)
     assert all(row["suggested_actions"] for row in rows)
+    assert all(row["money_signals"] for row in rows)
     assert {row["attention_level"] for row in rows} <= {"high", "medium", "steady"}
     assert {row["attention_type"] for row in rows} <= {
         "opportunity",

@@ -29,6 +29,19 @@ _CHANNEL_FOCUS: Dict[str, Tuple[str, ...]] = {
     "resource_integration": ("偏财", "比肩", "劫财"),
 }
 
+_GOD_PUBLIC_HINTS: Dict[str, str] = {
+    "正财": "稳定收入",
+    "偏财": "项目机会",
+    "食神": "稳定输出",
+    "伤官": "表达与销售转化",
+    "正官": "平台规则",
+    "七杀": "高压竞争",
+    "正印": "资质信用",
+    "偏印": "专业方法",
+    "比肩": "同辈合作",
+    "劫财": "竞争分利",
+}
+
 
 def _clean_label(value: Any, *, limit: int = 160) -> str:
     text = str(value or "").strip()
@@ -221,40 +234,40 @@ def _god_signal(god: str, *, top_channel: str, usable_state: str) -> Dict[str, A
 
     if god in _WEALTH_GODS:
         score_delta += 0.14
-        tags.append("财星触发")
-        reasons.append(f"{god}临运年，财富主题容易被推到台前")
+        tags.append("收入机会变多")
+        reasons.append("这一年更容易出现和收入、回款、客户或项目相关的机会")
         actions.append("优先看现金流、合同回款和资源承接")
         if usable_state == "wealth_as_use":
             score_delta += 0.06
-            reasons.append("wealth_profile 判定财星在顺侧，可作为机会窗口观察")
+            reasons.append("这些机会相对容易落地，适合主动谈合作、报价和回款")
         elif usable_state == "wealth_as_taboo":
             risk_delta += 0.13
-            reasons.append("wealth_profile 判定财星在忌侧，财动同时带压力和牵扯")
+            reasons.append("机会会伴随压力，尤其要盯紧预算、账期和承诺")
     elif god in _OUTPUT_GODS:
         score_delta += 0.1 if top_channel == "output_to_wealth" or god in focus_gods else 0.07
-        tags.append("输出变现")
-        reasons.append(f"{god}临运年，利于把技能、产品、表达转成收入线索")
+        tags.append("技能变现")
+        reasons.append("适合把专业能力、内容、产品或销售表达转成收入")
         actions.append("把交付、定价和复购路径先做清楚")
     elif god in _AUTHORITY_GODS:
         score_delta += 0.08 if top_channel in {"authority_income", "stable_income"} or god in focus_gods else 0.05
         risk_delta += 0.035
-        tags.append("平台规则")
-        reasons.append(f"{god}临运年，平台、职位、合同和规则承接变重要")
+        tags.append("职位/平台收入")
+        reasons.append("收入更依赖岗位、平台、合同和规则，适合争取更稳定的授权或职位")
         actions.append("用合规、合同、角色边界承接机会")
     elif god in _SEAL_GODS:
         score_delta += 0.06 if top_channel == "knowledge_asset" or god in focus_gods else 0.035
-        tags.append("资质沉淀")
-        reasons.append(f"{god}临运年，更适合用资质、方法论或专业壁垒蓄财")
+        tags.append("专业资产")
+        reasons.append("适合沉淀资质、IP、课程、方法论等长期资产")
         actions.append("沉淀可复用资产，避免只追短期交易")
     elif god in _PEER_GODS:
         risk_delta += 0.11
-        tags.append("竞争分利")
-        reasons.append(f"{god}临运年，合伙、竞争、分账和同辈资源会放大")
+        tags.append("合作分账")
+        reasons.append("合作、人脉和竞争会放大，钱可能从共同项目里来，也容易卡在分账")
         actions.append("先定分账、退出和责任边界")
         if top_channel == "resource_integration":
             score_delta += 0.055
             risk_delta += 0.035
-            reasons.append("主通道偏资源整合，机会和分利风险会同时抬升")
+            reasons.append("你的主要赚钱方式偏合作资源，机会和分账风险会同时抬升")
     return {
         "score_delta": score_delta,
         "risk_delta": risk_delta,
@@ -307,16 +320,16 @@ def _attention_level(score: float, risk: float, salience: float) -> str:
 
 def _focus_label(attention_type: str, tags: Sequence[str]) -> str:
     if attention_type == "opportunity_with_risk":
-        return "机会与风控同看"
+        return "有机会，也要控风险"
     if attention_type == "opportunity":
-        return "财富机会窗口"
+        return "收入机会较多"
     if attention_type == "risk_watch":
         return "现金流与分利风险"
-    if "输出变现" in tags:
-        return "输出转化窗口"
-    if "平台规则" in tags:
-        return "平台/合同承接"
-    return "稳态观察"
+    if "技能变现" in tags:
+        return "技能变现窗口"
+    if "职位/平台收入" in tags:
+        return "岗位/合同机会"
+    return "稳步经营"
 
 
 def _year_row(
@@ -346,9 +359,9 @@ def _year_row(
 
     score = _clamp(0.18 + profile_score * 0.45 + luck_signal["score_delta"] * 0.55 + flow_signal["score_delta"], high=0.96)
     risk = _clamp(0.08 + profile_risk * 0.52 + luck_signal["risk_delta"] * 0.5 + flow_signal["risk_delta"], high=0.88)
-    if usable_state == "wealth_needs_bridge" and not set(flow_signal["tags"]) & {"输出变现", "平台规则", "资质沉淀"}:
+    if usable_state == "wealth_needs_bridge" and not set(flow_signal["tags"]) & {"技能变现", "职位/平台收入", "专业资产"}:
         score = _clamp(score - 0.035, high=0.96)
-        flow_signal["reasons"].append("财富画像提示需要桥接，本年若无桥接神，机会更宜保守承接")
+        flow_signal["reasons"].append("这一年若缺少清晰的产品、平台或专业背书，赚钱机会更适合保守承接")
     if usable_state == "wealth_as_taboo" and score >= 0.58:
         risk = _clamp(risk + 0.06, high=0.88)
     salience = _clamp(score * 0.58 + risk * 0.42 + (0.04 if int(year) == int(current_year) else 0.0))
@@ -357,17 +370,21 @@ def _year_row(
     reasons = list(dict.fromkeys([*flow_signal["reasons"], *luck_signal["reasons"]]))[:5]
     actions = list(dict.fromkeys([*flow_signal["actions"], *luck_signal["actions"]]))[:4]
     if not reasons:
-        reasons = ["流年未形成强财富触发，宜按财富画像的主通道稳态观察"]
+        reasons = ["这一年收入机会不算特别强，适合按主要赚钱方式稳步经营"]
     if not actions:
         actions = ["保持预算、现金流和机会筛选纪律"]
     return {
         "year": int(year),
         "flow_pillar": _clean_label(flow_pillar) or "—",
         "luck_pillar": _clean_label(luck_pillar) or "—",
-        "flow_ten_gods": {
-            "stem": _clean_label(flow_stem_god),
-            "branch": _clean_label(flow_branch_god),
-        },
+        "money_signals": [
+            label
+            for label in (
+                _GOD_PUBLIC_HINTS.get(flow_stem_god, ""),
+                _GOD_PUBLIC_HINTS.get(flow_branch_god, ""),
+            )
+            if label
+        ],
         "score": round(score, 3),
         "risk": round(risk, 3),
         "salience": round(salience, 3),
@@ -400,19 +417,19 @@ def _luck_summary(
     risk = _clamp(0.08 + base_risk * 0.58 + signal["risk_delta"] * 0.72, high=0.86)
     if score >= 0.62 and risk >= 0.42:
         stance = "opportunity_with_pressure"
-        summary = "本步大运能把财富主题推到前台，但必须同看承接、风控和分利边界。"
+        summary = "这个十年赚钱机会会被推到前台，但要同时管好现金流、合作分账和风险边界。"
     elif score >= 0.62:
         stance = "opportunity_period"
-        summary = "本步大运偏财富机会窗口，适合围绕主财富通道做持续承接。"
+        summary = "这个十年收入机会比较明显，适合围绕主要赚钱方式持续经营。"
     elif risk >= 0.48:
         stance = "pressure_period"
-        summary = "本步大运财富压力大于显性机会，现金流、合伙和判断纪律要先行。"
-    elif set(signal["tags"]) & {"输出变现", "平台规则", "资质沉淀"}:
+        summary = "这个十年先别急着放大，重点是守住现金流、合伙边界和判断纪律。"
+    elif set(signal["tags"]) & {"技能变现", "职位/平台收入", "专业资产"}:
         stance = "conversion_period"
-        summary = "本步大运更像财富转化期，先做桥接条件，再谈放大机会。"
+        summary = "这个十年更像能力变现期，先把产品、平台或专业背书做扎实，再谈放大。"
     else:
         stance = "steady_observation"
-        summary = "本步大运财富信号偏稳，适合按画像主通道做观察和小步验证。"
+        summary = "这个十年财富信号偏平稳，适合小步验证收入来源，不宜一次性冒进。"
     return {
         "luck_pillar": luck_pillar,
         "start_year": _safe_int(luck_window.get("start_year"), 0),

@@ -58,18 +58,18 @@ def _profile_from_inputs(
 def _system_prompt(lang: str) -> str:
     if lang == "en":
         return (
-            "You are the V17 backstage wealth assertion writer. "
+            "You are the V17 backstage wealth reading writer. "
             "Use only the supplied wealth_profile prompt contract. "
             "Do not request, infer, or reinterpret raw BaZi chart data."
         )
     if lang == "ko":
         return (
-            "당신은 V17 백스테이지 재물 단언 작성자입니다. "
+            "당신은 V17 백스테이지 재물 해석 작성자입니다. "
             "제공된 wealth_profile 프롬프트 계약만 사용하십시오. "
             "원국 자료를 요청하거나 재해석하지 마십시오."
         )
     return (
-        "你是 V17 后台财富断言预览器。"
+        "你是 V17 后台财富解读预览器。"
         "只能使用输入的 wealth_profile prompt contract。"
         "不得请求、推断或重新解释原始八字。"
     )

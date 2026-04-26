@@ -11,6 +11,27 @@ CONFLICT_PROMPT_VERSION = "v17.conflict.arbitration.v1.0"
 WEALTH_ASSERTION_PROMPT_VERSION = "v17.topic.wealth_assertion_prompt.v1.0"
 OUTPUT_LANGUAGE = Literal["zh", "en", "ko"]
 
+_ZH_WEALTH_FORBIDDEN_TERMS = [
+    "正财",
+    "偏财",
+    "食神",
+    "伤官",
+    "正官",
+    "七杀",
+    "正印",
+    "偏印",
+    "比肩",
+    "劫财",
+    "财星",
+    "食伤",
+    "比劫",
+    "官杀",
+    "体用",
+    "用神",
+    "忌神",
+    "桥接神",
+]
+
 
 def _normalize_output_language(value: Any) -> OUTPUT_LANGUAGE:
     raw = str(value or "").strip().lower()
@@ -97,6 +118,29 @@ def _compact_channel_rows(value: Any, limit: int = 4) -> List[Dict[str, Any]]:
     return rows
 
 
+def _plain_usable_state(value: Any) -> str:
+    key = _safe_str(value)
+    if key == "wealth_as_use":
+        return "赚钱机会比较容易落地"
+    if key == "wealth_as_taboo":
+        return "赚钱机会伴随压力，需要先管住风险"
+    if key == "wealth_needs_bridge":
+        return "需要先靠产品、平台、专业背书或稳定交付把钱接住"
+    return "收入来源还不够清晰，先观察稳定性"
+
+
+def _plain_wealth_summary(profile: Dict[str, Any], channels: List[Dict[str, Any]]) -> Dict[str, Any]:
+    top_channel = channels[0] if channels else {}
+    return {
+        "user_question": "钱怎么来、能不能接住、哪里会漏钱、下一步怎么做",
+        "main_money_path": _safe_str(top_channel.get("label"), default="待观察") if top_channel else "待观察",
+        "opportunity_strength": round(_safe_float(profile.get("score"), 0.0), 3),
+        "risk_level": round(_safe_float(profile.get("risk"), 0.0), 3),
+        "confidence": round(_safe_float(profile.get("confidence"), 0.0), 3),
+        "usable_explanation": _plain_usable_state(profile.get("usable_state")),
+    }
+
+
 def _wealth_forbidden_claims(lang: OUTPUT_LANGUAGE) -> List[str]:
     if lang == "en":
         return [
@@ -157,6 +201,7 @@ def build_wealth_assertion_prompt_bundle(
             "top_channel": channels[0] if channels else {},
         },
         "wealth_profile": {
+            "plain_summary": _plain_wealth_summary(profile, channels),
             "primary_channels": channels,
             "strengths": _compact_profile_list(profile.get("strengths"), limit=6),
             "risks": _compact_profile_list(profile.get("risks"), limit=6),
@@ -177,6 +222,13 @@ def build_wealth_assertion_prompt_bundle(
             "must_preserve": ["score", "confidence", "risk", "usable_state", "primary_channels"],
             "forbidden_claims": _wealth_forbidden_claims(lang),
             "output_mode": "domain_specific_natural_language",
+            "audience": "ordinary_user_not_practitioner",
+            "writing_rules": [
+                "write in plain wealth language: income source, earning path, cash flow, clients, projects, pricing, contracts, savings, cooperation, risk control",
+                "do not expose internal BaZi or ten-god terminology to the user",
+                "each block should answer a real user question, not describe the system contract",
+            ],
+            "forbidden_user_terms": _ZH_WEALTH_FORBIDDEN_TERMS if lang == "zh" else [],
             "max_chars": 520 if lang == "zh" else 900,
         },
     }
@@ -197,12 +249,14 @@ def build_wealth_assertion_prompt_text(
     if lang == "en":
         lines: List[str] = [
             "You are the V17 wealth-topic assertion writer.",
-            "Task: write a wealth-specific BaZi assertion using only the supplied wealth_profile.",
+            "Task: write a wealth-specific reading for an ordinary user using only the supplied wealth_profile.",
             "Boundary: do not read raw chart data freely, do not re-infer the chart, and do not change confidence, risk, channels, or usable_state.",
             "Forbidden: guaranteed fortune, guaranteed poverty, bankruptcy claims, exact money amounts, exact years, or treating strong wealth stars as money already obtained.",
+            "Style: translate every technical signal into wealth language: income source, earning path, cash flow, clients, projects, contracts, cooperation, pricing, and risk control.",
+            "Do not mention ten-god names or internal contract fields in the user-facing answer.",
             "",
             "## Required Output",
-            "Use five compact blocks: [Wealth Verdict], [Wealth Source], [Usable & Bridge], [Risk], [Action].",
+            "Use five compact blocks: [Overall], [How Money Comes], [Can It Be Held], [Money Leaks], [Next Actions].",
             "Cite at least two evidence items from wealth_profile.evidence or channel evidence.",
             "",
             "## Wealth Profile",
@@ -211,12 +265,14 @@ def build_wealth_assertion_prompt_text(
     elif lang == "ko":
         lines = [
             "당신은 V17 재물 주제 단언 작성자입니다.",
-            "작업: 제공된 wealth_profile 만 사용하여 재물 전용 명리 단언을 작성하십시오.",
+            "작업: 제공된 wealth_profile 만 사용하여 일반 사용자가 이해할 수 있는 재물 해석을 작성하십시오.",
             "경계: 원국 자료를 자유롭게 다시 해석하지 말고, confidence/risk/channel/usable_state 를 바꾸지 마십시오.",
             "금지: 반드시 큰돈을 번다, 재물이 없다, 파산한다, 정확한 금액·연도, 재성이 강하니 이미 돈이 많다는 식의 표현.",
+            "문체: 모든 기술적 신호를 수입원, 돈 버는 방식, 현금흐름, 고객, 프로젝트, 계약, 협업, 가격 책정, 위험 관리 언어로 바꾸십시오.",
+            "사용자에게 십성 이름이나 내부 계약 필드를 드러내지 마십시오.",
             "",
             "## 필수 출력",
-            "[재물 총단], [재물 출처], [사용 가능성과 연결 조건], [위험], [행동]의 다섯 짧은 블록을 사용하십시오.",
+            "[전체 판단], [돈이 들어오는 방식], [돈을 받아내는 조건], [새는 돈], [다음 행동]의 다섯 짧은 블록을 사용하십시오.",
             "wealth_profile.evidence 또는 channel evidence 에서 최소 2개 근거를 인용하십시오.",
             "",
             "## 재물 프로필",
@@ -224,13 +280,16 @@ def build_wealth_assertion_prompt_text(
         output_label = "## 출력 계약"
     else:
         lines = [
-            "你是 V17 财富专题断言器。",
-            "任务：只基于输入的 wealth_profile 写财富专属断言。",
+            "你是 V17 财富解读写作者。",
+            "任务：只基于输入的 wealth_profile，给普通用户写一段能读懂的财富解读。",
             "边界：不得自由重读原始八字，不得重新推盘，不得改写置信度、风险、主通道或可用状态。",
             "禁区：不得写必发财、无财、破产、确定金额、确定年份，也不得把财星强等同于已经有钱。",
+            "文风：把所有技术信号翻译成财富语言，只讲收入来源、赚钱方式、现金流、客户/项目、合同、合作、定价、储蓄和风险控制。",
+            "用户正文里不要出现正财、偏财、食伤、比劫、官杀、体用、用神、忌神、桥接神等内部术语。",
+            "不要说“画像显示”“系统判定”“可用状态”；要直接说“你更适合怎样赚钱、哪里容易漏钱、先做什么”。",
             "",
             "## 必须输出",
-            "使用五个紧凑段落：【财富总断】【财富来源】【可用与承接】【风险】【行动】。",
+            "使用五个紧凑段落：【总体判断】【钱怎么来】【能不能接住】【要避开的坑】【接下来怎么做】。",
             "至少引用 2 条 wealth_profile.evidence 或通道证据。",
             "",
             "## 财富画像",
@@ -249,7 +308,7 @@ def build_wealth_assertion_prompt_text(
     )
     if not contract.get("profile_present"):
         missing = {
-            "zh": "缺少 wealth_profile 时，只能说明资料不足，不能生成财富断言。",
+            "zh": "缺少 wealth_profile 时，只能说明资料不足，不能生成财富解读。",
             "en": "If wealth_profile is missing, say the material is insufficient and do not generate a wealth assertion.",
             "ko": "wealth_profile 이 없으면 자료가 부족하다고 말하고 재물 단언을 생성하지 마십시오.",
         }[lang]
