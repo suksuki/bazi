@@ -285,6 +285,7 @@ def build_wealth_assertion_prompt_bundle(
     profile = _profile_from_inputs(wealth_profile=wealth_profile, physics_tensor=physics_tensor)
     assertion_style = _safe_dict(profile.get("assertion_style"))
     channels = _compact_channel_rows(profile.get("primary_channels"))
+    prompt_channels = [] if code else channels
     material_contract = _safe_str(code.get("contract")) if code else _safe_str(profile.get("contract"), default="v17.topic.wealth_profile.v1")
     return {
         "prompt_contract_version": LLM_PROMPT_CONTRACT_VERSION,
@@ -304,14 +305,15 @@ def build_wealth_assertion_prompt_bundle(
             "stance": _safe_str(profile.get("stance")),
             "visibility": _safe_str(profile.get("visibility")),
             "usable_state": _safe_str(profile.get("usable_state")),
-            "top_channel": channels[0] if channels else {},
+            "top_channel": prompt_channels[0] if prompt_channels else {},
             "primary_wealth_path": _safe_dict(code.get("primary_wealth_path")) if code else {},
         },
         "wealth_code": _compact_wealth_code(code) if code else {},
         "wealth_profile": {
-            "plain_summary": _plain_wealth_summary(profile, channels),
-            "primary_channels": channels,
-            "strengths": _compact_profile_list(profile.get("strengths"), limit=6),
+            "usage_role": "secondary_conditions_when_wealth_code_present" if code else "primary_material",
+            "plain_summary": _plain_wealth_summary(profile, prompt_channels),
+            "primary_channels": prompt_channels,
+            "strengths": [] if code else _compact_profile_list(profile.get("strengths"), limit=6),
             "risks": _compact_profile_list(profile.get("risks"), limit=6),
             "contradictions": _compact_profile_list(profile.get("contradictions"), limit=6),
             "bridge_requirements": _compact_profile_list(profile.get("bridge_requirements"), limit=6),
@@ -327,13 +329,18 @@ def build_wealth_assertion_prompt_bundle(
         "output_contract": {
             "required_blocks": ["wealth_verdict", "wealth_source", "usable_and_bridge", "risk", "action"],
             "must_cite_evidence_count": 2,
-            "must_preserve": ["score", "confidence", "risk", "usable_state", "primary_channels"],
+            "must_preserve": (
+                ["wealth_code.primary_wealth_path", "wealth_code.wealth_source", "wealth_code.carrier", "score", "confidence", "risk"]
+                if code
+                else ["score", "confidence", "risk", "usable_state", "primary_channels"]
+            ),
             "forbidden_claims": _wealth_forbidden_claims(lang),
             "output_mode": "domain_specific_natural_language",
             "audience": "ordinary_user_not_practitioner",
             "writing_rules": [
                 "write in plain wealth language: income source, earning path, cash flow, clients, projects, pricing, contracts, savings, cooperation, risk control",
                 "if wealth_code is present, make it the primary basis for wealth path, monetization, carrier, leakage, vault, and year watchlist",
+                "if wealth_code and wealth_profile.primary_channels disagree, follow wealth_code.primary_wealth_path and use primary_channels only as secondary conditions",
                 "do not expose internal BaZi or ten-god terminology to the user",
                 "each block should answer a real user question, not describe the system contract",
             ],
@@ -362,6 +369,7 @@ def build_wealth_assertion_prompt_text(
             "You are the V17 wealth-topic assertion writer.",
             "Task: write a wealth-specific reading for an ordinary user using only the supplied wealth_code first, falling back to wealth_profile only when wealth_code is missing.",
             "Boundary: do not read raw chart data freely, do not re-infer the chart, and do not change confidence, risk, channels, or usable_state.",
+            "Priority: if wealth_code.primary_wealth_path disagrees with wealth_profile.primary_channels, use wealth_code as the main path and treat profile channels as supporting conditions.",
             "Forbidden: guaranteed fortune, guaranteed poverty, bankruptcy claims, exact money amounts, exact years, or treating strong wealth stars as money already obtained.",
             "Style: translate every technical signal into wealth language: income source, earning path, cash flow, clients, projects, contracts, cooperation, pricing, and risk control.",
             "Do not mention ten-god names or internal contract fields in the user-facing answer.",
@@ -381,6 +389,7 @@ def build_wealth_assertion_prompt_text(
             "당신은 V17 재물 주제 단언 작성자입니다.",
             "작업: 제공된 wealth_code 를 우선 사용하고, 없을 때만 wealth_profile 을 보조로 사용하여 일반 사용자가 이해할 수 있는 재물 해석을 작성하십시오.",
             "경계: 원국 자료를 자유롭게 다시 해석하지 말고, confidence/risk/channel/usable_state 를 바꾸지 마십시오.",
+            "우선순위: wealth_code.primary_wealth_path 와 wealth_profile.primary_channels 가 다르면 wealth_code 를 주 경로로 삼고 profile channels 는 보조 조건으로만 쓰십시오.",
             "금지: 반드시 큰돈을 번다, 재물이 없다, 파산한다, 정확한 금액·연도, 재성이 강하니 이미 돈이 많다는 식의 표현.",
             "문체: 모든 기술적 신호를 수입원, 돈 버는 방식, 현금흐름, 고객, 프로젝트, 계약, 협업, 가격 책정, 위험 관리 언어로 바꾸십시오.",
             "사용자에게 십성 이름이나 내부 계약 필드를 드러내지 마십시오.",
@@ -400,6 +409,7 @@ def build_wealth_assertion_prompt_text(
             "你是 V17 财富解读写作者。",
             "任务：只基于输入的 wealth_code 优先写财富解读；没有 wealth_code 时，才退回使用 wealth_profile。",
             "边界：不得自由重读原始八字，不得重新推盘，不得改写置信度、风险、主通道或可用状态。",
+            "优先级：如果 wealth_code.primary_wealth_path 与 wealth_profile.primary_channels 不一致，必须以 wealth_code 的财富路径为主，primary_channels 只作为承接条件或辅助风险。",
             "禁区：不得写必发财、无财、破产、确定金额、确定年份，也不得把财星强等同于已经有钱。",
             "文风：把所有技术信号翻译成财富语言，只讲收入来源、赚钱方式、现金流、客户/项目、合同、合作、定价、储蓄和风险控制。",
             "用户正文里不要出现正财、偏财、食伤、比劫、官杀、体用、用神、忌神、桥接神等内部术语。",

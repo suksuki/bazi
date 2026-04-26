@@ -150,7 +150,6 @@ export function V17_WealthAssertionPreviewPanel({
   const channels = Array.isArray(profile.primary_channels)
     ? (profile.primary_channels as Array<unknown>).map(asLooseRecord).filter((row) => String(row.id || row.label || "").trim())
     : [];
-  const topChannel = channels[0] || {};
   const strengths = asStringList(profile.strengths).slice(0, 3);
   const risks = asStringList(profile.risks).slice(0, 3);
   const bridgeRequirements = asStringList(profile.bridge_requirements).slice(0, 3);
@@ -170,8 +169,25 @@ export function V17_WealthAssertionPreviewPanel({
   const monetizationEngine = asLooseRecord(wealthCode.monetization_engine);
   const carrier = asLooseRecord(wealthCode.carrier);
   const wealthVault = asLooseRecord(wealthCode.wealth_vault);
+  const secondaryPaths = asRecordList(wealthCode.secondary_paths).slice(0, 3);
   const leakagePoints = asRecordList(wealthCode.leakage_points).slice(0, 3);
   const yearWatchlist = asRecordList(wealthCode.flow_year_watchlist).slice(0, 3);
+  const hasWealthCode = Object.keys(wealthCode).length > 0;
+  const displayChannels = hasWealthCode
+    ? [
+        {
+          id: String(primaryPath.id || "primary_wealth_path"),
+          label: String(primaryPath.plain_name || pathSummary.primary_path_label || ui("主要财富路径", "Main wealth path", "주 재물 경로")),
+          score: primaryPath.score ?? wealthCode.score,
+        },
+        ...secondaryPaths.map((row) => ({
+          id: String(row.id || row.plain_name || row.plain_summary || ""),
+          label: String(row.plain_name || row.plain_summary || row.id || ""),
+          score: row.score,
+        })),
+      ].filter((row) => row.id || row.label)
+    : channels;
+  const topChannel = displayChannels[0] || {};
   const luckWindow = asLooseRecord(timeline.luck_window);
   const currentFlow = asLooseRecord(timeline.current_flow);
   const topAttentionYears = asRecordList(timeline.top_attention_years).slice(0, 4);
@@ -183,7 +199,6 @@ export function V17_WealthAssertionPreviewPanel({
   const hasProfile = Object.keys(profile).length > 0;
   const hasPreview = Object.keys(preview).length > 0;
   const hasTimeline = Object.keys(timeline).length > 0;
-  const hasWealthCode = Object.keys(wealthCode).length > 0;
   const timelineReady = Boolean(timeline.timeline_ready);
   const canSubmit = canRequest && physicsReady && Boolean(sessionId) && !pendingMode;
   const canCodeSubmit = canRequest && physicsReady && Boolean(sessionId) && !codePending;
@@ -347,9 +362,9 @@ export function V17_WealthAssertionPreviewPanel({
               </div>
             ) : null}
 
-            {channels.length ? (
+            {displayChannels.length ? (
               <div className="space-y-2">
-                {channels.slice(0, 3).map((channel) => {
+                {displayChannels.slice(0, 3).map((channel) => {
                   const label = term(String(channel.label || channel.id || ""));
                   const width = Math.max(6, Math.min(100, asNumberValue(channel.score) * 100));
                   return (

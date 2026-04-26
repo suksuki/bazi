@@ -86,8 +86,8 @@ def test_wealth_code_preview_builds_backstage_payload() -> None:
     assert preview["code_source"] == "computed.from_server_physics"
     assert preview["safety"]["raw_chart_access_for_llm"] is False
     assert preview["safety"]["parameter_mutation"] is False
-    assert preview["wealth_code"]["primary_wealth_path"]["id"] == "output_controls_pressure"
-    assert preview["path_summary"]["primary_path_label"] == "靠解决难题赚钱"
+    assert preview["wealth_code"]["primary_wealth_path"]["id"] == "output_work_to_money"
+    assert preview["path_summary"]["primary_path_label"] == "用专业输出解决难题并变现"
 
 
 def test_attach_wealth_code_preview_meta_keeps_code_audit() -> None:
@@ -98,7 +98,7 @@ def test_attach_wealth_code_preview_meta_keeps_code_audit() -> None:
     assert meta["wealth_code_preview"]["protocol"] == WEALTH_CODE_PREVIEW_PROTOCOL
     assert meta["wealth_code"]["contract"] == "v17.topic.wealth_code.v1"
     assert meta["topic_code_audits"][0]["kind"] == "wealth_code_preview"
-    assert meta["topic_code_audits"][0]["primary_path_id"] == "output_controls_pressure"
+    assert meta["topic_code_audits"][0]["primary_path_id"] == "output_work_to_money"
 
 
 def test_wealth_code_preview_summary_can_hide_full_code_and_graph() -> None:
@@ -106,7 +106,7 @@ def test_wealth_code_preview_summary_can_hide_full_code_and_graph() -> None:
     summary = summarize_wealth_code_preview(preview, include_code=False, include_graph=False)
 
     assert summary["preview_present"] is True
-    assert summary["path_summary"]["primary_path_id"] == "output_controls_pressure"
+    assert summary["path_summary"]["primary_path_id"] == "output_work_to_money"
     assert "wealth_code" not in summary
     assert "evidence_graph" not in summary["wealth_code_summary"]
 
@@ -135,7 +135,7 @@ def test_admin_wealth_code_preview_persists_to_session(isolated_auth_db) -> None
     body = response.json()
     assert body["ok"] is True
     assert body["persisted"] is True
-    assert body["preview"]["path_summary"]["primary_path_id"] == "output_controls_pressure"
+    assert body["preview"]["path_summary"]["primary_path_id"] == "output_work_to_money"
     stored = asyncio.run(get_state_backend().get_physics(session_id))
     meta = stored["meta"]
     assert meta["wealth_code_preview"]["protocol"] == WEALTH_CODE_PREVIEW_PROTOCOL
@@ -169,7 +169,7 @@ def test_admin_get_wealth_code_preview_returns_summary(isolated_auth_db) -> None
     assert body["ok"] is True
     assert body["preview_present"] is True
     assert body["preview"]["protocol"] == WEALTH_CODE_PREVIEW_PROTOCOL
-    assert body["preview"]["path_summary"]["primary_path_id"] == "output_controls_pressure"
+    assert body["preview"]["path_summary"]["primary_path_id"] == "output_work_to_money"
     assert "wealth_code" not in body["preview"]
     assert "evidence_graph" not in body["preview"]["wealth_code_summary"]
     assert body["topic_code_audits"][0]["kind"] == "wealth_code_preview"

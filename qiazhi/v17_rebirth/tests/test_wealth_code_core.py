@@ -65,13 +65,63 @@ def test_resolve_wealth_code_identifies_food_controls_kill_path() -> None:
     code = resolve_wealth_code(pt)["wealth_code"]
 
     assert code["contract"] == "v17.topic.wealth_code.v1"
-    assert code["primary_wealth_path"]["id"] == "output_controls_pressure"
-    assert code["primary_wealth_path"]["plain_name"] == "靠解决难题赚钱"
+    assert code["primary_wealth_path"]["id"] == "output_work_to_money"
+    assert code["primary_wealth_path"]["plain_name"] == "用专业输出解决难题并变现"
     assert "长期项目" in code["wealth_source"]["plain_source"]
     assert code["monetization_engine"]["driver"] == "output_authority"
     assert code["carrier"]["type"] == "method_and_contract"
     assert code["score"] >= 0.6
     assert code["evidence_graph"]["nodes"]
+
+
+def test_wealth_code_links_output_control_and_output_to_wealth_for_yi_chart() -> None:
+    pt = {
+        "day_master_stem": "乙",
+        "four_pillars": {
+            "year": "丁巳",
+            "month": "乙巳",
+            "day": "乙丑",
+            "hour": "乙酉",
+        },
+        "luck_pillar": "庚子",
+        "flow_pillar": "丙午",
+        "flow_year": 2026,
+        "ten_gods_runtime": {
+            "食神": 36.0,
+            "伤官": 22.0,
+            "正财": 30.0,
+            "偏财": 20.0,
+            "正官": 16.0,
+            "七杀": 8.0,
+            "正印": 10.0,
+            "偏印": 6.0,
+            "比肩": 10.0,
+            "劫财": 8.0,
+        },
+        "facts": [
+            {"fact": "格局候选：食伤生财，输出换财通道显性。", "plugin": "classical.pattern.shishen_shengcai.v1"},
+            {"fact": "格局候选：食伤制杀，制杀做功。", "plugin": "classical.pattern.shishang_zhisha.v1"},
+        ],
+        "meta": {
+            "god_ring_authority": {
+                "use_gods": ["食神", "伤官", "正财"],
+                "taboo_gods": ["七杀"],
+                "tongguan_gods": ["正官"],
+                "confidence": 0.82,
+            }
+        },
+    }
+    pt["meta"]["bazi_image"] = resolve_bazi_image(pt)["bazi_image"]
+    pt["meta"]["wealth_profile"] = resolve_wealth_profile(pt)["wealth_profile"]
+
+    code = resolve_wealth_code(pt)["wealth_code"]
+
+    assert code["primary_wealth_path"]["id"] == "output_work_to_money"
+    assert "不是单纯靠职位吃工资" in code["primary_wealth_path"]["plain_summary"]
+    assert "专业输出、内容表达、方案交付和复杂项目" in code["wealth_source"]["plain_source"]
+    assert any(row["id"] == "output_controls_pressure" for row in code["secondary_paths"])
+    assert code["carrier"]["type"] == "method_and_contract"
+    assert "组合路径：专业输出先处理压力，再把成果转成收入" in code["primary_wealth_path"]["evidence"]
 
 
 def test_resolve_wealth_code_models_vault_and_leakage_points() -> None:
@@ -150,4 +200,4 @@ def test_physics_canonical_materializes_wealth_code_lines() -> None:
     lines = PhysicsCanonicalService.materialize_prompt_lines(pt)
 
     assert any("财富密码合同" in line for line in lines)
-    assert any("财富主路径" in line and "靠解决难题赚钱" in line for line in lines)
+    assert any("财富主路径" in line and "用专业输出解决难题并变现" in line for line in lines)
