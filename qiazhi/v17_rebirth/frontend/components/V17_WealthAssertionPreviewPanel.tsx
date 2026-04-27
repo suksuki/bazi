@@ -1047,14 +1047,89 @@ export function V17_WealthAssertionPreviewPanel({
                     <span>{ui("逐年参考", "Year-by-year notes", "연도별 참고")}</span>
                     <ChevronDown className="h-3.5 w-3.5 transition group-open:rotate-180" />
                   </summary>
-                  <div className="mt-2 grid gap-1.5 sm:grid-cols-2">
-                    {decadeYears.map((row) => (
-                      <div key={`decade_${String(row.year || "")}_${String(row.flow_pillar || "")}`} className="grid grid-cols-[72px_minmax(0,1fr)_52px] items-center gap-2 rounded-lg border border-white/10 bg-white/[0.025] px-2 py-1.5 text-[11px] text-zinc-300">
-                        <span className="font-semibold text-zinc-100">{String(row.year || "—")} {String(row.flow_pillar || "—")}</span>
-                        <span className="truncate">{term(String(row.focus || ""))}</span>
-                        <span className="text-right text-cyan-100">{percentLabel(row.score)}</span>
-                      </div>
-                    ))}
+                  <div className="mt-2 space-y-1.5">
+                    {decadeYears.map((row) => {
+                      const yearKey = `decade_${String(row.year || "")}_${String(row.flow_pillar || "")}`;
+                      const yearMechanismSnapshot = asLooseRecord(row.mechanism_state_snapshot);
+                      const yearSupportSummary = asStringList(row.support_nodes_summary);
+                      const yearActivatedChains = asRecordList(row.activated_chains);
+                      const yearTopState = String(yearMechanismSnapshot.top_state || "").trim();
+                      return (
+                        <details key={yearKey} className="group rounded-lg border border-white/10 bg-white/[0.025]">
+                          <summary className="group flex cursor-pointer list-none items-center justify-between gap-3 px-2 py-1.5 text-[11px] text-zinc-300 hover:bg-white/[0.02]">
+                            <div className="grid min-w-0 flex-1 grid-cols-[72px_minmax(0,1fr)_56px] items-center gap-2">
+                              <span className="font-semibold text-zinc-100">{String(row.year || "—")} {String(row.flow_pillar || "—")}</span>
+                              <span className="truncate">{term(String(row.focus || ""))}</span>
+                              <span className="text-right text-cyan-100">{percentLabel(row.score)}</span>
+                            </div>
+                            <ChevronDown className="h-3.5 w-3.5 shrink-0 transition group-open:rotate-180" />
+                          </summary>
+                          <div className="border-t border-white/10 px-2 py-1.5">
+                            <div className="flex flex-wrap gap-1.5">
+                              {asStringList(row.tags).slice(0, 3).map((tag) => (
+                                <span key={`${yearKey}_tag_${tag}`} className="rounded-full border border-current/20 bg-black/15 px-1.5 py-0.5 text-[10px]">
+                                  {term(tag)}
+                                </span>
+                              ))}
+                            </div>
+                            {(yearSupportSummary.length || yearTopState || asStringList(row.activated_chain_ids).length) ? (
+                              <div className="mt-2">
+                                <p className="text-[11px] text-zinc-500">{ui("机制快照", "Mechanism snapshot", "메커니즘 스냅샷")}</p>
+                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                  {yearTopState ? (
+                                    <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${closureStateToneClass(yearTopState)}`}>
+                                      {localizedClosureState(yearTopState, ui)}
+                                    </span>
+                                  ) : null}
+                                  <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                                    {ui("闭合", "Closed", "완결")} {asIntValue(yearMechanismSnapshot.closed_count)}
+                                  </span>
+                                  <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                                    {ui("泄损", "Leak", "누수")} {asIntValue(yearMechanismSnapshot.leaking_count)}
+                                  </span>
+                                  <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                                    {ui("激活链", "Activated", "활성")} {String(asStringList(row.activated_chain_ids).length)}
+                                  </span>
+                                </div>
+                                {yearSupportSummary.length ? (
+                                  <p className="mt-1 text-[10px] text-zinc-500">
+                                    {ui("支持节点", "Support nodes", "지지 노드")}：{yearSupportSummary.slice(0, 4).join(" / ")}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {yearActivatedChains.length ? (
+                              <div className="mt-2 border-t border-white/10 pt-2">
+                                <p className="text-[11px] text-zinc-500">{ui("激活机制链", "Activated chains", "활성화 메커니즘")}</p>
+                                <div className="mt-1 space-y-1">
+                                  {yearActivatedChains.slice(0, 3).map((yearActivatedChain) => (
+                                    <p key={`${yearKey}_chain_${String(yearActivatedChain.chain_id || "")}`} className="text-[11px] leading-5 text-zinc-300">
+                                      <span className="font-medium text-zinc-100">{term(String(yearActivatedChain.plain_name || yearActivatedChain.chain_id || ""))}</span>
+                                      <span className="ml-2">
+                                        <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${closureStateToneClass(yearActivatedChain.closure_state)}`}>
+                                          {localizedClosureState(yearActivatedChain.closure_state, ui)}
+                                        </span>
+                                        <span className="ml-2 text-zinc-400">{percentLabel(yearActivatedChain.path_score || yearActivatedChain.activation_score || 0)}</span>
+                                      </span>
+                                    </p>
+                                  ))}
+                                </div>
+                                {yearActivatedChains[0] ? (
+                                  <p className="mt-1 text-[10px] leading-5 text-zinc-500">
+                                    {ui("路径说明", "Chain note", "경로 노트")}：{term(String(yearActivatedChains[0].state_reason || yearActivatedChains[0].reason || ""))}
+                                  </p>
+                                ) : null}
+                              </div>
+                            ) : null}
+                            {asStringList(row.reasons).slice(0, 2).map((item) => (
+                              <p key={`${yearKey}_reason_${item}`} className="mt-1 line-clamp-2 text-[11px] leading-5 text-zinc-500">
+                                {term(item)}
+                              </p>
+                            ))}
+                          </div>
+                        </details>
+                      );
+                    })}
                   </div>
                 </details>
               ) : null}
