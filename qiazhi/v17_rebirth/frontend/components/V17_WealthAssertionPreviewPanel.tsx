@@ -19,6 +19,14 @@ function asNumberValue(value: unknown, fallback = 0): number {
   return Number.isFinite(next) ? next : fallback;
 }
 
+function asIntValue(value: unknown, fallback = 0): number {
+  const next = Number.parseInt(String(value || ""), 10);
+  if (Number.isFinite(next)) {
+    return next;
+  }
+  return fallback;
+}
+
 function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
 }
@@ -285,6 +293,9 @@ export function V17_WealthAssertionPreviewPanel({
   const currentFlow = asLooseRecord(timeline.current_flow);
   const topAttentionYears = asRecordList(timeline.top_attention_years).slice(0, 4);
   const decadeYears = asRecordList(timeline.decade_years).slice(0, 10);
+  const currentFlowMechanismSnapshot = asLooseRecord(currentFlow.mechanism_state_snapshot);
+  const currentFlowActivatedChains = asRecordList(currentFlow.activated_chains);
+  const currentFlowClosureTop = String(currentFlowMechanismSnapshot.top_state || "").trim();
   const reply = String(llmResult.reply || "").trim();
   const promptText = String(preview.prompt_text || "").trim();
   const previewCreatedAt = String(preview.created_at || "").trim();
@@ -598,6 +609,26 @@ export function V17_WealthAssertionPreviewPanel({
                   <p className="mt-1 text-[11px] leading-5 text-zinc-300">
                     {term(String(primaryMechanismChain.plain_summary || ""))}
                   </p>
+                  {String(primaryMechanismChain.state_reason || primaryMechanismChain.reason || "").trim() ? (
+                    <p className="mt-1 text-[11px] leading-5 text-zinc-400">
+                      {ui("闭合说明", "Closure note", "폐합 설명")}：{term(String(primaryMechanismChain.state_reason || primaryMechanismChain.reason))}
+                    </p>
+                  ) : null}
+                  {asStringList(primaryMechanismChain.support_nodes).length ? (
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <p className="text-[11px] text-zinc-500">{ui("支撑节点", "Support nodes", "지지 노드")}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {asStringList(primaryMechanismChain.support_nodes).slice(0, 3).map((nodeLabel) => (
+                          <span
+                            key={`mechanism-support-${nodeLabel}`}
+                            className="rounded-full border border-emerald-200/30 bg-emerald-400/10 px-2 py-1 text-[10px] text-emerald-100"
+                          >
+                            {term(nodeLabel)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     <span className={`rounded-full border px-2 py-1 text-[10px] ${closureStateToneClass(primaryMechanismChain.closure_state)}`}>
                       {localizedClosureState(primaryMechanismChain.closure_state, ui)} · {percentLabel(primaryMechanismChain.activation_score || primaryMechanismChain.score)}
@@ -865,6 +896,38 @@ export function V17_WealthAssertionPreviewPanel({
                   <p className="mt-2 text-[12px] font-semibold text-zinc-100">
                     {term(String(currentFlow.focus || ui("稳态观察", "Steady watch", "안정 관찰")))}
                   </p>
+                  {currentFlowClosureTop ? (
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <p className="text-[11px] text-zinc-500">{ui("机制状态", "Mechanism state", "메커니즘 상태")}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        <span className={`rounded-full border px-2 py-1 text-[10px] ${closureStateToneClass(currentFlowClosureTop)}`}>
+                          {ui("关键状态", "Top state", "최우선 상태")} {localizedClosureState(currentFlowClosureTop, ui)}
+                        </span>
+                        <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-300">
+                          {ui("活跃链", "Active chains", "활성 경로")} {asStringList(currentFlow.activated_chain_ids).length}
+                        </span>
+                        <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-300">
+                          {ui("闭合数", "Closed", "완결 수")} {asIntValue(currentFlowMechanismSnapshot.closed_count)}
+                        </span>
+                        <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-300">
+                          {ui("泄损数", "Leak", "누수 수")} {asIntValue(currentFlowMechanismSnapshot.leaking_count)}
+                        </span>
+                      </div>
+                      {currentFlowActivatedChains.length ? (
+                        <div className="mt-1 space-y-1">
+                          {currentFlowActivatedChains.slice(0, 2).map((chain) => (
+                            <p key={`current-flow-chain-${String(chain.chain_id || "")}`} className="text-[11px] leading-5 text-zinc-400">
+                              {term(String(chain.plain_name || chain.chain_id || ""))}
+                              <span className={`ml-2 rounded-full border px-1.5 py-0.5 text-[9px] ${closureStateToneClass(chain.closure_state)}`}>
+                                {localizedClosureState(chain.closure_state, ui)}
+                              </span>
+                              <span className="ml-2 text-zinc-500">{percentLabel(chain.activation_score || chain.path_score || 0)}</span>
+                            </p>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
+                  ) : null}
                   {asStringList(currentFlow.reasons).slice(0, 2).map((item) => (
                     <p key={`current_flow_${item}`} className="mt-1 line-clamp-2 text-[11px] leading-5 text-zinc-500">
                       {term(item)}
@@ -875,65 +938,108 @@ export function V17_WealthAssertionPreviewPanel({
 
                   {topAttentionYears.length ? (
                     <div>
-                  <div className="flex items-center gap-2">
-                    <TrendingUp className="h-4 w-4 text-amber-200" />
-                    <p className="text-[12px] font-semibold text-amber-50">
-                      {ui("未来十年重点年份", "Key years in this decade", "10년 주요 연도")}
-                    </p>
-                  </div>
+                      <div className="flex items-center gap-2">
+                        <TrendingUp className="h-4 w-4 text-amber-200" />
+                        <p className="text-[12px] font-semibold text-amber-50">
+                          {ui("未来十年重点年份", "Key years in this decade", "10년 주요 연도")}
+                        </p>
+                      </div>
                       <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                         {topAttentionYears.map((row) => {
                           const key = `wealth_timeline_${String(row.year || "")}_${String(row.flow_pillar || "")}`;
                           const activated = asRecordList(row.activated_chains);
+                          const mechanismSnapshot = asLooseRecord(row.mechanism_state_snapshot);
+                          const supportSummary = asStringList(row.support_nodes_summary);
+                          const supportCount = asStringList(asLooseRecord(row).support_nodes || []).length;
+                          const topState = String(mechanismSnapshot.top_state || "").trim();
                           return (
                             <div key={key} className={`min-w-0 rounded-lg border p-3 ${attentionToneClass(row.attention_level)}`}>
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-semibold">
-                                {String(row.year || "—")} {String(row.flow_pillar || "—")}
-                              </p>
-                              <p className="mt-0.5 truncate text-[11px] opacity-80">
-                                {term(String(row.focus || ""))}
-                              </p>
-                            </div>
-                            <span className="shrink-0 text-[11px] opacity-80">{percentLabel(row.score)}</span>
-                          </div>
-                          <div className="mt-2 flex flex-wrap gap-1">
-                            {asStringList(row.tags).slice(0, 3).map((tag) => (
-                              <span key={`${key}_${tag}`} className="rounded-full border border-current/20 bg-black/15 px-1.5 py-0.5 text-[10px]">
-                                {term(tag)}
-                              </span>
-                            ))}
-                          </div>
-                          {activated.length ? (
-                            <div className="mt-2 border-t border-white/15 pt-2">
-                              <p className="text-[11px] text-zinc-500">{ui("激活机制链", "Activated chains", "활성화 메커니즘")}</p>
-                              <div className="mt-1 space-y-1">
-                                {activated.slice(0, 2).map((activatedChain) => (
-                                  <p key={`${key}_${String(activatedChain.chain_id || "")}`} className="text-[11px] leading-5 text-zinc-300">
-                                    <span className="font-medium text-zinc-100">{term(String(activatedChain.plain_name || activatedChain.chain_id || ""))}</span>
-                                    <span className="ml-2">
-                                      <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${closureStateToneClass(activatedChain.closure_state)}`}>
-                                        {localizedClosureState(activatedChain.closure_state, ui)}
-                                      </span>
-                                      <span className="ml-2 text-zinc-400">{percentLabel(activatedChain.activation_score || 0)}</span>
-                                    </span>
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0">
+                                  <p className="text-sm font-semibold">
+                                    {String(row.year || "—")} {String(row.flow_pillar || "—")}
                                   </p>
+                                  <p className="mt-0.5 truncate text-[11px] opacity-80">
+                                    {term(String(row.focus || ""))}
+                                  </p>
+                                </div>
+                                <span className="shrink-0 text-[11px] opacity-80">{percentLabel(row.score)}</span>
+                              </div>
+                              <div className="mt-2 flex flex-wrap gap-1">
+                                {asStringList(row.tags).slice(0, 3).map((tag) => (
+                                  <span
+                                    key={`${key}_${tag}`}
+                                    className="rounded-full border border-current/20 bg-black/15 px-1.5 py-0.5 text-[10px]"
+                                  >
+                                    {term(tag)}
+                                  </span>
                                 ))}
                               </div>
+                              {(supportSummary.length || topState || asStringList(row.activated_chain_ids).length) ? (
+                                <div className="mt-2 border-t border-white/15 pt-2">
+                                  <p className="text-[11px] text-zinc-500">{ui("机制快照", "Mechanism snapshot", "메커니즘 스냅샷")}</p>
+                                  <div className="mt-1 flex flex-wrap gap-1.5">
+                                    {topState ? (
+                                      <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${closureStateToneClass(topState)}`}>
+                                        {localizedClosureState(topState, ui)}
+                                      </span>
+                                    ) : null}
+                                    <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                                      {ui("激活链", "Activated", "활성")} {String(asStringList(row.activated_chain_ids).length)}
+                                    </span>
+                                    <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                                      {ui("闭合", "Closed", "완결")} {asIntValue(mechanismSnapshot.closed_count)}
+                                    </span>
+                                    <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
+                                      {ui("泄损", "Leak", "누수")} {asIntValue(mechanismSnapshot.leaking_count)}
+                                    </span>
+                                  </div>
+                                  {supportSummary.length ? (
+                                    <div className="mt-1 text-[11px] text-zinc-400">
+                                      {ui("支持节点", "Support nodes", "지지 노드")}：{supportSummary.slice(0, 3).join(" / ")}
+                                    </div>
+                                  ) : null}
+                                  {supportCount ? (
+                                    <div className="mt-1 text-[10px] text-zinc-500">
+                                      {ui("需求节点", "Requirement nodes", "요건 노드")} {supportCount}
+                                    </div>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {activated.length ? (
+                                <div className="mt-2 border-t border-white/15 pt-2">
+                                  <p className="text-[11px] text-zinc-500">{ui("激活机制链", "Activated chains", "활성화 메커니즘")}</p>
+                                  <div className="mt-1 space-y-1">
+                                    {activated.slice(0, 2).map((activatedChain) => (
+                                      <p key={`${key}_${String(activatedChain.chain_id || "")}`} className="text-[11px] leading-5 text-zinc-300">
+                                        <span className="font-medium text-zinc-100">{term(String(activatedChain.plain_name || activatedChain.chain_id || ""))}</span>
+                                        <span className="ml-2">
+                                          <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${closureStateToneClass(activatedChain.closure_state)}`}>
+                                            {localizedClosureState(activatedChain.closure_state, ui)}
+                                          </span>
+                                          <span className="ml-2 text-zinc-400">{percentLabel(activatedChain.path_score || activatedChain.activation_score || 0)}</span>
+                                        </span>
+                                      </p>
+                                    ))}
+                                  </div>
+                                  {activated[0] ? (
+                                    <p className="mt-1 text-[10px] leading-5 text-zinc-500">
+                                      {ui("路径说明", "Chain note", "경로 노트")}：{term(String(activated[0].state_reason || activated[0].reason || ""))}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              ) : null}
+                              {asStringList(row.reasons).slice(0, 1).map((item) => (
+                                <p key={`${key}_${item}`} className="mt-2 line-clamp-2 text-[11px] leading-5 opacity-80">
+                                  {term(item)}
+                                </p>
+                              ))}
                             </div>
-                          ) : null}
-                          {asStringList(row.reasons).slice(0, 1).map((item) => (
-                            <p key={`${key}_${item}`} className="mt-2 line-clamp-2 text-[11px] leading-5 opacity-80">
-                              {term(item)}
-                            </p>
-                          ))}
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ) : null}
+                          );
+                        })}
+                      </div>
+                    </div>
+                  ) : null}
 
               {decadeYears.length ? (
                 <details className="group">
