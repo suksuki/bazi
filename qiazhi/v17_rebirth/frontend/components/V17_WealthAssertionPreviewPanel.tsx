@@ -31,6 +31,17 @@ function asStringList(value: unknown): string[] {
   return Array.isArray(value) ? value.map((item) => String(item || "").trim()).filter(Boolean) : [];
 }
 
+function inferTopMechanismState(row: Record<string, unknown> | undefined | null): string {
+  const next = asLooseRecord(row);
+  const snapshot = asLooseRecord(next.mechanism_state_snapshot);
+  const snapshotState = String(snapshot.top_state || "").trim();
+  if (snapshotState) {
+    return snapshotState;
+  }
+  const activatedChains = asRecordList(next.activated_chains);
+  return String(activatedChains[0]?.closure_state || "").trim();
+}
+
 function asRecordList(value: unknown): Array<Record<string, unknown>> {
   return Array.isArray(value) ? value.map(asLooseRecord).filter((row) => Object.keys(row).length > 0) : [];
 }
@@ -124,6 +135,12 @@ function localizedClosureState(value: unknown, ui: LocalizeText): string {
   return ui("待观察", "Pending", "관찰");
 }
 
+function localizedClosureStateFilter(value: unknown, ui: LocalizeText): string {
+  const key = String(value || "").trim();
+  if (key === "all") return ui("全部状态", "All states", "전체 상태");
+  return localizedClosureState(key, ui);
+}
+
 function closureStateToneClass(value: unknown): string {
   const key = String(value || "").trim();
   if (key === "closed") return "border-emerald-300/35 bg-emerald-400/12 text-emerald-100";
@@ -204,6 +221,7 @@ export function V17_WealthAssertionPreviewPanel({
   const [codePending, setCodePending] = useState(false);
   const [timelinePending, setTimelinePending] = useState(false);
   const [errorState, setErrorState] = useState<{ resetKey: string; message: string } | null>(null);
+  const [timelineStateFilter, setTimelineStateFilter] = useState<string>("all");
 
   const preview = previewOverride?.resetKey === resetKey ? previewOverride.preview : initialPreview;
   const codePreview = codePreviewOverride?.resetKey === resetKey ? codePreviewOverride.preview : initialCodePreview;
@@ -291,8 +309,46 @@ export function V17_WealthAssertionPreviewPanel({
   const topChannel = displayChannels[0] || {};
   const luckWindow = asLooseRecord(timeline.luck_window);
   const currentFlow = asLooseRecord(timeline.current_flow);
-  const topAttentionYears = asRecordList(timeline.top_attention_years).slice(0, 4);
-  const decadeYears = asRecordList(timeline.decade_years).slice(0, 10);
+  const topAttentionYearsSource = asRecordList(timeline.top_attention_years).slice(0, 8);
+  const decadeYearsSource = asRecordList(timeline.decade_years).slice(0, 10);
+  const timelineFilterRows = decadeYearsSource.length ? decadeYearsSource : topAttentionYearsSource;
+  const timelineStateOptions = ["all", "closed", "partial_closed", "volatile", "open", "leaking", "blocked"];
+  const filterTimelineState = String(timelineStateFilter || "all").trim();
+  const matchesTimelineState = (row: Record<string, unknown>) => {
+    if (filterTimelineState === "all") {
+      return true;
+    }
+    const rowState = inferTopMechanismState(row);
+    if (rowState === filterTimelineState) {
+      return true;
+    }
+    return asRecordList(row.activated_chains).some((chain) => String(chain.closure_state || "").trim() === filterTimelineState);
+  };
+  const topAttentionYears = topAttentionYearsSource.filter(matchesTimelineState).slice(0, 4);
+  const decadeYears = decadeYearsSource.filter(matchesTimelineState);
+  const timelineStateCounts = timelineFilterRows.reduce(
+    (accumulator, row) => {
+      const rowStateSet = new Set<string>();
+      const topState = inferTopMechanismState(row);
+      if (topState) {
+        rowStateSet.add(topState);
+      }
+      asRecordList(row.activated_chains).forEach((chain) => {
+        const chainState = String(chain.closure_state || "").trim();
+        if (chainState) {
+          rowStateSet.add(chainState);
+        }
+      });
+      for (const state of rowStateSet) {
+        accumulator[state] = (accumulator[state] || 0) + 1;
+      }
+      return accumulator;
+    },
+    {} as Record<string, number>,
+  );
+  const timelineFilteredCount = filterTimelineState === "all"
+    ? timelineFilterRows.length
+    : timelineStateCounts[filterTimelineState] || 0;
   const currentFlowMechanismSnapshot = asLooseRecord(currentFlow.mechanism_state_snapshot);
   const currentFlowActivatedChains = asRecordList(currentFlow.activated_chains);
   const currentFlowClosureTop = String(currentFlowMechanismSnapshot.top_state || "").trim();
@@ -936,6 +992,45 @@ export function V17_WealthAssertionPreviewPanel({
                 </div>
               </div>
 
+                  <div className="rounded-lg border border-white/10 bg-black/20 p-3">
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <div>
+                        <p className="text-[11px] text-zinc-500">{ui("筛选机制状态", "Filter mechanism state", "메커니즘 상태 필터")}</p>
+                        <p className="mt-1 text-sm font-semibold text-zinc-100">
+                          {ui("聚焦年份", "Key year focus", "연도 포커스")}
+                          <span className="ml-2 text-xs font-normal text-zinc-400">
+                            {ui("当前", "Current", "현재")} {localizedClosureStateFilter(filterTimelineState, ui)}
+                          </span>
+                        </p>
+                      </div>
+                      {timelineFilterRows.length ? (
+                        <div className="flex flex-wrap justify-end gap-1.5">
+                          {timelineStateOptions.map((state) => {
+                            const isActive = state === filterTimelineState;
+                            const count = state === "all" ? timelineFilterRows.length : timelineStateCounts[state] || 0;
+                            return (
+                              <button
+                                key={`timeline-state-${state}`}
+                                type="button"
+                                disabled={state !== "all" && count === 0}
+                                onClick={() => setTimelineStateFilter(state)}
+                                className={`inline-flex min-h-8 items-center rounded-full border px-2 py-1 text-[10px] transition ${isActive
+                                  ? "border-cyan-300/45 bg-cyan-400/15 text-cyan-100"
+                                  : "border-white/12 bg-black/15 text-zinc-400 hover:border-white/28 hover:text-zinc-200"} ${state !== "all" && count === 0 ? "cursor-not-allowed opacity-40" : ""}`}
+                              >
+                                {localizedClosureStateFilter(state, ui)}
+                                <span className="ml-1 text-[10px] opacity-75">({count})</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                    <p className="mt-1 text-[10px] text-zinc-500">
+                      {timelineFilteredCount ? ui(`匹配 ${timelineFilteredCount} 个年份`, `Matches ${timelineFilteredCount} years`, `${timelineFilteredCount}개 연도 일치`) : ""}
+                    </p>
+                  </div>
+
                   {topAttentionYears.length ? (
                     <div>
                       <div className="flex items-center gap-2">
@@ -1039,6 +1134,10 @@ export function V17_WealthAssertionPreviewPanel({
                         })}
                       </div>
                     </div>
+                  ) : timelineFilterRows.length ? (
+                    <p className="rounded-lg border border-white/10 bg-black/15 px-2 py-2 text-xs text-zinc-400">
+                      {ui("当前筛选状态暂无匹配的重点年份。", "No key years match the selected state.", "현재 필터 상태에 맞는 핵심 연도가 없습니다.")}
+                    </p>
                   ) : null}
 
               {decadeYears.length ? (
@@ -1132,6 +1231,10 @@ export function V17_WealthAssertionPreviewPanel({
                     })}
                   </div>
                 </details>
+              ) : timelineFilterRows.length ? (
+                <p className="rounded-lg border border-white/10 bg-black/15 px-2 py-2 text-xs text-zinc-400">
+                  {ui("当前筛选状态暂无匹配的逐年参考。", "No yearly notes match the selected state.", "현재 필터 상태에 맞는 연도별 참고가 없습니다.")}
+                </p>
               ) : null}
             </div>
           ) : (
