@@ -90,6 +90,39 @@ _CHAIN_STATE_REASON: Dict[str, str] = {
 }
 
 
+def _build_mechanism_state_snapshot(*, activated_chains: Sequence[Mapping[str, Any]], fallback_state: str = "blocked") -> Dict[str, Any]:
+    closure_counts: Dict[str, int] = {
+        "closed": 0,
+        "partial_closed": 0,
+        "volatile": 0,
+        "open": 0,
+        "leaking": 0,
+        "blocked": 0,
+    }
+    for item in activated_chains:
+        state = _clean_label(item.get("closure_state"), limit=24)
+        if state in closure_counts:
+            closure_counts[state] = closure_counts.get(state, 0) + 1
+    if activated_chains:
+        top_state = max(
+            (state for state in closure_counts if closure_counts[state] > 0),
+            key=lambda state: _CHAIN_STATE_SCORE_ORDER.get(state, 0),
+            default=fallback_state,
+        )
+    else:
+        top_state = fallback_state
+    return {
+        "top_state": top_state,
+        "closed_count": closure_counts["closed"],
+        "partial_closed_count": closure_counts["partial_closed"],
+        "volatile_count": closure_counts["volatile"],
+        "open_count": closure_counts["open"],
+        "leaking_count": closure_counts["leaking"],
+        "blocked_count": closure_counts["blocked"],
+        "state_distribution": closure_counts,
+    }
+
+
 def _chain_closure_reason(chain_id: str, closure_state: str, matched: int, required_count: int) -> str:
     base = _CHAIN_STATE_REASON.get(closure_state, "状态待补充")
     if closure_state == "closed":
@@ -518,19 +551,8 @@ def _year_row(
         year_score=score,
         year_risk=risk,
     )
-    closure_snapshot = {
-        "top_state": (
-            max(
-                (item.get("closure_state") for item in activated_chains),
-                default="",
-                key=lambda state: _CHAIN_STATE_SCORE_ORDER.get(_clean_label(state), 0),
-            )
-            if activated_chains
-            else ""
-        ),
-        "closed_count": len([item for item in activated_chains if item.get("closure_state") == "closed"]),
-        "leaking_count": len([item for item in activated_chains if item.get("closure_state") == "leaking"]),
-    }
+    fallback_state = "open" if score >= 0.58 and risk <= 0.56 else "blocked"
+    mechanism_state_snapshot = _build_mechanism_state_snapshot(activated_chains=activated_chains, fallback_state=fallback_state)
     return {
         "year": int(year),
         "flow_pillar": _clean_label(flow_pillar) or "—",
@@ -549,7 +571,8 @@ def _year_row(
             )
             if label
         ],
-        "closure_snapshot": closure_snapshot,
+        "mechanism_state_snapshot": mechanism_state_snapshot,
+        "closure_snapshot": mechanism_state_snapshot,
         "score": round(score, 3),
         "risk": round(risk, 3),
         "salience": round(salience, 3),
