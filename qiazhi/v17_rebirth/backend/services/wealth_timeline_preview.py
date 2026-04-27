@@ -80,6 +80,26 @@ _CHAIN_STATE_SCORE_ORDER: Dict[str, int] = {
     "blocked": -2,
 }
 
+_CHAIN_STATE_REASON: Dict[str, str] = {
+    "closed": "核心条件已闭合，路径有机会转为可兑现财富。",
+    "partial_closed": "部分条件成立，适合先做承接与边界管理。",
+    "volatile": "条件有机会但波动较大，需同步看风险。",
+    "open": "链路尚在启动期，先观察再承接。",
+    "leaking": "有一定回报，但明显存在漏损风险。",
+    "blocked": "关键结构不足，未能闭合成财富机制。",
+}
+
+
+def _chain_closure_reason(chain_id: str, closure_state: str, matched: int, required_count: int) -> str:
+    base = _CHAIN_STATE_REASON.get(closure_state, "状态待补充")
+    if closure_state == "closed":
+        return base
+    if closure_state == "partial_closed":
+        return f"{_clean_label(chain_id)}匹配{matched}/{required_count}要件，{base}"
+    if matched == 0:
+        return f"{_clean_label(chain_id)}未命中关键要件，{base}"
+    return base
+
 
 def _clean_label(value: Any, *, limit: int = 160) -> str:
     text = str(value or "").strip()
@@ -396,11 +416,18 @@ def _activated_chains_for_year(
             continue
         activation = _clamp(0.18 + year_score * 0.5 + completeness * 0.45 - year_risk * 0.08)
         chain_risk = _clamp(year_risk + (0.06 if "合作" in requirements else 0.0) + (0.03 if "authority" in requirements else 0.0))
+        path_score = _clamp(0.24 + activation * 0.55 + completeness * 0.28)
         closure_state = _chain_state_from_signals(completeness=completeness, activation=activation, risk=chain_risk)
         reason = "与{}相关联，适合{}{}".format(
             "/".join(requirements) if requirements else "关键结构",
             "观察" if closure_state in {"open", "blocked"} else "承接",
             "，建议先补齐交付和回款" if closure_state != "closed" else "",
+        )
+        state_reason = _chain_closure_reason(
+            chain_id=chain_id,
+            closure_state=closure_state,
+            matched=matched,
+            required_count=req_count,
         )
         rows.append(
             {
@@ -408,6 +435,12 @@ def _activated_chains_for_year(
                 "plain_name": _clean_label(chain.get("plain_name")),
                 "activation_score": activation,
                 "closure_state": closure_state,
+                "path_score": round(_safe_float(path_score), 3),
+                "risk_score": round(_safe_float(chain_risk), 3),
+                "state_reason": state_reason,
+                "matched": matched,
+                "required_count": req_count,
+                "support_nodes": requirements,
                 "reason": reason,
                 "risk_modes": _clean_str_list(chain.get("risk_modes"), limit=5),
                 "requirements": requirements,
@@ -475,19 +508,38 @@ def _year_row(
         reasons = ["这一年收入机会不算特别强，适合按主要赚钱方式稳步经营"]
     if not actions:
         actions = ["保持预算、现金流和机会筛选纪律"]
+    activated_chains = _activated_chains_for_year(
+        active_gods=[
+            _clean_label(luck_stem_god),
+            _clean_label(luck_branch_god),
+            _clean_label(flow_stem_god),
+            _clean_label(flow_branch_god),
+        ],
+        year_score=score,
+        year_risk=risk,
+    )
+    closure_snapshot = {
+        "top_state": (
+            max(
+                (item.get("closure_state") for item in activated_chains),
+                default="",
+                key=lambda state: _CHAIN_STATE_SCORE_ORDER.get(_clean_label(state), 0),
+            )
+            if activated_chains
+            else ""
+        ),
+        "closed_count": len([item for item in activated_chains if item.get("closure_state") == "closed"]),
+        "leaking_count": len([item for item in activated_chains if item.get("closure_state") == "leaking"]),
+    }
     return {
         "year": int(year),
         "flow_pillar": _clean_label(flow_pillar) or "—",
         "luck_pillar": _clean_label(luck_pillar) or "—",
-        "activated_chains": _activated_chains_for_year(
-            active_gods=[
-                _clean_label(luck_stem_god),
-                _clean_label(luck_branch_god),
-                _clean_label(flow_stem_god),
-                _clean_label(flow_branch_god),
-            ],
-            year_score=score,
-            year_risk=risk,
+        "activated_chains": activated_chains,
+        "activated_chain_ids": _clean_str_list([item.get("chain_id") for item in activated_chains], limit=6),
+        "support_nodes_summary": _clean_str_list(
+            [label for chain in activated_chains for label in chain.get("requirements", [])],
+            limit=8,
         ),
         "money_signals": [
             label
@@ -497,6 +549,7 @@ def _year_row(
             )
             if label
         ],
+        "closure_snapshot": closure_snapshot,
         "score": round(score, 3),
         "risk": round(risk, 3),
         "salience": round(salience, 3),

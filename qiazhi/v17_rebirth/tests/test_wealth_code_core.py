@@ -8,6 +8,10 @@ from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import (
     resolve_wealth_code,
 )
 from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import resolve_wealth_profile
+from v17_rebirth.backend.services.wealth_timeline_preview import (
+    attach_wealth_timeline_preview_meta,
+    build_wealth_timeline_preview,
+)
 from v17_rebirth.backend.services.evidence_bundle import build_evidence_bundle
 from v17_rebirth.backend.services.physics_canonical import PhysicsCanonicalService
 
@@ -181,6 +185,38 @@ def test_resolve_wealth_code_builds_path_rankings() -> None:
     assert all("id" in row and row.get("size") in {"大", "中", "小"} for row in rankings)
     assert all(0.0 <= float(row.get("combined_score", 0.0)) <= 1.0 for row in rankings)
     assert len(rankings) <= 6
+
+
+def test_resolve_wealth_code_timeline_binds_mechanism_state() -> None:
+    pt = _pressure_tensor()
+    pt["meta"]["bazi_image"] = resolve_bazi_image(pt)["bazi_image"]
+    pt["meta"]["wealth_profile"] = resolve_wealth_profile(pt)["wealth_profile"]
+    pt["meta"] = attach_wealth_timeline_preview_meta(
+        pt["meta"],
+        build_wealth_timeline_preview(physics_tensor=pt),
+    )
+
+    code = resolve_wealth_code(pt)["wealth_code"]
+    watchlist = code["flow_year_watchlist"] if isinstance(code.get("flow_year_watchlist"), list) else []
+
+    assert watchlist
+    sample = watchlist[0]
+    assert sample["year"]
+    assert sample["activated_chain_ids"] or sample["activated_chains"] == []
+    if sample["activated_chains"]:
+        chain = sample["activated_chains"][0]
+        assert chain["chain_id"]
+        assert chain["state_reason"]
+        assert "path_score" in chain
+    assert sample["mechanism_state_snapshot"]["top_state"] in {
+        "",
+        "open",
+        "partial_closed",
+        "closed",
+        "volatile",
+        "leaking",
+        "blocked",
+    }
 
 
 def test_resolve_wealth_code_includes_mechanism_graph_metadata() -> None:

@@ -2094,13 +2094,48 @@ def _timeline_rows(meta: Mapping[str, Any]) -> tuple[List[Dict[str, Any]], List[
                         "chain_id": _clean_label(item.get("chain_id")),
                         "plain_name": _clean_label(item.get("plain_name")),
                         "closure_state": _clean_label(item.get("closure_state")),
+                        "state_reason": _clean_label(item.get("state_reason") or item.get("reason")),
                         "activation_score": round(_safe_float(item.get("activation_score"), 0.0), 3),
+                        "path_score": round(_safe_float(item.get("path_score"), 0.0), 3),
+                        "support_nodes": _clean_str_list(item.get("support_nodes"), limit=4),
+                        "requirements": _clean_str_list(item.get("requirements"), limit=4),
+                        "matched": int(_safe_float(item.get("matched"), 0.0)),
+                        "required_count": int(_safe_float(item.get("required_count"), 0.0)),
                         "reason": _clean_label(item.get("reason")),
                         "risk_modes": _clean_str_list(item.get("risk_modes"), limit=5),
                     }
                     for item in (row.get("activated_chains") if isinstance(row.get("activated_chains"), list) else [])
                     if isinstance(item, Mapping)
                 ],
+                "activated_chain_ids": _clean_str_list(
+                    [item.get("chain_id") for item in (row.get("activated_chains") if isinstance(row.get("activated_chains"), list) else [])],
+                    limit=6,
+                ),
+                "mechanism_state_snapshot": {
+                    "top_state": (
+                        max(
+                            (
+                                _clean_label(item.get("closure_state"))
+                                for item in (row.get("activated_chains") if isinstance(row.get("activated_chains"), list) else [])
+                                if isinstance(item, Mapping)
+                            ),
+                            default="",
+                            key=lambda state: CLOSURE_STATE_SCORE.get(state, 0.0),
+                        )
+                        if isinstance(row.get("activated_chains"), list)
+                        else ""
+                    ),
+                    "closed_paths": [
+                        _clean_label(item.get("chain_id"))
+                        for item in (row.get("activated_chains") if isinstance(row.get("activated_chains"), list) else [])
+                        if isinstance(item, Mapping) and _clean_label(item.get("closure_state")) == "closed"
+                    ],
+                    "leaking_paths": [
+                        _clean_label(item.get("chain_id"))
+                        for item in (row.get("activated_chains") if isinstance(row.get("activated_chains"), list) else [])
+                        if isinstance(item, Mapping) and _clean_label(item.get("closure_state")) == "leaking"
+                    ],
+                },
             }
         )
     return trends[:2], watchlist[:5]

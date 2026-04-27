@@ -112,6 +112,24 @@ def test_wealth_timeline_preview_marks_years_with_attention_reasons() -> None:
     }
 
 
+def test_wealth_timeline_preview_binds_mechanism_chains_to_years() -> None:
+    preview = build_wealth_timeline_preview(physics_tensor=_tensor())
+    year_rows = preview["top_attention_years"]
+
+    assert year_rows
+    binding_rows = [row for row in year_rows if row.get("activated_chains")]
+    assert binding_rows
+    sample = binding_rows[0]
+    assert sample["activated_chain_ids"]
+    assert isinstance(sample["activated_chain_ids"], list)
+    chain = sample["activated_chains"][0]
+    assert chain["chain_id"]
+    assert chain["closure_state"] in {"closed", "partial_closed", "open", "volatile", "blocked", "leaking"}
+    assert chain["state_reason"]
+    assert "path_score" in chain
+    assert chain["path_score"] >= 0.0
+
+
 def test_attach_wealth_timeline_preview_meta_keeps_prediction_audit() -> None:
     preview = build_wealth_timeline_preview(physics_tensor=_tensor())
     meta = attach_wealth_timeline_preview_meta({"existing": True}, preview)
