@@ -106,6 +106,21 @@ V17 不是一个“把规则堆在一起的八字程序”，而是一套分层�
 - [blind_school_family.py](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/backend/logic/L2_structure_patterns/blind_school_family.py)
 - [risk_matrix.py](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/backend/logic/L2_structure_patterns/risk_matrix.py)
 
+### V18.2 知识层兼容分层
+
+V18.2 的核心补齐不是新增更多主题插件，而是将插件降到“承载”层：
+
+- **Knowledge Corpus / Knowledge Card**：先接管抽象与归档。
+- **Rule Kernel**：统一规则化表达，记录理论来源、条件、冲突策略、作用域。
+- **Mechanism Graph**：围绕主题链条组织规则效果（如财富/事业/感情）。
+- **Prediction Contract**：输出可追溯、可验证、可回放的单条预测。
+
+插件在该结构中的角色更新为：
+
+- 规则包的组织者（按主题/门派分组）
+- 不直接代表最高裁决权
+- 不直接改变预测主判断边界（统一由 Resolver + Contract 协议执行）
+
 ### MasterReasoningLayer：命理师推理层
 
 职责：
@@ -218,6 +233,10 @@ V17 不是一个“把规则堆在一起的八字程序”，而是一套分层�
 
 - [V17_PLUGIN_MATCH_RECOMPUTE_PROTOCOL.md](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/docs/V17_PLUGIN_MATCH_RECOMPUTE_PROTOCOL.md)
 - [V17_MASTER_REASONING_PROTOCOL.md](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/docs/V17_MASTER_REASONING_PROTOCOL.md)
+
+### V18.2 设计补齐文档
+
+- [V18_2_KNOWLEDGE_CORPUS_TO_RULE_KERNEL_2026-04-27.md](/Users/liujin/DEV/AIProjects/bazi/qiazhi/v17_rebirth/docs/V18_2_KNOWLEDGE_CORPUS_TO_RULE_KERNEL_2026-04-27.md)
 
 ### 应继续建立的协议
 
