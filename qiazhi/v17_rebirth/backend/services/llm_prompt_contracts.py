@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from typing import Any, Dict, Iterable, List, Literal
+from typing import Any, Dict, Iterable, List, Literal, Mapping
 
 from .decision_brain_protocol import build_plan_claim
 
@@ -182,6 +182,18 @@ def _compact_code_rows(value: Any, limit: int = 4) -> List[Dict[str, Any]]:
                 "risk": round(max(0.0, min(1.0, _safe_float(row.get("risk"), 0.0))), 3),
                 "tags": _compact_profile_list(row.get("triggered_components") or row.get("tags"), limit=4),
                 "evidence": _compact_profile_list(row.get("evidence"), limit=3),
+                "activated_chains": [
+                    {
+                        "chain_id": _safe_str(item.get("chain_id") or item.get("id")),
+                        "plain_name": _safe_str(item.get("plain_name")),
+                        "closure_state": _safe_str(item.get("closure_state")),
+                        "activation_score": round(max(0.0, min(1.0, _safe_float(item.get("activation_score"), 0.0))), 3),
+                        "reason": _safe_str(item.get("reason")),
+                        "risk_modes": _compact_profile_list(item.get("risk_modes"), limit=4),
+                    }
+                    for item in _safe_list(row.get("activated_chains"))
+                    if isinstance(item, Mapping)
+                ],
             }
         )
         if len(rows) >= limit:
@@ -246,8 +258,13 @@ def _compact_wealth_code(code: Dict[str, Any]) -> Dict[str, Any]:
                 "plain_summary": _safe_str(chain.get("plain_summary")),
                 "met": bool(chain.get("met")),
                 "score": round(max(0.0, min(1.0, _safe_float(chain.get("score"), 0.0))), 3),
+                "activation_score": round(max(0.0, min(1.0, _safe_float(chain.get("activation_score"), 0.0))), 3),
+                "closure_state": _safe_str(chain.get("closure_state")),
+                "state_reason": _safe_str(chain.get("state_reason")),
                 "risk": round(max(0.0, min(1.0, _safe_float(chain.get("risk"), 0.0))), 3),
                 "completeness": round(max(0.0, min(1.0, _safe_float(chain.get("completeness"), 0.0))), 3),
+                "risk_modes": _compact_profile_list(chain.get("risk_modes"), limit=4),
+                "timing_triggers": _compact_profile_list(chain.get("timing_triggers"), limit=4),
                 "steps": [
                     {
                         "path_id": _safe_str(item.get("path_id")),

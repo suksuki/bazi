@@ -48,6 +48,70 @@ FINAL_WEALTH_CODE_KEYS: List[str] = [
 
 WEALTH_CODE_KNOWLEDGE_PATH = V17_REBIRTH_ROOT / "backend" / "logic" / "knowledge" / "wealth_code_knowledge.v1.json"
 
+MECHANISM_STATE_OPEN = "open"
+MECHANISM_STATE_PARTIAL = "partial_closed"
+MECHANISM_STATE_CLOSED = "closed"
+MECHANISM_STATE_BLOCKED = "blocked"
+MECHANISM_STATE_LEAKING = "leaking"
+MECHANISM_STATE_VOLATILE = "volatile"
+
+CLOSURE_STATE_ORDER: Dict[str, int] = {
+    MECHANISM_STATE_OPEN: 0,
+    MECHANISM_STATE_PARTIAL: 1,
+    MECHANISM_STATE_VOLATILE: 2,
+    MECHANISM_STATE_CLOSED: 3,
+    MECHANISM_STATE_LEAKING: 4,
+    MECHANISM_STATE_BLOCKED: 5,
+}
+
+CLOSURE_STATE_SCORE: Dict[str, float] = {
+    MECHANISM_STATE_CLOSED: 6.0,
+    MECHANISM_STATE_PARTIAL: 5.0,
+    MECHANISM_STATE_VOLATILE: 4.0,
+    MECHANISM_STATE_OPEN: 2.0,
+    MECHANISM_STATE_LEAKING: 1.5,
+    MECHANISM_STATE_BLOCKED: 1.0,
+}
+
+_MECHANISM_STATE_REASON_DEFAULT: Dict[str, str] = {
+    MECHANISM_STATE_CLOSED: "条件完整，路径闭合度高，可持续兑现",
+    MECHANISM_STATE_PARTIAL: "条件部分成立，适合持续承接",
+    MECHANISM_STATE_VOLATILE: "有机会但路径波动较大，需强调承接控制",
+    MECHANISM_STATE_OPEN: "条件线索刚起步，先观察再承接",
+    MECHANISM_STATE_LEAKING: "链路能成局部收益，但存在明显漏损风险",
+    MECHANISM_STATE_BLOCKED: "关键条件不足，机制暂未闭合",
+}
+
+_MECHANISM_STATE_RULES_DEFAULT: Dict[str, Dict[str, float]] = {
+    MECHANISM_STATE_CLOSED: {
+        "min_completeness": 1.0,
+        "min_activation": 0.7,
+        "max_risk": 0.52,
+    },
+    MECHANISM_STATE_PARTIAL: {
+        "min_completeness": 0.55,
+        "min_activation": 0.45,
+        "max_risk": 0.76,
+    },
+    MECHANISM_STATE_VOLATILE: {
+        "min_completeness": 0.55,
+        "min_activation": 0.42,
+        "min_risk": 0.34,
+    },
+    MECHANISM_STATE_LEAKING: {
+        "min_activation": 0.36,
+        "min_risk": 0.6,
+    },
+    MECHANISM_STATE_OPEN: {
+        "max_activation": 0.45,
+        "max_completeness": 0.54,
+    },
+    MECHANISM_STATE_BLOCKED: {
+        "max_activation": 0.36,
+        "max_completeness": 0.32,
+    },
+}
+
 STEMS = {"甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"}
 
 
@@ -123,6 +187,150 @@ def _path_size_tiers() -> List[Dict[str, Any]]:
 
 def _path_rank_limit() -> int:
     return max(3, int(_safe_float(_knowledge_section("path_rank_limit"), 6.0) or 6))
+
+
+def _chain_state_rules(chain_def: Mapping[str, Any], state: str) -> Dict[str, float]:
+    section = chain_def.get("state_rules") if isinstance(chain_def.get("state_rules"), Mapping) else {}
+    fallback = _MECHANISM_STATE_RULES_DEFAULT.get(state, {})
+    if not isinstance(section, Mapping):
+        return dict(fallback)
+    rules: Dict[str, float] = {}
+    for key, value in section.items():
+        if isinstance(value, (int, float)):
+            rules[str(key)] = float(value)
+    merged = dict(fallback)
+    merged.update(rules)
+    return merged
+
+
+def _chain_state_reason(chain_def: Mapping[str, Any], state: str) -> str:
+    reasons = chain_def.get("state_reasons")
+    if isinstance(reasons, Mapping):
+        return _clean_label(reasons.get(state)) or _MECHANISM_STATE_REASON_DEFAULT.get(state, "")
+    return _MECHANISM_STATE_REASON_DEFAULT.get(state, "")
+
+
+def _chain_risk_modes(chain_def: Mapping[str, Any], required_ids: Sequence[str]) -> List[str]:
+    row = chain_def.get("risk_modes")
+    if isinstance(row, Sequence) and not isinstance(row, (str, bytes)):
+        output: List[str] = []
+        seen: set[str] = set()
+        for value in row:
+            item = _clean_label(value)
+            if item and item not in seen:
+                seen.add(item)
+                output.append(item)
+        if output:
+            return output
+    # 回退策略：按路径映射补齐
+    out: List[str] = []
+    seen: set[str] = set()
+    fallback = {
+        "direct_wealth": ("cashflow_gap",),
+        "output_to_wealth": ("conversion_risk", "resource_block"),
+        "output_controls_pressure": ("contract_risk", "output_conflicts_authority"),
+        "wealth_officer_platform": ("platform_dependency",),
+        "wealth_seal_asset": ("knowledge_erosion",),
+        "resource_integration": ("peer_loss", "relationship_loss"),
+        "wealth_vault": ("hidden_cost",),
+        "leakage_risk": ("peer_loss", "cashflow_gap"),
+    }
+    for path_id in required_ids:
+        for mode in fallback.get(path_id, ()):  # type: ignore[union-attr]
+            item = _clean_label(mode)
+            if item and item not in seen:
+                seen.add(item)
+                out.append(item)
+    return out
+
+
+def _chain_timing_triggers(
+    chain_def: Mapping[str, Any],
+    path_scores: Mapping[str, float],
+) -> List[str]:
+    raw = chain_def.get("timing_triggers")
+    if isinstance(raw, list):
+        rows: List[str] = []
+        seen: set[str] = set()
+        for item in raw:
+            label = _clean_label(item)
+            if not label or label in seen:
+                continue
+            seen.add(label)
+            rows.append(label)
+        if rows:
+            return rows
+
+    fallback = {
+        "output_controls_pressure": "压力场景下先承接难题，再通过交付转化收入",
+        "output_to_wealth": "输出能力增强或客户需求清晰时出现变现机会",
+        "wealth_officer_platform": "平台/职位/合同规则窗口打开时增强",
+        "wealth_seal_asset": "证书、方法论、知识信用增强时更容易开仓",
+        "resource_integration": "合伙、团队或资源撮合窗口增强时出现共同财务机会",
+        "wealth_vault": "库存/回款/资产相关结构触发时形成沉淀通道",
+    }
+    required_rows: List[str] = []
+    seen: set[str] = set()
+    for path_id, score in path_scores.items():
+        if score <= 0.0:
+            continue
+        row = _clean_label(fallback.get(path_id))
+        if not row or row in seen:
+            continue
+        seen.add(row)
+        required_rows.append(row)
+    return required_rows
+
+
+def _evaluate_chain_state(
+    *,
+    matched: float,
+    required_count: int,
+    average_path_score: float,
+    max_path_risk: float,
+    chain_def: Mapping[str, Any],
+    min_steps: int,
+) -> tuple[str, float, str]:
+    completeness = matched / max(1, required_count)
+    activation_score = _clamp(
+        0.28 * completeness
+        + 0.56 * average_path_score
+        + 0.18 * min(
+            1.0,
+            (
+                _safe_float(chain_def.get("default_weight"), 0.8)
+                + _safe_float(chain_def.get("boost"), 0.0)
+            ),
+        )
+    )
+    is_met = matched >= max(1, min_steps)
+    for state in (MECHANISM_STATE_CLOSED, MECHANISM_STATE_VOLATILE, MECHANISM_STATE_PARTIAL, MECHANISM_STATE_LEAKING, MECHANISM_STATE_OPEN, MECHANISM_STATE_BLOCKED):
+        rules = _chain_state_rules(chain_def=chain_def, state=state)
+        min_completeness = _safe_float(rules.get("min_completeness"), 0.0)
+        max_completeness = _safe_float(rules.get("max_completeness"), 1.0)
+        min_activation = _safe_float(rules.get("min_activation"), 0.0)
+        max_activation = _safe_float(rules.get("max_activation"), 1.0)
+        min_risk = _safe_float(rules.get("min_risk"), -1.0)
+        max_risk = _safe_float(rules.get("max_risk"), 1.0)
+
+        if min_completeness > 0.0 and completeness < min_completeness:
+            continue
+        if max_completeness < 1.0 and completeness > max_completeness:
+            continue
+        if activation_score < min_activation or activation_score > max_activation:
+            continue
+        if max_risk < 1.0 and max_path_risk > max_risk:
+            continue
+        if min_risk > -1.0 and max_path_risk < min_risk:
+            continue
+        if state == MECHANISM_STATE_CLOSED and not is_met:
+            continue
+        if state == MECHANISM_STATE_PARTIAL and activation_score < _safe_float(rules.get("min_activation"), 0.35):
+            continue
+        return state, activation_score, _chain_state_reason(chain_def=chain_def, state=state)
+    if is_met:
+        return MECHANISM_STATE_OPEN, activation_score, _chain_state_reason(chain_def=chain_def, state=MECHANISM_STATE_OPEN)
+    return MECHANISM_STATE_BLOCKED, activation_score, _chain_state_reason(chain_def=chain_def, state=MECHANISM_STATE_BLOCKED)
 
 
 def _path_priority(path_id: str) -> int:
@@ -1026,6 +1234,25 @@ def _build_mechanism_chain(
             }
         )
     completeness = matched / max(1, len(required_ids))
+    required_count = max(1, len(required_ids))
+    average_path_score = sum(present_scores) / required_count
+    max_path_risk = max(path_risks) if path_risks else 0.0
+    closure_state, activation_score, state_reason = _evaluate_chain_state(
+        matched=matched,
+        required_count=required_count,
+        average_path_score=average_path_score,
+        max_path_risk=max_path_risk,
+        chain_def=chain_def,
+        min_steps=min_steps,
+    )
+    risk_modes = _chain_risk_modes(chain_def=chain_def, required_ids=required_ids)
+    timing_triggers = _chain_timing_triggers(
+        chain_def=chain_def,
+        path_scores={row_id: _safe_float((available_paths.get(row_id) or {}).get("score")) for row_id in required_ids if row_id},
+    )
+    if matched > 0 and not timing_triggers:
+        timing_triggers = _clean_str_list(chain_def.get("forbidden_terms"), limit=4)
+
     if matched < min_steps:
         # 不足够路径位点时允许保留观察链，但不应作为主链
         base_weight = _safe_float(chain_def.get("default_weight"), 0.0)
@@ -1043,7 +1270,12 @@ def _build_mechanism_chain(
                 3,
             ),
             "risk": round(_clamp(max(path_risks) if path_risks else 0.34), 3),
+            "activation_score": round(activation_score, 3),
+            "closure_state": closure_state,
+            "state_reason": state_reason,
+            "risk_modes": risk_modes,
             "completeness": round(completeness, 3),
+            "timing_triggers": timing_triggers,
             "met": False,
             "boost": round(_safe_float(chain_def.get("boost"), 0.0), 3),
             "forbidden_terms": _clean_str_list(chain_def.get("forbidden_terms"), limit=8),
@@ -1051,7 +1283,7 @@ def _build_mechanism_chain(
         }
 
     chain_weight = _safe_float(chain_def.get("default_weight"), 0.8)
-    score_baseline = sum(present_scores) / max(1, len(required_ids))
+    score_baseline = average_path_score
     chain_score = _clamp(score_baseline * 0.72 + chain_weight * 0.18 + completeness * 0.1 + _safe_float(chain_def.get("boost"), 0.0))
     chain_confidence = _clamp(score_baseline + 0.18, 0.2, 0.95)
     return {
@@ -1064,7 +1296,12 @@ def _build_mechanism_chain(
         "score": round(chain_score, 3),
         "confidence": round(chain_confidence, 3),
         "risk": round(_clamp(max(path_risks) if path_risks else 0.0), 3),
+        "activation_score": round(activation_score, 3),
+        "closure_state": closure_state,
+        "state_reason": state_reason,
         "completeness": round(completeness, 3),
+        "risk_modes": risk_modes,
+        "timing_triggers": timing_triggers,
         "met": True,
         "boost": round(_safe_float(chain_def.get("boost"), 0.0), 3),
         "forbidden_terms": _clean_str_list(chain_def.get("forbidden_terms"), limit=8),
@@ -1092,10 +1329,12 @@ def _infer_mechanism_chains(
     if not chains:
         return []
 
-    def _chain_rank(row: Mapping[str, Any]) -> tuple[float, float]:
+    def _chain_rank(row: Mapping[str, Any]) -> tuple[float, float, float]:
         met = 1.0 if bool(row.get("met")) else 0.0
         return (
             met,
+            CLOSURE_STATE_SCORE.get(_clean_label(row.get("closure_state")), 0.0),
+            _safe_float(row.get("activation_score"), 0.0),
             _safe_float(row.get("score"), 0.0),
         )
 
@@ -1384,6 +1623,18 @@ def _timeline_rows(meta: Mapping[str, Any]) -> tuple[List[Dict[str, Any]], List[
                 "score": round(_safe_float(row.get("score"), 0.0), 3),
                 "risk": round(_safe_float(row.get("risk"), 0.0), 3),
                 "triggered_components": _clean_str_list(row.get("tags"), limit=5),
+                "activated_chains": [
+                    {
+                        "chain_id": _clean_label(item.get("chain_id")),
+                        "plain_name": _clean_label(item.get("plain_name")),
+                        "closure_state": _clean_label(item.get("closure_state")),
+                        "activation_score": round(_safe_float(item.get("activation_score"), 0.0), 3),
+                        "reason": _clean_label(item.get("reason")),
+                        "risk_modes": _clean_str_list(item.get("risk_modes"), limit=5),
+                    }
+                    for item in (row.get("activated_chains") if isinstance(row.get("activated_chains"), list) else [])
+                    if isinstance(item, Mapping)
+                ],
             }
         )
     return trends[:2], watchlist[:5]
@@ -1593,6 +1844,9 @@ def resolve_wealth_code(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
                 "plain_name": _clean_label(top_chain.get("plain_name")),
                 "chain_name": _clean_label(top_chain.get("chain_name")),
                 "plain_summary": _clean_label(top_chain.get("plain_summary")),
+                "closure_state": _clean_label(top_chain.get("closure_state")),
+                "activation_score": round(_safe_float(top_chain.get("activation_score"), 0.0), 3),
+                "state_reason": _clean_label(top_chain.get("state_reason")),
                 "steps": top_chain.get("steps", []),
             }
             primary["plain_summary"] = _clean_label(top_chain.get("plain_summary"), limit=260)

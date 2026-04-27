@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from typing import Any, Dict, List, Mapping, Sequence, Tuple
+from typing import Any, Dict, Iterable, List, Mapping, Sequence, Tuple
 
 from v17_rebirth.backend.logic.L0_physics_fields.ten_gods_engine import BRANCH_HIDDEN, ten_god_from_stems
 from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import (
@@ -40,6 +40,44 @@ _GOD_PUBLIC_HINTS: Dict[str, str] = {
     "偏印": "专业方法",
     "比肩": "同辈合作",
     "劫财": "竞争分利",
+}
+
+_WEALTH_CHAIN_TEMPLATES: Dict[str, Dict[str, Any]] = {
+    "output_work_to_money": {
+        "plain_name": "用专业输出解决难题并变现",
+        "required_god_groups": {
+            "output": _OUTPUT_GODS,
+            "wealth": _WEALTH_GODS,
+            "authority": _AUTHORITY_GODS,
+        },
+        "risk_modes": ["contract_risk", "output_conflicts_authority", "peer_loss", "cashflow_gap"],
+    },
+    "single_output_to_wealth": {
+        "plain_name": "先把技能转交付，再兑现现金流",
+        "required_god_groups": {
+            "output": _OUTPUT_GODS,
+            "wealth": _WEALTH_GODS,
+        },
+        "risk_modes": ["resource_block", "cashflow_gap", "peer_loss"],
+    },
+    "single_officer_platform": {
+        "plain_name": "平台承接并稳定兑现",
+        "required_god_groups": {
+            "authority": _AUTHORITY_GODS,
+            "wealth": _WEALTH_GODS,
+        },
+        "risk_modes": ["platform_dependency", "contract_risk", "relationship_loss"],
+    },
+}
+
+
+_CHAIN_STATE_SCORE_ORDER: Dict[str, int] = {
+    "closed": 3,
+    "partial_closed": 2,
+    "volatile": 1,
+    "open": 0,
+    "leaking": -1,
+    "blocked": -2,
 }
 
 
@@ -318,6 +356,70 @@ def _attention_level(score: float, risk: float, salience: float) -> str:
     return "steady"
 
 
+def _chain_state_from_signals(*, completeness: float, activation: float, risk: float) -> str:
+    if completeness >= 0.98 and activation >= 0.7 and risk <= 0.58:
+        return "closed"
+    if completeness >= 0.66 and activation >= 0.5:
+        return "partial_closed"
+    if risk >= 0.6 and activation >= 0.38:
+        return "leaking"
+    if completeness >= 0.52 and activation >= 0.4 and risk >= 0.34:
+        return "volatile"
+    if activation >= 0.34:
+        return "open"
+    return "blocked"
+
+
+def _activated_chains_for_year(
+    *,
+    active_gods: Sequence[str],
+    year_score: float,
+    year_risk: float,
+) -> List[Dict[str, Any]]:
+    god_set = set(active_gods)
+    rows: List[Dict[str, Any]] = []
+    for chain_id, chain in _WEALTH_CHAIN_TEMPLATES.items():
+        required = chain.get("required_god_groups")
+        if not isinstance(required, Mapping):
+            continue
+        matched = 0
+        requirements = []
+        for label, group in required.items():
+            if not isinstance(group, Iterable):
+                continue
+            if set(group) & god_set:
+                matched += 1
+                requirements.append(label)
+        req_count = len(required)
+        completeness = matched / req_count if req_count else 0.0
+        if completeness < 0.34:
+            continue
+        activation = _clamp(0.18 + year_score * 0.5 + completeness * 0.45 - year_risk * 0.08)
+        chain_risk = _clamp(year_risk + (0.06 if "合作" in requirements else 0.0) + (0.03 if "authority" in requirements else 0.0))
+        closure_state = _chain_state_from_signals(completeness=completeness, activation=activation, risk=chain_risk)
+        reason = "与{}相关联，适合{}{}".format(
+            "/".join(requirements) if requirements else "关键结构",
+            "观察" if closure_state in {"open", "blocked"} else "承接",
+            "，建议先补齐交付和回款" if closure_state != "closed" else "",
+        )
+        rows.append(
+            {
+                "chain_id": chain_id,
+                "plain_name": _clean_label(chain.get("plain_name")),
+                "activation_score": activation,
+                "closure_state": closure_state,
+                "reason": reason,
+                "risk_modes": _clean_str_list(chain.get("risk_modes"), limit=5),
+                "requirements": requirements,
+            }
+        )
+    return sorted(
+        rows,
+        key=lambda row: (_CHAIN_STATE_SCORE_ORDER.get(_clean_label(row.get("closure_state")), 0), _safe_float(row.get("activation_score"), 0.0)),
+        reverse=True,
+    )
+
+
 def _focus_label(attention_type: str, tags: Sequence[str]) -> str:
     if attention_type == "opportunity_with_risk":
         return "有机会，也要控风险"
@@ -377,6 +479,16 @@ def _year_row(
         "year": int(year),
         "flow_pillar": _clean_label(flow_pillar) or "—",
         "luck_pillar": _clean_label(luck_pillar) or "—",
+        "activated_chains": _activated_chains_for_year(
+            active_gods=[
+                _clean_label(luck_stem_god),
+                _clean_label(luck_branch_god),
+                _clean_label(flow_stem_god),
+                _clean_label(flow_branch_god),
+            ],
+            year_score=score,
+            year_risk=risk,
+        ),
         "money_signals": [
             label
             for label in (

@@ -1177,6 +1177,54 @@
       },
       "boost": 0.07,
       "default_weight": 0.9,
+      "state_rules": {
+        "closed": {
+          "min_completeness": 1.0,
+          "min_activation": 0.76,
+          "max_risk": 0.52
+        },
+        "partial_closed": {
+          "min_completeness": 0.55,
+          "min_activation": 0.56,
+          "max_risk": 0.78
+        },
+        "volatile": {
+          "min_completeness": 0.55,
+          "min_activation": 0.42,
+          "min_risk": 0.32
+        },
+        "open": {
+          "max_activation": 0.76,
+          "max_completeness": 0.75
+        },
+        "leaking": {
+          "min_activation": 0.36,
+          "min_risk": 0.54
+        },
+        "blocked": {
+          "max_activation": 0.35,
+          "max_completeness": 0.34
+        }
+      },
+      "state_reasons": {
+        "closed": "难题承接与输出转化形成完整闭环，可见较稳定的项目现金流路径",
+        "partial_closed": "关键节点已有，但仍缺合同细节与回款纪律，需持续跟进",
+        "volatile": "输出与机会并存波动，若放大不当会放大压力与现金流不稳",
+        "open": "机制刚起步，先观察机会起伏并建立承接边界",
+        "leaking": "能见收益来源，但分账/合作与现金流边界风险明显",
+        "blocked": "尚未形成可执行的难题承接与变现闭环"
+      },
+      "risk_modes": [
+        "contract_risk",
+        "output_conflicts_authority",
+        "peer_loss",
+        "cashflow_gap"
+      ],
+      "timing_triggers": [
+        "大运/流年见食伤与财星同时增强时",
+        "官杀压力被项目化承接而非被动消耗时",
+        "有岗位/合同或规则窗口时"
+      ],
       "forbidden_terms": [
         "单靠职位",
         "靠单一客户报酬",
@@ -1197,7 +1245,57 @@
         "output_to_wealth": "把输出能力转成可复用交付内容或服务。"
       },
       "boost": 0.03,
-      "default_weight": 0.88
+      "default_weight": 0.88,
+      "state_rules": {
+        "closed": {
+          "min_completeness": 1.0,
+          "min_activation": 0.68,
+          "max_risk": 0.52
+        },
+        "partial_closed": {
+          "min_completeness": 0.55,
+          "min_activation": 0.5,
+          "max_risk": 0.78
+        },
+        "volatile": {
+          "min_completeness": 0.55,
+          "min_activation": 0.4,
+          "min_risk": 0.28
+        },
+        "open": {
+          "max_activation": 0.68,
+          "max_completeness": 0.75
+        },
+        "leaking": {
+          "min_activation": 0.34,
+          "min_risk": 0.52
+        },
+        "blocked": {
+          "max_activation": 0.35,
+          "max_completeness": 0.34
+        }
+      },
+      "state_reasons": {
+        "closed": "输出能力已形成可复用交付，变现机制可持续执行",
+        "partial_closed": "具备基础变现能力，仍需打磨交付和定价体系",
+        "volatile": "机会窗口在起伏，产出与回款节奏更易错位",
+        "open": "输出有向现金流转化迹象，但未形成稳定承接结构",
+        "leaking": "收入可见，但定价、回款和分账控制不足",
+        "blocked": "当前难以形成清晰的输出交付变现链"
+      },
+      "risk_modes": [
+        "resource_block",
+        "cashflow_gap",
+        "peer_loss"
+      ],
+      "timing_triggers": [
+        "输出型任务增加、服务需求明显上升时",
+        "内容/产品定价与复购闭环开始跑通时"
+      ],
+      "forbidden_terms": [
+        "天降财富",
+        "随机发财"
+      ]
     },
     "single_officer_platform": {
       "chain_name": "平台承接链",
@@ -1212,7 +1310,53 @@
         "wealth_officer_platform": "用平台授权、职位职责和合同规则承接机会。"
       },
       "boost": 0.02,
-      "default_weight": 0.84
+      "default_weight": 0.84,
+      "state_rules": {
+        "closed": {
+          "min_completeness": 1.0,
+          "min_activation": 0.64,
+          "max_risk": 0.54
+        },
+        "partial_closed": {
+          "min_completeness": 0.55,
+          "min_activation": 0.48,
+          "max_risk": 0.78
+        },
+        "volatile": {
+          "min_completeness": 0.55,
+          "min_activation": 0.38,
+          "min_risk": 0.3
+        },
+        "open": {
+          "max_activation": 0.65,
+          "max_completeness": 0.75
+        },
+        "leaking": {
+          "min_activation": 0.34,
+          "min_risk": 0.55
+        },
+        "blocked": {
+          "max_activation": 0.32,
+          "max_completeness": 0.34
+        }
+      },
+      "state_reasons": {
+        "closed": "平台/职位通道持续提供稳定承接与合规边界",
+        "partial_closed": "平台窗口存在，但依赖度高，需同步合同、职责与现金流",
+        "volatile": "平台与压力并行，机会会随制度变化波动",
+        "open": "平台能力初见，但边界与授权仍需确认",
+        "leaking": "有平台机会但合规与合作边界可导致回款不稳",
+        "blocked": "当前未形成可利用的平台承接结构"
+      },
+      "risk_modes": [
+        "platform_dependency",
+        "contract_risk",
+        "relationship_loss"
+      ],
+      "timing_triggers": [
+        "职位/岗位/平台调整窗口开启时",
+        "规则体系变更或新合同窗口出现时"
+      ]
     }
   },
   "source_rewrites": {

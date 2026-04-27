@@ -105,6 +105,27 @@ function localizedAttentionType(value: unknown, ui: LocalizeText): string {
   return ui("关注", "Watch", "관찰");
 }
 
+function localizedClosureState(value: unknown, ui: LocalizeText): string {
+  const key = String(value || "").trim();
+  if (key === "closed") return ui("路径闭合", "Path closed", "경로 완결");
+  if (key === "partial_closed") return ui("部分闭合", "Partly closed", "부분 완결");
+  if (key === "volatile") return ui("波动", "Volatile", "변동");
+  if (key === "open") return ui("未闭合", "Open", "열림");
+  if (key === "leaking") return ui("有漏损", "Leaking", "누수");
+  if (key === "blocked") return ui("被阻断", "Blocked", "차단");
+  return ui("待观察", "Pending", "관찰");
+}
+
+function closureStateToneClass(value: unknown): string {
+  const key = String(value || "").trim();
+  if (key === "closed") return "border-emerald-300/35 bg-emerald-400/12 text-emerald-100";
+  if (key === "partial_closed") return "border-cyan-300/30 bg-cyan-400/12 text-cyan-100";
+  if (key === "volatile") return "border-amber-300/30 bg-amber-400/10 text-amber-100";
+  if (key === "open") return "border-sky-300/25 bg-sky-400/10 text-sky-100";
+  if (key === "leaking") return "border-rose-300/30 bg-rose-400/12 text-rose-100";
+  return "border-white/15 bg-white/10 text-zinc-100";
+}
+
 function attentionToneClass(level: unknown): string {
   const key = String(level || "").trim();
   if (key === "high") return "border-amber-300/35 bg-amber-400/10 text-amber-50";
@@ -209,6 +230,7 @@ export function V17_WealthAssertionPreviewPanel({
   const leakagePoints = asRecordList(wealthCode.leakage_points).slice(0, 3);
   const yearWatchlist = asRecordList(wealthCode.flow_year_watchlist).slice(0, 3);
   const mechanismChains = asRecordList(wealthCode.mechanism_chains).slice(0, 2);
+  const primaryMechanismChain = mechanismChains[0] || {};
   const pathRankings = asRecordList(wealthCode.path_rankings).slice(0, 5);
   const graphNodes = asRecordList(evidenceGraph.nodes);
   const graphEdges = asRecordList(evidenceGraph.edges);
@@ -571,13 +593,36 @@ export function V17_WealthAssertionPreviewPanel({
                 <div className="rounded-lg border border-emerald-300/20 bg-black/20 p-3">
                   <p className="text-[11px] text-zinc-500">{ui("核心机制链", "Core mechanism chain", "핵심 메커니즘 체인")}</p>
                   <p className="mt-1 text-sm font-semibold leading-6 text-zinc-100">
-                    {term(String(mechanismChains[0].plain_name || mechanismChains[0].chain_name || ui("待生成机制链", "Awaiting mechanism chain", "메커니즘 준비 중")))}
+                    {term(String(primaryMechanismChain.plain_name || primaryMechanismChain.chain_name || ui("待生成机制链", "Awaiting mechanism chain", "메커니즘 준비 중")))}
                   </p>
                   <p className="mt-1 text-[11px] leading-5 text-zinc-300">
-                    {term(String(mechanismChains[0].plain_summary || ""))}
+                    {term(String(primaryMechanismChain.plain_summary || ""))}
                   </p>
+                  <div className="mt-2 flex flex-wrap gap-1.5">
+                    <span className={`rounded-full border px-2 py-1 text-[10px] ${closureStateToneClass(primaryMechanismChain.closure_state)}`}>
+                      {localizedClosureState(primaryMechanismChain.closure_state, ui)} · {percentLabel(primaryMechanismChain.activation_score || primaryMechanismChain.score)}
+                    </span>
+                    <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-200">
+                      {ui("完整度", "Completeness", "완성도")} {percentLabel(primaryMechanismChain.completeness || 0)}
+                    </span>
+                    <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-200">
+                      {ui("风险位点", "Risk tags", "위험표지")} {asStringList(primaryMechanismChain.risk_modes).length}
+                    </span>
+                  </div>
+                  {asStringList(primaryMechanismChain.timing_triggers).length ? (
+                    <div className="mt-2 border-t border-white/10 pt-2">
+                      <p className="text-[11px] text-zinc-500">{ui("激活时机", "Timing triggers", "활성화 시점")}</p>
+                      <div className="mt-1 flex flex-wrap gap-1.5">
+                        {asStringList(primaryMechanismChain.timing_triggers).slice(0, 3).map((item) => (
+                          <span key={`mechanism-timing-${item}`} className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-300">
+                            {term(item)}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
                   <div className="mt-2 space-y-1">
-                    {asRecordList(mechanismChains[0].steps).map((step, idx) => (
+                    {asRecordList(primaryMechanismChain.steps).map((step, idx) => (
                       <p key={`mechanism_step_${String(idx)}_${String(step.path_id || "")}`} className="text-[11px] leading-5 text-zinc-400">
                         {ui(
                           `${idx + 1}. `,
@@ -590,13 +635,13 @@ export function V17_WealthAssertionPreviewPanel({
                       </p>
                     ))}
                   </div>
-                  {asStringList(mechanismChains[0].forbidden_terms).length ? (
+                  {asStringList(primaryMechanismChain.forbidden_terms).length ? (
                     <div className="mt-2 border-t border-white/10 pt-2">
                       <p className="text-[11px] text-zinc-500">
                         {ui("防偏差提醒", "Avoid bias", "편향 경고")}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1.5">
-                        {asStringList(mechanismChains[0].forbidden_terms).slice(0, 3).map((item) => (
+                        {asStringList(primaryMechanismChain.forbidden_terms).slice(0, 3).map((item) => (
                           <span
                             key={`mechanism-forbid-${item}`}
                             className="rounded-full border border-rose-300/25 bg-rose-500/10 px-2 py-1 text-[10px] text-rose-100"
@@ -828,19 +873,20 @@ export function V17_WealthAssertionPreviewPanel({
                 </div>
               </div>
 
-              {topAttentionYears.length ? (
-                <div>
+                  {topAttentionYears.length ? (
+                    <div>
                   <div className="flex items-center gap-2">
                     <TrendingUp className="h-4 w-4 text-amber-200" />
                     <p className="text-[12px] font-semibold text-amber-50">
                       {ui("未来十年重点年份", "Key years in this decade", "10년 주요 연도")}
                     </p>
                   </div>
-                  <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                    {topAttentionYears.map((row) => {
-                      const key = `wealth_timeline_${String(row.year || "")}_${String(row.flow_pillar || "")}`;
-                      return (
-                        <div key={key} className={`min-w-0 rounded-lg border p-3 ${attentionToneClass(row.attention_level)}`}>
+                      <div className="mt-2 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                        {topAttentionYears.map((row) => {
+                          const key = `wealth_timeline_${String(row.year || "")}_${String(row.flow_pillar || "")}`;
+                          const activated = asRecordList(row.activated_chains);
+                          return (
+                            <div key={key} className={`min-w-0 rounded-lg border p-3 ${attentionToneClass(row.attention_level)}`}>
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <p className="text-sm font-semibold">
@@ -859,6 +905,24 @@ export function V17_WealthAssertionPreviewPanel({
                               </span>
                             ))}
                           </div>
+                          {activated.length ? (
+                            <div className="mt-2 border-t border-white/15 pt-2">
+                              <p className="text-[11px] text-zinc-500">{ui("激活机制链", "Activated chains", "활성화 메커니즘")}</p>
+                              <div className="mt-1 space-y-1">
+                                {activated.slice(0, 2).map((activatedChain) => (
+                                  <p key={`${key}_${String(activatedChain.chain_id || "")}`} className="text-[11px] leading-5 text-zinc-300">
+                                    <span className="font-medium text-zinc-100">{term(String(activatedChain.plain_name || activatedChain.chain_id || ""))}</span>
+                                    <span className="ml-2">
+                                      <span className={`rounded-full border px-1.5 py-0.5 text-[9px] ${closureStateToneClass(activatedChain.closure_state)}`}>
+                                        {localizedClosureState(activatedChain.closure_state, ui)}
+                                      </span>
+                                      <span className="ml-2 text-zinc-400">{percentLabel(activatedChain.activation_score || 0)}</span>
+                                    </span>
+                                  </p>
+                                ))}
+                              </div>
+                            </div>
+                          ) : null}
                           {asStringList(row.reasons).slice(0, 1).map((item) => (
                             <p key={`${key}_${item}`} className="mt-2 line-clamp-2 text-[11px] leading-5 opacity-80">
                               {term(item)}
