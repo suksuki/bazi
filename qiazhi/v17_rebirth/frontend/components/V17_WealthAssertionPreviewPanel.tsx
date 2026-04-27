@@ -326,7 +326,7 @@ export function V17_WealthAssertionPreviewPanel({
   };
   const topAttentionYears = topAttentionYearsSource.filter(matchesTimelineState).slice(0, 4);
   const decadeYears = decadeYearsSource.filter(matchesTimelineState);
-  const timelineStateCounts = timelineFilterRows.reduce(
+  const timelineStateCounts = timelineFilterRows.reduce<Record<string, number>>(
     (accumulator, row) => {
       const rowStateSet = new Set<string>();
       const topState = inferTopMechanismState(row);
@@ -344,7 +344,7 @@ export function V17_WealthAssertionPreviewPanel({
       }
       return accumulator;
     },
-    {} as Record<string, number>,
+    {},
   );
   const timelineFilteredCount = filterTimelineState === "all"
     ? timelineFilterRows.length
