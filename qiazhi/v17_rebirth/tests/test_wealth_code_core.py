@@ -183,6 +183,23 @@ def test_resolve_wealth_code_builds_path_rankings() -> None:
     assert len(rankings) <= 6
 
 
+def test_resolve_wealth_code_includes_mechanism_graph_metadata() -> None:
+    pt = _pressure_tensor()
+    pt["meta"]["bazi_image"] = resolve_bazi_image(pt)["bazi_image"]
+    pt["meta"]["wealth_profile"] = resolve_wealth_profile(pt)["wealth_profile"]
+
+    code = resolve_wealth_code(pt)["wealth_code"]
+
+    assert code["primary_wealth_path"].get("path_graph")
+    assert 0.0 <= code["primary_wealth_path"].get("path_graph_score", 0.0) <= 1.0
+    assert "path_graph_score" in code["primary_wealth_path"]
+    assert all(
+        "path_graph_score" in step
+        for row in code["mechanism_chains"]
+        for step in row.get("steps", [])
+    )
+
+
 def test_resolve_wealth_code_models_vault_and_leakage_points() -> None:
     pt = _pressure_tensor()
     pt["four_pillars"] = {

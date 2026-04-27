@@ -943,6 +943,130 @@
       ]
     }
   },
+  "mechanism_graphs": {
+    "direct_wealth": {
+      "nodes": [
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 1.0, "required_energy": 0.08, "min_stability": 0.28}
+      ],
+      "edges": [["wealth", "wealth"]],
+      "path_weight": 0.75,
+      "connectivity_base": 0.8,
+      "blockers": [
+        {
+          "type": "peer",
+          "groups": ["peer_gods"],
+          "weight": 0.06,
+          "threshold": 0.24
+        }
+      ]
+    },
+    "output_to_wealth": {
+      "nodes": [
+        {"id": "output", "god_group": "output_gods", "role_weight": 1.05, "required_energy": 0.12, "min_stability": 0.34},
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 1.0, "required_energy": 0.1, "min_stability": 0.28}
+      ],
+      "edges": [["output", "wealth"]],
+      "path_weight": 1.0,
+      "connectivity_base": 0.88,
+      "blockers": [
+        {
+          "type": "group",
+          "groups": ["peer_gods"],
+          "weight": 0.1,
+          "threshold": 0.32
+        }
+      ]
+    },
+    "output_controls_pressure": {
+      "nodes": [
+        {"id": "output", "god_group": "output_gods", "role_weight": 1.0, "required_energy": 0.12, "min_stability": 0.32},
+        {"id": "authority", "god_group": "authority_gods", "role_weight": 0.95, "required_energy": 0.14, "min_stability": 0.3},
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.86, "required_energy": 0.08, "min_stability": 0.25}
+      ],
+      "edges": [["output", "authority"], ["authority", "wealth"]],
+      "path_weight": 0.98,
+      "connectivity_base": 0.84,
+      "blockers": [
+        {
+          "type": "keyword",
+          "keywords": ["财破印", "财印相战"],
+          "weight": 0.12,
+          "threshold": 0.02
+        }
+      ]
+    },
+    "wealth_officer_platform": {
+      "nodes": [
+        {"id": "authority", "god_group": "authority_gods", "role_weight": 1.0, "required_energy": 0.12, "min_stability": 0.3},
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.94, "required_energy": 0.08, "min_stability": 0.24}
+      ],
+      "edges": [["authority", "wealth"]],
+      "path_weight": 0.9,
+      "connectivity_base": 0.86,
+      "blockers": [
+        {
+          "type": "group",
+          "groups": ["peer_gods"],
+          "weight": 0.08,
+          "threshold": 0.3
+        }
+      ]
+    },
+    "wealth_seal_asset": {
+      "nodes": [
+        {"id": "seal", "god_group": "seal_gods", "role_weight": 1.0, "required_energy": 0.12, "min_stability": 0.28},
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.94, "required_energy": 0.08, "min_stability": 0.24}
+      ],
+      "edges": [["seal", "wealth"]],
+      "path_weight": 0.86,
+      "connectivity_base": 0.82,
+      "blockers": [
+        {
+          "type": "keyword",
+          "keywords": ["财破印"],
+          "weight": 0.09,
+          "threshold": 0.02
+        }
+      ]
+    },
+    "resource_integration": {
+      "nodes": [
+        {"id": "peer", "god_group": "peer_gods", "role_weight": 0.95, "required_energy": 0.12, "min_stability": 0.28},
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.92, "required_energy": 0.08, "min_stability": 0.22}
+      ],
+      "edges": [["peer", "wealth"]],
+      "path_weight": 0.8,
+      "connectivity_base": 0.8,
+      "blockers": [
+        {
+          "type": "group",
+          "groups": ["peer_gods"],
+          "weight": 0.14,
+          "threshold": 0.5
+        }
+      ]
+    },
+    "wealth_vault": {
+      "nodes": [
+        {"id": "vault", "feature": "has_vault_signal", "role_weight": 1.0, "required_energy": 0.58, "min_stability": 0.2},
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.74, "required_energy": 0.06, "min_stability": 0.18}
+      ],
+      "edges": [["vault", "wealth"]],
+      "path_weight": 0.74,
+      "connectivity_base": 0.74,
+      "node_connectivity_boost": 0.06,
+      "blockers": []
+    },
+    "leakage_risk": {
+      "nodes": [
+        {"id": "peer", "god_group": "peer_gods", "role_weight": 1.0, "required_energy": 0.16, "min_stability": 0.2}
+      ],
+      "edges": [["peer", "peer"]],
+      "path_weight": 0.56,
+      "connectivity_base": 0.72,
+      "blockers": []
+    }
+  },
   "symbolic_path_boosters": {
     "direct_wealth": [
       {

@@ -175,6 +175,109 @@ _MECHANISM_CHAINS: Dict[str, Dict[str, Any]] = {
     if isinstance(template, Mapping)
 }
 
+_MECHANISM_GRAPH_SOURCE = _knowledge_section("mechanism_graphs")
+_MECHANISM_GRAPH_TEMPLATES: Dict[str, Dict[str, Any]] = {
+    str(path_id): dict(template)
+    for path_id, template in _MECHANISM_GRAPH_SOURCE.items()
+    if isinstance(template, Mapping)
+} if isinstance(_MECHANISM_GRAPH_SOURCE, Mapping) else {}
+
+_PATH_GRAPH_DEFAULTS: Dict[str, Any] = {
+    "nodes": [
+        {"id": "wealth", "god_group": "wealth_gods", "role_weight": 1.0, "required_energy": 0.08, "min_stability": 0.28},
+    ],
+    "edges": [
+        ["wealth", "wealth"]
+    ],
+    "path_weight": 0.75,
+    "connectivity_base": 0.82,
+    "blockers": [],
+    "node_connectivity_boost": 0.08,
+}
+
+_PATH_GRAPH_FALLBACK: Dict[str, Dict[str, Any]] = {
+    "direct_wealth": {
+        "nodes": [
+            {"id": "wealth", "god_group": "wealth_gods", "role_weight": 1.0, "required_energy": 0.08, "min_stability": 0.28},
+        ],
+        "edges": [["wealth", "wealth"]],
+        "path_weight": 0.75,
+        "connectivity_base": 0.8,
+        "blockers": [{"type": "peer", "groups": ["peer_gods"], "weight": 0.06, "threshold": 0.24}],
+    },
+    "output_to_wealth": {
+        "nodes": [
+            {"id": "output", "god_group": "output_gods", "role_weight": 1.05, "required_energy": 0.12, "min_stability": 0.34},
+            {"id": "wealth", "god_group": "wealth_gods", "role_weight": 1.0, "required_energy": 0.1, "min_stability": 0.28},
+        ],
+        "edges": [["output", "wealth"]],
+        "path_weight": 1.0,
+        "connectivity_base": 0.88,
+        "blockers": [{"type": "group", "groups": ["peer_gods"], "weight": 0.1, "threshold": 0.32}],
+    },
+    "output_controls_pressure": {
+        "nodes": [
+            {"id": "output", "god_group": "output_gods", "role_weight": 1.0, "required_energy": 0.12, "min_stability": 0.32},
+            {"id": "authority", "god_group": "authority_gods", "role_weight": 0.95, "required_energy": 0.14, "min_stability": 0.3},
+            {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.86, "required_energy": 0.08, "min_stability": 0.25},
+        ],
+        "edges": [["output", "authority"], ["authority", "wealth"]],
+        "path_weight": 0.98,
+        "connectivity_base": 0.84,
+        "blockers": [{"type": "keyword", "keywords": ["财破印", "财印相战"], "weight": 0.12, "threshold": 0.02}],
+    },
+    "wealth_officer_platform": {
+        "nodes": [
+            {"id": "authority", "god_group": "authority_gods", "role_weight": 1.0, "required_energy": 0.12, "min_stability": 0.3},
+            {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.94, "required_energy": 0.08, "min_stability": 0.24},
+        ],
+        "edges": [["authority", "wealth"]],
+        "path_weight": 0.9,
+        "connectivity_base": 0.86,
+        "blockers": [{"type": "group", "groups": ["peer_gods"], "weight": 0.08, "threshold": 0.3}],
+    },
+    "wealth_seal_asset": {
+        "nodes": [
+            {"id": "seal", "god_group": "seal_gods", "role_weight": 1.0, "required_energy": 0.12, "min_stability": 0.28},
+            {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.94, "required_energy": 0.08, "min_stability": 0.24},
+        ],
+        "edges": [["seal", "wealth"]],
+        "path_weight": 0.86,
+        "connectivity_base": 0.82,
+        "blockers": [{"type": "keyword", "keywords": ["财破印"], "weight": 0.09, "threshold": 0.02}],
+    },
+    "resource_integration": {
+        "nodes": [
+            {"id": "peer", "god_group": "peer_gods", "role_weight": 0.95, "required_energy": 0.12, "min_stability": 0.28},
+            {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.92, "required_energy": 0.08, "min_stability": 0.22},
+        ],
+        "edges": [["peer", "wealth"]],
+        "path_weight": 0.8,
+        "connectivity_base": 0.8,
+        "blockers": [{"type": "group", "groups": ["peer_gods"], "weight": 0.14, "threshold": 0.5}],
+    },
+    "wealth_vault": {
+        "nodes": [
+            {"id": "vault", "feature": "has_vault_signal", "role_weight": 1.0, "required_energy": 0.58, "min_stability": 0.2},
+            {"id": "wealth", "god_group": "wealth_gods", "role_weight": 0.74, "required_energy": 0.06, "min_stability": 0.18},
+        ],
+        "edges": [["vault", "wealth"]],
+        "path_weight": 0.74,
+        "connectivity_base": 0.74,
+        "blockers": [],
+        "node_connectivity_boost": 0.06,
+    },
+    "leakage_risk": {
+        "nodes": [
+            {"id": "peer", "god_group": "peer_gods", "role_weight": 1.0, "required_energy": 0.16, "min_stability": 0.2},
+        ],
+        "edges": [["peer", "peer"]],
+        "path_weight": 0.56,
+        "connectivity_base": 0.72,
+        "blockers": [],
+    },
+}
+
 
 def _path_size_tiers() -> List[Dict[str, Any]]:
     tiers = _knowledge_section("path_size_tiers")
@@ -287,15 +390,25 @@ def _evaluate_chain_state(
     matched: float,
     required_count: int,
     average_path_score: float,
+    average_graph_score: float,
+    average_graph_stability: float,
+    max_blocker_pressure: float,
     max_path_risk: float,
     chain_def: Mapping[str, Any],
     min_steps: int,
 ) -> tuple[str, float, str]:
     completeness = matched / max(1, required_count)
+    effective_risk = _clamp(max_path_risk + max_blocker_pressure * 0.4)
+    graph_boost = _clamp(
+        0.32 * _safe_float(average_graph_score)
+        + 0.12 * _safe_float(average_graph_stability)
+        + 0.10 * min(1.0, _safe_float(chain_def.get("default_weight"), 0.8) + _safe_float(chain_def.get("boost"), 0.0))
+    )
     activation_score = _clamp(
-        0.28 * completeness
-        + 0.56 * average_path_score
-        + 0.18 * min(
+        0.24 * completeness
+        + 0.52 * _safe_float(average_path_score)
+        + 0.24 * _safe_float(graph_boost)
+        + 0.10 * min(
             1.0,
             (
                 _safe_float(chain_def.get("default_weight"), 0.8)
@@ -319,9 +432,9 @@ def _evaluate_chain_state(
             continue
         if activation_score < min_activation or activation_score > max_activation:
             continue
-        if max_risk < 1.0 and max_path_risk > max_risk:
+        if max_risk < 1.0 and effective_risk > max_risk:
             continue
-        if min_risk > -1.0 and max_path_risk < min_risk:
+        if min_risk > -1.0 and effective_risk < min_risk:
             continue
         if state == MECHANISM_STATE_CLOSED and not is_met:
             continue
@@ -395,8 +508,9 @@ def _build_path_rankings(
             continue
         score = _safe_float(row.get("score"), 0.0)
         risk = _safe_float(row.get("risk"), 0.0)
+        graph_score = _safe_float(row.get("path_graph_score"), 0.0)
         support_boost = min(0.08, 0.02 * support_counts.get(path_id, 0))
-        combined = _clamp(score * (1.0 - risk * 0.18) + support_boost)
+        combined = _clamp(score * (1.0 - risk * 0.18) + graph_score * 0.16 + support_boost)
         size_label, size_signal = _path_size_label(combined, risk)
         prepared.append(
             {
@@ -468,12 +582,294 @@ def _clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
     return max(low, min(high, float(value)))
 
 
+def _knowledge_graph_template(path_id: str) -> Mapping[str, Any]:
+    return (
+        _MECHANISM_GRAPH_TEMPLATES.get(path_id)
+        or _PATH_GRAPH_FALLBACK.get(path_id)
+        or _PATH_GRAPH_DEFAULTS
+    )
+
+
+def _to_stability_value(raw: Any) -> float:
+    value = _safe_float(raw, 0.0)
+    if abs(value) > 10.0:
+        value = value / 1000.0
+    elif abs(value) > 1.0:
+        value = value / 100.0
+    return value
+
+
+def _god_stability_map(physics_tensor: Mapping[str, Any]) -> Dict[str, float]:
+    energy_meta = physics_tensor.get("energy_meta") if isinstance(physics_tensor.get("energy_meta"), Mapping) else {}
+    stability_rows: List[Mapping[str, float]] = []
+    climate = energy_meta.get("climate_modifier_layer") if isinstance(energy_meta.get("climate_modifier_layer"), Mapping) else {}
+    if isinstance(climate.get("ten_god_stability"), Mapping):
+        stability_rows.append(climate.get("ten_god_stability"))
+    if isinstance(energy_meta.get("ten_god_stability"), Mapping):
+        stability_rows.append(energy_meta.get("ten_god_stability"))
+
+    out: Dict[str, float] = {}
+    for row in stability_rows:
+        for god, value in row.items():
+            out[str(god)] = _clamp(0.5 + _to_stability_value(value))
+    return out
+
+
+def _global_stability_boost(physics_tensor: Mapping[str, Any]) -> float:
+    energy_meta = physics_tensor.get("energy_meta") if isinstance(physics_tensor.get("energy_meta"), Mapping) else {}
+    relation_rows = energy_meta.get("relation_dynamics_summary") if isinstance(energy_meta.get("relation_dynamics_summary"), list) else []
+    factor = 1.0
+    for row in relation_rows[:4]:
+        if not isinstance(row, Mapping):
+            continue
+        delta = _safe_float(row.get("stability_delta_ratio"), 0.0)
+        if delta < 0.0:
+            factor -= min(0.4, abs(delta))
+        else:
+            factor += min(0.2, delta) * 0.55
+    return _clamp(factor, 0.78, 1.22)
+
+
+def _god_visibility_bias(bazi_image: Mapping[str, Any], god: str) -> float:
+    if not god:
+        return 0.0
+    stems = bazi_image.get("stems") if isinstance(bazi_image.get("stems"), list) else []
+    branches = bazi_image.get("branches") if isinstance(bazi_image.get("branches"), list) else []
+    count = 0
+    for row in stems:
+        if isinstance(row, Mapping) and row.get("ten_god") == god:
+            count += 1
+    for row in branches:
+        if not isinstance(row, Mapping):
+            continue
+        hidden = row.get("hidden_stems") if isinstance(row.get("hidden_stems"), list) else []
+        count += sum(1 for item in hidden if isinstance(item, Mapping) and item.get("ten_god") == god)
+    return _clamp(0.02 * count, 0.0, 0.18)
+
+
+def _resolve_graph_node_gods(node_cfg: Mapping[str, Any]) -> List[str]:
+    direct_gods = node_cfg.get("ten_gods")
+    if isinstance(direct_gods, list):
+        return [str(god) for god in direct_gods if _clean_label(god)]
+    group_name = _clean_label(node_cfg.get("god_group"))
+    if group_name:
+        return list(_knowledge_gods(group_name))
+    return []
+
+
+def _path_graph_node_value(
+    node_cfg: Mapping[str, Any],
+    god_metrics: Mapping[str, Mapping[str, float]],
+    features: Mapping[str, float],
+) -> Dict[str, Any]:
+    node_id = _clean_label(node_cfg.get("id")) or "unknown_node"
+    required_energy = _safe_float(node_cfg.get("required_energy"), 0.08)
+    min_stability = _safe_float(node_cfg.get("min_stability"), 0.18)
+    role_weight = _safe_float(node_cfg.get("role_weight"), 1.0)
+    god_rows = _resolve_graph_node_gods(node_cfg)
+    if god_rows:
+        energy = sum(
+            _safe_float(god_metrics.get(god, {}).get("energy"), 0.0)
+            for god in god_rows
+        ) / max(1, len(god_rows))
+        stability = sum(
+            _safe_float(god_metrics.get(god, {}).get("stability"), 0.0)
+            for god in god_rows
+        ) / max(1, len(god_rows))
+    else:
+        feature_key = _clean_label(node_cfg.get("feature"))
+        energy = _safe_float(features.get(feature_key), 0.0) if feature_key else 0.0
+        stability = _safe_float(_PATH_GRAPH_DEFAULTS.get("stability_fallback"), 0.62)
+    energy_cap = max(required_energy, 0.03)
+    node_strength = _clamp(energy / energy_cap * max(0.28, role_weight))
+    node_stability = _clamp(stability)
+    connected = node_strength >= min_stability
+    active = connected and node_stability >= max(0.3, min_stability)
+    graph_signal = _clamp(node_strength * (0.5 + node_stability * 0.5) * role_weight)
+    return {
+        "node_id": node_id,
+        "energy": round(energy, 3),
+        "stability": round(node_stability, 3),
+        "required_energy": round(required_energy, 3),
+        "required_stability": round(min_stability, 3),
+        "role_weight": round(role_weight, 3),
+        "node_strength": round(node_strength, 3),
+        "connected": active,
+        "graph_signal": round(graph_signal, 3),
+        "gods": god_rows,
+    }
+
+
+def _path_graph_blocker_pressure(
+    template: Mapping[str, Any],
+    text: str,
+    claim_nodes: Sequence[Mapping[str, Any]],
+    god_metrics: Mapping[str, Mapping[str, float]],
+    features: Mapping[str, float],
+) -> tuple[float, List[str]]:
+    blockers = template.get("blockers")
+    if not isinstance(blockers, list):
+        return 0.0, []
+    text_lower = str(text or "").lower()
+    pressure = 0.0
+    reasons: List[str] = []
+    for blocker in blockers:
+        if not isinstance(blocker, Mapping):
+            continue
+        btype = _clean_label(blocker.get("type"))
+        weight = _safe_float(blocker.get("weight"), 0.0)
+        threshold = _safe_float(blocker.get("threshold"), 0.0)
+        if btype == "group":
+            groups = _clean_str_list(blocker.get("groups"), limit=4)
+            node_metrics = _safe_float(blocker.get("required"), 0.0)
+            group_energy = 0.0
+            for group_id in groups:
+                for god in _resolve_graph_node_gods({"god_group": group_id}):
+                    group_energy += _safe_float(god_metrics.get(god, {}).get("energy"), 0.0)
+            raw = max(0.0, group_energy - threshold)
+            if raw > 0.0 and (node_metrics or 1.0):
+                bump = weight * _clamp(raw / max(0.12, threshold), 0.0, 1.0)
+                pressure += bump
+                reasons.append(f"组内竞争或分财干扰（{group_id}）偏强")
+        elif btype == "keyword":
+            keywords = _clean_str_list(blocker.get("keywords"), limit=8)
+            if any(_clean_label(keyword) and _clean_label(keyword) in str(text_lower) for keyword in keywords):
+                pressure += weight
+                reasons.append("命理关键词显示结构性冲突")
+        elif btype == "feature":
+            feature = _clean_label(blocker.get("feature"))
+            value = _safe_float(features.get(feature), 0.0)
+            if value > threshold:
+                pressure += weight * _clamp((value - threshold) / max(0.05, threshold), 0.0, 1.0)
+                reasons.append(_clean_label(blocker.get("id") or blocker.get("name")) or "结构阻塞风险")
+        elif btype == "claim_hit":
+            hit_id = _clean_label(blocker.get("claim_id"))
+            threshold_hit = _safe_float(blocker.get("threshold"), 0.2)
+            if hit_id:
+                count = sum(1 for node in claim_nodes if _clean_label(node.get("id")) == hit_id)
+                if count >= threshold_hit:
+                    pressure += weight
+                    reasons.append(_clean_label(blocker.get("id")) or "claim 命中阻塞")
+    return _clamp(pressure, 0.0, 1.0), reasons
+
+
+def _path_graph_state(
+    *,
+    path_id: str,
+    god_metrics: Mapping[str, Mapping[str, float]],
+    claim_nodes: Sequence[Mapping[str, Any]],
+    features: Mapping[str, float],
+    text: str,
+    path_weight_scale: float = 1.0,
+) -> Dict[str, Any]:
+    template = dict(_knowledge_graph_template(path_id))
+    nodes = template.get("nodes")
+    if not isinstance(nodes, list):
+        nodes = list(_PATH_GRAPH_DEFAULTS.get("nodes", []))
+    template_nodes: List[Dict[str, Any]] = []
+    node_scores: List[float] = []
+    node_stabilities: List[float] = []
+    node_strengths: List[float] = []
+    for node_cfg in nodes:
+        if not isinstance(node_cfg, Mapping):
+            continue
+        profile = _path_graph_node_value(node_cfg, god_metrics, features)
+        template_nodes.append(profile)
+        node_scores.append(_safe_float(profile.get("graph_signal"), 0.0))
+        node_stabilities.append(_safe_float(profile.get("stability"), 0.0))
+        node_strengths.append(_safe_float(profile.get("node_strength"), 0.0))
+
+    if not template_nodes:
+        return {
+            "path_graph_score": 0.0,
+            "path_graph_stability": 0.0,
+            "path_graph_connectivity": 0.0,
+            "path_graph_blocker_pressure": 0.0,
+            "path_graph_nodes": [],
+            "path_graph_blockers": [],
+            "path_graph_active": False,
+            "path_graph_scale": 0.0,
+        }
+
+    path_weight = _safe_float(template.get("path_weight"), 1.0)
+    connectivity_base = _safe_float(template.get("connectivity_base"), 0.78)
+    node_connectivity_boost = _safe_float(template.get("node_connectivity_boost"), 0.0)
+    edge_rows = template.get("edges")
+    edges = [tuple(_clean_label(item) for item in row) for row in edge_rows] if isinstance(edge_rows, list) else []
+    edge_scores: List[float] = []
+    node_lookup = {row.get("node_id"): row for row in template_nodes}
+    for edge in edges:
+        if len(edge) != 2:
+            continue
+        left = _clean_label(edge[0])
+        right = _clean_label(edge[1])
+        left_row = node_lookup.get(left)
+        right_row = node_lookup.get(right)
+        if not (left_row and right_row):
+            continue
+        edge_scores.append(_clamp((left_row["node_strength"] + right_row["node_strength"]) * 0.5))
+    edge_base = sum(edge_scores) / len(edge_scores) if edge_scores else 0.82
+    connectivity = _clamp((0.5 * connectivity_base + 0.5 * edge_base) * _safe_float(1 + node_connectivity_boost, 1.0))
+    strength = sum(node_scores) / max(1.0, len(node_scores))
+    stability = sum(node_stabilities) / max(1.0, len(node_stabilities))
+    node_signal = sum(node_strengths) / max(1.0, len(node_strengths))
+    blocker_pressure, blocker_reasons = _path_graph_blocker_pressure(
+        template=template,
+        text=text,
+        claim_nodes=claim_nodes,
+        god_metrics=god_metrics,
+        features=features,
+    )
+    active_nodes = sum(1 for row in template_nodes if bool(row.get("connected")))
+    score = _clamp((strength * 0.55 + stability * 0.25 + connectivity * 0.2) * path_weight * path_weight_scale)
+    score = _clamp(score * _clamp(0.72 + node_signal * 0.18, 0.66, 1.0))
+    score = _clamp(score - blocker_pressure * 0.24)
+    return {
+        "path_graph_score": round(score, 3),
+        "path_graph_stability": round(_clamp(stability), 3),
+        "path_graph_connectivity": round(_clamp(connectivity), 3),
+        "path_graph_blocker_pressure": round(_clamp(blocker_pressure), 3),
+        "path_graph_nodes": template_nodes,
+        "path_graph_blockers": list(dict.fromkeys(blocker_reasons))[:5],
+        "path_graph_active_node_count": active_nodes,
+        "path_graph_total_nodes": len(template_nodes),
+        "path_graph_scale": round(_clamp(node_signal), 3),
+    }
+
+
 def _score_sum(scores: Mapping[str, Any], gods: Sequence[str]) -> float:
     return sum(max(0.0, _safe_float(scores.get(god), 0.0)) for god in gods)
 
 
 def _share(scores: Mapping[str, Any], gods: Sequence[str], total: float) -> float:
     return _score_sum(scores, gods) / max(total, 1.0)
+
+
+def _god_metric_profile(
+    scores: Mapping[str, Any],
+    bazi_image: Mapping[str, Any],
+    text: str,
+    physics_tensor: Mapping[str, Any],
+) -> Dict[str, Dict[str, float]]:
+    total = sum(max(0.0, _safe_float(value, 0.0)) for value in scores.values()) or 1.0
+    stability_map = _god_stability_map(physics_tensor)
+    global_boost = _global_stability_boost(physics_tensor)
+    metrics: Dict[str, Dict[str, float]] = {}
+    gods = set(_knowledge_gods("wealth_gods") + _knowledge_gods("output_gods") + _knowledge_gods("authority_gods") + _knowledge_gods("seal_gods") + _knowledge_gods("peer_gods"))
+    if total <= 0:
+        total = 1.0
+    for god in gods:
+        raw = _safe_float(scores.get(god), 0.0)
+        energy = _clamp(raw / total)
+        # 稳定性基于调候修正场，少量引入证据可见度
+        stability = _clamp(_safe_float(stability_map.get(god), 0.58) * global_boost + _god_visibility_bias(bazi_image, god))
+        if stability <= 0.25 and text and god in text:
+            stability = _clamp(stability + 0.05)
+        metrics[god] = {
+            "energy": round(energy, 3),
+            "stability": round(stability, 3),
+        }
+    return metrics
 
 
 def _signal_label(value: float) -> str:
@@ -1114,6 +1510,7 @@ def _path_row(
     bazi_facts: Sequence[Mapping[str, Any]],
     profile: Mapping[str, Any],
     symbolic_support: Sequence[Mapping[str, Any]],
+    mechanism_graph: Mapping[str, Any] | None = None,
 ) -> Dict[str, Any]:
     template = WEALTH_PATH_TEMPLATES[path_id]
     claim_links: List[Dict[str, Any]] = []
@@ -1162,6 +1559,11 @@ def _path_row(
         "driver": template["driver"],
         "carrier_type": template["carrier_type"],
         "risk_hint": template["risk_hint"],
+        "path_graph": dict(mechanism_graph) if isinstance(mechanism_graph, Mapping) else {},
+        "path_graph_score": round(_safe_float((mechanism_graph or {}).get("path_graph_score"), 0.0), 3),
+        "path_graph_stability": round(_safe_float((mechanism_graph or {}).get("path_graph_stability"), 0.0), 3),
+        "path_graph_connectivity": round(_safe_float((mechanism_graph or {}).get("path_graph_connectivity"), 0.0), 3),
+        "path_graph_blocker_pressure": round(_safe_float((mechanism_graph or {}).get("path_graph_blocker_pressure"), 0.0), 3),
         "evidence": evidence,
         "claim_hit_count": len(claim_hits),
         "symbolic_support": _clean_str_list([row.get("rule_label") for row in symbolic_support], limit=6),
@@ -1214,6 +1616,9 @@ def _build_mechanism_chain(
     step_rows: List[Dict[str, Any]] = []
     matched = 0
     present_scores: List[float] = []
+    graph_scores: List[float] = []
+    graph_stabilities: List[float] = []
+    graph_blockers: List[float] = []
     path_risks: List[float] = []
     for path_id in required_ids:
         row = available_paths.get(path_id)
@@ -1222,6 +1627,9 @@ def _build_mechanism_chain(
             matched += 1
             present_scores.append(_safe_float(row.get("score"), 0.0))
             path_risks.append(_safe_float(row.get("risk"), 0.0))
+            graph_scores.append(_safe_float(row.get("path_graph_score"), _safe_float(row.get("score"), 0.0)))
+            graph_stabilities.append(_safe_float(row.get("path_graph_stability"), 0.6))
+            graph_blockers.append(_safe_float(row.get("path_graph_blocker_pressure"), 0.0))
         row_plain = _clean_label(row.get("plain_name"), limit=80) if row else ""
         step_rows.append(
             {
@@ -1231,16 +1639,26 @@ def _build_mechanism_chain(
                 "path_score": round(_safe_float(row.get("score"), 0.0), 3) if row else 0.0,
                 "path_risk": round(_safe_float(row.get("risk"), 0.0), 3) if row else 0.0,
                 "path_confidence": round(_safe_float(row.get("confidence"), 0.0), 3) if row else 0.0,
+                "path_graph_score": round(_safe_float(row.get("path_graph_score"), 0.0), 3) if row else 0.0,
+                "path_graph_stability": round(_safe_float(row.get("path_graph_stability"), 0.0), 3) if row else 0.0,
+                "path_graph_connectivity": round(_safe_float(row.get("path_graph_connectivity"), 0.0), 3) if row else 0.0,
+                "path_graph_blocker_pressure": round(_safe_float(row.get("path_graph_blocker_pressure"), 0.0), 3) if row else 0.0,
             }
         )
     completeness = matched / max(1, len(required_ids))
     required_count = max(1, len(required_ids))
     average_path_score = sum(present_scores) / required_count
+    average_graph_score = sum(graph_scores) / required_count
+    average_graph_stability = sum(graph_stabilities) / required_count
+    max_blocker_pressure = max(graph_blockers) if graph_blockers else 0.0
     max_path_risk = max(path_risks) if path_risks else 0.0
     closure_state, activation_score, state_reason = _evaluate_chain_state(
         matched=matched,
         required_count=required_count,
         average_path_score=average_path_score,
+        average_graph_score=average_graph_score,
+        average_graph_stability=average_graph_stability,
+        max_blocker_pressure=max_blocker_pressure,
         max_path_risk=max_path_risk,
         chain_def=chain_def,
         min_steps=min_steps,
@@ -1284,8 +1702,23 @@ def _build_mechanism_chain(
 
     chain_weight = _safe_float(chain_def.get("default_weight"), 0.8)
     score_baseline = average_path_score
-    chain_score = _clamp(score_baseline * 0.72 + chain_weight * 0.18 + completeness * 0.1 + _safe_float(chain_def.get("boost"), 0.0))
-    chain_confidence = _clamp(score_baseline + 0.18, 0.2, 0.95)
+    chain_score = _clamp(
+        score_baseline * 0.62
+        + average_graph_score * 0.16
+        + average_graph_stability * 0.08
+        + chain_weight * 0.12
+        + completeness * 0.07
+        + _safe_float(chain_def.get("boost"), 0.0),
+    )
+    chain_confidence = _clamp(
+        score_baseline * 0.55
+        + average_graph_score * 0.2
+        + max(0.0, 1.0 - _safe_float(max_blocker_pressure))
+        * 0.08
+        + 0.16,
+        0.2,
+        0.95,
+    )
     return {
         "id": chain_id,
         "plain_name": _clean_label(chain_def.get("plain_name") or chain_def.get("chain_name") or chain_id),
@@ -1349,6 +1782,7 @@ def _score_paths(
     bazi_image: Mapping[str, Any],
     claim_nodes: Sequence[Mapping[str, Any]],
     text: str,
+    physics_tensor: Mapping[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     total = sum(max(0.0, _safe_float(value, 0.0)) for value in scores.values()) or 1.0
     wealth = _share(scores, _knowledge_gods("wealth_gods"), total)
@@ -1364,6 +1798,8 @@ def _score_paths(
     vault = _wealth_vault(bazi_image)
     scoring = _knowledge_section("global_scoring")
     output_wealth_nested = _has_output_wealth_nesting(bazi_image)
+    physics_payload = physics_tensor if isinstance(physics_tensor, Mapping) else {}
+    god_metrics = _god_metric_profile(scores, bazi_image, text, physics_payload)
     features: Dict[str, float] = {
         "wealth": wealth,
         "output": output,
@@ -1402,7 +1838,7 @@ def _score_paths(
         "seal_conflict": 1.0 if "财破印" in text or "财印相战" in text else 0.0,
     }
 
-    raw: Dict[str, tuple[float, float, float, List[Mapping[str, Any]], List[str], List[Mapping[str, Any]], List[Dict[str, str]]]] = {}
+    raw: Dict[str, tuple[float, float, float, List[Mapping[str, Any]], List[str], List[Mapping[str, Any]], List[Dict[str, str]], Dict[str, Any]]] = {}
     formulas = _knowledge_section("path_scoring")
     for path_id in WEALTH_PATH_TEMPLATES:
         formula = formulas.get(path_id) if isinstance(formulas.get(path_id), Mapping) else {}
@@ -1447,6 +1883,25 @@ def _score_paths(
         score = _formula_value(formula.get("score") if isinstance(formula.get("score"), Mapping) else {}, local_features)
         risk = _formula_value(formula.get("risk") if isinstance(formula.get("risk"), Mapping) else {}, local_features)
         score_parts = _score_parts_from_config(formula.get("score_parts"), local_features)
+        mechanism_graph = _path_graph_state(
+            path_id=path_id,
+            god_metrics=god_metrics,
+            claim_nodes=claim_nodes,
+            features=local_features,
+            text=text,
+            path_weight_scale=_safe_float(WEALTH_PATH_TEMPLATES.get(path_id, {}).get("path_weight"), 1.0),
+        )
+        score = _clamp(
+            score
+            + (_safe_float(mechanism_graph["path_graph_score"]) - 0.5) * 0.16
+            + _safe_float(mechanism_graph["path_graph_connectivity"]) * 0.04
+            + _safe_float(mechanism_graph["path_graph_stability"]) * 0.03,
+        )
+        risk = _clamp(
+            risk
+            + _safe_float(mechanism_graph["path_graph_blocker_pressure"]) * 0.34
+            + (1.0 - _safe_float(mechanism_graph["path_graph_stability"])) * 0.10,
+        )
         score_parts.extend(
             f"{_clean_label(support.get('rule_label'))}({support.get('match_count')}次)"
             for support in symbolic_support
@@ -1460,10 +1915,20 @@ def _score_paths(
             claim_hits,
             wealth_materials,
             symbolic_support,
+            mechanism_graph,
         )
 
     rows: List[Dict[str, Any]] = []
-    for path_id, (score, risk, support_weight, score_parts, claim_hits, bazi_facts, symbolic_support) in raw.items():
+    for path_id, (
+        score,
+        risk,
+        support_weight,
+        score_parts,
+        claim_hits,
+        bazi_facts,
+        symbolic_support,
+        mechanism_graph,
+    ) in raw.items():
         threshold = _safe_float(WEALTH_PATH_TEMPLATES[path_id].get("threshold"), 0.3)
         if score < threshold and path_id not in {"wealth_vault", "leakage_risk"}:
             continue
@@ -1482,6 +1947,7 @@ def _score_paths(
                 bazi_facts=bazi_facts,
                 profile=profile,
                 symbolic_support=symbolic_support,
+                mechanism_graph=mechanism_graph,
             )
         )
     return sorted(
@@ -1819,7 +2285,14 @@ def resolve_wealth_code(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
     if not profile and not bazi_image and not scores:
         return {"wealth_code": {}, "confidence": 0.0}
 
-    paths = _score_paths(scores=scores, profile=profile, bazi_image=bazi_image, claim_nodes=claim_nodes, text=text)
+    paths = _score_paths(
+        scores=scores,
+        profile=profile,
+        bazi_image=bazi_image,
+        claim_nodes=claim_nodes,
+        text=text,
+        physics_tensor=pt,
+    )
     if not paths:
         return {"wealth_code": {}, "confidence": 0.0}
 
