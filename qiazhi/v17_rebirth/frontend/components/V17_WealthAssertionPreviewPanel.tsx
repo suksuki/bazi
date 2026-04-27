@@ -141,6 +141,55 @@ function localizedClosureStateFilter(value: unknown, ui: LocalizeText): string {
   return localizedClosureState(key, ui);
 }
 
+type MechanismStateChip = {
+  key: string;
+  label: string;
+  count: number;
+  tone: string;
+};
+
+function mechanismStateCounts(snapshot: Record<string, unknown>): Record<string, number> {
+  const distribution = asLooseRecord(snapshot.state_distribution);
+  return {
+    closed: asIntValue(
+      distribution.closed_count ?? distribution.closed,
+      asIntValue(snapshot.closed_count),
+    ),
+    partial_closed: asIntValue(
+      distribution.partial_closed_count ?? distribution.partial_closed,
+      asIntValue(snapshot.partial_closed_count),
+    ),
+    volatile: asIntValue(
+      distribution.volatile_count ?? distribution.volatile,
+      asIntValue(snapshot.volatile_count),
+    ),
+    open: asIntValue(
+      distribution.open_count ?? distribution.open,
+      asIntValue(snapshot.open_count),
+    ),
+    leaking: asIntValue(
+      distribution.leaking_count ?? distribution.leaking,
+      asIntValue(snapshot.leaking_count),
+    ),
+    blocked: asIntValue(
+      distribution.blocked_count ?? distribution.blocked,
+      asIntValue(snapshot.blocked_count),
+    ),
+  };
+}
+
+function mechanismStateChips(snapshot: Record<string, unknown>, ui: LocalizeText): MechanismStateChip[] {
+  const counts = mechanismStateCounts(snapshot);
+  return [
+    { key: "closed", label: ui("闭合", "Closed", "완결"), count: counts.closed, tone: "border-emerald-300/35 bg-emerald-400/12 text-emerald-100" },
+    { key: "partial_closed", label: ui("部分闭合", "Partly closed", "부분 완결"), count: counts.partial_closed, tone: "border-cyan-300/30 bg-cyan-400/12 text-cyan-100" },
+    { key: "volatile", label: ui("波动", "Volatile", "변동"), count: counts.volatile, tone: "border-amber-300/30 bg-amber-400/10 text-amber-100" },
+    { key: "open", label: ui("未闭合", "Open", "열림"), count: counts.open, tone: "border-sky-300/25 bg-sky-400/10 text-sky-100" },
+    { key: "leaking", label: ui("泄损", "Leak", "누수"), count: counts.leaking, tone: "border-rose-300/30 bg-rose-400/12 text-rose-100" },
+    { key: "blocked", label: ui("被阻断", "Blocked", "차단"), count: counts.blocked, tone: "border-white/15 bg-white/10 text-zinc-100" },
+  ];
+}
+
 function closureStateToneClass(value: unknown): string {
   const key = String(value || "").trim();
   if (key === "closed") return "border-emerald-300/35 bg-emerald-400/12 text-emerald-100";
@@ -962,12 +1011,14 @@ export function V17_WealthAssertionPreviewPanel({
                         <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-300">
                           {ui("活跃链", "Active chains", "활성 경로")} {asStringList(currentFlow.activated_chain_ids).length}
                         </span>
-                        <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-300">
-                          {ui("闭合数", "Closed", "완결 수")} {asIntValue(currentFlowMechanismSnapshot.closed_count)}
-                        </span>
-                        <span className="rounded-full border border-white/20 bg-white/10 px-2 py-1 text-[10px] text-zinc-300">
-                          {ui("泄损数", "Leak", "누수 수")} {asIntValue(currentFlowMechanismSnapshot.leaking_count)}
-                        </span>
+                        {mechanismStateChips(currentFlowMechanismSnapshot, ui).map((item) => (
+                          <span
+                            key={`current-flow-state-${item.key}`}
+                            className={`rounded-full border px-2 py-1 text-[10px] ${item.tone}`}
+                          >
+                            {item.label} {item.count}
+                          </span>
+                        ))}
                       </div>
                       {currentFlowActivatedChains.length ? (
                         <div className="mt-1 space-y-1">
@@ -1082,12 +1133,16 @@ export function V17_WealthAssertionPreviewPanel({
                                     <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
                                       {ui("激活链", "Activated", "활성")} {String(asStringList(row.activated_chain_ids).length)}
                                     </span>
-                                    <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                                      {ui("闭合", "Closed", "완결")} {asIntValue(mechanismSnapshot.closed_count)}
-                                    </span>
-                                    <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                                      {ui("泄损", "Leak", "누수")} {asIntValue(mechanismSnapshot.leaking_count)}
-                                    </span>
+                                    {mechanismStateChips(mechanismSnapshot, ui)
+                                      .filter((item) => item.count > 0)
+                                      .map((item) => (
+                                        <span
+                                          key={`key-year-state-${item.key}_${String(row.year || "")}`}
+                                          className={`rounded-full border px-1.5 py-0.5 text-[9px] ${item.tone}`}
+                                        >
+                                          {item.label} {item.count}
+                                        </span>
+                                      ))}
                                   </div>
                                   {supportSummary.length ? (
                                     <div className="mt-1 text-[11px] text-zinc-400">
@@ -1180,12 +1235,16 @@ export function V17_WealthAssertionPreviewPanel({
                                       {localizedClosureState(yearTopState, ui)}
                                     </span>
                                   ) : null}
-                                  <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                                    {ui("闭合", "Closed", "완결")} {asIntValue(yearMechanismSnapshot.closed_count)}
-                                  </span>
-                                  <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
-                                    {ui("泄损", "Leak", "누수")} {asIntValue(yearMechanismSnapshot.leaking_count)}
-                                  </span>
+                                  {mechanismStateChips(yearMechanismSnapshot, ui)
+                                    .filter((item) => item.count > 0)
+                                    .map((item) => (
+                                      <span
+                                        key={`year-mechanism-state-${item.key}_${yearKey}`}
+                                        className={`rounded-full border px-1.5 py-0.5 text-[9px] ${item.tone}`}
+                                      >
+                                        {item.label} {item.count}
+                                      </span>
+                                    ))}
                                   <span className="rounded-full border border-white/20 bg-white/10 px-1.5 py-0.5 text-[9px] text-zinc-300">
                                     {ui("激活链", "Activated", "활성")} {String(asStringList(row.activated_chain_ids).length)}
                                   </span>

@@ -120,6 +120,14 @@ def test_wealth_timeline_preview_binds_mechanism_chains_to_years() -> None:
     binding_rows = [row for row in year_rows if row.get("activated_chains")]
     assert binding_rows
     sample = binding_rows[0]
+    mechanism_snapshot = sample.get("mechanism_state_snapshot") or {}
+    assert mechanism_snapshot.get("top_state")
+    assert mechanism_snapshot.get("state_distribution")
+    for key in {"closed", "partial_closed", "volatile", "open", "leaking", "blocked"}:
+        assert isinstance(mechanism_snapshot.get(f"{key}_count"), (int, float))
+        assert mechanism_snapshot.get(key + "_count", 0) >= 0
+    for key in {"closed", "partial_closed", "volatile", "open", "leaking", "blocked"}:
+        assert mechanism_snapshot["state_distribution"][key] >= 0
     assert sample["activated_chain_ids"]
     assert isinstance(sample["activated_chain_ids"], list)
     chain = sample["activated_chains"][0]
