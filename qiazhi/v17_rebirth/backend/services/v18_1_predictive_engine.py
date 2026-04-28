@@ -4914,10 +4914,16 @@ class V18PredictiveStore:
         level = _safe_str(payload.get("explanation_level"), "normal")
         if level not in {"brief", "normal", "detailed"}:
             raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "explanation_level must be brief/normal/detailed", 400)
+        raw_scope = payload.get("allowed_output_scope") or contract.get("allowed_output_scope") or {}
+        if isinstance(raw_scope, dict):
+            allowed_output_scope = dict(raw_scope)
+        else:
+            scope_text = _safe_str(raw_scope)
+            allowed_output_scope = {"scope": scope_text} if scope_text else {}
         return ExplanationRequest(
             prediction_id=prediction_id,
             contract_id=contract_id,
-            allowed_output_scope=dict(payload.get("allowed_output_scope") or contract.get("allowed_output_scope") or {}),
+            allowed_output_scope=allowed_output_scope,
             user_locale=_safe_str(payload.get("user_locale"), "zh-CN"),
             tone=_safe_str(payload.get("tone"), "clear"),
             explanation_level=level,
@@ -5212,6 +5218,77 @@ class V18PredictiveStore:
         for rows in self._learning_signals.values():
             out.extend(rows)
         return out
+
+    def query_trust_metrics(self) -> Dict[str, Any]:
+        total_predictions = len(self._ledger)
+        feedback_rows = [dict(item) for rows in self._feedback_events.values() for item in rows if isinstance(item, dict)]
+        total_feedback = len(feedback_rows)
+
+        feedback_distribution_counts = {"hit": 0, "partial": 0, "miss": 0, "unclear": 0}
+        high_confidence_miss_count = 0
+        verified_count = 0
+        replay_count = 0
+
+        for feedback in feedback_rows:
+            feedback_type = _safe_str(feedback.get("feedback_type")).lower()
+            if feedback_type in feedback_distribution_counts:
+                feedback_distribution_counts[feedback_type] += 1
+
+        for prediction_id, record in self._ledger.items():
+            if isinstance(record, dict) and isinstance(record.get("contract"), dict):
+                replay_count += 1
+            if _safe_str(record.get("verifier_status")) in {"pass", "pass_with_warning"}:
+                verified_count += 1
+
+        for prediction_id, feedback_rows_for_prediction in self._feedback_events.items():
+            record = dict(self._ledger.get(prediction_id, {}))
+            contract = dict(record.get("contract") or {})
+            confidence = _safe_float(contract.get("confidence"), 0.0)
+            if confidence >= 0.7:
+                high_confidence_miss_count += sum(
+                    1
+                    for feedback in _ensure_list(feedback_rows_for_prediction)
+                    if isinstance(feedback, dict) and _safe_str(feedback.get("feedback_type")).lower() == "miss"
+                )
+
+        active_rules = self.list_rules(status="active")
+        latest_rule_updated_at = ""
+        latest_rule_updated_dt: datetime | None = None
+        for rule in active_rules:
+            rule_snapshot = rule.to_dict()
+            for source in (
+                _safe_str(rule.approved_at),
+                _safe_str(rule_snapshot.get("approved_at")),
+                _safe_str(rule_snapshot.get("updated_at")),
+                _safe_str(rule_snapshot.get("created_at")),
+            ):
+                dt = _parse_dt(source)
+                if dt is None:
+                    continue
+                if latest_rule_updated_dt is None or dt > latest_rule_updated_dt:
+                    latest_rule_updated_dt = dt
+        if latest_rule_updated_dt:
+            latest_rule_updated_at = latest_rule_updated_dt.replace(microsecond=0).isoformat()
+
+        insights_payload = self.aggregate_learning_insights()
+        insights_generated = _safe_int(len(insights_payload.get("items") or []), 0)
+        learning_signals_generated = sum(len(rows) for rows in self._learning_signals.values())
+        suggestions_generated = len(self._candidate_rule_suggestions)
+
+        feedback_distribution = {key: _safe_float(value / max(1, total_feedback), 0.0) for key, value in feedback_distribution_counts.items()}
+        return {
+            "total_predictions": total_predictions,
+            "total_feedback": total_feedback,
+            "feedback_distribution": feedback_distribution,
+            "verified_explanations_rate": _safe_float(verified_count / max(1, total_predictions), 0.0),
+            "replay_available_rate": _safe_float(replay_count / max(1, total_predictions), 0.0),
+            "active_rules": len(active_rules),
+            "rules_last_updated_at": latest_rule_updated_at,
+            "high_confidence_miss_rate": _safe_float(high_confidence_miss_count / max(1, total_feedback), 0.0),
+            "learning_signals_generated": learning_signals_generated,
+            "insights_generated": insights_generated,
+            "suggestions_generated": suggestions_generated,
+        }
 
     def _learning_rows_for_aggregation(self) -> List[Dict[str, Any]]:
         rows: List[Dict[str, Any]] = []

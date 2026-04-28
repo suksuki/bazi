@@ -733,6 +733,15 @@ async def feedback_list(prediction_id: str | None = None, offset: int = 0, limit
         return _fail(exc)
 
 
+@router.get("/v18.1/trust-metrics")
+@router.get("/api/v18.1/trust-metrics")
+async def trust_metrics():
+    try:
+        return _ok(predictive_service.query_trust_metrics())
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
 @router.get("/v18.1/learning/insights")
 @router.get("/api/v18.1/learning/insights")
 async def learning_insights():

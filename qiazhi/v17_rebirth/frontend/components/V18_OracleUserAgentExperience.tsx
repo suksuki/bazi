@@ -63,6 +63,7 @@ type OraclePrediction = {
   ledgerId: string;
   contractHash: string;
   ruleDrift: boolean;
+  ledgerStatus: string;
   createdAt: string;
 };
 
@@ -439,6 +440,7 @@ function buildPrediction({
     ledgerId: readString(ledger, ["ledger_id", "id"]),
     contractHash: readString(ledger, ["contract_hash", "prediction_hash"]),
     ruleDrift: readBool(replayPayload, "rule_drift", false),
+    ledgerStatus: Object.keys(ledger).length > 0 ? "written" : "not loaded",
     createdAt: nowIso(),
   };
 }
@@ -819,6 +821,7 @@ export function V18_OracleUserAgentExperience({
           <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
             <div className="space-y-5">
               <PredictionSummaryCard prediction={currentPrediction} isAdmin={isAdmin} />
+              <PredictionProvenanceCard prediction={currentPrediction} isAdmin={isAdmin} />
               <PredictionFeedbackPanel
                 prediction={currentPrediction}
                 feedbackText={feedbackText}
@@ -1006,10 +1009,7 @@ function PredictionSummaryCard({ prediction, isAdmin }: { prediction: OraclePred
   const confidencePercent = prediction.confidence === null ? null : Math.round(prediction.confidence * 100);
   return (
     <section className="rounded-[2rem] border border-cyan-200/20 bg-cyan-200/[0.08] p-6 shadow-2xl shadow-cyan-950/20">
-      <div className="mb-4 flex flex-wrap items-center gap-2">
-        <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">系统裁决</span>
-        <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">基于已验证 Contract</span>
-      </div>
+      <TrustBadgeBar prediction={prediction} />
       <h2 className="text-2xl font-semibold leading-tight text-white md:text-3xl">{prediction.conclusionTitle}</h2>
       <p className="mt-3 text-sm leading-7 text-slate-300">{prediction.summary}</p>
       <div className="mt-5 grid gap-4 md:grid-cols-2">
@@ -1022,13 +1022,7 @@ function PredictionSummaryCard({ prediction, isAdmin }: { prediction: OraclePred
             <div className="h-full rounded-full bg-cyan-300 transition-all" style={{ width: `${confidencePercent ?? 18}%` }} />
           </div>
         </div>
-        <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
-          <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-amber-100">
-            <AlertTriangle className="h-4 w-4" />
-            不确定性
-          </div>
-          <p className="text-sm leading-6 text-amber-50/90">{prediction.uncertaintyText}</p>
-        </div>
+        <UncertaintyCallout prediction={prediction} compact />
       </div>
       {isAdmin ? (
         <div className="mt-4 grid gap-2 text-xs text-slate-400 md:grid-cols-2">
@@ -1037,6 +1031,74 @@ function PredictionSummaryCard({ prediction, isAdmin }: { prediction: OraclePred
         </div>
       ) : null}
     </section>
+  );
+}
+
+function TrustBadgeBar({ prediction }: { prediction: OraclePrediction }): ReactNode {
+  const badges = [
+    { label: "已通过规则裁决", ok: true },
+    { label: "已绑定证据链", ok: prediction.evidenceTrace.length > 0 },
+    { label: "已通过输出校验", ok: prediction.verifierStatus !== "blocked" },
+    { label: "已写入预测账本", ok: prediction.ledgerStatus === "written" },
+    { label: "可反馈学习", ok: Boolean(prediction.predictionId) },
+  ];
+  return (
+    <div className="mb-5 flex flex-wrap gap-2">
+      {badges.map((badge) => (
+        <span
+          key={badge.label}
+          className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs ${
+            badge.ok
+              ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100"
+              : "border-slate-400/20 bg-slate-500/10 text-slate-300"
+          }`}
+        >
+          <CheckIcon ok={badge.ok} />
+          {badge.label}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function CheckIcon({ ok }: { ok: boolean }): ReactNode {
+  return ok ? <BadgeCheck className="h-3.5 w-3.5" /> : <AlertTriangle className="h-3.5 w-3.5" />;
+}
+
+function PredictionProvenanceCard({ prediction, isAdmin }: { prediction: OraclePrediction; isAdmin: boolean }): ReactNode {
+  const id = (value: string) => (isAdmin ? value || "n/a" : shortHash(value));
+  return (
+    <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
+            <ShieldCheck className="h-5 w-5 text-cyan-200" />
+            预测来源
+          </h2>
+          <p className="mt-1 text-sm text-slate-400">这条结果已绑定 Contract、Verifier 与 Ledger，可追踪、可反馈、可回放。</p>
+        </div>
+        <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">
+          Provenance
+        </span>
+      </div>
+      <div className="grid gap-3 md:grid-cols-3">
+        <ProvenanceLine label="prediction_id" value={id(prediction.predictionId)} />
+        <ProvenanceLine label="contract_id" value={id(prediction.contractId)} />
+        <ProvenanceLine label="contract_hash" value={id(prediction.contractHash)} />
+        <ProvenanceLine label="verifier_status" value={prediction.verifierStatus || "verified"} />
+        <ProvenanceLine label="ledger_status" value={prediction.ledgerStatus} />
+        <ProvenanceLine label="generated_at" value={new Date(prediction.createdAt).toLocaleString()} />
+      </div>
+    </section>
+  );
+}
+
+function ProvenanceLine({ label, value }: { label: string; value: string }): ReactNode {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/20 p-3">
+      <div className="text-[11px] uppercase tracking-[0.16em] text-slate-500">{label}</div>
+      <div className="mt-1 break-all font-mono text-xs text-slate-200">{value || "n/a"}</div>
+    </div>
   );
 }
 
@@ -1053,6 +1115,8 @@ function VerifiedExplanationCard({ prediction }: { prediction: OraclePrediction 
         </div>
         <div className="flex flex-wrap gap-2">
           <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">已通过输出校验</span>
+          <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">解释层不参与命理裁决</span>
+          <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">解释内容来自已验证 Contract</span>
           <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300">model {prediction.modelVersion}</span>
           <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300">engine {prediction.engineVersion}</span>
         </div>
@@ -1063,39 +1127,54 @@ function VerifiedExplanationCard({ prediction }: { prediction: OraclePrediction 
 }
 
 function EvidenceTracePanel({ evidenceTrace }: { evidenceTrace: EvidenceItem[] }): ReactNode {
+  const preview = evidenceTrace.slice(0, 2);
+  const rest = evidenceTrace.slice(2);
   return (
-    <details className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/20 backdrop-blur">
-      <summary className="flex cursor-pointer list-none items-center justify-between gap-3 text-white">
-        <span className="flex items-center gap-2 text-lg font-semibold">
+    <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/20 backdrop-blur">
+      <div className="mb-4 flex items-center justify-between gap-3 text-white">
+        <h2 className="flex items-center gap-2 text-lg font-semibold">
           <ClipboardCheck className="h-5 w-5 text-cyan-200" />
           判断依据
-        </span>
-        <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300">默认折叠</span>
-      </summary>
-      <div className="mt-4 space-y-3">
+        </h2>
+        <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">核心证据预览</span>
+      </div>
+      <div className="space-y-3">
         {evidenceTrace.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-slate-400">
             当前 response 未暴露 evidence_trace。正式预测仍以 Contract / Ledger 为事实源。
           </p>
         ) : (
-          evidenceTrace.map((item, index) => (
-            <article key={`${item.ruleId}-${item.version}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-4">
-              <div className="mb-3 flex flex-wrap items-center gap-2">
-                <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">规则证据</span>
-                <span className="font-mono text-xs text-slate-400">{item.ruleId || "unknown_rule"}</span>
-              </div>
-              <dl className="grid gap-3 text-sm">
-                <EvidenceLine label="version" value={item.version || "n/a"} />
-                <EvidenceLine label="content_hash" value={shortHash(item.contentHash)} />
-                <EvidenceLine label="命中事实" value={item.matchedFacts.length ? compactJson(item.matchedFacts) : "n/a"} />
-                <EvidenceLine label="影响方向" value={compactJson(item.effect)} />
-                <EvidenceLine label="confidence_delta" value={item.confidenceDelta === null ? "n/a" : `${Math.round(item.confidenceDelta * 100)}%`} />
-              </dl>
-            </article>
-          ))
+          preview.map((item, index) => <EvidencePreview key={`${item.ruleId}-${item.version}-preview-${index}`} item={item} />)
         )}
       </div>
-    </details>
+      {rest.length > 0 ? (
+        <details className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300">
+          <summary className="cursor-pointer text-slate-100">查看其余 {rest.length} 条规则证据</summary>
+          <div className="mt-3 space-y-3">
+            {rest.map((item, index) => (
+              <EvidencePreview key={`${item.ruleId}-${item.version}-rest-${index}`} item={item} compact />
+            ))}
+          </div>
+        </details>
+      ) : null}
+    </section>
+  );
+}
+
+function EvidencePreview({ item, compact = false }: { item: EvidenceItem; compact?: boolean }): ReactNode {
+  return (
+    <article className={`rounded-2xl border border-white/10 bg-black/20 ${compact ? "p-3" : "p-4"}`}>
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">规则证据</span>
+        <span className="font-mono text-xs text-slate-400">{item.ruleId || "unknown_rule"}</span>
+      </div>
+      <dl className="grid gap-3 text-sm">
+        <EvidenceLine label="effect" value={compactJson(item.effect)} />
+        <EvidenceLine label="命中事实" value={item.matchedFacts.length ? compactJson(item.matchedFacts) : "n/a"} />
+        <EvidenceLine label="confidence_delta" value={item.confidenceDelta === null ? "n/a" : `${Math.round(item.confidenceDelta * 100)}%`} />
+        {!compact ? <EvidenceLine label="version / hash" value={`${item.version || "n/a"} / ${shortHash(item.contentHash)}`} /> : null}
+      </dl>
+    </article>
   );
 }
 
@@ -1109,15 +1188,23 @@ function EvidenceLine({ label, value }: { label: string; value: string }): React
 }
 
 function UncertaintyPanel({ prediction }: { prediction: OraclePrediction }): ReactNode {
+  return <UncertaintyCallout prediction={prediction} />;
+}
+
+function UncertaintyCallout({ prediction, compact = false }: { prediction: OraclePrediction; compact?: boolean }): ReactNode {
   return (
-    <section className="rounded-[2rem] border border-amber-300/20 bg-amber-300/[0.08] p-5 shadow-2xl shadow-black/20">
-      <h2 className="flex items-center gap-2 text-lg font-semibold text-amber-50">
+    <section className={`rounded-[2rem] border border-amber-300/20 bg-amber-300/[0.08] ${compact ? "p-4" : "p-5 shadow-2xl shadow-black/20"}`}>
+      <div className="mb-2 flex flex-wrap items-center gap-2">
         <AlertTriangle className="h-5 w-5" />
-        不确定性来源
-      </h2>
+        <h2 className="text-lg font-semibold text-amber-50">不确定性来源</h2>
+        <span className="rounded-full border border-amber-100/20 bg-black/20 px-3 py-1 text-xs uppercase tracking-[0.12em] text-amber-50">
+          {prediction.uncertaintyLevel}
+        </span>
+      </div>
       <p className="mt-2 text-sm leading-6 text-amber-50/90">{prediction.uncertaintyText}</p>
-      <InfoList title="哪些条件会影响判断" items={prediction.sensitiveFactors} />
-      <InfoList title="缺失假设" items={prediction.missingAssumptions} />
+      <p className="mt-3 text-xs font-semibold text-amber-100">本判断不是绝对结论，以下因素会影响结果。</p>
+      <InfoList title="影响因素" items={prediction.sensitiveFactors} />
+      {!compact ? <InfoList title="缺失假设" items={prediction.missingAssumptions} /> : null}
       <InfoList title="来源" items={prediction.uncertaintyReasons} />
     </section>
   );
@@ -1160,6 +1247,9 @@ function PredictionFeedbackPanel({
       <p className="mt-1 text-sm text-slate-400">
         反馈会绑定 prediction_id{prediction.conclusionRef ? " + conclusion_ref" : ""}，只生成 learning_signal，不会直接修改 active rule。
       </p>
+      <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-50">
+        你的反馈会进入学习信号，用于改进规则评分和候选规则建议，但不会直接修改当前规则。
+      </div>
       <textarea
         value={feedbackText}
         onChange={(event) => onFeedbackTextChange(event.target.value)}
@@ -1287,7 +1377,7 @@ function PredictionHistoryPanel({
               </div>
               <p className="mt-2 text-xs text-slate-400">feedback: {item.feedbackStatus}</p>
               <button type="button" onClick={() => onReplay(item)} className="mt-3 rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-cyan-100 transition hover:bg-white/10">
-                replay
+                查看回放 / 查看当时证据
               </button>
               {item.replay ? (
                 <details className="mt-3 rounded-xl bg-black/30 p-3 text-xs text-slate-300">
@@ -1347,4 +1437,3 @@ function DebugChip({ label, value }: { label: string; value: string }): ReactNod
 export function V18_UserAgentConsole(props: OracleUserAgentExperienceProps): ReactNode {
   return <V18_OracleUserAgentExperience {...props} />;
 }
-

@@ -20,7 +20,7 @@ export function proxy(req: NextRequest) {
   const role = String(req.cookies.get(ROLE_COOKIE)?.value || "").trim().toLowerCase();
 
   if (pathname === "/") {
-    return redirectTo(req, hasSession ? "/v17/oracle" : "/login");
+    return NextResponse.next();
   }
 
   if (pathname.startsWith("/login") || pathname.startsWith("/register")) {

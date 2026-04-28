@@ -1,8 +1,6 @@
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
+import { V18_LandingDemoExperience } from "@/components/V18_LandingDemoExperience";
 
-export default async function HomePage() {
-  const cookieStore = await cookies();
-  const hasSession = Boolean(cookieStore.get("v17_session")?.value);
-  redirect(hasSession ? "/v17/oracle" : "/login");
+export default function HomePage() {
+  return <V18_LandingDemoExperience initialMode="landing" />;
 }
+
