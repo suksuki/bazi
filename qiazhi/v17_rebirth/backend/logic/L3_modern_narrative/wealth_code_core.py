@@ -2333,6 +2333,19 @@ def resolve_wealth_code(physics_tensor: Dict[str, Any]) -> Dict[str, Any]:
 
     opportunity_paths = [row for row in paths if row.get("id") != "leakage_risk"]
     raw_primary = opportunity_paths[0] if opportunity_paths else paths[0]
+    if _clean_label(raw_primary.get("id")) == "wealth_vault":
+        vault_score = _safe_float(raw_primary.get("score"), 0.0)
+        explicit_path = next(
+            (
+                row
+                for row in opportunity_paths
+                if _clean_label(row.get("id")) != "wealth_vault"
+                and _safe_float(row.get("score"), 0.0) >= vault_score - 0.05
+            ),
+            None,
+        )
+        if explicit_path is not None:
+            raw_primary = explicit_path
     raw_secondary = [row for row in paths if row.get("id") != raw_primary.get("id")][:5]
     raw_primary_id = _clean_label(raw_primary.get("id"))
     primary = _merge_output_work_path(raw_primary, raw_secondary)

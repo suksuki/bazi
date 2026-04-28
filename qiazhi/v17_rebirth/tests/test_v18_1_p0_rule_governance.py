@@ -85,6 +85,24 @@ def test_runtime_facade_is_required_for_resolver_and_tests(p0_runtime) -> None:
     resolved = facade.run_resolver(_resolver_payload(), "system", 0)
     assert resolved["status"] == "resolved"
     assert resolved["resolver_snapshot"]["resolver_lifecycle"]["gatekeeper_protocol"] == engine.RULE_GATEKEEPER_PROTOCOL
+    assert resolved["resolver_snapshot"]["resolver_lifecycle"]["execution_mode"] == "runtime"
+
+    sandbox_override = {
+        **_resolver_payload(),
+        "prediction_id": "pred-p0-override",
+        "execution_mode": "debug",
+        "allow_sandbox": True,
+        "rule_candidates": [
+            {
+                "rule_id": "non.persisted",
+                "activation_score": 1.0,
+                "rule_payload": _rule_payload(rule_id="non.persisted", version="v1"),
+            }
+        ],
+    }
+    with pytest.raises(engine.PredictiveServiceError) as override_attempt:
+        facade.run_resolver(sandbox_override, "system", 0)
+    assert override_attempt.value.code == "RULE_SCOPE_VIOLATION"
 
     with pytest.raises(engine.PredictiveServiceError) as direct_test:
         service.run_rule_test_v0(
@@ -160,3 +178,115 @@ def test_gatekeeper_fail_close_and_ledger_requires_resolver_lifecycle(p0_runtime
             },
         )
     assert ledger_bypass.value.code == engine.LIFECYCLE_BYPASS_CODE
+
+
+def test_bypass_audit_is_persisted_and_wealth_pilot_requires_explicit_candidates(p0_runtime) -> None:
+    service, facade = p0_runtime
+    _activate_rule(service)
+
+    direct_token = service.issue_lifecycle_token(actor_role="system", purpose="runtime")
+    with pytest.raises(engine.PredictiveServiceError):
+        service.resolve_rules(
+            {
+                **_resolver_payload(),
+                "lifecycle_token": direct_token,
+                "execution_mode": "runtime",
+            }
+        )
+    persisted = engine.V18PredictiveStore()
+    bypass_events = persisted.query_rule_audit_events(event_type=engine.LIFECYCLE_BYPASS_CODE)["items"]
+    assert bypass_events
+    assert bypass_events[0]["event_type"] == engine.LIFECYCLE_BYPASS_CODE
+
+    with pytest.raises(engine.PredictiveServiceError) as missing_candidates:
+        facade.run_wealth_pilot(
+            {
+                "prediction_id": "wealth-pilot-no-candidates",
+                "plugin_claims": [{"plugin_id": "plugin.alpha", "claim_id": "c1"}],
+            },
+            "system",
+            0,
+        )
+    assert missing_candidates.value.code == "RULE_CANDIDATES_REQUIRED"
+
+
+def test_rule_candidate_to_knowledge_pr_to_sandbox_rule_version(p0_runtime) -> None:
+    service, _ = p0_runtime
+    card = service.register_knowledge_card(
+        {
+            "card_id": "kc.wealth.output",
+            "knowledge_domain": "wealth",
+            "title": "Output to Wealth",
+            "summary": "Output can become wealth when conversion evidence is present.",
+            "status": "draft",
+            "version": "v1",
+            "source_refs": ["internal:test"],
+            "tags": ["wealth"],
+            "content": {"principle": "output_to_wealth"},
+        },
+        actor_role="manager",
+        actor_user_id=7,
+    )
+    assert card["version"] == "v1"
+
+    candidate = service.build_sandbox_rule_candidate(
+        {
+            "knowledge_card_id": "kc.wealth.output",
+            "rule_candidate": _rule_payload(
+                rule_id="p1.rule",
+                version="v1",
+                knowledge_card_id="kc.wealth.output",
+                status="active",
+            ),
+        },
+        actor_role="practitioner",
+        actor_user_id=3,
+    )
+    assert candidate["candidate_state"] == "sandbox"
+    assert candidate["rule_payload"]["status"] == "experimental"
+
+    pr = service.append_knowledge_pr(
+        {
+            "prediction_id": "pred-p1",
+            "requested_by": "practitioner",
+            "knowledge_card_id": "kc.wealth.output",
+            "target_status": "validated",
+            "rule_candidate": candidate["rule_payload"],
+        }
+    )
+    assert pr["review_state"] == "pending_manual_review"
+    assert pr["candidate_state"] == "sandbox"
+    test_case = service.register_rule_test_case(
+        {
+            "case_id": "kc-output-case",
+            "source": "synthetic",
+            "chart_snapshot": {"matched_facts": ["x"]},
+            "query_intent": {"topic": "wealth"},
+            "expected_evidence_patterns": ["wealth"],
+            "expected_conclusions": ["wealth"],
+            "tags": ["wealth"],
+        },
+        actor_role="manager",
+        actor_user_id=7,
+    )
+    facade = engine.RuleRuntimeFacade(service)
+    test_run = facade.run_rule_test_v02(
+        {
+            "rule_candidate_id": pr["rule_candidate_id"],
+            "test_case_ids": [test_case["case_id"]],
+        },
+        "manager",
+        7,
+    )
+    assert test_run["overall_status"] == "pass"
+
+    reviewed = service.review_knowledge_pr(
+        {"pr_id": pr["pr_id"], "decision": "approve", "actor_user_id": 7},
+        actor_role="manager",
+    )
+    assert reviewed["review_state"] == "approved"
+    assert reviewed["materialized_rule"]["rule_id"] == "p1.rule"
+    materialized = service.get_rule("p1.rule", version="v1", allow_inactive=True)
+    assert materialized.status == "validated"
+    assert materialized.knowledge_card_id == "kc.wealth.output"
+    assert service.get_rule("p1.rule", version="v1", allow_inactive=True).status != "active"

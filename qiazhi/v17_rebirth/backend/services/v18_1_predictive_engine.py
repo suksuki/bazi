@@ -7,8 +7,9 @@ import os
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
+from contextlib import contextmanager
 from secrets import token_urlsafe
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Iterator, List, Optional
 
 from v17_rebirth.paths import RUNTIME_DIR
 
@@ -23,6 +24,8 @@ RULE_GATEKEEPER_PROTOCOL = "v18.1.gatekeeper"
 RULE_RUNTIME_TOKEN_TTL_SECONDS = 300
 LIFECYCLE_BYPASS_CODE = "LIFECYCLE_BYPASS_ATTEMPT"
 RULE_TEST_ENGINE_VERSION = "v0.1"
+RULE_TEST_ENGINE_VERSION_V02 = "v0.2"
+RULE_TEST_CASE_SOURCES = {"synthetic", "historical", "feedback", "manual"}
 RULE_TEST_ENGINE_THRESHOLD_V01 = {
     "version": RULE_TEST_ENGINE_VERSION,
     "precision_min": 0.8,
@@ -36,6 +39,32 @@ RULE_TEST_ENGINE_THRESHOLD_V01 = {
     "needs_review_conflict_rate": 0.35,
 }
 V18_1_STRICT_LIFECYCLE = os.getenv("V18_1_STRICT_LIFECYCLE", "1") in {"1", "true", "TRUE", "yes", "on"}
+V18_STORAGE_BACKEND = (os.getenv("PREDICTIVE_STORAGE_BACKEND") or os.getenv("V18_1_STORAGE_BACKEND") or "json").strip().lower() or "json"
+V18_POSTGRES_DSN = os.getenv("PREDICTIVE_DATABASE_URL") or os.getenv("DATABASE_URL") or os.getenv("POSTGRES_DSN") or ""
+
+
+V18_STATE_COLLECTIONS = (
+    "rules",
+    "active_rules",
+    "knowledge_cards",
+    "active_knowledge_cards",
+    "rule_candidates",
+    "knowledge_pr_queue",
+    "prediction_ledger",
+    "verifier_runs",
+    "feedback",
+    "learning_signals",
+    "aggregated_insights",
+    "candidate_rule_suggestions",
+    "rule_test_results",
+    "rule_test_suites",
+    "active_rule_test_suites",
+    "rule_test_cases",
+    "rule_test_runs",
+    "rule_quality_scores",
+    "agent_sessions",
+    "audit_events",
+)
 
 
 def _utcnow_iso() -> str:
@@ -61,6 +90,23 @@ def _prediction_hash(payload: Dict[str, Any]) -> str:
             digestmod=hashlib.sha256,
         ).hexdigest()
     return f"sha256:{digest}"
+
+
+def _contract_hash(payload: Dict[str, Any]) -> str:
+    canonical_payload = dict(payload or {})
+    canonical_payload.pop("contract_hash", None)
+    canonical_payload.pop("prediction_hash", None)
+    return f"sha256:{_sha256(_canonical_json(canonical_payload))}"
+
+
+def _payload_hash(payload: Dict[str, Any]) -> str:
+    return f"sha256:{_sha256(_canonical_json(dict(payload or {})))}"
+
+
+def _audit_event_hash(payload: Dict[str, Any]) -> str:
+    normalized = dict(payload or {})
+    normalized.pop("event_hash", None)
+    return _payload_hash(normalized)
 
 
 def _ensure_list(value: Any) -> List[Any]:
@@ -198,6 +244,10 @@ def _rule_test_run_payload_fingerprint(
     return _sha256(_canonical_json(normalized))
 
 
+def _rule_candidate_id(payload: Dict[str, Any]) -> str:
+    return f"rule_candidate_{_rule_payload_fingerprint(payload)[:16]}"
+
+
 def _knowledge_card_content_fingerprint(payload: Dict[str, Any]) -> str:
     normalized = {
         "knowledge_domain": _safe_str(payload.get("knowledge_domain")),
@@ -208,6 +258,265 @@ def _knowledge_card_content_fingerprint(payload: Dict[str, Any]) -> str:
         "content": dict(payload.get("content") or {}),
     }
     return _sha256(_canonical_json(normalized))
+
+
+def _state_row_created_at(payload: Any) -> str:
+    return _safe_str(payload.get("created_at") or payload.get("updated_at")) if isinstance(payload, dict) else ""
+
+
+def _state_row_rule_id(payload: Any) -> str:
+    if not isinstance(payload, dict):
+        return ""
+    if payload.get("rule_id"):
+        return _safe_str(payload.get("rule_id"))
+    nested = payload.get("rule_payload") if isinstance(payload.get("rule_payload"), dict) else {}
+    return _safe_str(nested.get("rule_id"))
+
+
+def _state_row_prediction_id(payload: Any) -> str:
+    return _safe_str(payload.get("prediction_id")) if isinstance(payload, dict) else ""
+
+
+def _state_row_insight_id(payload: Any) -> str:
+    return _safe_str(payload.get("insight_id") or payload.get("based_on_insight_id")) if isinstance(payload, dict) else ""
+
+
+class V18StorageAdapter:
+    backend_name = "base"
+
+    def load_snapshot(self) -> Dict[str, Any]:
+        return {}
+
+    def save_snapshot(self, snapshot: Dict[str, Any]) -> None:
+        return None
+
+    def transaction(self) -> Iterator[None]:
+        @contextmanager
+        def _noop() -> Iterator[None]:
+            yield
+        return _noop()
+
+    def update_audit_event(self, *_args: Any, **_kwargs: Any) -> None:
+        raise PredictiveServiceError("AUDIT_APPEND_ONLY", "audit events are append-only", 409)
+
+    def delete_audit_event(self, *_args: Any, **_kwargs: Any) -> None:
+        raise PredictiveServiceError("AUDIT_APPEND_ONLY", "audit events are append-only", 409)
+
+
+class JsonStorageAdapter(V18StorageAdapter):
+    backend_name = "json"
+
+
+class PostgresStorageAdapter(V18StorageAdapter):
+    backend_name = "postgres"
+
+    def __init__(self, dsn: str) -> None:
+        self.dsn = _safe_str(dsn)
+        if not self.dsn:
+            raise PredictiveServiceError("POSTGRES_DSN_REQUIRED", "PREDICTIVE_DATABASE_URL or DATABASE_URL is required for postgres backend", 500)
+        self._ensure_schema()
+
+    def _driver(self) -> Any:
+        try:
+            import psycopg  # type: ignore
+            return "psycopg", psycopg
+        except Exception:
+            try:
+                import psycopg2  # type: ignore
+                return "psycopg2", psycopg2
+            except Exception as exc:
+                raise PredictiveServiceError("POSTGRES_DRIVER_MISSING", "install psycopg or psycopg2 for postgres backend", 500) from exc
+
+    def _connect(self) -> Any:
+        _name, driver = self._driver()
+        return driver.connect(self.dsn)
+
+    def _json_param(self, payload: Any) -> str:
+        return json.dumps(payload, ensure_ascii=False, sort_keys=True)
+
+    def _ensure_schema(self) -> None:
+        ddl = [
+            """
+            CREATE TABLE IF NOT EXISTS predictive_state (
+                collection TEXT NOT NULL,
+                item_key TEXT NOT NULL,
+                payload JSONB NOT NULL,
+                created_at TIMESTAMPTZ,
+                rule_id TEXT,
+                prediction_id TEXT,
+                contract_id TEXT,
+                insight_id TEXT,
+                session_id TEXT,
+                PRIMARY KEY (collection, item_key)
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS predictive_audit_events (
+                event_hash TEXT PRIMARY KEY,
+                previous_event_hash TEXT,
+                payload JSONB NOT NULL,
+                created_at TIMESTAMPTZ,
+                rule_id TEXT,
+                event_type TEXT
+            )
+            """,
+            "CREATE INDEX IF NOT EXISTS idx_predictive_state_created_at ON predictive_state(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_state_rule_id ON predictive_state(rule_id)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_state_prediction_id ON predictive_state(prediction_id)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_state_contract_id ON predictive_state(contract_id)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_state_insight_id ON predictive_state(insight_id)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_state_session_id ON predictive_state(session_id)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_state_collection_created ON predictive_state(collection, created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_audit_created_at ON predictive_audit_events(created_at)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_audit_rule_id ON predictive_audit_events(rule_id)",
+            "CREATE INDEX IF NOT EXISTS idx_predictive_audit_event_type ON predictive_audit_events(event_type)",
+        ]
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                for stmt in ddl:
+                    cur.execute(stmt)
+            conn.commit()
+
+    def load_snapshot(self) -> Dict[str, Any]:
+        snapshot: Dict[str, Any] = {name: {} for name in V18_STATE_COLLECTIONS if name != "audit_events"}
+        snapshot["audit_events"] = []
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT collection, item_key, payload FROM predictive_state")
+                for collection, item_key, payload in cur.fetchall():
+                    if isinstance(payload, str):
+                        payload = json.loads(payload)
+                    snapshot.setdefault(collection, {})[_safe_str(item_key)] = payload
+                cur.execute("SELECT payload FROM predictive_audit_events ORDER BY created_at ASC")
+                for (payload,) in cur.fetchall():
+                    if isinstance(payload, str):
+                        payload = json.loads(payload)
+                    if isinstance(payload, dict):
+                        snapshot["audit_events"].append(payload)
+        return snapshot
+
+    def save_snapshot(self, snapshot: Dict[str, Any]) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                for collection, rows in snapshot.items():
+                    if collection == "audit_events":
+                        for event in rows if isinstance(rows, list) else []:
+                            if not isinstance(event, dict):
+                                continue
+                            cur.execute(
+                                """
+                                INSERT INTO predictive_audit_events
+                                (event_hash, previous_event_hash, payload, created_at, rule_id, event_type)
+                                VALUES (%s, %s, %s::jsonb, %s, %s, %s)
+                                ON CONFLICT (event_hash) DO NOTHING
+                                """,
+                                (
+                                    _safe_str(event.get("event_hash")) or _audit_event_hash(event),
+                                    _safe_str(event.get("previous_event_hash")),
+                                    self._json_param(event),
+                                    _safe_str(event.get("created_at")) or None,
+                                    _safe_str(event.get("rule_id")) or None,
+                                    _safe_str(event.get("event_type")) or None,
+                                ),
+                            )
+                        continue
+                    if not isinstance(rows, dict):
+                        continue
+                    for item_key, payload in rows.items():
+                        if collection == "rules" and isinstance(payload, dict):
+                            item_key = _rule_storage_key(_safe_str(payload.get("rule_id")), _safe_str(payload.get("version")))
+                        cur.execute(
+                            """
+                            INSERT INTO predictive_state
+                            (collection, item_key, payload, created_at, rule_id, prediction_id, contract_id, insight_id, session_id)
+                            VALUES (%s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s)
+                            ON CONFLICT (collection, item_key) DO UPDATE SET
+                                payload = EXCLUDED.payload,
+                                created_at = EXCLUDED.created_at,
+                                rule_id = EXCLUDED.rule_id,
+                                prediction_id = EXCLUDED.prediction_id,
+                                contract_id = EXCLUDED.contract_id,
+                                insight_id = EXCLUDED.insight_id,
+                                session_id = EXCLUDED.session_id
+                            """,
+                            (
+                                collection,
+                                _safe_str(item_key),
+                                self._json_param(payload),
+                                _state_row_created_at(payload) or None,
+                                _state_row_rule_id(payload) or None,
+                                _state_row_prediction_id(payload) or None,
+                                _safe_str(payload.get("contract_id")) if isinstance(payload, dict) else None,
+                                _state_row_insight_id(payload) or None,
+                                _safe_str(payload.get("agent_session_id") or payload.get("session_id")) if isinstance(payload, dict) else None,
+                            ),
+                        )
+            conn.commit()
+
+
+class RedisAccelerator:
+    def __init__(self) -> None:
+        self.url = _safe_str(os.getenv("PREDICTIVE_REDIS_URL") or os.getenv("REDIS_URL"))
+        self.available = False
+        self.client: Any = None
+        if not self.url:
+            return
+        try:
+            import redis  # type: ignore
+            self.client = redis.Redis.from_url(self.url, decode_responses=True)
+            self.client.ping()
+            self.available = True
+        except Exception:
+            self.client = None
+            self.available = False
+
+    def get_json(self, key: str) -> Any:
+        if not self.available:
+            return None
+        try:
+            raw = self.client.get(key)
+            return json.loads(raw) if raw else None
+        except Exception:
+            return None
+
+    def set_json(self, key: str, value: Any, ttl_seconds: int = 300) -> None:
+        if not self.available:
+            return
+        try:
+            self.client.setex(key, ttl_seconds, json.dumps(value, ensure_ascii=False))
+        except Exception:
+            return
+
+    def delete(self, *keys: str) -> None:
+        if not self.available or not keys:
+            return
+        try:
+            self.client.delete(*keys)
+        except Exception:
+            return
+
+    def acquire_lock(self, key: str, ttl_seconds: int = 30) -> bool:
+        if not self.available:
+            return True
+        try:
+            return bool(self.client.set(key, "1", nx=True, ex=ttl_seconds))
+        except Exception:
+            return True
+
+    def release_lock(self, key: str) -> None:
+        self.delete(key)
+
+    def idempotency_get(self, key: str) -> Any:
+        return self.get_json(f"idempotency:{key}")
+
+    def idempotency_set(self, key: str, value: Any, ttl_seconds: int = 86400) -> None:
+        self.set_json(f"idempotency:{key}", value, ttl_seconds=ttl_seconds)
+
+
+def _make_storage_adapter(backend: str, dsn: str) -> V18StorageAdapter:
+    if backend == "postgres":
+        return PostgresStorageAdapter(dsn)
+    return JsonStorageAdapter()
 
 
 def _normalize_claim(claim: Any) -> str:
@@ -418,13 +727,51 @@ class RuleKernel:
 @dataclass
 class RuleTestCase:
     case_id: str
-    scenario: str
-    expected_active: bool
-    observed_active: bool
+    source: str = "synthetic"
+    chart_snapshot: Dict[str, Any] = field(default_factory=dict)
+    query_intent: Dict[str, Any] = field(default_factory=dict)
+    expected_conclusions: List[Any] = field(default_factory=list)
+    expected_evidence_patterns: List[str] = field(default_factory=list)
+    forbidden_conclusions: List[str] = field(default_factory=list)
+    tags: List[str] = field(default_factory=list)
+    created_at: str = field(default_factory=_utcnow_iso)
+    scenario: str = ""
+    expected_active: bool = False
+    observed_active: bool = False
+    baseline_confidence: float = -1.0
+    max_confidence_drift: float = 0.35
+    force_verifier_failure: bool = False
     features: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "RuleTestCase":
+        case_id = _safe_str(payload.get("case_id"))
+        if not case_id:
+            raise ValueError("REQUIRED_FIELDS_MISSING: case_id")
+        source = _safe_str(payload.get("source"), "synthetic").lower()
+        if source not in RULE_TEST_CASE_SOURCES:
+            raise ValueError("INVALID_RULE_TEST_CASE_SOURCE")
+        return cls(
+            case_id=case_id,
+            source=source,
+            chart_snapshot=dict(payload.get("chart_snapshot") or {}),
+            query_intent=dict(payload.get("query_intent") or {}),
+            expected_conclusions=_ensure_list(payload.get("expected_conclusions")),
+            expected_evidence_patterns=[_safe_str(item) for item in _ensure_list(payload.get("expected_evidence_patterns")) if _safe_str(item)],
+            forbidden_conclusions=[_safe_str(item) for item in _ensure_list(payload.get("forbidden_conclusions")) if _safe_str(item)],
+            tags=[_safe_str(item) for item in _ensure_list(payload.get("tags")) if _safe_str(item)],
+            created_at=_safe_str(payload.get("created_at"), _utcnow_iso()),
+            scenario=_safe_str(payload.get("scenario"), source),
+            expected_active=_safe_bool(payload.get("expected_active"), default=False),
+            observed_active=_safe_bool(payload.get("observed_active"), default=False),
+            baseline_confidence=_safe_float(payload.get("baseline_confidence"), -1.0),
+            max_confidence_drift=_safe_float(payload.get("max_confidence_drift"), 0.35),
+            force_verifier_failure=_safe_bool(payload.get("force_verifier_failure"), False),
+            features=dict(payload.get("features") or {}),
+        )
 
 
 @dataclass
@@ -568,6 +915,8 @@ class RuleKernelAuditEvent:
     created_at: str = field(default_factory=_utcnow_iso)
     source: str = ""
     details: Dict[str, Any] = field(default_factory=dict)
+    event_hash: str = ""
+    previous_event_hash: str = ""
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -639,6 +988,14 @@ class PredictionContract:
     resolver_snapshot: Dict[str, Any]
     uncertainty: Dict[str, Any] = field(default_factory=dict)
     feedback_window: Dict[str, Any] = field(default_factory=dict)
+    user_query: str = ""
+    normalized_intent: Dict[str, Any] = field(default_factory=dict)
+    chart_snapshot: Dict[str, Any] = field(default_factory=dict)
+    rule_evidence: List[Dict[str, Any]] = field(default_factory=list)
+    inference_steps: List[Dict[str, Any]] = field(default_factory=list)
+    conclusions: List[Dict[str, Any]] = field(default_factory=list)
+    allowed_output_scope: Dict[str, Any] = field(default_factory=dict)
+    engine_version: str = V18_1_SCHEMA_VERSION
     created_at: str = field(default_factory=_utcnow_iso)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -691,17 +1048,33 @@ class PredictionContract:
             resolver_snapshot=dict(payload.get("resolver_snapshot") or {}),
             uncertainty=dict(payload.get("uncertainty") or {}),
             feedback_window=dict(payload.get("feedback_window") or {}),
+            user_query=_safe_str(payload.get("user_query"), ""),
+            normalized_intent=dict(payload.get("normalized_intent") or {}),
+            chart_snapshot=dict(payload.get("chart_snapshot") or {}),
+            rule_evidence=_ensure_list(payload.get("rule_evidence")),
+            inference_steps=_ensure_list(payload.get("inference_steps")),
+            conclusions=_ensure_list(payload.get("conclusions")),
+            allowed_output_scope=dict(payload.get("allowed_output_scope") or {}),
+            engine_version=_safe_str(payload.get("engine_version"), V18_1_SCHEMA_VERSION),
         )
 
 
 @dataclass
 class PredictionLedgerRecord:
+    ledger_id: str
     prediction_id: str
     topic: str
     chain_id: str
     state: str
     contract: Dict[str, Any]
     prediction_hash: str
+    contract_hash: str
+    user_query: str
+    normalized_intent: Dict[str, Any]
+    chart_snapshot_hash: str
+    conclusion_refs: List[str]
+    evidence_refs: List[str]
+    engine_version: str
     resolver_snapshot: Dict[str, Any]
     verifier_status: str
     feedback_state: str
@@ -778,6 +1151,110 @@ class RuleTestResult:
         return asdict(self)
 
 
+@dataclass
+class RuleTestRun:
+    run_id: str
+    rule_candidate_id: str
+    rule_id: str
+    version: str
+    test_case_ids: List[str]
+    results: List[Dict[str, Any]]
+    pass_count: int
+    fail_count: int
+    warning_count: int
+    overall_status: str
+    created_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class AggregatedInsight:
+    insight_id: str
+    related_rule_ids: List[str]
+    related_conclusions: List[str]
+    signal_count: int
+    hit_count: int
+    miss_count: int
+    partial_count: int
+    dominant_failure_pattern: str
+    confidence_trend: str
+    suggested_action: str
+    evidence_refs: List[str]
+    created_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class CandidateRuleSuggestion:
+    suggestion_id: str
+    based_on_insight_id: str
+    suggested_rule_diff: Dict[str, Any]
+    risk_level: str
+    expected_improvement: str
+    requires_human_review: bool = True
+    created_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class RuleQualityScore:
+    score_id: str
+    rule_id: str
+    version: str
+    rule_state: str
+    sample_count: int
+    hit_count: int
+    miss_count: int
+    partial_count: int
+    test_pass_rate: float
+    verifier_failure_count: int
+    drift_warning_count: int
+    confidence_calibration: str
+    risk_score: float
+    quality_score: float
+    recommended_action: str
+    evidence_refs: List[str]
+    created_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ExplanationRequest:
+    prediction_id: str
+    contract_id: str
+    allowed_output_scope: Dict[str, Any]
+    user_locale: str = "zh-CN"
+    tone: str = "clear"
+    explanation_level: str = "normal"
+    include_uncertainty: bool = True
+    include_evidence_trace: bool = False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass
+class ExplanationResponse:
+    prediction_id: str
+    contract_id: str
+    explanation: str
+    safe_output: Dict[str, Any]
+    verifier: Dict[str, Any]
+    evidence_trace: List[Dict[str, Any]]
+    created_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+
 class PredictiveServiceError(Exception):
     def __init__(self, code: str, message: str, status: int = 422):
         self.code = code
@@ -802,10 +1279,21 @@ class V18PredictiveStore:
         self._ledger_file = self._storage_dir / "prediction_ledger.json"
         self._verifier_file = self._storage_dir / "verifier_runs.json"
         self._feedback_file = self._storage_dir / "feedback_events.json"
+        self._learning_signal_file = self._storage_dir / "learning_signals.json"
+        self._rule_candidate_file = self._storage_dir / "rule_candidates.json"
+        self._agent_session_file = self._storage_dir / "agent_sessions.json"
         self._pr_queue_file = self._storage_dir / "knowledge_pr_queue.json"
         self._rule_test_file = self._storage_dir / "rule_test_results.json"
         self._rule_test_suite_file = self._storage_dir / "rule_test_suites.json"
         self._rule_test_suite_active_file = self._storage_dir / "active_rule_test_suites.json"
+        self._rule_test_case_file = self._storage_dir / "rule_test_cases_v02.json"
+        self._rule_test_run_file = self._storage_dir / "rule_test_runs_v02.json"
+        self._learning_insight_file = self._storage_dir / "learning_insights.json"
+        self._candidate_suggestion_file = self._storage_dir / "candidate_rule_suggestions.json"
+        self._rule_quality_score_file = self._storage_dir / "rule_quality_scores.json"
+        self._storage_backend = V18_STORAGE_BACKEND
+        self._storage_adapter = _make_storage_adapter(self._storage_backend, V18_POSTGRES_DSN)
+        self._redis = RedisAccelerator()
 
         self._rule_kernels: Dict[str, RuleKernel] = {}
         self._active_rules: Dict[str, str] = {}
@@ -816,14 +1304,125 @@ class V18PredictiveStore:
         self._ledger: Dict[str, Dict[str, Any]] = {}
         self._verifier_runs: Dict[str, List[Dict[str, Any]]] = {}
         self._feedback_events: Dict[str, List[Dict[str, Any]]] = {}
+        self._learning_signals: Dict[str, List[Dict[str, Any]]] = {}
+        self._rule_candidates: Dict[str, Dict[str, Any]] = {}
+        self._agent_sessions: Dict[str, Dict[str, Any]] = {}
         self._knowledge_pr: Dict[str, Dict[str, Any]] = {}
         self._rule_test_results: Dict[str, List[Dict[str, Any]]] = {}
         self._rule_test_suites: Dict[str, RuleTestSuite] = {}
         self._active_rule_test_suites: Dict[str, str] = {}
+        self._rule_test_cases: Dict[str, Dict[str, Any]] = {}
+        self._rule_test_runs: Dict[str, Dict[str, Any]] = {}
+        self._learning_insights: Dict[str, Dict[str, Any]] = {}
+        self._candidate_rule_suggestions: Dict[str, Dict[str, Any]] = {}
+        self._rule_quality_scores: Dict[str, Dict[str, Any]] = {}
 
         self._load()
 
+    def _snapshot(self) -> Dict[str, Any]:
+        return {
+            "rules": {k: asdict(v) for k, v in self._rule_kernels.items()},
+            "active_rules": dict(self._active_rules),
+            "knowledge_cards": {k: asdict(v) for k, v in self._knowledge_cards.items()},
+            "active_knowledge_cards": dict(self._active_knowledge_cards),
+            "rule_candidates": dict(self._rule_candidates),
+            "knowledge_pr_queue": dict(self._knowledge_pr),
+            "prediction_ledger": dict(self._ledger),
+            "verifier_runs": dict(self._verifier_runs),
+            "feedback": dict(self._feedback_events),
+            "learning_signals": dict(self._learning_signals),
+            "aggregated_insights": dict(self._learning_insights),
+            "candidate_rule_suggestions": dict(self._candidate_rule_suggestions),
+            "rule_test_results": dict(self._rule_test_results),
+            "rule_test_suites": {k: asdict(v) for k, v in self._rule_test_suites.items()},
+            "active_rule_test_suites": dict(self._active_rule_test_suites),
+            "rule_test_cases": dict(self._rule_test_cases),
+            "rule_test_runs": dict(self._rule_test_runs),
+            "rule_quality_scores": dict(self._rule_quality_scores),
+            "agent_sessions": dict(self._agent_sessions),
+            "audit_events": [event.to_dict() for event in self._rule_audit_events],
+        }
+
+    def _hydrate_from_snapshot(self, snapshot: Dict[str, Any]) -> None:
+        for raw_key, payload in (snapshot.get("rules") or {}).items():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                rule = RuleKernel.from_payload(dict(payload))
+                key = _rule_storage_key(rule.rule_id, rule.version)
+                self._rule_kernels[key] = rule
+                if rule.status == "active":
+                    self._active_rules[rule.rule_id] = rule.version
+            except Exception:
+                continue
+        if isinstance(snapshot.get("active_rules"), dict):
+            self._active_rules.update({k: _safe_str(v) for k, v in snapshot["active_rules"].items()})
+        for raw_key, payload in (snapshot.get("knowledge_cards") or {}).items():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                card = KnowledgeCard.from_payload(dict(payload))
+                key = _rule_storage_key(card.card_id, card.version)
+                self._knowledge_cards[key] = card
+                if card.status == "active":
+                    self._active_knowledge_cards[card.card_id] = card.version
+            except Exception:
+                continue
+        if isinstance(snapshot.get("active_knowledge_cards"), dict):
+            self._active_knowledge_cards.update({k: _safe_str(v) for k, v in snapshot["active_knowledge_cards"].items()})
+        for item in snapshot.get("audit_events") or []:
+            if isinstance(item, dict):
+                self._rule_audit_events.append(
+                    RuleKernelAuditEvent(
+                        rule_id=_safe_str(item.get("rule_id")),
+                        event_type=_safe_str(item.get("event_type"), "UNKNOWN"),
+                        severity=_safe_str(item.get("severity"), "info"),
+                        message=_safe_str(item.get("message")),
+                        actor_role=_safe_str(item.get("actor_role"), "system"),
+                        actor_user_id=_safe_int(item.get("actor_user_id"), 0),
+                        created_at=_safe_datetime_iso(item.get("created_at")),
+                        source=_safe_str(item.get("source"), RULE_GATEKEEPER_PROTOCOL),
+                        details=dict(item.get("details") or {}),
+                        event_hash=_safe_str(item.get("event_hash")),
+                        previous_event_hash=_safe_str(item.get("previous_event_hash")),
+                    )
+                )
+        mapping = {
+            "_ledger": "prediction_ledger",
+            "_verifier_runs": "verifier_runs",
+            "_feedback_events": "feedback",
+            "_learning_signals": "learning_signals",
+            "_rule_candidates": "rule_candidates",
+            "_agent_sessions": "agent_sessions",
+            "_knowledge_pr": "knowledge_pr_queue",
+            "_rule_test_results": "rule_test_results",
+            "_rule_test_cases": "rule_test_cases",
+            "_rule_test_runs": "rule_test_runs",
+            "_learning_insights": "aggregated_insights",
+            "_candidate_rule_suggestions": "candidate_rule_suggestions",
+            "_rule_quality_scores": "rule_quality_scores",
+        }
+        for attr, key in mapping.items():
+            value = snapshot.get(key)
+            if isinstance(value, dict):
+                setattr(self, attr, {k: v for k, v in value.items()})
+        for raw_key, payload in (snapshot.get("rule_test_suites") or {}).items():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                suite = RuleTestSuite.from_payload(dict(payload))
+                self._rule_test_suites[_rule_storage_key(suite.suite_id, suite.version)] = suite
+                if suite.status == "active":
+                    self._active_rule_test_suites[suite.suite_id] = suite.version
+            except Exception:
+                continue
+        if isinstance(snapshot.get("active_rule_test_suites"), dict):
+            self._active_rule_test_suites.update({k: _safe_str(v) for k, v in snapshot["active_rule_test_suites"].items()})
+
     def _load(self) -> None:
+        if self._storage_backend == "postgres":
+            self._hydrate_from_snapshot(self._storage_adapter.load_snapshot())
+            return
         if self._rule_file.exists():
             try:
                 raw = json.loads(self._rule_file.read_text(encoding="utf-8"))
@@ -869,6 +1468,8 @@ class V18PredictiveStore:
                                 created_at=_safe_datetime_iso(item.get("created_at")),
                                 source=_safe_str(item.get("source"), RULE_GATEKEEPER_PROTOCOL),
                                 details=dict(item.get("details") or {}),
+                                event_hash=_safe_str(item.get("event_hash")),
+                                previous_event_hash=_safe_str(item.get("previous_event_hash")),
                             )
                         )
             except Exception:
@@ -925,6 +1526,30 @@ class V18PredictiveStore:
             except Exception:
                 pass
 
+        if self._learning_signal_file.exists():
+            try:
+                raw = json.loads(self._learning_signal_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._learning_signals = {k: list(v) for k, v in raw.items() if isinstance(v, list)}
+            except Exception:
+                pass
+
+        if self._rule_candidate_file.exists():
+            try:
+                raw = json.loads(self._rule_candidate_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._rule_candidates = {k: dict(v) for k, v in raw.items() if isinstance(v, dict)}
+            except Exception:
+                pass
+
+        if self._agent_session_file.exists():
+            try:
+                raw = json.loads(self._agent_session_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._agent_sessions = {k: dict(v) for k, v in raw.items() if isinstance(v, dict)}
+            except Exception:
+                pass
+
         if self._pr_queue_file.exists():
             try:
                 raw = json.loads(self._pr_queue_file.read_text(encoding="utf-8"))
@@ -938,6 +1563,46 @@ class V18PredictiveStore:
                 raw = json.loads(self._rule_test_file.read_text(encoding="utf-8"))
                 if isinstance(raw, dict):
                     self._rule_test_results = {k: list(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, list)}
+            except Exception:
+                pass
+
+        if self._rule_test_case_file.exists():
+            try:
+                raw = json.loads(self._rule_test_case_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._rule_test_cases = {k: dict(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+            except Exception:
+                pass
+
+        if self._rule_test_run_file.exists():
+            try:
+                raw = json.loads(self._rule_test_run_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._rule_test_runs = {k: dict(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+            except Exception:
+                pass
+
+        if self._learning_insight_file.exists():
+            try:
+                raw = json.loads(self._learning_insight_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._learning_insights = {k: dict(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+            except Exception:
+                pass
+
+        if self._candidate_suggestion_file.exists():
+            try:
+                raw = json.loads(self._candidate_suggestion_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._candidate_rule_suggestions = {k: dict(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+            except Exception:
+                pass
+
+        if self._rule_quality_score_file.exists():
+            try:
+                raw = json.loads(self._rule_quality_score_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._rule_quality_scores = {k: dict(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
             except Exception:
                 pass
 
@@ -969,6 +1634,9 @@ class V18PredictiveStore:
                 pass
 
     def _persist(self) -> None:
+        if self._storage_backend == "postgres":
+            self._storage_adapter.save_snapshot(self._snapshot())
+            return
         def safe_dump(path: Path, payload: Any) -> None:
             try:
                 path.write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")
@@ -983,10 +1651,18 @@ class V18PredictiveStore:
         safe_dump(self._ledger_file, self._ledger)
         safe_dump(self._verifier_file, self._verifier_runs)
         safe_dump(self._feedback_file, self._feedback_events)
+        safe_dump(self._learning_signal_file, self._learning_signals)
+        safe_dump(self._rule_candidate_file, self._rule_candidates)
+        safe_dump(self._agent_session_file, self._agent_sessions)
         safe_dump(self._pr_queue_file, self._knowledge_pr)
         safe_dump(self._rule_test_file, self._rule_test_results)
         safe_dump(self._rule_test_suite_file, {k: asdict(v) for k, v in self._rule_test_suites.items()})
         safe_dump(self._rule_test_suite_active_file, self._active_rule_test_suites)
+        safe_dump(self._rule_test_case_file, self._rule_test_cases)
+        safe_dump(self._rule_test_run_file, self._rule_test_runs)
+        safe_dump(self._learning_insight_file, self._learning_insights)
+        safe_dump(self._candidate_suggestion_file, self._candidate_rule_suggestions)
+        safe_dump(self._rule_quality_score_file, self._rule_quality_scores)
 
     def _normalize_rule_key(self, rule_id: str, version: str) -> str:
         return _rule_storage_key(rule_id, version)
@@ -1015,18 +1691,99 @@ class V18PredictiveStore:
         source: str = RULE_GATEKEEPER_PROTOCOL,
         details: Optional[Dict[str, Any]] = None,
     ) -> None:
-        self._rule_audit_events.append(
-            RuleKernelAuditEvent(
-                rule_id=rule_id,
-                event_type=event_type,
-                severity=severity,
-                message=message,
-                actor_role=actor_role,
-                actor_user_id=actor_user_id,
-                source=source,
-                details=dict(details or {}),
-            )
+        previous_hash = _safe_str(self._rule_audit_events[-1].event_hash) if self._rule_audit_events else ""
+        event = RuleKernelAuditEvent(
+            rule_id=rule_id,
+            event_type=event_type,
+            severity=severity,
+            message=message,
+            actor_role=actor_role,
+            actor_user_id=actor_user_id,
+            source=source,
+            details=dict(details or {}),
+            previous_event_hash=previous_hash,
         )
+        payload = event.to_dict()
+        payload["event_hash"] = ""
+        event.event_hash = _audit_event_hash(payload)
+        self._rule_audit_events.append(event)
+
+    def update_audit_event(self, *_args: Any, **_kwargs: Any) -> None:
+        self._storage_adapter.update_audit_event(*_args, **_kwargs)
+
+    def delete_audit_event(self, *_args: Any, **_kwargs: Any) -> None:
+        self._storage_adapter.delete_audit_event(*_args, **_kwargs)
+
+    def verify_audit_hash_chain(self) -> Dict[str, Any]:
+        previous = ""
+        broken: List[Dict[str, Any]] = []
+        for index, event in enumerate(self._rule_audit_events):
+            payload = event.to_dict()
+            event_hash = _safe_str(payload.get("event_hash"))
+            actual_previous = _safe_str(payload.get("previous_event_hash"))
+            payload["event_hash"] = ""
+            expected_hash = _audit_event_hash(payload)
+            if actual_previous != previous or event_hash != expected_hash:
+                broken.append(
+                    {
+                        "index": index,
+                        "event_type": _safe_str(payload.get("event_type")),
+                        "expected_previous_event_hash": previous,
+                        "actual_previous_event_hash": actual_previous,
+                        "expected_event_hash": expected_hash,
+                        "actual_event_hash": event_hash,
+                    }
+                )
+            previous = event_hash
+        return {"ok": not broken, "event_count": len(self._rule_audit_events), "broken": broken}
+
+    @contextmanager
+    def transaction(self, _name: str = "default") -> Iterator[None]:
+        snapshot = self._snapshot()
+        try:
+            with self._storage_adapter.transaction():
+                yield
+        except Exception:
+            self._rule_kernels.clear()
+            self._active_rules.clear()
+            self._knowledge_cards.clear()
+            self._active_knowledge_cards.clear()
+            self._rule_audit_events.clear()
+            self._ledger.clear()
+            self._verifier_runs.clear()
+            self._feedback_events.clear()
+            self._learning_signals.clear()
+            self._rule_candidates.clear()
+            self._agent_sessions.clear()
+            self._knowledge_pr.clear()
+            self._rule_test_results.clear()
+            self._rule_test_suites.clear()
+            self._active_rule_test_suites.clear()
+            self._rule_test_cases.clear()
+            self._rule_test_runs.clear()
+            self._learning_insights.clear()
+            self._candidate_rule_suggestions.clear()
+            self._rule_quality_scores.clear()
+            self._hydrate_from_snapshot(snapshot)
+            self._persist()
+            raise
+
+    def migrate_json_to_postgres(self, dsn: str | None = None) -> Dict[str, Any]:
+        adapter = PostgresStorageAdapter(_safe_str(dsn or V18_POSTGRES_DSN))
+        snapshot = self._snapshot()
+        adapter.save_snapshot(snapshot)
+        migrated = adapter.load_snapshot()
+        return {
+            "backend": "postgres",
+            "collections": sorted(k for k in migrated.keys() if k in V18_STATE_COLLECTIONS),
+            "rule_count": len(migrated.get("rules") or {}),
+            "ledger_count": len(migrated.get("prediction_ledger") or {}),
+            "audit_event_count": len(migrated.get("audit_events") or []),
+            "idempotent": True,
+        }
+
+    def invalidate_cache(self, *keys: str) -> None:
+        self._redis.delete(*keys)
 
     def _rule_audit_trace(self, rule: RuleKernel) -> Dict[str, Any]:
         return {
@@ -1241,46 +1998,53 @@ class V18PredictiveStore:
         role = str(actor_role or "system").strip().lower()
         if role not in {"manager", "admin", "system"}:
             raise PredictiveServiceError("FORBIDDEN", "only reviewer roles can activate rules", 403)
+        lock_key = f"lock:rule:{rule_id}"
+        if not self._redis.acquire_lock(lock_key, ttl_seconds=30):
+            raise PredictiveServiceError("LOCK_BUSY", "rule activation is already in progress", 409)
 
-        target_version = _safe_str(target_version)
-        if not target_version:
-            raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "target_version required", 400)
+        try:
+            target_version = _safe_str(target_version)
+            if not target_version:
+                raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "target_version required", 400)
 
-        target_key = self._normalize_rule_key(rule_id, target_version)
-        target = self._rule_kernels.get(target_key)
-        if not target:
-            raise PredictiveServiceError("RULE_NOT_FOUND", f"Rule {rule_id} version {target_version} not found", 404)
-        if target.status != "validated":
-            raise PredictiveServiceError("RULE_TRANSITION_INVALID", "only validated rules can be activated", 409)
+            target_key = self._normalize_rule_key(rule_id, target_version)
+            target = self._rule_kernels.get(target_key)
+            if not target:
+                raise PredictiveServiceError("RULE_NOT_FOUND", f"Rule {rule_id} version {target_version} not found", 404)
+            if target.status != "validated":
+                raise PredictiveServiceError("RULE_TRANSITION_INVALID", "only validated rules can be activated", 409)
 
-        current_version = self._active_rules.get(rule_id)
-        if current_version and current_version != target_version:
-            old_key = self._normalize_rule_key(rule_id, current_version)
-            old_rule = self._rule_kernels.get(old_key)
-            if old_rule and old_rule.status == "active":
-                old_rule.status = "validated"
-                self._rule_kernels[old_key] = old_rule
+            current_version = self._active_rules.get(rule_id)
+            if current_version and current_version != target_version:
+                old_key = self._normalize_rule_key(rule_id, current_version)
+                old_rule = self._rule_kernels.get(old_key)
+                if old_rule and old_rule.status == "active":
+                    old_rule.status = "validated"
+                    self._rule_kernels[old_key] = old_rule
 
-        target.status = "active"
-        target.approved_by = _safe_str(actor_role, "system")
-        target.approved_by_user_id = _safe_int(actor_user_id, 0)
-        target.approved_at = _utcnow_iso()
-        self._active_rules[rule_id] = target_version
-        self._rule_kernels[target_key] = target
-        self._append_audit_event(
-            rule_id=rule_id,
-            event_type="RULE_ACTIVATED",
-            severity="info",
-            message="rule activated",
-            actor_role=role,
-            actor_user_id=actor_user_id,
-            details={
-                "version": target_version,
-                **self._rule_audit_trace(target),
-            },
-        )
-        self._persist()
-        return target
+            target.status = "active"
+            target.approved_by = _safe_str(actor_role, "system")
+            target.approved_by_user_id = _safe_int(actor_user_id, 0)
+            target.approved_at = _utcnow_iso()
+            self._active_rules[rule_id] = target_version
+            self._rule_kernels[target_key] = target
+            self._append_audit_event(
+                rule_id=rule_id,
+                event_type="RULE_ACTIVATED",
+                severity="info",
+                message="rule activated",
+                actor_role=role,
+                actor_user_id=actor_user_id,
+                details={
+                    "version": target_version,
+                    **self._rule_audit_trace(target),
+                },
+            )
+            self.invalidate_cache("cache:active_rules", "cache:rule_quality_scores")
+            self._persist()
+            return target
+        finally:
+            self._redis.release_lock(lock_key)
 
     def update_rule_status(
         self,
@@ -1424,6 +2188,10 @@ class V18PredictiveStore:
             "card_id": card.card_id,
             "operation": "created",
             "version": card.version,
+            "content_hash": card.content_hash,
+            "created_by": card.created_by,
+            "approved_by": card.approved_by,
+            "approved_at": card.approved_at,
         }
 
     def activate_knowledge_card(
@@ -1578,8 +2346,323 @@ class V18PredictiveStore:
                 continue
             if tag and tag not in card.tags:
                 continue
-            out.append(card)
+        out.append(card)
         return out
+
+    def build_sandbox_rule_candidate(
+        self,
+        payload: Dict[str, Any],
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        raw = dict(payload.get("rule_candidate") if isinstance(payload.get("rule_candidate"), dict) else payload)
+        if "owner_plugin" not in raw and raw.get("plugin_id"):
+            raw["owner_plugin"] = raw.get("plugin_id")
+        if "version" not in raw or not _safe_str(raw.get("version")):
+            raw["version"] = f"sandbox-{_safe_int(datetime.now(timezone.utc).timestamp())}"
+        raw["status"] = "experimental"
+        if "effect_scope" not in raw:
+            raw["effect_scope"] = _ensure_list(raw.get("allowed_topics")) or [_normalize_topic(raw.get("topic"))]
+        if "allowed_topics" not in raw:
+            raw["allowed_topics"] = _ensure_list(raw.get("effect_scope"))
+        if "knowledge_card_id" not in raw and payload.get("knowledge_card_id"):
+            raw["knowledge_card_id"] = payload.get("knowledge_card_id")
+
+        rule = RuleKernel.from_payload(raw)
+        if rule.status == "active":
+            raise PredictiveServiceError("RULE_TRANSITION_INVALID", "sandbox candidates cannot be active", 409)
+        if rule.knowledge_card_id:
+            self.get_knowledge_card(rule.knowledge_card_id, allow_inactive=True)
+        rule.created_by = _safe_str(actor_role, "system")
+        rule.created_by_user_id = _safe_int(actor_user_id, 0)
+        rule.content_hash = _rule_payload_fingerprint(rule.to_dict())
+        candidate = {
+            "candidate_id": _rule_candidate_id(rule.to_dict()),
+            "candidate_state": "sandbox",
+            "sandbox": True,
+            "rule_payload": rule.to_dict(),
+            "created_at": _utcnow_iso(),
+            "created_by": _safe_str(actor_role, "system"),
+        }
+        self._rule_candidates[candidate["candidate_id"]] = candidate
+        self._persist()
+        return candidate
+
+    def query_rule_candidates(
+        self,
+        *,
+        candidate_state: str | None = None,
+        rule_id: str | None = None,
+        knowledge_card_id: str | None = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        items = list(self._rule_candidates.values())
+        if candidate_state:
+            items = [item for item in items if _safe_str(item.get("candidate_state")) == _safe_str(candidate_state)]
+        if rule_id:
+            items = [item for item in items if _safe_str((item.get("rule_payload") or {}).get("rule_id")) == _safe_str(rule_id)]
+        if knowledge_card_id:
+            items = [item for item in items if _safe_str((item.get("rule_payload") or {}).get("knowledge_card_id")) == _safe_str(knowledge_card_id)]
+        items = sorted(items, key=lambda item: _parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        start = max(0, _safe_int(offset, 0))
+        size = max(1, min(_safe_int(limit, 100), 500))
+        return {"items": items[start : start + size], "total_matched": len(items), "total_returned": len(items[start : start + size]), "offset": start, "limit": size}
+
+    def register_rule_test_case(
+        self,
+        payload: Dict[str, Any],
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        case = RuleTestCase.from_payload(payload)
+        item = case.to_dict()
+        item["created_by"] = _safe_str(actor_role, "system")
+        item["created_by_user_id"] = _safe_int(actor_user_id, 0)
+        self._rule_test_cases[case.case_id] = item
+        self._persist()
+        return item
+
+    def query_rule_test_cases(
+        self,
+        *,
+        source: str | None = None,
+        tag: str | None = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        items = list(self._rule_test_cases.values())
+        if source:
+            items = [item for item in items if _safe_str(item.get("source")) == _safe_str(source)]
+        if tag:
+            items = [item for item in items if _safe_str(tag) in [_safe_str(row) for row in _ensure_list(item.get("tags"))]]
+        items = sorted(items, key=lambda item: _parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        start = max(0, _safe_int(offset, 0))
+        size = max(1, min(_safe_int(limit, 100), 500))
+        return {"items": items[start : start + size], "total_matched": len(items), "total_returned": len(items[start : start + size]), "offset": start, "limit": size}
+
+    def _rule_test_cases_for_payload(self, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+        cases: List[Dict[str, Any]] = []
+        for case_id in [_safe_str(item) for item in _ensure_list(payload.get("test_case_ids")) if _safe_str(item)]:
+            if case_id not in self._rule_test_cases:
+                raise PredictiveServiceError("RULE_TEST_CASE_NOT_FOUND", f"rule test case {case_id} not found", 404)
+            cases.append(dict(self._rule_test_cases[case_id]))
+        for raw in _ensure_list(payload.get("test_cases")):
+            if not isinstance(raw, dict):
+                continue
+            cases.append(RuleTestCase.from_payload(raw).to_dict())
+        if not cases:
+            raise PredictiveServiceError("RULE_TEST_EMPTY", "test_case_ids or test_cases required")
+        return cases
+
+    def _rule_subject_for_test(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        candidate_id = _safe_str(payload.get("rule_candidate_id"))
+        if candidate_id:
+            candidate = self._rule_candidates.get(candidate_id)
+            if not candidate:
+                raise PredictiveServiceError("RULE_CANDIDATE_NOT_FOUND", f"rule candidate {candidate_id} not found", 404)
+            rule_payload = dict(candidate.get("rule_payload") or {})
+            return {
+                "rule_candidate_id": candidate_id,
+                "rule_payload": rule_payload,
+                "rule_id": _safe_str(rule_payload.get("rule_id")),
+                "version": _safe_str(rule_payload.get("version")),
+                "subject_state": "sandbox_candidate",
+            }
+
+        rule_id = _safe_str(payload.get("rule_id"))
+        if not rule_id:
+            raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "rule_candidate_id or rule_id required")
+        rule = self.get_rule(rule_id, version=_safe_str(payload.get("version") or payload.get("rule_version")) or None, allow_inactive=True)
+        return {
+            "rule_candidate_id": "",
+            "rule_payload": rule.to_dict(),
+            "rule_id": rule.rule_id,
+            "version": rule.version,
+            "subject_state": rule.status,
+        }
+
+    def _candidate_test_contract_verification(self, rule_payload: Dict[str, Any], *, force_failure: bool = False) -> Dict[str, Any]:
+        errors: List[str] = []
+        if force_failure or _safe_bool(rule_payload.get("force_verifier_failure"), False):
+            errors.append("FORCED_CONTRACT_VERIFIER_FAILURE")
+        if not _safe_str(rule_payload.get("rule_id")) or not _safe_str(rule_payload.get("version")) or not _safe_str(rule_payload.get("content_hash")):
+            errors.append("RULE_EVIDENCE_IDENTITY_MISSING")
+        if _safe_str(rule_payload.get("status")) == "active":
+            errors.append("SANDBOX_CANDIDATE_CANNOT_BE_ACTIVE")
+        return {"result": "pass" if not errors else "fail", "errors": sorted(set(errors)), "verifier_version": "rule-test-contract-v02"}
+
+    def _run_single_rule_test_case_v02(self, *, rule_payload: Dict[str, Any], case: Dict[str, Any]) -> Dict[str, Any]:
+        rule_id = _safe_str(rule_payload.get("rule_id"))
+        version = _safe_str(rule_payload.get("version"))
+        content_hash = _safe_str(rule_payload.get("content_hash"))
+        effect = dict(rule_payload.get("effect") or {})
+        condition = dict(rule_payload.get("condition") or {})
+        chart_snapshot = dict(case.get("chart_snapshot") or {})
+        expected_patterns = [_safe_str(item) for item in _ensure_list(case.get("expected_evidence_patterns")) if _safe_str(item)]
+        forbidden_patterns = [_safe_str(item) for item in _ensure_list(case.get("forbidden_conclusions")) if _safe_str(item)]
+        expected_conclusions = _ensure_list(case.get("expected_conclusions"))
+        evidence_text_parts = [
+            _canonical_json(condition),
+            _canonical_json(effect),
+            _canonical_json(chart_snapshot),
+            " ".join([_safe_str(item) for item in _ensure_list(case.get("tags"))]),
+        ]
+        evidence_text = " ".join(evidence_text_parts).lower()
+        conclusion_claim = _safe_str(rule_payload.get("test_conclusion"))
+        if not conclusion_claim:
+            topic = _safe_str((case.get("query_intent") or {}).get("topic"), "general")
+            effect_keys = ",".join(sorted(_safe_str(key) for key in effect.keys())) or "effect"
+            conclusion_claim = f"{rule_id} supports {topic} via {effect_keys}"
+        conclusion_text = " ".join([conclusion_claim, _canonical_json(effect)]).lower()
+        failures: List[str] = []
+        warnings: List[str] = []
+
+        missing_patterns = [pattern for pattern in expected_patterns if pattern.lower() not in evidence_text]
+        if missing_patterns:
+            failures.append("EXPECTED_EVIDENCE_NOT_MATCHED:" + ",".join(missing_patterns))
+
+        forbidden_hits = [pattern for pattern in forbidden_patterns if pattern.lower() in conclusion_text]
+        if forbidden_hits:
+            failures.append("FORBIDDEN_CONCLUSION_PRODUCED:" + ",".join(forbidden_hits))
+
+        expected_text = " ".join(
+            _canonical_json(item) if isinstance(item, dict) else _safe_str(item)
+            for item in expected_conclusions
+        ).lower()
+        if expected_text and not any(token and token in conclusion_text for token in expected_text.replace(",", " ").split()):
+            warnings.append("EXPECTED_CONCLUSION_WEAK_MATCH")
+
+        raw_confidence = _safe_float(rule_payload.get("priority"), 0.5) * 0.45 + _safe_float(rule_payload.get("evidence_strength"), 0.5) * 0.55
+        confidence = round(max(0.0, min(1.0, raw_confidence)), 3)
+        baseline_confidence = None
+        for item in expected_conclusions:
+            if isinstance(item, dict) and "confidence" in item:
+                baseline_confidence = _safe_float(item.get("confidence"))
+                break
+        if baseline_confidence is None:
+            try:
+                raw_baseline = float(case.get("baseline_confidence"))
+            except (TypeError, ValueError):
+                raw_baseline = -1.0
+            if raw_baseline >= 0.0:
+                baseline_confidence = raw_baseline
+        if baseline_confidence is not None and abs(confidence - baseline_confidence) > _safe_float(case.get("max_confidence_drift"), 0.35):
+            warnings.append("CONFIDENCE_DRIFT_WARNING")
+
+        verification = self._candidate_test_contract_verification(
+            rule_payload,
+            force_failure=_safe_bool(case.get("force_verifier_failure"), False),
+        )
+        if verification.get("result") != "pass":
+            failures.append("CONTRACT_VERIFIER_FAILED:" + ",".join(_ensure_list(verification.get("errors"))))
+
+        status = "fail" if failures else ("warning" if warnings else "pass")
+        evidence_id = f"ev_{rule_id}_{version}_{content_hash[:12]}"
+        return {
+            "case_id": _safe_str(case.get("case_id")),
+            "status": status,
+            "failures": failures,
+            "warnings": warnings,
+            "evidence_refs": [evidence_id] if content_hash else [],
+            "conclusions": [
+                {
+                    "conclusion_id": f"conclusion_{_safe_str(case.get('case_id')) or 'case'}",
+                    "claim": conclusion_claim,
+                    "confidence": confidence,
+                    "evidence_ids": [evidence_id] if content_hash else [],
+                    "generated_by": "engine",
+                }
+            ],
+            "confidence": confidence,
+            "verifier": verification,
+        }
+
+    def run_rule_test_v02(self, payload: Dict[str, Any]) -> Dict[str, Any]:
+        self._assert_lifecycle(
+            token=_safe_str(payload.get("lifecycle_token", "")),
+            purpose="test",
+            execution_mode="test",
+        )
+        role = _safe_str(payload.get("actor_role"), "system").lower()
+        if role not in {"practitioner", "manager", "admin", "system"}:
+            raise PredictiveServiceError("FORBIDDEN", "only practitioner/manager/admin can run rule tests", 403)
+        subject = self._rule_subject_for_test(payload)
+        cases = self._rule_test_cases_for_payload(payload)
+        results = [
+            self._run_single_rule_test_case_v02(rule_payload=dict(subject["rule_payload"]), case=case)
+            for case in cases
+        ]
+        pass_count = sum(1 for item in results if item.get("status") == "pass")
+        fail_count = sum(1 for item in results if item.get("status") == "fail")
+        warning_count = sum(1 for item in results if item.get("status") == "warning")
+        overall_status = "fail" if fail_count else ("warning" if warning_count else "pass")
+        digest = _payload_hash(
+            {
+                "rule_candidate_id": subject["rule_candidate_id"],
+                "rule_id": subject["rule_id"],
+                "version": subject["version"],
+                "test_case_ids": [_safe_str(item.get("case_id")) for item in cases],
+                "results": results,
+            }
+        ).split(":", 1)[-1][:16]
+        run = RuleTestRun(
+            run_id=f"rule_test_run_{digest}",
+            rule_candidate_id=subject["rule_candidate_id"],
+            rule_id=subject["rule_id"],
+            version=subject["version"],
+            test_case_ids=[_safe_str(item.get("case_id")) for item in cases],
+            results=results,
+            pass_count=pass_count,
+            fail_count=fail_count,
+            warning_count=warning_count,
+            overall_status=overall_status,
+        ).to_dict()
+        run["rule_test_engine"] = RULE_TEST_ENGINE_VERSION_V02
+        run["subject_state"] = subject["subject_state"]
+        self._rule_test_runs[run["run_id"]] = run
+        self._persist()
+        self._append_audit_event(
+            rule_id=subject["rule_id"],
+            event_type="RULE_TEST_ENGINE_V02_RUN",
+            severity="info" if overall_status == "pass" else "warning",
+            message="rule test engine v0.2 run completed",
+            actor_role=role,
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+            details={
+                "run_id": run["run_id"],
+                "rule_candidate_id": subject["rule_candidate_id"],
+                "version": subject["version"],
+                "overall_status": overall_status,
+                "pass_count": pass_count,
+                "fail_count": fail_count,
+                "warning_count": warning_count,
+            },
+        )
+        return run
+
+    def get_rule_test_run(self, run_id: str) -> Dict[str, Any]:
+        run_id = _safe_str(run_id)
+        if run_id not in self._rule_test_runs:
+            raise PredictiveServiceError("RULE_TEST_RUN_NOT_FOUND", f"rule test run {run_id} not found", 404)
+        return dict(self._rule_test_runs[run_id])
+
+    def _has_recent_passing_rule_test(self, *, rule_candidate_id: str = "", rule_id: str = "", version: str = "") -> bool:
+        runs = sorted(
+            self._rule_test_runs.values(),
+            key=lambda item: _parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc),
+            reverse=True,
+        )
+        for run in runs:
+            if _safe_str(run.get("overall_status")) != "pass":
+                continue
+            if rule_candidate_id and _safe_str(run.get("rule_candidate_id")) == rule_candidate_id:
+                return True
+            if rule_id and version and _safe_str(run.get("rule_id")) == rule_id and _safe_str(run.get("version")) == version:
+                return True
+        return False
 
     def register_rule_test_suite(
         self,
@@ -2092,6 +3175,94 @@ class V18PredictiveStore:
             "rationale": rationale,
         }
 
+    def _rule_evidence_from_resolver(self, resolved_rules: Dict[str, Any], *, chart_snapshot: Dict[str, Any]) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        active_rule_ids = _ensure_list(resolved_rules.get("active_rules"))
+        resolved_effect = dict(resolved_rules.get("resolved_effect") or {})
+        facts = _ensure_list(chart_snapshot.get("matched_facts") or chart_snapshot.get("facts"))
+        for rule_id in active_rule_ids:
+            try:
+                rule = self.get_rule(_safe_str(rule_id), allow_inactive=False)
+            except PredictiveServiceError:
+                continue
+            evidence_id = f"ev_{rule.rule_id}_{rule.version}_{rule.content_hash[:12]}"
+            out.append(
+                {
+                    "evidence_id": evidence_id,
+                    "rule_id": rule.rule_id,
+                    "version": rule.version,
+                    "content_hash": rule.content_hash,
+                    "matched_facts": facts,
+                    "effect": dict(rule.effect or {}),
+                    "confidence_delta": round(_safe_float(rule.priority) * _safe_float(rule.evidence_strength), 4),
+                    "resolved_effect": resolved_effect,
+                }
+            )
+        return out
+
+    def _conclusions_from_evidence(self, *, topic: str, rule_evidence: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if not rule_evidence:
+            return []
+        conclusions: List[Dict[str, Any]] = []
+        for index, evidence in enumerate(rule_evidence):
+            effect = dict(evidence.get("effect") or {})
+            effect_key = next(iter(effect.keys()), _normalize_topic(topic))
+            score = _safe_float(effect.get(effect_key), 0.0)
+            conclusions.append(
+                {
+                    "conclusion_id": f"conclusion_{index + 1}",
+                    "topic": _normalize_topic(topic),
+                    "claim": f"{_normalize_topic(topic)} signal is supported by rule {evidence.get('rule_id')}",
+                    "polarity": "support" if score >= 0.0 else "risk",
+                    "confidence": min(1.0, _safe_float(evidence.get("confidence_delta"), 0.0)),
+                    "evidence_ids": [_safe_str(evidence.get("evidence_id"))],
+                    "generated_by": "engine",
+                }
+            )
+        return conclusions
+
+    def verify_prediction_contract(self, contract: Dict[str, Any]) -> Dict[str, Any]:
+        evidence_rows = [row for row in _ensure_list(contract.get("rule_evidence")) if isinstance(row, dict)]
+        conclusions = [row for row in _ensure_list(contract.get("conclusions")) if isinstance(row, dict)]
+        evidence_by_id = {
+            _safe_str(row.get("evidence_id")): row
+            for row in evidence_rows
+            if _safe_str(row.get("evidence_id"))
+        }
+        errors: List[str] = []
+
+        for row in evidence_rows:
+            if not _safe_str(row.get("rule_id")) or not _safe_str(row.get("version")) or not _safe_str(row.get("content_hash")):
+                errors.append("RULE_EVIDENCE_IDENTITY_MISSING")
+                continue
+            try:
+                rule = self.get_rule(_safe_str(row.get("rule_id")), version=_safe_str(row.get("version")), allow_inactive=True)
+                if _safe_str(rule.content_hash) != _safe_str(row.get("content_hash")):
+                    errors.append("RULE_EVIDENCE_HASH_MISMATCH")
+            except PredictiveServiceError:
+                errors.append("RULE_EVIDENCE_RULE_NOT_FOUND")
+
+        for row in conclusions:
+            refs = [_safe_str(item) for item in _ensure_list(row.get("evidence_ids")) if _safe_str(item)]
+            if not refs:
+                errors.append("CONCLUSION_EVIDENCE_REQUIRED")
+                continue
+            if any(ref not in evidence_by_id for ref in refs):
+                errors.append("CONCLUSION_EVIDENCE_NOT_FOUND")
+            if _safe_str(row.get("generated_by"), "engine") != "engine":
+                errors.append("CONCLUSION_NOT_ENGINE_GENERATED")
+
+        if conclusions and not evidence_rows:
+            errors.append("CONCLUSION_WITHOUT_EVIDENCE")
+
+        return {
+            "result": "pass" if not errors else "fail",
+            "errors": sorted(set(errors)),
+            "evidence_count": len(evidence_rows),
+            "conclusion_count": len(conclusions),
+            "verifier_version": "prediction-contract-v1",
+        }
+
     def build_contract(self, payload: Dict[str, Any], *, resolved_rules: Dict[str, Any]) -> PredictionContract:
         if resolved_rules.get("status") != "resolved":
             raise PredictiveServiceError("RESOLVER_REQUIRED_MISSING", "resolver_snapshot missing or invalid")
@@ -2106,8 +3277,25 @@ class V18PredictiveStore:
                 actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
                 details={"prediction_id": _safe_str(payload.get("prediction_id"))},
             )
+        if "rule_evidence" not in payload:
+            payload = dict(payload)
+            payload["rule_evidence"] = self._rule_evidence_from_resolver(
+                resolved_rules,
+                chart_snapshot=dict(payload.get("chart_snapshot") or {}),
+            )
+        if "conclusions" not in payload:
+            payload = dict(payload)
+            payload["conclusions"] = self._conclusions_from_evidence(
+                topic=_safe_str(payload.get("topic"), "wealth"),
+                rule_evidence=_ensure_list(payload.get("rule_evidence")),
+            )
+        if payload.get("conclusions") and not payload.get("rule_evidence"):
+            raise PredictiveServiceError("CONTRACT_VERIFIER_FAILED", "conclusion requires rule_evidence", 422)
+        verification = self.verify_prediction_contract(payload)
+        if verification.get("result") != "pass":
+            raise PredictiveServiceError("CONTRACT_VERIFIER_FAILED", ",".join(_ensure_list(verification.get("errors"))), 422)
         contract = PredictionContract.from_payload(payload)
-        if not contract.evidence_ids:
+        if not contract.evidence_ids and contract.conclusions:
             raise PredictiveServiceError("EVIDENCE_BINDING_FAILED", "evidence_ids are required", 422)
         if not contract.resolver_snapshot:
             raise PredictiveServiceError("RESOLVER_REQUIRED_MISSING", "resolver_snapshot is required", 422)
@@ -3341,6 +4529,23 @@ class V18PredictiveStore:
             raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "pr_id is required")
         if decision not in {"approve", "reject"}:
             raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "decision must be approve or reject")
+        request_id = _safe_str(payload.get("request_id"))
+        if request_id:
+            cached = self._redis.idempotency_get(f"pr_approve:{request_id}")
+            if cached:
+                return cached
+        lock_key = f"lock:pr:{pr_id}"
+        if not self._redis.acquire_lock(lock_key, ttl_seconds=30):
+            raise PredictiveServiceError("LOCK_BUSY", "PR review is already in progress", 409)
+        try:
+            return self._review_knowledge_pr_locked(payload, actor_role=actor_role, request_id=request_id, lock_key=lock_key)
+        finally:
+            self._redis.release_lock(lock_key)
+
+    def _review_knowledge_pr_locked(self, payload: Dict[str, Any], actor_role: str = "system", request_id: str = "", lock_key: str = "") -> Dict[str, Any]:
+        role = str(actor_role or "system").strip().lower()
+        pr_id = str(payload.get("pr_id") or "").strip()
+        decision = str(payload.get("decision") or "").strip().lower()
         if pr_id not in self._knowledge_pr:
             raise PredictiveServiceError("PR_NOT_FOUND", f"PR {pr_id} not found", 404)
 
@@ -3349,9 +4554,44 @@ class V18PredictiveStore:
             raise PredictiveServiceError("PR_LOCKED", "PR already reviewed")
 
         if decision == "approve":
-            target_status = str(pr.get("target_status") or payload.get("target_status") or "").strip().lower()
-            if target_status:
-                self.update_rule_status(rule_id=str(pr.get("rule_id") or ""), target_status=target_status, actor_role=role)
+            proposed = dict(pr.get("proposed_rule_payload") or {})
+            target_status = str(payload.get("target_status") or pr.get("target_status") or proposed.get("status") or "").strip().lower()
+            if target_status == "active":
+                raise PredictiveServiceError("RULE_TRANSITION_INVALID", "PR approval cannot directly activate rules", 409)
+            if proposed and pr.get("candidate_state") == "sandbox":
+                candidate_id = _safe_str(pr.get("rule_candidate_id"))
+                proposed_rule_id = _safe_str(proposed.get("rule_id") or pr.get("rule_id"))
+                proposed_version = _safe_str(proposed.get("version") or pr.get("rule_version"))
+                if not self._has_recent_passing_rule_test(
+                    rule_candidate_id=candidate_id,
+                    rule_id=proposed_rule_id,
+                    version=proposed_version,
+                ):
+                    raise PredictiveServiceError(
+                        "RULE_TEST_REQUIRED",
+                        "Knowledge PR approval requires a passing Rule Test Engine v0.2 run",
+                        409,
+                    )
+            if proposed:
+                if target_status:
+                    proposed["status"] = target_status
+                registered = self.register_rule(
+                    proposed,
+                    actor_role=role,
+                    actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+                )
+                pr["materialized_rule"] = registered
+                pr["rule_id"] = registered.get("rule_id") or pr.get("rule_id")
+                pr["rule_version"] = registered.get("version") or pr.get("rule_version")
+            elif target_status:
+                rule = self.update_rule_status(
+                    rule_id=str(pr.get("rule_id") or ""),
+                    target_status=target_status,
+                    actor_role=role,
+                    actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+                    version=_safe_str(payload.get("version") or pr.get("rule_version")) or None,
+                )
+                pr["materialized_rule"] = self._rule_audit_trace(rule)
             pr["review_state"] = "approved"
         else:
             pr["review_state"] = "rejected"
@@ -3360,7 +4600,10 @@ class V18PredictiveStore:
         pr["review_note"] = str(payload.get("review_note") or "").strip()
         pr["reviewed_at"] = _utcnow_iso()
         self._knowledge_pr[pr_id] = pr
+        self.invalidate_cache("cache:knowledge_pr_queue_ranking", "cache:rule_quality_scores")
         self._persist()
+        if request_id:
+            self._redis.idempotency_set(f"pr_approve:{request_id}", pr)
         return pr
 
     def run_shadow_compare(self, payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -3427,7 +4670,7 @@ class V18PredictiveStore:
                 details={"prediction_id": prediction_id},
             )
         evidence_ids = _ensure_list(contract_payload.get("evidence_ids"))
-        if not evidence_ids:
+        if not evidence_ids and _ensure_list(contract_payload.get("conclusions")):
             raise PredictiveServiceError("EVIDENCE_BINDING_FAILED", "evidence_ids required", 422)
         feedback_window = dict(contract_payload.get("feedback_window") or {})
         if not feedback_window:
@@ -3454,14 +4697,35 @@ class V18PredictiveStore:
             raise PredictiveServiceError("PREDICTION_HASH_MISMATCH", "prediction_hash mismatch")
 
         contract_payload["feedback_window"] = feedback_window
+        contract_payload.pop("contract_hash", None)
+        contract_hash = _contract_hash(contract_payload)
+        chart_snapshot_hash = _payload_hash(dict(contract_payload.get("chart_snapshot") or {}))
+        conclusion_refs = [
+            _safe_str(row.get("conclusion_id"))
+            for row in _ensure_list(contract_payload.get("conclusions"))
+            if isinstance(row, dict) and _safe_str(row.get("conclusion_id"))
+        ]
+        evidence_refs = [
+            _safe_str(row.get("evidence_id"))
+            for row in _ensure_list(contract_payload.get("rule_evidence"))
+            if isinstance(row, dict) and _safe_str(row.get("evidence_id"))
+        ]
 
         record = PredictionLedgerRecord(
+            ledger_id=f"led_{prediction_id}",
             prediction_id=prediction_id,
             topic=str(contract_payload.get("topic")),
             chain_id=str(contract_payload.get("chain_id")),
             state="Recorded",
             contract=contract_payload,
             prediction_hash=prediction_hash,
+            contract_hash=contract_hash,
+            user_query=_safe_str(contract_payload.get("user_query")),
+            normalized_intent=dict(contract_payload.get("normalized_intent") or {}),
+            chart_snapshot_hash=chart_snapshot_hash,
+            conclusion_refs=conclusion_refs,
+            evidence_refs=evidence_refs,
+            engine_version=_safe_str(contract_payload.get("engine_version") or contract_payload.get("model_version"), V18_1_SCHEMA_VERSION),
             resolver_snapshot=snapshot,
             verifier_status="pending",
             feedback_state="collecting",
@@ -3482,6 +4746,45 @@ class V18PredictiveStore:
         record["feedback_events"] = list(self._feedback_events.get(str(prediction_id), []))
         return record
 
+    def replay_prediction(self, prediction_id: str) -> Dict[str, Any]:
+        record = self.get_ledger(prediction_id)
+        contract = dict(record.get("contract") or {})
+        evidence = [row for row in _ensure_list(contract.get("rule_evidence")) if isinstance(row, dict)]
+        drift_rows = []
+        rule_drift = False
+        for row in evidence:
+            rid = _safe_str(row.get("rule_id"))
+            version = _safe_str(row.get("version"))
+            evidence_hash = _safe_str(row.get("content_hash"))
+            current_hash = ""
+            drift = False
+            try:
+                current_hash = self.get_rule(rid, version=version, allow_inactive=True).content_hash
+                drift = bool(current_hash and evidence_hash and current_hash != evidence_hash)
+            except PredictiveServiceError:
+                drift = True
+            rule_drift = rule_drift or drift
+            drift_rows.append(
+                {
+                    "rule_id": rid,
+                    "version": version,
+                    "evidence_content_hash": evidence_hash,
+                    "current_content_hash": current_hash,
+                    "rule_drift": drift,
+                }
+            )
+        return {
+            "prediction_id": prediction_id,
+            "ledger": record,
+            "contract": contract,
+            "evidence": evidence,
+            "feedback": list(self._feedback_events.get(prediction_id, [])),
+            "learning_signals": list(self._learning_signals.get(prediction_id, [])),
+            "rule_drift": rule_drift,
+            "rule_drift_details": drift_rows,
+            "replay_mode": "contract_replay_only",
+        }
+
     def run_verifier(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         prediction_id = str(payload.get("prediction_id") or "").strip()
         if not prediction_id:
@@ -3499,7 +4802,27 @@ class V18PredictiveStore:
         sections = llm_output.get("sections", {})
         evidence_ids = _ensure_list(contract_data.get("evidence_ids"))
         llm_evidence = _ensure_list(sections.get("evidence"))
-        checks["evidence_binding"] = all(eid in llm_evidence for eid in evidence_ids) if evidence_ids else bool(llm_evidence)
+        checks["evidence_binding"] = all(eid in llm_evidence for eid in evidence_ids) if evidence_ids else not _ensure_list(contract_data.get("conclusions"))
+
+        contract_verification = self.verify_prediction_contract(contract_data)
+        checks["prediction_contract_valid"] = contract_verification.get("result") == "pass"
+        allowed_conclusion_ids = {
+            _safe_str(row.get("conclusion_id"))
+            for row in _ensure_list(contract_data.get("conclusions"))
+            if isinstance(row, dict) and _safe_str(row.get("conclusion_id"))
+        }
+        llm_conclusion_ids = {
+            _safe_str(item)
+            for item in _ensure_list(sections.get("conclusion_ids") or llm_output.get("conclusion_ids"))
+            if _safe_str(item)
+        }
+        checks["contract_conclusion_scope"] = llm_conclusion_ids.issubset(allowed_conclusion_ids) if llm_conclusion_ids else True
+        if not allowed_conclusion_ids:
+            text_for_insufficient = str(llm_output.get("text") or "")
+            allowed_insufficient_terms = {"不足以判断", "证据不足", "insufficient evidence", "not enough evidence"}
+            checks["empty_conclusion_scope"] = any(term in text_for_insufficient for term in allowed_insufficient_terms)
+        else:
+            checks["empty_conclusion_scope"] = True
 
         absolute_words = {"必然", "必定", "注定", "100%", "100", "绝对", "确定", "肯定"}
         text = str(llm_output.get("text") or "")
@@ -3528,7 +4851,14 @@ class V18PredictiveStore:
         else:
             checks["unauthorized_source"] = True
 
-        fatal_fail_keys = {"evidence_binding", "chain_step", "unauthorized_source"}
+        fatal_fail_keys = {
+            "evidence_binding",
+            "chain_step",
+            "unauthorized_source",
+            "prediction_contract_valid",
+            "contract_conclusion_scope",
+            "empty_conclusion_scope",
+        }
         if any(not checks.get(key, False) for key in fatal_fail_keys):
             result = "fail"
             action = "BLOCKED"
@@ -3578,6 +4908,165 @@ class V18PredictiveStore:
             "verifier_run_id": run.run_id,
             "degraded_fields": [key for key, passed in checks.items() if not passed],
         }
+
+    def _explanation_request(self, prediction_id: str, payload: Dict[str, Any], contract: Dict[str, Any]) -> ExplanationRequest:
+        contract_id = _safe_str(payload.get("contract_id"), f"contract_{prediction_id}")
+        level = _safe_str(payload.get("explanation_level"), "normal")
+        if level not in {"brief", "normal", "detailed"}:
+            raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "explanation_level must be brief/normal/detailed", 400)
+        return ExplanationRequest(
+            prediction_id=prediction_id,
+            contract_id=contract_id,
+            allowed_output_scope=dict(payload.get("allowed_output_scope") or contract.get("allowed_output_scope") or {}),
+            user_locale=_safe_str(payload.get("user_locale"), "zh-CN"),
+            tone=_safe_str(payload.get("tone"), "clear"),
+            explanation_level=level,
+            include_uncertainty=_safe_bool(payload.get("include_uncertainty"), True),
+            include_evidence_trace=_safe_bool(payload.get("include_evidence_trace"), False),
+        )
+
+    def _contract_evidence_trace(self, contract: Dict[str, Any]) -> List[Dict[str, Any]]:
+        rows: List[Dict[str, Any]] = []
+        for evidence in _ensure_list(contract.get("rule_evidence")):
+            if not isinstance(evidence, dict):
+                continue
+            rows.append(
+                {
+                    "evidence_id": _safe_str(evidence.get("evidence_id")),
+                    "rule_id": _safe_str(evidence.get("rule_id")),
+                    "version": _safe_str(evidence.get("version")),
+                    "content_hash": _safe_str(evidence.get("content_hash")),
+                    "matched_facts": _ensure_list(evidence.get("matched_facts")),
+                    "effect": dict(evidence.get("effect") or {}),
+                    "confidence_delta": _safe_float(evidence.get("confidence_delta"), 0.0),
+                }
+            )
+        return rows
+
+    def _build_explanation_output(self, contract: Dict[str, Any], request: ExplanationRequest) -> Dict[str, Any]:
+        conclusions = [row for row in _ensure_list(contract.get("conclusions")) if isinstance(row, dict)]
+        evidence_ids = [_safe_str(row.get("evidence_id")) for row in _ensure_list(contract.get("rule_evidence")) if isinstance(row, dict) and _safe_str(row.get("evidence_id"))]
+        causal_path = [_safe_str(item) for item in _ensure_list(contract.get("causal_path")) if _safe_str(item)]
+        risk_modes = [_safe_str(item) for item in _ensure_list(contract.get("risk_modes")) if _safe_str(item)]
+        if not conclusions:
+            text = "证据不足，不足以判断。当前 Prediction Contract 没有形成可引用的结论，需要补充信息或等待更多可验证证据。"
+            return {
+                "text": text,
+                "is_prediction": False,
+                "sections": {
+                    "conclusion": [],
+                    "conclusion_ids": [],
+                    "evidence": [],
+                    "causal": causal_path,
+                    "risk": risk_modes,
+                    "suggestion": ["补充关键排盘信息或更多可验证事实"],
+                },
+                "sources": _ensure_list(contract.get("data_sources")),
+            }
+
+        conclusion_lines: List[str] = []
+        conclusion_ids: List[str] = []
+        max_confidence = 0.0
+        for conclusion in conclusions:
+            conclusion_id = _safe_str(conclusion.get("conclusion_id"))
+            claim = _safe_str(conclusion.get("claim"))
+            confidence = _safe_float(conclusion.get("confidence"), _safe_float(contract.get("confidence"), 0.0))
+            max_confidence = max(max_confidence, confidence)
+            if conclusion_id:
+                conclusion_ids.append(conclusion_id)
+            if claim:
+                conclusion_lines.append(f"{claim}（置信度约 {min(99, round(confidence * 100))}%）")
+        uncertainty = dict(contract.get("uncertainty") or {})
+        uncertainty_text = ""
+        if request.include_uncertainty:
+            uncertainty_score = _safe_float(uncertainty.get("score"), 0.0)
+            uncertainty_text = f" uncertainty 需保留，当前 uncertainty score 约为 {min(99, round(uncertainty_score * 100))}%。"
+        evidence_text = ""
+        if request.include_evidence_trace:
+            evidence_text = f" 证据链引用 {len(evidence_ids)} 条 contract evidence。"
+        if request.explanation_level == "brief":
+            text = "；".join(conclusion_lines[:1]) + uncertainty_text
+        elif request.explanation_level == "detailed":
+            text = "结论：" + "；".join(conclusion_lines) + "。机制：" + " > ".join(causal_path) + "。" + uncertainty_text + evidence_text
+        else:
+            text = "结论：" + "；".join(conclusion_lines) + "。" + uncertainty_text + evidence_text
+        return {
+            "text": text,
+            "is_prediction": True,
+            "max_confidence": max_confidence,
+            "sections": {
+                "conclusion": conclusion_lines,
+                "conclusion_ids": conclusion_ids,
+                "evidence": evidence_ids,
+                "causal": causal_path,
+                "risk": risk_modes,
+                "suggestion": ["以上解释仅限 Prediction Contract 范围，不新增命理判断"],
+            },
+            "sources": _ensure_list(contract.get("data_sources")),
+        }
+
+    def _verify_explanation_output(self, contract: Dict[str, Any], request: ExplanationRequest, output: Dict[str, Any]) -> Dict[str, Any]:
+        verifier = self.run_verifier({"prediction_id": request.prediction_id, "contract": contract, "llm_output": output})
+        errors = list(verifier.get("degraded_fields") or [])
+        allowed_evidence = {
+            _safe_str(row.get("evidence_id"))
+            for row in _ensure_list(contract.get("rule_evidence"))
+            if isinstance(row, dict) and _safe_str(row.get("evidence_id"))
+        }
+        cited_evidence = {
+            _safe_str(item)
+            for item in _ensure_list((output.get("sections") or {}).get("evidence"))
+            if _safe_str(item)
+        }
+        if not cited_evidence.issubset(allowed_evidence):
+            errors.append("explanation_evidence_scope")
+        contract_confidence = max(
+            [_safe_float(row.get("confidence"), _safe_float(contract.get("confidence"), 0.0)) for row in _ensure_list(contract.get("conclusions")) if isinstance(row, dict)]
+            or [_safe_float(contract.get("confidence"), 0.0)]
+        )
+        output_confidence = _safe_float(output.get("max_confidence"), contract_confidence)
+        if output_confidence > min(1.0, contract_confidence + 0.05):
+            errors.append("confidence_exaggeration")
+        if request.include_uncertainty and contract.get("uncertainty"):
+            text = _safe_str(output.get("text"))
+            if not any(term in text for term in {"不确定", "uncertainty", "证据不足", "需保留"}):
+                errors.append("uncertainty_omitted")
+        conclusions = [row for row in _ensure_list(contract.get("conclusions")) if isinstance(row, dict)]
+        if not conclusions and output.get("is_prediction"):
+            errors.append("clarification_masquerades_as_prediction")
+        if errors or verifier.get("result") == "fail":
+            verifier["result"] = "fail"
+            verifier["action"] = "BLOCKED"
+            verifier["degraded_fields"] = sorted(set(errors))
+        return verifier
+
+    def explain_prediction(self, prediction_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        prediction_id = _safe_str(prediction_id)
+        record = self.get_ledger(prediction_id)
+        contract = dict(record.get("contract") or {})
+        verification = self.verify_prediction_contract(contract)
+        if verification.get("result") != "pass":
+            raise PredictiveServiceError("CONTRACT_VERIFIER_FAILED", ",".join(_ensure_list(verification.get("errors"))), 422)
+        request = self._explanation_request(prediction_id, payload, contract)
+        expected_contract_id = f"contract_{prediction_id}"
+        if request.contract_id and request.contract_id != expected_contract_id:
+            raise PredictiveServiceError("CONTRACT_ID_MISMATCH", "contract_id does not match prediction_id", 409)
+        output = dict(payload.get("candidate_output") or payload.get("llm_output") or {})
+        if not output:
+            output = self._build_explanation_output(contract, request)
+        verifier = self._verify_explanation_output(contract, request, output)
+        if verifier.get("result") == "fail":
+            raise PredictiveServiceError("EXPLANATION_VERIFIER_FAILED", ",".join(_ensure_list(verifier.get("degraded_fields"))), 422)
+        evidence_trace = self._contract_evidence_trace(contract) if request.include_evidence_trace else []
+        response = ExplanationResponse(
+            prediction_id=prediction_id,
+            contract_id=request.contract_id,
+            explanation=_safe_str(output.get("text")),
+            safe_output=output,
+            verifier=verifier,
+            evidence_trace=evidence_trace,
+        )
+        return response.to_dict()
 
     def append_feedback(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         prediction_id = str(payload.get("prediction_id") or "").strip()
@@ -3632,11 +5121,617 @@ class V18PredictiveStore:
             "append_only": True,
         }
 
+    def _learning_action_for_feedback(self, feedback_type: str) -> str:
+        kind = _safe_str(feedback_type).lower()
+        if kind == "hit":
+            return "increase_confidence"
+        if kind == "miss":
+            return "review_rule"
+        if kind == "partial":
+            return "review_rule"
+        return "observe"
+
+    def append_prediction_feedback(self, prediction_id: str, payload: Dict[str, Any]) -> Dict[str, Any]:
+        prediction_id = _safe_str(prediction_id or payload.get("prediction_id"))
+        if not prediction_id or prediction_id not in self._ledger:
+            raise PredictiveServiceError("LEDGER_NOT_FOUND", f"prediction {prediction_id} not found", 404)
+        request_id = _safe_str(payload.get("request_id"))
+        if request_id:
+            cached = self._redis.idempotency_get(f"feedback:{prediction_id}:{request_id}")
+            if cached:
+                return cached
+        feedback_type = _safe_str(payload.get("feedback_type"), "user_comment").lower()
+        if feedback_type not in {"hit", "miss", "partial", "unclear", "user_comment"}:
+            raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "invalid feedback_type", 400)
+
+        record = self._ledger[prediction_id]
+        contract = dict(record.get("contract") or {})
+        conclusion_ref = _safe_str(payload.get("conclusion_id") or payload.get("conclusion_ref"))
+        conclusion_ids = {
+            _safe_str(row.get("conclusion_id"))
+            for row in _ensure_list(contract.get("conclusions"))
+            if isinstance(row, dict) and _safe_str(row.get("conclusion_id"))
+        }
+        if conclusion_ref and conclusion_ids and conclusion_ref not in conclusion_ids:
+            raise PredictiveServiceError("CONCLUSION_NOT_FOUND", "feedback conclusion_ref not found", 404)
+        feedback_id = f"fb_{prediction_id}_{_safe_int(len(self._feedback_events.get(prediction_id, [])) + 1)}"
+        feedback = {
+            "feedback_id": feedback_id,
+            "prediction_id": prediction_id,
+            "conclusion_id": conclusion_ref,
+            "conclusion_ref": conclusion_ref,
+            "feedback_type": feedback_type,
+            "user_comment": _safe_str(payload.get("user_comment")),
+            "observed_event": dict(payload.get("observed_event") or {}),
+            "observed_at": _safe_str(payload.get("observed_at"), _utcnow_iso()),
+            "created_at": _utcnow_iso(),
+        }
+        self._feedback_events.setdefault(prediction_id, []).append(feedback)
+
+        evidence_refs: List[str] = []
+        for conclusion in _ensure_list(contract.get("conclusions")):
+            if isinstance(conclusion, dict) and (not conclusion_ref or _safe_str(conclusion.get("conclusion_id")) == conclusion_ref):
+                evidence_refs.extend(_safe_str(item) for item in _ensure_list(conclusion.get("evidence_ids")) if _safe_str(item))
+        suggested_action = self._learning_action_for_feedback(feedback_type)
+        if feedback_type == "miss" and not evidence_refs:
+            suggested_action = "create_candidate"
+        signal = {
+            "signal_id": f"ls_{prediction_id}_{_safe_int(len(self._learning_signals.get(prediction_id, [])) + 1)}",
+            "prediction_id": prediction_id,
+            "conclusion_ref": conclusion_ref,
+            "rule_evidence_refs": sorted(set(evidence_refs)),
+            "feedback_type": feedback_type,
+            "suggested_action": suggested_action,
+            "reason": f"feedback_type={feedback_type}",
+            "created_at": _utcnow_iso(),
+        }
+        self._learning_signals.setdefault(prediction_id, []).append(signal)
+        self.invalidate_cache("cache:rule_quality_scores", f"cache:prediction_replay:{prediction_id}", "cache:learning_insights")
+        self._persist()
+        result = {"feedback": feedback, "learning_signal": signal}
+        if request_id:
+            self._redis.idempotency_set(f"feedback:{prediction_id}:{request_id}", result)
+        return result
+
+    def query_feedback(self, *, prediction_id: str | None = None, offset: int = 0, limit: int = 100) -> Dict[str, Any]:
+        if prediction_id:
+            items = list(self._feedback_events.get(_safe_str(prediction_id), []))
+        else:
+            items = []
+            for rows in self._feedback_events.values():
+                items.extend(rows)
+        items = sorted(items, key=lambda item: _parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)
+        start = max(0, _safe_int(offset, 0))
+        size = max(1, min(_safe_int(limit, 100), 500))
+        return {"items": items[start : start + size], "total_matched": len(items), "total_returned": len(items[start : start + size]), "offset": start, "limit": size}
+
+    def query_learning_signals(self, *, prediction_id: str | None = None) -> List[Dict[str, Any]]:
+        if prediction_id:
+            return list(self._learning_signals.get(_safe_str(prediction_id), []))
+        out: List[Dict[str, Any]] = []
+        for rows in self._learning_signals.values():
+            out.extend(rows)
+        return out
+
+    def _learning_rows_for_aggregation(self) -> List[Dict[str, Any]]:
+        rows: List[Dict[str, Any]] = []
+        for prediction_id, signals in self._learning_signals.items():
+            ledger = self._ledger.get(prediction_id)
+            if not isinstance(ledger, dict):
+                continue
+            contract = dict(ledger.get("contract") or {})
+            evidence_by_id = {
+                _safe_str(item.get("evidence_id")): dict(item)
+                for item in _ensure_list(contract.get("rule_evidence"))
+                if isinstance(item, dict) and _safe_str(item.get("evidence_id"))
+            }
+            conclusion_by_id = {
+                _safe_str(item.get("conclusion_id")): dict(item)
+                for item in _ensure_list(contract.get("conclusions"))
+                if isinstance(item, dict) and _safe_str(item.get("conclusion_id"))
+            }
+            feedback_rows = [
+                dict(item)
+                for item in self._feedback_events.get(prediction_id, [])
+                if isinstance(item, dict)
+            ]
+            chart_snapshot = dict(contract.get("chart_snapshot") or {})
+            matched_facts = [_safe_str(item) for item in _ensure_list(chart_snapshot.get("matched_facts")) if _safe_str(item)]
+            chart_pattern = "|".join(sorted(matched_facts)) or _safe_str(ledger.get("chart_snapshot_hash"))
+            uncertainty = dict(contract.get("uncertainty") or {})
+            uncertainty_score = _safe_float(uncertainty.get("score"), 0.0)
+            contract_confidence = _safe_float(contract.get("confidence"), 0.0)
+            for signal in signals:
+                if not isinstance(signal, dict):
+                    continue
+                conclusion_ref = _safe_str(signal.get("conclusion_ref"))
+                related_feedback = [
+                    item
+                    for item in feedback_rows
+                    if not conclusion_ref or _safe_str(item.get("conclusion_ref") or item.get("conclusion_id")) == conclusion_ref
+                ]
+                evidence_refs = [_safe_str(item) for item in _ensure_list(signal.get("rule_evidence_refs")) if _safe_str(item)]
+                if not evidence_refs and conclusion_ref in conclusion_by_id:
+                    evidence_refs = [
+                        _safe_str(item)
+                        for item in _ensure_list(conclusion_by_id[conclusion_ref].get("evidence_ids"))
+                        if _safe_str(item)
+                    ]
+                related_rule_ids = sorted(
+                    {
+                        _safe_str(evidence_by_id.get(eid, {}).get("rule_id"))
+                        for eid in evidence_refs
+                        if _safe_str(evidence_by_id.get(eid, {}).get("rule_id"))
+                    }
+                )
+                rows.append(
+                    {
+                        "signal": dict(signal),
+                        "feedback": related_feedback,
+                        "ledger": ledger,
+                        "contract": contract,
+                        "related_rule_ids": related_rule_ids,
+                        "related_conclusion": conclusion_ref,
+                        "evidence_refs": evidence_refs,
+                        "chart_pattern": chart_pattern,
+                        "uncertainty_score": uncertainty_score,
+                        "contract_confidence": contract_confidence,
+                        "prediction_id": prediction_id,
+                    }
+                )
+        return rows
+
+    def _dominant_failure_pattern(self, rows: List[Dict[str, Any]], *, miss_count: int, partial_count: int) -> str:
+        pattern_counts: Dict[str, int] = {}
+        high_uncertainty = 0
+        high_confidence_miss = 0
+        for row in rows:
+            signal = dict(row.get("signal") or {})
+            feedback_type = _safe_str(signal.get("feedback_type")).lower()
+            chart_pattern = _safe_str(row.get("chart_pattern"), "unknown_chart")
+            if feedback_type == "miss":
+                pattern_counts[f"miss_chart:{chart_pattern}"] = pattern_counts.get(f"miss_chart:{chart_pattern}", 0) + 1
+                if _safe_float(row.get("contract_confidence"), 0.0) >= 0.7:
+                    high_confidence_miss += 1
+            if feedback_type == "partial":
+                pattern_counts[f"partial_condition:{chart_pattern}"] = pattern_counts.get(f"partial_condition:{chart_pattern}", 0) + 1
+            if _safe_float(row.get("uncertainty_score"), 0.0) >= 0.5:
+                high_uncertainty += 1
+        if high_confidence_miss >= 2:
+            return "high_confidence_miss"
+        if miss_count >= 2 and pattern_counts:
+            return sorted(pattern_counts.items(), key=lambda item: (-item[1], item[0]))[0][0]
+        if partial_count >= 2 and pattern_counts:
+            return sorted(pattern_counts.items(), key=lambda item: (-item[1], item[0]))[0][0]
+        if high_uncertainty >= 2:
+            return "high_uncertainty_evidence"
+        return "no_dominant_failure"
+
+    def _suggested_action_for_insight(self, *, related_rule_ids: List[str], hit_count: int, miss_count: int, partial_count: int, pattern: str) -> str:
+        if not related_rule_ids and miss_count:
+            return "create_new_rule"
+        if pattern == "high_confidence_miss":
+            return "adjust_confidence"
+        if miss_count >= 3 and hit_count == 0:
+            return "deprecate_rule"
+        if miss_count >= 2 and partial_count >= 1:
+            return "split_rule"
+        if miss_count >= 2:
+            return "refine_condition"
+        if partial_count >= 2:
+            return "refine_condition"
+        if hit_count >= miss_count + partial_count:
+            return "no_change"
+        return "adjust_confidence"
+
+    def aggregate_learning_insights(self) -> Dict[str, Any]:
+        grouped: Dict[str, List[Dict[str, Any]]] = {}
+        for row in self._learning_rows_for_aggregation():
+            rule_key = ",".join(row.get("related_rule_ids") or []) or "unmapped_rule"
+            conclusion = _safe_str(row.get("related_conclusion"), "unmapped_conclusion")
+            key = f"{rule_key}::{conclusion}"
+            grouped.setdefault(key, []).append(row)
+
+        insights: Dict[str, Dict[str, Any]] = {}
+        for key, rows in grouped.items():
+            related_rule_ids = sorted({rid for row in rows for rid in _ensure_list(row.get("related_rule_ids")) if _safe_str(rid)})
+            related_conclusions = sorted({_safe_str(row.get("related_conclusion")) for row in rows if _safe_str(row.get("related_conclusion"))})
+            signal_count = len(rows)
+            hit_count = sum(1 for row in rows if _safe_str((row.get("signal") or {}).get("feedback_type")).lower() == "hit")
+            miss_count = sum(1 for row in rows if _safe_str((row.get("signal") or {}).get("feedback_type")).lower() == "miss")
+            partial_count = sum(1 for row in rows if _safe_str((row.get("signal") or {}).get("feedback_type")).lower() == "partial")
+            evidence_refs = sorted({eid for row in rows for eid in _ensure_list(row.get("evidence_refs")) if _safe_str(eid)})
+            confidences = [_safe_float(row.get("contract_confidence"), 0.0) for row in rows]
+            avg_confidence = sum(confidences) / len(confidences) if confidences else 0.0
+            if miss_count > hit_count and avg_confidence >= 0.7:
+                confidence_trend = "overconfident"
+            elif hit_count > miss_count + partial_count:
+                confidence_trend = "stable_positive"
+            elif partial_count or miss_count:
+                confidence_trend = "needs_review"
+            else:
+                confidence_trend = "neutral"
+            pattern = self._dominant_failure_pattern(rows, miss_count=miss_count, partial_count=partial_count)
+            suggested_action = self._suggested_action_for_insight(
+                related_rule_ids=related_rule_ids,
+                hit_count=hit_count,
+                miss_count=miss_count,
+                partial_count=partial_count,
+                pattern=pattern,
+            )
+            digest = _payload_hash(
+                {
+                    "key": key,
+                    "signals": sorted(_safe_str((row.get("signal") or {}).get("signal_id")) for row in rows),
+                    "evidence_refs": evidence_refs,
+                }
+            ).split(":", 1)[-1][:16]
+            insight = AggregatedInsight(
+                insight_id=f"insight_{digest}",
+                related_rule_ids=related_rule_ids,
+                related_conclusions=related_conclusions,
+                signal_count=signal_count,
+                hit_count=hit_count,
+                miss_count=miss_count,
+                partial_count=partial_count,
+                dominant_failure_pattern=pattern,
+                confidence_trend=confidence_trend,
+                suggested_action=suggested_action,
+                evidence_refs=evidence_refs,
+            ).to_dict()
+            insight["source_signal_ids"] = sorted(_safe_str((row.get("signal") or {}).get("signal_id")) for row in rows)
+            insight["source_prediction_ids"] = sorted(_safe_str(row.get("prediction_id")) for row in rows)
+            insights[insight["insight_id"]] = insight
+        self._learning_insights = insights
+        self.invalidate_cache("cache:learning_insights")
+        self._persist()
+        return {"items": sorted(insights.values(), key=lambda item: _parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True), "total": len(insights)}
+
+    def get_learning_insight(self, insight_id: str) -> Dict[str, Any]:
+        if not self._learning_insights:
+            self.aggregate_learning_insights()
+        insight_id = _safe_str(insight_id)
+        insight = self._learning_insights.get(insight_id)
+        if not insight:
+            raise PredictiveServiceError("LEARNING_INSIGHT_NOT_FOUND", f"learning insight {insight_id} not found", 404)
+        return dict(insight)
+
+    def _suggestion_for_insight(self, insight: Dict[str, Any]) -> Dict[str, Any]:
+        action = _safe_str(insight.get("suggested_action"), "no_change")
+        risk_level = "low" if action == "no_change" else "medium"
+        if action in {"deprecate_rule", "split_rule", "create_new_rule"}:
+            risk_level = "high"
+        diff = {
+            "action": action,
+            "target_rule_ids": _ensure_list(insight.get("related_rule_ids")),
+            "target_conclusions": _ensure_list(insight.get("related_conclusions")),
+            "dominant_failure_pattern": _safe_str(insight.get("dominant_failure_pattern")),
+            "proposed_change": {
+                "adjust_confidence": "lower confidence or widen uncertainty when the same pattern appears",
+                "refine_condition": "add chart/evidence condition guardrails before firing this rule",
+                "split_rule": "split broad condition into narrower sub-rules by chart pattern",
+                "deprecate_rule": "consider deprecating after reviewer confirms repeated misses",
+                "create_new_rule": "draft a new sandbox rule candidate from unmapped feedback evidence",
+                "no_change": "keep current rule behavior and continue observing",
+            }.get(action, "manual review required"),
+        }
+        digest = _payload_hash({"insight_id": insight.get("insight_id"), "diff": diff}).split(":", 1)[-1][:16]
+        expected = "reduce repeated miss/partial feedback while preserving contract evidence trace"
+        if action == "no_change":
+            expected = "no immediate rule change; continue collecting feedback"
+        return CandidateRuleSuggestion(
+            suggestion_id=f"suggestion_{digest}",
+            based_on_insight_id=_safe_str(insight.get("insight_id")),
+            suggested_rule_diff=diff,
+            risk_level=risk_level,
+            expected_improvement=expected,
+            requires_human_review=True,
+        ).to_dict()
+
+    def query_learning_insights(self) -> Dict[str, Any]:
+        return self.aggregate_learning_insights()
+
+    def query_candidate_rule_suggestions(self) -> Dict[str, Any]:
+        insights = self.aggregate_learning_insights()["items"]
+        suggestions = {
+            suggestion["suggestion_id"]: suggestion
+            for suggestion in (self._suggestion_for_insight(insight) for insight in insights)
+            if suggestion.get("based_on_insight_id")
+        }
+        self._candidate_rule_suggestions = suggestions
+        self.invalidate_cache("cache:learning_suggestions")
+        self._persist()
+        return {"items": list(suggestions.values()), "total": len(suggestions)}
+
+    def create_knowledge_card_from_suggestion(
+        self,
+        suggestion_id: str,
+        payload: Dict[str, Any],
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        if not self._candidate_rule_suggestions:
+            self.query_candidate_rule_suggestions()
+        suggestion = self._candidate_rule_suggestions.get(_safe_str(suggestion_id))
+        if not suggestion:
+            raise PredictiveServiceError("RULE_SUGGESTION_NOT_FOUND", f"suggestion {suggestion_id} not found", 404)
+        card_payload = {
+            "card_id": _safe_str(payload.get("card_id"), f"kc_from_{suggestion_id}"),
+            "knowledge_domain": _safe_str(payload.get("knowledge_domain"), "rule_learning"),
+            "title": _safe_str(payload.get("title"), f"Learning suggestion {suggestion_id}"),
+            "summary": _safe_str(payload.get("summary"), "Knowledge card drafted from a candidate rule suggestion."),
+            "status": "draft",
+            "version": _safe_str(payload.get("version"), "v1"),
+            "source_refs": [suggestion_id, _safe_str(suggestion.get("based_on_insight_id"))],
+            "tags": _ensure_list(payload.get("tags")) or ["learning_suggestion"],
+            "content": {"candidate_rule_suggestion": suggestion, "sandbox_required": True},
+        }
+        return self.register_knowledge_card(card_payload, actor_role=actor_role, actor_user_id=actor_user_id)
+
+    def _quality_subjects(self) -> Dict[str, Dict[str, Any]]:
+        subjects: Dict[str, Dict[str, Any]] = {}
+        for key, rule in self._rule_kernels.items():
+            rid, version = _split_rule_key(key)
+            subjects[_rule_storage_key(rid, version)] = {
+                "rule_id": rule.rule_id,
+                "version": rule.version,
+                "rule_state": rule.status,
+                "evidence_refs": [],
+            }
+        for candidate in self._rule_candidates.values():
+            payload = dict(candidate.get("rule_payload") or {})
+            rid = _safe_str(payload.get("rule_id"))
+            version = _safe_str(payload.get("version"))
+            if not rid or not version:
+                continue
+            subjects.setdefault(
+                _rule_storage_key(rid, version),
+                {
+                    "rule_id": rid,
+                    "version": version,
+                    "rule_state": "candidate",
+                    "evidence_refs": [],
+                },
+            )
+        return subjects
+
+    def _verifier_failures_by_rule(self) -> Dict[str, int]:
+        counts: Dict[str, int] = {}
+        for prediction_id, runs in self._verifier_runs.items():
+            if not any(_safe_str(run.get("result")) == "fail" for run in runs if isinstance(run, dict)):
+                continue
+            contract = dict((self._ledger.get(prediction_id) or {}).get("contract") or {})
+            for evidence in _ensure_list(contract.get("rule_evidence")):
+                if not isinstance(evidence, dict):
+                    continue
+                key = _rule_storage_key(_safe_str(evidence.get("rule_id")), _safe_str(evidence.get("version")))
+                counts[key] = counts.get(key, 0) + 1
+        return counts
+
+    def _feedback_stats_by_rule(self) -> Dict[str, Dict[str, Any]]:
+        stats: Dict[str, Dict[str, Any]] = {}
+        for prediction_id, feedback_rows in self._feedback_events.items():
+            ledger = self._ledger.get(prediction_id)
+            if not isinstance(ledger, dict):
+                continue
+            contract = dict(ledger.get("contract") or {})
+            evidence_by_id = {
+                _safe_str(item.get("evidence_id")): dict(item)
+                for item in _ensure_list(contract.get("rule_evidence"))
+                if isinstance(item, dict) and _safe_str(item.get("evidence_id"))
+            }
+            conclusion_by_id = {
+                _safe_str(item.get("conclusion_id")): dict(item)
+                for item in _ensure_list(contract.get("conclusions"))
+                if isinstance(item, dict) and _safe_str(item.get("conclusion_id"))
+            }
+            for feedback in feedback_rows:
+                if not isinstance(feedback, dict) or not _safe_str(feedback.get("feedback_id")):
+                    continue
+                feedback_type = _safe_str(feedback.get("feedback_type")).lower()
+                conclusion_ref = _safe_str(feedback.get("conclusion_ref") or feedback.get("conclusion_id"))
+                evidence_refs = []
+                if conclusion_ref in conclusion_by_id:
+                    evidence_refs = [_safe_str(item) for item in _ensure_list(conclusion_by_id[conclusion_ref].get("evidence_ids")) if _safe_str(item)]
+                if not evidence_refs:
+                    evidence_refs = [_safe_str(item) for item in _ensure_list(contract.get("evidence_ids")) if _safe_str(item)]
+                rule_keys = {
+                    _rule_storage_key(_safe_str(evidence_by_id.get(eid, {}).get("rule_id")), _safe_str(evidence_by_id.get(eid, {}).get("version")))
+                    for eid in evidence_refs
+                    if _safe_str(evidence_by_id.get(eid, {}).get("rule_id")) and _safe_str(evidence_by_id.get(eid, {}).get("version"))
+                }
+                for key in rule_keys:
+                    item = stats.setdefault(key, {"sample_count": 0, "hit": 0, "miss": 0, "partial": 0, "evidence_refs": []})
+                    item["sample_count"] += 1
+                    if feedback_type in {"hit", "miss", "partial"}:
+                        item[feedback_type] += 1
+                    item["evidence_refs"].append(_safe_str(feedback.get("feedback_id")))
+                    item["evidence_refs"].extend(evidence_refs)
+        return stats
+
+    def _test_stats_by_rule(self) -> Dict[str, Dict[str, Any]]:
+        stats: Dict[str, Dict[str, Any]] = {}
+        for run in self._rule_test_runs.values():
+            if not isinstance(run, dict):
+                continue
+            key = _rule_storage_key(_safe_str(run.get("rule_id")), _safe_str(run.get("version")))
+            if key == "::":
+                continue
+            item = stats.setdefault(key, {"runs": 0, "pass_runs": 0, "fail_runs": 0, "warning_runs": 0, "evidence_refs": []})
+            item["runs"] += 1
+            status = _safe_str(run.get("overall_status"))
+            if status == "pass":
+                item["pass_runs"] += 1
+            elif status == "fail":
+                item["fail_runs"] += 1
+            elif status == "warning":
+                item["warning_runs"] += 1
+            item["evidence_refs"].append(_safe_str(run.get("run_id")))
+        return stats
+
+    def _insight_stats_by_rule(self) -> Dict[str, Dict[str, Any]]:
+        insights = self.aggregate_learning_insights()["items"]
+        stats: Dict[str, Dict[str, Any]] = {}
+        for insight in insights:
+            for rid in [_safe_str(item) for item in _ensure_list(insight.get("related_rule_ids")) if _safe_str(item)]:
+                versions = self._list_rule_versions(rid) or [""]
+                for version in versions:
+                    key = _rule_storage_key(rid, version)
+                    item = stats.setdefault(key, {"risk_patterns": 0, "drift": 0, "evidence_refs": []})
+                    if _safe_str(insight.get("dominant_failure_pattern")) in {"high_confidence_miss", "high_uncertainty_evidence"} or _safe_str(insight.get("dominant_failure_pattern")).startswith(("miss_chart:", "partial_condition:")):
+                        item["risk_patterns"] += 1
+                    if _safe_str(insight.get("confidence_trend")) in {"overconfident", "needs_review"}:
+                        item["drift"] += 1
+                    item["evidence_refs"].append(_safe_str(insight.get("insight_id")))
+                    item["evidence_refs"].extend([_safe_str(ref) for ref in _ensure_list(insight.get("evidence_refs")) if _safe_str(ref)])
+        return stats
+
+    def recompute_rule_quality_scores(self) -> Dict[str, Any]:
+        subjects = self._quality_subjects()
+        feedback_stats = self._feedback_stats_by_rule()
+        test_stats = self._test_stats_by_rule()
+        insight_stats = self._insight_stats_by_rule()
+        verifier_failures = self._verifier_failures_by_rule()
+        scores: Dict[str, Dict[str, Any]] = {}
+
+        for key, subject in subjects.items():
+            fb = feedback_stats.get(key, {})
+            tests = test_stats.get(key, {})
+            insights = insight_stats.get(key, {})
+            sample_count = _safe_int(fb.get("sample_count"), 0)
+            hit_count = _safe_int(fb.get("hit"), 0)
+            miss_count = _safe_int(fb.get("miss"), 0)
+            partial_count = _safe_int(fb.get("partial"), 0)
+            test_runs = _safe_int(tests.get("runs"), 0)
+            test_pass_rate = _safe_float(_safe_int(tests.get("pass_runs"), 0) / test_runs, 0.0) if test_runs else 0.0
+            verifier_failure_count = _safe_int(verifier_failures.get(key), 0)
+            drift_warning_count = _safe_int(insights.get("drift"), 0)
+            risk_patterns = _safe_int(insights.get("risk_patterns"), 0)
+            confidence_calibration = "insufficient_data" if sample_count < 3 else "calibrated"
+            if miss_count > hit_count and sample_count >= 3:
+                confidence_calibration = "overconfident"
+            elif hit_count >= miss_count + partial_count and sample_count >= 3:
+                confidence_calibration = "stable"
+            risk_score = min(
+                1.0,
+                miss_count * 0.18
+                + partial_count * 0.08
+                + verifier_failure_count * 0.35
+                + drift_warning_count * 0.12
+                + risk_patterns * 0.12
+                + _safe_int(tests.get("fail_runs"), 0) * 0.25,
+            )
+            positive = hit_count * 0.14 + test_pass_rate * 0.32
+            penalty = miss_count * 0.12 + partial_count * 0.05 + verifier_failure_count * 0.28 + drift_warning_count * 0.08 + _safe_int(tests.get("fail_runs"), 0) * 0.18
+            quality_score = max(0.0, min(1.0, 0.45 + positive - penalty))
+            if verifier_failure_count or risk_score >= 0.72:
+                recommended_action = "review"
+            elif sample_count < 3 and test_runs == 0:
+                recommended_action = "monitor"
+            elif subject.get("rule_state") == "candidate" and quality_score >= 0.72 and test_pass_rate >= 0.8:
+                recommended_action = "promote_review"
+            elif subject.get("rule_state") == "candidate" and quality_score < 0.35:
+                recommended_action = "deprecate_candidate"
+            elif confidence_calibration == "overconfident":
+                recommended_action = "reduce_confidence"
+            elif risk_score >= 0.45:
+                recommended_action = "review"
+            else:
+                recommended_action = "keep"
+            evidence_refs = sorted(
+                {
+                    _safe_str(ref)
+                    for ref in (
+                        _ensure_list(fb.get("evidence_refs"))
+                        + _ensure_list(tests.get("evidence_refs"))
+                        + _ensure_list(insights.get("evidence_refs"))
+                    )
+                    if _safe_str(ref)
+                }
+            )
+            digest = _payload_hash(
+                {
+                    "rule_id": subject["rule_id"],
+                    "version": subject["version"],
+                    "sample_count": sample_count,
+                    "hit": hit_count,
+                    "miss": miss_count,
+                    "partial": partial_count,
+                    "test_pass_rate": round(test_pass_rate, 4),
+                    "verifier_failure_count": verifier_failure_count,
+                    "drift_warning_count": drift_warning_count,
+                }
+            ).split(":", 1)[-1][:16]
+            score = RuleQualityScore(
+                score_id=f"rqs_{digest}",
+                rule_id=subject["rule_id"],
+                version=subject["version"],
+                rule_state=_safe_str(subject.get("rule_state"), "unknown"),
+                sample_count=sample_count,
+                hit_count=hit_count,
+                miss_count=miss_count,
+                partial_count=partial_count,
+                test_pass_rate=round(test_pass_rate, 3),
+                verifier_failure_count=verifier_failure_count,
+                drift_warning_count=drift_warning_count,
+                confidence_calibration=confidence_calibration,
+                risk_score=round(risk_score, 3),
+                quality_score=round(quality_score, 3),
+                recommended_action=recommended_action,
+                evidence_refs=evidence_refs,
+            ).to_dict()
+            scores[key] = score
+        self._rule_quality_scores = scores
+        self._persist()
+        ordered = sorted(scores.values(), key=lambda item: (_safe_float(item.get("quality_score")), -_safe_float(item.get("risk_score"))), reverse=True)
+        return {"items": ordered, "total": len(ordered)}
+
+    def query_rule_quality_scores(self) -> Dict[str, Any]:
+        cached = self._redis.get_json("cache:rule_quality_scores")
+        if cached:
+            return cached
+        result = self.recompute_rule_quality_scores()
+        self._redis.set_json("cache:rule_quality_scores", result, ttl_seconds=300)
+        return result
+
+    def get_rule_quality_score(self, rule_id: str, version: str | None = None) -> Dict[str, Any]:
+        scores = self.recompute_rule_quality_scores()["items"]
+        matches = [
+            item for item in scores
+            if _safe_str(item.get("rule_id")) == _safe_str(rule_id)
+            and (not version or _safe_str(item.get("version")) == _safe_str(version))
+        ]
+        if not matches:
+            raise PredictiveServiceError("RULE_QUALITY_SCORE_NOT_FOUND", f"quality score for {rule_id} not found", 404)
+        return sorted(matches, key=lambda item: _parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc), reverse=True)[0]
+
     def append_knowledge_pr(self, payload: Dict[str, Any]) -> Dict[str, Any]:
-        prediction_id = str(payload.get("prediction_id") or "").strip()
-        if not prediction_id:
-            raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "prediction_id required")
-        rule_id = str(payload.get("rule_id") or "").strip()
+        prediction_id = str(payload.get("prediction_id") or payload.get("source_prediction_id") or "").strip()
+        proposed = payload.get("proposed_rule_payload") if isinstance(payload.get("proposed_rule_payload"), dict) else {}
+        rule_candidate_id = _safe_str(payload.get("rule_candidate_id"))
+        if rule_candidate_id:
+            candidate = self._rule_candidates.get(rule_candidate_id)
+            if not candidate:
+                raise PredictiveServiceError("RULE_CANDIDATE_NOT_FOUND", f"rule candidate {rule_candidate_id} not found", 404)
+            proposed = dict(candidate.get("rule_payload") or {})
+        if not proposed and isinstance(payload.get("rule_candidate"), dict):
+            raw_candidate = payload.get("rule_candidate") or {}
+            if raw_candidate.get("candidate_id") and isinstance(raw_candidate.get("rule_payload"), dict):
+                rule_candidate_id = _safe_str(raw_candidate.get("candidate_id"))
+                proposed = dict(raw_candidate.get("rule_payload") or {})
+                self._rule_candidates.setdefault(rule_candidate_id, dict(raw_candidate))
+            else:
+                sandbox = self.build_sandbox_rule_candidate(
+                    payload,
+                    actor_role=_safe_str(payload.get("requested_by"), "system"),
+                    actor_user_id=_safe_int(payload.get("requested_by_user_id"), 0),
+                )
+                rule_candidate_id = _safe_str(sandbox.get("candidate_id"))
+                proposed = dict(sandbox.get("rule_payload") or {})
+        rule_id = str(payload.get("rule_id") or proposed.get("rule_id") or "").strip()
+        if not prediction_id and not rule_id:
+            raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "prediction_id or rule_candidate required")
         if not rule_id:
             raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "rule_id required")
         pr_id = f"pr_{prediction_id}_{_safe_int(len(self._knowledge_pr) + 1)}"
@@ -3644,16 +5739,79 @@ class V18PredictiveStore:
             "pr_id": pr_id,
             "prediction_id": prediction_id,
             "rule_id": rule_id,
+            "rule_version": _safe_str(payload.get("rule_version") or proposed.get("version")),
+            "knowledge_card_id": _safe_str(payload.get("knowledge_card_id") or proposed.get("knowledge_card_id")),
             "change_type": str(payload.get("change_type", "rule_modify")),
             "requested_by": str(payload.get("requested_by", "system")),
-            "proposed_rule_payload": _as_dict(payload, ["proposed_rule_payload"], required=False) or {},
+            "target_status": _safe_str(payload.get("target_status") or proposed.get("status"), "experimental"),
+            "proposed_rule_payload": proposed,
+            "rule_candidate_id": rule_candidate_id,
             "evidence_packet": _as_dict(payload, ["evidence_packet"], required=False) or {},
             "created_at": _utcnow_iso(),
             "review_state": "pending_manual_review",
+            "candidate_state": "sandbox" if proposed else "",
         }
         self._knowledge_pr[pr_id] = pr
         self._persist()
         return pr
+
+    def query_knowledge_pr_queue(
+        self,
+        *,
+        review_state: str | None = None,
+        rule_id: str | None = None,
+        knowledge_card_id: str | None = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        items = list(self._knowledge_pr.values())
+        if review_state:
+            items = [item for item in items if _safe_str(item.get("review_state")) == _safe_str(review_state)]
+        if rule_id:
+            items = [item for item in items if _safe_str(item.get("rule_id")) == _safe_str(rule_id)]
+        if knowledge_card_id:
+            items = [item for item in items if _safe_str(item.get("knowledge_card_id")) == _safe_str(knowledge_card_id)]
+        score_by_key = {
+            _rule_storage_key(_safe_str(score.get("rule_id")), _safe_str(score.get("version"))): score
+            for score in self.recompute_rule_quality_scores()["items"]
+        }
+        enriched_items: List[Dict[str, Any]] = []
+        for item in items:
+            next_item = dict(item)
+            score = score_by_key.get(_rule_storage_key(_safe_str(next_item.get("rule_id")), _safe_str(next_item.get("rule_version"))), {})
+            quality_score = _safe_float(score.get("quality_score"), 0.0)
+            risk_score = _safe_float(score.get("risk_score"), 0.0)
+            recommended_action = _safe_str(score.get("recommended_action"), "monitor")
+            if recommended_action in {"review", "reduce_confidence", "deprecate_candidate"} or risk_score >= 0.6:
+                review_priority = "high"
+            elif recommended_action == "promote_review" or risk_score >= 0.35 or quality_score >= 0.7:
+                review_priority = "medium"
+            else:
+                review_priority = "low"
+            next_item["quality_score"] = quality_score
+            next_item["risk_score"] = risk_score
+            next_item["recommended_action"] = recommended_action
+            next_item["review_priority"] = review_priority
+            enriched_items.append(next_item)
+        priority_order = {"high": 0, "medium": 1, "low": 2}
+        items = sorted(
+            enriched_items,
+            key=lambda item: (
+                priority_order.get(_safe_str(item.get("review_priority")), 9),
+                -_safe_float(item.get("risk_score"), 0.0),
+                -_safe_float(item.get("quality_score"), 0.0),
+                -(_parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc)).timestamp(),
+            ),
+        )
+        start = max(0, _safe_int(offset, 0))
+        size = max(1, min(_safe_int(limit, 100), 500))
+        return {
+            "items": items[start : start + size],
+            "total_matched": len(items),
+            "total_returned": len(items[start : start + size]),
+            "offset": start,
+            "limit": size,
+        }
 
 
 class RuleRuntimeFacade:
@@ -3689,7 +5847,7 @@ class RuleRuntimeFacade:
         payload["actor_user_id"] = actor_user_id
         payload["lifecycle_token"] = self._issue(actor_role=actor_role, actor_user_id=actor_user_id, purpose="runtime")
         payload["execution_mode"] = "runtime"
-        payload.setdefault("allow_sandbox", False)
+        payload["allow_sandbox"] = False
         return self.service.resolve_rules(payload)
 
     def run_rule_test(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
@@ -3699,6 +5857,14 @@ class RuleRuntimeFacade:
         payload.setdefault("actor_role", actor_role)
         payload.setdefault("actor_user_id", actor_user_id)
         return self.service.run_rule_test_v0(payload)
+
+    def run_rule_test_v02(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
+        payload = dict(payload)
+        payload["lifecycle_token"] = self._issue(actor_role=actor_role, actor_user_id=actor_user_id, purpose="test")
+        payload["execution_mode"] = "test"
+        payload.setdefault("actor_role", actor_role)
+        payload.setdefault("actor_user_id", actor_user_id)
+        return self.service.run_rule_test_v02(payload)
 
     def run_shadow_compare(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
         payload = dict(payload)
@@ -3855,6 +6021,247 @@ class RuleRuntimeFacade:
             "verifier": verifier_result,
             "feedback": feedback_result,
         }
+
+    def run_prediction_contract_pipeline(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
+        request_id = _safe_str(payload.get("request_id"))
+        if request_id:
+            cached = self.service._redis.idempotency_get(f"contract_pipeline:{request_id}")
+            if cached:
+                return cached
+        lock_key = f"lock:contract_pipeline:{request_id or _safe_str(payload.get('prediction_id'))}"
+        if not self.service._redis.acquire_lock(lock_key, ttl_seconds=30):
+            raise PredictiveServiceError("LOCK_BUSY", "contract pipeline request is already in progress", 409)
+        try:
+            result = self._run_prediction_contract_pipeline_locked(payload, actor_role, actor_user_id)
+            if request_id:
+                self.service._redis.idempotency_set(f"contract_pipeline:{request_id}", result)
+            return result
+        finally:
+            self.service._redis.release_lock(lock_key)
+
+    def _run_prediction_contract_pipeline_locked(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
+        prediction_id = _safe_str(payload.get("prediction_id"), f"pred_{_safe_int(datetime.now(timezone.utc).timestamp())}")
+        user_query = _safe_str(payload.get("user_query") or payload.get("query"), "")
+        topic = _normalize_topic(payload.get("topic") or payload.get("topic_hint") or user_query)
+        debug = _safe_bool(payload.get("debug"), False)
+        plugin_claims = _ensure_list(payload.get("plugin_claims"))
+        if not plugin_claims:
+            raise PredictiveServiceError("GATEKEEPER_MISSING", "plugin claims required", 403)
+
+        normalized_intent = {
+            "topic": topic,
+            "user_query": user_query,
+            "intent": _safe_str(payload.get("intent"), "prediction"),
+        }
+        chart_snapshot = dict(payload.get("chart_snapshot") or {})
+        chart_snapshot.setdefault("matched_facts", _ensure_list(payload.get("matched_facts")))
+        runtime_context = dict(payload.get("runtime_context") or {})
+        runtime_context.setdefault("time_weight", {"natal": 0.5, "decade": 0.3, "year": 0.2})
+
+        rule_candidates = _ensure_list(payload.get("rule_candidates"))
+        if not rule_candidates:
+            retrieved = self.run_rule_retrieval(
+                {
+                    "prediction_id": prediction_id,
+                    "topic": topic,
+                    "plugin_claims": plugin_claims,
+                },
+                actor_role,
+                actor_user_id,
+            )
+            rule_candidates = [
+                {"rule_id": rule.rule_id, "version": rule.version, "activation_score": 1.0}
+                for rule in retrieved
+            ]
+        if not rule_candidates:
+            raise PredictiveServiceError("RULE_SCOPE_VIOLATION", "No rule candidates", 409)
+
+        resolved = self.run_resolver(
+            {
+                "prediction_id": prediction_id,
+                "topic": topic,
+                "plugin_claims": plugin_claims,
+                "rule_candidates": rule_candidates,
+                "runtime_context": runtime_context,
+            },
+            actor_role,
+            actor_user_id,
+        )
+        rule_evidence = self.service._rule_evidence_from_resolver(resolved, chart_snapshot=chart_snapshot)
+        conclusions = self.service._conclusions_from_evidence(topic=topic, rule_evidence=rule_evidence)
+        evidence_ids = [_safe_str(row.get("evidence_id")) for row in rule_evidence if _safe_str(row.get("evidence_id"))]
+        period = dict(payload.get("period") or {})
+        now_dt = datetime.now(timezone.utc)
+        period.setdefault("start_at", now_dt.replace(microsecond=0).isoformat())
+        period.setdefault("end_at", (now_dt + timedelta(days=180)).replace(microsecond=0).isoformat())
+
+        contract_payload = {
+            "prediction_id": prediction_id,
+            "user_query": user_query,
+            "normalized_intent": normalized_intent,
+            "chart_snapshot": chart_snapshot,
+            "topic": topic,
+            "chain_id": _safe_str(payload.get("chain_id"), f"{topic}_contract_v1"),
+            "causal_path": _ensure_list(payload.get("causal_path")) or ["rule_match", "effect_resolution", "contract_conclusion"],
+            "rule_ids": resolved.get("active_rules", []),
+            "chain_state": "resolved" if conclusions else "insufficient_evidence",
+            "confidence": min(1.0, sum(_safe_float(row.get("confidence_delta"), 0.0) for row in rule_evidence)),
+            "period": period,
+            "evidence_ids": evidence_ids,
+            "rule_evidence": rule_evidence,
+            "inference_steps": [
+                {"step": "intent_normalized", "output": normalized_intent},
+                {"step": "rules_resolved", "output": resolved.get("active_rules", [])},
+                {"step": "evidence_collected", "output": evidence_ids},
+                {"step": "conclusions_generated", "output": [_safe_str(row.get("conclusion_id")) for row in conclusions]},
+            ],
+            "conclusions": conclusions,
+            "verifiable_indicators": dict(payload.get("verifiable_indicators") or {"outcome": [topic]}),
+            "risk_modes": _ensure_list(payload.get("risk_modes")) or ["uncertainty"],
+            "data_sources": _ensure_list(payload.get("data_sources")) or ["prediction_contract_engine"],
+            "model_version": V18_1_SCHEMA_VERSION,
+            "schema_version": V18_1_SCHEMA_VERSION,
+            "engine_version": V18_1_SCHEMA_VERSION,
+            "display_policy": {
+                "allow_llm_expression": True,
+                "contract_only": True,
+            },
+            "allowed_output_scope": {
+                "conclusion_ids": [_safe_str(row.get("conclusion_id")) for row in conclusions],
+                "evidence_ids": evidence_ids,
+                "topic": topic,
+            },
+            "resolver_snapshot": resolved.get("resolver_snapshot", {}),
+            "uncertainty": dict(payload.get("uncertainty") or {"score": 0.3 if conclusions else 1.0}),
+            "feedback_window": _feedback_window_from_period(period),
+        }
+
+        contract = self.service.build_contract(contract_payload, resolved_rules=resolved)
+        record = self.service.write_ledger_record({"prediction_id": prediction_id}, contract.to_dict())
+        if conclusions:
+            safe_text = "；".join(_safe_str(row.get("claim")) for row in conclusions if _safe_str(row.get("claim")))
+        else:
+            safe_text = "证据不足，不足以判断。"
+        llm_output = {
+            "text": safe_text,
+            "sections": {
+                "conclusion": [_safe_str(row.get("claim")) for row in conclusions],
+                "conclusion_ids": [_safe_str(row.get("conclusion_id")) for row in conclusions],
+                "evidence": evidence_ids,
+                "causal": contract.causal_path,
+                "risk": contract.risk_modes,
+                "suggestion": [],
+            },
+            "sources": contract.data_sources,
+            "conclusion_ids": [_safe_str(row.get("conclusion_id")) for row in conclusions],
+        }
+        verifier = self.service.run_verifier(
+            {
+                "prediction_id": prediction_id,
+                "contract": contract.to_dict(),
+                "llm_output": llm_output,
+            }
+        )
+        response = {
+            "prediction_id": prediction_id,
+            "contract_id": f"contract_{prediction_id}",
+            "prediction_hash": record.prediction_hash,
+            "safe_output": llm_output if verifier.get("action") != "BLOCKED" else {"text": "证据不足，不足以判断。"},
+            "verifier": verifier,
+            "minimal_trace": {
+                "rule_ids": contract.rule_ids,
+                "evidence_count": len(contract.rule_evidence),
+                "conclusion_count": len(contract.conclusions),
+            },
+        }
+        if debug:
+            response["contract"] = contract.to_dict()
+            response["resolver_output"] = resolved
+        return response
+
+    def create_agent_session(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
+        session_id = _safe_str(payload.get("agent_session_id") or payload.get("session_id"), f"agent_{_safe_int(datetime.now(timezone.utc).timestamp())}_{len(self.service._agent_sessions) + 1}")
+        session = {
+            "agent_session_id": session_id,
+            "actor_role": _safe_str(actor_role, "user"),
+            "actor_user_id": _safe_int(actor_user_id, 0),
+            "birth_payload": dict(payload.get("birth_payload") or {}),
+            "chart_snapshot": dict(payload.get("chart_snapshot") or {}),
+            "agent_turns": [],
+            "created_at": _utcnow_iso(),
+            "updated_at": _utcnow_iso(),
+        }
+        self.service._agent_sessions[session_id] = session
+        self.service._persist()
+        return session
+
+    def get_agent_session(self, session_id: str) -> Dict[str, Any]:
+        session = self.service._agent_sessions.get(_safe_str(session_id))
+        if not session:
+            raise PredictiveServiceError("AGENT_SESSION_NOT_FOUND", f"agent session {session_id} not found", 404)
+        return dict(session)
+
+    def _agent_missing_fields(self, session: Dict[str, Any], payload: Dict[str, Any]) -> List[str]:
+        birth_payload = dict(payload.get("birth_payload") or session.get("birth_payload") or {})
+        chart_snapshot = dict(payload.get("chart_snapshot") or session.get("chart_snapshot") or {})
+        if chart_snapshot.get("matched_facts") or chart_snapshot.get("four_pillars"):
+            return []
+        missing = []
+        for key in ("year", "month", "day", "hour"):
+            if not birth_payload.get(key):
+                missing.append(key)
+        return missing
+
+    def append_agent_turn(self, session_id: str, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
+        session = self.get_agent_session(session_id)
+        user_message = _safe_str(payload.get("user_message") or payload.get("query") or payload.get("user_query"))
+        normalized_intent = {
+            "topic": _normalize_topic(payload.get("topic") or payload.get("topic_hint") or user_message),
+            "intent": _safe_str(payload.get("intent"), "prediction"),
+            "user_query": user_message,
+        }
+        missing_fields = self._agent_missing_fields(session, payload)
+        turn = {
+            "turn_id": f"turn_{len(session.get('agent_turns') or []) + 1}",
+            "user_message": user_message,
+            "normalized_intent": normalized_intent,
+            "missing_fields": missing_fields,
+            "contract_id": "",
+            "prediction_id": "",
+            "safe_output": {},
+            "created_at": _utcnow_iso(),
+        }
+        if missing_fields:
+            turn["safe_output"] = {
+                "type": "clarification_question",
+                "text": f"请补充出生信息：{', '.join(missing_fields)}。",
+                "is_prediction": False,
+            }
+        else:
+            pipeline_payload = {
+                **payload,
+                "prediction_id": _safe_str(payload.get("prediction_id"), f"{session_id}_{turn['turn_id']}"),
+                "user_query": user_message,
+                "topic": normalized_intent["topic"],
+                "chart_snapshot": dict(payload.get("chart_snapshot") or session.get("chart_snapshot") or {}),
+                "plugin_claims": _ensure_list(payload.get("plugin_claims")),
+                "rule_candidates": _ensure_list(payload.get("rule_candidates")),
+                "debug": _safe_bool(payload.get("debug"), False),
+            }
+            result = self.run_prediction_contract_pipeline(pipeline_payload, actor_role, actor_user_id)
+            turn["contract_id"] = _safe_str(result.get("contract_id"))
+            turn["prediction_id"] = _safe_str(result.get("prediction_id"))
+            turn["safe_output"] = dict(result.get("safe_output") or {})
+            turn["minimal_trace"] = dict(result.get("minimal_trace") or {})
+        session["agent_turns"] = list(session.get("agent_turns") or []) + [turn]
+        if payload.get("birth_payload"):
+            session["birth_payload"] = dict(payload.get("birth_payload") or {})
+        if payload.get("chart_snapshot"):
+            session["chart_snapshot"] = dict(payload.get("chart_snapshot") or {})
+        session["updated_at"] = _utcnow_iso()
+        self.service._agent_sessions[session_id] = session
+        self.service._persist()
+        return turn
 
 
 predictive_runtime_facade = RuleRuntimeFacade(V18PredictiveStore())

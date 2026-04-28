@@ -165,6 +165,33 @@ async def update_rule_kernel_status(rule_id: str, payload: dict, request: Reques
         return _fail_value(str(exc))
 
 
+@router.get("/v18.1/rules/quality-scores")
+@router.get("/api/v18.1/rules/quality-scores")
+async def rule_quality_scores():
+    try:
+        return _ok(predictive_service.query_rule_quality_scores())
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/rules/quality-scores/recompute")
+@router.post("/api/v18.1/rules/quality-scores/recompute")
+async def rule_quality_scores_recompute():
+    try:
+        return _ok(predictive_service.recompute_rule_quality_scores())
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/rules/{rule_id}/quality-score")
+@router.get("/api/v18.1/rules/{rule_id}/quality-score")
+async def rule_quality_score_get(rule_id: str, version: str | None = None):
+    try:
+        return _ok(predictive_service.get_rule_quality_score(rule_id, version=version))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
 @router.post("/v18.1/rule-retrieval")
 @router.post("/api/v18.1/rule-retrieval")
 async def rule_retrieval(payload: dict, request: Request):
@@ -218,6 +245,23 @@ async def prediction_contract_builder(payload: dict):
         return _fail_value(str(exc))
 
 
+@router.post("/v18.1/predictions/contract-pipeline")
+@router.post("/api/v18.1/predictions/contract-pipeline")
+async def prediction_contract_pipeline(payload: dict, request: Request):
+    try:
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_runtime_facade.run_prediction_contract_pipeline(
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "system"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
 def _extract_contract(payload: dict) -> dict:
     if "contract" in payload and isinstance(payload.get("contract"), dict):
         return dict(payload["contract"])
@@ -260,6 +304,36 @@ async def prediction_ledger_get(prediction_id: str):
         return _fail(exc)
 
 
+@router.get("/v18.1/predictions/{prediction_id}/ledger")
+@router.get("/api/v18.1/predictions/{prediction_id}/ledger")
+async def prediction_ledger_get_alias(prediction_id: str):
+    try:
+        return _ok({"record": predictive_service.get_ledger(prediction_id)})
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/predictions/{prediction_id}/replay")
+@router.get("/api/v18.1/predictions/{prediction_id}/replay")
+async def prediction_replay(prediction_id: str):
+    try:
+        return _ok(predictive_service.replay_prediction(prediction_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/predictions/{prediction_id}/explain")
+@router.post("/api/v18.1/predictions/{prediction_id}/explain")
+async def prediction_explain(prediction_id: str, payload: dict):
+    try:
+        result = predictive_service.explain_prediction(prediction_id, dict(payload or {}))
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
 @router.post("/v18.1/llm-output-verifier")
 @router.post("/api/v18.1/llm-output-verifier")
 async def llm_output_verifier(payload: dict):
@@ -283,6 +357,70 @@ async def feedback_collector(payload: dict):
         return _fail(exc)
 
 
+@router.post("/v18.1/predictions/{prediction_id}/feedback")
+@router.post("/api/v18.1/predictions/{prediction_id}/feedback")
+async def prediction_feedback(prediction_id: str, payload: dict):
+    try:
+        result = predictive_service.append_prediction_feedback(prediction_id, payload)
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/feedback")
+@router.get("/api/v18.1/feedback")
+async def feedback_list(prediction_id: str | None = None, offset: int = 0, limit: int = 100):
+    try:
+        return _ok(predictive_service.query_feedback(prediction_id=prediction_id, offset=offset, limit=limit))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/learning/insights")
+@router.get("/api/v18.1/learning/insights")
+async def learning_insights():
+    try:
+        return _ok(predictive_service.query_learning_insights())
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/learning/insights/{insight_id}")
+@router.get("/api/v18.1/learning/insights/{insight_id}")
+async def learning_insight_get(insight_id: str):
+    try:
+        return _ok(predictive_service.get_learning_insight(insight_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/learning/suggestions")
+@router.get("/api/v18.1/learning/suggestions")
+async def learning_suggestions():
+    try:
+        return _ok(predictive_service.query_candidate_rule_suggestions())
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/learning/suggestions/{suggestion_id}/knowledge-card")
+@router.post("/api/v18.1/learning/suggestions/{suggestion_id}/knowledge-card")
+async def learning_suggestion_to_knowledge_card(suggestion_id: str, payload: dict, request: Request):
+    try:
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_service.create_knowledge_card_from_suggestion(
+            suggestion_id,
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "system"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
 @router.post("/v18.1/knowledge-pr-queue")
 @router.post("/api/v18.1/knowledge-pr-queue")
 async def knowledge_pr_queue(payload: dict, request: Request):
@@ -291,6 +429,28 @@ async def knowledge_pr_queue(payload: dict, request: Request):
         if "requested_by" not in payload:
             payload["requested_by"] = _actor_role(request, payload)
         result = predictive_service.append_knowledge_pr(payload)
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/knowledge-pr-queue")
+@router.get("/api/v18.1/knowledge-pr-queue")
+async def knowledge_pr_queue_list(
+    review_state: str | None = None,
+    rule_id: str | None = None,
+    knowledge_card_id: str | None = None,
+    offset: int = 0,
+    limit: int = 100,
+):
+    try:
+        result = predictive_service.query_knowledge_pr_queue(
+            review_state=review_state,
+            rule_id=rule_id,
+            knowledge_card_id=knowledge_card_id,
+            offset=offset,
+            limit=limit,
+        )
         return _ok(result)
     except PredictiveServiceError as exc:
         return _fail(exc)
@@ -308,6 +468,46 @@ async def knowledge_pr_queue_review(pr_id: str, payload: dict, request: Request)
         return _fail(exc)
     except ValueError as exc:
         return _fail_value(str(exc))
+
+
+@router.post("/v18.1/rule-candidates/sandbox")
+@router.post("/api/v18.1/rule-candidates/sandbox")
+async def rule_candidate_sandbox(payload: dict, request: Request):
+    try:
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_service.build_sandbox_rule_candidate(
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "system"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/rule-candidates/sandbox")
+@router.get("/api/v18.1/rule-candidates/sandbox")
+async def rule_candidate_sandbox_list(
+    candidate_state: str | None = "sandbox",
+    rule_id: str | None = None,
+    knowledge_card_id: str | None = None,
+    offset: int = 0,
+    limit: int = 100,
+):
+    try:
+        return _ok(
+            predictive_service.query_rule_candidates(
+                candidate_state=candidate_state,
+                rule_id=rule_id,
+                knowledge_card_id=knowledge_card_id,
+                offset=offset,
+                limit=limit,
+            )
+        )
+    except PredictiveServiceError as exc:
+        return _fail(exc)
 
 
 @router.post("/v18.1/knowledge-cards")
@@ -373,7 +573,17 @@ async def knowledge_card_status_update(card_id: str, payload: dict, request: Req
             actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
             version=version or None,
         )
-        return _ok({"card_id": card.card_id, "status": card.status, "version": card.version})
+        return _ok(
+            {
+                "card_id": card.card_id,
+                "status": card.status,
+                "version": card.version,
+                "content_hash": card.content_hash,
+                "created_by": card.created_by,
+                "approved_by": card.approved_by,
+                "approved_at": card.approved_at,
+            }
+        )
     except PredictiveServiceError as exc:
         return _fail(exc)
     except ValueError as exc:
@@ -395,6 +605,63 @@ async def rule_test_run(payload: dict, request: Request):
         return _fail(exc)
     except ValueError as exc:
         return _fail_value(str(exc))
+
+
+@router.post("/v18.1/rule-test-cases")
+@router.post("/api/v18.1/rule-test-cases")
+async def rule_test_case_create(payload: dict, request: Request):
+    try:
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_service.register_rule_test_case(
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "system"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/rule-test-cases")
+@router.get("/api/v18.1/rule-test-cases")
+async def rule_test_case_list(
+    source: str | None = None,
+    tag: str | None = None,
+    offset: int = 0,
+    limit: int = 100,
+):
+    try:
+        return _ok(predictive_service.query_rule_test_cases(source=source, tag=tag, offset=offset, limit=limit))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/rule-test-runs")
+@router.post("/api/v18.1/rule-test-runs")
+async def rule_test_run_v02(payload: dict, request: Request):
+    try:
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_runtime_facade.run_rule_test_v02(
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "system"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/rule-test-runs/{run_id}")
+@router.get("/api/v18.1/rule-test-runs/{run_id}")
+async def rule_test_run_get_v02(run_id: str):
+    try:
+        return _ok(predictive_service.get_rule_test_run(run_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
 
 
 @router.post("/v18.1/rule-test-suites")
@@ -586,6 +853,8 @@ async def rule_test_engine_config(version: str | None = None):
 
 @router.get("/v18.1/rule-audit-events")
 @router.get("/api/v18.1/rule-audit-events")
+@router.get("/v18.1/audit/events")
+@router.get("/api/v18.1/audit/events")
 async def rule_audit_events(
     rule_id: str | None = None,
     event_type: str | None = None,
@@ -617,6 +886,66 @@ async def rule_audit_events(
                 "total": len(result["items"]),
             }
         )
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/audit/hash-chain")
+@router.get("/api/v18.1/audit/hash-chain")
+async def audit_hash_chain():
+    try:
+        return _ok(predictive_service.verify_audit_hash_chain())
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/storage/migrate-json-to-postgres")
+@router.post("/api/v18.1/storage/migrate-json-to-postgres")
+async def storage_migrate_json_to_postgres(payload: dict):
+    try:
+        return _ok(predictive_service.migrate_json_to_postgres(dsn=_safe_str(payload.get("dsn")) or None))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/agent/sessions")
+@router.post("/api/v18.1/agent/sessions")
+async def agent_session_create(payload: dict, request: Request):
+    try:
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_runtime_facade.create_agent_session(
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "user"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/agent/sessions/{session_id}/turns")
+@router.post("/api/v18.1/agent/sessions/{session_id}/turns")
+async def agent_session_turn(session_id: str, payload: dict, request: Request):
+    try:
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_runtime_facade.append_agent_turn(
+            session_id,
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "user"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/agent/sessions/{session_id}")
+@router.get("/api/v18.1/agent/sessions/{session_id}")
+async def agent_session_get(session_id: str):
+    try:
+        return _ok(predictive_runtime_facade.get_agent_session(session_id))
     except PredictiveServiceError as exc:
         return _fail(exc)
 
