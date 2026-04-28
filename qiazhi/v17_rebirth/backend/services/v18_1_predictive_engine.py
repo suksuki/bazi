@@ -227,7 +227,10 @@ def _normalize_claim(claim: Any) -> str:
 
 
 def _normalize_claim_plugin(claim: Any) -> str:
-    text = _safe_str(claim)
+    try:
+        text = _normalize_claim(claim)
+    except ValueError:
+        text = _safe_str(claim)
     if ":" in text:
         return text.split(":", 1)[0]
     return text
@@ -405,11 +408,7 @@ class RuleKernel:
         }
         if not candidate["created_at"]:
             candidate["created_at"] = _utcnow_iso()
-        candidate["content_hash"] = (
-            candidate["content_hash"]
-            if candidate["content_hash"]
-            else _rule_payload_fingerprint(candidate)
-        )
+        candidate["content_hash"] = _rule_payload_fingerprint(candidate)
 
         return cls(
             **candidate,
@@ -641,6 +640,9 @@ class PredictionContract:
     uncertainty: Dict[str, Any] = field(default_factory=dict)
     feedback_window: Dict[str, Any] = field(default_factory=dict)
     created_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
 
     @classmethod
     def from_payload(cls, payload: Dict[str, Any]) -> "PredictionContract":
@@ -1046,12 +1048,18 @@ class V18PredictiveStore:
 
     def _authorize_claim(self, rule: RuleKernel, plugin_claims: List[str]) -> bool:
         claims = {_normalize_claim_plugin(c) for c in plugin_claims}
+        claims = {claim for claim in claims if claim}
         if not claims:
             return False
         if not rule.owner_plugin:
             return False
         owner = _safe_str(rule.owner_plugin)
-        return owner in claims or any(owner.startswith(claim) for claim in claims if claim)
+        if owner in claims or "*" in claims:
+            return True
+        return any(
+            claim.endswith(".*") and owner.startswith(f"{claim[:-2]}.")
+            for claim in claims
+        )
 
     def _clean_lifecycle_tokens(self) -> None:
         now = datetime.now(timezone.utc).timestamp()
@@ -1066,6 +1074,7 @@ class V18PredictiveStore:
         actor_user_id: int = 0,
         purpose: str = "runtime",
         ttl_seconds: int = RULE_RUNTIME_TOKEN_TTL_SECONDS,
+        issuer: str = "direct",
     ) -> str:
         self._clean_lifecycle_tokens()
         token = token_urlsafe(24)
@@ -1074,6 +1083,7 @@ class V18PredictiveStore:
             "actor_role": _safe_str(actor_role, "system"),
             "actor_user_id": _safe_int(actor_user_id, 0),
             "purpose": _safe_str(purpose, "runtime"),
+            "issuer": _safe_str(issuer, "direct"),
             "issued_at": now,
             "expired_at": now + _safe_int(ttl_seconds, RULE_RUNTIME_TOKEN_TTL_SECONDS),
         }
@@ -1094,9 +1104,11 @@ class V18PredictiveStore:
                 source="rule-runtime",
                 details={"purpose": purpose, "execution_mode": execution_mode},
             )
+            self._persist()
             raise PredictiveServiceError(LIFECYCLE_BYPASS_CODE, "lifecycle token is required", 403)
         record = self._lifecycle_tokens.get(token)
         if not record or float(record.get("expired_at", 0.0)) < datetime.now(timezone.utc).timestamp():
+            record = record or {}
             self._append_audit_event(
                 rule_id="",
                 event_type=LIFECYCLE_BYPASS_CODE,
@@ -1107,6 +1119,7 @@ class V18PredictiveStore:
                 source="rule-runtime",
                 details={"purpose": purpose, "execution_mode": execution_mode},
             )
+            self._persist()
             raise PredictiveServiceError(LIFECYCLE_BYPASS_CODE, "invalid lifecycle token", 403)
         if _safe_str(record.get("purpose"), "runtime") != purpose:
             self._append_audit_event(
@@ -1119,7 +1132,52 @@ class V18PredictiveStore:
                 source="rule-runtime",
                 details={"purpose": purpose, "execution_mode": execution_mode},
             )
+            self._persist()
             raise PredictiveServiceError(LIFECYCLE_BYPASS_CODE, "invalid lifecycle context", 403)
+        if purpose in {"retrieval", "runtime", "pilot", "test", "debug"} and _safe_str(record.get("issuer")) != "runtime_facade":
+            self._append_audit_event(
+                rule_id="",
+                event_type=LIFECYCLE_BYPASS_CODE,
+                severity="high",
+                message="lifecycle token issuer is not runtime facade",
+                actor_role=_safe_str(record.get("actor_role"), "system"),
+                actor_user_id=_safe_int(record.get("actor_user_id"), 0),
+                source="rule-runtime",
+                details={
+                    "purpose": purpose,
+                    "execution_mode": execution_mode,
+                    "issuer": _safe_str(record.get("issuer"), "direct"),
+                },
+            )
+            self._persist()
+            raise PredictiveServiceError(LIFECYCLE_BYPASS_CODE, "runtime facade is required", 403)
+
+    def _raise_lifecycle_bypass(
+        self,
+        *,
+        message: str,
+        purpose: str,
+        execution_mode: str,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+        details: Optional[Dict[str, Any]] = None,
+    ) -> None:
+        self._append_audit_event(
+            rule_id="",
+            event_type=LIFECYCLE_BYPASS_CODE,
+            severity="high",
+            message=message,
+            actor_role=_safe_str(actor_role, "system"),
+            actor_user_id=_safe_int(actor_user_id, 0),
+            source="rule-runtime",
+            details={
+                "purpose": purpose,
+                "execution_mode": execution_mode,
+                **dict(details or {}),
+            },
+        )
+        self._persist()
+        raise PredictiveServiceError(LIFECYCLE_BYPASS_CODE, message, 403)
 
     def register_rule(
         self,
@@ -1166,6 +1224,10 @@ class V18PredictiveStore:
             "rule_id": rule.rule_id,
             "operation": "created",
             "version": rule.version,
+            "content_hash": rule.content_hash,
+            "created_by": rule.created_by,
+            "approved_by": rule.approved_by,
+            "approved_at": rule.approved_at,
         }
 
     def activate_rule(
@@ -1958,6 +2020,12 @@ class V18PredictiveStore:
             "conflict_actions": conflict_actions,
             "time_weight": time_weight,
             "runtime_context": input_obj.runtime_context,
+            "resolver_lifecycle": {
+                "execution_mode": _safe_str(input_obj.execution_mode, "runtime"),
+                "gatekeeper_protocol": RULE_GATEKEEPER_PROTOCOL,
+                "lifecycle_enforced": V18_1_STRICT_LIFECYCLE,
+                "plugin_claim_count": len(input_obj.plugin_claims),
+            },
         }
 
         return RuleResolverOutput(
@@ -2027,6 +2095,17 @@ class V18PredictiveStore:
     def build_contract(self, payload: Dict[str, Any], *, resolved_rules: Dict[str, Any]) -> PredictionContract:
         if resolved_rules.get("status") != "resolved":
             raise PredictiveServiceError("RESOLVER_REQUIRED_MISSING", "resolver_snapshot missing or invalid")
+        snapshot = resolved_rules.get("resolver_snapshot")
+        lifecycle = snapshot.get("resolver_lifecycle") if isinstance(snapshot, dict) else {}
+        if not isinstance(lifecycle, dict) or lifecycle.get("gatekeeper_protocol") != RULE_GATEKEEPER_PROTOCOL:
+            self._raise_lifecycle_bypass(
+                message="contract build requires resolver lifecycle snapshot",
+                purpose="contract",
+                execution_mode=_safe_str(payload.get("execution_mode"), "contract"),
+                actor_role=_safe_str(payload.get("actor_role"), "system"),
+                actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+                details={"prediction_id": _safe_str(payload.get("prediction_id"))},
+            )
         contract = PredictionContract.from_payload(payload)
         if not contract.evidence_ids:
             raise PredictiveServiceError("EVIDENCE_BINDING_FAILED", "evidence_ids are required", 422)
@@ -2106,6 +2185,7 @@ class V18PredictiveStore:
 
         suite_id_for_result = suite.suite_id if suite else ""
         suite_version_for_result = suite.version if suite else ""
+        execution_mode = _safe_str(payload.get("execution_mode"), "test")
         test_run_digest = _rule_test_run_payload_fingerprint(
             rule_id=rule_id,
             rule_version=rule.version,
@@ -2166,6 +2246,7 @@ class V18PredictiveStore:
             "rule_test_engine": RULE_TEST_ENGINE_VERSION,
             "quality_gate": eval_result["quality_gate"],
             "quality_score": eval_result["quality_score"],
+            "execution_mode": execution_mode,
             "summary": {
                 "hit": hit,
                 "false_positive": fp,
@@ -2197,6 +2278,7 @@ class V18PredictiveStore:
                 "test_suite": test_suite,
                 "total_cases": total_cases,
                 "rule_test_engine": RULE_TEST_ENGINE_VERSION,
+                "execution_mode": execution_mode,
                 "recommended_status": eval_result["recommended_status"],
                 "quality_gate": eval_result["quality_gate"],
                 "quality_score": eval_result["quality_score"],
@@ -2302,6 +2384,7 @@ class V18PredictiveStore:
         rule_id: str | None = None,
         suite_id: str | None = None,
         quality_gate: str | None = None,
+        execution_mode: str | None = None,
         min_quality_score: float | None = None,
         max_quality_score: float | None = None,
         start_at: str | None = None,
@@ -2317,9 +2400,14 @@ class V18PredictiveStore:
             target_gate = normalized_gate
         else:
             target_gate = ""
+        normalized_mode = _safe_str(execution_mode).lower()
+        if normalized_mode:
+            target_mode = normalized_mode
+        else:
+            target_mode = ""
 
         bucket_mode = _safe_str(granularity, "day").lower()
-        if bucket_mode not in {"day", "week"}:
+        if bucket_mode not in {"day", "week", "month"}:
             bucket_mode = "day"
 
         requested_points = _safe_int(trend_points, 30)
@@ -2347,6 +2435,8 @@ class V18PredictiveStore:
                 continue
             if end_dt and item_dt and item_dt > end_dt:
                 continue
+            if target_mode and _safe_str(item.get("execution_mode")).lower() != target_mode:
+                continue
             filtered.append(item)
 
         total_runs = len(filtered)
@@ -2359,24 +2449,35 @@ class V18PredictiveStore:
                     "start_at": start_at,
                     "end_at": end_at,
                     "granularity": bucket_mode,
-                "trend_points": requested_points,
-            },
-            "summary": {
-                "total_runs": 0,
-                "unique_rules": 0,
-                "avg_quality_score": 0.0,
+                    "trend_points": requested_points,
+                },
+                "summary": {
+                    "total_runs": 0,
+                    "unique_rules": 0,
+                    "trend_total_runs": 0,
+                    "trend_empty_buckets": 0,
+                    "avg_quality_score": 0.0,
                     "avg_precision": 0.0,
                     "avg_recall": 0.0,
                     "avg_conflict_rate": 0.0,
                     "total_cases": 0,
                     "gate_distribution": {},
+                    "execution_mode_distribution": {},
+                },
+                "trend_meta": {
+                    "granularity": bucket_mode,
+                    "total_buckets": 0,
+                    "empty_buckets": 0,
+                    "trend_total_runs": 0,
+                    "requested_points": requested_points,
                 },
                 "trend": [],
                 "by_rule": [],
-            "latest_runs": [],
-        }
+                "latest_runs": [],
+            }
 
         gate_distribution: Dict[str, int] = {}
+        mode_distribution: Dict[str, int] = {}
         rule_rollup: Dict[tuple[str, str], Dict[str, Any]] = {}
         trend_map: Dict[str, Dict[str, Any]] = {}
         total_quality_score = 0.0
@@ -2388,6 +2489,8 @@ class V18PredictiveStore:
         for item in filtered:
             gate = _safe_str(item.get("quality_gate"), "unknown").lower()
             gate_distribution[gate] = gate_distribution.get(gate, 0) + 1
+            mode = _safe_str(item.get("execution_mode"), "test").lower()
+            mode_distribution[mode] = mode_distribution.get(mode, 0) + 1
             quality = _safe_float(item.get("quality_score"), 0.0)
             precision = _safe_float(item.get("summary", {}).get("precision"), _safe_float(item.get("precision"), 0.0))
             recall = _safe_float(item.get("summary", {}).get("recall"), _safe_float(item.get("recall"), 0.0))
@@ -2410,6 +2513,7 @@ class V18PredictiveStore:
                     "suite_id": _safe_str(item.get("suite_id")),
                     "suite_version": _safe_str(item.get("suite_version")),
                     "runs": 0,
+                    "execution_mode_distribution": {},
                     "total_quality_score": 0.0,
                     "total_precision": 0.0,
                     "total_recall": 0.0,
@@ -2418,6 +2522,7 @@ class V18PredictiveStore:
                     "last_quality_gate": gate,
                     "latest_run_at": _safe_str(item.get("created_at")),
                     "latest_run_id": _safe_str(item.get("run_id")),
+                    "last_execution_mode": mode,
                 }
                 rule_rollup[key] = entry
             entry["runs"] += 1
@@ -2426,14 +2531,49 @@ class V18PredictiveStore:
             entry["total_recall"] += recall
             entry["total_conflict"] += conflict
             entry["total_cases"] += cases
+            entry["execution_mode_distribution"][mode] = entry["execution_mode_distribution"].get(mode, 0) + 1
 
             item_dt = _parse_dt(item.get("created_at"))
             if item_dt:
-                bucket = item_dt.strftime("%Y-%m-%d") if bucket_mode == "day" else item_dt.strftime("%G-%V")
-                trend = trend_map.setdefault(bucket, {"bucket": bucket, "runs": 0, "avg_quality_score": 0.0, "gate_distribution": {}})
+                if bucket_mode == "day":
+                    bucket = item_dt.strftime("%Y-%m-%d")
+                elif bucket_mode == "week":
+                    bucket = item_dt.strftime("%G-%V")
+                else:
+                    bucket = item_dt.strftime("%Y-%m")
+                trend = trend_map.setdefault(
+                    bucket,
+                    {
+                        "bucket": bucket,
+                        "runs": 0,
+                        "is_empty": False,
+                        "avg_quality_score": 0.0,
+                        "avg_conflict_rate": 0.0,
+                        "pass_rate": 0.0,
+                        "review_rate": 0.0,
+                        "needs_review_rate": 0.0,
+                        "other_gate_rate": 0.0,
+                        "gate_distribution": {},
+                        "mode_distribution": {},
+                    },
+                )
                 trend["runs"] += 1
                 trend["avg_quality_score"] = (trend["avg_quality_score"] * (trend["runs"] - 1) + quality) / trend["runs"]
+                trend["avg_conflict_rate"] = (trend["avg_conflict_rate"] * (trend["runs"] - 1) + conflict) / trend["runs"]
                 trend["gate_distribution"][gate] = trend["gate_distribution"].get(gate, 0) + 1
+                trend["mode_distribution"][mode] = trend["mode_distribution"].get(mode, 0) + 1
+
+                trend_runs = trend["runs"]
+                if trend_runs > 0:
+                    trend["pass_rate"] = trend["gate_distribution"].get("pass", 0) / trend_runs
+                    trend["review_rate"] = trend["gate_distribution"].get("review", 0) / trend_runs
+                    trend["needs_review_rate"] = trend["gate_distribution"].get("needs_review", 0) / trend_runs
+                    known_rates = (
+                        trend["gate_distribution"].get("pass", 0)
+                        + trend["gate_distribution"].get("review", 0)
+                        + trend["gate_distribution"].get("needs_review", 0)
+                    )
+                    trend["other_gate_rate"] = max(0.0, (trend_runs - known_rates) / trend_runs)
 
             latest_dt = _parse_dt(entry["latest_run_at"]) or datetime.min.replace(tzinfo=timezone.utc)
             if not item_dt or item_dt <= latest_dt:
@@ -2441,11 +2581,99 @@ class V18PredictiveStore:
             entry["latest_run_at"] = _safe_str(item.get("created_at"))
             entry["latest_run_id"] = _safe_str(item.get("run_id"))
             entry["last_quality_gate"] = gate
+            entry["last_execution_mode"] = mode
 
         trend_items = list(trend_map.values())
         trend_items.sort(key=lambda item: item["bucket"])
+        if trend_items:
+            def _parse_bucket_start(bucket: str) -> Optional[datetime]:
+                if bucket_mode == "day":
+                    return datetime.strptime(bucket, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                if bucket_mode == "week":
+                    try:
+                        return datetime.strptime(f"{bucket}-1", "%G-%V-%u").replace(tzinfo=timezone.utc)
+                    except ValueError:
+                        return None
+                if bucket_mode == "month":
+                    return datetime.strptime(f"{bucket}-01", "%Y-%m-%d").replace(tzinfo=timezone.utc)
+                return None
+
+            def _add_bucket(start_dt: datetime, offset: int) -> str:
+                if bucket_mode == "day":
+                    dt = start_dt + timedelta(days=offset)
+                    return dt.strftime("%Y-%m-%d")
+                if bucket_mode == "week":
+                    dt = start_dt + timedelta(weeks=offset)
+                    return dt.strftime("%G-%V")
+                dt = start_dt
+                month_index = dt.year * 12 + dt.month - 1 + offset
+                year = month_index // 12
+                month = month_index % 12 + 1
+                return f"{year:04d}-{month:02d}"
+
+            min_boundary = trend_items[0]["bucket"]
+            max_boundary = trend_items[-1]["bucket"]
+            start_boundary = _parse_bucket_start(min_boundary)
+            end_boundary = _parse_bucket_start(max_boundary)
+            if start_boundary is None:
+                start_boundary = _parse_dt(start_at)
+            if end_boundary is None:
+                end_boundary = _parse_dt(end_at)
+            if start_boundary is None:
+                start_boundary = _parse_dt(filtered[0].get("created_at"))
+            if end_boundary is None and filtered:
+                end_boundary = _parse_dt(filtered[-1].get("created_at"))
+
+            if start_boundary and end_boundary:
+                if end_boundary < start_boundary:
+                    start_boundary, end_boundary = end_boundary, start_boundary
+                existing = {item["bucket"]: item for item in trend_items}
+                if bucket_mode == "day":
+                    total_steps = (end_boundary.date() - start_boundary.date()).days + 1
+                elif bucket_mode == "week":
+                    total_steps = int((end_boundary - start_boundary).days / 7) + 1
+                else:
+                    total_steps = (end_boundary.year - start_boundary.year) * 12 + (end_boundary.month - start_boundary.month) + 1
+                total_steps = max(1, total_steps)
+                if total_steps <= 0:
+                    total_steps = 1
+
+                start_offset = 0
+                if total_steps > requested_points:
+                    start_offset = total_steps - requested_points
+
+                trend_items = []
+                for i in range(start_offset, total_steps):
+                    bucket_key = _add_bucket(start_boundary, i)
+                    trend_items.append(
+                        existing.get(
+                            bucket_key,
+                            {
+                                "bucket": bucket_key,
+                                "runs": 0,
+                                "is_empty": True,
+                                "avg_quality_score": 0.0,
+                                "avg_conflict_rate": 0.0,
+                                "pass_rate": 0.0,
+                                "review_rate": 0.0,
+                                "needs_review_rate": 0.0,
+                                "other_gate_rate": 0.0,
+                                "gate_distribution": {},
+                                "mode_distribution": {},
+                            },
+                        )
+                    )
+        trend_items.sort(key=lambda item: item["bucket"])
         if trend_items and len(trend_items) > requested_points:
             trend_items = trend_items[-requested_points:]
+
+        for item in trend_items:
+            if _safe_int(item.get("runs"), 0) <= 0:
+                item["is_empty"] = True
+            else:
+                item["is_empty"] = _safe_bool(item.get("is_empty"), default=False)
+
+        empty_trend_buckets = sum(1 for item in trend_items if _safe_int(item.get("runs"), 0) <= 0)
 
         by_rule = []
         for entry in rule_rollup.values():
@@ -2454,6 +2682,8 @@ class V18PredictiveStore:
                 {
                     "rule_id": entry["rule_id"],
                     "rule_version": entry["rule_version"],
+                    "suite_id": _safe_str(entry.get("suite_id")),
+                    "suite_version": _safe_str(entry.get("suite_version")),
                     "runs": runs,
                     "total_cases": _safe_int(entry.get("total_cases"), 0),
                     "avg_quality_score": _safe_float(entry.get("total_quality_score"), 0.0) / runs if runs else 0.0,
@@ -2463,6 +2693,8 @@ class V18PredictiveStore:
                     "latest_run_at": entry["latest_run_at"],
                     "latest_run_id": entry["latest_run_id"],
                     "last_quality_gate": entry["last_quality_gate"],
+                    "last_execution_mode": entry["last_execution_mode"],
+                    "execution_mode_distribution": entry.get("execution_mode_distribution") or {},
                 }
             )
         by_rule.sort(key=lambda item: item["runs"], reverse=True)
@@ -2471,7 +2703,9 @@ class V18PredictiveStore:
             filtered,
             key=lambda item: _parse_dt(item.get("created_at")) or datetime.min.replace(tzinfo=timezone.utc),
             reverse=True,
-        )[:max(1, min(_safe_int(latest_runs_limit, 10), 50)]
+        )
+        latest_runs_limit = max(1, min(_safe_int(latest_runs_limit, 10), 50))
+        latest_runs = latest_runs[:latest_runs_limit]
 
         latest_runs_summary = []
         for item in latest_runs:
@@ -2488,6 +2722,7 @@ class V18PredictiveStore:
                     "total_cases": _safe_int(item.get("total_cases"), 0),
                     "created_at": _safe_str(item.get("created_at")),
                     "test_suite": _safe_str(item.get("test_suite")),
+                    "execution_mode": _safe_str(item.get("execution_mode"), "test"),
                 }
             )
 
@@ -2500,16 +2735,27 @@ class V18PredictiveStore:
                 "end_at": end_at,
                 "granularity": bucket_mode,
                 "trend_points": requested_points,
+                "execution_mode": target_mode or "all",
             },
             "summary": {
                 "total_runs": total_runs,
                 "unique_rules": len(rule_rollup),
+                "trend_total_runs": total_runs,
+                "trend_empty_buckets": empty_trend_buckets,
                 "avg_quality_score": total_quality_score / total_runs if total_runs else 0.0,
                 "avg_precision": total_precision / total_runs if total_runs else 0.0,
                 "avg_recall": total_recall / total_runs if total_runs else 0.0,
                 "avg_conflict_rate": total_conflict / total_runs if total_runs else 0.0,
                 "total_cases": total_cases,
                 "gate_distribution": gate_distribution,
+                "execution_mode_distribution": mode_distribution,
+            },
+            "trend_meta": {
+                "granularity": bucket_mode,
+                "total_buckets": len(trend_items),
+                "empty_buckets": empty_trend_buckets,
+                "trend_total_runs": total_runs,
+                "requested_points": requested_points,
             },
             "trend": trend_items,
             "by_rule": by_rule,
@@ -3170,6 +3416,16 @@ class V18PredictiveStore:
         snapshot = contract_payload.get("resolver_snapshot")
         if not isinstance(snapshot, dict):
             raise PredictiveServiceError("RESOLVER_REQUIRED_MISSING", "resolver_snapshot is required")
+        lifecycle = snapshot.get("resolver_lifecycle")
+        if not isinstance(lifecycle, dict) or lifecycle.get("gatekeeper_protocol") != RULE_GATEKEEPER_PROTOCOL:
+            self._raise_lifecycle_bypass(
+                message="ledger write requires resolver lifecycle snapshot",
+                purpose="ledger",
+                execution_mode=_safe_str(contract_payload.get("execution_mode"), "ledger"),
+                actor_role=_safe_str(prediction.get("actor_role"), "system"),
+                actor_user_id=_safe_int(prediction.get("actor_user_id"), 0),
+                details={"prediction_id": prediction_id},
+            )
         evidence_ids = _ensure_list(contract_payload.get("evidence_ids"))
         if not evidence_ids:
             raise PredictiveServiceError("EVIDENCE_BINDING_FAILED", "evidence_ids required", 422)
@@ -3409,11 +3665,13 @@ class RuleRuntimeFacade:
             actor_role=actor_role,
             actor_user_id=actor_user_id,
             purpose=purpose,
+            issuer="runtime_facade",
         )
 
     def run_rule_retrieval(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> List[RuleKernel]:
-        token = self._issue(actor_role=actor_role, actor_user_id=actor_user_id, purpose="retrieval")
         payload = dict(payload)
+        token = self._issue(actor_role=actor_role, actor_user_id=actor_user_id, purpose="retrieval")
+        payload["execution_mode"] = "retrieval"
         payload["lifecycle_token"] = token
         return self.service.retrieve_rules(
             prediction_id=_safe_str(payload.get("prediction_id")),
@@ -3430,13 +3688,14 @@ class RuleRuntimeFacade:
         payload["actor_role"] = actor_role
         payload["actor_user_id"] = actor_user_id
         payload["lifecycle_token"] = self._issue(actor_role=actor_role, actor_user_id=actor_user_id, purpose="runtime")
-        payload.setdefault("execution_mode", "runtime")
+        payload["execution_mode"] = "runtime"
         payload.setdefault("allow_sandbox", False)
         return self.service.resolve_rules(payload)
 
     def run_rule_test(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
         payload = dict(payload)
         payload["lifecycle_token"] = self._issue(actor_role=actor_role, actor_user_id=actor_user_id, purpose="test")
+        payload["execution_mode"] = "test"
         payload.setdefault("actor_role", actor_role)
         payload.setdefault("actor_user_id", actor_user_id)
         return self.service.run_rule_test_v0(payload)
@@ -3444,6 +3703,7 @@ class RuleRuntimeFacade:
     def run_shadow_compare(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
         payload = dict(payload)
         payload["lifecycle_token"] = self._issue(actor_role=actor_role, actor_user_id=actor_user_id, purpose="debug")
+        payload["execution_mode"] = "debug"
         return self.service.run_shadow_compare(payload)
 
     def run_wealth_pilot(self, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:

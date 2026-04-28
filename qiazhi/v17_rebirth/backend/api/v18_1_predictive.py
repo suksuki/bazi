@@ -96,7 +96,7 @@ def _enrich_actor_context(payload: dict, request: Optional[Request] = None) -> d
 
 @router.post("/v18.1/rule-kernels")
 @router.post("/api/v18.1/rule-kernels")
-async def register_rule_kernel(payload: dict, request: Request) -> dict | JSONResponse:
+async def register_rule_kernel(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         data = predictive_service.register_rule(
@@ -113,7 +113,7 @@ async def register_rule_kernel(payload: dict, request: Request) -> dict | JSONRe
 
 @router.get("/v18.1/rule-kernels/{rule_id}")
 @router.get("/api/v18.1/rule-kernels/{rule_id}")
-async def get_rule_kernel(rule_id: str) -> dict | JSONResponse:
+async def get_rule_kernel(rule_id: str):
     try:
         rule = predictive_service.get_rule(rule_id)
         return _ok(rule.to_dict())
@@ -127,14 +127,14 @@ async def list_rule_kernels(
     effect_scope: str | None = None,
     status: str | None = None,
     owner_plugin: str | None = None,
-) -> dict | JSONResponse:
+):
     rules = predictive_service.list_rules(effect_scope=effect_scope, status=status, owner_plugin=owner_plugin)
     return _ok({"items": [r.to_dict() for r in rules], "total": len(rules)})
 
 
 @router.post("/v18.1/rule-kernels/{rule_id}/status")
 @router.post("/api/v18.1/rule-kernels/{rule_id}/status")
-async def update_rule_kernel_status(rule_id: str, payload: dict, request: Request) -> dict | JSONResponse:
+async def update_rule_kernel_status(rule_id: str, payload: dict, request: Request):
     try:
         target_status = str(payload.get("target_status") or "").strip()
         if not target_status:
@@ -148,7 +148,17 @@ async def update_rule_kernel_status(rule_id: str, payload: dict, request: Reques
             actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
             version=version or None,
         )
-        return _ok({"rule_id": rule.rule_id, "status": rule.status})
+        return _ok(
+            {
+                "rule_id": rule.rule_id,
+                "status": rule.status,
+                "version": rule.version,
+                "content_hash": rule.content_hash,
+                "created_by": rule.created_by,
+                "approved_by": rule.approved_by,
+                "approved_at": rule.approved_at,
+            }
+        )
     except PredictiveServiceError as exc:
         return _fail(exc)
     except ValueError as exc:
@@ -157,7 +167,7 @@ async def update_rule_kernel_status(rule_id: str, payload: dict, request: Reques
 
 @router.post("/v18.1/rule-retrieval")
 @router.post("/api/v18.1/rule-retrieval")
-async def rule_retrieval(payload: dict, request: Request) -> dict | JSONResponse:
+async def rule_retrieval(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(dict(payload), request)
         rules = predictive_runtime_facade.run_rule_retrieval(
@@ -172,7 +182,7 @@ async def rule_retrieval(payload: dict, request: Request) -> dict | JSONResponse
 
 @router.post("/v18.1/rule-resolver")
 @router.post("/api/v18.1/rule-resolver")
-async def rule_resolver(payload: dict, request: Request) -> dict | JSONResponse:
+async def rule_resolver(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         data = predictive_runtime_facade.run_resolver(
@@ -189,7 +199,7 @@ async def rule_resolver(payload: dict, request: Request) -> dict | JSONResponse:
 
 @router.post("/v18.1/prediction-contracts/builder")
 @router.post("/api/v18.1/prediction-contracts/builder")
-async def prediction_contract_builder(payload: dict) -> dict | JSONResponse:
+async def prediction_contract_builder(payload: dict):
     try:
         resolved_rules = payload.get("resolved_rules", {})
         contract_payload = payload
@@ -220,7 +230,7 @@ def _extract_contract(payload: dict) -> dict:
 
 @router.post("/v18.1/prediction-ledger/records")
 @router.post("/api/v18.1/prediction-ledger/records")
-async def prediction_ledger_write(payload: dict) -> dict | JSONResponse:
+async def prediction_ledger_write(payload: dict):
     try:
         prediction_id = _extract_prediction_id(payload)
         contract = _extract_contract(payload)
@@ -242,7 +252,7 @@ async def prediction_ledger_write(payload: dict) -> dict | JSONResponse:
 
 @router.get("/v18.1/prediction-ledger/records/{prediction_id}")
 @router.get("/api/v18.1/prediction-ledger/records/{prediction_id}")
-async def prediction_ledger_get(prediction_id: str) -> dict | JSONResponse:
+async def prediction_ledger_get(prediction_id: str):
     try:
         record = predictive_service.get_ledger(prediction_id)
         return _ok({"record": record})
@@ -252,7 +262,7 @@ async def prediction_ledger_get(prediction_id: str) -> dict | JSONResponse:
 
 @router.post("/v18.1/llm-output-verifier")
 @router.post("/api/v18.1/llm-output-verifier")
-async def llm_output_verifier(payload: dict) -> dict | JSONResponse:
+async def llm_output_verifier(payload: dict):
     try:
         result = predictive_service.run_verifier(payload)
         status = result["result"]
@@ -265,7 +275,7 @@ async def llm_output_verifier(payload: dict) -> dict | JSONResponse:
 
 @router.post("/v18.1/feedback")
 @router.post("/api/v18.1/feedback")
-async def feedback_collector(payload: dict) -> dict | JSONResponse:
+async def feedback_collector(payload: dict):
     try:
         result = predictive_service.append_feedback(payload)
         return _ok(result)
@@ -275,7 +285,7 @@ async def feedback_collector(payload: dict) -> dict | JSONResponse:
 
 @router.post("/v18.1/knowledge-pr-queue")
 @router.post("/api/v18.1/knowledge-pr-queue")
-async def knowledge_pr_queue(payload: dict, request: Request) -> dict | JSONResponse:
+async def knowledge_pr_queue(payload: dict, request: Request):
     try:
         payload = dict(payload)
         if "requested_by" not in payload:
@@ -288,7 +298,7 @@ async def knowledge_pr_queue(payload: dict, request: Request) -> dict | JSONResp
 
 @router.post("/v18.1/knowledge-pr-queue/{pr_id}/review")
 @router.post("/api/v18.1/knowledge-pr-queue/{pr_id}/review")
-async def knowledge_pr_queue_review(pr_id: str, payload: dict, request: Request) -> dict | JSONResponse:
+async def knowledge_pr_queue_review(pr_id: str, payload: dict, request: Request):
     try:
         payload = dict(payload)
         payload["pr_id"] = pr_id
@@ -302,7 +312,7 @@ async def knowledge_pr_queue_review(pr_id: str, payload: dict, request: Request)
 
 @router.post("/v18.1/knowledge-cards")
 @router.post("/api/v18.1/knowledge-cards")
-async def knowledge_cards_submit(payload: dict, request: Request) -> dict | JSONResponse:
+async def knowledge_cards_submit(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_service.register_knowledge_card(
@@ -323,7 +333,7 @@ async def knowledge_cards_list(
     knowledge_domain: str | None = None,
     status: str | None = None,
     tag: str | None = None,
-) -> dict | JSONResponse:
+):
     try:
         cards = predictive_service.list_knowledge_cards(
             knowledge_domain=knowledge_domain,
@@ -337,7 +347,7 @@ async def knowledge_cards_list(
 
 @router.get("/v18.1/knowledge-cards/{card_id}")
 @router.get("/api/v18.1/knowledge-cards/{card_id}")
-async def knowledge_card_get(card_id: str, version: str | None = None) -> dict | JSONResponse:
+async def knowledge_card_get(card_id: str, version: str | None = None):
     try:
         card = predictive_service.get_knowledge_card(card_id, version=version)
         return _ok(card.to_dict())
@@ -349,7 +359,7 @@ async def knowledge_card_get(card_id: str, version: str | None = None) -> dict |
 
 @router.post("/v18.1/knowledge-cards/{card_id}/status")
 @router.post("/api/v18.1/knowledge-cards/{card_id}/status")
-async def knowledge_card_status_update(card_id: str, payload: dict, request: Request) -> dict | JSONResponse:
+async def knowledge_card_status_update(card_id: str, payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         target_status = str(payload.get("target_status") or "").strip()
@@ -372,7 +382,7 @@ async def knowledge_card_status_update(card_id: str, payload: dict, request: Req
 
 @router.post("/v18.1/rule-tests/run")
 @router.post("/api/v18.1/rule-tests/run")
-async def rule_test_run(payload: dict, request: Request) -> dict | JSONResponse:
+async def rule_test_run(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_runtime_facade.run_rule_test(
@@ -389,7 +399,7 @@ async def rule_test_run(payload: dict, request: Request) -> dict | JSONResponse:
 
 @router.post("/v18.1/rule-test-suites")
 @router.post("/api/v18.1/rule-test-suites")
-async def register_rule_test_suite(payload: dict, request: Request) -> dict | JSONResponse:
+async def register_rule_test_suite(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_service.register_rule_test_suite(
@@ -410,7 +420,7 @@ async def rule_test_suites_list(
     rule_id: str | None = None,
     suite_id: str | None = None,
     status: str | None = None,
-) -> dict | JSONResponse:
+):
     try:
         suites = predictive_service.list_rule_test_suites(rule_id=rule_id, suite_id=suite_id, status=status)
         return _ok({"items": [suite.to_dict() for suite in suites], "total": len(suites)})
@@ -420,7 +430,7 @@ async def rule_test_suites_list(
 
 @router.get("/v18.1/rule-test-suites/{suite_id}")
 @router.get("/api/v18.1/rule-test-suites/{suite_id}")
-async def rule_test_suite_get(suite_id: str, version: str | None = None) -> dict | JSONResponse:
+async def rule_test_suite_get(suite_id: str, version: str | None = None):
     try:
         suite = predictive_service.get_rule_test_suite(suite_id, version=version)
         return _ok(suite.to_dict())
@@ -430,7 +440,7 @@ async def rule_test_suite_get(suite_id: str, version: str | None = None) -> dict
 
 @router.post("/v18.1/rule-test-suites/{suite_id}/status")
 @router.post("/api/v18.1/rule-test-suites/{suite_id}/status")
-async def rule_test_suite_status_update(suite_id: str, payload: dict, request: Request) -> dict | JSONResponse:
+async def rule_test_suite_status_update(suite_id: str, payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         target_status = str(payload.get("target_status") or "").strip()
@@ -453,7 +463,7 @@ async def rule_test_suite_status_update(suite_id: str, payload: dict, request: R
 
 @router.post("/v18.1/rule-test-suites/{suite_id}/deprecate")
 @router.post("/api/v18.1/rule-test-suites/{suite_id}/deprecate")
-async def rule_test_suite_deprecate(suite_id: str, payload: dict, request: Request) -> dict | JSONResponse:
+async def rule_test_suite_deprecate(suite_id: str, payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         version = _safe_str(payload.get("version"))
@@ -472,7 +482,7 @@ async def rule_test_suite_deprecate(suite_id: str, payload: dict, request: Reque
 
 @router.post("/v18.1/rule-test-suites/{suite_id}/run")
 @router.post("/api/v18.1/rule-test-suites/{suite_id}/run")
-async def rule_test_suite_run(suite_id: str, payload: dict, request: Request, suite_version: str | None = None) -> dict | JSONResponse:
+async def rule_test_suite_run(suite_id: str, payload: dict, request: Request, suite_version: str | None = None):
     try:
         payload = _enrich_actor_context(payload, request)
         payload = dict(payload)
@@ -503,7 +513,7 @@ async def rule_test_results(
     sort: str = "desc",
     offset: int = 0,
     limit: int = 50,
-) -> dict | JSONResponse:
+):
     try:
         result = predictive_service.query_rule_test_results(
             rule_id=rule_id,
@@ -538,12 +548,13 @@ async def rule_test_dashboard(
     quality_gate: str | None = None,
     min_quality_score: float | None = None,
     max_quality_score: float | None = None,
+    execution_mode: str | None = None,
     start_at: str | None = None,
     end_at: str | None = None,
     granularity: str = "day",
     trend_points: int = 30,
     latest_runs_limit: int = 10,
-) -> dict | JSONResponse:
+):
     try:
         result = predictive_service.get_rule_test_dashboard(
             rule_id=rule_id,
@@ -551,6 +562,7 @@ async def rule_test_dashboard(
             quality_gate=quality_gate,
             min_quality_score=min_quality_score,
             max_quality_score=max_quality_score,
+            execution_mode=execution_mode,
             start_at=start_at,
             end_at=end_at,
             granularity=granularity,
@@ -564,7 +576,7 @@ async def rule_test_dashboard(
 
 @router.get("/v18.1/rule-test-engine/config")
 @router.get("/api/v18.1/rule-test-engine/config")
-async def rule_test_engine_config(version: str | None = None) -> dict | JSONResponse:
+async def rule_test_engine_config(version: str | None = None):
     try:
         result = predictive_service.get_rule_test_engine_config(version=version)
         return _ok(result)
@@ -583,7 +595,7 @@ async def rule_audit_events(
     sort: str = "desc",
     offset: int = 0,
     limit: int = 200,
-) -> dict | JSONResponse:
+):
     try:
         result = predictive_service.query_rule_audit_events(
             rule_id=rule_id,
@@ -611,7 +623,7 @@ async def rule_audit_events(
 
 @router.post("/v18.1/consumer-agent/bootstrap")
 @router.post("/api/v18.1/consumer-agent/bootstrap")
-async def consumer_agent_bootstrap(payload: dict, request: Request) -> dict | JSONResponse:
+async def consumer_agent_bootstrap(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_service.build_consumer_agent_bootstrap(payload)
@@ -624,7 +636,7 @@ async def consumer_agent_bootstrap(payload: dict, request: Request) -> dict | JS
 
 @router.post("/v18.1/consumer-agent/decompose")
 @router.post("/api/v18.1/consumer-agent/decompose")
-async def consumer_agent_decompose(payload: dict, request: Request) -> dict | JSONResponse:
+async def consumer_agent_decompose(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_service.decompose_user_question(payload)
@@ -637,7 +649,7 @@ async def consumer_agent_decompose(payload: dict, request: Request) -> dict | JS
 
 @router.post("/v18.1/consumer-agent/action-plan")
 @router.post("/api/v18.1/consumer-agent/action-plan")
-async def consumer_agent_action_plan(payload: dict, request: Request) -> dict | JSONResponse:
+async def consumer_agent_action_plan(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_service.build_agent_action_plan(payload)
@@ -650,7 +662,7 @@ async def consumer_agent_action_plan(payload: dict, request: Request) -> dict | 
 
 @router.post("/v18.1/shadow-compare")
 @router.post("/api/v18.1/shadow-compare")
-async def shadow_compare(payload: dict, request: Request) -> dict | JSONResponse:
+async def shadow_compare(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_runtime_facade.run_shadow_compare(
@@ -667,7 +679,7 @@ async def shadow_compare(payload: dict, request: Request) -> dict | JSONResponse
 
 @router.post("/v18.1/wealth-pilot/run")
 @router.post("/api/v18.1/wealth-pilot/run")
-async def wealth_pilot_run(payload: dict, request: Request) -> dict | JSONResponse:
+async def wealth_pilot_run(payload: dict, request: Request):
     try:
         payload = _enrich_actor_context(payload, request)
         result = predictive_runtime_facade.run_wealth_pilot(
