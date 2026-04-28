@@ -3,7 +3,7 @@ from __future__ import annotations
 import time
 from typing import Any, Optional
 from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 
 from v17_rebirth.backend.services.v18_1_predictive_engine import (
     PredictiveServiceError,
@@ -93,6 +93,59 @@ def _enrich_actor_context(payload: dict, request: Optional[Request] = None) -> d
         if user:
             next_payload["actor_username"] = str(user.get("username") or user.get("id") or "").strip()
     return next_payload
+
+
+@router.api_route("/api/v18_1/{path:path}", methods=["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"])
+async def v18_1_underscore_api_alias(path: str, request: Request):
+    """Compatibility alias for clients opened from backend origin.
+
+    The Next.js frontend proxy uses /api/v18_1/* because filesystem route
+    segments with dots are awkward. If a browser opens the app through the
+    backend origin instead of the Next origin, that proxy layer is absent, so
+    this alias safely re-dispatches to the canonical /api/v18.1/* routes.
+    """
+    body = await request.body()
+    target_path = f"/api/v18.1/{path}"
+    scope = dict(request.scope)
+    scope["path"] = target_path
+    scope["raw_path"] = target_path.encode("utf-8")
+    scope["path_params"] = {}
+    scope.pop("route", None)
+    scope.pop("endpoint", None)
+
+    sent = False
+
+    async def receive():
+        nonlocal sent
+        if sent:
+            return {"type": "http.request", "body": b"", "more_body": False}
+        sent = True
+        return {"type": "http.request", "body": body, "more_body": False}
+
+    messages: list[dict] = []
+
+    async def send(message: dict):
+        messages.append(message)
+
+    await request.app(scope, receive, send)
+    status_code = 500
+    headers: list[tuple[bytes, bytes]] = []
+    chunks: list[bytes] = []
+    for message in messages:
+        if message.get("type") == "http.response.start":
+            status_code = int(message.get("status") or 500)
+            headers = list(message.get("headers") or [])
+        elif message.get("type") == "http.response.body":
+            chunk = message.get("body") or b""
+            if chunk:
+                chunks.append(chunk)
+    response_headers: dict[str, str] = {}
+    for key, value in headers:
+        text_key = key.decode("latin-1")
+        if text_key.lower() in {"content-length", "transfer-encoding"}:
+            continue
+        response_headers[text_key] = value.decode("latin-1")
+    return Response(content=b"".join(chunks), status_code=status_code, headers=response_headers)
 
 
 def _require_admin(request: Request) -> dict:
