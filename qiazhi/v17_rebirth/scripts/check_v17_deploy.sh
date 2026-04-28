@@ -6,6 +6,9 @@ BACKEND_URL="${V17_BACKEND_HEALTH_URL:-http://127.0.0.1:8017/health}"
 FRONTEND_URL="${V17_FRONTEND_LOGIN_URL:-http://127.0.0.1:3001/login}"
 ADMIN_API_URL="${V17_ADMIN_API_URL:-${DOMAIN%/}/api/v17-admin/db-bridge?v17_origin=v17_rebirth}"
 LOGIN_URL="${V17_LOGIN_URL:-${DOMAIN%/}/login}"
+V18_AGENT_SESSION_URL="${V17_V18_AGENT_SESSION_URL:-${DOMAIN%/}/api/v18.1/agent/sessions}"
+V18_AGENT_SESSION_LEGACY_URL="${V17_V18_AGENT_SESSION_LEGACY_URL:-${DOMAIN%/}/api/v18_1/agent/sessions}"
+LOCAL_V18_AGENT_SESSION_URL="${V17_LOCAL_V18_AGENT_SESSION_URL:-http://127.0.0.1:8017/api/v18.1/agent/sessions}"
 
 GREEN="\033[0;32m"
 YELLOW="\033[1;33m"
@@ -43,6 +46,25 @@ check_json_contains() {
   fi
 }
 
+check_post_json_contains() {
+  local label="$1"
+  local url="$2"
+  local payload="$3"
+  local needle="$4"
+  local body
+  body="$(curl -sS -m 10 \
+    -H "Content-Type: application/json" \
+    --data "$payload" \
+    "$url" 2>/dev/null || true)"
+  if [[ "$body" == *"$needle"* ]]; then
+    echo -e "${GREEN}ok${NC} ${label}: ${needle}"
+  else
+    echo -e "${RED}fail${NC} ${label}: missing ${needle} (${url})"
+    echo -e "${YELLOW}${body:0:360}${NC}"
+    failures=$((failures + 1))
+  fi
+}
+
 echo "V17 deploy check"
 echo "domain: ${DOMAIN}"
 
@@ -53,6 +75,26 @@ check_code "domain login" "$LOGIN_URL" '^(200|30[1278])$'
 # Unauthenticated admin API should usually be 401. 200 is accepted for an already-authenticated curl jar.
 # 404 is not accepted because it means Nginx routed /api/v17-admin/ to the wrong upstream.
 check_code "admin API route" "$ADMIN_API_URL" '^(200|401|403)$'
+
+# V18.1 Agent API must be reachable from both the public domain and local backend.
+# This catches stale Next builds, Nginx /api routing mistakes, and the v18_1 vs v18.1 alias issue.
+check_post_json_contains \
+  "v18.1 agent session canonical" \
+  "$V18_AGENT_SESSION_URL" \
+  '{"surface":"deploy_check_canonical","user_locale":"zh-CN"}' \
+  '"agent_session_id"'
+
+check_post_json_contains \
+  "v18.1 agent session legacy alias" \
+  "$V18_AGENT_SESSION_LEGACY_URL" \
+  '{"surface":"deploy_check_legacy","user_locale":"zh-CN"}' \
+  '"agent_session_id"'
+
+check_post_json_contains \
+  "local backend v18.1 agent session" \
+  "$LOCAL_V18_AGENT_SESSION_URL" \
+  '{"surface":"deploy_check_local","user_locale":"zh-CN"}' \
+  '"agent_session_id"'
 
 if [[ -n "${V17_ADMIN_IDENTIFIER:-}" && -n "${V17_ADMIN_PASSWORD:-}" ]]; then
   login_code="$(curl -sS -m 10 -o /dev/null -w "%{http_code}" \
