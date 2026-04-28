@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Any, Optional
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
@@ -92,6 +93,309 @@ def _enrich_actor_context(payload: dict, request: Optional[Request] = None) -> d
         if user:
             next_payload["actor_username"] = str(user.get("username") or user.get("id") or "").strip()
     return next_payload
+
+
+def _require_admin(request: Request) -> dict:
+    user = get_request_user(request)
+    if not user or str(user.get("role") or "").strip().lower() != "admin":
+        raise PredictiveServiceError("ADMIN_REQUIRED", "admin role required", 403)
+    return user
+
+
+def _latest_audit_event_dict() -> dict:
+    if not predictive_service._rule_audit_events:
+        return {}
+    return predictive_service._rule_audit_events[-1].to_dict()
+
+
+def _bootstrap_audit_step(
+    *,
+    step_key: str,
+    status: str,
+    rule_id: str,
+    actor_role: str,
+    actor_user_id: int,
+    details: dict,
+    error: str = "",
+) -> dict:
+    predictive_service._append_audit_event(
+        rule_id=rule_id,
+        event_type=f"ADMIN_BOOTSTRAP_{step_key.upper()}_{status.upper()}",
+        severity="error" if status == "failed" else "info",
+        message=error or f"admin bootstrap step {step_key} {status}",
+        actor_role=actor_role,
+        actor_user_id=actor_user_id,
+        source="admin-rule-bootstrap",
+        details=details,
+    )
+    predictive_service._persist()
+    event = _latest_audit_event_dict()
+    return {
+        "step_key": step_key,
+        "status": status,
+        "object_id": _safe_str(details.get("object_id")),
+        "audit_event_id": _safe_str(event.get("event_hash")),
+        "audit_event_type": _safe_str(event.get("event_type")),
+        "error": error,
+        "details": details,
+    }
+
+
+@router.post("/v18.1/admin/rule-bootstrap/wealth")
+@router.post("/api/v18.1/admin/rule-bootstrap/wealth")
+async def admin_bootstrap_wealth_rule(payload: dict, request: Request):
+    steps: list[dict] = []
+    try:
+        user = _require_admin(request)
+        actor_role = "admin"
+        actor_user_id = int(user.get("id") or 0)
+        suffix = _safe_str(payload.get("bootstrap_id"), str(int(time.time())))
+        safe_suffix = "".join(ch if ch.isalnum() else "_" for ch in suffix)[:48]
+        rule_id = _safe_str(payload.get("rule_id"), "bootstrap.wealth.baseline")
+        version = _safe_str(payload.get("version"), f"v{safe_suffix}")
+        card_id = _safe_str(payload.get("knowledge_card_id"), f"kc.bootstrap.wealth.{safe_suffix}")
+        case_id = _safe_str(payload.get("test_case_id"), f"tc.bootstrap.wealth.{safe_suffix}")
+
+        card = predictive_service.register_knowledge_card(
+            {
+                "card_id": card_id,
+                "knowledge_domain": "wealth",
+                "title": "Bootstrap Wealth Prediction Rule",
+                "summary": "Minimal active wealth rule used to prove the audited Agent prediction lifecycle.",
+                "status": "draft",
+                "version": "v1",
+                "source_refs": ["admin-bootstrap:p3-b"],
+                "tags": ["wealth", "bootstrap", "agent"],
+                "content": {
+                    "principle": "complete birth data allows a baseline wealth signal to be evaluated through Contract-first prediction.",
+                    "guardrail": "This bootstrap creates only a sandbox candidate first; activation happens after Rule Test and Reviewer approve.",
+                },
+                "created_by": "admin-bootstrap",
+            },
+            actor_role=actor_role,
+            actor_user_id=actor_user_id,
+        )
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="knowledge_card",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={"object_id": card.get("card_id"), "status": card.get("status"), "version": card.get("version")},
+            )
+        )
+
+        candidate = predictive_service.build_sandbox_rule_candidate(
+            {
+                "knowledge_card_id": card_id,
+                "rule_candidate": {
+                    "rule_id": rule_id,
+                    "knowledge_card_id": card_id,
+                    "theory_family": "bootstrap_wealth",
+                    "condition": {"complete_birth_fields": True},
+                    "effect": {"wealth": 0.62},
+                    "priority": 0.72,
+                    "evidence_strength": 0.84,
+                    "conflict_policy": "merge",
+                    "version": version,
+                    "owner_plugin": "plugin.agent",
+                    "status": "experimental",
+                    "effect_scope": ["wealth"],
+                    "allowed_topics": ["wealth"],
+                },
+            },
+            actor_role=actor_role,
+            actor_user_id=actor_user_id,
+        )
+        rule_payload = dict(candidate.get("rule_payload") or {})
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="sandbox_candidate",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={
+                    "object_id": candidate.get("candidate_id"),
+                    "candidate_state": candidate.get("candidate_state"),
+                    "rule_id": rule_payload.get("rule_id"),
+                    "version": rule_payload.get("version"),
+                    "content_hash": rule_payload.get("content_hash"),
+                },
+            )
+        )
+
+        test_case = predictive_service.register_rule_test_case(
+            {
+                "case_id": case_id,
+                "source": "synthetic",
+                "chart_snapshot": {"matched_facts": ["complete_birth_fields"], "four_pillars": {"year": "甲子"}},
+                "query_intent": {"topic": "wealth", "intent": "prediction"},
+                "expected_conclusions": ["wealth"],
+                "expected_evidence_patterns": ["complete_birth_fields", "wealth"],
+                "forbidden_conclusions": ["bankruptcy", "破产"],
+                "tags": ["wealth", "bootstrap", "synthetic"],
+            },
+            actor_role=actor_role,
+            actor_user_id=actor_user_id,
+        )
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="synthetic_test_case",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={"object_id": test_case.get("case_id"), "source": test_case.get("source")},
+            )
+        )
+
+        test_run = predictive_runtime_facade.run_rule_test_v02(
+            {
+                "rule_candidate_id": candidate.get("candidate_id"),
+                "test_case_ids": [test_case.get("case_id")],
+            },
+            actor_role,
+            actor_user_id,
+        )
+        if _safe_str(test_run.get("overall_status")) != "pass":
+            raise PredictiveServiceError("RULE_TEST_FAILED", "bootstrap candidate did not pass Rule Test Engine", 409)
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="rule_test_run",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={
+                    "object_id": test_run.get("run_id"),
+                    "overall_status": test_run.get("overall_status"),
+                    "pass_count": test_run.get("pass_count"),
+                    "fail_count": test_run.get("fail_count"),
+                    "warning_count": test_run.get("warning_count"),
+                },
+            )
+        )
+
+        pr = predictive_service.append_knowledge_pr(
+            {
+                "prediction_id": f"bootstrap-{safe_suffix}",
+                "requested_by": "admin",
+                "knowledge_card_id": card_id,
+                "target_status": "validated",
+                "rule_candidate_id": candidate.get("candidate_id"),
+            }
+        )
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="knowledge_pr",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={
+                    "object_id": pr.get("pr_id"),
+                    "review_state": pr.get("review_state"),
+                    "rule_candidate_id": pr.get("rule_candidate_id"),
+                },
+            )
+        )
+
+        reviewed = predictive_service.review_knowledge_pr(
+            {
+                "pr_id": pr.get("pr_id"),
+                "decision": "approve",
+                "actor_user_id": actor_user_id,
+            },
+            actor_role=actor_role,
+        )
+        materialized = dict(reviewed.get("materialized_rule") or {})
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="reviewer_approve",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={
+                    "object_id": reviewed.get("pr_id"),
+                    "review_state": reviewed.get("review_state"),
+                    "materialized_rule_id": materialized.get("rule_id"),
+                    "version": materialized.get("version"),
+                    "content_hash": materialized.get("content_hash"),
+                    "status": materialized.get("status"),
+                },
+            )
+        )
+
+        activated = predictive_service.update_rule_status(
+            rule_id,
+            "active",
+            actor_role=actor_role,
+            actor_user_id=actor_user_id,
+            version=version,
+        )
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="activate",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={
+                    "object_id": activated.rule_id,
+                    "rule_id": activated.rule_id,
+                    "version": activated.version,
+                    "content_hash": activated.content_hash,
+                    "status": activated.status,
+                    "approved_by": activated.approved_by,
+                    "approved_at": activated.approved_at,
+                },
+            )
+        )
+
+        active_rules = [rule.to_dict() for rule in predictive_service.list_rules(status="active")]
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="active_snapshot_refresh",
+                status="passed",
+                rule_id=rule_id,
+                actor_role=actor_role,
+                actor_user_id=actor_user_id,
+                details={"object_id": "active_rules_snapshot", "active_rule_count": len(active_rules)},
+            )
+        )
+
+        return _ok(
+            {
+                "steps": steps,
+                "active_rule": activated.to_dict(),
+                "active_rules": active_rules,
+                "knowledge_card": card,
+                "rule_candidate": candidate,
+                "rule_test_run": test_run,
+                "knowledge_pr": reviewed,
+            }
+        )
+    except PredictiveServiceError as exc:
+        steps.append(
+            _bootstrap_audit_step(
+                step_key="bootstrap",
+                status="failed",
+                rule_id=_safe_str(payload.get("rule_id"), "bootstrap.wealth.baseline"),
+                actor_role="admin",
+                actor_user_id=_actor_user_id(request, payload),
+                details={"object_id": "admin_bootstrap", "code": exc.code},
+                error=exc.message,
+            )
+        )
+        return JSONResponse(
+            status_code=exc.status,
+            content={"ok": False, "code": exc.code, "message": exc.message, "details": {}, "data": {"steps": steps}},
+        )
+    except ValueError as exc:
+        return _fail_value(str(exc))
 
 
 @router.post("/v18.1/rule-kernels")

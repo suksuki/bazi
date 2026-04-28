@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { V18_OracleUserAgentExperience } from "@/components/V18_OracleUserAgentExperience";
 import { useAuthSession } from "@/hooks/useAuthSession";
 
-export default function OraclePage() {
+export default function V17AgentPage() {
   const router = useRouter();
   const { user, loading, logout } = useAuthSession();
 
@@ -18,9 +18,9 @@ export default function OraclePage() {
 
   if (loading || !user) {
     return (
-      <main className="grid min-h-screen place-items-center bg-[#080c11] text-slate-100">
+      <main className="grid min-h-screen place-items-center bg-[#090d14] text-slate-100">
         <div className="rounded-3xl border border-white/10 bg-white/[0.06] px-6 py-5 text-sm text-slate-300">
-          正在进入 Oracle Agent...
+          正在进入 Agent...
         </div>
       </main>
     );
@@ -35,4 +35,3 @@ export default function OraclePage() {
     />
   );
 }
-
