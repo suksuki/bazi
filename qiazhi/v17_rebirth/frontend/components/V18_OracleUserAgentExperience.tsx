@@ -501,7 +501,7 @@ export function V18_OracleUserAgentExperience({
   const fetchAgentSession = useCallback(
     async (candidateSessionId: string): Promise<boolean> => {
       const { data, ok } = await requestJson<unknown>(
-        `/api/v18_1/agent/sessions/${encodeURIComponent(candidateSessionId)}`,
+        `/api/v18.1/agent/sessions/${encodeURIComponent(candidateSessionId)}`,
         noStoreInit(),
       );
       if (!ok) return false;
@@ -516,7 +516,7 @@ export function V18_OracleUserAgentExperience({
 
   const createAgentSession = useCallback(async () => {
     const { data, ok, error: requestError } = await requestJson<unknown>(
-      "/api/v18_1/agent/sessions",
+      "/api/v18.1/agent/sessions",
       jsonPostInit(
         {
           surface: "oracle_user_agent_ui",
@@ -562,7 +562,7 @@ export function V18_OracleUserAgentExperience({
 
   const loadReplay = useCallback(async (predictionId: string): Promise<Record<string, unknown>> => {
     const { data, ok, error: requestError } = await requestJson<unknown>(
-      `/api/v18_1/predictions/${encodeURIComponent(predictionId)}/replay`,
+      `/api/v18.1/predictions/${encodeURIComponent(predictionId)}/replay`,
       noStoreInit(),
     );
     if (!ok) throw new Error(apiFailureMessage(data, requestError, "Replay 加载失败。"));
@@ -582,7 +582,7 @@ export function V18_OracleUserAgentExperience({
       chartSnapshot: Record<string, unknown>;
     }): Promise<OraclePrediction> => {
       const { data, ok, error: requestError } = await requestJson<unknown>(
-        `/api/v18_1/predictions/${encodeURIComponent(predictionId)}/explain`,
+        `/api/v18.1/predictions/${encodeURIComponent(predictionId)}/explain`,
         jsonPostInit(
           {
             prediction_id: predictionId,
@@ -640,7 +640,7 @@ export function V18_OracleUserAgentExperience({
       const birthPayload = providedBirthPayload(birthInfo);
       const chartSnapshot = buildChartSnapshot(birthInfo);
       const { data, ok, error: requestError } = await requestJson<unknown>(
-        `/api/v18_1/agent/sessions/${encodeURIComponent(sessionId)}/turns`,
+        `/api/v18.1/agent/sessions/${encodeURIComponent(sessionId)}/turns`,
         jsonPostInit(
           {
             request_id: stableId("oracle_agent_turn"),
@@ -717,7 +717,7 @@ export function V18_OracleUserAgentExperience({
       setFeedbackStatus("");
       try {
         const { data, ok, error: requestError } = await requestJson<unknown>(
-          `/api/v18_1/predictions/${encodeURIComponent(currentPrediction.predictionId)}/feedback`,
+          `/api/v18.1/predictions/${encodeURIComponent(currentPrediction.predictionId)}/feedback`,
           jsonPostInit(
             {
               request_id: stableId("oracle_feedback"),

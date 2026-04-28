@@ -357,7 +357,7 @@ export function V18_UserAgentConsole({ displayName, roleLabel, onLogout }: UserA
   const fetchAgentSession = useCallback(
     async (candidateSessionId: string): Promise<boolean> => {
       const { data, ok } = await requestJson<unknown>(
-        `/api/v18_1/agent/sessions/${encodeURIComponent(candidateSessionId)}`,
+        `/api/v18.1/agent/sessions/${encodeURIComponent(candidateSessionId)}`,
         noStoreInit(),
       );
       if (!ok) return false;
@@ -372,7 +372,7 @@ export function V18_UserAgentConsole({ displayName, roleLabel, onLogout }: UserA
 
   const createAgentSession = useCallback(async () => {
     const { data, ok, error: requestError } = await requestJson<unknown>(
-      "/api/v18_1/agent/sessions",
+      "/api/v18.1/agent/sessions",
       jsonPostInit(
         {
           surface: "user_agent_frontend",
@@ -435,7 +435,7 @@ export function V18_UserAgentConsole({ displayName, roleLabel, onLogout }: UserA
       turnPayload: Record<string, unknown>;
     }) => {
       const { data, ok, error: requestError } = await requestJson<unknown>(
-        `/api/v18_1/predictions/${encodeURIComponent(predictionId)}/explain`,
+        `/api/v18.1/predictions/${encodeURIComponent(predictionId)}/explain`,
         jsonPostInit(
           {
             prediction_id: predictionId,
@@ -518,7 +518,7 @@ export function V18_UserAgentConsole({ displayName, roleLabel, onLogout }: UserA
       const chartSnapshot = buildChartSnapshot(birthInfo);
       const birthFields = buildProvidedBirthInfo(birthInfo);
       const { data, ok, error: requestError } = await requestJson<unknown>(
-        `/api/v18_1/agent/sessions/${encodeURIComponent(sessionId)}/turns`,
+        `/api/v18.1/agent/sessions/${encodeURIComponent(sessionId)}/turns`,
         jsonPostInit(
           {
             request_id: stableId("agent_turn"),
@@ -601,7 +601,7 @@ export function V18_UserAgentConsole({ displayName, roleLabel, onLogout }: UserA
       setError("");
       try {
         const { data, ok, error: requestError } = await requestJson<unknown>(
-          `/api/v18_1/predictions/${encodeURIComponent(message.predictionId)}/feedback`,
+          `/api/v18.1/predictions/${encodeURIComponent(message.predictionId)}/feedback`,
           jsonPostInit(
             {
               request_id: stableId("feedback"),
@@ -647,7 +647,7 @@ export function V18_UserAgentConsole({ displayName, roleLabel, onLogout }: UserA
     setError("");
     try {
       const { data, ok, error: requestError } = await requestJson<unknown>(
-        `/api/v18_1/predictions/${encodeURIComponent(item.predictionId)}/replay`,
+        `/api/v18.1/predictions/${encodeURIComponent(item.predictionId)}/replay`,
         noStoreInit(),
       );
       if (!ok) {

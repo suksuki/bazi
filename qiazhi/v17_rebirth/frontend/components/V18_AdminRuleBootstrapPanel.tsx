@@ -203,8 +203,8 @@ export function V18_AdminRuleBootstrapPanel({ displayName, onLogout }: AdminRule
     setError("");
     try {
       const [rulesResp, qualityResp] = await Promise.all([
-        requestJson<unknown>("/api/v18_1/rule-kernels?status=active", noStoreInit()),
-        requestJson<unknown>("/api/v18_1/rules/quality-scores", noStoreInit()),
+        requestJson<unknown>("/api/v18.1/rule-kernels?status=active", noStoreInit()),
+        requestJson<unknown>("/api/v18.1/rules/quality-scores", noStoreInit()),
       ]);
       if (!rulesResp.ok) throw new Error(apiFailureMessage(rulesResp.data, rulesResp.error, "Active rule status 加载失败。"));
       setActiveRules(normalizeActiveRules(unwrapEnvelope(rulesResp.data)));
@@ -227,7 +227,7 @@ export function V18_AdminRuleBootstrapPanel({ displayName, onLogout }: AdminRule
     try {
       const bootstrapId = stableId("p3b").replace(/[^a-zA-Z0-9_]/g, "_");
       const { data, ok, error: requestError } = await requestJson<unknown>(
-        "/api/v18_1/admin/rule-bootstrap/wealth",
+        "/api/v18.1/admin/rule-bootstrap/wealth",
         jsonPostInit(
           {
             bootstrap_id: bootstrapId,
@@ -261,7 +261,7 @@ export function V18_AdminRuleBootstrapPanel({ displayName, onLogout }: AdminRule
     setSmokeSteps([]);
     try {
       const sessionResp = await requestJson<unknown>(
-        "/api/v18_1/agent/sessions",
+        "/api/v18.1/agent/sessions",
         jsonPostInit({ surface: "admin_rule_bootstrap_smoke", user_locale: "zh-CN" }, noStoreInit()),
       );
       if (!sessionResp.ok) throw new Error(apiFailureMessage(sessionResp.data, sessionResp.error, "Agent session 创建失败。"));
@@ -269,7 +269,7 @@ export function V18_AdminRuleBootstrapPanel({ displayName, onLogout }: AdminRule
       setSmokeStep({ key: "session", status: "passed", detail: sessionId });
 
       const turnResp = await requestJson<unknown>(
-        `/api/v18_1/agent/sessions/${encodeURIComponent(sessionId)}/turns`,
+        `/api/v18.1/agent/sessions/${encodeURIComponent(sessionId)}/turns`,
         jsonPostInit(
           {
             request_id: stableId("admin_smoke_turn"),
@@ -300,7 +300,7 @@ export function V18_AdminRuleBootstrapPanel({ displayName, onLogout }: AdminRule
       setSmokeStep({ key: "prediction", status: "passed", detail: predictionId });
 
       const explainResp = await requestJson<unknown>(
-        `/api/v18_1/predictions/${encodeURIComponent(predictionId)}/explain`,
+        `/api/v18.1/predictions/${encodeURIComponent(predictionId)}/explain`,
         jsonPostInit(
           {
             prediction_id: predictionId,
@@ -323,7 +323,7 @@ export function V18_AdminRuleBootstrapPanel({ displayName, onLogout }: AdminRule
       const conclusionIds = readArray(safeOutput, "conclusion_ids").length > 0 ? readArray(safeOutput, "conclusion_ids") : readArray(sections, "conclusion_ids");
       const conclusionRef = String(conclusionIds[0] || "conclusion_1");
       const feedbackResp = await requestJson<unknown>(
-        `/api/v18_1/predictions/${encodeURIComponent(predictionId)}/feedback`,
+        `/api/v18.1/predictions/${encodeURIComponent(predictionId)}/feedback`,
         jsonPostInit(
           {
             request_id: stableId("admin_smoke_feedback"),
@@ -342,7 +342,7 @@ export function V18_AdminRuleBootstrapPanel({ displayName, onLogout }: AdminRule
       const learningSignal = readRecord(unwrapEnvelope(feedbackResp.data), "learning_signal");
       setSmokeStep({ key: "feedback", status: "passed", detail: readString(learningSignal, ["signal_id", "id"], "learning_signal created") });
 
-      const replayResp = await requestJson<unknown>(`/api/v18_1/predictions/${encodeURIComponent(predictionId)}/replay`, noStoreInit());
+      const replayResp = await requestJson<unknown>(`/api/v18.1/predictions/${encodeURIComponent(predictionId)}/replay`, noStoreInit());
       if (!replayResp.ok) throw new Error(apiFailureMessage(replayResp.data, replayResp.error, "Replay 查询失败。"));
       setSmokeStep({ key: "replay", status: "passed", detail: "replay returned" });
     } catch (err) {
