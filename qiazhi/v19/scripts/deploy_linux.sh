@@ -3,7 +3,8 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 V19_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
-REPO_ROOT="$(cd "${V19_DIR}/.." && pwd)"
+APP_ROOT="$(cd "${V19_DIR}/.." && pwd)"
+GIT_ROOT="$(git -C "${APP_ROOT}" rev-parse --show-toplevel 2>/dev/null || true)"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 HOST="${HOST:-127.0.0.1}"
@@ -20,25 +21,35 @@ ROLE="${ROLE:-admin}"
 SAVE_AUDIT="${SAVE_AUDIT:-1}"
 INGEST_RULE_DB="${INGEST_RULE_DB:-0}"
 
-export PYTHONPATH="${REPO_ROOT}:${PYTHONPATH:-}"
+export PYTHONPATH="${APP_ROOT}:${PYTHONPATH:-}"
 
-cd "${REPO_ROOT}"
+cd "${APP_ROOT}"
 
-echo "V19 deploy: repo=${REPO_ROOT} branch=${BRANCH} port=${PORT}"
+echo "V19 deploy: app=${APP_ROOT} branch=${BRANCH} port=${PORT}"
 
-if [[ -d .git ]]; then
+if [[ -n "${GIT_ROOT}" && -d "${GIT_ROOT}/.git" ]]; then
+  echo "V19 deploy: git=${GIT_ROOT}"
+  cd "${GIT_ROOT}"
   echo "V19 deploy: fetching ${REMOTE}/${BRANCH}"
   git fetch --prune "${REMOTE}"
   if [[ "${FORCE_SYNC}" == "1" ]]; then
     echo "V19 deploy: FORCE_SYNC=1, resetting to ${REMOTE}/${BRANCH}"
     git reset --hard "${REMOTE}/${BRANCH}"
-    git clean -fd -e "v19/.runtime/" -e ".venv/" -e "v19/.venv/"
+    git clean -fd \
+      -e "v19/.runtime/" \
+      -e ".venv/" \
+      -e "v19/.venv/" \
+      -e "qiazhi/v19/.runtime/" \
+      -e "qiazhi/.venv/" \
+      -e "qiazhi/v19/.venv/" \
+      -e "db_backups/"
   else
     echo "V19 deploy: fast-forward pull"
     git pull --ff-only "${REMOTE}" "${BRANCH}"
   fi
+  cd "${APP_ROOT}"
 else
-  echo "V19 deploy: ${REPO_ROOT} is not a git repository; skipping sync" >&2
+  echo "V19 deploy: no git repository found from ${APP_ROOT}; skipping sync" >&2
 fi
 
 if [[ "${STOP_EXISTING}" == "1" ]]; then
