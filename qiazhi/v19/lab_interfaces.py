@@ -969,12 +969,12 @@ def _default_label_contract() -> Dict[str, Any]:
         "terms": {
             "app_title": {
                 "category": "oracle_ui",
-                "label": {"zh": "八字结构分析 Agent", "en": "Bazi Structure Agent", "ko": "사주 구조 분석 에이전트"},
+                "label": {"zh": "掐指一算", "en": "Qiazhi Bazi", "ko": "Qiazhi Bazi"},
                 "description": {"zh": "用户端入口标题。", "en": "User-facing entry title.", "ko": "사용자용 진입 제목입니다."},
             },
             "app_subtitle": {
                 "category": "oracle_ui",
-                "label": {"zh": "我会帮你提出合适的问题，并给出可验证的结构化结果。", "en": "I help you ask bounded questions and return verifiable structured results.", "ko": "적절한 질문을 안내하고 검증 가능한 구조화 결과를 제공합니다."},
+                "label": {"zh": "八字测算先看结构，再回答问题；不输出传统断语。", "en": "Structure-first Bazi reading with bounded answers, not fortune claims.", "ko": "구조를 먼저 보고 제한된 답변을 제공하며 운세 단정은 하지 않습니다."},
                 "description": {"zh": "用户端副标题。", "en": "User-facing subtitle.", "ko": "사용자용 부제목입니다."},
             },
             "locale_label": {
@@ -990,14 +990,14 @@ def _default_label_contract() -> Dict[str, Any]:
                 "label": {"zh": "Lab 分析端", "en": "Lab Mode", "ko": "Lab 모드"},
                 "description": {"zh": "进入分析端。", "en": "Open analyst lab.", "ko": "분석 Lab으로 이동합니다."},
             },
-            "entry_title": {"category": "entry_ui", "label": {"zh": "进入 V19", "en": "Enter V19", "ko": "V19 시작"}, "description": {"zh": "入口标题。", "en": "Entry title.", "ko": "진입 제목입니다."}},
+            "entry_title": {"category": "entry_ui", "label": {"zh": "进入掐指一算", "en": "Enter Qiazhi Bazi", "ko": "Qiazhi Bazi 시작"}, "description": {"zh": "入口标题。", "en": "Entry title.", "ko": "진입 제목입니다."}},
             "entry_subtitle": {"category": "entry_ui", "label": {"zh": "选择你的身份。游客试用最快，登录只用于区分入口权限，不改变分析结果。", "en": "Choose your entry. Guest trial is fastest; login only controls surface access and never changes analysis.", "ko": "입장 방식을 선택하세요. 게스트 체험이 가장 빠르며 로그인은 화면 접근만 제어하고 분석 결과는 바꾸지 않습니다."}, "description": {"zh": "入口说明。", "en": "Entry subtitle.", "ko": "진입 설명입니다."}},
             "guest_trial": {"category": "entry_ui", "label": {"zh": "游客试用", "en": "Try as guest", "ko": "게스트로 체험"}, "description": {"zh": "游客入口。", "en": "Guest entry.", "ko": "게스트 진입입니다."}},
-            "guest_trial_desc": {"category": "entry_ui", "label": {"zh": "无需账号，直接进入 Guided Bazi Agent。", "en": "No account needed. Open the Guided Bazi Agent directly.", "ko": "계정 없이 Guided Bazi Agent로 바로 들어갑니다."}, "description": {"zh": "游客说明。", "en": "Guest description.", "ko": "게스트 설명입니다."}},
+            "guest_trial_desc": {"category": "entry_ui", "label": {"zh": "无需账号，直接进入掐指一算。", "en": "No account needed. Open Qiazhi Bazi directly.", "ko": "계정 없이 Qiazhi Bazi로 바로 들어갑니다."}, "description": {"zh": "游客说明。", "en": "Guest description.", "ko": "게스트 설명입니다."}},
             "user_login_register": {"category": "entry_ui", "label": {"zh": "普通用户登录 / 注册", "en": "User login / register", "ko": "사용자 로그인 / 등록"}, "description": {"zh": "用户入口。", "en": "User entry.", "ko": "사용자 진입입니다."}},
-            "user_login_desc": {"category": "entry_ui", "label": {"zh": "本地最小账号入口，进入用户端 Agent。", "en": "Minimal local account entry for the user agent.", "ko": "사용자 Agent로 들어가는 최소 로컬 계정入口입니다."}, "description": {"zh": "用户说明。", "en": "User description.", "ko": "사용자 설명입니다."}},
+            "user_login_desc": {"category": "entry_ui", "label": {"zh": "本地最小账号入口，进入掐指一算用户端。", "en": "Minimal local account entry for Qiazhi Bazi.", "ko": "Qiazhi Bazi 사용자 화면으로 들어가는 최소 로컬 계정入口입니다."}, "description": {"zh": "用户说明。", "en": "User description.", "ko": "사용자 설명입니다."}},
             "login_register": {"category": "entry_ui", "label": {"zh": "登录 / 注册", "en": "Login / register", "ko": "로그인 / 등록"}, "description": {"zh": "统一登录入口。", "en": "Unified login entry.", "ko": "통합 로그인入口입니다."}},
-            "login_register_desc": {"category": "entry_ui", "label": {"zh": "登录后系统会自动识别权限；角色只控制入口，不改变分析结果。", "en": "After login, V19 resolves your access automatically; roles control surfaces, not analysis.", "ko": "로그인 후 접근 권한이 자동으로 결정됩니다. 역할은 화면 접근만 제어하고 분석 결과는 바꾸지 않습니다."}, "description": {"zh": "统一登录说明。", "en": "Unified login description.", "ko": "통합 로그인 설명입니다."}},
+            "login_register_desc": {"category": "entry_ui", "label": {"zh": "登录后系统会自动识别权限；角色只控制入口，不改变分析结果。", "en": "After login, access is resolved automatically; roles control surfaces, not analysis.", "ko": "로그인 후 접근 권한이 자동으로 결정됩니다. 역할은 화면 접근만 제어하고 분석 결과는 바꾸지 않습니다."}, "description": {"zh": "统一登录说明。", "en": "Unified login description.", "ko": "통합 로그인 설명입니다."}},
             "profile_list": {"category": "profile_ui", "label": {"zh": "八字档案", "en": "Bazi profiles", "ko": "사주 프로필"}, "description": {"zh": "档案列表。", "en": "Profile list.", "ko": "프로필 목록입니다."}},
             "profile_list_desc": {"category": "profile_ui", "label": {"zh": "选择已有命盘，或新建一个命盘。", "en": "Choose an existing chart or create a new one.", "ko": "기존 명식을 선택하거나 새 명식을 만드세요."}, "description": {"zh": "档案说明。", "en": "Profile description.", "ko": "프로필 설명입니다."}},
             "new_profile": {"category": "profile_ui", "label": {"zh": "新建命盘", "en": "New chart profile", "ko": "새 명식 만들기"}, "description": {"zh": "新建档案。", "en": "New profile.", "ko": "새 프로필입니다."}},

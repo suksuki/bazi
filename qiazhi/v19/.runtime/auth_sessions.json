@@ -119,6 +119,22 @@
     "user_id": "admin",
     "username": "admin"
   },
+  "v19auth_8390b7b6a86047218c0dc1d8477fb0e7": {
+    "created_at": "2026-04-29T08:27:40+00:00",
+    "role": "admin",
+    "token": "v19auth_8390b7b6a86047218c0dc1d8477fb0e7",
+    "updated_at": "2026-04-29T08:27:40+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_88e3524efb8d475c93123898767b65c3": {
+    "created_at": "2026-04-29T08:22:35+00:00",
+    "role": "admin",
+    "token": "v19auth_88e3524efb8d475c93123898767b65c3",
+    "updated_at": "2026-04-29T08:22:35+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
   "v19auth_9446a8848c77469fa06395c4b7d0f4cc": {
     "created_at": "2026-04-29T00:22:07+00:00",
     "role": "user",
@@ -142,6 +158,14 @@
     "updated_at": "2026-04-29T00:20:13+00:00",
     "user_id": "user_9285c832e0",
     "username": "local_user"
+  },
+  "v19auth_ab161a51fd8249ddad7cde610a414f0c": {
+    "created_at": "2026-04-29T08:15:31+00:00",
+    "role": "admin",
+    "token": "v19auth_ab161a51fd8249ddad7cde610a414f0c",
+    "updated_at": "2026-04-29T08:15:31+00:00",
+    "user_id": "admin",
+    "username": "admin"
   },
   "v19auth_b9caa86be0ca4c84a47a60d3ce4522a8": {
     "created_at": "2026-04-29T03:36:19+00:00",
@@ -191,6 +215,14 @@
     "user_id": "admin",
     "username": "admin"
   },
+  "v19auth_d4a6acbbb377499d87828f72c1541f2e": {
+    "created_at": "2026-04-29T08:11:54+00:00",
+    "role": "admin",
+    "token": "v19auth_d4a6acbbb377499d87828f72c1541f2e",
+    "updated_at": "2026-04-29T08:11:54+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
   "v19auth_db2cc63a43b3471a91c7ce4df5e3c6f2": {
     "created_at": "2026-04-29T00:06:58+00:00",
     "role": "user",
@@ -230,5 +262,13 @@
     "updated_at": "2026-04-29T00:21:36+00:00",
     "user_id": "guest_ef688c1cd7",
     "username": "guest"
+  },
+  "v19auth_f6b42b1dbee4470681f1ddc8d37ba54a": {
+    "created_at": "2026-04-29T12:17:43+00:00",
+    "role": "admin",
+    "token": "v19auth_f6b42b1dbee4470681f1ddc8d37ba54a",
+    "updated_at": "2026-04-29T12:17:43+00:00",
+    "user_id": "admin",
+    "username": "admin"
   }
 }

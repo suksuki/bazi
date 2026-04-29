@@ -1487,6 +1487,11 @@ def index() -> FileResponse:
     return FileResponse(FRONTEND / "index.html")
 
 
+@app.get("/favicon.ico")
+def favicon() -> FileResponse:
+    return FileResponse(FRONTEND / "assets" / "favicon.png")
+
+
 @app.get("/entry")
 def entry() -> FileResponse:
     return FileResponse(FRONTEND / "index.html")

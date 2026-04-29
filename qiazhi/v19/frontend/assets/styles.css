@@ -223,6 +223,17 @@ h3 {
   font-weight: 950;
 }
 
+.brand-logo {
+  width: 54px;
+  height: 54px;
+  flex: 0 0 auto;
+  border: 1px solid rgba(156, 229, 186, 0.34);
+  border-radius: 16px;
+  background: radial-gradient(circle at 50% 34%, rgba(156, 229, 186, 0.18), transparent 60%), #07100d;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(156, 229, 186, 0.06) inset;
+  object-fit: cover;
+}
+
 .brand {
   display: flex;
   gap: 14px;
