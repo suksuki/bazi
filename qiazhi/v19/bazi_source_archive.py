@@ -371,8 +371,15 @@ def seed_current_knowledge_drafts(*, force: bool = False) -> Dict[str, Any]:
             "guardrails": GUARDRAILS + ["DRAFT_ONLY", "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"],
         }
         if knowledge_id in existing:
-            merged = {**existing[knowledge_id], **draft, "draft_id": existing[knowledge_id].get("draft_id") or draft["draft_id"], "updated_at": utc_now()}
-            merged.setdefault("history", []).append(_history("seed_update", "admin", "Current Bazi knowledge draft seed updated; draft only."))
+            previous = existing[knowledge_id]
+            preserved = {
+                key: previous.get(key)
+                for key in ["draft_id", "status", "review_status", "review_note", "reviewed_by_role", "reviewed_at"]
+                if previous.get(key) not in {None, ""}
+            }
+            merged = {**previous, **draft, **preserved, "draft_id": previous.get("draft_id") or draft["draft_id"], "updated_at": utc_now()}
+            merged["history"] = list(previous.get("history") or [])
+            merged["history"].append(_history("seed_update", "admin", "Current Bazi knowledge draft seed updated; existing review state preserved."))
             existing[knowledge_id] = merged
             updated += 1
         else:

@@ -39,11 +39,14 @@ from v19.bazi_rule_db import (
     list_bazi_rules,
 )
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
+from v19.synthetic_validation import P11_GUIDED_SYNTHETIC_CASES, run_guided_synthetic_collision
 from v19.lab_interfaces import (
     approve_bazi_rule_proposal,
     create_promotion_request,
     create_bazi_rule_proposal,
     create_guided_question_proposal,
+    create_knowledge_batch_proposal_drafts,
+    create_knowledge_review_batch,
     create_revision_proposal,
     guided_question_answer_quality_report,
     guided_question_feedback_summary,
@@ -51,8 +54,10 @@ from v19.lab_interfaces import (
     activate_revision_record,
     approve_guided_question_proposal,
     approve_revision_proposal,
+    create_governance_release,
     lab_status,
     label_contract,
+    create_synthetic_promotion_candidate,
     list_active_rule_revisions,
     list_bazi_rule_proposals,
     list_bazi_rule_versions,
@@ -61,14 +66,20 @@ from v19.lab_interfaces import (
     list_guided_question_feedback,
     list_guided_question_library_versions,
     list_guided_question_proposals,
+    list_governance_releases,
+    list_knowledge_batch_proposal_runs,
+    list_knowledge_review_batches,
     list_promotion_requests,
     list_revision_proposals,
     list_rule_impacts,
+    list_synthetic_promotion_candidates,
     list_validation_cases,
     list_validation_runs,
     register_feedback,
+    review_synthetic_promotion_candidate,
     record_guided_question_audit,
     run_validation_cases,
+    seed_p14_knowledge_review_batches,
     seed_validation_cases,
     update_promotion_status,
     update_guided_question_review,
@@ -947,6 +958,90 @@ def lab_validation_run_post(request: Request) -> Dict[str, Any]:
 def lab_validation_runs_get(request: Request) -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
     return list_validation_runs(load_settings())
+
+
+@app.get("/api/lab/synthetic-collision")
+def lab_synthetic_collision_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    result = run_guided_synthetic_collision(P11_GUIDED_SYNTHETIC_CASES)
+    return {
+        "ok": True,
+        "matrix": "P11_SYNTHETIC_EXPANSION",
+        "case_count": len(P11_GUIDED_SYNTHETIC_CASES),
+        "run": result,
+    }
+
+
+@app.post("/api/lab/synthetic-collision/run")
+def lab_synthetic_collision_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    result = run_guided_synthetic_collision(P11_GUIDED_SYNTHETIC_CASES)
+    return {
+        "ok": True,
+        "matrix": "P11_SYNTHETIC_EXPANSION",
+        "case_count": len(P11_GUIDED_SYNTHETIC_CASES),
+        "run": result,
+    }
+
+
+@app.get("/api/lab/synthetic-promotions")
+def lab_synthetic_promotions_get(request: Request, status: str = "") -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return list_synthetic_promotion_candidates(load_settings(), status=status)
+
+
+@app.post("/api/lab/synthetic-promotions")
+def lab_synthetic_promotion_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_synthetic_promotion_candidate(dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/synthetic-promotions/{candidate_id}/review")
+def lab_synthetic_promotion_review_post(candidate_id: str, payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return review_synthetic_promotion_candidate(candidate_id, dict(payload or {}), load_settings())
+
+
+@app.get("/api/lab/governance-releases")
+def lab_governance_releases_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return list_governance_releases(load_settings())
+
+
+@app.post("/api/lab/governance-releases")
+def lab_governance_release_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_governance_release(dict(payload or {}), load_settings())
+
+
+@app.get("/api/lab/knowledge-review-batches")
+def lab_knowledge_review_batches_get(request: Request, status: str = "") -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return list_knowledge_review_batches(load_settings(), status=status)
+
+
+@app.post("/api/lab/knowledge-review-batches")
+def lab_knowledge_review_batch_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_knowledge_review_batch(dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/knowledge-review-batches/seed-p14")
+def lab_knowledge_review_batch_seed_p14_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return seed_p14_knowledge_review_batches(load_settings())
+
+
+@app.get("/api/lab/knowledge-batch-proposal-runs")
+def lab_knowledge_batch_proposal_runs_get(request: Request, status: str = "", batch_key: str = "") -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return list_knowledge_batch_proposal_runs(load_settings(), status=status, batch_key=batch_key)
+
+
+@app.post("/api/lab/knowledge-review-batches/{batch_id}/proposal-drafts")
+def lab_knowledge_review_batch_proposal_drafts_post(batch_id: str, payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_knowledge_batch_proposal_drafts(batch_id, dict(payload or {}), load_settings())
 
 
 @app.post("/api/lab/promotions")

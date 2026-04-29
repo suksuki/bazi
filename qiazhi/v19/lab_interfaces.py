@@ -8,6 +8,9 @@ from typing import Any, Dict, List, Tuple
 from v19.agent import build_agent_turn
 from v19.agent.income_stability import derive_income_stability
 from v19.runtime import RUNTIME, _postgres_connection, resolve_postgres_url, utc_now
+from v19.bazi_source_archive import create_knowledge_draft, list_knowledge_drafts
+from v19.synthetic_validation.guided_cases import P11_GUIDED_SYNTHETIC_CASES, make_synthetic_chart
+from v19.synthetic_validation.guided_runner import run_guided_synthetic_collision
 
 LAB_FILE = RUNTIME / "lab_interfaces.json"
 LAB_VERSION = "v19.lab_interfaces.v1"
@@ -23,6 +26,8 @@ ALLOWED_GUIDED_REQUIRED_CONTEXT = {"chart", "result", "time_relation"}
 ALLOWED_GUIDED_DEPTH = {"beginner", "intermediate"}
 ALLOWED_BAZI_RULE_DOMAINS = {"day_master_element", "structural_relation", "ten_god_relation", "time_structure", "income_stability"}
 ALLOWED_BAZI_RULE_STATUS = {"draft", "validation_ready", "validation_failed", "approved", "rejected", "active_record"}
+ALLOWED_SYNTHETIC_PROMOTION_DECISIONS = {"approve", "reject", "needs_knowledge", "needs_rule", "needs_expression"}
+ALLOWED_SYNTHETIC_PROMOTION_STATUS = {"draft_review", "analyst_review", "proposal_created", "rejected", "deprecated"}
 
 
 def lab_status(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -42,6 +47,10 @@ def lab_status(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
             "guided_question_audits": len(state["guided_question_audits"]),
             "bazi_rule_proposals": len(state["bazi_rule_proposals"]),
             "bazi_rule_versions": len(state["bazi_rule_versions"]),
+            "synthetic_promotion_candidates": len(state["synthetic_promotion_candidates"]),
+            "governance_releases": len(state["governance_releases"]),
+            "knowledge_review_batches": len(state["knowledge_review_batches"]),
+            "knowledge_batch_proposal_runs": len(state["knowledge_batch_proposal_runs"]),
             "rule_impacts": len(state["rule_impacts"]),
             "revision_proposals": len(state["revision_proposals"]),
             "active_rule_revisions": len(state["active_rule_revisions"]),
@@ -446,6 +455,9 @@ def record_guided_question_library_version(payload: Dict[str, Any], settings: Di
     not_approved = [row.get("proposal_id") for row in proposals if row.get("status") != "approved"]
     if not_approved:
         return {"ok": False, "code": "PROPOSALS_NOT_APPROVED", "message": "All included proposals must be approved.", "proposal_ids": not_approved}
+    gate = _p12_synthetic_regression_gate()
+    if not gate.get("passed"):
+        return {"ok": False, "code": "P12_SYNTHETIC_REGRESSION_FAILED", "message": "P11 synthetic regression must pass before recording an active question-library version.", "regression_gate": gate}
     version = {
         "version_id": "gqlv_" + uuid.uuid4().hex[:16],
         "created_at": utc_now(),
@@ -465,8 +477,9 @@ def record_guided_question_library_version(payload: Dict[str, Any], settings: Di
         ],
         "question_count": _bounded_int(payload.get("question_count"), len(proposal_ids), 0, 9999),
         "runtime_mutation": False,
+        "p12_regression_gate": gate,
         "note": _clean(payload.get("note")),
-        "guardrails": ["VERSION_RECORD_ONLY", "NO_RUNTIME_MUTATION", "REQUIRES_FUTURE_ENGINEERING_IMPLEMENTATION"],
+        "guardrails": ["VERSION_RECORD_ONLY", "NO_RUNTIME_MUTATION", "P12_SYNTHETIC_REGRESSION_REQUIRED", "REQUIRES_FUTURE_ENGINEERING_IMPLEMENTATION"],
     }
     for proposal in proposals:
         proposal["status"] = "active_record"
@@ -606,6 +619,9 @@ def record_bazi_rule_version(payload: Dict[str, Any], settings: Dict[str, Any] |
     not_approved = [row.get("proposal_id") for row in proposals if row.get("status") != "approved"]
     if not_approved:
         return {"ok": False, "code": "RULE_PROPOSALS_NOT_APPROVED", "message": "All included rule proposals must be approved.", "proposal_ids": not_approved}
+    gate = _p12_synthetic_regression_gate()
+    if not gate.get("passed"):
+        return {"ok": False, "code": "P12_SYNTHETIC_REGRESSION_FAILED", "message": "P11 synthetic regression must pass before recording an active rule version.", "regression_gate": gate}
     version = {
         "version_id": "brv_" + uuid.uuid4().hex[:16],
         "created_at": utc_now(),
@@ -614,6 +630,7 @@ def record_bazi_rule_version(payload: Dict[str, Any], settings: Dict[str, Any] |
         "included_proposals": proposal_ids,
         "rule_count": _bounded_int(payload.get("rule_count"), len(proposal_ids), 0, 9999),
         "runtime_mutation": False,
+        "p12_regression_gate": gate,
         "note": _clean(payload.get("note")),
         "changelog": [
             {
@@ -626,7 +643,7 @@ def record_bazi_rule_version(payload: Dict[str, Any], settings: Dict[str, Any] |
             }
             for row in proposals
         ],
-        "guardrails": ["RULE_VERSION_RECORD_ONLY", "NO_RUNTIME_INFERENCE_MUTATION", "REQUIRES_FUTURE_ENGINEERING_IMPLEMENTATION"],
+        "guardrails": ["RULE_VERSION_RECORD_ONLY", "NO_RUNTIME_INFERENCE_MUTATION", "P12_SYNTHETIC_REGRESSION_REQUIRED", "REQUIRES_FUTURE_ENGINEERING_IMPLEMENTATION"],
     }
     for proposal in proposals:
         proposal["status"] = "active_record"
@@ -641,6 +658,413 @@ def list_bazi_rule_versions(settings: Dict[str, Any] | None = None) -> Dict[str,
     state, storage = _load_state(settings)
     rows = sorted(state["bazi_rule_versions"], key=lambda row: str(row.get("created_at") or ""), reverse=True)
     return {"ok": True, "count": len(rows), "items": rows[:100], "storage": storage, "guardrails": ["RULE_VERSION_RECORDS_ONLY", "NO_RUNTIME_INFERENCE_MUTATION"]}
+
+
+def create_synthetic_promotion_candidate(payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    draft = dict(payload.get("draft") or payload)
+    case_id = _clean(draft.get("case_id"))
+    if not case_id:
+        return {"ok": False, "code": "SYNTHETIC_CASE_ID_REQUIRED", "message": "case_id is required."}
+    target = _clean(draft.get("target"), "knowledge_or_rule_review_draft")
+    draft_type = _clean(draft.get("draft_type"), _synthetic_draft_type_from_target(target))
+    candidate = {
+        "candidate_id": "spc_" + uuid.uuid4().hex[:16],
+        "created_at": utc_now(),
+        "updated_at": utc_now(),
+        "case_id": case_id,
+        "structure_label": _clean(draft.get("structure_label")),
+        "collision_focus": _clean(draft.get("collision_focus")),
+        "target": target,
+        "draft_type": draft_type,
+        "attribution_layer": _clean(draft.get("attribution_layer"), "synthetic"),
+        "failure_types": _string_list(draft.get("failure_types")),
+        "knowledge_tags": _string_list(draft.get("knowledge_tags")),
+        "suggested_action": _clean(draft.get("suggested_action")),
+        "status": "draft_review",
+        "source_draft": draft,
+        "review_decision": {"decision": "pending", "actor_role": "", "note": "", "decided_at": ""},
+        "downstream_proposal": {},
+        "regression_gate": {"required_before_active_record": True, "matrix": "P11_SYNTHETIC_EXPANSION"},
+        "guardrails": ["SYNTHETIC_FAILURE_DRAFT_ONLY", "ANALYST_REVIEW_REQUIRED", "NO_AUTO_LEARNING", "NO_RUNTIME_MUTATION"],
+    }
+    state["synthetic_promotion_candidates"].append(candidate)
+    saved = _save_state(state, settings)
+    return {"ok": True, "item": candidate, "storage": saved}
+
+
+def list_synthetic_promotion_candidates(settings: Dict[str, Any] | None = None, *, status: str = "") -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    rows = list(state["synthetic_promotion_candidates"])
+    if status:
+        rows = [row for row in rows if row.get("status") == status]
+    rows.sort(key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""), reverse=True)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "items": rows[:100],
+        "storage": storage,
+        "guardrails": ["PROMOTION_QUEUE_ONLY", "ANALYST_DECISION_REQUIRED", "P11_REGRESSION_REQUIRED_BEFORE_ACTIVE_RECORD"],
+    }
+
+
+def review_synthetic_promotion_candidate(candidate_id: str, payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    candidate = _find_synthetic_promotion_candidate(state, candidate_id)
+    if not candidate:
+        return {"ok": False, "code": "SYNTHETIC_PROMOTION_NOT_FOUND", "message": "Synthetic promotion candidate not found."}
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin can review synthetic promotion candidates."}
+    decision = _clean(payload.get("decision"), "reject")
+    if decision not in ALLOWED_SYNTHETIC_PROMOTION_DECISIONS:
+        return {"ok": False, "code": "SYNTHETIC_PROMOTION_DECISION_INVALID", "message": "Unsupported review decision."}
+    candidate["review_decision"] = {
+        "decision": decision,
+        "actor_role": role,
+        "actor_id": _clean(payload.get("actor_id"), role),
+        "note": _clean(payload.get("note")),
+        "decided_at": utc_now(),
+    }
+    candidate["updated_at"] = utc_now()
+    candidate["status"] = "rejected" if decision == "reject" else "analyst_review"
+    candidate.setdefault("history", []).append(
+        {
+            "created_at": utc_now(),
+            "actor_role": role,
+            "decision": decision,
+            "note": _clean(payload.get("note")),
+        }
+    )
+    saved = _save_state(state, settings)
+    if decision == "reject":
+        return {"ok": True, "item": candidate, "storage": saved, "guardrails": candidate["guardrails"]}
+
+    downstream = _create_synthetic_downstream_proposal(candidate, decision, payload, settings)
+    state, _ = _load_state(settings)
+    candidate = _find_synthetic_promotion_candidate(state, candidate_id)
+    if candidate:
+        candidate["downstream_proposal"] = downstream
+        candidate["status"] = "proposal_created" if downstream.get("ok") else "analyst_review"
+        candidate["updated_at"] = utc_now()
+        candidate.setdefault("history", []).append(
+            {
+                "created_at": utc_now(),
+                "actor_role": "system",
+                "status": candidate["status"],
+                "note": "Downstream proposal creation attempted. Runtime unchanged.",
+                "downstream_kind": downstream.get("kind"),
+                "downstream_id": downstream.get("proposal_id") or downstream.get("draft_id"),
+            }
+        )
+        saved = _save_state(state, settings)
+    return {"ok": True, "item": candidate, "downstream": downstream, "storage": saved}
+
+
+def create_governance_release(payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin can create governance release records."}
+    artifact_ids = {
+        "knowledge_draft_ids": _string_list(payload.get("knowledge_draft_ids")),
+        "guided_question_version_ids": _string_list(payload.get("guided_question_version_ids")),
+        "bazi_rule_version_ids": _string_list(payload.get("bazi_rule_version_ids")),
+        "active_revision_ids": _string_list(payload.get("active_revision_ids")),
+    }
+    if not any(artifact_ids.values()):
+        return {"ok": False, "code": "RELEASE_ARTIFACT_REQUIRED", "message": "At least one reviewed/versioned artifact id is required."}
+    artifacts, missing = _collect_governance_release_artifacts(state, artifact_ids)
+    if missing:
+        return {"ok": False, "code": "RELEASE_ARTIFACT_NOT_FOUND", "message": "Some release artifacts were not found.", "missing": missing}
+    gate = _p12_synthetic_regression_gate()
+    if not gate.get("passed"):
+        return {"ok": False, "code": "P13_SYNTHETIC_REGRESSION_FAILED", "message": "P11 synthetic regression must pass before recording a governance release.", "regression_gate": gate}
+    release = {
+        "release_id": "grl_" + uuid.uuid4().hex[:16],
+        "created_at": utc_now(),
+        "created_by_role": role,
+        "created_by": _clean(payload.get("actor_id"), role),
+        "release_type": _clean(payload.get("release_type"), "p13_governance_manifest"),
+        "status": "release_record",
+        "artifact_ids": artifact_ids,
+        "artifacts": artifacts,
+        "summary": _governance_release_summary(artifacts),
+        "p13_regression_gate": gate,
+        "runtime_mutation": False,
+        "note": _clean(payload.get("note")),
+        "guardrails": ["GOVERNANCE_RELEASE_RECORD_ONLY", "NO_RUNTIME_MUTATION", "P11_SYNTHETIC_REGRESSION_REQUIRED", "ANALYST_OR_ADMIN_REVIEW_REQUIRED"],
+    }
+    state["governance_releases"].append(release)
+    saved = _save_state(state, settings)
+    return {"ok": True, "item": release, "storage": saved}
+
+
+def list_governance_releases(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    rows = sorted(state["governance_releases"], key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "items": rows[:100],
+        "storage": storage,
+        "guardrails": ["GOVERNANCE_RELEASE_RECORDS_ONLY", "NO_RUNTIME_MUTATION", "P11_SYNTHETIC_REGRESSION_REQUIRED"],
+    }
+
+
+def create_knowledge_review_batch(payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    drafts = _select_knowledge_review_drafts(payload)
+    if not drafts:
+        return {"ok": False, "code": "KNOWLEDGE_REVIEW_BATCH_EMPTY", "message": "No knowledge drafts matched the batch filter."}
+    batch_key = _clean(payload.get("batch_key")) or "kb_batch_" + _synthetic_slug(payload.get("batch_name") or payload.get("name") or uuid.uuid4().hex[:8])
+    if any(row.get("batch_key") == batch_key for row in state["knowledge_review_batches"]):
+        return {"ok": False, "code": "KNOWLEDGE_REVIEW_BATCH_EXISTS", "message": "Batch key already exists.", "batch_key": batch_key}
+    batch = {
+        "batch_id": "krb_" + uuid.uuid4().hex[:16],
+        "batch_key": batch_key,
+        "created_at": utc_now(),
+        "updated_at": utc_now(),
+        "created_by_role": _role(payload.get("actor_role")),
+        "batch_name": _clean(payload.get("batch_name") or payload.get("name"), batch_key),
+        "scope": _clean(payload.get("scope"), "knowledge_draft_review"),
+        "status": "draft_review",
+        "recommended_action": _clean(payload.get("recommended_action"), "analyst_review"),
+        "risk_levels": sorted({str(row.get("risk_level") or "") for row in drafts if row.get("risk_level")}),
+        "domains": sorted({str(row.get("domain") or "") for row in drafts if row.get("domain")}),
+        "categories": sorted({str(row.get("category") or "") for row in drafts if row.get("category")}),
+        "draft_ids": [str(row.get("draft_id") or "") for row in drafts if row.get("draft_id")],
+        "knowledge_ids": [str(row.get("knowledge_id") or "") for row in drafts if row.get("knowledge_id")],
+        "items": [_knowledge_review_batch_item(row) for row in drafts],
+        "summary": {
+            "draft_count": len(drafts),
+            "by_risk_level": _top_counts(_count_by(drafts, "risk_level")),
+            "by_domain": _top_counts(_count_by(drafts, "domain")),
+            "by_category": _top_counts(_count_by(drafts, "category")),
+        },
+        "review_policy": _clean(payload.get("review_policy"), "batch_only_no_status_mutation"),
+        "note": _clean(payload.get("note")),
+        "guardrails": ["REVIEW_BATCH_ONLY", "NO_DRAFT_STATUS_MUTATION", "ANALYST_REVIEW_REQUIRED", "NO_RUNTIME_MUTATION"],
+    }
+    state["knowledge_review_batches"].append(batch)
+    saved = _save_state(state, settings)
+    return {"ok": True, "item": batch, "storage": saved}
+
+
+def seed_p14_knowledge_review_batches(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    specs = [
+        {
+            "batch_key": "p15.p14.r1_metadata_boundaries",
+            "batch_name": "P14 R1 metadata boundaries",
+            "knowledge_id_prefix": "p14.",
+            "risk_levels": ["R1"],
+            "recommended_action": "review_for_proposal_ready",
+            "note": "Ten-god family and month-command boundary drafts. Safe to review first.",
+            "actor_role": "system",
+        },
+        {
+            "batch_key": "p15.p14.r2_source_version_review",
+            "batch_name": "P14 R2 source/version review",
+            "knowledge_id_prefix": "p14.",
+            "risk_levels": ["R2"],
+            "recommended_action": "source_version_review_before_rule_proposal",
+            "note": "Stem combination and branch penalty drafts require source/version review.",
+            "actor_role": "system",
+        },
+        {
+            "batch_key": "p15.p14.r3_archive_reference_only",
+            "batch_name": "P14 R3 archive/reference only",
+            "knowledge_id_prefix": "p14.",
+            "risk_levels": ["R3"],
+            "recommended_action": "archive_reference_only_until_architect_or_analyst_review",
+            "note": "Twelve growth phase and useful-god drafts remain archive/reference only.",
+            "actor_role": "system",
+        },
+    ]
+    created = []
+    skipped = []
+    for spec in specs:
+        result = create_knowledge_review_batch(spec, settings)
+        if result.get("ok"):
+            created.append(result.get("item"))
+        else:
+            skipped.append({"batch_key": spec["batch_key"], "code": result.get("code"), "message": result.get("message")})
+    return {
+        "ok": True,
+        "created_count": len(created),
+        "skipped_count": len(skipped),
+        "items": created,
+        "skipped": skipped,
+        "guardrails": ["P14_BATCH_SEED_ONLY", "NO_DRAFT_STATUS_MUTATION", "ANALYST_REVIEW_REQUIRED"],
+    }
+
+
+def list_knowledge_review_batches(settings: Dict[str, Any] | None = None, *, status: str = "") -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    rows = list(state["knowledge_review_batches"])
+    if status:
+        rows = [row for row in rows if row.get("status") == status]
+    rows.sort(key=lambda row: str(row.get("updated_at") or row.get("created_at") or ""), reverse=True)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "items": rows[:100],
+        "storage": storage,
+        "guardrails": ["REVIEW_BATCH_RECORDS_ONLY", "NO_DRAFT_STATUS_MUTATION", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def create_knowledge_batch_proposal_drafts(batch_id: str, payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    batch = _find_knowledge_review_batch(state, batch_id)
+    if not batch:
+        return {"ok": False, "code": "KNOWLEDGE_REVIEW_BATCH_NOT_FOUND", "message": "Knowledge review batch not found."}
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin can create batch proposal drafts."}
+    existing = _find_successful_knowledge_batch_proposal_run(state, batch)
+    if existing and payload.get("allow_duplicate") is not True:
+        return {
+            "ok": False,
+            "code": "KNOWLEDGE_BATCH_PROPOSALS_EXIST",
+            "message": "Proposal drafts already exist for this batch. Use allow_duplicate=true only for explicit re-review.",
+            "item": existing,
+            "guardrails": existing.get("guardrails") or [],
+        }
+
+    eligible = _knowledge_batch_proposal_eligibility(batch)
+    run_id = "kbpr_" + uuid.uuid4().hex[:16]
+    if not eligible["eligible"]:
+        run = _knowledge_batch_proposal_run_base(run_id, batch, payload, role)
+        run.update(
+            {
+                "status": "blocked",
+                "blocked_reason": eligible["reason"],
+                "blocked_items": eligible["blocked_items"],
+                "summary": {
+                    "rule_proposal_count": 0,
+                    "question_proposal_count": 0,
+                    "blocked_count": len(eligible["blocked_items"]) or len(batch.get("items") or []),
+                },
+            }
+        )
+        state["knowledge_batch_proposal_runs"].append(run)
+        saved = _save_state(state, settings)
+        return {
+            "ok": False,
+            "code": "KNOWLEDGE_BATCH_PROPOSAL_BLOCKED",
+            "message": eligible["reason"],
+            "item": run,
+            "storage": saved,
+            "guardrails": run["guardrails"],
+        }
+
+    drafts, missing = _knowledge_drafts_for_batch(batch)
+    if missing:
+        run = _knowledge_batch_proposal_run_base(run_id, batch, payload, role)
+        run.update(
+            {
+                "status": "blocked",
+                "blocked_reason": "Some batch draft ids were not found in the knowledge draft archive.",
+                "blocked_items": missing,
+                "summary": {"rule_proposal_count": 0, "question_proposal_count": 0, "blocked_count": len(missing)},
+            }
+        )
+        state["knowledge_batch_proposal_runs"].append(run)
+        saved = _save_state(state, settings)
+        return {
+            "ok": False,
+            "code": "KNOWLEDGE_BATCH_DRAFTS_MISSING",
+            "message": run["blocked_reason"],
+            "item": run,
+            "storage": saved,
+            "guardrails": run["guardrails"],
+        }
+
+    rule_items = []
+    question_items = []
+    errors = []
+    if payload.get("create_rule_proposals") is not False:
+        for draft in drafts:
+            created = create_bazi_rule_proposal(_knowledge_batch_rule_proposal_payload(batch, draft, run_id, payload, role), settings)
+            if created.get("ok"):
+                item = dict(created.get("item") or {})
+                rule_items.append(
+                    {
+                        "proposal_id": item.get("proposal_id"),
+                        "rule_id": item.get("rule_id"),
+                        "domain": item.get("domain"),
+                        "source_knowledge_id": draft.get("knowledge_id"),
+                        "source_draft_id": draft.get("draft_id"),
+                    }
+                )
+            else:
+                errors.append(
+                    {
+                        "kind": "bazi_rule_proposal",
+                        "source_knowledge_id": draft.get("knowledge_id"),
+                        "code": created.get("code"),
+                        "message": created.get("message"),
+                    }
+                )
+    if payload.get("create_question_proposal") is not False:
+        created = create_guided_question_proposal(_knowledge_batch_question_proposal_payload(batch, drafts, run_id, payload, role), settings)
+        if created.get("ok"):
+            item = dict(created.get("item") or {})
+            question_items.append(
+                {
+                    "proposal_id": item.get("proposal_id"),
+                    "question_key": item.get("proposed_question_key"),
+                    "source_question_key": item.get("source_question_key"),
+                }
+            )
+        else:
+            errors.append({"kind": "guided_question_proposal", "code": created.get("code"), "message": created.get("message")})
+
+    state, _ = _load_state(settings)
+    run = _knowledge_batch_proposal_run_base(run_id, batch, payload, role)
+    run.update(
+        {
+            "status": "proposal_drafts_created" if not errors else "proposal_drafts_partial",
+            "rule_proposals": rule_items,
+            "guided_question_proposals": question_items,
+            "errors": errors,
+            "summary": {
+                "rule_proposal_count": len(rule_items),
+                "question_proposal_count": len(question_items),
+                "blocked_count": 0,
+                "error_count": len(errors),
+            },
+        }
+    )
+    state["knowledge_batch_proposal_runs"].append(run)
+    saved = _save_state(state, settings)
+    return {
+        "ok": not errors,
+        "item": run,
+        "storage": saved,
+        "guardrails": run["guardrails"],
+        "rule_proposals": rule_items,
+        "guided_question_proposals": question_items,
+        "errors": errors,
+    }
+
+
+def list_knowledge_batch_proposal_runs(settings: Dict[str, Any] | None = None, *, status: str = "", batch_key: str = "") -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    rows = list(state["knowledge_batch_proposal_runs"])
+    if status:
+        rows = [row for row in rows if row.get("status") == status]
+    if batch_key:
+        rows = [row for row in rows if row.get("batch_key") == batch_key or row.get("batch_id") == batch_key]
+    rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "items": rows[:100],
+        "storage": storage,
+        "guardrails": ["P16_PROPOSAL_RUN_LEDGER_ONLY", "NO_RUNTIME_MUTATION", "R2_R3_ANALYST_REVIEW_BEFORE_PROPOSAL"],
+    }
 
 
 def seed_validation_cases(settings: Dict[str, Any] | None = None, *, force: bool = False) -> Dict[str, Any]:
@@ -851,6 +1275,9 @@ def activate_revision_record(revision_id: str, payload: Dict[str, Any], settings
         return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin can activate revision records."}
     if revision.get("status") != "approved":
         return {"ok": False, "code": "APPROVAL_REQUIRED", "message": "Revision must be approved before activation record is created."}
+    gate = _p12_synthetic_regression_gate()
+    if not gate.get("passed"):
+        return {"ok": False, "code": "P12_SYNTHETIC_REGRESSION_FAILED", "message": "P11 synthetic regression must pass before recording an active revision.", "regression_gate": gate}
     active = {
         "active_revision_id": "arv_" + uuid.uuid4().hex[:16],
         "status": "active_revision_record",
@@ -863,8 +1290,9 @@ def activate_revision_record(revision_id: str, payload: Dict[str, Any], settings
         "activated_by_role": role,
         "activated_by": _clean(payload.get("actor_id"), role),
         "runtime_mutation": False,
+        "p12_regression_gate": gate,
         "note": _clean(payload.get("note")),
-        "guardrails": ["ACTIVE_RECORD_ONLY", "NO_RUNTIME_MUTATION", "REQUIRES_ENGINEERING_IMPLEMENTATION"],
+        "guardrails": ["ACTIVE_RECORD_ONLY", "NO_RUNTIME_MUTATION", "P12_SYNTHETIC_REGRESSION_REQUIRED", "REQUIRES_ENGINEERING_IMPLEMENTATION"],
     }
     revision["status"] = "active_revision_record"
     revision["updated_at"] = utc_now()
@@ -908,7 +1336,11 @@ def label_contract(locale: str = "zh", settings: Dict[str, Any] | None = None) -
 
 def _run_case(case: Dict[str, Any]) -> Dict[str, Any]:
     try:
-        result = build_agent_turn(case["input"])
+        if isinstance(case.get("chart"), dict):
+            data = {"chart": dict(case.get("chart") or {})}
+            result = {"ok": True, "code": "OK", "data": data}
+        else:
+            result = build_agent_turn(case["input"])
         expected_error = str(case.get("expected_error_code") or "")
         if expected_error:
             actual_error = str(result.get("code") or "")
@@ -937,28 +1369,26 @@ def _run_case(case: Dict[str, Any]) -> Dict[str, Any]:
 def _default_validation_cases() -> List[Dict[str, Any]]:
     return [
         {
-            "case_id": "syn.income_stability.1990_05_12_male_2025",
-            "title": "Known current lab sample",
-            "input": {
-                "birth_input": {"calendar": "solar", "calendar_type": "solar", "year": 1990, "month": 5, "day": 12, "hour": 10, "gender": "male"},
-                "selected_year": 2025,
-                "message": "income_stability regression case",
-            },
+            "case_id": "syn.income_stability.synthetic_stable_structure",
+            "title": "Synthetic explicit pillars: stable income-structure signal",
+            "chart": make_synthetic_chart(
+                "syn.income_stability.synthetic_stable_structure",
+                {"year": "戊辰", "month": "己未", "day": "戊午", "hour": "癸亥"},
+            ),
             "expected_income_stability": {"income_stability": "stable", "self_capacity": "high", "wealth_accessibility": "clear"},
             "status": "active",
-            "guardrails": ["REGRESSION_CASE", "NOT_DOMAIN_TRUTH"],
+            "guardrails": ["SYNTHETIC_EXPLICIT_PILLARS", "NOT_DOMAIN_TRUTH", "NO_BIRTHDATE"],
         },
         {
-            "case_id": "syn.income_stability.lunar_conversion_boundary",
-            "title": "Lunar calendar conversion boundary",
-            "input": {
-                "birth_input": {"calendar": "lunar", "calendar_type": "lunar", "year": 1990, "month": 5, "day": 12, "hour": 10, "minute": 0, "gender": "male", "lunar_is_leap_month": False},
-                "selected_year": 2025,
-                "message": "lunar conversion boundary case",
-            },
-            "expected_income_stability": {},
+            "case_id": "syn.income_stability.synthetic_disrupted_wealth_access",
+            "title": "Synthetic explicit pillars: disrupted wealth-access signal",
+            "chart": make_synthetic_chart(
+                "syn.income_stability.synthetic_disrupted_wealth_access",
+                {"year": "戊辰", "month": "丁巳", "day": "戊午", "hour": "壬子"},
+            ),
+            "expected_income_stability": {"income_stability": "unstable", "wealth_accessibility": "disrupted", "volatility": "medium"},
             "status": "active",
-            "guardrails": ["BOUNDARY_CASE", "LUNAR_CONVERSION_SUPPORTED", "NO_RESULT_EXPECTATION"],
+            "guardrails": ["SYNTHETIC_EXPLICIT_PILLARS", "NOT_DOMAIN_TRUTH", "NO_BIRTHDATE"],
         },
     ]
 
@@ -1209,6 +1639,10 @@ def _empty_state() -> Dict[str, Any]:
         "guided_question_audits": [],
         "bazi_rule_proposals": [],
         "bazi_rule_versions": [],
+        "synthetic_promotion_candidates": [],
+        "governance_releases": [],
+        "knowledge_review_batches": [],
+        "knowledge_batch_proposal_runs": [],
         "rule_impacts": [],
         "revision_proposals": [],
         "active_rule_revisions": [],
@@ -1275,7 +1709,7 @@ def _file_load_state() -> Dict[str, Any]:
         return _empty_state()
     state = _empty_state()
     if isinstance(payload, dict):
-        for key in ["feedback", "guided_question_reviews", "guided_question_proposals", "guided_question_library_versions", "guided_question_audits", "bazi_rule_proposals", "bazi_rule_versions", "rule_impacts", "revision_proposals", "active_rule_revisions", "validation_cases", "validation_runs", "promotion_requests"]:
+        for key in ["feedback", "guided_question_reviews", "guided_question_proposals", "guided_question_library_versions", "guided_question_audits", "bazi_rule_proposals", "bazi_rule_versions", "synthetic_promotion_candidates", "governance_releases", "knowledge_review_batches", "knowledge_batch_proposal_runs", "rule_impacts", "revision_proposals", "active_rule_revisions", "validation_cases", "validation_runs", "promotion_requests"]:
             if isinstance(payload.get(key), list):
                 state[key] = list(payload[key])
         if isinstance(payload.get("label_contract"), dict):
@@ -1351,6 +1785,14 @@ def _top_counts(counts: Dict[str, int], limit: int = 12) -> List[Dict[str, Any]]
         {"key": key, "count": value}
         for key, value in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]
     ]
+
+
+def _count_by(rows: List[Dict[str, Any]], key: str) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for row in rows:
+        value = _clean(row.get(key), "unknown")
+        counts[value] = counts.get(value, 0) + 1
+    return counts
 
 
 def _answer_quality_item_from_audit(row: Dict[str, Any]) -> Dict[str, Any]:
@@ -1594,6 +2036,601 @@ def _append_bazi_rule_history(proposal: Dict[str, Any], *, actor_role: str, stat
             "note": note,
         }
     )
+
+
+def _find_synthetic_promotion_candidate(state: Dict[str, Any], candidate_id: str) -> Dict[str, Any] | None:
+    clean = _clean(candidate_id)
+    for row in state.get("synthetic_promotion_candidates", []):
+        if row.get("candidate_id") == clean:
+            return row
+    return None
+
+
+def _create_synthetic_downstream_proposal(candidate: Dict[str, Any], decision: str, payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    kind = _synthetic_downstream_kind(candidate, decision)
+    actor_role = _role(payload.get("actor_role"))
+    if kind == "knowledge_draft":
+        created = create_knowledge_draft(_synthetic_knowledge_draft_payload(candidate, decision, payload, actor_role))
+        item = dict(created.get("item") or {})
+        return {
+            "ok": bool(created.get("ok")),
+            "kind": kind,
+            "draft_id": item.get("draft_id") or "",
+            "knowledge_id": item.get("knowledge_id") or "",
+            "code": created.get("code") or "",
+            "message": created.get("message") or "",
+            "guardrails": created.get("guardrails") or [],
+        }
+    if kind == "bazi_rule_proposal":
+        created = create_bazi_rule_proposal(_synthetic_rule_proposal_payload(candidate, payload, actor_role), settings)
+        item = dict(created.get("item") or {})
+        return {
+            "ok": bool(created.get("ok")),
+            "kind": kind,
+            "proposal_id": item.get("proposal_id") or "",
+            "rule_id": item.get("rule_id") or "",
+            "code": created.get("code") or "",
+            "message": created.get("message") or "",
+            "guardrails": item.get("guardrails") or [],
+        }
+    if kind == "guided_question_proposal":
+        created = create_guided_question_proposal(_synthetic_guided_question_proposal_payload(candidate, payload, actor_role), settings)
+        item = dict(created.get("item") or {})
+        return {
+            "ok": bool(created.get("ok")),
+            "kind": kind,
+            "proposal_id": item.get("proposal_id") or "",
+            "question_key": item.get("proposed_question_key") or item.get("source_question_key") or "",
+            "code": created.get("code") or "",
+            "message": created.get("message") or "",
+            "guardrails": item.get("guardrails") or [],
+        }
+    return {"ok": False, "kind": kind, "code": "SYNTHETIC_DOWNSTREAM_KIND_UNSUPPORTED", "message": "No downstream proposal kind mapped."}
+
+
+def _synthetic_downstream_kind(candidate: Dict[str, Any], decision: str) -> str:
+    if decision in {"needs_knowledge", "needs_expression"}:
+        return "knowledge_draft"
+    if decision == "needs_rule":
+        return "bazi_rule_proposal"
+    draft_type = _clean(candidate.get("draft_type"))
+    if draft_type in {"knowledge_seed", "answer_expression"}:
+        return "knowledge_draft"
+    if draft_type == "rule_draft":
+        return "bazi_rule_proposal"
+    if draft_type == "question_recommendation_draft":
+        return "guided_question_proposal"
+    return "knowledge_draft"
+
+
+def _synthetic_knowledge_draft_payload(candidate: Dict[str, Any], decision: str, payload: Dict[str, Any], actor_role: str) -> Dict[str, Any]:
+    slug = _synthetic_slug(candidate.get("case_id"))
+    is_expression = decision == "needs_expression" or _clean(candidate.get("draft_type")) == "answer_expression"
+    domain = _clean(payload.get("domain")) or ("answer_expression" if is_expression else "core_structure")
+    category = _clean(payload.get("category")) or _clean(candidate.get("attribution_layer"), "synthetic_collision")
+    statement = _clean(payload.get("statement")) or (
+        f"Synthetic collision review for {candidate.get('case_id')}: {candidate.get('suggested_action') or 'analyst should draft a bounded knowledge update'}."
+    )
+    return {
+        "actor_role": actor_role,
+        "knowledge_id": _clean(payload.get("knowledge_id")) or f"synthetic.{slug}.{_synthetic_slug(candidate.get('draft_type'))}",
+        "domain": domain,
+        "category": category,
+        "title": _clean(payload.get("title")) or f"Synthetic review: {candidate.get('case_id')}",
+        "statement": statement,
+        "structured_facts": {
+            "source": "p11_synthetic_collision",
+            "case_id": candidate.get("case_id"),
+            "target": candidate.get("target"),
+            "draft_type": candidate.get("draft_type"),
+            "attribution_layer": candidate.get("attribution_layer"),
+            "failure_types": candidate.get("failure_types") or [],
+            "knowledge_tags": candidate.get("knowledge_tags") or [],
+        },
+        "source_refs": ["synthetic_collision:P11"],
+        "risk_level": _clean(payload.get("risk_level"), "R2"),
+        "confidence_prior": _bounded_float(payload.get("confidence_prior"), 0.5, 0.0, 1.0),
+        "allowed_usage": ["knowledge_unit_draft", "rule_proposal_source"],
+        "forbidden_usage": ["direct_active_rule", "direct_fortune_output", "runtime_inference_without_proposal"],
+    }
+
+
+def _synthetic_rule_proposal_payload(candidate: Dict[str, Any], payload: Dict[str, Any], actor_role: str) -> Dict[str, Any]:
+    slug = _synthetic_slug(candidate.get("case_id"))
+    domain = _clean(payload.get("domain")) or _synthetic_rule_domain(candidate)
+    return {
+        "actor_role": actor_role,
+        "rule_id": _clean(payload.get("rule_id")) or f"v19.synthetic.{slug}",
+        "domain": domain,
+        "version": _bounded_int(payload.get("version"), 1, 1, 9999),
+        "source_feedback_ids": _string_list(payload.get("source_feedback_ids")),
+        "input_contract": {
+            "required": ["chart", "guided_question_context", "knowledge_context"],
+            "source": "p11_synthetic_collision",
+            "case_id": candidate.get("case_id"),
+        },
+        "condition": {
+            "source": "p11_synthetic_collision",
+            "case_id": candidate.get("case_id"),
+            "target": candidate.get("target"),
+            "draft_type": candidate.get("draft_type"),
+            "failure_types": candidate.get("failure_types") or [],
+            "knowledge_tags": candidate.get("knowledge_tags") or [],
+        },
+        "output_contract": {
+            "signal": _clean(payload.get("output_signal")) or _synthetic_output_signal(candidate, domain),
+            "value_set": ["present", "absent", "needs_review"],
+            "is_prediction": False,
+            "runtime_scope": "proposal_only_no_runtime_inference_mutation",
+        },
+        "reasoning_path": [
+            "read synthetic failure attribution",
+            "draft structured rule proposal only",
+            "require validation, analyst approval, and P11 regression before any active record",
+        ],
+        "evidence": {
+            "source": "p11_synthetic_collision",
+            "case_id": candidate.get("case_id"),
+            "attribution_layer": candidate.get("attribution_layer"),
+            "suggested_action": candidate.get("suggested_action"),
+        },
+        "confidence": _bounded_float(payload.get("confidence"), 0.5, 0.0, 1.0),
+        "rationale": _clean(payload.get("rationale")) or f"Synthetic collision draft from {candidate.get('case_id')}. Rule proposal only.",
+        "guardrails": ["RULE_PROPOSAL_ONLY", "NO_RUNTIME_INFERENCE_MUTATION", "VALIDATION_REQUIRED"],
+    }
+
+
+def _synthetic_guided_question_proposal_payload(candidate: Dict[str, Any], payload: Dict[str, Any], actor_role: str) -> Dict[str, Any]:
+    key = _clean(payload.get("source_question_key")) or "q_income_stability"
+    return {
+        "actor_role": actor_role,
+        "proposed_action": _clean(payload.get("proposed_action"), "edit"),
+        "source_question_key": key,
+        "proposed_question_key": _clean(payload.get("proposed_question_key"), key),
+        "source_feedback_ids": _string_list(payload.get("source_feedback_ids")),
+        "proposed_label": {
+            "zh": _clean(payload.get("label_zh")) or f"复核 {candidate.get('case_id')} 的推荐问题",
+            "en": _clean(payload.get("label_en")) or f"Review recommended question for {candidate.get('case_id')}",
+            "ko": _clean(payload.get("label_ko")) or f"{candidate.get('case_id')} 추천 질문 검토",
+        },
+        "proposed_metadata": {
+            "depth": "beginner",
+            "required_context": ["chart", "result"],
+            "related_questions": ["q_income_stability", "q_branch_relation_detail"],
+            "source": "p11_synthetic_collision",
+            "case_id": candidate.get("case_id"),
+        },
+        "rationale": _clean(payload.get("rationale")) or f"Synthetic collision recommendation review for {candidate.get('case_id')}.",
+    }
+
+
+def _synthetic_draft_type_from_target(target: str) -> str:
+    mapping = {
+        "answer_expression_seed_draft": "answer_expression",
+        "knowledge_seed_draft": "knowledge_seed",
+        "rule_db_structured_fact_draft": "rule_draft",
+        "guided_question_ranking_draft": "question_recommendation_draft",
+    }
+    return mapping.get(_clean(target), "knowledge_seed")
+
+
+def _synthetic_rule_domain(candidate: Dict[str, Any]) -> str:
+    tags = " ".join(_string_list(candidate.get("knowledge_tags")) + _string_list(candidate.get("failure_types")) + [_clean(candidate.get("attribution_layer"))])
+    if "income" in tags or "wealth" in tags:
+        return "income_stability"
+    if "ten_god" in tags:
+        return "ten_god_relation"
+    if "time" in tags:
+        return "time_structure"
+    return "structural_relation"
+
+
+def _synthetic_output_signal(candidate: Dict[str, Any], domain: str) -> str:
+    if domain == "income_stability":
+        return "income_structure_review_signal"
+    if domain == "time_structure":
+        return "time_context_review_signal"
+    if domain == "ten_god_relation":
+        return "ten_god_review_signal"
+    return _clean(candidate.get("attribution_layer"), "synthetic_structure_review_signal")
+
+
+def _synthetic_slug(value: Any) -> str:
+    text = _clean(value, "synthetic")
+    cleaned = "".join(char.lower() if char.isalnum() else "." for char in text)
+    parts = [part for part in cleaned.split(".") if part]
+    return ".".join(parts)[:96] or "synthetic"
+
+
+def _p12_synthetic_regression_gate() -> Dict[str, Any]:
+    result = run_guided_synthetic_collision(P11_GUIDED_SYNTHETIC_CASES)
+    summary = dict(result.get("summary") or {})
+    passed = result.get("status") == "pass" and int(summary.get("failed") or 0) == 0 and int(summary.get("total") or 0) >= 20
+    return {
+        "required": True,
+        "matrix": "P11_SYNTHETIC_EXPANSION",
+        "validation_run": result.get("validation_run") or "",
+        "status": result.get("status") or "",
+        "passed": passed,
+        "summary": summary,
+        "guardrails": ["SYNTHETIC_REGRESSION_GATE", "NO_AUTO_LEARNING", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def _collect_governance_release_artifacts(state: Dict[str, Any], artifact_ids: Dict[str, List[str]]) -> tuple[Dict[str, List[Dict[str, Any]]], List[Dict[str, str]]]:
+    artifacts = {
+        "knowledge_drafts": _knowledge_draft_release_items(artifact_ids.get("knowledge_draft_ids") or []),
+        "guided_question_versions": _release_items_by_id(state.get("guided_question_library_versions") or [], artifact_ids.get("guided_question_version_ids") or [], "version_id"),
+        "bazi_rule_versions": _release_items_by_id(state.get("bazi_rule_versions") or [], artifact_ids.get("bazi_rule_version_ids") or [], "version_id"),
+        "active_revisions": _release_items_by_id(state.get("active_rule_revisions") or [], artifact_ids.get("active_revision_ids") or [], "active_revision_id"),
+    }
+    missing: List[Dict[str, str]] = []
+    expected = {
+        "knowledge_drafts": artifact_ids.get("knowledge_draft_ids") or [],
+        "guided_question_versions": artifact_ids.get("guided_question_version_ids") or [],
+        "bazi_rule_versions": artifact_ids.get("bazi_rule_version_ids") or [],
+        "active_revisions": artifact_ids.get("active_revision_ids") or [],
+    }
+    keys = {
+        "knowledge_drafts": {"draft_id", "knowledge_id"},
+        "guided_question_versions": {"version_id"},
+        "bazi_rule_versions": {"version_id"},
+        "active_revisions": {"active_revision_id"},
+    }
+    for group, ids in expected.items():
+        found = {
+            str(row.get(key) or "")
+            for row in artifacts.get(group) or []
+            for key in keys[group]
+            if row.get(key)
+        }
+        for item_id in ids:
+            if item_id not in found:
+                missing.append({"artifact_type": group, "artifact_id": item_id})
+    return artifacts, missing
+
+
+def _knowledge_draft_release_items(ids: List[str]) -> List[Dict[str, Any]]:
+    if not ids:
+        return []
+    try:
+        rows = [dict(row) for row in (list_knowledge_drafts().get("items") or [])]
+    except Exception:
+        rows = []
+    wanted = set(ids)
+    out = []
+    for row in rows:
+        if str(row.get("draft_id") or "") in wanted or str(row.get("knowledge_id") or "") in wanted:
+            out.append(_compact_release_item(row, ["draft_id", "knowledge_id", "domain", "category", "risk_level", "review_status", "title"]))
+    return out
+
+
+def _release_items_by_id(rows: List[Dict[str, Any]], ids: List[str], id_key: str) -> List[Dict[str, Any]]:
+    wanted = set(ids)
+    out = []
+    for row in rows:
+        if str(row.get(id_key) or "") in wanted:
+            out.append(_compact_release_item(dict(row), [id_key, "status", "created_at", "activated_by_role", "runtime_mutation", "note"]))
+    return out
+
+
+def _compact_release_item(row: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+    item = {key: row.get(key) for key in keys if key in row}
+    if "p12_regression_gate" in row:
+        gate = dict(row.get("p12_regression_gate") or {})
+        item["p12_regression_gate"] = {"passed": gate.get("passed"), "matrix": gate.get("matrix"), "summary": gate.get("summary")}
+    if "changelog" in row:
+        item["changelog"] = list(row.get("changelog") or [])[:12]
+    if "included_proposals" in row:
+        item["included_proposals"] = list(row.get("included_proposals") or [])
+    return item
+
+
+def _governance_release_summary(artifacts: Dict[str, List[Dict[str, Any]]]) -> Dict[str, Any]:
+    counts = {key: len(value) for key, value in artifacts.items()}
+    return {
+        "artifact_count": sum(counts.values()),
+        "by_artifact_type": counts,
+        "runtime_mutation": False,
+        "release_scope": "governance_manifest_only",
+    }
+
+
+def _find_knowledge_review_batch(state: Dict[str, Any], batch_id: str) -> Dict[str, Any] | None:
+    clean = _clean(batch_id)
+    for row in state.get("knowledge_review_batches", []):
+        if row.get("batch_id") == clean or row.get("batch_key") == clean:
+            return row
+    return None
+
+
+def _find_successful_knowledge_batch_proposal_run(state: Dict[str, Any], batch: Dict[str, Any]) -> Dict[str, Any] | None:
+    batch_id = _clean(batch.get("batch_id"))
+    batch_key = _clean(batch.get("batch_key"))
+    for row in state.get("knowledge_batch_proposal_runs", []):
+        if row.get("status") != "proposal_drafts_created":
+            continue
+        if row.get("batch_id") == batch_id or row.get("batch_key") == batch_key:
+            return row
+    return None
+
+
+def _knowledge_batch_proposal_eligibility(batch: Dict[str, Any]) -> Dict[str, Any]:
+    items = [dict(row) for row in (batch.get("items") or []) if isinstance(row, dict)]
+    risks = set(_string_list(batch.get("risk_levels")))
+    risks.update(str(row.get("risk_level") or "") for row in items if row.get("risk_level"))
+    risks.discard("")
+    action = _clean(batch.get("recommended_action")).lower()
+    blocked_items = []
+    for row in items:
+        if str(row.get("risk_level") or "") not in {"R0", "R1"}:
+            blocked_items.append(_knowledge_batch_blocked_item(row, "Only R0/R1 knowledge drafts can enter P16 proposal drafting."))
+    if not items:
+        return {"eligible": False, "reason": "Batch has no knowledge draft items.", "blocked_items": []}
+    if "source_version" in action or "archive" in action:
+        return {
+            "eligible": False,
+            "reason": "Batch action requires source/version or archive review before proposal drafting.",
+            "blocked_items": blocked_items or [_knowledge_batch_blocked_item(row, "Batch action is not proposal-ready.") for row in items],
+        }
+    if risks - {"R0", "R1"}:
+        return {
+            "eligible": False,
+            "reason": "R2/R3/R4 knowledge batches stay in analyst/source review before P16 proposal drafting.",
+            "blocked_items": blocked_items,
+        }
+    return {"eligible": True, "reason": "Batch is eligible for P16 proposal drafts.", "blocked_items": []}
+
+
+def _knowledge_batch_blocked_item(row: Dict[str, Any], reason: str) -> Dict[str, Any]:
+    return {
+        "knowledge_id": row.get("knowledge_id"),
+        "draft_id": row.get("draft_id"),
+        "risk_level": row.get("risk_level"),
+        "reason": reason,
+    }
+
+
+def _knowledge_batch_proposal_run_base(run_id: str, batch: Dict[str, Any], payload: Dict[str, Any], role: str) -> Dict[str, Any]:
+    return {
+        "run_id": run_id,
+        "created_at": utc_now(),
+        "batch_id": batch.get("batch_id"),
+        "batch_key": batch.get("batch_key"),
+        "batch_name": batch.get("batch_name"),
+        "actor_role": role,
+        "actor_id": _clean(payload.get("actor_id"), role),
+        "decision": _clean(payload.get("decision"), "generate_rule_and_question_proposal_drafts"),
+        "source_risk_levels": list(batch.get("risk_levels") or []),
+        "source_domains": list(batch.get("domains") or []),
+        "source_knowledge_ids": list(batch.get("knowledge_ids") or []),
+        "recommended_action": batch.get("recommended_action"),
+        "runtime_mutation": False,
+        "note": _clean(payload.get("note"), "P16 batch proposal draft generation. Proposal ledgers only."),
+        "rule_proposals": [],
+        "guided_question_proposals": [],
+        "blocked_items": [],
+        "errors": [],
+        "summary": {"rule_proposal_count": 0, "question_proposal_count": 0, "blocked_count": 0, "error_count": 0},
+        "guardrails": [
+            "P16_BATCH_TO_PROPOSAL_DRAFT_ONLY",
+            "NO_RUNTIME_MUTATION",
+            "NO_AUTO_RULE_ACTIVATION",
+            "VALIDATION_AND_APPROVAL_REQUIRED",
+            "R2_R3_ANALYST_REVIEW_BEFORE_PROPOSAL",
+        ],
+    }
+
+
+def _knowledge_drafts_for_batch(batch: Dict[str, Any]) -> tuple[List[Dict[str, Any]], List[Dict[str, Any]]]:
+    try:
+        rows = [dict(row) for row in (list_knowledge_drafts().get("items") or [])]
+    except Exception:
+        rows = []
+    wanted = []
+    for item in batch.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        wanted.extend([_clean(item.get("draft_id")), _clean(item.get("knowledge_id"))])
+    wanted.extend(_string_list(batch.get("draft_ids")))
+    wanted.extend(_string_list(batch.get("knowledge_ids")))
+    order = {item: index for index, item in enumerate([item for item in wanted if item])}
+    selected = []
+    seen = set()
+    for row in rows:
+        draft_id = _clean(row.get("draft_id"))
+        knowledge_id = _clean(row.get("knowledge_id"))
+        if draft_id not in order and knowledge_id not in order:
+            continue
+        key = draft_id or knowledge_id
+        if key in seen:
+            continue
+        seen.add(key)
+        selected.append(row)
+    selected.sort(key=lambda row: min(order.get(_clean(row.get("draft_id")), 9999), order.get(_clean(row.get("knowledge_id")), 9999)))
+    found = {_clean(row.get("draft_id")) for row in selected} | {_clean(row.get("knowledge_id")) for row in selected}
+    missing = []
+    for item in batch.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        draft_id = _clean(item.get("draft_id"))
+        knowledge_id = _clean(item.get("knowledge_id"))
+        if draft_id not in found and knowledge_id not in found:
+            missing.append({"draft_id": draft_id, "knowledge_id": knowledge_id, "reason": "Draft is listed in the batch but absent from the source archive."})
+    return selected, missing
+
+
+def _knowledge_batch_rule_proposal_payload(batch: Dict[str, Any], draft: Dict[str, Any], run_id: str, payload: Dict[str, Any], role: str) -> Dict[str, Any]:
+    knowledge_id = _clean(draft.get("knowledge_id"))
+    domain = _knowledge_batch_rule_domain(draft)
+    signal = _knowledge_batch_output_signal(draft, domain)
+    return {
+        "actor_role": role,
+        "rule_id": f"v19.kb_v2.{_synthetic_slug(knowledge_id)}",
+        "domain": domain,
+        "version": 1,
+        "source_feedback_ids": [],
+        "input_contract": {
+            "required": ["chart", "knowledge_context", "guided_question_context"],
+            "source_batch_id": batch.get("batch_id"),
+            "source_batch_key": batch.get("batch_key"),
+            "source_knowledge_id": knowledge_id,
+        },
+        "condition": {
+            "source": "p16_knowledge_batch_proposal",
+            "source_run_id": run_id,
+            "source_batch_key": batch.get("batch_key"),
+            "source_draft_id": draft.get("draft_id"),
+            "source_knowledge_id": knowledge_id,
+            "category": draft.get("category"),
+            "risk_level": draft.get("risk_level"),
+            "structured_facts": draft.get("structured_facts") or {},
+            "conditions": draft.get("conditions") or {},
+        },
+        "output_contract": {
+            "signal": signal,
+            "value_set": ["present", "absent", "unknown"],
+            "is_prediction": False,
+            "runtime_scope": "proposal_only_no_runtime_inference_mutation",
+        },
+        "reasoning_path": [
+            "read P16 reviewed knowledge batch",
+            "map each R0/R1 draft into a bounded structural rule proposal",
+            "require schema validation, analyst/admin approval, version record, and future engineering implementation",
+        ],
+        "evidence": {
+            "source": "knowledge_review_batch",
+            "run_id": run_id,
+            "batch_id": batch.get("batch_id"),
+            "batch_key": batch.get("batch_key"),
+            "source_draft_id": draft.get("draft_id"),
+            "source_knowledge_id": knowledge_id,
+            "source_excerpt_ids": draft.get("source_excerpt_ids") or [],
+            "risk_level": draft.get("risk_level"),
+            "review_status_at_generation": draft.get("review_status") or "pending",
+            "batch_guardrails": batch.get("guardrails") or [],
+        },
+        "confidence": _bounded_float(draft.get("confidence_prior"), 0.5, 0.0, 1.0),
+        "rationale": _clean(payload.get("rationale")) or f"P16 proposal draft from knowledge batch {batch.get('batch_key')} and draft {knowledge_id}.",
+        "guardrails": ["FROM_KNOWLEDGE_BATCH", "RULE_PROPOSAL_ONLY", "NO_RUNTIME_INFERENCE_MUTATION", "NO_PREDICTION", "STRUCTURE_ONLY"],
+    }
+
+
+def _knowledge_batch_question_proposal_payload(batch: Dict[str, Any], drafts: List[Dict[str, Any]], run_id: str, payload: Dict[str, Any], role: str) -> Dict[str, Any]:
+    key_suffix = _synthetic_slug(batch.get("batch_key") or batch.get("batch_id")).replace(".", "_")
+    knowledge_ids = [_clean(row.get("knowledge_id")) for row in drafts if _clean(row.get("knowledge_id"))]
+    return {
+        "actor_role": role,
+        "source_question_key": _clean(payload.get("source_question_key"), "q_income_stability"),
+        "proposed_action": _clean(payload.get("proposed_action"), "add"),
+        "proposed_question_key": _clean(payload.get("proposed_question_key"), f"q_kb_v2_{key_suffix}"),
+        "proposed_label": {
+            "zh": _clean(payload.get("label_zh"), "查看收入稳定性的结构边界依据"),
+            "en": _clean(payload.get("label_en"), "Review structural evidence for income stability"),
+            "ko": _clean(payload.get("label_ko"), "수입 안정성의 구조 근거 보기"),
+        },
+        "proposed_metadata": {
+            "depth": "intermediate",
+            "required_context": ["chart", "result"],
+            "related_questions": ["q_income_stability", "follow_rule_basis"],
+            "source": "p16_knowledge_batch_proposal",
+            "source_run_id": run_id,
+            "source_batch_key": batch.get("batch_key"),
+            "source_knowledge_ids": knowledge_ids,
+            "forbidden_prediction": True,
+        },
+        "rationale": _clean(payload.get("question_rationale")) or f"P16 guided question proposal from knowledge batch {batch.get('batch_key')}.",
+    }
+
+
+def _knowledge_batch_rule_domain(draft: Dict[str, Any]) -> str:
+    blob = " ".join(
+        [
+            _clean(draft.get("knowledge_id")),
+            _clean(draft.get("domain")),
+            _clean(draft.get("category")),
+            _clean(draft.get("title")),
+        ]
+    ).lower()
+    if "wealth" in blob or "income" in blob:
+        return "income_stability"
+    if "ten_god" in blob or "十神" in blob:
+        return "ten_god_relation"
+    if "time" in blob or "luck" in blob or "flow" in blob:
+        return "time_structure"
+    if "day_master" in blob or "element" in blob:
+        return "day_master_element"
+    return "structural_relation"
+
+
+def _knowledge_batch_output_signal(draft: Dict[str, Any], domain: str) -> str:
+    blob = " ".join([_clean(draft.get("knowledge_id")), _clean(draft.get("category")), _clean(draft.get("title"))]).lower()
+    if "wealth" in blob:
+        return "wealth_relation_boundary"
+    if "ten_god" in blob:
+        return "ten_god_family_boundary"
+    if "month_command" in blob:
+        return "month_command_boundary"
+    if "stem_combination" in blob:
+        return "stem_combination_boundary"
+    if "branch_penalty" in blob:
+        return "branch_penalty_boundary"
+    if domain == "income_stability":
+        return "income_stability_evidence_boundary"
+    return "structural_context_boundary"
+
+
+def _select_knowledge_review_drafts(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+    try:
+        rows = [dict(row) for row in (list_knowledge_drafts().get("items") or [])]
+    except Exception:
+        rows = []
+    ids = set(_string_list(payload.get("draft_ids") or payload.get("knowledge_ids")))
+    risk_levels = set(_string_list(payload.get("risk_levels")))
+    domains = set(_string_list(payload.get("domains")))
+    categories = set(_string_list(payload.get("categories")))
+    prefix = _clean(payload.get("knowledge_id_prefix") or payload.get("prefix"))
+    selected = []
+    for row in rows:
+        knowledge_id = str(row.get("knowledge_id") or "")
+        draft_id = str(row.get("draft_id") or "")
+        if ids and knowledge_id not in ids and draft_id not in ids:
+            continue
+        if prefix and not knowledge_id.startswith(prefix):
+            continue
+        if risk_levels and str(row.get("risk_level") or "") not in risk_levels:
+            continue
+        if domains and str(row.get("domain") or "") not in domains:
+            continue
+        if categories and str(row.get("category") or "") not in categories:
+            continue
+        selected.append(row)
+    selected.sort(key=lambda row: (str(row.get("risk_level") or ""), str(row.get("knowledge_id") or "")))
+    return selected
+
+
+def _knowledge_review_batch_item(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "draft_id": row.get("draft_id"),
+        "knowledge_id": row.get("knowledge_id"),
+        "title": row.get("title"),
+        "domain": row.get("domain"),
+        "category": row.get("category"),
+        "risk_level": row.get("risk_level"),
+        "review_status": row.get("review_status"),
+        "recommended_queue": _knowledge_review_recommended_queue(row),
+    }
+
+
+def _knowledge_review_recommended_queue(row: Dict[str, Any]) -> str:
+    risk = str(row.get("risk_level") or "")
+    if risk in {"R0", "R1"}:
+        return "analyst_fast_review"
+    if risk == "R2":
+        return "source_version_review"
+    if risk in {"R3", "R4"}:
+        return "archive_reference_only"
+    return "analyst_review"
 
 
 def _string_list(value: Any) -> List[str]:

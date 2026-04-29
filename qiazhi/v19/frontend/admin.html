@@ -172,6 +172,38 @@
           <label>Proposal Rationale<textarea id="sourceDraftProposalRationale">从已审核知识草稿生成规则提案；仍需 validation / approval / version record，不改变推理。</textarea></label>
           <button type="button" id="createRuleProposalFromDraft" class="secondary">从 Draft 创建 Rule Proposal</button>
           <div id="sourceDraftList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Knowledge Review Batches</h3>
+          <p class="panel-note">P15 批量审核入口。Batch 只聚合知识草稿，不修改 review_status；分析师确认后再单独更新 draft 或进入 proposal。</p>
+          <div class="grid">
+            <label>Batch Name<input id="kbReviewBatchName" value="P14 review batch" /></label>
+            <label>Knowledge Prefix<input id="kbReviewBatchPrefix" value="p14." /></label>
+            <label>Risk Levels<input id="kbReviewBatchRiskLevels" placeholder="R1,R2,R3" /></label>
+            <label>Recommended Action<input id="kbReviewBatchAction" value="analyst_review" /></label>
+          </div>
+          <label>Draft / Knowledge IDs<textarea id="kbReviewBatchDraftIds" placeholder="可选；为空时按 prefix/risk/domain/category 过滤"></textarea></label>
+          <div class="button-row three">
+            <button type="button" id="seedP14ReviewBatches">生成 P14 Batches</button>
+            <button type="button" id="createKbReviewBatch" class="secondary">创建 Batch</button>
+            <button type="button" id="reloadKbReviewBatches" class="secondary">刷新 Batches</button>
+          </div>
+          <div id="kbReviewBatchStatus" class="status-line">未加载</div>
+          <div id="kbReviewBatchList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">P16 Batch Proposal Drafts</h3>
+          <p class="panel-note">从已分组的 R1 知识批次生成 Rule Proposal / Question Proposal 草案。R2/R3 会记录 blocked run，等待分析师或架构师审核。</p>
+          <div class="grid">
+            <label class="span-2">Batch ID / Key<input id="kbProposalBatchId" placeholder="p15.p14.r1_metadata_boundaries 或 krb_xxx" /></label>
+            <label>Question Source<input id="kbProposalSourceQuestion" value="q_income_stability" /></label>
+            <label>Actor Role<select id="kbProposalActorRole"><option value="admin">admin</option><option value="analyst">analyst</option></select></label>
+          </div>
+          <label>Proposal Note<textarea id="kbProposalNote">P16 controlled batch proposal draft. R1 only; no runtime mutation.</textarea></label>
+          <div class="button-row">
+            <button type="button" id="createKbBatchProposalDrafts">生成 Proposal Drafts</button>
+            <button type="button" id="reloadKbBatchProposalRuns" class="secondary">刷新 P16 Runs</button>
+          </div>
+          <div id="kbBatchProposalStatus" class="status-line">未加载</div>
+          <div id="kbBatchProposalRunList" class="knowledge-list"></div>
         </section>
 
         <section class="settings-panel">
@@ -323,6 +355,22 @@
           <div id="baziRuleProposalList" class="knowledge-list"></div>
           <div id="baziRuleVersionList" class="knowledge-list"></div>
 
+          <h3 class="admin-subhead">Governance Release Manifest</h3>
+          <p class="panel-note">P13 版本治理清单。只汇总已审核/已版本化记录，创建前强制 P11 regression gate；不会改变 runtime。</p>
+          <div class="grid">
+            <label>Knowledge Draft IDs<input id="releaseKnowledgeDraftIds" placeholder="kud_xxx 或 knowledge_id，逗号分隔" /></label>
+            <label>Question Version IDs<input id="releaseGqVersionIds" placeholder="gqlv_xxx, gqlv_yyy" /></label>
+            <label>Rule Version IDs<input id="releaseRuleVersionIds" placeholder="brv_xxx, brv_yyy" /></label>
+            <label>Active Revision IDs<input id="releaseActiveRevisionIds" placeholder="arv_xxx, arv_yyy" /></label>
+          </div>
+          <label>Release Note<textarea id="releaseNote">P13 governance release record. Manifest only; P11 regression gate required.</textarea></label>
+          <div class="button-row">
+            <button type="button" id="createGovernanceRelease">创建 Release Manifest</button>
+            <button type="button" id="reloadGovernanceReleases" class="secondary">刷新 Releases</button>
+          </div>
+          <div id="governanceReleaseStatus" class="status-line">未加载</div>
+          <div id="governanceReleaseList" class="knowledge-list"></div>
+
           <h3 class="admin-subhead">Bazi Rule DB</h3>
           <p class="panel-note">直接规则库。当前从 Knowledge Draft 自动入库 R0-R3，R4 保持 archive-only。Rule DB 是后续 Engine Adapter 的输入，不再沿用插件黑盒。</p>
           <div class="button-row three">
@@ -362,6 +410,28 @@
           <div id="validationStatus" class="status-line">未加载</div>
           <div id="validationList" class="knowledge-list"></div>
           <div id="labelsList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Synthetic Collision Review</h3>
+          <p class="panel-note">P11 合成盘矩阵。失败样例只生成 audit 和 draft proposal，必须由分析师审核后再进入知识库或规则库。</p>
+          <div class="button-row">
+            <button type="button" id="runSyntheticCollision">运行 P11 Collision</button>
+          </div>
+          <div id="syntheticCollisionStatus" class="status-line">未加载</div>
+          <div id="syntheticCollisionSummary" class="knowledge-list"></div>
+          <div id="syntheticCollisionFailures" class="knowledge-list"></div>
+          <div id="syntheticCollisionDrafts" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Controlled Promotion Queue</h3>
+          <p class="panel-note">P12 晋级门。Synthetic draft 先进入候选队列；只有人工 decision 和 P11 regression gate 通过后，才允许进入 active/version record。</p>
+          <div class="grid">
+            <label>Review Decision<select id="syntheticPromotionDecision"><option value="approve">approve</option><option value="reject">reject</option><option value="needs_knowledge">needs_knowledge</option><option value="needs_rule">needs_rule</option><option value="needs_expression">needs_expression</option></select></label>
+            <label>Review Note<input id="syntheticPromotionNote" value="Controlled promotion review. No automatic runtime mutation." /></label>
+          </div>
+          <div class="button-row">
+            <button type="button" id="reloadSyntheticPromotions" class="secondary">刷新晋级候选</button>
+          </div>
+          <div id="syntheticPromotionStatus" class="status-line">未加载</div>
+          <div id="syntheticPromotionList" class="knowledge-list"></div>
         </section>
       </section>
     </main>

@@ -80,6 +80,8 @@ Findings and fixes:
 - The old "look at these three points" guidance panel was removed because it duplicated the question chips without adding an action or new fact.
 - Repeated prediction-disclaimer badges and warning strips were removed from the Oracle/Profile UI. Boundary language remains in the relevant answer text, but the fixed UI chrome no longer spends space on "not prediction" reminders.
 - The direct income-stability renderer was rewritten from an audit-log style response into a concise user-facing structure summary.
+- P10 now has a 12-case synthetic guided-collision matrix using explicit pillars rather than real birth data. It checks recommendation, wealth-oriented question presence, retrieval, applied knowledge, relation types, baseline vs knowledge-augmented evidence delta, and answer text together.
+- Lab default validation cases were converted from real-looking birth inputs into synthetic explicit-pillar cases with `NO_BIRTHDATE`.
 
 Verification:
 
@@ -88,7 +90,11 @@ python3 -m pytest -q v19/tests
 python3 -m json.tool docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json
 ```
 
-Result: `38 passed`; the draft seed JSON is valid. A direct 23-question guided-answer matrix also passed the internal-marker and truncation checks. Frontend Oracle/Profile scripts pass `node --check`.
+Result: `41 passed`; the draft seed JSON is valid. A direct 23-question guided-answer matrix also passed the internal-marker and truncation checks. Frontend Oracle/Profile scripts pass `node --check`.
+
+Synthetic evolution framework note: [V19_SYNTHETIC_EVOLUTION_FRAMEWORK.md](./V19_SYNTHETIC_EVOLUTION_FRAMEWORK.md).
+
+Synthetic collision review report: [V19_P10_SYNTHETIC_COLLISION_REVIEW.md](./V19_P10_SYNTHETIC_COLLISION_REVIEW.md).
 
 ## Deployment note
 

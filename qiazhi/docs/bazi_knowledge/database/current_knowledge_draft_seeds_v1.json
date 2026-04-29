@@ -2060,9 +2060,344 @@
         ]
       },
       "title": "结构回答要短而完整"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "ten_god_signal_candidate",
+        "question_guidance"
+      ],
+      "category": "ten_god",
+      "domain": "ten_god",
+      "forbidden_usage": [
+        "personality_verdict",
+        "sibling_friend_prediction",
+        "fortune"
+      ],
+      "knowledge_id": "p14.ten_god.peer_family_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "比劫类十神先解释为与日主同类的关系标签，包括比肩与劫财。它可以作为同类、竞争或分担关系的结构线索，但不能直接输出兄弟朋友、人品性格或财富得失断语。",
+      "structured_facts": {
+        "family": "peer",
+        "members": [
+          "比肩",
+          "劫财"
+        ],
+        "plain_meaning": "same_type_relation",
+        "boundary": "metadata_not_people_or_fortune_verdict"
+      },
+      "title": "比劫类十神只是同类关系标签"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "ten_god_signal_candidate",
+        "question_guidance"
+      ],
+      "category": "ten_god",
+      "domain": "ten_god",
+      "forbidden_usage": [
+        "talent_verdict",
+        "career_prediction",
+        "fortune"
+      ],
+      "knowledge_id": "p14.ten_god.output_family_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "食伤类十神先解释为日主所生出的输出关系，包括食神与伤官。它可以说明表达、产出或泄出关系的结构方向，但不能直接判断才华、职业或人生结果。",
+      "structured_facts": {
+        "family": "output",
+        "members": [
+          "食神",
+          "伤官"
+        ],
+        "plain_meaning": "output_relation",
+        "boundary": "structure_direction_not_talent_verdict"
+      },
+      "title": "食伤类十神只是输出关系标签"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "ten_god_signal_candidate",
+        "income_structure_context"
+      ],
+      "category": "ten_god",
+      "domain": "ten_god",
+      "forbidden_usage": [
+        "wealth_prediction",
+        "money_gain_loss_verdict",
+        "fortune"
+      ],
+      "knowledge_id": "p14.ten_god.wealth_family_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "财类十神先解释为日主所克的对象关系，包括正财与偏财。它可作为收入稳定性结构的证据来源之一，但不能直接等同于有钱、发财、破财或财运好坏。",
+      "structured_facts": {
+        "family": "wealth",
+        "members": [
+          "正财",
+          "偏财"
+        ],
+        "plain_meaning": "controlled_object_relation",
+        "boundary": "income_structure_evidence_not_wealth_prediction"
+      },
+      "title": "财类十神只是被日主所克的对象关系"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "ten_god_signal_candidate",
+        "question_guidance"
+      ],
+      "category": "ten_god",
+      "domain": "ten_god",
+      "forbidden_usage": [
+        "career_authority_verdict",
+        "marriage_verdict",
+        "fortune"
+      ],
+      "knowledge_id": "p14.ten_god.officer_family_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "官杀类十神先解释为克制日主的约束关系，包括正官与七杀。它可以作为压力、约束或规则关系的结构线索，但不能直接判断职业、权力、婚姻或吉凶。",
+      "structured_facts": {
+        "family": "officer",
+        "members": [
+          "正官",
+          "七杀"
+        ],
+        "plain_meaning": "constraint_relation",
+        "boundary": "constraint_metadata_not_life_event_verdict"
+      },
+      "title": "官杀类十神只是约束关系标签"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "ten_god_signal_candidate",
+        "question_guidance"
+      ],
+      "category": "ten_god",
+      "domain": "ten_god",
+      "forbidden_usage": [
+        "education_family_verdict",
+        "health_verdict",
+        "fortune"
+      ],
+      "knowledge_id": "p14.ten_god.resource_family_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "印类十神先解释为生日主的来源支持关系，包括正印与偏印。它可以说明来源、承载或支持关系的结构方向，但不能直接判断学历、长辈、健康或命运结果。",
+      "structured_facts": {
+        "family": "resource",
+        "members": [
+          "正印",
+          "偏印"
+        ],
+        "plain_meaning": "support_source_relation",
+        "boundary": "support_metadata_not_life_event_verdict"
+      },
+      "title": "印类十神只是来源支持关系标签"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "strength_signal_candidate",
+        "question_guidance"
+      ],
+      "category": "strength_model",
+      "domain": "strength",
+      "forbidden_usage": [
+        "single_season_strength_verdict",
+        "good_bad_judgement",
+        "fortune"
+      ],
+      "knowledge_id": "p14.month_command.seasonal_groups_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "月支可先按季节组提供环境背景：寅卯辰偏春木，巳午未偏夏火，申酉戌偏秋金，亥子丑偏冬水。这个分组只是月令环境线索，不能单独推出日主强弱或吉凶。",
+      "structured_facts": {
+        "seasonal_groups": {
+          "spring_wood": [
+            "寅",
+            "卯",
+            "辰"
+          ],
+          "summer_fire": [
+            "巳",
+            "午",
+            "未"
+          ],
+          "autumn_metal": [
+            "申",
+            "酉",
+            "戌"
+          ],
+          "winter_water": [
+            "亥",
+            "子",
+            "丑"
+          ]
+        },
+        "boundary": "season_context_not_strength_verdict"
+      },
+      "title": "月令季节组只是环境背景"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "rule_proposal_source",
+        "audit_check"
+      ],
+      "category": "stem_relation",
+      "domain": "core_structure",
+      "forbidden_usage": [
+        "transformation_claim",
+        "good_bad_judgement",
+        "fortune"
+      ],
+      "knowledge_id": "p14.stem_combination.no_transformation_boundary.v1",
+      "risk_level": "R2",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "天干五合可先作为天干之间的结构组合关系记录：甲己、乙庚、丙辛、丁壬、戊癸。是否化、化成什么、是否成局需要更严格条件和来源审核；当前不能直接输出化合结论。",
+      "structured_facts": {
+        "stem_combinations": [
+          "甲己",
+          "乙庚",
+          "丙辛",
+          "丁壬",
+          "戊癸"
+        ],
+        "boundary": "combination_presence_not_transformation_claim"
+      },
+      "title": "天干五合只先记录组合关系"
+    },
+    {
+      "allowed_usage": [
+        "source_archive",
+        "rule_proposal_source",
+        "audit_check"
+      ],
+      "category": "branch_relation",
+      "domain": "core_structure",
+      "forbidden_usage": [
+        "unversioned_penalty_rule",
+        "disaster_language",
+        "fortune"
+      ],
+      "knowledge_id": "p14.branch_penalty.versioned_source_boundary.v1",
+      "risk_level": "R2",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "刑关系存在不同传统版本和解释层级。当前只能记录“刑”作为需要来源版本的地支关系候选；没有明确来源和版本时，不应展开成灾祸、冲突或吉凶语言。",
+      "structured_facts": {
+        "relation": "penalty",
+        "requires": [
+          "source_version",
+          "pair_or_group_definition",
+          "reviewed_output_boundary"
+        ],
+        "boundary": "versioned_source_required_before_rule_activation"
+      },
+      "title": "地支刑关系必须带来源版本"
+    },
+    {
+      "allowed_usage": [
+        "source_archive",
+        "analyst_reference",
+        "future_rule_proposal_source"
+      ],
+      "category": "growth_phase",
+      "domain": "core_structure",
+      "forbidden_usage": [
+        "active_inference",
+        "life_stage_prediction",
+        "fortune"
+      ],
+      "knowledge_id": "p14.twelve_growth_phase.boundary.v1",
+      "risk_level": "R3",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "十二长生可先作为高风险结构索引归档，包括长生、沐浴、冠带、临官、帝旺、衰、病、死、墓、绝、胎、养。当前不进入 active inference，也不输出人生阶段或运势判断。",
+      "structured_facts": {
+        "phases": [
+          "长生",
+          "沐浴",
+          "冠带",
+          "临官",
+          "帝旺",
+          "衰",
+          "病",
+          "死",
+          "墓",
+          "绝",
+          "胎",
+          "养"
+        ],
+        "boundary": "archive_only_until_model_review"
+      },
+      "title": "十二长生先作为高风险结构索引"
+    },
+    {
+      "allowed_usage": [
+        "source_archive",
+        "analyst_reference",
+        "future_rule_proposal_source"
+      ],
+      "category": "useful_god",
+      "domain": "strength",
+      "forbidden_usage": [
+        "single_symbol_useful_god",
+        "good_bad_judgement",
+        "fortune"
+      ],
+      "knowledge_id": "p14.useful_god.boundary.v1",
+      "risk_level": "R3",
+      "source_refs": [
+        "p14.synthetic_knowledge_expansion",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "用神、喜忌和忌神属于高阶模型输出，不能由单个十神、月令或地支关系直接推出。只有当强弱、格局、调候、通关等模型边界被单独审核后，才可作为未来规则提案讨论。",
+      "structured_facts": {
+        "requires_reviewed_models": [
+          "strength_model",
+          "pattern_model",
+          "seasonal_adjustment_model",
+          "balancing_model"
+        ],
+        "boundary": "no_useful_god_without_reviewed_model"
+      },
+      "title": "用神喜忌不能由单一符号直接推出"
     }
   ],
   "runtime_scope": "knowledge_unit_draft_only_no_runtime_inference",
-  "seed_id": "v19.current_bazi_knowledge_draft_seeds.p9.v1",
-  "status": "draft_seed_p9_structural_signal_expanded"
+  "seed_id": "v19.current_bazi_knowledge_draft_seeds.p14.v1",
+  "status": "draft_seed_p14_bazi_knowledge_expanded"
 }

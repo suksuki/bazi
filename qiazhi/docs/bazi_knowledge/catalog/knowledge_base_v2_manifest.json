@@ -1,0 +1,132 @@
+{
+  "manifest_id": "v19.bazi_knowledge_base.v2.catalog",
+  "status": "catalog_manifest_only",
+  "runtime_scope": "no_runtime_inference_mutation",
+  "created_from": [
+    "docs/bazi_knowledge/source_archive/source_catalog_v1.json",
+    "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/core/core_units_v1.md",
+    "docs/bazi_knowledge/wealth/wealth_units_v1.md"
+  ],
+  "layers": [
+    {
+      "layer": "L0_source_archive",
+      "path": "docs/bazi_knowledge/source_archive/",
+      "purpose": "Record sources and licensing/reliability metadata.",
+      "activation_policy": "never_direct_runtime"
+    },
+    {
+      "layer": "L1_excerpt_archive",
+      "path": "v19/.runtime/bazi_source_archive.json:excerpts",
+      "purpose": "Store short excerpts or normalized summaries.",
+      "activation_policy": "never_direct_runtime"
+    },
+    {
+      "layer": "L2_knowledge_unit_drafts",
+      "path": "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
+      "purpose": "Store structured Bazi knowledge drafts grouped by risk and domain.",
+      "activation_policy": "requires_review_batch_then_proposal"
+    },
+    {
+      "layer": "L3_review_batches",
+      "path": "v19.lab_interfaces:knowledge_review_batches",
+      "purpose": "Group drafts for analyst/admin review without mutating draft status.",
+      "activation_policy": "batch_review_only"
+    },
+    {
+      "layer": "L4_rule_and_question_proposals",
+      "path": "v19.lab_interfaces:knowledge_batch_proposal_runs,guided_question_proposals,bazi_rule_proposals,synthetic_promotion_candidates",
+      "purpose": "Hold controlled proposals generated from reviewed drafts or synthetic failures.",
+      "activation_policy": "validation_and_approval_required"
+    },
+    {
+      "layer": "L5_governance_release_manifest",
+      "path": "v19.lab_interfaces:governance_releases",
+      "purpose": "Record reviewed/versioned artifacts as a release manifest.",
+      "activation_policy": "p11_regression_gate_required_no_runtime_mutation"
+    }
+  ],
+  "domains": [
+    {
+      "domain": "core_structure",
+      "directory": "docs/bazi_knowledge/core/",
+      "current_seed_prefixes": ["core.", "p9.", "p10.", "p14."],
+      "rule_policy": "R0-R2 may enter proposals after review; R3/R4 remain archive/reference unless explicitly approved."
+    },
+    {
+      "domain": "ten_god",
+      "directory": "docs/bazi_knowledge/ten_god/",
+      "current_seed_prefixes": ["ten_god.", "core.ten_god", "p10.ten_god", "p14.ten_god"],
+      "rule_policy": "Relationship metadata only; no life-event verdicts."
+    },
+    {
+      "domain": "strength",
+      "directory": "docs/bazi_knowledge/strength/",
+      "current_seed_prefixes": ["strength.", "p10.month_command", "p14.month_command", "p14.useful_god"],
+      "rule_policy": "Evidence model only until analyst-reviewed strength/useful-god model exists."
+    },
+    {
+      "domain": "wealth",
+      "directory": "docs/bazi_knowledge/wealth/",
+      "current_seed_prefixes": ["wealth.", "ten_god.wealth", "p14.ten_god.wealth"],
+      "rule_policy": "May support income_stability evidence; no wealth prediction."
+    },
+    {
+      "domain": "answer_expression",
+      "directory": "docs/bazi_knowledge/answer_expression/",
+      "current_seed_prefixes": ["answer.", "p10.answer", "p9.structural_signal_adapter"],
+      "rule_policy": "User-facing wording guidance only; no new facts."
+    },
+    {
+      "domain": "luck_flow",
+      "directory": "docs/bazi_knowledge/time_context/",
+      "current_seed_prefixes": ["luck_flow.", "time."],
+      "rule_policy": "Time context only unless a future reviewed time-aware inference proposal exists."
+    }
+  ],
+  "review_batches": [
+    {
+      "batch_key": "p15.p14.r1_metadata_boundaries",
+      "risk": "R1",
+      "recommended_action": "review_for_proposal_ready"
+    },
+    {
+      "batch_key": "p15.p14.r2_source_version_review",
+      "risk": "R2",
+      "recommended_action": "source_version_review_before_rule_proposal"
+    },
+    {
+      "batch_key": "p15.p14.r3_archive_reference_only",
+      "risk": "R3",
+      "recommended_action": "archive_reference_only_until_architect_or_analyst_review"
+    }
+  ],
+  "proposal_generation": {
+    "stage": "P16_KNOWLEDGE_BATCH_PROPOSAL_DRAFTS",
+    "entrypoints": [
+      "POST /api/lab/knowledge-review-batches/{batch_id}/proposal-drafts",
+      "GET /api/lab/knowledge-batch-proposal-runs"
+    ],
+    "eligible_batches": [
+      "p15.p14.r1_metadata_boundaries"
+    ],
+    "blocked_until_review": [
+      "p15.p14.r2_source_version_review",
+      "p15.p14.r3_archive_reference_only"
+    ],
+    "outputs": [
+      "knowledge_batch_proposal_runs",
+      "bazi_rule_proposals",
+      "guided_question_proposals"
+    ],
+    "runtime_scope": "proposal_draft_only_no_runtime_mutation"
+  },
+  "guardrails": [
+    "CATALOG_ONLY",
+    "NO_RUNTIME_MUTATION",
+    "NO_AUTO_LEARNING",
+    "ANALYST_REVIEW_REQUIRED",
+    "R2_R3_ANALYST_REVIEW_BEFORE_PROPOSAL",
+    "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
+  ]
+}

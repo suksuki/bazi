@@ -50,7 +50,7 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
         "required": ["chart"],
         "required_facts": ["hidden_stems", "chart_anchor"],
         "answer_scope": "explain_hidden_stems_as_metadata_not_prediction",
-        "score": 76,
+        "score": 83,
         "related_questions": ["q_day_master_month_anchor", "q_structure_overview", "q_income_factors"],
         "label": {
             "zh": "藏干在这张命盘里只是补充信息，还是会影响结构理解？",
@@ -82,7 +82,7 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
         "required": ["chart"],
         "required_facts": ["chart_anchor", "hidden_stems", "stem_elements"],
         "answer_scope": "explain_ten_god_as_relationship_metadata",
-        "score": 73,
+        "score": 84,
         "related_questions": ["q_hidden_stem_role", "q_income_factors", "q_read_result_not_fortune"],
         "label": {
             "zh": "十神标签在这里为什么只是关系元数据，而不是断语？",
@@ -178,7 +178,7 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
         "required": ["chart"],
         "required_facts": ["income_signals", "chart_anchor", "relations"],
         "answer_scope": "explain_income_structure_signal_not_wealth_prediction",
-        "score": 70,
+        "score": 89,
         "related_questions": ["q_income_factors", "q_signal_combination", "follow_rule_basis"],
         "label": {
             "zh": "我的收入稳定性结构如何？",
@@ -290,7 +290,7 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
         "required": ["time_relation"],
         "required_facts": ["time_context", "relations"],
         "answer_scope": "separate_timing_relations_from_natal_structure",
-        "score": 72,
+        "score": 83,
         "related_questions": ["q_time_context", "q_luck_flow_layers", "q_time_not_inference"],
         "label": {
             "zh": "大运、流年和本命发生关系时，哪些只算背景，哪些才算本命结构？",
@@ -745,7 +745,7 @@ def _chart_facts(chart: Dict[str, Any], time_context: Dict[str, Any]) -> Dict[st
         "relation_pairs": sorted(relation_pairs),
         "relation_types": relation_types,
         "has_clash": bool(relation_pairs_by_type.get("clash")),
-        "has_combination": bool(relation_pairs_by_type.get("combination")),
+        "has_combination": bool(relation_pairs_by_type.get("combination") or relation_pairs_by_type.get("three_harmony") or relation_pairs_by_type.get("three_meeting")),
         "has_harm": bool(relation_pairs_by_type.get("harm")),
         "has_break": bool(relation_pairs_by_type.get("break")),
         "has_three_harmony": _has_three_harmony(branches),
@@ -1034,7 +1034,7 @@ def compose_guided_question_answer(
     elif answer_kind == "income_structure":
         if income_signals:
             signal_text = "；".join(f"{_income_signal_label(key)}是{value}" for key, value in income_signals.items() if key and value)
-            paragraphs.append(f"你问的是收入稳定性结构。当前确定性规则给出的相关信号是：{signal_text}。这些信号说明结构状态，不等同于财运预测。")
+            paragraphs.append(f"你问的是收入稳定性结构。当前可见的相关信号是：{signal_text}。这些信号说明结构状态；具体财富事件需要另按时间与事实条件分析。")
         else:
             paragraphs.append("你问的是收入稳定性结构，但当前没有取到可用的收入结构信号，所以这里不能硬生成结论。")
     elif answer_kind == "metadata_boundary":
@@ -1313,6 +1313,8 @@ def _relation_type_phrase(value: str) -> str:
     labels = {
         "clash": "出现冲：",
         "combination": "出现合：",
+        "three_harmony": "出现三合：",
+        "three_meeting": "出现三会：",
         "harm": "出现害：",
         "break": "出现破：",
         "unknown": "出现关系：",
@@ -1326,8 +1328,8 @@ def _time_context_sentence(time_context: Dict[str, Any]) -> str:
     luck_pillar = luck.get("pillar") or "未取到大运柱"
     flow_pillar = flow.get("pillar") or "未取到流年柱"
     flow_year = flow.get("year") or ""
-    luck_rel = _relation_map_text(dict(luck.get("relations") or {}))
-    flow_rel = _relation_map_text(dict(flow.get("relations") or {}))
+    luck_rel = _relation_map_text(dict(luck.get("relations") or luck.get("relations_with_natal") or {}))
+    flow_rel = _relation_map_text(dict(flow.get("relations") or flow.get("relations_with_natal") or {}))
     return f"时间背景上，当前大运显示为{luck_pillar}，流年显示为{flow_year}{flow_pillar}；大运关系是{luck_rel}，流年关系是{flow_rel}。这些先作为时间背景阅读。"
 
 
@@ -1650,7 +1652,15 @@ def _append_time_relation_items(items: List[Dict[str, Any]], scope: str, payload
     rel = payload.get("relations_with_natal") if isinstance(payload.get("relations_with_natal"), dict) else {}
     pillar = (payload.get("pillar") or {}).get("display") if isinstance(payload.get("pillar"), dict) else ""
     scope_label = _l("当前大运" if scope == "luck_cycle" else "流年", "Current luck cycle" if scope == "luck_cycle" else "Flow year", "현재 대운" if scope == "luck_cycle" else "세운")
-    for key, relation_label in [("clashes", _relation_type_label("six_clash")), ("combinations", _relation_type_label("six_combination"))]:
+    relation_labels = [
+        ("clashes", _relation_type_label("six_clash")),
+        ("combinations", _relation_type_label("six_combination")),
+        ("harm", _relation_type_label("harm")),
+        ("break", _relation_type_label("break")),
+        ("three_harmony", _relation_type_label("three_harmony")),
+        ("three_meeting", _relation_type_label("three_meeting")),
+    ]
+    for key, relation_label in relation_labels:
         for value in _as_list(rel.get(key)):
             text = str(value or "")
             if not text:
@@ -1915,6 +1925,10 @@ def _relation_type_label(relation_type: str) -> Dict[str, str]:
         return _l("冲", "Clash", "충")
     if normalized == "combination":
         return _l("合", "Combination", "합")
+    if normalized == "three_harmony":
+        return _l("三合", "Three harmony", "삼합")
+    if normalized == "three_meeting":
+        return _l("三会", "Three meeting", "삼회")
     if normalized == "harm":
         return _l("害", "Harm", "해")
     if normalized == "break":
@@ -2539,8 +2553,12 @@ def _normalize_relation_type(raw: str) -> str:
     raw_type = str(raw or "").strip()
     if raw_type in {"six_clash", "clash", "clashes"}:
         return "clash"
-    if raw_type in {"six_combination", "combination", "combinations", "three_harmony", "three_meeting"}:
+    if raw_type in {"six_combination", "combination", "combinations"}:
         return "combination"
+    if raw_type in {"three_harmony"}:
+        return "three_harmony"
+    if raw_type in {"three_meeting"}:
+        return "three_meeting"
     if raw_type in {"six_harm", "harm"}:
         return "harm"
     if raw_type in {"break", "penalty", "punishment"}:

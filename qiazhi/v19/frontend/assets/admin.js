@@ -3,6 +3,7 @@ const $ = (id) => document.getElementById(id);
 let current = null;
 let models = [];
 let chatModels = [];
+let latestSyntheticDrafts = [];
 
 loadSettings();
 loadKnowledge();
@@ -158,6 +159,45 @@ $("createKnowledgeDraft").addEventListener("click", async () => {
 });
 
 $("reloadKnowledgeDrafts").addEventListener("click", () => loadKnowledgeDrafts());
+
+$("seedP14ReviewBatches").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/knowledge-review-batches/seed-p14", {});
+  $("kbReviewBatchStatus").textContent = `P14 batches: created ${result.created_count || 0} · skipped ${result.skipped_count || 0} · no draft status mutation`;
+  await loadKnowledgeReviewBatches();
+});
+
+$("createKbReviewBatch").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/knowledge-review-batches", {
+    batch_name: $("kbReviewBatchName").value,
+    knowledge_id_prefix: $("kbReviewBatchPrefix").value,
+    risk_levels: $("kbReviewBatchRiskLevels").value,
+    draft_ids: $("kbReviewBatchDraftIds").value,
+    recommended_action: $("kbReviewBatchAction").value,
+    actor_role: "admin",
+  });
+  $("kbReviewBatchStatus").textContent = `batch: ${result.item?.batch_id || result.code || ""} · ${result.item?.summary?.draft_count || result.message || ""}`;
+  await loadKnowledgeReviewBatches();
+});
+
+$("reloadKbReviewBatches").addEventListener("click", () => loadKnowledgeReviewBatches());
+
+$("createKbBatchProposalDrafts").addEventListener("click", async () => {
+  const batchId = $("kbProposalBatchId").value.trim();
+  if (!batchId) {
+    $("kbBatchProposalStatus").textContent = "请先填写 Batch ID / Key。";
+    return;
+  }
+  const result = await postJson(`/api/lab/knowledge-review-batches/${encodeURIComponent(batchId)}/proposal-drafts`, {
+    actor_role: $("kbProposalActorRole").value,
+    source_question_key: $("kbProposalSourceQuestion").value,
+    note: $("kbProposalNote").value,
+  });
+  const item = result.item || {};
+  $("kbBatchProposalStatus").textContent = `${item.status || result.code || "proposal_drafts"} · rules ${item.summary?.rule_proposal_count || 0} · questions ${item.summary?.question_proposal_count || 0} · blocked ${item.summary?.blocked_count || 0}`;
+  await Promise.all([loadKnowledgeBatchProposalRuns(), loadBaziRuleProposals(), loadGuidedQuestionProposals()]);
+});
+
+$("reloadKbBatchProposalRuns").addEventListener("click", () => loadKnowledgeBatchProposalRuns());
 
 $("seedCurrentKnowledgeDrafts").addEventListener("click", async () => {
   const result = await postJson("/api/admin/bazi-source-archive/knowledge-drafts/seed-current", { force: false });
@@ -337,6 +377,21 @@ $("recordBaziRuleVersion").addEventListener("click", async () => {
   await Promise.all([loadBaziRuleProposals(), loadBaziRuleVersions()]);
 });
 
+$("createGovernanceRelease").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/governance-releases", {
+    knowledge_draft_ids: $("releaseKnowledgeDraftIds").value,
+    guided_question_version_ids: $("releaseGqVersionIds").value,
+    bazi_rule_version_ids: $("releaseRuleVersionIds").value,
+    active_revision_ids: $("releaseActiveRevisionIds").value,
+    note: $("releaseNote").value,
+    actor_role: "admin",
+  });
+  $("governanceReleaseStatus").textContent = `release: ${result.item?.release_id || result.code || ""} · ${result.item?.status || result.message || ""} · P11 gate required`;
+  await loadGovernanceReleases();
+});
+
+$("reloadGovernanceReleases").addEventListener("click", () => loadGovernanceReleases());
+
 $("ingestBaziRuleDb").addEventListener("click", async () => {
   const result = await postJson("/api/admin/bazi-rule-db/ingest-current", { force: false, enable_engine: true });
   $("ruleDbStatus").textContent = `ingested: +${result.imported_count || 0} / updated ${result.updated_count || 0} · blocked ${result.blocked_count || 0} · rules ${result.rule_count || 0}`;
@@ -375,6 +430,10 @@ $("runValidation").addEventListener("click", async () => {
   renderValidationResults(run.results || []);
 });
 
+$("runSyntheticCollision").addEventListener("click", () => runSyntheticCollisionReview());
+
+$("reloadSyntheticPromotions").addEventListener("click", () => loadSyntheticPromotions());
+
 $("loadLabels").addEventListener("click", () => loadLabels());
 
 async function loadSettings() {
@@ -412,6 +471,8 @@ async function loadSourceArchive() {
   renderSourceArchive(sources.items || []);
   await loadSourceExcerpts();
   await loadKnowledgeDrafts();
+  await loadKnowledgeReviewBatches();
+  await loadKnowledgeBatchProposalRuns();
 }
 
 async function loadSourceGovernanceOverview() {
@@ -434,6 +495,18 @@ async function loadKnowledgeDrafts() {
   renderKnowledgeDrafts(result.items || []);
 }
 
+async function loadKnowledgeReviewBatches() {
+  const result = await fetch("/api/lab/knowledge-review-batches").then((response) => response.json());
+  $("kbReviewBatchStatus").textContent = `knowledge review batches: ${result.count || 0} · no draft status mutation`;
+  renderKnowledgeReviewBatches(result.items || []);
+}
+
+async function loadKnowledgeBatchProposalRuns() {
+  const result = await fetch("/api/lab/knowledge-batch-proposal-runs").then((response) => response.json());
+  $("kbBatchProposalStatus").textContent = `P16 runs: ${result.count || 0} · proposal drafts only`;
+  renderKnowledgeBatchProposalRuns(result.items || []);
+}
+
 async function loadLab() {
   const status = await fetch("/api/lab/status").then((response) => response.json());
   $("feedbackStatus").textContent = `feedback: ${status.counts?.feedback || 0} · guardrail: no auto learning`;
@@ -441,10 +514,13 @@ async function loadLab() {
   $("revisionStatus").textContent = `revision proposals: ${status.counts?.revision_proposals || 0} · validation gated · no runtime mutation`;
   $("promotionStatus").textContent = `review queue: ${status.counts?.promotion_requests || 0} · no auto promotion`;
   $("validationStatus").textContent = `validation cases: ${status.counts?.validation_cases || 0}`;
+  $("syntheticPromotionStatus").textContent = `synthetic promotion candidates: ${status.counts?.synthetic_promotion_candidates || 0} · P11 regression gate required`;
   $("guidedQuestionStatusLine").textContent = `guided question feedback: ${status.counts?.guided_question_feedback || 0} · reviews: ${status.counts?.guided_question_reviews || 0}`;
   $("gqProposalStatus").textContent = `guided question proposals: ${status.counts?.guided_question_proposals || 0} · versions: ${status.counts?.guided_question_library_versions || 0}`;
   $("baziRuleStatus").textContent = `bazi rule proposals: ${status.counts?.bazi_rule_proposals || 0} · versions: ${status.counts?.bazi_rule_versions || 0}`;
-  await Promise.all([loadFeedback(), loadGuidedQuestionFeedback(), loadAnswerQuality(), loadRuleImpacts(), loadRevisions(), loadActiveRevisions(), loadGuidedQuestionProposals(), loadGuidedQuestionVersions(), loadBaziRuleProposals(), loadBaziRuleVersions(), loadBaziRuleDb(), loadPromotions(), loadValidationCases(), loadLabels()]);
+  $("governanceReleaseStatus").textContent = `governance releases: ${status.counts?.governance_releases || 0} · manifest only`;
+  $("kbBatchProposalStatus").textContent = `P16 runs: ${status.counts?.knowledge_batch_proposal_runs || 0} · R1 proposal draft gate`;
+  await Promise.all([loadFeedback(), loadGuidedQuestionFeedback(), loadAnswerQuality(), loadRuleImpacts(), loadRevisions(), loadActiveRevisions(), loadGuidedQuestionProposals(), loadGuidedQuestionVersions(), loadBaziRuleProposals(), loadBaziRuleVersions(), loadGovernanceReleases(), loadBaziRuleDb(), loadPromotions(), loadValidationCases(), loadLabels(), loadSyntheticCollisionReview(), loadSyntheticPromotions()]);
 }
 
 async function loadFeedback() {
@@ -554,6 +630,12 @@ async function loadBaziRuleVersions() {
   renderBaziRuleVersions(result.items || []);
 }
 
+async function loadGovernanceReleases() {
+  const result = await fetch("/api/lab/governance-releases").then((response) => response.json());
+  $("governanceReleaseStatus").textContent = `governance releases: ${result.count || 0} · manifest only · no runtime mutation`;
+  renderGovernanceReleases(result.items || []);
+}
+
 async function loadBaziRuleDb() {
   const params = new URLSearchParams();
   const domain = $("ruleDbDomainFilter").value;
@@ -574,6 +656,25 @@ async function loadBaziRuleDb() {
 async function loadValidationCases() {
   const result = await fetch("/api/lab/validation/cases").then((response) => response.json());
   renderValidationCases(result.items || []);
+}
+
+async function loadSyntheticCollisionReview() {
+  const result = await fetch("/api/lab/synthetic-collision").then((response) => response.json());
+  renderSyntheticCollisionReview(result);
+}
+
+async function runSyntheticCollisionReview() {
+  $("syntheticCollisionStatus").textContent = "running P11 synthetic collision...";
+  $("syntheticCollisionFailures").innerHTML = "";
+  $("syntheticCollisionDrafts").innerHTML = "";
+  const result = await postJson("/api/lab/synthetic-collision/run", {});
+  renderSyntheticCollisionReview(result);
+}
+
+async function loadSyntheticPromotions() {
+  const result = await fetch("/api/lab/synthetic-promotions").then((response) => response.json());
+  $("syntheticPromotionStatus").textContent = `synthetic promotion candidates: ${result.count || 0} · no auto promotion`;
+  renderSyntheticPromotions(result.items || []);
 }
 
 async function loadLabels() {
@@ -913,6 +1014,48 @@ function renderKnowledgeDrafts(items) {
   });
 }
 
+function renderKnowledgeReviewBatches(items) {
+  const box = $("kbReviewBatchList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No knowledge review batches yet.</div>";
+    return;
+  }
+  box.innerHTML = items.map((item) => {
+    const summary = item.summary || {};
+    const byRisk = summary.by_risk_level || {};
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.batch_key || item.batch_id || "")}</span><strong>${escapeHtml(item.status || "")}</strong></div>
+      <h3>${escapeHtml(item.batch_name || "")} · ${escapeHtml(String(summary.draft_count || 0))} draft(s)</h3>
+      <p>${escapeHtml(item.note || item.recommended_action || "")}</p>
+      <div class="knowledge-guard">risk: ${escapeHtml(JSON.stringify(byRisk))} · domains: ${escapeHtml((item.domains || []).join(", ") || "-")}</div>
+      <div class="knowledge-guard">action: ${escapeHtml(item.recommended_action || "")} · no draft status mutation</div>
+      <div class="knowledge-guard">knowledge: ${escapeHtml((item.knowledge_ids || []).slice(0, 10).join(", ") || "-")}</div>
+    </article>`;
+  }).join("");
+}
+
+function renderKnowledgeBatchProposalRuns(items) {
+  const box = $("kbBatchProposalRunList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No P16 proposal runs yet.</div>";
+    return;
+  }
+  box.innerHTML = items.map((item) => {
+    const summary = item.summary || {};
+    const ruleIds = (item.rule_proposals || []).map((row) => row.proposal_id || row.rule_id).filter(Boolean);
+    const questionIds = (item.guided_question_proposals || []).map((row) => row.proposal_id || row.question_key).filter(Boolean);
+    const blocked = (item.blocked_items || []).map((row) => row.knowledge_id || row.draft_id).filter(Boolean);
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.batch_key || item.batch_id || "")}</span><strong>${escapeHtml(item.status || "")}</strong></div>
+      <h3>${escapeHtml(item.run_id || "")} · rules ${escapeHtml(String(summary.rule_proposal_count || 0))} · questions ${escapeHtml(String(summary.question_proposal_count || 0))}</h3>
+      <p>${escapeHtml(item.note || item.blocked_reason || "")}</p>
+      <div class="knowledge-guard">rule proposals: ${escapeHtml(ruleIds.slice(0, 8).join(", ") || "-")}</div>
+      <div class="knowledge-guard">question proposals: ${escapeHtml(questionIds.slice(0, 4).join(", ") || "-")}</div>
+      <div class="knowledge-guard">blocked: ${escapeHtml(blocked.slice(0, 8).join(", ") || "-")} · no runtime mutation</div>
+    </article>`;
+  }).join("");
+}
+
 function renderFeedback(items) {
   const box = $("feedbackList");
   if (!items.length) {
@@ -1039,6 +1182,93 @@ function renderValidationResults(items) {
     <h3>${item.passed ? "PASS" : "FAIL"}</h3>
     <p>${escapeHtml(JSON.stringify(item.observed || {}))}</p>
   </article>`).join("");
+}
+
+function renderSyntheticCollisionReview(payload) {
+  const run = payload.run || payload;
+  const summary = run.summary || {};
+  const review = run.collision_review || {};
+  const report = run.evolution_report || {};
+  const cases = run.cases || [];
+  const failures = cases.filter((item) => item.status === "fail");
+  $("syntheticCollisionStatus").textContent = `P11 ${run.status || "-"} · ${summary.passed || 0}/${summary.total || 0} passed · failures ${summary.failed || 0} · analyst review required for drafts`;
+
+  $("syntheticCollisionSummary").innerHTML = `<article class="knowledge-item">
+    <div class="knowledge-top"><span>${escapeHtml(payload.matrix || "P11_SYNTHETIC_EXPANSION")}</span><strong>${escapeHtml(run.validation_run || "")}</strong></div>
+    <h3>${escapeHtml(String(summary.total || 0))} synthetic case(s)</h3>
+    <p>stable ${escapeHtml(String((review.stable_structures || []).length))} · misfire ${escapeHtml(String((review.misfire_structures || []).length))} · missing ${escapeHtml(String((review.missing_structures || []).length))}</p>
+    <div class="knowledge-guard">${(run.boundaries || []).map((item) => escapeHtml(item)).join(" · ")}</div>
+  </article>`;
+
+  if (!failures.length) {
+    $("syntheticCollisionFailures").innerHTML = "<div class=\"knowledge-empty\">No failing synthetic cases. Failed cases will appear here for analyst review.</div>";
+  } else {
+    $("syntheticCollisionFailures").innerHTML = failures.map((item) => {
+      const failureText = (item.failures || []).map((failure) => `${failure.failure_type || ""}:${failure.expected || failure.forbidden || failure.message || ""}`).join(" · ");
+      const tags = (item.knowledge_tags || item.observed?.standardized_knowledge_tags || []).join(", ");
+      return `<article class="knowledge-item">
+        <div class="knowledge-top"><span>${escapeHtml(item.case_id || "")}</span><strong>${escapeHtml(item.structure_label || "")}</strong></div>
+        <h3>${escapeHtml(item.collision_focus || "")}</h3>
+        <p>${escapeHtml(failureText || "failure recorded")}</p>
+        <div class="knowledge-guard">knowledge tags: ${escapeHtml(tags || "-")}</div>
+        <div class="knowledge-guard">preview: ${escapeHtml(item.observed?.text_preview || "")}</div>
+      </article>`;
+    }).join("");
+  }
+
+  const audits = report.audit_records || [];
+  const drafts = report.draft_suggestions || [];
+  latestSyntheticDrafts = drafts;
+  if (!audits.length && !drafts.length) {
+    $("syntheticCollisionDrafts").innerHTML = "<div class=\"knowledge-empty\">No audit or draft proposal generated. Matrix is currently stable.</div>";
+    return;
+  }
+  const auditCards = audits.map((item) => `<article class="knowledge-item">
+    <div class="knowledge-top"><span>${escapeHtml(item.audit_id || "")}</span><strong>${escapeHtml(item.attribution_layer || "")}</strong></div>
+    <h3>${escapeHtml(item.case_id || "")}</h3>
+    <p>${escapeHtml((item.failure_types || []).join(" · "))}</p>
+    <div class="knowledge-guard">review: ${escapeHtml(item.review_status || "")} · ${escapeHtml((item.guardrails || []).join(" · "))}</div>
+  </article>`);
+  const draftCards = drafts.map((item, index) => `<article class="knowledge-item">
+    <div class="knowledge-top"><span>${escapeHtml(item.proposal_id || "")}</span><strong>${escapeHtml(item.draft_type || item.target || "")}</strong></div>
+    <h3>${escapeHtml(item.case_id || "")}</h3>
+    <p>${escapeHtml(item.suggested_action || "")}</p>
+    <div class="knowledge-guard">layer: ${escapeHtml(item.attribution_layer || "")} · scope: ${escapeHtml(item.proposal_scope || "")}</div>
+    <div class="button-row">
+      <button type="button" class="secondary" data-synthetic-draft-index="${escapeHtml(String(index))}">Create Promotion Candidate</button>
+    </div>
+  </article>`);
+  $("syntheticCollisionDrafts").innerHTML = auditCards.concat(draftCards).join("");
+  $("syntheticCollisionDrafts").querySelectorAll("[data-synthetic-draft-index]").forEach((button) => {
+    button.addEventListener("click", () => createSyntheticPromotionFromDraft(Number(button.dataset.syntheticDraftIndex || 0)));
+  });
+}
+
+function renderSyntheticPromotions(items) {
+  const box = $("syntheticPromotionList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No synthetic promotion candidates.</div>";
+    return;
+  }
+  box.innerHTML = items.map((item) => {
+    const review = item.review_decision || {};
+    const downstream = item.downstream_proposal || {};
+    const canReview = item.status === "draft_review" || item.status === "analyst_review";
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.candidate_id || "")}</span><strong>${escapeHtml(item.status || "")}</strong></div>
+      <h3>${escapeHtml(item.case_id || "")} · ${escapeHtml(item.draft_type || item.target || "")}</h3>
+      <p>${escapeHtml(item.suggested_action || "")}</p>
+      <div class="knowledge-guard">decision: ${escapeHtml(review.decision || "pending")} · layer: ${escapeHtml(item.attribution_layer || "")}</div>
+      <div class="knowledge-guard">downstream: ${escapeHtml(downstream.kind || "-")} ${escapeHtml(downstream.proposal_id || downstream.draft_id || downstream.knowledge_id || "")}</div>
+      <div class="knowledge-guard">gate: P11 regression required before active/version record · runtime_mutation=false</div>
+      <div class="button-row">
+        <button type="button" data-synthetic-promotion-review="${escapeHtml(item.candidate_id || "")}" ${canReview ? "" : "disabled"}>Apply Decision</button>
+      </div>
+    </article>`;
+  }).join("");
+  box.querySelectorAll("[data-synthetic-promotion-review]").forEach((button) => {
+    button.addEventListener("click", () => reviewSyntheticPromotion(button.dataset.syntheticPromotionReview || ""));
+  });
 }
 
 function renderLabels(terms) {
@@ -1213,6 +1443,27 @@ function renderBaziRuleVersions(items) {
   </article>`).join("");
 }
 
+function renderGovernanceReleases(items) {
+  const box = $("governanceReleaseList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No governance release manifests yet.</div>";
+    return;
+  }
+  box.innerHTML = items.map((item) => {
+    const summary = item.summary || {};
+    const byType = summary.by_artifact_type || {};
+    const gate = item.p13_regression_gate || {};
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.release_id || "")}</span><strong>${escapeHtml(item.status || "")}</strong></div>
+      <h3>${escapeHtml(String(summary.artifact_count || 0))} artifact(s) · ${escapeHtml(item.release_type || "")}</h3>
+      <p>${escapeHtml(item.note || "")}</p>
+      <div class="knowledge-guard">knowledge ${escapeHtml(String(byType.knowledge_drafts || 0))} · question versions ${escapeHtml(String(byType.guided_question_versions || 0))} · rule versions ${escapeHtml(String(byType.bazi_rule_versions || 0))} · active revisions ${escapeHtml(String(byType.active_revisions || 0))}</div>
+      <div class="knowledge-guard">P11 gate: ${escapeHtml(String(Boolean(gate.passed)))} · ${escapeHtml(JSON.stringify(gate.summary || {}))}</div>
+      <div class="knowledge-guard">runtime_mutation=${escapeHtml(String(Boolean(item.runtime_mutation)))} · ${(item.guardrails || []).map(escapeHtml).join(" · ")}</div>
+    </article>`;
+  }).join("");
+}
+
 function readableStructuralValue(value) {
   if (value === null || value === undefined || value === "") return "-";
   if (Array.isArray(value)) return value.map(readableStructuralValue).join(" / ");
@@ -1280,6 +1531,27 @@ function renderBaziRuleDb(items) {
     <div class="knowledge-guard">status: ${escapeHtml(item.status || "")} · engine_enabled: ${escapeHtml(String(Boolean(item.engine_enabled)))} · signal: ${escapeHtml((item.output_contract || {}).signal || "")}</div>
     <div class="knowledge-guard">source draft: ${escapeHtml(item.source_draft_id || "")} · category: ${escapeHtml(item.category || "")}</div>
   </article>`).join("");
+}
+
+async function createSyntheticPromotionFromDraft(index) {
+  const draft = latestSyntheticDrafts[index];
+  if (!draft) return;
+  const result = await postJson("/api/lab/synthetic-promotions", { draft });
+  $("syntheticPromotionStatus").textContent = `candidate: ${result.item?.candidate_id || result.code || ""} · review required · no auto learning`;
+  await loadSyntheticPromotions();
+}
+
+async function reviewSyntheticPromotion(candidateId) {
+  if (!candidateId) return;
+  const result = await postJson(`/api/lab/synthetic-promotions/${encodeURIComponent(candidateId)}/review`, {
+    decision: $("syntheticPromotionDecision").value,
+    note: $("syntheticPromotionNote").value,
+    actor_role: "admin",
+  });
+  const item = result.item || {};
+  const downstream = result.downstream || item.downstream_proposal || {};
+  $("syntheticPromotionStatus").textContent = `review: ${item.candidate_id || candidateId} · ${item.status || result.code || ""} · downstream ${downstream.kind || "-"} ${downstream.proposal_id || downstream.draft_id || ""}`;
+  await Promise.all([loadSyntheticPromotions(), loadKnowledgeDrafts(), loadGuidedQuestionProposals(), loadBaziRuleProposals()]);
 }
 
 async function handleBaziRuleProposalAction(proposalId, action) {
