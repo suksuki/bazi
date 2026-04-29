@@ -48,7 +48,7 @@ Reasons:
 chart algorithm is prototype-grade
 solar-term boundaries are approximate
 luck-cycle start age is approximate
-lunar input unsupported
+lunar input is converted to solar before structure calculation
 timezone / birthplace not modeled
 knowledge store is evidence-only
 income_stability is bounded structure signal only

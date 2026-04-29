@@ -212,7 +212,19 @@
           </div>
           <div id="answerQualityStatus" class="status-line">未加载</div>
           <div id="answerQualitySummary" class="knowledge-list"></div>
-          <div id="answerQualityList" class="knowledge-list"></div>
+      <div id="answerQualityList" class="knowledge-list"></div>
+
+      <h3 class="admin-subhead">Structural Rule Signals</h3>
+      <p class="muted">P9 Review: 从 Rule DB 和当前命盘事实生成结构信号。只用于问题推荐、回答解释和审计，不改变收入稳定性或任何结果。</p>
+      <div class="grid two">
+        <label>Profile ID (optional)<input id="structuralSignalProfileId" placeholder="empty = demo birth input" /></label>
+        <label>Selected Year<input id="structuralSignalYear" type="number" value="2026" /></label>
+      </div>
+      <div class="button-row">
+        <button id="loadStructuralSignals">Review Structural Signals</button>
+      </div>
+      <div id="structuralSignalStatus" class="pill-row"></div>
+      <div id="structuralSignalList" class="knowledge-list"></div>
           <div class="button-row">
             <button type="button" id="reloadRuleImpacts" class="secondary">刷新 Rule Impact Mapping</button>
             <button type="button" id="filterIncomeImpacts" class="secondary">只看 income_stability</button>

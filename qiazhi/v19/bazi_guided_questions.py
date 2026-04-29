@@ -3,11 +3,11 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Set, Tuple
 
 from v19.agent.structure import THREE_HARMONIES
-from v19.bazi_rule_db import list_bazi_rules
+from v19.bazi_rule_db import build_structural_rule_signals
 from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem
 
 
-QUESTION_REGISTRY_VERSION = "v19.question_registry.p5.structural_signals.v1"
+QUESTION_REGISTRY_VERSION = "v19.question_registry.p9.structural_rule_signals.v1"
 QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
     "q_structure_overview": {
         "theme": "structure_basis",
@@ -383,18 +383,17 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
 def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
     chart = dict(agent_data.get("chart") or {})
     time_context = dict(agent_data.get("time_context") or {})
-    rules = [row for row in list_bazi_rules().get("items", []) if row.get("engine_enabled") is True]
+    inference_context = dict(agent_data.get("inference_context") or {})
     facts = _chart_facts(chart, time_context)
     signals: List[Dict[str, Any]] = []
     questions: List[Dict[str, Any]] = _registry_questions(facts)
     for signal in _structural_signals_from_facts(facts):
         signals.append(signal)
         questions.extend(_questions_for_structural_signal(signal, facts))
-    for rule in rules:
-        match = _match_rule(rule, facts)
-        if not match.get("matched"):
+    rule_signal_report = build_structural_rule_signals(chart, time_context, inference_context)
+    for signal in rule_signal_report.get("signals") or []:
+        if not isinstance(signal, dict):
             continue
-        signal = _signal_from_rule(rule, match)
         signals.append(signal)
         questions.extend(_questions_from_signal(signal, facts))
     questions = _dedupe_questions(questions)
@@ -403,6 +402,11 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         "available": True,
         "runtime_scope": "guided_questions_only_no_inference_mutation",
         "rule_signal_count": len(signals),
+        "rule_signal_adapter": {
+            "version": rule_signal_report.get("version") or "",
+            "count": rule_signal_report.get("count") or 0,
+            "runtime_scope": rule_signal_report.get("runtime_scope") or "",
+        },
         "question_count": len(questions),
         "signals": signals[:24],
         "questions": questions[:10],
@@ -1682,6 +1686,10 @@ def _signal_user_label(category: str) -> Dict[str, str]:
         "five_element_relation": _l("五行关系", "Five-element relation", "오행 관계"),
         "stem_relation": _l("天干关系", "Stem relation", "천간 관계"),
         "strength_model": _l("日主强弱证据", "Day-master strength evidence", "일간 강약 근거"),
+        "structure_anchor": _l("结构基点", "Structure anchor", "구조 기준점"),
+        "time_boundary": _l("时间结构边界", "Time boundary", "시간 구조 경계"),
+        "wealth_boundary": _l("财星边界", "Wealth-star boundary", "재성 경계"),
+        "adapter_boundary": _l("规则信号边界", "Rule-signal boundary", "규칙 신호 경계"),
     }
     return labels.get(category, _l("结构依据", "Structural basis", "구조 근거"))
 
@@ -1999,6 +2007,54 @@ def _questions_from_signal(signal: Dict[str, Any], facts: Dict[str, Any]) -> Lis
                 },
                 signal,
                 ["q_income_factors", "q_read_result_not_fortune"],
+            )
+        )
+    elif category == "structure_anchor":
+        questions.append(
+            _question(
+                "kbq_structure_anchor_chain",
+                "structure_basis",
+                "beginner",
+                86,
+                {
+                    "zh": "这张命盘应该先从日主、月令和四柱位置怎样建立结构基点？",
+                    "en": "How should this chart establish its structural baseline from day master, month command, and pillar positions?",
+                    "ko": "이 명식은 일간, 월령, 사주 위치에서 구조 기준을 어떻게 세워야 하나요?",
+                },
+                signal,
+                ["q_day_master_month_anchor", "q_month_command_anchor", "q_structure_overview"],
+            )
+        )
+    elif category in {"time_boundary", "timing_context"}:
+        questions.append(
+            _question(
+                "kbq_time_layer_boundary",
+                "time_context",
+                "beginner",
+                82,
+                {
+                    "zh": "当前大运或流年属于哪一层时间背景，为什么不直接改结果？",
+                    "en": "Which time-context layer does the current luck or flow year belong to, and why does it not directly change the result?",
+                    "ko": "현재 대운 또는 세운은 어떤 시간 배경층이며 왜 결과를 직접 바꾸지 않나요?",
+                },
+                signal,
+                ["q_time_context_boundary", "q_time_not_inference", "q_luck_flow_layers"],
+            )
+        )
+    elif category == "wealth_boundary":
+        questions.append(
+            _question(
+                "kbq_wealth_metadata_boundary",
+                "income_stability",
+                "intermediate",
+                74,
+                {
+                    "zh": "财星在这里为什么先读作关系元数据，而不是财富断语？",
+                    "en": "Why is the wealth star read first as relationship metadata here, not a wealth verdict?",
+                    "ko": "여기서 재성은 왜 재물 단정이 아니라 관계 메타데이터로 먼저 읽나요?",
+                },
+                signal,
+                ["q_ten_god_metadata", "q_income_path_structure", "q_read_result_not_fortune"],
             )
         )
     elif domain == "income_stability":

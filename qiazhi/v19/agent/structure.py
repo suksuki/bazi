@@ -91,8 +91,14 @@ class BirthInput:
     month: int
     day: int
     hour: int
+    minute: int
     gender: Literal["male", "female"]
     calendar_type: Literal["solar", "lunar"] = "solar"
+    lunar_is_leap_month: bool = False
+
+
+class LunarConversionUnavailable(RuntimeError):
+    pass
 
 
 def build_agent_turn(payload: Dict[str, Any]) -> Dict[str, Any]:
@@ -100,17 +106,28 @@ def build_agent_turn(payload: Dict[str, Any]) -> Dict[str, Any]:
     selected_year = _int(payload.get("selected_year"), 2025)
     message = str(payload.get("message") or "").strip()
 
-    if birth.calendar_type != "solar":
+    try:
+        effective_birth, calendar_conversion = _effective_solar_birth(birth)
+    except LunarConversionUnavailable:
         return {
             "ok": False,
-            "code": "lunar_calendar_not_supported",
-            "message": "V19 standalone agent currently supports solar input only.",
+            "code": "lunar_calendar_conversion_unavailable",
+            "message": "阴历换算组件不可用，暂时无法处理阴历出生日期。",
+        }
+    except Exception as exc:
+        return {
+            "ok": False,
+            "code": "invalid_lunar_input",
+            "message": f"阴历出生日期无法换算为阳历，请检查月份、日期和是否为闰月。({exc})",
         }
 
-    chart = build_chart(birth)
+    chart = build_chart(effective_birth)
+    if calendar_conversion:
+        chart["calendar_note"] = "lunar_converted_to_solar_v17_compatible_lunar_python_then_solar_mvp_approximate_jie_boundaries"
+        chart["calendar_conversion"] = calendar_conversion
     flow_year = build_flow_year(chart, selected_year)
-    luck_cycles = build_luck_cycles(chart, birth)
-    age = selected_year - birth.year
+    luck_cycles = build_luck_cycles(chart, effective_birth)
+    age = selected_year - effective_birth.year
     active_luck_cycle = next((cycle for cycle in luck_cycles["cycles"] if cycle["start_age"] <= age <= cycle["end_age"]), None)
 
     return {
@@ -120,6 +137,13 @@ def build_agent_turn(payload: Dict[str, Any]) -> Dict[str, Any]:
             "mode": "v19_standalone_agent",
             "boundary": "structure_first_no_prediction",
             "birth_input": birth.__dict__,
+            "birth_input_solar": effective_birth.__dict__,
+            "calendar_conversion": calendar_conversion
+            or {
+                "source": "direct_solar_input",
+                "input_calendar_type": "solar",
+                "effective_calendar_type": "solar",
+            },
             "chart": chart,
             "time_context": {
                 "natal": chart,
@@ -196,20 +220,77 @@ def build_luck_cycles(chart: Dict[str, Any], birth: BirthInput) -> Dict[str, Any
 
 
 def _birth_input(raw: Dict[str, Any]) -> BirthInput:
+    calendar = str(raw.get("calendar_type") or raw.get("calendar") or "solar").strip().lower()
+    calendar_type: Literal["solar", "lunar"] = "lunar" if calendar == "lunar" else "solar"
     return BirthInput(
         year=_int(raw.get("year"), 1990),
         month=_int(raw.get("month"), 5),
         day=_int(raw.get("day"), 12),
         hour=_int(raw.get("hour"), 10),
+        minute=_int(raw.get("minute"), 0),
         gender="female" if raw.get("gender") == "female" else "male",
-        calendar_type="lunar" if raw.get("calendar_type") == "lunar" else "solar",
+        calendar_type=calendar_type,
+        lunar_is_leap_month=calendar_type == "lunar" and _boolish(raw.get("lunar_is_leap_month") or raw.get("is_lunar_leap_month")),
     )
+
+
+def _effective_solar_birth(birth: BirthInput) -> tuple[BirthInput, Dict[str, Any] | None]:
+    if birth.calendar_type != "lunar":
+        return birth, None
+
+    try:
+        from lunar_python import Lunar
+    except Exception as exc:
+        raise LunarConversionUnavailable(str(exc)) from exc
+
+    lunar_month = -birth.month if birth.lunar_is_leap_month else birth.month
+    lunar = Lunar.fromYmdHms(birth.year, lunar_month, birth.day, birth.hour, birth.minute, 0)
+    solar = lunar.getSolar()
+    effective = BirthInput(
+        year=int(solar.getYear()),
+        month=int(solar.getMonth()),
+        day=int(solar.getDay()),
+        hour=int(solar.getHour()),
+        minute=int(solar.getMinute()),
+        gender=birth.gender,
+        calendar_type="solar",
+        lunar_is_leap_month=False,
+    )
+    return effective, {
+        "source": "v17_compatible_lunar_python",
+        "input_calendar_type": "lunar",
+        "effective_calendar_type": "solar",
+        "lunar_is_leap_month": bool(birth.lunar_is_leap_month),
+        "lunar_month_for_conversion": lunar_month,
+        "input": {
+            "year": birth.year,
+            "month": birth.month,
+            "day": birth.day,
+            "hour": birth.hour,
+            "minute": birth.minute,
+        },
+        "solar": {
+            "year": effective.year,
+            "month": effective.month,
+            "day": effective.day,
+            "hour": effective.hour,
+            "minute": effective.minute,
+        },
+    }
 
 
 def _validate_solar_date(birth: BirthInput) -> None:
     date(birth.year, birth.month, birth.day)
     if birth.hour < 0 or birth.hour > 23:
         raise ValueError("invalid hour")
+    if birth.minute < 0 or birth.minute > 59:
+        raise ValueError("invalid minute")
+
+
+def _boolish(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    return str(value or "").strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
 def _year_pillar(year: int, month: int, day: int) -> Dict[str, str]:

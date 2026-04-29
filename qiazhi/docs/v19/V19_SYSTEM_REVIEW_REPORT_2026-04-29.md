@@ -197,7 +197,7 @@ v19/agent/structure.py
 Responsibilities:
 
 - Parse birth input.
-- Reject unsupported lunar input.
+- Convert lunar input, including leap lunar month, to solar input before chart structure.
 - Generate four pillars.
 - Generate approximate luck cycle sequence.
 - Generate selected flow year pillar.
@@ -523,7 +523,7 @@ Knowledge Base
 ### 10.1 Hard Boundaries
 
 ```text
-No lunar input support yet.
+Lunar input is supported through V17-compatible `lunar_python` conversion before the V19 chart structure step.
 No production-grade solar-term engine yet.
 No final fortune prediction yet.
 No traditional prediction text as system output.
@@ -579,7 +579,7 @@ Are four-pillar algorithms acceptable for prototype use?
 Which parts are approximate and must be replaced before serious use?
 What solar-term boundary rules are required?
 What timezone / birthplace assumptions must be added?
-How should lunar input be converted and validated?
+Is the V17-compatible lunar conversion, including leap-month handling, acceptable for V19 prototype use?
 ```
 
 ### 11.2 Luck Cycle Review

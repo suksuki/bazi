@@ -59,6 +59,10 @@ function bindEvents() {
     $("flowYear").value = $("flowYearRange").value;
     renderTimeStep();
   });
+  $("calendar").addEventListener("change", () => {
+    updateCalendarUi();
+    updateDayOptions(Number($("day").value || 1));
+  });
   ["year", "month"].forEach((id) => $(id).addEventListener("change", () => updateDayOptions(Number($("day").value || 1))));
 }
 
@@ -72,6 +76,8 @@ function initInputs() {
   updateDayOptions(now.getDate());
   $("gender").innerHTML = ["male", "female", "unknown"].map((item) => `<option value="${item}">${escapeHtml(t(item))}</option>`).join("");
   $("calendar").innerHTML = ["solar", "lunar"].map((item) => `<option value="${item}">${escapeHtml(t(item))}</option>`).join("");
+  updateCalendarUi();
+  updateDayOptions(now.getDate());
   $("flowYear").value = String(currentYear);
   $("flowYearRange").value = String(currentYear);
 }
@@ -117,9 +123,12 @@ function renderRoleNav(role) {
 
 function profileCard(profile) {
   const birth = profile.birth_input || {};
+  const calendarNote = birth.calendar_type === "lunar"
+    ? `${t("lunar")}${birth.lunar_is_leap_month ? ` · ${t("lunar_leap_month")}` : ""}`
+    : t("solar");
   return `<article class="profile-card">
     <h3>${escapeHtml(profile.name || "")}</h3>
-    <p>${escapeHtml([birth.year, birth.month, birth.day].filter(Boolean).join("-"))} · ${escapeHtml(String(birth.hour ?? ""))}:${escapeHtml(String(birth.minute ?? 0).padStart(2, "0"))}</p>
+    <p>${escapeHtml([birth.year, birth.month, birth.day].filter(Boolean).join("-"))} · ${escapeHtml(String(birth.hour ?? ""))}:${escapeHtml(String(birth.minute ?? 0).padStart(2, "0"))} · ${escapeHtml(calendarNote)}</p>
     <div class="profile-card-actions">
       <button type="button" data-open-profile="${escapeHtml(profile.id)}">${escapeHtml(t("enter_existing_profile"))}</button>
       <button type="button" class="secondary" data-edit-profile="${escapeHtml(profile.id)}">${escapeHtml(t("edit_profile"))}</button>
@@ -212,8 +221,9 @@ async function structurePreview(birth, selectedYear) {
 }
 
 function readBirth() {
+  const calendar = $("calendar").value;
   return {
-    year: Number($("year").value), month: Number($("month").value), day: Number($("day").value), hour: Number($("hour").value), minute: Number($("minute").value), gender: $("gender").value, calendar: $("calendar").value, calendar_type: $("calendar").value,
+    year: Number($("year").value), month: Number($("month").value), day: Number($("day").value), hour: Number($("hour").value), minute: Number($("minute").value), gender: $("gender").value, calendar, calendar_type: calendar, lunar_is_leap_month: calendar === "lunar" && $("lunarLeapMonth").checked,
   };
 }
 
@@ -227,6 +237,8 @@ function writeBirth(birth) {
   if (birth.gender) $("gender").value = String(birth.gender);
   const calendar = birth.calendar_type || birth.calendar;
   if (calendar) $("calendar").value = String(calendar);
+  $("lunarLeapMonth").checked = Boolean(birth.lunar_is_leap_month);
+  updateCalendarUi();
 }
 
 function showStep(id) {
@@ -236,9 +248,15 @@ function showStep(id) {
 function updateDayOptions(preferredDay) {
   const year = Number($("year").value || new Date().getFullYear());
   const month = Number($("month").value || 1);
-  const maxDay = new Date(year, month, 0).getDate();
+  const maxDay = $("calendar")?.value === "lunar" ? 30 : new Date(year, month, 0).getDate();
   const day = Math.min(Math.max(Number(preferredDay || 1), 1), maxDay);
   $("day").innerHTML = rangeOptions(1, maxDay, day, 2);
+}
+
+function updateCalendarUi() {
+  const isLunar = $("calendar")?.value === "lunar";
+  $("lunarLeapMonth").disabled = !isLunar;
+  if (!isLunar) $("lunarLeapMonth").checked = false;
 }
 
 function rangeOptions(start, end, selected, padLength = 0) {

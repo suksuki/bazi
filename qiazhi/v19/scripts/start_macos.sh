@@ -19,11 +19,12 @@ fi
 
 if ! "${PYTHON_BIN}" - <<'PY' >/dev/null 2>&1
 import fastapi
+import lunar_python
 import uvicorn
 PY
 then
-  echo "Missing Python dependencies. Install fastapi and uvicorn for this Python." >&2
-  echo "Example: ${PYTHON_BIN} -m pip install fastapi uvicorn" >&2
+  echo "Missing Python dependencies. Install fastapi, uvicorn, and lunar-python for this Python." >&2
+  echo "Example: ${PYTHON_BIN} -m pip install fastapi uvicorn lunar-python" >&2
   exit 1
 fi
 

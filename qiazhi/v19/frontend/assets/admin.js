@@ -239,6 +239,8 @@ $("filterAnswerQualityFail").addEventListener("click", () => loadAnswerQuality("
 
 $("filterAnswerQualityWatch").addEventListener("click", () => loadAnswerQuality("watch"));
 
+$("loadStructuralSignals")?.addEventListener("click", () => loadStructuralSignals());
+
 $("reviewGuidedQuestion").addEventListener("click", async () => {
   const key = $("guidedQuestionKey").value.trim();
   if (!key) {
@@ -469,6 +471,42 @@ async function loadAnswerQuality(statusFilter = "") {
   $("answerQualityStatus").textContent = `answer quality: pass ${byStatus.pass || 0} · watch ${byStatus.watch || 0} · fail ${byStatus.fail || 0} · ${statusFilter ? `filtered: ${statusFilter}` : "all"} · no auto learning`;
   renderAnswerQualitySummary(summary);
   renderAnswerQualityItems(items);
+}
+
+async function loadStructuralSignals() {
+  const yearValue = Number($("structuralSignalYear")?.value || 2026);
+  const selectedYear = Number.isFinite(yearValue) ? yearValue : 2026;
+  const profileId = ($("structuralSignalProfileId")?.value || "").trim();
+  const payload = {
+    selected_year: selectedYear,
+    ...(profileId
+      ? { profile_id: profileId }
+      : {
+          birth_input: {
+            year: 1990,
+            month: 11,
+            day: 13,
+            hour: 12,
+            gender: "male",
+            calendar_type: "solar",
+          },
+        }),
+  };
+  $("structuralSignalStatus").textContent = "loading structural rule signals...";
+  $("structuralSignalList").innerHTML = "";
+  try {
+    const result = await fetch("/api/lab/structural-rule-signals?role=admin", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    }).then((response) => response.json());
+    const data = result.data || result;
+    const report = data.structural_rule_signals || data.report || data;
+    renderStructuralSignals(report);
+  } catch (error) {
+    $("structuralSignalStatus").textContent = `structural signals failed: ${error?.message || error}`;
+    $("structuralSignalList").innerHTML = "<div class=\"knowledge-empty\">Unable to load Structural Rule Signals.</div>";
+  }
 }
 
 async function loadRuleImpacts(signal = "") {
@@ -1173,6 +1211,60 @@ function renderBaziRuleVersions(items) {
     <div class="knowledge-guard">included: ${(item.included_proposals || []).map(escapeHtml).join(", ") || "none"} · future engineering implementation required</div>
     <div class="knowledge-guard">changelog: ${escapeHtml((item.changelog || []).map((row) => `${row.domain}:${row.rule_id}`).join(" / ") || "none")}</div>
   </article>`).join("");
+}
+
+function readableStructuralValue(value) {
+  if (value === null || value === undefined || value === "") return "-";
+  if (Array.isArray(value)) return value.map(readableStructuralValue).join(" / ");
+  if (typeof value === "object") {
+    try {
+      return JSON.stringify(value, null, 0);
+    } catch {
+      return String(value);
+    }
+  }
+  return String(value);
+}
+
+function renderStructuralSignals(report = {}) {
+  const box = $("structuralSignalList");
+  const signals = Array.isArray(report.signals) ? report.signals : [];
+  const facts = report.facts_summary || {};
+  const count = report.count ?? signals.length;
+  const version = report.version || report.signal_version || "p9";
+  const mutated = signals.some((item) => item.mutates_result === true);
+  $("structuralSignalStatus").innerHTML = [
+    `<span class="pill">signals: ${escapeHtml(String(count))}</span>`,
+    `<span class="pill">version: ${escapeHtml(String(version))}</span>`,
+    `<span class="pill">${mutated ? "warning: mutation flag found" : "result mutation: false"}</span>`,
+  ].join("");
+  if (!signals.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No Structural Rule Signals for this chart/time context.</div>";
+    return;
+  }
+  const factLine = Object.entries(facts)
+    .filter(([, value]) => value !== null && value !== undefined && readableStructuralValue(value) !== "-")
+    .map(([key, value]) => `${key}: ${readableStructuralValue(value)}`)
+    .join(" · ");
+  const factBlock = factLine
+    ? `<article class="knowledge-item"><div class="knowledge-top"><span>fact summary</span><strong>read only</strong></div><p>${escapeHtml(factLine)}</p></article>`
+    : "";
+  box.innerHTML = `${factBlock}${signals.slice(0, 60).map((item) => {
+    const observed = readableStructuralValue(item.observed || item.observed_facts || item.facts || {});
+    const refs = readableStructuralValue(item.fact_refs || []);
+    const scope = readableStructuralValue(item.answer_scope || []);
+    const questions = readableStructuralValue(item.question_keys || []);
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.signal_id || item.rule_id || "")}</span><strong>${escapeHtml(item.category || item.domain || "structural_signal")}</strong></div>
+      <h3>${escapeHtml(item.title || item.knowledge_id || item.rule_id || "")}</h3>
+      <p>${escapeHtml(item.reason || item.statement || "")}</p>
+      <div class="knowledge-guard">layer: ${escapeHtml(item.layer || "-")} · risk: ${escapeHtml(item.risk_level || "-")} · score: ${escapeHtml(String(item.score ?? "-"))}</div>
+      <div class="knowledge-guard">observed: ${escapeHtml(observed)}</div>
+      <div class="knowledge-guard">answer_scope: ${escapeHtml(scope)} · question_keys: ${escapeHtml(questions)}</div>
+      <div class="knowledge-guard">source rule: ${escapeHtml(item.rule_id || "-")} · knowledge: ${escapeHtml(item.knowledge_id || "-")} · refs: ${escapeHtml(refs)}</div>
+      <div class="knowledge-guard">mutates_result=${escapeHtml(String(Boolean(item.mutates_result)))} · source=${escapeHtml(item.source || "rule_db_adapter")}</div>
+    </article>`;
+  }).join("")}`;
 }
 
 function renderBaziRuleDb(items) {

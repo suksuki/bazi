@@ -11,6 +11,12 @@ $("flowYear").addEventListener("input", () => {
   const value = Number($("flowYear").value || 2025);
   if (Number.isFinite(value)) $("flowYearRange").value = String(Math.max(1984, Math.min(2050, value)));
 });
+$("calendar").addEventListener("change", () => {
+  const isLunar = $("calendar").value === "lunar";
+  $("lunarLeapMonth").disabled = !isLunar;
+  if (!isLunar) $("lunarLeapMonth").checked = false;
+});
+$("calendar").dispatchEvent(new Event("change"));
 $("message").addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
     runAgent();
@@ -39,6 +45,7 @@ async function runAgent() {
 }
 
 function buildPayload() {
+  const calendar = $("calendar").value;
   return {
     birth_input: {
       year: Number($("year").value),
@@ -46,8 +53,9 @@ function buildPayload() {
       day: Number($("day").value),
       hour: Number($("hour").value),
       gender: $("gender").value,
-      calendar: $("calendar").value,
-      calendar_type: $("calendar").value,
+      calendar,
+      calendar_type: calendar,
+      lunar_is_leap_month: calendar === "lunar" && $("lunarLeapMonth").checked,
     },
     selected_year: Number($("flowYear").value),
     message: $("message").value.trim() || "请基于当前结构上下文继续。",

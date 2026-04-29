@@ -88,14 +88,14 @@ Current seeded cases:
 
 ```text
 syn.income_stability.1990_05_12_male_2025
-syn.income_stability.lunar_unsupported_boundary
+syn.income_stability.lunar_conversion_boundary
 ```
 
 Validation scope:
 
 ```text
 deterministic income_stability regression
-unsupported boundary behavior
+lunar-to-solar conversion boundary behavior
 ```
 
 ### Role Boundary

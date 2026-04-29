@@ -949,17 +949,16 @@ def _default_validation_cases() -> List[Dict[str, Any]]:
             "guardrails": ["REGRESSION_CASE", "NOT_DOMAIN_TRUTH"],
         },
         {
-            "case_id": "syn.income_stability.lunar_unsupported_boundary",
-            "title": "Lunar unsupported boundary",
+            "case_id": "syn.income_stability.lunar_conversion_boundary",
+            "title": "Lunar calendar conversion boundary",
             "input": {
-                "birth_input": {"calendar": "lunar", "calendar_type": "lunar", "year": 1990, "month": 5, "day": 12, "hour": 10, "gender": "male"},
+                "birth_input": {"calendar": "lunar", "calendar_type": "lunar", "year": 1990, "month": 5, "day": 12, "hour": 10, "minute": 0, "gender": "male", "lunar_is_leap_month": False},
                 "selected_year": 2025,
-                "message": "boundary case",
+                "message": "lunar conversion boundary case",
             },
-            "expected_error_code": "lunar_calendar_not_supported",
             "expected_income_stability": {},
             "status": "active",
-            "guardrails": ["BOUNDARY_CASE"],
+            "guardrails": ["BOUNDARY_CASE", "LUNAR_CONVERSION_SUPPORTED", "NO_RESULT_EXPECTATION"],
         },
     ]
 
@@ -1078,6 +1077,7 @@ def _default_label_contract() -> Dict[str, Any]:
             "calendar": {"category": "oracle_ui", "label": {"zh": "历法", "en": "Calendar", "ko": "달력"}, "description": {"zh": "历法。", "en": "Calendar.", "ko": "달력입니다."}},
             "solar": {"category": "oracle_ui", "label": {"zh": "阳历", "en": "Solar", "ko": "양력"}, "description": {"zh": "阳历。", "en": "Solar.", "ko": "양력입니다."}},
             "lunar": {"category": "oracle_ui", "label": {"zh": "阴历", "en": "Lunar", "ko": "음력"}, "description": {"zh": "阴历。", "en": "Lunar.", "ko": "음력입니다."}},
+            "lunar_leap_month": {"category": "oracle_ui", "label": {"zh": "闰月", "en": "Leap month", "ko": "윤달"}, "description": {"zh": "仅阴历出生日期使用。", "en": "Only used for lunar birth dates.", "ko": "음력 생년월일에만 사용합니다."}},
             "flow_year": {"category": "oracle_ui", "label": {"zh": "流年", "en": "Flow year", "ko": "세운 연도"}, "description": {"zh": "时间背景，不是预测。", "en": "Time context, not prediction.", "ko": "시간 맥락이며 예측이 아닙니다."}},
             "pillar_panel": {"category": "oracle_ui", "label": {"zh": "命盘结构预览", "en": "Pillar structure preview", "ko": "명식 구조 미리보기"}, "description": {"zh": "六柱预览。", "en": "Six-pillar preview.", "ko": "육주 미리보기입니다."}},
             "natal_chart": {"category": "oracle_ui", "label": {"zh": "本命四柱", "en": "Natal chart", "ko": "본명 사주"}, "description": {"zh": "四柱。", "en": "Natal four pillars.", "ko": "본명 사주입니다."}},

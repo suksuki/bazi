@@ -33,7 +33,9 @@ from v19.bazi_source_archive import (
 )
 from v19.bazi_rule_db import (
     bazi_rule_db_status,
+    build_structural_rule_signals,
     ingest_current_knowledge_drafts_to_rule_db,
+    knowledge_rule_signal_coverage,
     list_bazi_rules,
 )
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
@@ -528,6 +530,92 @@ def lab_guided_question_audit_report_get(request: Request) -> Dict[str, Any]:
 def lab_guided_question_answer_quality_get(request: Request) -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
     return guided_question_answer_quality_report(load_settings())
+
+
+@app.post("/api/lab/structural-rule-signals")
+def lab_structural_rule_signals_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    body = dict(payload or {})
+    profile_id = str(body.get("profile_id") or "").strip()
+    if profile_id:
+        profile = get_bazi_profile(profile_id, "")
+        if not profile:
+            return {"ok": False, "code": "PROFILE_NOT_FOUND", "message": "Bazi profile not found for structural-rule signal review."}
+        birth_input = profile.get("birth_input") or {}
+    else:
+        birth_input = body.get("birth_input") or {}
+    base_payload = {
+        "birth_input": birth_input,
+        "selected_year": body.get("selected_year"),
+        "message": str(body.get("message") or "structural rule signal review"),
+        "role": "practitioner",
+    }
+    result = build_agent_turn(base_payload)
+    if not result.get("ok"):
+        return result
+    data = dict(result.get("data") or {})
+    income_stability = derive_income_stability(dict(data.get("chart") or {}))
+    report = build_structural_rule_signals(
+        dict(data.get("chart") or {}),
+        dict(data.get("time_context") or {}),
+        {
+            "supported_theme": "income_stability",
+            "income_stability": income_stability,
+            "guardrails": ["STRUCTURAL_SIGNAL_REVIEW_CONTEXT", "NO_RESULT_MUTATION"],
+        },
+    )
+    return {
+        "ok": True,
+        "data": {
+            "profile_id": profile_id,
+            "selected_year": body.get("selected_year"),
+            "structural_rule_signals": report,
+            "guardrails": ["REVIEW_ONLY", "NO_RESULT_MUTATION", "NO_FORTUNE", "NO_RULE_ACTIVATION"],
+        },
+    }
+
+
+@app.post("/api/lab/knowledge-rule-signal-coverage")
+def lab_knowledge_rule_signal_coverage_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    body = dict(payload or {})
+    profile_id = str(body.get("profile_id") or "").strip()
+    if profile_id:
+        profile = get_bazi_profile(profile_id, "")
+        if not profile:
+            return {"ok": False, "code": "PROFILE_NOT_FOUND", "message": "Bazi profile not found for knowledge/rule coverage review."}
+        birth_input = profile.get("birth_input") or {}
+    else:
+        birth_input = body.get("birth_input") or {}
+    base_payload = {
+        "birth_input": birth_input,
+        "selected_year": body.get("selected_year"),
+        "message": str(body.get("message") or "knowledge rule signal coverage review"),
+        "role": "practitioner",
+    }
+    result = build_agent_turn(base_payload)
+    if not result.get("ok"):
+        return result
+    data = dict(result.get("data") or {})
+    income_stability = derive_income_stability(dict(data.get("chart") or {}))
+    report = knowledge_rule_signal_coverage(
+        dict(data.get("chart") or {}),
+        dict(data.get("time_context") or {}),
+        {
+            "supported_theme": "income_stability",
+            "income_stability": income_stability,
+            "guardrails": ["KNOWLEDGE_RULE_COVERAGE_REVIEW_CONTEXT", "NO_RESULT_MUTATION"],
+        },
+    )
+    return {
+        "ok": True,
+        "data": {
+            "profile_id": profile_id,
+            "selected_year": body.get("selected_year"),
+            "knowledge_rule_signal_coverage": report,
+            "guardrails": ["REVIEW_ONLY", "NO_RESULT_MUTATION", "NO_FORTUNE", "NO_RULE_ACTIVATION"],
+        },
+    }
 
 
 @app.get("/api/agent/sessions")
@@ -1357,7 +1445,7 @@ def _algorithm_status() -> Dict[str, Any]:
             "provenance": "v19.agent.structure.build_chart",
             "limitations": [
                 "solar_term_boundaries_are_approximate",
-                "lunar_input_unsupported",
+                "lunar_input_converted_to_solar_before_structure",
                 "timezone_and_birthplace_not_modeled",
                 "day_pillar_requires_domain_verification",
             ],

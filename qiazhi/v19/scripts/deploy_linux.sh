@@ -15,6 +15,7 @@ FORCE_SYNC="${FORCE_SYNC:-0}"
 STOP_EXISTING="${STOP_EXISTING:-1}"
 RUN_P6="${RUN_P6:-0}"
 RUN_P7="${RUN_P7:-0}"
+RUN_P9="${RUN_P9:-0}"
 ROLE="${ROLE:-admin}"
 SAVE_AUDIT="${SAVE_AUDIT:-1}"
 INGEST_RULE_DB="${INGEST_RULE_DB:-0}"
@@ -117,7 +118,12 @@ fi
 echo "V19 backend API: ${URL}/api/agent/turn"
 echo "V19 frontend:    ${URL}"
 
-if [[ "${RUN_P6}" == "1" ]]; then
+if [[ "${RUN_P9}" == "1" ]]; then
+  echo "V19 deploy: running P9 knowledge/rule-signal review"
+  if ! BASE_URL="${URL}" ROLE="${ROLE}" SAVE_AUDIT="${SAVE_AUDIT}" INGEST_RULE_DB="${INGEST_RULE_DB:-1}" "${SCRIPT_DIR}/p9_knowledge_rule_review.sh"; then
+    echo "V19 deploy warning: P9 knowledge/rule-signal review reported issues; server remains running" >&2
+  fi
+elif [[ "${RUN_P6}" == "1" ]]; then
   echo "V19 deploy: running P6 seed/audit"
   if ! BASE_URL="${URL}" ROLE="${ROLE}" SAVE_AUDIT="${SAVE_AUDIT}" INGEST_RULE_DB="${INGEST_RULE_DB}" "${SCRIPT_DIR}/p6_seed_and_audit.sh"; then
     echo "V19 deploy warning: P6 seed/audit failed; server remains running" >&2
