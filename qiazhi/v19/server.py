@@ -43,6 +43,7 @@ from v19.lab_interfaces import (
     create_bazi_rule_proposal,
     create_guided_question_proposal,
     create_revision_proposal,
+    guided_question_answer_quality_report,
     guided_question_feedback_summary,
     guided_question_audit_report,
     activate_revision_record,
@@ -521,6 +522,12 @@ def lab_guided_question_audits_get(request: Request, status: str = "", question_
 def lab_guided_question_audit_report_get(request: Request) -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
     return guided_question_audit_report(load_settings())
+
+
+@app.get("/api/lab/guided-question-answer-quality")
+def lab_guided_question_answer_quality_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return guided_question_answer_quality_report(load_settings())
 
 
 @app.get("/api/agent/sessions")
@@ -1009,6 +1016,7 @@ def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str) -
         "sections": answer.get("sections"),
         "retrieved_facts": answer.get("retrieved_facts"),
         "observed_facts": answer.get("observed_facts"),
+        "knowledge_context": answer.get("knowledge_context"),
         "composed_text": answer.get("composed_text"),
         "result_relation": answer.get("result_relation"),
         "guardrails": answer.get("guardrails"),
@@ -1021,6 +1029,9 @@ def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str) -
                 "不要使用表格、标题、项目符号、英文 key、规则名或审计口吻。"
                 "用用户能听懂的话回答当前问题，控制在 2 到 4 个自然段。"
                 "边界只作为写作约束，不要机械复述免责声明；除非用户明确询问边界，否则不要单独写“不是预测”或“不改变 income_stability”这类句子。"
+                "优先使用 knowledge_context 中的结构解释知识来组织语言，尤其是月令、日主、藏干、十神、五行、墓库、地支关系和时间背景边界。"
+                "回答必须像在解释用户刚问的问题：先回应问题意图，再说观察到的结构事实，再用一两句普通话说明它代表的结构意义。"
+                "不要输出 rule_id、signal_id、internal key、debug 字段；如果问题超出支持范围，只说明当前支持结构阅读，并引导用户改问一个结构问题。"
                 "如果 intent.supported=false，只能说明当前不支持这个问题，不能绕开限制作答。"
                 "优先保持 composed_text 的意思，不能加入 retrieved_facts 或 observed_facts 之外的新事实。"
             ),
@@ -1030,9 +1041,58 @@ def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str) -
     ]
 
 
+def _looks_truncated_guided_answer(text: str) -> bool:
+    clean = str(text or "").strip()
+    if len(clean) < 24:
+        return False
+    if clean.count("“") != clean.count("”"):
+        return True
+    if clean.count("‘") != clean.count("’"):
+        return True
+    if clean.count("（") != clean.count("）"):
+        return True
+    if clean.count("(") != clean.count(")"):
+        return True
+    bad_tails = (
+        "，",
+        "、",
+        "：",
+        "；",
+        ",",
+        ":",
+        ";",
+        "的",
+        "和",
+        "与",
+        "或",
+        "而",
+        "及",
+        "以及",
+        "因为",
+        "所以",
+        "但是",
+        "并且",
+        "同时",
+        "其中",
+        "例如",
+        "比如",
+        "包括",
+        "位于",
+        "出现于",
+    )
+    if clean.endswith(bad_tails):
+        return True
+    sentence_tails = "。！？.!?）】”’」』"
+    if len(clean) >= 120 and clean[-1] not in sentence_tails:
+        return True
+    return False
+
+
 def _guard_guided_answer_rewrite(text: str, fallback_text: str, answer: Dict[str, Any]) -> str:
     clean = str(text or "").strip()
     if not clean:
+        return fallback_text
+    if _looks_truncated_guided_answer(clean):
         return fallback_text
     intent = dict(answer.get("intent") or {})
     if intent.get("supported") is False and "不支持" not in clean and "不会硬编" not in clean:
@@ -1056,6 +1116,9 @@ def _guided_question_audit_report(data: Dict[str, Any], answer: Dict[str, Any]) 
         _audit_check("retrieved_facts_present", bool(retrieved), "Fact retriever returned a payload."),
         _audit_check("observed_facts_present", bool(observed), "Observed facts are attached for review."),
         _audit_check("answer_text_present", bool(text.strip()), "Answer composer produced Chinese text."),
+        _audit_check("answer_not_truncated", not _looks_truncated_guided_answer(text), "Answer text does not look cut off."),
+        _audit_check("no_internal_answer_markers", not any(marker in text for marker in ["answer_empty", "GUIDED_ANSWER", "DETERMINISTIC_RESULT_CARD", "rule_id", "signal_id", "question_basis", "source_signal_id"]), "Answer text hides internal/debug markers."),
+        _audit_check("no_prediction_terms", not any(term in text for term in ["一定", "必然", "发财", "破财", "今年会", "明年会", "好运", "坏运", "财运很好", "财运很差", "婚姻会", "健康会"]), "Answer text avoids prediction wording."),
         _audit_check("contract_intent_matches_router", not contract or contract.get("intent") == intent.get("answer_kind"), "Question contract intent matches routed answer kind."),
         _audit_check("unsupported_does_not_retrieve_chart_facts", intent.get("supported") is not False or not retrieved.get("chart_anchor"), "Unsupported intents do not retrieve chart facts."),
         _audit_check("time_context_marked_context_only", _audit_time_context_marked(retrieved), "Time context is marked as context-only."),

@@ -122,7 +122,34 @@ def _public_record(record: Dict[str, Any]) -> Dict[str, Any]:
 def _context_keywords(structure_payload: Dict[str, Any], user_message: str) -> List[str]:
     raw = _norm(user_message)
     words = {item for item in raw.replace("/", " ").replace("_", " ").split() if item}
-    for key in ["income", "income_stability", "stability", "流年", "大运", "四柱", "十神", "冲", "合"]:
+    for key in [
+        "income",
+        "income_stability",
+        "stability",
+        "wealth",
+        "流年",
+        "大运",
+        "时间背景",
+        "四柱",
+        "日主",
+        "日干",
+        "月令",
+        "月支",
+        "藏干",
+        "透干",
+        "十神",
+        "财星",
+        "五行",
+        "生克",
+        "冲",
+        "合",
+        "六合",
+        "三合",
+        "墓库",
+        "结构回答",
+        "说人话",
+        "不支持",
+    ]:
         if key.lower() in raw:
             words.add(key.lower())
     if structure_payload.get("chart"):

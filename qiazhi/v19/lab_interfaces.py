@@ -17,6 +17,8 @@ ALLOWED_GUIDED_QUESTION_REVIEW_STATUS = {"pending", "reviewed", "proposed_change
 ALLOWED_GUIDED_QUESTION_ACTION = {"add", "edit", "deprecate", "reorder_path"}
 ALLOWED_GUIDED_QUESTION_PROPOSAL_STATUS = {"draft", "validation_ready", "validation_failed", "approved", "rejected", "active_record"}
 FORBIDDEN_GUIDED_QUESTION_TERMS = ["未来财运", "今年好", "今年坏", "什么时候发财", "发财", "命运如何", "fortune", "future wealth", "good luck", "bad luck", "운세", "재물운"]
+FORBIDDEN_ANSWER_TERMS = ["一定", "必然", "发财", "破财", "今年会", "明年会", "好运", "坏运", "财运很好", "财运很差", "婚姻会", "健康会"]
+INTERNAL_ANSWER_MARKERS = ["answer_empty", "GUIDED_ANSWER", "DETERMINISTIC_RESULT_CARD", "rule_id", "signal_id", "question_basis", "source_signal_id"]
 ALLOWED_GUIDED_REQUIRED_CONTEXT = {"chart", "result", "time_relation"}
 ALLOWED_GUIDED_DEPTH = {"beginner", "intermediate"}
 ALLOWED_BAZI_RULE_DOMAINS = {"day_master_element", "structural_relation", "ten_god_relation", "time_structure", "income_stability"}
@@ -259,6 +261,44 @@ def guided_question_audit_report(settings: Dict[str, Any] | None = None) -> Dict
         "latest_failures": latest_failures[:20],
         "recommendations": _guided_question_audit_recommendations(by_status, failed_checks, unsupported),
         "guardrails": ["AUDIT_REPORT_ONLY", "NO_AUTO_RULE_UPDATE", "NO_AUTO_LIBRARY_UPDATE"],
+    }
+
+
+def guided_question_answer_quality_report(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    items: List[Dict[str, Any]] = []
+    for row in state["guided_question_audits"]:
+        items.append(_answer_quality_item_from_audit(row))
+    for row in state["feedback"]:
+        if row.get("subject_type") == "guided_question":
+            items.append(_answer_quality_item_from_feedback(row))
+    items.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+
+    by_status: Dict[str, int] = {}
+    by_question: Dict[str, int] = {}
+    risk_flags: Dict[str, int] = {}
+    for item in items:
+        status = _clean(item.get("status"), "unknown")
+        by_status[status] = by_status.get(status, 0) + 1
+        key = _clean(item.get("question_key"), "unknown")
+        by_question[key] = by_question.get(key, 0) + 1
+        for flag in item.get("risk_flags") or []:
+            flag_key = _clean(flag, "unknown_risk")
+            risk_flags[flag_key] = risk_flags.get(flag_key, 0) + 1
+
+    return {
+        "ok": True,
+        "version": "v19.p7.answer_quality_report.v1",
+        "count": len(items),
+        "storage": storage,
+        "summary": {
+            "by_status": by_status,
+            "by_question": _top_counts(by_question),
+            "risk_flags": _top_counts(risk_flags),
+        },
+        "items": items[:200],
+        "recommendations": _answer_quality_recommendations(by_status, risk_flags),
+        "guardrails": ["QUALITY_REPORT_ONLY", "NO_AUTO_LEARNING", "NO_AUTO_RULE_UPDATE", "NO_RUNTIME_MUTATION"],
     }
 
 
@@ -1069,16 +1109,21 @@ def _default_label_contract() -> Dict[str, Any]:
                 "label": {"zh": "选择一个合适的问题", "en": "Choose a bounded question", "ko": "범위가 정해진 질문을 선택하세요"},
                 "description": {"zh": "问题构建器标题。", "en": "Question builder heading.", "ko": "질문 구성 제목입니다."},
             },
-            "guidance_title": {"category": "oracle_ui", "label": {"zh": "Agent 建议你先这样理解", "en": "Agent suggests this reading path", "ko": "Agent가 추천하는 이해 순서"}, "description": {"zh": "智能引导标题。", "en": "Guidance title.", "ko": "안내 제목입니다."}},
-            "guidance_scope_note": {"category": "oracle_ui", "label": {"zh": "只引导结构问题，不生成预测。", "en": "Guides structure questions only; no prediction is generated.", "ko": "구조 질문만 안내하며 예측은 생성하지 않습니다."}, "description": {"zh": "智能引导边界。", "en": "Guidance boundary.", "ko": "안내 경계입니다."}},
-            "guidance_step_structure": {"category": "oracle_ui", "label": {"zh": "先确认结构基点", "en": "First confirm the structural anchor", "ko": "먼저 구조 기준점 확인"}, "description": {"zh": "引导步骤。", "en": "Guidance step.", "ko": "안내 단계입니다."}},
-            "guidance_step_income": {"category": "oracle_ui", "label": {"zh": "再看收入稳定性信号", "en": "Then read the income stability signal", "ko": "다음으로 소득 안정성 신호 보기"}, "description": {"zh": "引导步骤。", "en": "Guidance step.", "ko": "안내 단계입니다."}},
-            "guidance_step_time": {"category": "oracle_ui", "label": {"zh": "最后看时间背景关系", "en": "Finally inspect time-context relations", "ko": "마지막으로 시간 맥락 관계 보기"}, "description": {"zh": "引导步骤。", "en": "Guidance step.", "ko": "안내 단계입니다."}},
+            "guidance_title": {"category": "oracle_ui", "label": {"zh": "先看这三点", "en": "Start with these three points", "ko": "먼저 이 세 가지를 보세요"}, "description": {"zh": "智能引导标题。", "en": "Guidance title.", "ko": "안내 제목입니다."}},
+            "guidance_scope_note": {"category": "oracle_ui", "label": {"zh": "", "en": "", "ko": ""}, "description": {"zh": "智能引导边界。", "en": "Guidance boundary.", "ko": "안내 경계입니다."}},
+            "guidance_step_structure": {"category": "oracle_ui", "label": {"zh": "结构基点", "en": "Structure anchor", "ko": "구조 기준점"}, "description": {"zh": "引导步骤。", "en": "Guidance step.", "ko": "안내 단계입니다."}},
+            "guidance_step_income": {"category": "oracle_ui", "label": {"zh": "收入结构", "en": "Income structure", "ko": "소득 구조"}, "description": {"zh": "引导步骤。", "en": "Guidance step.", "ko": "안내 단계입니다."}},
+            "guidance_step_time": {"category": "oracle_ui", "label": {"zh": "时间背景", "en": "Time context", "ko": "시간 배경"}, "description": {"zh": "引导步骤。", "en": "Guidance step.", "ko": "안내 단계입니다."}},
             "custom_question": {"category": "oracle_ui", "label": {"zh": "你也可以修改问题", "en": "You can edit the question", "ko": "질문을 수정할 수 있습니다"}, "description": {"zh": "自定义问题。", "en": "Custom question.", "ko": "사용자 질문입니다."}},
             "q_income_stability": {"category": "oracle_question", "label": {"zh": "我的收入稳定性结构如何？", "en": "How is my income stability structure?", "ko": "나의 소득 안정성 구조는 어떤가요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
             "q_income_factors": {"category": "oracle_question", "label": {"zh": "当前结构中哪些因素影响收入稳定？", "en": "Which structure factors affect income stability?", "ko": "현재 구조에서 어떤 요소가 소득 안정성에 영향을 주나요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
+            "q_income_path_structure": {"category": "oracle_question", "label": {"zh": "如果只按结构看，收入路径是被哪些信号组织起来的？", "en": "Structurally, which signals organize the income path?", "ko": "구조만 보면 소득 경로는 어떤 신호들로 조직되나요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
             "q_time_context": {"category": "oracle_question", "label": {"zh": "这个流年只作为时间背景，会触发哪些结构关系？", "en": "As context only, what relations does this flow year trigger?", "ko": "예측이 아닌 시간 맥락으로서 이 세운은 어떤 구조 관계를 만들까요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
             "q_structure_overview": {"category": "oracle_question", "label": {"zh": "如果只看结构，这张命盘先呈现哪些特征？", "en": "Looking only at structure, what features appear first?", "ko": "구조만 보면 이 명식에서 먼저 보이는 특징은 무엇인가요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
+            "q_month_command_anchor": {"category": "oracle_question", "label": {"zh": "月令在这张命盘里先提供了什么结构背景？", "en": "What structural background does the month branch provide here?", "ko": "월지는 이 명식에서 어떤 구조 배경을 먼저 제공하나요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
+            "q_ten_god_metadata": {"category": "oracle_question", "label": {"zh": "十神标签在这里为什么只是关系元数据，而不是断语？", "en": "Why are Ten God labels relationship metadata here rather than verdicts?", "ko": "여기서 십성 라벨은 왜 단정이 아니라 관계 메타데이터인가요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
+            "q_element_flow_metadata": {"category": "oracle_question", "label": {"zh": "五行生克在这里应该怎样只按结构关系阅读？", "en": "How should element generation/control be read only as structural relation here?", "ko": "오행 생극은 여기서 구조 관계로만 어떻게 읽어야 하나요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
+            "q_vault_structure": {"category": "oracle_question", "label": {"zh": "这张命盘里的墓库结构，应该如何只按结构层阅读？", "en": "How should the vault structure in this chart be read only at the structural layer?", "ko": "이 명식의 묘고 구조는 구조 층에서만 어떻게 읽어야 하나요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
             "q_wealth_accessibility": {"category": "oracle_question", "label": {"zh": "财富可达性这个信号是由哪些结构支持的？", "en": "Which structures support the wealth accessibility signal?", "ko": "재성 접근성 신호는 어떤 구조가 뒷받침하나요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
             "q_volatility_factors": {"category": "oracle_question", "label": {"zh": "哪些结构因素会增加收入稳定性的波动？", "en": "Which structural factors increase income-stability volatility?", "ko": "어떤 구조 요소가 소득 안정성의 변동성을 높이나요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
             "q_signal_combination": {"category": "oracle_question", "label": {"zh": "这个结果主要由哪几个结构信号共同形成？", "en": "Which structure signals jointly form this result?", "ko": "이 결과는 어떤 구조 신호들이 함께 만든 것인가요?"}, "description": {"zh": "支持问题。", "en": "Supported question.", "ko": "지원 질문입니다."}},
@@ -1314,6 +1359,154 @@ def _top_counts(counts: Dict[str, int], limit: int = 12) -> List[Dict[str, Any]]
         {"key": key, "count": value}
         for key, value in sorted(counts.items(), key=lambda item: (-item[1], item[0]))[:limit]
     ]
+
+
+def _answer_quality_item_from_audit(row: Dict[str, Any]) -> Dict[str, Any]:
+    composed = row.get("composed_text") if isinstance(row.get("composed_text"), dict) else {}
+    text = str(composed.get("zh") or composed.get("text") or "")
+    context = {
+        "question_contract": dict(row.get("question_contract") or {}),
+        "intent": dict(row.get("intent") or {}),
+        "retrieved_facts": dict(row.get("retrieved_facts") or {}),
+        "observed_facts": dict(row.get("observed_facts") or {}),
+        "rating": 0,
+    }
+    quality = _answer_quality_score(text, context)
+    return {
+        "source_type": "guided_question_audit",
+        "source_id": row.get("audit_id"),
+        "created_at": row.get("created_at"),
+        "question_key": row.get("selected_question_key") or (context["question_contract"].get("key") or ""),
+        "answer_kind": context["intent"].get("answer_kind") or "",
+        "score": quality["score"],
+        "status": quality["status"],
+        "risk_flags": quality["risk_flags"],
+        "checks": quality["checks"],
+        "text_preview": " ".join(text.split())[:220],
+        "suggested_review_action": quality["suggested_review_action"],
+        "guardrails": ["AUDIT_QUALITY_DERIVED", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def _answer_quality_item_from_feedback(row: Dict[str, Any]) -> Dict[str, Any]:
+    payload = dict(row.get("payload") or {})
+    metadata = dict(row.get("metadata") or {})
+    text = str(payload.get("answer_text") or metadata.get("answer_text") or "")
+    context = {
+        "question_contract": dict(payload.get("question_contract") or metadata.get("question_contract") or {}),
+        "intent": dict(payload.get("intent") or metadata.get("intent") or {}),
+        "retrieved_facts": dict(payload.get("retrieved_facts") or metadata.get("retrieved_facts") or {}),
+        "observed_facts": dict(payload.get("observed_facts") or metadata.get("observed_facts") or {}),
+        "rating": _bounded_int(row.get("rating"), 0, -2, 2),
+    }
+    quality = _answer_quality_score(text, context)
+    return {
+        "source_type": "guided_question_feedback",
+        "source_id": row.get("feedback_id"),
+        "created_at": row.get("created_at"),
+        "question_key": row.get("subject_id") or metadata.get("question_key") or context["question_contract"].get("key") or "",
+        "answer_kind": payload.get("answer_kind") or metadata.get("answer_kind") or context["intent"].get("answer_kind") or "",
+        "rating": context["rating"],
+        "score": quality["score"],
+        "status": quality["status"],
+        "risk_flags": quality["risk_flags"],
+        "checks": quality["checks"],
+        "text_preview": " ".join(text.split())[:220],
+        "suggested_review_action": quality["suggested_review_action"],
+        "guardrails": ["FEEDBACK_QUALITY_DERIVED", "NO_AUTO_LEARNING", "ANALYST_REVIEW_REQUIRED"],
+    }
+
+
+def _answer_quality_score(text: str, context: Dict[str, Any]) -> Dict[str, Any]:
+    clean = str(text or "").strip()
+    intent = dict(context.get("intent") or {})
+    checks = [
+        _quality_check("answer_text_present", bool(clean), "Answer text is present."),
+        _quality_check("answer_not_truncated", not _answer_text_looks_truncated(clean), "Answer does not look cut off."),
+        _quality_check("no_internal_markers", not any(marker in clean for marker in INTERNAL_ANSWER_MARKERS), "Answer hides internal rule/debug markers."),
+        _quality_check("no_prediction_terms", not any(term in clean for term in FORBIDDEN_ANSWER_TERMS), "Answer avoids prediction wording."),
+        _quality_check("question_contract_present", bool(context.get("question_contract")), "Question contract is attached."),
+        _quality_check("intent_present", bool(intent.get("intent_id") or intent.get("answer_kind")), "Routed intent is attached."),
+        _quality_check("retrieved_facts_present", bool(context.get("retrieved_facts")), "Retrieved facts are attached."),
+        _quality_check("observed_facts_present", bool(context.get("observed_facts")), "Observed facts are attached."),
+        _quality_check(
+            "unsupported_has_boundary",
+            intent.get("supported") is not False or ("不支持" in clean or "不会硬编" in clean or "结构分析范围" in clean),
+            "Unsupported questions have an explicit boundary.",
+        ),
+        _quality_check("user_feedback_not_negative", _bounded_int(context.get("rating"), 0, -2, 2) >= 0, "User feedback is not negative."),
+    ]
+    risk_flags = [row["name"] for row in checks if not row["passed"]]
+    critical = {"answer_text_present", "answer_not_truncated", "no_internal_markers", "no_prediction_terms", "unsupported_has_boundary"}
+    failed_critical = [flag for flag in risk_flags if flag in critical]
+    score = max(0, 100 - len(failed_critical) * 30 - (len(risk_flags) - len(failed_critical)) * 10)
+    if failed_critical:
+        status = "fail"
+    elif risk_flags:
+        status = "watch"
+    else:
+        status = "pass"
+    return {
+        "score": score,
+        "status": status,
+        "risk_flags": risk_flags,
+        "checks": checks,
+        "suggested_review_action": _answer_quality_action(status, risk_flags),
+    }
+
+
+def _quality_check(name: str, passed: bool, note: str) -> Dict[str, Any]:
+    return {"name": name, "passed": bool(passed), "note": note}
+
+
+def _answer_text_looks_truncated(text: str) -> bool:
+    clean = str(text or "").strip()
+    if len(clean) < 24:
+        return False
+    if clean.count("“") != clean.count("”"):
+        return True
+    if clean.count("‘") != clean.count("’"):
+        return True
+    if clean.count("（") != clean.count("）"):
+        return True
+    if clean.count("(") != clean.count(")"):
+        return True
+    if clean.endswith(("，", "、", "：", "；", ",", ":", ";", "的", "和", "与", "或", "而", "以及", "因为", "所以", "但是", "并且", "同时", "其中", "例如", "比如", "包括", "位于", "出现于")):
+        return True
+    if len(clean) >= 120 and clean[-1] not in "。！？.!?）】”’」』":
+        return True
+    return False
+
+
+def _answer_quality_action(status: str, risk_flags: List[str]) -> str:
+    if status == "pass":
+        return "no_action"
+    if "answer_not_truncated" in risk_flags:
+        return "review_llm_rewrite_or_fallback"
+    if "no_internal_markers" in risk_flags:
+        return "remove_internal_marker_from_user_copy"
+    if "no_prediction_terms" in risk_flags:
+        return "tighten_guardrail_or_composer"
+    if "user_feedback_not_negative" in risk_flags:
+        return "analyst_review_answer_helpfulness"
+    return "analyst_review"
+
+
+def _answer_quality_recommendations(by_status: Dict[str, int], risk_flags: Dict[str, int]) -> List[str]:
+    rows: List[str] = []
+    if by_status.get("fail"):
+        rows.append("Fix fail items before expanding the question library.")
+    if risk_flags.get("answer_not_truncated"):
+        rows.append("LLM rewrite or frontend rendering produced cut-off text; use deterministic fallback and inspect max token/timeout settings.")
+    if risk_flags.get("no_internal_markers"):
+        rows.append("Remove internal rule/debug markers from user-facing answer copy.")
+    if risk_flags.get("no_prediction_terms"):
+        rows.append("Tighten answer guardrails before allowing this wording in production.")
+    if risk_flags.get("user_feedback_not_negative"):
+        rows.append("Review not-helpful feedback with the retrieved facts and question contract attached.")
+    if not rows:
+        rows.append("No quality risks detected in saved guided-question answer records.")
+    return rows
 
 
 def _guided_question_audit_recommendations(by_status: Dict[str, int], failed_checks: Dict[str, int], unsupported: Dict[str, int]) -> List[str]:

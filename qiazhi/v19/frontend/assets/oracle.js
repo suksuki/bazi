@@ -18,11 +18,16 @@ const QUESTION_LIBRARY = [
   { key: "q_luck_flow_layers", theme: "time_context", required: ["time_relation"], depth: "intermediate", phase: "any", related_questions: ["q_time_context_boundary", "q_time_vs_natal_relation", "q_time_not_inference"], forbidden_prediction: true },
   { key: "q_time_not_inference", theme: "time_context", required: ["time_relation"], depth: "intermediate", phase: "any", related_questions: ["q_time_context_boundary", "q_result_card_boundary"], forbidden_prediction: true },
   { key: "q_day_master_month_anchor", theme: "structure_basis", required: ["chart"], depth: "beginner", phase: "any", related_questions: ["q_structure_overview", "q_hidden_stem_role", "q_income_factors"], forbidden_prediction: true },
+  { key: "q_month_command_anchor", theme: "structure_basis", required: ["chart"], depth: "beginner", phase: "any", related_questions: ["q_day_master_month_anchor", "q_structure_overview", "q_hidden_stem_role"], forbidden_prediction: true },
   { key: "q_hidden_stem_role", theme: "structure_basis", required: ["chart"], depth: "intermediate", phase: "any", related_questions: ["q_day_master_month_anchor", "q_structure_overview", "q_income_factors"], forbidden_prediction: true },
+  { key: "q_ten_god_metadata", theme: "structure_basis", required: ["chart"], depth: "intermediate", phase: "any", related_questions: ["q_hidden_stem_role", "q_income_factors", "q_read_result_not_fortune"], forbidden_prediction: true },
+  { key: "q_element_flow_metadata", theme: "structure_basis", required: ["chart"], depth: "intermediate", phase: "any", related_questions: ["q_day_master_month_anchor", "q_ten_god_metadata", "q_income_factors"], forbidden_prediction: true },
   { key: "q_branch_relation_detail", theme: "structure_basis", required: ["branch_relation"], depth: "beginner", phase: "any", related_questions: ["q_combination_context", "q_time_context", "q_time_vs_natal_relation", "q_cautious_reading"], forbidden_prediction: true },
   { key: "q_time_vs_natal_relation", theme: "time_context", required: ["time_relation"], depth: "intermediate", phase: "any", related_questions: ["q_time_context", "q_luck_flow_layers", "q_time_not_inference"], forbidden_prediction: true },
   { key: "q_combination_context", theme: "structure_basis", required: ["branch_relation"], signal: "combination_relation", depth: "intermediate", phase: "any", related_questions: ["q_branch_relation_detail", "q_structure_overview", "q_time_context_boundary"], forbidden_prediction: true },
   { key: "q_three_harmony_context", theme: "structure_basis", required: ["branch_relation"], signal: "three_harmony", depth: "intermediate", phase: "any", related_questions: ["q_branch_relation_detail", "q_structure_overview", "q_time_context_boundary"], forbidden_prediction: true },
+  { key: "q_vault_structure", theme: "structure_basis", required: ["chart"], depth: "intermediate", phase: "any", related_questions: ["q_hidden_stem_role", "q_structure_overview", "q_time_context_boundary"], forbidden_prediction: true },
+  { key: "q_income_path_structure", theme: "income_stability", required: ["result"], depth: "intermediate", phase: "after_result", related_questions: ["q_income_factors", "q_wealth_accessibility", "q_signal_combination"], forbidden_prediction: true },
   { key: "q_no_good_bad", theme: "boundary", required: ["result"], depth: "beginner", phase: "after_result", related_questions: ["q_result_card_boundary", "q_read_result_not_fortune"], forbidden_prediction: true },
   { key: "q_result_card_boundary", theme: "boundary", required: ["result"], depth: "beginner", phase: "after_result", related_questions: ["q_read_result_not_fortune", "follow_rule_basis", "follow_feedback"], forbidden_prediction: true },
   { key: "q_analyst_review_needed", theme: "feedback", required: ["result"], depth: "intermediate", phase: "after_result", related_questions: ["follow_feedback", "follow_rule_basis"], forbidden_prediction: true },
@@ -263,7 +268,7 @@ function renderGuidancePanel(structure, result) {
     ["guidance_step_income", signals.income_stability ? tValue(signals.income_stability) : t("income_stability")],
     ["guidance_step_time", relationCount ? `${relationCount} · ${t("context_only")}` : t("context_only")],
   ];
-  $("guidancePanel").innerHTML = `<div class="guidance-head"><strong>${escapeHtml(t("guidance_title"))}</strong><span>${escapeHtml(t("guidance_scope_note"))}</span></div><div class="guidance-grid">${cards.map(([key,value])=>`<article><span>${escapeHtml(t(key))}</span><strong>${escapeHtml(value)}</strong></article>`).join("")}</div>`;
+  $("guidancePanel").innerHTML = `<div class="guidance-head"><strong>${escapeHtml(t("guidance_title"))}</strong></div><div class="guidance-grid">${cards.map(([key,value])=>`<article><span>${escapeHtml(t(key))}</span><strong>${escapeHtml(value)}</strong></article>`).join("")}</div>`;
 }
 function guidanceQuestionKeys(structure, result) { return rankedQuestionKeys(structure, result, { afterResult: Boolean(result) }).slice(0, 5); }
 function rankedQuestionKeys(structure, result, options = {}) {

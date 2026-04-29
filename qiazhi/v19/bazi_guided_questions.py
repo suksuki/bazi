@@ -7,7 +7,7 @@ from v19.bazi_rule_db import list_bazi_rules
 from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem
 
 
-QUESTION_REGISTRY_VERSION = "v19.question_registry.audit.v1"
+QUESTION_REGISTRY_VERSION = "v19.question_registry.p5.structural_signals.v1"
 QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
     "q_structure_overview": {
         "theme": "structure_basis",
@@ -55,6 +55,70 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
             "zh": "藏干在这张命盘里只是补充信息，还是会影响结构理解？",
             "en": "Are hidden stems only supporting information here, or do they affect structural reading?",
             "ko": "지장간은 여기서 보조 정보일 뿐인가요, 아니면 구조 이해에 영향을 주나요?",
+        },
+    },
+    "q_month_command_anchor": {
+        "theme": "structure_basis",
+        "depth": "beginner",
+        "phase": "any",
+        "intent": "metadata_boundary",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "hidden_stems", "stem_elements"],
+        "answer_scope": "explain_month_branch_as_structure_anchor",
+        "score": 84,
+        "related_questions": ["q_day_master_month_anchor", "q_structure_overview", "q_hidden_stem_role"],
+        "label": {
+            "zh": "月令在这张命盘里先提供了什么结构背景？",
+            "en": "What structural background does the month branch provide here?",
+            "ko": "월지는 이 명식에서 어떤 구조 배경을 먼저 제공하나요?",
+        },
+    },
+    "q_ten_god_metadata": {
+        "theme": "structure_basis",
+        "depth": "intermediate",
+        "phase": "any",
+        "intent": "metadata_boundary",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "hidden_stems", "stem_elements"],
+        "answer_scope": "explain_ten_god_as_relationship_metadata",
+        "score": 73,
+        "related_questions": ["q_hidden_stem_role", "q_income_factors", "q_read_result_not_fortune"],
+        "label": {
+            "zh": "十神标签在这里为什么只是关系元数据，而不是断语？",
+            "en": "Why are Ten God labels relationship metadata here rather than verdicts?",
+            "ko": "여기서 십성 라벨은 왜 단정이 아니라 관계 메타데이터인가요?",
+        },
+    },
+    "q_vault_structure": {
+        "theme": "structure_basis",
+        "depth": "intermediate",
+        "phase": "any",
+        "intent": "vault",
+        "required": ["chart"],
+        "required_facts": ["vaults", "hidden_stems", "time_context"],
+        "answer_scope": "explain_vault_branch_as_structural_storage_not_verdict",
+        "score": 79,
+        "related_questions": ["q_hidden_stem_role", "q_structure_overview", "q_time_context_boundary"],
+        "label": {
+            "zh": "这张命盘里的墓库结构，应该如何只按结构层阅读？",
+            "en": "How should the vault structure in this chart be read only at the structural layer?",
+            "ko": "이 명식의 묘고 구조는 구조 층에서만 어떻게 읽어야 하나요?",
+        },
+    },
+    "q_element_flow_metadata": {
+        "theme": "structure_basis",
+        "depth": "intermediate",
+        "phase": "any",
+        "intent": "metadata_boundary",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "stem_elements", "hidden_stems"],
+        "answer_scope": "explain_element_generation_control_as_structure_metadata",
+        "score": 69,
+        "related_questions": ["q_day_master_month_anchor", "q_ten_god_metadata", "q_income_factors"],
+        "label": {
+            "zh": "五行生克在这里应该怎样只按结构关系阅读？",
+            "en": "How should element generation/control be read only as structural relation here?",
+            "ko": "오행 생극은 여기서 구조 관계로만 어떻게 읽어야 하나요?",
         },
     },
     "q_branch_relation_detail": {
@@ -135,6 +199,22 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
             "zh": "当前结构中哪些因素影响收入稳定？",
             "en": "Which structure factors affect income stability?",
             "ko": "현재 구조에서 어떤 요소가 소득 안정성에 영향을 주나요?",
+        },
+    },
+    "q_income_path_structure": {
+        "theme": "income_stability",
+        "depth": "intermediate",
+        "phase": "after_result",
+        "intent": "income_structure",
+        "required": ["result"],
+        "required_facts": ["income_signals", "chart_anchor", "relations"],
+        "answer_scope": "explain_income_path_as_structure_not_prediction",
+        "score": 66,
+        "related_questions": ["q_income_factors", "q_wealth_accessibility", "q_signal_combination"],
+        "label": {
+            "zh": "如果只按结构看，收入路径是被哪些信号组织起来的？",
+            "en": "Structurally, which signals organize the income path?",
+            "ko": "구조만 보면 소득 경로는 어떤 신호들로 조직되나요?",
         },
     },
     "q_signal_combination": {
@@ -307,6 +387,9 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
     facts = _chart_facts(chart, time_context)
     signals: List[Dict[str, Any]] = []
     questions: List[Dict[str, Any]] = _registry_questions(facts)
+    for signal in _structural_signals_from_facts(facts):
+        signals.append(signal)
+        questions.extend(_questions_for_structural_signal(signal, facts))
     for rule in rules:
         match = _match_rule(rule, facts)
         if not match.get("matched"):
@@ -337,6 +420,124 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
+def _structural_signals_from_facts(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    signals: List[Dict[str, Any]] = []
+    relations = sorted(str(item) for item in facts.get("relation_types") or [] if str(item))
+    relation_pairs = [str(item) for item in facts.get("relation_pairs") or [] if str(item)]
+    if relations or relation_pairs:
+        signals.append(
+            _structural_signal(
+                "struct.branch_relations",
+                "branch_relation",
+                relation_pairs or relations,
+                ["relations"],
+                "命盘或时间背景存在可见地支关系，适合先解释发生在哪一层。",
+                ["q_branch_relation_detail", "q_combination_context", "q_time_vs_natal_relation"],
+                86,
+            )
+        )
+    vaults = [str(item) for item in facts.get("vault_branches") or [] if str(item)]
+    if facts.get("luck_is_vault"):
+        vaults.append(str(facts.get("luck_branch") or ""))
+    if facts.get("flow_is_vault"):
+        vaults.append(str(facts.get("flow_branch") or ""))
+    vaults = sorted({item for item in vaults if item})
+    if vaults:
+        signals.append(
+            _structural_signal(
+                "struct.vaults",
+                "vault",
+                vaults,
+                ["vaults", "hidden_stems"],
+                "命盘或时间背景出现墓库支，适合解释位置、藏干和阅读边界。",
+                ["q_vault_structure", "q_hidden_stem_role", "q_structure_overview"],
+                80,
+            )
+        )
+    if facts.get("day_stem") or facts.get("month_branch"):
+        observed = [str(item) for item in [facts.get("day_stem"), facts.get("month_branch")] if str(item)]
+        signals.append(
+            _structural_signal(
+                "struct.anchor",
+                "structure_anchor",
+                observed,
+                ["chart_anchor", "stem_elements"],
+                "日主和月令构成结构阅读的入口，适合先回答结构基点。",
+                ["q_day_master_month_anchor", "q_month_command_anchor", "q_structure_overview"],
+                78,
+            )
+        )
+    hidden = facts.get("hidden_stems_by_branch") if isinstance(facts.get("hidden_stems_by_branch"), dict) else {}
+    if hidden:
+        observed = []
+        for branch, stems in hidden.items():
+            if not stems:
+                continue
+            stem_list = stems if isinstance(stems, list) else [stems]
+            observed.append(f"{branch}藏{'/'.join([str(stem) for stem in stem_list if str(stem)])}")
+        signals.append(
+            _structural_signal(
+                "struct.hidden_stems",
+                "hidden_stems",
+                observed[:8],
+                ["hidden_stems"],
+                "藏干用于说明结构来源，不直接等于断语。",
+                ["q_hidden_stem_role", "q_ten_god_metadata", "q_element_flow_metadata"],
+                70,
+            )
+        )
+    return signals
+
+
+def _structural_signal(signal_id: str, category: str, observed: List[str], fact_scopes: List[str], reason: str, question_keys: List[str], score: int) -> Dict[str, Any]:
+    return {
+        "signal_id": signal_id,
+        "source": "structural_rule_signal",
+        "version": "p5.structural_signals.v1",
+        "domain": "structure",
+        "category": category,
+        "observed": [str(item) for item in observed if str(item)],
+        "fact_scopes": fact_scopes,
+        "reason": reason,
+        "question_keys": question_keys,
+        "score": score,
+        "mutates_result": False,
+    }
+
+
+def _questions_for_structural_signal(signal: Dict[str, Any], facts: Dict[str, Any]) -> List[Dict[str, Any]]:
+    rows: List[Dict[str, Any]] = []
+    observed = [str(item) for item in signal.get("observed") or [] if str(item)]
+    for key in signal.get("question_keys") or []:
+        contract = QUESTION_REGISTRY.get(str(key) or "")
+        if not contract:
+            continue
+        label = contract.get("label") if isinstance(contract.get("label"), dict) else {}
+        rows.append(
+            {
+                "key": key,
+                "source": "structural_rule_signal",
+                "registry_version": QUESTION_REGISTRY_VERSION,
+                "label": label,
+                "theme": contract.get("theme") or signal.get("category") or "structure_basis",
+                "intent": contract.get("intent") or signal.get("category") or "structure_overview",
+                "answer_scope": contract.get("answer_scope") or "",
+                "required_facts": list(contract.get("required_facts") or signal.get("fact_scopes") or []),
+                "score": int(signal.get("score") or contract.get("score") or 0),
+                "question_basis": _signal_user_label(str(signal.get("category") or "")),
+                "basis_text": _l(
+                    str(signal.get("reason") or "当前命盘有可解释的结构事实。"),
+                    "The chart has structural facts that can be explained.",
+                    "명식에 설명 가능한 구조 사실이 있습니다.",
+                ),
+                "source_signal_id": signal.get("signal_id") or "",
+                "observed": observed[:6],
+                "runtime_scope": "question_recommendation_only_no_result_mutation",
+            }
+        )
+    return rows
+
+
 def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str = "", message: str = "") -> Dict[str, Any]:
     chart = dict(agent_data.get("chart") or {})
     time_context = dict(agent_data.get("time_context") or {})
@@ -365,11 +566,7 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
     retrieved_facts = retrieve_guided_question_facts(intent, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
     sections = _guided_answer_sections(answer_kind, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
     summary = _guided_answer_summary(answer_kind, source_signal)
-    result_relation = _l(
-        "这条回答只解释当前问题命中的结构事实；不会改变 income_stability，也不会生成预测。",
-        "This answer only explains the structural facts behind the current question; it does not change income_stability or generate prediction.",
-        "이 답변은 현재 질문이 맞닿은 구조 사실만 설명하며 income_stability를 바꾸거나 예측을 만들지 않습니다.",
-    )
+    result_relation = _l("", "", "")
     answer = {
         "available": True,
         "renderer": "v19.guided_question_answer.deterministic.v1",
@@ -391,6 +588,7 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         "answer_kind": answer_kind,
         "summary": summary,
         "sections": sections,
+        "knowledge_context": dict(agent_data.get("knowledge_context") or {}),
         "observed_facts": _guided_answer_observed_facts(chart, time_context, facts, income_bundle, source_question, source_signal, answer_kind),
         "composed_text": {"zh": compose_guided_question_answer(clean_message, intent, retrieved_facts, summary, result_relation)},
         "result_relation": result_relation,
@@ -1003,44 +1201,44 @@ def _guided_answer_summary(answer_kind: str, source_signal: Dict[str, Any] | Non
     observed_text = "、".join(observed)
     summaries = {
         "branch_relation": _l(
-            f"这条问题命中的结构依据是{observed_text or '当前可见的冲合关系'}；它说明地支之间的连接或张力，只用于解释结构背景。",
-            f"The structural basis behind this question is {observed_text or 'the visible branch relations'}; it describes branch links or tension as context only.",
-            f"이 질문의 구조 근거는 {observed_text or '현재 보이는 지지 관계'}이며, 지지 사이의 연결이나 긴장을 배경으로만 설명합니다.",
+            f"可以先这样看：这题问的是地支之间有没有连接或张力。当前可见的是{observed_text or '命盘里已检测到的冲合关系'}，重点不是下结论，而是分清它发生在本命、大运还是流年这一层。",
+            f"Read it this way: the question asks whether branches form links or tension. The visible basis is {observed_text or 'the detected branch relations'}, and the key is to separate natal, luck-cycle, and flow-year layers.",
+            f"이렇게 보면 됩니다. 이 질문은 지지 사이의 연결이나 긴장이 있는지를 묻습니다. 현재 보이는 근거는 {observed_text or '감지된 지지 관계'}이며, 핵심은 원국·대운·세운 층을 나누는 것입니다.",
         ),
         "vault": _l(
-            f"这条问题命中的结构依据是{observed_text or '墓库支'}；下面只解释它们出现在哪里、藏干是什么、能读到哪一层。",
-            f"The structural basis behind this question is {observed_text or 'vault branches'}; the answer explains where they appear, their hidden stems, and the reading boundary.",
-            f"이 질문의 구조 근거는 {observed_text or '묘고 지지'}이며, 어디에 나타나는지와 지장간, 읽기 경계를 설명합니다.",
+            f"这题适合先看“位置”。当前命中的墓库线索是{observed_text or '墓库支'}：它们在哪里出现、里面藏了什么，是结构信息；不要直接把它翻译成一句吉凶。",
+            f"This question starts from location. The vault clue is {observed_text or 'vault branches'}: where it appears and what hidden stems it contains are structural facts, not a good/bad verdict.",
+            f"이 질문은 먼저 위치를 봅니다. 묘고 단서는 {observed_text or '묘고 지지'}이며, 어디에 있고 어떤 지장간을 품는지가 구조 정보입니다.",
         ),
         "time_boundary": _l(
-            "这条问题的直接回答：大运和流年目前只进入时间背景层；即使出现冲合，也只用于解释提问和展示背景，不参与当前结果聚合。",
-            "Direct answer: luck cycle and flow year currently stay in the time-context layer; even when relations appear, they guide questions and display context only.",
-            "직접 답변: 대운과 세운은 현재 시간 배경층에만 있으며, 충합이 나타나도 질문 안내와 배경 표시로만 사용됩니다.",
+            "这里要先把层级分开：大运和流年是时间背景层。它们可以帮助你看见某些关系为什么被提出来，但不会自动变成当前结构结果。",
+            "Separate the layers first: luck cycle and flow year are time-context layers. They can explain why a relation is worth asking about, but they do not automatically become the current structural result.",
+            "먼저 층을 나눠야 합니다. 대운과 세운은 시간 배경층이며, 어떤 관계를 질문해야 하는지 설명할 수 있지만 현재 구조 결과로 자동 전환되지는 않습니다.",
         ),
         "income_structure": _l(
-            "这条问题的直接回答：收入稳定性由已生成的确定性结构信号组成；这些信号说明结构状态，不是财运预测。",
-            "Direct answer: income stability is composed from existing deterministic structural signals; these describe structure state, not wealth prediction.",
-            "직접 답변: 소득 안정성은 기존 결정론적 구조 신호로 구성되며, 이는 구조 상태 설명이지 재물운 예측이 아닙니다.",
+            "收入稳定性这里按结构读：系统看的是承载力、财富结构出现度、可达性、波动和牵制这些信号怎样组合，而不是判断你会不会发财。",
+            "Income stability is read structurally here: the system looks at capacity, wealth-structure presence, accessibility, volatility, and constraints, not whether someone will become rich.",
+            "여기서 소득 안정성은 구조로 읽습니다. 수용력, 재성 구조의 출현, 접근성, 변동성, 견제가 어떻게 조합되는지를 보는 것이지 재물운을 예측하는 것이 아닙니다.",
         ),
         "result_boundary": _l(
-            "这条问题的直接回答：Result 卡片是规则输出的结构摘要，只回答当前支持的结构域，不是传统断语。",
-            "Direct answer: the Result card is a rule-produced structure summary for the supported domain, not traditional fortune text.",
-            "직접 답변: Result 카드는 지원되는 구조 영역에 대한 규칙 기반 요약이며 전통식 단정문이 아닙니다.",
+            "Result 只是一张结构摘要卡：它告诉你当前规则支持的结构域怎么归类，不负责给人生下判断。",
+            "The Result is a structural summary card: it classifies the supported structural domain, not a life verdict.",
+            "Result는 구조 요약 카드입니다. 현재 규칙이 지원하는 구조 영역을 분류할 뿐 인생 판단을 내리지 않습니다.",
         ),
         "metadata_boundary": _l(
-            "这条问题的直接回答：十神、藏干、五行属性在这里是关系元数据，用来解释结构来源，不直接成为结论。",
-            "Direct answer: Ten God, hidden stems, and element attributes are relational metadata here; they explain structure sources and are not conclusions by themselves.",
-            "직접 답변: 십성, 지장간, 오행 속성은 여기서 관계 메타데이터이며 구조 출처를 설명할 뿐 직접 결론은 아닙니다.",
+            "十神、藏干、五行在这里像“关系说明书”：它们告诉你某个结构从哪里来、和谁有关，但单独拿出来不能当结论。",
+            "Ten God, hidden stems, and elements work like relationship notes here: they tell where a structure comes from and what it relates to, but they are not standalone conclusions.",
+            "십성, 지장간, 오행은 여기서 관계 설명서에 가깝습니다. 구조가 어디서 나오고 무엇과 관련되는지 말해 주지만, 단독 결론은 아닙니다.",
         ),
         "rule_basis": _l(
-            "这条问题的直接回答：规则依据来自结构输入和确定性规则摘要；用户端只展示可读摘要，内部 rule_id 留在 Lab 中审计。",
-            "Direct answer: the rule basis comes from structural inputs and deterministic-rule summaries; the user view shows readable summaries while rule_id audit stays in Lab.",
-            "직접 답변: 규칙 근거는 구조 입력과 결정론적 규칙 요약에서 오며, 사용자 화면에는 읽기 쉬운 요약만 표시됩니다.",
+            "规则依据可以看，但用户端只应该看到能读懂的理由：用了哪些结构输入、命中了哪些事实、为什么足以支持这条回答。内部编号留给审计。",
+            "The rule basis can be shown, but users should see readable reasons: which structural inputs were used, which facts matched, and why they support the answer. Internal IDs stay in audit.",
+            "규칙 근거는 볼 수 있지만 사용자에게는 읽을 수 있는 이유만 보여야 합니다. 어떤 구조 입력과 사실이 쓰였는지 설명하고 내부 ID는 감사에 남깁니다.",
         ),
         "structure_overview": _l(
-            "这条问题的直接回答：先看日主、月令、四柱地支、可见冲合和时间背景；这些都是结构事实，不是结果好坏。",
-            "Direct answer: first read the day master, month structure, four-pillar branches, visible relations, and time context; these are structure facts, not good/bad outcomes.",
-            "직접 답변: 먼저 일간, 월지 구조, 사주 지지, 보이는 관계와 시간 배경을 봅니다. 이는 구조 사실이지 길흉 판단이 아닙니다.",
+            "只看结构时，先别急着问好坏。先把日主、月令、四柱地支、可见关系和时间背景摆清楚，后面的回答才不会跳步。",
+            "When reading structure, do not start with good or bad. First lay out day master, month branch, pillar branches, visible relations, and time context so the answer does not skip steps.",
+            "구조를 볼 때는 길흉부터 묻지 않습니다. 일간, 월지, 사주 지지, 보이는 관계와 시간 배경을 먼저 정리해야 답이 건너뛰지 않습니다.",
         ),
     }
     return summaries.get(answer_kind, summaries["structure_overview"])

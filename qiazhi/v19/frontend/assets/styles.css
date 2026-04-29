@@ -1216,6 +1216,9 @@ summary em {
 
 .answer-card-main {
   border-color: rgba(201, 164, 92, 0.34);
+  height: auto;
+  min-height: 0;
+  overflow: visible;
 }
 
 .answer-empty {
@@ -1230,6 +1233,11 @@ summary em {
   font-size: 18px;
   line-height: 1.8;
   max-width: 76ch;
+  height: auto;
+  max-height: none;
+  overflow: visible;
+  padding-bottom: 6px;
+  white-space: pre-wrap;
 }
 
 .answer-prose p {
@@ -1238,6 +1246,19 @@ summary em {
 
 .answer-prose p:last-child {
   margin-bottom: 0;
+}
+
+#questionAnswer {
+  height: auto;
+  max-height: none;
+  overflow: visible;
+}
+
+#answerFeedback {
+  clear: both;
+  margin-top: 18px;
+  position: relative;
+  z-index: 1;
 }
 
 .next-question-block {
