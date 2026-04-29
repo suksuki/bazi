@@ -1,0 +1,12 @@
+# Local dependency/runtime artifacts
+qiazhi/.venv/
+qiazhi/.pnpm-store/
+qiazhi/.pycache/
+qiazhi/.pycache_tmp/
+qiazhi/**/__pycache__/
+qiazhi/**/*.pyc
+qiazhi/v17_rebirth/.runtime/
+qiazhi/v17_rebirth/.runlogs/
+
+# OS/editor noise
+.DS_Store
