@@ -418,7 +418,7 @@ def _adapter_facts(chart: Dict[str, Any], time_context: Dict[str, Any], inferenc
     pillars = dict(chart.get("pillars") or {})
     branches = [str((pillars.get(name) or {}).get("branch") or "") for name in ["year", "month", "day", "hour"]]
     stems = [str((pillars.get(name) or {}).get("stem") or "") for name in ["year", "month", "day", "hour"]]
-    hidden = {branch: list(BRANCH_HIDDEN_STEMS.get(branch, [])) for branch in branches if branch}
+    hidden = {branch: [str(stem) for stem, _ in BRANCH_HIDDEN_STEMS.get(branch, [])] for branch in branches if branch}
     relation_items = list((chart.get("relations") or {}).get("items") or [])
     relation_pairs, relation_types = _adapter_relation_facts(relation_items)
     time_pairs, time_types, time_layers = _adapter_time_relation_facts(time_context)
