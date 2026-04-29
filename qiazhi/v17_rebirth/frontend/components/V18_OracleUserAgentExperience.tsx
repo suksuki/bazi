@@ -22,6 +22,14 @@ import {
 } from "lucide-react";
 
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
+import { useAppLanguage } from "@/hooks/useAppLanguage";
+import type { AppLanguage } from "@/lib/i18n";
+import { userFacingApiMessage, userFacingExceptionMessage } from "@/lib/v18UserMessages";
+import {
+  CapabilityBoundaryPanel,
+  capabilityBoundaryFromSafeOutput,
+  type CapabilityBoundary,
+} from "@/components/V18_CapabilityBoundaryPanel";
 
 type FeedbackType = "hit" | "miss" | "partial" | "unclear";
 type BirthGender = "unknown" | "male" | "female";
@@ -55,6 +63,8 @@ type OraclePrediction = {
   missingAssumptions: string[];
   sensitiveFactors: string[];
   evidenceTrace: EvidenceItem[];
+  wealthType?: string;
+  wealthTypeLabel?: string;
   chartSnapshot: Record<string, unknown>;
   replay: Record<string, unknown>;
   verifierStatus: string;
@@ -68,12 +78,18 @@ type OraclePrediction = {
 };
 
 type EvidenceItem = {
+  featureId: string;
+  featureType: string;
+  featureLabel: string;
   ruleId: string;
   version: string;
   contentHash: string;
   matchedFacts: unknown[];
   effect: unknown;
   confidenceDelta: number | null;
+  risk: number | null;
+  stability: number | null;
+  wealthRelevance: number | null;
 };
 
 type PredictionHistoryItem = {
@@ -87,18 +103,203 @@ type PredictionHistoryItem = {
 };
 
 const SESSION_STORAGE_KEY = "v18.oracle_agent.session_id";
-const FEEDBACK_LABELS: Record<FeedbackType, string> = {
-  hit: "准",
-  miss: "不准",
-  partial: "部分准",
-  unclear: "不清楚",
+const FEEDBACK_LABELS: Record<AppLanguage, Record<FeedbackType, string>> = {
+  zh: {
+    hit: "👍 准",
+    miss: "👎 不准",
+    partial: "⚖️ 部分准",
+    unclear: "❓ 不清楚",
+  },
+  en: {
+    hit: "👍 Accurate",
+    miss: "👎 Not accurate",
+    partial: "⚖️ Partly accurate",
+    unclear: "❓ Unclear",
+  },
+  ko: {
+    hit: "👍 맞아요",
+    miss: "👎 아니에요",
+    partial: "⚖️ 부분적으로 맞아요",
+    unclear: "❓ 잘 모르겠어요",
+  },
 };
 
-const FEEDBACK_HINTS: Record<FeedbackType, string> = {
-  hit: "命中会形成正向 learning_signal，但不会直接改 active rule。",
-  miss: "不命中会进入规则复核线索，不会直接改 active rule。",
-  partial: "部分命中会提示 Reviewer 关注条件边界。",
-  unclear: "不清楚会先进入观察，不触发规则修改。",
+const FEEDBACK_HINTS: Record<AppLanguage, Record<FeedbackType, string>> = {
+  zh: {
+    hit: "命中会形成正向 learning_signal，但不会直接改 active rule。",
+    miss: "不命中会进入规则复核线索，不会直接改 active rule。",
+    partial: "部分命中会提示 Reviewer 关注条件边界。",
+    unclear: "不清楚会先进入观察，不触发规则修改。",
+  },
+  en: {
+    hit: "A hit creates a positive learning_signal, but does not directly change active rules.",
+    miss: "A miss becomes a review signal, but does not directly change active rules.",
+    partial: "A partial hit helps reviewers inspect boundary conditions.",
+    unclear: "Unclear feedback is observed first and does not modify rules.",
+  },
+  ko: {
+    hit: "일치 피드백은 긍정 learning_signal이 되지만 active rule을 직접 바꾸지 않습니다.",
+    miss: "불일치 피드백은 검토 신호가 되지만 active rule을 직접 바꾸지 않습니다.",
+    partial: "부분 일치는 조건 경계를 검토하는 신호가 됩니다.",
+    unclear: "불명확 피드백은 관찰로 남고 규칙을 수정하지 않습니다.",
+  },
+};
+
+const ORACLE_PRODUCT_COPY: Record<
+  AppLanguage,
+  {
+    firstPrompt: string;
+    firstPromptDismiss: string;
+    recommendedTitle: string;
+    recommendedQueries: string[];
+    heroTitle: string;
+    heroSubtitle: string;
+    questionPlaceholder: string;
+    submitLabel: string;
+    logoutLabel: string;
+    readyLabel: string;
+    connectingLabel: string;
+    pendingLabel: string;
+    decisionEyebrow: string;
+    decisionHint: string;
+    confidenceLabel: string;
+    summaryWealthStructure: string;
+    summaryCoreEvidence: string;
+    summaryRiskSources: string;
+    summaryUncertainty: string;
+    summaryNoRisk: string;
+    coreEvidenceTitle: string;
+    coreEvidenceBadge: string;
+    evidenceEmpty: string;
+    evidenceMore: string;
+    evidenceLess: string;
+    wealthStructureLabel: string;
+    verifiedExplanationTitle: string;
+    verifiedExplanationHint: string;
+    verifiedBadge: string;
+    explanationBoundary: string;
+    contractSourceBadge: string;
+    feedbackTitle: string;
+    feedbackCopy: string;
+    feedbackNotice: string;
+    feedbackPlaceholder: string;
+    feedbackRecorded: string;
+  }
+> = {
+  zh: {
+    firstPrompt: "当前 Beta 优先回答财富相关、可验证的问题。你可以直接点下面的问题开始。",
+    firstPromptDismiss: "知道了",
+    recommendedTitle: "推荐问题",
+    recommendedQueries: ["我未来两年财运如何？", "收入是否稳定？", "有没有明显风险？", "适合稳定收入还是尝试机会？"],
+    heroTitle: "你想了解什么？",
+    heroSubtitle: "我会根据命盘、规则证据和历史反馈，给出可追溯的财富判断。",
+    questionPlaceholder: "例如：我未来两年财运如何？收入是否稳定？有没有投资风险？",
+    submitLabel: "开始分析",
+    logoutLabel: "退出",
+    readyLabel: "agent ready",
+    connectingLabel: "connecting",
+    pendingLabel: "session pending",
+    decisionEyebrow: "系统决策",
+    decisionHint: "这是基于 active rule、Contract、Verifier 与 Ledger 的可追溯判断，不是开放式闲聊。",
+    confidenceLabel: "决策置信度",
+    summaryWealthStructure: "财富结构（核心结论）",
+    summaryCoreEvidence: "核心依据",
+    summaryRiskSources: "风险来源",
+    summaryUncertainty: "不确定性",
+    summaryNoRisk: "暂无明显结构性风险信号",
+    coreEvidenceTitle: "核心依据",
+    coreEvidenceBadge: "核心证据预览",
+    evidenceEmpty: "当前 response 未暴露核心 evidence_trace。正式预测仍以 Contract / Ledger 为事实源。",
+    evidenceMore: "展开更多证据",
+    evidenceLess: "收起证据",
+    wealthStructureLabel: "财富结构",
+    verifiedExplanationTitle: "系统解释（基于已验证 Contract）",
+    verifiedExplanationHint: "这不是 raw LLM output；仅展示通过输出校验后的解释。",
+    verifiedBadge: "已通过校验",
+    explanationBoundary: "解释层不参与命理裁决",
+    contractSourceBadge: "解释内容来自已验证 Contract",
+    feedbackTitle: "用户反馈",
+    feedbackCopy: "反馈会绑定 prediction_id，只生成 learning_signal，不会直接修改 active rule。",
+    feedbackNotice: "你的反馈会进入学习信号，用于改进规则评分和候选规则建议，但不会直接修改当前结果。",
+    feedbackPlaceholder: "补充实际情况，例如：2024年确实换工作/收入上涨/投资亏损",
+    feedbackRecorded: "已记录，这会进入学习信号，但不会直接修改规则。",
+  },
+  en: {
+    firstPrompt: "This beta focuses on verifiable wealth questions. You can start by clicking one below.",
+    firstPromptDismiss: "Got it",
+    recommendedTitle: "Recommended questions",
+    recommendedQueries: ["How is my financial outlook in the next 2 years?", "Is my income stable?", "Are there major financial risks?", "Stable income or opportunity-taking?"],
+    heroTitle: "What would you like to understand?",
+    heroSubtitle: "I use chart structure, rule evidence, and feedback history to produce traceable wealth judgments.",
+    questionPlaceholder: "Example: How is my financial outlook in the next 2 years? Is my income stable? Any investment risk?",
+    submitLabel: "Analyze",
+    logoutLabel: "Sign out",
+    readyLabel: "agent ready",
+    connectingLabel: "connecting",
+    pendingLabel: "session pending",
+    decisionEyebrow: "System decision",
+    decisionHint: "This is a traceable decision based on active rules, Contract, Verifier, and Ledger, not open-ended chat.",
+    confidenceLabel: "Decision confidence",
+    summaryWealthStructure: "Wealth structure (core judgment)",
+    summaryCoreEvidence: "Core evidence",
+    summaryRiskSources: "Risk sources",
+    summaryUncertainty: "Uncertainty",
+    summaryNoRisk: "No strong structural risk signal yet",
+    coreEvidenceTitle: "Core evidence",
+    coreEvidenceBadge: "Core evidence preview",
+    evidenceEmpty: "No core evidence_trace is exposed in this response. The Contract / Ledger remains the source of truth.",
+    evidenceMore: "Show more evidence",
+    evidenceLess: "Hide evidence",
+    wealthStructureLabel: "Wealth structure",
+    verifiedExplanationTitle: "System explanation (based on verified Contract)",
+    verifiedExplanationHint: "This is not raw LLM output; only verifier-approved explanation is shown.",
+    verifiedBadge: "Verifier-checked",
+    explanationBoundary: "Explanation does not make the judgment",
+    contractSourceBadge: "Explanation comes from a verified Contract",
+    feedbackTitle: "Feedback",
+    feedbackCopy: "Feedback is bound to prediction_id and only creates a learning_signal. It does not directly modify active rules.",
+    feedbackNotice: "Your feedback improves rule scoring and candidate suggestions, but it does not directly modify the current result.",
+    feedbackPlaceholder: "Add context, e.g. income changed, job changed, investment loss or gain",
+    feedbackRecorded: "Recorded. This becomes a learning signal and does not directly modify rules.",
+  },
+  ko: {
+    firstPrompt: "현재 Beta는 검증 가능한 재물 관련 질문에 우선 답합니다. 아래 질문을 눌러 시작할 수 있습니다.",
+    firstPromptDismiss: "알겠어요",
+    recommendedTitle: "추천 질문",
+    recommendedQueries: ["앞으로 2년 재물운은 어떤가요?", "수입은 안정적인가요?", "큰 재정 리스크가 있나요?", "안정 수입과 기회 중 무엇이 맞나요?"],
+    heroTitle: "무엇을 알고 싶나요?",
+    heroSubtitle: "명식 구조, 규칙 근거, 피드백 기록을 바탕으로 추적 가능한 재물 판단을 제공합니다.",
+    questionPlaceholder: "예: 앞으로 2년 재물운은 어떤가요? 수입은 안정적인가요? 투자 리스크가 있나요?",
+    submitLabel: "분석 시작",
+    logoutLabel: "로그아웃",
+    readyLabel: "agent ready",
+    connectingLabel: "connecting",
+    pendingLabel: "session pending",
+    decisionEyebrow: "시스템 판단",
+    decisionHint: "이 결과는 active rule, Contract, Verifier, Ledger에 기반한 추적 가능한 판단이며 자유 대화가 아닙니다.",
+    confidenceLabel: "판단 신뢰도",
+    summaryWealthStructure: "재물 구조 (핵심 판단)",
+    summaryCoreEvidence: "핵심 근거",
+    summaryRiskSources: "리스크 요인",
+    summaryUncertainty: "불확실성",
+    summaryNoRisk: "뚜렷한 구조적 리스크 신호는 아직 없습니다",
+    coreEvidenceTitle: "핵심 근거",
+    coreEvidenceBadge: "핵심 근거 미리보기",
+    evidenceEmpty: "현재 response에는 핵심 evidence_trace가 노출되지 않았습니다. 공식 예측의 사실 기준은 Contract / Ledger입니다.",
+    evidenceMore: "근거 더 보기",
+    evidenceLess: "근거 접기",
+    wealthStructureLabel: "재물 구조",
+    verifiedExplanationTitle: "시스템 설명 (검증된 Contract 기반)",
+    verifiedExplanationHint: "raw LLM output이 아니라, 출력 검증을 통과한 설명만 표시합니다.",
+    verifiedBadge: "검증 완료",
+    explanationBoundary: "설명 계층은 판단하지 않습니다",
+    contractSourceBadge: "설명은 검증된 Contract 기반입니다",
+    feedbackTitle: "사용자 피드백",
+    feedbackCopy: "피드백은 prediction_id에 연결되어 learning_signal만 생성하며 active rule을 직접 수정하지 않습니다.",
+    feedbackNotice: "피드백은 규칙 점수와 후보 규칙 제안을 개선하지만 현재 결과를 직접 수정하지 않습니다.",
+    feedbackPlaceholder: "실제 상황을 보충해 주세요. 예: 이직, 수입 변화, 투자 손익",
+    feedbackRecorded: "기록되었습니다. 학습 신호로 들어가며 규칙을 직접 수정하지 않습니다.",
+  },
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -110,8 +311,8 @@ function unwrapEnvelope(value: unknown): Record<string, unknown> {
   return isRecord(value) ? value : {};
 }
 
-function apiFailureMessage(value: unknown, requestError: string | undefined, fallback: string): string {
-  return requestError || readString(value, ["message", "detail", "error"]) || readString(unwrapEnvelope(value), ["message", "detail", "error"]) || fallback;
+function apiFailureMessage(value: unknown, requestError: string | undefined, fallback: string, language: AppLanguage): string {
+  return userFacingApiMessage(value, requestError, fallback, language);
 }
 
 function readRecord(source: unknown, key: string): Record<string, unknown> {
@@ -308,15 +509,21 @@ function normalizeEvidence(value: unknown): EvidenceItem[] {
     .map((row) => {
       const evidence = isRecord(row) ? row : {};
       return {
+        featureId: readString(evidence, ["feature_id", "featureId"]),
+        featureType: readString(evidence, ["feature_type", "featureType"]),
+        featureLabel: readString(evidence, ["feature_label", "featureLabel"]) || readString(readRecord(evidence, "feature"), ["label"]),
         ruleId: readString(evidence, ["rule_id", "ruleId", "id"]),
         version: readString(evidence, ["version", "rule_version"]),
         contentHash: readString(evidence, ["content_hash", "rule_hash", "hash"]),
         matchedFacts: readArray(evidence, "matched_facts").length ? readArray(evidence, "matched_facts") : readArray(evidence, "facts"),
         effect: evidence.effect || evidence.effects || evidence.effect_delta || {},
         confidenceDelta: clampConfidence(readNumber(evidence, ["confidence_delta", "confidence", "score"])),
+        risk: clampConfidence(readNumber(evidence, ["risk"])),
+        stability: clampConfidence(readNumber(evidence, ["stability"])),
+        wealthRelevance: clampConfidence(readNumber(evidence, ["wealth_relevance", "wealthRelevance"])),
       };
     })
-    .filter((item) => item.ruleId || item.version || item.contentHash || item.matchedFacts.length > 0);
+    .filter((item) => item.ruleId || item.featureId || item.version || item.contentHash || item.matchedFacts.length > 0);
 }
 
 function evidenceFromSources(...sources: unknown[]): EvidenceItem[] {
@@ -417,6 +624,10 @@ function buildPrediction({
   const uncertainty = uncertaintyFromContract(contract, explanationResponse);
   const conclusionTitle = conclusionFromSources(contract, turnSafeOutput, explanationText);
   const conclusionRef = firstConclusionRef(turnSafeOutput, explanationSafeOutput, explanationResponse, ledger, contract);
+  const safeWealthProfile = readRecord(turnSafeOutput, "wealth_profile");
+  const contractChart = readRecord(contract, "chart_snapshot");
+  const contractWealthProfile = readRecord(readRecord(contractChart, "wealth_domain_bundle"), "wealth_profile");
+  const wealthProfile = readString(safeWealthProfile, ["wealth_type", "wealth_type_label"]) ? safeWealthProfile : contractWealthProfile;
   const verifier = readRecord(explanationResponse, "verifier");
   const verifierStatus =
     readString(verifier, ["status", "action"]) ||
@@ -432,6 +643,8 @@ function buildPrediction({
     confidence,
     ...uncertainty,
     evidenceTrace,
+    wealthType: readString(wealthProfile, ["wealth_type"]),
+    wealthTypeLabel: readString(wealthProfile, ["wealth_type_label"]) || readString(wealthProfile, ["wealth_type"]),
     chartSnapshot: Object.keys(chartSnapshot).length > 0 ? chartSnapshot : readRecord(contract, "chart_snapshot"),
     replay: replayPayload,
     verifierStatus,
@@ -457,12 +670,14 @@ export function V18_OracleUserAgentExperience({
   isAdmin = false,
   onLogout,
 }: OracleUserAgentExperienceProps): ReactNode {
+  const { language } = useAppLanguage();
   const [sessionId, setSessionId] = useState("");
   const [loadingSession, setLoadingSession] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [question, setQuestion] = useState("");
   const [birthInfo, setBirthInfo] = useState<BirthInfo>({ year: "", month: "", day: "", hour: "", gender: "unknown" });
   const [clarificationQuestion, setClarificationQuestion] = useState("");
+  const [capabilityBoundary, setCapabilityBoundary] = useState<CapabilityBoundary | null>(null);
   const [missingFields, setMissingFields] = useState<string[]>([]);
   const [currentPrediction, setCurrentPrediction] = useState<OraclePrediction | null>(null);
   const [history, setHistory] = useState<PredictionHistoryItem[]>([]);
@@ -528,14 +743,14 @@ export function V18_OracleUserAgentExperience({
         noStoreInit(),
       ),
     );
-    if (!ok) throw new Error(apiFailureMessage(data, requestError, "Agent session 创建失败。"));
+    if (!ok) throw new Error(apiFailureMessage(data, requestError, "Agent session 创建失败。", language));
     const payload = unwrapEnvelope(data);
     const resolvedId = extractSessionId(payload);
     if (!resolvedId) throw new Error("Agent session 响应缺少 session_id。");
     localStorage.setItem(SESSION_STORAGE_KEY, resolvedId);
     setSessionId(resolvedId);
     restoreSessionHistory(payload);
-  }, [restoreSessionHistory]);
+  }, [language, restoreSessionHistory]);
 
   useEffect(() => {
     let cancelled = false;
@@ -551,7 +766,7 @@ export function V18_OracleUserAgentExperience({
         }
         if (!cancelled) await createAgentSession();
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Agent session 初始化失败。");
+        if (!cancelled) setError(userFacingExceptionMessage(err, "Agent session 初始化失败。", language));
       } finally {
         if (!cancelled) setLoadingSession(false);
       }
@@ -567,9 +782,9 @@ export function V18_OracleUserAgentExperience({
       `/api/v18.1/predictions/${encodeURIComponent(predictionId)}/replay`,
       noStoreInit(),
     );
-    if (!ok) throw new Error(apiFailureMessage(data, requestError, "Replay 加载失败。"));
+    if (!ok) throw new Error(apiFailureMessage(data, requestError, "Replay 加载失败。", language));
     return unwrapEnvelope(data);
-  }, []);
+  }, [language]);
 
   const explainPrediction = useCallback(
     async ({
@@ -599,7 +814,7 @@ export function V18_OracleUserAgentExperience({
           noStoreInit(),
         ),
       );
-      if (!ok) throw new Error(apiFailureMessage(data, requestError, "系统解释被输出校验拦截。"));
+      if (!ok) throw new Error(apiFailureMessage(data, requestError, "系统解释被输出校验拦截。", language));
       const explanationPayload = unwrapEnvelope(data);
       const explanationResponse =
         readRecord(explanationPayload, "explanation_response").safe_output || explanationPayload.explanation_response
@@ -607,7 +822,7 @@ export function V18_OracleUserAgentExperience({
           : explanationPayload;
       const verifier = readRecord(explanationResponse, "verifier");
       if (readBool(verifier, "ok", true) === false || readBool(explanationResponse, "verified", true) === false) {
-        throw new Error("系统解释未通过输出校验，前端拒绝展示。");
+        throw new Error(userFacingApiMessage({ code: "VERIFIER_BLOCKED" }, undefined, "系统解释未通过输出校验，前端拒绝展示。", language));
       }
 
       let replayPayload: Record<string, unknown> = {};
@@ -626,16 +841,17 @@ export function V18_OracleUserAgentExperience({
         chartSnapshot,
       });
     },
-    [loadReplay],
+    [language, loadReplay],
   );
 
-  const submitQuestion = useCallback(async () => {
-    const userQuestion = question.trim();
+  const submitQuestion = useCallback(async (questionOverride?: string) => {
+    const userQuestion = questionOverride?.trim() || question.trim();
     if (!userQuestion || !sessionId || submitting) return;
     setSubmitting(true);
     setError("");
     setFeedbackStatus("");
     setClarificationQuestion("");
+    setCapabilityBoundary(null);
     setMissingFields([]);
 
     try {
@@ -667,10 +883,18 @@ export function V18_OracleUserAgentExperience({
         ),
       );
 
-      if (!ok) throw new Error(apiFailureMessage(data, requestError, "Agent turn 提交失败。"));
+      if (!ok) throw new Error(apiFailureMessage(data, requestError, "Agent turn 提交失败。", language));
       const payload = unwrapEnvelope(data);
       const turn = readRecord(payload, "turn");
       const safeOutput = Object.keys(readRecord(turn, "safe_output")).length > 0 ? readRecord(turn, "safe_output") : readRecord(payload, "safe_output");
+      const boundary = capabilityBoundaryFromSafeOutput(safeOutput);
+      if (boundary) {
+        setCurrentPrediction(null);
+        setMissingFields([]);
+        setClarificationQuestion("");
+        setCapabilityBoundary(boundary);
+        return;
+      }
       const returnedMissingFields =
         readArray(turn, "missing_fields").length > 0
           ? readArray(turn, "missing_fields").map((item) => String(item || "").trim()).filter(Boolean)
@@ -685,6 +909,7 @@ export function V18_OracleUserAgentExperience({
 
       if (isClarification) {
         setCurrentPrediction(null);
+        setCapabilityBoundary(null);
         setMissingFields(returnedMissingFields);
         setClarificationQuestion(
           safeOutputText(safeOutput) ||
@@ -694,6 +919,7 @@ export function V18_OracleUserAgentExperience({
       }
 
       const prediction = await explainPrediction({ predictionId, contractId, safeOutput, chartSnapshot });
+      setCapabilityBoundary(null);
       setCurrentPrediction(prediction);
       setFeedbackText("");
       upsertHistory({
@@ -706,11 +932,19 @@ export function V18_OracleUserAgentExperience({
         replay: prediction.replay,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Agent 处理失败。");
+      setError(userFacingExceptionMessage(err, "Agent 处理失败。", language));
     } finally {
       setSubmitting(false);
     }
-  }, [birthInfo, explainPrediction, question, sessionId, submitting, upsertHistory]);
+  }, [birthInfo, explainPrediction, language, question, sessionId, submitting, upsertHistory]);
+
+  const submitSuggestedQuestion = useCallback(
+    (nextQuestion: string) => {
+      setQuestion(nextQuestion);
+      void submitQuestion(nextQuestion);
+    },
+    [submitQuestion],
+  );
 
   const submitFeedback = useCallback(
     async (feedbackType: FeedbackType) => {
@@ -730,7 +964,7 @@ export function V18_OracleUserAgentExperience({
               user_comment: feedbackText.trim(),
               observed_event: {
                 source: "oracle_user_agent_ui",
-                label: FEEDBACK_LABELS[feedbackType],
+                label: FEEDBACK_LABELS[language][feedbackType],
                 note: feedbackText.trim(),
               },
               observed_at: nowIso(),
@@ -738,11 +972,11 @@ export function V18_OracleUserAgentExperience({
             noStoreInit(),
           ),
         );
-        if (!ok) throw new Error(apiFailureMessage(data, requestError, "Feedback 提交失败。"));
+        if (!ok) throw new Error(apiFailureMessage(data, requestError, "Feedback 提交失败。", language));
         const payload = unwrapEnvelope(data);
         const learningSignal = readRecord(payload, "learning_signal");
         const signalId = readString(learningSignal, ["signal_id", "id"], "created");
-        setFeedbackStatus(`已记录，这会进入学习信号，但不会直接修改规则。learning_signal=${signalId}`);
+        setFeedbackStatus(`${ORACLE_PRODUCT_COPY[language].feedbackRecorded} learning_signal=${signalId}`);
         upsertHistory({
           predictionId: currentPrediction.predictionId,
           contractId: currentPrediction.contractId,
@@ -753,10 +987,10 @@ export function V18_OracleUserAgentExperience({
           replay: currentPrediction.replay,
         });
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Feedback 提交失败。");
+        setError(userFacingExceptionMessage(err, "Feedback 提交失败。", language));
       }
     },
-    [currentPrediction, feedbackText, upsertHistory],
+    [currentPrediction, feedbackText, language, upsertHistory],
   );
 
   const replayHistoryItem = useCallback(
@@ -776,10 +1010,10 @@ export function V18_OracleUserAgentExperience({
           ),
         );
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Replay 加载失败。");
+        setError(userFacingExceptionMessage(err, "Replay 加载失败。", language));
       }
     },
-    [loadReplay],
+    [language, loadReplay],
   );
 
   return (
@@ -794,11 +1028,13 @@ export function V18_OracleUserAgentExperience({
         <OracleAgentPanel
           displayName={displayName}
           roleLabel={roleLabel}
+          language={language}
           loading={loadingSession || submitting}
           sessionReady={Boolean(sessionId)}
           question={question}
           onQuestionChange={setQuestion}
           onSubmit={() => void submitQuestion()}
+          onSuggestedQuery={submitSuggestedQuestion}
           onLogout={onLogout}
         />
 
@@ -807,6 +1043,15 @@ export function V18_OracleUserAgentExperience({
             <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0" />
             <span>{error}</span>
           </div>
+        ) : null}
+
+        {capabilityBoundary ? (
+          <CapabilityBoundaryPanel
+            boundary={capabilityBoundary}
+            className="mt-5"
+            language={language}
+            onTryQuery={submitSuggestedQuestion}
+          />
         ) : null}
 
         <BirthInfoClarificationForm
@@ -820,24 +1065,25 @@ export function V18_OracleUserAgentExperience({
         {currentPrediction ? (
           <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
             <div className="space-y-5">
-              <PredictionSummaryCard prediction={currentPrediction} isAdmin={isAdmin} />
-              <PredictionProvenanceCard prediction={currentPrediction} isAdmin={isAdmin} />
+              <PredictionSummaryCard prediction={currentPrediction} isAdmin={isAdmin} language={language} />
               <PredictionFeedbackPanel
                 prediction={currentPrediction}
+                language={language}
                 feedbackText={feedbackText}
                 feedbackStatus={feedbackStatus}
                 onFeedbackTextChange={setFeedbackText}
                 onSubmitFeedback={(feedbackType) => void submitFeedback(feedbackType)}
               />
-              <VerifiedExplanationCard prediction={currentPrediction} />
+              <PredictionProvenanceCard prediction={currentPrediction} isAdmin={isAdmin} />
+              <VerifiedExplanationCard prediction={currentPrediction} language={language} />
             </div>
             <div className="space-y-5">
-              <EvidenceTracePanel evidenceTrace={currentPrediction.evidenceTrace} />
+              <EvidenceTracePanel evidenceTrace={currentPrediction.evidenceTrace} language={language} />
               <UncertaintyPanel prediction={currentPrediction} />
               {isAdmin ? <AdminDebugPanel prediction={currentPrediction} /> : null}
             </div>
           </section>
-        ) : (
+        ) : capabilityBoundary ? null : (
           <section className="mt-6 rounded-[2rem] border border-white/10 bg-white/[0.05] p-6 text-slate-300 shadow-2xl shadow-black/25 backdrop-blur">
             <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
               <div>
@@ -871,22 +1117,27 @@ export function V18_OracleUserAgentExperience({
 function OracleAgentPanel({
   displayName,
   roleLabel,
+  language,
   loading,
   sessionReady,
   question,
   onQuestionChange,
   onSubmit,
+  onSuggestedQuery,
   onLogout,
 }: {
   displayName?: string;
   roleLabel?: string;
+  language: AppLanguage;
   loading: boolean;
   sessionReady: boolean;
   question: string;
   onQuestionChange: (value: string) => void;
   onSubmit: () => void;
+  onSuggestedQuery: (value: string) => void;
   onLogout?: () => void | Promise<void>;
 }): ReactNode {
+  const text = ORACLE_PRODUCT_COPY[language];
   return (
     <section className="rounded-[2.25rem] border border-white/10 bg-white/[0.07] p-5 shadow-2xl shadow-black/30 backdrop-blur md:p-7">
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
@@ -895,9 +1146,9 @@ function OracleAgentPanel({
             <Bot className="h-3.5 w-3.5" />
             Oracle Agent / Contract-first
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">你想了解什么？</h1>
+          <h1 className="text-3xl font-semibold tracking-tight text-white md:text-5xl">{text.heroTitle}</h1>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-300 md:text-base">
-            我会根据命盘、规则证据和历史反馈，给出可追溯的判断。
+            {text.heroSubtitle}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
@@ -905,11 +1156,11 @@ function OracleAgentPanel({
             {displayName || "User"} {roleLabel ? `· ${roleLabel}` : ""}
           </span>
           <span className={`rounded-full border px-3 py-2 text-xs ${sessionReady ? "border-emerald-300/20 bg-emerald-300/10 text-emerald-100" : "border-amber-300/20 bg-amber-300/10 text-amber-100"}`}>
-            {loading ? "connecting" : sessionReady ? "agent ready" : "session pending"}
+            {loading ? text.connectingLabel : sessionReady ? text.readyLabel : text.pendingLabel}
           </span>
           {onLogout ? (
             <button type="button" onClick={() => void onLogout()} className="rounded-full border border-white/10 bg-black/20 px-3 py-2 text-slate-300 transition hover:bg-black/30">
-              退出
+              {text.logoutLabel}
             </button>
           ) : null}
         </div>
@@ -922,7 +1173,7 @@ function OracleAgentPanel({
           onKeyDown={(event) => {
             if (event.key === "Enter" && (event.metaKey || event.ctrlKey)) onSubmit();
           }}
-          placeholder="例如：我未来两年财运怎么样？适合创业还是稳定工作？"
+          placeholder={text.questionPlaceholder}
           className="min-h-36 resize-none rounded-[1.75rem] border border-white/10 bg-[#070b10]/70 px-5 py-4 text-base leading-7 text-slate-100 outline-none transition placeholder:text-slate-500 focus:border-cyan-300/60"
         />
         <button
@@ -932,10 +1183,56 @@ function OracleAgentPanel({
           className="inline-flex min-h-16 items-center justify-center gap-2 rounded-[1.75rem] bg-cyan-300 px-5 py-4 font-semibold text-slate-950 transition hover:bg-cyan-200 disabled:cursor-not-allowed disabled:bg-slate-600 disabled:text-slate-300 lg:min-h-full"
         >
           {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
-          开始分析
+          {text.submitLabel}
         </button>
       </div>
+      <FirstUseHint storageKey="v18.oracle.first_prompt.dismissed" text={text} />
+      <QuerySuggestionChips text={text} onSelect={onSuggestedQuery} />
     </section>
+  );
+}
+
+function FirstUseHint({ storageKey, text }: { storageKey: string; text: (typeof ORACLE_PRODUCT_COPY)[AppLanguage] }): ReactNode {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setVisible(window.localStorage.getItem(storageKey) !== "1");
+  }, [storageKey]);
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    if (typeof window !== "undefined") window.localStorage.setItem(storageKey, "1");
+  }, [storageKey]);
+
+  if (!visible) return null;
+  return (
+    <div className="mt-4 flex flex-col gap-3 rounded-[1.5rem] border border-cyan-200/15 bg-cyan-200/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm leading-6 text-cyan-50">{text.firstPrompt}</p>
+      <button type="button" onClick={dismiss} className="self-start rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10 sm:self-auto">
+        {text.firstPromptDismiss}
+      </button>
+    </div>
+  );
+}
+
+function QuerySuggestionChips({ text, onSelect }: { text: (typeof ORACLE_PRODUCT_COPY)[AppLanguage]; onSelect: (query: string) => void }): ReactNode {
+  return (
+    <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100/70">{text.recommendedTitle}</p>
+      <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+        {text.recommendedQueries.map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onSelect(item)}
+            className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1.5 text-xs text-cyan-50 transition hover:bg-cyan-200/15"
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -1005,25 +1302,42 @@ function BirthInput({ label, value, onChange }: { label: string; value: string; 
   );
 }
 
-function PredictionSummaryCard({ prediction, isAdmin }: { prediction: OraclePrediction; isAdmin: boolean }): ReactNode {
+function PredictionSummaryCard({ prediction, isAdmin, language }: { prediction: OraclePrediction; isAdmin: boolean; language: AppLanguage }): ReactNode {
+  const text = ORACLE_PRODUCT_COPY[language];
   const confidencePercent = prediction.confidence === null ? null : Math.round(prediction.confidence * 100);
+  const coreEvidence = sortCoreEvidence(prediction.evidenceTrace).slice(0, 2);
+  const risks = riskEvidence(prediction.evidenceTrace).slice(0, 2);
   return (
     <section className="rounded-[2rem] border border-cyan-200/20 bg-cyan-200/[0.08] p-6 shadow-2xl shadow-cyan-950/20">
-      <TrustBadgeBar prediction={prediction} />
-      <h2 className="text-2xl font-semibold leading-tight text-white md:text-3xl">{prediction.conclusionTitle}</h2>
-      <p className="mt-3 text-sm leading-7 text-slate-300">{prediction.summary}</p>
-      <div className="mt-5 grid gap-4 md:grid-cols-2">
-        <div className="rounded-2xl border border-white/10 bg-black/20 p-4">
-          <div className="mb-2 flex items-center justify-between text-sm">
-            <span className="text-slate-300">置信度</span>
-            <span className="font-semibold text-white">{confidencePercent === null ? "未公开" : `${confidencePercent}%`}</span>
+      <TrustBadgeBar prediction={prediction} language={language} />
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/70">{text.decisionEyebrow}</p>
+      <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-100/80">{text.summaryWealthStructure}</p>
+        <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="inline-flex rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-1 text-sm font-semibold text-amber-100">
+              {prediction.wealthTypeLabel || prediction.wealthType || text.wealthStructureLabel}
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold leading-tight text-white md:text-3xl">{prediction.conclusionTitle}</h2>
+            <p className="mt-3 text-sm leading-7 text-slate-300">{prediction.summary}</p>
           </div>
-          <div className="h-2 overflow-hidden rounded-full bg-white/10">
-            <div className="h-full rounded-full bg-cyan-300 transition-all" style={{ width: `${confidencePercent ?? 18}%` }} />
+          <div className="min-w-44 rounded-2xl border border-white/10 bg-white/[0.05] p-4">
+            <div className="mb-2 flex items-center justify-between text-sm">
+              <span className="text-slate-300">{text.confidenceLabel}</span>
+              <span className="font-semibold text-white">{confidencePercent === null ? "n/a" : `${confidencePercent}%`}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-cyan-300 transition-all" style={{ width: `${confidencePercent ?? 18}%` }} />
+            </div>
           </div>
         </div>
-        <UncertaintyCallout prediction={prediction} compact />
       </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <SummaryBlock title={text.summaryCoreEvidence} items={coreEvidence.map((item) => evidenceSummary(item, language))} />
+        <SummaryBlock title={text.summaryRiskSources} items={risks.length ? risks.map((item) => evidenceSummary(item, language)) : [text.summaryNoRisk]} tone="risk" />
+        <SummaryBlock title={text.summaryUncertainty} items={[prediction.uncertaintyText, ...prediction.uncertaintyReasons.slice(0, 2)]} tone="uncertainty" />
+      </div>
+      <p className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-cyan-50/90">{text.decisionHint}</p>
       {isAdmin ? (
         <div className="mt-4 grid gap-2 text-xs text-slate-400 md:grid-cols-2">
           <DebugChip label="prediction_id" value={prediction.predictionId} />
@@ -1034,13 +1348,40 @@ function PredictionSummaryCard({ prediction, isAdmin }: { prediction: OraclePred
   );
 }
 
-function TrustBadgeBar({ prediction }: { prediction: OraclePrediction }): ReactNode {
+function SummaryBlock({ title, items, tone = "default" }: { title: string; items: string[]; tone?: "default" | "risk" | "uncertainty" }): ReactNode {
+  const toneClass =
+    tone === "risk"
+      ? "border-rose-300/20 bg-rose-300/[0.07]"
+      : tone === "uncertainty"
+        ? "border-amber-300/20 bg-amber-300/[0.08]"
+        : "border-white/10 bg-white/[0.05]";
+  return (
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">{title}</p>
+      <ul className="space-y-2 text-xs leading-5 text-slate-100">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-200" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function TrustBadgeBar({ prediction, language }: { prediction: OraclePrediction; language: AppLanguage }): ReactNode {
+  const labels: Record<AppLanguage, string[]> = {
+    zh: ["已通过规则裁决", "已绑定证据链", "已通过输出校验", "已写入预测账本", "可反馈学习"],
+    en: ["Rule-adjudicated", "Evidence-linked", "Verifier-checked", "Ledger-written", "Feedback-ready"],
+    ko: ["규칙 판단 완료", "근거 연결 완료", "검증 완료", "Ledger 기록", "피드백 가능"],
+  };
   const badges = [
-    { label: "已通过规则裁决", ok: true },
-    { label: "已绑定证据链", ok: prediction.evidenceTrace.length > 0 },
-    { label: "已通过输出校验", ok: prediction.verifierStatus !== "blocked" },
-    { label: "已写入预测账本", ok: prediction.ledgerStatus === "written" },
-    { label: "可反馈学习", ok: Boolean(prediction.predictionId) },
+    { label: labels[language][0], ok: true },
+    { label: labels[language][1], ok: prediction.evidenceTrace.length > 0 },
+    { label: labels[language][2], ok: prediction.verifierStatus !== "blocked" },
+    { label: labels[language][3], ok: prediction.ledgerStatus === "written" },
+    { label: labels[language][4], ok: Boolean(prediction.predictionId) },
   ];
   return (
     <div className="mb-5 flex flex-wrap gap-2">
@@ -1102,21 +1443,22 @@ function ProvenanceLine({ label, value }: { label: string; value: string }): Rea
   );
 }
 
-function VerifiedExplanationCard({ prediction }: { prediction: OraclePrediction }): ReactNode {
+function VerifiedExplanationCard({ prediction, language }: { prediction: OraclePrediction; language: AppLanguage }): ReactNode {
+  const text = ORACLE_PRODUCT_COPY[language];
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-6 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="flex items-center gap-2 text-xl font-semibold text-white">
             <BadgeCheck className="h-5 w-5 text-emerald-200" />
-            系统解释（基于规则裁决）
+            {text.verifiedExplanationTitle}
           </h2>
-          <p className="mt-1 text-sm text-slate-400">这不是 raw LLM output；仅展示通过输出校验后的解释。</p>
+          <p className="mt-1 text-sm text-slate-400">{text.verifiedExplanationHint}</p>
         </div>
         <div className="flex flex-wrap gap-2">
-          <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">已通过输出校验</span>
-          <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">解释层不参与命理裁决</span>
-          <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">解释内容来自已验证 Contract</span>
+          <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">{text.verifiedBadge}</span>
+          <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">{text.explanationBoundary}</span>
+          <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">{text.contractSourceBadge}</span>
           <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300">model {prediction.modelVersion}</span>
           <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs text-slate-300">engine {prediction.engineVersion}</span>
         </div>
@@ -1126,33 +1468,35 @@ function VerifiedExplanationCard({ prediction }: { prediction: OraclePrediction 
   );
 }
 
-function EvidenceTracePanel({ evidenceTrace }: { evidenceTrace: EvidenceItem[] }): ReactNode {
-  const preview = evidenceTrace.slice(0, 2);
-  const rest = evidenceTrace.slice(2);
+function EvidenceTracePanel({ evidenceTrace, language }: { evidenceTrace: EvidenceItem[]; language: AppLanguage }): ReactNode {
+  const text = ORACLE_PRODUCT_COPY[language];
+  const ordered = sortCoreEvidence(evidenceTrace);
+  const preview = ordered.slice(0, 2);
+  const rest = ordered.slice(3);
   return (
     <section className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/20 backdrop-blur">
       <div className="mb-4 flex items-center justify-between gap-3 text-white">
         <h2 className="flex items-center gap-2 text-lg font-semibold">
           <ClipboardCheck className="h-5 w-5 text-cyan-200" />
-          判断依据
+          {text.coreEvidenceTitle}
         </h2>
-        <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">核心证据预览</span>
+        <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">{text.coreEvidenceBadge}</span>
       </div>
       <div className="space-y-3">
         {evidenceTrace.length === 0 ? (
           <p className="rounded-2xl border border-dashed border-white/10 bg-black/20 p-4 text-sm text-slate-400">
-            当前 response 未暴露 evidence_trace。正式预测仍以 Contract / Ledger 为事实源。
+            {text.evidenceEmpty}
           </p>
         ) : (
-          preview.map((item, index) => <EvidencePreview key={`${item.ruleId}-${item.version}-preview-${index}`} item={item} />)
+          preview.map((item, index) => <EvidencePreview key={`${item.ruleId}-${item.version}-preview-${index}`} item={item} language={language} />)
         )}
       </div>
       {rest.length > 0 ? (
         <details className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-4 text-sm text-slate-300">
-          <summary className="cursor-pointer text-slate-100">查看其余 {rest.length} 条规则证据</summary>
+          <summary className="cursor-pointer text-slate-100">{text.evidenceMore} ({rest.length})</summary>
           <div className="mt-3 space-y-3">
             {rest.map((item, index) => (
-              <EvidencePreview key={`${item.ruleId}-${item.version}-rest-${index}`} item={item} compact />
+              <EvidencePreview key={`${item.ruleId}-${item.version}-rest-${index}`} item={item} language={language} compact />
             ))}
           </div>
         </details>
@@ -1161,21 +1505,116 @@ function EvidenceTracePanel({ evidenceTrace }: { evidenceTrace: EvidenceItem[] }
   );
 }
 
-function EvidencePreview({ item, compact = false }: { item: EvidenceItem; compact?: boolean }): ReactNode {
+function EvidencePreview({ item, language, compact = false }: { item: EvidenceItem; language: AppLanguage; compact?: boolean }): ReactNode {
+  const label = evidenceLabel(item, language);
   return (
     <article className={`rounded-2xl border border-white/10 bg-black/20 ${compact ? "p-3" : "p-4"}`}>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">规则证据</span>
+        <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{ORACLE_PRODUCT_COPY[language].coreEvidenceTitle}</span>
+        {item.featureLabel || item.featureType ? (
+          <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">{label}</span>
+        ) : null}
         <span className="font-mono text-xs text-slate-400">{item.ruleId || "unknown_rule"}</span>
       </div>
       <dl className="grid gap-3 text-sm">
+        {item.featureType ? <EvidenceLine label={ORACLE_PRODUCT_COPY[language].wealthStructureLabel} value={wealthFeatureLabel(item.featureType, language)} /> : null}
         <EvidenceLine label="effect" value={compactJson(item.effect)} />
-        <EvidenceLine label="命中事实" value={item.matchedFacts.length ? compactJson(item.matchedFacts) : "n/a"} />
+        <EvidenceLine label={language === "en" ? "matched facts" : language === "ko" ? "적중 근거" : "命中事实"} value={item.matchedFacts.length ? compactJson(item.matchedFacts) : "n/a"} />
         <EvidenceLine label="confidence_delta" value={item.confidenceDelta === null ? "n/a" : `${Math.round(item.confidenceDelta * 100)}%`} />
+        {item.stability !== null ? <EvidenceLine label="stability / risk" value={`${Math.round(item.stability * 100)}% / ${item.risk === null ? "n/a" : `${Math.round(item.risk * 100)}%`}`} /> : null}
         {!compact ? <EvidenceLine label="version / hash" value={`${item.version || "n/a"} / ${shortHash(item.contentHash)}`} /> : null}
       </dl>
     </article>
   );
+}
+
+function wealthFeatureLabel(value: string, language: AppLanguage): string {
+  const labels: Record<AppLanguage, Record<string, string>> = {
+    zh: {
+      wealth_strength: "财星状态",
+      wealth_star_state: "财星状态",
+      wealth_vault: "财库状态",
+      wealth_vault_state: "财库状态",
+      output_generate_wealth: "食伤生财",
+      output_to_wealth: "食伤生财",
+      constraint_structure: "官杀制约",
+      authority_wealth_constraint: "官杀制约",
+      authority_constraint: "官杀制约",
+      peer_competition: "比劫竞争",
+      structure_activation: "结构引动",
+      flow_activation: "大运流年引动",
+      luck_flow_activation: "大运流年引动",
+      stability_risk: "结构稳定性",
+      relationship_volatility: "结构稳定性",
+      wealth_path_type: "财富路径",
+      wealth_stability_risk: "风险来源",
+    },
+    en: {
+      wealth_strength: "Wealth signal",
+      wealth_star_state: "Wealth signal",
+      wealth_vault: "Wealth vault",
+      wealth_vault_state: "Wealth vault",
+      output_generate_wealth: "Output generates wealth",
+      output_to_wealth: "Output generates wealth",
+      constraint_structure: "Authority constraint",
+      authority_wealth_constraint: "Authority constraint",
+      authority_constraint: "Authority constraint",
+      peer_competition: "Peer competition",
+      structure_activation: "Structure activation",
+      flow_activation: "Luck-flow activation",
+      luck_flow_activation: "Luck-flow activation",
+      stability_risk: "Structural stability",
+      relationship_volatility: "Structural stability",
+      wealth_path_type: "Wealth path",
+      wealth_stability_risk: "Risk source",
+    },
+    ko: {
+      wealth_strength: "재성 상태",
+      wealth_star_state: "재성 상태",
+      wealth_vault: "재고 상태",
+      wealth_vault_state: "재고 상태",
+      output_generate_wealth: "식상생재",
+      output_to_wealth: "식상생재",
+      constraint_structure: "관살 제약",
+      authority_wealth_constraint: "관살 제약",
+      authority_constraint: "관살 제약",
+      peer_competition: "비겁 경쟁",
+      structure_activation: "구조 작동",
+      flow_activation: "운 흐름 작동",
+      luck_flow_activation: "운 흐름 작동",
+      stability_risk: "구조 안정성",
+      relationship_volatility: "구조 안정성",
+      wealth_path_type: "재물 경로",
+      wealth_stability_risk: "리스크 요인",
+    },
+  };
+  return labels[language][value] || value || labels[language].wealth_strength;
+}
+
+function sortCoreEvidence(evidence: EvidenceItem[]): EvidenceItem[] {
+  return [...evidence].sort((left, right) => {
+    const leftScore = (left.wealthRelevance ?? 0) + (left.confidenceDelta ?? 0) + (left.stability ?? 0) * 0.2 + (left.risk ?? 0) * 0.2;
+    const rightScore = (right.wealthRelevance ?? 0) + (right.confidenceDelta ?? 0) + (right.stability ?? 0) * 0.2 + (right.risk ?? 0) * 0.2;
+    return rightScore - leftScore;
+  });
+}
+
+function evidenceLabel(item: EvidenceItem, language: AppLanguage): string {
+  return item.featureLabel || wealthFeatureLabel(item.featureType || item.featureId, language);
+}
+
+function evidenceSummary(item: EvidenceItem, language: AppLanguage): string {
+  const label = evidenceLabel(item, language);
+  const effect = compactJson(item.effect);
+  const facts = item.matchedFacts.length ? compactJson(item.matchedFacts.slice(0, 2)) : "";
+  if (language === "en") return `${label}: ${effect}${facts ? `; facts ${facts}` : ""}`;
+  if (language === "ko") return `${label}: ${effect}${facts ? `; 근거 ${facts}` : ""}`;
+  return `${label}：${effect}${facts ? `；事实 ${facts}` : ""}`;
+}
+
+function riskEvidence(evidence: EvidenceItem[]): EvidenceItem[] {
+  const riskTypes = new Set(["peer_competition", "authority_constraint", "constraint_structure", "structure_activation", "wealth_vault", "wealth_vault_state", "stability_risk", "wealth_stability_risk"]);
+  return sortCoreEvidence(evidence).filter((item) => (item.risk ?? 0) >= 0.4 || riskTypes.has(item.featureType) || riskTypes.has(item.featureId));
 }
 
 function EvidenceLine({ label, value }: { label: string; value: string }): ReactNode {
@@ -1227,46 +1666,49 @@ function InfoList({ title, items }: { title: string; items: string[] }): ReactNo
 
 function PredictionFeedbackPanel({
   prediction,
+  language,
   feedbackText,
   feedbackStatus,
   onFeedbackTextChange,
   onSubmitFeedback,
 }: {
   prediction: OraclePrediction;
+  language: AppLanguage;
   feedbackText: string;
   feedbackStatus: string;
   onFeedbackTextChange: (value: string) => void;
   onSubmitFeedback: (feedbackType: FeedbackType) => void;
 }): ReactNode {
+  const text = ORACLE_PRODUCT_COPY[language];
   return (
     <section id="prediction-feedback-panel" className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5 shadow-2xl shadow-black/20 backdrop-blur">
       <h2 className="flex items-center gap-2 text-lg font-semibold text-white">
         <Sparkles className="h-5 w-5 text-amber-200" />
-        用户反馈
+        {text.feedbackTitle}
       </h2>
       <p className="mt-1 text-sm text-slate-400">
-        反馈会绑定 prediction_id{prediction.conclusionRef ? " + conclusion_ref" : ""}，只生成 learning_signal，不会直接修改 active rule。
+        {text.feedbackCopy}{prediction.conclusionRef ? " conclusion_ref" : ""}
       </p>
       <div className="mt-4 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-4 text-sm leading-6 text-emerald-50">
-        你的反馈会进入学习信号，用于改进规则评分和候选规则建议，但不会直接修改当前规则。
+        {text.feedbackNotice}
       </div>
       <textarea
         value={feedbackText}
         onChange={(event) => onFeedbackTextChange(event.target.value)}
-        placeholder="补充实际情况，例如：2024年确实换工作/收入上涨/投资亏损"
+        placeholder={text.feedbackPlaceholder}
         className="mt-4 min-h-24 w-full resize-none rounded-2xl border border-white/10 bg-black/25 px-4 py-3 text-sm leading-6 text-slate-100 outline-none placeholder:text-slate-500 focus:border-cyan-300/50"
       />
       <div className="mt-3 flex flex-wrap gap-2">
-        {(Object.keys(FEEDBACK_LABELS) as FeedbackType[]).map((type) => (
+        {(Object.keys(FEEDBACK_LABELS[language]) as FeedbackType[]).map((type) => (
           <button
             key={type}
             type="button"
             disabled={!prediction.predictionId}
-            title={FEEDBACK_HINTS[type]}
+            title={FEEDBACK_HINTS[language][type]}
             onClick={() => onSubmitFeedback(type)}
             className="rounded-full border border-white/10 bg-black/25 px-4 py-2 text-sm text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {FEEDBACK_LABELS[type]}
+            {FEEDBACK_LABELS[language][type]}
           </button>
         ))}
       </div>

@@ -1,0 +1,344 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V19 Admin</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <main class="admin-shell">
+      <header class="admin-header">
+        <div>
+          <div class="eyebrow">V19 Admin</div>
+          <h1>DB / LLM 运行时配置</h1>
+          <p>独立 V19 设置页。参数借鉴 V17 的 DB Bridge 与 LLM Node：支持 host/port/database 或 URL，支持 OpenAI-compatible / Ollama 风格模型探测、模型加载与对话测试。</p>
+        </div>
+        <div class="admin-nav-actions">
+          <a class="nav-link" href="/profiles">进入测算</a>
+          <a class="nav-link" href="/lab">分析台</a>
+          <a class="nav-link subtle" href="/">返回入口</a>
+        </div>
+      </header>
+
+      <section class="admin-grid wide">
+        <form id="dbForm" class="settings-panel">
+          <h2>DB Bridge</h2>
+          <p class="panel-note">保存会话用。未启用时 V19 使用本地 JSON 文件；启用后会尝试写入 PostgreSQL，并保留 file mirror。</p>
+          <label class="check-row"><input id="dbEnabled" type="checkbox" /> 启用数据库桥接</label>
+          <div class="grid">
+            <label>Storage Backend<select id="dbStorageBackend"><option value="file">file</option><option value="postgres">postgres</option></select></label>
+            <label>Driver<input id="dbDriver" value="postgresql" /></label>
+            <label>Host<input id="dbHost" placeholder="127.0.0.1" /></label>
+            <label>Port<input id="dbPort" inputmode="numeric" placeholder="5432" /></label>
+            <label>Database<input id="dbDatabase" placeholder="qiazhi_v19" /></label>
+            <label>Username<input id="dbUsername" placeholder="postgres" /></label>
+            <label>Password<input id="dbPassword" type="password" placeholder="留空表示不修改已有密码" /></label>
+            <label>SSL Mode<input id="dbSslmode" placeholder="prefer" /></label>
+          </div>
+          <label>PostgreSQL URL<input id="dbUrl" placeholder="postgresql://user:password@localhost:5432/qiazhi_v19?sslmode=prefer" /></label>
+          <label class="check-row"><input id="dbAutoMigrate" type="checkbox" /> auto_migrate_json_to_postgres</label>
+          <div class="derived-box">Resolved URL: <span id="dbResolvedUrl">-</span></div>
+          <div class="button-row three">
+            <button type="button" id="saveDb">保存 DB</button>
+            <button type="button" id="ensureDb" class="secondary">创建本地库</button>
+            <button type="button" id="testDb" class="secondary">连通测试</button>
+          </div>
+          <div id="dbStatus" class="status-line">未加载</div>
+        </form>
+
+        <form id="llmForm" class="settings-panel">
+          <h2>LLM Node</h2>
+          <p class="panel-note">Agent 可选调用 LLM。Base URL 留空时按 V17 方式由 host + port 推导为 /v1；支持 /models 与 Ollama /api/tags 探测。</p>
+          <div class="grid">
+            <label class="check-row"><input id="llmEnabled" type="checkbox" /> 启用 LLM</label>
+            <label class="check-row"><input id="llmExecuteLlm" type="checkbox" /> Agent 调用 LLM</label>
+            <label>Provider<input id="llmProvider" placeholder="ollama" /></label>
+            <label>Model<input id="llmModel" placeholder="qwen2.5:7b" /></label>
+            <label class="span-2">模型选择<select id="llmModelSelect"><option value="">先加载模型</option></select></label>
+            <label>Host<input id="llmHost" placeholder="127.0.0.1" /></label>
+            <label>Port<input id="llmPort" inputmode="numeric" placeholder="11434" /></label>
+            <label>Username<input id="llmUsername" placeholder="optional" /></label>
+            <label>Password<input id="llmPassword" type="password" placeholder="留空表示不修改已有密码" /></label>
+          </div>
+          <label>Base URL<input id="llmBaseUrl" placeholder="http://127.0.0.1:11434/v1 或 https://api.openai.com/v1" /></label>
+          <label>API Key<input id="llmApiKey" type="password" placeholder="留空表示不修改已有 key" /></label>
+          <div class="grid">
+            <label>HTTP Timeout Sec<input id="llmHttpTimeoutSec" inputmode="decimal" value="15" /></label>
+            <label>Fuse Wait Sec<input id="llmFuseWaitSec" inputmode="decimal" value="30" /></label>
+            <label>Temperature<input id="llmTemperature" inputmode="decimal" value="0.2" /></label>
+            <label>Max Tokens<input id="llmMaxTokens" inputmode="numeric" value="800" /></label>
+          </div>
+          <div class="derived-box">Resolved Base URL: <span id="llmResolvedBaseUrl">-</span></div>
+          <div class="button-row three">
+            <button type="button" id="saveLlm">保存 LLM</button>
+            <button type="button" id="testLlm" class="secondary">连通测试</button>
+            <button type="button" id="loadModels" class="secondary">加载模型</button>
+          </div>
+          <div class="derived-box">对话模型优先显示；embedding 模型不会自动选中。</div>
+          <div id="llmModels" class="model-list"></div>
+          <label>测试 Prompt<textarea id="llmPrompt">请用一句话说明 V19 LLM 节点已连接。</textarea></label>
+          <button type="button" id="testLlmChat">测试对话</button>
+          <div id="llmStatus" class="status-line">未加载</div>
+          <div id="llmReply" class="status-line muted">尚未执行对话测试。</div>
+        </form>
+
+        <section class="settings-panel">
+          <h2>八字档案迁移</h2>
+          <p class="panel-note">从 V17 admin 的 auth_bazi_profiles 导入命盘档案。地理信息会保留在 profile metadata / birth_input.location；当前 V19 立盘算法仍不使用出生地修正。</p>
+          <div class="button-row">
+            <button type="button" id="importV17Profiles">导入 V17 Admin 档案</button>
+            <a class="nav-link" href="/profiles">查看档案</a>
+          </div>
+          <div id="profileImportStatus" class="status-line">未导入</div>
+        </section>
+
+        <section class="settings-panel">
+          <h2>Knowledge Evidence Store</h2>
+          <p class="panel-note">V19 A-only 基础证据库，不是正式 Rule DB。只作为 reviewed evidence templates 注入 Agent，不直接生成预测、分数或传统断语。</p>
+          <div class="button-row three">
+            <button type="button" id="seedKnowledge">初始化知识库</button>
+            <button type="button" id="reloadKnowledge" class="secondary">刷新列表</button>
+            <button type="button" id="searchKnowledge" class="secondary">检索测试</button>
+          </div>
+          <label>检索词<input id="knowledgeQuery" placeholder="流年 大运 income_stability 六合 六冲" /></label>
+          <div id="knowledgeStatus" class="status-line">未加载</div>
+          <div id="knowledgeList" class="knowledge-list"></div>
+        </section>
+
+        <section class="settings-panel">
+          <h2>八字资料来源库</h2>
+          <p class="panel-note">P12-C Source Archive。这里先管理《三命通会》、旧 V18 知识文件、PDF/网页等资料来源；只做入库和审计，不生成 active rule，不改变推理。</p>
+          <div class="button-row three">
+            <button type="button" id="seedBaziSources">初始化来源目录</button>
+            <button type="button" id="reloadBaziSources" class="secondary">刷新来源</button>
+            <button type="button" id="filterBaziSources" class="secondary">筛选</button>
+          </div>
+          <button type="button" id="loadSourceGovernanceOverview" class="secondary">加载治理总览</button>
+          <div class="grid">
+            <label>Risk<select id="sourceRiskFilter"><option value="">全部</option><option value="R0">R0 基础事实</option><option value="R1">R1 结构关系</option><option value="R2">R2 机制解释</option><option value="R3">R3 格局/综合判断</option><option value="R4">R4 象义/断语/案例</option></select></label>
+            <label>Type<select id="sourceTypeFilter"><option value="">全部</option><option value="classical_text">classical_text</option><option value="classical_commentary">classical_commentary</option><option value="legacy_v17_v18">legacy_v17_v18</option><option value="web_reference">web_reference</option><option value="pdf_scan">pdf_scan</option><option value="modern_reference">modern_reference</option><option value="practitioner_note">practitioner_note</option></select></label>
+            <label class="span-2">Search<input id="sourceQuery" placeholder="三命通会 / 墓库 / wealth / V18" /></label>
+          </div>
+          <div class="derived-box">治理边界：Source Archive only · no active rule · no runtime inference change</div>
+          <div id="sourceArchiveStatus" class="status-line">未加载</div>
+          <div id="sourceGovernanceOverview" class="knowledge-list"></div>
+          <div id="sourceArchiveList" class="knowledge-list"></div>
+          <h3 class="admin-subhead">Excerpt Archive</h3>
+          <p class="panel-note">短摘录 / 摘要层。用于把古籍或旧系统资料转成可审阅片段；限制短摘录，不允许搬运全文，不生成规则。</p>
+          <div class="grid">
+            <label>Source ID<input id="sourceExcerptSourceId" placeholder="classical.san_ming_tong_hui.wikisource.siku.v1" /></label>
+            <label>Locator<input id="sourceExcerptLocator" placeholder="卷01 / 页码 / 章节" /></label>
+            <label>Risk<select id="sourceExcerptRisk"><option value="R0">R0</option><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4" selected>R4</option></select></label>
+            <label>Keywords<input id="sourceExcerptKeywords" placeholder="墓库, 财库, 格局" /></label>
+          </div>
+          <label>Short Excerpt<textarea id="sourceExcerptOriginal" placeholder="只允许短摘录，不要复制全文。"></textarea></label>
+          <label>Normalized Summary<textarea id="sourceExcerptSummary" placeholder="用自己的话概括结构知识，不写断语。"></textarea></label>
+          <div class="button-row">
+            <button type="button" id="createSourceExcerpt">创建 Excerpt</button>
+            <button type="button" id="reloadSourceExcerpts" class="secondary">刷新 Excerpts</button>
+          </div>
+          <div id="sourceExcerptList" class="knowledge-list"></div>
+          <h3 class="admin-subhead">Knowledge Unit Draft</h3>
+          <p class="panel-note">从 Excerpt 手动生成知识单元草稿。草稿不会进入 active knowledge，也不会影响推理；后续必须转 Rule Proposal 并审核。</p>
+          <div class="grid">
+            <label>Knowledge ID<input id="sourceDraftKnowledgeId" placeholder="core.vault_structure.draft" /></label>
+            <label>Domain<input id="sourceDraftDomain" value="core_structure" /></label>
+            <label>Category<input id="sourceDraftCategory" placeholder="vault / branch_relation / ten_god" /></label>
+            <label>Risk<select id="sourceDraftRisk"><option value="R0">R0</option><option value="R1">R1</option><option value="R2" selected>R2</option><option value="R3">R3</option><option value="R4">R4</option></select></label>
+            <label class="span-2">Source Excerpt IDs<input id="sourceDraftExcerptIds" placeholder="ex_xxx, ex_yyy" /></label>
+          </div>
+          <label>Statement<textarea id="sourceDraftStatement" placeholder="用结构语言描述知识，不写吉凶断语。"></textarea></label>
+          <label>Structured Facts JSON<textarea id="sourceDraftFacts">{}</textarea></label>
+          <div class="grid">
+            <label>Review Draft ID / Knowledge ID<input id="sourceDraftReviewId" placeholder="kud_xxx 或 core.xxx" /></label>
+            <label>Review Status<select id="sourceDraftReviewStatus"><option value="reviewed">reviewed</option><option value="needs_revision">needs_revision</option><option value="proposal_ready">proposal_ready</option><option value="rejected">rejected</option><option value="deprecated">deprecated</option></select></label>
+          </div>
+          <label>Review Note<textarea id="sourceDraftReviewNote">知识草稿审核记录；不会改变推理。</textarea></label>
+          <div class="button-row three">
+            <button type="button" id="createKnowledgeDraft">创建 Knowledge Draft</button>
+            <button type="button" id="seedCurrentKnowledgeDrafts" class="secondary">导入当前知识库</button>
+            <button type="button" id="reloadKnowledgeDrafts" class="secondary">刷新 Drafts</button>
+          </div>
+          <button type="button" id="reviewKnowledgeDraft" class="secondary">更新 Draft 审核</button>
+          <div class="grid">
+            <label>Proposal Draft ID / Knowledge ID<input id="sourceDraftProposalId" placeholder="必须已标记 proposal_ready" /></label>
+            <label>Proposal Domain<select id="sourceDraftProposalDomain"><option value="">自动映射</option><option value="day_master_element">day_master_element</option><option value="structural_relation">structural_relation</option><option value="ten_god_relation">ten_god_relation</option><option value="time_structure">time_structure</option><option value="income_stability">income_stability</option></select></label>
+          </div>
+          <label>Proposal Rationale<textarea id="sourceDraftProposalRationale">从已审核知识草稿生成规则提案；仍需 validation / approval / version record，不改变推理。</textarea></label>
+          <button type="button" id="createRuleProposalFromDraft" class="secondary">从 Draft 创建 Rule Proposal</button>
+          <div id="sourceDraftList" class="knowledge-list"></div>
+        </section>
+
+        <section class="settings-panel">
+          <h2>Evolution Interfaces</h2>
+          <p class="panel-note">自我进化入口骨架。反馈只进入 Feedback Ledger 和 Analyst Review Queue，不会自动修改 active knowledge 或规则。</p>
+
+          <h3 class="admin-subhead">Feedback Ledger</h3>
+          <div class="grid">
+            <label>Role<select id="feedbackRole"><option value="analyst">analyst</option><option value="practitioner">practitioner</option><option value="user">user</option><option value="admin">admin</option></select></label>
+            <label>Subject Type<input id="feedbackSubjectType" value="income_stability" /></label>
+            <label>Subject ID<input id="feedbackSubjectId" placeholder="optional" /></label>
+            <label>Rating<select id="feedbackRating"><option value="1">+1 useful</option><option value="0">0 neutral</option><option value="-1">-1 issue</option><option value="-2">-2 blocker</option></select></label>
+          </div>
+          <label>Feedback Comment<textarea id="feedbackComment">income_stability renderer wording needs analyst review.</textarea></label>
+          <div class="button-row">
+            <button type="button" id="submitFeedback">提交反馈</button>
+            <button type="button" id="reloadFeedback" class="secondary">刷新反馈</button>
+          </div>
+          <div id="feedbackStatus" class="status-line">未加载</div>
+          <div id="feedbackList" class="knowledge-list"></div>
+          <h3 class="admin-subhead">Guided Question Feedback Queue</h3>
+          <p class="panel-note">P9 问题引导反馈治理。统计和审核状态只进入 review queue，不会自动修改问题库或推荐排序。</p>
+          <div class="grid">
+            <label>Question Key<input id="guidedQuestionKey" placeholder="q_income_stability" /></label>
+            <label>Status<select id="guidedQuestionStatus"><option value="pending">pending</option><option value="reviewed">reviewed</option><option value="proposed_change">proposed_change</option><option value="rejected">rejected</option></select></label>
+          </div>
+          <label>Review Note<textarea id="guidedQuestionNote">Review guided question feedback. No automatic question-library mutation.</textarea></label>
+          <div class="button-row three">
+            <button type="button" id="reloadGuidedQuestionFeedback">刷新问题反馈</button>
+            <button type="button" id="reviewGuidedQuestion" class="secondary">更新审核状态</button>
+            <button type="button" id="filterGuidedQuestion" class="secondary">按 Key 过滤</button>
+          </div>
+          <div id="guidedQuestionStatusLine" class="status-line">未加载</div>
+          <div id="guidedQuestionSummary" class="knowledge-list"></div>
+          <div id="guidedQuestionFeedbackList" class="knowledge-list"></div>
+          <div class="button-row">
+            <button type="button" id="reloadRuleImpacts" class="secondary">刷新 Rule Impact Mapping</button>
+            <button type="button" id="filterIncomeImpacts" class="secondary">只看 income_stability</button>
+          </div>
+          <div id="ruleImpactStatus" class="status-line">未加载</div>
+          <div id="ruleImpactList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Rule Revision Proposal Workflow</h3>
+          <p class="panel-note">P7 只生成规则修订提案。提案必须先通过 synthetic validation，再由 analyst/admin 审核；通过后仅写入 active revision record，不自动修改运行时规则。</p>
+          <div class="grid">
+            <label>Source Rule Impact IDs<input id="revisionSourceImpactIds" placeholder="ri_xxx, ri_yyy" /></label>
+            <label>Target Signal<input id="revisionTargetSignal" value="income_stability" /></label>
+            <label>Target Rule ID<input id="revisionTargetRuleId" value="v19.income_stability.aggregate" /></label>
+            <label>Current Version<input id="revisionCurrentVersion" inputmode="numeric" value="1" /></label>
+            <label>Proposed Version<input id="revisionProposedVersion" inputmode="numeric" value="2" /></label>
+            <label>Reviewer Role<select id="revisionReviewerRole"><option value="analyst">analyst</option><option value="admin">admin</option><option value="practitioner">practitioner</option><option value="user">user</option></select></label>
+          </div>
+          <label>Proposal<textarea id="revisionProposal">Revise rule wording or condition mapping after analyst review. This proposal must not mutate active runtime inference.</textarea></label>
+          <div class="button-row three">
+            <button type="button" id="createRevision">创建 Proposal</button>
+            <button type="button" id="reloadRevisions" class="secondary">刷新 Proposals</button>
+            <button type="button" id="reloadActiveRevisions" class="secondary">刷新 Active Records</button>
+          </div>
+          <div id="revisionStatus" class="status-line">未加载</div>
+          <div id="revisionList" class="knowledge-list"></div>
+          <div id="activeRevisionList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Guided Question Proposal Workflow</h3>
+          <p class="panel-note">P10 问题库版本治理。这里只创建 proposal、validation、approval 和 version record；不会自动写回前端 QUESTION_LIBRARY。</p>
+          <h3 class="admin-subhead">Assisted Governance Draft Helper</h3>
+          <p class="panel-note">P11 Draft only。LLM 只能起草草稿并填入下方表单；必须人工点击创建 Proposal，再走 validation / approval / version record。</p>
+          <div class="grid">
+            <label>Draft Question Key<input id="gqDraftQuestionKey" placeholder="q_income_stability" /></label>
+            <label>Reviewer Note<input id="gqDraftReviewerNote" placeholder="可选审核备注" /></label>
+          </div>
+          <label>Feedback Summary<textarea id="gqDraftFeedbackSummary">Summarize guided-question feedback here. Draft only; must be reviewed manually.</textarea></label>
+          <button type="button" id="generateGqDraft" class="secondary">Generate Draft</button>
+          <div id="gqDraftStatus" class="status-line">Draft only · must be reviewed manually</div>
+          <div class="grid">
+            <label>Action<select id="gqProposalAction"><option value="edit">edit</option><option value="add">add</option><option value="deprecate">deprecate</option><option value="reorder_path">reorder_path</option></select></label>
+            <label>Source Question Key<input id="gqSourceQuestionKey" placeholder="q_income_stability" /></label>
+            <label>Source Feedback IDs<input id="gqSourceFeedbackIds" placeholder="fb_xxx, fb_yyy" /></label>
+            <label>Proposed Question Key<input id="gqProposedQuestionKey" placeholder="q_income_stability" /></label>
+            <label>Depth<select id="gqDepth"><option value="beginner">beginner</option><option value="intermediate">intermediate</option></select></label>
+            <label>Required Context<input id="gqRequiredContext" value="chart,result" /></label>
+          </div>
+          <div class="grid">
+            <label>ZH Label<input id="gqLabelZh" placeholder="中文问题" /></label>
+            <label>EN Label<input id="gqLabelEn" placeholder="English question" /></label>
+            <label>KO Label<input id="gqLabelKo" placeholder="한국어 질문" /></label>
+            <label>Related Questions<input id="gqRelatedQuestions" placeholder="q_a, q_b" /></label>
+          </div>
+          <label>Rationale<textarea id="gqRationale">Proposal from guided question feedback review. Validation required; no runtime mutation.</textarea></label>
+          <div class="button-row three">
+            <button type="button" id="createGqProposal">创建 Question Proposal</button>
+            <button type="button" id="reloadGqProposals" class="secondary">刷新 Proposals</button>
+            <button type="button" id="reloadGqVersions" class="secondary">刷新 Versions</button>
+          </div>
+          <div class="grid">
+            <label>Included Proposal IDs<input id="gqVersionProposalIds" placeholder="gqp_xxx, gqp_yyy" /></label>
+            <label>Version Note<input id="gqVersionNote" placeholder="active record only; no runtime mutation" /></label>
+          </div>
+          <button type="button" id="recordGqVersion" class="secondary">记录 Question Library Version</button>
+          <div id="gqProposalStatus" class="status-line">未加载</div>
+          <div id="gqProposalList" class="knowledge-list"></div>
+          <div id="gqVersionList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Bazi Rule Knowledge Proposal Ledger</h3>
+          <p class="panel-note">P12-A 八字规则知识库提案账本。只记录规则提案、schema validation、approval 和 version record；不接入 runtime inference。</p>
+          <div class="grid">
+            <label>Rule ID<input id="brRuleId" value="v19.bazi.structure.sample" /></label>
+            <label>Domain<select id="brDomain"><option value="day_master_element">day_master_element</option><option value="structural_relation">structural_relation</option><option value="ten_god_relation">ten_god_relation</option><option value="time_structure">time_structure</option><option value="income_stability">income_stability</option></select></label>
+            <label>Version<input id="brVersion" inputmode="numeric" value="1" /></label>
+            <label>Source Feedback IDs<input id="brSourceFeedbackIds" placeholder="fb_xxx, fb_yyy" /></label>
+          </div>
+          <label>Input Contract Required<textarea id="brInputRequired">chart.day_master, chart.pillars</textarea></label>
+          <label>Condition JSON<textarea id="brCondition">{ "relation_type": "structural_context" }</textarea></label>
+          <label>Output Contract JSON<textarea id="brOutputContract">{ "signal": "structure_context", "value_set": ["low", "medium", "high", "unknown"], "is_prediction": false }</textarea></label>
+          <label>Reasoning Path<textarea id="brReasoningPath">inspect structural input, emit context only</textarea></label>
+          <label>Rationale<textarea id="brRationale">Rule proposal only. Analyst/admin review and future engineering implementation required.</textarea></label>
+          <div class="button-row three">
+            <button type="button" id="createBaziRuleProposal">创建 Rule Proposal</button>
+            <button type="button" id="reloadBaziRuleProposals" class="secondary">刷新 Rule Proposals</button>
+            <button type="button" id="reloadBaziRuleVersions" class="secondary">刷新 Rule Versions</button>
+          </div>
+          <div class="grid">
+            <label>Included Rule Proposal IDs<input id="brVersionProposalIds" placeholder="brp_xxx, brp_yyy" /></label>
+            <label>Rule Version Note<input id="brVersionNote" placeholder="active record only; no runtime inference mutation" /></label>
+          </div>
+          <button type="button" id="recordBaziRuleVersion" class="secondary">记录 Rule Knowledge Version</button>
+          <div id="baziRuleStatus" class="status-line">未加载</div>
+          <div id="baziRuleProposalList" class="knowledge-list"></div>
+          <div id="baziRuleVersionList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Bazi Rule DB</h3>
+          <p class="panel-note">直接规则库。当前从 Knowledge Draft 自动入库 R0-R3，R4 保持 archive-only。Rule DB 是后续 Engine Adapter 的输入，不再沿用插件黑盒。</p>
+          <div class="button-row three">
+            <button type="button" id="ingestBaziRuleDb">当前知识直接入库</button>
+            <button type="button" id="reloadBaziRuleDb" class="secondary">刷新 Rule DB</button>
+            <button type="button" id="filterBaziRuleDb" class="secondary">筛选 Rule DB</button>
+          </div>
+          <div class="grid">
+            <label>Rule DB Domain<select id="ruleDbDomainFilter"><option value="">全部</option><option value="day_master_element">day_master_element</option><option value="structural_relation">structural_relation</option><option value="ten_god_relation">ten_god_relation</option><option value="time_structure">time_structure</option><option value="income_stability">income_stability</option></select></label>
+            <label>Rule DB Risk<select id="ruleDbRiskFilter"><option value="">全部</option><option value="R0">R0</option><option value="R1">R1</option><option value="R2">R2</option><option value="R3">R3</option><option value="R4">R4</option></select></label>
+            <label class="span-2">Rule DB Search<input id="ruleDbQuery" placeholder="十神 / 墓库 / wealth / time" /></label>
+          </div>
+          <div id="ruleDbStatus" class="status-line">未加载</div>
+          <div id="ruleDbList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Analyst Review Queue</h3>
+          <div class="grid">
+            <label>Kind<select id="promotionKind"><option value="feedback_to_knowledge">feedback_to_knowledge</option><option value="knowledge_to_rule">knowledge_to_rule</option><option value="rule_activation">rule_activation</option></select></label>
+            <label>Source IDs<input id="promotionSourceIds" placeholder="fb_xxx, knowledge_id" /></label>
+            <label class="span-2">Target ID<input id="promotionTargetId" placeholder="wealth.income_stability_rule_basis" /></label>
+          </div>
+          <label>Proposal<textarea id="promotionProposal">Review feedback and decide whether a knowledge wording change is needed. Do not auto-activate rules.</textarea></label>
+          <div class="button-row">
+            <button type="button" id="createPromotion">创建 Review Request</button>
+            <button type="button" id="reloadPromotions" class="secondary">刷新队列</button>
+          </div>
+          <div id="promotionStatus" class="status-line">未加载</div>
+          <div id="promotionList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Synthetic Validation</h3>
+          <div class="button-row three">
+            <button type="button" id="seedValidation">初始化 Cases</button>
+            <button type="button" id="runValidation" class="secondary">运行 Validation</button>
+            <button type="button" id="loadLabels" class="secondary">加载 Labels</button>
+          </div>
+          <label>Locale<select id="labelsLocale"><option value="zh">zh</option><option value="en">en</option><option value="ko">ko</option></select></label>
+          <div id="validationStatus" class="status-line">未加载</div>
+          <div id="validationList" class="knowledge-list"></div>
+          <div id="labelsList" class="knowledge-list"></div>
+        </section>
+      </section>
+    </main>
+    <script src="/assets/admin.js"></script>
+  </body>
+</html>

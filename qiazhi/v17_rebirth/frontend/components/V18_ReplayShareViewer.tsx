@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import {
   AlertTriangle,
   ArrowLeft,
+  ArrowRight,
   CheckCircle2,
   ClipboardCheck,
   Copy,
@@ -18,7 +19,8 @@ import {
 
 import { useAppLanguage } from "@/hooks/useAppLanguage";
 import type { AppLanguage } from "@/lib/i18n";
-import { noStoreInit, requestJson } from "@/lib/apiClient";
+import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
+import { userFacingApiMessage, userFacingExceptionMessage } from "@/lib/v18UserMessages";
 
 type ReplayShareViewerProps = {
   predictionId: string;
@@ -39,14 +41,24 @@ type ReplayCopy = {
   replayMode: string;
   conclusion: string;
   confidence: string;
+  uncertainty: string;
   evidence: string;
   feedback: string;
   learningSignals: string;
   ruleDrift: string;
   noDrift: string;
   hasDrift: string;
-  ledger: string;
-  contract: string;
+  redactedNotice: string;
+  fullRecordNotice: string;
+  evidenceCount: string;
+  feedbackPrompt: string;
+  feedbackHit: string;
+  feedbackPartial: string;
+  feedbackMiss: string;
+  feedbackUnclear: string;
+  feedbackThanks: string;
+  tryDemoCta: string;
+  loginSaveCta: string;
 };
 
 const REPLAY_COPY: Record<AppLanguage, ReplayCopy> = {
@@ -65,14 +77,24 @@ const REPLAY_COPY: Record<AppLanguage, ReplayCopy> = {
     replayMode: "回放模式",
     conclusion: "结论",
     confidence: "置信度",
+    uncertainty: "不确定性",
     evidence: "证据",
     feedback: "反馈",
     learningSignals: "学习信号",
     ruleDrift: "规则漂移",
     noDrift: "未检测到漂移",
     hasDrift: "检测到漂移",
-    ledger: "Ledger 摘要",
-    contract: "Contract 摘要",
+    redactedNotice: "此回放已隐藏个人信息",
+    fullRecordNotice: "完整记录仅本人登录后可见",
+    evidenceCount: "证据数量",
+    feedbackPrompt: "你觉得准吗？",
+    feedbackHit: "准",
+    feedbackPartial: "部分准",
+    feedbackMiss: "不准",
+    feedbackUnclear: "不确定",
+    feedbackThanks: "已记录你的反馈，它会进入学习信号。",
+    tryDemoCta: "我也想试一次",
+    loginSaveCta: "登录保存我的预测",
   },
   en: {
     product: "Qiazhi",
@@ -89,14 +111,24 @@ const REPLAY_COPY: Record<AppLanguage, ReplayCopy> = {
     replayMode: "Replay mode",
     conclusion: "Conclusion",
     confidence: "Confidence",
+    uncertainty: "Uncertainty",
     evidence: "Evidence",
     feedback: "Feedback",
     learningSignals: "Learning signals",
     ruleDrift: "Rule drift",
     noDrift: "No drift detected",
     hasDrift: "Drift detected",
-    ledger: "Ledger summary",
-    contract: "Contract summary",
+    redactedNotice: "Personal information is hidden in this replay",
+    fullRecordNotice: "The complete record is visible only after signing in as the owner",
+    evidenceCount: "Evidence count",
+    feedbackPrompt: "Does this feel accurate?",
+    feedbackHit: "Accurate",
+    feedbackPartial: "Partly accurate",
+    feedbackMiss: "Not accurate",
+    feedbackUnclear: "Not sure",
+    feedbackThanks: "Feedback recorded. It will be used as a learning signal.",
+    tryDemoCta: "Try one myself",
+    loginSaveCta: "Sign in to save my prediction",
   },
   ko: {
     product: "Qiazhi",
@@ -113,14 +145,24 @@ const REPLAY_COPY: Record<AppLanguage, ReplayCopy> = {
     replayMode: "Replay 모드",
     conclusion: "결론",
     confidence: "신뢰도",
+    uncertainty: "불확실성",
     evidence: "근거",
     feedback: "피드백",
     learningSignals: "Learning signal",
     ruleDrift: "규칙 변화",
     noDrift: "변화 없음",
     hasDrift: "변화 감지",
-    ledger: "Ledger 요약",
-    contract: "Contract 요약",
+    redactedNotice: "이 replay는 개인정보를 숨긴 상태입니다",
+    fullRecordNotice: "전체 기록은 본인 로그인 후에만 확인할 수 있습니다",
+    evidenceCount: "근거 수",
+    feedbackPrompt: "정확하다고 느끼셨나요?",
+    feedbackHit: "맞아요",
+    feedbackPartial: "부분적으로 맞아요",
+    feedbackMiss: "아니에요",
+    feedbackUnclear: "잘 모르겠어요",
+    feedbackThanks: "피드백이 기록되었습니다. 학습 신호로 반영됩니다.",
+    tryDemoCta: "나도 한번 해보기",
+    loginSaveCta: "로그인하고 내 예측 저장",
   },
 };
 
@@ -130,12 +172,6 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 function unwrapEnvelope(value: unknown): Record<string, unknown> {
   if (isRecord(value) && isRecord(value.data)) return value.data;
-  return isRecord(value) ? value : {};
-}
-
-function readRecord(source: unknown, key: string): Record<string, unknown> {
-  if (!isRecord(source)) return {};
-  const value = source[key];
   return isRecord(value) ? value : {};
 }
 
@@ -165,27 +201,21 @@ function readNumber(source: unknown, keys: string[]): number | null {
   return null;
 }
 
-function readBool(source: unknown, key: string, fallback = false): boolean {
-  if (!isRecord(source)) return fallback;
-  const value = source[key];
-  return typeof value === "boolean" ? value : fallback;
-}
-
-function compactJson(value: unknown): string {
-  try {
-    return JSON.stringify(value);
-  } catch {
-    return String(value);
-  }
-}
-
 function shortHash(value: string, size = 24): string {
   if (!value) return "n/a";
   return value.length > size ? `${value.slice(0, size - 3)}...` : value;
 }
 
-function firstConclusion(contract: Record<string, unknown>): Record<string, unknown> {
-  return readArray(contract, "conclusions").find(isRecord) || {};
+function wealthFeatureLabel(value: string): string {
+  const labels: Record<string, string> = {
+    wealth_strength: "财星强弱",
+    wealth_vault: "财库状态",
+    output_generate_wealth: "食伤生财",
+    constraint_structure: "官杀制约财富",
+    flow_activation: "大运流年引动",
+    stability_risk: "合冲刑害稳定性",
+  };
+  return labels[value] || value;
 }
 
 export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps): ReactNode {
@@ -195,20 +225,22 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [feedbackStatus, setFeedbackStatus] = useState("");
+  const [feedbackLoading, setFeedbackLoading] = useState(false);
 
   const loadReplay = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const resp = await requestJson<unknown>(`/api/v18.1/predictions/${encodeURIComponent(predictionId)}/replay`, noStoreInit());
-      if (!resp.ok) throw new Error(resp.error || text.failed);
+      const resp = await requestJson<unknown>(`/api/v18.1/predictions/${encodeURIComponent(predictionId)}/public-replay`, noStoreInit());
+      if (!resp.ok) throw new Error(userFacingApiMessage(resp.data, resp.error, text.failed, language));
       setReplay(unwrapEnvelope(resp.data));
     } catch (err) {
-      setError(err instanceof Error ? err.message : text.failed);
+      setError(userFacingExceptionMessage(err, text.failed, language));
     } finally {
       setLoading(false);
     }
-  }, [predictionId, text.failed]);
+  }, [language, predictionId, text.failed]);
 
   useEffect(() => {
     void loadReplay();
@@ -226,14 +258,47 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
     window.setTimeout(() => setCopied(false), 1600);
   }, [replayUrl]);
 
-  const ledger = readRecord(replay, "ledger");
-  const contract = readRecord(replay, "contract");
-  const conclusion = firstConclusion(contract);
-  const evidence = readArray(replay, "evidence").filter(isRecord);
-  const feedback = readArray(replay, "feedback");
-  const learningSignals = readArray(replay, "learning_signals");
-  const ruleDrift = readBool(replay, "rule_drift");
-  const confidence = readNumber(conclusion, ["confidence"]) ?? readNumber(contract, ["confidence"]);
+  const submitReplayFeedback = useCallback(
+    async (feedbackType: "hit" | "partial" | "miss" | "unclear") => {
+      setFeedbackLoading(true);
+      setFeedbackStatus("");
+      setError("");
+      try {
+        const resp = await requestJson<unknown>(
+          `/api/v18.1/predictions/${encodeURIComponent(predictionId)}/feedback`,
+          jsonPostInit(
+            {
+              feedback_type: feedbackType,
+              user_comment: "public replay quick feedback",
+              observed_event: {
+                source: "public_replay",
+                label: feedbackType,
+              },
+              observed_at: new Date().toISOString(),
+            },
+            noStoreInit(),
+          ),
+        );
+        if (!resp.ok) throw new Error(userFacingApiMessage(resp.data, resp.error, text.feedbackThanks, language));
+        setFeedbackStatus(text.feedbackThanks);
+      } catch (err) {
+        setFeedbackStatus(userFacingExceptionMessage(err, text.feedbackThanks, language));
+      } finally {
+        setFeedbackLoading(false);
+      }
+    },
+    [language, predictionId, text.feedbackThanks],
+  );
+
+  const uncertainty = isRecord(replay.uncertainty) ? replay.uncertainty : {};
+  const evidence = readArray(replay, "evidence_summary").filter(isRecord);
+  const feedbackCount = readNumber(replay, ["feedback_count"]) ?? 0;
+  const learningSignalCount = readNumber(replay, ["learning_signal_count"]) ?? 0;
+  const ruleDrift = replay.rule_drift === true;
+  const confidence = readNumber(replay, ["confidence"]);
+  const redaction = isRecord(replay.redaction) ? replay.redaction : {};
+  const redactionNotice = readString(redaction, ["notice"], text.redactedNotice);
+  const fullRecordNotice = readString(redaction, ["full_record_notice"], text.fullRecordNotice);
 
   return (
     <main className="min-h-screen bg-[#070b10] text-slate-100">
@@ -264,7 +329,7 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
             <Sparkles className="h-4 w-4" />
             {text.product}
           </div>
-          <h1 className="text-4xl font-semibold text-white md:text-6xl">{text.title}</h1>
+          <h1 className="text-3xl font-semibold text-white sm:text-4xl md:text-6xl">{text.title}</h1>
           <p className="mt-5 text-base leading-8 text-slate-300">{text.subtitle}</p>
         </header>
 
@@ -272,7 +337,7 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{text.predictionId}</p>
-              <p className="mt-1 break-all font-mono text-sm text-cyan-100">{predictionId}</p>
+              <p className="mt-1 break-all font-mono text-sm text-cyan-100">{readString(replay, ["prediction_id_short"], shortHash(predictionId))}</p>
             </div>
             <div className="flex flex-wrap gap-2">
               <button type="button" onClick={() => void copyReplayLink()} className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-slate-100 transition hover:bg-white/10">
@@ -304,15 +369,23 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
         {!loading && !error ? (
           <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
             <div className="space-y-5">
+              <article className="rounded-[2rem] border border-emerald-300/20 bg-emerald-300/[0.08] p-5">
+                <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
+                  <ShieldCheck className="h-5 w-5 text-emerald-200" />
+                  {redactionNotice}
+                </h2>
+                <p className="text-sm leading-6 text-slate-300">{fullRecordNotice}</p>
+              </article>
+
               <article className="rounded-[2rem] border border-white/10 bg-black/25 p-5">
                 <h2 className="mb-3 flex items-center gap-2 text-xl font-semibold text-white">
                   <ShieldCheck className="h-5 w-5 text-cyan-200" />
                   {text.conclusion}
                 </h2>
-                <p className="text-sm leading-7 text-slate-200">{readString(conclusion, ["claim"], readString(ledger, ["prediction_summary"], "n/a"))}</p>
+                <p className="text-sm leading-7 text-slate-200">{readString(replay, ["conclusion_summary"], "n/a")}</p>
                 <div className="mt-4 grid gap-3 sm:grid-cols-3">
                   <ReplayStat label={text.confidence} value={confidence === null ? "n/a" : `${Math.round(confidence * 100)}%`} />
-                  <ReplayStat label={text.verifier} value={readString(ledger, ["verifier_status", "state"], "n/a")} />
+                  <ReplayStat label={text.verifier} value={readString(replay, ["verifier_status"], "n/a")} />
                   <ReplayStat label={text.replayMode} value={readString(replay, ["replay_mode"], "n/a")} />
                 </div>
               </article>
@@ -320,17 +393,12 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
               <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
                 <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
                   <Database className="h-5 w-5 text-emerald-200" />
-                  {text.ledger}
+                  {text.uncertainty}
                 </h2>
-                <pre className="max-h-72 overflow-auto whitespace-pre-wrap break-words rounded-2xl border border-white/10 bg-black/20 p-4 text-xs leading-6 text-slate-300">
-                  {compactJson({
-                    prediction_id: readString(replay, ["prediction_id"], predictionId),
-                    state: readString(ledger, ["state"]),
-                    verifier_status: readString(ledger, ["verifier_status"]),
-                    feedback_count: feedback.length,
-                    learning_signal_count: learningSignals.length,
-                  })}
-                </pre>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <ReplayStat label={text.uncertainty} value={`${Math.round((readNumber(uncertainty, ["score"]) ?? 0) * 100)}%`} />
+                  <ReplayStat label={text.evidenceCount} value={`${evidence.length}`} />
+                </div>
               </article>
             </div>
 
@@ -341,11 +409,13 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
                   {text.evidence}
                 </h2>
                 <div className="space-y-3">
-                  {evidence.slice(0, 3).map((item, index) => (
+                  {evidence.slice(0, 2).map((item, index) => (
                     <div key={`${readString(item, ["rule_id"], "rule")}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
                       <p className="font-mono text-xs text-cyan-100">{shortHash(readString(item, ["rule_id"], "rule"))}</p>
-                      <p className="mt-2 text-slate-300">effect: {compactJson(readRecord(item, "effect"))}</p>
-                      <p className="mt-1 text-slate-400">hash: {shortHash(readString(item, ["content_hash"]))}</p>
+                      <p className="mt-2 text-emerald-100">{readString(item, ["feature_label"]) || wealthFeatureLabel(readString(item, ["feature_type"])) || text.evidence}</p>
+                      <p className="mt-2 text-slate-300">effect_keys: {readArray(item, "effect_keys").map(String).join(", ") || "n/a"}</p>
+                      <p className="mt-1 text-slate-400">matched_fact_count: {readNumber(item, ["matched_fact_count"]) ?? 0}</p>
+                      <p className="mt-1 text-slate-400">stability / risk: {Math.round((readNumber(item, ["stability"]) ?? 0) * 100)}% / {Math.round((readNumber(item, ["risk"]) ?? 0) * 100)}%</p>
                     </div>
                   ))}
                 </div>
@@ -354,17 +424,58 @@ export function V18_ReplayShareViewer({ predictionId }: ReplayShareViewerProps):
               <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
                 <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
                   <History className="h-5 w-5 text-cyan-200" />
-                  {text.contract}
+                  {text.replayMode}
                 </h2>
                 <div className="grid gap-3">
-                  <ReplayStat label={text.feedback} value={`${feedback.length}`} />
-                  <ReplayStat label={text.learningSignals} value={`${learningSignals.length}`} />
+                  <ReplayStat label={text.feedback} value={`${feedbackCount}`} />
+                  <ReplayStat label={text.learningSignals} value={`${learningSignalCount}`} />
                   <ReplayStat label={text.ruleDrift} value={ruleDrift ? text.hasDrift : text.noDrift} tone={ruleDrift ? "warn" : "ok"} />
                 </div>
               </article>
             </aside>
           </section>
         ) : null}
+
+        {!loading && !error ? (
+          <section className="mt-6 rounded-[2rem] border border-cyan-200/20 bg-cyan-200/[0.06] p-5">
+            <h2 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
+              <Sparkles className="h-5 w-5 text-cyan-200" />
+              {text.feedbackPrompt}
+            </h2>
+            <div className="flex flex-wrap gap-2">
+              {[
+                ["hit", text.feedbackHit],
+                ["partial", text.feedbackPartial],
+                ["miss", text.feedbackMiss],
+                ["unclear", text.feedbackUnclear],
+              ].map(([type, label]) => (
+                <button
+                  key={type}
+                  type="button"
+                  disabled={feedbackLoading}
+                  onClick={() => void submitReplayFeedback(type as "hit" | "partial" | "miss" | "unclear")}
+                  className="rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-slate-100 transition hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {feedbackStatus ? (
+              <p className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-100">{feedbackStatus}</p>
+            ) : null}
+          </section>
+        ) : null}
+
+        <section className="mt-6 flex flex-col gap-3 border-t border-white/10 pt-6 sm:flex-row">
+          <a href="/demo" className="inline-flex items-center justify-center gap-2 rounded-full bg-cyan-300 px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200">
+            {text.tryDemoCta}
+            <ArrowRight className="h-4 w-4" />
+          </a>
+          <a href="/login?next=/v17/oracle" className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/10 px-5 py-3 text-sm font-semibold text-slate-100 transition hover:bg-white/15">
+            <ShieldCheck className="h-4 w-4" />
+            {text.loginSaveCta}
+          </a>
+        </section>
       </section>
     </main>
   );

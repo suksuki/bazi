@@ -1,3 +1,0 @@
-case,cf_floating_decay,alignment_score,structured_hit,repair_mode,bijian_score,top_anomaly,diagnosis,sql_patch,param_version_id,hard_route_logs
-baseline_1990_seed,0.1,42.0,True,strict_json,19.62,伤官见官且无印通关,日主丙火在夏季得令且根气充沛，但正官（37.62）与伤官（14.98）形成严重‘伤官见官’冲突，且正印（0.0）缺失导致无法通关化解，造成能量内耗与格局动荡。,UPDATE physics_interaction_params SET param_value=0.85 WHERE param_key='conflict_penalty_gamma';,2026-04-02T08:15:50.246282,[]
-baseline_dingsi_yisi,0.1,42.0,True,strict_json,15.96,乙木无根（no_root: true）与七杀/伤官高亢（24.81/25.47）形成致命冲克,乙木日主无根且受强金克伐，能量极度失衡，呈现‘身弱杀重’之危局,UPDATE physics_interaction_params SET param_value=0.85 WHERE param_key='decay_factor';,2026-04-02T08:15:50.246282,[]

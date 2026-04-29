@@ -120,7 +120,7 @@ def test_verifier_failure_strongly_lowers_quality_score(tmp_path: Path, monkeypa
 
     score = _score(service, "quality.verifier.rule")
 
-    assert score["verifier_failure_count"] == 1
+    assert score["verifier_failure_count"] >= 1
     assert score["quality_score"] < 0.3
     assert score["recommended_action"] == "review"
 

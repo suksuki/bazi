@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import hashlib
+import logging
 import time
 from typing import Any, Optional
 from fastapi import APIRouter, Request
@@ -10,9 +12,121 @@ from v17_rebirth.backend.services.v18_1_predictive_engine import (
     predictive_runtime_facade,
     predictive_service,
 )
+from v17_rebirth.backend.services.core_bazi_feature_layer import core_bazi_feature_service
+from v17_rebirth.backend.services.core_bazi_strength_model import core_bazi_strength_service
+from v17_rebirth.backend.services.core_bazi_structure_effect_layer import core_bazi_structure_effect_service
+from v17_rebirth.backend.services.core_bazi_wealth_domain import wealth_domain_service
 from v17_rebirth.backend.services.auth_service import get_request_user
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
+
+
+_ERROR_COPY: dict[str, dict[str, str]] = {
+    "RULE_SCOPE_VIOLATION": {
+        "zh": "这个问题目前不在系统的可验证规则范围内。你可以改问财运趋势、收入稳定性，或财富机会与风险。",
+        "en": "This question is outside the current verifiable rule scope. Try asking about wealth trends, income stability, or financial risk and opportunity.",
+        "ko": "이 질문은 현재 검증 가능한 규칙 범위 밖에 있습니다. 재물 흐름, 수입 안정성, 기회와 리스크에 대해 질문해 주세요.",
+    },
+    "CONTRACT_SCHEMA_INVALID": {
+        "zh": "这次请求缺少必要信息。请补齐问题和出生信息后再试。",
+        "en": "Some required information is missing. Please complete the question and birth details, then try again.",
+        "ko": "필수 정보가 부족합니다. 질문과 출생 정보를 보완한 뒤 다시 시도해 주세요.",
+    },
+    "LEDGER_NOT_FOUND": {
+        "zh": "没有找到这条预测记录。请确认链接是否完整，或重新生成一次预测。",
+        "en": "This prediction record was not found. Check the link or generate a new prediction.",
+        "ko": "이 예측 기록을 찾을 수 없습니다. 링크를 확인하거나 새 예측을 생성해 주세요.",
+    },
+    "RATE_LIMITED": {
+        "zh": "请求有点太频繁了。请稍等一下再试。",
+        "en": "Too many requests in a short time. Please wait a moment and try again.",
+        "ko": "짧은 시간에 요청이 너무 많습니다. 잠시 후 다시 시도해 주세요.",
+    },
+    "DUPLICATE_FEEDBACK": {
+        "zh": "这条反馈已经记录过了。谢谢，你的反馈会进入学习信号。",
+        "en": "This feedback has already been recorded. Thank you; it will be used as a learning signal.",
+        "ko": "이 피드백은 이미 기록되었습니다. 감사합니다. 학습 신호로 반영됩니다.",
+    },
+    "FEEDBACK_LOCKED": {
+        "zh": "这条记录当前不能重复写入。你可以刷新后查看最新状态。",
+        "en": "This record cannot be written again right now. Refresh to view the latest state.",
+        "ko": "이 기록은 지금 중복 저장할 수 없습니다. 새로고침 후 최신 상태를 확인해 주세요.",
+    },
+    "LOCK_BUSY": {
+        "zh": "系统正在处理同一条记录。请稍等片刻再试。",
+        "en": "The system is already processing this record. Please try again shortly.",
+        "ko": "시스템이 같은 기록을 처리 중입니다. 잠시 후 다시 시도해 주세요.",
+    },
+    "ADMIN_REQUIRED": {
+        "zh": "这个操作需要管理员权限。",
+        "en": "This action requires admin permission.",
+        "ko": "이 작업에는 관리자 권한이 필요합니다.",
+    },
+    "BAZI_KNOWLEDGE_COMPILER_INVALID": {
+        "zh": "这条知识单元暂时不能转换为规则候选，请先检查 feature mapping。",
+        "en": "This knowledge unit cannot be converted yet. Please review its feature mapping.",
+        "ko": "이 지식 단위는 아직 규칙 후보로 변환할 수 없습니다. feature mapping을 확인해 주세요.",
+    },
+    "KB_AUDIT_MODEL_UNCONFIGURED": {
+        "zh": "审计模型暂未配置，系统将使用本地安全审计结果。",
+        "en": "The audit model is not configured. The system will use local safety audit results.",
+        "ko": "감사 모델이 설정되지 않았습니다. 로컬 안전 감사 결과를 사용합니다.",
+    },
+    "CORE_BAZI_CHART_INVALID": {
+        "zh": "命盘结构信息不完整。请提供四柱，至少需要日干和月支。",
+        "en": "The chart structure is incomplete. Please provide the four pillars, including at least the day stem and month branch.",
+        "ko": "명식 구조 정보가 부족합니다. 최소한 일간과 월지를 포함한 사주를 제공해 주세요.",
+    },
+    "CORE_FEATURE_BUNDLE_NOT_FOUND": {
+        "zh": "没有找到这份基础命理特征包。请重新抽取一次。",
+        "en": "This core Bazi feature bundle was not found. Please extract it again.",
+        "ko": "해당 기본 명리 feature bundle을 찾을 수 없습니다. 다시 추출해 주세요.",
+    },
+    "CORE_STRENGTH_INPUT_INVALID": {
+        "zh": "强弱评估缺少基础命理特征包。请先完成 Core Feature 抽取。",
+        "en": "Strength evaluation requires a core Bazi feature bundle. Please extract Core Features first.",
+        "ko": "강약 평가에는 기본 명리 feature bundle이 필요합니다. 먼저 Core Feature를 추출해 주세요.",
+    },
+    "CORE_STRENGTH_BUNDLE_NOT_FOUND": {
+        "zh": "没有找到这份强弱证据包。请重新评估一次。",
+        "en": "This strength evidence bundle was not found. Please evaluate it again.",
+        "ko": "해당 강약 증거 bundle을 찾을 수 없습니다. 다시 평가해 주세요.",
+    },
+    "CORE_STRUCTURE_INPUT_INVALID": {
+        "zh": "结构作用评估缺少基础特征包或强弱证据包。请先完成 Core Feature 与 Strength 评估。",
+        "en": "Structure effect evaluation requires both the core feature bundle and strength evidence bundle. Please complete Core Feature extraction and Strength evaluation first.",
+        "ko": "구조 작용 평가에는 Core Feature bundle과 강약 증거 bundle이 모두 필요합니다. 먼저 두 평가를 완료해 주세요.",
+    },
+    "CORE_STRUCTURE_BUNDLE_NOT_FOUND": {
+        "zh": "没有找到这份结构作用证据包。请重新评估一次。",
+        "en": "This structure effect evidence bundle was not found. Please evaluate it again.",
+        "ko": "해당 구조 작용 증거 bundle을 찾을 수 없습니다. 다시 평가해 주세요.",
+    },
+    "WEALTH_DOMAIN_INPUT_INVALID": {
+        "zh": "财富结构评估缺少 Core Feature、Strength 或 Structure Effect 证据包。",
+        "en": "Wealth evaluation requires Core Feature, Strength, and Structure Effect bundles.",
+        "ko": "재물 구조 평가에는 Core Feature, Strength, Structure Effect bundle이 필요합니다.",
+    },
+    "WEALTH_DOMAIN_UNSUPPORTED_INTENT": {
+        "zh": "这个问题不属于当前财富域支持范围。请改问财运趋势、收入稳定性，或财富风险机会。",
+        "en": "This question is outside the supported wealth-domain intents. Ask about wealth outlook, income stability, or risk and opportunity.",
+        "ko": "이 질문은 현재 재물 도메인 지원 범위 밖입니다. 재물 흐름, 수입 안정성, 기회와 리스크로 질문해 주세요.",
+    },
+    "WEALTH_DOMAIN_BUNDLE_NOT_FOUND": {
+        "zh": "没有找到这份财富结构证据包。请重新评估一次。",
+        "en": "This wealth-domain evidence bundle was not found. Please evaluate it again.",
+        "ko": "해당 재물 도메인 증거 bundle을 찾을 수 없습니다. 다시 평가해 주세요.",
+    },
+    "DEFAULT": {
+        "zh": "系统暂时无法完成这次请求。请稍后重试，或换一个财富相关问题。",
+        "en": "The system could not complete this request right now. Please try again later, or ask a wealth-related question.",
+        "ko": "현재 요청을 완료할 수 없습니다. 잠시 후 다시 시도하거나 재물 관련 질문으로 바꿔 주세요.",
+    },
+}
+
+_RATE_LIMIT_FALLBACK: dict[str, dict[str, Any]] = {}
+_DEDUP_FALLBACK: dict[str, float] = {}
 
 
 def _ok(payload: dict) -> dict:
@@ -20,21 +134,24 @@ def _ok(payload: dict) -> dict:
 
 
 def _fail(error: PredictiveServiceError, details: dict | None = None) -> JSONResponse:
+    user_message = _user_error_message(error.code)
     return JSONResponse(
         status_code=error.status,
         content={
             "ok": False,
             "code": error.code,
-            "message": error.message,
+            "message": user_message["zh"],
+            "user_message": user_message,
             "details": details or {},
         },
     )
 
 
 def _fail_value(message: str) -> JSONResponse:
+    user_message = _user_error_message("CONTRACT_SCHEMA_INVALID")
     return JSONResponse(
         status_code=400,
-        content={"ok": False, "code": "CONTRACT_SCHEMA_INVALID", "message": message, "details": {}},
+        content={"ok": False, "code": "CONTRACT_SCHEMA_INVALID", "message": user_message["zh"], "user_message": user_message, "details": {}},
     )
 
 
@@ -82,6 +199,78 @@ def _safe_int(value: object, default: int = 0) -> int:
         return int(value)
     except (TypeError, ValueError):
         return default
+
+
+def _user_error_message(code: str) -> dict[str, str]:
+    return dict(_ERROR_COPY.get(_safe_str(code).upper()) or _ERROR_COPY["DEFAULT"])
+
+
+def _client_identity(request: Request) -> str:
+    forwarded = _safe_str(request.headers.get("x-forwarded-for")).split(",")[0].strip()
+    host = forwarded or _safe_str(getattr(request.client, "host", "unknown"), "unknown")
+    raw = f"{host}:{_safe_str(request.headers.get('user-agent'))[:120]}"
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()[:24]
+
+
+def _redis_get_json(key: str) -> Any:
+    try:
+        return predictive_service._redis.get_json(key)
+    except Exception as exc:
+        logger.warning("v18_1 redis get failed; using in-process fallback key=%s error=%s", key, exc)
+        return None
+
+
+def _redis_set_json(key: str, value: Any, ttl_seconds: int) -> bool:
+    try:
+        predictive_service._redis.set_json(key, value, ttl_seconds=ttl_seconds)
+        return True
+    except Exception as exc:
+        logger.warning("v18_1 redis set failed; using in-process fallback key=%s error=%s", key, exc)
+        return False
+
+
+def _rate_limit(request: Request, bucket: str, *, limit: int, window_seconds: int, key_extra: str = "") -> None:
+    identity = _client_identity(request)
+    now = time.time()
+    window = int(now // max(1, window_seconds))
+    key = f"rate:v18_1:{bucket}:{identity}:{key_extra}:{window}"
+    current = _redis_get_json(key)
+    if isinstance(current, dict):
+        count = _safe_int(current.get("count"), 0)
+        if count >= limit:
+            raise PredictiveServiceError("RATE_LIMITED", "rate limited", 429)
+        _redis_set_json(key, {"count": count + 1, "updated_at": now}, ttl_seconds=window_seconds + 2)
+        return
+    if current is not None:
+        count = _safe_int(current, 0)
+        if count >= limit:
+            raise PredictiveServiceError("RATE_LIMITED", "rate limited", 429)
+        _redis_set_json(key, count + 1, ttl_seconds=window_seconds + 2)
+        return
+
+    fallback = _RATE_LIMIT_FALLBACK.get(key)
+    if fallback and float(fallback.get("expires_at", 0)) > now:
+        count = _safe_int(fallback.get("count"), 0)
+        if count >= limit:
+            raise PredictiveServiceError("RATE_LIMITED", "rate limited", 429)
+        fallback["count"] = count + 1
+        return
+    _RATE_LIMIT_FALLBACK[key] = {"count": 1, "expires_at": now + window_seconds}
+    _redis_set_json(key, {"count": 1, "updated_at": now}, ttl_seconds=window_seconds + 2)
+
+
+def _dedupe_once(request: Request, bucket: str, fingerprint: str, ttl_seconds: int = 86400) -> None:
+    now = time.time()
+    identity = _client_identity(request)
+    digest = hashlib.sha256(f"{identity}:{fingerprint}".encode("utf-8")).hexdigest()
+    key = f"dedupe:v18_1:{bucket}:{digest}"
+    if _redis_get_json(key):
+        raise PredictiveServiceError("DUPLICATE_FEEDBACK", "duplicate feedback", 409)
+    expires_at = _DEDUP_FALLBACK.get(key)
+    if expires_at and expires_at > now:
+        raise PredictiveServiceError("DUPLICATE_FEEDBACK", "duplicate feedback", 409)
+    _DEDUP_FALLBACK[key] = now + ttl_seconds
+    _redis_set_json(key, {"seen": True, "created_at": now}, ttl_seconds=ttl_seconds)
 
 
 def _enrich_actor_context(payload: dict, request: Optional[Request] = None) -> dict:
@@ -443,9 +632,10 @@ async def admin_bootstrap_wealth_rule(payload: dict, request: Request):
                 error=exc.message,
             )
         )
+        user_message = _user_error_message(exc.code)
         return JSONResponse(
             status_code=exc.status,
-            content={"ok": False, "code": exc.code, "message": exc.message, "details": {}, "data": {"steps": steps}},
+            content={"ok": False, "code": exc.code, "message": user_message["zh"], "user_message": user_message, "details": {}, "data": {"steps": steps}},
         )
     except ValueError as exc:
         return _fail_value(str(exc))
@@ -606,6 +796,7 @@ async def prediction_contract_builder(payload: dict):
 @router.post("/api/v18.1/predictions/contract-pipeline")
 async def prediction_contract_pipeline(payload: dict, request: Request):
     try:
+        _rate_limit(request, "contract_pipeline", limit=60, window_seconds=60)
         payload = _enrich_actor_context(payload, request)
         result = predictive_runtime_facade.run_prediction_contract_pipeline(
             payload,
@@ -679,10 +870,21 @@ async def prediction_replay(prediction_id: str):
         return _fail(exc)
 
 
+@router.get("/v18.1/predictions/{prediction_id}/public-replay")
+@router.get("/api/v18.1/predictions/{prediction_id}/public-replay")
+async def prediction_public_replay(prediction_id: str, request: Request):
+    try:
+        _rate_limit(request, "public_replay", limit=120, window_seconds=60, key_extra=prediction_id[:32])
+        return _ok(predictive_service.public_replay_prediction(prediction_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
 @router.post("/v18.1/predictions/{prediction_id}/explain")
 @router.post("/api/v18.1/predictions/{prediction_id}/explain")
-async def prediction_explain(prediction_id: str, payload: dict):
+async def prediction_explain(prediction_id: str, payload: dict, request: Request):
     try:
+        _rate_limit(request, "prediction_explain", limit=60, window_seconds=60, key_extra=prediction_id[:32])
         result = predictive_service.explain_prediction(prediction_id, dict(payload or {}))
         return _ok(result)
     except PredictiveServiceError as exc:
@@ -706,8 +908,11 @@ async def llm_output_verifier(payload: dict):
 
 @router.post("/v18.1/feedback")
 @router.post("/api/v18.1/feedback")
-async def feedback_collector(payload: dict):
+async def feedback_collector(payload: dict, request: Request):
     try:
+        _rate_limit(request, "feedback", limit=30, window_seconds=60)
+        fingerprint = f"generic:{_safe_str(payload.get('prediction_id'))}:{_safe_str(payload.get('feedback_type'))}:{_safe_str(payload.get('conclusion_ref') or payload.get('conclusion_id'))}"
+        _dedupe_once(request, "feedback", fingerprint)
         result = predictive_service.append_feedback(payload)
         return _ok(result)
     except PredictiveServiceError as exc:
@@ -716,8 +921,12 @@ async def feedback_collector(payload: dict):
 
 @router.post("/v18.1/predictions/{prediction_id}/feedback")
 @router.post("/api/v18.1/predictions/{prediction_id}/feedback")
-async def prediction_feedback(prediction_id: str, payload: dict):
+async def prediction_feedback(prediction_id: str, payload: dict, request: Request):
     try:
+        _rate_limit(request, "prediction_feedback", limit=30, window_seconds=60, key_extra=prediction_id[:32])
+        if not _safe_str(payload.get("request_id")):
+            fingerprint = f"{prediction_id}:{_safe_str(payload.get('feedback_type'))}:{_safe_str(payload.get('conclusion_ref') or payload.get('conclusion_id'))}"
+            _dedupe_once(request, "feedback", fingerprint)
         result = predictive_service.append_prediction_feedback(prediction_id, payload)
         return _ok(result)
     except PredictiveServiceError as exc:
@@ -735,9 +944,98 @@ async def feedback_list(prediction_id: str | None = None, offset: int = 0, limit
 
 @router.get("/v18.1/trust-metrics")
 @router.get("/api/v18.1/trust-metrics")
-async def trust_metrics():
+async def trust_metrics(request: Request):
     try:
+        _rate_limit(request, "trust_metrics", limit=120, window_seconds=60)
         return _ok(predictive_service.query_trust_metrics())
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/core-bazi/features/extract")
+@router.post("/api/v18.1/core-bazi/features/extract")
+async def core_bazi_features_extract(payload: dict, request: Request):
+    try:
+        _rate_limit(request, "core_bazi_feature_extract", limit=60, window_seconds=60)
+        return _ok(core_bazi_feature_service.extract_and_store(payload))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/core-bazi/features/{bundle_id}")
+@router.get("/api/v18.1/core-bazi/features/{bundle_id}")
+async def core_bazi_features_get(bundle_id: str, request: Request):
+    try:
+        _rate_limit(request, "core_bazi_feature_get", limit=120, window_seconds=60)
+        return _ok(core_bazi_feature_service.get_bundle(bundle_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/core-bazi/strength/evaluate")
+@router.post("/api/v18.1/core-bazi/strength/evaluate")
+async def core_bazi_strength_evaluate(payload: dict, request: Request):
+    try:
+        _rate_limit(request, "core_bazi_strength_evaluate", limit=60, window_seconds=60)
+        return _ok(core_bazi_strength_service.evaluate_and_store(payload))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/core-bazi/strength/{strength_bundle_id}")
+@router.get("/api/v18.1/core-bazi/strength/{strength_bundle_id}")
+async def core_bazi_strength_get(strength_bundle_id: str, request: Request):
+    try:
+        _rate_limit(request, "core_bazi_strength_get", limit=120, window_seconds=60)
+        return _ok(core_bazi_strength_service.get_bundle(strength_bundle_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/core-bazi/structure/evaluate")
+@router.post("/api/v18.1/core-bazi/structure/evaluate")
+async def core_bazi_structure_evaluate(payload: dict, request: Request):
+    try:
+        _rate_limit(request, "core_bazi_structure_evaluate", limit=60, window_seconds=60)
+        return _ok(core_bazi_structure_effect_service.evaluate_and_store(payload))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/core-bazi/structure/{structure_bundle_id}")
+@router.get("/api/v18.1/core-bazi/structure/{structure_bundle_id}")
+async def core_bazi_structure_get(structure_bundle_id: str, request: Request):
+    try:
+        _rate_limit(request, "core_bazi_structure_get", limit=120, window_seconds=60)
+        return _ok(core_bazi_structure_effect_service.get_bundle(structure_bundle_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/domain/wealth/evaluate")
+@router.post("/api/v18.1/domain/wealth/evaluate")
+async def wealth_domain_evaluate(payload: dict, request: Request):
+    try:
+        _rate_limit(request, "wealth_domain_evaluate", limit=60, window_seconds=60)
+        return _ok(wealth_domain_service.evaluate_and_store(payload))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/domain/wealth/{wealth_bundle_id}")
+@router.get("/api/v18.1/domain/wealth/{wealth_bundle_id}")
+async def wealth_domain_get(wealth_bundle_id: str, request: Request):
+    try:
+        _rate_limit(request, "wealth_domain_get", limit=120, window_seconds=60)
+        return _ok(wealth_domain_service.get_bundle(wealth_bundle_id))
     except PredictiveServiceError as exc:
         return _fail(exc)
 
@@ -954,6 +1252,128 @@ async def knowledge_card_status_update(card_id: str, payload: dict, request: Req
         return _fail(exc)
     except ValueError as exc:
         return _fail_value(str(exc))
+
+
+@router.post("/v18.1/knowledge-base/units")
+@router.post("/api/v18.1/knowledge-base/units")
+async def bazi_knowledge_unit_create(payload: dict, request: Request):
+    try:
+        _require_admin(request)
+        payload = _enrich_actor_context(payload, request)
+        result = predictive_service.register_bazi_knowledge_unit(
+            payload,
+            actor_role=_safe_str(payload.get("actor_role"), "system"),
+            actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+        )
+        return _ok(result)
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+    except ValueError as exc:
+        return _fail_value(str(exc))
+
+
+@router.get("/v18.1/knowledge-base/units")
+@router.get("/api/v18.1/knowledge-base/units")
+async def bazi_knowledge_units_list(
+    domain: str | None = None,
+    category: str | None = None,
+    status: str | None = None,
+    offset: int = 0,
+    limit: int = 100,
+):
+    try:
+        return _ok(
+            predictive_service.list_bazi_knowledge_units(
+                domain=domain,
+                category=category,
+                status=status,
+                offset=offset,
+                limit=limit,
+            )
+        )
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.get("/v18.1/knowledge-base/units/{knowledge_id}")
+@router.get("/api/v18.1/knowledge-base/units/{knowledge_id}")
+async def bazi_knowledge_unit_get(knowledge_id: str):
+    try:
+        return _ok(predictive_service.get_bazi_knowledge_unit(knowledge_id))
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/knowledge-base/units/{knowledge_id}/review")
+@router.post("/api/v18.1/knowledge-base/units/{knowledge_id}/review")
+async def bazi_knowledge_unit_review(knowledge_id: str, payload: dict, request: Request):
+    try:
+        _require_admin(request)
+        payload = _enrich_actor_context(payload, request)
+        return _ok(
+            predictive_service.review_bazi_knowledge_unit(
+                knowledge_id,
+                payload,
+                actor_role=_safe_str(payload.get("actor_role"), "system"),
+                actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+            )
+        )
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/knowledge-base/units/{knowledge_id}/deprecate")
+@router.post("/api/v18.1/knowledge-base/units/{knowledge_id}/deprecate")
+async def bazi_knowledge_unit_deprecate(knowledge_id: str, payload: dict, request: Request):
+    try:
+        _require_admin(request)
+        payload = _enrich_actor_context(payload, request)
+        return _ok(
+            predictive_service.deprecate_bazi_knowledge_unit(
+                knowledge_id,
+                payload,
+                actor_role=_safe_str(payload.get("actor_role"), "system"),
+                actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+            )
+        )
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/knowledge-base/units/{knowledge_id}/to-rule-candidate")
+@router.post("/api/v18.1/knowledge-base/units/{knowledge_id}/to-rule-candidate")
+async def bazi_knowledge_unit_to_rule_candidate(knowledge_id: str, payload: dict, request: Request):
+    try:
+        _require_admin(request)
+        payload = _enrich_actor_context(payload, request)
+        return _ok(
+            predictive_service.bazi_knowledge_unit_to_rule_candidate(
+                knowledge_id,
+                payload,
+                actor_role=_safe_str(payload.get("actor_role"), "system"),
+                actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+            )
+        )
+    except PredictiveServiceError as exc:
+        return _fail(exc)
+
+
+@router.post("/v18.1/knowledge-base/units/{knowledge_id}/dry-run-audit")
+@router.post("/api/v18.1/knowledge-base/units/{knowledge_id}/dry-run-audit")
+async def bazi_knowledge_unit_dry_run_audit(knowledge_id: str, payload: dict, request: Request):
+    try:
+        _require_admin(request)
+        payload = _enrich_actor_context(payload, request)
+        return _ok(
+            predictive_service.dry_run_bazi_knowledge_audit(
+                knowledge_id,
+                payload,
+                actor_role=_safe_str(payload.get("actor_role"), "system"),
+                actor_user_id=_safe_int(payload.get("actor_user_id"), 0),
+            )
+        )
+    except PredictiveServiceError as exc:
+        return _fail(exc)
 
 
 @router.post("/v18.1/rule-tests/run")
@@ -1278,6 +1698,9 @@ async def storage_migrate_json_to_postgres(payload: dict):
 @router.post("/api/v18.1/agent/sessions")
 async def agent_session_create(payload: dict, request: Request):
     try:
+        surface = _safe_str(payload.get("surface"))
+        bucket = "demo_session" if surface == "landing_demo" or payload.get("is_demo") else "agent_session"
+        _rate_limit(request, bucket, limit=20 if bucket == "demo_session" else 40, window_seconds=60)
         payload = _enrich_actor_context(payload, request)
         result = predictive_runtime_facade.create_agent_session(
             payload,
@@ -1293,6 +1716,9 @@ async def agent_session_create(payload: dict, request: Request):
 @router.post("/api/v18.1/agent/sessions/{session_id}/turns")
 async def agent_session_turn(session_id: str, payload: dict, request: Request):
     try:
+        surface = _safe_str(payload.get("surface"))
+        bucket = "demo_turn" if surface == "landing_demo" or payload.get("is_demo") else "agent_turn"
+        _rate_limit(request, bucket, limit=10 if bucket == "demo_turn" else 30, window_seconds=60, key_extra=session_id[:32])
         payload = _enrich_actor_context(payload, request)
         result = predictive_runtime_facade.append_agent_turn(
             session_id,

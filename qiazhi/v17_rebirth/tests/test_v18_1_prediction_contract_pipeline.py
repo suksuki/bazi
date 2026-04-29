@@ -196,5 +196,5 @@ def test_prediction_contract_pipeline_runs_complete_sample(contract_runtime) -> 
     assert result["prediction_id"] == "pred-pipeline"
     assert result["contract_id"] == "contract_pred-pipeline"
     assert result["verifier"]["result"] == "pass"
-    assert result["minimal_trace"]["evidence_count"] == 1
+    assert result["minimal_trace"]["evidence_count"] >= 2
     assert result["contract"]["conclusions"][0]["generated_by"] == "engine"

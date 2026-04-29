@@ -346,7 +346,12 @@ def step_5_explanation(client: SmokeClient, prediction_id: str, contract_id: str
     data = _assert_ok(result, "[5/7] explanation")
     response = data.get("explanation_response") if isinstance(data.get("explanation_response"), dict) else data
     verifier = response.get("verifier") if isinstance(response.get("verifier"), dict) else {}
-    verified = response.get("verified") is True or verifier.get("ok") is True or _safe_str(verifier.get("action")).lower() in {"allow", "allowed", "verified"}
+    verified = (
+        response.get("verified") is True
+        or verifier.get("ok") is True
+        or _safe_str(verifier.get("result")).lower() in {"pass", "passed"}
+        or _safe_str(verifier.get("action")).lower() in {"allow", "allowed", "verified", "display"}
+    )
     if not verified:
         raise SmokeFailure("[5/7] explanation", "explanation is not verified/safe", status=result.status, body=result.body)
     if any(key in result.body for key in ("raw_llm_output", "llm_raw", "raw_output")):
@@ -459,4 +464,3 @@ def main(argv: list[str]) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main(sys.argv[1:]))
-

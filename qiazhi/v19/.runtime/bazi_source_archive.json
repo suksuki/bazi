@@ -1,0 +1,2239 @@
+{
+  "created_at": "2026-04-29T03:01:04+00:00",
+  "excerpts": [],
+  "guardrails": [
+    "SOURCE_ARCHIVE_ONLY",
+    "NO_ACTIVE_RULE_CREATION",
+    "NO_RUNTIME_INFERENCE_CHANGE",
+    "NO_DIRECT_PLUGIN_RULE_REUSE",
+    "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+  ],
+  "knowledge_drafts": [
+    {
+      "allowed_usage": [
+        "hidden_layer_analysis",
+        "ten_god_signal_candidate",
+        "knowledge_unit_draft"
+      ],
+      "category": "hidden_stem",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_bfefddfd87be4c70",
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.branch_attributes_hidden_stems.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R1",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "legacy.v18.bazi_knowledge_units.runtime.v1"
+      ],
+      "statement": "每个地支具有主五行属性，并包含一个或多个藏干；藏干用于可见/隐藏层结构分析。",
+      "status": "draft",
+      "structured_facts": {
+        "hidden_stems": {
+          "丑": [
+            {
+              "layer": "main",
+              "stem": "己"
+            },
+            {
+              "layer": "middle",
+              "stem": "癸"
+            },
+            {
+              "layer": "residual",
+              "stem": "辛"
+            }
+          ],
+          "亥": [
+            {
+              "layer": "main",
+              "stem": "壬"
+            },
+            {
+              "layer": "middle",
+              "stem": "甲"
+            }
+          ],
+          "午": [
+            {
+              "layer": "main",
+              "stem": "丁"
+            },
+            {
+              "layer": "middle",
+              "stem": "己"
+            }
+          ],
+          "卯": [
+            {
+              "layer": "main",
+              "stem": "乙"
+            }
+          ],
+          "子": [
+            {
+              "layer": "main",
+              "stem": "癸"
+            }
+          ],
+          "寅": [
+            {
+              "layer": "main",
+              "stem": "甲"
+            },
+            {
+              "layer": "middle",
+              "stem": "丙"
+            },
+            {
+              "layer": "residual",
+              "stem": "戊"
+            }
+          ],
+          "巳": [
+            {
+              "layer": "main",
+              "stem": "丙"
+            },
+            {
+              "layer": "middle",
+              "stem": "庚"
+            },
+            {
+              "layer": "residual",
+              "stem": "戊"
+            }
+          ],
+          "戌": [
+            {
+              "layer": "main",
+              "stem": "戊"
+            },
+            {
+              "layer": "middle",
+              "stem": "辛"
+            },
+            {
+              "layer": "residual",
+              "stem": "丁"
+            }
+          ],
+          "未": [
+            {
+              "layer": "main",
+              "stem": "己"
+            },
+            {
+              "layer": "middle",
+              "stem": "丁"
+            },
+            {
+              "layer": "residual",
+              "stem": "乙"
+            }
+          ],
+          "申": [
+            {
+              "layer": "main",
+              "stem": "庚"
+            },
+            {
+              "layer": "middle",
+              "stem": "壬"
+            },
+            {
+              "layer": "residual",
+              "stem": "戊"
+            }
+          ],
+          "辰": [
+            {
+              "layer": "main",
+              "stem": "戊"
+            },
+            {
+              "layer": "middle",
+              "stem": "乙"
+            },
+            {
+              "layer": "residual",
+              "stem": "癸"
+            }
+          ],
+          "酉": [
+            {
+              "layer": "main",
+              "stem": "辛"
+            }
+          ]
+        }
+      },
+      "title": "地支五行与藏干",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "relation_index",
+        "analyst_review",
+        "rule_proposal_source"
+      ],
+      "category": "branch_relation",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_e8c67399f23e4286",
+      "forbidden_usage": [
+        "direct_risk_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.branch_relations.penalty_harm_break.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R2",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "classical.yuan_hai_zi_ping.wikisource.v1"
+      ],
+      "statement": "刑、害、破属于地支关系中的高风险解释层，当前只建立关系索引，不直接生成风险结论。",
+      "status": "draft",
+      "structured_facts": {
+        "penalty_note": "刑关系存在不同传统表述，需按来源与版本单独审核。",
+        "six_break": [
+          [
+            "子",
+            "酉"
+          ],
+          [
+            "丑",
+            "辰"
+          ],
+          [
+            "寅",
+            "亥"
+          ],
+          [
+            "卯",
+            "午"
+          ],
+          [
+            "巳",
+            "申"
+          ],
+          [
+            "未",
+            "戌"
+          ]
+        ],
+        "six_harm": [
+          [
+            "子",
+            "未"
+          ],
+          [
+            "丑",
+            "午"
+          ],
+          [
+            "寅",
+            "巳"
+          ],
+          [
+            "卯",
+            "辰"
+          ],
+          [
+            "申",
+            "亥"
+          ],
+          [
+            "酉",
+            "戌"
+          ]
+        ]
+      },
+      "title": "地支刑害破关系索引",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "time_context",
+        "structure_summary"
+      ],
+      "category": "branch_relation",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_c66ffb16fce64700",
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune",
+        "risk_claim_without_rule"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.branch_relations.six_clash.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R1",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md"
+      ],
+      "statement": "六冲是地支之间的结构冲突关系，可用于关系检测与 Time Context 展示。",
+      "status": "draft",
+      "structured_facts": {
+        "pairs": [
+          [
+            "子",
+            "午"
+          ],
+          [
+            "丑",
+            "未"
+          ],
+          [
+            "寅",
+            "申"
+          ],
+          [
+            "卯",
+            "酉"
+          ],
+          [
+            "辰",
+            "戌"
+          ],
+          [
+            "巳",
+            "亥"
+          ]
+        ]
+      },
+      "title": "地支六冲",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "time_context",
+        "structure_summary"
+      ],
+      "category": "branch_relation",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_87dbdb6c2696475f",
+      "forbidden_usage": [
+        "direct_prediction",
+        "good_bad_judgement"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.branch_relations.six_combination.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R1",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md"
+      ],
+      "statement": "六合是地支之间的结构组合关系，可用于关系检测与 Time Context 展示。",
+      "status": "draft",
+      "structured_facts": {
+        "pairs": [
+          [
+            "子",
+            "丑"
+          ],
+          [
+            "寅",
+            "亥"
+          ],
+          [
+            "卯",
+            "戌"
+          ],
+          [
+            "辰",
+            "酉"
+          ],
+          [
+            "巳",
+            "申"
+          ],
+          [
+            "午",
+            "未"
+          ]
+        ]
+      },
+      "title": "地支六合",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "time_context",
+        "rule_proposal_source"
+      ],
+      "category": "branch_relation",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_020a93f1009e43db",
+      "forbidden_usage": [
+        "direct_prediction",
+        "good_bad_judgement"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.branch_relations.three_harmony.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R1",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md"
+      ],
+      "statement": "三合是三个地支形成的结构组合关系，当前只作为结构关系候选，不直接解释为结果。",
+      "status": "draft",
+      "structured_facts": {
+        "groups": {
+          "fire": [
+            "寅",
+            "午",
+            "戌"
+          ],
+          "metal": [
+            "巳",
+            "酉",
+            "丑"
+          ],
+          "water": [
+            "申",
+            "子",
+            "辰"
+          ],
+          "wood": [
+            "亥",
+            "卯",
+            "未"
+          ]
+        }
+      },
+      "title": "地支三合局",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "structure_summary",
+        "rule_proposal_source"
+      ],
+      "category": "branch_relation",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_4951596a96934bef",
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.branch_relations.three_meeting.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R1",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md"
+      ],
+      "statement": "三会是三个连续季节地支形成的结构聚合关系，当前只作为结构关系候选。",
+      "status": "draft",
+      "structured_facts": {
+        "groups": {
+          "fire": [
+            "巳",
+            "午",
+            "未"
+          ],
+          "metal": [
+            "申",
+            "酉",
+            "戌"
+          ],
+          "water": [
+            "亥",
+            "子",
+            "丑"
+          ],
+          "wood": [
+            "寅",
+            "卯",
+            "辰"
+          ]
+        }
+      },
+      "title": "地支三会局",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "chart_structure",
+        "pillar_construction",
+        "branch_relation_detection"
+      ],
+      "category": "core_symbol",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_6737391152b94635",
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune",
+        "traditional_judgement"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.earthly_branches.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R0",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "classical.san_ming_tong_hui.wikisource.siku.v1"
+      ],
+      "statement": "十二地支是四柱地支层的基础符号，包括子、丑、寅、卯、辰、巳、午、未、申、酉、戌、亥。",
+      "status": "draft",
+      "structured_facts": {
+        "branches": [
+          "子",
+          "丑",
+          "寅",
+          "卯",
+          "辰",
+          "巳",
+          "午",
+          "未",
+          "申",
+          "酉",
+          "戌",
+          "亥"
+        ]
+      },
+      "title": "十二地支",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "element_relation",
+        "feature_extraction",
+        "rule_proposal_source"
+      ],
+      "category": "five_element_relation",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "five_element",
+      "draft_id": "kud_78f30f2319144373",
+      "forbidden_usage": [
+        "direct_good_bad",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.five_element_relations.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R0",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "classical.san_ming_tong_hui.wikisource.siku.v1"
+      ],
+      "statement": "五行相生与相克是结构关系的基础，可用于描述元素之间的 produce / control / same 等关系。",
+      "status": "draft",
+      "structured_facts": {
+        "control_cycle": [
+          [
+            "wood",
+            "earth"
+          ],
+          [
+            "earth",
+            "water"
+          ],
+          [
+            "water",
+            "fire"
+          ],
+          [
+            "fire",
+            "metal"
+          ],
+          [
+            "metal",
+            "wood"
+          ]
+        ],
+        "generation_cycle": [
+          [
+            "wood",
+            "fire"
+          ],
+          [
+            "fire",
+            "earth"
+          ],
+          [
+            "earth",
+            "metal"
+          ],
+          [
+            "metal",
+            "water"
+          ],
+          [
+            "water",
+            "wood"
+          ]
+        ]
+      },
+      "title": "五行生克关系",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "chart_structure",
+        "pillar_construction",
+        "knowledge_unit_draft"
+      ],
+      "category": "core_symbol",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_d418ea1680ed48a5",
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune",
+        "traditional_judgement"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.heavenly_stems.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R0",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "classical.san_ming_tong_hui.wikisource.siku.v1"
+      ],
+      "statement": "十天干是四柱天干层的基础符号，包括甲、乙、丙、丁、戊、己、庚、辛、壬、癸。",
+      "status": "draft",
+      "structured_facts": {
+        "stems": [
+          "甲",
+          "乙",
+          "丙",
+          "丁",
+          "戊",
+          "己",
+          "庚",
+          "辛",
+          "壬",
+          "癸"
+        ]
+      },
+      "title": "十天干",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "ten_god_mapping",
+        "element_relation",
+        "feature_extraction"
+      ],
+      "category": "stem_branch_attribute",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_cd80fedf1d3941ff",
+      "forbidden_usage": [
+        "direct_prediction",
+        "good_bad_judgement"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.stem_attributes.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R0",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "legacy.v18.bazi_knowledge_units.runtime.v1"
+      ],
+      "statement": "每个天干具有固定的五行与阴阳属性，可作为十神映射、五行关系和结构检测的基础输入。",
+      "status": "draft",
+      "structured_facts": {
+        "attributes": {
+          "丁": {
+            "element": "fire",
+            "polarity": "yin"
+          },
+          "丙": {
+            "element": "fire",
+            "polarity": "yang"
+          },
+          "乙": {
+            "element": "wood",
+            "polarity": "yin"
+          },
+          "壬": {
+            "element": "water",
+            "polarity": "yang"
+          },
+          "己": {
+            "element": "earth",
+            "polarity": "yin"
+          },
+          "庚": {
+            "element": "metal",
+            "polarity": "yang"
+          },
+          "戊": {
+            "element": "earth",
+            "polarity": "yang"
+          },
+          "甲": {
+            "element": "wood",
+            "polarity": "yang"
+          },
+          "癸": {
+            "element": "water",
+            "polarity": "yin"
+          },
+          "辛": {
+            "element": "metal",
+            "polarity": "yin"
+          }
+        }
+      },
+      "title": "天干五行阴阳属性",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "stem_relation_detection",
+        "structure_summary"
+      ],
+      "category": "stem_relation",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_dfbb7f62b26743ce",
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.stem_combination.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R1",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md"
+      ],
+      "statement": "天干五合是天干之间的结构组合关系，当前只作为关系检测知识草稿。",
+      "status": "draft",
+      "structured_facts": {
+        "pairs": [
+          [
+            "甲",
+            "己"
+          ],
+          [
+            "乙",
+            "庚"
+          ],
+          [
+            "丙",
+            "辛"
+          ],
+          [
+            "丁",
+            "壬"
+          ],
+          [
+            "戊",
+            "癸"
+          ]
+        ],
+        "resulting_elements": {
+          "丁壬": "wood",
+          "丙辛": "water",
+          "乙庚": "metal",
+          "戊癸": "fire",
+          "甲己": "earth"
+        }
+      },
+      "title": "天干五合",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "relation_metadata",
+        "feature_extraction",
+        "ten_god_signal_candidate"
+      ],
+      "category": "ten_god",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "ten_god",
+      "draft_id": "kud_bcddb60e53ae430e",
+      "forbidden_usage": [
+        "direct_prediction",
+        "standalone_judgement",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.ten_god_mapping.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R1",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "legacy.v18.bazi_knowledge_units.runtime.v1"
+      ],
+      "statement": "十神是日主天干与目标天干之间的关系标签，属于关系元数据，不等同于预测结论。",
+      "status": "draft",
+      "structured_facts": {
+        "internal_keys": [
+          "bi_jian",
+          "jie_cai",
+          "shi_shen",
+          "shang_guan",
+          "zheng_cai",
+          "pian_cai",
+          "zheng_guan",
+          "qi_sha",
+          "zheng_yin",
+          "pian_yin"
+        ],
+        "ten_gods": [
+          "比肩",
+          "劫财",
+          "食神",
+          "伤官",
+          "正财",
+          "偏财",
+          "正官",
+          "七杀",
+          "正印",
+          "偏印"
+        ]
+      },
+      "title": "十神映射基础",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "vault_structure_index",
+        "rule_proposal_source",
+        "analyst_review"
+      ],
+      "category": "vault",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_0e51adfc2bc04931",
+      "forbidden_usage": [
+        "direct_wealth_prediction",
+        "direct_fortune",
+        "unreviewed_vault_opening_claim"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "core.vault_structure.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R2",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+        "classical.san_ming_tong_hui.wikisource.siku.v1"
+      ],
+      "statement": "辰、戌、丑、未常被归入墓库结构；当前只定义结构属性与候选用途，不直接输出财富或运势结论。",
+      "status": "draft",
+      "structured_facts": {
+        "element_notes": {
+          "丑": "metal/water/earth related storage in many systems",
+          "戌": "fire/earth related storage in many systems",
+          "未": "wood/fire/earth related storage in many systems",
+          "辰": "water/earth related storage in many systems"
+        },
+        "vault_branches": [
+          "辰",
+          "戌",
+          "丑",
+          "未"
+        ]
+      },
+      "title": "四墓库结构",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "pattern_index",
+        "analyst_review",
+        "rule_proposal_source"
+      ],
+      "category": "pattern_structure",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_ec59b662895f463b",
+      "forbidden_usage": [
+        "direct_pattern_judgement",
+        "fortune",
+        "traditional_prediction_text"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "pattern.structure_index.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R3",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "classical.zi_ping_zhen_quan.reference.v1",
+        "classical.yuan_hai_zi_ping.wikisource.v1",
+        "classical.san_ming_tong_hui.wikisource.siku.v1"
+      ],
+      "statement": "格局类知识可先建立结构索引和来源目录，但不能直接输出命好、命差、富贵贫贱等传统判断。",
+      "status": "draft",
+      "structured_facts": {
+        "pattern_families": [
+          "正官格",
+          "七杀格",
+          "正财格",
+          "偏财格",
+          "食神格",
+          "伤官格",
+          "印绶格",
+          "建禄格",
+          "羊刃格",
+          "从格",
+          "化气格",
+          "专旺格",
+          "杂气格"
+        ],
+        "runtime_status": "proposal_only"
+      },
+      "title": "格局结构索引边界",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "evidence_schema",
+        "rule_proposal_source",
+        "analyst_review"
+      ],
+      "category": "strength_model",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "strength",
+      "draft_id": "kud_5e481d21827a4da4",
+      "forbidden_usage": [
+        "direct_runtime_replacement",
+        "direct_fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "strength.day_master_evidence_model.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R2",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "classical.di_tian_sui.wikisource.v1",
+        "classical.qiong_tong_bao_jian.wikisource.v1"
+      ],
+      "statement": "日主强弱应由月令、根气、同党、异党、生助、克泄耗等证据共同支持；当前只定义 evidence schema，不替换现有推理。",
+      "status": "draft",
+      "structured_facts": {
+        "evidence_factors": [
+          "month_command",
+          "root_strength",
+          "same_element_support",
+          "resource_support",
+          "output_drain",
+          "wealth_drain",
+          "officer_control"
+        ],
+        "output_candidate": [
+          "weak",
+          "balanced",
+          "strong",
+          "unknown"
+        ]
+      },
+      "title": "日主强弱证据模型",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "boundary_record",
+        "analyst_reference"
+      ],
+      "category": "blind_symbolic",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "personality",
+      "draft_id": "kud_8aa37ee5476b4e1e",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "fortune",
+        "traditional_prediction_text"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "symbolic.blind_school_boundary.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R4",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/v19/V19_BAZI_DATABASE_FIRST_KNOWLEDGE_SYSTEM_PLAN_2026-04-29.md",
+        "legacy.v18.knowledge_corpus_to_rule_kernel.report.v1"
+      ],
+      "statement": "盲派与象法资料默认归为高风险象义材料，只能作为分析师参考或弱证据归档，不进入当前 active inference。",
+      "status": "draft",
+      "structured_facts": {
+        "allowed": [
+          "source_archive",
+          "analyst_reference",
+          "case_archive"
+        ],
+        "forbidden": [
+          "active_rule",
+          "direct_prediction",
+          "user_facing_judgement"
+        ]
+      },
+      "title": "盲派象法归档边界",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "source_archive",
+        "analyst_reference"
+      ],
+      "category": "shensha",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "core_structure",
+      "draft_id": "kud_2fa7045cf4ae4d41",
+      "forbidden_usage": [
+        "active_inference",
+        "direct_result_card",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "symbolic.shensha_boundary.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R4",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "classical.yuan_hai_zi_ping.wikisource.v1",
+        "legacy.v18.knowledge_corpus_to_rule_kernel.report.v1"
+      ],
+      "statement": "神煞资料在当前 V19 中只作为来源归档和分析师参考，不作为主推理信号。",
+      "status": "draft",
+      "structured_facts": {
+        "reason": "high symbolic and tradition-dependent variance",
+        "runtime_status": "archive_only"
+      },
+      "title": "神煞资料归档边界",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "time_context",
+        "ui_boundary",
+        "rule_proposal_guardrail"
+      ],
+      "category": "timing_context",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "luck_flow",
+      "draft_id": "kud_70b808b431074509",
+      "forbidden_usage": [
+        "time_aware_inference_without_design",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "time.time_context_boundary.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R2",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/v19/V19_BAZI_DATABASE_FIRST_KNOWLEDGE_SYSTEM_PLAN_2026-04-29.md",
+        "docs/v19/V19_BAZI_KNOWLEDGE_EXPANSION_ENGINEERING_PLAN_2026-04-29.md"
+      ],
+      "statement": "大运与流年在当前 V19 阶段只作为时间结构上下文，不能直接改变 income_stability 或生成预测结论。",
+      "status": "draft",
+      "structured_facts": {
+        "allowed": [
+          "flow_year_pillar",
+          "luck_cycle_pillar",
+          "relations_with_natal",
+          "algorithm_status",
+          "provenance"
+        ],
+        "forbidden": [
+          "fortune",
+          "direct_result_change",
+          "this_year_good_bad"
+        ]
+      },
+      "title": "时间结构上下文边界",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "mechanism_candidate",
+        "rule_proposal_source"
+      ],
+      "category": "wealth_mechanism",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "wealth",
+      "draft_id": "kud_a3050bcbc03046b1",
+      "forbidden_usage": [
+        "direct_fortune",
+        "direct_income_result_change"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "wealth.output_generate_wealth.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R2",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+        "legacy.v18.bazi_knowledge_units.runtime.v1"
+      ],
+      "statement": "食伤与财的连接可作为变现路径结构候选；当前只作为机制候选，不输出财富好坏。",
+      "status": "draft",
+      "structured_facts": {
+        "candidate_outputs": [
+          "conversion_path",
+          "output_to_wealth_link_strength"
+        ],
+        "feature_key": "output_generate_wealth",
+        "inputs": [
+          "ten_god_mapping",
+          "output_presence",
+          "wealth_presence"
+        ]
+      },
+      "title": "食伤生财机制候选",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "feature_candidate",
+        "rule_proposal_source"
+      ],
+      "category": "wealth_mechanism",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "wealth",
+      "draft_id": "kud_6e6c8228c58b46e3",
+      "forbidden_usage": [
+        "direct_wealth_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "wealth.peer_competition.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R2",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+        "legacy.v18.bazi_knowledge_units.runtime.v1"
+      ],
+      "statement": "比劫与财之间的关系可作为财富结构竞争或分散候选；当前只作为规则提案来源，不直接形成断语。",
+      "status": "draft",
+      "structured_facts": {
+        "candidate_outputs": [
+          "competition_signal",
+          "distribution_pressure"
+        ],
+        "feature_key": "peer_competition",
+        "inputs": [
+          "peer_presence",
+          "wealth_presence",
+          "day_master_strength"
+        ]
+      },
+      "title": "比劫与财结构关系候选",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    },
+    {
+      "allowed_usage": [
+        "feature_mapping_candidate",
+        "rule_proposal_source"
+      ],
+      "category": "wealth_feature",
+      "conditions": {},
+      "confidence_prior": 0.5,
+      "created_at": "2026-04-29T03:04:44+00:00",
+      "domain": "wealth",
+      "draft_id": "kud_084d0c0460344ef1",
+      "forbidden_usage": [
+        "direct_wealth_prediction",
+        "direct_fortune"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL",
+        "DRAFT_ONLY",
+        "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seeded; requires proposal before runtime.",
+          "status": "seed_create"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:04:44+00:00",
+          "note": "Current Bazi knowledge draft seed updated; draft only.",
+          "status": "seed_update"
+        }
+      ],
+      "knowledge_id": "wealth.wealth_strength.v1",
+      "review_note": "",
+      "review_status": "pending",
+      "risk_level": "R2",
+      "source_excerpt_ids": [],
+      "source_refs": [
+        "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+        "legacy.v18.bazi_knowledge_units.runtime.v1"
+      ],
+      "statement": "财星强弱可作为财富结构特征候选，需结合十神映射、根气、月令和日主承载力；当前只作为知识草稿，不直接生成财富结论。",
+      "status": "draft",
+      "structured_facts": {
+        "candidate_outputs": [
+          "wealth_strength_score",
+          "wealth_presence"
+        ],
+        "feature_key": "wealth_strength",
+        "inputs": [
+          "ten_god_mapping",
+          "root_strength",
+          "month_command"
+        ]
+      },
+      "title": "财星强弱结构特征",
+      "updated_at": "2026-04-29T03:04:44+00:00"
+    }
+  ],
+  "runtime_scope": "source_archive_only_no_inference",
+  "sources": [
+    {
+      "access_note": "维基文库公开文本。",
+      "allowed_usage": [
+        "source_archive",
+        "excerpt_archive",
+        "rule_proposal_source"
+      ],
+      "author_or_compiler": "传统传本",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "direct_prediction"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "strength_model",
+        "pattern_structure",
+        "timing_context",
+        "mechanism_reasoning"
+      ],
+      "language": "zh",
+      "license_note": "按维基文库页面说明处理。",
+      "local_path": "",
+      "notes": "多为高度概括性理论，必须人工解释后再结构化。",
+      "period": "传统命理古籍",
+      "reliability": "high",
+      "risk_level": "R3",
+      "source_id": "classical.di_tian_sui.wikisource.v1",
+      "source_priority": "primary",
+      "source_type": "classical_text",
+      "title": "滴天髓",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://zh.wikisource.org/wiki/滴天髓"
+    },
+    {
+      "access_note": "维基文库公开文本。",
+      "allowed_usage": [
+        "source_archive",
+        "analyst_reference",
+        "excerpt_archive"
+      ],
+      "author_or_compiler": "任铁樵注本相关传本",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "case_to_rule_without_review"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "mechanism_reasoning",
+        "pattern_structure",
+        "case_record",
+        "classical_saying"
+      ],
+      "language": "zh",
+      "license_note": "按维基文库页面说明处理。",
+      "local_path": "",
+      "notes": "包含大量命例与解释，适合做案例库，但不直接转规则。",
+      "period": "清代注本相关",
+      "reliability": "medium",
+      "risk_level": "R4",
+      "source_id": "classical.di_tian_sui_chan_wei.wikisource.v1",
+      "source_priority": "secondary",
+      "source_type": "classical_commentary",
+      "title": "滴天髓阐微",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://zh.wikisource.org/wiki/滴天髓闡微"
+    },
+    {
+      "access_note": "维基文库公开文本。",
+      "allowed_usage": [
+        "source_archive",
+        "excerpt_archive",
+        "rule_proposal_source"
+      ],
+      "author_or_compiler": "传统传本，赖春台整理相关",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "unreviewed_tiaohou_inference"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "strength_model",
+        "seasonal_adjustment",
+        "pattern_structure",
+        "classical_saying"
+      ],
+      "language": "zh",
+      "license_note": "按维基文库页面说明处理。",
+      "local_path": "",
+      "notes": "适合未来调候/季节模型研究；当前只归档与提案化。",
+      "period": "传统命理古籍",
+      "reliability": "high",
+      "risk_level": "R3",
+      "source_id": "classical.qiong_tong_bao_jian.wikisource.v1",
+      "source_priority": "primary",
+      "source_type": "classical_text",
+      "title": "穷通宝鉴",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://zh.wikisource.org/zh-hans/穷通宝鉴"
+    },
+    {
+      "access_note": "Chinese Text Project 条目。",
+      "allowed_usage": [
+        "source_cross_check",
+        "excerpt_locator"
+      ],
+      "author_or_compiler": "万民英",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "bulk_copy_without_review"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "pattern_structure",
+        "timing_context",
+        "classical_saying"
+      ],
+      "language": "zh",
+      "license_note": "按 CText 页面与数据使用规则处理。",
+      "local_path": "",
+      "notes": "作为维基文库文本的交叉校验来源。",
+      "period": "明代",
+      "reliability": "medium",
+      "risk_level": "R3",
+      "source_id": "classical.san_ming_tong_hui.ctext.v1",
+      "source_priority": "secondary",
+      "source_type": "classical_text",
+      "title": "三命通会（Chinese Text Project）",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://ctext.org/wiki.pl?if=en&remap=gb&res=587236"
+    },
+    {
+      "access_note": "维基文库公开文本，按卷访问。",
+      "allowed_usage": [
+        "source_archive",
+        "excerpt_archive",
+        "knowledge_unit_draft",
+        "rule_proposal_source"
+      ],
+      "author_or_compiler": "万民英",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "direct_fortune_output",
+        "unreviewed_prediction"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "core_symbol",
+        "ten_god",
+        "pattern_structure",
+        "timing_context",
+        "classical_saying"
+      ],
+      "language": "zh",
+      "license_note": "维基文库页面说明为公有领域文本；站点文本许可需按页面说明处理。",
+      "local_path": "",
+      "notes": "优先抽取结构性条目，断语只归档。",
+      "period": "明代",
+      "reliability": "high",
+      "risk_level": "R3",
+      "source_id": "classical.san_ming_tong_hui.wikisource.siku.v1",
+      "source_priority": "primary",
+      "source_type": "classical_text",
+      "title": "三命通会（四库全书本）",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://zh.wikisource.org/wiki/三命通會_(四庫全書本)/卷01"
+    },
+    {
+      "access_note": "Chinese Text Project 条目。",
+      "allowed_usage": [
+        "source_archive",
+        "source_cross_check"
+      ],
+      "author_or_compiler": "张楠",
+      "forbidden_usage": [
+        "direct_active_rule"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "pattern_structure",
+        "classical_saying"
+      ],
+      "language": "zh",
+      "license_note": "按 CText 页面与数据使用规则处理。",
+      "local_path": "",
+      "notes": "与 PDF 扫描交叉校验。",
+      "period": "明代相关传本",
+      "reliability": "medium",
+      "risk_level": "R4",
+      "source_id": "classical.shen_feng_tong_kao.ctext.v1",
+      "source_priority": "secondary",
+      "source_type": "classical_text",
+      "title": "神峰通考（Chinese Text Project）",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://ctext.org/wiki.pl?chapter=545846&if=en&remap=gb"
+    },
+    {
+      "access_note": "Wikimedia Commons 扫描文件。",
+      "allowed_usage": [
+        "source_archive",
+        "analyst_reference"
+      ],
+      "author_or_compiler": "张楠",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "ocr_to_rule_without_review"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "pattern_structure",
+        "classical_saying",
+        "case_record"
+      ],
+      "language": "zh",
+      "license_note": "按 Wikimedia Commons 文件页面说明处理。",
+      "local_path": "",
+      "notes": "需要 OCR 与人工校对。",
+      "period": "明代相关传本",
+      "reliability": "medium",
+      "risk_level": "R4",
+      "source_id": "classical.shen_feng_tong_kao.wikimedia_pdf.v1",
+      "source_priority": "secondary",
+      "source_type": "pdf_scan",
+      "title": "神峰通考 PDF 扫描",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://commons.wikimedia.org/wiki/File:NLC416-12jh004266-48929_神峰通考.pdf"
+    },
+    {
+      "access_note": "维基文库公开文本。",
+      "allowed_usage": [
+        "source_archive",
+        "excerpt_archive",
+        "knowledge_unit_draft"
+      ],
+      "author_or_compiler": "徐升相关传本",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "traditional_prediction_text"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "ten_god",
+        "pattern_structure",
+        "shensha",
+        "classical_saying"
+      ],
+      "language": "zh",
+      "license_note": "按维基文库页面说明处理。",
+      "local_path": "",
+      "notes": "子平体系核心来源之一，需区分结构规则与断语。",
+      "period": "宋元以后传本",
+      "reliability": "high",
+      "risk_level": "R3",
+      "source_id": "classical.yuan_hai_zi_ping.wikisource.v1",
+      "source_priority": "primary",
+      "source_type": "classical_text",
+      "title": "渊海子平大全",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://zh.wikisource.org/zh-hans/淵海子平大全"
+    },
+    {
+      "access_note": "百科条目用于确认书名、作者、章节概况；原文来源需另行确认。",
+      "allowed_usage": [
+        "source_discovery",
+        "bibliographic_reference"
+      ],
+      "author_or_compiler": "沈孝瞻",
+      "forbidden_usage": [
+        "direct_rule_source",
+        "active_inference"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "queued",
+      "knowledge_scope": [
+        "pattern_structure",
+        "useful_god",
+        "classical_saying"
+      ],
+      "language": "zh",
+      "license_note": "百科内容按其页面许可处理；不作为原文权威。",
+      "local_path": "",
+      "notes": "需要寻找更可靠原文底本。",
+      "period": "清代",
+      "reliability": "low",
+      "risk_level": "R3",
+      "source_id": "classical.zi_ping_zhen_quan.reference.v1",
+      "source_priority": "tertiary",
+      "source_type": "web_reference",
+      "title": "子平真诠",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": "https://zh.wikipedia.org/wiki/子平真詮"
+    },
+    {
+      "access_note": "本地旧系统运行时知识单元。",
+      "allowed_usage": [
+        "migration_reference",
+        "rule_proposal_source"
+      ],
+      "author_or_compiler": "V18 project",
+      "forbidden_usage": [
+        "direct_active_rule",
+        "unreviewed_import"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "wealth",
+        "feature_definition",
+        "mechanism_reasoning"
+      ],
+      "language": "zh",
+      "license_note": "内部项目资产。",
+      "local_path": "v17_rebirth/.runtime/v18_1/bazi_knowledge_units.json",
+      "notes": "主要财富领域，需要逐条审计。",
+      "period": "V18.1",
+      "reliability": "medium",
+      "risk_level": "R2",
+      "source_id": "legacy.v18.bazi_knowledge_units.runtime.v1",
+      "source_priority": "primary",
+      "source_type": "legacy_v17_v18",
+      "title": "V18 runtime bazi_knowledge_units.json",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": ""
+    },
+    {
+      "access_note": "本地旧系统报告。",
+      "allowed_usage": [
+        "architecture_reference",
+        "migration_reference"
+      ],
+      "author_or_compiler": "V18 project",
+      "forbidden_usage": [
+        "direct_active_rule"
+      ],
+      "guardrails": [
+        "SOURCE_ARCHIVE_ONLY",
+        "NO_ACTIVE_RULE_CREATION",
+        "NO_RUNTIME_INFERENCE_CHANGE",
+        "NO_DIRECT_PLUGIN_RULE_REUSE",
+        "ANALYST_REVIEW_REQUIRED_BEFORE_RULE_PROPOSAL"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T03:01:04+00:00",
+          "note": "Source catalog seed updated; no runtime inference change.",
+          "status": "catalog_seed_update"
+        }
+      ],
+      "ingestion_status": "cataloged",
+      "knowledge_scope": [
+        "governance",
+        "rule_kernel",
+        "mechanism_graph",
+        "plugin_boundary"
+      ],
+      "language": "zh",
+      "license_note": "内部项目资产。",
+      "local_path": "v17_rebirth/docs/V18_2_KNOWLEDGE_CORPUS_TO_RULE_KERNEL_2026-04-27.md",
+      "notes": "V19 知识治理路线的重要历史来源。",
+      "period": "2026-04-27",
+      "reliability": "high",
+      "risk_level": "R1",
+      "source_id": "legacy.v18.knowledge_corpus_to_rule_kernel.report.v1",
+      "source_priority": "primary",
+      "source_type": "legacy_v17_v18",
+      "title": "V18.2 知识分层与插件承载规范",
+      "updated_at": "2026-04-29T03:01:04+00:00",
+      "url": ""
+    }
+  ],
+  "updated_at": "2026-04-29T03:04:44+00:00",
+  "version": "v19.bazi_source_archive.v1"
+}

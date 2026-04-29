@@ -1,0 +1,234 @@
+{
+  "v19auth_0149defbd6fe408db1d98a5609a6dd28": {
+    "created_at": "2026-04-29T04:32:35+00:00",
+    "role": "admin",
+    "token": "v19auth_0149defbd6fe408db1d98a5609a6dd28",
+    "updated_at": "2026-04-29T04:32:35+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_0cbe395fdf4f4ce3b3940148d7b8c317": {
+    "created_at": "2026-04-29T04:55:25+00:00",
+    "role": "admin",
+    "token": "v19auth_0cbe395fdf4f4ce3b3940148d7b8c317",
+    "updated_at": "2026-04-29T04:55:25+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_18823f23075743239408a08a05dd9147": {
+    "created_at": "2026-04-29T03:29:22+00:00",
+    "role": "admin",
+    "token": "v19auth_18823f23075743239408a08a05dd9147",
+    "updated_at": "2026-04-29T03:29:22+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_24c85bb05e094b9ba894ef0edda24e58": {
+    "created_at": "2026-04-29T05:51:12+00:00",
+    "role": "admin",
+    "token": "v19auth_24c85bb05e094b9ba894ef0edda24e58",
+    "updated_at": "2026-04-29T05:51:12+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_2d56c53e287f44358091c5677a67166d": {
+    "created_at": "2026-04-29T03:32:11+00:00",
+    "role": "admin",
+    "token": "v19auth_2d56c53e287f44358091c5677a67166d",
+    "updated_at": "2026-04-29T03:32:11+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_42080ca8fa544b04a7daeeedf0043d8f": {
+    "created_at": "2026-04-29T00:22:40+00:00",
+    "role": "user",
+    "token": "v19auth_42080ca8fa544b04a7daeeedf0043d8f",
+    "updated_at": "2026-04-29T00:22:40+00:00",
+    "user_id": "user_688171eb4c",
+    "username": "local_user"
+  },
+  "v19auth_55274f79c33148638795e776feed648b": {
+    "created_at": "2026-04-29T04:57:55+00:00",
+    "role": "admin",
+    "token": "v19auth_55274f79c33148638795e776feed648b",
+    "updated_at": "2026-04-29T04:57:55+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_5586a22404df4babaeeb403f7691b44e": {
+    "created_at": "2026-04-29T00:18:36+00:00",
+    "role": "guest",
+    "token": "v19auth_5586a22404df4babaeeb403f7691b44e",
+    "updated_at": "2026-04-29T00:18:36+00:00",
+    "user_id": "guest_b9bdcaac80",
+    "username": "guest"
+  },
+  "v19auth_59e5945df6bd481cac26b08b619fbc8e": {
+    "created_at": "2026-04-29T00:18:56+00:00",
+    "role": "guest",
+    "token": "v19auth_59e5945df6bd481cac26b08b619fbc8e",
+    "updated_at": "2026-04-29T00:18:56+00:00",
+    "user_id": "guest_6bd440dc86",
+    "username": "guest"
+  },
+  "v19auth_5a1c9eea9594497fb48d43ba8b416a2f": {
+    "created_at": "2026-04-29T00:20:13+00:00",
+    "role": "practitioner",
+    "token": "v19auth_5a1c9eea9594497fb48d43ba8b416a2f",
+    "updated_at": "2026-04-29T00:20:13+00:00",
+    "user_id": "practitioner_3dfb5dbee6",
+    "username": "practitioner"
+  },
+  "v19auth_5a4fd60b721248f685a389edc5a1ffb3": {
+    "created_at": "2026-04-29T00:22:28+00:00",
+    "role": "admin",
+    "token": "v19auth_5a4fd60b721248f685a389edc5a1ffb3",
+    "updated_at": "2026-04-29T00:22:28+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_5d5ce2a73b0d4a9bb11e2296bb1ec7ad": {
+    "created_at": "2026-04-29T00:31:20+00:00",
+    "role": "admin",
+    "token": "v19auth_5d5ce2a73b0d4a9bb11e2296bb1ec7ad",
+    "updated_at": "2026-04-29T00:31:20+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_70ee61e9f2a24ea8866bbada204e609d": {
+    "created_at": "2026-04-29T00:05:21+00:00",
+    "role": "practitioner",
+    "token": "v19auth_70ee61e9f2a24ea8866bbada204e609d",
+    "updated_at": "2026-04-29T00:05:21+00:00",
+    "user_id": "practitioner_38e6ab1b37",
+    "username": "local_practitioner"
+  },
+  "v19auth_7ff87121cc7e4d59b28d12e7b92cb320": {
+    "created_at": "2026-04-29T03:51:08+00:00",
+    "role": "admin",
+    "token": "v19auth_7ff87121cc7e4d59b28d12e7b92cb320",
+    "updated_at": "2026-04-29T03:51:08+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_80ec49d83baf45a4b92e0c6426b07062": {
+    "created_at": "2026-04-29T00:06:35+00:00",
+    "role": "admin",
+    "token": "v19auth_80ec49d83baf45a4b92e0c6426b07062",
+    "updated_at": "2026-04-29T00:06:35+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_9446a8848c77469fa06395c4b7d0f4cc": {
+    "created_at": "2026-04-29T00:22:07+00:00",
+    "role": "user",
+    "token": "v19auth_9446a8848c77469fa06395c4b7d0f4cc",
+    "updated_at": "2026-04-29T00:22:07+00:00",
+    "user_id": "user_580c7c9d87",
+    "username": "local_user"
+  },
+  "v19auth_9657beaf06ce487b8108287f4333bc84": {
+    "created_at": "2026-04-29T00:05:21+00:00",
+    "role": "user",
+    "token": "v19auth_9657beaf06ce487b8108287f4333bc84",
+    "updated_at": "2026-04-29T00:05:21+00:00",
+    "user_id": "user_0d60f16a3c",
+    "username": "local_user"
+  },
+  "v19auth_a445eedc95384caab5e9f94ed8516067": {
+    "created_at": "2026-04-29T00:20:13+00:00",
+    "role": "user",
+    "token": "v19auth_a445eedc95384caab5e9f94ed8516067",
+    "updated_at": "2026-04-29T00:20:13+00:00",
+    "user_id": "user_9285c832e0",
+    "username": "local_user"
+  },
+  "v19auth_b9caa86be0ca4c84a47a60d3ce4522a8": {
+    "created_at": "2026-04-29T03:36:19+00:00",
+    "role": "admin",
+    "token": "v19auth_b9caa86be0ca4c84a47a60d3ce4522a8",
+    "updated_at": "2026-04-29T03:36:19+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_bb1a561f2da34fb691bc8352feea657d": {
+    "created_at": "2026-04-29T00:20:13+00:00",
+    "role": "guest",
+    "token": "v19auth_bb1a561f2da34fb691bc8352feea657d",
+    "updated_at": "2026-04-29T00:20:13+00:00",
+    "user_id": "guest_d08095628f",
+    "username": "guest"
+  },
+  "v19auth_c047be259b9a42f3982301c73268db99": {
+    "created_at": "2026-04-29T00:18:36+00:00",
+    "role": "user",
+    "token": "v19auth_c047be259b9a42f3982301c73268db99",
+    "updated_at": "2026-04-29T00:18:36+00:00",
+    "user_id": "user_c17928bf40",
+    "username": "local_user"
+  },
+  "v19auth_cb14b843ecc740fabe32cfceaad3161b": {
+    "created_at": "2026-04-29T01:03:33+00:00",
+    "role": "admin",
+    "token": "v19auth_cb14b843ecc740fabe32cfceaad3161b",
+    "updated_at": "2026-04-29T01:03:33+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_d0e1ccf38812454e9c3675ee07d041ee": {
+    "created_at": "2026-04-29T00:18:36+00:00",
+    "role": "practitioner",
+    "token": "v19auth_d0e1ccf38812454e9c3675ee07d041ee",
+    "updated_at": "2026-04-29T00:18:36+00:00",
+    "user_id": "practitioner_1f70820503",
+    "username": "practitioner"
+  },
+  "v19auth_d487499f41004507bac7f53f752f7d36": {
+    "created_at": "2026-04-29T00:20:13+00:00",
+    "role": "admin",
+    "token": "v19auth_d487499f41004507bac7f53f752f7d36",
+    "updated_at": "2026-04-29T00:20:13+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_db2cc63a43b3471a91c7ce4df5e3c6f2": {
+    "created_at": "2026-04-29T00:06:58+00:00",
+    "role": "user",
+    "token": "v19auth_db2cc63a43b3471a91c7ce4df5e3c6f2",
+    "updated_at": "2026-04-29T00:06:58+00:00",
+    "user_id": "user_f8730c2a55",
+    "username": "admin"
+  },
+  "v19auth_df6e96cdc6fb4725a4beb53268bbe5a8": {
+    "created_at": "2026-04-29T00:05:21+00:00",
+    "role": "guest",
+    "token": "v19auth_df6e96cdc6fb4725a4beb53268bbe5a8",
+    "updated_at": "2026-04-29T00:05:21+00:00",
+    "user_id": "guest_2444c07e1c",
+    "username": "guest"
+  },
+  "v19auth_e5c97fcbb0ba4b27bff03784595d627f": {
+    "created_at": "2026-04-29T00:05:21+00:00",
+    "role": "admin",
+    "token": "v19auth_e5c97fcbb0ba4b27bff03784595d627f",
+    "updated_at": "2026-04-29T00:05:21+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_f2ca20ec77534eb08dc304a9bacf1c9f": {
+    "created_at": "2026-04-29T00:18:36+00:00",
+    "role": "admin",
+    "token": "v19auth_f2ca20ec77534eb08dc304a9bacf1c9f",
+    "updated_at": "2026-04-29T00:18:36+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_f4b60907de28428e98c2d4a6c7607406": {
+    "created_at": "2026-04-29T00:21:36+00:00",
+    "role": "guest",
+    "token": "v19auth_f4b60907de28428e98c2d4a6c7607406",
+    "updated_at": "2026-04-29T00:21:36+00:00",
+    "user_id": "guest_ef688c1cd7",
+    "username": "guest"
+  }
+}

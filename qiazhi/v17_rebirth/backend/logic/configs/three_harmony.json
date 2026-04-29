@@ -1,0 +1,16 @@
+{
+  "plugin_id": "L1_THREE_HARMONY",
+  "calculation_model": "Relative_Leverage",
+  "bindings": {
+    "primary_gain": "$.constants.FUSION_MID_GAIN",
+    "secondary_loss": "$.constants.FUSION_EDGE_LOSS"
+  },
+  "leverage_logic": {
+    "is_induced_by_stem": true,
+    "induction_source": "$.constants.INDUCTION_MAP",
+    "override": {
+      "active": false,
+      "value": 0.0
+    }
+  }
+}

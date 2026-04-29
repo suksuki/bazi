@@ -26,6 +26,12 @@ import {
 import { useAppLanguage } from "@/hooks/useAppLanguage";
 import { APP_LANGUAGE_COOKIE, APP_LANGUAGE_STORAGE_KEY, type AppLanguage } from "@/lib/i18n";
 import { jsonPostInit, noStoreInit, requestJson } from "@/lib/apiClient";
+import { userFacingApiMessage, userFacingExceptionMessage } from "@/lib/v18UserMessages";
+import {
+  CapabilityBoundaryPanel,
+  capabilityBoundaryFromSafeOutput,
+  type CapabilityBoundary,
+} from "@/components/V18_CapabilityBoundaryPanel";
 
 type LandingDemoExperienceProps = {
   initialMode?: "landing" | "demo";
@@ -83,11 +89,24 @@ type Copy = {
   metricTrustVerifiedLine: string;
   metricTrustGrowthLine: string;
   metricTrustFallbackLine: string;
+  metricTrendLine: string;
+  metricLearningLine: string;
+  metric7dTitle: string;
+  metric7dPredictions: string;
+  metric7dFeedback: string;
+  metric7dHitPartial: string;
+  metric7dActiveUsers: string;
+  metric7dRuleUpdate: string;
+  metric7dInsufficient: string;
   metricCollecting: string;
   demoTitle: string;
   demoSubtitle: string;
   activeRules: string;
   questionPlaceholder: string;
+  firstPrompt: string;
+  firstPromptDismiss: string;
+  recommendedTitle: string;
+  recommendedQueries: string[];
   sampleQuestion: string;
   sampleChart: string;
   sampleChartReady: string;
@@ -95,11 +114,22 @@ type Copy = {
   needActiveRule: string;
   needSampleChart: string;
   conclusion: string;
+  decisionEyebrow: string;
+  decisionHint: string;
+  summaryWealthStructure: string;
+  summaryCoreEvidence: string;
+  summaryRiskSources: string;
+  summaryUncertainty: string;
+  summaryNoRisk: string;
   confidence: string;
   uncertainty: string;
   verifiedExplanation: string;
   explanationBoundary: string;
   evidence: string;
+  evidencePreviewBadge: string;
+  evidenceMore: string;
+  evidenceLess: string;
+  wealthStructure: string;
   feedbackTitle: string;
   feedbackCopy: string;
   feedbackHit: string;
@@ -174,11 +204,24 @@ const COPY: Record<AppLanguage, Copy> = {
     metricTrustVerifiedLine: "已通过校验",
     metricTrustGrowthLine: "你的反馈将直接影响这些指标",
     metricTrustFallbackLine: "系统正在持续学习，随着使用会不断优化",
+    metricTrendLine: "近 24 小时趋势",
+    metricLearningLine: "反馈正在影响学习信号",
+    metric7dTitle: "最近 7 天",
+    metric7dPredictions: "预测次数",
+    metric7dFeedback: "反馈次数",
+    metric7dHitPartial: "命中 + 部分符合",
+    metric7dActiveUsers: "活跃用户",
+    metric7dRuleUpdate: "最近规则更新",
+    metric7dInsufficient: "正在积累数据，暂不展示结论式指标",
     metricCollecting: "数据积累中",
     demoTitle: "Live Demo",
     demoSubtitle: "无需登录，使用示例命盘走真实 Contract → Verifier → Ledger → Feedback → Replay 链路。",
     activeRules: "活跃规则",
-    questionPlaceholder: "例如：我未来两年财运如何？",
+    questionPlaceholder: "例如：我未来两年财运如何？收入是否稳定？有没有投资风险？",
+    firstPrompt: "当前 Beta 优先回答财富相关、可验证的问题。你可以直接点下面的问题开始。",
+    firstPromptDismiss: "知道了",
+    recommendedTitle: "推荐问题",
+    recommendedQueries: ["我未来两年财运如何？", "收入是否稳定？", "有没有明显风险？", "适合稳定收入还是尝试机会？"],
     sampleQuestion: "我未来两年财运如何？",
     sampleChart: "使用示例命盘",
     sampleChartReady: "示例命盘已就绪",
@@ -186,17 +229,28 @@ const COPY: Record<AppLanguage, Copy> = {
     needActiveRule: "Demo 需要至少一条 active rule。请先由 admin 在 /v17/admin/rules 初始化财富预测规则。",
     needSampleChart: "请先点击“使用示例命盘”，Demo 不会自行补判出生信息。",
     conclusion: "系统裁决",
+    decisionEyebrow: "系统决策",
+    decisionHint: "这条结果来自 Contract → Verifier → Ledger，不是开放式闲聊。",
+    summaryWealthStructure: "财富结构（核心结论）",
+    summaryCoreEvidence: "核心依据",
+    summaryRiskSources: "风险来源",
+    summaryUncertainty: "不确定性",
+    summaryNoRisk: "暂无明显结构性风险信号",
     confidence: "置信度",
     uncertainty: "不确定性",
     verifiedExplanation: "系统解释（基于已验证 Contract）",
     explanationBoundary: "解释层不参与命理裁决",
-    evidence: "Evidence",
+    evidence: "核心依据",
+    evidencePreviewBadge: "默认展示前两条",
+    evidenceMore: "展开更多证据",
+    evidenceLess: "收起证据",
+    wealthStructure: "财富结构",
     feedbackTitle: "Demo 反馈",
     feedbackCopy: "你的反馈会进入学习信号，用于改进规则评分与候选规则，但不会直接修改当前规则。",
-    feedbackHit: "准",
-    feedbackMiss: "不准",
-    feedbackPartial: "部分准",
-    feedbackUnclear: "不清楚",
+    feedbackHit: "👍 准",
+    feedbackMiss: "👎 不准",
+    feedbackPartial: "⚖️ 部分准",
+    feedbackUnclear: "❓ 不清楚",
     replayTitle: "Replay",
     replayCopy: "本次 Demo 已可回放：Ledger、Contract、Evidence、Feedback 会按 prediction_id 关联。",
     replaySummary: "查看回放摘要",
@@ -263,11 +317,24 @@ const COPY: Record<AppLanguage, Copy> = {
     metricTrustVerifiedLine: "Verifier-checked",
     metricTrustGrowthLine: "Your feedback directly improves these metrics",
     metricTrustFallbackLine: "The system is still learning and improves with more usage",
+    metricTrendLine: "Last 24h trend",
+    metricLearningLine: "Feedback is shaping learning signals",
+    metric7dTitle: "Last 7 days",
+    metric7dPredictions: "Predictions",
+    metric7dFeedback: "Feedback",
+    metric7dHitPartial: "Hit + partial",
+    metric7dActiveUsers: "Active users",
+    metric7dRuleUpdate: "Latest rule update",
+    metric7dInsufficient: "Still collecting data; no conclusive metric shown yet",
     metricCollecting: "Collecting data",
     demoTitle: "Live Demo",
     demoSubtitle: "No sign-in required. Use a sample chart to run the real Contract → Verifier → Ledger → Feedback → Replay path.",
     activeRules: "Active rules",
-    questionPlaceholder: "Example: How does my wealth outlook look over the next two years?",
+    questionPlaceholder: "Example: How is my 2-year wealth outlook? Will my income be stable? Any investment risk?",
+    firstPrompt: "This beta focuses on verifiable wealth questions. You can start by clicking one below.",
+    firstPromptDismiss: "Got it",
+    recommendedTitle: "Recommended questions",
+    recommendedQueries: ["How is my financial outlook in the next 2 years?", "Is my income stable?", "Are there major financial risks?", "Stable income or opportunity-taking?"],
     sampleQuestion: "How does my wealth outlook look over the next two years?",
     sampleChart: "Use sample chart",
     sampleChartReady: "Sample chart ready",
@@ -275,17 +342,28 @@ const COPY: Record<AppLanguage, Copy> = {
     needActiveRule: "The demo needs at least one active rule. Ask an admin to initialize the wealth rule in /v17/admin/rules first.",
     needSampleChart: "Please use the sample chart first. The demo will not invent missing birth information.",
     conclusion: "System adjudication",
+    decisionEyebrow: "System decision",
+    decisionHint: "This result comes from Contract → Verifier → Ledger, not open-ended chat.",
+    summaryWealthStructure: "Wealth structure (core judgment)",
+    summaryCoreEvidence: "Core evidence",
+    summaryRiskSources: "Risk sources",
+    summaryUncertainty: "Uncertainty",
+    summaryNoRisk: "No strong structural risk signal yet",
     confidence: "Confidence",
     uncertainty: "Uncertainty",
     verifiedExplanation: "System explanation (from a verified Contract)",
     explanationBoundary: "The explanation layer does not make destiny decisions",
-    evidence: "Evidence",
+    evidence: "Core evidence",
+    evidencePreviewBadge: "Top 2 by default",
+    evidenceMore: "Show more evidence",
+    evidenceLess: "Hide evidence",
+    wealthStructure: "Wealth structure",
     feedbackTitle: "Demo feedback",
     feedbackCopy: "Your feedback becomes a learning signal for rule scoring and candidate suggestions, but it does not directly modify the current rule.",
-    feedbackHit: "Accurate",
-    feedbackMiss: "Not accurate",
-    feedbackPartial: "Partly accurate",
-    feedbackUnclear: "Unclear",
+    feedbackHit: "👍 Accurate",
+    feedbackMiss: "👎 Not accurate",
+    feedbackPartial: "⚖️ Partly accurate",
+    feedbackUnclear: "❓ Unclear",
     replayTitle: "Replay",
     replayCopy: "This demo is replayable: Ledger, Contract, Evidence, and Feedback are linked by prediction_id.",
     replaySummary: "View replay summary",
@@ -352,11 +430,24 @@ const COPY: Record<AppLanguage, Copy> = {
     metricTrustVerifiedLine: "검증 완료",
     metricTrustGrowthLine: "피드백은 이 지표를 직접 개선합니다",
     metricTrustFallbackLine: "시스템이 계속 학습 중입니다. 사용이 늘수록 정확도가 향상됩니다.",
+    metricTrendLine: "최근 24시간 추세",
+    metricLearningLine: "피드백이 학습 신호에 반영됩니다",
+    metric7dTitle: "최근 7일",
+    metric7dPredictions: "예측 횟수",
+    metric7dFeedback: "피드백 수",
+    metric7dHitPartial: "일치 + 부분 일치",
+    metric7dActiveUsers: "활성 사용자",
+    metric7dRuleUpdate: "최근 규칙 업데이트",
+    metric7dInsufficient: "데이터를 축적 중이며 아직 단정적인 지표를 표시하지 않습니다",
     metricCollecting: "데이터 축적 중",
     demoTitle: "Live Demo",
     demoSubtitle: "로그인 없이 예시 명식으로 실제 Contract → Verifier → Ledger → Feedback → Replay 흐름을 체험합니다.",
     activeRules: "활성 규칙",
-    questionPlaceholder: "예: 앞으로 2년 재물운은 어떨까요?",
+    questionPlaceholder: "예: 앞으로 2년 재물운은 어떤가요? 수입은 안정적일까요? 투자 리스크가 있나요?",
+    firstPrompt: "현재 Beta는 검증 가능한 재물 관련 질문에 우선 답합니다. 아래 질문을 눌러 시작할 수 있습니다.",
+    firstPromptDismiss: "알겠어요",
+    recommendedTitle: "추천 질문",
+    recommendedQueries: ["앞으로 2년 재물운은 어떤가요?", "수입은 안정적인가요?", "큰 재정 리스크가 있나요?", "안정 수입과 기회 중 무엇이 맞나요?"],
     sampleQuestion: "앞으로 2년 재물운은 어떨까요?",
     sampleChart: "예시 명식 사용",
     sampleChartReady: "예시 명식 준비됨",
@@ -364,17 +455,28 @@ const COPY: Record<AppLanguage, Copy> = {
     needActiveRule: "Demo에는 최소 1개의 active rule이 필요합니다. 먼저 admin이 /v17/admin/rules에서 재물 규칙을 초기화해야 합니다.",
     needSampleChart: "먼저 예시 명식을 선택해 주세요. Demo는 부족한 출생 정보를 임의로 채우지 않습니다.",
     conclusion: "시스템 판단",
+    decisionEyebrow: "시스템 판단",
+    decisionHint: "이 결과는 Contract → Verifier → Ledger 흐름에서 생성되며 자유 대화가 아닙니다.",
+    summaryWealthStructure: "재물 구조 (핵심 판단)",
+    summaryCoreEvidence: "핵심 근거",
+    summaryRiskSources: "리스크 요인",
+    summaryUncertainty: "불확실성",
+    summaryNoRisk: "뚜렷한 구조적 리스크 신호는 아직 없습니다",
     confidence: "신뢰도",
     uncertainty: "불확실성",
     verifiedExplanation: "시스템 설명 (검증된 Contract 기반)",
     explanationBoundary: "설명 계층은 명리 판단에 참여하지 않습니다",
-    evidence: "근거",
+    evidence: "핵심 근거",
+    evidencePreviewBadge: "기본 2개 표시",
+    evidenceMore: "근거 더 보기",
+    evidenceLess: "근거 접기",
+    wealthStructure: "재물 구조",
     feedbackTitle: "Demo 피드백",
     feedbackCopy: "피드백은 규칙 점수와 후보 규칙 제안을 개선하는 learning signal이 되지만, 현재 규칙을 직접 수정하지 않습니다.",
-    feedbackHit: "맞아요",
-    feedbackMiss: "아니에요",
-    feedbackPartial: "부분적으로 맞아요",
-    feedbackUnclear: "잘 모르겠어요",
+    feedbackHit: "👍 맞아요",
+    feedbackMiss: "👎 아니에요",
+    feedbackPartial: "⚖️ 부분적으로 맞아요",
+    feedbackUnclear: "❓ 잘 모르겠어요",
     replayTitle: "Replay",
     replayCopy: "이 Demo는 다시 확인할 수 있습니다. Ledger, Contract, Evidence, Feedback이 prediction_id로 연결됩니다.",
     replaySummary: "Replay 요약 보기",
@@ -403,15 +505,23 @@ type DemoPrediction = {
   verifierStatus: string;
   replay?: Record<string, unknown>;
   feedbackStatus?: string;
+  wealthType?: string;
+  wealthTypeLabel?: string;
 };
 
 type EvidenceItem = {
+  featureId: string;
+  featureType: string;
+  featureLabel: string;
   ruleId: string;
   version: string;
   contentHash: string;
   matchedFacts: unknown[];
   effect: unknown;
   confidenceDelta: number | null;
+  risk: number | null;
+  stability: number | null;
+  wealthRelevance: number | null;
 };
 
 type TrustMetrics = {
@@ -431,6 +541,34 @@ type TrustMetrics = {
   learningSignalsGenerated: number | null;
   insightsGenerated: number | null;
   suggestionsGenerated: number | null;
+  last7d: {
+    predictions: number;
+    feedback: number;
+    hitPartialRate: number | null;
+    activeUsers: number | null;
+    lastRuleUpdateTime: string;
+    dataSufficient: boolean;
+  };
+  predictionTrend: {
+    last24h: number;
+    previous24h: number;
+    delta: number;
+  };
+  feedbackTrend: {
+    last24h: number;
+    previous24h: number;
+    delta: number;
+  };
+  latestRuleUpdate: {
+    ruleId: string;
+    version: string;
+    updatedAt: string;
+  };
+  learningVisibility: {
+    recentFeedbackCount: number;
+    learningSignalCount: number;
+    note: string;
+  };
 };
 
 const LANGUAGE_LABELS: Record<AppLanguage, string> = {
@@ -458,6 +596,34 @@ const EMPTY_TRUST_METRICS: TrustMetrics = {
   learningSignalsGenerated: null,
   insightsGenerated: null,
   suggestionsGenerated: null,
+  last7d: {
+    predictions: 0,
+    feedback: 0,
+    hitPartialRate: null,
+    activeUsers: null,
+    lastRuleUpdateTime: "",
+    dataSufficient: false,
+  },
+  predictionTrend: {
+    last24h: 0,
+    previous24h: 0,
+    delta: 0,
+  },
+  feedbackTrend: {
+    last24h: 0,
+    previous24h: 0,
+    delta: 0,
+  },
+  latestRuleUpdate: {
+    ruleId: "",
+    version: "",
+    updatedAt: "",
+  },
+  learningVisibility: {
+    recentFeedbackCount: 0,
+    learningSignalCount: 0,
+    note: "",
+  },
 };
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -507,8 +673,8 @@ function readBool(source: unknown, key: string, fallback = false): boolean {
   return typeof value === "boolean" ? value : fallback;
 }
 
-function apiFailureMessage(value: unknown, requestError: string | undefined, fallback: string): string {
-  return requestError || readString(value, ["message", "detail", "error"]) || readString(unwrapEnvelope(value), ["message", "detail", "error"]) || fallback;
+function apiFailureMessage(value: unknown, requestError: string | undefined, fallback: string, language: AppLanguage): string {
+  return userFacingApiMessage(value, requestError, fallback, language);
 }
 
 function stableId(prefix: string): string {
@@ -545,6 +711,12 @@ function readRatio(value: unknown, fallback = 0): number {
 function parseTrustMetrics(source: unknown): TrustMetrics {
   const payload = isRecord(source) ? (isRecord(source.data) ? source.data : source) : {};
   const distribution = readRecord(payload, "feedback_distribution");
+  const predictionTrend = readRecord(payload, "prediction_trend");
+  const feedbackTrend = readRecord(payload, "feedback_trend");
+  const latestRuleUpdate = readRecord(payload, "latest_rule_update");
+  const learningVisibility = readRecord(payload, "learning_visibility");
+  const last7d = readRecord(payload, "last_7d_metrics");
+  const last7dFeedback = readNumber(last7d, ["feedback"]) ?? readNumber(payload, ["last_7d_feedback"]) ?? 0;
   const trust: TrustMetrics = {
     totalPredictions: readNumber(payload, ["total_predictions", "total"]),
     totalFeedback: readNumber(payload, ["total_feedback"]),
@@ -562,6 +734,34 @@ function parseTrustMetrics(source: unknown): TrustMetrics {
     learningSignalsGenerated: readNumber(payload, ["learning_signals_generated"]),
     insightsGenerated: readNumber(payload, ["insights_generated"]),
     suggestionsGenerated: readNumber(payload, ["suggestions_generated"]),
+    last7d: {
+      predictions: readNumber(last7d, ["predictions"]) ?? readNumber(payload, ["last_7d_predictions"]) ?? 0,
+      feedback: last7dFeedback,
+      hitPartialRate: last7dFeedback > 0 ? readNumber(last7d, ["hit_partial_rate"]) ?? readNumber(payload, ["last_7d_hit_partial_rate"]) ?? 0 : null,
+      activeUsers: readNumber(last7d, ["active_users"]) ?? readNumber(payload, ["last_7d_active_users"]),
+      lastRuleUpdateTime: readString(last7d, ["last_rule_update_time"]) || readString(payload, ["last_rule_update_time"]),
+      dataSufficient: readBool(last7d, "data_sufficient", false),
+    },
+    predictionTrend: {
+      last24h: readNumber(predictionTrend, ["last_24h", "last24h"]) ?? 0,
+      previous24h: readNumber(predictionTrend, ["previous_24h", "previous24h"]) ?? 0,
+      delta: readNumber(predictionTrend, ["delta"]) ?? 0,
+    },
+    feedbackTrend: {
+      last24h: readNumber(feedbackTrend, ["last_24h", "last24h"]) ?? 0,
+      previous24h: readNumber(feedbackTrend, ["previous_24h", "previous24h"]) ?? 0,
+      delta: readNumber(feedbackTrend, ["delta"]) ?? 0,
+    },
+    latestRuleUpdate: {
+      ruleId: readString(latestRuleUpdate, ["rule_id", "ruleId"]),
+      version: readString(latestRuleUpdate, ["version"]),
+      updatedAt: readString(latestRuleUpdate, ["updated_at", "updatedAt"]),
+    },
+    learningVisibility: {
+      recentFeedbackCount: readNumber(learningVisibility, ["recent_feedback_count", "recentFeedbackCount"]) ?? 0,
+      learningSignalCount: readNumber(learningVisibility, ["learning_signal_count", "learningSignalCount"]) ?? 0,
+      note: readString(learningVisibility, ["note"]),
+    },
   };
   return trust;
 }
@@ -614,13 +814,108 @@ function extractConclusionRef(safeOutput: Record<string, unknown>, contract: Rec
 
 function normalizeEvidence(rows: unknown[]): EvidenceItem[] {
   return rows.filter(isRecord).map((row) => ({
+    featureId: readString(row, ["feature_id", "featureId"]),
+    featureType: readString(row, ["feature_type", "featureType"]),
+    featureLabel: readString(row, ["feature_label", "featureLabel"]) || readString(readRecord(row, "feature"), ["label"]),
     ruleId: readString(row, ["rule_id", "ruleId"]),
     version: readString(row, ["version", "rule_version"]),
     contentHash: readString(row, ["content_hash", "rule_hash"]),
     matchedFacts: readArray(row, "matched_facts"),
     effect: row.effect || row.effects || {},
     confidenceDelta: clampConfidence(readNumber(row, ["confidence_delta", "confidence"])),
+    risk: clampConfidence(readNumber(row, ["risk"])),
+    stability: clampConfidence(readNumber(row, ["stability"])),
+    wealthRelevance: clampConfidence(readNumber(row, ["wealth_relevance", "wealthRelevance"])),
   }));
+}
+
+function wealthFeatureLabel(value: string, language: AppLanguage): string {
+  const labels: Record<AppLanguage, Record<string, string>> = {
+    zh: {
+      wealth_strength: "财星状态",
+      wealth_star_state: "财星状态",
+      wealth_vault: "财库状态",
+      wealth_vault_state: "财库状态",
+      output_generate_wealth: "食伤生财",
+      output_to_wealth: "食伤生财",
+      constraint_structure: "官杀制约",
+      authority_wealth_constraint: "官杀制约",
+      authority_constraint: "官杀制约",
+      peer_competition: "比劫竞争",
+      structure_activation: "结构引动",
+      flow_activation: "大运流年引动",
+      luck_flow_activation: "大运流年引动",
+      stability_risk: "结构稳定性",
+      relationship_volatility: "结构稳定性",
+      wealth_path_type: "财富路径",
+      wealth_stability_risk: "风险来源",
+    },
+    en: {
+      wealth_strength: "Wealth signal",
+      wealth_star_state: "Wealth signal",
+      wealth_vault: "Wealth vault",
+      wealth_vault_state: "Wealth vault",
+      output_generate_wealth: "Output generates wealth",
+      output_to_wealth: "Output generates wealth",
+      constraint_structure: "Authority constraint",
+      authority_wealth_constraint: "Authority constraint",
+      authority_constraint: "Authority constraint",
+      peer_competition: "Peer competition",
+      structure_activation: "Structure activation",
+      flow_activation: "Luck-flow activation",
+      luck_flow_activation: "Luck-flow activation",
+      stability_risk: "Structural stability",
+      relationship_volatility: "Structural stability",
+      wealth_path_type: "Wealth path",
+      wealth_stability_risk: "Risk source",
+    },
+    ko: {
+      wealth_strength: "재성 상태",
+      wealth_star_state: "재성 상태",
+      wealth_vault: "재고 상태",
+      wealth_vault_state: "재고 상태",
+      output_generate_wealth: "식상생재",
+      output_to_wealth: "식상생재",
+      constraint_structure: "관살 제약",
+      authority_wealth_constraint: "관살 제약",
+      authority_constraint: "관살 제약",
+      peer_competition: "비겁 경쟁",
+      structure_activation: "구조 작동",
+      flow_activation: "운 흐름 작동",
+      luck_flow_activation: "운 흐름 작동",
+      stability_risk: "구조 안정성",
+      relationship_volatility: "구조 안정성",
+      wealth_path_type: "재물 경로",
+      wealth_stability_risk: "리스크 요인",
+    },
+  };
+  return labels[language][value] || value || labels[language].wealth_strength;
+}
+
+function sortCoreEvidence(evidence: EvidenceItem[]): EvidenceItem[] {
+  return [...evidence].sort((left, right) => {
+    const leftScore = (left.wealthRelevance ?? 0) + (left.confidenceDelta ?? 0) + (left.stability ?? 0) * 0.2 + (left.risk ?? 0) * 0.2;
+    const rightScore = (right.wealthRelevance ?? 0) + (right.confidenceDelta ?? 0) + (right.stability ?? 0) * 0.2 + (right.risk ?? 0) * 0.2;
+    return rightScore - leftScore;
+  });
+}
+
+function evidenceLabel(item: EvidenceItem, language: AppLanguage): string {
+  return item.featureLabel || wealthFeatureLabel(item.featureType || item.featureId, language);
+}
+
+function evidenceSummary(item: EvidenceItem, language: AppLanguage): string {
+  const label = evidenceLabel(item, language);
+  const effect = compactJson(item.effect);
+  const facts = item.matchedFacts.length ? compactJson(item.matchedFacts.slice(0, 2)) : "";
+  if (language === "en") return `${label}: ${effect}${facts ? `; facts ${facts}` : ""}`;
+  if (language === "ko") return `${label}: ${effect}${facts ? `; 근거 ${facts}` : ""}`;
+  return `${label}：${effect}${facts ? `；事实 ${facts}` : ""}`;
+}
+
+function riskEvidence(evidence: EvidenceItem[]): EvidenceItem[] {
+  const riskTypes = new Set(["peer_competition", "authority_constraint", "constraint_structure", "structure_activation", "wealth_vault", "wealth_vault_state", "stability_risk", "wealth_stability_risk"]);
+  return sortCoreEvidence(evidence).filter((item) => (item.risk ?? 0) >= 0.4 || riskTypes.has(item.featureType) || riskTypes.has(item.featureId));
 }
 
 function buildDemoChartSnapshot(): Record<string, unknown> {
@@ -633,7 +928,9 @@ function buildDemoChartSnapshot(): Record<string, unknown> {
     gender: "male",
     matched_facts: ["complete_birth_fields"],
     birth_fields: { year: "1990", month: "01", day: "01", hour: "09", gender: "male" },
-    four_pillars: { year: "1990", month: "01", day: "01", hour: "09" },
+    four_pillars: { year: "丁巳", month: "乙酉", day: "乙丑", hour: "乙卯" },
+    luck_pillar: "壬子",
+    flow_pillar: "己未",
   };
 }
 
@@ -663,6 +960,7 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
   const [loadingMetrics, setLoadingMetrics] = useState(false);
   const [running, setRunning] = useState(false);
   const [prediction, setPrediction] = useState<DemoPrediction | null>(null);
+  const [capabilityBoundary, setCapabilityBoundary] = useState<CapabilityBoundary | null>(null);
   const [error, setError] = useState("");
 
   const demoReady = useMemo(() => (metrics.activeRules ?? 0) > 0, [metrics.activeRules]);
@@ -733,19 +1031,22 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
     void loadMetrics();
   }, [loadMetrics]);
 
-  const runDemo = useCallback(async () => {
+  const runDemo = useCallback(async (questionOverride?: string, options?: { useSample?: boolean }) => {
+    const effectiveQuestion = questionOverride?.trim() || question.trim() || text.sampleQuestion;
+    const shouldUseSampleChart = options?.useSample ?? useSampleChart;
     setError("");
     setPrediction(null);
+    setCapabilityBoundary(null);
     setRunning(true);
     try {
       if (!demoReady) throw new Error(text.needActiveRule);
-      if (!useSampleChart) throw new Error(text.needSampleChart);
+      if (!shouldUseSampleChart) throw new Error(text.needSampleChart);
 
       const sessionResp = await requestJson<unknown>(
         "/api/v18.1/agent/sessions",
         jsonPostInit({ surface: "landing_demo", user_locale: language, is_demo: true }, noStoreInit()),
       );
-      if (!sessionResp.ok) throw new Error(apiFailureMessage(sessionResp.data, sessionResp.error, "Demo session failed."));
+      if (!sessionResp.ok) throw new Error(apiFailureMessage(sessionResp.data, sessionResp.error, "Demo session failed.", language));
       const session = unwrapEnvelope(sessionResp.data);
       const sessionId = readString(session, ["agent_session_id", "session_id", "id"]);
       if (!sessionId) throw new Error("Demo session missing session_id.");
@@ -756,8 +1057,8 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
           {
             request_id: stableId("landing_demo_turn"),
             is_demo: true,
-            user_message: question.trim() || text.sampleQuestion,
-            user_query: question.trim() || text.sampleQuestion,
+            user_message: effectiveQuestion,
+            user_query: effectiveQuestion,
             plugin_claims: [{ plugin_id: "plugin.agent", claim_id: "landing_demo" }],
             birth_payload: { year: "1990", month: "01", day: "01", hour: "09", gender: "male" },
             chart_snapshot: buildDemoChartSnapshot(),
@@ -766,9 +1067,15 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
           noStoreInit(),
         ),
       );
-      if (!turnResp.ok) throw new Error(apiFailureMessage(turnResp.data, turnResp.error, "Demo prediction failed."));
+      if (!turnResp.ok) throw new Error(apiFailureMessage(turnResp.data, turnResp.error, "Demo prediction failed.", language));
       const turn = unwrapEnvelope(turnResp.data);
       const safeOutput = readRecord(turn, "safe_output");
+      const boundary = capabilityBoundaryFromSafeOutput(safeOutput);
+      if (boundary) {
+        setPrediction(null);
+        setCapabilityBoundary(boundary);
+        return;
+      }
       if (readString(safeOutput, ["type"]) === "clarification_question" || readBool(safeOutput, "is_prediction", true) === false) {
         throw new Error("Demo returned a clarification instead of a prediction.");
       }
@@ -793,7 +1100,7 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
           noStoreInit(),
         ),
       );
-      if (!explainResp.ok) throw new Error(apiFailureMessage(explainResp.data, explainResp.error, "Verified explanation failed."));
+      if (!explainResp.ok) throw new Error(apiFailureMessage(explainResp.data, explainResp.error, "Verified explanation failed.", language));
       const explainPayload = unwrapEnvelope(explainResp.data);
       const explanationResponse =
         readRecord(explainPayload, "explanation_response").safe_output || explainPayload.explanation_response
@@ -801,7 +1108,7 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
           : explainPayload;
       const verifier = readRecord(explanationResponse, "verifier");
       if (readBool(verifier, "ok", true) === false || readBool(explanationResponse, "verified", true) === false) {
-        throw new Error("Explanation verifier blocked the output.");
+        throw new Error(userFacingApiMessage({ code: "VERIFIER_BLOCKED" }, undefined, "Explanation verifier blocked the output.", language));
       }
 
       const replayResp = await requestJson<unknown>(`/api/v18.1/predictions/${encodeURIComponent(predictionId)}/replay`, noStoreInit());
@@ -809,6 +1116,10 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
       const contract = readRecord(replay, "contract");
       const evidence = normalizeEvidence(readArray(contract, "rule_evidence").length ? readArray(contract, "rule_evidence") : readArray(replay, "evidence"));
       const uncertainty = readRecord(contract, "uncertainty");
+      const safeWealthProfile = readRecord(safeOutput, "wealth_profile");
+      const contractChart = readRecord(contract, "chart_snapshot");
+      const contractWealthProfile = readRecord(readRecord(contractChart, "wealth_domain_bundle"), "wealth_profile");
+      const wealthProfile = readString(safeWealthProfile, ["wealth_type", "wealth_type_label"]) ? safeWealthProfile : contractWealthProfile;
       const explanation =
         readString(explanationResponse, ["explanation", "verified_output", "output"]) ||
         safeOutputText(readRecord(explanationResponse, "safe_output")) ||
@@ -827,14 +1138,25 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
         evidence,
         verifierStatus: readString(verifier, ["action", "status"], text.verified),
         replay,
+        wealthType: readString(wealthProfile, ["wealth_type"]),
+        wealthTypeLabel: readString(wealthProfile, ["wealth_type_label"]) || readString(wealthProfile, ["wealth_type"]),
       });
       void loadMetrics();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Demo failed.");
+      setError(userFacingExceptionMessage(err, "Demo failed.", language));
     } finally {
       setRunning(false);
     }
   }, [demoReady, language, loadMetrics, question, text, useSampleChart]);
+
+  const runSuggestedDemo = useCallback(
+    (nextQuestion: string) => {
+      setQuestion(nextQuestion);
+      setUseSampleChart(true);
+      void runDemo(nextQuestion, { useSample: true });
+    },
+    [runDemo],
+  );
 
   const submitFeedback = useCallback(
     async (feedbackType: "hit" | "miss" | "partial" | "unclear") => {
@@ -858,7 +1180,7 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
             noStoreInit(),
           ),
         );
-        if (!feedbackResp.ok) throw new Error(apiFailureMessage(feedbackResp.data, feedbackResp.error, "Demo feedback failed."));
+        if (!feedbackResp.ok) throw new Error(apiFailureMessage(feedbackResp.data, feedbackResp.error, "Demo feedback failed.", language));
         const payload = unwrapEnvelope(feedbackResp.data);
         const signal = readRecord(payload, "learning_signal");
         setPrediction((prev) =>
@@ -871,7 +1193,7 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
         );
         void loadMetrics();
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Demo feedback failed.");
+        setError(userFacingExceptionMessage(err, "Demo feedback failed.", language));
       }
     },
     [prediction, loadMetrics],
@@ -893,6 +1215,8 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
         <HowItWorksFlow text={text} />
         <DemoAgentPanel
           activeRuleCount={metrics.activeRules}
+          capabilityBoundary={capabilityBoundary}
+          language={language}
           metrics={metrics}
           error={error}
           prediction={prediction}
@@ -904,6 +1228,7 @@ export function V18_LandingDemoExperience({ initialMode = "landing" }: LandingDe
           onQuestionChange={setQuestion}
           onRunDemo={() => void runDemo()}
           onSampleChart={() => setUseSampleChart(true)}
+          onSuggestedQuery={runSuggestedDemo}
         />
       </section>
     </main>
@@ -1040,6 +1365,7 @@ function HowItWorksFlow({ text }: { text: Copy }): ReactNode {
 
 function TrustMetricsPanel({ text, metrics, loading, onRefresh }: { text: Copy; metrics: TrustMetrics; loading: boolean; onRefresh: () => void }): ReactNode {
   const hasHistory = hasTrustHistory(metrics);
+  const has7dHistory = metrics.last7d.dataSufficient;
   return (
     <section className="mt-6 rounded-[2rem] border border-emerald-200/20 bg-emerald-200/[0.06] p-6 shadow-xl shadow-black/20">
       <div className="mb-4 flex items-center justify-between gap-3">
@@ -1091,11 +1417,40 @@ function TrustMetricsPanel({ text, metrics, loading, onRefresh }: { text: Copy; 
           </div>
         </article>
       </div>
+      <article className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-5">
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-emerald-100/70">{text.metric7dTitle}</p>
+            <p className="mt-1 text-sm leading-6 text-slate-300">
+              {has7dHistory ? text.metricTrustGrowthLine : text.metric7dInsufficient}
+            </p>
+          </div>
+          <span className="rounded-full border border-emerald-200/20 bg-emerald-200/10 px-3 py-1 text-xs text-emerald-100">
+            {has7dHistory ? text.metricLive : text.metricCollecting}
+          </span>
+        </div>
+        <div className="grid gap-3 md:grid-cols-4">
+          <MetricCard label={text.metric7dPredictions} value={numberText(metrics.last7d.predictions)} />
+          <MetricCard label={text.metric7dFeedback} value={numberText(metrics.last7d.feedback)} />
+          <MetricCard label={text.metric7dHitPartial} value={has7dHistory ? percentText(metrics.last7d.hitPartialRate) : text.metricCollecting} />
+          <MetricCard label={text.metric7dRuleUpdate} value={metrics.last7d.lastRuleUpdateTime || buildRulesLastUpdatedText(metrics, text)} />
+        </div>
+        {metrics.last7d.activeUsers !== null && metrics.last7d.activeUsers > 0 ? (
+          <p className="mt-3 text-xs text-slate-500">
+            {text.metric7dActiveUsers}: {numberText(metrics.last7d.activeUsers)}
+          </p>
+        ) : null}
+      </article>
       <div className="mt-4 grid gap-4 md:grid-cols-4">
         <MetricCard label={text.metricTrustReplayLine} value={hasHistory ? percentText(metrics.replayAvailableRate) : text.metricCollecting} />
         <MetricCard label={text.metricTrustVerifiedLine} value={hasHistory ? percentText(metrics.verifiedExplanationsRate) : text.metricCollecting} />
         <MetricCard label={`${text.metricHit} / ${text.metricMiss}`} value={hasHistory ? percentText(metrics.feedbackDistribution.miss + metrics.feedbackDistribution.hit) : text.metricCollecting} />
         <MetricCard label={text.metricMiss} value={hasHistory ? percentText(metrics.highConfidenceMissRate) : text.metricCollecting} />
+      </div>
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <MetricCard label={text.metricTrendLine} value={hasHistory ? `+${metrics.predictionTrend.last24h} / ${metrics.predictionTrend.delta >= 0 ? "+" : ""}${metrics.predictionTrend.delta}` : text.metricCollecting} />
+        <MetricCard label={text.metricLearningLine} value={hasHistory ? `${metrics.learningVisibility.learningSignalCount}` : text.metricCollecting} />
+        <MetricCard label={text.metricUpdated} value={metrics.latestRuleUpdate.ruleId ? `${metrics.latestRuleUpdate.ruleId} ${metrics.latestRuleUpdate.version}` : buildRulesLastUpdatedText(metrics, text)} />
       </div>
     </section>
   );
@@ -1139,6 +1494,8 @@ function PredictionTrustSummary({ text, metrics }: { text: Copy; metrics: TrustM
 
 function DemoAgentPanel({
   activeRuleCount,
+  capabilityBoundary,
+  language,
   metrics,
   error,
   prediction,
@@ -1150,8 +1507,11 @@ function DemoAgentPanel({
   onQuestionChange,
   onRunDemo,
   onSampleChart,
+  onSuggestedQuery,
 }: {
   activeRuleCount: number | null;
+  capabilityBoundary: CapabilityBoundary | null;
+  language: AppLanguage;
   metrics: TrustMetrics;
   error: string;
   prediction: DemoPrediction | null;
@@ -1163,6 +1523,7 @@ function DemoAgentPanel({
   onQuestionChange: (value: string) => void;
   onRunDemo: () => void;
   onSampleChart: () => void;
+  onSuggestedQuery: (value: string) => void;
 }): ReactNode {
   return (
     <section id="live-demo" className="mt-6 rounded-[2.25rem] border border-cyan-200/20 bg-cyan-200/[0.07] p-6 shadow-2xl shadow-black/25">
@@ -1201,19 +1562,183 @@ function DemoAgentPanel({
           </button>
         </div>
       </div>
-      {prediction ? <DemoPredictionResult prediction={prediction} text={text} metrics={metrics} onFeedback={onFeedback} /> : null}
+      <FirstUseHint storageKey="v18.demo.first_prompt.dismissed" text={text} />
+      <QuerySuggestionChips text={text} onSelect={onSuggestedQuery} />
+      {capabilityBoundary ? (
+        <CapabilityBoundaryPanel
+          boundary={capabilityBoundary}
+          className="mt-5"
+          language={language}
+          onTryQuery={onSuggestedQuery}
+        />
+      ) : null}
+      {prediction ? <DemoPredictionResult prediction={prediction} text={text} language={language} metrics={metrics} onFeedback={onFeedback} /> : null}
     </section>
+  );
+}
+
+function FirstUseHint({ storageKey, text }: { storageKey: string; text: Copy }): ReactNode {
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    setVisible(window.localStorage.getItem(storageKey) !== "1");
+  }, [storageKey]);
+
+  const dismiss = useCallback(() => {
+    setVisible(false);
+    if (typeof window !== "undefined") window.localStorage.setItem(storageKey, "1");
+  }, [storageKey]);
+
+  if (!visible) return null;
+  return (
+    <div className="mt-4 flex flex-col gap-3 rounded-[1.5rem] border border-cyan-200/15 bg-cyan-200/[0.06] p-4 sm:flex-row sm:items-center sm:justify-between">
+      <p className="text-sm leading-6 text-cyan-50">{text.firstPrompt}</p>
+      <button type="button" onClick={dismiss} className="self-start rounded-full border border-white/10 bg-black/20 px-3 py-1.5 text-xs text-slate-100 transition hover:bg-white/10 sm:self-auto">
+        {text.firstPromptDismiss}
+      </button>
+    </div>
+  );
+}
+
+function QuerySuggestionChips({ text, onSelect }: { text: Copy; onSelect: (query: string) => void }): ReactNode {
+  return (
+    <div className="mt-4 rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+      <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-100/70">{text.recommendedTitle}</p>
+      <div className="mt-3 flex snap-x gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-0 [&::-webkit-scrollbar]:hidden">
+        {text.recommendedQueries.map((item) => (
+          <button
+            key={item}
+            type="button"
+            onClick={() => onSelect(item)}
+            className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1.5 text-xs text-cyan-50 transition hover:bg-cyan-200/15"
+          >
+            {item}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function PredictionSummaryCard({
+  prediction,
+  text,
+  language,
+  confidenceText,
+}: {
+  prediction: DemoPrediction;
+  text: Copy;
+  language: AppLanguage;
+  confidenceText: string;
+}): ReactNode {
+  const coreEvidence = sortCoreEvidence(prediction.evidence).slice(0, 2);
+  const risks = riskEvidence(prediction.evidence).slice(0, 2);
+  const confidenceValue = prediction.confidence === null ? 18 : Math.round(prediction.confidence * 100);
+  return (
+    <article className="rounded-[2rem] border border-cyan-200/20 bg-cyan-200/[0.08] p-5 shadow-2xl shadow-cyan-950/20">
+      <div className="mb-3 flex flex-wrap gap-2">
+        <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">{text.predictionId} {shortHash(prediction.predictionId)}</span>
+        <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{text.verified} {prediction.verifierStatus}</span>
+      </div>
+      <p className="mb-2 text-xs font-semibold uppercase tracking-[0.22em] text-cyan-100/70">{text.decisionEyebrow}</p>
+      <div className="rounded-[1.5rem] border border-white/10 bg-black/20 p-4">
+        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-amber-100/80">{text.summaryWealthStructure}</p>
+        <div className="mt-3 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+          <div>
+            <p className="inline-flex rounded-full border border-amber-200/20 bg-amber-200/10 px-3 py-1 text-sm font-semibold text-amber-100">
+              {prediction.wealthTypeLabel || prediction.wealthType || text.wealthStructure}
+            </p>
+            <h3 className="mt-3 text-2xl font-semibold text-white">{prediction.conclusion}</h3>
+          </div>
+          <div className="min-w-40 rounded-2xl border border-white/10 bg-white/[0.05] p-3">
+            <div className="mb-2 flex items-center justify-between gap-3 text-xs">
+              <span className="text-slate-300">{text.confidence}</span>
+              <span className="font-semibold text-white">{confidenceText}</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-white/10">
+              <div className="h-full rounded-full bg-cyan-300" style={{ width: `${confidenceValue}%` }} />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div className="mt-4 grid gap-3 md:grid-cols-3">
+        <SummaryBlock title={text.summaryCoreEvidence} items={coreEvidence.map((item) => evidenceSummary(item, language))} />
+        <SummaryBlock title={text.summaryRiskSources} items={risks.length ? risks.map((item) => evidenceSummary(item, language)) : [text.summaryNoRisk]} tone="risk" />
+        <SummaryBlock title={text.summaryUncertainty} items={[prediction.uncertainty]} tone="uncertainty" />
+      </div>
+      <p className="mt-4 rounded-2xl border border-white/10 bg-black/20 p-3 text-xs leading-5 text-cyan-50/90">{text.decisionHint}</p>
+    </article>
+  );
+}
+
+function SummaryBlock({ title, items, tone = "default" }: { title: string; items: string[]; tone?: "default" | "risk" | "uncertainty" }): ReactNode {
+  const toneClass =
+    tone === "risk"
+      ? "border-rose-300/20 bg-rose-300/[0.07]"
+      : tone === "uncertainty"
+        ? "border-amber-300/20 bg-amber-300/[0.08]"
+        : "border-white/10 bg-white/[0.05]";
+  return (
+    <div className={`rounded-2xl border p-4 ${toneClass}`}>
+      <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-300">{title}</p>
+      <ul className="space-y-2 text-xs leading-5 text-slate-100">
+        {items.map((item) => (
+          <li key={item} className="flex gap-2">
+            <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-cyan-200" />
+            <span>{item}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function EvidencePreview({ evidence, text, language }: { evidence: EvidenceItem[]; text: Copy; language: AppLanguage }): ReactNode {
+  const [expanded, setExpanded] = useState(false);
+  const ordered = sortCoreEvidence(evidence);
+  const visible = expanded ? ordered : ordered.slice(0, 2);
+  return (
+    <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
+      <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="flex items-center gap-2 text-lg font-semibold text-white">
+          <ClipboardCheck className="h-5 w-5 text-cyan-200" />
+          {text.evidence}
+        </h3>
+        <span className="rounded-full border border-cyan-200/20 bg-cyan-200/10 px-3 py-1 text-xs text-cyan-100">{text.evidencePreviewBadge}</span>
+      </div>
+      <div className="space-y-3">
+        {visible.map((item, index) => (
+          <div key={`${item.ruleId || item.featureId}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
+            <p className="font-semibold text-emerald-100">{evidenceLabel(item, language)}</p>
+            <p className="mt-2 text-slate-300">{evidenceSummary(item, language)}</p>
+            <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-slate-400">
+              {item.stability !== null ? <span>stability {Math.round(item.stability * 100)}%</span> : null}
+              {item.risk !== null ? <span>risk {Math.round(item.risk * 100)}%</span> : null}
+              {item.wealthRelevance !== null ? <span>relevance {Math.round(item.wealthRelevance * 100)}%</span> : null}
+            </div>
+          </div>
+        ))}
+      </div>
+      {ordered.length > 3 ? (
+        <button type="button" onClick={() => setExpanded((prev) => !prev)} className="mt-4 rounded-full border border-white/10 bg-black/20 px-4 py-2 text-sm text-slate-100 transition hover:bg-white/10">
+          {expanded ? text.evidenceLess : `${text.evidenceMore} (${ordered.length - 3})`}
+        </button>
+      ) : null}
+    </article>
   );
 }
 
 function DemoPredictionResult({
   prediction,
   text,
+  language,
   metrics,
   onFeedback,
 }: {
   prediction: DemoPrediction;
   text: Copy;
+  language: AppLanguage;
   metrics: TrustMetrics;
   onFeedback: (type: "hit" | "miss" | "partial" | "unclear") => void;
 }): ReactNode {
@@ -1234,31 +1759,7 @@ function DemoPredictionResult({
   return (
     <section className="mt-6 grid gap-5 lg:grid-cols-[minmax(0,1fr)_24rem]">
       <div className="space-y-5">
-        <article className="rounded-[2rem] border border-white/10 bg-black/25 p-5">
-          <div className="mb-3 flex flex-wrap gap-2">
-            <span className="rounded-full bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">{text.predictionId} {shortHash(prediction.predictionId)}</span>
-            <span className="rounded-full bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{text.verified} {prediction.verifierStatus}</span>
-          </div>
-          <h3 className="text-2xl font-semibold text-white">{prediction.conclusion}</h3>
-          <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-white/[0.05] p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-slate-500">{text.confidence}</p>
-              <p className="mt-1 text-xl font-semibold text-white">{confidence}</p>
-            </div>
-            <div className="rounded-2xl border border-amber-300/20 bg-amber-300/10 p-4">
-              <p className="text-xs uppercase tracking-[0.16em] text-amber-100/70">{text.uncertainty}</p>
-              <p className="mt-1 text-sm leading-6 text-amber-50">{prediction.uncertainty}</p>
-            </div>
-          </div>
-        </article>
-        <PredictionTrustSummary text={text} metrics={metrics} />
-        <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
-          <div className="mb-3 flex flex-wrap gap-2">
-            <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">{text.verifiedExplanation}</span>
-            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{text.explanationBoundary}</span>
-          </div>
-          <p className="whitespace-pre-wrap text-sm leading-7 text-slate-200">{prediction.explanation}</p>
-        </article>
+        <PredictionSummaryCard prediction={prediction} text={text} language={language} confidenceText={confidence} />
         <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
           <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-white">
             <MessageSquare className="h-5 w-5 text-amber-200" />
@@ -1278,6 +1779,14 @@ function DemoPredictionResult({
             ))}
           </div>
           {prediction.feedbackStatus ? <p className="mt-3 rounded-2xl border border-emerald-300/20 bg-emerald-300/10 p-3 text-sm text-emerald-100">{prediction.feedbackStatus}</p> : null}
+        </article>
+        <PredictionTrustSummary text={text} metrics={metrics} />
+        <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
+          <div className="mb-3 flex flex-wrap gap-2">
+            <span className="rounded-full border border-emerald-300/20 bg-emerald-300/10 px-3 py-1 text-xs text-emerald-100">{text.verifiedExplanation}</span>
+            <span className="rounded-full border border-cyan-300/20 bg-cyan-300/10 px-3 py-1 text-xs text-cyan-100">{text.explanationBoundary}</span>
+          </div>
+          <p className="whitespace-pre-wrap text-sm leading-7 text-slate-200">{prediction.explanation}</p>
         </article>
         <article className="rounded-[2rem] border border-emerald-300/20 bg-emerald-300/[0.07] p-5">
           <h3 className="mb-2 flex items-center gap-2 text-lg font-semibold text-white">
@@ -1301,22 +1810,7 @@ function DemoPredictionResult({
         </article>
       </div>
       <aside className="space-y-5">
-        <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
-          <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
-            <ClipboardCheck className="h-5 w-5 text-cyan-200" />
-            {text.evidence}
-          </h3>
-          <div className="space-y-3">
-            {prediction.evidence.slice(0, 2).map((item, index) => (
-              <div key={`${item.ruleId}-${index}`} className="rounded-2xl border border-white/10 bg-black/20 p-4 text-sm">
-                <p className="font-mono text-xs text-cyan-100">{item.ruleId || "rule"}</p>
-                <p className="mt-2 text-slate-300">effect: {compactJson(item.effect)}</p>
-                <p className="mt-1 text-slate-400">facts: {item.matchedFacts.length ? compactJson(item.matchedFacts) : "n/a"}</p>
-                <p className="mt-1 text-slate-400">confidence_delta: {item.confidenceDelta === null ? "n/a" : `${Math.round(item.confidenceDelta * 100)}%`}</p>
-              </div>
-            ))}
-          </div>
-        </article>
+        <EvidencePreview evidence={prediction.evidence} text={text} language={language} />
         <article className="rounded-[2rem] border border-white/10 bg-white/[0.06] p-5">
           <h3 className="mb-3 flex items-center gap-2 text-lg font-semibold text-white">
             <History className="h-5 w-5 text-cyan-200" />

@@ -1,0 +1,2081 @@
+{
+  "created_at": "2026-04-29T03:18:29+00:00",
+  "guardrails": [
+    "RULE_DB_INGESTION",
+    "NO_LLM_AUTHORITY",
+    "NO_PLUGIN_BLACK_BOX",
+    "R4_ARCHIVE_ONLY"
+  ],
+  "last_ingestion": {
+    "blocked": [
+      {
+        "knowledge_id": "symbolic.blind_school_boundary.v1",
+        "reason": "R4_ARCHIVE_ONLY"
+      },
+      {
+        "knowledge_id": "symbolic.shensha_boundary.v1",
+        "reason": "R4_ARCHIVE_ONLY"
+      }
+    ],
+    "blocked_count": 2,
+    "created_at": "2026-04-29T03:18:29+00:00",
+    "draft_count": 21,
+    "enable_engine": true,
+    "imported_count": 19,
+    "source": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v19/.runtime/bazi_source_archive.json",
+    "updated_count": 0
+  },
+  "rules": [
+    {
+      "allowed_usage": [
+        "hidden_layer_analysis",
+        "ten_god_signal_candidate",
+        "knowledge_unit_draft"
+      ],
+      "category": "hidden_stem",
+      "condition": {
+        "category": "hidden_stem",
+        "conditions": {},
+        "risk_level": "R1",
+        "structured_facts": {
+          "hidden_stems": {
+            "丑": [
+              {
+                "layer": "main",
+                "stem": "己"
+              },
+              {
+                "layer": "middle",
+                "stem": "癸"
+              },
+              {
+                "layer": "residual",
+                "stem": "辛"
+              }
+            ],
+            "亥": [
+              {
+                "layer": "main",
+                "stem": "壬"
+              },
+              {
+                "layer": "middle",
+                "stem": "甲"
+              }
+            ],
+            "午": [
+              {
+                "layer": "main",
+                "stem": "丁"
+              },
+              {
+                "layer": "middle",
+                "stem": "己"
+              }
+            ],
+            "卯": [
+              {
+                "layer": "main",
+                "stem": "乙"
+              }
+            ],
+            "子": [
+              {
+                "layer": "main",
+                "stem": "癸"
+              }
+            ],
+            "寅": [
+              {
+                "layer": "main",
+                "stem": "甲"
+              },
+              {
+                "layer": "middle",
+                "stem": "丙"
+              },
+              {
+                "layer": "residual",
+                "stem": "戊"
+              }
+            ],
+            "巳": [
+              {
+                "layer": "main",
+                "stem": "丙"
+              },
+              {
+                "layer": "middle",
+                "stem": "庚"
+              },
+              {
+                "layer": "residual",
+                "stem": "戊"
+              }
+            ],
+            "戌": [
+              {
+                "layer": "main",
+                "stem": "戊"
+              },
+              {
+                "layer": "middle",
+                "stem": "辛"
+              },
+              {
+                "layer": "residual",
+                "stem": "丁"
+              }
+            ],
+            "未": [
+              {
+                "layer": "main",
+                "stem": "己"
+              },
+              {
+                "layer": "middle",
+                "stem": "丁"
+              },
+              {
+                "layer": "residual",
+                "stem": "乙"
+              }
+            ],
+            "申": [
+              {
+                "layer": "main",
+                "stem": "庚"
+              },
+              {
+                "layer": "middle",
+                "stem": "壬"
+              },
+              {
+                "layer": "residual",
+                "stem": "戊"
+              }
+            ],
+            "辰": [
+              {
+                "layer": "main",
+                "stem": "戊"
+              },
+              {
+                "layer": "middle",
+                "stem": "乙"
+              },
+              {
+                "layer": "residual",
+                "stem": "癸"
+              }
+            ],
+            "酉": [
+              {
+                "layer": "main",
+                "stem": "辛"
+              }
+            ]
+          }
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "day_master_element",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_bfefddfd87be4c70",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "legacy.v18.bazi_knowledge_units.runtime.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart"
+        ]
+      },
+      "knowledge_id": "core.branch_attributes_hidden_stems.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "hidden_stem_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R1",
+      "rule_id": "v19.rule.core.branch_attributes_hidden_stems.v1",
+      "rule_record_id": "brr_a5a92c1fd89c4bea",
+      "source_draft_id": "kud_bfefddfd87be4c70",
+      "statement": "每个地支具有主五行属性，并包含一个或多个藏干；藏干用于可见/隐藏层结构分析。",
+      "status": "active_in_rule_db",
+      "title": "地支五行与藏干",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "relation_index",
+        "analyst_review",
+        "rule_proposal_source"
+      ],
+      "category": "branch_relation",
+      "condition": {
+        "category": "branch_relation",
+        "conditions": {},
+        "risk_level": "R2",
+        "structured_facts": {
+          "penalty_note": "刑关系存在不同传统表述，需按来源与版本单独审核。",
+          "six_break": [
+            [
+              "子",
+              "酉"
+            ],
+            [
+              "丑",
+              "辰"
+            ],
+            [
+              "寅",
+              "亥"
+            ],
+            [
+              "卯",
+              "午"
+            ],
+            [
+              "巳",
+              "申"
+            ],
+            [
+              "未",
+              "戌"
+            ]
+          ],
+          "six_harm": [
+            [
+              "子",
+              "未"
+            ],
+            [
+              "丑",
+              "午"
+            ],
+            [
+              "寅",
+              "巳"
+            ],
+            [
+              "卯",
+              "辰"
+            ],
+            [
+              "申",
+              "亥"
+            ],
+            [
+              "酉",
+              "戌"
+            ]
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_e8c67399f23e4286",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "classical.yuan_hai_zi_ping.wikisource.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_risk_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "core.branch_relations.penalty_harm_break.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "branch_relation_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R2",
+      "rule_id": "v19.rule.core.branch_relations.penalty_harm_break.v1",
+      "rule_record_id": "brr_f54bae0231a74ff7",
+      "source_draft_id": "kud_e8c67399f23e4286",
+      "statement": "刑、害、破属于地支关系中的高风险解释层，当前只建立关系索引，不直接生成风险结论。",
+      "status": "active_in_rule_db",
+      "title": "地支刑害破关系索引",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "time_context",
+        "structure_summary"
+      ],
+      "category": "branch_relation",
+      "condition": {
+        "category": "branch_relation",
+        "conditions": {},
+        "risk_level": "R1",
+        "structured_facts": {
+          "pairs": [
+            [
+              "子",
+              "午"
+            ],
+            [
+              "丑",
+              "未"
+            ],
+            [
+              "寅",
+              "申"
+            ],
+            [
+              "卯",
+              "酉"
+            ],
+            [
+              "辰",
+              "戌"
+            ],
+            [
+              "巳",
+              "亥"
+            ]
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_c66ffb16fce64700",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune",
+        "risk_claim_without_rule"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "core.branch_relations.six_clash.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "branch_relation_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R1",
+      "rule_id": "v19.rule.core.branch_relations.six_clash.v1",
+      "rule_record_id": "brr_344ad0808f024a7f",
+      "source_draft_id": "kud_c66ffb16fce64700",
+      "statement": "六冲是地支之间的结构冲突关系，可用于关系检测与 Time Context 展示。",
+      "status": "active_in_rule_db",
+      "title": "地支六冲",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "time_context",
+        "structure_summary"
+      ],
+      "category": "branch_relation",
+      "condition": {
+        "category": "branch_relation",
+        "conditions": {},
+        "risk_level": "R1",
+        "structured_facts": {
+          "pairs": [
+            [
+              "子",
+              "丑"
+            ],
+            [
+              "寅",
+              "亥"
+            ],
+            [
+              "卯",
+              "戌"
+            ],
+            [
+              "辰",
+              "酉"
+            ],
+            [
+              "巳",
+              "申"
+            ],
+            [
+              "午",
+              "未"
+            ]
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_87dbdb6c2696475f",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "good_bad_judgement"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "core.branch_relations.six_combination.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "branch_relation_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R1",
+      "rule_id": "v19.rule.core.branch_relations.six_combination.v1",
+      "rule_record_id": "brr_e1814a99415743cd",
+      "source_draft_id": "kud_87dbdb6c2696475f",
+      "statement": "六合是地支之间的结构组合关系，可用于关系检测与 Time Context 展示。",
+      "status": "active_in_rule_db",
+      "title": "地支六合",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "time_context",
+        "rule_proposal_source"
+      ],
+      "category": "branch_relation",
+      "condition": {
+        "category": "branch_relation",
+        "conditions": {},
+        "risk_level": "R1",
+        "structured_facts": {
+          "groups": {
+            "fire": [
+              "寅",
+              "午",
+              "戌"
+            ],
+            "metal": [
+              "巳",
+              "酉",
+              "丑"
+            ],
+            "water": [
+              "申",
+              "子",
+              "辰"
+            ],
+            "wood": [
+              "亥",
+              "卯",
+              "未"
+            ]
+          }
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_020a93f1009e43db",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "good_bad_judgement"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "core.branch_relations.three_harmony.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "branch_relation_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R1",
+      "rule_id": "v19.rule.core.branch_relations.three_harmony.v1",
+      "rule_record_id": "brr_112dfa4124d44302",
+      "source_draft_id": "kud_020a93f1009e43db",
+      "statement": "三合是三个地支形成的结构组合关系，当前只作为结构关系候选，不直接解释为结果。",
+      "status": "active_in_rule_db",
+      "title": "地支三合局",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "branch_relation_detection",
+        "structure_summary",
+        "rule_proposal_source"
+      ],
+      "category": "branch_relation",
+      "condition": {
+        "category": "branch_relation",
+        "conditions": {},
+        "risk_level": "R1",
+        "structured_facts": {
+          "groups": {
+            "fire": [
+              "巳",
+              "午",
+              "未"
+            ],
+            "metal": [
+              "申",
+              "酉",
+              "戌"
+            ],
+            "water": [
+              "亥",
+              "子",
+              "丑"
+            ],
+            "wood": [
+              "寅",
+              "卯",
+              "辰"
+            ]
+          }
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_4951596a96934bef",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "core.branch_relations.three_meeting.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "branch_relation_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R1",
+      "rule_id": "v19.rule.core.branch_relations.three_meeting.v1",
+      "rule_record_id": "brr_0a9e61eef92f4bf6",
+      "source_draft_id": "kud_4951596a96934bef",
+      "statement": "三会是三个连续季节地支形成的结构聚合关系，当前只作为结构关系候选。",
+      "status": "active_in_rule_db",
+      "title": "地支三会局",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "chart_structure",
+        "pillar_construction",
+        "branch_relation_detection"
+      ],
+      "category": "core_symbol",
+      "condition": {
+        "category": "core_symbol",
+        "conditions": {},
+        "risk_level": "R0",
+        "structured_facts": {
+          "branches": [
+            "子",
+            "丑",
+            "寅",
+            "卯",
+            "辰",
+            "巳",
+            "午",
+            "未",
+            "申",
+            "酉",
+            "戌",
+            "亥"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "day_master_element",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_6737391152b94635",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "classical.san_ming_tong_hui.wikisource.siku.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune",
+        "traditional_judgement"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart"
+        ]
+      },
+      "knowledge_id": "core.earthly_branches.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "core_symbol_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R0",
+      "rule_id": "v19.rule.core.earthly_branches.v1",
+      "rule_record_id": "brr_9dd3ac3f561c447f",
+      "source_draft_id": "kud_6737391152b94635",
+      "statement": "十二地支是四柱地支层的基础符号，包括子、丑、寅、卯、辰、巳、午、未、申、酉、戌、亥。",
+      "status": "active_in_rule_db",
+      "title": "十二地支",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "element_relation",
+        "feature_extraction",
+        "rule_proposal_source"
+      ],
+      "category": "five_element_relation",
+      "condition": {
+        "category": "five_element_relation",
+        "conditions": {},
+        "risk_level": "R0",
+        "structured_facts": {
+          "control_cycle": [
+            [
+              "wood",
+              "earth"
+            ],
+            [
+              "earth",
+              "water"
+            ],
+            [
+              "water",
+              "fire"
+            ],
+            [
+              "fire",
+              "metal"
+            ],
+            [
+              "metal",
+              "wood"
+            ]
+          ],
+          "generation_cycle": [
+            [
+              "wood",
+              "fire"
+            ],
+            [
+              "fire",
+              "earth"
+            ],
+            [
+              "earth",
+              "metal"
+            ],
+            [
+              "metal",
+              "water"
+            ],
+            [
+              "water",
+              "wood"
+            ]
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "day_master_element",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_78f30f2319144373",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "classical.san_ming_tong_hui.wikisource.siku.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_good_bad",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart"
+        ]
+      },
+      "knowledge_id": "core.five_element_relations.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "five_element_relation_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R0",
+      "rule_id": "v19.rule.core.five_element_relations.v1",
+      "rule_record_id": "brr_939c2142bc5a47af",
+      "source_draft_id": "kud_78f30f2319144373",
+      "statement": "五行相生与相克是结构关系的基础，可用于描述元素之间的 produce / control / same 等关系。",
+      "status": "active_in_rule_db",
+      "title": "五行生克关系",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "chart_structure",
+        "pillar_construction",
+        "knowledge_unit_draft"
+      ],
+      "category": "core_symbol",
+      "condition": {
+        "category": "core_symbol",
+        "conditions": {},
+        "risk_level": "R0",
+        "structured_facts": {
+          "stems": [
+            "甲",
+            "乙",
+            "丙",
+            "丁",
+            "戊",
+            "己",
+            "庚",
+            "辛",
+            "壬",
+            "癸"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "day_master_element",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_d418ea1680ed48a5",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "classical.san_ming_tong_hui.wikisource.siku.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune",
+        "traditional_judgement"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart"
+        ]
+      },
+      "knowledge_id": "core.heavenly_stems.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "core_symbol_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R0",
+      "rule_id": "v19.rule.core.heavenly_stems.v1",
+      "rule_record_id": "brr_c093919cf2304dc8",
+      "source_draft_id": "kud_d418ea1680ed48a5",
+      "statement": "十天干是四柱天干层的基础符号，包括甲、乙、丙、丁、戊、己、庚、辛、壬、癸。",
+      "status": "active_in_rule_db",
+      "title": "十天干",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "ten_god_mapping",
+        "element_relation",
+        "feature_extraction"
+      ],
+      "category": "stem_branch_attribute",
+      "condition": {
+        "category": "stem_branch_attribute",
+        "conditions": {},
+        "risk_level": "R0",
+        "structured_facts": {
+          "attributes": {
+            "丁": {
+              "element": "fire",
+              "polarity": "yin"
+            },
+            "丙": {
+              "element": "fire",
+              "polarity": "yang"
+            },
+            "乙": {
+              "element": "wood",
+              "polarity": "yin"
+            },
+            "壬": {
+              "element": "water",
+              "polarity": "yang"
+            },
+            "己": {
+              "element": "earth",
+              "polarity": "yin"
+            },
+            "庚": {
+              "element": "metal",
+              "polarity": "yang"
+            },
+            "戊": {
+              "element": "earth",
+              "polarity": "yang"
+            },
+            "甲": {
+              "element": "wood",
+              "polarity": "yang"
+            },
+            "癸": {
+              "element": "water",
+              "polarity": "yin"
+            },
+            "辛": {
+              "element": "metal",
+              "polarity": "yin"
+            }
+          }
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "day_master_element",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_cd80fedf1d3941ff",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "legacy.v18.bazi_knowledge_units.runtime.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "good_bad_judgement"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart"
+        ]
+      },
+      "knowledge_id": "core.stem_attributes.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "stem_branch_attribute_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R0",
+      "rule_id": "v19.rule.core.stem_attributes.v1",
+      "rule_record_id": "brr_9d642bde7a1d4618",
+      "source_draft_id": "kud_cd80fedf1d3941ff",
+      "statement": "每个天干具有固定的五行与阴阳属性，可作为十神映射、五行关系和结构检测的基础输入。",
+      "status": "active_in_rule_db",
+      "title": "天干五行阴阳属性",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "stem_relation_detection",
+        "structure_summary"
+      ],
+      "category": "stem_relation",
+      "condition": {
+        "category": "stem_relation",
+        "conditions": {},
+        "risk_level": "R1",
+        "structured_facts": {
+          "pairs": [
+            [
+              "甲",
+              "己"
+            ],
+            [
+              "乙",
+              "庚"
+            ],
+            [
+              "丙",
+              "辛"
+            ],
+            [
+              "丁",
+              "壬"
+            ],
+            [
+              "戊",
+              "癸"
+            ]
+          ],
+          "resulting_elements": {
+            "丁壬": "wood",
+            "丙辛": "water",
+            "乙庚": "metal",
+            "戊癸": "fire",
+            "甲己": "earth"
+          }
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_dfbb7f62b26743ce",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "core.stem_combination.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "stem_relation_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R1",
+      "rule_id": "v19.rule.core.stem_combination.v1",
+      "rule_record_id": "brr_4cf5d2e48d764004",
+      "source_draft_id": "kud_dfbb7f62b26743ce",
+      "statement": "天干五合是天干之间的结构组合关系，当前只作为关系检测知识草稿。",
+      "status": "active_in_rule_db",
+      "title": "天干五合",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "relation_metadata",
+        "feature_extraction",
+        "ten_god_signal_candidate"
+      ],
+      "category": "ten_god",
+      "condition": {
+        "category": "ten_god",
+        "conditions": {},
+        "risk_level": "R1",
+        "structured_facts": {
+          "internal_keys": [
+            "bi_jian",
+            "jie_cai",
+            "shi_shen",
+            "shang_guan",
+            "zheng_cai",
+            "pian_cai",
+            "zheng_guan",
+            "qi_sha",
+            "zheng_yin",
+            "pian_yin"
+          ],
+          "ten_gods": [
+            "比肩",
+            "劫财",
+            "食神",
+            "伤官",
+            "正财",
+            "偏财",
+            "正官",
+            "七杀",
+            "正印",
+            "偏印"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "ten_god_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_bcddb60e53ae430e",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "legacy.v18.bazi_knowledge_units.runtime.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_prediction",
+        "standalone_judgement",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.day_master",
+          "chart.pillars"
+        ]
+      },
+      "knowledge_id": "core.ten_god_mapping.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "ten_god_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R1",
+      "rule_id": "v19.rule.core.ten_god_mapping.v1",
+      "rule_record_id": "brr_5901c1417d3c4984",
+      "source_draft_id": "kud_bcddb60e53ae430e",
+      "statement": "十神是日主天干与目标天干之间的关系标签，属于关系元数据，不等同于预测结论。",
+      "status": "active_in_rule_db",
+      "title": "十神映射基础",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "vault_structure_index",
+        "rule_proposal_source",
+        "analyst_review"
+      ],
+      "category": "vault",
+      "condition": {
+        "category": "vault",
+        "conditions": {},
+        "risk_level": "R2",
+        "structured_facts": {
+          "element_notes": {
+            "丑": "metal/water/earth related storage in many systems",
+            "戌": "fire/earth related storage in many systems",
+            "未": "wood/fire/earth related storage in many systems",
+            "辰": "water/earth related storage in many systems"
+          },
+          "vault_branches": [
+            "辰",
+            "戌",
+            "丑",
+            "未"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_0e51adfc2bc04931",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+          "classical.san_ming_tong_hui.wikisource.siku.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_wealth_prediction",
+        "direct_fortune",
+        "unreviewed_vault_opening_claim"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "core.vault_structure.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "vault_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R2",
+      "rule_id": "v19.rule.core.vault_structure.v1",
+      "rule_record_id": "brr_8d0e9fa1ef8940c4",
+      "source_draft_id": "kud_0e51adfc2bc04931",
+      "statement": "辰、戌、丑、未常被归入墓库结构；当前只定义结构属性与候选用途，不直接输出财富或运势结论。",
+      "status": "active_in_rule_db",
+      "title": "四墓库结构",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "pattern_index",
+        "analyst_review",
+        "rule_proposal_source"
+      ],
+      "category": "pattern_structure",
+      "condition": {
+        "category": "pattern_structure",
+        "conditions": {},
+        "risk_level": "R3",
+        "structured_facts": {
+          "pattern_families": [
+            "正官格",
+            "七杀格",
+            "正财格",
+            "偏财格",
+            "食神格",
+            "伤官格",
+            "印绶格",
+            "建禄格",
+            "羊刃格",
+            "从格",
+            "化气格",
+            "专旺格",
+            "杂气格"
+          ],
+          "runtime_status": "proposal_only"
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "structural_relation",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_ec59b662895f463b",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "classical.zi_ping_zhen_quan.reference.v1",
+          "classical.yuan_hai_zi_ping.wikisource.v1",
+          "classical.san_ming_tong_hui.wikisource.siku.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_pattern_judgement",
+        "fortune",
+        "traditional_prediction_text"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart.pillars",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "pattern.structure_index.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "pattern_structure_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R3",
+      "rule_id": "v19.rule.pattern.structure_index.v1",
+      "rule_record_id": "brr_a1cdc9b02f234ca7",
+      "source_draft_id": "kud_ec59b662895f463b",
+      "statement": "格局类知识可先建立结构索引和来源目录，但不能直接输出命好、命差、富贵贫贱等传统判断。",
+      "status": "active_in_rule_db",
+      "title": "格局结构索引边界",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "evidence_schema",
+        "rule_proposal_source",
+        "analyst_review"
+      ],
+      "category": "strength_model",
+      "condition": {
+        "category": "strength_model",
+        "conditions": {},
+        "risk_level": "R2",
+        "structured_facts": {
+          "evidence_factors": [
+            "month_command",
+            "root_strength",
+            "same_element_support",
+            "resource_support",
+            "output_drain",
+            "wealth_drain",
+            "officer_control"
+          ],
+          "output_candidate": [
+            "weak",
+            "balanced",
+            "strong",
+            "unknown"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "day_master_element",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_5e481d21827a4da4",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "classical.di_tian_sui.wikisource.v1",
+          "classical.qiong_tong_bao_jian.wikisource.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_runtime_replacement",
+        "direct_fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart"
+        ]
+      },
+      "knowledge_id": "strength.day_master_evidence_model.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "strength_model_signal",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R2",
+      "rule_id": "v19.rule.strength.day_master_evidence_model.v1",
+      "rule_record_id": "brr_2ac5ccd25f2b42a7",
+      "source_draft_id": "kud_5e481d21827a4da4",
+      "statement": "日主强弱应由月令、根气、同党、异党、生助、克泄耗等证据共同支持；当前只定义 evidence schema，不替换现有推理。",
+      "status": "active_in_rule_db",
+      "title": "日主强弱证据模型",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "time_context",
+        "ui_boundary",
+        "rule_proposal_guardrail"
+      ],
+      "category": "timing_context",
+      "condition": {
+        "category": "timing_context",
+        "conditions": {},
+        "risk_level": "R2",
+        "structured_facts": {
+          "allowed": [
+            "flow_year_pillar",
+            "luck_cycle_pillar",
+            "relations_with_natal",
+            "algorithm_status",
+            "provenance"
+          ],
+          "forbidden": [
+            "fortune",
+            "direct_result_change",
+            "this_year_good_bad"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "time_structure",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_70b808b431074509",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/v19/V19_BAZI_DATABASE_FIRST_KNOWLEDGE_SYSTEM_PLAN_2026-04-29.md",
+          "docs/v19/V19_BAZI_KNOWLEDGE_EXPANSION_ENGINEERING_PLAN_2026-04-29.md"
+        ]
+      },
+      "forbidden_usage": [
+        "time_aware_inference_without_design",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart",
+          "time_context"
+        ]
+      },
+      "knowledge_id": "time.time_context_boundary.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "time_context_structure",
+        "value_set": [
+          "present",
+          "absent",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R2",
+      "rule_id": "v19.rule.time.time_context_boundary.v1",
+      "rule_record_id": "brr_c6b2e5db7abe40d4",
+      "source_draft_id": "kud_70b808b431074509",
+      "statement": "大运与流年在当前 V19 阶段只作为时间结构上下文，不能直接改变 income_stability 或生成预测结论。",
+      "status": "active_in_rule_db",
+      "title": "时间结构上下文边界",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "mechanism_candidate",
+        "rule_proposal_source"
+      ],
+      "category": "wealth_mechanism",
+      "condition": {
+        "category": "wealth_mechanism",
+        "conditions": {},
+        "risk_level": "R2",
+        "structured_facts": {
+          "candidate_outputs": [
+            "conversion_path",
+            "output_to_wealth_link_strength"
+          ],
+          "feature_key": "output_generate_wealth",
+          "inputs": [
+            "ten_god_mapping",
+            "output_presence",
+            "wealth_presence"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "income_stability",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_a3050bcbc03046b1",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+          "legacy.v18.bazi_knowledge_units.runtime.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_fortune",
+        "direct_income_result_change"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart",
+          "inference_context.income_stability"
+        ]
+      },
+      "knowledge_id": "wealth.output_generate_wealth.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "income_stability_rule_feature",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R2",
+      "rule_id": "v19.rule.wealth.output_generate_wealth.v1",
+      "rule_record_id": "brr_6d873b762bc64656",
+      "source_draft_id": "kud_a3050bcbc03046b1",
+      "statement": "食伤与财的连接可作为变现路径结构候选；当前只作为机制候选，不输出财富好坏。",
+      "status": "active_in_rule_db",
+      "title": "食伤生财机制候选",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "feature_candidate",
+        "rule_proposal_source"
+      ],
+      "category": "wealth_mechanism",
+      "condition": {
+        "category": "wealth_mechanism",
+        "conditions": {},
+        "risk_level": "R2",
+        "structured_facts": {
+          "candidate_outputs": [
+            "competition_signal",
+            "distribution_pressure"
+          ],
+          "feature_key": "peer_competition",
+          "inputs": [
+            "peer_presence",
+            "wealth_presence",
+            "day_master_strength"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "income_stability",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_6e6c8228c58b46e3",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+          "legacy.v18.bazi_knowledge_units.runtime.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_wealth_prediction",
+        "fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart",
+          "inference_context.income_stability"
+        ]
+      },
+      "knowledge_id": "wealth.peer_competition.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "income_stability_rule_feature",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R2",
+      "rule_id": "v19.rule.wealth.peer_competition.v1",
+      "rule_record_id": "brr_74e809cca0c34eaf",
+      "source_draft_id": "kud_6e6c8228c58b46e3",
+      "statement": "比劫与财之间的关系可作为财富结构竞争或分散候选；当前只作为规则提案来源，不直接形成断语。",
+      "status": "active_in_rule_db",
+      "title": "比劫与财结构关系候选",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    },
+    {
+      "allowed_usage": [
+        "feature_mapping_candidate",
+        "rule_proposal_source"
+      ],
+      "category": "wealth_feature",
+      "condition": {
+        "category": "wealth_feature",
+        "conditions": {},
+        "risk_level": "R2",
+        "structured_facts": {
+          "candidate_outputs": [
+            "wealth_strength_score",
+            "wealth_presence"
+          ],
+          "feature_key": "wealth_strength",
+          "inputs": [
+            "ten_god_mapping",
+            "root_strength",
+            "month_command"
+          ]
+        }
+      },
+      "confidence": 0.5,
+      "created_at": "2026-04-29T03:18:29+00:00",
+      "domain": "income_stability",
+      "engine_adapter_status": "available_for_structural_signal_adapter",
+      "engine_enabled": true,
+      "evidence": {
+        "review_note": "",
+        "review_status": "pending",
+        "source_draft_id": "kud_084d0c0460344ef1",
+        "source_excerpt_ids": [],
+        "source_refs": [
+          "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+          "legacy.v18.bazi_knowledge_units.runtime.v1"
+        ]
+      },
+      "forbidden_usage": [
+        "direct_wealth_prediction",
+        "direct_fortune"
+      ],
+      "guardrails": [
+        "RULE_DB_INGESTION",
+        "NO_LLM_AUTHORITY",
+        "NO_PLUGIN_BLACK_BOX",
+        "R4_ARCHIVE_ONLY"
+      ],
+      "history": [
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T03:18:29+00:00",
+          "note": "Directly ingested from V19 knowledge draft into Bazi Rule DB.",
+          "status": "ingested"
+        }
+      ],
+      "input_contract": {
+        "required": [
+          "chart",
+          "inference_context.income_stability"
+        ]
+      },
+      "knowledge_id": "wealth.wealth_strength.v1",
+      "output_contract": {
+        "is_prediction": false,
+        "prediction_scope": "structural_rule_signal",
+        "signal": "income_stability_rule_feature",
+        "value_set": [
+          "none",
+          "low",
+          "medium",
+          "high",
+          "unknown"
+        ]
+      },
+      "reasoning_path": [
+        "load active_in_rule_db record",
+        "match structured facts against chart/time context",
+        "emit structural rule signal with attribution"
+      ],
+      "risk_level": "R2",
+      "rule_id": "v19.rule.wealth.wealth_strength.v1",
+      "rule_record_id": "brr_30bda9d1901c4e38",
+      "source_draft_id": "kud_084d0c0460344ef1",
+      "statement": "财星强弱可作为财富结构特征候选，需结合十神映射、根气、月令和日主承载力；当前只作为知识草稿，不直接生成财富结论。",
+      "status": "active_in_rule_db",
+      "title": "财星强弱结构特征",
+      "updated_at": "2026-04-29T03:18:29+00:00"
+    }
+  ],
+  "updated_at": "2026-04-29T03:18:29+00:00",
+  "version": "v19.bazi_rule_db.v1"
+}

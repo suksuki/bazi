@@ -1,0 +1,35 @@
+{
+  "db": {
+    "auto_migrate_json_to_postgres": false,
+    "backend": "postgres",
+    "database": "qiazhi_v19",
+    "driver": "postgresql",
+    "enabled": false,
+    "host": "127.0.0.1",
+    "password": "",
+    "port": 5432,
+    "sslmode": "prefer",
+    "storage_backend": "file",
+    "url": "",
+    "username": "liujin"
+  },
+  "llm": {
+    "api_key": "",
+    "audit_api_key": "",
+    "audit_base_url": "",
+    "audit_model": "",
+    "base_url": "",
+    "enabled": true,
+    "execute_llm": true,
+    "fuse_wait_timeout_sec": 30.0,
+    "host": "dblife.com",
+    "http_timeout_sec": 15.0,
+    "max_tokens": 800,
+    "model": "gemma4:latest",
+    "password": "",
+    "port": 11888,
+    "provider": "ollama",
+    "temperature": 0.2,
+    "username": ""
+  }
+}

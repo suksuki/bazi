@@ -3,7 +3,10 @@ from __future__ import annotations
 import hashlib
 import hmac
 import json
+import math
 import os
+import urllib.error
+import urllib.request
 from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone, timedelta
 from pathlib import Path
@@ -11,6 +14,12 @@ from contextlib import contextmanager
 from secrets import token_urlsafe
 from typing import Any, Dict, Iterator, List, Optional
 
+from v17_rebirth.backend.config import (
+    PREDICTIVE_DATABASE_URL,
+    PREDICTIVE_STORAGE_BACKEND,
+    should_auto_migrate_predictive_json_to_postgres,
+)
+from v17_rebirth.infrastructure.llm_bridge import get_runtime_llm_config
 from v17_rebirth.paths import RUNTIME_DIR
 
 
@@ -18,11 +27,40 @@ V18_1_SCHEMA_VERSION = "v18.1"
 V18_1_SECRET = os.getenv("V18_1_SECRET", "v18.1-predictive-secret")
 RULE_STATE_VALUES = {"experimental", "validated", "active", "deprecated"}
 KNOWLEDGE_CARD_STATES = {"draft", "validated", "active", "deprecated", "archived"}
+BAZI_KNOWLEDGE_DOMAINS = {"wealth", "career", "relationship", "health", "chart_structure"}
+BAZI_KNOWLEDGE_CATEGORIES = {
+    "wealth_star",
+    "wealth_vault",
+    "output_generate_wealth",
+    "constraint_structure",
+    "combination_clash_stability",
+    "luck_flow_activation",
+}
+BAZI_KNOWLEDGE_STATES = {"draft", "reviewed", "deprecated"}
+BAZI_FEATURE_TYPES = {
+    "wealth_strength",
+    "wealth_vault_activation",
+    "wealth_vault_state",
+    "output_generate_wealth",
+    "wealth_constraint",
+    "peer_competition",
+    "wealth_flow_activation",
+    "wealth_stability",
+    "wealth_risk",
+}
 RULE_TEST_SUITE_STATES = {"draft", "validated", "active", "deprecated", "archived"}
 RULE_CONFLICT_POLICIES = {"override", "merge", "suppress", "degrade", "defer_manual_review"}
 RULE_GATEKEEPER_PROTOCOL = "v18.1.gatekeeper"
 RULE_RUNTIME_TOKEN_TTL_SECONDS = 300
 LIFECYCLE_BYPASS_CODE = "LIFECYCLE_BYPASS_ATTEMPT"
+ENERGY_CLAMP_DECORATOR = "ENERGY_CLAMP"
+ENERGY_CLAMP_LIMITS = {
+    "unsigned_min": 0.0,
+    "unsigned_max": 1.0,
+    "signed_min": -1.0,
+    "signed_max": 1.0,
+    "raw_abs_max": 1000000.0,
+}
 RULE_TEST_ENGINE_VERSION = "v0.1"
 RULE_TEST_ENGINE_VERSION_V02 = "v0.2"
 RULE_TEST_CASE_SOURCES = {"synthetic", "historical", "feedback", "manual"}
@@ -39,8 +77,25 @@ RULE_TEST_ENGINE_THRESHOLD_V01 = {
     "needs_review_conflict_rate": 0.35,
 }
 V18_1_STRICT_LIFECYCLE = os.getenv("V18_1_STRICT_LIFECYCLE", "1") in {"1", "true", "TRUE", "yes", "on"}
-V18_STORAGE_BACKEND = (os.getenv("PREDICTIVE_STORAGE_BACKEND") or os.getenv("V18_1_STORAGE_BACKEND") or "json").strip().lower() or "json"
-V18_POSTGRES_DSN = os.getenv("PREDICTIVE_DATABASE_URL") or os.getenv("DATABASE_URL") or os.getenv("POSTGRES_DSN") or ""
+V18_STORAGE_BACKEND = PREDICTIVE_STORAGE_BACKEND
+V18_POSTGRES_DSN = PREDICTIVE_DATABASE_URL
+V18_KB_AUDIT_BASE_URL = (
+    os.getenv("V18_KB_AUDIT_BASE_URL")
+    or os.getenv("QWEN_AUDIT_BASE_URL")
+    or os.getenv("LLM_BASE_URL")
+    or ""
+).strip()
+V18_KB_AUDIT_MODEL = (
+    os.getenv("V18_KB_AUDIT_MODEL")
+    or os.getenv("QWEN_AUDIT_MODEL")
+    or "qwen3.6.3.5"
+).strip()
+V18_KB_AUDIT_API_KEY = (
+    os.getenv("V18_KB_AUDIT_API_KEY")
+    or os.getenv("QWEN_AUDIT_API_KEY")
+    or os.getenv("OPENAI_API_KEY")
+    or ""
+).strip()
 
 
 V18_STATE_COLLECTIONS = (
@@ -64,6 +119,10 @@ V18_STATE_COLLECTIONS = (
     "rule_quality_scores",
     "agent_sessions",
     "audit_events",
+    "bazi_knowledge_units",
+    "bazi_knowledge_sources",
+    "bazi_knowledge_conflicts",
+    "bazi_feature_definitions",
 )
 
 
@@ -193,6 +252,41 @@ def _knowledge_card_payload_fingerprint(payload: Dict[str, Any]) -> str:
         "source_refs": _ensure_list(payload.get("source_refs")),
         "tags": _ensure_list(payload.get("tags")),
         "content": dict(payload.get("content") or {}),
+    }
+    return _sha256(_canonical_json(normalized))
+
+
+def _bazi_knowledge_content_fingerprint(payload: Dict[str, Any]) -> str:
+    normalized = {
+        "knowledge_id": _safe_str(payload.get("knowledge_id")),
+        "domain": _safe_str(payload.get("domain")),
+        "category": _safe_str(payload.get("category")),
+        "title": _safe_str(payload.get("title")),
+        "statement": _safe_str(payload.get("statement")),
+        "classical_source": _safe_str(payload.get("classical_source")),
+        "modern_interpretation": _safe_str(payload.get("modern_interpretation")),
+        "conditions": dict(payload.get("conditions") or {}),
+        "feature_mapping": dict(payload.get("feature_mapping") or {}),
+        "effects": dict(payload.get("effects") or {}),
+        "risk_factors": _ensure_list(payload.get("risk_factors")),
+        "uncertainty_factors": _ensure_list(payload.get("uncertainty_factors")),
+        "conflicts": _ensure_list(payload.get("conflicts")),
+        "confidence_prior": _safe_float(payload.get("confidence_prior"), 0.0),
+    }
+    return _sha256(_canonical_json(normalized))
+
+
+def _feature_definition_content_fingerprint(payload: Dict[str, Any]) -> str:
+    normalized = {
+        "feature_type": _safe_str(payload.get("feature_type")),
+        "domain": _safe_str(payload.get("domain")),
+        "title": _safe_str(payload.get("title")),
+        "input_requirements": dict(payload.get("input_requirements") or {}),
+        "detection_logic": dict(payload.get("detection_logic") or {}),
+        "output_fields": _ensure_list(payload.get("output_fields")),
+        "effect_direction": _safe_str(payload.get("effect_direction")),
+        "confidence_weight": _safe_float(payload.get("confidence_weight"), 0.0),
+        "uncertainty_weight": _safe_float(payload.get("uncertainty_weight"), 0.0),
     }
     return _sha256(_canonical_json(normalized))
 
@@ -360,6 +454,72 @@ class PostgresStorageAdapter(V18StorageAdapter):
                 event_type TEXT
             )
             """,
+            """
+            CREATE TABLE IF NOT EXISTS bazi_knowledge_units (
+                knowledge_id TEXT PRIMARY KEY,
+                domain TEXT NOT NULL,
+                category TEXT NOT NULL,
+                title TEXT NOT NULL,
+                statement TEXT NOT NULL,
+                classical_source TEXT NOT NULL,
+                modern_interpretation TEXT NOT NULL,
+                conditions JSONB NOT NULL DEFAULT '{}'::jsonb,
+                feature_mapping JSONB NOT NULL DEFAULT '{}'::jsonb,
+                effects JSONB NOT NULL DEFAULT '{}'::jsonb,
+                risk_factors JSONB NOT NULL DEFAULT '[]'::jsonb,
+                uncertainty_factors JSONB NOT NULL DEFAULT '[]'::jsonb,
+                conflicts JSONB NOT NULL DEFAULT '[]'::jsonb,
+                confidence_prior DOUBLE PRECISION NOT NULL DEFAULT 0,
+                status TEXT NOT NULL,
+                created_by TEXT,
+                reviewed_by TEXT,
+                source_refs JSONB NOT NULL DEFAULT '[]'::jsonb,
+                content_hash TEXT NOT NULL,
+                created_at TIMESTAMPTZ,
+                updated_at TIMESTAMPTZ,
+                reviewed_at TIMESTAMPTZ
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS bazi_knowledge_sources (
+                source_id TEXT PRIMARY KEY,
+                knowledge_id TEXT NOT NULL,
+                source_type TEXT NOT NULL,
+                title TEXT NOT NULL,
+                reference TEXT NOT NULL,
+                notes TEXT,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS bazi_knowledge_conflicts (
+                conflict_id TEXT PRIMARY KEY,
+                knowledge_id TEXT NOT NULL,
+                conflicts_with TEXT NOT NULL,
+                conflict_type TEXT NOT NULL,
+                resolution_policy TEXT NOT NULL,
+                payload JSONB NOT NULL DEFAULT '{}'::jsonb,
+                created_at TIMESTAMPTZ
+            )
+            """,
+            """
+            CREATE TABLE IF NOT EXISTS bazi_feature_definitions (
+                feature_type TEXT PRIMARY KEY,
+                domain TEXT NOT NULL,
+                title TEXT NOT NULL,
+                input_requirements JSONB NOT NULL DEFAULT '{}'::jsonb,
+                detection_logic JSONB NOT NULL DEFAULT '{}'::jsonb,
+                output_fields JSONB NOT NULL DEFAULT '[]'::jsonb,
+                effect_direction TEXT NOT NULL,
+                confidence_weight DOUBLE PRECISION NOT NULL DEFAULT 0,
+                uncertainty_weight DOUBLE PRECISION NOT NULL DEFAULT 0,
+                status TEXT NOT NULL,
+                content_hash TEXT NOT NULL,
+                created_at TIMESTAMPTZ,
+                updated_at TIMESTAMPTZ
+            )
+            """,
             "CREATE INDEX IF NOT EXISTS idx_predictive_state_created_at ON predictive_state(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_predictive_state_rule_id ON predictive_state(rule_id)",
             "CREATE INDEX IF NOT EXISTS idx_predictive_state_prediction_id ON predictive_state(prediction_id)",
@@ -370,6 +530,13 @@ class PostgresStorageAdapter(V18StorageAdapter):
             "CREATE INDEX IF NOT EXISTS idx_predictive_audit_created_at ON predictive_audit_events(created_at)",
             "CREATE INDEX IF NOT EXISTS idx_predictive_audit_rule_id ON predictive_audit_events(rule_id)",
             "CREATE INDEX IF NOT EXISTS idx_predictive_audit_event_type ON predictive_audit_events(event_type)",
+            "CREATE INDEX IF NOT EXISTS idx_bazi_knowledge_units_domain ON bazi_knowledge_units(domain)",
+            "CREATE INDEX IF NOT EXISTS idx_bazi_knowledge_units_category ON bazi_knowledge_units(category)",
+            "CREATE INDEX IF NOT EXISTS idx_bazi_knowledge_units_status ON bazi_knowledge_units(status)",
+            "CREATE INDEX IF NOT EXISTS idx_bazi_knowledge_units_domain_category_status ON bazi_knowledge_units(domain, category, status)",
+            "CREATE INDEX IF NOT EXISTS idx_bazi_knowledge_sources_knowledge_id ON bazi_knowledge_sources(knowledge_id)",
+            "CREATE INDEX IF NOT EXISTS idx_bazi_knowledge_conflicts_knowledge_id ON bazi_knowledge_conflicts(knowledge_id)",
+            "CREATE INDEX IF NOT EXISTS idx_bazi_feature_definitions_domain ON bazi_feature_definitions(domain)",
         ]
         with self._connect() as conn:
             with conn.cursor() as cur:
@@ -393,6 +560,76 @@ class PostgresStorageAdapter(V18StorageAdapter):
                         payload = json.loads(payload)
                     if isinstance(payload, dict):
                         snapshot["audit_events"].append(payload)
+                cur.execute("SELECT knowledge_id, domain, category, title, statement, classical_source, modern_interpretation, conditions, feature_mapping, effects, risk_factors, uncertainty_factors, conflicts, confidence_prior, status, created_by, reviewed_by, source_refs, content_hash, created_at, updated_at, reviewed_at FROM bazi_knowledge_units")
+                for row in cur.fetchall():
+                    payload = {
+                        "knowledge_id": row[0],
+                        "domain": row[1],
+                        "category": row[2],
+                        "title": row[3],
+                        "statement": row[4],
+                        "classical_source": row[5],
+                        "modern_interpretation": row[6],
+                        "conditions": row[7],
+                        "feature_mapping": row[8],
+                        "effects": row[9],
+                        "risk_factors": row[10],
+                        "uncertainty_factors": row[11],
+                        "conflicts": row[12],
+                        "confidence_prior": row[13],
+                        "status": row[14],
+                        "created_by": row[15],
+                        "reviewed_by": row[16],
+                        "source_refs": row[17],
+                        "content_hash": row[18],
+                        "created_at": _safe_str(row[19]),
+                        "updated_at": _safe_str(row[20]),
+                        "reviewed_at": _safe_str(row[21]),
+                    }
+                    snapshot.setdefault("bazi_knowledge_units", {})[_safe_str(row[0])] = payload
+                cur.execute("SELECT feature_type, domain, title, input_requirements, detection_logic, output_fields, effect_direction, confidence_weight, uncertainty_weight, status, content_hash, created_at, updated_at FROM bazi_feature_definitions")
+                for row in cur.fetchall():
+                    payload = {
+                        "feature_type": row[0],
+                        "domain": row[1],
+                        "title": row[2],
+                        "input_requirements": row[3],
+                        "detection_logic": row[4],
+                        "output_fields": row[5],
+                        "effect_direction": row[6],
+                        "confidence_weight": row[7],
+                        "uncertainty_weight": row[8],
+                        "status": row[9],
+                        "content_hash": row[10],
+                        "created_at": _safe_str(row[11]),
+                        "updated_at": _safe_str(row[12]),
+                    }
+                    snapshot.setdefault("bazi_feature_definitions", {})[_safe_str(row[0])] = payload
+                cur.execute("SELECT source_id, knowledge_id, source_type, title, reference, notes, payload, created_at FROM bazi_knowledge_sources")
+                for row in cur.fetchall():
+                    payload = {
+                        "source_id": row[0],
+                        "knowledge_id": row[1],
+                        "source_type": row[2],
+                        "title": row[3],
+                        "reference": row[4],
+                        "notes": row[5],
+                        "payload": row[6],
+                        "created_at": _safe_str(row[7]),
+                    }
+                    snapshot.setdefault("bazi_knowledge_sources", {})[_safe_str(row[0])] = payload
+                cur.execute("SELECT conflict_id, knowledge_id, conflicts_with, conflict_type, resolution_policy, payload, created_at FROM bazi_knowledge_conflicts")
+                for row in cur.fetchall():
+                    payload = {
+                        "conflict_id": row[0],
+                        "knowledge_id": row[1],
+                        "conflicts_with": row[2],
+                        "conflict_type": row[3],
+                        "resolution_policy": row[4],
+                        "payload": row[5],
+                        "created_at": _safe_str(row[6]),
+                    }
+                    snapshot.setdefault("bazi_knowledge_conflicts", {})[_safe_str(row[0])] = payload
         return snapshot
 
     def save_snapshot(self, snapshot: Dict[str, Any]) -> None:
@@ -451,7 +688,157 @@ class PostgresStorageAdapter(V18StorageAdapter):
                                 _safe_str(payload.get("agent_session_id") or payload.get("session_id")) if isinstance(payload, dict) else None,
                             ),
                         )
+                self._save_bazi_rows(cur, snapshot)
             conn.commit()
+
+    def _save_bazi_rows(self, cur: Any, snapshot: Dict[str, Any]) -> None:
+        for payload in (snapshot.get("bazi_knowledge_units") or {}).values():
+            if not isinstance(payload, dict):
+                continue
+            cur.execute(
+                """
+                INSERT INTO bazi_knowledge_units
+                (knowledge_id, domain, category, title, statement, classical_source, modern_interpretation, conditions, feature_mapping, effects, risk_factors, uncertainty_factors, conflicts, confidence_prior, status, created_by, reviewed_by, source_refs, content_hash, created_at, updated_at, reviewed_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s::jsonb, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s)
+                ON CONFLICT (knowledge_id) DO UPDATE SET
+                    domain = EXCLUDED.domain,
+                    category = EXCLUDED.category,
+                    title = EXCLUDED.title,
+                    statement = EXCLUDED.statement,
+                    classical_source = EXCLUDED.classical_source,
+                    modern_interpretation = EXCLUDED.modern_interpretation,
+                    conditions = EXCLUDED.conditions,
+                    feature_mapping = EXCLUDED.feature_mapping,
+                    effects = EXCLUDED.effects,
+                    risk_factors = EXCLUDED.risk_factors,
+                    uncertainty_factors = EXCLUDED.uncertainty_factors,
+                    conflicts = EXCLUDED.conflicts,
+                    confidence_prior = EXCLUDED.confidence_prior,
+                    status = EXCLUDED.status,
+                    created_by = EXCLUDED.created_by,
+                    reviewed_by = EXCLUDED.reviewed_by,
+                    source_refs = EXCLUDED.source_refs,
+                    content_hash = EXCLUDED.content_hash,
+                    created_at = EXCLUDED.created_at,
+                    updated_at = EXCLUDED.updated_at,
+                    reviewed_at = EXCLUDED.reviewed_at
+                """,
+                (
+                    _safe_str(payload.get("knowledge_id")),
+                    _safe_str(payload.get("domain")),
+                    _safe_str(payload.get("category")),
+                    _safe_str(payload.get("title")),
+                    _safe_str(payload.get("statement")),
+                    _safe_str(payload.get("classical_source")),
+                    _safe_str(payload.get("modern_interpretation")),
+                    self._json_param(dict(payload.get("conditions") or {})),
+                    self._json_param(dict(payload.get("feature_mapping") or {})),
+                    self._json_param(dict(payload.get("effects") or {})),
+                    self._json_param(_ensure_list(payload.get("risk_factors"))),
+                    self._json_param(_ensure_list(payload.get("uncertainty_factors"))),
+                    self._json_param(_ensure_list(payload.get("conflicts"))),
+                    _safe_float(payload.get("confidence_prior"), 0.0),
+                    _safe_str(payload.get("status")),
+                    _safe_str(payload.get("created_by")),
+                    _safe_str(payload.get("reviewed_by")),
+                    self._json_param(_ensure_list(payload.get("source_refs"))),
+                    _safe_str(payload.get("content_hash")),
+                    _safe_str(payload.get("created_at")) or None,
+                    _safe_str(payload.get("updated_at")) or None,
+                    _safe_str(payload.get("reviewed_at")) or None,
+                ),
+            )
+        for payload in (snapshot.get("bazi_feature_definitions") or {}).values():
+            if not isinstance(payload, dict):
+                continue
+            cur.execute(
+                """
+                INSERT INTO bazi_feature_definitions
+                (feature_type, domain, title, input_requirements, detection_logic, output_fields, effect_direction, confidence_weight, uncertainty_weight, status, content_hash, created_at, updated_at)
+                VALUES (%s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (feature_type) DO UPDATE SET
+                    domain = EXCLUDED.domain,
+                    title = EXCLUDED.title,
+                    input_requirements = EXCLUDED.input_requirements,
+                    detection_logic = EXCLUDED.detection_logic,
+                    output_fields = EXCLUDED.output_fields,
+                    effect_direction = EXCLUDED.effect_direction,
+                    confidence_weight = EXCLUDED.confidence_weight,
+                    uncertainty_weight = EXCLUDED.uncertainty_weight,
+                    status = EXCLUDED.status,
+                    content_hash = EXCLUDED.content_hash,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    _safe_str(payload.get("feature_type")),
+                    _safe_str(payload.get("domain")),
+                    _safe_str(payload.get("title")),
+                    self._json_param(dict(payload.get("input_requirements") or {})),
+                    self._json_param(dict(payload.get("detection_logic") or {})),
+                    self._json_param(_ensure_list(payload.get("output_fields"))),
+                    _safe_str(payload.get("effect_direction")),
+                    _safe_float(payload.get("confidence_weight"), 0.0),
+                    _safe_float(payload.get("uncertainty_weight"), 0.0),
+                    _safe_str(payload.get("status")),
+                    _safe_str(payload.get("content_hash")),
+                    _safe_str(payload.get("created_at")) or None,
+                    _safe_str(payload.get("updated_at")) or None,
+                ),
+            )
+        for payload in (snapshot.get("bazi_knowledge_sources") or {}).values():
+            if not isinstance(payload, dict):
+                continue
+            cur.execute(
+                """
+                INSERT INTO bazi_knowledge_sources
+                (source_id, knowledge_id, source_type, title, reference, notes, payload, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s)
+                ON CONFLICT (source_id) DO UPDATE SET
+                    knowledge_id = EXCLUDED.knowledge_id,
+                    source_type = EXCLUDED.source_type,
+                    title = EXCLUDED.title,
+                    reference = EXCLUDED.reference,
+                    notes = EXCLUDED.notes,
+                    payload = EXCLUDED.payload,
+                    created_at = EXCLUDED.created_at
+                """,
+                (
+                    _safe_str(payload.get("source_id")),
+                    _safe_str(payload.get("knowledge_id")),
+                    _safe_str(payload.get("source_type")),
+                    _safe_str(payload.get("title")),
+                    _safe_str(payload.get("reference")),
+                    _safe_str(payload.get("notes")),
+                    self._json_param(dict(payload.get("payload") or {})),
+                    _safe_str(payload.get("created_at")) or None,
+                ),
+            )
+        for payload in (snapshot.get("bazi_knowledge_conflicts") or {}).values():
+            if not isinstance(payload, dict):
+                continue
+            cur.execute(
+                """
+                INSERT INTO bazi_knowledge_conflicts
+                (conflict_id, knowledge_id, conflicts_with, conflict_type, resolution_policy, payload, created_at)
+                VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s)
+                ON CONFLICT (conflict_id) DO UPDATE SET
+                    knowledge_id = EXCLUDED.knowledge_id,
+                    conflicts_with = EXCLUDED.conflicts_with,
+                    conflict_type = EXCLUDED.conflict_type,
+                    resolution_policy = EXCLUDED.resolution_policy,
+                    payload = EXCLUDED.payload,
+                    created_at = EXCLUDED.created_at
+                """,
+                (
+                    _safe_str(payload.get("conflict_id")),
+                    _safe_str(payload.get("knowledge_id")),
+                    _safe_str(payload.get("conflicts_with")),
+                    _safe_str(payload.get("conflict_type")),
+                    _safe_str(payload.get("resolution_policy")),
+                    self._json_param(dict(payload.get("payload") or {})),
+                    _safe_str(payload.get("created_at")) or None,
+                ),
+            )
 
 
 class RedisAccelerator:
@@ -905,6 +1292,551 @@ class KnowledgeCard:
 
 
 @dataclass
+class BaziFeatureDefinition:
+    feature_type: str
+    domain: str
+    title: str
+    input_requirements: Dict[str, Any]
+    detection_logic: Dict[str, Any]
+    output_fields: List[str]
+    effect_direction: str
+    confidence_weight: float
+    uncertainty_weight: float
+    status: str = "reviewed"
+    content_hash: str = ""
+    created_at: str = field(default_factory=_utcnow_iso)
+    updated_at: str = field(default_factory=_utcnow_iso)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "BaziFeatureDefinition":
+        required = [
+            "feature_type",
+            "domain",
+            "title",
+            "input_requirements",
+            "detection_logic",
+            "output_fields",
+            "effect_direction",
+            "confidence_weight",
+            "uncertainty_weight",
+        ]
+        missing = [key for key in required if key not in payload]
+        if missing:
+            raise ValueError(f"REQUIRED_FIELDS_MISSING: {','.join(missing)}")
+        feature_type = _safe_str(payload.get("feature_type"))
+        if feature_type not in BAZI_FEATURE_TYPES:
+            raise ValueError("INVALID_BAZI_FEATURE_TYPE")
+        domain = _safe_str(payload.get("domain"), "wealth")
+        if domain not in BAZI_KNOWLEDGE_DOMAINS:
+            raise ValueError("INVALID_BAZI_KNOWLEDGE_DOMAIN")
+        status = _safe_str(payload.get("status"), "reviewed")
+        if status not in BAZI_KNOWLEDGE_STATES:
+            raise ValueError("INVALID_BAZI_KNOWLEDGE_STATUS")
+        now = _utcnow_iso()
+        content_hash = _safe_str(payload.get("content_hash")) or _feature_definition_content_fingerprint(payload)
+        return cls(
+            feature_type=feature_type,
+            domain=domain,
+            title=_safe_str(payload.get("title")),
+            input_requirements=dict(payload.get("input_requirements") or {}),
+            detection_logic=dict(payload.get("detection_logic") or {}),
+            output_fields=[_safe_str(item) for item in _ensure_list(payload.get("output_fields")) if _safe_str(item)],
+            effect_direction=_safe_str(payload.get("effect_direction")),
+            confidence_weight=_safe_float(payload.get("confidence_weight"), 0.5),
+            uncertainty_weight=_safe_float(payload.get("uncertainty_weight"), 0.3),
+            status=status,
+            content_hash=content_hash,
+            created_at=_safe_str(payload.get("created_at"), now),
+            updated_at=_safe_str(payload.get("updated_at"), now),
+        )
+
+
+@dataclass
+class BaziKnowledgeUnit:
+    knowledge_id: str
+    domain: str
+    category: str
+    title: str
+    statement: str
+    classical_source: str
+    modern_interpretation: str
+    conditions: Dict[str, Any]
+    feature_mapping: Dict[str, Any]
+    effects: Dict[str, Any]
+    risk_factors: List[str]
+    uncertainty_factors: List[str]
+    conflicts: List[str]
+    confidence_prior: float
+    status: str = "draft"
+    created_by: str = "system"
+    reviewed_by: str = ""
+    created_at: str = field(default_factory=_utcnow_iso)
+    updated_at: str = field(default_factory=_utcnow_iso)
+    reviewed_at: str = ""
+    content_hash: str = ""
+    source_refs: List[str] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        return asdict(self)
+
+    @classmethod
+    def from_payload(cls, payload: Dict[str, Any]) -> "BaziKnowledgeUnit":
+        required = [
+            "knowledge_id",
+            "domain",
+            "category",
+            "title",
+            "statement",
+            "classical_source",
+            "modern_interpretation",
+            "conditions",
+            "feature_mapping",
+            "effects",
+            "risk_factors",
+            "uncertainty_factors",
+            "conflicts",
+            "confidence_prior",
+        ]
+        missing = [key for key in required if key not in payload]
+        if missing:
+            raise ValueError(f"REQUIRED_FIELDS_MISSING: {','.join(missing)}")
+        domain = _safe_str(payload.get("domain"))
+        if domain not in BAZI_KNOWLEDGE_DOMAINS:
+            raise ValueError("INVALID_BAZI_KNOWLEDGE_DOMAIN")
+        category = _safe_str(payload.get("category"))
+        if category not in BAZI_KNOWLEDGE_CATEGORIES:
+            raise ValueError("INVALID_BAZI_KNOWLEDGE_CATEGORY")
+        status = _safe_str(payload.get("status"), "draft")
+        if status not in BAZI_KNOWLEDGE_STATES:
+            raise ValueError("INVALID_BAZI_KNOWLEDGE_STATUS")
+        feature_mapping = dict(payload.get("feature_mapping") or {})
+        required_mapping = [
+            "feature_type",
+            "input_requirements",
+            "detection_logic",
+            "output_fields",
+            "effect_direction",
+            "confidence_weight",
+            "uncertainty_weight",
+        ]
+        missing_mapping = [key for key in required_mapping if key not in feature_mapping]
+        if missing_mapping:
+            raise ValueError(f"FEATURE_MAPPING_FIELDS_MISSING: {','.join(missing_mapping)}")
+        feature_type = _safe_str(feature_mapping.get("feature_type"))
+        if feature_type not in BAZI_FEATURE_TYPES:
+            raise ValueError("INVALID_BAZI_FEATURE_TYPE")
+        now = _utcnow_iso()
+        content_hash = _safe_str(payload.get("content_hash")) or _bazi_knowledge_content_fingerprint(payload)
+        return cls(
+            knowledge_id=_safe_str(payload.get("knowledge_id")),
+            domain=domain,
+            category=category,
+            title=_safe_str(payload.get("title")),
+            statement=_safe_str(payload.get("statement")),
+            classical_source=_safe_str(payload.get("classical_source")),
+            modern_interpretation=_safe_str(payload.get("modern_interpretation")),
+            conditions=dict(payload.get("conditions") or {}),
+            feature_mapping=feature_mapping,
+            effects=dict(payload.get("effects") or {}),
+            risk_factors=[_safe_str(item) for item in _ensure_list(payload.get("risk_factors")) if _safe_str(item)],
+            uncertainty_factors=[_safe_str(item) for item in _ensure_list(payload.get("uncertainty_factors")) if _safe_str(item)],
+            conflicts=[_safe_str(item) for item in _ensure_list(payload.get("conflicts")) if _safe_str(item)],
+            confidence_prior=self_clamped(payload.get("confidence_prior"), 0.5),
+            status=status,
+            created_by=_safe_str(payload.get("created_by"), "system"),
+            reviewed_by=_safe_str(payload.get("reviewed_by"), ""),
+            created_at=_safe_str(payload.get("created_at"), now),
+            updated_at=_safe_str(payload.get("updated_at"), now),
+            reviewed_at=_safe_str(payload.get("reviewed_at"), ""),
+            content_hash=content_hash,
+            source_refs=[_safe_str(item) for item in _ensure_list(payload.get("source_refs")) if _safe_str(item)],
+        )
+
+
+def self_clamped(value: Any, fallback: float = 0.0) -> float:
+    return max(0.0, min(1.0, _safe_float(value, fallback)))
+
+
+def _energy_clamp_value(
+    value: Any,
+    *,
+    fallback: float = 0.0,
+    signed: bool = False,
+) -> Dict[str, Any]:
+    min_value = ENERGY_CLAMP_LIMITS["signed_min"] if signed else ENERGY_CLAMP_LIMITS["unsigned_min"]
+    max_value = ENERGY_CLAMP_LIMITS["signed_max"] if signed else ENERGY_CLAMP_LIMITS["unsigned_max"]
+    raw_abs_max = ENERGY_CLAMP_LIMITS["raw_abs_max"]
+    reason = "ok"
+    try:
+        raw = float(value)
+    except (TypeError, ValueError):
+        raw = float(fallback)
+        reason = "invalid_number"
+    if not math.isfinite(raw):
+        raw = float(fallback)
+        reason = "non_finite"
+    if abs(raw) > raw_abs_max:
+        raw = max_value if raw > 0 else min_value
+        reason = "overflow_guard"
+    clamped = max(min_value, min(max_value, raw))
+    if clamped != raw and reason == "ok":
+        reason = "range_clamped"
+    return {
+        "value": round(clamped, 6),
+        "clamped": reason != "ok",
+        "reason": reason,
+        "signed": signed,
+        "limits": {
+            "min": min_value,
+            "max": max_value,
+            "raw_abs_max": raw_abs_max,
+        },
+    }
+
+
+def _bazi_feature_mapping(
+    feature_type: str,
+    *,
+    input_requirements: List[str],
+    detection_logic: Dict[str, Any],
+    output_fields: List[str],
+    effect_direction: str,
+    confidence_weight: float,
+    uncertainty_weight: float,
+) -> Dict[str, Any]:
+    return {
+        "feature_type": feature_type,
+        "input_requirements": input_requirements,
+        "detection_logic": detection_logic,
+        "output_fields": output_fields,
+        "effect_direction": effect_direction,
+        "confidence_weight": confidence_weight,
+        "uncertainty_weight": uncertainty_weight,
+    }
+
+
+WEALTH_FEATURE_DEFINITIONS_V1: List[Dict[str, Any]] = [
+    {
+        "feature_type": "wealth_strength",
+        "domain": "wealth",
+        "title": "财星强弱",
+        "input_requirements": {"required": ["ten_gods_runtime", "root_visibility", "season_strength"]},
+        "detection_logic": {"score_from": ["正财", "偏财", "透干", "藏支", "有根"]},
+        "output_fields": ["strength", "stability", "matched_facts", "wealth_relevance"],
+        "effect_direction": "support_or_risk_by_body_strength",
+        "confidence_weight": 0.78,
+        "uncertainty_weight": 0.3,
+    },
+    {
+        "feature_type": "wealth_vault_activation",
+        "domain": "wealth",
+        "title": "财库与库门状态",
+        "input_requirements": {"required": ["earth_branches", "vault_branch", "relation_events"]},
+        "detection_logic": {"score_from": ["辰戌丑未", "冲开", "被合", "透财"]},
+        "output_fields": ["vault_state", "activation", "stability", "risk"],
+        "effect_direction": "wealth_retention_and_timing",
+        "confidence_weight": 0.72,
+        "uncertainty_weight": 0.38,
+    },
+    {
+        "feature_type": "wealth_vault_state",
+        "domain": "wealth",
+        "title": "财库状态",
+        "input_requirements": {"required": ["relation_hits", "structure_effect_bundle", "vault_branch"]},
+        "detection_logic": {"score_from": ["closed_storable", "closed_inactive", "opened_by_clash", "locked_by_combination", "blocked", "conflicted"]},
+        "output_fields": ["vault_presence", "vault_state", "liquidity", "stability", "risk", "uncertainty"],
+        "effect_direction": "wealth_storage_liquidity_and_release",
+        "confidence_weight": 0.85,
+        "uncertainty_weight": 0.15,
+    },
+    {
+        "feature_type": "output_generate_wealth",
+        "domain": "wealth",
+        "title": "食伤生财",
+        "input_requirements": {"required": ["食神", "伤官", "正财", "偏财", "body_strength"]},
+        "detection_logic": {"score_from": ["食伤强度", "财星承接", "印星抑制", "身强身弱"]},
+        "output_fields": ["output_strength", "wealth_channel", "risk", "uncertainty"],
+        "effect_direction": "earning_opportunity",
+        "confidence_weight": 0.74,
+        "uncertainty_weight": 0.35,
+    },
+    {
+        "feature_type": "wealth_constraint",
+        "domain": "wealth",
+        "title": "官杀与印比对财富结构的制约",
+        "input_requirements": {"required": ["官杀", "印星", "比劫", "财星", "body_strength"]},
+        "detection_logic": {"score_from": ["官杀制约", "印克食伤", "比劫夺财", "财官相生"]},
+        "output_fields": ["constraint_type", "risk", "stability", "effect"],
+        "effect_direction": "constraint_or_platform",
+        "confidence_weight": 0.68,
+        "uncertainty_weight": 0.42,
+    },
+    {
+        "feature_type": "peer_competition",
+        "domain": "wealth",
+        "title": "比劫竞争与资源分配",
+        "input_requirements": {"required": ["ten_god_mapping", "strength_model", "wealth_strength"]},
+        "detection_logic": {"score_from": ["比肩", "劫财", "peer_strength", "competition_pressure", "resource_distribution_risk"]},
+        "output_fields": ["peer_strength", "competition_pressure", "resource_distribution_risk", "cooperation_signal", "risk"],
+        "effect_direction": "competition_or_distribution_modifier",
+        "confidence_weight": 0.7,
+        "uncertainty_weight": 0.3,
+    },
+    {
+        "feature_type": "wealth_flow_activation",
+        "domain": "wealth",
+        "title": "大运流年引动",
+        "input_requirements": {"required": ["luck_pillar", "flow_year", "natal_wealth_features"]},
+        "detection_logic": {"score_from": ["财星引动", "财库引动", "合冲刑害触发"]},
+        "output_fields": ["timing_activation", "flow_state", "risk", "stability"],
+        "effect_direction": "timing_window",
+        "confidence_weight": 0.64,
+        "uncertainty_weight": 0.48,
+    },
+    {
+        "feature_type": "wealth_stability",
+        "domain": "wealth",
+        "title": "财富稳定性",
+        "input_requirements": {"required": ["relation_events", "cashflow_structure", "vault_state"]},
+        "detection_logic": {"score_from": ["合局", "冲", "刑害", "库门状态"]},
+        "output_fields": ["stability", "risk", "matched_facts"],
+        "effect_direction": "stability_modifier",
+        "confidence_weight": 0.62,
+        "uncertainty_weight": 0.5,
+    },
+    {
+        "feature_type": "wealth_risk",
+        "domain": "wealth",
+        "title": "财富风险来源",
+        "input_requirements": {"required": ["conflict_events", "body_strength", "resource_constraints"]},
+        "detection_logic": {"score_from": ["财旺身弱", "食伤太过", "比劫夺财", "刑害"]},
+        "output_fields": ["risk", "risk_source", "uncertainty"],
+        "effect_direction": "risk_modifier",
+        "confidence_weight": 0.66,
+        "uncertainty_weight": 0.52,
+    },
+]
+
+
+def _wealth_kb_unit(
+    suffix: str,
+    *,
+    category: str,
+    title: str,
+    statement: str,
+    feature_type: str,
+    conditions: Dict[str, Any],
+    effects: Dict[str, Any],
+    risk_factors: List[str],
+    uncertainty_factors: List[str],
+    conflicts: List[str],
+    confidence_prior: float,
+    classical_source: str = "古典八字通用规则",
+    modern_interpretation: str = "",
+) -> Dict[str, Any]:
+    return {
+        "knowledge_id": f"wealth.{suffix}",
+        "domain": "wealth",
+        "category": category,
+        "title": title,
+        "statement": statement,
+        "classical_source": classical_source,
+        "modern_interpretation": modern_interpretation or statement,
+        "conditions": conditions,
+        "feature_mapping": _bazi_feature_mapping(
+            feature_type,
+            input_requirements=["four_pillars", "ten_gods_runtime", "root_visibility", "luck_flow_context"],
+            detection_logic={"category": category, "conditions": conditions},
+            output_fields=["feature_id", "feature_type", "matched_facts", "strength", "stability", "effect", "risk", "uncertainty", "wealth_relevance"],
+            effect_direction="support" if effects.get("wealth", 0) >= 0 else "risk",
+            confidence_weight=confidence_prior,
+            uncertainty_weight=max(0.05, round(1.0 - confidence_prior, 2)),
+        ),
+        "effects": effects,
+        "risk_factors": risk_factors,
+        "uncertainty_factors": uncertainty_factors,
+        "conflicts": conflicts,
+        "confidence_prior": confidence_prior,
+        "status": "draft",
+        "created_by": "wealth_kb_seed_v1",
+        "source_refs": ["docs:bazi_knowledge/wealth/wealth_units_v1.md"],
+    }
+
+
+WEALTH_KNOWLEDGE_UNITS_V1: List[Dict[str, Any]] = [
+    _wealth_kb_unit("001_wealth_star_strength", category="wealth_star", title="财星强弱", statement="财星强弱代表财富资源显隐与可承接程度，但必须结合身强身弱与根气判断。", feature_type="wealth_strength", conditions={"wealth_star": "visible_or_scored", "body_strength_required": True}, effects={"wealth": 0.62, "income_stability": 0.34}, risk_factors=["财旺身弱时承接压力增大"], uncertainty_factors=["需判断日主强弱", "需区分正财偏财"], conflicts=["比劫夺财", "印星过强"], confidence_prior=0.72),
+    _wealth_kb_unit("002_wealth_star_visible_stem", category="wealth_star", title="财星透干", statement="财星透干通常表示财富议题更容易外显，收入机会更容易被看见。", feature_type="wealth_strength", conditions={"wealth_star": "heavenly_stem_visible"}, effects={"wealth": 0.58, "opportunity_visibility": 0.62}, risk_factors=["透而无根时稳定性不足"], uncertainty_factors=["需看地支根气", "需看是否被合克"], conflicts=["财星被合", "比劫透出"], confidence_prior=0.68),
+    _wealth_kb_unit("003_wealth_star_hidden_branch", category="wealth_star", title="财星藏支", statement="财星藏支偏向潜在资源或内在财富结构，需要运岁或关系触发后更明显。", feature_type="wealth_strength", conditions={"wealth_star": "hidden_in_branch"}, effects={"wealth": 0.42, "timing_dependency": 0.56}, risk_factors=["机会不一定即时兑现"], uncertainty_factors=["需看是否透出", "需看运岁引动"], conflicts=["库门闭合", "冲动过强"], confidence_prior=0.62),
+    _wealth_kb_unit("004_wealth_has_root", category="wealth_star", title="财星有根", statement="财星有根时财富信号更稳定，较容易形成可持续收入结构。", feature_type="wealth_strength", conditions={"wealth_star_root": "rooted"}, effects={"wealth": 0.68, "income_stability": 0.58}, risk_factors=["过旺时仍需身能承财"], uncertainty_factors=["根气强弱需量化"], conflicts=["财旺身弱", "冲根"], confidence_prior=0.74),
+    _wealth_kb_unit("005_wealth_no_root", category="wealth_star", title="财星无根", statement="财星无根时财富机会可能存在，但稳定兑现与留存能力需要谨慎评估。", feature_type="wealth_risk", conditions={"wealth_star_root": "rootless"}, effects={"wealth": 0.24, "risk": 0.48, "income_stability": -0.28}, risk_factors=["机会虚浮", "回款不稳"], uncertainty_factors=["需看大运补根", "需看食伤承接"], conflicts=["大运引动财星"], confidence_prior=0.63),
+    _wealth_kb_unit("006_wealth_vault", category="wealth_vault", title="财库", statement="财库代表财富储藏、资金沉淀或资产容器，但库本身不等于自动发财。", feature_type="wealth_vault_activation", conditions={"vault_branch": "辰戌丑未", "wealth_relation": "present"}, effects={"wealth_retention": 0.62, "income_stability": 0.42}, risk_factors=["库闭则兑现慢"], uncertainty_factors=["需判断库中所藏与日主关系"], conflicts=["财库被合", "冲开过烈"], confidence_prior=0.7),
+    _wealth_kb_unit("007_wealth_vault_opened_by_clash", category="wealth_vault", title="财库冲开", statement="财库被适度冲开时可能带来资金流动或兑现窗口，但过冲也会增加波动。", feature_type="wealth_vault_activation", conditions={"vault_state": "opened_by_clash"}, effects={"wealth": 0.52, "timing_activation": 0.66, "risk": 0.36}, risk_factors=["过冲导致破库或资金外泄"], uncertainty_factors=["需看冲的力量与喜忌"], conflicts=["刑害同来", "身弱财旺"], confidence_prior=0.66),
+    _wealth_kb_unit("008_wealth_vault_combined", category="wealth_vault", title="财库被合", statement="财库被合时财富结构可能被关系、合作或环境锁住，兑现节奏变慢。", feature_type="wealth_stability", conditions={"vault_state": "combined_or_locked"}, effects={"wealth_stability": -0.28, "risk": 0.42}, risk_factors=["资金被锁", "合作分配不清"], uncertainty_factors=["需看合化是否成立"], conflicts=["流年冲开", "透财有力"], confidence_prior=0.62),
+    _wealth_kb_unit("009_output_generate_wealth", category="output_generate_wealth", title="食伤生财", statement="食伤能生财时，才华、输出、产品化能力可转化为赚钱路径。", feature_type="output_generate_wealth", conditions={"output_star": "strong", "wealth_star": "present"}, effects={"wealth": 0.72, "earning_opportunity": 0.72}, risk_factors=["食伤过强可能泄身"], uncertainty_factors=["需看财星承接", "需看身强身弱"], conflicts=["印星克制食伤", "财星无根"], confidence_prior=0.76),
+    _wealth_kb_unit("010_excess_output_leaks_body", category="output_generate_wealth", title="食伤太过泄身", statement="食伤过旺而身弱时，输出很多但承财能力不足，容易劳多获少或现金流不稳。", feature_type="wealth_risk", conditions={"output_star": "excessive", "body_strength": "weak"}, effects={"wealth": -0.18, "risk": 0.58, "income_stability": -0.42}, risk_factors=["过度消耗", "变现效率低"], uncertainty_factors=["需看印比是否扶身"], conflicts=["身旺可任输出", "财星有根"], confidence_prior=0.69),
+    _wealth_kb_unit("011_authority_constraint", category="constraint_structure", title="官杀制约财富", statement="官杀结构会影响财富路径的制度、平台、规则和压力边界。", feature_type="wealth_constraint", conditions={"authority_star": "active", "wealth_path": "present"}, effects={"wealth": 0.36, "constraint": 0.58, "risk": 0.34}, risk_factors=["制度压力", "合规成本"], uncertainty_factors=["需看官杀为喜为忌"], conflicts=["食神制杀", "财官相生"], confidence_prior=0.66),
+    _wealth_kb_unit("012_resource_blocks_output", category="constraint_structure", title="印星克制食伤影响生财", statement="印星过强可能抑制食伤输出，使输出生财路径不顺或产品化受阻。", feature_type="wealth_constraint", conditions={"resource_star": "strong", "output_star": "blocked"}, effects={"earning_opportunity": -0.32, "risk": 0.42}, risk_factors=["想法多但交付慢", "表达受限"], uncertainty_factors=["需看印星是否为用"], conflicts=["伤官配印", "身弱喜印"], confidence_prior=0.64),
+    _wealth_kb_unit("013_peer_robs_wealth", category="constraint_structure", title="比劫夺财", statement="比劫强而财星受压时，财富容易受到竞争、分利或人际消耗影响。", feature_type="wealth_risk", conditions={"peer_star": "strong", "wealth_star": "contested"}, effects={"wealth": -0.22, "risk": 0.64, "wealth_stability": -0.44}, risk_factors=["竞争分利", "合作消耗"], uncertainty_factors=["需看是否有官杀制比劫"], conflicts=["官杀制劫", "团队协作变现"], confidence_prior=0.71),
+    _wealth_kb_unit("014_wealth旺_body_weak", category="wealth_star", title="财旺身弱", statement="财旺身弱表示财富机会或压力大于承接能力，宜关注风险控制。", feature_type="wealth_risk", conditions={"wealth_star": "strong", "body_strength": "weak"}, effects={"wealth": 0.18, "risk": 0.66, "income_stability": -0.36}, risk_factors=["机会过载", "负债或回款压力"], uncertainty_factors=["需看扶身运"], conflicts=["比印扶身", "财官结构清"], confidence_prior=0.73),
+    _wealth_kb_unit("015_body_strong_wealth_weak", category="wealth_star", title="身旺财弱", statement="身旺财弱时行动力或承接力可能有余，但财富目标、资源入口或市场机会不足。", feature_type="wealth_strength", conditions={"body_strength": "strong", "wealth_star": "weak"}, effects={"wealth": 0.32, "opportunity_visibility": -0.24}, risk_factors=["忙而收益少", "资源入口窄"], uncertainty_factors=["需看食伤是否能生财"], conflicts=["大运见财", "食伤生财"], confidence_prior=0.65),
+    _wealth_kb_unit("016_wealth_authority_mutual_support", category="constraint_structure", title="财官相生", statement="财官相生可表示财富与职位、平台、规则资源互相支持。", feature_type="wealth_constraint", conditions={"wealth_star": "present", "authority_star": "ordered"}, effects={"wealth": 0.56, "income_stability": 0.48}, risk_factors=["规则依赖强"], uncertainty_factors=["需看官杀清浊"], conflicts=["伤官见官", "比劫夺财"], confidence_prior=0.69),
+    _wealth_kb_unit("017_luck_activates_wealth", category="luck_flow_activation", title="大运引动财星", statement="大运引动财星时，财富议题在该阶段更容易成为主线。", feature_type="wealth_flow_activation", conditions={"luck_pillar": "activates_wealth_star"}, effects={"wealth": 0.58, "timing_activation": 0.72}, risk_factors=["引动忌神财时压力增大"], uncertainty_factors=["需看原局承接条件"], conflicts=["财旺身弱", "比劫夺财"], confidence_prior=0.67),
+    _wealth_kb_unit("018_flow_activates_vault", category="luck_flow_activation", title="流年引动财库", statement="流年引动财库可能形成资产、回款、储蓄或资金结构变化的窗口。", feature_type="wealth_flow_activation", conditions={"flow_year": "activates_wealth_vault"}, effects={"wealth_retention": 0.5, "timing_activation": 0.68, "risk": 0.28}, risk_factors=["冲合不稳时资金波动"], uncertainty_factors=["需看库门开合状态"], conflicts=["财库被合", "刑冲过重"], confidence_prior=0.64),
+    _wealth_kb_unit("019_combination_changes_stability", category="combination_clash_stability", title="合局导致财富稳定性变化", statement="合局会改变财富结构的稳定性，可能形成合作承接，也可能锁住兑现。", feature_type="wealth_stability", conditions={"combination": "active", "wealth_related": True}, effects={"wealth_stability": 0.18, "risk": 0.32}, risk_factors=["合作绑定", "利益分配不清"], uncertainty_factors=["需看合化是否成立"], conflicts=["冲破合局", "比劫夺财"], confidence_prior=0.61),
+    _wealth_kb_unit("020_clash_changes_liquidity", category="combination_clash_stability", title="冲导致财富流动性变化", statement="冲会带来财富结构流动性变化，可能打开机会，也可能造成损耗。", feature_type="wealth_stability", conditions={"clash": "wealth_related"}, effects={"wealth_stability": -0.22, "timing_activation": 0.42, "risk": 0.48}, risk_factors=["突发支出", "回款波动"], uncertainty_factors=["需看冲的位置与力量"], conflicts=["有制有化", "库门适度打开"], confidence_prior=0.62),
+    _wealth_kb_unit("021_punishment_harm_risk", category="combination_clash_stability", title="刑害导致财富风险", statement="刑害更偏隐性摩擦、合同瑕疵或关系损耗，会提高财富风险。", feature_type="wealth_risk", conditions={"punishment_or_harm": "wealth_related"}, effects={"risk": 0.6, "wealth_stability": -0.38}, risk_factors=["暗耗", "争议", "信任成本"], uncertainty_factors=["需看是否成局与是否触发财星"], conflicts=["规则化合同", "官星约束"], confidence_prior=0.66),
+    _wealth_kb_unit("022_wealth_in_spouse_palace", category="wealth_star", title="财在夫妻宫", statement="财在夫妻宫或伴侣位相关时，财富来源可能与伴侣、合作、客户关系更相关。", feature_type="wealth_strength", conditions={"wealth_position": "spouse_palace_or_partner_axis"}, effects={"wealth": 0.44, "relationship_wealth_link": 0.62}, risk_factors=["亲密关系与利益边界混合"], uncertainty_factors=["需看宫位受冲合"], conflicts=["夫妻宫受刑害", "比劫争财"], confidence_prior=0.6),
+    _wealth_kb_unit("023_inside_outside_wealth_source", category="wealth_star", title="家内家外财富来源", statement="财星所在位置会影响财富来源偏家内资源、稳定薪酬、外部市场或远方机会。", feature_type="wealth_strength", conditions={"wealth_position": "inside_outside_axis"}, effects={"wealth": 0.4, "source_type_signal": 0.62}, risk_factors=["来源判断需避免单点决定"], uncertainty_factors=["需结合十神、宫位与大运"], conflicts=["流年迁移触发", "合冲改变位置含义"], confidence_prior=0.58),
+]
+
+
+def _reviewed_core_wealth_unit(
+    suffix: str,
+    *,
+    category: str,
+    title: str,
+    statement: str,
+    feature_type: str,
+    output_fields: List[str],
+    effect_direction: str,
+    conditions: Dict[str, Any],
+    effects: Dict[str, Any],
+    risk_factors: List[str],
+    uncertainty_factors: List[str],
+    conflicts: List[str],
+    confidence_prior: float,
+) -> Dict[str, Any]:
+    payload = _wealth_kb_unit(
+        suffix,
+        category=category,
+        title=title,
+        statement=statement,
+        feature_type=feature_type,
+        conditions={
+            **conditions,
+            "knowledge_version": "core_wealth_v1",
+            "runtime_policy": "feature_evidence_only",
+            "prediction_runtime": "disabled_until_rule_activation",
+        },
+        effects=effects,
+        risk_factors=risk_factors,
+        uncertainty_factors=uncertainty_factors,
+        conflicts=conflicts,
+        confidence_prior=confidence_prior,
+        classical_source="owner-reviewed classical bazi wealth model",
+        modern_interpretation=statement,
+    )
+    payload["status"] = "reviewed"
+    payload["created_by"] = "owner_codex_reviewed_core_wealth_v1"
+    payload["reviewed_by"] = "owner"
+    payload["reviewed_at"] = "2026-04-28T00:00:00+00:00"
+    payload["source_refs"] = ["docs:bazi_knowledge/wealth/wealth_units_v1.md#core-wealth-v1"]
+    payload["feature_mapping"] = _bazi_feature_mapping(
+        feature_type,
+        input_requirements=["core_feature_bundle", "core_strength_bundle", "core_structure_effect_bundle"],
+        detection_logic={
+            "knowledge_id": payload["knowledge_id"],
+            "knowledge_version": "core_wealth_v1",
+            "mode": "structured_feature_mapping",
+            "conditions": payload["conditions"],
+            "no_direct_conclusion": True,
+        },
+        output_fields=output_fields,
+        effect_direction=effect_direction,
+        confidence_weight=confidence_prior,
+        uncertainty_weight=max(0.05, round(1.0 - confidence_prior, 2)),
+    )
+    return payload
+
+
+WEALTH_CORE_KNOWLEDGE_UNITS_V1: List[Dict[str, Any]] = [
+    _reviewed_core_wealth_unit(
+        "wealth_strength",
+        category="wealth_star",
+        title="财星强弱",
+        statement="财星代表资源获取与价值交换能力，其状态决定财富潜力基础。",
+        feature_type="wealth_strength",
+        output_fields=["wealth_strength_score", "wealth_presence"],
+        effect_direction="wealth_potential_foundation",
+        conditions={"inputs": ["ten_god_mapping", "root_strength", "month_command"]},
+        effects={"wealth_potential": 0.8, "structure_stability": 0.42},
+        risk_factors=["财强身弱 → 承载风险", "latent → 机会难以转化"],
+        uncertainty_factors=["依赖日主承载力", "依赖结构引动"],
+        conflicts=["印星抑制", "比劫分夺"],
+        confidence_prior=0.8,
+    ),
+    _reviewed_core_wealth_unit(
+        "output_generate_wealth",
+        category="output_generate_wealth",
+        title="食伤生财",
+        statement="食伤代表输出与创造，其与财的连接决定变现路径。",
+        feature_type="output_generate_wealth",
+        output_fields=["output_strength_score", "output_to_wealth_link_strength", "conversion_path"],
+        effect_direction="earning_opportunity_and_conversion_path",
+        conditions={"inputs": ["ten_god_mapping", "root_strength", "strength_model"]},
+        effects={"earning_opportunity": 0.75, "conversion_support": 0.62},
+        risk_factors=["输出强但 blocked → 有能力但无法变现", "输出过旺 → 泄身"],
+        uncertainty_factors=["依赖财星是否存在", "依赖结构支持"],
+        conflicts=["印抑制输出", "官杀限制表达"],
+        confidence_prior=0.75,
+    ),
+    _reviewed_core_wealth_unit(
+        "wealth_vault",
+        category="wealth_vault",
+        title="财库",
+        statement="墓库结构决定财富的储存、流动与释放方式。",
+        feature_type="wealth_vault_state",
+        output_fields=["vault_presence", "vault_state"],
+        effect_direction="wealth_storage_liquidity_and_release",
+        conditions={"inputs": ["relation_hits", "structure_effect_bundle"]},
+        effects={"wealth_retention": 0.85, "liquidity_modifier": 0.48, "uncertainty": 0.22},
+        risk_factors=["冲过强 → 波动", "合过强 → 难变现"],
+        uncertainty_factors=["合冲同时存在", "依赖岁运触发"],
+        conflicts=["冲 vs 合", "多结构叠加"],
+        confidence_prior=0.85,
+    ),
+    _reviewed_core_wealth_unit(
+        "peer_competition",
+        category="constraint_structure",
+        title="比劫竞争",
+        statement="比劫代表同类竞争与资源分配机制。",
+        feature_type="peer_competition",
+        output_fields=["peer_strength", "competition_pressure", "resource_distribution_risk"],
+        effect_direction="competition_or_distribution_modifier",
+        conditions={"inputs": ["ten_god_mapping", "strength_model"]},
+        effects={"competition_pressure": 0.7, "resource_distribution_risk": 0.52},
+        risk_factors=["competition_pressure 高 → 收入不稳定", "distribution_risk 高 → 财富分散"],
+        uncertainty_factors=["合作 vs 竞争方向"],
+        conflicts=["财星强 → 可抵消", "官杀 → 约束竞争"],
+        confidence_prior=0.7,
+    ),
+    _reviewed_core_wealth_unit(
+        "constraint_structure",
+        category="constraint_structure",
+        title="官杀制约财富",
+        statement="官杀代表规则、约束与结构压力，对财富路径产生规范或限制作用。",
+        feature_type="wealth_constraint",
+        output_fields=["constraint_strength", "constraint_effects"],
+        effect_direction="risk_stabilization_or_income_pressure",
+        conditions={"inputs": ["ten_god_mapping", "strength_model"]},
+        effects={"stabilize_risk": 0.56, "pressure_income": 0.42, "formalize_path": 0.48},
+        risk_factors=["约束过强 → 收入压制", "约束过弱 → 风险增加"],
+        uncertainty_factors=["官杀与日主关系", "是否形成制化"],
+        conflicts=["食伤冲官", "印化官杀"],
+        confidence_prior=0.75,
+    ),
+]
+
+WEALTH_KNOWLEDGE_UNITS_V1.extend(WEALTH_CORE_KNOWLEDGE_UNITS_V1)
+WEALTH_CORE_REVIEWED_KNOWLEDGE_UNIT_IDS: List[str] = [
+    unit["knowledge_id"] for unit in WEALTH_CORE_KNOWLEDGE_UNITS_V1
+]
+
+
+@dataclass
 class RuleKernelAuditEvent:
     rule_id: str
     event_type: str
@@ -1291,6 +2223,10 @@ class V18PredictiveStore:
         self._learning_insight_file = self._storage_dir / "learning_insights.json"
         self._candidate_suggestion_file = self._storage_dir / "candidate_rule_suggestions.json"
         self._rule_quality_score_file = self._storage_dir / "rule_quality_scores.json"
+        self._bazi_knowledge_unit_file = self._storage_dir / "bazi_knowledge_units.json"
+        self._bazi_feature_definition_file = self._storage_dir / "bazi_feature_definitions.json"
+        self._bazi_knowledge_source_file = self._storage_dir / "bazi_knowledge_sources.json"
+        self._bazi_knowledge_conflict_file = self._storage_dir / "bazi_knowledge_conflicts.json"
         self._storage_backend = V18_STORAGE_BACKEND
         self._storage_adapter = _make_storage_adapter(self._storage_backend, V18_POSTGRES_DSN)
         self._redis = RedisAccelerator()
@@ -1316,10 +2252,69 @@ class V18PredictiveStore:
         self._learning_insights: Dict[str, Dict[str, Any]] = {}
         self._candidate_rule_suggestions: Dict[str, Dict[str, Any]] = {}
         self._rule_quality_scores: Dict[str, Dict[str, Any]] = {}
+        self._bazi_knowledge_units: Dict[str, BaziKnowledgeUnit] = {}
+        self._bazi_feature_definitions: Dict[str, BaziFeatureDefinition] = {}
+        self._bazi_knowledge_sources: Dict[str, Dict[str, Any]] = {}
+        self._bazi_knowledge_conflicts: Dict[str, Dict[str, Any]] = {}
 
         self._load()
+        self.seed_wealth_knowledge_base_v1(only_if_missing=True)
+        self._auto_migrate_json_to_postgres_if_configured()
+
+    def _auto_migrate_json_to_postgres_if_configured(self) -> None:
+        if not should_auto_migrate_predictive_json_to_postgres():
+            return
+        try:
+            self.migrate_json_to_postgres(V18_POSTGRES_DSN)
+        except Exception as exc:
+            self._append_audit_event(
+                rule_id="predictive.storage",
+                event_type="PREDICTIVE_POSTGRES_AUTO_MIGRATION_WARNING",
+                severity="warning",
+                message="PREDICTIVE_DATABASE_URL detected but JSON-to-Postgres projection did not complete",
+                actor_role="system",
+                actor_user_id=0,
+                source="predictive.config",
+                details={"error": _safe_str(exc), "backend": self._storage_backend},
+            )
+            try:
+                self._persist()
+            except Exception:
+                pass
 
     def _snapshot(self) -> Dict[str, Any]:
+        bazi_sources = dict(self._bazi_knowledge_sources)
+        bazi_conflicts = dict(self._bazi_knowledge_conflicts)
+        for unit in self._bazi_knowledge_units.values():
+            for index, source_ref in enumerate(unit.source_refs):
+                source_id = f"{unit.knowledge_id}:source:{index + 1}"
+                bazi_sources.setdefault(
+                    source_id,
+                    {
+                        "source_id": source_id,
+                        "knowledge_id": unit.knowledge_id,
+                        "source_type": "markdown" if source_ref.startswith("docs:") else "reference",
+                        "title": source_ref,
+                        "reference": source_ref,
+                        "notes": "structured seed source reference",
+                        "payload": {"source_ref": source_ref},
+                        "created_at": unit.created_at,
+                    },
+                )
+            for index, conflict in enumerate(unit.conflicts):
+                conflict_id = f"{unit.knowledge_id}:conflict:{index + 1}"
+                bazi_conflicts.setdefault(
+                    conflict_id,
+                    {
+                        "conflict_id": conflict_id,
+                        "knowledge_id": unit.knowledge_id,
+                        "conflicts_with": conflict,
+                        "conflict_type": "knowledge_boundary",
+                        "resolution_policy": "manual_review_required",
+                        "payload": {"conflict": conflict},
+                        "created_at": unit.created_at,
+                    },
+                )
         return {
             "rules": {k: asdict(v) for k, v in self._rule_kernels.items()},
             "active_rules": dict(self._active_rules),
@@ -1341,6 +2336,10 @@ class V18PredictiveStore:
             "rule_quality_scores": dict(self._rule_quality_scores),
             "agent_sessions": dict(self._agent_sessions),
             "audit_events": [event.to_dict() for event in self._rule_audit_events],
+            "bazi_knowledge_units": {k: asdict(v) for k, v in self._bazi_knowledge_units.items()},
+            "bazi_feature_definitions": {k: asdict(v) for k, v in self._bazi_feature_definitions.items()},
+            "bazi_knowledge_sources": bazi_sources,
+            "bazi_knowledge_conflicts": bazi_conflicts,
         }
 
     def _hydrate_from_snapshot(self, snapshot: Dict[str, Any]) -> None:
@@ -1401,11 +2400,29 @@ class V18PredictiveStore:
             "_learning_insights": "aggregated_insights",
             "_candidate_rule_suggestions": "candidate_rule_suggestions",
             "_rule_quality_scores": "rule_quality_scores",
+            "_bazi_knowledge_sources": "bazi_knowledge_sources",
+            "_bazi_knowledge_conflicts": "bazi_knowledge_conflicts",
         }
         for attr, key in mapping.items():
             value = snapshot.get(key)
             if isinstance(value, dict):
                 setattr(self, attr, {k: v for k, v in value.items()})
+        for knowledge_id, payload in (snapshot.get("bazi_knowledge_units") or {}).items():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                unit = BaziKnowledgeUnit.from_payload(dict(payload))
+                self._bazi_knowledge_units[unit.knowledge_id] = unit
+            except Exception:
+                continue
+        for feature_type, payload in (snapshot.get("bazi_feature_definitions") or {}).items():
+            if not isinstance(payload, dict):
+                continue
+            try:
+                definition = BaziFeatureDefinition.from_payload(dict(payload))
+                self._bazi_feature_definitions[definition.feature_type] = definition
+            except Exception:
+                continue
         for raw_key, payload in (snapshot.get("rule_test_suites") or {}).items():
             if not isinstance(payload, dict):
                 continue
@@ -1606,6 +2623,52 @@ class V18PredictiveStore:
             except Exception:
                 pass
 
+        if self._bazi_knowledge_unit_file.exists():
+            try:
+                raw = json.loads(self._bazi_knowledge_unit_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    for payload in raw.values():
+                        if not isinstance(payload, dict):
+                            continue
+                        try:
+                            unit = BaziKnowledgeUnit.from_payload(dict(payload))
+                            self._bazi_knowledge_units[unit.knowledge_id] = unit
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        if self._bazi_feature_definition_file.exists():
+            try:
+                raw = json.loads(self._bazi_feature_definition_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    for payload in raw.values():
+                        if not isinstance(payload, dict):
+                            continue
+                        try:
+                            definition = BaziFeatureDefinition.from_payload(dict(payload))
+                            self._bazi_feature_definitions[definition.feature_type] = definition
+                        except Exception:
+                            pass
+            except Exception:
+                pass
+
+        if self._bazi_knowledge_source_file.exists():
+            try:
+                raw = json.loads(self._bazi_knowledge_source_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._bazi_knowledge_sources = {k: dict(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+            except Exception:
+                pass
+
+        if self._bazi_knowledge_conflict_file.exists():
+            try:
+                raw = json.loads(self._bazi_knowledge_conflict_file.read_text(encoding="utf-8"))
+                if isinstance(raw, dict):
+                    self._bazi_knowledge_conflicts = {k: dict(v) for k, v in raw.items() if isinstance(k, str) and isinstance(v, dict)}
+            except Exception:
+                pass
+
         if self._rule_test_suite_file.exists():
             try:
                 raw_suites = json.loads(self._rule_test_suite_file.read_text(encoding="utf-8"))
@@ -1663,6 +2726,10 @@ class V18PredictiveStore:
         safe_dump(self._learning_insight_file, self._learning_insights)
         safe_dump(self._candidate_suggestion_file, self._candidate_rule_suggestions)
         safe_dump(self._rule_quality_score_file, self._rule_quality_scores)
+        safe_dump(self._bazi_knowledge_unit_file, {k: asdict(v) for k, v in self._bazi_knowledge_units.items()})
+        safe_dump(self._bazi_feature_definition_file, {k: asdict(v) for k, v in self._bazi_feature_definitions.items()})
+        safe_dump(self._bazi_knowledge_source_file, self._bazi_knowledge_sources)
+        safe_dump(self._bazi_knowledge_conflict_file, self._bazi_knowledge_conflicts)
 
     def _normalize_rule_key(self, rule_id: str, version: str) -> str:
         return _rule_storage_key(rule_id, version)
@@ -1764,6 +2831,10 @@ class V18PredictiveStore:
             self._learning_insights.clear()
             self._candidate_rule_suggestions.clear()
             self._rule_quality_scores.clear()
+            self._bazi_knowledge_units.clear()
+            self._bazi_feature_definitions.clear()
+            self._bazi_knowledge_sources.clear()
+            self._bazi_knowledge_conflicts.clear()
             self._hydrate_from_snapshot(snapshot)
             self._persist()
             raise
@@ -2349,6 +3420,632 @@ class V18PredictiveStore:
         out.append(card)
         return out
 
+    def seed_wealth_knowledge_base_v1(self, *, only_if_missing: bool = True) -> Dict[str, Any]:
+        inserted = 0
+        skipped = 0
+        for payload in WEALTH_FEATURE_DEFINITIONS_V1:
+            try:
+                definition = BaziFeatureDefinition.from_payload(payload)
+            except Exception:
+                continue
+            if only_if_missing and definition.feature_type in self._bazi_feature_definitions:
+                skipped += 1
+                continue
+            self._bazi_feature_definitions[definition.feature_type] = definition
+            inserted += 1
+        for payload in WEALTH_KNOWLEDGE_UNITS_V1:
+            try:
+                unit = BaziKnowledgeUnit.from_payload(payload)
+            except Exception:
+                continue
+            if only_if_missing and unit.knowledge_id in self._bazi_knowledge_units:
+                skipped += 1
+                continue
+            self._bazi_knowledge_units[unit.knowledge_id] = unit
+            inserted += 1
+        if inserted:
+            self._persist()
+        return {
+            "seed_id": "wealth_kb_seed_v1",
+            "domain": "wealth",
+            "inserted": inserted,
+            "skipped": skipped,
+            "knowledge_unit_count": len([unit for unit in self._bazi_knowledge_units.values() if unit.domain == "wealth"]),
+            "feature_definition_count": len([row for row in self._bazi_feature_definitions.values() if row.domain == "wealth"]),
+        }
+
+    def register_bazi_knowledge_unit(
+        self,
+        payload: Dict[str, Any],
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        unit_payload = dict(payload or {})
+        unit_payload.setdefault("created_by", _safe_str(actor_role, "system"))
+        unit = BaziKnowledgeUnit.from_payload(unit_payload)
+        existing = self._bazi_knowledge_units.get(unit.knowledge_id)
+        if existing and existing.status == "reviewed":
+            incoming_hash = _bazi_knowledge_content_fingerprint(unit_payload)
+            if incoming_hash != existing.content_hash:
+                raise PredictiveServiceError("BAZI_KNOWLEDGE_IMMUTABLE", "reviewed knowledge unit cannot be edited; create a new knowledge_id/version or deprecate it", 409)
+        if existing and existing.status == "deprecated":
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_DEPRECATED", "deprecated knowledge unit cannot be overwritten", 409)
+        if existing and existing.status == "draft":
+            unit.created_at = existing.created_at
+        unit.updated_at = _utcnow_iso()
+        self._bazi_knowledge_units[unit.knowledge_id] = unit
+        self._persist()
+        return unit.to_dict()
+
+    def list_bazi_knowledge_units(
+        self,
+        *,
+        domain: str | None = None,
+        category: str | None = None,
+        status: str | None = None,
+        offset: int = 0,
+        limit: int = 100,
+    ) -> Dict[str, Any]:
+        items = [unit.to_dict() for unit in self._bazi_knowledge_units.values()]
+        if domain:
+            items = [item for item in items if _safe_str(item.get("domain")) == _safe_str(domain)]
+        if category:
+            items = [item for item in items if _safe_str(item.get("category")) == _safe_str(category)]
+        if status:
+            items = [item for item in items if _safe_str(item.get("status")) == _safe_str(status)]
+        items = sorted(items, key=lambda item: (_safe_str(item.get("domain")), _safe_str(item.get("category")), _safe_str(item.get("knowledge_id"))))
+        start = max(0, _safe_int(offset, 0))
+        size = max(1, min(_safe_int(limit, 100), 500))
+        return {"items": items[start : start + size], "total_matched": len(items), "total_returned": len(items[start : start + size]), "offset": start, "limit": size}
+
+    def get_bazi_knowledge_unit(self, knowledge_id: str) -> Dict[str, Any]:
+        unit = self._bazi_knowledge_units.get(_safe_str(knowledge_id))
+        if not unit:
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_NOT_FOUND", f"knowledge unit {knowledge_id} not found", 404)
+        return unit.to_dict()
+
+    def review_bazi_knowledge_unit(
+        self,
+        knowledge_id: str,
+        payload: Dict[str, Any],
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        unit = self._bazi_knowledge_units.get(_safe_str(knowledge_id))
+        if not unit:
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_NOT_FOUND", f"knowledge unit {knowledge_id} not found", 404)
+        if unit.status == "deprecated":
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_DEPRECATED", "deprecated knowledge unit cannot be reviewed", 409)
+        unit.status = "reviewed"
+        unit.reviewed_by = _safe_str(payload.get("reviewed_by") or actor_role, "system")
+        unit.reviewed_at = _utcnow_iso()
+        unit.updated_at = unit.reviewed_at
+        self._bazi_knowledge_units[unit.knowledge_id] = unit
+        self._append_audit_event(
+            rule_id=unit.knowledge_id,
+            event_type="BAZI_KNOWLEDGE_REVIEWED",
+            severity="info",
+            message="bazi knowledge unit reviewed",
+            actor_role=_safe_str(actor_role, "system"),
+            actor_user_id=_safe_int(actor_user_id, 0),
+            source="bazi-knowledge-base",
+            details={"knowledge_id": unit.knowledge_id, "domain": unit.domain, "category": unit.category, "content_hash": unit.content_hash},
+        )
+        self._persist()
+        return unit.to_dict()
+
+    def deprecate_bazi_knowledge_unit(
+        self,
+        knowledge_id: str,
+        payload: Dict[str, Any],
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        unit = self._bazi_knowledge_units.get(_safe_str(knowledge_id))
+        if not unit:
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_NOT_FOUND", f"knowledge unit {knowledge_id} not found", 404)
+        unit.status = "deprecated"
+        unit.reviewed_by = _safe_str(payload.get("reviewed_by") or actor_role, unit.reviewed_by)
+        unit.updated_at = _utcnow_iso()
+        self._bazi_knowledge_units[unit.knowledge_id] = unit
+        self._append_audit_event(
+            rule_id=unit.knowledge_id,
+            event_type="BAZI_KNOWLEDGE_DEPRECATED",
+            severity="warning",
+            message=_safe_str(payload.get("reason"), "bazi knowledge unit deprecated"),
+            actor_role=_safe_str(actor_role, "system"),
+            actor_user_id=_safe_int(actor_user_id, 0),
+            source="bazi-knowledge-base",
+            details={"knowledge_id": unit.knowledge_id, "domain": unit.domain, "category": unit.category, "content_hash": unit.content_hash},
+        )
+        self._persist()
+        return unit.to_dict()
+
+    def apply_energy_clamp(self, value: Any, *, signed: bool = False, fallback: float = 0.0) -> Dict[str, Any]:
+        return _energy_clamp_value(value, signed=signed, fallback=fallback)
+
+    def compile_bazi_knowledge_rule_logic(self, unit_or_payload: BaziKnowledgeUnit | Dict[str, Any]) -> Dict[str, Any]:
+        unit = unit_or_payload if isinstance(unit_or_payload, BaziKnowledgeUnit) else BaziKnowledgeUnit.from_payload(dict(unit_or_payload))
+        mapping = dict(unit.feature_mapping or {})
+        feature_type = _safe_str(mapping.get("feature_type"))
+        if feature_type not in BAZI_FEATURE_TYPES:
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_COMPILER_INVALID", "feature_mapping.feature_type is not supported", 422)
+        confidence = self.apply_energy_clamp(mapping.get("confidence_weight"), fallback=unit.confidence_prior)
+        uncertainty = self.apply_energy_clamp(mapping.get("uncertainty_weight"), fallback=0.3)
+        effects: Dict[str, Any] = {}
+        effect_trace: Dict[str, Any] = {}
+        for key, value in dict(unit.effects or {}).items():
+            effect_key = _safe_str(key)
+            if not effect_key:
+                continue
+            clamped = self.apply_energy_clamp(value, signed=True)
+            effects[effect_key] = clamped["value"]
+            effect_trace[effect_key] = clamped
+        return {
+            "compiler_version": "kb-rule-generator-v18.1-alpha",
+            "logic_type": "feature_mapping_dsl",
+            "runtime_scope": "sandbox_candidate_only",
+            "decorators": [ENERGY_CLAMP_DECORATOR],
+            "energy_clamp": {
+                "decorator": ENERGY_CLAMP_DECORATOR,
+                "limits": ENERGY_CLAMP_LIMITS,
+                "applied_to": ["confidence_weight", "uncertainty_weight", "effects", "strength", "stability", "risk"],
+                "overflow_policy": "clamp_and_flag",
+            },
+            "source_knowledge_id": unit.knowledge_id,
+            "knowledge_category": unit.category,
+            "feature_type": feature_type,
+            "input_requirements": mapping.get("input_requirements"),
+            "detection_logic": mapping.get("detection_logic"),
+            "output_fields": _ensure_list(mapping.get("output_fields")),
+            "effect_direction": _safe_str(mapping.get("effect_direction")),
+            "weights": {
+                "confidence_weight": confidence["value"],
+                "uncertainty_weight": uncertainty["value"],
+                "confidence_clamp": confidence,
+                "uncertainty_clamp": uncertainty,
+            },
+            "bounded_effects": effects,
+            "effect_clamp_trace": effect_trace,
+            "dsl": {
+                "op": "weighted_feature_match",
+                "when": {
+                    "all": _ensure_list(dict(unit.conditions or {}).get("requires"))
+                    or [{"field": key, "expected": value} for key, value in dict(unit.conditions or {}).items()],
+                    "detection_logic": mapping.get("detection_logic"),
+                },
+                "emit_feature": {
+                    "feature_type": feature_type,
+                    "effect": effects,
+                    "confidence_weight": confidence["value"],
+                    "uncertainty_weight": uncertainty["value"],
+                },
+                "guardrails": [ENERGY_CLAMP_DECORATOR, "SANDBOX_ONLY", "NO_DIRECT_CONCLUSION"],
+            },
+            "pseudo_code": f"{ENERGY_CLAMP_DECORATOR}(weighted_feature_match(feature_type='{feature_type}', source='{unit.knowledge_id}'))",
+            "zero_leakage_policy": {
+                "kb_does_not_enter_prediction_runtime": True,
+                "requires_rule_test_engine": True,
+                "requires_knowledge_pr": True,
+                "requires_reviewer_activation": True,
+            },
+        }
+
+    def bazi_knowledge_unit_to_rule_candidate(
+        self,
+        knowledge_id: str,
+        payload: Dict[str, Any] | None = None,
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        unit = self._bazi_knowledge_units.get(_safe_str(knowledge_id))
+        if not unit:
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_NOT_FOUND", f"knowledge unit {knowledge_id} not found", 404)
+        if unit.status == "deprecated":
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_DEPRECATED", "deprecated knowledge unit cannot be converted to rule candidate", 409)
+        mapping = dict(unit.feature_mapping or {})
+        feature_type = _safe_str(mapping.get("feature_type"))
+        compiled_logic = self.compile_bazi_knowledge_rule_logic(unit)
+        effects = {key: _safe_float(value, 0.0) for key, value in dict(unit.effects or {}).items() if _safe_str(key)}
+        if "wealth" not in effects and unit.domain == "wealth":
+            effects["wealth"] = max(0.05, min(1.0, unit.confidence_prior))
+        safe_suffix = "".join(ch if ch.isalnum() else "_" for ch in unit.knowledge_id)[:72]
+        rule_payload = {
+            "rule_id": _safe_str((payload or {}).get("rule_id"), f"kb.{safe_suffix}"),
+            "theory_family": "bazi_knowledge_base_wealth",
+            "condition": {
+                "source_knowledge_id": unit.knowledge_id,
+                "knowledge_category": unit.category,
+                "feature_type": feature_type,
+                "input_requirements": mapping.get("input_requirements"),
+                "detection_logic": mapping.get("detection_logic"),
+                "conditions": unit.conditions,
+                "compiled_feature_logic": compiled_logic,
+                "compiler_guardrails": [ENERGY_CLAMP_DECORATOR, "SANDBOX_ONLY", "NO_DIRECT_CONCLUSION"],
+            },
+            "effect": dict(compiled_logic.get("bounded_effects") or effects),
+            "priority": max(0.1, min(0.95, unit.confidence_prior)),
+            "evidence_strength": max(0.1, min(0.95, _safe_float(dict(compiled_logic.get("weights") or {}).get("confidence_weight"), unit.confidence_prior))),
+            "conflict_policy": "merge",
+            "version": _safe_str((payload or {}).get("version"), f"sandbox-kb-{_safe_int(datetime.now(timezone.utc).timestamp())}"),
+            "owner_plugin": "kb.bazi.wealth",
+            "status": "experimental",
+            "effect_scope": [unit.domain],
+            "allowed_topics": [unit.domain],
+        }
+        candidate = self.build_sandbox_rule_candidate(
+            {"rule_candidate": rule_payload},
+            actor_role=actor_role,
+            actor_user_id=actor_user_id,
+        )
+        candidate["source_knowledge_id"] = unit.knowledge_id
+        candidate["source_knowledge_unit"] = unit.to_dict()
+        candidate["feature_mapping"] = mapping
+        candidate["compiled_rule_logic"] = compiled_logic
+        candidate["conversion_policy"] = {
+            "sandbox_only": True,
+            "requires_rule_test": True,
+            "requires_knowledge_pr": True,
+            "requires_reviewer_activate": True,
+            "kb_does_not_enter_prediction_runtime": True,
+        }
+        self._rule_candidates[candidate["candidate_id"]] = candidate
+        self._persist()
+        return candidate
+
+    def bootstrap_wealth_core_rule_test_candidates_v1(
+        self,
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+        suite_version: str = "v1",
+        suite_status: str = "draft",
+    ) -> Dict[str, Any]:
+        role = str(actor_role or "system").strip().lower()
+        suite_status = str(suite_status).strip().lower()
+        if suite_status != "draft":
+            raise PredictiveServiceError(
+                "RULE_TEST_SUITE_TRANSITION_INVALID",
+                "Wealth Core v1 test suites must be created in draft status",
+                409,
+            )
+
+        candidate_outputs: List[Dict[str, Any]] = []
+        suite_outputs: List[Dict[str, Any]] = []
+        case_outputs: List[Dict[str, Any]] = []
+        suite_candidates: List[Dict[str, str]] = []
+
+        for knowledge_id in WEALTH_CORE_REVIEWED_KNOWLEDGE_UNIT_IDS:
+            unit = self.get_bazi_knowledge_unit(knowledge_id)
+            if unit.get("status") != "reviewed":
+                raise PredictiveServiceError(
+                    "BAZI_KNOWLEDGE_NOT_REVIEWED",
+                    f"knowledge unit {knowledge_id} is not reviewed",
+                    409,
+                )
+
+            safe_suffix = str(knowledge_id).replace(".", "_")
+            candidate = self.bazi_knowledge_unit_to_rule_candidate(
+                knowledge_id,
+                {"rule_id": f"kb.core.{safe_suffix}", "version": suite_version},
+                actor_role=role,
+                actor_user_id=actor_user_id,
+            )
+            candidate_outputs.append(candidate)
+
+            case = self.register_rule_test_case(
+                {
+                    "case_id": f"wealth_core_v1_{safe_suffix}_smoke",
+                    "source": "synthetic",
+                    "chart_snapshot": {"knowledge_id": knowledge_id},
+                    "query_intent": {
+                        "topic": "wealth",
+                        "knowledge_id": knowledge_id,
+                        "suite_version": suite_version,
+                        "suite_status": suite_status,
+                    },
+                    "expected_conclusions": [],
+                    "expected_evidence_patterns": [],
+                    "forbidden_conclusions": [],
+                    "tags": ["wealth", "core_wealth_v1", "rule_test_candidate_v1", knowledge_id],
+                },
+                actor_role=role,
+                actor_user_id=actor_user_id,
+            )
+            case_outputs.append(case)
+
+            suite = self.register_rule_test_suite(
+                {
+                    "suite_id": f"wealth_core_v1_{safe_suffix}_suite",
+                    "rule_id": candidate["rule_payload"]["rule_id"],
+                    "rule_version": candidate["rule_payload"]["version"],
+                    "title": f"Wealth Core v1 Candidate Suite: {knowledge_id}",
+                    "description": (
+                        "Generated by bootstrap_wealth_core_rule_test_candidates_v1 for "
+                        "wealth KB reviewed units."
+                    ),
+                    "status": suite_status,
+                    "version": suite_version,
+                    "test_cases": [case],
+                },
+                actor_role=role,
+                actor_user_id=actor_user_id,
+                require_rule_reference=False,
+            )
+            suite_out = self.get_rule_test_suite(
+                suite["suite_id"],
+                version=suite["version"],
+                allow_inactive=True,
+            ).to_dict()
+            suite_outputs.append(suite_out)
+            suite_candidates.append({"knowledge_id": knowledge_id, "suite_id": suite["suite_id"], "candidate_id": candidate["candidate_id"]})
+
+        return {
+            "candidate_count": len(candidate_outputs),
+            "suite_count": len(suite_outputs),
+            "case_count": len(case_outputs),
+            "candidates": candidate_outputs,
+            "suites": suite_outputs,
+            "cases": case_outputs,
+            "suite_candidates": suite_candidates,
+        }
+
+    def _bazi_audit_scenarios(self, unit: BaziKnowledgeUnit) -> List[Dict[str, Any]]:
+        return [
+            {
+                "scenario_id": "vault_opened_by_clash",
+                "description": "财库被冲开，机会流动性上升，但稳定性可能下降。",
+                "expected_feedback": {"wealth_flow_activation": "positive", "wealth_stability": "mixed_or_negative", "risk": "positive"},
+            },
+            {
+                "scenario_id": "vault_locked_by_combination",
+                "description": "财库被合，财富承接可能被关系或环境锁住，兑现节奏变慢。",
+                "expected_feedback": {"wealth_stability": "negative_or_delayed", "risk": "positive"},
+            },
+            {
+                "scenario_id": "combination_forms_cooperation",
+                "description": "合局形成合作承接时，稳定性可能提升，但分配风险需要单独标记。",
+                "expected_feedback": {"wealth_stability": "conditional_positive", "risk": "conditional_positive"},
+            },
+            {
+                "scenario_id": "punishment_harm_hidden_cost",
+                "description": "刑害触发财务相关位置时，隐性摩擦、合同瑕疵或信任成本上升。",
+                "expected_feedback": {"wealth_stability": "negative", "risk": "positive"},
+            },
+        ]
+
+    def _call_qwen_kb_audit(
+        self,
+        *,
+        unit: BaziKnowledgeUnit,
+        compiled_logic: Dict[str, Any],
+        scenarios: List[Dict[str, Any]],
+        payload: Dict[str, Any],
+    ) -> Dict[str, Any]:
+        runtime_llm = get_runtime_llm_config()
+        env_model = (
+            os.getenv("V18_KB_AUDIT_MODEL")
+            or os.getenv("QWEN_AUDIT_MODEL")
+            or ""
+        ).strip()
+        env_api_key = (
+            os.getenv("V18_KB_AUDIT_API_KEY")
+            or os.getenv("QWEN_AUDIT_API_KEY")
+            or os.getenv("OPENAI_API_KEY")
+            or ""
+        ).strip()
+        base_url = _safe_str(payload.get("base_url") or V18_KB_AUDIT_BASE_URL or runtime_llm.get("base_url"))
+        if not base_url:
+            raise PredictiveServiceError("KB_AUDIT_MODEL_UNCONFIGURED", "V18_KB_AUDIT_BASE_URL is not configured", 503)
+        url = base_url.rstrip("/")
+        if not url.endswith("/chat/completions"):
+            url = f"{url}/chat/completions"
+        model = _safe_str(payload.get("model") or env_model or runtime_llm.get("model") or V18_KB_AUDIT_MODEL, "qwen3.6.3.5")
+        body = {
+            "model": model,
+            "temperature": 0.1,
+            "messages": [
+                {
+                    "role": "system",
+                    "content": "你是八字财富知识库审计员。只返回 JSON，不生成预测结论。重点审计合冲刑害对 wealth_stability/risk 的正负反馈是否自洽。",
+                },
+                {
+                    "role": "user",
+                    "content": json.dumps(
+                        {
+                            "knowledge_unit": unit.to_dict(),
+                            "compiled_rule_logic": compiled_logic,
+                            "audit_scenarios": scenarios,
+                            "required_json_shape": {
+                                "conflicts": [
+                                    {
+                                        "conflict_type": "string",
+                                        "severity": "low|medium|high",
+                                        "conflicts_with": "string",
+                                        "reason": "string",
+                                        "recommended_resolution": "string",
+                                    }
+                                ]
+                            },
+                        },
+                        ensure_ascii=False,
+                        sort_keys=True,
+                    ),
+                },
+            ],
+        }
+        headers = {"Content-Type": "application/json"}
+        api_key = _safe_str(payload.get("api_key") or env_api_key or runtime_llm.get("api_key") or V18_KB_AUDIT_API_KEY)
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
+        timeout = max(3, min(_safe_int(payload.get("timeout_seconds"), 20), 90))
+        req = urllib.request.Request(
+            url,
+            data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+            headers=headers,
+            method="POST",
+        )
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            raw = resp.read().decode("utf-8")
+        data = json.loads(raw)
+        content = _safe_str(
+            (((data.get("choices") or [{}])[0].get("message") or {}).get("content"))
+            if isinstance(data, dict)
+            else ""
+        )
+        try:
+            parsed = json.loads(content)
+        except Exception:
+            parsed = {"raw_model_response": content}
+        parsed["model"] = model
+        parsed["endpoint"] = url
+        return parsed
+
+    def _local_bazi_audit_conflicts(
+        self,
+        unit: BaziKnowledgeUnit,
+        compiled_logic: Dict[str, Any],
+        model_report: Dict[str, Any] | None = None,
+    ) -> List[Dict[str, Any]]:
+        findings: List[Dict[str, Any]] = []
+        for item in _ensure_list((model_report or {}).get("conflicts")):
+            if not isinstance(item, dict):
+                continue
+            findings.append(
+                {
+                    "conflict_type": _safe_str(item.get("conflict_type"), "model_detected_conflict"),
+                    "severity": _safe_str(item.get("severity"), "medium"),
+                    "conflicts_with": _safe_str(item.get("conflicts_with"), "model_audit"),
+                    "reason": _safe_str(item.get("reason"), "model reported a logic conflict"),
+                    "recommended_resolution": _safe_str(item.get("recommended_resolution"), "manual_review_required"),
+                    "source": "qwen_audit",
+                }
+            )
+        effects = dict(compiled_logic.get("bounded_effects") or {})
+        risk = _safe_float(effects.get("risk"), 0.0)
+        stability = _safe_float(effects.get("wealth_stability"), 0.0)
+        if unit.category == "combination_clash_stability" or _safe_str(unit.feature_mapping.get("feature_type")) in {"wealth_stability", "wealth_risk"}:
+            if unit.knowledge_id.endswith("019_combination_changes_stability"):
+                findings.append(
+                    {
+                        "conflict_type": "stability_polarity_ambiguous",
+                        "severity": "medium",
+                        "conflicts_with": "vault_opened_by_clash_vs_vault_locked_by_combination",
+                        "reason": "合局可形成合作承接，也可能锁住兑现；单一正向 wealth_stability 需要条件化。",
+                        "recommended_resolution": "split positive cooperation and locked-liquidity branches before activation",
+                        "source": "local_inflation_audit",
+                    }
+                )
+            if risk >= 0.3 and stability > 0:
+                findings.append(
+                    {
+                        "conflict_type": "mixed_signal_requires_uncertainty",
+                        "severity": "low",
+                        "conflicts_with": "positive_stability_and_positive_risk",
+                        "reason": "稳定性支持与风险上升同时出现，Rule Candidate 必须保留 uncertainty/risk 分支。",
+                        "recommended_resolution": "keep risk as separate evidence modifier; do not collapse into a positive conclusion",
+                        "source": "local_inflation_audit",
+                    }
+                )
+        if not findings:
+            findings.append(
+                {
+                    "conflict_type": "no_blocking_conflict",
+                    "severity": "info",
+                    "conflicts_with": "none",
+                    "reason": "未发现阻塞型冲突，但仍需 Rule Test Engine 与 reviewer 激活流程。",
+                    "recommended_resolution": "continue sandbox test flow",
+                    "source": "local_inflation_audit",
+                }
+            )
+        return findings
+
+    def dry_run_bazi_knowledge_audit(
+        self,
+        knowledge_id: str,
+        payload: Dict[str, Any] | None = None,
+        *,
+        actor_role: str = "system",
+        actor_user_id: int = 0,
+    ) -> Dict[str, Any]:
+        unit = self._bazi_knowledge_units.get(_safe_str(knowledge_id))
+        if not unit:
+            raise PredictiveServiceError("BAZI_KNOWLEDGE_NOT_FOUND", f"knowledge unit {knowledge_id} not found", 404)
+        compiled_logic = self.compile_bazi_knowledge_rule_logic(unit)
+        scenarios = self._bazi_audit_scenarios(unit)
+        audit_payload = dict(payload or {})
+        model_report: Dict[str, Any] = {}
+        audit_status = "local_fallback"
+        model_error = ""
+        if not _safe_bool(audit_payload.get("skip_model"), False) and not _safe_bool(audit_payload.get("local_only"), False):
+            try:
+                model_report = self._call_qwen_kb_audit(
+                    unit=unit,
+                    compiled_logic=compiled_logic,
+                    scenarios=scenarios,
+                    payload=audit_payload,
+                )
+                audit_status = "model_completed"
+            except Exception as exc:
+                model_error = _safe_str(exc)
+                audit_status = "model_failed_local_fallback"
+        conflicts = self._local_bazi_audit_conflicts(unit, compiled_logic, model_report=model_report)
+        now = _utcnow_iso()
+        persisted: List[Dict[str, Any]] = []
+        for finding in conflicts:
+            conflict_seed = {
+                "knowledge_id": unit.knowledge_id,
+                "finding": finding,
+                "compiled_hash": _payload_hash(compiled_logic),
+            }
+            conflict_id = f"{unit.knowledge_id}:audit:{_sha256(_canonical_json(conflict_seed))[:12]}"
+            row = {
+                "conflict_id": conflict_id,
+                "knowledge_id": unit.knowledge_id,
+                "conflicts_with": _safe_str(finding.get("conflicts_with"), "audit"),
+                "conflict_type": _safe_str(finding.get("conflict_type"), "logic_audit"),
+                "resolution_policy": "manual_review_required" if _safe_str(finding.get("severity")) != "info" else "continue_sandbox_flow",
+                "payload": {
+                    "audit_status": audit_status,
+                    "severity": _safe_str(finding.get("severity"), "medium"),
+                    "reason": _safe_str(finding.get("reason")),
+                    "recommended_resolution": _safe_str(finding.get("recommended_resolution")),
+                    "source": _safe_str(finding.get("source"), "local_inflation_audit"),
+                    "model": _safe_str(model_report.get("model") or V18_KB_AUDIT_MODEL),
+                    "model_error": model_error,
+                    "compiled_rule_logic": compiled_logic,
+                    "scenarios": scenarios,
+                },
+                "created_at": now,
+            }
+            self._bazi_knowledge_conflicts[conflict_id] = row
+            persisted.append(row)
+        self._append_audit_event(
+            rule_id=unit.knowledge_id,
+            event_type="BAZI_KB_AUDIT_DRY_RUN",
+            severity="warning" if any(_safe_str(item.get("payload", {}).get("severity")) in {"medium", "high"} for item in persisted) else "info",
+            message="bazi knowledge unit dry-run audit completed",
+            actor_role=_safe_str(actor_role, "system"),
+            actor_user_id=_safe_int(actor_user_id, 0),
+            source="bazi-kb-rule-bridge",
+            details={"knowledge_id": unit.knowledge_id, "audit_status": audit_status, "conflict_count": len(persisted)},
+        )
+        self._persist()
+        return {
+            "knowledge_id": unit.knowledge_id,
+            "audit_status": audit_status,
+            "model": _safe_str(model_report.get("model") or V18_KB_AUDIT_MODEL),
+            "model_error": model_error,
+            "compiled_rule_logic": compiled_logic,
+            "scenarios": scenarios,
+            "conflicts": persisted,
+            "zero_leakage_policy": compiled_logic.get("zero_leakage_policy"),
+        }
+
     def build_sandbox_rule_candidate(
         self,
         payload: Dict[str, Any],
@@ -2670,6 +4367,7 @@ class V18PredictiveStore:
         *,
         actor_role: str = "system",
         actor_user_id: int = 0,
+        require_rule_reference: bool = True,
     ) -> Dict[str, Any]:
         requested_status = str(payload.get("status") or "").strip().lower()
         role = str(actor_role or "system").strip().lower()
@@ -2683,8 +4381,15 @@ class V18PredictiveStore:
             raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "suite_id is required", 400)
         if not suite.rule_id:
             raise PredictiveServiceError("CONTRACT_SCHEMA_INVALID", "rule_id is required", 400)
-
-        self.get_rule(rule_id=suite.rule_id, version=suite.rule_version, allow_inactive=True)
+        if not require_rule_reference:
+            if suite.status != "draft":
+                raise PredictiveServiceError(
+                    "RULE_TEST_SUITE_TRANSITION_INVALID",
+                    "non-registered-rule suites must start as draft",
+                    409,
+                )
+        else:
+            self.get_rule(rule_id=suite.rule_id, version=suite.rule_version, allow_inactive=True)
 
         key = self._normalize_rule_key(suite.suite_id, suite.version)
         if key in self._rule_test_suites:
@@ -3180,10 +4885,48 @@ class V18PredictiveStore:
         active_rule_ids = _ensure_list(resolved_rules.get("active_rules"))
         resolved_effect = dict(resolved_rules.get("resolved_effect") or {})
         facts = _ensure_list(chart_snapshot.get("matched_facts") or chart_snapshot.get("facts"))
+        topic_hint = _normalize_topic(chart_snapshot.get("topic") or chart_snapshot.get("topic_hint") or chart_snapshot.get("detected_topic"))
+        wealth_features = self._wealth_features_from_chart(chart_snapshot) if topic_hint in {"wealth", "general"} else []
         for rule_id in active_rule_ids:
             try:
                 rule = self.get_rule(_safe_str(rule_id), allow_inactive=False)
             except PredictiveServiceError:
+                continue
+            if "wealth" in [_safe_str(item).lower() for item in _ensure_list(rule.allowed_topics)] or "wealth" in [_safe_str(item).lower() for item in _ensure_list(rule.effect_scope)]:
+                for feature in wealth_features:
+                    feature_id = _safe_str(feature.get("feature_id"))
+                    if not feature_id:
+                        continue
+                    evidence_id = f"ev_{rule.rule_id}_{rule.version}_{feature_id}"[:180]
+                    strength = _safe_float(feature.get("strength"), 0.0)
+                    stability = _safe_float(feature.get("stability"), 0.5)
+                    risk = _safe_float(feature.get("risk"), 0.0)
+                    relevance = _safe_float(feature.get("wealth_relevance"), 0.0)
+                    confidence_delta = max(0.0, min(1.0, strength * (0.45 + stability * 0.35) * relevance * (1.0 - min(0.7, risk) * 0.25)))
+                    out.append(
+                        {
+                            "evidence_id": evidence_id,
+                            "rule_id": rule.rule_id,
+                            "version": rule.version,
+                            "content_hash": rule.content_hash,
+                            "feature_id": feature_id,
+                            "feature_type": _safe_str(feature.get("feature_type")),
+                            "feature_label": _safe_str(feature.get("feature_label") or feature.get("label")),
+                            "evidence_type": "feature_evidence",
+                            "semantic_type": _safe_str(feature.get("feature_type")),
+                            "feature": feature,
+                            "matched_facts": _ensure_list(feature.get("matched_facts")),
+                            "effect": dict(feature.get("effect") or {}),
+                            "risk": risk,
+                            "stability": stability,
+                            "strength": strength,
+                            "uncertainty": _safe_float(feature.get("uncertainty"), 0.0),
+                            "wealth_relevance": relevance,
+                            "confidence_delta": round(confidence_delta, 4),
+                            "resolved_effect": resolved_effect,
+                            "evidence_source": "wealth_feature_engine_v1",
+                        }
+                    )
                 continue
             evidence_id = f"ev_{rule.rule_id}_{rule.version}_{rule.content_hash[:12]}"
             out.append(
@@ -3201,6 +4944,8 @@ class V18PredictiveStore:
         return out
 
     def _conclusions_from_evidence(self, *, topic: str, rule_evidence: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        if _normalize_topic(topic) == "wealth":
+            return self._wealth_conclusions_from_feature_evidence(rule_evidence)
         if not rule_evidence:
             return []
         conclusions: List[Dict[str, Any]] = []
@@ -3220,6 +4965,421 @@ class V18PredictiveStore:
                 }
             )
         return conclusions
+
+    def _clamped_float(self, value: Any, fallback: float = 0.0) -> float:
+        return max(0.0, min(1.0, _safe_float(value, fallback)))
+
+    def _normalize_wealth_feature(self, payload: Dict[str, Any], *, fallback_type: str = "wealth_signal") -> Dict[str, Any]:
+        feature_id = _safe_str(payload.get("feature_id") or payload.get("id") or fallback_type)
+        raw_feature_type = _safe_str(payload.get("feature_type") or payload.get("type") or fallback_type)
+        type_aliases = {
+            "wealth_star_state": "wealth_strength",
+            "wealth_path_type": "wealth_strength",
+            "wealth_vault_state": "wealth_vault",
+            "output_to_wealth": "output_generate_wealth",
+            "wealth_constraint": "constraint_structure",
+            "authority_wealth_constraint": "constraint_structure",
+            "luck_flow_activation": "flow_activation",
+            "relationship_volatility": "stability_risk",
+            "wealth_stability_risk": "stability_risk",
+        }
+        feature_type = type_aliases.get(raw_feature_type, raw_feature_type)
+        strength = self._clamped_float(payload.get("strength") if "strength" in payload else payload.get("score"), 0.0)
+        stability = self._clamped_float(payload.get("stability"), 0.62)
+        risk = self._clamped_float(payload.get("risk"), 0.0)
+        uncertainty = self._clamped_float(payload.get("uncertainty"), max(0.05, 1.0 - stability))
+        relevance = self._clamped_float(payload.get("wealth_relevance"), 0.72)
+        effect = dict(payload.get("effect") or {})
+        if not effect and feature_type != "stability_risk":
+            effect = {"wealth": round(strength * relevance, 3)}
+        label = _safe_str(payload.get("label") or payload.get("plain_name") or payload.get("summary") or feature_type)
+        return {
+            "feature_id": feature_id.replace(" ", "_")[:96],
+            "feature_type": feature_type,
+            "matched_facts": [_safe_str(item) for item in _ensure_list(payload.get("matched_facts")) if _safe_str(item)][:8],
+            "strength": round(strength, 3),
+            "stability": round(stability, 3),
+            "effect": effect,
+            "risk": round(risk, 3),
+            "uncertainty": round(uncertainty, 3),
+            "wealth_relevance": round(relevance, 3),
+            "label": label,
+            "feature_label": label,
+            "source": _safe_str(payload.get("source"), "wealth_engine_v1"),
+            "source_knowledge_id": _safe_str(payload.get("source_knowledge_id")),
+            "knowledge_mode": _safe_str(payload.get("knowledge_mode")),
+            "experimental": _safe_bool(payload.get("experimental"), False),
+        }
+
+    def _wealth_features_from_chart(self, chart_snapshot: Dict[str, Any]) -> List[Dict[str, Any]]:
+        provided = _ensure_list(chart_snapshot.get("wealth_features") or chart_snapshot.get("structured_wealth_features"))
+        out: List[Dict[str, Any]] = []
+        for row in provided:
+            if isinstance(row, dict):
+                out.append(self._normalize_wealth_feature(row))
+        wealth_domain = chart_snapshot.get("wealth_domain_bundle")
+        if isinstance(wealth_domain, dict):
+            for row in _ensure_list(wealth_domain.get("wealth_evidence")):
+                if isinstance(row, dict):
+                    out.append(self._normalize_wealth_feature(row, fallback_type="wealth_domain_evidence"))
+
+        tensor = dict(chart_snapshot.get("physics_tensor") or chart_snapshot)
+        meta = dict(tensor.get("meta") or {})
+        wealth_code = dict(chart_snapshot.get("wealth_code") or meta.get("wealth_code") or {})
+        wealth_profile = dict(chart_snapshot.get("wealth_profile") or meta.get("wealth_profile") or {})
+
+        if not wealth_code and (tensor.get("ten_gods_runtime") or tensor.get("facts") or tensor.get("four_pillars")):
+            try:
+                from v17_rebirth.backend.logic.L0_physics_fields.bazi_image_core import resolve_bazi_image
+                from v17_rebirth.backend.logic.L3_modern_narrative.wealth_code_core import resolve_wealth_code
+                from v17_rebirth.backend.logic.L3_modern_narrative.wealth_profile_core import resolve_wealth_profile
+
+                tensor = dict(tensor)
+                meta = dict(tensor.get("meta") or {})
+                if "bazi_image" not in meta:
+                    meta["bazi_image"] = resolve_bazi_image(tensor).get("bazi_image", {})
+                tensor["meta"] = meta
+                if not wealth_profile:
+                    wealth_profile = dict(resolve_wealth_profile(tensor).get("wealth_profile") or {})
+                    meta["wealth_profile"] = wealth_profile
+                    tensor["meta"] = meta
+                wealth_code = dict(resolve_wealth_code(tensor).get("wealth_code") or {})
+            except Exception:
+                wealth_code = wealth_code or {}
+                wealth_profile = wealth_profile or {}
+
+        out.extend(self._wealth_features_from_existing_wealth_outputs(wealth_code, wealth_profile, tensor))
+
+        matched_facts = [_safe_str(item) for item in _ensure_list(chart_snapshot.get("matched_facts") or chart_snapshot.get("facts")) if _safe_str(item)]
+        fact_text = " ".join(matched_facts + [_safe_str(row.get("fact")) for row in _ensure_list(tensor.get("facts")) if isinstance(row, dict)])
+        has_baseline_wealth = any(item in fact_text for item in {"wealth_visible", "complete_birth_fields", "output_visible", "cashflow_segment", "quality_visible", "durable_visible", "财", "收入", "食伤生财", "财星"})
+        if has_baseline_wealth:
+            out.extend(
+                [
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": "wealth_baseline_strength",
+                        "feature_type": "wealth_strength",
+                        "matched_facts": matched_facts or ["wealth_visible"],
+                        "strength": 0.86,
+                        "stability": 0.82,
+                        "risk": 0.05,
+                        "uncertainty": 0.18,
+                        "wealth_relevance": 0.9,
+                        "effect": {"wealth": 0.72},
+                        "label": "财星强弱 / 财富基础信号",
+                    }
+                ),
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": "wealth_baseline_flow_context",
+                        "feature_type": "flow_activation",
+                        "matched_facts": matched_facts or ["wealth_visible"],
+                        "strength": 0.54,
+                        "stability": 0.58,
+                        "risk": 0.2,
+                        "uncertainty": 0.42,
+                        "wealth_relevance": 0.62,
+                        "effect": {"timing_activation": 0.44, "wealth_stability": 0.18},
+                        "label": "财富问题时间上下文",
+                    }
+                ),
+                ]
+            )
+
+        if any(term in fact_text for term in {"合", "冲", "刑", "害", "冲合", "刑害", "volatile", "stability"}):
+            out.append(
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": "relationship_volatility_risk",
+                        "feature_type": "stability_risk",
+                        "matched_facts": matched_facts[:6] or ["relation_volatility"],
+                        "strength": 0.42,
+                        "stability": 0.35,
+                        "risk": 0.62,
+                        "uncertainty": 0.58,
+                        "wealth_relevance": 0.38,
+                        "effect": {"wealth_stability": -0.28, "risk": 0.62},
+                        "label": "合冲刑害稳定性风险",
+                    }
+                )
+            )
+
+        unique: Dict[str, Dict[str, Any]] = {}
+        for feature in out:
+            feature_id = _safe_str(feature.get("feature_id"))
+            if not feature_id:
+                continue
+            if feature_id not in unique or _safe_float(feature.get("strength"), 0.0) > _safe_float(unique[feature_id].get("strength"), 0.0):
+                unique[feature_id] = feature
+        return list(unique.values())[:12]
+
+    def _wealth_features_from_existing_wealth_outputs(self, wealth_code: Dict[str, Any], wealth_profile: Dict[str, Any], tensor: Dict[str, Any]) -> List[Dict[str, Any]]:
+        out: List[Dict[str, Any]] = []
+        profile_evidence = _ensure_list(wealth_profile.get("evidence"))
+        if wealth_profile:
+            out.append(
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": "wealth_star_strength",
+                        "feature_type": "wealth_strength",
+                        "matched_facts": profile_evidence[:6],
+                        "strength": _safe_float(wealth_profile.get("score"), 0.0),
+                        "stability": _safe_float(wealth_profile.get("confidence"), 0.58),
+                        "risk": _safe_float(wealth_profile.get("risk"), 0.25),
+                        "uncertainty": max(0.05, 1.0 - _safe_float(wealth_profile.get("confidence"), 0.58)),
+                        "wealth_relevance": 0.9,
+                        "effect": {"wealth": _safe_float(wealth_profile.get("score"), 0.0), "income_stability": 1.0 - _safe_float(wealth_profile.get("risk"), 0.25)},
+                        "label": "财星状态",
+                    }
+                )
+            )
+
+        primary_path = dict(wealth_code.get("primary_wealth_path") or {})
+        if primary_path:
+            path_id = _safe_str(primary_path.get("id"), "primary_wealth_path")
+            score = _safe_float(primary_path.get("score") or primary_path.get("path_graph_score") or wealth_code.get("score"), 0.0)
+            out.append(
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": f"wealth_path_{path_id}",
+                        "feature_type": "wealth_strength",
+                        "matched_facts": _ensure_list(primary_path.get("evidence")),
+                        "strength": score,
+                        "stability": _safe_float(wealth_code.get("confidence"), 0.62),
+                        "risk": _safe_float(wealth_code.get("risk"), 0.22),
+                        "uncertainty": 1.0 - _safe_float(wealth_code.get("confidence"), 0.62),
+                        "wealth_relevance": 0.94,
+                        "effect": {"wealth": score, "path_closure": score},
+                        "label": _safe_str(primary_path.get("plain_name") or primary_path.get("plain_summary") or "财富路径类型"),
+                    }
+                )
+            )
+            if path_id in {"output_to_wealth", "output_work_to_money"} or "输出" in _safe_str(primary_path.get("plain_summary")):
+                out.append(
+                    self._normalize_wealth_feature(
+                        {
+                            "feature_id": "output_generates_wealth",
+                            "feature_type": "output_generate_wealth",
+                            "matched_facts": _ensure_list(primary_path.get("evidence")),
+                            "strength": max(0.5, score),
+                            "stability": _safe_float(wealth_code.get("confidence"), 0.62),
+                            "risk": _safe_float(wealth_code.get("risk"), 0.22),
+                            "uncertainty": 0.28,
+                            "wealth_relevance": 0.9,
+                            "effect": {"wealth": score, "income_stability": min(0.72, score)},
+                            "label": "食伤生财 / 输出变现",
+                        }
+                    )
+                )
+
+        vault = dict(wealth_code.get("wealth_vault") or {})
+        if vault and (vault.get("has_vault_signal") or vault.get("vault_state")):
+            state = _safe_str(vault.get("vault_state"), "static")
+            activated = state == "activated"
+            out.append(
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": "wealth_vault_state",
+                        "feature_type": "wealth_vault",
+                        "matched_facts": _ensure_list(vault.get("evidence")) or [_safe_str(vault.get("plain_summary"))],
+                        "strength": 0.72 if activated else 0.56,
+                        "stability": 0.7 if activated else 0.52,
+                        "risk": 0.18 if activated else 0.32,
+                        "uncertainty": 0.22 if activated else 0.42,
+                        "wealth_relevance": 0.84,
+                        "effect": {"wealth_retention": 0.72 if activated else 0.48, "income_stability": 0.56 if activated else 0.36},
+                        "label": "财库状态",
+                    }
+                )
+            )
+
+        for row in _ensure_list(wealth_code.get("secondary_paths"))[:4]:
+            if not isinstance(row, dict):
+                continue
+            path_id = _safe_str(row.get("id"))
+            if path_id in {"output_controls_pressure", "wealth_officer_platform"}:
+                out.append(
+                    self._normalize_wealth_feature(
+                        {
+                            "feature_id": f"authority_constraint_{path_id}",
+                            "feature_type": "constraint_structure",
+                            "matched_facts": _ensure_list(row.get("evidence")),
+                            "strength": _safe_float(row.get("score"), 0.48),
+                            "stability": _safe_float(row.get("confidence"), 0.55),
+                            "risk": _safe_float(row.get("risk"), 0.38),
+                            "uncertainty": 0.35,
+                            "wealth_relevance": 0.72,
+                            "effect": {"wealth": _safe_float(row.get("score"), 0.48) * 0.55, "risk": _safe_float(row.get("risk"), 0.38)},
+                            "label": "官杀制约财富",
+                        }
+                    )
+                )
+
+        watchlist = [row for row in _ensure_list(wealth_code.get("flow_year_watchlist")) if isinstance(row, dict)]
+        if watchlist:
+            top = watchlist[0]
+            state = _safe_str(dict(top.get("mechanism_state_snapshot") or {}).get("top_state"))
+            volatile = state in {"volatile", "leaking", "blocked"}
+            out.append(
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": "luck_flow_activation",
+                        "feature_type": "flow_activation",
+                        "matched_facts": [_safe_str(top.get("year")), _safe_str(top.get("focus")), _safe_str(state)],
+                        "strength": _safe_float(top.get("path_score") or top.get("score"), 0.52),
+                        "stability": 0.42 if volatile else 0.62,
+                        "risk": 0.58 if volatile else 0.24,
+                        "uncertainty": 0.46 if volatile else 0.28,
+                        "wealth_relevance": 0.76,
+                        "effect": {"timing_activation": 0.65, "wealth_stability": -0.18 if volatile else 0.22},
+                        "label": "大运流年引动",
+                    }
+                )
+            )
+
+        leakage = [row for row in _ensure_list(wealth_code.get("leakage_points")) if isinstance(row, dict)]
+        if leakage:
+            out.append(
+                self._normalize_wealth_feature(
+                    {
+                        "feature_id": "wealth_leakage_risk",
+                        "feature_type": "stability_risk",
+                        "matched_facts": [_safe_str(row.get("plain_summary") or row.get("id")) for row in leakage[:4]],
+                        "strength": max([_safe_float(row.get("risk"), 0.45) for row in leakage] or [0.45]),
+                        "stability": 0.38,
+                        "risk": max([_safe_float(row.get("risk"), 0.45) for row in leakage] or [0.45]),
+                        "uncertainty": 0.48,
+                        "wealth_relevance": 0.68,
+                        "effect": {"wealth_stability": -0.36, "risk": 0.62},
+                        "label": "财富稳定性风险",
+                    }
+                )
+            )
+        return out
+
+    def _wealth_conclusions_from_feature_evidence(self, rule_evidence: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        feature_rows = [row for row in rule_evidence if isinstance(row, dict) and _safe_str(row.get("feature_id"))]
+        if not feature_rows:
+            return []
+        support_types = {"wealth_strength", "wealth_vault", "output_generate_wealth", "constraint_structure", "flow_activation"}
+        support = [
+            row for row in feature_rows
+            if _safe_str(row.get("feature_type")) in support_types and _safe_float(dict(row.get("effect") or {}).get("wealth"), 0.0) > 0.0
+        ]
+        if not support:
+            return []
+        risk_rows = [
+            row for row in feature_rows
+            if _safe_float(row.get("risk"), 0.0) >= 0.42 or _safe_float(row.get("stability"), 1.0) <= 0.45 or _safe_str(row.get("feature_type")) == "stability_risk"
+        ]
+        conclusions: List[Dict[str, Any]] = []
+        top_support = sorted(support, key=lambda row: _safe_float(row.get("confidence_delta"), 0.0), reverse=True)[:4]
+        support_ids = [_safe_str(row.get("evidence_id")) for row in top_support if _safe_str(row.get("evidence_id"))]
+        labels = [_safe_str(dict(row.get("feature") or {}).get("label") or row.get("feature_type")) for row in top_support]
+        avg_support = sum(_safe_float(row.get("confidence_delta"), 0.0) for row in top_support) / max(1, len(top_support))
+        conclusions.append(
+            {
+                "conclusion_id": "conclusion_1",
+                "topic": "wealth",
+                "claim": f"财富判断由多条核心财富依据共同支持，当前主要依据是：{'、'.join(labels[:3])}。",
+                "polarity": "support",
+                "confidence": round(max(0.05, min(1.0, avg_support)), 3),
+                "evidence_ids": support_ids,
+                "generated_by": "engine",
+                "composition": "multi_feature_wealth_evidence",
+            }
+        )
+        stability_rows = [row for row in feature_rows if _safe_float(dict(row.get("effect") or {}).get("income_stability"), 0.0) or _safe_str(row.get("feature_type")) in {"wealth_vault", "flow_activation", "stability_risk"}]
+        if stability_rows:
+            selected = sorted(stability_rows, key=lambda row: abs(_safe_float(dict(row.get("effect") or {}).get("income_stability"), 0.0)) + _safe_float(row.get("risk"), 0.0), reverse=True)[:3]
+            selected_ids = [_safe_str(row.get("evidence_id")) for row in selected if _safe_str(row.get("evidence_id"))]
+            avg_stability = sum(_safe_float(row.get("stability"), 0.5) for row in selected) / max(1, len(selected))
+            conclusions.append(
+                {
+                    "conclusion_id": "conclusion_2",
+                    "topic": "wealth",
+                    "claim": "收入稳定性需要结合财库、路径闭合和冲合波动一起看；当前稳定性不是单点规则决定。",
+                    "polarity": "support" if avg_stability >= 0.5 else "risk",
+                    "confidence": round(max(0.05, min(1.0, avg_stability * 0.72)), 3),
+                    "evidence_ids": selected_ids,
+                    "generated_by": "engine",
+                    "composition": "stability_from_feature_evidence",
+                }
+            )
+        if risk_rows:
+            selected = sorted(risk_rows, key=lambda row: _safe_float(row.get("risk"), 0.0), reverse=True)[:3]
+            selected_ids = [_safe_str(row.get("evidence_id")) for row in selected if _safe_str(row.get("evidence_id"))]
+            max_risk = max([_safe_float(row.get("risk"), 0.0) for row in selected] or [0.0])
+            conclusions.append(
+                {
+                    "conclusion_id": f"conclusion_{len(conclusions) + 1}",
+                    "topic": "wealth",
+                    "claim": "主要风险来自财富路径的稳定性扰动，尤其要关注合冲刑害、分利竞争或回款承接。",
+                    "polarity": "risk",
+                    "confidence": round(max(0.05, min(1.0, max_risk * 0.68)), 3),
+                    "evidence_ids": selected_ids,
+                    "generated_by": "engine",
+                    "composition": "risk_from_feature_evidence",
+                }
+            )
+        return conclusions
+
+    def _contract_confidence_from_evidence(self, rule_evidence: List[Dict[str, Any]]) -> float:
+        rows = [row for row in rule_evidence if isinstance(row, dict)]
+        if not rows:
+            return 0.0
+        weighted = []
+        for row in rows:
+            strength = _safe_float(row.get("strength"), _safe_float(row.get("confidence_delta"), 0.0))
+            stability = _safe_float(row.get("stability"), 0.55)
+            risk = _safe_float(row.get("risk"), 0.0)
+            relevance = _safe_float(row.get("wealth_relevance"), 0.7)
+            weighted.append(max(0.0, min(1.0, strength * 0.42 + stability * 0.26 + relevance * 0.22 - risk * 0.12)))
+        top = sorted(weighted, reverse=True)[:4]
+        breadth_bonus = min(0.08, max(0, len(top) - 1) * 0.025)
+        weighted_average = sum(top) / max(1, len(top))
+        dominant_signal = max(top)
+        return round(min(1.0, dominant_signal * 0.68 + weighted_average * 0.32 + breadth_bonus), 3)
+
+    def _uncertainty_from_evidence(self, rule_evidence: List[Dict[str, Any]], conclusions: List[Dict[str, Any]], chart_snapshot: Dict[str, Any]) -> Dict[str, Any]:
+        rows = [row for row in rule_evidence if isinstance(row, dict)]
+        if not rows or not conclusions:
+            return {"score": 1.0, "source": ["no_feature_backed_wealth_evidence"], "missing_assumptions": ["缺少可验证财富特征"], "sensitive_factors": ["补充命盘结构后再判断"]}
+        avg_uncertainty = sum(_safe_float(row.get("uncertainty"), 0.25) for row in rows) / max(1, len(rows))
+        max_risk = max([_safe_float(row.get("risk"), 0.0) for row in rows] or [0.0])
+        low_stability = any(_safe_float(row.get("stability"), 0.7) < 0.46 for row in rows)
+        sources = ["evidence_strength_stability"]
+        if max_risk >= 0.45:
+            sources.append("wealth_risk_pressure")
+        if low_stability:
+            sources.append("relation_or_timing_volatility")
+        if not chart_snapshot.get("birth_time") and not chart_snapshot.get("birth_fields"):
+            sources.append("limited_birth_detail")
+        score = max(0.05, min(1.0, avg_uncertainty * 0.55 + max_risk * 0.3 + (0.18 if low_stability else 0.0)))
+        return {
+            "score": round(score, 3),
+            "source": sources,
+            "missing_assumptions": ["现实收入结构、职业选择和实际现金流仍需用户反馈校准"],
+            "sensitive_factors": ["合冲刑害稳定性", "大运流年触发", "合作分利与回款节奏"],
+        }
+
+    def _risk_modes_from_evidence(self, rule_evidence: List[Dict[str, Any]]) -> List[str]:
+        modes: List[str] = []
+        for row in rule_evidence:
+            if not isinstance(row, dict):
+                continue
+            ftype = _safe_str(row.get("feature_type"))
+            risk = _safe_float(row.get("risk"), 0.0)
+            if ftype == "stability_risk":
+                modes.append("relation_volatility")
+            if ftype == "stability_risk" or risk >= 0.5:
+                modes.append("wealth_stability_risk")
+            if ftype == "flow_activation":
+                modes.append("timing_activation")
+            if ftype == "constraint_structure":
+                modes.append("rule_or_platform_constraint")
+        return list(dict.fromkeys(modes)) or ["uncertainty"]
 
     def verify_prediction_contract(self, contract: Dict[str, Any]) -> Dict[str, Any]:
         evidence_rows = [row for row in _ensure_list(contract.get("rule_evidence")) if isinstance(row, dict)]
@@ -4785,6 +6945,60 @@ class V18PredictiveStore:
             "replay_mode": "contract_replay_only",
         }
 
+    def public_replay_prediction(self, prediction_id: str) -> Dict[str, Any]:
+        replay = self.replay_prediction(prediction_id)
+        record = dict(replay.get("ledger") or {})
+        contract = dict(replay.get("contract") or {})
+        conclusions = [row for row in _ensure_list(contract.get("conclusions")) if isinstance(row, dict)]
+        first_conclusion = conclusions[0] if conclusions else {}
+        confidence = _safe_float(first_conclusion.get("confidence"), _safe_float(contract.get("confidence"), 0.0))
+        uncertainty = dict(contract.get("uncertainty") or {})
+        risk_modes = [_safe_str(item) for item in _ensure_list(contract.get("risk_modes")) if _safe_str(item)]
+
+        evidence_summary = []
+        for evidence in _ensure_list(replay.get("evidence")):
+            if not isinstance(evidence, dict):
+                continue
+            effect = dict(evidence.get("effect") or {})
+            evidence_summary.append(
+                {
+                    "rule_id": _safe_str(evidence.get("rule_id")),
+                    "version": _safe_str(evidence.get("version")),
+                    "feature_id": _safe_str(evidence.get("feature_id")),
+                    "feature_type": _safe_str(evidence.get("feature_type")),
+                    "feature_label": _safe_str(evidence.get("feature_label") or dict(evidence.get("feature") or {}).get("label")),
+                    "evidence_type": _safe_str(evidence.get("evidence_type"), "feature_evidence" if evidence.get("feature_id") else "rule_evidence"),
+                    "effect_keys": sorted([_safe_str(key) for key in effect.keys() if _safe_str(key)]),
+                    "matched_fact_count": len(_ensure_list(evidence.get("matched_facts"))),
+                    "confidence_delta": _safe_float(evidence.get("confidence_delta"), 0.0),
+                    "risk": _safe_float(evidence.get("risk"), 0.0),
+                    "stability": _safe_float(evidence.get("stability"), 0.0),
+                }
+            )
+
+        return {
+            "public_safe": True,
+            "prediction_id_short": _safe_str(prediction_id)[:18],
+            "topic": _safe_str(record.get("topic") or contract.get("topic")),
+            "conclusion_summary": _safe_str(first_conclusion.get("claim"), "n/a"),
+            "confidence": confidence,
+            "uncertainty": {
+                "score": _safe_float(uncertainty.get("score"), 0.0),
+                "risk_modes": risk_modes[:4],
+            },
+            "verifier_status": _safe_str(record.get("verifier_status") or record.get("state"), "n/a"),
+            "evidence_summary": evidence_summary[:5],
+            "feedback_count": len(_ensure_list(replay.get("feedback"))),
+            "learning_signal_count": len(_ensure_list(replay.get("learning_signals"))),
+            "rule_drift": bool(replay.get("rule_drift")),
+            "replay_mode": "public_redacted_replay",
+            "redaction": {
+                "public_safe": True,
+                "notice": "此回放已隐藏个人信息",
+                "full_record_notice": "完整记录仅本人登录后可见",
+            },
+        }
+
     def run_verifier(self, payload: Dict[str, Any]) -> Dict[str, Any]:
         prediction_id = str(payload.get("prediction_id") or "").strip()
         if not prediction_id:
@@ -4942,9 +7156,15 @@ class V18PredictiveStore:
                     "rule_id": _safe_str(evidence.get("rule_id")),
                     "version": _safe_str(evidence.get("version")),
                     "content_hash": _safe_str(evidence.get("content_hash")),
+                    "feature_id": _safe_str(evidence.get("feature_id")),
+                    "feature_type": _safe_str(evidence.get("feature_type")),
+                    "feature_label": _safe_str(dict(evidence.get("feature") or {}).get("label")),
                     "matched_facts": _ensure_list(evidence.get("matched_facts")),
                     "effect": dict(evidence.get("effect") or {}),
                     "confidence_delta": _safe_float(evidence.get("confidence_delta"), 0.0),
+                    "risk": _safe_float(evidence.get("risk"), 0.0),
+                    "stability": _safe_float(evidence.get("stability"), 0.0),
+                    "wealth_relevance": _safe_float(evidence.get("wealth_relevance"), 0.0),
                 }
             )
         return rows
@@ -4952,6 +7172,7 @@ class V18PredictiveStore:
     def _build_explanation_output(self, contract: Dict[str, Any], request: ExplanationRequest) -> Dict[str, Any]:
         conclusions = [row for row in _ensure_list(contract.get("conclusions")) if isinstance(row, dict)]
         evidence_ids = [_safe_str(row.get("evidence_id")) for row in _ensure_list(contract.get("rule_evidence")) if isinstance(row, dict) and _safe_str(row.get("evidence_id"))]
+        evidence_rows = [row for row in _ensure_list(contract.get("rule_evidence")) if isinstance(row, dict)]
         causal_path = [_safe_str(item) for item in _ensure_list(contract.get("causal_path")) if _safe_str(item)]
         risk_modes = [_safe_str(item) for item in _ensure_list(contract.get("risk_modes")) if _safe_str(item)]
         if not conclusions:
@@ -4968,6 +7189,11 @@ class V18PredictiveStore:
                     "suggestion": ["补充关键排盘信息或更多可验证事实"],
                 },
                 "sources": _ensure_list(contract.get("data_sources")),
+                "reasoning_adapter": {
+                    "mode": "contract_bounded_v1",
+                    "used_evidence_ids": [],
+                    "constraints": ["no_new_conclusion", "no_confidence_change", "contract_evidence_only"],
+                },
             }
 
         conclusion_lines: List[str] = []
@@ -4988,14 +7214,33 @@ class V18PredictiveStore:
             uncertainty_score = _safe_float(uncertainty.get("score"), 0.0)
             uncertainty_text = f" uncertainty 需保留，当前 uncertainty score 约为 {min(99, round(uncertainty_score * 100))}%。"
         evidence_text = ""
+        evidence_detail_text = ""
         if request.include_evidence_trace:
+            labels = [
+                _safe_str(dict(row.get("feature") or {}).get("label") or row.get("feature_label") or row.get("feature_type"))
+                for row in evidence_rows
+            ]
+            labels = [item for item in labels if item]
+            label_text = "、".join(labels[:4])
             evidence_text = f" 证据链引用 {len(evidence_ids)} 条 contract evidence。"
+            if label_text:
+                evidence_text += f"综合依据包括：{label_text}。"
+            evidence_detail_lines = []
+            for row in evidence_rows[:4]:
+                label = _safe_str(dict(row.get("feature") or {}).get("label") or row.get("feature_label") or row.get("feature_type"))
+                strength = _safe_float(row.get("strength"), _safe_float(row.get("confidence_delta"), 0.0))
+                stability = _safe_float(row.get("stability"), 0.0)
+                risk = _safe_float(row.get("risk"), 0.0)
+                if label:
+                    evidence_detail_lines.append(f"{label}: strength {round(strength * 100)}%, stability {round(stability * 100)}%, risk {round(risk * 100)}%")
+            if evidence_detail_lines:
+                evidence_detail_text = " 分项依据：" + "；".join(evidence_detail_lines) + "。"
         if request.explanation_level == "brief":
             text = "；".join(conclusion_lines[:1]) + uncertainty_text
         elif request.explanation_level == "detailed":
-            text = "结论：" + "；".join(conclusion_lines) + "。机制：" + " > ".join(causal_path) + "。" + uncertainty_text + evidence_text
+            text = "综合判断：" + "；".join(conclusion_lines) + "。机制：" + " > ".join(causal_path) + "。" + uncertainty_text + evidence_text + evidence_detail_text
         else:
-            text = "结论：" + "；".join(conclusion_lines) + "。" + uncertainty_text + evidence_text
+            text = "综合判断：" + "；".join(conclusion_lines) + "。" + uncertainty_text + evidence_text + evidence_detail_text
         return {
             "text": text,
             "is_prediction": True,
@@ -5009,6 +7254,11 @@ class V18PredictiveStore:
                 "suggestion": ["以上解释仅限 Prediction Contract 范围，不新增命理判断"],
             },
             "sources": _ensure_list(contract.get("data_sources")),
+            "reasoning_adapter": {
+                "mode": "contract_bounded_v1",
+                "used_evidence_ids": evidence_ids,
+                "constraints": ["no_new_conclusion", "no_confidence_change", "contract_evidence_only"],
+            },
         }
 
     def _verify_explanation_output(self, contract: Dict[str, Any], request: ExplanationRequest, output: Dict[str, Any]) -> Dict[str, Any]:
@@ -5026,6 +7276,18 @@ class V18PredictiveStore:
         }
         if not cited_evidence.issubset(allowed_evidence):
             errors.append("explanation_evidence_scope")
+        allowed_conclusions = {
+            _safe_str(row.get("conclusion_id"))
+            for row in _ensure_list(contract.get("conclusions"))
+            if isinstance(row, dict) and _safe_str(row.get("conclusion_id"))
+        }
+        cited_conclusions = {
+            _safe_str(item)
+            for item in _ensure_list((output.get("sections") or {}).get("conclusion_ids"))
+            if _safe_str(item)
+        }
+        if not cited_conclusions.issubset(allowed_conclusions):
+            errors.append("explanation_conclusion_scope")
         contract_confidence = max(
             [_safe_float(row.get("confidence"), _safe_float(contract.get("confidence"), 0.0)) for row in _ensure_list(contract.get("conclusions")) if isinstance(row, dict)]
             or [_safe_float(contract.get("confidence"), 0.0)]
@@ -5253,6 +7515,7 @@ class V18PredictiveStore:
 
         active_rules = self.list_rules(status="active")
         latest_rule_updated_at = ""
+        latest_rule_update: Dict[str, Any] = {}
         latest_rule_updated_dt: datetime | None = None
         for rule in active_rules:
             rule_snapshot = rule.to_dict()
@@ -5267,6 +7530,12 @@ class V18PredictiveStore:
                     continue
                 if latest_rule_updated_dt is None or dt > latest_rule_updated_dt:
                     latest_rule_updated_dt = dt
+                    latest_rule_update = {
+                        "rule_id": rule.rule_id,
+                        "version": rule.version,
+                        "status": rule.status,
+                        "updated_at": source,
+                    }
         if latest_rule_updated_dt:
             latest_rule_updated_at = latest_rule_updated_dt.replace(microsecond=0).isoformat()
 
@@ -5276,6 +7545,47 @@ class V18PredictiveStore:
         suggestions_generated = len(self._candidate_rule_suggestions)
 
         feedback_distribution = {key: _safe_float(value / max(1, total_feedback), 0.0) for key, value in feedback_distribution_counts.items()}
+        now = datetime.now(timezone.utc)
+        day_ago = now - timedelta(days=1)
+        two_days_ago = now - timedelta(days=2)
+        seven_days_ago = now - timedelta(days=7)
+        prediction_last_24h = 0
+        prediction_previous_24h = 0
+        prediction_last_7d = 0
+        active_users_last_7d: set[str] = set()
+        for record in self._ledger.values():
+            if not isinstance(record, dict):
+                continue
+            created = _parse_dt(record.get("created_at"))
+            if created is None:
+                continue
+            if created >= seven_days_ago:
+                prediction_last_7d += 1
+                for key in ("user_id", "agent_session_id", "session_id", "created_by"):
+                    value = _safe_str(record.get(key))
+                    if value:
+                        active_users_last_7d.add(value)
+            if created >= day_ago:
+                prediction_last_24h += 1
+            elif created >= two_days_ago:
+                prediction_previous_24h += 1
+        feedback_last_24h = 0
+        feedback_previous_24h = 0
+        feedback_last_7d = 0
+        feedback_hit_partial_last_7d = 0
+        for feedback in feedback_rows:
+            created = _parse_dt(feedback.get("created_at") or feedback.get("observed_at"))
+            if created is None:
+                continue
+            if created >= seven_days_ago:
+                feedback_last_7d += 1
+                if _safe_str(feedback.get("feedback_type")).lower() in {"hit", "partial"}:
+                    feedback_hit_partial_last_7d += 1
+            if created >= day_ago:
+                feedback_last_24h += 1
+            elif created >= two_days_ago:
+                feedback_previous_24h += 1
+        last_7d_hit_partial_rate = _safe_float(feedback_hit_partial_last_7d / max(1, feedback_last_7d), 0.0)
         return {
             "total_predictions": total_predictions,
             "total_feedback": total_feedback,
@@ -5288,6 +7598,35 @@ class V18PredictiveStore:
             "learning_signals_generated": learning_signals_generated,
             "insights_generated": insights_generated,
             "suggestions_generated": suggestions_generated,
+            "last_7d_predictions": prediction_last_7d,
+            "last_7d_feedback": feedback_last_7d,
+            "last_7d_hit_partial_rate": last_7d_hit_partial_rate,
+            "last_7d_active_users": len(active_users_last_7d),
+            "last_rule_update_time": latest_rule_updated_at,
+            "last_7d_metrics": {
+                "predictions": prediction_last_7d,
+                "feedback": feedback_last_7d,
+                "hit_partial_rate": last_7d_hit_partial_rate,
+                "active_users": len(active_users_last_7d),
+                "last_rule_update_time": latest_rule_updated_at,
+                "data_sufficient": prediction_last_7d >= 10 and feedback_last_7d >= 3,
+            },
+            "prediction_trend": {
+                "last_24h": prediction_last_24h,
+                "previous_24h": prediction_previous_24h,
+                "delta": prediction_last_24h - prediction_previous_24h,
+            },
+            "feedback_trend": {
+                "last_24h": feedback_last_24h,
+                "previous_24h": feedback_previous_24h,
+                "delta": feedback_last_24h - feedback_previous_24h,
+            },
+            "latest_rule_update": latest_rule_update,
+            "learning_visibility": {
+                "recent_feedback_count": feedback_last_24h,
+                "learning_signal_count": learning_signals_generated,
+                "note": "feedback influences learning signals and reviewer suggestions without directly mutating active rules",
+            },
         }
 
     def _learning_rows_for_aggregation(self) -> List[Dict[str, Any]]:
@@ -6132,8 +8471,10 @@ class RuleRuntimeFacade:
         }
         chart_snapshot = dict(payload.get("chart_snapshot") or {})
         chart_snapshot.setdefault("matched_facts", _ensure_list(payload.get("matched_facts")))
+        chart_snapshot.setdefault("topic", topic)
         runtime_context = dict(payload.get("runtime_context") or {})
         runtime_context.setdefault("time_weight", {"natal": 0.5, "decade": 0.3, "year": 0.2})
+        wealth_domain_bundle: Dict[str, Any] = {}
 
         rule_candidates = _ensure_list(payload.get("rule_candidates"))
         if not rule_candidates:
@@ -6164,6 +8505,41 @@ class RuleRuntimeFacade:
             actor_role,
             actor_user_id,
         )
+        if topic == "wealth":
+            try:
+                from v17_rebirth.backend.services.core_bazi_feature_layer import core_bazi_feature_service
+                from v17_rebirth.backend.services.core_bazi_strength_model import core_bazi_strength_service
+                from v17_rebirth.backend.services.core_bazi_structure_effect_layer import core_bazi_structure_effect_service
+                from v17_rebirth.backend.services.core_bazi_wealth_domain import wealth_domain_service
+
+                core_bundle = core_bazi_feature_service.extract_and_store({"chart_snapshot": chart_snapshot})
+                strength_bundle = core_bazi_strength_service.evaluate_and_store({"core_feature_bundle": core_bundle})
+                structure_bundle = core_bazi_structure_effect_service.evaluate_and_store(
+                    {"core_feature_bundle": core_bundle, "core_strength_bundle": strength_bundle}
+                )
+                intent = _safe_str(payload.get("intent"), "wealth_prediction")
+                if intent == "prediction":
+                    intent = "wealth_prediction"
+                wealth_domain_bundle = wealth_domain_service.evaluate_and_store(
+                    {
+                        "core_feature_bundle": core_bundle,
+                        "core_strength_bundle": strength_bundle,
+                        "structure_effect_bundle": structure_bundle,
+                        "user_intent": intent,
+                        "knowledge_mode": _safe_str(payload.get("knowledge_mode"), "baseline_only"),
+                    }
+                )
+                chart_snapshot["core_feature_bundle_id"] = core_bundle.get("bundle_id")
+                chart_snapshot["core_strength_bundle_id"] = strength_bundle.get("strength_bundle_id")
+                chart_snapshot["core_structure_bundle_id"] = structure_bundle.get("structure_bundle_id")
+                chart_snapshot["wealth_domain_bundle_id"] = wealth_domain_bundle.get("wealth_bundle_id")
+                chart_snapshot["wealth_domain_bundle"] = wealth_domain_bundle
+                chart_snapshot["wealth_features"] = _ensure_list(wealth_domain_bundle.get("wealth_evidence"))
+                chart_snapshot["wealth_domain_knowledge_mode"] = _safe_str(wealth_domain_bundle.get("knowledge_mode"), "baseline_only")
+                chart_snapshot["wealth_domain_experimental"] = _safe_bool(wealth_domain_bundle.get("experimental"), False)
+            except PredictiveServiceError as exc:
+                chart_snapshot["wealth_domain_status"] = "fallback_legacy_wealth_features"
+                chart_snapshot["wealth_domain_error_code"] = exc.code
         rule_evidence = self.service._rule_evidence_from_resolver(resolved, chart_snapshot=chart_snapshot)
         conclusions = self.service._conclusions_from_evidence(topic=topic, rule_evidence=rule_evidence)
         evidence_ids = [_safe_str(row.get("evidence_id")) for row in rule_evidence if _safe_str(row.get("evidence_id"))]
@@ -6179,23 +8555,39 @@ class RuleRuntimeFacade:
             "chart_snapshot": chart_snapshot,
             "topic": topic,
             "chain_id": _safe_str(payload.get("chain_id"), f"{topic}_contract_v1"),
-            "causal_path": _ensure_list(payload.get("causal_path")) or ["rule_match", "effect_resolution", "contract_conclusion"],
+            "causal_path": _ensure_list(payload.get("causal_path")) or (
+                ["wealth_feature_extraction", "multi_rule_composition", "contract_conclusion"]
+                if topic == "wealth"
+                else ["rule_match", "effect_resolution", "contract_conclusion"]
+            ),
             "rule_ids": resolved.get("active_rules", []),
             "chain_state": "resolved" if conclusions else "insufficient_evidence",
-            "confidence": min(1.0, sum(_safe_float(row.get("confidence_delta"), 0.0) for row in rule_evidence)),
+            "confidence": self.service._contract_confidence_from_evidence(rule_evidence),
             "period": period,
             "evidence_ids": evidence_ids,
             "rule_evidence": rule_evidence,
             "inference_steps": [
                 {"step": "intent_normalized", "output": normalized_intent},
                 {"step": "rules_resolved", "output": resolved.get("active_rules", [])},
+                {"step": "wealth_domain_evaluated", "output": _safe_str(wealth_domain_bundle.get("wealth_bundle_id"))} if wealth_domain_bundle else {"step": "wealth_domain_evaluated", "output": "not_available"},
                 {"step": "evidence_collected", "output": evidence_ids},
                 {"step": "conclusions_generated", "output": [_safe_str(row.get("conclusion_id")) for row in conclusions]},
             ],
             "conclusions": conclusions,
             "verifiable_indicators": dict(payload.get("verifiable_indicators") or {"outcome": [topic]}),
-            "risk_modes": _ensure_list(payload.get("risk_modes")) or ["uncertainty"],
-            "data_sources": _ensure_list(payload.get("data_sources")) or ["prediction_contract_engine"],
+            "risk_modes": _ensure_list(payload.get("risk_modes")) or self.service._risk_modes_from_evidence(rule_evidence),
+            "data_sources": _ensure_list(payload.get("data_sources")) or (
+                [
+                    "prediction_contract_engine",
+                    "core_bazi_feature_layer_v1",
+                    "core_strength_model_v1",
+                    "core_structure_effect_layer_v1",
+                    "wealth_domain_v1",
+                    "wealth_feature_engine_v1",
+                ]
+                if wealth_domain_bundle
+                else ["prediction_contract_engine", "wealth_feature_engine_v1"] if topic == "wealth" else ["prediction_contract_engine"]
+            ),
             "model_version": V18_1_SCHEMA_VERSION,
             "schema_version": V18_1_SCHEMA_VERSION,
             "engine_version": V18_1_SCHEMA_VERSION,
@@ -6209,7 +8601,7 @@ class RuleRuntimeFacade:
                 "topic": topic,
             },
             "resolver_snapshot": resolved.get("resolver_snapshot", {}),
-            "uncertainty": dict(payload.get("uncertainty") or {"score": 0.3 if conclusions else 1.0}),
+            "uncertainty": dict(payload.get("uncertainty") or wealth_domain_bundle.get("uncertainty") or self.service._uncertainty_from_evidence(rule_evidence, conclusions, chart_snapshot)),
             "feedback_window": _feedback_window_from_period(period),
         }
 
@@ -6232,6 +8624,19 @@ class RuleRuntimeFacade:
             "sources": contract.data_sources,
             "conclusion_ids": [_safe_str(row.get("conclusion_id")) for row in conclusions],
         }
+        if wealth_domain_bundle:
+            llm_output["wealth_profile"] = dict(wealth_domain_bundle.get("wealth_profile") or {})
+            llm_output["wealth_evidence_summary"] = [
+                {
+                    "feature_id": _safe_str(row.get("feature_id")),
+                    "feature_type": _safe_str(row.get("feature_type")),
+                    "feature_label": _safe_str(row.get("feature_label") or row.get("label")),
+                    "risk": _safe_float(row.get("risk"), 0.0),
+                    "stability": _safe_float(row.get("stability"), 0.0),
+                }
+                for row in _ensure_list(wealth_domain_bundle.get("wealth_evidence"))[:5]
+                if isinstance(row, dict)
+            ]
         verifier = self.service.run_verifier(
             {
                 "prediction_id": prediction_id,
@@ -6289,6 +8694,110 @@ class RuleRuntimeFacade:
                 missing.append(key)
         return missing
 
+    def _agent_capability_boundary(self, user_message: str, topic: str, has_explicit_rule_candidates: bool = False) -> Dict[str, Any]:
+        q = _safe_str(user_message).lower()
+        normalized_topic = _normalize_topic(topic or user_message)
+        wealth_terms = [
+            "财",
+            "钱",
+            "收入",
+            "现金",
+            "财富",
+            "财运",
+            "投资",
+            "创业",
+            "变现",
+            "回款",
+            "赚钱",
+            "wealth",
+            "financial",
+            "finance",
+            "money",
+            "income",
+            "revenue",
+            "cash",
+            "investment",
+            "salary",
+            "startup",
+            "재물",
+            "재운",
+            "돈",
+            "수입",
+            "소득",
+            "투자",
+            "현금",
+        ]
+        unsupported_terms = [
+            "感情",
+            "恋爱",
+            "婚姻",
+            "伴侣",
+            "健康",
+            "疾病",
+            "家庭",
+            "子女",
+            "父母",
+            "完整命盘",
+            "命盘结构",
+            "解析命盘",
+            "八字格局",
+            "十神",
+            "用神",
+            "relationships",
+            "relationship",
+            "love",
+            "marriage",
+            "health",
+            "family",
+            "full chart",
+            "chart interpretation",
+            "natal chart",
+            "연애",
+            "결혼",
+            "관계",
+            "건강",
+            "가족",
+            "전체 명식",
+            "명식 해석",
+            "사주 해석",
+        ]
+        has_wealth_scope = normalized_topic == "wealth" or any(term in q for term in wealth_terms)
+        has_unsupported_scope = normalized_topic in {"relationship", "health"} or any(term in q for term in unsupported_terms)
+        if has_wealth_scope and not has_unsupported_scope:
+            if has_explicit_rule_candidates:
+                return {}
+            active_rules = self.service.list_rules(status="active")
+            covers_wealth = any(
+                "wealth" in [str(item).strip().lower() for item in (getattr(rule, "allowed_topics", []) or [])]
+                or "wealth" in [str(item).strip().lower() for item in (getattr(rule, "effect_scope", []) or [])]
+                for rule in active_rules
+            )
+            if not covers_wealth:
+                return {
+                    "type": "capability_boundary",
+                    "is_prediction": False,
+                    "capability_boundary": True,
+                    "message": "财富预测规则尚未启用。当前不会生成预测；请稍后再试，或由管理员初始化财富预测规则。",
+                    "supported_scopes": ["财运趋势", "收入稳定性", "财富机会与风险"],
+                    "unsupported_scopes": ["未启用 active wealth rule 时不会预测", "命盘结构解析", "感情 / 婚姻", "健康 / 家庭"],
+                    "suggested_queries": ["我这两年财运如何？", "收入是否稳定？", "有没有明显投资或现金流风险？"],
+                    "detected_topic": normalized_topic,
+                    "active_rule_required": True,
+                    "next_action": "initialize_active_wealth_rule",
+                }
+            return {}
+        return {
+            "type": "capability_boundary",
+            "is_prediction": False,
+            "capability_boundary": True,
+            "message": "这个问题目前不在系统的可验证规则范围内。当前我可以帮助你分析财运趋势、收入稳定性、财富机会与风险。",
+            "supported_scopes": ["财运趋势", "收入稳定性", "财富机会与风险"],
+            "unsupported_scopes": ["命盘结构解析", "感情 / 婚姻", "健康 / 家庭"],
+            "suggested_queries": ["我这两年财运如何？", "收入是否稳定？", "有没有明显投资或现金流风险？"],
+            "detected_topic": normalized_topic,
+            "next_action": "ask_supported_wealth_question",
+        }
+
     def append_agent_turn(self, session_id: str, payload: Dict[str, Any], actor_role: str, actor_user_id: int) -> Dict[str, Any]:
         session = self.get_agent_session(session_id)
         user_message = _safe_str(payload.get("user_message") or payload.get("query") or payload.get("user_query"))
@@ -6308,7 +8817,16 @@ class RuleRuntimeFacade:
             "safe_output": {},
             "created_at": _utcnow_iso(),
         }
-        if missing_fields:
+        capability_boundary = self._agent_capability_boundary(
+            user_message,
+            normalized_intent["topic"],
+            has_explicit_rule_candidates=bool(_ensure_list(payload.get("rule_candidates"))),
+        )
+        if capability_boundary:
+            normalized_intent["capability_boundary"] = True
+            turn["capability_boundary"] = True
+            turn["safe_output"] = capability_boundary
+        elif missing_fields:
             turn["safe_output"] = {
                 "type": "clarification_question",
                 "text": f"请补充出生信息：{', '.join(missing_fields)}。",

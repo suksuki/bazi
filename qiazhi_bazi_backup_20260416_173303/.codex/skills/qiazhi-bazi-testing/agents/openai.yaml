@@ -1,4 +1,0 @@
-interface:
-  display_name: "Qiazhi Testing"
-  short_description: "Apply repo test strategy, validation commands, and case coverage"
-  default_prompt: "Use the qiazhi-bazi-testing skill to choose the right test layer, add or update coverage, run the required validation commands, and sync test docs."

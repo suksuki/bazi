@@ -1,0 +1,310 @@
+{
+  "seed_id": "v19.current_bazi_knowledge_draft_seeds.v1",
+  "created_at": "2026-04-29",
+  "status": "draft_seed",
+  "runtime_scope": "knowledge_unit_draft_only_no_runtime_inference",
+  "aligned_with": [
+    "docs/v19/V19_BAZI_DATABASE_FIRST_KNOWLEDGE_SYSTEM_PLAN_2026-04-29.md",
+    "docs/v19/V19_BAZI_KNOWLEDGE_SYSTEM_INVENTORY_FOR_ANALYST_2026-04-29.md",
+    "v17_rebirth/docs/V18_2_KNOWLEDGE_CORPUS_TO_RULE_KERNEL_2026-04-27.md"
+  ],
+  "guardrails": [
+    "DRAFT_ONLY",
+    "NO_ACTIVE_RULE_CREATION",
+    "NO_RUNTIME_INFERENCE_CHANGE",
+    "NO_DIRECT_PLUGIN_RULE_REUSE",
+    "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME"
+  ],
+  "knowledge_drafts": [
+    {
+      "knowledge_id": "core.heavenly_stems.v1",
+      "domain": "core_structure",
+      "category": "core_symbol",
+      "title": "十天干",
+      "statement": "十天干是四柱天干层的基础符号，包括甲、乙、丙、丁、戊、己、庚、辛、壬、癸。",
+      "structured_facts": {"stems": ["甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸"]},
+      "risk_level": "R0",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "classical.san_ming_tong_hui.wikisource.siku.v1"],
+      "allowed_usage": ["chart_structure", "pillar_construction", "knowledge_unit_draft"],
+      "forbidden_usage": ["direct_prediction", "fortune", "traditional_judgement"]
+    },
+    {
+      "knowledge_id": "core.earthly_branches.v1",
+      "domain": "core_structure",
+      "category": "core_symbol",
+      "title": "十二地支",
+      "statement": "十二地支是四柱地支层的基础符号，包括子、丑、寅、卯、辰、巳、午、未、申、酉、戌、亥。",
+      "structured_facts": {"branches": ["子", "丑", "寅", "卯", "辰", "巳", "午", "未", "申", "酉", "戌", "亥"]},
+      "risk_level": "R0",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "classical.san_ming_tong_hui.wikisource.siku.v1"],
+      "allowed_usage": ["chart_structure", "pillar_construction", "branch_relation_detection"],
+      "forbidden_usage": ["direct_prediction", "fortune", "traditional_judgement"]
+    },
+    {
+      "knowledge_id": "core.stem_attributes.v1",
+      "domain": "core_structure",
+      "category": "stem_branch_attribute",
+      "title": "天干五行阴阳属性",
+      "statement": "每个天干具有固定的五行与阴阳属性，可作为十神映射、五行关系和结构检测的基础输入。",
+      "structured_facts": {
+        "attributes": {
+          "甲": {"element": "wood", "polarity": "yang"},
+          "乙": {"element": "wood", "polarity": "yin"},
+          "丙": {"element": "fire", "polarity": "yang"},
+          "丁": {"element": "fire", "polarity": "yin"},
+          "戊": {"element": "earth", "polarity": "yang"},
+          "己": {"element": "earth", "polarity": "yin"},
+          "庚": {"element": "metal", "polarity": "yang"},
+          "辛": {"element": "metal", "polarity": "yin"},
+          "壬": {"element": "water", "polarity": "yang"},
+          "癸": {"element": "water", "polarity": "yin"}
+        }
+      },
+      "risk_level": "R0",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "legacy.v18.bazi_knowledge_units.runtime.v1"],
+      "allowed_usage": ["ten_god_mapping", "element_relation", "feature_extraction"],
+      "forbidden_usage": ["direct_prediction", "good_bad_judgement"]
+    },
+    {
+      "knowledge_id": "core.branch_attributes_hidden_stems.v1",
+      "domain": "core_structure",
+      "category": "hidden_stem",
+      "title": "地支五行与藏干",
+      "statement": "每个地支具有主五行属性，并包含一个或多个藏干；藏干用于可见/隐藏层结构分析。",
+      "structured_facts": {
+        "hidden_stems": {
+          "子": [{"stem": "癸", "layer": "main"}],
+          "丑": [{"stem": "己", "layer": "main"}, {"stem": "癸", "layer": "middle"}, {"stem": "辛", "layer": "residual"}],
+          "寅": [{"stem": "甲", "layer": "main"}, {"stem": "丙", "layer": "middle"}, {"stem": "戊", "layer": "residual"}],
+          "卯": [{"stem": "乙", "layer": "main"}],
+          "辰": [{"stem": "戊", "layer": "main"}, {"stem": "乙", "layer": "middle"}, {"stem": "癸", "layer": "residual"}],
+          "巳": [{"stem": "丙", "layer": "main"}, {"stem": "庚", "layer": "middle"}, {"stem": "戊", "layer": "residual"}],
+          "午": [{"stem": "丁", "layer": "main"}, {"stem": "己", "layer": "middle"}],
+          "未": [{"stem": "己", "layer": "main"}, {"stem": "丁", "layer": "middle"}, {"stem": "乙", "layer": "residual"}],
+          "申": [{"stem": "庚", "layer": "main"}, {"stem": "壬", "layer": "middle"}, {"stem": "戊", "layer": "residual"}],
+          "酉": [{"stem": "辛", "layer": "main"}],
+          "戌": [{"stem": "戊", "layer": "main"}, {"stem": "辛", "layer": "middle"}, {"stem": "丁", "layer": "residual"}],
+          "亥": [{"stem": "壬", "layer": "main"}, {"stem": "甲", "layer": "middle"}]
+        }
+      },
+      "risk_level": "R1",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "legacy.v18.bazi_knowledge_units.runtime.v1"],
+      "allowed_usage": ["hidden_layer_analysis", "ten_god_signal_candidate", "knowledge_unit_draft"],
+      "forbidden_usage": ["direct_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "core.five_element_relations.v1",
+      "domain": "five_element",
+      "category": "five_element_relation",
+      "title": "五行生克关系",
+      "statement": "五行相生与相克是结构关系的基础，可用于描述元素之间的 produce / control / same 等关系。",
+      "structured_facts": {
+        "generation_cycle": [["wood", "fire"], ["fire", "earth"], ["earth", "metal"], ["metal", "water"], ["water", "wood"]],
+        "control_cycle": [["wood", "earth"], ["earth", "water"], ["water", "fire"], ["fire", "metal"], ["metal", "wood"]]
+      },
+      "risk_level": "R0",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "classical.san_ming_tong_hui.wikisource.siku.v1"],
+      "allowed_usage": ["element_relation", "feature_extraction", "rule_proposal_source"],
+      "forbidden_usage": ["direct_good_bad", "fortune"]
+    },
+    {
+      "knowledge_id": "core.ten_god_mapping.v1",
+      "domain": "ten_god",
+      "category": "ten_god",
+      "title": "十神映射基础",
+      "statement": "十神是日主天干与目标天干之间的关系标签，属于关系元数据，不等同于预测结论。",
+      "structured_facts": {
+        "ten_gods": ["比肩", "劫财", "食神", "伤官", "正财", "偏财", "正官", "七杀", "正印", "偏印"],
+        "internal_keys": ["bi_jian", "jie_cai", "shi_shen", "shang_guan", "zheng_cai", "pian_cai", "zheng_guan", "qi_sha", "zheng_yin", "pian_yin"]
+      },
+      "risk_level": "R1",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "legacy.v18.bazi_knowledge_units.runtime.v1"],
+      "allowed_usage": ["relation_metadata", "feature_extraction", "ten_god_signal_candidate"],
+      "forbidden_usage": ["direct_prediction", "standalone_judgement", "fortune"]
+    },
+    {
+      "knowledge_id": "core.branch_relations.six_combination.v1",
+      "domain": "core_structure",
+      "category": "branch_relation",
+      "title": "地支六合",
+      "statement": "六合是地支之间的结构组合关系，可用于关系检测与 Time Context 展示。",
+      "structured_facts": {"pairs": [["子", "丑"], ["寅", "亥"], ["卯", "戌"], ["辰", "酉"], ["巳", "申"], ["午", "未"]]},
+      "risk_level": "R1",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "allowed_usage": ["branch_relation_detection", "time_context", "structure_summary"],
+      "forbidden_usage": ["direct_prediction", "good_bad_judgement"]
+    },
+    {
+      "knowledge_id": "core.branch_relations.six_clash.v1",
+      "domain": "core_structure",
+      "category": "branch_relation",
+      "title": "地支六冲",
+      "statement": "六冲是地支之间的结构冲突关系，可用于关系检测与 Time Context 展示。",
+      "structured_facts": {"pairs": [["子", "午"], ["丑", "未"], ["寅", "申"], ["卯", "酉"], ["辰", "戌"], ["巳", "亥"]]},
+      "risk_level": "R1",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "allowed_usage": ["branch_relation_detection", "time_context", "structure_summary"],
+      "forbidden_usage": ["direct_prediction", "fortune", "risk_claim_without_rule"]
+    },
+    {
+      "knowledge_id": "core.branch_relations.three_harmony.v1",
+      "domain": "core_structure",
+      "category": "branch_relation",
+      "title": "地支三合局",
+      "statement": "三合是三个地支形成的结构组合关系，当前只作为结构关系候选，不直接解释为结果。",
+      "structured_facts": {"groups": {"water": ["申", "子", "辰"], "wood": ["亥", "卯", "未"], "fire": ["寅", "午", "戌"], "metal": ["巳", "酉", "丑"]}},
+      "risk_level": "R1",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "allowed_usage": ["branch_relation_detection", "time_context", "rule_proposal_source"],
+      "forbidden_usage": ["direct_prediction", "good_bad_judgement"]
+    },
+    {
+      "knowledge_id": "core.branch_relations.three_meeting.v1",
+      "domain": "core_structure",
+      "category": "branch_relation",
+      "title": "地支三会局",
+      "statement": "三会是三个连续季节地支形成的结构聚合关系，当前只作为结构关系候选。",
+      "structured_facts": {"groups": {"wood": ["寅", "卯", "辰"], "fire": ["巳", "午", "未"], "metal": ["申", "酉", "戌"], "water": ["亥", "子", "丑"]}},
+      "risk_level": "R1",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "allowed_usage": ["branch_relation_detection", "structure_summary", "rule_proposal_source"],
+      "forbidden_usage": ["direct_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "core.branch_relations.penalty_harm_break.v1",
+      "domain": "core_structure",
+      "category": "branch_relation",
+      "title": "地支刑害破关系索引",
+      "statement": "刑、害、破属于地支关系中的高风险解释层，当前只建立关系索引，不直接生成风险结论。",
+      "structured_facts": {
+        "six_harm": [["子", "未"], ["丑", "午"], ["寅", "巳"], ["卯", "辰"], ["申", "亥"], ["酉", "戌"]],
+        "six_break": [["子", "酉"], ["丑", "辰"], ["寅", "亥"], ["卯", "午"], ["巳", "申"], ["未", "戌"]],
+        "penalty_note": "刑关系存在不同传统表述，需按来源与版本单独审核。"
+      },
+      "risk_level": "R2",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "classical.yuan_hai_zi_ping.wikisource.v1"],
+      "allowed_usage": ["relation_index", "analyst_review", "rule_proposal_source"],
+      "forbidden_usage": ["direct_risk_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "core.stem_combination.v1",
+      "domain": "core_structure",
+      "category": "stem_relation",
+      "title": "天干五合",
+      "statement": "天干五合是天干之间的结构组合关系，当前只作为关系检测知识草稿。",
+      "structured_facts": {"pairs": [["甲", "己"], ["乙", "庚"], ["丙", "辛"], ["丁", "壬"], ["戊", "癸"]], "resulting_elements": {"甲己": "earth", "乙庚": "metal", "丙辛": "water", "丁壬": "wood", "戊癸": "fire"}},
+      "risk_level": "R1",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "allowed_usage": ["stem_relation_detection", "structure_summary"],
+      "forbidden_usage": ["direct_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "core.vault_structure.v1",
+      "domain": "core_structure",
+      "category": "vault",
+      "title": "四墓库结构",
+      "statement": "辰、戌、丑、未常被归入墓库结构；当前只定义结构属性与候选用途，不直接输出财富或运势结论。",
+      "structured_facts": {"vault_branches": ["辰", "戌", "丑", "未"], "element_notes": {"辰": "water/earth related storage in many systems", "戌": "fire/earth related storage in many systems", "丑": "metal/water/earth related storage in many systems", "未": "wood/fire/earth related storage in many systems"}},
+      "risk_level": "R2",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "docs/bazi_knowledge/wealth/wealth_units_v1.md", "classical.san_ming_tong_hui.wikisource.siku.v1"],
+      "allowed_usage": ["vault_structure_index", "rule_proposal_source", "analyst_review"],
+      "forbidden_usage": ["direct_wealth_prediction", "direct_fortune", "unreviewed_vault_opening_claim"]
+    },
+    {
+      "knowledge_id": "strength.day_master_evidence_model.v1",
+      "domain": "strength",
+      "category": "strength_model",
+      "title": "日主强弱证据模型",
+      "statement": "日主强弱应由月令、根气、同党、异党、生助、克泄耗等证据共同支持；当前只定义 evidence schema，不替换现有推理。",
+      "structured_facts": {"evidence_factors": ["month_command", "root_strength", "same_element_support", "resource_support", "output_drain", "wealth_drain", "officer_control"], "output_candidate": ["weak", "balanced", "strong", "unknown"]},
+      "risk_level": "R2",
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md", "classical.di_tian_sui.wikisource.v1", "classical.qiong_tong_bao_jian.wikisource.v1"],
+      "allowed_usage": ["evidence_schema", "rule_proposal_source", "analyst_review"],
+      "forbidden_usage": ["direct_runtime_replacement", "direct_fortune"]
+    },
+    {
+      "knowledge_id": "wealth.wealth_strength.v1",
+      "domain": "wealth",
+      "category": "wealth_feature",
+      "title": "财星强弱结构特征",
+      "statement": "财星强弱可作为财富结构特征候选，需结合十神映射、根气、月令和日主承载力；当前只作为知识草稿，不直接生成财富结论。",
+      "structured_facts": {"feature_key": "wealth_strength", "inputs": ["ten_god_mapping", "root_strength", "month_command"], "candidate_outputs": ["wealth_strength_score", "wealth_presence"]},
+      "risk_level": "R2",
+      "source_refs": ["docs/bazi_knowledge/wealth/wealth_units_v1.md", "legacy.v18.bazi_knowledge_units.runtime.v1"],
+      "allowed_usage": ["feature_mapping_candidate", "rule_proposal_source"],
+      "forbidden_usage": ["direct_wealth_prediction", "direct_fortune"]
+    },
+    {
+      "knowledge_id": "wealth.output_generate_wealth.v1",
+      "domain": "wealth",
+      "category": "wealth_mechanism",
+      "title": "食伤生财机制候选",
+      "statement": "食伤与财的连接可作为变现路径结构候选；当前只作为机制候选，不输出财富好坏。",
+      "structured_facts": {"feature_key": "output_generate_wealth", "inputs": ["ten_god_mapping", "output_presence", "wealth_presence"], "candidate_outputs": ["conversion_path", "output_to_wealth_link_strength"]},
+      "risk_level": "R2",
+      "source_refs": ["docs/bazi_knowledge/wealth/wealth_units_v1.md", "legacy.v18.bazi_knowledge_units.runtime.v1"],
+      "allowed_usage": ["mechanism_candidate", "rule_proposal_source"],
+      "forbidden_usage": ["direct_fortune", "direct_income_result_change"]
+    },
+    {
+      "knowledge_id": "wealth.peer_competition.v1",
+      "domain": "wealth",
+      "category": "wealth_mechanism",
+      "title": "比劫与财结构关系候选",
+      "statement": "比劫与财之间的关系可作为财富结构竞争或分散候选；当前只作为规则提案来源，不直接形成断语。",
+      "structured_facts": {"feature_key": "peer_competition", "inputs": ["peer_presence", "wealth_presence", "day_master_strength"], "candidate_outputs": ["competition_signal", "distribution_pressure"]},
+      "risk_level": "R2",
+      "source_refs": ["docs/bazi_knowledge/wealth/wealth_units_v1.md", "legacy.v18.bazi_knowledge_units.runtime.v1"],
+      "allowed_usage": ["feature_candidate", "rule_proposal_source"],
+      "forbidden_usage": ["direct_wealth_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "time.time_context_boundary.v1",
+      "domain": "luck_flow",
+      "category": "timing_context",
+      "title": "时间结构上下文边界",
+      "statement": "大运与流年在当前 V19 阶段只作为时间结构上下文，不能直接改变 income_stability 或生成预测结论。",
+      "structured_facts": {"allowed": ["flow_year_pillar", "luck_cycle_pillar", "relations_with_natal", "algorithm_status", "provenance"], "forbidden": ["fortune", "direct_result_change", "this_year_good_bad"]},
+      "risk_level": "R2",
+      "source_refs": ["docs/v19/V19_BAZI_DATABASE_FIRST_KNOWLEDGE_SYSTEM_PLAN_2026-04-29.md", "docs/v19/V19_BAZI_KNOWLEDGE_EXPANSION_ENGINEERING_PLAN_2026-04-29.md"],
+      "allowed_usage": ["time_context", "ui_boundary", "rule_proposal_guardrail"],
+      "forbidden_usage": ["time_aware_inference_without_design", "fortune"]
+    },
+    {
+      "knowledge_id": "pattern.structure_index.v1",
+      "domain": "core_structure",
+      "category": "pattern_structure",
+      "title": "格局结构索引边界",
+      "statement": "格局类知识可先建立结构索引和来源目录，但不能直接输出命好、命差、富贵贫贱等传统判断。",
+      "structured_facts": {"pattern_families": ["正官格", "七杀格", "正财格", "偏财格", "食神格", "伤官格", "印绶格", "建禄格", "羊刃格", "从格", "化气格", "专旺格", "杂气格"], "runtime_status": "proposal_only"},
+      "risk_level": "R3",
+      "source_refs": ["classical.zi_ping_zhen_quan.reference.v1", "classical.yuan_hai_zi_ping.wikisource.v1", "classical.san_ming_tong_hui.wikisource.siku.v1"],
+      "allowed_usage": ["pattern_index", "analyst_review", "rule_proposal_source"],
+      "forbidden_usage": ["direct_pattern_judgement", "fortune", "traditional_prediction_text"]
+    },
+    {
+      "knowledge_id": "symbolic.blind_school_boundary.v1",
+      "domain": "personality",
+      "category": "blind_symbolic",
+      "title": "盲派象法归档边界",
+      "statement": "盲派与象法资料默认归为高风险象义材料，只能作为分析师参考或弱证据归档，不进入当前 active inference。",
+      "structured_facts": {"allowed": ["source_archive", "analyst_reference", "case_archive"], "forbidden": ["active_rule", "direct_prediction", "user_facing_judgement"]},
+      "risk_level": "R4",
+      "source_refs": ["docs/v19/V19_BAZI_DATABASE_FIRST_KNOWLEDGE_SYSTEM_PLAN_2026-04-29.md", "legacy.v18.knowledge_corpus_to_rule_kernel.report.v1"],
+      "allowed_usage": ["boundary_record", "analyst_reference"],
+      "forbidden_usage": ["direct_active_rule", "fortune", "traditional_prediction_text"]
+    },
+    {
+      "knowledge_id": "symbolic.shensha_boundary.v1",
+      "domain": "core_structure",
+      "category": "shensha",
+      "title": "神煞资料归档边界",
+      "statement": "神煞资料在当前 V19 中只作为来源归档和分析师参考，不作为主推理信号。",
+      "structured_facts": {"runtime_status": "archive_only", "reason": "high symbolic and tradition-dependent variance"},
+      "risk_level": "R4",
+      "source_refs": ["classical.yuan_hai_zi_ping.wikisource.v1", "legacy.v18.knowledge_corpus_to_rule_kernel.report.v1"],
+      "allowed_usage": ["source_archive", "analyst_reference"],
+      "forbidden_usage": ["active_inference", "direct_result_card", "fortune"]
+    }
+  ]
+}

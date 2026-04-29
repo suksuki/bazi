@@ -1,0 +1,829 @@
+{
+  "active_rule_revisions": [
+    {
+      "activated_at": "2026-04-28T23:16:52+00:00",
+      "activated_by": "analyst",
+      "activated_by_role": "analyst",
+      "active_revision_id": "arv_ac3bfae230574a16",
+      "guardrails": [
+        "ACTIVE_RECORD_ONLY",
+        "NO_RUNTIME_MUTATION",
+        "REQUIRES_ENGINEERING_IMPLEMENTATION"
+      ],
+      "note": "Smoke active revision record only.",
+      "revision_id": "rev_68f5edad9a7a435c",
+      "rule_version": 2,
+      "runtime_mutation": false,
+      "target_rule_id": "v19.income_stability.aggregate",
+      "target_signal": "income_stability"
+    },
+    {
+      "activated_at": "2026-04-28T23:18:09+00:00",
+      "activated_by": "analyst",
+      "activated_by_role": "analyst",
+      "active_revision_id": "arv_9cf66bbc07b64128",
+      "guardrails": [
+        "ACTIVE_RECORD_ONLY",
+        "NO_RUNTIME_MUTATION",
+        "REQUIRES_ENGINEERING_IMPLEMENTATION"
+      ],
+      "note": "Smoke active revision record only.",
+      "proposed_version": 2,
+      "revision_id": "rev_e6a63220007145e8",
+      "rule_version": 2,
+      "runtime_mutation": false,
+      "status": "active_revision_record",
+      "target_rule_id": "v19.income_stability.aggregate",
+      "target_signal": "income_stability"
+    }
+  ],
+  "feedback": [
+    {
+      "actor_id": "anonymous",
+      "actor_role": "analyst",
+      "comment": "interface smoke test",
+      "created_at": "2026-04-28T16:19:00+00:00",
+      "feedback_id": "fb_79c0a136bce24a3c",
+      "guardrails": [
+        "FEEDBACK_IS_SIGNAL_NOT_RULE",
+        "REQUIRES_ANALYST_REVIEW"
+      ],
+      "payload": {},
+      "rating": 1,
+      "status": "open",
+      "subject_id": "",
+      "subject_type": "income_stability",
+      "suggested_action": "",
+      "tags": [
+        "smoke"
+      ],
+      "updated_at": "2026-04-28T16:19:00+00:00"
+    },
+    {
+      "actor_id": "anonymous",
+      "actor_role": "analyst",
+      "comment": "rule attribution smoke test",
+      "created_at": "2026-04-28T16:24:41+00:00",
+      "feedback_id": "fb_f47c5e6775d74890",
+      "guardrails": [
+        "FEEDBACK_IS_SIGNAL_NOT_RULE",
+        "REQUIRES_ANALYST_REVIEW"
+      ],
+      "payload": {
+        "rule_attribution": {
+          "signal_evidence": [
+            {
+              "condition": "map element support/pressure tendency into low/medium/high carrying capacity",
+              "confidence": 0.86,
+              "inputs": [
+                {
+                  "path": "element_balance.support_score",
+                  "value": 0.674
+                },
+                {
+                  "path": "element_balance.pressure_score",
+                  "value": 0.326
+                },
+                {
+                  "path": "element_balance.tendency",
+                  "value": "strong"
+                }
+              ],
+              "rule_id": "v19.income_stability.self_capacity",
+              "rule_version": 1,
+              "signal": "self_capacity",
+              "value": "high"
+            },
+            {
+              "condition": "count wealth-element contacts in visible pillar stem/branch metadata",
+              "confidence": 0.74,
+              "inputs": [
+                {
+                  "path": "wealth_element",
+                  "value": "metal"
+                },
+                {
+                  "path": "wealth_presence.count",
+                  "value": 2
+                },
+                {
+                  "path": "wealth_presence.hits",
+                  "value": [
+                    "year.stem",
+                    "month.stem"
+                  ]
+                }
+              ],
+              "rule_id": "v19.income_stability.wealth_presence",
+              "rule_version": 1,
+              "signal": "wealth_presence",
+              "value": "medium"
+            },
+            {
+              "condition": "check whether branch relations touching wealth pillars are clear, bound, disrupted, or conflicted",
+              "confidence": 0.86,
+              "inputs": [
+                {
+                  "path": "touched_wealth_pillars",
+                  "value": [
+                    "year",
+                    "month"
+                  ]
+                },
+                {
+                  "path": "wealth_relation_counts.clash",
+                  "value": 0
+                },
+                {
+                  "path": "wealth_relation_counts.combination",
+                  "value": 0
+                }
+              ],
+              "rule_id": "v19.income_stability.wealth_accessibility",
+              "rule_version": 1,
+              "signal": "wealth_accessibility",
+              "value": "clear"
+            },
+            {
+              "condition": "map natal six-clash count into low/medium/high volatility",
+              "confidence": 0.62,
+              "inputs": [
+                {
+                  "path": "branch_relations[type=six_clash].count",
+                  "value": 0
+                }
+              ],
+              "rule_id": "v19.income_stability.volatility",
+              "rule_version": 1,
+              "signal": "volatility",
+              "value": "low"
+            },
+            {
+              "condition": "detect whether three-harmony structure exists as a binding signal",
+              "confidence": 0.82,
+              "inputs": [
+                {
+                  "path": "branch_relations[type=three_harmony].count",
+                  "value": 0
+                }
+              ],
+              "rule_id": "v19.income_stability.structure_binding",
+              "rule_version": 1,
+              "signal": "structure_binding",
+              "value": "none"
+            },
+            {
+              "condition": "aggregate bounded input signals into final income_stability structure signal",
+              "confidence": 0.86,
+              "inputs": [
+                {
+                  "path": "signals.self_capacity",
+                  "value": "high"
+                },
+                {
+                  "path": "signals.wealth_presence",
+                  "value": "medium"
+                },
+                {
+                  "path": "signals.wealth_accessibility",
+                  "value": "clear"
+                },
+                {
+                  "path": "signals.volatility",
+                  "value": "low"
+                },
+                {
+                  "path": "signals.structure_binding",
+                  "value": "none"
+                }
+              ],
+              "rule_id": "v19.income_stability.aggregate",
+              "rule_version": 1,
+              "signal": "income_stability",
+              "value": "stable"
+            }
+          ]
+        }
+      },
+      "rating": -1,
+      "rule_impact_count": 6,
+      "status": "open",
+      "subject_id": "",
+      "subject_type": "income_stability",
+      "suggested_action": "",
+      "tags": [],
+      "updated_at": "2026-04-28T16:24:41+00:00"
+    }
+  ],
+  "guided_question_library_versions": [
+    {
+      "activated_by": "qa_admin",
+      "activated_by_role": "admin",
+      "changelog": [
+        {
+          "action": "edit",
+          "proposal_id": "gqp_cee56cbfb59443ad",
+          "question_key": "q_income_stability",
+          "rationale": "QA proposal for governance audit hardening; no runtime mutation.",
+          "review_note": "QA approval after validation.",
+          "source_question_key": "q_income_stability"
+        }
+      ],
+      "created_at": "2026-04-29T02:09:45+00:00",
+      "guardrails": [
+        "VERSION_RECORD_ONLY",
+        "NO_RUNTIME_MUTATION",
+        "REQUIRES_FUTURE_ENGINEERING_IMPLEMENTATION"
+      ],
+      "included_proposals": [
+        "gqp_cee56cbfb59443ad"
+      ],
+      "note": "QA version record only; runtime_mutation=false.",
+      "question_count": 1,
+      "runtime_mutation": false,
+      "version_id": "gqlv_44faf93848354e08"
+    }
+  ],
+  "guided_question_proposals": [
+    {
+      "created_at": "2026-04-29T02:09:45+00:00",
+      "guardrails": [
+        "PROPOSAL_ONLY",
+        "NO_AUTO_LIBRARY_UPDATE",
+        "VALIDATION_REQUIRED",
+        "ANALYST_OR_ADMIN_APPROVAL_REQUIRED"
+      ],
+      "history": [
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T02:09:45+00:00",
+          "note": "Guided question proposal created. Proposal only; no runtime mutation.",
+          "status": "draft"
+        },
+        {
+          "actor_role": "system",
+          "created_at": "2026-04-29T02:09:45+00:00",
+          "note": "Validation completed. Checks are audit records only; question library unchanged.",
+          "status": "validation_ready"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T02:09:45+00:00",
+          "note": "QA approval after validation.",
+          "status": "approved"
+        },
+        {
+          "actor_role": "admin",
+          "created_at": "2026-04-29T02:09:45+00:00",
+          "note": "Included in version record. runtime_mutation=false. version_id=gqlv_44faf93848354e08",
+          "status": "active_record"
+        }
+      ],
+      "proposal_id": "gqp_cee56cbfb59443ad",
+      "proposed_action": "edit",
+      "proposed_label": {
+        "en": "How is my income stability structure?",
+        "ko": "나의 소득 안정성 구조는 어떤가요?",
+        "zh": "我的收入稳定性结构如何？"
+      },
+      "proposed_metadata": {
+        "depth": "beginner",
+        "forbidden_prediction": true,
+        "related_questions": [
+          "q_income_factors",
+          "follow_rule_basis"
+        ],
+        "required_context": [
+          "chart",
+          "result"
+        ]
+      },
+      "proposed_question_key": "q_income_stability",
+      "rationale": "QA proposal for governance audit hardening; no runtime mutation.",
+      "review": {
+        "approved_at": "2026-04-29T02:09:45+00:00",
+        "approved_by": "qa_admin",
+        "approved_role": "admin",
+        "note": "QA approval after validation."
+      },
+      "source_feedback_ids": [
+        "fb_qa_governance_flow"
+      ],
+      "source_question_key": "q_income_stability",
+      "status": "active_record",
+      "updated_at": "2026-04-29T02:09:45+00:00",
+      "validation": {
+        "checks": [
+          {
+            "name": "forbidden_prediction_terms",
+            "passed": true
+          },
+          {
+            "name": "required_context_allowed",
+            "passed": true
+          },
+          {
+            "name": "depth_allowed",
+            "passed": true
+          },
+          {
+            "name": "related_questions_present_for_reorder",
+            "passed": true
+          },
+          {
+            "name": "zh_label_present",
+            "passed": true
+          },
+          {
+            "name": "en_label_present",
+            "passed": true
+          },
+          {
+            "name": "ko_label_present",
+            "passed": true
+          },
+          {
+            "name": "metadata_for_add_or_edit",
+            "passed": true
+          }
+        ],
+        "passed": true,
+        "required": true,
+        "validated_at": "2026-04-29T02:09:45+00:00"
+      }
+    }
+  ],
+  "guided_question_reviews": [],
+  "label_contract": {
+    "terms": {
+      "analyst_review_required": {
+        "category": "guardrail",
+        "description": {
+          "en": "Feedback and promotion requests do not auto-activate rules.",
+          "ko": "피드백과 승격 요청은 규칙을 자동 활성화하지 않습니다.",
+          "zh": "反馈和 promotion 不会自动激活规则。"
+        },
+        "label": {
+          "en": "Analyst Review Required",
+          "ko": "분석가 검토 필요",
+          "zh": "需要分析师审核"
+        }
+      },
+      "income_stability": {
+        "category": "signal",
+        "description": {
+          "en": "A wealth-domain structure signal, not a wealth prediction.",
+          "ko": "재물 영역의 구조 신호이며 예측이 아닙니다.",
+          "zh": "财富域结构信号，不是财富预测。"
+        },
+        "label": {
+          "en": "Income Stability Signal",
+          "ko": "수입 안정성 구조 신호",
+          "zh": "收入稳定性结构信号"
+        }
+      },
+      "knowledge_evidence_store": {
+        "category": "system",
+        "description": {
+          "en": "Reviewed evidence templates, not an executable rule DB.",
+          "ko": "검토된 증거 템플릿이며 실행 규칙 DB가 아닙니다.",
+          "zh": "Reviewed evidence templates，不是可执行规则库。"
+        },
+        "label": {
+          "en": "Knowledge Evidence Store",
+          "ko": "지식 증거 저장소",
+          "zh": "知识证据库"
+        }
+      },
+      "time_structure": {
+        "category": "boundary",
+        "description": {
+          "en": "Context only, not prediction.",
+          "ko": "맥락일 뿐 예측이 아닙니다.",
+          "zh": "上下文，不是预测。"
+        },
+        "label": {
+          "en": "Time Structure",
+          "ko": "시간 구조",
+          "zh": "时间结构"
+        }
+      }
+    },
+    "version": "v19.label_contract.v1"
+  },
+  "promotion_requests": [
+    {
+      "created_at": "2026-04-28T16:19:00+00:00",
+      "created_by_role": "analyst",
+      "guardrails": [
+        "REQUEST_ONLY",
+        "NO_AUTO_PROMOTION",
+        "ANALYST_APPROVAL_REQUIRED"
+      ],
+      "kind": "feedback_to_knowledge",
+      "promotion_id": "prq_9263b5b1996f426f",
+      "proposal": "review wording only",
+      "rationale": "",
+      "review_notes": [],
+      "source_ids": [
+        "fb_79c0a136bce24a3c"
+      ],
+      "status": "draft_review",
+      "target_id": "wealth.income_stability_rule_basis",
+      "updated_at": "2026-04-28T16:19:00+00:00"
+    }
+  ],
+  "revision_proposals": [
+    {
+      "activation": {
+        "activated_at": "2026-04-28T23:16:52+00:00",
+        "activated_by": "analyst",
+        "active": true,
+        "runtime_mutation": false
+      },
+      "created_at": "2026-04-28T23:16:52+00:00",
+      "current_rule_version": 1,
+      "guardrails": [
+        "PROPOSAL_ONLY",
+        "VALIDATION_REQUIRED",
+        "ANALYST_APPROVAL_REQUIRED",
+        "NO_RUNTIME_MUTATION"
+      ],
+      "proposal": "P7 smoke proposal: keep income_stability deterministic and adjust only after analyst-approved revision workflow.",
+      "proposed_change": {},
+      "proposed_rule_version": 2,
+      "rationale": "Smoke-test proposal for governance workflow; no runtime rule mutation.",
+      "review": {
+        "approved_at": "2026-04-28T23:16:52+00:00",
+        "approved_by": "analyst",
+        "approved_role": "analyst",
+        "notes": [
+          {
+            "actor_role": "analyst",
+            "created_at": "2026-04-28T23:16:52+00:00",
+            "note": "Smoke approval after validation."
+          }
+        ],
+        "required_role": [
+          "analyst",
+          "admin"
+        ]
+      },
+      "revision_id": "rev_68f5edad9a7a435c",
+      "source_impact_ids": [],
+      "status": "active_revision_record",
+      "target_rule_id": "v19.income_stability.aggregate",
+      "target_signal": "income_stability",
+      "updated_at": "2026-04-28T23:16:52+00:00",
+      "validation": {
+        "failed_count": 0,
+        "latest_run_id": "vr_e839d8c110a2425f",
+        "passed": true,
+        "passed_count": 2,
+        "required": true
+      }
+    },
+    {
+      "activation": {
+        "activated_at": "2026-04-28T23:18:09+00:00",
+        "activated_by": "analyst",
+        "active": true,
+        "runtime_mutation": false
+      },
+      "created_at": "2026-04-28T23:18:09+00:00",
+      "current_rule_version": 1,
+      "current_version": 1,
+      "guardrails": [
+        "PROPOSAL_ONLY",
+        "VALIDATION_REQUIRED",
+        "ANALYST_APPROVAL_REQUIRED",
+        "NO_RUNTIME_MUTATION"
+      ],
+      "proposal": "P7 smoke proposal: revision stays proposal-only until validation and analyst/admin approval.",
+      "proposed_change": {},
+      "proposed_rule_version": 2,
+      "proposed_version": 2,
+      "rationale": "Smoke-test proposal for governance workflow; no runtime rule mutation.",
+      "review": {
+        "approved_at": "2026-04-28T23:18:09+00:00",
+        "approved_by": "analyst",
+        "approved_role": "analyst",
+        "notes": [
+          {
+            "actor_role": "analyst",
+            "created_at": "2026-04-28T23:18:09+00:00",
+            "note": "Smoke approval after validation."
+          }
+        ],
+        "required_role": [
+          "analyst",
+          "admin"
+        ]
+      },
+      "revision_id": "rev_e6a63220007145e8",
+      "source_impact_ids": [
+        "ri_smoke"
+      ],
+      "source_rule_impact_ids": [
+        "ri_smoke"
+      ],
+      "status": "active_revision_record",
+      "target_rule_id": "v19.income_stability.aggregate",
+      "target_signal": "income_stability",
+      "updated_at": "2026-04-28T23:18:09+00:00",
+      "validation": {
+        "failed_count": 0,
+        "latest_run_id": "vr_5f9d2f6ca5104656",
+        "passed": true,
+        "passed_count": 2,
+        "required": true
+      },
+      "validation_summary": {
+        "case_count": 2,
+        "failed": 0,
+        "passed": 2
+      }
+    }
+  ],
+  "rule_impacts": [
+    {
+      "condition": "map element support/pressure tendency into low/medium/high carrying capacity",
+      "confidence": 0.86,
+      "created_at": "2026-04-28T16:24:41+00:00",
+      "feedback_id": "fb_f47c5e6775d74890",
+      "guardrails": [
+        "ATTRIBUTION_ONLY",
+        "NO_AUTO_RULE_UPDATE"
+      ],
+      "impact_id": "rim_09b5f4fb990e4627",
+      "impact_type": "candidate_review",
+      "inputs": [
+        {
+          "path": "element_balance.support_score",
+          "value": 0.674
+        },
+        {
+          "path": "element_balance.pressure_score",
+          "value": 0.326
+        },
+        {
+          "path": "element_balance.tendency",
+          "value": "strong"
+        }
+      ],
+      "observed_value": "high",
+      "rule_id": "v19.income_stability.self_capacity",
+      "rule_version": 1,
+      "signal": "self_capacity",
+      "status": "open",
+      "subject_type": "income_stability"
+    },
+    {
+      "condition": "count wealth-element contacts in visible pillar stem/branch metadata",
+      "confidence": 0.74,
+      "created_at": "2026-04-28T16:24:41+00:00",
+      "feedback_id": "fb_f47c5e6775d74890",
+      "guardrails": [
+        "ATTRIBUTION_ONLY",
+        "NO_AUTO_RULE_UPDATE"
+      ],
+      "impact_id": "rim_8c6ed203a14a430b",
+      "impact_type": "candidate_review",
+      "inputs": [
+        {
+          "path": "wealth_element",
+          "value": "metal"
+        },
+        {
+          "path": "wealth_presence.count",
+          "value": 2
+        },
+        {
+          "path": "wealth_presence.hits",
+          "value": [
+            "year.stem",
+            "month.stem"
+          ]
+        }
+      ],
+      "observed_value": "medium",
+      "rule_id": "v19.income_stability.wealth_presence",
+      "rule_version": 1,
+      "signal": "wealth_presence",
+      "status": "open",
+      "subject_type": "income_stability"
+    },
+    {
+      "condition": "check whether branch relations touching wealth pillars are clear, bound, disrupted, or conflicted",
+      "confidence": 0.86,
+      "created_at": "2026-04-28T16:24:41+00:00",
+      "feedback_id": "fb_f47c5e6775d74890",
+      "guardrails": [
+        "ATTRIBUTION_ONLY",
+        "NO_AUTO_RULE_UPDATE"
+      ],
+      "impact_id": "rim_c1f088282e854e53",
+      "impact_type": "candidate_review",
+      "inputs": [
+        {
+          "path": "touched_wealth_pillars",
+          "value": [
+            "year",
+            "month"
+          ]
+        },
+        {
+          "path": "wealth_relation_counts.clash",
+          "value": 0
+        },
+        {
+          "path": "wealth_relation_counts.combination",
+          "value": 0
+        }
+      ],
+      "observed_value": "clear",
+      "rule_id": "v19.income_stability.wealth_accessibility",
+      "rule_version": 1,
+      "signal": "wealth_accessibility",
+      "status": "open",
+      "subject_type": "income_stability"
+    },
+    {
+      "condition": "map natal six-clash count into low/medium/high volatility",
+      "confidence": 0.62,
+      "created_at": "2026-04-28T16:24:41+00:00",
+      "feedback_id": "fb_f47c5e6775d74890",
+      "guardrails": [
+        "ATTRIBUTION_ONLY",
+        "NO_AUTO_RULE_UPDATE"
+      ],
+      "impact_id": "rim_9aa3ef6fafac4c62",
+      "impact_type": "candidate_review",
+      "inputs": [
+        {
+          "path": "branch_relations[type=six_clash].count",
+          "value": 0
+        }
+      ],
+      "observed_value": "low",
+      "rule_id": "v19.income_stability.volatility",
+      "rule_version": 1,
+      "signal": "volatility",
+      "status": "open",
+      "subject_type": "income_stability"
+    },
+    {
+      "condition": "detect whether three-harmony structure exists as a binding signal",
+      "confidence": 0.82,
+      "created_at": "2026-04-28T16:24:41+00:00",
+      "feedback_id": "fb_f47c5e6775d74890",
+      "guardrails": [
+        "ATTRIBUTION_ONLY",
+        "NO_AUTO_RULE_UPDATE"
+      ],
+      "impact_id": "rim_86137b22c6cd4cd9",
+      "impact_type": "candidate_review",
+      "inputs": [
+        {
+          "path": "branch_relations[type=three_harmony].count",
+          "value": 0
+        }
+      ],
+      "observed_value": "none",
+      "rule_id": "v19.income_stability.structure_binding",
+      "rule_version": 1,
+      "signal": "structure_binding",
+      "status": "open",
+      "subject_type": "income_stability"
+    },
+    {
+      "condition": "aggregate bounded input signals into final income_stability structure signal",
+      "confidence": 0.86,
+      "created_at": "2026-04-28T16:24:41+00:00",
+      "feedback_id": "fb_f47c5e6775d74890",
+      "guardrails": [
+        "ATTRIBUTION_ONLY",
+        "NO_AUTO_RULE_UPDATE"
+      ],
+      "impact_id": "rim_a1cc6534fbfb4926",
+      "impact_type": "candidate_review",
+      "inputs": [
+        {
+          "path": "signals.self_capacity",
+          "value": "high"
+        },
+        {
+          "path": "signals.wealth_presence",
+          "value": "medium"
+        },
+        {
+          "path": "signals.wealth_accessibility",
+          "value": "clear"
+        },
+        {
+          "path": "signals.volatility",
+          "value": "low"
+        },
+        {
+          "path": "signals.structure_binding",
+          "value": "none"
+        }
+      ],
+      "observed_value": "stable",
+      "rule_id": "v19.income_stability.aggregate",
+      "rule_version": 1,
+      "signal": "income_stability",
+      "status": "open",
+      "subject_type": "income_stability"
+    }
+  ],
+  "validation_cases": [
+    {
+      "case_id": "syn.income_stability.1990_05_12_male_2025",
+      "expected_income_stability": {
+        "income_stability": "stable",
+        "self_capacity": "high",
+        "wealth_accessibility": "clear"
+      },
+      "guardrails": [
+        "REGRESSION_CASE",
+        "NOT_DOMAIN_TRUTH"
+      ],
+      "input": {
+        "birth_input": {
+          "calendar": "solar",
+          "calendar_type": "solar",
+          "day": 12,
+          "gender": "male",
+          "hour": 10,
+          "month": 5,
+          "year": 1990
+        },
+        "message": "income_stability regression case",
+        "selected_year": 2025
+      },
+      "status": "active",
+      "title": "Known current lab sample"
+    },
+    {
+      "case_id": "syn.income_stability.lunar_unsupported_boundary",
+      "expected_error_code": "lunar_calendar_not_supported",
+      "expected_income_stability": {},
+      "guardrails": [
+        "BOUNDARY_CASE"
+      ],
+      "input": {
+        "birth_input": {
+          "calendar": "lunar",
+          "calendar_type": "lunar",
+          "day": 12,
+          "gender": "male",
+          "hour": 10,
+          "month": 5,
+          "year": 1990
+        },
+        "message": "boundary case",
+        "selected_year": 2025
+      },
+      "status": "active",
+      "title": "Lunar unsupported boundary"
+    }
+  ],
+  "validation_runs": [
+    {
+      "case_count": 2,
+      "created_at": "2026-04-28T16:19:00+00:00",
+      "failed": 0,
+      "guardrails": [
+        "SYNTHETIC_VALIDATION_ONLY",
+        "NO_RULE_ACTIVATION"
+      ],
+      "passed": 2,
+      "results": [
+        {
+          "case_id": "syn.income_stability.1990_05_12_male_2025",
+          "failures": [],
+          "observed": {
+            "income_stability": "stable",
+            "self_capacity": "high",
+            "structure_binding": "none",
+            "volatility": "low",
+            "wealth_accessibility": "clear",
+            "wealth_presence": "medium"
+          },
+          "passed": true
+        },
+        {
+          "case_id": "syn.income_stability.lunar_unsupported_boundary",
+          "failures": [],
+          "observed": {
+            "code": "lunar_calendar_not_supported"
+          },
+          "passed": true
+        }
+      ],
+      "run_id": "vr_01e89c0ad5b540cb"
+    }
+  ],
+  "version": "v19.lab_interfaces.v1"
+}

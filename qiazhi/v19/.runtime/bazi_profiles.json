@@ -1,0 +1,734 @@
+{
+  "bp_01f7ea1601514bbf": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 8,
+      "gender": "male",
+      "hour": 12,
+      "location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 4,
+      "year": 1962
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_01f7ea1601514bbf",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:16",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      }
+    },
+    "name": "黄秉烈",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T08:37:18+00:00"
+  },
+  "bp_22b4931e684b405d": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 9,
+      "gender": "male",
+      "hour": 18,
+      "location": {
+        "city_code": "320500",
+        "city_group": "cn-32",
+        "city_name": "苏州市",
+        "longitude": null
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 7,
+      "year": 1979
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_22b4931e684b405d",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:10",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "320500",
+        "city_group": "cn-32",
+        "city_name": "苏州市",
+        "longitude": null
+      }
+    },
+    "name": "臧明远",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T08:17:57+00:00"
+  },
+  "bp_2b5f7262af5d4c61": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 11,
+      "gender": "male",
+      "hour": 12,
+      "location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      },
+      "minute": 0,
+      "month": 11,
+      "year": 1950
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_2b5f7262af5d4c61",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:15",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      }
+    },
+    "name": "王金星",
+    "owner_id": "admin",
+    "updated_at": "2026-04-29T00:39:04+00:00"
+  },
+  "bp_2c06e47772d347a3": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 1,
+      "gender": "male",
+      "hour": 6,
+      "location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 9,
+      "year": 1979
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_2c06e47772d347a3",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:11",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      }
+    },
+    "name": "吴哲",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T07:08:49+00:00"
+  },
+  "bp_2ef9a011ee7e4a67": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 7,
+      "gender": "female",
+      "hour": 0,
+      "location": {
+        "city_code": "310000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "上海市",
+        "longitude": 121.4737
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 5,
+      "year": 1976
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_2ef9a011ee7e4a67",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:6",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "310000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "上海市",
+        "longitude": 121.4737
+      }
+    },
+    "name": "蔡琳",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  },
+  "bp_3026f5b7f2d84da0": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 11,
+      "gender": "female",
+      "hour": 20,
+      "location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 6,
+      "year": 1982
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_3026f5b7f2d84da0",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:3",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      }
+    },
+    "name": "沈佳",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:37:45+00:00"
+  },
+  "bp_57ae8f352d764cdf": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 26,
+      "gender": "female",
+      "hour": 16,
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 3,
+      "year": 1963
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_57ae8f352d764cdf",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": false,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:4",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {}
+    },
+    "name": "王昆",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  },
+  "bp_5dab4a386c084a9a": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 26,
+      "gender": "male",
+      "hour": 18,
+      "location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 10,
+      "year": 1977
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_5dab4a386c084a9a",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:1",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "110000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "北京市",
+        "longitude": 116.4074
+      }
+    },
+    "name": "李恒",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  },
+  "bp_6d7a1d9474354ccb": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 8,
+      "gender": "female",
+      "hour": 14,
+      "location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 2,
+      "year": 2022
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_6d7a1d9474354ccb",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:13",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      }
+    },
+    "name": "多多",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T08:00:46+00:00"
+  },
+  "bp_6e9fe78fa38b4a91": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 12,
+      "gender": "male",
+      "hour": 6,
+      "location": {
+        "city_code": "310000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "上海市",
+        "longitude": 121.4737
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 10,
+      "year": 1952
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_6e9fe78fa38b4a91",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:14",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "310000",
+        "city_group": "cn-direct-municipalities",
+        "city_name": "上海市",
+        "longitude": 121.4737
+      }
+    },
+    "name": "陈晓龙",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T07:28:59+00:00"
+  },
+  "bp_87804e40b338495c": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 30,
+      "gender": "female",
+      "hour": 20,
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 8,
+      "year": 1943
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_87804e40b338495c",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": false,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:12",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {}
+    },
+    "name": "妈",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  },
+  "bp_a43a1c0a3d6d48dd": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 14,
+      "gender": "male",
+      "hour": 8,
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 6,
+      "year": 1978
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_a43a1c0a3d6d48dd",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": false,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:7",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {}
+    },
+    "name": "黄翔",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  },
+  "bp_a85437ca1c2e4f8a": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 8,
+      "gender": "male",
+      "hour": 17,
+      "location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      },
+      "lunar_is_leap_month": false,
+      "minute": 30,
+      "month": 5,
+      "year": 1977
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_a85437ca1c2e4f8a",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:17",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      }
+    },
+    "name": "刘晋",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:46:51+00:00"
+  },
+  "bp_af6594c061d24eef": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 27,
+      "gender": "male",
+      "hour": 12,
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 5,
+      "year": 1947
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_af6594c061d24eef",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": false,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:2",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {}
+    },
+    "name": "蒋柯栋",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  },
+  "bp_b2d87ca6a9be447f": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 12,
+      "gender": "male",
+      "hour": 10,
+      "minute": 30,
+      "month": 5,
+      "year": 1990
+    },
+    "created_at": "2026-04-29T00:20:13+00:00",
+    "id": "bp_b2d87ca6a9be447f",
+    "name": "本人",
+    "owner_id": "guest_d08095628f",
+    "updated_at": "2026-04-29T00:20:13+00:00"
+  },
+  "bp_b448eb5cda774a7d": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 28,
+      "gender": "male",
+      "hour": 18,
+      "location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      },
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 5,
+      "year": 2018
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_b448eb5cda774a7d",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": true,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:9",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {
+        "city_code": "KR-SEL",
+        "city_group": "intl-asia",
+        "city_name": "首尔",
+        "longitude": 126.978
+      }
+    },
+    "name": "苏苏琪",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T07:51:30+00:00"
+  },
+  "bp_b6a52d67675c4670": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 29,
+      "gender": "male",
+      "hour": 9,
+      "minute": 21,
+      "month": 4,
+      "year": 2026
+    },
+    "created_at": "2026-04-29T00:21:46+00:00",
+    "id": "bp_b6a52d67675c4670",
+    "name": "八字档案",
+    "owner_id": "guest_ef688c1cd7",
+    "updated_at": "2026-04-29T00:21:46+00:00"
+  },
+  "bp_b8e86b688af649a2": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 8,
+      "gender": "male",
+      "hour": 17,
+      "minute": 30,
+      "month": 5,
+      "year": 1977
+    },
+    "created_at": "2026-04-29T00:23:17+00:00",
+    "id": "bp_b8e86b688af649a2",
+    "name": "jin",
+    "owner_id": "user_688171eb4c",
+    "updated_at": "2026-04-29T00:23:17+00:00"
+  },
+  "bp_b969ccccd97e4140": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 1,
+      "gender": "male",
+      "hour": 20,
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 9,
+      "year": 1990
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_b969ccccd97e4140",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": false,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:5",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {}
+    },
+    "name": "王余喆",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  },
+  "bp_d42868f2ebf74ffb": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 12,
+      "gender": "male",
+      "hour": 10,
+      "minute": 30,
+      "month": 5,
+      "year": 1990
+    },
+    "created_at": "2026-04-29T00:18:36+00:00",
+    "id": "bp_d42868f2ebf74ffb",
+    "name": "本人",
+    "owner_id": "guest_b9bdcaac80",
+    "updated_at": "2026-04-29T00:18:36+00:00"
+  },
+  "bp_e3eeb375ad074a33": {
+    "birth_input": {
+      "calendar": "solar",
+      "calendar_type": "solar",
+      "day": 18,
+      "gender": "male",
+      "hour": 6,
+      "lunar_is_leap_month": false,
+      "minute": 0,
+      "month": 5,
+      "year": 1971
+    },
+    "created_at": "2026-04-24T06:24:57",
+    "id": "bp_e3eeb375ad074a33",
+    "metadata": {
+      "compatibility": {
+        "geo_not_used_by_v19_chart_engine": true,
+        "geo_preserved": false,
+        "lunar_leap_month_preserved": false
+      },
+      "imported_at": "2026-04-29T00:29:21+00:00",
+      "source": "v17_rebirth.auth_bazi_profiles",
+      "source_ref": "v17:auth_bazi_profiles:8",
+      "source_role": "admin",
+      "source_user_id": 1,
+      "source_username": "admin",
+      "v17_location": {}
+    },
+    "name": "刘强",
+    "owner_id": "admin",
+    "updated_at": "2026-04-24T06:24:57"
+  }
+}

@@ -110,7 +110,8 @@ def test_explanation_is_based_only_on_contract(explanation_runtime) -> None:
     )
 
     assert explanation["verifier"]["result"] == "pass"
-    assert explanation["safe_output"]["sections"]["conclusion_ids"] == ["conclusion_1"]
+    expected_conclusion_ids = [row["conclusion_id"] for row in result["contract"]["conclusions"]]
+    assert explanation["safe_output"]["sections"]["conclusion_ids"] == expected_conclusion_ids
     assert explanation["evidence_trace"]
     assert result["contract"]["conclusions"][0]["claim"] in explanation["explanation"]
 
