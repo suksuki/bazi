@@ -233,6 +233,12 @@ $("reloadGuidedQuestionFeedback").addEventListener("click", () => loadGuidedQues
 
 $("filterGuidedQuestion").addEventListener("click", () => loadGuidedQuestionFeedback($("guidedQuestionKey").value.trim()));
 
+$("reloadAnswerQuality").addEventListener("click", () => loadAnswerQuality());
+
+$("filterAnswerQualityFail").addEventListener("click", () => loadAnswerQuality("fail"));
+
+$("filterAnswerQualityWatch").addEventListener("click", () => loadAnswerQuality("watch"));
+
 $("reviewGuidedQuestion").addEventListener("click", async () => {
   const key = $("guidedQuestionKey").value.trim();
   if (!key) {
@@ -436,7 +442,7 @@ async function loadLab() {
   $("guidedQuestionStatusLine").textContent = `guided question feedback: ${status.counts?.guided_question_feedback || 0} · reviews: ${status.counts?.guided_question_reviews || 0}`;
   $("gqProposalStatus").textContent = `guided question proposals: ${status.counts?.guided_question_proposals || 0} · versions: ${status.counts?.guided_question_library_versions || 0}`;
   $("baziRuleStatus").textContent = `bazi rule proposals: ${status.counts?.bazi_rule_proposals || 0} · versions: ${status.counts?.bazi_rule_versions || 0}`;
-  await Promise.all([loadFeedback(), loadGuidedQuestionFeedback(), loadRuleImpacts(), loadRevisions(), loadActiveRevisions(), loadGuidedQuestionProposals(), loadGuidedQuestionVersions(), loadBaziRuleProposals(), loadBaziRuleVersions(), loadBaziRuleDb(), loadPromotions(), loadValidationCases(), loadLabels()]);
+  await Promise.all([loadFeedback(), loadGuidedQuestionFeedback(), loadAnswerQuality(), loadRuleImpacts(), loadRevisions(), loadActiveRevisions(), loadGuidedQuestionProposals(), loadGuidedQuestionVersions(), loadBaziRuleProposals(), loadBaziRuleVersions(), loadBaziRuleDb(), loadPromotions(), loadValidationCases(), loadLabels()]);
 }
 
 async function loadFeedback() {
@@ -453,6 +459,16 @@ async function loadGuidedQuestionFeedback(questionKey = "") {
   $("guidedQuestionStatusLine").textContent = `summary: ${summary.count || 0} question(s) · queue: ${queue.count || 0} feedback item(s) · no auto learning`;
   renderGuidedQuestionSummary(summary.items || []);
   renderGuidedQuestionFeedback(queue.items || []);
+}
+
+async function loadAnswerQuality(statusFilter = "") {
+  const result = await fetch("/api/lab/guided-question-answer-quality").then((response) => response.json());
+  const summary = result.summary || {};
+  const byStatus = summary.by_status || {};
+  const items = statusFilter ? (result.items || []).filter((item) => item.status === statusFilter) : (result.items || []);
+  $("answerQualityStatus").textContent = `answer quality: pass ${byStatus.pass || 0} · watch ${byStatus.watch || 0} · fail ${byStatus.fail || 0} · ${statusFilter ? `filtered: ${statusFilter}` : "all"} · no auto learning`;
+  renderAnswerQualitySummary(summary);
+  renderAnswerQualityItems(items);
 }
 
 async function loadRuleImpacts(signal = "") {
@@ -899,6 +915,42 @@ function renderGuidedQuestionFeedback(items) {
     <p>${escapeHtml(item.comment || "")}</p>
     <div class="knowledge-guard">actor: ${escapeHtml(item.actor_role || "")} · status: ${escapeHtml(item.status || "")} · guided feedback only</div>
   </article>`).join("");
+}
+
+function renderAnswerQualitySummary(summary = {}) {
+  const box = $("answerQualitySummary");
+  const byStatus = summary.by_status || {};
+  const riskFlags = summary.risk_flags || [];
+  if (!Object.keys(byStatus).length && !riskFlags.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No answer quality records yet. Run P7 audit or collect answer feedback first.</div>";
+    return;
+  }
+  const statusLine = Object.entries(byStatus).map(([key, value]) => `${escapeHtml(key)}: ${escapeHtml(String(value))}`).join(" · ") || "no status";
+  const risks = riskFlags.slice(0, 8).map((item) => `${escapeHtml(item.key || "")}: ${escapeHtml(String(item.count || 0))}`).join(" · ") || "no risk flags";
+  box.innerHTML = `<article class="knowledge-item">
+    <div class="knowledge-top"><span>P7 quality summary</span><strong>review only</strong></div>
+    <h3>${statusLine}</h3>
+    <p>${risks}</p>
+    <div class="knowledge-guard">quality report only · no auto learning · no runtime mutation</div>
+  </article>`;
+}
+
+function renderAnswerQualityItems(items) {
+  const box = $("answerQualityList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No answer quality items for this filter.</div>";
+    return;
+  }
+  box.innerHTML = items.slice(0, 24).map((item) => {
+    const flags = (item.risk_flags || []).map(escapeHtml).join(", ") || "none";
+    const status = item.status || "unknown";
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.source_id || "")}</span><strong>${escapeHtml(status)}</strong></div>
+      <h3>${escapeHtml(item.question_key || "-")} · score ${escapeHtml(String(item.score ?? ""))}</h3>
+      <p>${escapeHtml(item.text_preview || "")}</p>
+      <div class="knowledge-guard">source: ${escapeHtml(item.source_type || "")} · action: ${escapeHtml(item.suggested_review_action || "")} · risks: ${flags}</div>
+    </article>`;
+  }).join("");
 }
 
 function renderRuleImpacts(items) {

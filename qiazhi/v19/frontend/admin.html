@@ -203,6 +203,16 @@
           <div id="guidedQuestionStatusLine" class="status-line">未加载</div>
           <div id="guidedQuestionSummary" class="knowledge-list"></div>
           <div id="guidedQuestionFeedbackList" class="knowledge-list"></div>
+          <h3 class="admin-subhead">Guided Answer Quality Ledger</h3>
+          <p class="panel-note">P7 回答质量治理。这里汇总审计和用户反馈，只提示哪些回答需要人工复核；不会自动学习、不会改问题排序、不会改规则。</p>
+          <div class="button-row three">
+            <button type="button" id="reloadAnswerQuality" class="secondary">刷新回答质量</button>
+            <button type="button" id="filterAnswerQualityFail" class="secondary">只看 fail</button>
+            <button type="button" id="filterAnswerQualityWatch" class="secondary">只看 watch</button>
+          </div>
+          <div id="answerQualityStatus" class="status-line">未加载</div>
+          <div id="answerQualitySummary" class="knowledge-list"></div>
+          <div id="answerQualityList" class="knowledge-list"></div>
           <div class="button-row">
             <button type="button" id="reloadRuleImpacts" class="secondary">刷新 Rule Impact Mapping</button>
             <button type="button" id="filterIncomeImpacts" class="secondary">只看 income_stability</button>
