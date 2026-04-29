@@ -1157,54 +1157,6 @@ summary em {
   color: var(--text-main);
 }
 
-.guidance-panel {
-  border: 1px solid rgba(58, 166, 117, 0.24);
-  border-radius: var(--radius);
-  background: linear-gradient(135deg, rgba(58, 166, 117, 0.1), rgba(12, 20, 17, 0.66));
-  margin-top: 12px;
-  padding: 12px;
-}
-
-.guidance-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 12px;
-  align-items: baseline;
-  margin-bottom: 10px;
-}
-
-.guidance-head strong {
-  color: var(--text-main);
-  font-size: 13px;
-}
-
-.guidance-head span,
-.guidance-grid span {
-  color: var(--text-muted);
-  font-size: 11px;
-  line-height: 1.5;
-}
-
-.guidance-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-}
-
-.guidance-grid article {
-  border: 1px solid rgba(143, 226, 179, 0.16);
-  border-radius: 10px;
-  background: rgba(6, 11, 8, 0.45);
-  padding: 10px;
-}
-
-.guidance-grid strong {
-  display: block;
-  color: var(--text-main);
-  font-size: 13px;
-  margin-top: 5px;
-}
-
 .question-feedback {
   display: flex;
   align-items: center;
@@ -1331,14 +1283,6 @@ summary em {
   .oracle-card,
   .oracle-hero {
     padding: 14px;
-  }
-
-  .guidance-head {
-    display: block;
-  }
-
-  .guidance-grid {
-    grid-template-columns: 1fr;
   }
 
   .oracle-chip {

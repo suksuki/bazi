@@ -216,7 +216,7 @@ async function structurePreview(birth, selectedYear) {
     $("profileStatus").textContent = result.message || result.code || "error";
     return null;
   }
-  $("profileStatus").textContent = t("does_not_represent_prediction");
+  $("profileStatus").textContent = "";
   return result.data;
 }
 

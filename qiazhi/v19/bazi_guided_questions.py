@@ -4,10 +4,11 @@ from typing import Any, Dict, Iterable, List, Set, Tuple
 
 from v19.agent.structure import THREE_HARMONIES
 from v19.bazi_rule_db import build_structural_rule_signals
-from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem
+from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem, ten_god
 
 
 QUESTION_REGISTRY_VERSION = "v19.question_registry.p9.structural_rule_signals.v1"
+THREE_MEETINGS = [("寅", "卯", "辰"), ("巳", "午", "未"), ("申", "酉", "戌"), ("亥", "子", "丑")]
 QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
     "q_structure_overview": {
         "theme": "structure_basis",
@@ -356,9 +357,9 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
         "score": 48,
         "related_questions": ["q_read_result_not_fortune", "follow_rule_basis"],
         "label": {
-            "zh": "为什么 ResultCard 不是传统断语？",
-            "en": "Why is the ResultCard not traditional fortune text?",
-            "ko": "왜 ResultCard는 전통식 단정문이 아닌가요?",
+            "zh": "为什么结果卡不是传统断语？",
+            "en": "Why is the result card not traditional fortune text?",
+            "ko": "왜 결과 카드는 전통식 단정문이 아닌가요?",
         },
     },
     "follow_rule_basis": {
@@ -560,14 +561,25 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
     clean_key = str(question_key or "").strip()
     clean_message = str(message or "").strip()
     source_question = _find_guided_question(guided_context, clean_key)
+    if not source_question:
+        registered_question = _registry_question_for_key(clean_key)
+        if registered_question:
+            source_question = _registry_question(clean_key, registered_question)
     source_signal = _source_signal_for_question(guided_context, source_question)
     intent = route_guided_question_intent(clean_key, clean_message, source_signal)
     answer_kind = str(intent.get("answer_kind") or "structure_overview")
     if not source_signal:
-        source_signal = _source_signal_for_answer_kind(guided_context, answer_kind)
+        source_signal = _source_signal_for_question_or_kind(guided_context, source_question, answer_kind)
     intent["source_signal_id"] = source_signal.get("signal_id") if source_signal else ""
     intent["source_signal_category"] = source_signal.get("category") if source_signal else ""
+    knowledge_context = dict(agent_data.get("knowledge_context") or {})
+    applied_knowledge = _select_answer_knowledge(knowledge_context, answer_kind, clean_key, clean_message, source_signal)
     retrieved_facts = retrieve_guided_question_facts(intent, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
+    retrieved_facts["knowledge_context"] = {
+        "applied_ids": [str(item.get("knowledge_id") or "") for item in applied_knowledge if item.get("knowledge_id")],
+        "items": applied_knowledge,
+        "runtime_scope": "answer_composer_context_only",
+    }
     sections = _guided_answer_sections(answer_kind, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
     summary = _guided_answer_summary(answer_kind, source_signal)
     result_relation = _l("", "", "")
@@ -592,9 +604,10 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         "answer_kind": answer_kind,
         "summary": summary,
         "sections": sections,
-        "knowledge_context": dict(agent_data.get("knowledge_context") or {}),
+        "knowledge_context": knowledge_context,
+        "applied_knowledge": applied_knowledge,
         "observed_facts": _guided_answer_observed_facts(chart, time_context, facts, income_bundle, source_question, source_signal, answer_kind),
-        "composed_text": {"zh": compose_guided_question_answer(clean_message, intent, retrieved_facts, summary, result_relation)},
+        "composed_text": {"zh": compose_guided_question_answer(clean_message, intent, retrieved_facts, summary, result_relation, applied_knowledge)},
         "result_relation": result_relation,
         "runtime_scope": "guided_question_answer_only_no_inference_mutation",
         "guardrails": [
@@ -713,6 +726,15 @@ def _chart_facts(chart: Dict[str, Any], time_context: Dict[str, Any]) -> Dict[st
         "stems": stems,
         "branch_set": sorted(branch_set),
         "stem_set": sorted(stem_set),
+        "day_stem": str((pillars.get("day") or {}).get("stem") or ""),
+        "day_branch": str((pillars.get("day") or {}).get("branch") or ""),
+        "month_stem": str((pillars.get("month") or {}).get("stem") or ""),
+        "month_branch": str((pillars.get("month") or {}).get("branch") or ""),
+        "hidden_stems_by_branch": {
+            branch: [stem for stem, _ in BRANCH_HIDDEN_STEMS.get(branch, [])]
+            for branch in sorted(branch_set)
+            if BRANCH_HIDDEN_STEMS.get(branch)
+        },
         "all_stems": sorted(stem_set | _hidden_stems_for_branches(branches)),
         "all_stem_elements": sorted({element_of_stem(stem) for stem in (stem_set | _hidden_stems_for_branches(branches)) if element_of_stem(stem)}),
         "vault_branches": sorted(set(vault_branches)),
@@ -727,6 +749,7 @@ def _chart_facts(chart: Dict[str, Any], time_context: Dict[str, Any]) -> Dict[st
         "has_harm": bool(relation_pairs_by_type.get("harm")),
         "has_break": bool(relation_pairs_by_type.get("break")),
         "has_three_harmony": _has_three_harmony(branches),
+        "has_three_meeting": _has_three_meeting(branches),
         "flow_branch": flow_branch,
         "luck_branch": luck_branch,
         "flow_is_vault": flow_branch in VAULT_BRANCHES,
@@ -789,7 +812,7 @@ def _source_signal_for_answer_kind(guided_context: Dict[str, Any], answer_kind: 
         "vault": {"vault"},
         "time_boundary": {"timing_context"},
         "income_structure": {"wealth_feature", "wealth_mechanism"},
-        "metadata_boundary": {"ten_god", "hidden_stem", "stem_branch_attribute", "five_element_relation", "stem_relation", "strength_model"},
+        "metadata_boundary": {"ten_god", "hidden_stem", "hidden_stems", "structure_anchor", "stem_branch_attribute", "five_element_relation", "stem_relation", "strength_model"},
         "result_boundary": {"pattern_structure"},
         "rule_basis": {"branch_relation", "vault", "timing_context", "wealth_feature", "wealth_mechanism"},
         "structure_overview": {"branch_relation", "vault", "core_symbol", "hidden_stem", "stem_branch_attribute"},
@@ -803,6 +826,48 @@ def _source_signal_for_answer_kind(guided_context: Dict[str, Any], answer_kind: 
         if str(row.get("category") or "") in preferred:
             return dict(row)
     return fallback
+
+
+def _source_signal_for_question_or_kind(guided_context: Dict[str, Any], question: Dict[str, Any], answer_kind: str) -> Dict[str, Any]:
+    key = str(question.get("key") or "")
+    preferred = _preferred_signal_categories_for_question(key, answer_kind)
+    if preferred:
+        signal = _first_signal_by_category(guided_context, preferred)
+        if signal:
+            return signal
+    return _source_signal_for_answer_kind(guided_context, answer_kind)
+
+
+def _preferred_signal_categories_for_question(question_key: str, answer_kind: str) -> List[str]:
+    key = str(question_key or "")
+    if key == "q_month_command_anchor":
+        return ["strength_model", "structure_anchor", "stem_branch_attribute"]
+    if key == "q_day_master_month_anchor":
+        return ["structure_anchor", "strength_model", "stem_branch_attribute"]
+    if key == "q_hidden_stem_role":
+        return ["hidden_stem", "hidden_stems"]
+    if key == "q_ten_god_metadata":
+        return ["ten_god", "wealth_boundary"]
+    if key == "q_element_flow_metadata":
+        return ["five_element_relation", "stem_relation", "stem_branch_attribute"]
+    if answer_kind == "metadata_boundary":
+        return ["structure_anchor", "hidden_stem", "hidden_stems", "ten_god", "strength_model"]
+    return []
+
+
+def _first_signal_by_category(guided_context: Dict[str, Any], categories: List[str]) -> Dict[str, Any]:
+    priority = {category: index for index, category in enumerate(categories)}
+    candidates: List[Tuple[int, int, Dict[str, Any]]] = []
+    for index, row in enumerate(guided_context.get("signals") or []):
+        if not isinstance(row, dict):
+            continue
+        category = str(row.get("category") or row.get("domain") or "")
+        if category in priority:
+            candidates.append((priority[category], index, dict(row)))
+    if not candidates:
+        return {}
+    candidates.sort(key=lambda item: (item[0], item[1]))
+    return candidates[0][2]
 
 
 def route_guided_question_intent(question_key: str, message: str, source_signal: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -828,6 +893,8 @@ def route_guided_question_intent(question_key: str, message: str, source_signal:
         "intent_id": intent_id,
         "domain": domain,
         "answer_kind": answer_kind,
+        "question_key": key,
+        "question_text": text,
         "supported": not bool(unsupported_reason),
         "unsupported_reason": unsupported_reason,
         "confidence": 0.92 if signal_kind else (0.78 if terms else 0.58),
@@ -924,7 +991,14 @@ def retrieve_guided_question_facts(
     }
 
 
-def compose_guided_question_answer(question_text: str, intent: Dict[str, Any], facts: Dict[str, Any], summary: Dict[str, str], result_relation: Dict[str, str]) -> str:
+def compose_guided_question_answer(
+    question_text: str,
+    intent: Dict[str, Any],
+    facts: Dict[str, Any],
+    summary: Dict[str, str],
+    result_relation: Dict[str, str],
+    applied_knowledge: List[Dict[str, Any]] | None = None,
+) -> str:
     if intent.get("supported") is False:
         return (
             "这个问题当前不在系统支持的结构分析范围内，所以我不会硬编答案。"
@@ -937,14 +1011,16 @@ def compose_guided_question_answer(question_text: str, intent: Dict[str, Any], f
     vaults = list(facts.get("vaults") or [])
     time_context = dict(facts.get("time_context") or {})
     income_signals = dict(facts.get("income_signals") or {})
+    knowledge_items = list(applied_knowledge or [])
     paragraphs: List[str] = []
 
     if answer_kind == "branch_relation":
         if relations:
             relation_text = "；".join(_relation_fact_sentence(row) for row in relations[:6])
-            paragraphs.append(f"你问的是冲合关系。当前可见的结构关系主要是：{relation_text}。这里的重点不是判断好坏，而是看哪些地支之间产生了连接、牵动或张力。")
+            boundary = "如果出现刑、害、破，也先按关系名处理，不能从名称直接扩写成冲突或灾祸。" if any(str(row.get("type") or "") in {"harm", "break"} for row in relations) or _knowledge_has(knowledge_items, "penalty_harm_break") else "这里的重点不是判断好坏，而是看哪些地支之间产生了连接、牵动或张力。"
+            paragraphs.append(f"你问的是地支关系。当前可见的结构关系主要是：{relation_text}。{boundary}")
         else:
-            paragraphs.append("你问的是冲合关系。当前可取到的命盘事实里没有明确的冲合条目，所以这里不能硬说某个关系已经触发；最多只能回到四柱本身继续看结构。")
+            paragraphs.append("你问的是地支关系。当前可取到的命盘事实里没有明确的关系条目，所以这里不能硬说某个关系已经触发；最多只能回到四柱本身继续看结构。")
         paragraphs.append(_time_context_sentence(time_context))
     elif answer_kind == "vault":
         if vaults:
@@ -954,7 +1030,7 @@ def compose_guided_question_answer(question_text: str, intent: Dict[str, Any], f
             paragraphs.append("你问的是墓库结构。当前事实检索没有找到明确墓库支，所以不能为了回答而补一个不存在的墓库判断。")
     elif answer_kind == "time_boundary":
         paragraphs.append(_time_context_sentence(time_context))
-        paragraphs.append("这部分只能说明大运、流年和本命之间有没有形成背景关系；它不会在当前版本里直接改写收入稳定性结果。")
+        paragraphs.append("读这类信息时，先看它属于大运、流年还是本命内部，再看它和哪一柱发生关系；不要把一个时间背景词直接读成结果。")
     elif answer_kind == "income_structure":
         if income_signals:
             signal_text = "；".join(f"{_income_signal_label(key)}是{value}" for key, value in income_signals.items() if key and value)
@@ -963,19 +1039,35 @@ def compose_guided_question_answer(question_text: str, intent: Dict[str, Any], f
             paragraphs.append("你问的是收入稳定性结构，但当前没有取到可用的收入结构信号，所以这里不能硬生成结论。")
     elif answer_kind == "metadata_boundary":
         day = anchor.get("day_pillar") or "日柱未取到"
+        day_stem = anchor.get("day_stem") or ""
         month = anchor.get("month_pillar") or "月柱未取到"
+        month_branch = anchor.get("month_branch") or ""
         hidden = dict(facts.get("hidden_stems") or {})
         hidden_text = "；".join(f"{branch}藏{stems}" for branch, stems in hidden.items()) or "当前没有可展开的藏干信息"
-        paragraphs.append(f"你问的是十神、藏干或日主月令这类元数据。当前结构基点可以先看日柱{day}和月柱{month}；藏干层面看到：{hidden_text}。")
-        paragraphs.append("这些内容的作用是解释关系来源，比如某个五行或关系从哪里出现；它本身不是一句断语，也不直接等于某个结果。")
+        focus = _metadata_focus(intent, question_text)
+        if focus == "month_command":
+            hidden_month = _hidden_stems_label(month_branch) if month_branch else "-"
+            paragraphs.append(f"你问的是月令。当前月柱是{month}，月支{month_branch or '未取到'}先提供的是日主所处的季节和结构背景；这个月支本身藏干是{hidden_month}。")
+            paragraphs.append(f"所以它适合先回答“环境从哪里来”：日柱{day}要放回月令背景里读，再和透出的天干、藏干、地支关系一起看；月令不能单独推出身强、身弱或好坏。")
+        elif focus == "ten_god":
+            visible_text = _visible_ten_god_text(anchor)
+            visible_fallback = f"日主{day_stem or '未取到'}周围的可见天干需要逐一映射"
+            paragraphs.append("你问的是十神标签。它在这里先按五类关系读：比劫是同类关系，食伤是输出关系，财是日主所克的对象关系，官杀是约束关系，印是来源支持关系。")
+            paragraphs.append(f"当前要先分层：{visible_text or visible_fallback}；藏干层面看到：{hidden_text}。这些标签说明关系来源，不单独当结论。")
+        elif focus == "hidden_stems":
+            paragraphs.append(f"你问的是藏干。当前藏干层面看到：{hidden_text}。它会影响结构理解，因为它说明某个五行或关系是直接透出，还是藏在地支里面。")
+            paragraphs.append(f"所以这里先把来源层分清：日柱{day}和月柱{month}是入口，藏干只是补足结构来源，不直接替代结果判断。")
+        else:
+            paragraphs.append(f"你问的是十神、藏干或日主月令这类结构信息。当前结构基点可以先看日柱{day}和月柱{month}；藏干层面看到：{hidden_text}。")
+            paragraphs.append("这些内容的作用是解释关系来源，比如某个五行或关系从哪里出现；它本身不是一句断语，也不直接等于某个结果。")
     elif answer_kind == "rule_basis":
         signal = dict(facts.get("source_signal") or {})
-        observed = "、".join(str(item) for item in signal.get("observed") or []) or "当前结构事实"
-        paragraphs.append(f"这条回答的依据来自规则库命中的结构信号：{observed}。用户端只需要知道它对应了哪些可见事实，内部规则编号留给 Lab 审核。")
+        observed = "、".join(_plain_observed_values(signal.get("observed") or [])) or "当前可见结构事实"
+        paragraphs.append(f"这条判断可以先看它用了哪些事实：{observed}。对用户来说，重点是这些事实是否在命盘或时间背景中真实出现，而不是去看编号。")
     else:
         day = anchor.get("day_pillar") or "日柱未取到"
         month = anchor.get("month_pillar") or "月柱未取到"
-        relation_text = "；".join(_relation_fact_sentence(row) for row in relations[:3]) if relations else "当前没有明确冲合条目"
+        relation_text = "；".join(_relation_fact_sentence(row) for row in relations[:3]) if relations else "当前没有明确地支关系条目"
         vault_text = "、".join(str(row.get("branch")) for row in vaults) if vaults else "未见明确墓库支"
         paragraphs.append(f"如果只看结构，这张命盘可以先抓三个入口：日柱是{day}，月柱是{month}，地支关系是{relation_text}，墓库观察是{vault_text}。")
         paragraphs.append("这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。")
@@ -983,9 +1075,176 @@ def compose_guided_question_answer(question_text: str, intent: Dict[str, Any], f
     return "\n\n".join(paragraph for paragraph in paragraphs if paragraph and paragraph.strip())
 
 
+def _select_answer_knowledge(
+    knowledge_context: Dict[str, Any],
+    answer_kind: str,
+    question_key: str,
+    question_text: str,
+    source_signal: Dict[str, Any],
+) -> List[Dict[str, Any]]:
+    rows = [dict(row) for row in knowledge_context.get("items") or [] if isinstance(row, dict)]
+    if not rows:
+        return []
+    focus_text = " ".join(
+        [
+            str(answer_kind or ""),
+            str(question_key or ""),
+            str(question_text or ""),
+            str(source_signal.get("knowledge_id") or ""),
+            str(source_signal.get("category") or ""),
+        ]
+    )
+    selected: List[Dict[str, Any]] = []
+    style_rows: List[Dict[str, Any]] = []
+    for row in rows:
+        domain = str(row.get("domain") or "")
+        knowledge_id = str(row.get("knowledge_id") or "")
+        blob = _norm_text(" ".join([knowledge_id, domain, str(row.get("title") or ""), str(row.get("statement") or "")]))
+        if domain == "answer_expression":
+            style_rows.append(_compact_knowledge_item(row))
+            continue
+        if _knowledge_relevant_to_answer(blob, focus_text):
+            selected.append(_compact_knowledge_item(row))
+    selected.extend(style_rows[:2])
+    return selected[:6]
+
+
+def _compact_knowledge_item(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "knowledge_id": row.get("knowledge_id"),
+        "domain": row.get("domain"),
+        "title": row.get("title"),
+        "statement": row.get("statement"),
+        "evidence_type": row.get("evidence_type"),
+        "match_score": row.get("match_score"),
+    }
+
+
+def _knowledge_relevant_to_answer(knowledge_blob: str, focus_text: str) -> bool:
+    focus = _norm_text(focus_text)
+    pairs = [
+        ("月令", "month_command"),
+        ("月支", "month_command"),
+        ("身强", "month_command"),
+        ("身弱", "month_command"),
+        ("十神", "ten_god"),
+        ("财星", "ten_god"),
+        ("官杀", "ten_god"),
+        ("印星", "ten_god"),
+        ("藏干", "hidden_stem"),
+        ("透干", "hidden_stem"),
+        ("刑", "penalty_harm_break"),
+        ("害", "penalty_harm_break"),
+        ("破", "penalty_harm_break"),
+        ("三会", "three_meeting"),
+        ("墓库", "vault"),
+        ("地支关系", "branch_relation"),
+        ("冲", "branch_relation"),
+        ("合", "branch_relation"),
+        ("收入", "income"),
+        ("财富", "income"),
+    ]
+    for user_token, knowledge_token in pairs:
+        if user_token in focus and knowledge_token in knowledge_blob:
+            return True
+    return False
+
+
+def _knowledge_has(rows: List[Dict[str, Any]], needle: str) -> bool:
+    target = str(needle or "")
+    if not target:
+        return False
+    return any(target in str(row.get("knowledge_id") or "") or target in str(row.get("statement") or "") for row in rows)
+
+
+def _metadata_focus(intent: Dict[str, Any], question_text: str) -> str:
+    text = _norm_text(
+        " ".join(
+            [
+                str(intent.get("question_key") or ""),
+                str(intent.get("answer_scope") or ""),
+                str(question_text or ""),
+                " ".join(str(item) for item in intent.get("detected_terms") or []),
+            ]
+        )
+    )
+    if "月令" in text or "月支" in text or "month_command" in text:
+        return "month_command"
+    if "十神" in text or "ten_god" in text:
+        return "ten_god"
+    if "藏干" in text or "hidden_stem" in text:
+        return "hidden_stems"
+    return "metadata"
+
+
+def _visible_ten_god_text(anchor: Dict[str, Any]) -> str:
+    day_stem = str(anchor.get("day_stem") or "")
+    if not day_stem:
+        return ""
+    rows = []
+    for item in anchor.get("pillar_order") or []:
+        if not isinstance(item, dict):
+            continue
+        stem = str(item.get("stem") or "")
+        display = str(item.get("display") or stem)
+        if not stem:
+            continue
+        rows.append(f"{display}的{stem}是{_ten_god_family_label(ten_god(day_stem, stem))}")
+    return "、".join(rows[:4])
+
+
+def _ten_god_family_label(value: str) -> str:
+    labels = {
+        "peer": "同类关系",
+        "output": "输出关系",
+        "wealth": "日主所克的对象关系",
+        "officer": "约束关系",
+        "seal": "来源支持关系",
+    }
+    return labels.get(str(value or ""), "待确认关系")
+
+
+def _plain_observed_values(values: List[Any]) -> List[str]:
+    rows = []
+    for value in values:
+        text = str(value or "").strip()
+        if not text:
+            continue
+        if "=" in text:
+            key, raw_value = text.split("=", 1)
+            rows.append(f"{_income_signal_label(key)}是{_plain_signal_value(raw_value)}")
+        elif text == "relation_metadata":
+            rows.append("关系标签")
+        elif text.startswith("gen:"):
+            rows.append(text.replace("gen:", "相生关系 "))
+        elif text.startswith("ctrl:"):
+            rows.append(text.replace("ctrl:", "相克关系 "))
+        else:
+            rows.append(text.replace("group:", "组合"))
+    return rows
+
+
+def _plain_signal_value(value: str) -> str:
+    labels = {
+        "none": "无",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "not_applicable": "不适用",
+        "unstable": "不稳定",
+        "stable": "稳定",
+        "mixed": "混合",
+    }
+    return labels.get(str(value or ""), str(value or "未知"))
+
+
+def _norm_text(value: Any) -> str:
+    return str(value or "").strip().lower()
+
+
 def _detected_intent_terms(text: str) -> List[str]:
     terms = []
-    for token in ["冲", "合", "六合", "三合", "墓库", "藏干", "十神", "日主", "月令", "大运", "流年", "时间", "收入", "财富", "规则依据"]:
+    for token in ["冲", "合", "刑", "害", "破", "六合", "三合", "三会", "墓库", "藏干", "透干", "十神", "日主", "月令", "月支", "大运", "流年", "时间", "收入", "财富", "规则依据"]:
         if token in text:
             terms.append(token)
     return _dedupe_keep_order(terms)
@@ -1047,10 +1306,10 @@ def _branch_locations_from_facts(branch: str, facts: Dict[str, Any]) -> str:
 
 def _relation_fact_sentence(row: Dict[str, Any]) -> str:
     pair = str(row.get("pair") or "").replace("-", "")
-    return f"{row.get('layer')}{_relation_type_label(str(row.get('type') or ''))}{pair}"
+    return f"{row.get('layer')}{_relation_type_phrase(str(row.get('type') or ''))}{pair}"
 
 
-def _relation_type_label(value: str) -> str:
+def _relation_type_phrase(value: str) -> str:
     labels = {
         "clash": "出现冲：",
         "combination": "出现合：",
@@ -1069,15 +1328,15 @@ def _time_context_sentence(time_context: Dict[str, Any]) -> str:
     flow_year = flow.get("year") or ""
     luck_rel = _relation_map_text(dict(luck.get("relations") or {}))
     flow_rel = _relation_map_text(dict(flow.get("relations") or {}))
-    return f"时间背景上，当前大运显示为{luck_pillar}，流年显示为{flow_year}{flow_pillar}；大运关系是{luck_rel}，流年关系是{flow_rel}。这些只作为时间背景阅读。"
+    return f"时间背景上，当前大运显示为{luck_pillar}，流年显示为{flow_year}{flow_pillar}；大运关系是{luck_rel}，流年关系是{flow_rel}。这些先作为时间背景阅读。"
 
 
 def _relation_map_text(relations: Dict[str, List[str]]) -> str:
     parts = []
     for relation_type, pairs in relations.items():
         for pair in pairs:
-            parts.append(f"{_relation_type_label(str(relation_type)).replace('出现', '').replace('：', '')}{str(pair).replace('-', '')}")
-    return "、".join(parts) if parts else "未见明确冲合条目"
+            parts.append(f"{_relation_type_phrase(str(relation_type)).replace('出现', '').replace('：', '')}{str(pair).replace('-', '')}")
+    return "、".join(parts) if parts else "未见明确地支关系条目"
 
 
 def _income_signal_label(key: str) -> str:
@@ -1174,7 +1433,7 @@ def _serializable_relation_map(raw: Dict[str, Any]) -> Dict[str, List[str]]:
 def _guided_answer_kind(question_key: str, message: str) -> str:
     key = str(question_key or "")
     text = str(message or "")
-    if key in {"q_branch_relation_detail", "q_time_vs_natal_relation", "q_combination_context", "q_three_harmony_context"} or "branch_relation" in key or key == "q_time_context" or any(token in text for token in ["冲合", "冲", "合", "关系", "三合", "六合"]):
+    if key in {"q_branch_relation_detail", "q_time_vs_natal_relation", "q_combination_context", "q_three_harmony_context"} or "branch_relation" in key or key == "q_time_context" or any(token in text for token in ["冲合", "冲", "合", "刑", "害", "破", "关系", "三合", "三会", "六合"]):
         return "branch_relation"
     if "vault" in key or "墓库" in text:
         return "vault"
@@ -1220,14 +1479,14 @@ def _guided_answer_summary(answer_kind: str, source_signal: Dict[str, Any] | Non
             "먼저 층을 나눠야 합니다. 대운과 세운은 시간 배경층이며, 어떤 관계를 질문해야 하는지 설명할 수 있지만 현재 구조 결과로 자동 전환되지는 않습니다.",
         ),
         "income_structure": _l(
-            "收入稳定性这里按结构读：系统看的是承载力、财富结构出现度、可达性、波动和牵制这些信号怎样组合，而不是判断你会不会发财。",
+            "收入稳定性这里按结构读：重点是承载力、财富结构出现度、可达性、波动和牵制这些信号怎样组合，而不是判断你会不会发财。",
             "Income stability is read structurally here: the system looks at capacity, wealth-structure presence, accessibility, volatility, and constraints, not whether someone will become rich.",
             "여기서 소득 안정성은 구조로 읽습니다. 수용력, 재성 구조의 출현, 접근성, 변동성, 견제가 어떻게 조합되는지를 보는 것이지 재물운을 예측하는 것이 아닙니다.",
         ),
         "result_boundary": _l(
-            "Result 只是一张结构摘要卡：它告诉你当前规则支持的结构域怎么归类，不负责给人生下判断。",
-            "The Result is a structural summary card: it classifies the supported structural domain, not a life verdict.",
-            "Result는 구조 요약 카드입니다. 현재 규칙이 지원하는 구조 영역을 분류할 뿐 인생 판단을 내리지 않습니다.",
+            "结果卡只是一张结构摘要：它告诉你当前支持的结构主题怎么归类，不负责给人生下判断。",
+            "The result card is a structural summary: it classifies the supported structural domain, not a life verdict.",
+            "결과 카드는 구조 요약입니다. 현재 규칙이 지원하는 구조 영역을 분류할 뿐 인생 판단을 내리지 않습니다.",
         ),
         "metadata_boundary": _l(
             "十神、藏干、五行在这里像“关系说明书”：它们告诉你某个结构从哪里来、和谁有关，但单独拿出来不能当结论。",
@@ -1235,7 +1494,7 @@ def _guided_answer_summary(answer_kind: str, source_signal: Dict[str, Any] | Non
             "십성, 지장간, 오행은 여기서 관계 설명서에 가깝습니다. 구조가 어디서 나오고 무엇과 관련되는지 말해 주지만, 단독 결론은 아닙니다.",
         ),
         "rule_basis": _l(
-            "规则依据可以看，但用户端只应该看到能读懂的理由：用了哪些结构输入、命中了哪些事实、为什么足以支持这条回答。内部编号留给审计。",
+            "规则依据可以看成可读理由：用了哪些结构输入、命中了哪些事实、为什么足以支持这条回答。用户侧先看事实，不需要看编号。",
             "The rule basis can be shown, but users should see readable reasons: which structural inputs were used, which facts matched, and why they support the answer. Internal IDs stay in audit.",
             "규칙 근거는 볼 수 있지만 사용자에게는 읽을 수 있는 이유만 보여야 합니다. 어떤 구조 입력과 사실이 쓰였는지 설명하고 내부 ID는 감사에 남깁니다.",
         ),
@@ -1272,16 +1531,16 @@ def _guided_answer_sections(
     if answer_kind == "time_boundary":
         return source_section + [
             _section("时间背景层", "Time-context layer", "시간 배경층", _time_answer_items(time_context)),
-            _section("结果边界", "Result boundary", "결과 경계", _boundary_items("time")),
+            _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("time")),
         ]
     if answer_kind == "income_structure":
         return source_section + [
-            _section("当前确定性信号", "Current deterministic signals", "현재 결정론적 신호", _income_answer_items(income_bundle)),
-            _section("结果边界", "Result boundary", "결과 경계", _boundary_items("income")),
+            _section("当前结构信号", "Current structural signals", "현재 구조 신호", _income_answer_items(income_bundle)),
+            _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("income")),
         ]
     if answer_kind == "result_boundary":
         return source_section + [
-            _section("如何读 Result", "How to read Result", "Result 읽는 법", _result_boundary_items(income_bundle)),
+            _section("如何读结果卡", "How to read the result card", "결과 카드 읽는 법", _result_boundary_items(income_bundle)),
             _section("禁止外推", "Do not extrapolate", "확대 해석 금지", _boundary_items("result")),
         ]
     if answer_kind == "metadata_boundary":
@@ -1315,7 +1574,7 @@ def _source_signal_section(question: Dict[str, Any], signal: Dict[str, Any]) -> 
         _item(
             _l("命中的结构依据", "Matched structural basis", "일치한 구조 근거"),
             _signal_user_label(str(signal.get("category") or signal.get("domain") or "")),
-            _l("这是用户可读分类，不展示内部规则名。", "This is a user-facing category, not an internal rule name.", "이는 사용자용 분류이며 내부 규칙명이 아닙니다."),
+            _l("这里用可读分类说明它属于哪一类结构。", "This names the readable structural category.", "읽을 수 있는 구조 분류로 표시합니다."),
         ),
     ]
     if observed:
@@ -1323,7 +1582,7 @@ def _source_signal_section(question: Dict[str, Any], signal: Dict[str, Any]) -> 
             _item(
                 _l("观察到的结构", "Observed structure", "관찰된 구조"),
                 _l("、".join(observed), " / ".join(observed), " / ".join(observed)),
-                _l("下面只解释这些已观察到的结构事实。", "The sections below explain only these observed structural facts.", "아래 내용은 관찰된 구조 사실만 설명합니다."),
+                _l("后续回答会围绕这些事实展开。", "The answer should stay around these observed facts.", "이 관찰 사실을 중심으로 답합니다."),
             )
         )
     return [_section("这条问题为什么被回答", "Why this question is being answered", "이 질문을 답하는 이유", items)]
@@ -1444,7 +1703,7 @@ def _vault_answer_items(chart: Dict[str, Any], time_context: Dict[str, Any], fac
         _item(
             _l("时间背景墓库支", "Time-context vault branches", "시간 배경 묘고 지지"),
             _l("、".join([item for item in time_vaults if item]) if time_vaults else "未见", ", ".join([item for item in time_vaults if item]) if time_vaults else "None detected", ", ".join([item for item in time_vaults if item]) if time_vaults else "감지 없음"),
-            _l("即使时间背景出现墓库，也不直接改变当前 income_stability。", "Even if a time-context vault appears, it does not directly change current income_stability.", "시간 배경에 묘고가 나타나도 현재 income_stability를 직접 바꾸지 않습니다."),
+            _l("它说明时间层也出现了可观察的墓库支，读法仍先看所在层级和藏干。", "It means a vault branch is visible in the timing layer; read its layer and hidden stems first.", "시간층에 관찰 가능한 묘고 지지가 보이며, 먼저 층위와 지장간을 봅니다."),
         )
     )
     return items
@@ -1471,7 +1730,7 @@ def _time_answer_items(time_context: Dict[str, Any]) -> List[Dict[str, Any]]:
             _item(
                 _l("时间关系", "Time relations", "시간 관계"),
                 _l("未见已检测的冲合关系", "No detected clash/combination relation", "감지된 충합 관계 없음"),
-                _l("仍然不改变既有结果。", "The existing result remains unchanged.", "기존 결과는 바뀌지 않습니다."),
+                _l("这里先只说明时间层有没有形成关系。", "This first names whether the timing layer forms a relation.", "먼저 시간층 관계 여부만 설명합니다."),
             )
         )
     return items
@@ -1490,15 +1749,15 @@ def _income_answer_items(income_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
     items = []
     for key, zh, en, ko in order:
         value = str(signals.get(key) or "unknown")
-        items.append(_item(_l(zh, en, ko), _value_l(value), _l("来自既有确定性规则聚合。", "Comes from the existing deterministic rule aggregation.", "기존 결정론적 규칙 집계에서 온 값입니다.")))
+        items.append(_item(_l(zh, en, ko), _value_l(value), _l("来自当前结构信号汇总。", "Comes from the current structural signal summary.", "현재 구조 신호 요약에서 온 값입니다.")))
     return items
 
 
 def _result_boundary_items(income_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
     signals = _income_signal_map(income_bundle)
     return [
-        _item(_l("Result 的用途", "Purpose of Result", "Result의 용도"), _l("展示当前支持域的结构摘要", "Shows a structure summary for the currently supported domain", "현재 지원 영역의 구조 요약을 표시합니다"), _l("它不是对每个引导问题的完整回答。", "It is not the complete answer to every guided question.", "모든 안내 질문에 대한 전체 답변은 아닙니다.")),
-        _item(_l("当前结果值", "Current result value", "현재 결과값"), _value_l(str(signals.get("income_stability") or "unknown")), _l("该值保持由原 income_stability 推理生成。", "This value remains generated by the original income_stability inference.", "이 값은 기존 income_stability 추론에서 생성된 그대로입니다.")),
+        _item(_l("结果卡用途", "Purpose of result card", "결과 카드의 용도"), _l("展示当前支持主题的结构摘要", "Shows a structure summary for the currently supported topic", "현재 지원 영역의 구조 요약을 표시합니다"), _l("它不是对每个引导问题的完整回答。", "It is not the complete answer to every guided question.", "모든 안내 질문에 대한 전체 답변은 아닙니다.")),
+        _item(_l("当前摘要值", "Current summary value", "현재 요약값"), _value_l(str(signals.get("income_stability") or "unknown")), _l("这个值来自收入稳定性结构信号。", "This value comes from the income-stability structural signal.", "이 값은 소득 안정성 구조 신호에서 온 것입니다.")),
     ]
 
 
@@ -1515,7 +1774,7 @@ def _metadata_answer_items(chart: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _rule_basis_items(income_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
     evidence = [str(item) for item in income_bundle.get("evidence_summary") or [] if str(item)]
     return [
-        _item(_l("用户端依据", "User-facing basis", "사용자용 근거"), _l("结构输入 + 确定性规则摘要", "Structural input + deterministic-rule summary", "구조 입력 + 결정론적 규칙 요약"), _l("详细 rule_id 留在 Lab 侧审计。", "Detailed rule_id audit remains in Lab.", "상세 rule_id 감사는 Lab에 남습니다.")),
+        _item(_l("可读依据", "Readable basis", "읽을 수 있는 근거"), _l("结构输入和事实摘要", "Structural input and fact summary", "구조 입력과 사실 요약"), _l("用户侧先看事实，不需要看编号。", "Users can read the facts without IDs.", "사용자는 번호 없이 사실을 볼 수 있습니다.")),
         _item(_l("证据摘要", "Evidence summary", "근거 요약"), _l("；".join(evidence) if evidence else "暂无额外摘要", "; ".join(evidence) if evidence else "No additional summary", "; ".join(evidence) if evidence else "추가 요약 없음"), _l("该摘要解释结果来源，不扩展成预测。", "This summary explains result sources and does not expand into prediction.", "이 요약은 결과 출처를 설명하며 예측으로 확장되지 않습니다.")),
     ]
 
@@ -1584,7 +1843,7 @@ def _recommendation_items(guided_context: Dict[str, Any]) -> List[Dict[str, Any]
         if len(items) >= 3:
             break
         value = " / ".join(observed) if observed else _local_text(reason, "zh")
-        items.append(_item(category, _l(value, value, value), _l("这只解释为什么推荐问题，不改变结果。", "This only explains why the question is recommended; it does not change the result.", "이는 질문 추천 이유만 설명하며 결과를 바꾸지 않습니다.")))
+        items.append(_item(category, _l(value, value, value), _l("这解释为什么这个问题值得问。", "This explains why the question is worth asking.", "이 질문을 추천한 이유를 설명합니다.")))
     if not items:
         items.append(_item(_l("推荐背景", "Recommendation background", "추천 배경"), _l("来自当前命盘结构预览", "From the current chart-structure preview", "현재 명식 구조 미리보기에서 옴"), _l("用于引导提问。", "Used to guide questions.", "질문 안내에 사용됩니다.")))
     return items
@@ -1597,9 +1856,9 @@ def _boundary_items(kind: str) -> List[Dict[str, Any]]:
         _l("不输出好坏、发财破财、今年运势等判断。", "No good/bad, wealth gain/loss, or this-year fortune judgement is produced.", "길흉, 재물 득실, 올해 운세 판단을 출력하지 않습니다."),
     )
     result = _item(
-        _l("结果关系", "Relation to Result", "Result와의 관계"),
-        _l("不改变 income_stability", "Does not change income_stability", "income_stability를 바꾸지 않음"),
-        _l("当前答案层只解释问题，结果仍由原确定性规则生成。", "The answer layer only explains the question; the result remains generated by the original deterministic rules.", "현재 답변층은 질문만 설명하며 결과는 기존 결정론적 규칙에서 생성됩니다."),
+        _l("和结果卡的关系", "Relation to result card", "결과 카드와의 관계"),
+        _l("先解释当前问题", "Explains the current question first", "현재 질문을 먼저 설명"),
+        _l("如果要看收入稳定性，应回到对应结果卡和它自己的结构证据。", "For income stability, read the dedicated result card and its own structural evidence.", "소득 안정성은 해당 결과 카드와 자체 구조 근거에서 확인합니다."),
     )
     if kind == "time":
         return [result, common]
@@ -1685,7 +1944,7 @@ def _signal_user_label(category: str) -> Dict[str, str]:
         "hidden_stem": _l("藏干结构", "Hidden-stem structure", "지장간 구조"),
         "five_element_relation": _l("五行关系", "Five-element relation", "오행 관계"),
         "stem_relation": _l("天干关系", "Stem relation", "천간 관계"),
-        "strength_model": _l("日主强弱证据", "Day-master strength evidence", "일간 강약 근거"),
+        "strength_model": _l("日主环境证据", "Day-master context evidence", "일간 환경 근거"),
         "structure_anchor": _l("结构基点", "Structure anchor", "구조 기준점"),
         "time_boundary": _l("时间结构边界", "Time boundary", "시간 구조 경계"),
         "wealth_boundary": _l("财星边界", "Wealth-star boundary", "재성 경계"),
@@ -2220,6 +2479,11 @@ def _dedupe_questions(rows: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 def _has_three_harmony(branches: List[str]) -> bool:
     present = set(branches)
     return any(set(group) <= present for group in THREE_HARMONIES)
+
+
+def _has_three_meeting(branches: List[str]) -> bool:
+    present = set(branches)
+    return any(set(group) <= present for group in THREE_MEETINGS)
 
 
 def _collect_relation_pairs_from_items(items: Iterable[Dict[str, Any]]) -> tuple[Dict[str, set[str]], Set[str], List[str]]:

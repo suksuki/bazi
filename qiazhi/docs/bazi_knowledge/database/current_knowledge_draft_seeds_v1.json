@@ -13,7 +13,8 @@
     "REQUIRES_RULE_PROPOSAL_BEFORE_RUNTIME",
     "P6_KNOWLEDGE_DB_EXPANSION",
     "P9_KNOWLEDGE_CHAIN_EXPANSION",
-    "P9_STRUCTURAL_RULE_SIGNAL_ADAPTER"
+    "P9_STRUCTURAL_RULE_SIGNAL_ADAPTER",
+    "P10_KNOWLEDGE_RULE_COMPLETION"
   ],
   "knowledge_drafts": [
     {
@@ -1700,6 +1701,365 @@
         ]
       },
       "title": "Structural Rule Signal Adapter 边界"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "question_guidance",
+        "hidden_stem_signal_candidate"
+      ],
+      "category": "hidden_stem",
+      "domain": "core_structure",
+      "forbidden_usage": [
+        "direct_prediction",
+        "single_symbol_verdict",
+        "fortune"
+      ],
+      "knowledge_id": "p10.branch_hidden_stem_complete_mapping.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "v19.knowledge.seed.p10.branch_hidden_stem_complete_mapping",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "每个地支在回答中使用藏干前，应先暴露其藏干来源层。回答应说清地支和所含天干，把它作为观察到的结构来源，而不是直接断语。",
+      "structured_facts": {
+        "boundary": "hidden_stem_source_layer_first",
+        "hidden_stems": {
+          "丑": [
+            "己",
+            "癸",
+            "辛"
+          ],
+          "亥": [
+            "壬",
+            "甲"
+          ],
+          "午": [
+            "丁",
+            "己"
+          ],
+          "卯": [
+            "乙"
+          ],
+          "子": [
+            "癸"
+          ],
+          "寅": [
+            "甲",
+            "丙",
+            "戊"
+          ],
+          "巳": [
+            "丙",
+            "庚",
+            "戊"
+          ],
+          "戌": [
+            "戊",
+            "辛",
+            "丁"
+          ],
+          "未": [
+            "己",
+            "丁",
+            "乙"
+          ],
+          "申": [
+            "庚",
+            "壬",
+            "戊"
+          ],
+          "辰": [
+            "戊",
+            "乙",
+            "癸"
+          ],
+          "酉": [
+            "辛"
+          ]
+        }
+      },
+      "title": "地支藏干完整映射与来源层边界"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "question_guidance",
+        "branch_relation_signal_candidate"
+      ],
+      "category": "branch_relation",
+      "domain": "core_structure",
+      "forbidden_usage": [
+        "disaster_language",
+        "good_bad_judgement",
+        "direct_prediction"
+      ],
+      "knowledge_id": "p10.branch_penalty_harm_break_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "v19.knowledge.seed.p10.branch_penalty_harm_break_boundary",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "刑、害、破属于地支关系名称。只有当关系被明确检测到时，回答才可作为关系元数据说明；不得从名称直接扩写成冲突、灾祸、好坏或结果断语。",
+      "structured_facts": {
+        "boundary": "observed_relation_only",
+        "six_break": [
+          [
+            "子",
+            "酉"
+          ],
+          [
+            "丑",
+            "辰"
+          ],
+          [
+            "寅",
+            "亥"
+          ],
+          [
+            "卯",
+            "午"
+          ],
+          [
+            "巳",
+            "申"
+          ],
+          [
+            "未",
+            "戌"
+          ]
+        ],
+        "six_harm": [
+          [
+            "子",
+            "未"
+          ],
+          [
+            "丑",
+            "午"
+          ],
+          [
+            "寅",
+            "巳"
+          ],
+          [
+            "卯",
+            "辰"
+          ],
+          [
+            "申",
+            "亥"
+          ],
+          [
+            "酉",
+            "戌"
+          ]
+        ]
+      },
+      "title": "刑害破只作为已检测地支关系元数据"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "question_guidance",
+        "branch_relation_signal_candidate"
+      ],
+      "category": "branch_relation",
+      "domain": "core_structure",
+      "forbidden_usage": [
+        "strength_verdict_from_name_only",
+        "timing_prediction",
+        "good_bad_judgement"
+      ],
+      "knowledge_id": "p10.branch_three_meeting_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "v19.knowledge.seed.p10.branch_three_meeting_boundary",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "三会是地支成组关系。回答应先报告可见组合和所在层级，不应仅凭“三会”这个名称推出强弱、结果或时间判断。",
+      "structured_facts": {
+        "boundary": "visible_set_and_layer_first",
+        "groups": {
+          "fire": [
+            "巳",
+            "午",
+            "未"
+          ],
+          "metal": [
+            "申",
+            "酉",
+            "戌"
+          ],
+          "water": [
+            "亥",
+            "子",
+            "丑"
+          ],
+          "wood": [
+            "寅",
+            "卯",
+            "辰"
+          ]
+        }
+      },
+      "title": "三会先读可见组合与层级"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "ten_god_signal_candidate",
+        "llm_rewrite_guidance"
+      ],
+      "category": "ten_god",
+      "domain": "ten_god",
+      "forbidden_usage": [
+        "direct_prediction",
+        "marriage_health_career_verdict",
+        "fortune"
+      ],
+      "knowledge_id": "p10.ten_god_five_family_plain_language.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "v19.knowledge.seed.p10.ten_god_five_family_plain_language",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "十神面向用户时应先按五类关系解释：比劫是同类关系，食伤是输出关系，财是日主所克的对象关系，官杀是克日主的约束关系，印是生日主的来源关系。这些都是关系元数据，不是人生断语。",
+      "structured_facts": {
+        "anchor": "day_master",
+        "boundary": "metadata_not_life_outcome",
+        "ten_god_families": [
+          "peer",
+          "output",
+          "wealth",
+          "officer",
+          "resource"
+        ]
+      },
+      "title": "十神五类关系的用户可读解释"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "ten_god_signal_candidate",
+        "audit_check"
+      ],
+      "category": "ten_god",
+      "domain": "ten_god",
+      "forbidden_usage": [
+        "direct_prediction",
+        "unlayered_ten_god_verdict"
+      ],
+      "knowledge_id": "p10.ten_god_visible_hidden_boundary.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "v19.knowledge.seed.p10.ten_god_visible_hidden_boundary",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "十神标签需要说明目标天干来自透干还是藏干。可见层与隐藏层只是证据层不同，不能因为标签出现就直接推出结果。",
+      "structured_facts": {
+        "anchor": "day_master",
+        "boundary": "evidence_layer_first",
+        "layers": [
+          "visible_stem_layer",
+          "hidden_stem_layer"
+        ]
+      },
+      "title": "十神可见层与藏干层边界"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "strength_signal_candidate",
+        "question_guidance"
+      ],
+      "category": "strength_model",
+      "domain": "strength",
+      "forbidden_usage": [
+        "single_symbol_strength_verdict",
+        "good_bad_judgement",
+        "fortune"
+      ],
+      "knowledge_id": "p10.month_command_season_not_verdict.v1",
+      "risk_level": "R1",
+      "source_refs": [
+        "v19.knowledge.seed.p10.month_command_season_not_verdict",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "月令和季节提供日主所处环境的证据背景，但不能单独输出身强、身弱、好坏。只有经过独立审核的强弱模型消费这些证据后，才可以形成更具体的结构信号。",
+      "structured_facts": {
+        "anchor": "month_branch",
+        "boundary": "not_standalone_strength_verdict",
+        "evidence": [
+          "season_context",
+          "environment_background"
+        ]
+      },
+      "title": "月令季节不是单独强弱断语"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "llm_rewrite_guidance",
+        "ux_copy_review"
+      ],
+      "category": "answer_style",
+      "domain": "answer_expression",
+      "forbidden_usage": [
+        "new_fact_generation",
+        "prediction",
+        "rule_mutation"
+      ],
+      "knowledge_id": "p10.answer_no_boilerplate_tail.v1",
+      "risk_level": "R0",
+      "source_refs": [
+        "v19.knowledge.seed.p10.answer_no_boilerplate_tail",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "回答应自然回答当前问题，不要在结尾重复“这条回答只解释当前问题”“不改变结果”等模板化尾巴。边界需要时应融入正文，而不是像系统日志一样追加。",
+      "structured_facts": {
+        "answer_style": "natural_plain_language",
+        "avoid": [
+          "generic_disclaimer_tail",
+          "internal_policy_tone",
+          "debug_label"
+        ]
+      },
+      "title": "用户回答不要追加模板化尾巴"
+    },
+    {
+      "allowed_usage": [
+        "answer_composer_context",
+        "llm_rewrite_guidance",
+        "quality_audit"
+      ],
+      "category": "answer_style",
+      "domain": "answer_expression",
+      "forbidden_usage": [
+        "fabricated_fact",
+        "prediction",
+        "rule_mutation"
+      ],
+      "knowledge_id": "p10.answer_concise_complete_response.v1",
+      "risk_level": "R0",
+      "source_refs": [
+        "v19.knowledge.seed.p10.answer_concise_complete_response",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "结构回答应先回答问题，再点出观察到的事实，最后用一句普通话说明结构意义并收住。若细节过多，应引导继续问，而不是把回答写到半句被截断。",
+      "structured_facts": {
+        "answer_shape": [
+          "direct_answer",
+          "observed_facts",
+          "plain_meaning",
+          "clean_stop"
+        ],
+        "avoid": [
+          "unfinished_sentence",
+          "overlong_enumeration"
+        ]
+      },
+      "title": "结构回答要短而完整"
     }
   ],
   "runtime_scope": "knowledge_unit_draft_only_no_runtime_inference",

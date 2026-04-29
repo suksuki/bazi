@@ -39,11 +39,27 @@
     "user_id": "admin",
     "username": "admin"
   },
+  "v19auth_2849af497df54e838f445588529fe20e": {
+    "created_at": "2026-04-29T12:52:26+00:00",
+    "role": "guest",
+    "token": "v19auth_2849af497df54e838f445588529fe20e",
+    "updated_at": "2026-04-29T12:52:26+00:00",
+    "user_id": "guest_6ab28420c4",
+    "username": "guest"
+  },
   "v19auth_2d56c53e287f44358091c5677a67166d": {
     "created_at": "2026-04-29T03:32:11+00:00",
     "role": "admin",
     "token": "v19auth_2d56c53e287f44358091c5677a67166d",
     "updated_at": "2026-04-29T03:32:11+00:00",
+    "user_id": "admin",
+    "username": "admin"
+  },
+  "v19auth_34d43c7c437a4c469955dcd9a300f087": {
+    "created_at": "2026-04-29T13:11:20+00:00",
+    "role": "admin",
+    "token": "v19auth_34d43c7c437a4c469955dcd9a300f087",
+    "updated_at": "2026-04-29T13:11:20+00:00",
     "user_id": "admin",
     "username": "admin"
   },
@@ -78,6 +94,14 @@
     "updated_at": "2026-04-29T00:18:36+00:00",
     "user_id": "guest_b9bdcaac80",
     "username": "guest"
+  },
+  "v19auth_57bf06ec3f264cd0947fc09298be8c19": {
+    "created_at": "2026-04-29T12:58:45+00:00",
+    "role": "admin",
+    "token": "v19auth_57bf06ec3f264cd0947fc09298be8c19",
+    "updated_at": "2026-04-29T12:58:45+00:00",
+    "user_id": "admin",
+    "username": "admin"
   },
   "v19auth_59e5945df6bd481cac26b08b619fbc8e": {
     "created_at": "2026-04-29T00:18:56+00:00",

@@ -420,8 +420,9 @@ def _adapter_facts(chart: Dict[str, Any], time_context: Dict[str, Any], inferenc
     stems = [str((pillars.get(name) or {}).get("stem") or "") for name in ["year", "month", "day", "hour"]]
     hidden = {branch: [str(stem) for stem, _ in BRANCH_HIDDEN_STEMS.get(branch, [])] for branch in branches if branch}
     relation_items = list((chart.get("relations") or {}).get("items") or [])
-    relation_pairs, relation_types = _adapter_relation_facts(relation_items)
-    time_pairs, time_types, time_layers = _adapter_time_relation_facts(time_context)
+    relation_pairs, relation_types, relation_pairs_by_type = _adapter_relation_facts(relation_items)
+    time_pairs, time_types, time_layers, time_pairs_by_type = _adapter_time_relation_facts(time_context)
+    all_relation_pairs_by_type = _merge_relation_pairs_by_type(relation_pairs_by_type, time_pairs_by_type)
     income_bundle = dict(inference_context.get("income_stability") or {})
     income_signals = {
         str(row.get("key") or ""): str(row.get("value") or "")
@@ -442,6 +443,7 @@ def _adapter_facts(chart: Dict[str, Any], time_context: Dict[str, Any], inferenc
         "all_elements": {element_of_stem(stem) for stem in stems if stem} | {element_of_stem(stem) for rows in hidden.values() for stem in rows},
         "vault_branches": sorted({branch for branch in branches if branch in VAULT_BRANCHES}),
         "relation_pairs": sorted(set(relation_pairs) | set(time_pairs)),
+        "relation_pairs_by_type": all_relation_pairs_by_type,
         "relation_types": sorted(set(relation_types) | set(time_types)),
         "has_time_context": bool(time_context),
         "time_layers": sorted(set(time_layers)),
@@ -451,9 +453,10 @@ def _adapter_facts(chart: Dict[str, Any], time_context: Dict[str, Any], inferenc
     }
 
 
-def _adapter_relation_facts(items: List[Any]) -> Tuple[List[str], List[str]]:
+def _adapter_relation_facts(items: List[Any]) -> Tuple[List[str], List[str], Dict[str, List[str]]]:
     pairs: List[str] = []
     types: List[str] = []
+    pairs_by_type: Dict[str, List[str]] = {}
     for item in items:
         if not isinstance(item, dict):
             continue
@@ -464,16 +467,21 @@ def _adapter_relation_facts(items: List[Any]) -> Tuple[List[str], List[str]]:
         if isinstance(branches, str):
             raw = branches.replace("/", "").replace("-", "").replace(" ", "")
             if len(raw) >= 2:
-                pairs.append(_pair_key(raw[0], raw[1]))
+                pair = _pair_key(raw[0], raw[1])
+                pairs.append(pair)
+                pairs_by_type.setdefault(relation_type, []).append(pair)
         elif isinstance(branches, list) and len(branches) >= 2:
-            pairs.append(_pair_key(str(branches[0]), str(branches[1])))
-    return sorted(set(pairs)), sorted(set(types))
+            pair = _pair_key(str(branches[0]), str(branches[1]))
+            pairs.append(pair)
+            pairs_by_type.setdefault(relation_type, []).append(pair)
+    return sorted(set(pairs)), sorted(set(types)), {key: sorted(set(value)) for key, value in pairs_by_type.items()}
 
 
-def _adapter_time_relation_facts(time_context: Dict[str, Any]) -> Tuple[List[str], List[str], List[str]]:
+def _adapter_time_relation_facts(time_context: Dict[str, Any]) -> Tuple[List[str], List[str], List[str], Dict[str, List[str]]]:
     pairs: List[str] = []
     types: List[str] = []
     layers: List[str] = []
+    pairs_by_type: Dict[str, List[str]] = {}
     for layer_key in ["luck_cycle", "flow_year"]:
         layer = dict(time_context.get(layer_key) or {})
         rel = dict(layer.get("relations_with_natal") or {})
@@ -485,7 +493,16 @@ def _adapter_time_relation_facts(time_context: Dict[str, Any]) -> Tuple[List[str
                     pairs.append(pair)
                     types.append(normalized)
                     layers.append(layer_key)
-    return sorted(set(pairs)), sorted(set(types)), sorted(set(layers))
+                    pairs_by_type.setdefault(normalized, []).append(pair)
+    return sorted(set(pairs)), sorted(set(types)), sorted(set(layers)), {key: sorted(set(value)) for key, value in pairs_by_type.items()}
+
+
+def _merge_relation_pairs_by_type(*maps: Dict[str, List[str]]) -> Dict[str, List[str]]:
+    merged: Dict[str, List[str]] = {}
+    for row in maps:
+        for relation_type, pairs in row.items():
+            merged.setdefault(str(relation_type), []).extend(str(pair) for pair in pairs if str(pair))
+    return {key: sorted(set(value)) for key, value in merged.items()}
 
 
 def _adapter_match_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str, Any]:
@@ -495,6 +512,19 @@ def _adapter_match_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str
     observed: List[str] = []
     fact_refs: List[str] = []
     layer = "chart_structure"
+
+    if structured:
+        structured_match = _match_adapter_structured_facts(structured, facts)
+        if structured_match.get("matched"):
+            return {
+                "matched": True,
+                "reason": _adapter_reason(rule),
+                "observed": list(structured_match.get("observed") or []),
+                "fact_refs": list(structured_match.get("fact_refs") or []),
+                "layer": structured_match.get("layer") or layer,
+            }
+        if structured_match.get("relevant"):
+            return {"matched": False, "reason": "structured_facts_not_matched", "observed": [], "fact_refs": [], "layer": layer}
 
     if category in {"structure_anchor", "core_symbol", "stem_branch_attribute"} and (facts.get("day_stem") or facts.get("month_branch")):
         observed = [str(item) for item in [facts.get("day_stem"), facts.get("month_branch")] if str(item)]
@@ -529,12 +559,6 @@ def _adapter_match_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str
     elif category == "pattern_structure" and facts.get("branches"):
         observed = list(facts.get("branches") or [])[:4]
         fact_refs = ["chart.pillars"]
-
-    if not observed and structured:
-        structured_match = _match_adapter_structured_facts(structured, facts)
-        if structured_match.get("matched"):
-            observed = list(structured_match.get("observed") or [])
-            fact_refs = list(structured_match.get("fact_refs") or [])
 
     if observed:
         return {"matched": True, "reason": _adapter_reason(rule), "observed": observed, "fact_refs": fact_refs, "layer": layer}
@@ -579,40 +603,92 @@ def _extract_structured_facts_from_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
 def _match_adapter_structured_facts(structured: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str, Any]:
     observed: List[str] = []
     fact_refs: List[str] = []
+    relevant = False
+    layer = "chart_structure"
     branches = set(facts.get("branch_set") or set())
     stems = set(facts.get("stem_set") or set())
     all_stems = set(facts.get("all_stems") or set())
     all_elements = set(facts.get("all_elements") or set())
+    relation_pairs = set(facts.get("relation_pairs") or [])
+    relation_pairs_by_type = {str(key): set(value) for key, value in (facts.get("relation_pairs_by_type") or {}).items()}
     for branch in _string_list(structured.get("vault_branches")) + _string_list(structured.get("branches")):
+        relevant = True
         if branch in branches:
             observed.append(branch)
             fact_refs.append("chart.branches")
     for stem in _string_list(structured.get("stems")):
+        relevant = True
         if stem in stems or stem in all_stems:
             observed.append(stem)
             fact_refs.append("chart.stems")
     if isinstance(structured.get("hidden_stems"), dict):
+        relevant = True
         for branch in structured.get("hidden_stems", {}).keys():
             if str(branch) in branches:
                 observed.append(str(branch))
                 fact_refs.append("chart.hidden_stems")
-    for pair in _string_list(structured.get("generation_cycle")):
+    groups = structured.get("groups")
+    if isinstance(groups, dict):
+        relevant = True
+        for group_items in groups.values():
+            normalized = [str(item) for item in _string_list(group_items)]
+            if normalized and all(item in branches for item in normalized[:3]):
+                observed.append("".join(normalized[:3]))
+                fact_refs.append("chart.branches")
+    for raw_pair in _structured_pair_values(structured.get("pairs")):
+        relevant = True
+        pair = _parse_pair(raw_pair)
+        if not pair:
+            continue
+        pair_key = _pair_key(pair[0], pair[1])
+        if pair_key in relation_pairs:
+            observed.append(pair_key)
+            fact_refs.append("chart.relations")
+            layer = "chart_or_time_relation"
+    for raw_pair in _structured_pair_values(structured.get("six_harm")):
+        relevant = True
+        pair = _parse_pair(raw_pair)
+        if not pair:
+            continue
+        pair_key = _pair_key(pair[0], pair[1])
+        if pair_key in relation_pairs_by_type.get("harm", set()):
+            observed.append(pair_key)
+            fact_refs.append("chart.relations")
+            layer = "chart_or_time_relation"
+    for raw_pair in _structured_pair_values(structured.get("six_break")):
+        relevant = True
+        pair = _parse_pair(raw_pair)
+        if not pair:
+            continue
+        pair_key = _pair_key(pair[0], pair[1])
+        if pair_key in relation_pairs_by_type.get("break", set()):
+            observed.append(pair_key)
+            fact_refs.append("chart.relations")
+            layer = "chart_or_time_relation"
+    for pair in _structured_pair_values(structured.get("generation_cycle")):
+        relevant = True
         parsed = _parse_pair(pair)
         if parsed and parsed[0] in all_elements and parsed[1] in all_elements:
             observed.append(f"gen:{parsed[0]}->{parsed[1]}")
             fact_refs.append("chart.elements")
-    for pair in _string_list(structured.get("control_cycle")):
+    for pair in _structured_pair_values(structured.get("control_cycle")):
+        relevant = True
         parsed = _parse_pair(pair)
         if parsed and parsed[0] in all_elements and parsed[1] in all_elements:
             observed.append(f"ctrl:{parsed[0]}x{parsed[1]}")
             fact_refs.append("chart.elements")
-    if structured.get("anchor") in {"day_master", "day_stem"} and facts.get("day_stem"):
-        observed.append(str(facts.get("day_stem")))
-        fact_refs.append("chart.day_stem")
-    if structured.get("anchor") == "month_branch" and facts.get("month_branch"):
-        observed.append(str(facts.get("month_branch")))
-        fact_refs.append("chart.month_branch")
-    return {"matched": bool(observed), "observed": _dedupe(observed), "fact_refs": _dedupe(fact_refs)}
+    anchor = str(structured.get("anchor") or "")
+    if anchor in {"day_master", "day_stem"}:
+        relevant = True
+        if facts.get("day_stem"):
+            observed.append(str(facts.get("day_stem")))
+            fact_refs.append("chart.day_stem")
+    if anchor == "month_branch":
+        relevant = True
+        if facts.get("month_branch"):
+            observed.append(str(facts.get("month_branch")))
+            fact_refs.append("chart.month_branch")
+    return {"matched": bool(observed), "relevant": relevant, "observed": _dedupe(observed), "fact_refs": _dedupe(fact_refs), "layer": layer}
 
 
 def _adapter_reason(rule: Dict[str, Any]) -> str:
@@ -748,6 +824,16 @@ def _string_list(value: Any) -> List[str]:
         return [str(item).strip() for item in value if str(item).strip()]
     if isinstance(value, str):
         return [item.strip() for item in value.replace("，", ",").split(",") if item.strip()]
+    return []
+
+
+def _structured_pair_values(value: Any) -> List[Any]:
+    if isinstance(value, list):
+        return list(value)
+    if isinstance(value, tuple):
+        return list(value)
+    if isinstance(value, str):
+        return _string_list(value)
     return []
 
 

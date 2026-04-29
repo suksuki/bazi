@@ -37,46 +37,36 @@ def render_income_stability_answer(bundle: Dict[str, Any]) -> str:
     wealth_element = str(bundle.get("wealth_element") or "")
 
     lines = [
-        "Income Stability deterministic review",
+        f"这张命盘的收入稳定性结构先看作：{_label_value(value)}。",
         "",
-        "结论边界：这是财富域的结构信号，不是财富预测、不是今年财运判断、不是传统断语。",
-        f"当前 income_stability: {_label_value(value)} ({value or 'unknown'})",
-        f"作用范围：{bundle.get('scope') or 'unknown'}；is_prediction={str(bool(bundle.get('is_prediction'))).lower()}。",
+        "这个结果只说明本命结构里的收入稳定性线索，具体财富事件需要另按时间与事实条件分析。",
         "",
-        "规则依据：",
+        "主要依据：",
     ]
     for key in ["self_capacity", "wealth_presence", "wealth_accessibility", "volatility", "structure_binding"]:
         row = signals.get(key, {})
-        metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
-        sources = row.get("sources") if isinstance(row.get("sources"), list) else []
-        inputs = row.get("inputs") if isinstance(row.get("inputs"), list) else []
-        lines.append(f"- {SIGNAL_LABELS[key]}: {_label_value(str(row.get('value') or ''))} ({row.get('value') or 'unknown'})")
-        lines.append(f"  rule: {row.get('rule_id') or 'unknown'}@v{row.get('rule_version') or '?'}")
-        if row.get("condition"):
-            lines.append(f"  condition: {row.get('condition')}")
-        if inputs:
-            lines.append(f"  inputs: {_compact_inputs(inputs)}")
-        if metrics:
-            lines.append(f"  metrics: {_compact_metrics(metrics)}")
-        if sources:
-            lines.append(f"  sources: {_compact_sources(sources)}")
+        reason = _signal_reason(key, row, touched)
+        suffix = f"。{reason}" if reason else "。"
+        lines.append(f"- {SIGNAL_LABELS[key]}：{_label_value(str(row.get('value') or ''))}{suffix}")
 
     lines.extend(
         [
             "",
-            "结构命中：",
-            f"- wealth_element: {wealth_element or 'unknown'}",
-            f"- touched_wealth_pillars: {', '.join(str(item) for item in touched) if touched else 'none'}",
+            "结构线索：",
+            f"- 财富元素：{_element_label(wealth_element)}。",
+            f"- 触及财富元素的位置：{_pillar_list(touched)}。",
         ]
     )
+    relation_text = _branch_relation_summary(bundle.get("branch_relations"))
+    if relation_text:
+        lines.append(f"- 本命地支关系：{relation_text}。")
     if evidence:
-        lines.append(f"- evidence_summary: {', '.join(str(item) for item in evidence)}")
+        lines.append(f"- 摘要：{_evidence_summary_text(evidence)}。")
 
     lines.extend(
         [
             "",
-            "禁止解释：不输出 good/bad、favorable/unfavorable、今年财运、发财/破财、传统预测文本。",
-            "后续若要让流年/大运影响该信号，必须进入 P5 time-aware inference，不能在 P4 直接混入。",
+            "阅读边界：这里先不把大运、流年改写成收入结果；它们可以作为时间背景另看，但不能直接替代本命结构。",
         ]
     )
     return "\n".join(lines)
@@ -87,33 +77,99 @@ def _value(signals: Dict[str, Dict[str, Any]], key: str) -> str:
 
 
 def _label_value(value: str) -> str:
-    return VALUE_LABELS.get(value, value or "unknown")
+    return VALUE_LABELS.get(value, value or "未知")
 
 
-def _compact_metrics(metrics: Dict[str, Any]) -> str:
+def _signal_reason(key: str, row: Dict[str, Any], touched_wealth_pillars: list[Any]) -> str:
+    metrics = row.get("metrics") if isinstance(row.get("metrics"), dict) else {}
+    if key == "self_capacity":
+        support = _percent(metrics.get("support_score"))
+        pressure = _percent(metrics.get("pressure_score"))
+        if support or pressure:
+            return f"支持约{support or '未知'}，压力约{pressure or '未知'}"
+    if key == "wealth_presence":
+        count = metrics.get("count")
+        if isinstance(count, (int, float)):
+            return f"可见天干地支里财富元素线索为{int(count)}处"
+    if key == "wealth_accessibility":
+        clash = _count_text(metrics.get("clash"))
+        combination = _count_text(metrics.get("combination"))
+        if not touched_wealth_pillars:
+            return "当前未见直接触及财富元素的柱位，所以这项暂不单独判断"
+        return f"触及财富元素的位置里，连接{combination}、冲动{clash}"
+    if key == "volatility":
+        return f"本命地支里检测到冲动关系{_count_text(metrics.get('clash_count'))}"
+    if key == "structure_binding":
+        return f"本命地支里检测到三合牵制{_count_text(metrics.get('three_harmony_count'))}"
+    return ""
+
+
+def _percent(value: Any) -> str:
+    if not isinstance(value, (int, float)):
+        return ""
+    return f"{round(float(value) * 100)}%"
+
+
+def _count_text(value: Any) -> str:
+    if isinstance(value, (int, float)):
+        return f"{int(value)}组"
+    return "0组"
+
+
+def _element_label(value: str) -> str:
+    labels = {
+        "wood": "木",
+        "fire": "火",
+        "earth": "土",
+        "metal": "金",
+        "water": "水",
+    }
+    return labels.get(value, "未识别")
+
+
+def _pillar_list(items: list[Any]) -> str:
+    labels = {
+        "year": "年柱",
+        "month": "月柱",
+        "day": "日柱",
+        "hour": "时柱",
+    }
+    values = [labels.get(str(item), str(item)) for item in items if str(item)]
+    return "、".join(values) if values else "未见直接触及"
+
+
+def _branch_relation_summary(value: Any) -> str:
+    if not isinstance(value, list):
+        return ""
     parts = []
-    for key in sorted(metrics):
-        value = metrics[key]
-        if isinstance(value, list):
-            value = "[" + ", ".join(str(item) for item in value) + "]"
-        parts.append(f"{key}={value}")
-    return "; ".join(parts)
-
-
-def _compact_inputs(inputs: list[Dict[str, Any]]) -> str:
-    parts = []
-    for item in inputs:
-        if not isinstance(item, dict):
+    for row in value:
+        if not isinstance(row, dict):
             continue
-        parts.append(f"{item.get('path')}={item.get('value')}")
-    return "; ".join(parts)
+        branches = str(row.get("branches") or "")
+        relation = _relation_label(str(row.get("type") or ""))
+        if branches and relation:
+            parts.append(f"{branches}{relation}")
+    return "、".join(parts)
 
 
-def _compact_sources(sources: list[Any]) -> str:
+def _relation_label(value: str) -> str:
+    labels = {
+        "six_clash": "冲",
+        "six_combination": "合",
+        "three_harmony": "三合",
+    }
+    return labels.get(value, "")
+
+
+def _evidence_summary_text(items: list[Any]) -> str:
     parts = []
-    for item in sources:
-        if isinstance(item, dict):
-            parts.append(f"{item.get('path')}={item.get('value')}")
+    for item in items:
+        text = str(item or "")
+        if not text:
+            continue
+        if "=" in text:
+            key, raw_value = text.split("=", 1)
+            parts.append(f"{SIGNAL_LABELS.get(key, key)}为{_label_value(raw_value)}")
         else:
-            parts.append(str(item))
-    return "; ".join(parts)
+            parts.append(text)
+    return "；".join(parts)

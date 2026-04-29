@@ -65,6 +65,7 @@ class KnowledgeDomain(str, Enum):
     LUCK_FLOW = "luck_flow"
     THEME_MAPPING = "theme_mapping"
     WEALTH = "wealth"
+    ANSWER_EXPRESSION = "answer_expression"
     CAREER = "career"
     RELATIONSHIP = "relationship"
     HEALTH = "health"

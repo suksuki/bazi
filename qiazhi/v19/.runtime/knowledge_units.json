@@ -1,4 +1,241 @@
 {
+  "answer.structure_plain_language": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "answer_expression_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "answer.structure_plain_language",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:085d687c22a4ca7c78f297249e1c90ca9920b13a45746e632248d21f3f28181a",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.answer.structure_plain_language.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "回答",
+          "说人话",
+          "结构回答",
+          "解释",
+          "用户问题",
+          "answer"
+        ],
+        "structured_facts": [
+          "user_question",
+          "matched_facts",
+          "plain_language",
+          "no_internal_debug_dump"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:085d687c22a4ca7c78f297249e1c90ca9920b13a45746e632248d21f3f28181a",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "answer_expression_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "answer.structure_plain_language",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "A useful V19 answer should name the user's question, name the matched facts, explain the structural meaning in ordinary language, and avoid internal IDs or generic disclaimers unless the user asks about boundaries.",
+      "status": "reviewed",
+      "title": "Plain-Language Structure Answer",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "answer.unsupported_question_boundary": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "unsupported_answer_boundary_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "answer.unsupported_question_boundary",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:d2fbea9b27505704138bc7d0cd00465d4f4ddbd0dd2e71bee68967381238fbde",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.answer.unsupported_question_boundary.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "不支持",
+          "婚姻",
+          "健康",
+          "发财",
+          "什么时候",
+          "预测",
+          "空回答"
+        ],
+        "structured_facts": [
+          "unsupported_intent",
+          "clear_boundary",
+          "offer_supported_question",
+          "no_fake_answer"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:d2fbea9b27505704138bc7d0cd00465d4f4ddbd0dd2e71bee68967381238fbde",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "unsupported_answer_boundary_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "answer.unsupported_question_boundary",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "If a question asks for marriage, health, exact timing, luck, rich/poor judgement, or other unsupported predictions, V19 should say the current system only supports structure reading and offer a supported structural question.",
+      "status": "reviewed",
+      "title": "Unsupported Question Boundary",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
   "core.branch_relation_layer_boundary": {
     "template": {
       "confidence_prior": 0.82,
@@ -2604,6 +2841,1927 @@
         "Exact downstream inference requires separate reviewed rules."
       ],
       "updated_at": "2026-04-29T08:15:47+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.answer_concise_complete_response": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "answer_completion_shape_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.answer_concise_complete_response",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:61924203e6a918830f9142cda57ffa031475739df633e063fc1038c8218bb470",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.answer_concise_complete_response.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "完整回答",
+          "没说完",
+          "截断",
+          "简洁",
+          "回答",
+          "继续问"
+        ],
+        "structured_facts": [
+          "answer_question",
+          "name_observed_facts",
+          "plain_structural_meaning",
+          "finish_cleanly",
+          "offer_next_question_if_needed"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:61924203e6a918830f9142cda57ffa031475739df633e063fc1038c8218bb470",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "answer_completion_shape_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.answer_concise_complete_response",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "A guided answer should be short enough to finish cleanly: answer the question, name the observed facts, explain the structural meaning, and stop. If details exceed the space, offer a next question rather than ending mid-sentence.",
+      "status": "reviewed",
+      "title": "Concise and Complete Answer Shape",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.answer_no_boilerplate_tail": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "answer_no_boilerplate_tail_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.answer_no_boilerplate_tail",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:5932346ae644186cf5e84841ac225d3af9d8c4b8660b336e36d71ca60c9ea76d",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.answer_no_boilerplate_tail.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "废话",
+          "尾巴",
+          "免责",
+          "这条回答",
+          "说人话",
+          "回答当前问题"
+        ],
+        "structured_facts": [
+          "avoid_generic_tail",
+          "natural_boundary_language",
+          "answer_current_question",
+          "no_internal_policy_tone"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:5932346ae644186cf5e84841ac225d3af9d8c4b8660b336e36d71ca60c9ea76d",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "answer_no_boilerplate_tail_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.answer_no_boilerplate_tail",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "User-facing answers should avoid empty tails such as 'this answer only explains the current question' unless the user explicitly asks about system boundaries. The boundary should be woven into the answer in natural language.",
+      "status": "reviewed",
+      "title": "No Boilerplate Tail in User Answers",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.branch_hidden_stem_complete_mapping": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "hidden_stem_complete_mapping_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.branch_hidden_stem_complete_mapping",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:a8406adb90340672772eb7a7edffd16e81ed95ea2d5cdd6ba6c37290caa581b7",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.branch_hidden_stem_complete_mapping.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "藏干",
+          "地支藏干",
+          "完整藏干",
+          "结构来源",
+          "branch hidden stems"
+        ],
+        "structured_facts": [
+          "子=癸",
+          "丑=己/癸/辛",
+          "寅=甲/丙/戊",
+          "卯=乙",
+          "辰=戊/乙/癸",
+          "巳=丙/庚/戊",
+          "午=丁/己",
+          "未=己/丁/乙",
+          "申=庚/壬/戊",
+          "酉=辛",
+          "戌=戊/辛/丁",
+          "亥=壬/甲"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:a8406adb90340672772eb7a7edffd16e81ed95ea2d5cdd6ba6c37290caa581b7",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "hidden_stem_complete_mapping_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.branch_hidden_stem_complete_mapping",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "Every branch should expose its hidden-stem source layer before an answer uses it. V19 should name the branch and contained stems as observed structure, not as a verdict.",
+      "status": "reviewed",
+      "title": "Complete Branch Hidden-Stem Mapping",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.branch_penalty_harm_break_boundary": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "branch_penalty_harm_break_boundary_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.branch_penalty_harm_break_boundary",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:0dcfc58796a82ea638332d7e1409b20b185a0c05bf6ae8a498199927150949e8",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.branch_penalty_harm_break_boundary.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "刑",
+          "害",
+          "破",
+          "地支关系",
+          "关系元数据",
+          "不作断语"
+        ],
+        "structured_facts": [
+          "penalty_relation",
+          "harm_relation",
+          "break_relation",
+          "observed_relation_only",
+          "no_conflict_narrative"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:0dcfc58796a82ea638332d7e1409b20b185a0c05bf6ae8a498199927150949e8",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "branch_penalty_harm_break_boundary_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.branch_penalty_harm_break_boundary",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "刑、害、破 are branch-relation terms. In V19 they may be named as observed relation metadata only when the relation is explicitly detected; they must not become conflict, disaster, or good/bad language.",
+      "status": "reviewed",
+      "title": "Penalty, Harm, and Break Boundary",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.branch_three_meeting_boundary": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "branch_three_meeting_boundary_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.branch_three_meeting_boundary",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:f163bc7a5daa95d5eec1483e01c7ef50651cc5883c4f44f4b2d46a03fa247299",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.branch_three_meeting_boundary.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "三会",
+          "地支关系",
+          "会局",
+          "本命",
+          "大运",
+          "流年",
+          "层级"
+        ],
+        "structured_facts": [
+          "寅卯辰",
+          "巳午未",
+          "申酉戌",
+          "亥子丑",
+          "branch_set_relation",
+          "layer_first"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:f163bc7a5daa95d5eec1483e01c7ef50651cc5883c4f44f4b2d46a03fa247299",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "branch_three_meeting_boundary_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.branch_three_meeting_boundary",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "三会 is a branch-set relation. V19 should report the visible set and layer first; it should not infer strength, outcome, or timing from the name alone.",
+      "status": "reviewed",
+      "title": "Three Meeting Boundary",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.month_command_season_not_verdict": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "strength",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "month_command_season_boundary_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.month_command_season_not_verdict",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:da80a99f163c6fbbaec7d138b220b56160ff32e15025c4634a5445a32ea3f701",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.month_command_season_not_verdict.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "月令",
+          "月支",
+          "季节",
+          "旺衰",
+          "身强",
+          "身弱",
+          "结构背景"
+        ],
+        "structured_facts": [
+          "month_branch",
+          "season_context",
+          "environment_evidence",
+          "not_standalone_strength_verdict",
+          "requires_reviewed_model"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:da80a99f163c6fbbaec7d138b220b56160ff32e15025c4634a5445a32ea3f701",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "strength",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "month_command_season_boundary_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.month_command_season_not_verdict",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "月令 and season context can explain the environment around the day master, but they are not enough to output 身强、身弱, good, or bad by themselves. V19 should describe them as evidence background unless a separate reviewed strength model consumes them.",
+      "status": "reviewed",
+      "title": "Month Command and Season Are Not Verdicts",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.ten_god_five_family_plain_language": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "ten_god",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "ten_god_five_family_plain_language_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.ten_god_five_family_plain_language",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:d5cf79d694cd93a953cf247c490bb897e01931559a67de6236b92cbeffe4941a",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.ten_god_five_family_plain_language.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "十神",
+          "比劫",
+          "食伤",
+          "财星",
+          "官杀",
+          "印星",
+          "说人话"
+        ],
+        "structured_facts": [
+          "peer_family",
+          "output_family",
+          "wealth_family",
+          "officer_family",
+          "resource_family",
+          "metadata_not_life_outcome"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:d5cf79d694cd93a953cf247c490bb897e01931559a67de6236b92cbeffe4941a",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "ten_god",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "ten_god_five_family_plain_language_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.ten_god_five_family_plain_language",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "For user-facing answers, ten-god labels should be grouped into five relation families around the day master: 比劫 as same-side relation, 食伤 as output relation, 财 as controlled-by-day-master relation, 官杀 as controlling relation, and 印 as supporting-source relation. These are relation families, not life predictions.",
+      "status": "reviewed",
+      "title": "Ten-God Five-Family Plain Language",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p10.ten_god_visible_hidden_boundary": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "ten_god",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "ten_god_visible_hidden_boundary_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p10.ten_god_visible_hidden_boundary",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:a93f2618ffaf0d82bbdb4d8da2d557d1df3607a3fc78e2d19436a2e7cb39bc5e",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p10.ten_god_visible_hidden_boundary.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "十神",
+          "透干",
+          "藏干",
+          "明现",
+          "隐藏",
+          "证据层"
+        ],
+        "structured_facts": [
+          "target_stem",
+          "visible_stem_layer",
+          "hidden_stem_layer",
+          "evidence_layer_first",
+          "not_prediction"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:a93f2618ffaf0d82bbdb4d8da2d557d1df3607a3fc78e2d19436a2e7cb39bc5e",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "ten_god",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "ten_god_visible_hidden_boundary_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p10.ten_god_visible_hidden_boundary",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "A ten-god label should say whether the target stem is visible on a pillar or contained inside a branch. Visible and hidden labels have different evidence layers; neither layer alone is a prediction.",
+      "status": "reviewed",
+      "title": "Visible and Hidden Ten-God Boundary",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.branch_relation_layer_chain": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "branch_relation_layer_chain_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.branch_relation_layer_chain",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:9b9868bde6ee5ca463a4619626cc0f81f9f6e59a5daa101e9d40c5e5d607e1e1",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.branch_relation_layer_chain.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "地支关系",
+          "冲合",
+          "本命",
+          "大运",
+          "流年",
+          "分层",
+          "layer"
+        ],
+        "structured_facts": [
+          "natal_internal",
+          "luck_to_natal",
+          "flow_year_to_natal",
+          "relation_pair",
+          "layer_first_answer"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:9b9868bde6ee5ca463a4619626cc0f81f9f6e59a5daa101e9d40c5e5d607e1e1",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "branch_relation_layer_chain_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.branch_relation_layer_chain",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "Branch relations should be reported with layer first: natal-internal, luck-to-natal, or flow-year-to-natal. The same pair can guide questions differently depending on layer.",
+      "status": "reviewed",
+      "title": "Branch Relation Layer Chain",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.element_relation_chain": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "five_element",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "element_relation_chain_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.element_relation_chain",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:d313cb3bab9793e21546af2503035c941649c2dcb0678b359b3dd5ef1bd71333",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.element_relation_chain.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "五行",
+          "生",
+          "克",
+          "帮扶",
+          "泄耗",
+          "同类",
+          "关系方向"
+        ],
+        "structured_facts": [
+          "generation_direction",
+          "control_direction",
+          "same_element_group",
+          "structure_language_only"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:d313cb3bab9793e21546af2503035c941649c2dcb0678b359b3dd5ef1bd71333",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "five_element",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "element_relation_chain_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.element_relation_chain",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "Element generation and control can explain relation direction such as support, drain, control, or same-element grouping. The answer must keep this as structure language unless a separate reviewed rule consumes it.",
+      "status": "reviewed",
+      "title": "Element Relation Chain",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.income_structure_signal_chain": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "wealth",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "income_structure_signal_chain_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.income_structure_signal_chain",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:ad334a41e8430daaada340fa4287af1328ba0b468ad206831c5e9f30cfea1a46",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.income_structure_signal_chain.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "收入稳定",
+          "财富结构",
+          "承载力",
+          "可达性",
+          "波动",
+          "牵制",
+          "不预测金额"
+        ],
+        "structured_facts": [
+          "self_capacity",
+          "wealth_presence",
+          "wealth_accessibility",
+          "volatility",
+          "structure_binding",
+          "no_amount_or_timing"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:ad334a41e8430daaada340fa4287af1328ba0b468ad206831c5e9f30cfea1a46",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "wealth",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "income_structure_signal_chain_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.income_structure_signal_chain",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "Income-structure answers should connect supported signals such as self capacity, wealth presence, accessibility, volatility, and binding. They should not infer wealth timing or income amount.",
+      "status": "reviewed",
+      "title": "Income Structure Signal Chain",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.month_hidden_stem_chain": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "month_hidden_stem_chain_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.month_hidden_stem_chain",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:303bbcf22a846fd8cdcd34e0bca1220565b2ea5b9a5c066ea503d14ee2ce26f2",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.month_hidden_stem_chain.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "月令",
+          "藏干",
+          "地支",
+          "来源",
+          "层级",
+          "结构信号"
+        ],
+        "structured_facts": [
+          "month_environment_layer",
+          "branch_container_layer",
+          "hidden_source_layer",
+          "signal_origin"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:303bbcf22a846fd8cdcd34e0bca1220565b2ea5b9a5c066ea503d14ee2ce26f2",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "month_hidden_stem_chain_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.month_hidden_stem_chain",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "月令 gives the environment layer, while hidden stems explain contained sources inside each branch. An answer should name both layers when explaining where a structure signal comes from.",
+      "status": "reviewed",
+      "title": "Month Command and Hidden-Stem Chain",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.structural_signal_adapter_boundary": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "structural_signal_adapter_boundary",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.structural_signal_adapter_boundary",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:12584c5f9c10b079142d3a82ad17045e88a4c277eca987497fd9db253be6d928",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.structural_signal_adapter_boundary.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "Structural Rule Signals",
+          "Rule DB",
+          "解释",
+          "审计",
+          "不改变结果",
+          "adapter"
+        ],
+        "structured_facts": [
+          "rule_db_signal",
+          "question_guidance",
+          "answer_explanation",
+          "audit",
+          "no_result_mutation"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:12584c5f9c10b079142d3a82ad17045e88a4c277eca987497fd9db253be6d928",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "answer_expression",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "structural_signal_adapter_boundary",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.structural_signal_adapter_boundary",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "Rule DB may emit structural rule signals for question guidance, answer explanation, and audit. These signals are not allowed to mutate deterministic results unless a later validated engine adapter explicitly approves that use.",
+      "status": "reviewed",
+      "title": "Structural Signal Adapter Boundary",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.structure_reading_chain": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "structure_reading_chain_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.structure_reading_chain",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:40d2036f5f27c302971e546e6aa806552f146737d32e37dec65570c2c1ad4ead",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.structure_reading_chain.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "结构链",
+          "阅读顺序",
+          "日主",
+          "月令",
+          "藏干",
+          "冲合",
+          "墓库",
+          "时间背景"
+        ],
+        "structured_facts": [
+          "day_master_anchor",
+          "month_command",
+          "visible_pillars",
+          "hidden_stems",
+          "branch_relations",
+          "vaults",
+          "time_context",
+          "supported_result_context"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:40d2036f5f27c302971e546e6aa806552f146737d32e37dec65570c2c1ad4ead",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "structure_reading_chain_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.structure_reading_chain",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "A structural answer should follow an explicit chain: day-master anchor, month-command background, visible pillars, hidden stems, branch relations, vaults, time context, then supported result context if relevant.",
+      "status": "reviewed",
+      "title": "Structure Reading Chain",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.ten_god_relation_chain": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "ten_god",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "ten_god_relation_chain_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.ten_god_relation_chain",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:98564f13c6524ed32df1a27fde76b452e7f43031d73c1564abe6d825b43e190e",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.ten_god_relation_chain.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "十神",
+          "日主",
+          "藏干",
+          "财星",
+          "关系元数据",
+          "不作断语"
+        ],
+        "structured_facts": [
+          "day_master",
+          "target_stem",
+          "visible_or_hidden_layer",
+          "relationship_label",
+          "metadata_not_outcome"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:98564f13c6524ed32df1a27fde76b452e7f43031d73c1564abe6d825b43e190e",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "ten_god",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "ten_god_relation_chain_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.ten_god_relation_chain",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "A ten-god explanation should start from the day master, identify the target visible or hidden stem, then explain the relationship label as metadata. It should not jump directly from a label to a life outcome.",
+      "status": "reviewed",
+      "title": "Ten-God Relationship Chain",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
+      "version": "v1"
+    }
+  },
+  "p9.vault_location_chain": {
+    "template": {
+      "confidence_prior": 0.82,
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "detection_logic": {
+        "op": "contextual_keyword_and_structure_match"
+      },
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "evidence_type": "vault_location_chain_evidence",
+      "guardrails": [
+        "NO_DIRECT_PREDICTION",
+        "NO_ACTIVE_RULE",
+        "EVIDENCE_ONLY",
+        "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+      ],
+      "input_requirements": [
+        "chart_structure",
+        "time_context_optional",
+        "user_question"
+      ],
+      "knowledge_id": "p9.vault_location_chain",
+      "output_fields": [
+        "knowledge_id",
+        "title",
+        "statement",
+        "structured_facts",
+        "guardrails"
+      ],
+      "provenance": {
+        "content_hash": "sha256:dd1dd21a5b95c602403084a030fcf6e40402b2733d4d4490e2cbc38303b73bc2",
+        "reviewed_at": "2026-04-29T12:52:51+00:00",
+        "reviewed_by": "v19_seed",
+        "source_refs": [
+          "docs/bazi_knowledge/core/core_units_v1.md",
+          "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+        ]
+      },
+      "runtime_scope": "evidence_template_only",
+      "template_id": "template.p9.vault_location_chain.v1"
+    },
+    "unit": {
+      "conditions": {
+        "allowed_usage": [
+          "evidence_template",
+          "structure_explanation",
+          "agent_context"
+        ],
+        "forbidden_usage": [
+          "fortune",
+          "score",
+          "good_bad_judgement",
+          "traditional_prediction_text"
+        ],
+        "keywords": [
+          "墓库",
+          "辰戌丑未",
+          "位置",
+          "藏干",
+          "开库",
+          "闭库",
+          "结构层"
+        ],
+        "structured_facts": [
+          "vault_branch",
+          "pillar_or_time_layer",
+          "hidden_stems",
+          "no_open_close_claim"
+        ]
+      },
+      "confidence_prior": 0.82,
+      "conflicts": [],
+      "content_hash": "sha256:dd1dd21a5b95c602403084a030fcf6e40402b2733d4d4490e2cbc38303b73bc2",
+      "created_at": "2026-04-29T12:52:51+00:00",
+      "created_by": "v19_seed",
+      "domain": "core_structure",
+      "effects": {
+        "runtime_scope": "evidence_only"
+      },
+      "feature_mapping": {
+        "detection_logic": {
+          "op": "contextual_keyword_and_structure_match"
+        },
+        "evidence_type": "vault_location_chain_evidence",
+        "input_requirements": [
+          "chart_structure",
+          "time_context_optional",
+          "user_question"
+        ],
+        "output_fields": [
+          "knowledge_id",
+          "title",
+          "statement",
+          "structured_facts",
+          "guardrails"
+        ]
+      },
+      "knowledge_id": "p9.vault_location_chain",
+      "reviewed_at": "2026-04-29T12:52:51+00:00",
+      "reviewed_by": "v19_seed",
+      "risks": [
+        "May be misused as prediction if separated from guardrails."
+      ],
+      "source_refs": [
+        "docs/bazi_knowledge/core/core_units_v1.md",
+        "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+      ],
+      "statement": "A vault answer should name the vault branch, its pillar or time layer, and the hidden stems it contains. It should avoid opening/closing vault claims unless such a rule has been separately reviewed.",
+      "status": "reviewed",
+      "title": "Vault Location and Hidden-Stem Chain",
+      "uncertainty": [
+        "Exact downstream inference requires separate reviewed rules."
+      ],
+      "updated_at": "2026-04-29T12:52:51+00:00",
       "version": "v1"
     }
   },

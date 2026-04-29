@@ -66,6 +66,25 @@ def retrieve_knowledge(structure_payload: Dict[str, Any], user_message: str, set
             score += 1
         if structure_payload.get("time_context") and domain == "luck_flow":
             score += 3
+        if domain == "answer_expression" and any(keyword in keywords for keyword in {"回答", "说人话", "废话", "不支持", "完整回答"}):
+            score += 8
+        if domain == "ten_god" and any(keyword in keywords for keyword in {"十神", "财星", "官杀", "印星", "比劫", "食伤"}):
+            score += 5
+        if domain == "strength" and any(keyword in keywords for keyword in {"月令", "月支", "旺衰", "身强", "身弱", "承载力"}):
+            score += 5
+        if knowledge_id.startswith("p10."):
+            if "month_command" in knowledge_id and any(keyword in keywords for keyword in {"月令", "月支", "身强", "身弱", "旺衰"}):
+                score += 14
+            if "ten_god" in knowledge_id and any(keyword in keywords for keyword in {"十神", "财星", "官杀", "印星", "比劫", "食伤", "透干", "藏干"}):
+                score += 14
+            if "branch_hidden_stem" in knowledge_id and any(keyword in keywords for keyword in {"藏干", "地支藏干", "透干"}):
+                score += 14
+            if "penalty_harm_break" in knowledge_id and any(keyword in keywords for keyword in {"刑", "害", "破"}):
+                score += 14
+            if "three_meeting" in knowledge_id and "三会" in keywords:
+                score += 14
+            if "answer_" in knowledge_id and domain == "answer_expression":
+                score += 4
         if "income" in _norm(user_message) and domain in {"ten_god", "strength", "theme_mapping"}:
             score += 3
         if score > 0:
@@ -143,11 +162,20 @@ def _context_keywords(structure_payload: Dict[str, Any], user_message: str) -> L
         "生克",
         "冲",
         "合",
+        "刑",
+        "害",
+        "破",
         "六合",
         "三合",
+        "三会",
         "墓库",
+        "墓",
+        "库",
         "结构回答",
         "说人话",
+        "废话",
+        "回答",
+        "完整回答",
         "不支持",
     ]:
         if key.lower() in raw:

@@ -91,7 +91,6 @@ function bindEvents() {
   if (structureData) renderPillarPanel(structureData);
   renderQuestions();
   if (structureData) renderQuestionContext(structureData);
-  if (structureData) renderGuidancePanel(structureData, lastData);
   if (lastData) renderResult(lastData);
   });
   $("run").addEventListener("click", runAgent);
@@ -136,7 +135,6 @@ async function loadStructure() {
   dynamicQuestions = dynamicQuestionsFrom(structureData);
   renderPillarPanel(structureData);
   renderQuestionContext(structureData);
-  renderGuidancePanel(structureData, lastData);
 }
 
 function renderQuestions() {
@@ -187,7 +185,7 @@ function renderPillarPanel(data) {
   const pillars = data.chart?.pillars || {};
   const activeLuck = data.time_context?.luck_cycle || null;
   const flow = data.time_context?.flow_year || {};
-  $("pillarPanel").innerHTML = `<section class="pillar-section"><div class="pillar-panel-head"><span>${escapeHtml(t("pillar_panel"))}</span><em>${escapeHtml(t("not_prediction"))}</em></div><div class="pillar-subhead">${escapeHtml(t("natal_chart"))}</div><div class="pillar-grid natal-pillars">${["year","month","day","hour"].map((key)=>pillarCell(t(key), pillars[key], key==="day")).join("")}</div><div class="pillar-context-grid"><article class="context-pillar luck-context" tabindex="0"><span>${escapeHtml(t("current_luck_cycle"))}</span><strong>${escapeHtml(activeLuck?.pillar?.display || "-")}</strong><em>${activeLuck ? `${activeLuck.start_age}-${activeLuck.end_age}` : t("context_only")}</em>${activeLuck?.pillar ? `<div class="pillar-tooltip">${escapeHtml(pillarTooltip(activeLuck.pillar, false))}</div>` : ""}</article><article class="context-pillar flow-context" tabindex="0"><span>${escapeHtml(t("flow_year"))}</span><strong>${escapeHtml(flow.pillar?.display || "-")}</strong><em>${escapeHtml(String(flow.year || ""))} · ${escapeHtml(t("context_only"))}</em>${flow.pillar ? `<div class="pillar-tooltip">${escapeHtml(pillarTooltip(flow.pillar, false))}</div>` : ""}</article></div><div class="context-warning">${escapeHtml(t("does_not_represent_prediction"))}</div></section>`;
+  $("pillarPanel").innerHTML = `<section class="pillar-section"><div class="pillar-panel-head"><span>${escapeHtml(t("pillar_panel"))}</span></div><div class="pillar-subhead">${escapeHtml(t("natal_chart"))}</div><div class="pillar-grid natal-pillars">${["year","month","day","hour"].map((key)=>pillarCell(t(key), pillars[key], key==="day")).join("")}</div><div class="pillar-context-grid"><article class="context-pillar luck-context" tabindex="0"><span>${escapeHtml(t("current_luck_cycle"))}</span><strong>${escapeHtml(activeLuck?.pillar?.display || "-")}</strong><em>${activeLuck ? `${activeLuck.start_age}-${activeLuck.end_age}` : t("context_only")}</em>${activeLuck?.pillar ? `<div class="pillar-tooltip">${escapeHtml(pillarTooltip(activeLuck.pillar, false))}</div>` : ""}</article><article class="context-pillar flow-context" tabindex="0"><span>${escapeHtml(t("flow_year"))}</span><strong>${escapeHtml(flow.pillar?.display || "-")}</strong><em>${escapeHtml(String(flow.year || ""))} · ${escapeHtml(t("context_only"))}</em>${flow.pillar ? `<div class="pillar-tooltip">${escapeHtml(pillarTooltip(flow.pillar, false))}</div>` : ""}</article></div></section>`;
 }
 
 function pillarCell(label, pillar, isDay) { return `<article class="pillar-cell ${isDay ? "day-master-cell" : ""}" tabindex="0"><span>${escapeHtml(label)}</span><strong>${escapeHtml(pillar?.display || "-")}</strong><em>${isDay ? escapeHtml(t("day_master")) : escapeHtml(pillar?.stem_element || "")}</em><div class="pillar-tooltip">${escapeHtml(pillarTooltip(pillar || {}, isDay))}</div></article>`; }
@@ -199,7 +197,6 @@ function renderNextQuestions() {
   $("nextQuestionBlock").classList.toggle("hidden", !keys.length);
   $("nextQuestions").innerHTML = keys.map((key) => `<button type="button" class="oracle-chip" data-next-key="${key}"><span>${escapeHtml(questionLabel(key))}</span></button>`).join("");
   document.querySelectorAll("[data-next-key]").forEach((button)=>button.addEventListener("click",()=>{setQuestion(button.dataset.nextKey||"q_income_stability"); $("message").focus();}));
-  renderGuidancePanel(structureData, lastData);
   renderQuestions();
 }
 
@@ -257,18 +254,6 @@ async function submitQuestionFeedback(rating, answer = {}) {
     if (lastData) renderNextQuestions();
   }
   $("oracleStatus").textContent = result.ok === false ? (result.message || result.code || "feedback failed") : t("answer_feedback_saved");
-}
-function renderGuidancePanel(structure, result) {
-  if (!$("guidancePanel") || !structure) return;
-  const signals = signalMapFromResult(result);
-  const rel = structure.time_context?.flow_year?.relations_with_natal || {};
-  const relationCount = (rel.clashes || []).length + (rel.combinations || []).length;
-  const cards = [
-    ["guidance_step_structure", structure.chart?.pillars?.day?.display || "-"],
-    ["guidance_step_income", signals.income_stability ? tValue(signals.income_stability) : t("income_stability")],
-    ["guidance_step_time", relationCount ? `${relationCount} · ${t("context_only")}` : t("context_only")],
-  ];
-  $("guidancePanel").innerHTML = `<div class="guidance-head"><strong>${escapeHtml(t("guidance_title"))}</strong></div><div class="guidance-grid">${cards.map(([key,value])=>`<article><span>${escapeHtml(t(key))}</span><strong>${escapeHtml(value)}</strong></article>`).join("")}</div>`;
 }
 function guidanceQuestionKeys(structure, result) { return rankedQuestionKeys(structure, result, { afterResult: Boolean(result) }).slice(0, 5); }
 function rankedQuestionKeys(structure, result, options = {}) {

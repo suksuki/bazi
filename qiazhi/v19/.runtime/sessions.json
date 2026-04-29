@@ -48249,6 +48249,3744 @@
     "updated_at": "2026-04-29T00:05:21+00:00",
     "user_id": ""
   },
+  "v19s_646a22a841434498": {
+    "created_at": "2026-04-29T12:53:12+00:00",
+    "role": "guest",
+    "session_id": "v19s_646a22a841434498",
+    "turns": [
+      {
+        "assistant": {
+          "llm_status": {
+            "base_url": "http://dblife.com:11888/v1",
+            "enabled": true,
+            "execute_llm": true,
+            "model": "gemma4:latest",
+            "provider": "ollama",
+            "reason": "guided_answer_llm_rewrite_rejected_contract_fallback",
+            "used": false
+          },
+          "role": "v19_guided_question_answer_composer_contract_fallback",
+          "structured": {
+            "agent_reply": {
+              "content": [
+                "如果只看结构，这张命盘可以先抓三个入口：日柱是癸酉，月柱是壬辰，地支关系是命盘内部{'zh': '合', 'en': 'Combination', 'ko': '합'}辰酉，墓库观察是辰。",
+                "",
+                "这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。"
+              ],
+              "guardrails": [
+                "LLM_REPHRASES_STRUCTURED_FACTS_ONLY",
+                "NO_RESULT_MUTATION",
+                "NO_FORTUNE"
+              ],
+              "role": "v19_guided_question_answer_composer_contract_fallback"
+            },
+            "algorithm_status": {
+              "chart_structure": {
+                "limitations": [
+                  "solar_term_boundaries_are_approximate",
+                  "lunar_input_converted_to_solar_before_structure",
+                  "timezone_and_birthplace_not_modeled",
+                  "day_pillar_requires_domain_verification"
+                ],
+                "provenance": "v19.agent.structure.build_chart",
+                "status": "prototype"
+              },
+              "income_stability": {
+                "is_prediction": false,
+                "provenance": "v19.agent.income_stability.derive_income_stability",
+                "status": "deterministic_structure_signal"
+              },
+              "knowledge": {
+                "not_rule_db": true,
+                "provenance": "v19.knowledge_store reviewed evidence templates",
+                "status": "evidence_store"
+              },
+              "llm": {
+                "primary_for_income_stability": false,
+                "status": "optional_explanation"
+              },
+              "public_product_ready": false,
+              "system_name": "V19 Standalone Agent Lab",
+              "time_structure": {
+                "limitations": [
+                  "luck_cycle_start_age_is_approximate",
+                  "flow_year_does_not_modify_income_stability_in_P4"
+                ],
+                "provenance": "v19.agent.structure.build_luck_cycles/build_flow_year",
+                "status": "context_only"
+              }
+            },
+            "birth_input": {
+              "calendar_type": "solar",
+              "day": 29,
+              "gender": "male",
+              "hour": 21,
+              "lunar_is_leap_month": false,
+              "minute": 52,
+              "month": 4,
+              "year": 2026
+            },
+            "birth_input_solar": {
+              "calendar_type": "solar",
+              "day": 29,
+              "gender": "male",
+              "hour": 21,
+              "lunar_is_leap_month": false,
+              "minute": 52,
+              "month": 4,
+              "year": 2026
+            },
+            "boundary": "structure_first_no_prediction",
+            "calendar_conversion": {
+              "effective_calendar_type": "solar",
+              "input_calendar_type": "solar",
+              "source": "direct_solar_input"
+            },
+            "chart": {
+              "calendar_note": "solar_mvp_approximate_jie_boundaries",
+              "day_master": {
+                "element": "water",
+                "stem": "癸",
+                "yin_yang": "yin"
+              },
+              "pillars": {
+                "day": {
+                  "branch": "酉",
+                  "branch_element": "metal",
+                  "branch_yin_yang": "yin",
+                  "display": "癸酉",
+                  "stem": "癸",
+                  "stem_element": "water",
+                  "stem_yin_yang": "yin"
+                },
+                "hour": {
+                  "branch": "亥",
+                  "branch_element": "water",
+                  "branch_yin_yang": "yang",
+                  "display": "癸亥",
+                  "stem": "癸",
+                  "stem_element": "water",
+                  "stem_yin_yang": "yin"
+                },
+                "month": {
+                  "branch": "辰",
+                  "branch_element": "earth",
+                  "branch_yin_yang": "yang",
+                  "display": "壬辰",
+                  "stem": "壬",
+                  "stem_element": "water",
+                  "stem_yin_yang": "yang"
+                },
+                "year": {
+                  "branch": "午",
+                  "branch_element": "fire",
+                  "branch_yin_yang": "yin",
+                  "display": "丙午",
+                  "stem": "丙",
+                  "stem_element": "fire",
+                  "stem_yin_yang": "yang"
+                }
+              },
+              "relations": {
+                "items": [
+                  {
+                    "branches": "辰酉",
+                    "pillars": [
+                      "month",
+                      "day"
+                    ],
+                    "type": "six_combination"
+                  }
+                ]
+              },
+              "status": "ok"
+            },
+            "deterministic_outputs": {
+              "guided_question_answer": {
+                "llm_may_rephrase": true,
+                "primary_user_output": true,
+                "renderer": "v19.guided_question_answer.text.v1"
+              }
+            },
+            "guided_question_answer": {
+              "answer_kind": "structure_overview",
+              "available": true,
+              "composed_text": {
+                "zh": "如果只看结构，这张命盘可以先抓三个入口：日柱是癸酉，月柱是壬辰，地支关系是命盘内部{'zh': '合', 'en': 'Combination', 'ko': '합'}辰酉，墓库观察是辰。\n\n这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。"
+              },
+              "content": {
+                "zh": [
+                  "如果只看结构，这张命盘可以先抓三个入口：日柱是癸酉，月柱是壬辰，地支关系是命盘内部{'zh': '合', 'en': 'Combination', 'ko': '합'}辰酉，墓库观察是辰。",
+                  "",
+                  "这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。"
+                ]
+              },
+              "guardrails": [
+                "QUESTION_TO_ANSWER_WORKFLOW",
+                "DETERMINISTIC_RENDERER",
+                "NO_RESULT_MUTATION",
+                "NO_FORTUNE",
+                "NO_TIME_AWARE_INFERENCE"
+              ],
+              "intent": {
+                "answer_kind": "structure_overview",
+                "answer_scope": "summarize_visible_structure_only",
+                "confidence": 0.58,
+                "detected_terms": [],
+                "domain": "structure_basis",
+                "fact_scopes": [
+                  "chart_anchor",
+                  "relations",
+                  "vaults",
+                  "time_context"
+                ],
+                "guardrails": [
+                  "ROUTE_TO_FACTS_ONLY",
+                  "NO_RESULT_MUTATION",
+                  "NO_FORTUNE"
+                ],
+                "intent_id": "intent.structure_overview",
+                "router": "v19.intent_router.rule_keyword_and_signal.v1",
+                "source_signal_category": "branch_relation",
+                "source_signal_id": "struct.branch_relations",
+                "supported": true,
+                "unsupported_reason": ""
+              },
+              "knowledge_context": {
+                "enabled": true,
+                "guardrails": [
+                  "NO_DIRECT_PREDICTION",
+                  "NO_SCORE",
+                  "NO_FORTUNE",
+                  "NO_TRADITIONAL_NARRATIVE"
+                ],
+                "items": [
+                  {
+                    "confidence_prior": 0.82,
+                    "domain": "core_structure",
+                    "evidence_type": "branch_relation_layer_evidence",
+                    "forbidden_usage": [
+                      "fortune",
+                      "score",
+                      "good_bad_judgement",
+                      "traditional_prediction_text"
+                    ],
+                    "guardrails": [
+                      "NO_DIRECT_PREDICTION",
+                      "NO_ACTIVE_RULE",
+                      "EVIDENCE_ONLY",
+                      "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                    ],
+                    "keywords": [
+                      "地支关系",
+                      "冲合",
+                      "六合",
+                      "三合",
+                      "本命",
+                      "大运",
+                      "流年",
+                      "层级"
+                    ],
+                    "knowledge_id": "core.branch_relation_layer_boundary",
+                    "match_score": 19,
+                    "source_refs": [
+                      "docs/bazi_knowledge/core/core_units_v1.md",
+                      "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                    ],
+                    "statement": "Branch relations must be separated by layer: natal-internal relations describe the base chart, while luck-cycle and flow-year relations describe time context. The same relation word should not be mixed across layers.",
+                    "status": "reviewed",
+                    "structured_facts": [
+                      "natal_internal",
+                      "luck_cycle_to_natal",
+                      "flow_year_to_natal",
+                      "layer_required"
+                    ],
+                    "title": "Branch Relation Layer Boundary"
+                  },
+                  {
+                    "confidence_prior": 0.82,
+                    "domain": "core_structure",
+                    "evidence_type": "branch_relation_layer_chain_evidence",
+                    "forbidden_usage": [
+                      "fortune",
+                      "score",
+                      "good_bad_judgement",
+                      "traditional_prediction_text"
+                    ],
+                    "guardrails": [
+                      "NO_DIRECT_PREDICTION",
+                      "NO_ACTIVE_RULE",
+                      "EVIDENCE_ONLY",
+                      "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                    ],
+                    "keywords": [
+                      "地支关系",
+                      "冲合",
+                      "本命",
+                      "大运",
+                      "流年",
+                      "分层",
+                      "layer"
+                    ],
+                    "knowledge_id": "p9.branch_relation_layer_chain",
+                    "match_score": 19,
+                    "source_refs": [
+                      "docs/bazi_knowledge/core/core_units_v1.md",
+                      "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                    ],
+                    "statement": "Branch relations should be reported with layer first: natal-internal, luck-to-natal, or flow-year-to-natal. The same pair can guide questions differently depending on layer.",
+                    "status": "reviewed",
+                    "structured_facts": [
+                      "natal_internal",
+                      "luck_to_natal",
+                      "flow_year_to_natal",
+                      "relation_pair",
+                      "layer_first_answer"
+                    ],
+                    "title": "Branch Relation Layer Chain"
+                  },
+                  {
+                    "confidence_prior": 0.82,
+                    "domain": "luck_flow",
+                    "evidence_type": "time_relation_context_evidence",
+                    "forbidden_usage": [
+                      "fortune",
+                      "score",
+                      "good_bad_judgement",
+                      "traditional_prediction_text"
+                    ],
+                    "guardrails": [
+                      "NO_DIRECT_PREDICTION",
+                      "NO_ACTIVE_RULE",
+                      "EVIDENCE_ONLY",
+                      "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                    ],
+                    "keywords": [
+                      "流年冲合",
+                      "大运冲合",
+                      "关系背景",
+                      "时间层",
+                      "只作背景"
+                    ],
+                    "knowledge_id": "luck_flow.time_relation_context_only",
+                    "match_score": 17,
+                    "source_refs": [
+                      "docs/bazi_knowledge/core/core_units_v1.md",
+                      "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                    ],
+                    "statement": "When a luck cycle or flow year forms a branch relation with the natal chart, V19 should state the relation and its layer, then stop at context explanation unless a separate reviewed rule explicitly consumes it.",
+                    "status": "reviewed",
+                    "structured_facts": [
+                      "relation_name",
+                      "time_layer",
+                      "natal_target",
+                      "requires_reviewed_rule_for_result"
+                    ],
+                    "title": "Timing Relations as Context Only"
+                  },
+                  {
+                    "confidence_prior": 0.82,
+                    "domain": "luck_flow",
+                    "evidence_type": "time_context_plain_language_evidence",
+                    "forbidden_usage": [
+                      "fortune",
+                      "score",
+                      "good_bad_judgement",
+                      "traditional_prediction_text"
+                    ],
+                    "guardrails": [
+                      "NO_DIRECT_PREDICTION",
+                      "NO_ACTIVE_RULE",
+                      "EVIDENCE_ONLY",
+                      "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                    ],
+                    "keywords": [
+                      "时间背景",
+                      "大运",
+                      "流年",
+                      "今年",
+                      "当前",
+                      "不改变结果",
+                      "context only"
+                    ],
+                    "knowledge_id": "luck_flow.time_context_boundary_plain_language",
+                    "match_score": 15,
+                    "source_refs": [
+                      "docs/bazi_knowledge/core/core_units_v1.md",
+                      "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                    ],
+                    "statement": "大运 and 流年 are timing layers. They can explain why a question is relevant now or which relation is visible, but V19 must not automatically use them to mutate income_stability or make year-specific predictions.",
+                    "status": "reviewed",
+                    "structured_facts": [
+                      "luck_cycle_context",
+                      "flow_year_context",
+                      "question_guidance",
+                      "no_result_mutation"
+                    ],
+                    "title": "Time Context Boundary in Plain Language"
+                  },
+                  {
+                    "confidence_prior": 0.82,
+                    "domain": "core_structure",
+                    "evidence_type": "structure_reading_chain_evidence",
+                    "forbidden_usage": [
+                      "fortune",
+                      "score",
+                      "good_bad_judgement",
+                      "traditional_prediction_text"
+                    ],
+                    "guardrails": [
+                      "NO_DIRECT_PREDICTION",
+                      "NO_ACTIVE_RULE",
+                      "EVIDENCE_ONLY",
+                      "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                    ],
+                    "keywords": [
+                      "结构链",
+                      "阅读顺序",
+                      "日主",
+                      "月令",
+                      "藏干",
+                      "冲合",
+                      "墓库",
+                      "时间背景"
+                    ],
+                    "knowledge_id": "p9.structure_reading_chain",
+                    "match_score": 15,
+                    "source_refs": [
+                      "docs/bazi_knowledge/core/core_units_v1.md",
+                      "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                    ],
+                    "statement": "A structural answer should follow an explicit chain: day-master anchor, month-command background, visible pillars, hidden stems, branch relations, vaults, time context, then supported result context if relevant.",
+                    "status": "reviewed",
+                    "structured_facts": [
+                      "day_master_anchor",
+                      "month_command",
+                      "visible_pillars",
+                      "hidden_stems",
+                      "branch_relations",
+                      "vaults",
+                      "time_context",
+                      "supported_result_context"
+                    ],
+                    "title": "Structure Reading Chain"
+                  },
+                  {
+                    "confidence_prior": 0.82,
+                    "domain": "core_structure",
+                    "evidence_type": "core_symbol_evidence",
+                    "forbidden_usage": [
+                      "fortune",
+                      "score",
+                      "good_bad_judgement",
+                      "traditional_prediction_text"
+                    ],
+                    "guardrails": [
+                      "NO_DIRECT_PREDICTION",
+                      "NO_ACTIVE_RULE",
+                      "EVIDENCE_ONLY",
+                      "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                    ],
+                    "keywords": [
+                      "branch",
+                      "pillar",
+                      "地支",
+                      "冲",
+                      "合"
+                    ],
+                    "knowledge_id": "core.earthly_branches",
+                    "match_score": 13,
+                    "source_refs": [
+                      "docs/bazi_knowledge/core/core_units_v1.md",
+                      "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                    ],
+                    "statement": "The twelve earthly branches are branch symbols used in pillars and branch relation detection.",
+                    "status": "reviewed",
+                    "structured_facts": [
+                      "子",
+                      "丑",
+                      "寅",
+                      "卯",
+                      "辰",
+                      "巳",
+                      "午",
+                      "未",
+                      "申",
+                      "酉",
+                      "戌",
+                      "亥"
+                    ],
+                    "title": "Earthly Branches"
+                  }
+                ],
+                "mode": "reviewed_evidence_templates_only",
+                "query_keywords": [
+                  "branch",
+                  "chart",
+                  "flow_year",
+                  "pillar",
+                  "relation",
+                  "stem",
+                  "冲",
+                  "合",
+                  "四柱",
+                  "如果只看结构，这张命盘先呈现哪些特征？",
+                  "流年"
+                ],
+                "runtime_scope": "agent_context_not_prediction"
+              },
+              "observed_facts": {
+                "answer_kind": "structure_overview",
+                "guardrail": "observed_facts_support_answer_only_no_result_mutation",
+                "income_stability": {
+                  "income_stability": "stable",
+                  "self_capacity": "high",
+                  "structure_binding": "none",
+                  "volatility": "low",
+                  "wealth_accessibility": "clear",
+                  "wealth_presence": "medium"
+                },
+                "natal_pillars": {
+                  "day": {
+                    "branch": "酉",
+                    "display": "癸酉",
+                    "stem": "癸"
+                  },
+                  "hour": {
+                    "branch": "亥",
+                    "display": "癸亥",
+                    "stem": "癸"
+                  },
+                  "month": {
+                    "branch": "辰",
+                    "display": "壬辰",
+                    "stem": "壬"
+                  },
+                  "year": {
+                    "branch": "午",
+                    "display": "丙午",
+                    "stem": "丙"
+                  }
+                },
+                "relation_pairs": [
+                  "辰-酉"
+                ],
+                "relation_types": [
+                  "combination"
+                ],
+                "source_question_key": "q_structure_overview",
+                "source_signal_category": "branch_relation",
+                "source_signal_id": "struct.branch_relations",
+                "source_signal_observed": [
+                  "辰-酉"
+                ],
+                "time_context": {
+                  "flow_year": {
+                    "pillar": "丙午",
+                    "relations": {},
+                    "year": 2026
+                  },
+                  "luck_cycle": {
+                    "pillar": "",
+                    "relations": {}
+                  }
+                },
+                "vault_branches": [
+                  "辰"
+                ]
+              },
+              "question_contract": {
+                "answer_scope": "summarize_visible_structure_only",
+                "intent": "structure_overview",
+                "key": "q_structure_overview",
+                "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                "required_facts": [
+                  "chart_anchor",
+                  "relations",
+                  "vaults",
+                  "time_context"
+                ],
+                "source": "question_registry",
+                "supported": true
+              },
+              "question_key": "q_structure_overview",
+              "question_text": "如果只看结构，这张命盘先呈现哪些特征？",
+              "renderer": "v19.guided_question_answer.deterministic.v1",
+              "result_relation": {
+                "en": "",
+                "ko": "",
+                "zh": ""
+              },
+              "retrieved_facts": {
+                "available_question_count": 10,
+                "chart_anchor": {
+                  "day_pillar": "癸酉",
+                  "day_stem": "癸",
+                  "month_branch": "辰",
+                  "month_pillar": "壬辰",
+                  "pillar_order": [
+                    {
+                      "branch": "午",
+                      "display": "丙午",
+                      "position": "year",
+                      "stem": "丙"
+                    },
+                    {
+                      "branch": "辰",
+                      "display": "壬辰",
+                      "position": "month",
+                      "stem": "壬"
+                    },
+                    {
+                      "branch": "酉",
+                      "display": "癸酉",
+                      "position": "day",
+                      "stem": "癸"
+                    },
+                    {
+                      "branch": "亥",
+                      "display": "癸亥",
+                      "position": "hour",
+                      "stem": "癸"
+                    }
+                  ]
+                },
+                "fact_scopes": [
+                  "chart_anchor",
+                  "relations",
+                  "vaults",
+                  "time_context"
+                ],
+                "guardrails": [
+                  "FACTS_ARE_INPUTS_NOT_PREDICTIONS",
+                  "TIME_CONTEXT_DOES_NOT_MUTATE_RESULT"
+                ],
+                "hidden_stems": {
+                  "亥": "壬 / 甲",
+                  "午": "丁 / 己",
+                  "辰": "戊 / 乙 / 癸",
+                  "酉": "辛"
+                },
+                "income_signals": {
+                  "income_stability": "stable",
+                  "self_capacity": "high",
+                  "structure_binding": "none",
+                  "volatility": "low",
+                  "wealth_accessibility": "clear",
+                  "wealth_presence": "medium"
+                },
+                "intent_id": "intent.structure_overview",
+                "relations": [
+                  {
+                    "layer": "命盘内部",
+                    "pair": "辰-酉",
+                    "pillars": [
+                      "month",
+                      "day"
+                    ],
+                    "raw_branches": "辰酉",
+                    "type": "combination"
+                  }
+                ],
+                "retriever": "v19.fact_retriever.intent_scoped.v1",
+                "source_question": {
+                  "key": "q_structure_overview",
+                  "label": {
+                    "en": "Looking only at structure, what features appear first?",
+                    "ko": "구조만 보면 이 명식에서 먼저 보이는 특징은 무엇인가요?",
+                    "zh": "如果只看结构，这张命盘先呈现哪些特征？"
+                  }
+                },
+                "source_signal": {
+                  "category": "branch_relation",
+                  "knowledge_id": "",
+                  "observed": [
+                    "辰-酉"
+                  ],
+                  "reason": "命盘或时间背景存在可见地支关系，适合先解释发生在哪一层。",
+                  "rule_id": "",
+                  "signal_id": "struct.branch_relations",
+                  "title": ""
+                },
+                "time_context": {
+                  "flow_year": {
+                    "pillar": "丙午",
+                    "relations": {},
+                    "year": 2026
+                  },
+                  "luck_cycle": {
+                    "age_range": "",
+                    "pillar": "",
+                    "relations": {}
+                  },
+                  "scope": "time_context_only_no_income_stability_mutation"
+                },
+                "vaults": [
+                  {
+                    "branch": "辰",
+                    "hidden_stems": "戊 / 乙 / 癸",
+                    "locations": "月柱"
+                  }
+                ]
+              },
+              "runtime_scope": "guided_question_answer_only_no_inference_mutation",
+              "sections": [
+                {
+                  "items": [
+                    {
+                      "label": {
+                        "en": "Current question",
+                        "ko": "현재 질문",
+                        "zh": "当前问题"
+                      },
+                      "note": {
+                        "en": "The answer is organized around the structural signal behind this question.",
+                        "ko": "답변은 이 질문 뒤의 구조 신호를 중심으로 구성됩니다.",
+                        "zh": "回答优先围绕这个问题背后的结构信号组织。"
+                      },
+                      "value": {
+                        "en": "Looking only at structure, what features appear first?",
+                        "ko": "구조만 보면 이 명식에서 먼저 보이는 특징은 무엇인가요?",
+                        "zh": "如果只看结构，这张命盘先呈现哪些特征？"
+                      }
+                    },
+                    {
+                      "label": {
+                        "en": "Matched structural basis",
+                        "ko": "일치한 구조 근거",
+                        "zh": "命中的结构依据"
+                      },
+                      "note": {
+                        "en": "This is a user-facing category, not an internal rule name.",
+                        "ko": "이는 사용자용 분류이며 내부 규칙명이 아닙니다.",
+                        "zh": "这是用户可读分类，不展示内部规则名。"
+                      },
+                      "value": {
+                        "en": "Branch relation",
+                        "ko": "지지 관계",
+                        "zh": "地支关系"
+                      }
+                    },
+                    {
+                      "label": {
+                        "en": "Observed structure",
+                        "ko": "관찰된 구조",
+                        "zh": "观察到的结构"
+                      },
+                      "note": {
+                        "en": "The answer should stay around these observed facts.",
+                        "ko": "이 관찰 사실을 중심으로 답합니다.",
+                        "zh": "后续回答会围绕这些事实展开。"
+                      },
+                      "value": {
+                        "en": "辰-酉",
+                        "ko": "辰-酉",
+                        "zh": "辰-酉"
+                      }
+                    }
+                  ],
+                  "title": {
+                    "en": "Why this question is being answered",
+                    "ko": "이 질문을 답하는 이유",
+                    "zh": "这条问题为什么被回答"
+                  }
+                },
+                {
+                  "items": [
+                    {
+                      "label": {
+                        "en": "Day-master anchor",
+                        "ko": "일간 기준점",
+                        "zh": "日主结构基点"
+                      },
+                      "note": {
+                        "en": "The day master is a structural anchor, not a destiny conclusion.",
+                        "ko": "일간은 구조 기준점이지 운명 결론이 아닙니다.",
+                        "zh": "日主是结构定位点，不是命运结论。"
+                      },
+                      "value": {
+                        "en": "癸酉",
+                        "ko": "癸酉",
+                        "zh": "癸酉"
+                      }
+                    },
+                    {
+                      "label": {
+                        "en": "Month structure",
+                        "ko": "월지 구조",
+                        "zh": "月令结构"
+                      },
+                      "note": {
+                        "en": "Used to observe seasonal/month-command background.",
+                        "ko": "계절/월령 배경을 보기 위해 사용됩니다.",
+                        "zh": "用于观察季节/月令背景。"
+                      },
+                      "value": {
+                        "en": "壬辰",
+                        "ko": "壬辰",
+                        "zh": "壬辰"
+                      }
+                    },
+                    {
+                      "label": {
+                        "en": "Vault hint",
+                        "ko": "묘고 힌트",
+                        "zh": "墓库提示"
+                      },
+                      "note": {
+                        "en": "Structure label only.",
+                        "ko": "구조 라벨로만 사용됩니다.",
+                        "zh": "仅作为结构标签。"
+                      },
+                      "value": {
+                        "en": "辰",
+                        "ko": "辰",
+                        "zh": "辰"
+                      }
+                    }
+                  ],
+                  "title": {
+                    "en": "Structural anchors",
+                    "ko": "구조 기준점",
+                    "zh": "结构基点"
+                  }
+                },
+                {
+                  "items": [
+                    {
+                      "label": {
+                        "en": "Combination",
+                        "ko": "합",
+                        "zh": "合"
+                      },
+                      "note": {
+                        "en": "Natal four-pillar relation: month pillar / day pillar",
+                        "ko": "본명 사주 내부 관계: 월주 / 일주",
+                        "zh": "本命四柱内部关系：月柱 / 日柱"
+                      },
+                      "value": {
+                        "en": "辰酉",
+                        "ko": "辰酉",
+                        "zh": "辰酉"
+                      }
+                    }
+                  ],
+                  "title": {
+                    "en": "Visible relations",
+                    "ko": "보이는 관계",
+                    "zh": "可见关系"
+                  }
+                },
+                {
+                  "items": [
+                    {
+                      "label": {
+                        "en": "Current boundary",
+                        "ko": "현재 경계",
+                        "zh": "当前边界"
+                      },
+                      "note": {
+                        "en": "No good/bad, wealth gain/loss, or this-year fortune judgement is produced.",
+                        "ko": "길흉, 재물 득실, 올해 운세 판단을 출력하지 않습니다.",
+                        "zh": "不输出好坏、发财破财、今年运势等判断。"
+                      },
+                      "value": {
+                        "en": "Structural explanation, not prediction",
+                        "ko": "구조 설명이며 예측 아님",
+                        "zh": "结构解释，不是预测"
+                      }
+                    },
+                    {
+                      "label": {
+                        "en": "Relation to existing result",
+                        "ko": "기존 결과와의 관계",
+                        "zh": "与既有结果的关系"
+                      },
+                      "note": {
+                        "en": "For income stability, read the dedicated result card and its own structural evidence.",
+                        "ko": "소득 안정성은 해당 결과 카드와 자체 구조 근거에서 확인합니다.",
+                        "zh": "如果要看收入稳定性，应回到对应结果卡和它自己的结构证据。"
+                      },
+                      "value": {
+                        "en": "Does not automatically rewrite the existing result",
+                        "ko": "기존 결과를 자동으로 바꾸지 않음",
+                        "zh": "不自动改写既有结果"
+                      }
+                    }
+                  ],
+                  "title": {
+                    "en": "Reading boundary",
+                    "ko": "읽기 경계",
+                    "zh": "阅读边界"
+                  }
+                }
+              ],
+              "source_signal_category": "branch_relation",
+              "source_signal_id": "struct.branch_relations",
+              "summary": {
+                "en": "When reading structure, do not start with good or bad. First lay out day master, month branch, pillar branches, visible relations, and time context so the answer does not skip steps.",
+                "ko": "구조를 볼 때는 길흉부터 묻지 않습니다. 일간, 월지, 사주 지지, 보이는 관계와 시간 배경을 먼저 정리해야 답이 건너뛰지 않습니다.",
+                "zh": "只看结构时，先别急着问好坏。先把日主、月令、四柱地支、可见关系和时间背景摆清楚，后面的回答才不会跳步。"
+              },
+              "text": {
+                "zh": "如果只看结构，这张命盘可以先抓三个入口：日柱是癸酉，月柱是壬辰，地支关系是命盘内部{'zh': '合', 'en': 'Combination', 'ko': '합'}辰酉，墓库观察是辰。\n\n这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。"
+              }
+            },
+            "guided_question_context": {
+              "available": true,
+              "guardrails": [
+                "RULE_DB_GUIDES_QUESTIONS_ONLY",
+                "NO_RESULT_MUTATION",
+                "NO_FORTUNE",
+                "NO_TIME_AWARE_INFERENCE"
+              ],
+              "question_count": 34,
+              "question_registry": {
+                "items": [
+                  {
+                    "answer_scope": "summarize_visible_structure_only",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "structure_overview",
+                    "key": "q_structure_overview",
+                    "label": {
+                      "en": "Looking only at structure, what features appear first?",
+                      "ko": "구조만 보면 이 명식에서 먼저 보이는 특징은 무엇인가요?",
+                      "zh": "如果只看结构，这张命盘先呈现哪些特征？"
+                    },
+                    "phase": "before_result",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_day_master_month_anchor",
+                      "q_hidden_stem_role",
+                      "q_branch_relation_detail",
+                      "q_income_stability"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "chart_anchor",
+                      "relations",
+                      "vaults",
+                      "time_context"
+                    ],
+                    "score": 92,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_day_master_and_month_anchor_as_structure",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "metadata_boundary",
+                    "key": "q_day_master_month_anchor",
+                    "label": {
+                      "en": "Starting from the day master and month branch, what structural baseline appears?",
+                      "ko": "일간과 월지를 먼저 보면 어떤 구조 기준점이 보이나요?",
+                      "zh": "这张命盘先看日主和月令，能读出什么结构基点？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_structure_overview",
+                      "q_hidden_stem_role",
+                      "q_income_factors"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "chart_anchor",
+                      "hidden_stems",
+                      "stem_elements"
+                    ],
+                    "score": 90,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_hidden_stems_as_metadata_not_prediction",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "metadata_boundary",
+                    "key": "q_hidden_stem_role",
+                    "label": {
+                      "en": "Are hidden stems only supporting information here, or do they affect structural reading?",
+                      "ko": "지장간은 여기서 보조 정보일 뿐인가요, 아니면 구조 이해에 영향을 주나요?",
+                      "zh": "藏干在这张命盘里只是补充信息，还是会影响结构理解？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_day_master_month_anchor",
+                      "q_structure_overview",
+                      "q_income_factors"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "hidden_stems",
+                      "chart_anchor"
+                    ],
+                    "score": 76,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_month_branch_as_structure_anchor",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "metadata_boundary",
+                    "key": "q_month_command_anchor",
+                    "label": {
+                      "en": "What structural background does the month branch provide here?",
+                      "ko": "월지는 이 명식에서 어떤 구조 배경을 먼저 제공하나요?",
+                      "zh": "月令在这张命盘里先提供了什么结构背景？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_day_master_month_anchor",
+                      "q_structure_overview",
+                      "q_hidden_stem_role"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "chart_anchor",
+                      "hidden_stems",
+                      "stem_elements"
+                    ],
+                    "score": 84,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_ten_god_as_relationship_metadata",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "metadata_boundary",
+                    "key": "q_ten_god_metadata",
+                    "label": {
+                      "en": "Why are Ten God labels relationship metadata here rather than verdicts?",
+                      "ko": "여기서 십성 라벨은 왜 단정이 아니라 관계 메타데이터인가요?",
+                      "zh": "十神标签在这里为什么只是关系元数据，而不是断语？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_hidden_stem_role",
+                      "q_income_factors",
+                      "q_read_result_not_fortune"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "chart_anchor",
+                      "hidden_stems",
+                      "stem_elements"
+                    ],
+                    "score": 73,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_vault_branch_as_structural_storage_not_verdict",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "vault",
+                    "key": "q_vault_structure",
+                    "label": {
+                      "en": "How should the vault structure in this chart be read only at the structural layer?",
+                      "ko": "이 명식의 묘고 구조는 구조 층에서만 어떻게 읽어야 하나요?",
+                      "zh": "这张命盘里的墓库结构，应该如何只按结构层阅读？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_hidden_stem_role",
+                      "q_structure_overview",
+                      "q_time_context_boundary"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "vaults",
+                      "hidden_stems",
+                      "time_context"
+                    ],
+                    "score": 79,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_element_generation_control_as_structure_metadata",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "metadata_boundary",
+                    "key": "q_element_flow_metadata",
+                    "label": {
+                      "en": "How should element generation/control be read only as structural relation here?",
+                      "ko": "오행 생극은 여기서 구조 관계로만 어떻게 읽어야 하나요?",
+                      "zh": "五行生克在这里应该怎样只按结构关系阅读？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_day_master_month_anchor",
+                      "q_ten_god_metadata",
+                      "q_income_factors"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "chart_anchor",
+                      "stem_elements",
+                      "hidden_stems"
+                    ],
+                    "score": 69,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "separate_natal_luck_flow_branch_relations",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "branch_relation",
+                    "key": "q_branch_relation_detail",
+                    "label": {
+                      "en": "Do the visible clash/combination relations occur inside the natal chart or in timing context?",
+                      "ko": "현재 보이는 충합 관계는 원국 안에서 생기나요, 아니면 시간 배경에서 생기나요?",
+                      "zh": "当前看得到的冲合关系，分别发生在本命还是时间背景？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_combination_context",
+                      "q_time_context",
+                      "q_time_vs_natal_relation",
+                      "q_cautious_reading"
+                    ],
+                    "required": [
+                      "branch_relation"
+                    ],
+                    "required_facts": [
+                      "relations",
+                      "chart_anchor",
+                      "time_context"
+                    ],
+                    "score": 88,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_combination_as_structural_link_only",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "branch_relation",
+                    "key": "q_combination_context",
+                    "label": {
+                      "en": "If a combination relation appears, what structural link does it indicate here?",
+                      "ko": "합 관계가 나타난다면 여기서는 어떤 구조 연결만 뜻하나요?",
+                      "zh": "如果出现合或六合关系，它在这里只表示什么结构连接？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_branch_relation_detail",
+                      "q_structure_overview",
+                      "q_time_context_boundary"
+                    ],
+                    "required": [
+                      "branch_relation"
+                    ],
+                    "required_facts": [
+                      "relations"
+                    ],
+                    "score": 74,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_three_harmony_as_structural_link_only",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "branch_relation",
+                    "key": "q_three_harmony_context",
+                    "label": {
+                      "en": "If a three-harmony structure appears, what structural link does it indicate here?",
+                      "ko": "삼합 구조가 나타난다면 여기서는 어떤 구조 연결만 뜻하나요?",
+                      "zh": "如果出现三合结构，它在这里只表示什么结构连接？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_branch_relation_detail",
+                      "q_structure_overview",
+                      "q_time_context_boundary"
+                    ],
+                    "required": [
+                      "branch_relation"
+                    ],
+                    "required_facts": [
+                      "relations"
+                    ],
+                    "score": 72,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  },
+                  {
+                    "answer_scope": "explain_income_structure_signal_not_wealth_prediction",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "income_structure",
+                    "key": "q_income_stability",
+                    "label": {
+                      "en": "How is my income stability structure?",
+                      "ko": "나의 소득 안정성 구조는 어떤가요?",
+                      "zh": "我的收入稳定性结构如何？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_income_factors",
+                      "q_signal_combination",
+                      "follow_rule_basis"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "income_signals",
+                      "chart_anchor",
+                      "relations"
+                    ],
+                    "score": 70,
+                    "source": "question_registry",
+                    "theme": "income_stability"
+                  },
+                  {
+                    "answer_scope": "explain_income_factors_as_evidence_only",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "income_structure",
+                    "key": "q_income_factors",
+                    "label": {
+                      "en": "Which structure factors affect income stability?",
+                      "ko": "현재 구조에서 어떤 요소가 소득 안정성에 영향을 주나요?",
+                      "zh": "当前结构中哪些因素影响收入稳定？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_signal_combination",
+                      "q_income_continuity",
+                      "q_wealth_accessibility"
+                    ],
+                    "required": [
+                      "chart"
+                    ],
+                    "required_facts": [
+                      "income_signals",
+                      "chart_anchor",
+                      "relations"
+                    ],
+                    "score": 68,
+                    "source": "question_registry",
+                    "theme": "income_stability"
+                  },
+                  {
+                    "answer_scope": "explain_income_path_as_structure_not_prediction",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "income_structure",
+                    "key": "q_income_path_structure",
+                    "label": {
+                      "en": "Structurally, which signals organize the income path?",
+                      "ko": "구조만 보면 소득 경로는 어떤 신호들로 조직되나요?",
+                      "zh": "如果只按结构看，收入路径是被哪些信号组织起来的？"
+                    },
+                    "phase": "after_result",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_income_factors",
+                      "q_wealth_accessibility",
+                      "q_signal_combination"
+                    ],
+                    "required": [
+                      "result"
+                    ],
+                    "required_facts": [
+                      "income_signals",
+                      "chart_anchor",
+                      "relations"
+                    ],
+                    "score": 66,
+                    "source": "question_registry",
+                    "theme": "income_stability"
+                  },
+                  {
+                    "answer_scope": "explain_signal_aggregation_without_prediction",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "income_structure",
+                    "key": "q_signal_combination",
+                    "label": {
+                      "en": "Which structure signals jointly form this result?",
+                      "ko": "이 결과는 어떤 구조 신호들이 함께 만든 것인가요?",
+                      "zh": "这个结果主要由哪几个结构信号共同形成？"
+                    },
+                    "phase": "after_result",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_primary_auxiliary_signals",
+                      "follow_rule_basis",
+                      "q_wealth_accessibility"
+                    ],
+                    "required": [
+                      "result"
+                    ],
+                    "required_facts": [
+                      "income_signals"
+                    ],
+                    "score": 62,
+                    "source": "question_registry",
+                    "theme": "income_stability"
+                  },
+                  {
+                    "answer_scope": "explain_flow_year_as_context_only",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "time_boundary",
+                    "key": "q_time_context",
+                    "label": {
+                      "en": "As context only, what relations does this flow year trigger?",
+                      "ko": "예측이 아닌 시간 맥락으로서 이 세운은 어떤 구조 관계를 만들까요?",
+                      "zh": "这个流年只作为时间背景，会触发哪些结构关系？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_branch_relation_detail",
+                      "q_time_vs_natal_relation",
+                      "q_time_context_boundary",
+                      "q_luck_flow_layers"
+                    ],
+                    "required": [
+                      "time_relation"
+                    ],
+                    "required_facts": [
+                      "time_context",
+                      "relations"
+                    ],
+                    "score": 82,
+                    "source": "question_registry",
+                    "theme": "time_context"
+                  },
+                  {
+                    "answer_scope": "explain_time_context_boundary",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "time_boundary",
+                    "key": "q_time_context_boundary",
+                    "label": {
+                      "en": "Which relations are background only and should not be read as prediction?",
+                      "ko": "어떤 구조 관계가 배경일 뿐 예측으로 읽으면 안 되나요?",
+                      "zh": "哪些结构关系只是背景，不应该直接理解成预测？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_time_context",
+                      "q_time_vs_natal_relation",
+                      "q_time_not_inference"
+                    ],
+                    "required": [
+                      "time_relation"
+                    ],
+                    "required_facts": [
+                      "time_context",
+                      "relations"
+                    ],
+                    "score": 78,
+                    "source": "question_registry",
+                    "theme": "time_context"
+                  },
+                  {
+                    "answer_scope": "separate_luck_cycle_and_flow_year_layers",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "time_boundary",
+                    "key": "q_luck_flow_layers",
+                    "label": {
+                      "en": "Which structural layer do luck cycle and flow year belong to here?",
+                      "ko": "여기서 대운과 세운은 각각 어떤 구조 층에 속하나요?",
+                      "zh": "大运和流年在这里分别属于哪一层结构？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_time_context_boundary",
+                      "q_time_vs_natal_relation",
+                      "q_time_not_inference"
+                    ],
+                    "required": [
+                      "time_relation"
+                    ],
+                    "required_facts": [
+                      "time_context"
+                    ],
+                    "score": 64,
+                    "source": "question_registry",
+                    "theme": "time_context"
+                  },
+                  {
+                    "answer_scope": "separate_timing_relations_from_natal_structure",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "branch_relation",
+                    "key": "q_time_vs_natal_relation",
+                    "label": {
+                      "en": "When luck/flow relates to the natal chart, what is only background and what belongs to natal structure?",
+                      "ko": "대운·세운이 원국과 관계를 만들 때 무엇은 배경이고 무엇은 원국 구조인가요?",
+                      "zh": "大运、流年和本命发生关系时，哪些只算背景，哪些才算本命结构？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_time_context",
+                      "q_luck_flow_layers",
+                      "q_time_not_inference"
+                    ],
+                    "required": [
+                      "time_relation"
+                    ],
+                    "required_facts": [
+                      "time_context",
+                      "relations"
+                    ],
+                    "score": 72,
+                    "source": "question_registry",
+                    "theme": "time_context"
+                  },
+                  {
+                    "answer_scope": "explain_time_context_does_not_mutate_income_stability",
+                    "depth": "intermediate",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "time_boundary",
+                    "key": "q_time_not_inference",
+                    "label": {
+                      "en": "Why does the current time structure not directly change the income-stability result?",
+                      "ko": "왜 현재 시간 구조가 소득 안정성 결과를 직접 바꾸지 않나요?",
+                      "zh": "为什么当前时间结构不直接改变收入稳定性结果？"
+                    },
+                    "phase": "any",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_time_context_boundary",
+                      "q_result_card_boundary"
+                    ],
+                    "required": [
+                      "time_relation"
+                    ],
+                    "required_facts": [
+                      "time_context",
+                      "income_signals"
+                    ],
+                    "score": 60,
+                    "source": "question_registry",
+                    "theme": "time_context"
+                  },
+                  {
+                    "answer_scope": "explain_result_not_fortune_text",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "result_boundary",
+                    "key": "q_read_result_not_fortune",
+                    "label": {
+                      "en": "How should I read this result without treating it as a fortune statement?",
+                      "ko": "이 결과를 단정문이 아니라 어떻게 읽어야 하나요?",
+                      "zh": "我应该如何阅读这个结果，而不是把它当成断语？"
+                    },
+                    "phase": "after_result",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_no_good_bad",
+                      "q_result_card_boundary",
+                      "follow_rule_basis"
+                    ],
+                    "required": [
+                      "result"
+                    ],
+                    "required_facts": [
+                      "income_signals",
+                      "guardrails"
+                    ],
+                    "score": 58,
+                    "source": "question_registry",
+                    "theme": "boundary"
+                  },
+                  {
+                    "answer_scope": "explain_no_good_bad_boundary",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "result_boundary",
+                    "key": "q_no_good_bad",
+                    "label": {
+                      "en": "Why does this system avoid direct good/bad judgments?",
+                      "ko": "왜 이 시스템은 직접적인 길흉 판단을 피하나요?",
+                      "zh": "这个系统为什么不直接判断“好坏”？"
+                    },
+                    "phase": "after_result",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_result_card_boundary",
+                      "q_read_result_not_fortune"
+                    ],
+                    "required": [
+                      "result"
+                    ],
+                    "required_facts": [
+                      "guardrails"
+                    ],
+                    "score": 50,
+                    "source": "question_registry",
+                    "theme": "boundary"
+                  },
+                  {
+                    "answer_scope": "explain_result_card_boundary",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "result_boundary",
+                    "key": "q_result_card_boundary",
+                    "label": {
+                      "en": "Why is the ResultCard not traditional fortune text?",
+                      "ko": "왜 ResultCard는 전통식 단정문이 아닌가요?",
+                      "zh": "为什么 ResultCard 不是传统断语？"
+                    },
+                    "phase": "after_result",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_read_result_not_fortune",
+                      "follow_rule_basis"
+                    ],
+                    "required": [
+                      "result"
+                    ],
+                    "required_facts": [
+                      "income_signals",
+                      "guardrails"
+                    ],
+                    "score": 48,
+                    "source": "question_registry",
+                    "theme": "boundary"
+                  },
+                  {
+                    "answer_scope": "explain_visible_rule_basis_without_internal_debug_dump",
+                    "depth": "beginner",
+                    "forbidden_prediction": true,
+                    "guardrails": [
+                      "QUESTION_REGISTRY_CONTRACT",
+                      "NO_FORTUNE",
+                      "NO_RESULT_MUTATION"
+                    ],
+                    "intent": "rule_basis",
+                    "key": "follow_rule_basis",
+                    "label": {
+                      "en": "Show the rule basis for this result",
+                      "ko": "이 결과의 규칙 근거 보기",
+                      "zh": "查看这条判断的规则依据"
+                    },
+                    "phase": "after_result",
+                    "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                    "related_questions": [
+                      "q_signal_combination",
+                      "q_read_result_not_fortune"
+                    ],
+                    "required": [
+                      "result"
+                    ],
+                    "required_facts": [
+                      "source_signal",
+                      "observed_facts"
+                    ],
+                    "score": 46,
+                    "source": "question_registry",
+                    "theme": "structure_basis"
+                  }
+                ],
+                "single_source": true,
+                "version": "v19.question_registry.p9.structural_rule_signals.v1"
+              },
+              "questions": [
+                {
+                  "answer_scope": "explain_vault_structure_only",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "DYNAMIC_GUIDED_QUESTION",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "vault",
+                  "key": "kbq_vault_structure",
+                  "label": {
+                    "en": "How should the vault structure in this chart be read structurally only?",
+                    "ko": "이 명식의 묘고 구조를 구조층으로만 어떻게 읽어야 하나요?",
+                    "zh": "这张命盘里的辰墓库结构，应该如何只按结构层阅读？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_structure_overview",
+                    "q_time_context_boundary",
+                    "follow_rule_basis"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "vaults",
+                    "hidden_stems",
+                    "chart_anchor"
+                  ],
+                  "risk_level": "R2",
+                  "score": 95,
+                  "source": "rule_db_dynamic_question",
+                  "source_knowledge_id": "core.vault_structure.v1",
+                  "source_rule_id": "v19.rule.core.vault_structure.v1",
+                  "source_signal_id": "srs.core.vault_structure.v1",
+                  "theme": "structure_basis"
+                },
+                {
+                  "answer_scope": "summarize_visible_structure_only",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "QUESTION_REGISTRY_CONTRACT",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "structure_overview",
+                  "key": "q_structure_overview",
+                  "label": {
+                    "en": "Looking only at structure, what features appear first?",
+                    "ko": "구조만 보면 이 명식에서 먼저 보이는 특징은 무엇인가요?",
+                    "zh": "如果只看结构，这张命盘先呈现哪些特征？"
+                  },
+                  "phase": "before_result",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_day_master_month_anchor",
+                    "q_hidden_stem_role",
+                    "q_branch_relation_detail",
+                    "q_income_stability"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "chart_anchor",
+                    "relations",
+                    "vaults",
+                    "time_context"
+                  ],
+                  "score": 92,
+                  "source": "question_registry",
+                  "theme": "structure_basis"
+                },
+                {
+                  "answer_scope": "explain_day_master_and_month_anchor_as_structure",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "QUESTION_REGISTRY_CONTRACT",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "metadata_boundary",
+                  "key": "q_day_master_month_anchor",
+                  "label": {
+                    "en": "Starting from the day master and month branch, what structural baseline appears?",
+                    "ko": "일간과 월지를 먼저 보면 어떤 구조 기준점이 보이나요?",
+                    "zh": "这张命盘先看日主和月令，能读出什么结构基点？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_structure_overview",
+                    "q_hidden_stem_role",
+                    "q_income_factors"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "chart_anchor",
+                    "hidden_stems",
+                    "stem_elements"
+                  ],
+                  "score": 90,
+                  "source": "question_registry",
+                  "theme": "structure_basis"
+                },
+                {
+                  "answer_scope": "separate_natal_luck_flow_branch_relations",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "QUESTION_REGISTRY_CONTRACT",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "branch_relation",
+                  "key": "q_branch_relation_detail",
+                  "label": {
+                    "en": "Do the visible clash/combination relations occur inside the natal chart or in timing context?",
+                    "ko": "현재 보이는 충합 관계는 원국 안에서 생기나요, 아니면 시간 배경에서 생기나요?",
+                    "zh": "当前看得到的冲合关系，分别发生在本命还是时间背景？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_combination_context",
+                    "q_time_context",
+                    "q_time_vs_natal_relation",
+                    "q_cautious_reading"
+                  ],
+                  "required": [
+                    "branch_relation"
+                  ],
+                  "required_facts": [
+                    "relations",
+                    "chart_anchor",
+                    "time_context"
+                  ],
+                  "score": 88,
+                  "source": "question_registry",
+                  "theme": "structure_basis"
+                },
+                {
+                  "answer_scope": "separate_branch_relations_by_layer",
+                  "depth": "intermediate",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "DYNAMIC_GUIDED_QUESTION",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "branch_relation",
+                  "key": "kbq_time_vs_natal_relation",
+                  "label": {
+                    "en": "How should relations between timing context and the natal chart be read by layer?",
+                    "ko": "대운·세운과 원국 사이의 관계는 층위별로 어떻게 읽어야 하나요?",
+                    "zh": "大运或流年和本命之间的关系，应该怎样分层阅读？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_time_context",
+                    "q_luck_flow_layers",
+                    "q_time_not_inference"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "relations",
+                    "chart_anchor",
+                    "time_context"
+                  ],
+                  "risk_level": "R1",
+                  "score": 86,
+                  "source": "rule_db_dynamic_question",
+                  "source_knowledge_id": "core.branch_relations.three_meeting.v1",
+                  "source_rule_id": "v19.rule.core.branch_relations.three_meeting.v1",
+                  "source_signal_id": "srs.core.branch_relations.three_meeting.v1",
+                  "theme": "time_context"
+                },
+                {
+                  "answer_scope": "explain_month_branch_as_structure_anchor",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "QUESTION_REGISTRY_CONTRACT",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "metadata_boundary",
+                  "key": "q_month_command_anchor",
+                  "label": {
+                    "en": "What structural background does the month branch provide here?",
+                    "ko": "월지는 이 명식에서 어떤 구조 배경을 먼저 제공하나요?",
+                    "zh": "月令在这张命盘里先提供了什么结构背景？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_day_master_month_anchor",
+                    "q_structure_overview",
+                    "q_hidden_stem_role"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "chart_anchor",
+                    "hidden_stems",
+                    "stem_elements"
+                  ],
+                  "score": 84,
+                  "source": "question_registry",
+                  "theme": "structure_basis"
+                },
+                {
+                  "answer_scope": "separate_branch_relations_by_layer",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "DYNAMIC_GUIDED_QUESTION",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "branch_relation",
+                  "key": "kbq_branch_relation_structure",
+                  "label": {
+                    "en": "Which clash or combination relations are triggered, and what do they mean structurally?",
+                    "ko": "현재 명식이나 시간 배경에서 어떤 충합 관계가 나타나며 구조적으로 무엇을 뜻하나요?",
+                    "zh": "当前命盘或时间背景触发了哪些冲合关系，它们在结构层代表什么？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_time_context",
+                    "q_structure_overview",
+                    "follow_rule_basis"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "relations",
+                    "chart_anchor",
+                    "time_context"
+                  ],
+                  "risk_level": "R1",
+                  "score": 84,
+                  "source": "rule_db_dynamic_question",
+                  "source_knowledge_id": "core.branch_relations.three_meeting.v1",
+                  "source_rule_id": "v19.rule.core.branch_relations.three_meeting.v1",
+                  "source_signal_id": "srs.core.branch_relations.three_meeting.v1",
+                  "theme": "structure_basis"
+                },
+                {
+                  "answer_scope": "separate_branch_relations_by_layer",
+                  "depth": "intermediate",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "DYNAMIC_GUIDED_QUESTION",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "branch_relation",
+                  "key": "kbq_combination_context",
+                  "label": {
+                    "en": "What structural link can the current combination relation indicate here?",
+                    "ko": "현재 나타난 합 관계는 여기서 어떤 구조 연결만 뜻하나요?",
+                    "zh": "当前出现的合或六合关系，在这里只能说明什么结构连接？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_branch_relation_detail",
+                    "q_structure_overview",
+                    "q_time_context_boundary"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "relations",
+                    "chart_anchor",
+                    "time_context"
+                  ],
+                  "risk_level": "R1",
+                  "score": 83,
+                  "source": "rule_db_dynamic_question",
+                  "source_knowledge_id": "core.branch_relations.three_meeting.v1",
+                  "source_rule_id": "v19.rule.core.branch_relations.three_meeting.v1",
+                  "source_signal_id": "srs.core.branch_relations.three_meeting.v1",
+                  "theme": "structure_basis"
+                },
+                {
+                  "answer_scope": "explain_flow_year_as_context_only",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "QUESTION_REGISTRY_CONTRACT",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "time_boundary",
+                  "key": "q_time_context",
+                  "label": {
+                    "en": "As context only, what relations does this flow year trigger?",
+                    "ko": "예측이 아닌 시간 맥락으로서 이 세운은 어떤 구조 관계를 만들까요?",
+                    "zh": "这个流年只作为时间背景，会触发哪些结构关系？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_branch_relation_detail",
+                    "q_time_vs_natal_relation",
+                    "q_time_context_boundary",
+                    "q_luck_flow_layers"
+                  ],
+                  "required": [
+                    "time_relation"
+                  ],
+                  "required_facts": [
+                    "time_context",
+                    "relations"
+                  ],
+                  "score": 82,
+                  "source": "question_registry",
+                  "theme": "time_context"
+                },
+                {
+                  "answer_scope": "explain_time_context_only",
+                  "depth": "beginner",
+                  "forbidden_prediction": true,
+                  "guardrails": [
+                    "DYNAMIC_GUIDED_QUESTION",
+                    "NO_FORTUNE",
+                    "NO_RESULT_MUTATION"
+                  ],
+                  "intent": "time_boundary",
+                  "key": "kbq_time_layer_boundary",
+                  "label": {
+                    "en": "Which time-context layer does the current luck or flow year belong to, and why does it not directly change the result?",
+                    "ko": "현재 대운 또는 세운은 어떤 시간 배경층이며 왜 결과를 직접 바꾸지 않나요?",
+                    "zh": "当前大运或流年属于哪一层时间背景，为什么不直接改结果？"
+                  },
+                  "phase": "any",
+                  "registry_version": "v19.question_registry.p9.structural_rule_signals.v1",
+                  "related_questions": [
+                    "q_time_context_boundary",
+                    "q_time_not_inference",
+                    "q_luck_flow_layers"
+                  ],
+                  "required": [
+                    "chart"
+                  ],
+                  "required_facts": [
+                    "time_context",
+                    "relations"
+                  ],
+                  "risk_level": "R2",
+                  "score": 82,
+                  "source": "rule_db_dynamic_question",
+                  "source_knowledge_id": "time.time_context_boundary.v1",
+                  "source_rule_id": "v19.rule.time.time_context_boundary.v1",
+                  "source_signal_id": "srs.time.time_context_boundary.v1",
+                  "theme": "time_context"
+                }
+              ],
+              "rule_signal_adapter": {
+                "count": 19,
+                "runtime_scope": "structural_rule_signals_only_no_result_mutation",
+                "version": "v19.p9.structural_rule_signals.v1"
+              },
+              "rule_signal_count": 21,
+              "runtime_scope": "guided_questions_only_no_inference_mutation",
+              "signals": [
+                {
+                  "category": "branch_relation",
+                  "domain": "structure",
+                  "fact_scopes": [
+                    "relations"
+                  ],
+                  "mutates_result": false,
+                  "observed": [
+                    "辰-酉"
+                  ],
+                  "question_keys": [
+                    "q_branch_relation_detail",
+                    "q_combination_context",
+                    "q_time_vs_natal_relation"
+                  ],
+                  "reason": "命盘或时间背景存在可见地支关系，适合先解释发生在哪一层。",
+                  "score": 86,
+                  "signal_id": "struct.branch_relations",
+                  "source": "structural_rule_signal",
+                  "version": "p5.structural_signals.v1"
+                },
+                {
+                  "category": "vault",
+                  "domain": "structure",
+                  "fact_scopes": [
+                    "vaults",
+                    "hidden_stems"
+                  ],
+                  "mutates_result": false,
+                  "observed": [
+                    "辰"
+                  ],
+                  "question_keys": [
+                    "q_vault_structure",
+                    "q_hidden_stem_role",
+                    "q_structure_overview"
+                  ],
+                  "reason": "命盘或时间背景出现墓库支，适合解释位置、藏干和阅读边界。",
+                  "score": 80,
+                  "signal_id": "struct.vaults",
+                  "source": "structural_rule_signal",
+                  "version": "p5.structural_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_vault_location_hidden_stems_and_boundary",
+                  "category": "vault",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.vault_branches",
+                    "chart.hidden_stems"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.vault_structure.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰"
+                  ],
+                  "question_keys": [
+                    "q_vault_structure",
+                    "q_hidden_stem_role",
+                    "q_time_context_boundary"
+                  ],
+                  "reason": "Rule DB matched vault branch facts and hidden-stem boundary.",
+                  "risk_level": "R2",
+                  "rule_id": "v19.rule.core.vault_structure.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 86,
+                  "signal_id": "srs.core.vault_structure.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "四墓库结构",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_branch_relations_by_layer",
+                  "category": "branch_relation",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.relations",
+                    "time_context.relations"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.branch_relations.three_meeting.v1",
+                  "layer": "chart_or_time_relation",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰酉"
+                  ],
+                  "question_keys": [
+                    "q_branch_relation_detail",
+                    "q_time_vs_natal_relation",
+                    "q_combination_context"
+                  ],
+                  "reason": "Rule DB matched branch-relation facts by layer.",
+                  "risk_level": "R1",
+                  "rule_id": "v19.rule.core.branch_relations.three_meeting.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 86,
+                  "signal_id": "srs.core.branch_relations.three_meeting.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "地支三会局",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_branch_relations_by_layer",
+                  "category": "branch_relation",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.relations",
+                    "time_context.relations"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.branch_relations.three_harmony.v1",
+                  "layer": "chart_or_time_relation",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰酉"
+                  ],
+                  "question_keys": [
+                    "q_branch_relation_detail",
+                    "q_time_vs_natal_relation",
+                    "q_combination_context"
+                  ],
+                  "reason": "Rule DB matched branch-relation facts by layer.",
+                  "risk_level": "R1",
+                  "rule_id": "v19.rule.core.branch_relations.three_harmony.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 86,
+                  "signal_id": "srs.core.branch_relations.three_harmony.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "地支三合局",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_branch_relations_by_layer",
+                  "category": "branch_relation",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.relations",
+                    "time_context.relations"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.branch_relations.six_combination.v1",
+                  "layer": "chart_or_time_relation",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰酉"
+                  ],
+                  "question_keys": [
+                    "q_branch_relation_detail",
+                    "q_time_vs_natal_relation",
+                    "q_combination_context"
+                  ],
+                  "reason": "Rule DB matched branch-relation facts by layer.",
+                  "risk_level": "R1",
+                  "rule_id": "v19.rule.core.branch_relations.six_combination.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 86,
+                  "signal_id": "srs.core.branch_relations.six_combination.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "地支六合",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_branch_relations_by_layer",
+                  "category": "branch_relation",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.relations",
+                    "time_context.relations"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.branch_relations.six_clash.v1",
+                  "layer": "chart_or_time_relation",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰酉"
+                  ],
+                  "question_keys": [
+                    "q_branch_relation_detail",
+                    "q_time_vs_natal_relation",
+                    "q_combination_context"
+                  ],
+                  "reason": "Rule DB matched branch-relation facts by layer.",
+                  "risk_level": "R1",
+                  "rule_id": "v19.rule.core.branch_relations.six_clash.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 86,
+                  "signal_id": "srs.core.branch_relations.six_clash.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "地支六冲",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_branch_relations_by_layer",
+                  "category": "branch_relation",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.relations",
+                    "time_context.relations"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.branch_relations.penalty_harm_break.v1",
+                  "layer": "chart_or_time_relation",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰酉"
+                  ],
+                  "question_keys": [
+                    "q_branch_relation_detail",
+                    "q_time_vs_natal_relation",
+                    "q_combination_context"
+                  ],
+                  "reason": "Rule DB matched branch-relation facts by layer.",
+                  "risk_level": "R2",
+                  "rule_id": "v19.rule.core.branch_relations.penalty_harm_break.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 86,
+                  "signal_id": "srs.core.branch_relations.penalty_harm_break.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "地支刑害破关系索引",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_time_context_without_result_mutation",
+                  "category": "timing_context",
+                  "domain": "time_structure",
+                  "fact_refs": [
+                    "time_context"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "time.time_context_boundary.v1",
+                  "layer": "time_context",
+                  "mutates_result": false,
+                  "observed": [
+                    "time_context"
+                  ],
+                  "question_keys": [
+                    "q_time_context_boundary",
+                    "q_time_not_inference",
+                    "q_luck_flow_layers"
+                  ],
+                  "reason": "Rule DB matched time-context boundary.",
+                  "risk_level": "R2",
+                  "rule_id": "v19.rule.time.time_context_boundary.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 82,
+                  "signal_id": "srs.time.time_context_boundary.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "时间结构上下文边界",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_income_structure_signals_without_prediction",
+                  "category": "wealth_feature",
+                  "domain": "income_stability",
+                  "fact_refs": [
+                    "inference_context.income_stability.signals"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "wealth.wealth_strength.v1",
+                  "layer": "supported_result_context",
+                  "mutates_result": false,
+                  "observed": [
+                    "self_capacity=high",
+                    "wealth_presence=medium",
+                    "wealth_accessibility=clear",
+                    "volatility=low",
+                    "structure_binding=none",
+                    "income_stability=stable"
+                  ],
+                  "question_keys": [
+                    "q_income_factors",
+                    "q_income_path_structure",
+                    "q_signal_combination"
+                  ],
+                  "reason": "Rule DB matched income-structure feature context.",
+                  "risk_level": "R2",
+                  "rule_id": "v19.rule.wealth.wealth_strength.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 76,
+                  "signal_id": "srs.wealth.wealth_strength.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "财星强弱结构特征",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_income_structure_signals_without_prediction",
+                  "category": "wealth_mechanism",
+                  "domain": "income_stability",
+                  "fact_refs": [
+                    "inference_context.income_stability.signals"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "wealth.peer_competition.v1",
+                  "layer": "supported_result_context",
+                  "mutates_result": false,
+                  "observed": [
+                    "self_capacity=high",
+                    "wealth_presence=medium",
+                    "wealth_accessibility=clear",
+                    "volatility=low",
+                    "structure_binding=none",
+                    "income_stability=stable"
+                  ],
+                  "question_keys": [
+                    "q_income_factors",
+                    "q_income_path_structure",
+                    "q_signal_combination"
+                  ],
+                  "reason": "Rule DB matched income-structure mechanism context.",
+                  "risk_level": "R2",
+                  "rule_id": "v19.rule.wealth.peer_competition.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 76,
+                  "signal_id": "srs.wealth.peer_competition.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "比劫与财结构关系候选",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_income_structure_signals_without_prediction",
+                  "category": "wealth_mechanism",
+                  "domain": "income_stability",
+                  "fact_refs": [
+                    "inference_context.income_stability.signals"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "wealth.output_generate_wealth.v1",
+                  "layer": "supported_result_context",
+                  "mutates_result": false,
+                  "observed": [
+                    "self_capacity=high",
+                    "wealth_presence=medium",
+                    "wealth_accessibility=clear",
+                    "volatility=low",
+                    "structure_binding=none",
+                    "income_stability=stable"
+                  ],
+                  "question_keys": [
+                    "q_income_factors",
+                    "q_income_path_structure",
+                    "q_signal_combination"
+                  ],
+                  "reason": "Rule DB matched income-structure mechanism context.",
+                  "risk_level": "R2",
+                  "rule_id": "v19.rule.wealth.output_generate_wealth.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 76,
+                  "signal_id": "srs.wealth.output_generate_wealth.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "食伤生财机制候选",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_relationship_metadata_without_verdict",
+                  "category": "ten_god",
+                  "domain": "ten_god_relation",
+                  "fact_refs": [
+                    "chart.day_stem",
+                    "chart.visible_hidden_stems"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.ten_god_mapping.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "癸",
+                    "relation_metadata"
+                  ],
+                  "question_keys": [
+                    "q_ten_god_metadata",
+                    "q_hidden_stem_role",
+                    "q_read_result_not_fortune"
+                  ],
+                  "reason": "Rule DB matched ten-god relationship metadata boundary.",
+                  "risk_level": "R1",
+                  "rule_id": "v19.rule.core.ten_god_mapping.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 72,
+                  "signal_id": "srs.core.ten_god_mapping.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "十神映射基础",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "hidden_stem",
+                  "domain": "day_master_element",
+                  "fact_refs": [
+                    "chart.hidden_stems"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.branch_attributes_hidden_stems.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "午藏丁/己",
+                    "辰藏戊/乙/癸",
+                    "酉藏辛",
+                    "亥藏壬/甲"
+                  ],
+                  "question_keys": [
+                    "q_hidden_stem_role",
+                    "q_ten_god_metadata",
+                    "q_element_flow_metadata"
+                  ],
+                  "reason": "Rule DB matched hidden-stem facts used as structure sources.",
+                  "risk_level": "R1",
+                  "rule_id": "v19.rule.core.branch_attributes_hidden_stems.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 72,
+                  "signal_id": "srs.core.branch_attributes_hidden_stems.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "地支五行与藏干",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "strength_model",
+                  "domain": "day_master_element",
+                  "fact_refs": [
+                    "chart.day_stem",
+                    "chart.month_branch",
+                    "chart.hidden_stems"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "strength.day_master_evidence_model.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "癸",
+                    "辰",
+                    "capacity_evidence_candidate"
+                  ],
+                  "question_keys": [
+                    "q_structure_overview",
+                    "q_read_result_not_fortune",
+                    "follow_rule_basis"
+                  ],
+                  "reason": "Rule DB matched capacity-evidence structure context.",
+                  "risk_level": "R2",
+                  "rule_id": "v19.rule.strength.day_master_evidence_model.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 60,
+                  "signal_id": "srs.strength.day_master_evidence_model.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "日主强弱证据模型",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "pattern_structure",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.pillars"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "pattern.structure_index.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "午",
+                    "辰",
+                    "酉",
+                    "亥"
+                  ],
+                  "question_keys": [
+                    "q_structure_overview",
+                    "q_read_result_not_fortune",
+                    "follow_rule_basis"
+                  ],
+                  "reason": "Rule DB matched structural facts.",
+                  "risk_level": "R3",
+                  "rule_id": "v19.rule.pattern.structure_index.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 60,
+                  "signal_id": "srs.pattern.structure_index.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "格局结构索引边界",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "stem_relation",
+                  "domain": "structural_relation",
+                  "fact_refs": [
+                    "chart.relations",
+                    "time_context.relations"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.stem_combination.v1",
+                  "layer": "chart_or_time_relation",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰酉"
+                  ],
+                  "question_keys": [
+                    "q_structure_overview",
+                    "q_read_result_not_fortune",
+                    "follow_rule_basis"
+                  ],
+                  "reason": "Rule DB matched structural facts.",
+                  "risk_level": "R1",
+                  "rule_id": "v19.rule.core.stem_combination.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 60,
+                  "signal_id": "srs.core.stem_combination.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "天干五合",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "stem_branch_attribute",
+                  "domain": "day_master_element",
+                  "fact_refs": [
+                    "chart.day_stem",
+                    "chart.month_branch"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.stem_attributes.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "癸",
+                    "辰"
+                  ],
+                  "question_keys": [
+                    "q_structure_overview",
+                    "q_read_result_not_fortune",
+                    "follow_rule_basis"
+                  ],
+                  "reason": "Rule DB matched structural facts.",
+                  "risk_level": "R0",
+                  "rule_id": "v19.rule.core.stem_attributes.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 60,
+                  "signal_id": "srs.core.stem_attributes.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "天干五行阴阳属性",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "core_symbol",
+                  "domain": "day_master_element",
+                  "fact_refs": [
+                    "chart.day_stem",
+                    "chart.month_branch"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.heavenly_stems.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "癸",
+                    "辰"
+                  ],
+                  "question_keys": [
+                    "q_structure_overview",
+                    "q_read_result_not_fortune",
+                    "follow_rule_basis"
+                  ],
+                  "reason": "Rule DB matched structural facts.",
+                  "risk_level": "R0",
+                  "rule_id": "v19.rule.core.heavenly_stems.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 60,
+                  "signal_id": "srs.core.heavenly_stems.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "十天干",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "five_element_relation",
+                  "domain": "day_master_element",
+                  "fact_refs": [
+                    "chart.relations",
+                    "time_context.relations"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.five_element_relations.v1",
+                  "layer": "chart_or_time_relation",
+                  "mutates_result": false,
+                  "observed": [
+                    "辰酉"
+                  ],
+                  "question_keys": [
+                    "q_structure_overview",
+                    "q_read_result_not_fortune",
+                    "follow_rule_basis"
+                  ],
+                  "reason": "Rule DB matched structural facts.",
+                  "risk_level": "R0",
+                  "rule_id": "v19.rule.core.five_element_relations.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 60,
+                  "signal_id": "srs.core.five_element_relations.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "五行生克关系",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                },
+                {
+                  "answer_scope": "explain_structural_fact_without_prediction",
+                  "category": "core_symbol",
+                  "domain": "day_master_element",
+                  "fact_refs": [
+                    "chart.day_stem",
+                    "chart.month_branch"
+                  ],
+                  "guardrails": [
+                    "RULE_DB_SIGNAL_ONLY",
+                    "NO_RESULT_MUTATION",
+                    "NO_FORTUNE",
+                    "NO_AUTO_RULE_ACTIVATION"
+                  ],
+                  "knowledge_id": "core.earthly_branches.v1",
+                  "layer": "chart_structure",
+                  "mutates_result": false,
+                  "observed": [
+                    "癸",
+                    "辰"
+                  ],
+                  "question_keys": [
+                    "q_structure_overview",
+                    "q_read_result_not_fortune",
+                    "follow_rule_basis"
+                  ],
+                  "reason": "Rule DB matched structural facts.",
+                  "risk_level": "R0",
+                  "rule_id": "v19.rule.core.earthly_branches.v1",
+                  "runtime_scope": "structural_rule_signal_only_no_result_mutation",
+                  "score": 60,
+                  "signal_id": "srs.core.earthly_branches.v1",
+                  "source": "bazi_rule_db_engine_adapter",
+                  "title": "十二地支",
+                  "version": "v19.p9.structural_rule_signals.v1"
+                }
+              ]
+            },
+            "inference_context": {
+              "guardrails": [
+                "BACKEND_INFERENCE_FIRST",
+                "WEALTH_DOMAIN_SIGNAL_NOT_PREDICTION",
+                "LLM_EXPLAINS_EVIDENCE_ONLY"
+              ],
+              "income_stability": {
+                "branch_relations": [
+                  {
+                    "branches": "辰酉",
+                    "pillar_names": [
+                      "month",
+                      "day"
+                    ],
+                    "type": "six_combination"
+                  }
+                ],
+                "domain": "wealth",
+                "evidence_summary": [
+                  "income_stability=stable",
+                  "self_capacity=high",
+                  "wealth_presence=medium",
+                  "wealth_accessibility=clear",
+                  "volatility=low",
+                  "structure_binding=none"
+                ],
+                "guardrails": [
+                  "WEALTH_DOMAIN_SIGNAL_NOT_PREDICTION",
+                  "NO_FORTUNE",
+                  "NO_SCORE",
+                  "NO_TRADITIONAL_NARRATIVE"
+                ],
+                "is_prediction": false,
+                "rule_attribution": {
+                  "feedback_mapping_path": "feedback.subject_type=income_stability -> signal -> rule_id -> inputs/condition",
+                  "guardrails": [
+                    "ATTRIBUTION_ONLY",
+                    "NO_AUTO_RULE_UPDATE",
+                    "ANALYST_REVIEW_REQUIRED"
+                  ],
+                  "signal_evidence": [
+                    {
+                      "condition": "map element support/pressure tendency into low/medium/high carrying capacity",
+                      "confidence": 0.86,
+                      "inputs": [
+                        {
+                          "path": "element_balance.support_score",
+                          "value": 0.665
+                        },
+                        {
+                          "path": "element_balance.pressure_score",
+                          "value": 0.335
+                        },
+                        {
+                          "path": "element_balance.tendency",
+                          "value": "strong"
+                        }
+                      ],
+                      "rule_id": "v19.income_stability.self_capacity",
+                      "rule_version": 1,
+                      "signal": "self_capacity",
+                      "value": "high"
+                    },
+                    {
+                      "condition": "count wealth-element contacts in visible pillar stem/branch metadata",
+                      "confidence": 0.74,
+                      "inputs": [
+                        {
+                          "path": "wealth_element",
+                          "value": "fire"
+                        },
+                        {
+                          "path": "wealth_presence.count",
+                          "value": 2
+                        },
+                        {
+                          "path": "wealth_presence.hits",
+                          "value": [
+                            "year.stem",
+                            "year.branch"
+                          ]
+                        }
+                      ],
+                      "rule_id": "v19.income_stability.wealth_presence",
+                      "rule_version": 1,
+                      "signal": "wealth_presence",
+                      "value": "medium"
+                    },
+                    {
+                      "condition": "check whether branch relations touching wealth pillars are clear, bound, disrupted, or conflicted",
+                      "confidence": 0.86,
+                      "inputs": [
+                        {
+                          "path": "touched_wealth_pillars",
+                          "value": [
+                            "year"
+                          ]
+                        },
+                        {
+                          "path": "wealth_relation_counts.clash",
+                          "value": 0
+                        },
+                        {
+                          "path": "wealth_relation_counts.combination",
+                          "value": 0
+                        }
+                      ],
+                      "rule_id": "v19.income_stability.wealth_accessibility",
+                      "rule_version": 1,
+                      "signal": "wealth_accessibility",
+                      "value": "clear"
+                    },
+                    {
+                      "condition": "map natal six-clash count into low/medium/high volatility",
+                      "confidence": 0.62,
+                      "inputs": [
+                        {
+                          "path": "branch_relations[type=six_clash].count",
+                          "value": 0
+                        }
+                      ],
+                      "rule_id": "v19.income_stability.volatility",
+                      "rule_version": 1,
+                      "signal": "volatility",
+                      "value": "low"
+                    },
+                    {
+                      "condition": "detect whether three-harmony structure exists as a binding signal",
+                      "confidence": 0.82,
+                      "inputs": [
+                        {
+                          "path": "branch_relations[type=three_harmony].count",
+                          "value": 0
+                        }
+                      ],
+                      "rule_id": "v19.income_stability.structure_binding",
+                      "rule_version": 1,
+                      "signal": "structure_binding",
+                      "value": "none"
+                    },
+                    {
+                      "condition": "aggregate bounded input signals into final income_stability structure signal",
+                      "confidence": 0.86,
+                      "inputs": [
+                        {
+                          "path": "signals.self_capacity",
+                          "value": "high"
+                        },
+                        {
+                          "path": "signals.wealth_presence",
+                          "value": "medium"
+                        },
+                        {
+                          "path": "signals.wealth_accessibility",
+                          "value": "clear"
+                        },
+                        {
+                          "path": "signals.volatility",
+                          "value": "low"
+                        },
+                        {
+                          "path": "signals.structure_binding",
+                          "value": "none"
+                        }
+                      ],
+                      "rule_id": "v19.income_stability.aggregate",
+                      "rule_version": 1,
+                      "signal": "income_stability",
+                      "value": "stable"
+                    }
+                  ],
+                  "version": "v19.rule_attribution.v1"
+                },
+                "rule_contract": {
+                  "allowed_output": [
+                    "rule_basis",
+                    "signal_values",
+                    "source_paths",
+                    "uncertainty"
+                  ],
+                  "forbidden_output": [
+                    "fortune",
+                    "yearly_prediction",
+                    "good_bad_judgement",
+                    "发财/破财断语",
+                    "traditional_prediction_text"
+                  ],
+                  "time_context_policy": "P4 time structure is context only and does not change income_stability."
+                },
+                "scope": "static_natal_structure_only",
+                "signals": [
+                  {
+                    "condition": "map element support/pressure tendency into low/medium/high carrying capacity",
+                    "confidence": 0.86,
+                    "inputs": [
+                      {
+                        "path": "element_balance.support_score",
+                        "value": 0.665
+                      },
+                      {
+                        "path": "element_balance.pressure_score",
+                        "value": 0.335
+                      },
+                      {
+                        "path": "element_balance.tendency",
+                        "value": "strong"
+                      }
+                    ],
+                    "key": "self_capacity",
+                    "metrics": {
+                      "pressure_score": 0.335,
+                      "support_score": 0.665,
+                      "tendency": "strong"
+                    },
+                    "rule_id": "v19.income_stability.self_capacity",
+                    "rule_version": 1,
+                    "sources": [
+                      {
+                        "path": "element_balance.support_score",
+                        "value": 0.665
+                      },
+                      {
+                        "path": "element_balance.pressure_score",
+                        "value": 0.335
+                      }
+                    ],
+                    "value": "high"
+                  },
+                  {
+                    "condition": "count wealth-element contacts in visible pillar stem/branch metadata",
+                    "confidence": 0.74,
+                    "inputs": [
+                      {
+                        "path": "wealth_element",
+                        "value": "fire"
+                      },
+                      {
+                        "path": "wealth_presence.count",
+                        "value": 2
+                      },
+                      {
+                        "path": "wealth_presence.hits",
+                        "value": [
+                          "year.stem",
+                          "year.branch"
+                        ]
+                      }
+                    ],
+                    "key": "wealth_presence",
+                    "metrics": {
+                      "count": 2,
+                      "hits": [
+                        "year.stem",
+                        "year.branch"
+                      ]
+                    },
+                    "rule_id": "v19.income_stability.wealth_presence",
+                    "rule_version": 1,
+                    "sources": [
+                      {
+                        "path": "pillars.*.stem_element",
+                        "value": "wealth_element"
+                      },
+                      {
+                        "path": "pillars.*.branch_element",
+                        "value": "wealth_element"
+                      }
+                    ],
+                    "value": "medium"
+                  },
+                  {
+                    "condition": "check whether branch relations touching wealth pillars are clear, bound, disrupted, or conflicted",
+                    "confidence": 0.86,
+                    "inputs": [
+                      {
+                        "path": "touched_wealth_pillars",
+                        "value": [
+                          "year"
+                        ]
+                      },
+                      {
+                        "path": "wealth_relation_counts.clash",
+                        "value": 0
+                      },
+                      {
+                        "path": "wealth_relation_counts.combination",
+                        "value": 0
+                      }
+                    ],
+                    "key": "wealth_accessibility",
+                    "metrics": {
+                      "clash": 0,
+                      "combination": 0
+                    },
+                    "rule_id": "v19.income_stability.wealth_accessibility",
+                    "rule_version": 1,
+                    "sources": [
+                      {
+                        "path": "branch_relations touching wealth pillars",
+                        "value": {
+                          "clash": 0,
+                          "combination": 0
+                        }
+                      }
+                    ],
+                    "value": "clear"
+                  },
+                  {
+                    "condition": "map natal six-clash count into low/medium/high volatility",
+                    "confidence": 0.62,
+                    "inputs": [
+                      {
+                        "path": "branch_relations[type=six_clash].count",
+                        "value": 0
+                      }
+                    ],
+                    "key": "volatility",
+                    "metrics": {
+                      "clash_count": 0
+                    },
+                    "rule_id": "v19.income_stability.volatility",
+                    "rule_version": 1,
+                    "sources": [
+                      {
+                        "path": "branch_relations[type=six_clash]",
+                        "value": 0
+                      }
+                    ],
+                    "value": "low"
+                  },
+                  {
+                    "condition": "detect whether three-harmony structure exists as a binding signal",
+                    "confidence": 0.82,
+                    "inputs": [
+                      {
+                        "path": "branch_relations[type=three_harmony].count",
+                        "value": 0
+                      }
+                    ],
+                    "key": "structure_binding",
+                    "metrics": {
+                      "three_harmony_count": 0
+                    },
+                    "rule_id": "v19.income_stability.structure_binding",
+                    "rule_version": 1,
+                    "sources": [
+                      {
+                        "path": "branch_relations[type=three_harmony]",
+                        "value": 0
+                      }
+                    ],
+                    "value": "none"
+                  },
+                  {
+                    "condition": "aggregate bounded input signals into final income_stability structure signal",
+                    "confidence": 0.86,
+                    "inputs": [
+                      {
+                        "path": "signals.self_capacity",
+                        "value": "high"
+                      },
+                      {
+                        "path": "signals.wealth_presence",
+                        "value": "medium"
+                      },
+                      {
+                        "path": "signals.wealth_accessibility",
+                        "value": "clear"
+                      },
+                      {
+                        "path": "signals.volatility",
+                        "value": "low"
+                      },
+                      {
+                        "path": "signals.structure_binding",
+                        "value": "none"
+                      }
+                    ],
+                    "key": "income_stability",
+                    "metrics": {},
+                    "rule_id": "v19.income_stability.aggregate",
+                    "rule_version": 1,
+                    "sources": [
+                      {
+                        "path": "signals.*",
+                        "value": "bounded_signal_values"
+                      }
+                    ],
+                    "value": "stable"
+                  }
+                ],
+                "status": "ok",
+                "supported_theme": "income_stability",
+                "touched_wealth_pillars": [
+                  "year"
+                ],
+                "version": "v19.income_stability.agent_adapter.v1",
+                "wealth_element": "fire"
+              },
+              "supported_theme": "income_stability"
+            },
+            "knowledge_context": {
+              "enabled": true,
+              "guardrails": [
+                "NO_DIRECT_PREDICTION",
+                "NO_SCORE",
+                "NO_FORTUNE",
+                "NO_TRADITIONAL_NARRATIVE"
+              ],
+              "items": [
+                {
+                  "confidence_prior": 0.82,
+                  "domain": "core_structure",
+                  "evidence_type": "branch_relation_layer_evidence",
+                  "forbidden_usage": [
+                    "fortune",
+                    "score",
+                    "good_bad_judgement",
+                    "traditional_prediction_text"
+                  ],
+                  "guardrails": [
+                    "NO_DIRECT_PREDICTION",
+                    "NO_ACTIVE_RULE",
+                    "EVIDENCE_ONLY",
+                    "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                  ],
+                  "keywords": [
+                    "地支关系",
+                    "冲合",
+                    "六合",
+                    "三合",
+                    "本命",
+                    "大运",
+                    "流年",
+                    "层级"
+                  ],
+                  "knowledge_id": "core.branch_relation_layer_boundary",
+                  "match_score": 19,
+                  "source_refs": [
+                    "docs/bazi_knowledge/core/core_units_v1.md",
+                    "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                  ],
+                  "statement": "Branch relations must be separated by layer: natal-internal relations describe the base chart, while luck-cycle and flow-year relations describe time context. The same relation word should not be mixed across layers.",
+                  "status": "reviewed",
+                  "structured_facts": [
+                    "natal_internal",
+                    "luck_cycle_to_natal",
+                    "flow_year_to_natal",
+                    "layer_required"
+                  ],
+                  "title": "Branch Relation Layer Boundary"
+                },
+                {
+                  "confidence_prior": 0.82,
+                  "domain": "core_structure",
+                  "evidence_type": "branch_relation_layer_chain_evidence",
+                  "forbidden_usage": [
+                    "fortune",
+                    "score",
+                    "good_bad_judgement",
+                    "traditional_prediction_text"
+                  ],
+                  "guardrails": [
+                    "NO_DIRECT_PREDICTION",
+                    "NO_ACTIVE_RULE",
+                    "EVIDENCE_ONLY",
+                    "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                  ],
+                  "keywords": [
+                    "地支关系",
+                    "冲合",
+                    "本命",
+                    "大运",
+                    "流年",
+                    "分层",
+                    "layer"
+                  ],
+                  "knowledge_id": "p9.branch_relation_layer_chain",
+                  "match_score": 19,
+                  "source_refs": [
+                    "docs/bazi_knowledge/core/core_units_v1.md",
+                    "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                  ],
+                  "statement": "Branch relations should be reported with layer first: natal-internal, luck-to-natal, or flow-year-to-natal. The same pair can guide questions differently depending on layer.",
+                  "status": "reviewed",
+                  "structured_facts": [
+                    "natal_internal",
+                    "luck_to_natal",
+                    "flow_year_to_natal",
+                    "relation_pair",
+                    "layer_first_answer"
+                  ],
+                  "title": "Branch Relation Layer Chain"
+                },
+                {
+                  "confidence_prior": 0.82,
+                  "domain": "luck_flow",
+                  "evidence_type": "time_relation_context_evidence",
+                  "forbidden_usage": [
+                    "fortune",
+                    "score",
+                    "good_bad_judgement",
+                    "traditional_prediction_text"
+                  ],
+                  "guardrails": [
+                    "NO_DIRECT_PREDICTION",
+                    "NO_ACTIVE_RULE",
+                    "EVIDENCE_ONLY",
+                    "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                  ],
+                  "keywords": [
+                    "流年冲合",
+                    "大运冲合",
+                    "关系背景",
+                    "时间层",
+                    "只作背景"
+                  ],
+                  "knowledge_id": "luck_flow.time_relation_context_only",
+                  "match_score": 17,
+                  "source_refs": [
+                    "docs/bazi_knowledge/core/core_units_v1.md",
+                    "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                  ],
+                  "statement": "When a luck cycle or flow year forms a branch relation with the natal chart, V19 should state the relation and its layer, then stop at context explanation unless a separate reviewed rule explicitly consumes it.",
+                  "status": "reviewed",
+                  "structured_facts": [
+                    "relation_name",
+                    "time_layer",
+                    "natal_target",
+                    "requires_reviewed_rule_for_result"
+                  ],
+                  "title": "Timing Relations as Context Only"
+                },
+                {
+                  "confidence_prior": 0.82,
+                  "domain": "luck_flow",
+                  "evidence_type": "time_context_plain_language_evidence",
+                  "forbidden_usage": [
+                    "fortune",
+                    "score",
+                    "good_bad_judgement",
+                    "traditional_prediction_text"
+                  ],
+                  "guardrails": [
+                    "NO_DIRECT_PREDICTION",
+                    "NO_ACTIVE_RULE",
+                    "EVIDENCE_ONLY",
+                    "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                  ],
+                  "keywords": [
+                    "时间背景",
+                    "大运",
+                    "流年",
+                    "今年",
+                    "当前",
+                    "不改变结果",
+                    "context only"
+                  ],
+                  "knowledge_id": "luck_flow.time_context_boundary_plain_language",
+                  "match_score": 15,
+                  "source_refs": [
+                    "docs/bazi_knowledge/core/core_units_v1.md",
+                    "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                  ],
+                  "statement": "大运 and 流年 are timing layers. They can explain why a question is relevant now or which relation is visible, but V19 must not automatically use them to mutate income_stability or make year-specific predictions.",
+                  "status": "reviewed",
+                  "structured_facts": [
+                    "luck_cycle_context",
+                    "flow_year_context",
+                    "question_guidance",
+                    "no_result_mutation"
+                  ],
+                  "title": "Time Context Boundary in Plain Language"
+                },
+                {
+                  "confidence_prior": 0.82,
+                  "domain": "core_structure",
+                  "evidence_type": "structure_reading_chain_evidence",
+                  "forbidden_usage": [
+                    "fortune",
+                    "score",
+                    "good_bad_judgement",
+                    "traditional_prediction_text"
+                  ],
+                  "guardrails": [
+                    "NO_DIRECT_PREDICTION",
+                    "NO_ACTIVE_RULE",
+                    "EVIDENCE_ONLY",
+                    "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                  ],
+                  "keywords": [
+                    "结构链",
+                    "阅读顺序",
+                    "日主",
+                    "月令",
+                    "藏干",
+                    "冲合",
+                    "墓库",
+                    "时间背景"
+                  ],
+                  "knowledge_id": "p9.structure_reading_chain",
+                  "match_score": 15,
+                  "source_refs": [
+                    "docs/bazi_knowledge/core/core_units_v1.md",
+                    "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                  ],
+                  "statement": "A structural answer should follow an explicit chain: day-master anchor, month-command background, visible pillars, hidden stems, branch relations, vaults, time context, then supported result context if relevant.",
+                  "status": "reviewed",
+                  "structured_facts": [
+                    "day_master_anchor",
+                    "month_command",
+                    "visible_pillars",
+                    "hidden_stems",
+                    "branch_relations",
+                    "vaults",
+                    "time_context",
+                    "supported_result_context"
+                  ],
+                  "title": "Structure Reading Chain"
+                },
+                {
+                  "confidence_prior": 0.82,
+                  "domain": "core_structure",
+                  "evidence_type": "core_symbol_evidence",
+                  "forbidden_usage": [
+                    "fortune",
+                    "score",
+                    "good_bad_judgement",
+                    "traditional_prediction_text"
+                  ],
+                  "guardrails": [
+                    "NO_DIRECT_PREDICTION",
+                    "NO_ACTIVE_RULE",
+                    "EVIDENCE_ONLY",
+                    "REQUIRES_CONTRACT_VERIFIER_FOR_OUTPUT"
+                  ],
+                  "keywords": [
+                    "branch",
+                    "pillar",
+                    "地支",
+                    "冲",
+                    "合"
+                  ],
+                  "knowledge_id": "core.earthly_branches",
+                  "match_score": 13,
+                  "source_refs": [
+                    "docs/bazi_knowledge/core/core_units_v1.md",
+                    "docs/v19/V19_KNOWLEDGE_KERNEL_CHARTER.md"
+                  ],
+                  "statement": "The twelve earthly branches are branch symbols used in pillars and branch relation detection.",
+                  "status": "reviewed",
+                  "structured_facts": [
+                    "子",
+                    "丑",
+                    "寅",
+                    "卯",
+                    "辰",
+                    "巳",
+                    "午",
+                    "未",
+                    "申",
+                    "酉",
+                    "戌",
+                    "亥"
+                  ],
+                  "title": "Earthly Branches"
+                }
+              ],
+              "mode": "reviewed_evidence_templates_only",
+              "query_keywords": [
+                "branch",
+                "chart",
+                "flow_year",
+                "pillar",
+                "relation",
+                "stem",
+                "冲",
+                "合",
+                "四柱",
+                "如果只看结构，这张命盘先呈现哪些特征？",
+                "流年"
+              ],
+              "runtime_scope": "agent_context_not_prediction"
+            },
+            "luck_cycles": {
+              "cycles": [
+                {
+                  "end_age": 17,
+                  "pillar": {
+                    "branch": "巳",
+                    "branch_element": "fire",
+                    "branch_yin_yang": "yang",
+                    "display": "癸巳",
+                    "stem": "癸",
+                    "stem_element": "water",
+                    "stem_yin_yang": "yin"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [
+                      "巳亥"
+                    ],
+                    "combinations": []
+                  },
+                  "start_age": 8
+                },
+                {
+                  "end_age": 27,
+                  "pillar": {
+                    "branch": "午",
+                    "branch_element": "fire",
+                    "branch_yin_yang": "yin",
+                    "display": "甲午",
+                    "stem": "甲",
+                    "stem_element": "wood",
+                    "stem_yin_yang": "yang"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [],
+                    "combinations": []
+                  },
+                  "start_age": 18
+                },
+                {
+                  "end_age": 37,
+                  "pillar": {
+                    "branch": "未",
+                    "branch_element": "earth",
+                    "branch_yin_yang": "yin",
+                    "display": "乙未",
+                    "stem": "乙",
+                    "stem_element": "wood",
+                    "stem_yin_yang": "yin"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [],
+                    "combinations": [
+                      "午未"
+                    ]
+                  },
+                  "start_age": 28
+                },
+                {
+                  "end_age": 47,
+                  "pillar": {
+                    "branch": "申",
+                    "branch_element": "metal",
+                    "branch_yin_yang": "yang",
+                    "display": "丙申",
+                    "stem": "丙",
+                    "stem_element": "fire",
+                    "stem_yin_yang": "yang"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [],
+                    "combinations": []
+                  },
+                  "start_age": 38
+                },
+                {
+                  "end_age": 57,
+                  "pillar": {
+                    "branch": "酉",
+                    "branch_element": "metal",
+                    "branch_yin_yang": "yin",
+                    "display": "丁酉",
+                    "stem": "丁",
+                    "stem_element": "fire",
+                    "stem_yin_yang": "yin"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [],
+                    "combinations": [
+                      "辰酉"
+                    ]
+                  },
+                  "start_age": 48
+                },
+                {
+                  "end_age": 67,
+                  "pillar": {
+                    "branch": "戌",
+                    "branch_element": "earth",
+                    "branch_yin_yang": "yang",
+                    "display": "戊戌",
+                    "stem": "戊",
+                    "stem_element": "earth",
+                    "stem_yin_yang": "yang"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [
+                      "辰戌"
+                    ],
+                    "combinations": []
+                  },
+                  "start_age": 58
+                },
+                {
+                  "end_age": 77,
+                  "pillar": {
+                    "branch": "亥",
+                    "branch_element": "water",
+                    "branch_yin_yang": "yang",
+                    "display": "己亥",
+                    "stem": "己",
+                    "stem_element": "earth",
+                    "stem_yin_yang": "yin"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [],
+                    "combinations": []
+                  },
+                  "start_age": 68
+                },
+                {
+                  "end_age": 87,
+                  "pillar": {
+                    "branch": "子",
+                    "branch_element": "water",
+                    "branch_yin_yang": "yin",
+                    "display": "庚子",
+                    "stem": "庚",
+                    "stem_element": "metal",
+                    "stem_yin_yang": "yang"
+                  },
+                  "relations_with_natal": {
+                    "clashes": [
+                      "子午"
+                    ],
+                    "combinations": []
+                  },
+                  "start_age": 78
+                }
+              ],
+              "direction": "forward",
+              "start_age_note": "approximate_start_age_pending_solar_term_engine"
+            },
+            "mode": "v19_standalone_agent",
+            "time_context": {
+              "flow_year": {
+                "pillar": {
+                  "branch": "午",
+                  "branch_element": "fire",
+                  "branch_yin_yang": "yin",
+                  "display": "丙午",
+                  "stem": "丙",
+                  "stem_element": "fire",
+                  "stem_yin_yang": "yang"
+                },
+                "relations_with_natal": {
+                  "clashes": [],
+                  "combinations": []
+                },
+                "year": 2026
+              },
+              "luck_cycle": null,
+              "natal": {
+                "calendar_note": "solar_mvp_approximate_jie_boundaries",
+                "day_master": {
+                  "element": "water",
+                  "stem": "癸",
+                  "yin_yang": "yin"
+                },
+                "pillars": {
+                  "day": {
+                    "branch": "酉",
+                    "branch_element": "metal",
+                    "branch_yin_yang": "yin",
+                    "display": "癸酉",
+                    "stem": "癸",
+                    "stem_element": "water",
+                    "stem_yin_yang": "yin"
+                  },
+                  "hour": {
+                    "branch": "亥",
+                    "branch_element": "water",
+                    "branch_yin_yang": "yang",
+                    "display": "癸亥",
+                    "stem": "癸",
+                    "stem_element": "water",
+                    "stem_yin_yang": "yin"
+                  },
+                  "month": {
+                    "branch": "辰",
+                    "branch_element": "earth",
+                    "branch_yin_yang": "yang",
+                    "display": "壬辰",
+                    "stem": "壬",
+                    "stem_element": "water",
+                    "stem_yin_yang": "yang"
+                  },
+                  "year": {
+                    "branch": "午",
+                    "branch_element": "fire",
+                    "branch_yin_yang": "yin",
+                    "display": "丙午",
+                    "stem": "丙",
+                    "stem_element": "fire",
+                    "stem_yin_yang": "yang"
+                  }
+                },
+                "relations": {
+                  "items": [
+                    {
+                      "branches": "辰酉",
+                      "pillars": [
+                        "month",
+                        "day"
+                      ],
+                      "type": "six_combination"
+                    }
+                  ]
+                },
+                "status": "ok"
+              }
+            }
+          },
+          "text": "如果只看结构，这张命盘可以先抓三个入口：日柱是癸酉，月柱是壬辰，地支关系是命盘内部{'zh': '合', 'en': 'Combination', 'ko': '합'}辰酉，墓库观察是辰。\n\n这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。"
+        },
+        "created_at": "2026-04-29T12:53:12+00:00",
+        "user": {
+          "birth_input": {
+            "calendar": "solar",
+            "calendar_type": "solar",
+            "day": 29,
+            "gender": "male",
+            "hour": 21,
+            "lunar_is_leap_month": false,
+            "minute": 52,
+            "month": 4,
+            "year": 2026
+          },
+          "message": "如果只看结构，这张命盘先呈现哪些特征？",
+          "selected_year": 2026
+        }
+      }
+    ],
+    "updated_at": "2026-04-29T12:53:12+00:00",
+    "user_id": ""
+  },
   "v19s_66beb99830704393": {
     "created_at": "2026-04-28T23:36:36+00:00",
     "role": "guest",
