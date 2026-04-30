@@ -277,6 +277,148 @@ def ingest_current_knowledge_drafts_to_rule_db(*, force: bool = False, enable_en
     }
 
 
+def ingest_rule_version_proposals_to_rule_db(
+    version: Dict[str, Any],
+    proposals: List[Dict[str, Any]],
+    *,
+    enable_engine: bool = False,
+    source_stage: str = "rule_version_proposal_ingestion",
+) -> Dict[str, Any]:
+    state, storage = _load_state()
+    included = set(_string_list(version.get("included_proposals")))
+    selected = [
+        dict(row)
+        for row in proposals
+        if _clean(row.get("proposal_id")) in included
+        and _clean(row.get("rule_id"))
+        and _clean(row.get("status")) in {"active_record", "approved"}
+    ]
+    existing = {str(row.get("rule_id") or ""): row for row in state.get("rules") or []}
+    imported = 0
+    updated = 0
+    blocked: List[Dict[str, str]] = []
+    for proposal in selected:
+        if _clean(proposal.get("domain")) not in {"day_master_element", "structural_relation", "ten_god_relation", "time_structure", "income_stability"}:
+            blocked.append({"proposal_id": _clean(proposal.get("proposal_id")), "reason": "domain_not_allowed"})
+            continue
+        rule = _rule_from_versioned_proposal(proposal, version, enable_engine=enable_engine, source_stage=source_stage)
+        rule_id = rule["rule_id"]
+        if rule_id in existing:
+            previous = dict(existing[rule_id])
+            merged = {**previous, **rule, "rule_record_id": previous.get("rule_record_id") or rule["rule_record_id"], "updated_at": utc_now()}
+            if previous.get("engine_enabled") is True and not enable_engine:
+                merged["engine_enabled"] = True
+                merged["engine_adapter_status"] = previous.get("engine_adapter_status") or "synthetic_gate_active"
+            merged.setdefault("history", []).append(_history("updated_from_rule_version", "system", "Rule DB record updated from versioned proposal."))
+            existing[rule_id] = merged
+            updated += 1
+        else:
+            existing[rule_id] = rule
+            imported += 1
+    state["rules"] = sorted(existing.values(), key=lambda row: str(row.get("rule_id") or ""))
+    state["last_version_ingestion"] = {
+        "created_at": utc_now(),
+        "source_stage": source_stage,
+        "version_id": version.get("version_id"),
+        "proposal_count": len(selected),
+        "imported_count": imported,
+        "updated_count": updated,
+        "blocked_count": len(blocked),
+        "engine_enabled_requested": bool(enable_engine),
+        "runtime_mutation": False,
+    }
+    storage = _save_state(state)
+    return {
+        "ok": True,
+        "status": "rule_version_proposals_ingested",
+        "version_id": version.get("version_id"),
+        "proposal_count": len(selected),
+        "imported_count": imported,
+        "updated_count": updated,
+        "blocked_count": len(blocked),
+        "blocked": blocked,
+        "rule_count": len(state["rules"]),
+        "engine_enabled_count": len([row for row in state["rules"] if row.get("engine_enabled") is True]),
+        "runtime_mutation": False,
+        "storage": storage,
+        "guardrails": GUARDRAILS + ["RULE_VERSION_PROPOSAL_INGESTION", "ENGINE_DISABLED_BY_DEFAULT", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def enrich_rule_db_candidate_adapter_facts(
+    *,
+    prefixes: List[str] | None = None,
+    source_stage: str = "P31M_PRIORITY_TOPIC_ADAPTER_FACTS",
+) -> Dict[str, Any]:
+    state, _ = _load_state()
+    normalized_prefixes = [prefix for prefix in [str(item).strip() for item in (prefixes or ["p31c."])] if prefix]
+    updated: List[Dict[str, Any]] = []
+    skipped: List[Dict[str, str]] = []
+    for rule in state.get("rules") or []:
+        knowledge_id = _clean(rule.get("knowledge_id"))
+        rule_id = _clean(rule.get("rule_id"))
+        if normalized_prefixes and not any(knowledge_id.startswith(prefix) for prefix in normalized_prefixes):
+            continue
+        if not rule_id.startswith("v19.p31e."):
+            skipped.append({"rule_id": rule_id, "knowledge_id": knowledge_id, "reason": "not_p31e_rule"})
+            continue
+        structured = _adapter_structured_facts_for_versioned_rule(rule)
+        if not structured:
+            skipped.append({"rule_id": rule_id, "knowledge_id": knowledge_id, "reason": "structured_fact_template_missing"})
+            continue
+        condition = dict(rule.get("condition") or {})
+        condition["structured_facts"] = structured
+        condition["adapter_fact_stage"] = source_stage
+        condition["adapter_contract_status"] = "facts_seeded_synthetic_gate_pending"
+        condition["adapter_fact_version"] = "v19.p31m.priority_topic_adapter_facts.v1"
+        rule["condition"] = condition
+        allowed = _string_list(rule.get("allowed_usage"))
+        for token in ["rule_db", "engine_adapter_candidate", "synthetic_gate_candidate", "shadow_signal_candidate"]:
+            if token not in allowed:
+                allowed.append(token)
+        forbidden = _string_list(rule.get("forbidden_usage"))
+        for token in ["direct_fortune_output", "domain_result_prediction", "runtime_activation_without_synthetic_gate"]:
+            if token not in forbidden:
+                forbidden.append(token)
+        rule["allowed_usage"] = allowed
+        rule["forbidden_usage"] = forbidden
+        rule["engine_enabled"] = False
+        rule["engine_adapter_status"] = "adapter_facts_seeded_waiting_synthetic_gate"
+        rule["updated_at"] = utc_now()
+        rule.setdefault("history", []).append(_history("adapter_facts_seeded", "system", "P31M seeded adapter structured facts and synthetic gate marker. Engine remains disabled."))
+        updated.append(
+            {
+                "rule_id": rule_id,
+                "knowledge_id": knowledge_id,
+                "category": rule.get("category"),
+                "domain": rule.get("domain"),
+                "structured_fact_keys": sorted(structured.keys()),
+                "engine_enabled": False,
+            }
+        )
+    state["last_adapter_fact_enrichment"] = {
+        "created_at": utc_now(),
+        "source_stage": source_stage,
+        "updated_count": len(updated),
+        "skipped_count": len(skipped),
+        "runtime_mutation": False,
+    }
+    storage = _save_state(state)
+    return {
+        "ok": True,
+        "status": "adapter_facts_seeded",
+        "updated_count": len(updated),
+        "skipped_count": len(skipped),
+        "items": updated,
+        "skipped": skipped[:100],
+        "by_category": _count_by(updated, "category"),
+        "engine_enabled_count": len([row for row in updated if row.get("engine_enabled") is True]),
+        "runtime_mutation": False,
+        "storage": storage,
+        "guardrails": GUARDRAILS + ["ADAPTER_FACT_ENRICHMENT", "ENGINE_DISABLED", "NO_RUNTIME_MUTATION"],
+    }
+
+
 def smart_gate_bazi_rule_db_candidates(
     *,
     prefixes: List[str] | None = None,
@@ -487,6 +629,114 @@ def _rule_from_draft(draft: Dict[str, Any], *, enable_engine: bool) -> Dict[str,
         "updated_at": now,
         "history": [_history("ingested", "system", "Directly ingested from V19 knowledge draft into Bazi Rule DB.")],
         "guardrails": GUARDRAILS,
+    }
+
+
+def _rule_from_versioned_proposal(
+    proposal: Dict[str, Any],
+    version: Dict[str, Any],
+    *,
+    enable_engine: bool,
+    source_stage: str,
+) -> Dict[str, Any]:
+    now = utc_now()
+    condition = dict(proposal.get("condition") or {})
+    evidence = dict(proposal.get("evidence") or {})
+    output_contract = dict(proposal.get("output_contract") or {})
+    rule_id = _clean(proposal.get("rule_id"))
+    proposal_id = _clean(proposal.get("proposal_id"))
+    model_id = _clean(evidence.get("source_model_id") or condition.get("source_model_id") or proposal_id)
+    lane = _clean(condition.get("lane"), "versioned_proposal")
+    topic = _clean(condition.get("topic"), rule_id)
+    return {
+        "rule_record_id": "brr_" + uuid.uuid4().hex[:16],
+        "rule_id": rule_id,
+        "knowledge_id": model_id,
+        "source_draft_id": "",
+        "source_proposal_id": proposal_id,
+        "source_version_id": version.get("version_id"),
+        "domain": _clean(proposal.get("domain"), "structural_relation"),
+        "category": lane,
+        "title": topic,
+        "statement": _clean(proposal.get("rationale"), topic),
+        "risk_level": _clean(condition.get("risk_level") or evidence.get("risk_level"), "R2"),
+        "status": "active_record",
+        "engine_enabled": bool(enable_engine),
+        "engine_adapter_status": "synthetic_gate_active" if enable_engine else "candidate_waiting_synthetic_acceptance",
+        "input_contract": proposal.get("input_contract") or {"required": ["chart", "time_context", "knowledge_context"]},
+        "condition": {
+            **condition,
+            "source_stage": source_stage,
+            "source_version_id": version.get("version_id"),
+            "source_proposal_id": proposal_id,
+        },
+        "output_contract": {
+            **output_contract,
+            "is_prediction": False,
+            "prediction_scope": "structural_rule_signal",
+        },
+        "reasoning_path": proposal.get("reasoning_path") or [
+            "load versioned proposal rule record",
+            "keep as shadow adapter candidate until structured facts and synthetic gate pass",
+        ],
+        "evidence": {
+            **evidence,
+            "source_stage": source_stage,
+            "source_proposal_id": proposal_id,
+            "source_version_id": version.get("version_id"),
+            "runtime_mutation": False,
+        },
+        "confidence": _bounded_float(proposal.get("confidence"), 0.5, 0.0, 1.0),
+        "allowed_usage": ["rule_db", "engine_adapter_candidate", "shadow_signal_candidate"],
+        "forbidden_usage": ["direct_fortune_output", "domain_result_prediction", "runtime_activation_without_synthetic_gate"],
+        "created_at": now,
+        "updated_at": now,
+        "history": [_history("ingested_from_rule_version", "system", "Ingested from versioned proposal into Rule DB candidate records. Engine disabled unless explicitly gated.")],
+        "guardrails": GUARDRAILS + ["RULE_VERSION_PROPOSAL_INGESTION", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def _adapter_structured_facts_for_versioned_rule(rule: Dict[str, Any]) -> Dict[str, Any]:
+    category = _clean(rule.get("category"))
+    domain = _clean(rule.get("domain"))
+    knowledge_id = _clean(rule.get("knowledge_id"))
+    base = {
+        "adapter_marker": "p31m_priority_topic_candidate",
+        "source_model_id": knowledge_id,
+        "source_rule_id": _clean(rule.get("rule_id")),
+        "specificity": "minimal_anchor_until_adapter_samples_pass",
+    }
+    if category == "regular_pattern":
+        return {
+            **base,
+            "anchor": "month_branch",
+            "pattern_candidate": _clean(rule.get("title")),
+            "required_boundary": "candidate_only_no_formation_verdict",
+        }
+    if category == "time_activation" or domain == "time_structure":
+        return {
+            **base,
+            "anchor": "day_stem",
+            "requires_time_context": True,
+            "required_boundary": "time_trigger_only_no_event_timing",
+        }
+    if category == "wealth_domain_bridge" or domain == "income_stability":
+        return {
+            **base,
+            "anchor": "day_stem",
+            "requires_income_context": True,
+            "required_boundary": "income_structure_only_no_wealth_prediction",
+        }
+    if category in {"career_domain_bridge", "palace_domain_bridge"}:
+        return {
+            **base,
+            "anchor": "day_stem",
+            "required_boundary": "domain_context_only_no_result_prediction",
+        }
+    return {
+        **base,
+        "anchor": "day_stem",
+        "required_boundary": "structure_only_no_prediction",
     }
 
 

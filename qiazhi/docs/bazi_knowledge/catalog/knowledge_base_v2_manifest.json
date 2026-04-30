@@ -21,6 +21,31 @@
     "docs/v19/V19_P31_ALL_KNOWLEDGE_COVERAGE_AUDIT.md",
     "docs/v19/V19_P31A_ALL_KNOWLEDGE_FOUNDATION_GAP_PACK.md",
     "docs/v19/V19_P31B_ALL_KNOWLEDGE_DIRECTORY_COMPLETION.md",
+    "docs/v19/V19_P31C_PRIORITY_TOPIC_CONVERSION_REGISTRY.md",
+    "docs/v19/V19_P31D_PRIORITY_TOPIC_SMART_GATE.md",
+    "docs/v19/V19_P31E_PRIORITY_TOPIC_RULE_PROPOSALS.md",
+    "docs/v19/V19_P31F_PRIORITY_TOPIC_REVIEW_PACKET.md",
+    "docs/v19/V19_P31G_PRIORITY_TOPIC_DECISION_PREFLIGHT.md",
+    "docs/v19/V19_P31H_PRIORITY_TOPIC_CONTROLLED_APPROVAL.md",
+    "docs/v19/V19_P31I_PRIORITY_TOPIC_RULE_VERSION.md",
+    "docs/v19/V19_P31J_PRIORITY_TOPIC_GOVERNANCE_RELEASE.md",
+    "docs/v19/V19_P31K_PRIORITY_TOPIC_RULE_DB_CANDIDATES.md",
+    "docs/v19/V19_P31L_PRIORITY_TOPIC_ADAPTER_READINESS.md",
+    "docs/v19/V19_P31M_PRIORITY_TOPIC_ADAPTER_FACTS.md",
+    "docs/v19/V19_P32_TEN_GOD_PATHWAY_SECOND_WAVE_KNOWLEDGE.md",
+    "docs/v19/V19_P33_PATTERN_EXPANSION_FIRST_WAVE_KNOWLEDGE.md",
+    "docs/v19/V19_P34_BLIND_LIFA_EXPANSION_FIRST_WAVE_KNOWLEDGE.md",
+    "docs/v19/V19_P35_BRANCH_TIME_ACTIVATION_FIRST_WAVE_KNOWLEDGE.md",
+    "docs/v19/V19_P36_DOMAIN_APPLICATION_FIRST_WAVE_KNOWLEDGE.md",
+    "docs/v19/V19_P37_AUXILIARY_GEO_FIRST_WAVE_KNOWLEDGE.md",
+    "docs/v19/V19_P38_ANSWER_GOVERNANCE_FIRST_WAVE_KNOWLEDGE.md",
+    "docs/v19/V19_P39_RULE_CONVERSION_VALIDATION_FIRST_WAVE.md",
+    "docs/v19/V19_P40_RULE_AUDIT_APPLICATION.md",
+    "docs/v19/V19_P41_CONDITION_TOPIC_DEEP_VALIDATION.md",
+    "docs/v19/V19_P42_SMART_GATE_ACCELERATION.md",
+    "docs/v19/V19_P43_DRY_RUN_SHADOW_SCORING.md",
+    "docs/v19/V19_P44_CONTROLLED_ACTIVATION_CANDIDATES.md",
+    "docs/v19/V19_P45_CANARY_RUNTIME_TRIAL.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -29,24 +54,38 @@
     "docs/bazi_knowledge/packs/p28f_ten_god_conflict_family_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p31a_all_knowledge_foundation_gap_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p31b_all_knowledge_directory_completion_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p32_ten_god_pathway_second_wave_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p33_pattern_expansion_first_wave_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p34_blind_lifa_expansion_first_wave_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p35_branch_time_activation_first_wave_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p36_domain_application_first_wave_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p37_auxiliary_geo_first_wave_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p38_answer_governance_first_wave_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/core/core_units_v1.md",
     "docs/bazi_knowledge/ten_god/ten_god_units_v1.md",
     "docs/bazi_knowledge/strength/strength_units_v1.md",
     "docs/bazi_knowledge/time_context/time_context_units_v1.md",
     "docs/bazi_knowledge/time_context/luck_flow_activation_units_v1.md",
+    "docs/bazi_knowledge/time_context/branch_time_activation_first_wave_topic_v1.md",
     "docs/bazi_knowledge/pattern/pattern_units_v1.md",
     "docs/bazi_knowledge/pattern/regular/regular_pattern_units_v1.md",
     "docs/bazi_knowledge/pattern/quality/pattern_quality_units_v1.md",
     "docs/bazi_knowledge/pattern/special/special_pattern_units_v1.md",
+    "docs/bazi_knowledge/pattern/pattern_expansion_first_wave_topic_v1.md",
     "docs/bazi_knowledge/palace/palace_units_v1.md",
     "docs/bazi_knowledge/blind/lifa/blind_lifa_units_v1.md",
+    "docs/bazi_knowledge/blind/lifa/blind_lifa_expansion_first_wave_topic_v1.md",
     "docs/bazi_knowledge/blind/xiangfa/blind_xiangfa_units_v1.md",
     "docs/bazi_knowledge/blind/jifa/blind_jifa_archive_units_v1.md",
     "docs/bazi_knowledge/interaction/ten_god_interaction_topics_v1.md",
     "docs/bazi_knowledge/interaction/ten_god_conflict_constraint_mixed_topic_v1.md",
+    "docs/bazi_knowledge/interaction/ten_god_pathway_second_wave_topic_v1.md",
     "docs/bazi_knowledge/geo_context/geo_context_units_v1.md",
+    "docs/bazi_knowledge/geo_context/auxiliary_geo_first_wave_topic_v1.md",
     "docs/bazi_knowledge/answer_expression/answer_expression_units_v1.md",
+    "docs/bazi_knowledge/answer_expression/answer_governance_first_wave_topic_v1.md",
     "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+    "docs/bazi_knowledge/wealth/domain_application_first_wave_topic_v1.md",
     "docs/bazi_knowledge/branch_advanced/branch_advanced_units_v1.md",
     "docs/bazi_knowledge/calendar/calendar_units_v1.md",
     "docs/bazi_knowledge/career/career_units_v1.md",
@@ -348,6 +387,120 @@
         "luck_flow"
       ],
       "activation_policy": "seed_to_rule_db_candidates_only; high-risk domains remain archive-first and all mechanism/domain rules require condition models and eval gates"
+    },
+    {
+      "pack_id": "p32.ten_god_pathway_second_wave_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p32_ten_god_pathway_second_wave_knowledge_draft_seeds_v1.json",
+      "stage": "P32_TEN_GOD_PATHWAY_SECOND_WAVE_KNOWLEDGE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 24,
+      "risk_levels": ["R1", "R2"],
+      "source_context": [
+        "Ten-god pathway second wave topic",
+        "P28E/P28F ten-god interaction review",
+        "Bazi knowledge taxonomy L3A"
+      ],
+      "domains": ["interaction", "wealth", "strength", "pattern"],
+      "activation_policy": "seed_to_rule_db_candidates_only; new knowledge first, no runtime activation until later topic-specific condition models and synthetic samples"
+    },
+    {
+      "pack_id": "p33.pattern_expansion_first_wave_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p33_pattern_expansion_first_wave_knowledge_draft_seeds_v1.json",
+      "stage": "P33_PATTERN_EXPANSION_FIRST_WAVE_KNOWLEDGE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 32,
+      "risk_levels": ["R2", "R3"],
+      "source_context": [
+        "Pattern expansion first wave topic",
+        "Regular pattern units",
+        "Special pattern units",
+        "Bazi knowledge taxonomy L5A"
+      ],
+      "domains": ["pattern", "wealth", "interaction", "strength", "core"],
+      "activation_policy": "seed_to_rule_db_candidates_only; pattern knowledge remains candidate-only and cannot output pattern verdicts before dedicated condition models and synthetic samples"
+    },
+    {
+      "pack_id": "p34.blind_lifa_expansion_first_wave_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p34_blind_lifa_expansion_first_wave_knowledge_draft_seeds_v1.json",
+      "stage": "P34_BLIND_LIFA_EXPANSION_FIRST_WAVE_KNOWLEDGE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 24,
+      "risk_levels": ["R2", "R3"],
+      "source_context": [
+        "Blind lifa expansion first wave topic",
+        "Blind lifa units",
+        "Blind xiangfa units",
+        "Bazi knowledge taxonomy L7A"
+      ],
+      "domains": ["blind", "strength", "core", "interaction", "palace", "time_context"],
+      "activation_policy": "seed_to_rule_db_candidates_only; blind lifa remains neutral-structure only and cannot output formula verdicts before dedicated synthetic samples"
+    },
+    {
+      "pack_id": "p35.branch_time_activation_first_wave_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p35_branch_time_activation_first_wave_knowledge_draft_seeds_v1.json",
+      "stage": "P35_BRANCH_TIME_ACTIVATION_FIRST_WAVE_KNOWLEDGE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 36,
+      "risk_levels": ["R1", "R2"],
+      "source_context": [
+        "Branch time activation first wave topic",
+        "Core units",
+        "Luck flow activation units",
+        "Bazi knowledge taxonomy L1A and L9B"
+      ],
+      "domains": ["core_structure", "luck_flow", "time_context", "core"],
+      "activation_policy": "seed_to_rule_db_candidates_only; branch relations and time activation cannot output event predictions or rewrite natal structure before synthetic samples"
+    },
+    {
+      "pack_id": "p36.domain_application_first_wave_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p36_domain_application_first_wave_knowledge_draft_seeds_v1.json",
+      "stage": "P36_DOMAIN_APPLICATION_FIRST_WAVE_KNOWLEDGE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 28,
+      "risk_levels": ["R2", "R3", "R4"],
+      "source_context": [
+        "Domain application first wave topic",
+        "Wealth units",
+        "Career units",
+        "Relationship and health archive units",
+        "Bazi knowledge taxonomy L8A"
+      ],
+      "domains": ["wealth", "career", "relationship", "health", "family", "children", "personality"],
+      "activation_policy": "seed_to_rule_db_candidates_only; domain applications are bridge or archive-only and cannot output domain predictions before safety-specific synthetic samples"
+    },
+    {
+      "pack_id": "p37.auxiliary_geo_first_wave_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p37_auxiliary_geo_first_wave_knowledge_draft_seeds_v1.json",
+      "stage": "P37_AUXILIARY_GEO_FIRST_WAVE_KNOWLEDGE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 30,
+      "risk_levels": ["R1", "R2", "R3", "R4"],
+      "source_context": [
+        "Auxiliary geo first wave topic",
+        "Geo context units",
+        "Auxiliary archive units",
+        "Useful god archive units",
+        "Bazi knowledge taxonomy L9C and L10A"
+      ],
+      "domains": ["geo_context", "growth_phase", "shensha", "nayin", "auxiliary_pillars", "auxiliary_symbols", "useful_god"],
+      "activation_policy": "seed_to_rule_db_candidates_only; geo metadata remains validation-only and auxiliary symbols remain archive-first without fortune or advice outputs"
+    },
+    {
+      "pack_id": "p38.answer_governance_first_wave_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p38_answer_governance_first_wave_knowledge_draft_seeds_v1.json",
+      "stage": "P38_ANSWER_GOVERNANCE_FIRST_WAVE_KNOWLEDGE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 28,
+      "risk_levels": ["R0", "R1"],
+      "source_context": [
+        "Answer governance first wave topic",
+        "Answer expression units",
+        "Review UI units",
+        "Rule DB gate units",
+        "Bazi knowledge taxonomy L11A"
+      ],
+      "domains": ["answer_expression", "lab", "rule_db"],
+      "activation_policy": "seed_to_rule_db_candidates_only; answer governance may audit and format outputs but cannot activate bazi rules or introduce prediction text"
     }
   ],
   "proposal_generation": {
@@ -811,15 +964,15 @@
   "p31_all_knowledge_coverage_audit": {
     "stage": "P31_ALL_KNOWLEDGE_COVERAGE_AUDIT",
     "entrypoint": "v19.knowledge_base_audit.run_p31_all_knowledge_coverage_audit",
-    "taxonomy_item_count": 154,
-    "knowledge_draft_count": 234,
+    "taxonomy_item_count": 255,
+    "knowledge_draft_count": 436,
     "expected_directory_count": 33,
     "existing_directory_count": 33,
     "missing_directory_count": 0,
     "taxonomy_status": {
-      "已有": 25,
-      "部分": 125,
-      "归档": 4
+      "已有": 32,
+      "部分": 214,
+      "归档": 9
     },
     "runtime_scope": "audit_only_no_runtime_rule_activation",
     "migration_policy": "dual_track_forward_first_then_backfill",
@@ -868,6 +1021,556 @@
       "NO_RUNTIME_RULE_ACTIVATION",
       "NO_FORTUNE",
       "HIGH_RISK_DOMAINS_ARCHIVE_FIRST"
+    ]
+  },
+  "p31c_priority_topic_conversion_registry": {
+    "stage": "P31C_PRIORITY_TOPIC_CONVERSION_REGISTRY",
+    "entrypoints": [
+      "v19.synthetic_validation.priority_topic_conversion.build_p31c_priority_topic_conversion_registry",
+      "v19.synthetic_validation.priority_topic_conversion.run_p31c_priority_topic_regression"
+    ],
+    "high_priority_partial_count": 155,
+    "existing_ten_god_chain_case_count": 24,
+    "new_condition_model_count": 28,
+    "eval_sample_count": 112,
+    "activation_allowed": false,
+    "activation_updated_count": 0,
+    "lanes": {
+      "regular_pattern": 10,
+      "pattern_quality": 4,
+      "time_activation": 7,
+      "wealth_domain_bridge": 2,
+      "career_domain_bridge": 4,
+      "palace_domain_bridge": 1
+    },
+    "runtime_scope": "condition_model_registry_and_eval_contract_only_no_runtime_activation",
+    "guardrails": [
+      "TOPIC_CONVERSION_REGISTRY_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_FORTUNE",
+      "NO_DOMAIN_RESULT_PREDICTION",
+      "CONDITION_MODEL_AND_EVAL_REQUIRED",
+      "HIGH_RISK_ARCHIVE_FIRST"
+    ]
+  },
+  "p31d_priority_topic_smart_gate": {
+    "stage": "P31D_PRIORITY_TOPIC_SMART_GATE",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31d_priority_topic_smart_gate",
+    "model_count": 28,
+    "selected_shadow_proposal_count": 22,
+    "blocked_count": 6,
+    "activation_allowed": false,
+    "activation_updated_count": 0,
+    "p31c_regression_required": true,
+    "blocked_by_reason": {
+      "risk_above_shadow_gate": 6
+    },
+    "selected_by_lane": {
+      "regular_pattern": 10,
+      "time_activation": 7,
+      "wealth_domain_bridge": 2,
+      "career_domain_bridge": 2,
+      "palace_domain_bridge": 1
+    },
+    "runtime_scope": "smart_gate_dry_run_only_no_runtime_activation",
+    "guardrails": [
+      "SMART_GATE_DRY_RUN_ONLY",
+      "P31C_REGRESSION_REQUIRED",
+      "LOW_RISK_SHADOW_PROPOSAL_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_DOMAIN_RESULT_PREDICTION",
+      "AUDITABLE_BLOCKERS_REQUIRED"
+    ]
+  },
+  "p31e_priority_topic_rule_proposals": {
+    "stage": "P31E_PRIORITY_TOPIC_RULE_PROPOSALS",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31e_priority_topic_rule_proposal_generation",
+    "gate_selected_count": 22,
+    "created_rule_proposal_count": 22,
+    "validation_ready_count": 22,
+    "validation_failed_count": 0,
+    "activation_allowed": false,
+    "activation_updated_count": 0,
+    "approval_mutation": false,
+    "version_mutation": false,
+    "runtime_mutation": false,
+    "by_domain": {
+      "structural_relation": 13,
+      "time_structure": 7,
+      "income_stability": 2
+    },
+    "by_lane": {
+      "regular_pattern": 10,
+      "time_activation": 7,
+      "wealth_domain_bridge": 2,
+      "career_domain_bridge": 2,
+      "palace_domain_bridge": 1
+    },
+    "runtime_scope": "rule_proposal_generation_only_no_approval_no_runtime_activation",
+    "guardrails": [
+      "RULE_PROPOSAL_GENERATION_ONLY",
+      "P31D_SHADOW_GATE_REQUIRED",
+      "VALIDATION_REQUIRED",
+      "NO_APPROVAL_MUTATION",
+      "NO_VERSION_RECORD",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p31f_priority_topic_review_packet": {
+    "stage": "P31F_PRIORITY_TOPIC_REVIEW_PACKET",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31f_priority_topic_review_packet",
+    "proposal_count": 22,
+    "validation_run_count": 1,
+    "validation_passed": 22,
+    "validation_failed": 0,
+    "review_packet_count": 1,
+    "review_packet_item_count": 22,
+    "activation_allowed": false,
+    "approval_mutation": false,
+    "approval_preflight_mutation": false,
+    "version_mutation": false,
+    "runtime_mutation": false,
+    "by_kind": {
+      "bazi_rule_proposal": 22
+    },
+    "runtime_scope": "review_packet_only_no_approval_no_preflight_no_runtime_activation",
+    "guardrails": [
+      "REVIEW_PACKET_ONLY",
+      "P31E_VALIDATION_READY_REQUIRED",
+      "NO_APPROVAL_MUTATION",
+      "NO_APPROVAL_PREFLIGHT",
+      "NO_VERSION_RECORD",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p31g_priority_topic_decision_preflight": {
+    "stage": "P31G_PRIORITY_TOPIC_DECISION_PREFLIGHT",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31g_priority_topic_decision_preflight",
+    "proposal_count": 22,
+    "decision_record_count": 22,
+    "approve_candidate_count": 22,
+    "approval_preflight_record_count": 1,
+    "preflight_ready_item_count": 22,
+    "preflight_failed_checks": 0,
+    "activation_allowed": false,
+    "approval_execution_mutation": false,
+    "proposal_status_mutation": false,
+    "version_mutation": false,
+    "runtime_mutation": false,
+    "runtime_scope": "decision_ledger_and_preflight_only_no_approval_execution_no_runtime_activation",
+    "guardrails": [
+      "DECISION_LEDGER_AND_PREFLIGHT_ONLY",
+      "P31F_REVIEW_PACKET_REQUIRED",
+      "ITEM_SCOPED_DECISIONS_REQUIRED",
+      "NO_APPROVAL_EXECUTION",
+      "NO_PROPOSAL_STATUS_MUTATION",
+      "NO_VERSION_RECORD",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p31h_priority_topic_controlled_approval": {
+    "stage": "P31H_PRIORITY_TOPIC_CONTROLLED_APPROVAL",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31h_priority_topic_controlled_approval",
+    "proposal_count": 22,
+    "approval_execution_count": 1,
+    "approved_count": 22,
+    "failed_count": 0,
+    "rule_approved_count": 22,
+    "question_approved_count": 0,
+    "activation_allowed": false,
+    "controlled_approval_mutation": true,
+    "auto_approval": false,
+    "version_mutation": false,
+    "runtime_mutation": false,
+    "runtime_scope": "controlled_proposal_approval_only_no_version_no_runtime_activation",
+    "guardrails": [
+      "CONTROLLED_APPROVAL_ONLY",
+      "P31G_PREFLIGHT_REQUIRED",
+      "APPROVE_VALIDATION_READY_PROPOSALS_ONLY",
+      "NO_VERSION_RECORD",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p31i_priority_topic_rule_version": {
+    "stage": "P31I_PRIORITY_TOPIC_RULE_VERSION",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31i_priority_topic_rule_version_record",
+    "approved_count": 22,
+    "version_record_count": 1,
+    "included_proposal_count": 22,
+    "rule_count": 22,
+    "activation_allowed": false,
+    "proposal_status_mutation": true,
+    "version_mutation": true,
+    "runtime_mutation": false,
+    "runtime_scope": "rule_version_record_only_no_runtime_activation",
+    "guardrails": [
+      "RULE_VERSION_RECORD_ONLY",
+      "P31H_APPROVAL_REQUIRED",
+      "P12_SYNTHETIC_REGRESSION_REQUIRED",
+      "P31E_PROPOSALS_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p31j_priority_topic_governance_release": {
+    "stage": "P31J_PRIORITY_TOPIC_GOVERNANCE_RELEASE",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31j_priority_topic_governance_release",
+    "rule_version_count": 1,
+    "governance_release_count": 1,
+    "artifact_count": 1,
+    "bazi_rule_version_artifact_count": 1,
+    "activation_allowed": false,
+    "release_mutation": true,
+    "runtime_mutation": false,
+    "runtime_scope": "governance_release_record_only_no_runtime_activation",
+    "guardrails": [
+      "GOVERNANCE_RELEASE_RECORD_ONLY",
+      "P31I_RULE_VERSION_REQUIRED",
+      "P11_SYNTHETIC_REGRESSION_REQUIRED",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p31k_priority_topic_rule_db_candidates": {
+    "stage": "P31K_PRIORITY_TOPIC_RULE_DB_CANDIDATES",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31k_priority_topic_rule_db_candidates",
+    "versioned_proposal_count": 22,
+    "rule_db_candidate_count": 22,
+    "imported_count": 22,
+    "blocked_count": 0,
+    "engine_enabled_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "rule_db_candidate_ingestion_only_engine_disabled_no_runtime_activation",
+    "guardrails": [
+      "RULE_DB_CANDIDATE_INGESTION_ONLY",
+      "P31J_GOVERNANCE_RELEASE_REQUIRED",
+      "ENGINE_DISABLED_BY_DEFAULT",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p31l_priority_topic_adapter_readiness": {
+    "stage": "P31L_PRIORITY_TOPIC_ADAPTER_READINESS",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31l_priority_topic_adapter_readiness",
+    "rule_db_candidate_count": 22,
+    "ready_candidate_count": 0,
+    "selected_count": 0,
+    "blocked_count": 22,
+    "engine_enabled_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "expected_blockers": [
+      "missing_structured_facts",
+      "missing_synthetic_gate_candidate"
+    ],
+    "runtime_scope": "adapter_readiness_report_only_no_engine_activation_no_runtime_activation",
+    "guardrails": [
+      "ADAPTER_READINESS_REPORT_ONLY",
+      "P31K_RULE_DB_CANDIDATES_REQUIRED",
+      "NO_ENGINE_ACTIVATION",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p31m_priority_topic_adapter_facts": {
+    "stage": "P31M_PRIORITY_TOPIC_ADAPTER_FACTS",
+    "entrypoint": "v19.synthetic_validation.priority_topic_conversion.run_p31m_priority_topic_adapter_fact_enrichment",
+    "rule_db_candidate_count": 22,
+    "adapter_fact_updated_count": 22,
+    "eval_sample_count": 88,
+    "eval_failed_count": 0,
+    "gate_selected_count": 22,
+    "gate_blocked_count": 0,
+    "engine_enabled_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "adapter_fact_enrichment_and_synthetic_gate_dry_run_only_no_engine_activation_no_runtime_activation",
+    "guardrails": [
+      "ADAPTER_FACT_ENRICHMENT_ONLY",
+      "P31K_RULE_DB_CANDIDATES_REQUIRED",
+      "SYNTHETIC_GATE_MARKER_ONLY",
+      "ENGINE_DISABLED",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p39_rule_conversion_validation_first_wave": {
+    "stage": "P39_RULE_CONVERSION_VALIDATION_FIRST_WAVE",
+    "entrypoints": [
+      "v19.synthetic_validation.rule_conversion_validation.build_p39_rule_conversion_candidates",
+      "v19.synthetic_validation.rule_conversion_validation.build_p39_rule_conversion_eval_dataset",
+      "v19.synthetic_validation.rule_conversion_validation.run_p39_rule_conversion_regression"
+    ],
+    "draft_count": 436,
+    "eligible_candidate_count": 348,
+    "blocked_count": 88,
+    "eval_sample_count": 1392,
+    "min_samples_per_candidate": 4,
+    "sample_failed_count": 0,
+    "false_positive_count": 0,
+    "forbidden_text_failure_count": 0,
+    "engine_enabled_count": 0,
+    "activation_updated_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "batch_rule_candidate_conversion_and_synthetic_eval_only_no_runtime_activation",
+    "eligible_risks": ["R0", "R1", "R2"],
+    "blocked_risks": ["R3", "R4"],
+    "guardrails": [
+      "BATCH_RULE_CANDIDATE_CONVERSION",
+      "R0_R2_ONLY",
+      "R3_R4_BLOCKED_TO_ARCHIVE_REVIEW",
+      "SYNTHETIC_EVAL_DATASET_REQUIRED",
+      "ENGINE_DISABLED_BY_DEFAULT",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p40_rule_audit_application": {
+    "stage": "P40_RULE_AUDIT_APPLICATION",
+    "entrypoints": [
+      "v19.synthetic_validation.rule_audit_application.build_p40_rule_audit_report",
+      "v19.synthetic_validation.rule_audit_application.build_p40_condition_model_synthetic_dataset",
+      "v19.synthetic_validation.rule_audit_application.build_p40_framework_rule_registry",
+      "v19.synthetic_validation.rule_audit_application.run_p40_rule_audit_application_regression"
+    ],
+    "candidate_count": 348,
+    "blocked_high_risk_count": 88,
+    "audit_failed_count": 0,
+    "framework_registered_count": 348,
+    "framework_contract_applied_count": 80,
+    "condition_model_queue_count": 268,
+    "condition_model_queue_validated_count": 268,
+    "condition_synthetic_sample_count": 1072,
+    "condition_synthetic_failed_count": 0,
+    "false_positive_count": 0,
+    "engine_enabled_count": 0,
+    "activation_updated_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "audited_framework_registration_only_no_runtime_activation",
+    "application_lanes": {
+      "answer_governance_framework": 22,
+      "review_gate_framework": 14,
+      "metadata_boundary_framework": 11,
+      "archive_neutral_tag_framework": 2,
+      "metadata_seed_framework": 31,
+      "condition_model_framework_queue": 268
+    },
+    "guardrails": [
+      "RULE_AUDIT_BEFORE_FRAMEWORK_APPLICATION",
+      "P39_REGRESSION_REQUIRED",
+      "NON_PREDICTIVE_CONTRACTS_ONLY",
+      "CONDITION_MODELS_REQUIRE_SYNTHETIC_VALIDATION",
+      "ENGINE_DISABLED_BY_DEFAULT",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p41_condition_topic_deep_validation": {
+    "stage": "P41_CONDITION_TOPIC_DEEP_VALIDATION",
+    "entrypoints": [
+      "v19.synthetic_validation.condition_topic_deep_validation.build_p41_condition_topic_batches",
+      "v19.synthetic_validation.condition_topic_deep_validation.build_p41_condition_deep_eval_dataset",
+      "v19.synthetic_validation.condition_topic_deep_validation.run_p41_condition_deep_regression",
+      "v19.synthetic_validation.condition_topic_deep_validation.build_p41_smart_gate_candidate_batches",
+      "v19.synthetic_validation.condition_topic_deep_validation.run_p41_topic_batch_application_regression"
+    ],
+    "topic_batch_count": 6,
+    "condition_candidate_count": 268,
+    "deep_sample_count": 2680,
+    "min_samples_per_candidate": 10,
+    "sample_failed_count": 0,
+    "false_positive_count": 0,
+    "forbidden_text_failure_count": 0,
+    "smart_gate_candidate_batch_count": 6,
+    "smart_gate_candidate_count": 268,
+    "ready_batch_count": 6,
+    "blocked_batch_count": 0,
+    "engine_enabled_count": 0,
+    "activation_updated_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "topic_deep_validation_and_smart_gate_candidate_batches_only_no_runtime_activation",
+    "topic_lanes": {
+      "ten_god_mechanism": 93,
+      "branch_time_activation": 74,
+      "wealth_career_bridge": 38,
+      "pattern_structure": 30,
+      "core_strength_foundation": 20,
+      "blind_lifa_palace": 13
+    },
+    "deep_samples_by_topic_lane": {
+      "ten_god_mechanism": 930,
+      "branch_time_activation": 740,
+      "wealth_career_bridge": 380,
+      "pattern_structure": 300,
+      "core_strength_foundation": 200,
+      "blind_lifa_palace": 130
+    },
+    "guardrails": [
+      "P40_FRAMEWORK_REGISTRY_REQUIRED",
+      "TOPIC_BATCH_DEEP_VALIDATION",
+      "TEN_SAMPLE_MINIMUM_PER_CONDITION_CANDIDATE",
+      "SMART_GATE_CANDIDATE_BATCH_ONLY",
+      "ENGINE_DISABLED_BY_DEFAULT",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p42_smart_gate_acceleration": {
+    "stage": "P42_SMART_GATE_ACCELERATION",
+    "entrypoints": [
+      "v19.synthetic_validation.smart_gate_acceleration.build_p42_smart_gate_audit",
+      "v19.synthetic_validation.smart_gate_acceleration.build_p42_smart_gate_eval_dataset",
+      "v19.synthetic_validation.smart_gate_acceleration.run_p42_smart_gate_regression",
+      "v19.synthetic_validation.smart_gate_acceleration.build_p42_framework_gate_plan",
+      "v19.synthetic_validation.smart_gate_acceleration.run_p42_smart_gate_application_regression"
+    ],
+    "candidate_count": 268,
+    "dry_run_candidate_count": 110,
+    "shadow_scoring_candidate_count": 158,
+    "blocked_count": 0,
+    "gate_eval_sample_count": 1072,
+    "sample_failed_count": 0,
+    "engine_enabled_count": 0,
+    "activation_updated_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "smart_gate_plan_only_no_runtime_activation",
+    "by_risk_level": {
+      "R0": 2,
+      "R1": 108,
+      "R2": 158
+    },
+    "topic_lanes": {
+      "ten_god_mechanism": 93,
+      "branch_time_activation": 74,
+      "wealth_career_bridge": 38,
+      "pattern_structure": 30,
+      "core_strength_foundation": 20,
+      "blind_lifa_palace": 13
+    },
+    "guardrails": [
+      "P41_DEEP_VALIDATION_REQUIRED",
+      "SMART_GATE_ACCELERATION_DRY_RUN_ONLY",
+      "R0_R1_DRY_RUN_CANDIDATE",
+      "R2_SHADOW_SCORING_CANDIDATE",
+      "ENGINE_DISABLED_BY_DEFAULT",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p43_dry_run_shadow_scoring": {
+    "stage": "P43_DRY_RUN_SHADOW_SCORING",
+    "entrypoints": [
+      "v19.synthetic_validation.dry_run_shadow_scoring.build_p43_dry_run_shadow_eval_dataset",
+      "v19.synthetic_validation.dry_run_shadow_scoring.run_p43_dry_run_shadow_scoring",
+      "v19.synthetic_validation.dry_run_shadow_scoring.build_p43_feedback_ledger",
+      "v19.synthetic_validation.dry_run_shadow_scoring.run_p43_execution_regression"
+    ],
+    "candidate_count": 268,
+    "dry_run_passed_count": 110,
+    "shadow_scored_count": 158,
+    "blocked_count": 0,
+    "execution_sample_count": 1072,
+    "sample_failed_count": 0,
+    "false_positive_count": 0,
+    "forbidden_text_failure_count": 0,
+    "rollback_ready_count": 268,
+    "answer_mutation_count": 0,
+    "engine_enabled_count": 0,
+    "activation_updated_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "non_runtime_dry_run_and_shadow_scoring_only_no_answer_mutation",
+    "execution_modes": {
+      "dry_run_internal": 440,
+      "shadow_scoring_internal": 632
+    },
+    "guardrails": [
+      "P42_GATE_PLAN_REQUIRED",
+      "NON_RUNTIME_DRY_RUN_AND_SHADOW_ONLY",
+      "NO_USER_ANSWER_MUTATION",
+      "ROLLBACK_CONTRACT_REQUIRED",
+      "ENGINE_DISABLED_BY_DEFAULT",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p44_controlled_activation_candidates": {
+    "stage": "P44_CONTROLLED_ACTIVATION_CANDIDATES",
+    "entrypoints": [
+      "v19.synthetic_validation.controlled_activation_candidates.build_p44_controlled_activation_packet",
+      "v19.synthetic_validation.controlled_activation_candidates.build_p44_rollback_manifest",
+      "v19.synthetic_validation.controlled_activation_candidates.run_p44_release_candidate_regression"
+    ],
+    "source_candidate_count": 268,
+    "activation_candidate_count": 110,
+    "shadow_hold_count": 158,
+    "ring0_canary_count": 2,
+    "ring1_internal_count": 108,
+    "rollback_item_count": 110,
+    "missing_rollback_count": 0,
+    "answer_mutation_count": 0,
+    "engine_enabled_count": 0,
+    "activation_updated_count": 0,
+    "activation_allowed": false,
+    "runtime_mutation": false,
+    "runtime_scope": "controlled_activation_candidate_packet_only_no_runtime_activation",
+    "activation_candidate_by_topic_lane": {
+      "ten_god_mechanism": 56,
+      "branch_time_activation": 42,
+      "core_strength_foundation": 10,
+      "wealth_career_bridge": 2
+    },
+    "shadow_hold_by_topic_lane": {
+      "ten_god_mechanism": 37,
+      "branch_time_activation": 32,
+      "wealth_career_bridge": 36,
+      "pattern_structure": 30,
+      "core_strength_foundation": 10,
+      "blind_lifa_palace": 13
+    },
+    "guardrails": [
+      "P43_FEEDBACK_LEDGER_REQUIRED",
+      "CONTROLLED_ACTIVATION_CANDIDATE_PACKET_ONLY",
+      "R0_R1_DRY_RUN_PASSED_ONLY",
+      "ROLLBACK_MANIFEST_REQUIRED",
+      "ENGINE_DISABLED_UNTIL_RELEASE_EXECUTION",
+      "NO_USER_ANSWER_MUTATION",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
+  "p45_canary_runtime_trial": {
+    "stage": "P45_CANARY_RUNTIME_TRIAL",
+    "entrypoints": [
+      "v19.synthetic_validation.canary_runtime_trial.build_p45_canary_activation_plan",
+      "v19.synthetic_validation.canary_runtime_trial.build_p45_canary_eval_dataset",
+      "v19.synthetic_validation.canary_runtime_trial.run_p45_canary_runtime_trial",
+      "v19.synthetic_validation.canary_runtime_trial.run_p45_canary_release_regression"
+    ],
+    "ring0_canary_count": 2,
+    "canary_runtime_enabled_count": 2,
+    "production_engine_enabled_count": 0,
+    "canary_eval_sample_count": 12,
+    "sample_failed_count": 0,
+    "production_signal_leak_count": 0,
+    "forbidden_text_failure_count": 0,
+    "rollback_ready_count": 2,
+    "kill_switch_ready_count": 2,
+    "answer_mutation_count": 0,
+    "production_runtime_mutation": false,
+    "runtime_scope": "isolated_canary_runtime_only_no_production_engine_or_answer_mutation",
+    "canary_knowledge_ids": [
+      "core.five_element_relations.v1",
+      "core.stem_attributes.v1"
+    ],
+    "guardrails": [
+      "P44_RELEASE_CANDIDATE_REGRESSION_REQUIRED",
+      "RING0_CANARY_ONLY",
+      "ISOLATED_CANARY_RUNTIME_ONLY",
+      "PRODUCTION_ENGINE_DISABLED",
+      "NO_USER_ANSWER_MUTATION",
+      "ROLLBACK_AND_KILL_SWITCH_REQUIRED",
+      "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
   "v19_framework_adaptation_review": {
@@ -925,6 +1628,13 @@
     "P25_CONTROLLED_APPROVAL_ONLY",
     "P26_KNOWLEDGE_TO_RULES_FAST_PATH",
     "P27_SMART_RULE_ACTIVATION_GATE",
+    "P39_RULE_CONVERSION_VALIDATION_FIRST_WAVE",
+    "P40_RULE_AUDIT_APPLICATION",
+    "P41_CONDITION_TOPIC_DEEP_VALIDATION",
+    "P42_SMART_GATE_ACCELERATION",
+    "P43_DRY_RUN_SHADOW_SCORING",
+    "P44_CONTROLLED_ACTIVATION_CANDIDATES",
+    "P45_CANARY_RUNTIME_TRIAL",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

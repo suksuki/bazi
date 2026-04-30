@@ -15,6 +15,63 @@ from v19.synthetic_validation.ten_god_conflict_matrix import (
     run_p29_ten_god_mechanism_internal_scoring,
     run_p30_ten_god_mechanism_arbitration,
 )
+from v19.synthetic_validation.priority_topic_conversion import (
+    build_p31c_priority_topic_conversion_registry,
+    run_p31c_priority_topic_regression,
+    run_p31d_priority_topic_smart_gate,
+    run_p31e_priority_topic_rule_proposal_generation,
+    run_p31f_priority_topic_review_packet,
+    run_p31g_priority_topic_decision_preflight,
+    run_p31h_priority_topic_controlled_approval,
+    run_p31i_priority_topic_rule_version_record,
+    run_p31j_priority_topic_governance_release,
+    run_p31k_priority_topic_rule_db_candidates,
+    run_p31l_priority_topic_adapter_readiness,
+    run_p31m_priority_topic_adapter_fact_enrichment,
+)
+from v19.synthetic_validation.rule_conversion_validation import (
+    build_p39_rule_conversion_candidates,
+    build_p39_rule_conversion_eval_dataset,
+    run_p39_rule_conversion_regression,
+)
+from v19.synthetic_validation.rule_audit_application import (
+    build_p40_condition_model_synthetic_dataset,
+    build_p40_framework_rule_registry,
+    build_p40_rule_audit_report,
+    run_p40_condition_model_synthetic_regression,
+    run_p40_rule_audit_application_regression,
+)
+from v19.synthetic_validation.condition_topic_deep_validation import (
+    build_p41_condition_deep_eval_dataset,
+    build_p41_condition_topic_batches,
+    build_p41_smart_gate_candidate_batches,
+    run_p41_condition_deep_regression,
+    run_p41_topic_batch_application_regression,
+)
+from v19.synthetic_validation.smart_gate_acceleration import (
+    build_p42_framework_gate_plan,
+    build_p42_smart_gate_audit,
+    build_p42_smart_gate_eval_dataset,
+    run_p42_smart_gate_application_regression,
+    run_p42_smart_gate_regression,
+)
+from v19.synthetic_validation.dry_run_shadow_scoring import (
+    build_p43_dry_run_shadow_eval_dataset,
+    build_p43_feedback_ledger,
+    run_p43_dry_run_shadow_scoring,
+    run_p43_execution_regression,
+)
+from v19.synthetic_validation.controlled_activation_candidates import (
+    build_p44_controlled_activation_packet,
+    build_p44_rollback_manifest,
+    run_p44_release_candidate_regression,
+)
+from v19.synthetic_validation.canary_runtime_trial import (
+    build_p45_canary_activation_plan,
+    build_p45_canary_eval_dataset,
+    run_p45_canary_release_regression,
+    run_p45_canary_runtime_trial,
+)
 
 __all__ = [
     "DEFAULT_SYNTHETIC_CASES",
@@ -26,6 +83,24 @@ __all__ = [
     "build_p28h_ten_god_conflict_review_table",
     "build_p28j_ten_god_mechanism_condition_models",
     "build_p28k_ten_god_mechanism_eval_dataset",
+    "build_p31c_priority_topic_conversion_registry",
+    "build_p39_rule_conversion_candidates",
+    "build_p39_rule_conversion_eval_dataset",
+    "build_p40_condition_model_synthetic_dataset",
+    "build_p40_framework_rule_registry",
+    "build_p40_rule_audit_report",
+    "build_p41_condition_deep_eval_dataset",
+    "build_p41_condition_topic_batches",
+    "build_p41_smart_gate_candidate_batches",
+    "build_p42_framework_gate_plan",
+    "build_p42_smart_gate_audit",
+    "build_p42_smart_gate_eval_dataset",
+    "build_p43_dry_run_shadow_eval_dataset",
+    "build_p43_feedback_ledger",
+    "build_p44_controlled_activation_packet",
+    "build_p44_rollback_manifest",
+    "build_p45_canary_activation_plan",
+    "build_p45_canary_eval_dataset",
     "run_guided_synthetic_collision",
     "run_p28g_ten_god_conflict_matrix",
     "run_p28i_ten_god_fast_path_gate",
@@ -33,5 +108,28 @@ __all__ = [
     "run_p28l_ten_god_mechanism_signal_gate",
     "run_p29_ten_god_mechanism_internal_scoring",
     "run_p30_ten_god_mechanism_arbitration",
+    "run_p31c_priority_topic_regression",
+    "run_p31d_priority_topic_smart_gate",
+    "run_p31e_priority_topic_rule_proposal_generation",
+    "run_p31f_priority_topic_review_packet",
+    "run_p31g_priority_topic_decision_preflight",
+    "run_p31h_priority_topic_controlled_approval",
+    "run_p31i_priority_topic_rule_version_record",
+    "run_p31j_priority_topic_governance_release",
+    "run_p31k_priority_topic_rule_db_candidates",
+    "run_p31l_priority_topic_adapter_readiness",
+    "run_p31m_priority_topic_adapter_fact_enrichment",
+    "run_p39_rule_conversion_regression",
+    "run_p40_condition_model_synthetic_regression",
+    "run_p40_rule_audit_application_regression",
+    "run_p41_condition_deep_regression",
+    "run_p41_topic_batch_application_regression",
+    "run_p42_smart_gate_application_regression",
+    "run_p42_smart_gate_regression",
+    "run_p43_dry_run_shadow_scoring",
+    "run_p43_execution_regression",
+    "run_p44_release_candidate_regression",
+    "run_p45_canary_release_regression",
+    "run_p45_canary_runtime_trial",
     "run_synthetic_validation",
 ]

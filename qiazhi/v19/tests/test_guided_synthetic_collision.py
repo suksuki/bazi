@@ -1613,11 +1613,20 @@ def test_p31_all_knowledge_coverage_audit_reads_catalog_and_new_framework_tracks
     audit = run_p31_all_knowledge_coverage_audit()
 
     assert audit["status"] == "audit_ready_gaps_found"
-    assert audit["summary"]["taxonomy_item_count"] == 154
-    assert audit["summary"]["knowledge_draft_count"] == 234
-    assert audit["summary"]["by_taxonomy_status"] == {"已有": 25, "部分": 125, "归档": 4}
-    assert audit["summary"]["drafts_by_domain"]["pattern"] == 16
-    assert audit["summary"]["drafts_by_domain"]["blind"] == 5
+    assert audit["summary"]["taxonomy_item_count"] == 255
+    assert audit["summary"]["knowledge_draft_count"] == 436
+    assert audit["summary"]["by_taxonomy_status"] == {"已有": 32, "部分": 214, "归档": 9}
+    assert audit["summary"]["drafts_by_domain"]["core_structure"] == 62
+    assert audit["summary"]["drafts_by_domain"]["luck_flow"] == 36
+    assert audit["summary"]["drafts_by_domain"]["pattern"] == 48
+    assert audit["summary"]["drafts_by_domain"]["blind"] == 29
+    assert audit["summary"]["drafts_by_domain"]["wealth"] == 30
+    assert audit["summary"]["drafts_by_domain"]["career"] == 10
+    assert audit["summary"]["drafts_by_domain"]["geo_context"] == 16
+    assert audit["summary"]["drafts_by_domain"]["useful_god"] == 6
+    assert audit["summary"]["drafts_by_domain"]["answer_expression"] == 22
+    assert audit["summary"]["drafts_by_domain"]["lab"] == 7
+    assert audit["summary"]["drafts_by_domain"]["rule_db"] == 7
     assert audit["summary"]["drafts_by_domain"]["palace"] == 7
     assert audit["directory_report"]["existing_directory_count"] == 33
     assert audit["directory_report"]["missing_directory_count"] == 0
@@ -1630,7 +1639,7 @@ def test_p31_all_knowledge_coverage_audit_reads_catalog_and_new_framework_tracks
     assert audit["migration_policy"]["decision"] == "dual_track_forward_first_then_backfill"
     assert "docs/v19/V19_P31_ALL_KNOWLEDGE_COVERAGE_AUDIT.md" in manifest["created_from"]
     assert "docs/v19/V19_P31B_ALL_KNOWLEDGE_DIRECTORY_COMPLETION.md" in manifest["created_from"]
-    assert manifest["p31_all_knowledge_coverage_audit"]["knowledge_draft_count"] == 234
+    assert manifest["p31_all_knowledge_coverage_audit"]["knowledge_draft_count"] == 436
     assert manifest["p31a_all_knowledge_foundation_gap_pack"]["draft_count"] == 35
     assert manifest["p31b_all_knowledge_directory_completion"]["draft_count"] == 36
 
@@ -1654,9 +1663,9 @@ def test_p31a_foundation_gap_pack_seeds_and_keeps_runtime_disabled(tmp_path, mon
 
     assert pack["pack_id"] == "p31a.all_knowledge_foundation_gap_pack.v1"
     assert len(pack["knowledge_drafts"]) == 35
-    assert seeded["count"] == 234
+    assert seeded["count"] == 436
     assert len(p31a_drafts) == 35
-    assert ingested["rule_count"] >= 232
+    assert ingested["rule_count"] >= 424
     assert len(p31a_rules) == 35
     assert {row["domain"] for row in p31a_drafts} >= {"blind", "palace", "pattern", "luck_flow", "geo_context", "strength", "core_structure"}
     assert all(row["engine_enabled"] is False for row in p31a_rules)
@@ -1686,8 +1695,8 @@ def test_p31b_directory_completion_pack_removes_missing_directories_and_stays_sh
     assert len(pack["knowledge_drafts"]) == 36
     assert audit["directory_report"]["missing_directories"] == []
     assert audit["summary"]["by_taxonomy_status"].get("缺失", 0) == 0
-    assert seeded["count"] == 234
-    assert ingested["rule_count"] >= 232
+    assert seeded["count"] == 436
+    assert ingested["rule_count"] >= 424
     assert len(p31b_drafts) == 36
     assert len(p31b_rules) == 36
     assert {row["domain"] for row in p31b_drafts} >= {
@@ -1702,6 +1711,1324 @@ def test_p31b_directory_completion_pack_removes_missing_directories_and_stays_sh
     }
     assert all(row["engine_enabled"] is False for row in p31b_rules)
     assert all(any(token in row["forbidden_usage"] for token in ["fortune", "auto_approval", "runtime_activation"]) for row in p31b_rules)
+
+
+def test_p32_ten_god_pathway_second_wave_new_knowledge_pack_is_cataloged() -> None:
+    root = Path(__file__).resolve().parents[2]
+    pack = json.loads((root / "docs/bazi_knowledge/packs/p32_ten_god_pathway_second_wave_knowledge_draft_seeds_v1.json").read_text(encoding="utf-8"))
+    topic = (root / "docs/bazi_knowledge/interaction/ten_god_pathway_second_wave_topic_v1.md").read_text(encoding="utf-8")
+    taxonomy = (root / "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md").read_text(encoding="utf-8")
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    drafts = pack["knowledge_drafts"]
+    titles = {row["title"] for row in drafts}
+
+    assert pack["pack_id"] == "p32.ten_god_pathway_second_wave_knowledge_pack.v1"
+    assert len(drafts) == 24
+    assert {row["risk_level"] for row in drafts} == {"R1", "R2"}
+    assert {row["domain"] for row in drafts} == {"interaction"}
+    assert {row["category"] for row in drafts} == {"ten_god_pathway", "ten_god_pathway_mechanism"}
+    for title in [
+        "伤官生财组合存在",
+        "食神泄秀组合存在",
+        "比劫帮身组合存在",
+        "官杀制比劫组合存在",
+        "官星护财组合存在",
+        "财制枭护食组合存在",
+        "食神生财制杀组合存在",
+        "财印交战组合存在",
+    ]:
+        assert title in titles
+    assert "P32 第二批路径补全状态" in (root / "docs/bazi_knowledge/interaction/ten_god_interaction_topics_v1.md").read_text(encoding="utf-8")
+    assert "十神路径第二批" in taxonomy
+    assert "财制枭护食" in topic
+    assert "docs/bazi_knowledge/interaction/ten_god_pathway_second_wave_topic_v1.md" in manifest["created_from"]
+    assert "docs/bazi_knowledge/packs/p32_ten_god_pathway_second_wave_knowledge_draft_seeds_v1.json" in manifest["created_from"]
+    assert "docs/v19/V19_P32_TEN_GOD_PATHWAY_SECOND_WAVE_KNOWLEDGE.md" in manifest["created_from"]
+    manifest_pack = next(row for row in manifest["content_packs"] if row["pack_id"] == pack["pack_id"])
+    assert manifest_pack["draft_count"] == 24
+
+
+def test_p33_pattern_expansion_first_wave_new_knowledge_pack_is_cataloged() -> None:
+    root = Path(__file__).resolve().parents[2]
+    pack = json.loads((root / "docs/bazi_knowledge/packs/p33_pattern_expansion_first_wave_knowledge_draft_seeds_v1.json").read_text(encoding="utf-8"))
+    topic = (root / "docs/bazi_knowledge/pattern/pattern_expansion_first_wave_topic_v1.md").read_text(encoding="utf-8")
+    taxonomy = (root / "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md").read_text(encoding="utf-8")
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    drafts = pack["knowledge_drafts"]
+    titles = {row["title"] for row in drafts}
+
+    assert pack["pack_id"] == "p33.pattern_expansion_first_wave_knowledge_pack.v1"
+    assert len(drafts) == 32
+    assert {row["domain"] for row in drafts} == {"pattern"}
+    assert {row["risk_level"] for row in drafts} == {"R2", "R3"}
+    assert {row["category"] for row in drafts} == {
+        "pattern_source",
+        "pattern_source_boundary",
+        "regular_pattern_detail",
+        "regular_pattern_boundary",
+        "special_pattern_boundary",
+    }
+    for title in [
+        "月令取格来源存在",
+        "杂气取格条件边界",
+        "正官格候选结构",
+        "七杀格制化边界",
+        "财格承载边界",
+        "伤官格见官配印边界",
+        "从财格真从假从边界",
+        "化气格合而不化边界",
+    ]:
+        assert title in titles
+    assert "格局细化第一批" in taxonomy
+    assert "月令取格" in topic
+    assert "合而不化" in topic
+    assert "docs/bazi_knowledge/pattern/pattern_expansion_first_wave_topic_v1.md" in manifest["created_from"]
+    assert "docs/bazi_knowledge/packs/p33_pattern_expansion_first_wave_knowledge_draft_seeds_v1.json" in manifest["created_from"]
+    assert "docs/v19/V19_P33_PATTERN_EXPANSION_FIRST_WAVE_KNOWLEDGE.md" in manifest["created_from"]
+    manifest_pack = next(row for row in manifest["content_packs"] if row["pack_id"] == pack["pack_id"])
+    assert manifest_pack["draft_count"] == 32
+
+
+def test_p34_blind_lifa_expansion_first_wave_new_knowledge_pack_is_cataloged() -> None:
+    root = Path(__file__).resolve().parents[2]
+    pack = json.loads((root / "docs/bazi_knowledge/packs/p34_blind_lifa_expansion_first_wave_knowledge_draft_seeds_v1.json").read_text(encoding="utf-8"))
+    topic = (root / "docs/bazi_knowledge/blind/lifa/blind_lifa_expansion_first_wave_topic_v1.md").read_text(encoding="utf-8")
+    taxonomy = (root / "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md").read_text(encoding="utf-8")
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    drafts = pack["knowledge_drafts"]
+    titles = {row["title"] for row in drafts}
+
+    assert pack["pack_id"] == "p34.blind_lifa_expansion_first_wave_knowledge_pack.v1"
+    assert len(drafts) == 24
+    assert {row["domain"] for row in drafts} == {"blind"}
+    assert {row["risk_level"] for row in drafts} == {"R2", "R3"}
+    assert {row["category"] for row in drafts} == {
+        "blind_lifa_action",
+        "blind_lifa_boundary",
+        "blind_lifa_path",
+        "blind_lifa_role",
+        "blind_xiangfa_archive",
+    }
+    for title in [
+        "宾主定位结构存在",
+        "体用定位边界",
+        "做功路径成立边界",
+        "合冲做功边界",
+        "墓库做功候选存在",
+        "时间引动作功边界",
+        "换象带象边界",
+    ]:
+        assert title in titles
+    assert "盲派理法细化第一批" in taxonomy
+    assert "actor" in topic
+    assert "时间层不改写本命结构" in topic
+    assert "docs/bazi_knowledge/blind/lifa/blind_lifa_expansion_first_wave_topic_v1.md" in manifest["created_from"]
+    assert "docs/bazi_knowledge/packs/p34_blind_lifa_expansion_first_wave_knowledge_draft_seeds_v1.json" in manifest["created_from"]
+    assert "docs/v19/V19_P34_BLIND_LIFA_EXPANSION_FIRST_WAVE_KNOWLEDGE.md" in manifest["created_from"]
+    manifest_pack = next(row for row in manifest["content_packs"] if row["pack_id"] == pack["pack_id"])
+    assert manifest_pack["draft_count"] == 24
+
+
+def test_p35_branch_time_activation_first_wave_new_knowledge_pack_is_cataloged() -> None:
+    root = Path(__file__).resolve().parents[2]
+    pack = json.loads((root / "docs/bazi_knowledge/packs/p35_branch_time_activation_first_wave_knowledge_draft_seeds_v1.json").read_text(encoding="utf-8"))
+    topic = (root / "docs/bazi_knowledge/time_context/branch_time_activation_first_wave_topic_v1.md").read_text(encoding="utf-8")
+    taxonomy = (root / "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md").read_text(encoding="utf-8")
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    drafts = pack["knowledge_drafts"]
+    titles = {row["title"] for row in drafts}
+
+    assert pack["pack_id"] == "p35.branch_time_activation_first_wave_knowledge_pack.v1"
+    assert len(drafts) == 36
+    assert {row["domain"] for row in drafts} == {"core_structure", "luck_flow"}
+    assert {row["risk_level"] for row in drafts} == {"R1", "R2"}
+    assert {row["category"] for row in drafts} == {
+        "branch_relation",
+        "branch_relation_boundary",
+        "stem_relation",
+        "stem_relation_boundary",
+        "storage_relation",
+        "storage_relation_boundary",
+        "time_activation",
+        "time_activation_boundary",
+    }
+    for title in [
+        "六合合化边界",
+        "六冲作用边界",
+        "三合局成势边界",
+        "三会局季节边界",
+        "天干五合合化边界",
+        "墓库开闭边界",
+        "流年引动大运边界",
+        "干支同动拆分边界",
+        "墓库引动边界",
+    ]:
+        assert title in titles
+    assert "地支关系与时间引动细化第一批" in taxonomy
+    assert "时间引动细化第一批" in taxonomy
+    assert "关系名不能直接等于作用成立" in topic
+    assert "时间层不改写本命结构" in topic
+    assert "docs/bazi_knowledge/time_context/branch_time_activation_first_wave_topic_v1.md" in manifest["created_from"]
+    assert "docs/bazi_knowledge/packs/p35_branch_time_activation_first_wave_knowledge_draft_seeds_v1.json" in manifest["created_from"]
+    assert "docs/v19/V19_P35_BRANCH_TIME_ACTIVATION_FIRST_WAVE_KNOWLEDGE.md" in manifest["created_from"]
+    manifest_pack = next(row for row in manifest["content_packs"] if row["pack_id"] == pack["pack_id"])
+    assert manifest_pack["draft_count"] == 36
+
+
+def test_p36_domain_application_first_wave_new_knowledge_pack_is_cataloged() -> None:
+    root = Path(__file__).resolve().parents[2]
+    pack = json.loads((root / "docs/bazi_knowledge/packs/p36_domain_application_first_wave_knowledge_draft_seeds_v1.json").read_text(encoding="utf-8"))
+    topic = (root / "docs/bazi_knowledge/wealth/domain_application_first_wave_topic_v1.md").read_text(encoding="utf-8")
+    taxonomy = (root / "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md").read_text(encoding="utf-8")
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    drafts = pack["knowledge_drafts"]
+    titles = {row["title"] for row in drafts}
+
+    assert pack["pack_id"] == "p36.domain_application_first_wave_knowledge_pack.v1"
+    assert len(drafts) == 28
+    assert {row["domain"] for row in drafts} == {
+        "career",
+        "children",
+        "family",
+        "health",
+        "personality",
+        "relationship",
+        "wealth",
+    }
+    assert {row["risk_level"] for row in drafts} == {"R2", "R3", "R4"}
+    assert {row["category"] for row in drafts} == {
+        "domain_archive",
+        "domain_archive_boundary",
+        "domain_boundary",
+        "domain_bridge",
+    }
+    for title in [
+        "财富收入结构边界",
+        "财星显隐可达边界",
+        "财富稳定波动边界",
+        "食伤变现路径边界",
+        "事业官杀语境边界",
+        "格局事业承接边界",
+        "关系日支语境边界",
+        "健康安全降级边界",
+        "性格象意归档边界",
+    ]:
+        assert title in titles
+    assert "领域应用承接第一批" in taxonomy
+    assert "财富、事业、关系、健康、六亲、子女、性格" in topic
+    assert "不做领域预测" in topic
+    assert "docs/bazi_knowledge/wealth/domain_application_first_wave_topic_v1.md" in manifest["created_from"]
+    assert "docs/bazi_knowledge/packs/p36_domain_application_first_wave_knowledge_draft_seeds_v1.json" in manifest["created_from"]
+    assert "docs/v19/V19_P36_DOMAIN_APPLICATION_FIRST_WAVE_KNOWLEDGE.md" in manifest["created_from"]
+    manifest_pack = next(row for row in manifest["content_packs"] if row["pack_id"] == pack["pack_id"])
+    assert manifest_pack["draft_count"] == 28
+
+
+def test_p37_auxiliary_geo_first_wave_new_knowledge_pack_is_cataloged() -> None:
+    root = Path(__file__).resolve().parents[2]
+    pack = json.loads((root / "docs/bazi_knowledge/packs/p37_auxiliary_geo_first_wave_knowledge_draft_seeds_v1.json").read_text(encoding="utf-8"))
+    topic = (root / "docs/bazi_knowledge/geo_context/auxiliary_geo_first_wave_topic_v1.md").read_text(encoding="utf-8")
+    taxonomy = (root / "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md").read_text(encoding="utf-8")
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    drafts = pack["knowledge_drafts"]
+    titles = {row["title"] for row in drafts}
+
+    assert pack["pack_id"] == "p37.auxiliary_geo_first_wave_knowledge_pack.v1"
+    assert len(drafts) == 30
+    assert {row["domain"] for row in drafts} == {
+        "auxiliary_pillars",
+        "auxiliary_symbols",
+        "geo_context",
+        "growth_phase",
+        "nayin",
+        "shensha",
+        "useful_god",
+    }
+    assert {row["risk_level"] for row in drafts} == {"R1", "R2", "R3", "R4"}
+    assert {row["category"] for row in drafts} == {
+        "auxiliary_archive",
+        "auxiliary_boundary",
+        "geo_boundary",
+        "geo_context_archive",
+        "geo_metadata",
+    }
+    for title in [
+        "出生地时区校验边界",
+        "真太阳时启用边界",
+        "地域气候调候边界",
+        "迁移地影响禁用边界",
+        "十二长生使用边界",
+        "神煞索引边界",
+        "纳音归档边界",
+        "空亡辅助符号边界",
+        "用神候选禁用边界",
+        "忌神与补救建议禁用边界",
+    ]:
+        assert title in titles
+    assert "地理与排盘元数据细化第一批" in taxonomy
+    assert "辅助体系细化第一批" in taxonomy
+    assert any("不输出喜用、忌神或补救建议" in row["statement"] for row in drafts)
+    assert "地理信息只作排盘校验或背景" in (root / "docs/v19/V19_P37_AUXILIARY_GEO_FIRST_WAVE_KNOWLEDGE.md").read_text(encoding="utf-8")
+    assert "docs/bazi_knowledge/geo_context/auxiliary_geo_first_wave_topic_v1.md" in manifest["created_from"]
+    assert "docs/bazi_knowledge/packs/p37_auxiliary_geo_first_wave_knowledge_draft_seeds_v1.json" in manifest["created_from"]
+    assert "docs/v19/V19_P37_AUXILIARY_GEO_FIRST_WAVE_KNOWLEDGE.md" in manifest["created_from"]
+    assert "神煞、纳音、空亡、辅助柱默认 archive-first" in topic
+    manifest_pack = next(row for row in manifest["content_packs"] if row["pack_id"] == pack["pack_id"])
+    assert manifest_pack["draft_count"] == 30
+
+
+def test_p38_answer_governance_first_wave_new_knowledge_pack_is_cataloged() -> None:
+    root = Path(__file__).resolve().parents[2]
+    pack = json.loads((root / "docs/bazi_knowledge/packs/p38_answer_governance_first_wave_knowledge_draft_seeds_v1.json").read_text(encoding="utf-8"))
+    topic = (root / "docs/bazi_knowledge/answer_expression/answer_governance_first_wave_topic_v1.md").read_text(encoding="utf-8")
+    taxonomy = (root / "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md").read_text(encoding="utf-8")
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    drafts = pack["knowledge_drafts"]
+    titles = {row["title"] for row in drafts}
+
+    assert pack["pack_id"] == "p38.answer_governance_first_wave_knowledge_pack.v1"
+    assert len(drafts) == 28
+    assert {row["domain"] for row in drafts} == {"answer_expression", "lab", "rule_db"}
+    assert {row["risk_level"] for row in drafts} == {"R0", "R1"}
+    assert {row["category"] for row in drafts} == {
+        "answer_boundary",
+        "answer_feedback",
+        "answer_safety",
+        "answer_style",
+        "review_ui",
+        "review_ui_boundary",
+        "rule_db_gate",
+        "rule_db_gate_boundary",
+    }
+    for title in [
+        "预测断语过滤存在",
+        "预测断语替换边界",
+        "时间层不改写表达边界",
+        "领域安全降级边界",
+        "用户反馈不改规则边界",
+        "失败归因展示边界",
+        "合成评估报告边界",
+        "智能门禁报告边界",
+        "回滚谱系边界",
+        "自动审批禁用边界",
+    ]:
+        assert title in titles
+    assert "回答表达与治理细化第一批" in taxonomy
+    assert "不输出内部字段" in (root / "docs/v19/V19_P38_ANSWER_GOVERNANCE_FIRST_WAVE_KNOWLEDGE.md").read_text(encoding="utf-8")
+    assert "不输出预测" in topic
+    assert "不自动批准" in topic
+    assert "docs/bazi_knowledge/answer_expression/answer_governance_first_wave_topic_v1.md" in manifest["created_from"]
+    assert "docs/bazi_knowledge/packs/p38_answer_governance_first_wave_knowledge_draft_seeds_v1.json" in manifest["created_from"]
+    assert "docs/v19/V19_P38_ANSWER_GOVERNANCE_FIRST_WAVE_KNOWLEDGE.md" in manifest["created_from"]
+    assert manifest["content_packs"][-1]["pack_id"] == pack["pack_id"]
+    assert manifest["content_packs"][-1]["draft_count"] == 28
+
+
+def test_p39_rule_conversion_validation_first_wave_batches_all_eligible_knowledge() -> None:
+    from v19.synthetic_validation import build_p39_rule_conversion_candidates
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    registry = build_p39_rule_conversion_candidates()
+    by_knowledge_id = {row["knowledge_id"]: row for row in registry["candidates"]}
+
+    assert registry["status"] == "rule_conversion_candidates_ready_no_activation"
+    assert registry["summary"]["draft_count"] == 436
+    assert registry["summary"]["eligible_candidate_count"] == 348
+    assert registry["summary"]["blocked_count"] == 88
+    assert registry["summary"]["engine_enabled_count"] == 0
+    assert registry["summary"]["activation_updated_count"] == 0
+    assert registry["summary"]["by_risk"] == {"R0": 16, "R1": 146, "R2": 186}
+    assert registry["summary"]["blocked_by_risk"] == {"R3": 76, "R4": 12}
+    assert registry["summary"]["by_conversion_mode"]["condition_model_candidate"] == 268
+    assert registry["summary"]["by_conversion_mode"]["answer_expression_contract"] == 22
+    assert registry["summary"]["by_conversion_mode"]["governance_gate_contract"] == 14
+    assert registry["summary"]["by_conversion_mode"]["metadata_boundary_rule"] == 11
+    assert all(row["engine_enabled"] is False for row in registry["candidates"])
+    assert all(row["activation_allowed"] is False for row in registry["candidates"])
+    assert all(row["risk_level"] in {"R0", "R1", "R2"} for row in registry["candidates"])
+    assert all(row["risk_level"] in {"R3", "R4"} for row in registry["blocked"])
+    for knowledge_id in [
+        "p32.interaction.shangguan_generate_wealth.mechanism_boundary",
+        "p33.pattern.month_command_source.existence",
+        "p35.branch.liuhe.existence",
+        "p38.answer.plain_language.existence",
+    ]:
+        assert knowledge_id in by_knowledge_id
+        assert by_knowledge_id[knowledge_id]["condition_axes_required"]
+        assert by_knowledge_id[knowledge_id]["forbidden_outputs"]
+
+    assert "docs/v19/V19_P39_RULE_CONVERSION_VALIDATION_FIRST_WAVE.md" in manifest["created_from"]
+    assert manifest["p39_rule_conversion_validation_first_wave"]["eligible_candidate_count"] == 348
+    assert manifest["p39_rule_conversion_validation_first_wave"]["blocked_count"] == 88
+    assert manifest["p39_rule_conversion_validation_first_wave"]["engine_enabled_count"] == 0
+    assert "P39_RULE_CONVERSION_VALIDATION_FIRST_WAVE" in manifest["guardrails"]
+
+
+def test_p39_rule_conversion_eval_dataset_and_regression_validate_candidates() -> None:
+    from v19.synthetic_validation import build_p39_rule_conversion_eval_dataset, run_p39_rule_conversion_regression
+
+    dataset = build_p39_rule_conversion_eval_dataset()
+    regression = run_p39_rule_conversion_regression()
+    samples_by_candidate = {}
+    for sample in dataset["samples"]:
+        samples_by_candidate.setdefault(sample["source_candidate_rule_id"], []).append(sample)
+
+    assert dataset["status"] == "eval_dataset_ready_no_rule_activation"
+    assert dataset["summary"]["candidate_count"] == 348
+    assert dataset["summary"]["sample_count"] == 1392
+    assert dataset["summary"]["min_samples_per_candidate"] == 4
+    assert dataset["summary"]["activation_updated_count"] == 0
+    assert dataset["summary"]["by_polarity"] == {
+        "positive": 348,
+        "negative": 348,
+        "distractor_time": 348,
+        "distractor_hidden": 348,
+    }
+    assert dataset["summary"]["by_sample_type"] == {
+        "positive_contract": 348,
+        "negative_missing_condition_axis": 348,
+        "distractor_time_layer": 348,
+        "distractor_hidden_layer": 348,
+    }
+    assert all(len(rows) == 4 for rows in samples_by_candidate.values())
+    assert all({"case_id", "source_candidate_rule_id", "knowledge_id", "polarity", "expected_signal", "forbidden_signals", "expected_question_keys", "forbidden_text", "condition_axes_expected", "audit_tags"} <= set(sample) for sample in dataset["samples"])
+    assert all(sample["expected_signal"] for sample in dataset["samples"] if sample["sample_type"] == "positive_contract")
+    assert all(sample["forbidden_signals"] for sample in dataset["samples"] if sample["sample_type"] != "positive_contract")
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["candidate_count"] == 348
+    assert regression["summary"]["blocked_count"] == 88
+    assert regression["summary"]["sample_count"] == 1392
+    assert regression["summary"]["candidate_failed"] == 0
+    assert regression["summary"]["sample_failed"] == 0
+    assert regression["summary"]["false_positive_count"] == 0
+    assert regression["summary"]["forbidden_text_failure_count"] == 0
+    assert regression["summary"]["engine_enabled_count"] == 0
+    assert regression["summary"]["activation_updated_count"] == 0
+
+
+def test_p40_rule_audit_applies_safe_contracts_and_queues_condition_models() -> None:
+    from v19.synthetic_validation import build_p40_framework_rule_registry, build_p40_rule_audit_report
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    audit = build_p40_rule_audit_report()
+    registry = build_p40_framework_rule_registry()
+
+    assert audit["status"] == "rule_audit_ready"
+    assert audit["summary"]["p39_regression_status"] == "pass"
+    assert audit["summary"]["candidate_count"] == 348
+    assert audit["summary"]["blocked_high_risk_count"] == 88
+    assert audit["summary"]["audit_failed_count"] == 0
+    assert audit["summary"]["framework_contract_ready_count"] == 80
+    assert audit["summary"]["condition_synthetic_required_count"] == 268
+    assert audit["summary"]["engine_enabled_count"] == 0
+    assert audit["summary"]["activation_updated_count"] == 0
+    assert audit["summary"]["by_audit_status"] == {
+        "framework_contract_ready": 80,
+        "condition_synthetic_required": 268,
+    }
+    assert audit["summary"]["by_application_lane"] == {
+        "answer_governance_framework": 22,
+        "metadata_seed_framework": 31,
+        "condition_model_framework_queue": 268,
+        "metadata_boundary_framework": 11,
+        "archive_neutral_tag_framework": 2,
+        "review_gate_framework": 14,
+    }
+
+    assert registry["status"] == "framework_registry_ready_no_runtime_activation"
+    assert registry["summary"]["framework_registered_count"] == 348
+    assert registry["summary"]["framework_contract_applied_count"] == 80
+    assert registry["summary"]["condition_model_queue_count"] == 268
+    assert registry["summary"]["condition_model_queue_validated_count"] == 268
+    assert registry["summary"]["engine_enabled_count"] == 0
+    assert registry["summary"]["activation_updated_count"] == 0
+    assert registry["summary"]["runtime_mutation"] is False
+    assert registry["summary"]["by_application_status"] == {
+        "framework_contract_applied": 80,
+        "condition_model_queue_validated": 268,
+    }
+    assert all(row["engine_enabled"] is False for row in registry["items"])
+    assert all(row["activation_allowed"] is False for row in registry["items"])
+    assert "docs/v19/V19_P40_RULE_AUDIT_APPLICATION.md" in manifest["created_from"]
+    assert manifest["p40_rule_audit_application"]["framework_registered_count"] == 348
+    assert manifest["p40_rule_audit_application"]["condition_model_queue_count"] == 268
+    assert manifest["p40_rule_audit_application"]["framework_contract_applied_count"] == 80
+    assert "P40_RULE_AUDIT_APPLICATION" in manifest["guardrails"]
+
+
+def test_p40_condition_model_synthetic_validation_passes_before_framework_queue() -> None:
+    from v19.synthetic_validation import (
+        build_p40_condition_model_synthetic_dataset,
+        run_p40_rule_audit_application_regression,
+    )
+
+    dataset = build_p40_condition_model_synthetic_dataset()
+    regression = run_p40_rule_audit_application_regression()
+
+    assert dataset["status"] == "condition_synthetic_dataset_ready_no_activation"
+    assert dataset["summary"]["source_candidate_count"] == 268
+    assert dataset["summary"]["sample_count"] == 1072
+    assert dataset["summary"]["min_samples_per_candidate"] == 4
+    assert dataset["summary"]["activation_updated_count"] == 0
+    assert dataset["summary"]["by_sample_type"] == {
+        "positive_all_axes_present": 268,
+        "negative_missing_action_path": 268,
+        "distractor_time_only": 268,
+        "distractor_hidden_only": 268,
+    }
+    assert dataset["summary"]["by_polarity"] == {
+        "positive": 268,
+        "negative": 268,
+        "distractor_time": 268,
+        "distractor_hidden": 268,
+    }
+    assert all(sample["expected_signal"] for sample in dataset["samples"] if sample["sample_type"] == "positive_all_axes_present")
+    assert all(sample["forbidden_signals"] for sample in dataset["samples"] if sample["sample_type"] != "positive_all_axes_present")
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["candidate_count"] == 348
+    assert regression["summary"]["blocked_high_risk_count"] == 88
+    assert regression["summary"]["framework_registered_count"] == 348
+    assert regression["summary"]["framework_contract_applied_count"] == 80
+    assert regression["summary"]["condition_model_queue_count"] == 268
+    assert regression["summary"]["condition_synthetic_sample_count"] == 1072
+    assert regression["summary"]["audit_failed_count"] == 0
+    assert regression["summary"]["condition_synthetic_failed_count"] == 0
+    assert regression["summary"]["false_positive_count"] == 0
+    assert regression["summary"]["engine_enabled_count"] == 0
+    assert regression["summary"]["activation_updated_count"] == 0
+    assert regression["summary"]["runtime_mutation"] is False
+
+
+def test_p41_condition_topic_batches_cover_all_validated_condition_models() -> None:
+    from v19.synthetic_validation import build_p41_condition_topic_batches, build_p41_smart_gate_candidate_batches
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    batches = build_p41_condition_topic_batches()
+    gate = build_p41_smart_gate_candidate_batches()
+
+    assert batches["status"] == "condition_topic_batches_ready"
+    assert batches["summary"]["p40_regression_status"] == "pass"
+    assert batches["summary"]["topic_batch_count"] == 6
+    assert batches["summary"]["condition_candidate_count"] == 268
+    assert batches["summary"]["assigned_candidate_count"] == 268
+    assert batches["summary"]["activation_updated_count"] == 0
+    assert batches["summary"]["engine_enabled_count"] == 0
+    assert batches["summary"]["by_topic_lane"] == {
+        "ten_god_mechanism": 93,
+        "branch_time_activation": 74,
+        "wealth_career_bridge": 38,
+        "pattern_structure": 30,
+        "core_strength_foundation": 20,
+        "blind_lifa_palace": 13,
+    }
+    assert all(row["minimum_samples_per_candidate"] == 10 for row in batches["batches"])
+    assert all(row["engine_enabled"] is False for row in batches["batches"])
+
+    assert gate["status"] == "smart_gate_candidate_batches_ready_no_activation"
+    assert gate["summary"]["topic_batch_count"] == 6
+    assert gate["summary"]["gate_candidate_count"] == 268
+    assert gate["summary"]["deep_sample_count"] == 2680
+    assert gate["summary"]["ready_batch_count"] == 6
+    assert gate["summary"]["blocked_batch_count"] == 0
+    assert gate["summary"]["engine_enabled_count"] == 0
+    assert gate["summary"]["activation_updated_count"] == 0
+    assert gate["summary"]["runtime_mutation"] is False
+    assert all(row["readiness_status"] == "smart_gate_candidate_ready" for row in gate["batches"])
+    assert "docs/v19/V19_P41_CONDITION_TOPIC_DEEP_VALIDATION.md" in manifest["created_from"]
+    assert manifest["p41_condition_topic_deep_validation"]["smart_gate_candidate_count"] == 268
+    assert manifest["p41_condition_topic_deep_validation"]["topic_lanes"]["ten_god_mechanism"] == 93
+    assert "P41_CONDITION_TOPIC_DEEP_VALIDATION" in manifest["guardrails"]
+
+
+def test_p41_condition_deep_eval_dataset_and_regression_are_strict() -> None:
+    from v19.synthetic_validation import build_p41_condition_deep_eval_dataset, run_p41_topic_batch_application_regression
+
+    dataset = build_p41_condition_deep_eval_dataset()
+    regression = run_p41_topic_batch_application_regression()
+
+    assert dataset["status"] == "condition_deep_eval_dataset_ready_no_activation"
+    assert dataset["summary"]["topic_batch_count"] == 6
+    assert dataset["summary"]["condition_candidate_count"] == 268
+    assert dataset["summary"]["sample_count"] == 2680
+    assert dataset["summary"]["min_samples_per_candidate"] == 10
+    assert dataset["summary"]["activation_updated_count"] == 0
+    assert dataset["summary"]["engine_enabled_count"] == 0
+    assert dataset["summary"]["by_topic_lane"] == {
+        "ten_god_mechanism": 930,
+        "branch_time_activation": 740,
+        "wealth_career_bridge": 380,
+        "pattern_structure": 300,
+        "core_strength_foundation": 200,
+        "blind_lifa_palace": 130,
+    }
+    assert dataset["summary"]["by_polarity"] == {
+        "positive": 804,
+        "negative": 1340,
+        "distractor_time": 268,
+        "distractor_hidden": 268,
+    }
+    assert dataset["summary"]["by_sample_type"] == {
+        "positive_all_axes_present": 268,
+        "positive_rescue_path_present": 268,
+        "positive_same_layer_action_present": 268,
+        "negative_missing_source_layer": 268,
+        "negative_missing_action_path": 268,
+        "negative_capacity_insufficient": 268,
+        "negative_cross_layer_no_action": 268,
+        "negative_relation_name_no_transformation": 268,
+        "distractor_time_trigger_only": 268,
+        "distractor_hidden_stem_only": 268,
+    }
+    assert all(sample["expected_signal"] for sample in dataset["samples"] if sample["sample_type"].startswith("positive_"))
+    assert all(sample["forbidden_signals"] for sample in dataset["samples"] if not sample["sample_type"].startswith("positive_"))
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["topic_batch_count"] == 6
+    assert regression["summary"]["gate_candidate_count"] == 268
+    assert regression["summary"]["deep_sample_count"] == 2680
+    assert regression["summary"]["ready_batch_count"] == 6
+    assert regression["summary"]["blocked_batch_count"] == 0
+    assert regression["summary"]["engine_enabled_count"] == 0
+    assert regression["summary"]["activation_updated_count"] == 0
+    assert regression["summary"]["runtime_mutation"] is False
+
+
+def test_p42_smart_gate_audit_accelerates_low_risk_and_shadows_r2() -> None:
+    from v19.synthetic_validation import build_p42_framework_gate_plan, build_p42_smart_gate_audit
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    audit = build_p42_smart_gate_audit()
+    plan = build_p42_framework_gate_plan()
+
+    assert audit["status"] == "smart_gate_audit_ready"
+    assert audit["summary"]["p41_regression_status"] == "pass"
+    assert audit["summary"]["candidate_count"] == 268
+    assert audit["summary"]["dry_run_candidate_count"] == 110
+    assert audit["summary"]["shadow_scoring_candidate_count"] == 158
+    assert audit["summary"]["blocked_count"] == 0
+    assert audit["summary"]["engine_enabled_count"] == 0
+    assert audit["summary"]["activation_updated_count"] == 0
+    assert audit["summary"]["by_gate_decision"] == {
+        "dry_run_candidate": 110,
+        "shadow_scoring_candidate": 158,
+    }
+    assert audit["summary"]["by_risk_level"] == {"R1": 108, "R2": 158, "R0": 2}
+    assert all(row["gate_decision"] == "dry_run_candidate" for row in audit["items"] if row["risk_level"] in {"R0", "R1"})
+    assert all(row["gate_decision"] == "shadow_scoring_candidate" for row in audit["items"] if row["risk_level"] == "R2")
+
+    assert plan["status"] == "framework_gate_plan_ready_no_activation"
+    assert plan["summary"]["candidate_count"] == 268
+    assert plan["summary"]["dry_run_candidate_count"] == 110
+    assert plan["summary"]["shadow_scoring_candidate_count"] == 158
+    assert plan["summary"]["blocked_count"] == 0
+    assert plan["summary"]["engine_enabled_count"] == 0
+    assert plan["summary"]["activation_updated_count"] == 0
+    assert plan["summary"]["runtime_mutation"] is False
+    assert plan["summary"]["by_application_status"] == {
+        "dry_run_planned": 110,
+        "shadow_scoring_planned": 158,
+    }
+    assert "docs/v19/V19_P42_SMART_GATE_ACCELERATION.md" in manifest["created_from"]
+    assert manifest["p42_smart_gate_acceleration"]["dry_run_candidate_count"] == 110
+    assert manifest["p42_smart_gate_acceleration"]["shadow_scoring_candidate_count"] == 158
+    assert "P42_SMART_GATE_ACCELERATION" in manifest["guardrails"]
+
+
+def test_p42_smart_gate_eval_and_application_regression_pass_without_activation() -> None:
+    from v19.synthetic_validation import build_p42_smart_gate_eval_dataset, run_p42_smart_gate_application_regression
+
+    dataset = build_p42_smart_gate_eval_dataset()
+    regression = run_p42_smart_gate_application_regression()
+
+    assert dataset["status"] == "smart_gate_eval_dataset_ready_no_activation"
+    assert dataset["summary"]["candidate_count"] == 268
+    assert dataset["summary"]["sample_count"] == 1072
+    assert dataset["summary"]["min_samples_per_candidate"] == 4
+    assert dataset["summary"]["activation_updated_count"] == 0
+    assert dataset["summary"]["engine_enabled_count"] == 0
+    assert dataset["summary"]["by_sample_type"] == {
+        "gate_decision_contract": 268,
+        "risk_boundary_contract": 268,
+        "forbidden_runtime_activation_contract": 268,
+        "rollback_contract": 268,
+    }
+    assert dataset["summary"]["by_gate_decision"] == {
+        "dry_run_candidate": 440,
+        "shadow_scoring_candidate": 632,
+    }
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["candidate_count"] == 268
+    assert regression["summary"]["dry_run_candidate_count"] == 110
+    assert regression["summary"]["shadow_scoring_candidate_count"] == 158
+    assert regression["summary"]["blocked_count"] == 0
+    assert regression["summary"]["engine_enabled_count"] == 0
+    assert regression["summary"]["activation_updated_count"] == 0
+    assert regression["summary"]["runtime_mutation"] is False
+
+
+def test_p43_dry_run_shadow_eval_executes_without_answer_or_runtime_mutation() -> None:
+    from v19.synthetic_validation import build_p43_dry_run_shadow_eval_dataset, run_p43_dry_run_shadow_scoring
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    dataset = build_p43_dry_run_shadow_eval_dataset()
+    scoring = run_p43_dry_run_shadow_scoring()
+
+    assert dataset["status"] == "dry_run_shadow_eval_dataset_ready_no_runtime_activation"
+    assert dataset["summary"]["candidate_count"] == 268
+    assert dataset["summary"]["dry_run_candidate_count"] == 110
+    assert dataset["summary"]["shadow_scoring_candidate_count"] == 158
+    assert dataset["summary"]["sample_count"] == 1072
+    assert dataset["summary"]["min_samples_per_candidate"] == 4
+    assert dataset["summary"]["engine_enabled_count"] == 0
+    assert dataset["summary"]["activation_updated_count"] == 0
+    assert dataset["summary"]["answer_mutation_count"] == 0
+    assert dataset["summary"]["by_execution_mode"] == {
+        "dry_run_internal": 440,
+        "shadow_scoring_internal": 632,
+    }
+    assert dataset["summary"]["by_sample_type"] == {
+        "internal_signal_contract": 268,
+        "no_answer_mutation_contract": 268,
+        "forbidden_text_contract": 268,
+        "rollback_contract": 268,
+    }
+
+    assert scoring["status"] == "pass"
+    assert scoring["summary"]["candidate_count"] == 268
+    assert scoring["summary"]["dry_run_candidate_count"] == 110
+    assert scoring["summary"]["shadow_scoring_candidate_count"] == 158
+    assert scoring["summary"]["sample_count"] == 1072
+    assert scoring["summary"]["sample_failed"] == 0
+    assert scoring["summary"]["false_positive_count"] == 0
+    assert scoring["summary"]["forbidden_text_failure_count"] == 0
+    assert scoring["summary"]["answer_mutation_count"] == 0
+    assert scoring["summary"]["rollback_ready_count"] == 268
+    assert scoring["summary"]["engine_enabled_count"] == 0
+    assert scoring["summary"]["activation_updated_count"] == 0
+    assert "docs/v19/V19_P43_DRY_RUN_SHADOW_SCORING.md" in manifest["created_from"]
+    assert manifest["p43_dry_run_shadow_scoring"]["dry_run_passed_count"] == 110
+    assert manifest["p43_dry_run_shadow_scoring"]["shadow_scored_count"] == 158
+    assert "P43_DRY_RUN_SHADOW_SCORING" in manifest["guardrails"]
+
+
+def test_p43_feedback_ledger_and_execution_regression_are_ready() -> None:
+    from v19.synthetic_validation import build_p43_feedback_ledger, run_p43_execution_regression
+
+    ledger = build_p43_feedback_ledger()
+    regression = run_p43_execution_regression()
+
+    assert ledger["status"] == "feedback_ledger_ready_no_runtime_activation"
+    assert ledger["summary"]["candidate_count"] == 268
+    assert ledger["summary"]["dry_run_passed_count"] == 110
+    assert ledger["summary"]["shadow_scored_count"] == 158
+    assert ledger["summary"]["blocked_count"] == 0
+    assert ledger["summary"]["engine_enabled_count"] == 0
+    assert ledger["summary"]["answer_mutation_count"] == 0
+    assert ledger["summary"]["runtime_mutation"] is False
+    assert ledger["summary"]["by_feedback_status"] == {
+        "dry_run_passed": 110,
+        "shadow_scored": 158,
+    }
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["candidate_count"] == 268
+    assert regression["summary"]["dry_run_passed_count"] == 110
+    assert regression["summary"]["shadow_scored_count"] == 158
+    assert regression["summary"]["blocked_count"] == 0
+    assert regression["summary"]["engine_enabled_count"] == 0
+    assert regression["summary"]["answer_mutation_count"] == 0
+    assert regression["summary"]["runtime_mutation"] is False
+
+
+def test_p44_controlled_activation_candidates_have_rollback_and_no_runtime_activation() -> None:
+    from v19.synthetic_validation import (
+        build_p44_controlled_activation_packet,
+        build_p44_rollback_manifest,
+        run_p44_release_candidate_regression,
+    )
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    packet = build_p44_controlled_activation_packet()
+    rollback = build_p44_rollback_manifest()
+    regression = run_p44_release_candidate_regression()
+
+    assert packet["status"] == "controlled_activation_packet_ready_no_runtime_activation"
+    assert packet["summary"]["source_candidate_count"] == 268
+    assert packet["summary"]["activation_candidate_count"] == 110
+    assert packet["summary"]["shadow_hold_count"] == 158
+    assert packet["summary"]["ring0_canary_count"] == 2
+    assert packet["summary"]["ring1_internal_count"] == 108
+    assert packet["summary"]["engine_enabled_count"] == 0
+    assert packet["summary"]["answer_mutation_count"] == 0
+    assert packet["summary"]["activation_updated_count"] == 0
+    assert packet["summary"]["runtime_mutation"] is False
+    assert packet["summary"]["by_topic_lane"] == {
+        "branch_time_activation": 42,
+        "core_strength_foundation": 10,
+        "ten_god_mechanism": 56,
+        "wealth_career_bridge": 2,
+    }
+    assert packet["summary"]["shadow_hold_by_topic_lane"] == {
+        "branch_time_activation": 32,
+        "wealth_career_bridge": 36,
+        "pattern_structure": 30,
+        "core_strength_foundation": 10,
+        "ten_god_mechanism": 37,
+        "blind_lifa_palace": 13,
+    }
+
+    assert rollback["status"] == "rollback_manifest_ready_no_runtime_activation"
+    assert rollback["summary"]["activation_candidate_count"] == 110
+    assert rollback["summary"]["rollback_item_count"] == 110
+    assert rollback["summary"]["missing_rollback_count"] == 0
+    assert rollback["summary"]["engine_enabled_count"] == 0
+    assert rollback["summary"]["answer_mutation_count"] == 0
+    assert rollback["summary"]["runtime_mutation"] is False
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["activation_candidate_count"] == 110
+    assert regression["summary"]["shadow_hold_count"] == 158
+    assert regression["summary"]["ring0_canary_count"] == 2
+    assert regression["summary"]["ring1_internal_count"] == 108
+    assert regression["summary"]["rollback_item_count"] == 110
+    assert regression["summary"]["missing_rollback_count"] == 0
+    assert regression["summary"]["engine_enabled_count"] == 0
+    assert regression["summary"]["answer_mutation_count"] == 0
+    assert regression["summary"]["activation_updated_count"] == 0
+    assert regression["summary"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P44_CONTROLLED_ACTIVATION_CANDIDATES.md" in manifest["created_from"]
+    assert manifest["p44_controlled_activation_candidates"]["activation_candidate_count"] == 110
+    assert manifest["p44_controlled_activation_candidates"]["rollback_item_count"] == 110
+    assert "P44_CONTROLLED_ACTIVATION_CANDIDATES" in manifest["guardrails"]
+
+
+def test_p45_canary_runtime_trial_is_isolated_and_reversible() -> None:
+    from v19.synthetic_validation import run_p45_canary_release_regression
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    regression = run_p45_canary_release_regression()
+    plan = regression["canary_plan"]
+    trial = regression["canary_trial"]
+    dataset = trial["eval_dataset"]
+
+    assert plan["status"] == "canary_activation_plan_ready_isolated_runtime_only"
+    assert plan["summary"]["p44_regression_status"] == "pass"
+    assert plan["summary"]["ring0_canary_count"] == 2
+    assert plan["summary"]["canary_runtime_enabled_count"] == 2
+    assert plan["summary"]["production_engine_enabled_count"] == 0
+    assert plan["summary"]["rollback_covered_count"] == 2
+    assert plan["summary"]["kill_switch_covered_count"] == 2
+    assert plan["summary"]["answer_mutation_count"] == 0
+    assert plan["summary"]["production_runtime_mutation"] is False
+    assert {row["knowledge_id"] for row in plan["canaries"]} == {
+        "core.five_element_relations.v1",
+        "core.stem_attributes.v1",
+    }
+    assert all(row["canary_engine_enabled"] is True for row in plan["canaries"])
+    assert all(row["production_engine_enabled"] is False for row in plan["canaries"])
+
+    assert dataset["status"] == "canary_eval_dataset_ready_isolated_runtime_only"
+    assert dataset["summary"]["ring0_canary_count"] == 2
+    assert dataset["summary"]["sample_count"] == 12
+    assert dataset["summary"]["min_samples_per_canary"] == 6
+    assert dataset["summary"]["canary_runtime_enabled_count"] == 2
+    assert dataset["summary"]["production_engine_enabled_count"] == 0
+    assert dataset["summary"]["answer_mutation_count"] == 0
+    assert dataset["summary"]["by_sample_type"] == {
+        "canary_internal_signal_contract": 2,
+        "production_route_no_signal_contract": 2,
+        "answer_text_no_mutation_contract": 2,
+        "forbidden_text_contract": 2,
+        "rollback_execution_contract": 2,
+        "kill_switch_contract": 2,
+    }
+
+    assert trial["status"] == "pass"
+    assert trial["summary"]["ring0_canary_count"] == 2
+    assert trial["summary"]["sample_count"] == 12
+    assert trial["summary"]["sample_failed"] == 0
+    assert trial["summary"]["canary_internal_signal_count"] == 2
+    assert trial["summary"]["production_signal_leak_count"] == 0
+    assert trial["summary"]["forbidden_text_failure_count"] == 0
+    assert trial["summary"]["rollback_ready_count"] == 2
+    assert trial["summary"]["kill_switch_ready_count"] == 2
+    assert trial["summary"]["canary_runtime_enabled_count"] == 2
+    assert trial["summary"]["production_engine_enabled_count"] == 0
+    assert trial["summary"]["answer_mutation_count"] == 0
+    assert trial["summary"]["production_runtime_mutation"] is False
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["ring0_canary_count"] == 2
+    assert regression["summary"]["sample_failed"] == 0
+    assert regression["summary"]["production_engine_enabled_count"] == 0
+    assert regression["summary"]["production_signal_leak_count"] == 0
+    assert regression["summary"]["forbidden_text_failure_count"] == 0
+    assert regression["summary"]["rollback_ready_count"] == 2
+    assert regression["summary"]["kill_switch_ready_count"] == 2
+    assert regression["summary"]["answer_mutation_count"] == 0
+    assert regression["summary"]["production_runtime_mutation"] is False
+    assert "docs/v19/V19_P45_CANARY_RUNTIME_TRIAL.md" in manifest["created_from"]
+    assert manifest["p45_canary_runtime_trial"]["ring0_canary_count"] == 2
+    assert manifest["p45_canary_runtime_trial"]["canary_runtime_enabled_count"] == 2
+    assert manifest["p45_canary_runtime_trial"]["production_engine_enabled_count"] == 0
+    assert "P45_CANARY_RUNTIME_TRIAL" in manifest["guardrails"]
+
+
+def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
+    from v19.synthetic_validation import build_p31c_priority_topic_conversion_registry
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    registry = build_p31c_priority_topic_conversion_registry()
+    by_model = {row["model_id"]: row for row in registry["models"]}
+
+    assert registry["status"] == "priority_topic_conversion_ready_no_activation"
+    assert registry["summary"]["high_priority_partial_count"] == 155
+    assert registry["summary"]["existing_ten_god_chain_case_count"] == 24
+    assert registry["summary"]["new_condition_model_count"] == 28
+    assert registry["summary"]["eval_sample_requirement_count"] == 112
+    assert registry["summary"]["activation_updated_count"] == 0
+    assert registry["summary"]["by_lane"] == {
+        "career_domain_bridge": 4,
+        "palace_domain_bridge": 1,
+        "pattern_quality": 4,
+        "regular_pattern": 10,
+        "time_activation": 7,
+        "wealth_domain_bridge": 2,
+    }
+    assert registry["eval_dataset"]["by_polarity"] == {
+        "positive": 28,
+        "negative": 28,
+        "distractor_time": 28,
+        "distractor_hidden": 28,
+    }
+    for model_id in [
+        "p31c.pattern.regular.zhengguan",
+        "p31c.pattern.quality.formation_break",
+        "p31c.time.luck_to_natal",
+        "p31c.time.ten_god_activation",
+        "p31c.domain.wealth_income_structure",
+        "p31c.domain.career_official_kill",
+    ]:
+        assert model_id in by_model
+        assert by_model[model_id]["activation_allowed"] is False
+        assert "fortune" in by_model[model_id]["forbidden_outputs"]
+    assert "docs/v19/V19_P31C_PRIORITY_TOPIC_CONVERSION_REGISTRY.md" in manifest["created_from"]
+    assert manifest["p31c_priority_topic_conversion_registry"]["new_condition_model_count"] == 28
+    assert manifest["p31c_priority_topic_conversion_registry"]["eval_sample_count"] == 112
+
+
+def test_p31c_priority_topic_regression_is_strict_and_no_activation() -> None:
+    from v19.synthetic_validation import run_p31c_priority_topic_regression
+
+    regression = run_p31c_priority_topic_regression()
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["model_count"] == 28
+    assert regression["summary"]["sample_count"] == 112
+    assert regression["summary"]["sample_failed"] == 0
+    assert regression["summary"]["false_positive_count"] == 0
+    assert regression["summary"]["forbidden_text_failure_count"] == 0
+    assert regression["summary"]["activation_updated_count"] == 0
+    assert regression["summary"]["by_polarity"] == {
+        "positive": 28,
+        "negative": 28,
+        "distractor_time": 28,
+        "distractor_hidden": 28,
+    }
+    assert all(row["status"] == "pass" for row in regression["models"])
+    assert all(row["sample_count"] == 4 for row in regression["models"])
+
+
+def test_p31d_priority_topic_smart_gate_dry_run_selects_low_risk_only() -> None:
+    from v19.synthetic_validation import run_p31d_priority_topic_smart_gate
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    gate = run_p31d_priority_topic_smart_gate()
+
+    assert gate["status"] == "dry_run_ready"
+    assert gate["summary"]["model_count"] == 28
+    assert gate["summary"]["selected_shadow_proposal_count"] == 22
+    assert gate["summary"]["blocked_count"] == 6
+    assert gate["summary"]["activation_updated_count"] == 0
+    assert gate["summary"]["p31c_regression_status"] == "pass"
+    assert gate["summary"]["blocked_by_reason"] == {"risk_above_shadow_gate": 6}
+    assert gate["summary"]["selected_by_lane"] == {
+        "regular_pattern": 10,
+        "time_activation": 7,
+        "wealth_domain_bridge": 2,
+        "career_domain_bridge": 2,
+        "palace_domain_bridge": 1,
+    }
+    assert {row["risk_level"] for row in gate["selected"]} <= {"R1", "R2"}
+    assert {row["risk_level"] for row in gate["blocked"]} == {"R3"}
+    assert all(row["activation_allowed"] is False for row in gate["selected"] + gate["blocked"])
+    assert manifest["p31d_priority_topic_smart_gate"]["selected_shadow_proposal_count"] == 22
+    assert manifest["p31d_priority_topic_smart_gate"]["activation_allowed"] is False
+    assert "docs/v19/V19_P31D_PRIORITY_TOPIC_SMART_GATE.md" in manifest["created_from"]
+
+
+def test_p31e_priority_topic_rule_proposal_generation_creates_validation_ready_only(tmp_path, monkeypatch) -> None:
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31e_priority_topic_rule_proposal_generation
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+
+    generated = run_p31e_priority_topic_rule_proposal_generation()
+    proposals = lab.list_bazi_rule_proposals()["items"]
+
+    assert generated["status"] == "proposal_generation_ready"
+    assert generated["summary"]["gate_selected_count"] == 22
+    assert generated["summary"]["created_rule_proposal_count"] == 22
+    assert generated["summary"]["validation_ready_count"] == 22
+    assert generated["summary"]["validation_failed_count"] == 0
+    assert generated["summary"]["activation_updated_count"] == 0
+    assert generated["summary"]["approval_mutation"] is False
+    assert generated["summary"]["version_mutation"] is False
+    assert generated["summary"]["runtime_mutation"] is False
+    assert generated["summary"]["by_domain"] == {
+        "structural_relation": 13,
+        "time_structure": 7,
+        "income_stability": 2,
+    }
+    assert generated["summary"]["by_lane"] == {
+        "regular_pattern": 10,
+        "time_activation": 7,
+        "wealth_domain_bridge": 2,
+        "career_domain_bridge": 2,
+        "palace_domain_bridge": 1,
+    }
+    assert len(proposals) == 22
+    assert {row["status"] for row in proposals} == {"validation_ready"}
+    assert all((row["validation"] or {}).get("passed") is True for row in proposals)
+    assert all("NO_RUNTIME_INFERENCE_MUTATION" in row["guardrails"] for row in proposals)
+    assert all((row["output_contract"] or {}).get("is_prediction") is False for row in proposals)
+    assert all(row["rule_id"].startswith("v19.p31e.") for row in proposals)
+    assert manifest["p31e_priority_topic_rule_proposals"]["created_rule_proposal_count"] == 22
+    assert manifest["p31e_priority_topic_rule_proposals"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31E_PRIORITY_TOPIC_RULE_PROPOSALS.md" in manifest["created_from"]
+
+
+def test_p31f_priority_topic_review_packet_wraps_validated_proposals_only(tmp_path, monkeypatch) -> None:
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31f_priority_topic_review_packet
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+
+    packetized = run_p31f_priority_topic_review_packet()
+    validation_runs = lab.list_proposal_validation_runs()
+    review_packets = lab.list_proposal_review_packets()
+    proposals = lab.list_bazi_rule_proposals()["items"]
+
+    assert packetized["status"] == "review_packet_ready"
+    assert packetized["summary"]["proposal_count"] == 22
+    assert packetized["summary"]["validation_run_count"] == 1
+    assert packetized["summary"]["validation_passed"] == 22
+    assert packetized["summary"]["validation_failed"] == 0
+    assert packetized["summary"]["review_packet_count"] == 1
+    assert packetized["summary"]["review_packet_item_count"] == 22
+    assert packetized["summary"]["approval_mutation"] is False
+    assert packetized["summary"]["approval_preflight_mutation"] is False
+    assert packetized["summary"]["version_mutation"] is False
+    assert packetized["summary"]["runtime_mutation"] is False
+    assert len(proposals) == 22
+    assert {row["status"] for row in proposals} == {"validation_ready"}
+    assert validation_runs["count"] == 1
+    assert validation_runs["items"][0]["status"] == "validation_ready"
+    assert validation_runs["items"][0]["summary"]["passed"] == 22
+    assert review_packets["count"] == 1
+    assert review_packets["items"][0]["status"] == "approval_review_ready"
+    assert review_packets["items"][0]["summary"]["total"] == 22
+    assert review_packets["items"][0]["summary"]["validation_failed"] == 0
+    assert review_packets["items"][0]["summary"]["by_kind"] == [{"key": "bazi_rule_proposal", "count": 22}]
+    assert review_packets["items"][0]["approval_preflight_status"] == "not_run"
+    assert review_packets["items"][0]["approval_execution_status"] == "not_run"
+    assert manifest["p31f_priority_topic_review_packet"]["review_packet_item_count"] == 22
+    assert manifest["p31f_priority_topic_review_packet"]["approval_preflight_mutation"] is False
+    assert manifest["p31f_priority_topic_review_packet"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31F_PRIORITY_TOPIC_REVIEW_PACKET.md" in manifest["created_from"]
+
+
+def test_p31g_priority_topic_decision_preflight_records_item_decisions_only(tmp_path, monkeypatch) -> None:
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31g_priority_topic_decision_preflight
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+
+    preflighted = run_p31g_priority_topic_decision_preflight()
+    packet = lab.list_proposal_review_packets()["items"][0]
+    proposals = lab.list_bazi_rule_proposals()["items"]
+
+    assert preflighted["status"] == "decision_preflight_ready"
+    assert preflighted["summary"]["proposal_count"] == 22
+    assert preflighted["summary"]["decision_record_count"] == 22
+    assert preflighted["summary"]["approve_candidate_count"] == 22
+    assert preflighted["summary"]["approval_preflight_record_count"] == 1
+    assert preflighted["summary"]["preflight_status"] == "approval_preflight_ready"
+    assert preflighted["summary"]["preflight_ready_item_count"] == 22
+    assert preflighted["summary"]["preflight_failed_checks"] == 0
+    assert preflighted["summary"]["approval_execution_mutation"] is False
+    assert preflighted["summary"]["proposal_status_mutation"] is False
+    assert preflighted["summary"]["version_mutation"] is False
+    assert preflighted["summary"]["runtime_mutation"] is False
+    assert packet["decision_summary"]["total"] == 22
+    assert packet["decision_summary"]["latest_decision"] == "approve_candidate"
+    assert packet["approval_preflight_summary"]["latest_status"] == "approval_preflight_ready"
+    assert all((row.get("latest_review_decision") or {}).get("decision") == "approve_candidate" for row in packet["items"])
+    assert {row["status"] for row in proposals} == {"validation_ready"}
+    assert lab.list_bazi_rule_versions()["count"] == 0
+    assert lab.lab_status()["counts"]["proposal_review_packet_decisions"] == 22
+    assert lab.lab_status()["counts"]["proposal_review_approval_preflights"] == 1
+    assert manifest["p31g_priority_topic_decision_preflight"]["decision_record_count"] == 22
+    assert manifest["p31g_priority_topic_decision_preflight"]["proposal_status_mutation"] is False
+    assert manifest["p31g_priority_topic_decision_preflight"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31G_PRIORITY_TOPIC_DECISION_PREFLIGHT.md" in manifest["created_from"]
+
+
+def test_p31h_priority_topic_controlled_approval_approves_proposals_without_version_or_runtime(tmp_path, monkeypatch) -> None:
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31h_priority_topic_controlled_approval
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+
+    approved = run_p31h_priority_topic_controlled_approval()
+    proposals = lab.list_bazi_rule_proposals()["items"]
+    packet = lab.list_proposal_review_packets()["items"][0]
+
+    assert approved["status"] == "controlled_approval_executed"
+    assert approved["summary"]["proposal_count"] == 22
+    assert approved["summary"]["approval_execution_count"] == 1
+    assert approved["summary"]["approved_count"] == 22
+    assert approved["summary"]["failed_count"] == 0
+    assert approved["summary"]["rule_approved_count"] == 22
+    assert approved["summary"]["question_approved_count"] == 0
+    assert approved["summary"]["controlled_approval_mutation"] is True
+    assert approved["summary"]["auto_approval"] is False
+    assert approved["summary"]["version_mutation"] is False
+    assert approved["summary"]["runtime_mutation"] is False
+    assert {row["status"] for row in proposals} == {"approved"}
+    assert packet["approval_execution_summary"]["latest_status"] == "controlled_approval_executed"
+    assert lab.list_bazi_rule_versions()["count"] == 0
+    assert lab.list_guided_question_library_versions()["count"] == 0
+    assert lab.lab_status()["counts"]["proposal_review_approval_executions"] == 1
+    assert manifest["p31h_priority_topic_controlled_approval"]["approved_count"] == 22
+    assert manifest["p31h_priority_topic_controlled_approval"]["version_mutation"] is False
+    assert manifest["p31h_priority_topic_controlled_approval"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31H_PRIORITY_TOPIC_CONTROLLED_APPROVAL.md" in manifest["created_from"]
+
+
+def test_p31i_priority_topic_rule_version_records_approved_p31e_proposals_only(tmp_path, monkeypatch) -> None:
+    import v19.bazi_rule_db as rule_db
+    import v19.bazi_source_archive as archive
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31i_priority_topic_rule_version_record
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_SEED_FILE", root / "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json")
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_PACK_DIR", root / "docs/bazi_knowledge/packs")
+    monkeypatch.setattr(archive, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+    monkeypatch.setattr(rule_db, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(rule_db, "RULE_DB_FILE", tmp_path / "rule_db.json")
+
+    versioned = run_p31i_priority_topic_rule_version_record()
+    proposals = lab.list_bazi_rule_proposals()["items"]
+    versions = lab.list_bazi_rule_versions()
+
+    assert versioned["status"] == "rule_version_recorded"
+    assert versioned["summary"]["approved_count"] == 22
+    assert versioned["summary"]["version_record_count"] == 1
+    assert versioned["summary"]["included_proposal_count"] == 22
+    assert versioned["summary"]["rule_count"] == 22
+    assert versioned["summary"]["proposal_status_mutation"] is True
+    assert versioned["summary"]["version_mutation"] is True
+    assert versioned["summary"]["runtime_mutation"] is False
+    assert versioned["regression_baseline"]["rule_db_rule_count"] >= 200
+    assert versions["count"] == 1
+    assert versions["items"][0]["rule_count"] == 22
+    assert versions["items"][0]["runtime_mutation"] is False
+    assert len(versions["items"][0]["included_proposals"]) == 22
+    assert {row["status"] for row in proposals} == {"active_record"}
+    assert lab.list_guided_question_library_versions()["count"] == 0
+    assert lab.list_governance_releases()["count"] == 0
+    assert manifest["p31i_priority_topic_rule_version"]["version_record_count"] == 1
+    assert manifest["p31i_priority_topic_rule_version"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31I_PRIORITY_TOPIC_RULE_VERSION.md" in manifest["created_from"]
+
+
+def test_p31j_priority_topic_governance_release_records_rule_version_only(tmp_path, monkeypatch) -> None:
+    import v19.bazi_rule_db as rule_db
+    import v19.bazi_source_archive as archive
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31j_priority_topic_governance_release
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_SEED_FILE", root / "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json")
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_PACK_DIR", root / "docs/bazi_knowledge/packs")
+    monkeypatch.setattr(archive, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+    monkeypatch.setattr(rule_db, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(rule_db, "RULE_DB_FILE", tmp_path / "rule_db.json")
+
+    released = run_p31j_priority_topic_governance_release()
+    releases = lab.list_governance_releases()
+    versions = lab.list_bazi_rule_versions()
+    proposals = lab.list_bazi_rule_proposals()["items"]
+
+    assert released["status"] == "governance_release_recorded"
+    assert released["summary"]["rule_version_count"] == 1
+    assert released["summary"]["governance_release_count"] == 1
+    assert released["summary"]["artifact_count"] == 1
+    assert released["summary"]["bazi_rule_version_artifact_count"] == 1
+    assert released["summary"]["release_mutation"] is True
+    assert released["summary"]["runtime_mutation"] is False
+    assert releases["count"] == 1
+    assert releases["items"][0]["release_type"] == "p31j_priority_topic_rule_release"
+    assert releases["items"][0]["summary"]["by_artifact_type"]["bazi_rule_versions"] == 1
+    assert releases["items"][0]["runtime_mutation"] is False
+    assert versions["count"] == 1
+    assert {row["status"] for row in proposals} == {"active_record"}
+    assert manifest["p31j_priority_topic_governance_release"]["governance_release_count"] == 1
+    assert manifest["p31j_priority_topic_governance_release"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31J_PRIORITY_TOPIC_GOVERNANCE_RELEASE.md" in manifest["created_from"]
+
+
+def test_p31k_priority_topic_rule_db_candidates_ingest_disabled_adapter_records(tmp_path, monkeypatch) -> None:
+    import v19.bazi_rule_db as rule_db
+    import v19.bazi_source_archive as archive
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31k_priority_topic_rule_db_candidates
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_SEED_FILE", root / "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json")
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_PACK_DIR", root / "docs/bazi_knowledge/packs")
+    monkeypatch.setattr(archive, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+    monkeypatch.setattr(rule_db, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(rule_db, "RULE_DB_FILE", tmp_path / "rule_db.json")
+
+    ingested = run_p31k_priority_topic_rule_db_candidates()
+    p31_rules = rule_db.list_bazi_rules(q="v19.p31e.")["items"]
+
+    assert ingested["status"] == "rule_db_candidates_ingested"
+    assert ingested["summary"]["governance_release_count"] == 1
+    assert ingested["summary"]["rule_version_count"] == 1
+    assert ingested["summary"]["versioned_proposal_count"] == 22
+    assert ingested["summary"]["rule_db_candidate_count"] == 22
+    assert ingested["summary"]["imported_count"] == 22
+    assert ingested["summary"]["blocked_count"] == 0
+    assert ingested["summary"]["engine_enabled_count"] == 0
+    assert ingested["summary"]["runtime_mutation"] is False
+    assert len(p31_rules) == 22
+    assert {row["status"] for row in p31_rules} == {"active_record"}
+    assert {row["engine_enabled"] for row in p31_rules} == {False}
+    assert {row["engine_adapter_status"] for row in p31_rules} == {"candidate_waiting_synthetic_acceptance"}
+    assert all(row["source_version_id"] for row in p31_rules)
+    assert all("runtime_activation_without_synthetic_gate" in row["forbidden_usage"] for row in p31_rules)
+    assert manifest["p31k_priority_topic_rule_db_candidates"]["rule_db_candidate_count"] == 22
+    assert manifest["p31k_priority_topic_rule_db_candidates"]["engine_enabled_count"] == 0
+    assert manifest["p31k_priority_topic_rule_db_candidates"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31K_PRIORITY_TOPIC_RULE_DB_CANDIDATES.md" in manifest["created_from"]
+
+
+def test_p31l_priority_topic_adapter_readiness_reports_blockers_without_activation(tmp_path, monkeypatch) -> None:
+    import v19.bazi_rule_db as rule_db
+    import v19.bazi_source_archive as archive
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31l_priority_topic_adapter_readiness
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_SEED_FILE", root / "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json")
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_PACK_DIR", root / "docs/bazi_knowledge/packs")
+    monkeypatch.setattr(archive, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+    monkeypatch.setattr(rule_db, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(rule_db, "RULE_DB_FILE", tmp_path / "rule_db.json")
+
+    readiness = run_p31l_priority_topic_adapter_readiness()
+    p31_rules = rule_db.list_bazi_rules(q="v19.p31e.")["items"]
+
+    assert readiness["status"] == "adapter_readiness_report_ready"
+    assert readiness["summary"]["rule_db_candidate_count"] == 22
+    assert readiness["summary"]["ready_candidate_count"] == 0
+    assert readiness["summary"]["selected_count"] == 0
+    assert readiness["summary"]["blocked_count"] == 22
+    assert readiness["summary"]["engine_enabled_count"] == 0
+    assert readiness["summary"]["runtime_mutation"] is False
+    assert readiness["summary"]["blocked_by_reason"]["missing_structured_facts"] == 22
+    assert readiness["summary"]["blocked_by_reason"]["missing_synthetic_gate_candidate"] == 22
+    assert {row["engine_enabled"] for row in p31_rules} == {False}
+    assert manifest["p31l_priority_topic_adapter_readiness"]["blocked_count"] == 22
+    assert manifest["p31l_priority_topic_adapter_readiness"]["engine_enabled_count"] == 0
+    assert manifest["p31l_priority_topic_adapter_readiness"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31L_PRIORITY_TOPIC_ADAPTER_READINESS.md" in manifest["created_from"]
+
+
+def test_p31m_priority_topic_adapter_fact_enrichment_makes_candidates_gate_ready_without_activation(tmp_path, monkeypatch) -> None:
+    import v19.bazi_rule_db as rule_db
+    import v19.bazi_source_archive as archive
+    import v19.lab_interfaces as lab
+    from v19.synthetic_validation import run_p31m_priority_topic_adapter_fact_enrichment
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_SEED_FILE", root / "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json")
+    monkeypatch.setattr(archive, "KNOWLEDGE_DRAFT_PACK_DIR", root / "docs/bazi_knowledge/packs")
+    monkeypatch.setattr(archive, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(lab, "LAB_FILE", tmp_path / "lab_interfaces.json")
+    monkeypatch.setattr(rule_db, "SOURCE_ARCHIVE_FILE", tmp_path / "archive.json")
+    monkeypatch.setattr(rule_db, "RULE_DB_FILE", tmp_path / "rule_db.json")
+
+    enriched = run_p31m_priority_topic_adapter_fact_enrichment()
+    p31_rules = rule_db.list_bazi_rules(q="v19.p31e.")["items"]
+
+    assert enriched["status"] == "adapter_facts_regression_ready"
+    assert enriched["summary"]["rule_db_candidate_count"] == 22
+    assert enriched["summary"]["adapter_fact_updated_count"] == 22
+    assert enriched["summary"]["eval_sample_count"] == 88
+    assert enriched["summary"]["eval_failed_count"] == 0
+    assert enriched["summary"]["gate_selected_count"] == 22
+    assert enriched["summary"]["gate_blocked_count"] == 0
+    assert enriched["summary"]["engine_enabled_count"] == 0
+    assert enriched["summary"]["runtime_mutation"] is False
+    assert enriched["summary"]["by_eval_sample_type"] == {
+        "structured_facts_present": 22,
+        "synthetic_gate_candidate_present": 22,
+        "engine_disabled_contract": 22,
+        "forbidden_runtime_outputs_present": 22,
+    }
+    assert {row["engine_enabled"] for row in p31_rules} == {False}
+    assert {row["engine_adapter_status"] for row in p31_rules} == {"adapter_facts_seeded_waiting_synthetic_gate"}
+    assert all((row["condition"] or {}).get("structured_facts", {}).get("adapter_marker") == "p31m_priority_topic_candidate" for row in p31_rules)
+    assert all("synthetic_gate_candidate" in row["allowed_usage"] for row in p31_rules)
+    assert manifest["p31m_priority_topic_adapter_facts"]["adapter_fact_updated_count"] == 22
+    assert manifest["p31m_priority_topic_adapter_facts"]["gate_selected_count"] == 22
+    assert manifest["p31m_priority_topic_adapter_facts"]["engine_enabled_count"] == 0
+    assert manifest["p31m_priority_topic_adapter_facts"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P31M_PRIORITY_TOPIC_ADAPTER_FACTS.md" in manifest["created_from"]
 
 
 def test_lab_default_validation_cases_are_synthetic_explicit_pillars() -> None:
