@@ -20,6 +20,7 @@ FORCE_SYNC="${FORCE_SYNC:-0}"
 STOP_EXISTING="${STOP_EXISTING:-1}"
 USE_SYSTEMD="${USE_SYSTEMD:-0}"
 SERVICE_NAME="${SERVICE_NAME:-qiazhi-v19}"
+OPEN_BROWSER="${OPEN_BROWSER:-0}"
 RUN_P6="${RUN_P6:-0}"
 RUN_P7="${RUN_P7:-0}"
 RUN_P9="${RUN_P9:-0}"
@@ -126,6 +127,6 @@ if [[ "${RUN_P7}" == "1" ]]; then
   fi
 fi
 
-if command -v xdg-open >/dev/null 2>&1; then
+if [[ "${OPEN_BROWSER}" == "1" ]] && command -v xdg-open >/dev/null 2>&1; then
   xdg-open "${URL}" >/dev/null 2>&1 || true
 fi

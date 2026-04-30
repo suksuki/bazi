@@ -15,6 +15,7 @@ LOG_FILE="${LOG_FILE:-${RUNTIME_DIR}/server_${PORT}.log}"
 PID_FILE="${PID_FILE:-${RUNTIME_DIR}/server_${PORT}.pid}"
 USE_SYSTEMD="${USE_SYSTEMD:-0}"
 SERVICE_NAME="${SERVICE_NAME:-qiazhi-v19}"
+OPEN_BROWSER="${OPEN_BROWSER:-0}"
 
 export PYTHONPATH="${REPO_ROOT}:${PYTHONPATH:-}"
 
@@ -61,6 +62,6 @@ else
   v19_start_server_detached "${PYTHON_BIN}" "${REPO_ROOT}" "${HOST}" "${PORT}" "${LOG_FILE}" "${PID_FILE}"
 fi
 
-if command -v xdg-open >/dev/null 2>&1; then
+if [[ "${OPEN_BROWSER}" == "1" ]] && command -v xdg-open >/dev/null 2>&1; then
   xdg-open "${URL}" >/dev/null 2>&1 || true
 fi
