@@ -48,6 +48,70 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
             "ko": "일간과 월지를 먼저 보면 어떤 구조 기준점이 보이나요?",
         },
     },
+    "q_strength_assessment": {
+        "theme": "strength_structure",
+        "depth": "beginner",
+        "phase": "any",
+        "intent": "strength_assessment",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "hidden_stems", "stem_elements"],
+        "answer_scope": "explain_day_master_strength_as_evidence_bundle_not_verdict",
+        "score": 88,
+        "related_questions": ["q_day_master_month_anchor", "q_month_command_anchor", "q_useful_god_candidates"],
+        "label": {
+            "zh": "这个八字的日主强弱，应该先看哪些证据？",
+            "en": "Which evidence should be checked first for day-master strength?",
+            "ko": "이 사주의 일간 강약은 어떤 근거를 먼저 봐야 하나요?",
+        },
+    },
+    "q_useful_god_candidates": {
+        "theme": "useful_god_boundary",
+        "depth": "intermediate",
+        "phase": "after_structure",
+        "intent": "useful_god_boundary",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "hidden_stems", "stem_elements", "relations"],
+        "answer_scope": "explain_useful_god_as_candidate_path_requiring_strength_and_structure_gate",
+        "score": 82,
+        "related_questions": ["q_strength_assessment", "q_favorable_elements_boundary", "q_unfavorable_god_boundary"],
+        "label": {
+            "zh": "这张命盘的用神，当前只能先形成哪些候选路径？",
+            "en": "What useful-god candidate paths can be formed at this stage?",
+            "ko": "이 명식의 용신은 현재 어떤 후보 경로로만 볼 수 있나요?",
+        },
+    },
+    "q_unfavorable_god_boundary": {
+        "theme": "useful_god_boundary",
+        "depth": "intermediate",
+        "phase": "after_structure",
+        "intent": "useful_god_boundary",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "hidden_stems", "stem_elements", "relations"],
+        "answer_scope": "explain_unfavorable_god_as_boundary_not_remedy_advice",
+        "score": 76,
+        "related_questions": ["q_useful_god_candidates", "q_strength_assessment", "q_read_result_not_fortune"],
+        "label": {
+            "zh": "忌神问题现在应该如何只按结构边界回答？",
+            "en": "How should unfavorable-god questions be answered only as structural boundaries?",
+            "ko": "기신 질문은 현재 구조 경계로만 어떻게 답해야 하나요?",
+        },
+    },
+    "q_favorable_elements_boundary": {
+        "theme": "useful_god_boundary",
+        "depth": "intermediate",
+        "phase": "after_structure",
+        "intent": "useful_god_boundary",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "stem_elements", "hidden_stems"],
+        "answer_scope": "explain_favorable_elements_as_candidate_not_remedy",
+        "score": 74,
+        "related_questions": ["q_useful_god_candidates", "q_unfavorable_god_boundary", "q_element_flow_metadata"],
+        "label": {
+            "zh": "喜什么五行这类问题，当前能回答到什么边界？",
+            "en": "For favorable-element questions, what boundary can be answered now?",
+            "ko": "희신 오행 질문은 현재 어느 경계까지 답할 수 있나요?",
+        },
+    },
     "q_hidden_stem_role": {
         "theme": "structure_basis",
         "depth": "intermediate",
@@ -110,6 +174,38 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
             "zh": "这张命盘里的墓库结构，应该如何只按结构层阅读？",
             "en": "How should the vault structure in this chart be read only at the structural layer?",
             "ko": "이 명식의 묘고 구조는 구조 층에서만 어떻게 읽어야 하나요?",
+        },
+    },
+    "q_pattern_structure": {
+        "theme": "pattern_structure",
+        "depth": "intermediate",
+        "phase": "after_structure",
+        "intent": "pattern_structure",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "hidden_stems", "relations"],
+        "answer_scope": "explain_pattern_as_structure_index_not_fate_verdict",
+        "score": 80,
+        "related_questions": ["q_strength_assessment", "q_ten_god_focus", "q_read_result_not_fortune"],
+        "label": {
+            "zh": "这个八字的格局，应该先按哪些结构入口判断？",
+            "en": "Which structural entries should be checked first for chart pattern?",
+            "ko": "이 사주의 격국은 어떤 구조 입구부터 봐야 하나요?",
+        },
+    },
+    "q_ten_god_focus": {
+        "theme": "structure_basis",
+        "depth": "intermediate",
+        "phase": "after_structure",
+        "intent": "metadata_boundary",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "hidden_stems", "stem_elements"],
+        "answer_scope": "explain_primary_ten_god_focus_as_visible_structure_not_verdict",
+        "score": 78,
+        "related_questions": ["q_ten_god_metadata", "q_pattern_structure", "q_income_factors"],
+        "label": {
+            "zh": "财、官、印、食伤里，当前哪些十神关系更值得先看？",
+            "en": "Among wealth, officer, resource, and output, which Ten God relations deserve first attention?",
+            "ko": "재성·관성·인성·식상 중 어떤 십성 관계를 먼저 봐야 하나요?",
         },
     },
     "q_career_structure": {
@@ -628,7 +724,7 @@ def _structural_signals_from_facts(facts: Dict[str, Any]) -> List[Dict[str, Any]
                 observed,
                 ["chart_anchor", "stem_elements"],
                 "日主和月令构成结构阅读的入口，适合先回答结构基点。",
-                ["q_day_master_month_anchor", "q_month_command_anchor", "q_structure_overview"],
+                ["q_strength_assessment", "q_day_master_month_anchor", "q_useful_god_candidates", "q_pattern_structure", "q_month_command_anchor", "q_structure_overview"],
                 78,
             )
         )
@@ -753,6 +849,24 @@ def _structural_question_label(key: str, contract: Dict[str, Any], signal: Dict[
             f"日主、月令这组结构基点（{text}）先看什么？",
             f"What should be read first from this day-master/month anchor ({text})?",
             f"일간·월령 기준점({text})에서 먼저 무엇을 보나요?",
+        )
+    if key == "q_strength_assessment" and text:
+        return _l(
+            f"日主强弱要围绕{text}先看哪些证据？",
+            f"For day-master strength around {text}, which evidence comes first?",
+            f"{text}를 중심으로 일간 강약은 어떤 근거를 먼저 보나요?",
+        )
+    if key == "q_useful_god_candidates" and text:
+        return _l(
+            f"在{text}这个结构入口下，用神只能先形成哪些候选？",
+            f"Under the structural entry {text}, what useful-god candidates can be formed first?",
+            f"{text} 구조 입구에서 용신은 어떤 후보로만 볼 수 있나요?",
+        )
+    if key == "q_pattern_structure" and text:
+        return _l(
+            f"从{text}开始，这个八字的格局应该先看哪些条件？",
+            f"Starting from {text}, which conditions should be checked first for pattern?",
+            f"{text}에서 시작할 때 이 사주의 격국은 어떤 조건을 먼저 보나요?",
         )
     if key == "q_month_command_anchor" and text:
         return _l(
@@ -1120,6 +1234,8 @@ def _registry_questions(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
 
 def _baseline_questions(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
     keys = ["q_income_stability"]
+    if facts.get("day_stem") or facts.get("month_branch"):
+        keys.extend(["q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure"])
     if not facts.get("day_stem") and not facts.get("month_branch"):
         keys.append("q_structure_overview")
     rows = []
@@ -1129,7 +1245,7 @@ def _baseline_questions(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
             continue
         row = _registry_question(key, spec)
         row["source"] = "baseline_question_fallback"
-        row["score"] = min(int(row.get("score") or 0), 76)
+        row["score"] = min(int(row.get("score") or 0), 82)
         row["question_basis"] = _l("基础问题入口", "Baseline question entry", "기본 질문 진입점")
         row["basis_text"] = _l(
             "用于保证用户始终有一个可回答的结构问题；排序会让命盘命中的结构问题优先。",
@@ -1166,6 +1282,9 @@ def _source_signal_for_answer_kind(guided_context: Dict[str, Any], answer_kind: 
         "vault": {"vault"},
         "time_boundary": {"timing_context"},
         "income_structure": {"wealth_feature", "wealth_mechanism"},
+        "strength_assessment": {"strength_model", "structure_anchor", "stem_branch_attribute"},
+        "useful_god_boundary": {"strength_model", "five_element_relation", "structure_anchor", "stem_branch_attribute"},
+        "pattern_structure": {"pattern_structure", "ten_god_interaction", "strength_model", "structure_anchor"},
         "metadata_boundary": {"ten_god", "ten_god_interaction", "hidden_stem", "hidden_stems", "structure_anchor", "stem_branch_attribute", "five_element_relation", "stem_relation", "strength_model"},
         "result_boundary": {"pattern_structure"},
         "rule_basis": {"branch_relation", "vault", "timing_context", "wealth_feature", "wealth_mechanism"},
@@ -1198,6 +1317,12 @@ def _preferred_signal_categories_for_question(question_key: str, answer_kind: st
         return ["strength_model", "structure_anchor", "stem_branch_attribute"]
     if key == "q_day_master_month_anchor":
         return ["structure_anchor", "strength_model", "stem_branch_attribute"]
+    if key in {"q_strength_assessment", "q_useful_god_candidates", "q_unfavorable_god_boundary", "q_favorable_elements_boundary"}:
+        return ["strength_model", "structure_anchor", "five_element_relation", "stem_branch_attribute"]
+    if key == "q_pattern_structure":
+        return ["pattern_structure", "ten_god_interaction", "structure_anchor", "strength_model"]
+    if key == "q_ten_god_focus":
+        return ["ten_god_interaction", "ten_god", "wealth_boundary", "strength_model"]
     if key == "q_hidden_stem_role":
         return ["hidden_stem", "hidden_stems"]
     if key == "q_ten_god_metadata":
@@ -1237,6 +1362,9 @@ def route_guided_question_intent(question_key: str, message: str, source_signal:
         "vault": ("intent.vault_structure", "structural_relation", ["pillars", "vault_branches", "hidden_stems"]),
         "time_boundary": ("intent.time_context_boundary", "time_structure", ["pillars", "luck_cycle", "flow_year", "time_relations"]),
         "income_structure": ("intent.income_structure", "income_stability", ["income_signals", "pillars", "relations"]),
+        "strength_assessment": ("intent.strength_assessment", "strength_structure", ["pillars", "month_branch", "hidden_stems", "stem_elements"]),
+        "useful_god_boundary": ("intent.useful_god_boundary", "useful_god", ["pillars", "month_branch", "hidden_stems", "stem_elements", "relations"]),
+        "pattern_structure": ("intent.pattern_structure", "pattern", ["pillars", "month_branch", "ten_god_metadata", "relations"]),
         "career_structure": ("intent.career_structure", "career_structure", ["pillars", "relations", "source_signal"]),
         "relationship_structure": ("intent.relationship_structure", "relationship_structure", ["pillars", "relations", "source_signal", "time_context"]),
         "health_structure": ("intent.health_structure", "health_structure", ["pillars", "relations", "source_signal", "time_context"]),
@@ -1885,6 +2013,12 @@ def _guided_answer_kind(question_key: str, message: str) -> str:
         return "vault"
     if key in {"q_time_context_boundary", "q_luck_flow_layers", "q_time_not_inference"} or any(token in lowered for token in ["time context", "luck cycle", "flow year"]) or any(token in text for token in ["时间结构", "大运", "流年", "대운", "세운"]):
         return "time_boundary"
+    if key == "q_strength_assessment" or any(token in lowered for token in ["strong", "weak", "strength"]) or any(token in text for token in ["身强", "身弱", "强弱", "旺衰", "日主强", "日主弱"]):
+        return "strength_assessment"
+    if key in {"q_useful_god_candidates", "q_unfavorable_god_boundary", "q_favorable_elements_boundary"} or any(token in lowered for token in ["useful god", "favorable element", "unfavorable"]) or any(token in text for token in ["用神", "忌神", "喜神", "喜用", "喜什么五行", "忌什么五行"]):
+        return "useful_god_boundary"
+    if key == "q_pattern_structure" or any(token in lowered for token in ["pattern"]) or any(token in text for token in ["格局", "成格", "破格", "从格", "化格"]):
+        return "pattern_structure"
     if key in {
         "q_income_stability",
         "q_income_factors",
@@ -1898,7 +2032,7 @@ def _guided_answer_kind(question_key: str, message: str) -> str:
         return "income_structure"
     if key in {"q_read_result_not_fortune", "q_no_good_bad", "q_result_card_boundary", "q_cautious_reading"}:
         return "result_boundary"
-    if key in {"q_day_master_month_anchor", "q_hidden_stem_role"} or "ten_god" in key or any(token in lowered for token in ["ten god", "day master", "month branch", "hidden stem"]) or any(token in text for token in ["十神", "藏干", "日主", "月令", "십성", "일간", "월지", "지장간"]):
+    if key in {"q_day_master_month_anchor", "q_hidden_stem_role", "q_ten_god_focus"} or "ten_god" in key or any(token in lowered for token in ["ten god", "day master", "month branch", "hidden stem"]) or any(token in text for token in ["十神", "藏干", "日主", "月令", "财官印", "食伤", "십성", "일간", "월지", "지장간"]):
         return "metadata_boundary"
     if key == "follow_rule_basis" or "规则依据" in text:
         return "rule_basis"
@@ -1928,6 +2062,21 @@ def _guided_answer_summary(answer_kind: str, source_signal: Dict[str, Any] | Non
             "收入稳定性这里按结构读：重点是承载力、财富结构出现度、可达性、波动和牵制这些信号怎样组合，而不是判断你会不会发财。",
             "Income stability is read structurally here: the system looks at capacity, wealth-structure presence, accessibility, volatility, and constraints, not whether someone will become rich.",
             "여기서 소득 안정성은 구조로 읽습니다. 수용력, 재성 구조의 출현, 접근성, 변동성, 견제가 어떻게 조합되는지를 보는 것이지 재물운을 예측하는 것이 아닙니다.",
+        ),
+        "strength_assessment": _l(
+            "日主强弱不能只靠一个字下结论。这里先看月令、透出、藏干、根气和克泄耗支持，形成强弱承载证据，而不是直接给一句身强身弱断语。",
+            "Day-master strength cannot be concluded from one character. This first checks month command, visible stems, hidden stems, roots, support, and pressure as evidence, not as a one-line verdict.",
+            "일간 강약은 한 글자만으로 단정하지 않습니다. 월령, 투간, 지장간, 뿌리, 지지와 압력을 근거로 보며 단정문으로 처리하지 않습니다.",
+        ),
+        "useful_god_boundary": _l(
+            "用神、忌神这里先作为候选路径处理：必须先有强弱承载、结构病点和调候/通关/扶抑等证据，不够时只能说候选，不能直接给补救建议。",
+            "Useful or unfavorable gods are handled as candidate paths here. Strength evidence, structural issue, and balancing path are required; otherwise the answer stays at candidate level with no remedy advice.",
+            "용신·기신은 여기서 후보 경로로만 다룹니다. 강약 근거, 구조 문제, 조후·통관·부억 경로가 필요하며 부족하면 후보로만 말합니다.",
+        ),
+        "pattern_structure": _l(
+            "格局问题先按结构索引读：看月令来源、透干、藏干、成格条件和破格因素是否同层成立，不直接把格局名翻译成命运结论。",
+            "Pattern questions are read as structural indexing: month source, visible stems, hidden stems, formation conditions, and breaking factors must align; a pattern name is not a fate verdict.",
+            "격국 질문은 구조 색인으로 읽습니다. 월령 출처, 투간, 지장간, 성격 조건과 파격 요소가 같은 층에서 성립하는지 봅니다.",
         ),
         "career_structure": _l(
             "事业问题先按结构读：看约束、输出、承载、格局和时间层是否形成可解释路径，不直接推出职业成败。",
@@ -1998,6 +2147,21 @@ def _guided_answer_sections(
         return source_section + [
             _section("当前结构信号", "Current structural signals", "현재 구조 신호", _income_answer_items(income_bundle)),
             _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("income")),
+        ]
+    if answer_kind == "strength_assessment":
+        return source_section + [
+            _section("强弱承载证据", "Strength-capacity evidence", "강약 수용 근거", _strength_answer_items(chart, facts, source_signal or {})),
+            _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("strength")),
+        ]
+    if answer_kind == "useful_god_boundary":
+        return source_section + [
+            _section("用神/忌神候选路径", "Useful/unfavorable-god candidate paths", "용신/기신 후보 경로", _useful_god_answer_items(chart, facts, source_signal or {})),
+            _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("useful_god")),
+        ]
+    if answer_kind == "pattern_structure":
+        return source_section + [
+            _section("格局结构入口", "Pattern structural entries", "격국 구조 입구", _pattern_answer_items(chart, facts, source_signal or {})),
+            _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("pattern")),
         ]
     if answer_kind == "career_structure":
         return source_section + [
@@ -2237,6 +2401,43 @@ def _income_answer_items(income_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
     return items
 
 
+def _strength_answer_items(chart: Dict[str, Any], facts: Dict[str, Any], source_signal: Dict[str, Any]) -> List[Dict[str, Any]]:
+    day_stem = str(facts.get("day_stem") or "")
+    month_branch = str(facts.get("month_branch") or "")
+    hidden = facts.get("hidden_stems_by_branch") if isinstance(facts.get("hidden_stems_by_branch"), dict) else {}
+    hidden_text = "；".join(f"{branch}藏{'/'.join(str(stem) for stem in stems)}" for branch, stems in hidden.items() if stems)
+    observed = "、".join(_plain_observed_values(source_signal.get("observed") or []))
+    return [
+        _item(_l("日主", "Day master", "일간"), _l(day_stem or "未见", day_stem or "not detected", day_stem or "감지 없음"), _l("它是强弱承载问题的观察中心。", "It is the observation center for strength-capacity questions.", "강약 수용 질문의 관찰 중심입니다.")),
+        _item(_l("月令", "Month branch", "월지"), _l(month_branch or "未见", month_branch or "not detected", month_branch or "감지 없음"), _l("月令先提供季节和环境背景，不能单独推出强弱结论。", "The month branch gives seasonal/context evidence; it cannot decide strength alone.", "월지는 계절과 환경 근거를 제공하지만 단독으로 강약을 정하지 않습니다.")),
+        _item(_l("藏干来源", "Hidden-stem sources", "지장간 출처"), _l(hidden_text or "未见可用藏干映射", hidden_text or "no hidden-stem mapping detected", hidden_text or "지장간 매핑 없음"), _l("藏干只补充来源层，不能替代完整强弱判断。", "Hidden stems supplement the source layer and do not replace full strength judgment.", "지장간은 출처층 보조이며 전체 강약 판단을 대체하지 않습니다.")),
+        _item(_l("当前命中", "Current match", "현재 일치"), _l(observed or "日主/月令结构入口", observed or "day-master/month-command entry", observed or "일간/월령 구조 입구"), _l("这里只形成证据束，不输出身强身弱断语。", "This forms an evidence bundle, not a strong/weak verdict.", "근거 묶음만 만들며 강약 단정을 출력하지 않습니다.")),
+    ]
+
+
+def _useful_god_answer_items(chart: Dict[str, Any], facts: Dict[str, Any], source_signal: Dict[str, Any]) -> List[Dict[str, Any]]:
+    elements = [str(item) for item in facts.get("all_stem_elements") or [] if str(item)]
+    observed = "、".join(_plain_observed_values(source_signal.get("observed") or []))
+    return [
+        _item(_l("候选前提", "Candidate prerequisite", "후보 전제"), _l("先完成强弱承载证据", "Strength-capacity evidence first", "강약 수용 근거가 먼저 필요합니다"), _l("没有承载证据时，不直接给用神或忌神。", "Without capacity evidence, useful/unfavorable gods are not assigned directly.", "수용 근거 없이 용신·기신을 바로 정하지 않습니다.")),
+        _item(_l("可见五行", "Visible elements", "보이는 오행"), _l("、".join(elements) if elements else "未见", ", ".join(elements) if elements else "none detected", ", ".join(elements) if elements else "감지 없음"), _l("这些只是候选素材，不等于喜忌结论。", "These are candidate materials, not favorable/unfavorable conclusions.", "이는 후보 자료일 뿐 희기 결론이 아닙니다.")),
+        _item(_l("当前路径", "Current path", "현재 경로"), _l(observed or "强弱、调候、通关、扶抑都待证据确认", observed or "strength, seasonal balance, mediation, and support/control still require evidence", observed or "강약·조후·통관·부억은 근거 확인이 필요합니다"), _l("只回答候选路径和边界，不提供补救建议。", "Only candidate paths and boundaries are answered; no remedy advice is given.", "후보 경로와 경계만 답하고 처방 조언은 하지 않습니다.")),
+    ]
+
+
+def _pattern_answer_items(chart: Dict[str, Any], facts: Dict[str, Any], source_signal: Dict[str, Any]) -> List[Dict[str, Any]]:
+    month_branch = str(facts.get("month_branch") or "")
+    stems = [str(item) for item in facts.get("stems") or [] if str(item)]
+    relation_types = sorted(str(item) for item in facts.get("relation_types") or [] if str(item))
+    observed = "、".join(_plain_observed_values(source_signal.get("observed") or []))
+    return [
+        _item(_l("月令来源", "Month-command source", "월령 출처"), _l(month_branch or "未见", month_branch or "not detected", month_branch or "감지 없음"), _l("格局先看月令和结构来源。", "Pattern first checks month command and structural source.", "격국은 먼저 월령과 구조 출처를 봅니다.")),
+        _item(_l("透出天干", "Visible stems", "투간"), _l("、".join(stems) if stems else "未见", ", ".join(stems) if stems else "none detected", ", ".join(stems) if stems else "감지 없음"), _l("透出只是成格条件的一部分。", "Visible stems are only part of formation conditions.", "투간은 성격 조건의 일부입니다.")),
+        _item(_l("结构扰动", "Structural disturbance", "구조 교란"), _l("、".join(relation_types) if relation_types else "未见明确冲合刑害", ", ".join(relation_types) if relation_types else "no clear relations detected", ", ".join(relation_types) if relation_types else "명확한 관계 없음"), _l("冲合刑害可能影响成格或破格，但不能单独下结论。", "Relations may affect formation or breaking, but cannot decide alone.", "충합형해는 성격/파격에 영향을 줄 수 있지만 단독 결론은 아닙니다.")),
+        _item(_l("当前索引", "Current index", "현재 색인"), _l(observed or "格局候选仍需同层条件验证", observed or "pattern candidate still needs same-layer validation", observed or "격국 후보는 같은 층 조건 검증이 필요합니다"), _l("这里只作为结构目录，不输出命运判断。", "This is a structural catalog only, not a fate judgement.", "구조 목록일 뿐 운명 판단이 아닙니다.")),
+    ]
+
+
 def _domain_answer_label(answer_kind: str) -> str:
     return {
         "career_structure": "事业结构",
@@ -2412,7 +2613,7 @@ def _boundary_items(kind: str) -> List[Dict[str, Any]]:
     common = _item(
         _l("当前边界", "Current boundary", "현재 경계"),
         _l("结构解释，不是预测", "Structural explanation, not prediction", "구조 설명이며 예측 아님"),
-        _l("不输出好坏、发财破财、今年运势等判断。", "No good/bad, wealth gain/loss, or this-year fortune judgement is produced.", "길흉, 재물 득실, 올해 운세 판단을 출력하지 않습니다."),
+        _l("不输出好坏、财富得失、今年运势等判断。", "No good/bad, wealth gain/loss, or this-year fortune judgement is produced.", "길흉, 재물 득실, 올해 운세 판단을 출력하지 않습니다."),
     )
     result = _item(
         _l("和结果卡的关系", "Relation to result card", "결과 카드와의 관계"),
@@ -2421,6 +2622,21 @@ def _boundary_items(kind: str) -> List[Dict[str, Any]]:
     )
     if kind == "time":
         return [result, common]
+    if kind == "strength":
+        return [
+            _item(_l("强弱边界", "Strength boundary", "강약 경계"), _l("证据束，不是一句断语", "Evidence bundle, not a one-line verdict", "근거 묶음이며 단정문 아님"), _l("强弱要看月令、透藏、根气、克泄耗和扶助是否共同成立。", "Strength requires month command, visible/hidden sources, roots, pressure, and support to align.", "강약은 월령, 투장, 뿌리, 압력과 지지가 함께 성립해야 합니다.")),
+            common,
+        ]
+    if kind == "useful_god":
+        return [
+            _item(_l("用神边界", "Useful-god boundary", "용신 경계"), _l("候选路径，不是补救建议", "Candidate path, not remedy advice", "후보 경로이며 처방 조언 아님"), _l("没有完整结构证据时，不输出喜用、忌神或补救建议。", "Without full structural evidence, no favorable/unfavorable-god or remedy advice is output.", "완전한 구조 근거 없이 희용·기신이나 처방 조언을 출력하지 않습니다.")),
+            common,
+        ]
+    if kind == "pattern":
+        return [
+            _item(_l("格局边界", "Pattern boundary", "격국 경계"), _l("结构索引，不是命运判断", "Structural index, not fate judgement", "구조 색인이며 운명 판단 아님"), _l("格局名必须回到月令、透干、藏干和破格条件里验证。", "Pattern names must be validated against month command, visible stems, hidden stems, and breaking factors.", "격국명은 월령, 투간, 지장간, 파격 조건으로 검증해야 합니다.")),
+            common,
+        ]
     return [common, result]
 
 
@@ -3177,13 +3393,16 @@ def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_contex
         category_counts[category] = category_counts.get(category, 0) + 1
 
     anchor_keys = [
-        "q_branch_relation_detail",
-        "kbq_vault_structure",
-        "kbq_ten_god_interaction_boundary",
         "kbq_income_collision_route",
         "kbq_income_path_route",
         "kbq_wealth_access_route",
+        "q_strength_assessment",
+        "q_useful_god_candidates",
+        "q_pattern_structure",
         "q_income_stability",
+        "q_branch_relation_detail",
+        "kbq_vault_structure",
+        "kbq_ten_god_interaction_boundary",
         "kbq_time_vs_natal_relation",
         "q_month_command_anchor",
         "q_ten_god_metadata",
@@ -3272,6 +3491,8 @@ def _question_specificity_score(row: Dict[str, Any]) -> int:
         score += 4
     if bucket == "vault":
         score += 2 if len(observed) >= 2 else -4
+    if key in {"q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure"}:
+        score += 10
     if key in {"q_structure_overview", "kbq_structure_anchor_chain"} and not observed:
         score -= 8
     if key == "q_income_stability":
@@ -3295,6 +3516,10 @@ def _question_bucket(row: Dict[str, Any]) -> str:
         return "time_context"
     if theme == "income_stability" or "income" in key or "wealth" in key:
         return "income_stability"
+    if key in {"q_strength_assessment", "q_useful_god_candidates", "q_unfavorable_god_boundary", "q_favorable_elements_boundary"} or theme in {"strength_structure", "useful_god_boundary"} or intent in {"strength_assessment", "useful_god_boundary"}:
+        return "strength_useful_god"
+    if key == "q_pattern_structure" or theme == "pattern_structure" or intent == "pattern_structure":
+        return "pattern_structure"
     if intent == "metadata_boundary" or any(token in key for token in ["hidden", "ten_god", "month_command", "day_master", "metadata"]):
         return "metadata"
     if theme == "boundary" or intent == "result_boundary":
@@ -3307,8 +3532,8 @@ def _route_bucket_order(lane_counts: Dict[str, int], facts: Dict[str, Any]) -> L
         "branch_time_activation": ["branch_relation", "time_context", "vault"],
         "ten_god_mechanism": ["ten_god_interaction", "metadata", "income_stability", "structure_basis"],
         "wealth_career_bridge": ["income_stability", "metadata", "structure_basis"],
-        "core_strength_foundation": ["metadata", "structure_basis"],
-        "pattern_structure": ["structure_basis", "boundary"],
+        "core_strength_foundation": ["strength_useful_god", "metadata", "structure_basis"],
+        "pattern_structure": ["pattern_structure", "strength_useful_god", "structure_basis", "boundary"],
         "blind_lifa_palace": ["vault", "branch_relation", "structure_basis"],
     }
     ordered: List[str] = []
@@ -3325,7 +3550,7 @@ def _route_bucket_order(lane_counts: Dict[str, int], facts: Dict[str, Any]) -> L
             _prepend_once(ordered, "vault")
         elif "vault" not in ordered:
             ordered.insert(min(2, len(ordered)), "vault")
-    for bucket in ["income_stability", "metadata", "structure_basis", "boundary"]:
+    for bucket in ["strength_useful_god", "income_stability", "metadata", "structure_basis", "boundary"]:
         if bucket not in ordered:
             ordered.append(bucket)
     return ordered[:7]

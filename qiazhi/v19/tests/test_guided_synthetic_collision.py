@@ -3585,6 +3585,35 @@ def test_mainline_runtime_rule_db_isolated_canary_trial_has_no_production_leak()
     assert "CANARY_TRIAL_NO_PRODUCTION_ACTIVATION" in trial["guardrails"]
 
 
+def test_common_bazi_questions_are_registered_and_answered_with_boundaries() -> None:
+    from v19.bazi_guided_questions import build_guided_question_answer
+
+    data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
+    context = data["guided_question_context"]
+    keys = [row["key"] for row in context["questions"]]
+
+    assert "q_strength_assessment" in keys[:10]
+    assert "q_useful_god_candidates" in keys[:10]
+    assert "q_pattern_structure" in keys[:10]
+
+    strength = build_guided_question_answer(data, "q_strength_assessment", "这个八字是强还是弱？")
+    useful = build_guided_question_answer(data, "q_useful_god_candidates", "用神是什么？忌神是什么？")
+    pattern = build_guided_question_answer(data, "q_pattern_structure", "这个八字格局怎么看？")
+
+    assert strength["intent"]["answer_kind"] == "strength_assessment"
+    assert useful["intent"]["answer_kind"] == "useful_god_boundary"
+    assert pattern["intent"]["answer_kind"] == "pattern_structure"
+    strength_text = "\n".join(str(line) for line in strength["content"]["zh"])
+    useful_text = "\n".join(str(line) for line in useful["content"]["zh"])
+    pattern_text = "\n".join(str(line) for line in pattern["content"]["zh"])
+    assert "证据束" in strength_text
+    assert "候选路径" in useful_text
+    assert "结构索引" in pattern_text
+    for text in [strength_text, useful_text, pattern_text]:
+        for forbidden in ["一定", "发财", "破财", "必然", "应期"]:
+            assert forbidden not in text
+
+
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
     from v19.synthetic_validation import build_p31c_priority_topic_conversion_registry
 

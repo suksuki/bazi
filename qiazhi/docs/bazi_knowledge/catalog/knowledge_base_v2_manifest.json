@@ -69,6 +69,7 @@
     "docs/v19/V19_P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION.md",
     "docs/v19/V19_P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS.md",
     "docs/v19/V19_MAINLINE_RUNTIME_RULE_DB_READINESS.md",
+    "docs/v19/V19_MAINLINE_COMMON_BAZI_QUESTION_INTENTS.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
