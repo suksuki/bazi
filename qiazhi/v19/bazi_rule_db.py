@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem
+from v19.core.chart import BRANCH_HIDDEN_STEMS, CONTROLS, GENERATES, STEM_POLARITY, VAULT_BRANCHES, element_of_stem
 from v19.runtime import RUNTIME, utc_now
 
 RULE_DB_VERSION = "v19.bazi_rule_db.v1"
@@ -19,6 +19,14 @@ GUARDRAILS = [
     "NO_PLUGIN_BLACK_BOX",
     "R4_ARCHIVE_ONLY",
 ]
+SMART_GATE_GUARDRAILS = [
+    "P27_SMART_RULE_GATE",
+    "SYNTHETIC_REGRESSION_REQUIRED",
+    "LOW_RISK_ONLY_BY_DEFAULT",
+    "TRANSPARENT_ACTIVATION_LOG",
+    "NO_RESULT_MUTATION",
+]
+RISK_RANK = {"R0": 0, "R1": 1, "R2": 2, "R3": 3, "R4": 4}
 
 
 def bazi_rule_db_status() -> Dict[str, Any]:
@@ -232,7 +240,11 @@ def ingest_current_knowledge_drafts_to_rule_db(*, force: bool = False, enable_en
         rule = _rule_from_draft(draft, enable_engine=enable_engine)
         rule_id = rule["rule_id"]
         if rule_id in existing:
-            merged = {**existing[rule_id], **rule, "rule_record_id": existing[rule_id].get("rule_record_id") or rule["rule_record_id"], "updated_at": utc_now()}
+            previous = existing[rule_id]
+            merged = {**previous, **rule, "rule_record_id": previous.get("rule_record_id") or rule["rule_record_id"], "updated_at": utc_now()}
+            if _should_preserve_smart_gate_activation(previous, rule):
+                merged["engine_enabled"] = True
+                merged["engine_adapter_status"] = previous.get("engine_adapter_status") or "synthetic_gate_active"
             merged.setdefault("history", []).append(_history("updated_from_draft", "system", "Rule DB record updated from knowledge draft ingestion."))
             existing[rule_id] = merged
             updated += 1
@@ -265,11 +277,171 @@ def ingest_current_knowledge_drafts_to_rule_db(*, force: bool = False, enable_en
     }
 
 
+def smart_gate_bazi_rule_db_candidates(
+    *,
+    prefixes: List[str] | None = None,
+    max_risk_level: str = "R1",
+    min_confidence: float = 0.72,
+    limit: int = 12,
+    activate: bool = False,
+    actor_role: str = "system",
+    note: str = "",
+    regression_status: str = "",
+) -> Dict[str, Any]:
+    state, storage = _load_state()
+    normalized_prefixes = [prefix for prefix in [str(item).strip() for item in (prefixes or ["p27."])] if prefix]
+    max_risk_rank = RISK_RANK.get(str(max_risk_level or "R1"), 1)
+    min_confidence_value = _bounded_float(min_confidence, 0.72, 0.0, 1.0)
+    limit_value = max(0, min(int(limit or 0), 100))
+    candidates: List[Dict[str, Any]] = []
+    blocked: List[Dict[str, Any]] = []
+    already_active: List[Dict[str, Any]] = []
+
+    for rule in state.get("rules") or []:
+        knowledge_id = _clean(rule.get("knowledge_id"))
+        if normalized_prefixes and not any(knowledge_id.startswith(prefix) for prefix in normalized_prefixes):
+            continue
+        evaluation = _smart_gate_rule_evaluation(
+            rule,
+            max_risk_rank=max_risk_rank,
+            min_confidence=min_confidence_value,
+        )
+        row = {
+            "rule_id": rule.get("rule_id"),
+            "knowledge_id": knowledge_id,
+            "domain": rule.get("domain"),
+            "category": rule.get("category"),
+            "risk_level": rule.get("risk_level"),
+            "confidence": rule.get("confidence"),
+            "score": evaluation["score"],
+            "eligible": evaluation["eligible"],
+            "blockers": evaluation["blockers"],
+            "engine_enabled": rule.get("engine_enabled") is True,
+        }
+        if rule.get("engine_enabled") is True:
+            already_active.append(row)
+        elif evaluation["eligible"]:
+            candidates.append(row)
+        else:
+            blocked.append(row)
+
+    candidates.sort(key=lambda row: (int(row.get("score") or 0), str(row.get("knowledge_id") or "")), reverse=True)
+    selected = candidates[:limit_value] if limit_value else []
+
+    if activate and regression_status != "pass":
+        return {
+            "ok": False,
+            "status": "blocked",
+            "code": "SYNTHETIC_REGRESSION_REQUIRED",
+            "message": "Smart activation requires a passing synthetic regression result.",
+            "summary": _smart_gate_summary(candidates, blocked, already_active, selected, 0),
+            "candidates": candidates,
+            "selected": selected,
+            "blocked": blocked[:200],
+            "already_active": already_active[:200],
+            "storage": storage,
+            "guardrails": SMART_GATE_GUARDRAILS,
+        }
+
+    activated: List[Dict[str, Any]] = []
+    saved = storage
+    if activate and selected:
+        selected_rule_ids = {str(row.get("rule_id") or "") for row in selected}
+        now = utc_now()
+        for rule in state.get("rules") or []:
+            if str(rule.get("rule_id") or "") not in selected_rule_ids:
+                continue
+            rule["engine_enabled"] = True
+            rule["engine_adapter_status"] = "synthetic_gate_active"
+            rule["updated_at"] = now
+            rule.setdefault("history", []).append(
+                _history(
+                    "synthetic_gate_active",
+                    actor_role,
+                    note or "P27 smart gate activated this Rule DB candidate after synthetic regression passed.",
+                )
+            )
+            activated.append(
+                {
+                    "rule_id": rule.get("rule_id"),
+                    "knowledge_id": rule.get("knowledge_id"),
+                    "domain": rule.get("domain"),
+                    "category": rule.get("category"),
+                    "risk_level": rule.get("risk_level"),
+                }
+            )
+        state["last_smart_activation"] = {
+            "created_at": now,
+            "prefixes": normalized_prefixes,
+            "max_risk_level": max_risk_level,
+            "min_confidence": min_confidence_value,
+            "selected_count": len(selected),
+            "activated_count": len(activated),
+            "regression_status": regression_status,
+            "actor_role": actor_role,
+            "guardrails": SMART_GATE_GUARDRAILS,
+        }
+        saved = _save_state(state)
+
+    return {
+        "ok": True,
+        "status": "activated" if activate else "dry_run",
+        "summary": _smart_gate_summary(candidates, blocked, already_active, selected, len(activated)),
+        "candidates": candidates,
+        "selected": selected,
+        "activated": activated,
+        "blocked": blocked[:200],
+        "already_active": already_active[:200],
+        "storage": saved,
+        "runtime_scope": "rule_db_engine_adapter_signal_only_no_result_mutation",
+        "guardrails": SMART_GATE_GUARDRAILS,
+    }
+
+
+def set_bazi_rule_engine_activation(
+    rule_ids: List[str],
+    *,
+    enabled: bool,
+    actor_role: str = "system",
+    note: str = "",
+    adapter_status: str = "",
+) -> Dict[str, Any]:
+    state, storage = _load_state()
+    targets = {str(item).strip() for item in rule_ids if str(item).strip()}
+    updated: List[Dict[str, Any]] = []
+    status = adapter_status or ("synthetic_gate_active" if enabled else "candidate_waiting_synthetic_acceptance")
+    now = utc_now()
+    for rule in state.get("rules") or []:
+        if str(rule.get("rule_id") or "") not in targets and str(rule.get("knowledge_id") or "") not in targets:
+            continue
+        rule["engine_enabled"] = bool(enabled)
+        rule["engine_adapter_status"] = status
+        rule["updated_at"] = now
+        rule.setdefault("history", []).append(
+            _history(
+                "engine_enabled" if enabled else "engine_disabled",
+                actor_role,
+                note or ("Rule DB engine adapter activation updated." if enabled else "Rule DB engine adapter activation rolled back."),
+            )
+        )
+        updated.append({"rule_id": rule.get("rule_id"), "knowledge_id": rule.get("knowledge_id"), "engine_enabled": rule.get("engine_enabled")})
+    if updated:
+        storage = _save_state(state)
+    return {
+        "ok": True,
+        "updated_count": len(updated),
+        "items": updated,
+        "storage": storage,
+        "guardrails": SMART_GATE_GUARDRAILS,
+    }
+
+
 def _rule_from_draft(draft: Dict[str, Any], *, enable_engine: bool) -> Dict[str, Any]:
     knowledge_id = _clean(draft.get("knowledge_id"))
     domain = _draft_to_rule_domain(draft)
     rule_id = "v19.rule." + knowledge_id
     now = utc_now()
+    engine_enabled = _draft_engine_enabled(draft, enable_engine)
     return {
         "rule_record_id": "brr_" + uuid.uuid4().hex[:16],
         "rule_id": rule_id,
@@ -281,8 +453,8 @@ def _rule_from_draft(draft: Dict[str, Any], *, enable_engine: bool) -> Dict[str,
         "statement": _clean(draft.get("statement")),
         "risk_level": _clean(draft.get("risk_level"), "R2"),
         "status": "active_in_rule_db",
-        "engine_enabled": enable_engine,
-        "engine_adapter_status": "available_for_structural_signal_adapter",
+        "engine_enabled": engine_enabled,
+        "engine_adapter_status": "available_for_structural_signal_adapter" if engine_enabled else "candidate_waiting_synthetic_acceptance",
         "input_contract": {"required": _draft_input_contract(draft, domain)},
         "condition": {
             "structured_facts": draft.get("structured_facts") or {},
@@ -316,6 +488,93 @@ def _rule_from_draft(draft: Dict[str, Any], *, enable_engine: bool) -> Dict[str,
         "history": [_history("ingested", "system", "Directly ingested from V19 knowledge draft into Bazi Rule DB.")],
         "guardrails": GUARDRAILS,
     }
+
+
+def _draft_engine_enabled(draft: Dict[str, Any], enable_engine: bool) -> bool:
+    if not enable_engine:
+        return False
+    knowledge_id = _clean(draft.get("knowledge_id"))
+    if knowledge_id.startswith(("p21.", "p26.", "p27.")):
+        return draft.get("engine_enabled") is True
+    allowed = _string_list(draft.get("allowed_usage"))
+    if "engine_adapter_candidate" in allowed and "engine_adapter_ready" not in allowed:
+        return False
+    return draft.get("engine_enabled") is not False
+
+
+def _should_preserve_smart_gate_activation(previous: Dict[str, Any], incoming: Dict[str, Any]) -> bool:
+    return (
+        previous.get("engine_enabled") is True
+        and str(previous.get("engine_adapter_status") or "") == "synthetic_gate_active"
+        and incoming.get("engine_enabled") is False
+        and str(previous.get("knowledge_id") or "").startswith("p27.")
+    )
+
+
+def _smart_gate_rule_evaluation(rule: Dict[str, Any], *, max_risk_rank: int, min_confidence: float) -> Dict[str, Any]:
+    blockers: List[str] = []
+    risk = _clean(rule.get("risk_level"), "R4")
+    risk_rank = RISK_RANK.get(risk, 4)
+    allowed = _string_list(rule.get("allowed_usage"))
+    confidence = _bounded_float(rule.get("confidence"), 0.0, 0.0, 1.0)
+    category = _clean(rule.get("category"))
+    status = _clean(rule.get("status"))
+    structured = {}
+    condition = rule.get("condition")
+    if isinstance(condition, dict) and isinstance(condition.get("structured_facts"), dict):
+        structured = dict(condition.get("structured_facts") or {})
+
+    if status not in {"active_in_rule_db", "active_record", "approved"}:
+        blockers.append("status_not_active")
+    if risk_rank > max_risk_rank:
+        blockers.append("risk_above_gate")
+    if confidence < min_confidence:
+        blockers.append("confidence_below_gate")
+    if "rule_db" not in allowed:
+        blockers.append("missing_rule_db_usage")
+    if "engine_adapter_candidate" not in allowed:
+        blockers.append("missing_engine_candidate_usage")
+    if "synthetic_gate_candidate" not in allowed and "engine_adapter_ready" not in allowed:
+        blockers.append("missing_synthetic_gate_candidate")
+    if category in {"pattern_structure", "stem_relation"}:
+        blockers.append("advanced_model_review_required")
+    if not structured:
+        blockers.append("missing_structured_facts")
+
+    score = int(confidence * 100) - (risk_rank * 8)
+    if category in {"structure_anchor", "hidden_stem", "branch_relation", "time_boundary"}:
+        score += 8
+    if category in {"ten_god", "wealth_boundary", "strength_model"}:
+        score += 6
+    if category in {"wealth_feature", "wealth_mechanism", "timing_context"}:
+        score += 3
+    return {"eligible": not blockers, "blockers": blockers, "score": score}
+
+
+def _smart_gate_summary(
+    candidates: List[Dict[str, Any]],
+    blocked: List[Dict[str, Any]],
+    already_active: List[Dict[str, Any]],
+    selected: List[Dict[str, Any]],
+    activated_count: int,
+) -> Dict[str, Any]:
+    return {
+        "candidate_count": len(candidates),
+        "selected_count": len(selected),
+        "activated_count": activated_count,
+        "blocked_count": len(blocked),
+        "already_active_count": len(already_active),
+        "blocked_by_reason": _blocked_reason_counts(blocked),
+    }
+
+
+def _blocked_reason_counts(rows: List[Dict[str, Any]]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for row in rows:
+        for blocker in row.get("blockers") or []:
+            key = str(blocker or "unknown")
+            counts[key] = counts.get(key, 0) + 1
+    return counts
 
 
 def _load_state() -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -359,7 +618,7 @@ def _load_source_archive() -> Dict[str, Any]:
 def _draft_to_rule_domain(draft: Dict[str, Any]) -> str:
     domain = _clean(draft.get("domain"))
     category = _clean(draft.get("category"))
-    if domain == "ten_god" or category == "ten_god":
+    if domain in {"ten_god", "interaction"} or category in {"ten_god", "ten_god_interaction", "ten_god_interaction_mechanism"}:
         return "ten_god_relation"
     if domain == "luck_flow" or category == "timing_context":
         return "time_structure"
@@ -429,6 +688,7 @@ def _adapter_facts(chart: Dict[str, Any], time_context: Dict[str, Any], inferenc
         for row in income_bundle.get("signals") or []
         if isinstance(row, dict) and str(row.get("key") or "")
     }
+    ten_god_positions = _adapter_ten_god_positions(pillars, time_context)
     return {
         "pillars": pillars,
         "branches": [item for item in branches if item],
@@ -450,7 +710,192 @@ def _adapter_facts(chart: Dict[str, Any], time_context: Dict[str, Any], inferenc
         "luck_branch": str(((time_context.get("luck_cycle") or {}).get("pillar") or {}).get("branch") or ""),
         "flow_branch": str(((time_context.get("flow_year") or {}).get("pillar") or {}).get("branch") or ""),
         "income_signals": income_signals,
+        "ten_god_positions": ten_god_positions,
+        "ten_god_labels": {str(row.get("label") or "") for row in ten_god_positions if row.get("label")},
+        "ten_god_families": {str(row.get("family") or "") for row in ten_god_positions if row.get("family")},
     }
+
+
+def _adapter_ten_god_positions(pillars: Dict[str, Any], time_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    day_stem = str((pillars.get("day") or {}).get("stem") or "")
+    if not day_stem:
+        return []
+    rows: List[Dict[str, Any]] = []
+    pillar_labels = {"year": "年", "month": "月", "day": "日", "hour": "时"}
+    for pillar_key in ["year", "month", "hour"]:
+        pillar = dict(pillars.get(pillar_key) or {})
+        stem = str(pillar.get("stem") or "")
+        if stem:
+            rows.append(_ten_god_position(day_stem, stem, "visible_stem", f"{pillar_labels[pillar_key]}干{stem}", pillar_key))
+    for pillar_key in ["year", "month", "day", "hour"]:
+        branch = str((pillars.get(pillar_key) or {}).get("branch") or "")
+        for hidden_stem, _ in BRANCH_HIDDEN_STEMS.get(branch, []):
+            rows.append(_ten_god_position(day_stem, str(hidden_stem), "hidden_stem", f"{pillar_labels[pillar_key]}支藏{hidden_stem}", pillar_key))
+    for layer_key, layer_label in [("luck_cycle", "大运"), ("flow_year", "流年")]:
+        layer = dict(time_context.get(layer_key) or {})
+        pillar = dict(layer.get("pillar") or {})
+        stem = str(pillar.get("stem") or "")
+        branch = str(pillar.get("branch") or "")
+        if stem:
+            rows.append(_ten_god_position(day_stem, stem, "time_visible_stem", f"{layer_label}干{stem}", layer_key))
+        for hidden_stem, _ in BRANCH_HIDDEN_STEMS.get(branch, []):
+            rows.append(_ten_god_position(day_stem, str(hidden_stem), "time_hidden_stem", f"{layer_label}支藏{hidden_stem}", layer_key))
+    return [row for row in rows if row.get("label")]
+
+
+def _ten_god_position(day_stem: str, target_stem: str, layer: str, location: str, pillar: str) -> Dict[str, Any]:
+    label = _detailed_ten_god_label(day_stem, target_stem)
+    return {
+        "label": label,
+        "family": _ten_god_family(label),
+        "stem": target_stem,
+        "layer": layer,
+        "location": location,
+        "pillar": pillar,
+    }
+
+
+def _detailed_ten_god_label(day_stem: str, target_stem: str) -> str:
+    day_element = element_of_stem(day_stem)
+    target_element = element_of_stem(target_stem)
+    day_polarity = STEM_POLARITY.get(day_stem, "")
+    target_polarity = STEM_POLARITY.get(target_stem, "")
+    if not day_element or not target_element or not day_polarity or not target_polarity:
+        return ""
+    same_polarity = day_polarity == target_polarity
+    if target_element == day_element:
+        return "比肩" if same_polarity else "劫财"
+    if GENERATES.get(day_element) == target_element:
+        return "食神" if same_polarity else "伤官"
+    if CONTROLS.get(day_element) == target_element:
+        return "偏财" if same_polarity else "正财"
+    if CONTROLS.get(target_element) == day_element:
+        return "七杀" if same_polarity else "正官"
+    if GENERATES.get(target_element) == day_element:
+        return "偏印" if same_polarity else "正印"
+    return ""
+
+
+def _ten_god_family(label: str) -> str:
+    return {
+        "比肩": "peer",
+        "劫财": "peer",
+        "比劫": "peer",
+        "食神": "output",
+        "伤官": "output",
+        "食伤": "output",
+        "正财": "wealth",
+        "偏财": "wealth",
+        "财星": "wealth",
+        "正官": "officer",
+        "七杀": "officer",
+        "官杀": "officer",
+        "正印": "seal",
+        "偏印": "seal",
+        "枭神": "seal",
+        "印星": "seal",
+    }.get(str(label or ""), "")
+
+
+def _match_structured_ten_gods(structured: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str, Any]:
+    involved = _string_list(structured.get("involved_ten_gods"))
+    positions = [dict(row) for row in facts.get("ten_god_positions") or [] if isinstance(row, dict)]
+    relation_types = set(facts.get("relation_types") or [])
+    observed: List[str] = []
+    fact_refs: List[str] = []
+    missing: List[str] = []
+    interaction_name = str(structured.get("interaction_name") or "")
+    visible_layer_required = "混杂" in interaction_name or interaction_name in {"伤官见官", "比劫分财"}
+    exact_all_required = "混杂" in interaction_name
+
+    exact_by_family: Dict[str, List[str]] = {}
+    family_requirements: List[Tuple[str, str]] = []
+    relation_requirements: List[str] = []
+    day_master_required = False
+    for label in involved:
+        if label == "日主":
+            day_master_required = True
+            continue
+        if label == "合":
+            relation_requirements.append("combination")
+            continue
+        family = _ten_god_family(label)
+        if label in {"比劫", "食伤", "财星", "官杀", "印星", "枭印"}:
+            if family:
+                family_requirements.append((label, family))
+            continue
+        if family:
+            exact_by_family.setdefault(family, []).append(label)
+            continue
+        missing.append(label)
+
+    if day_master_required:
+        if facts.get("day_stem"):
+            observed.append(f"日主({facts.get('day_stem')})")
+            fact_refs.append("chart.day_stem")
+        else:
+            missing.append("日主")
+
+    for relation in relation_requirements:
+        if relation in relation_types:
+            observed.append("合")
+            fact_refs.append("chart.relations")
+        else:
+            missing.append("合")
+
+    for source_label, family in family_requirements:
+        matched_family_positions = _positions_for_family(positions, family, visible_only=visible_layer_required)
+        if matched_family_positions:
+            observed.extend(_format_ten_god_position(row) for row in matched_family_positions[:2])
+            fact_refs.append("chart.ten_god_labels")
+        else:
+            missing.append(source_label)
+
+    for family, exact_labels in exact_by_family.items():
+        unique_labels = sorted(set(exact_labels))
+        if len(unique_labels) > 1 and not exact_all_required:
+            matched_family_positions = _positions_for_family(positions, family, visible_only=visible_layer_required)
+            if matched_family_positions:
+                observed.extend(_format_ten_god_position(row) for row in matched_family_positions[:2])
+                fact_refs.append("chart.ten_god_labels")
+            else:
+                missing.append("/".join(unique_labels))
+            continue
+        for label in unique_labels:
+            if visible_layer_required:
+                matched_positions = [
+                    row
+                    for row in positions
+                    if str(row.get("label") or "") == label and str(row.get("layer") or "") in {"visible_stem", "time_visible_stem"}
+                ]
+            else:
+                matched_positions = [row for row in positions if str(row.get("label") or "") == label]
+            if matched_positions:
+                observed.append(_format_ten_god_position(matched_positions[0]))
+                fact_refs.append("chart.ten_god_labels")
+            else:
+                missing.append(label)
+
+    return {
+        "matched": not missing and bool(involved),
+        "observed": _dedupe(observed),
+        "fact_refs": _dedupe(fact_refs),
+        "missing": _dedupe(missing),
+    }
+
+
+def _positions_for_family(positions: List[Dict[str, Any]], family: str, *, visible_only: bool = False) -> List[Dict[str, Any]]:
+    return [
+        row
+        for row in positions
+        if str(row.get("family") or "") == family and (not visible_only or str(row.get("layer") or "") in {"visible_stem", "time_visible_stem"})
+    ]
+
+
+def _format_ten_god_position(row: Dict[str, Any]) -> str:
+    label = str(row.get("label") or "")
+    location = str(row.get("location") or row.get("stem") or "")
+    return f"{label}({location})" if label and location else label or location
 
 
 def _adapter_relation_facts(items: List[Any]) -> Tuple[List[str], List[str], Dict[str, List[str]]]:
@@ -525,6 +970,9 @@ def _adapter_match_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str
             }
         if structured_match.get("relevant"):
             return {"matched": False, "reason": "structured_facts_not_matched", "observed": [], "fact_refs": [], "layer": layer}
+
+    if category.startswith("ten_god_interaction"):
+        return {"matched": False, "reason": "ten_god_interaction_specific_facts_required", "observed": [], "fact_refs": [], "layer": layer}
 
     if category in {"structure_anchor", "core_symbol", "stem_branch_attribute"} and (facts.get("day_stem") or facts.get("month_branch")):
         observed = [str(item) for item in [facts.get("day_stem"), facts.get("month_branch")] if str(item)]
@@ -611,6 +1059,22 @@ def _match_adapter_structured_facts(structured: Dict[str, Any], facts: Dict[str,
     all_elements = set(facts.get("all_elements") or set())
     relation_pairs = set(facts.get("relation_pairs") or [])
     relation_pairs_by_type = {str(key): set(value) for key, value in (facts.get("relation_pairs_by_type") or {}).items()}
+    involved_ten_gods = _string_list(structured.get("involved_ten_gods"))
+    if involved_ten_gods:
+        relevant = True
+        ten_god_match = _match_structured_ten_gods(structured, facts)
+        if not ten_god_match.get("matched"):
+            return {
+                "matched": False,
+                "relevant": True,
+                "observed": [],
+                "fact_refs": [],
+                "layer": "ten_god_relation",
+                "missing_ten_gods": list(ten_god_match.get("missing") or []),
+            }
+        observed.extend(str(item) for item in ten_god_match.get("observed") or [] if str(item))
+        fact_refs.extend(str(item) for item in ten_god_match.get("fact_refs") or [] if str(item))
+        layer = "ten_god_relation"
     for branch in _string_list(structured.get("vault_branches")) + _string_list(structured.get("branches")):
         relevant = True
         if branch in branches:
@@ -699,6 +1163,8 @@ def _adapter_reason(rule: Dict[str, Any]) -> str:
         "branch_relation": "Rule DB matched branch-relation facts by layer.",
         "vault": "Rule DB matched vault branch facts and hidden-stem boundary.",
         "ten_god": "Rule DB matched ten-god relationship metadata boundary.",
+        "ten_god_interaction": "Rule DB matched ten-god interaction facts by specific labels.",
+        "ten_god_interaction_mechanism": "Rule DB matched ten-god interaction mechanism boundary.",
         "wealth_boundary": "Rule DB matched wealth-star boundary as structure metadata.",
         "wealth_feature": "Rule DB matched income-structure feature context.",
         "wealth_mechanism": "Rule DB matched income-structure mechanism context.",
@@ -710,6 +1176,8 @@ def _adapter_reason(rule: Dict[str, Any]) -> str:
 
 
 def _adapter_answer_scope(domain: str, category: str) -> str:
+    if category.startswith("ten_god_interaction"):
+        return "explain_ten_god_interaction_without_verdict"
     if category == "vault":
         return "explain_vault_location_hidden_stems_and_boundary"
     if category == "branch_relation":
@@ -724,6 +1192,8 @@ def _adapter_answer_scope(domain: str, category: str) -> str:
 
 
 def _adapter_question_keys(domain: str, category: str) -> List[str]:
+    if category.startswith("ten_god_interaction"):
+        return ["q_ten_god_metadata", "q_signal_combination", "q_read_result_not_fortune"]
     if category == "vault":
         return ["q_vault_structure", "q_hidden_stem_role", "q_time_context_boundary"]
     if category == "branch_relation":
@@ -742,6 +1212,14 @@ def _adapter_question_keys(domain: str, category: str) -> List[str]:
 
 
 def _adapter_score(domain: str, category: str) -> int:
+    if category.startswith("ten_god_interaction"):
+        return 87
+    if category == "strength_model":
+        return 90
+    if domain == "ten_god_relation" or category in {"ten_god", "wealth_boundary"}:
+        return 89
+    if domain == "income_stability" or category in {"wealth_feature", "wealth_mechanism"}:
+        return 88
     if category in {"branch_relation", "vault", "structure_anchor"}:
         return 86
     if category in {"time_boundary", "timing_context"} or domain == "time_structure":
@@ -763,6 +1241,7 @@ def _facts_summary(facts: Dict[str, Any]) -> Dict[str, Any]:
         "relation_types": list(facts.get("relation_types") or []),
         "time_layers": list(facts.get("time_layers") or []),
         "income_signal_count": len(facts.get("income_signals") or {}),
+        "ten_god_labels": sorted(facts.get("ten_god_labels") or []),
     }
 
 

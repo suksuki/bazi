@@ -17,7 +17,8 @@ Knowledge Review Batch
   -> P16 proposal run ledger
   -> Bazi rule proposal drafts
   -> Guided question proposal draft
-  -> existing validation / approval / version record gates
+  -> P17 validation run
+  -> existing approval / version record gates
   -> P13 governance release manifest
 ```
 

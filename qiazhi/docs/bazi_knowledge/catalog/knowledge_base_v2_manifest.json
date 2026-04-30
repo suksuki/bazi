@@ -4,9 +4,66 @@
   "runtime_scope": "no_runtime_inference_mutation",
   "created_from": [
     "docs/bazi_knowledge/source_archive/source_catalog_v1.json",
+    "docs/bazi_knowledge/catalog/bazi_knowledge_taxonomy_master_zh_v1.md",
+    "docs/bazi_knowledge/catalog/knowledge_base_reviewer_catalog_zh_v1.md",
+    "docs/bazi_knowledge/catalog/knowledge_base_gap_review_zh_v1.md",
+    "docs/bazi_knowledge/catalog/topic_review_queue_zh_v1.md",
+    "docs/bazi_knowledge/catalog/knowledge_review_rule_conversion_roadmap_zh_v1.md",
+    "docs/v19/V19_P28G_TEN_GOD_CONFLICT_SYNTHETIC_MATRIX.md",
+    "docs/v19/V19_P28H_TEN_GOD_CONFLICT_REVIEW_TABLE.md",
+    "docs/v19/V19_P28I_TEN_GOD_FAST_PATH_GATE.md",
+    "docs/v19/V19_P28J_TEN_GOD_MECHANISM_CONDITION_MODELS.md",
+    "docs/v19/V19_P28J_FRAMEWORK_ADAPTATION_REVIEW.md",
+    "docs/v19/V19_P28K_TEN_GOD_MECHANISM_EVAL_DATASET.md",
+    "docs/v19/V19_P28L_TEN_GOD_MECHANISM_SIGNAL_GATE.md",
+    "docs/v19/V19_P29_TEN_GOD_MECHANISM_INTERNAL_SCORING.md",
+    "docs/v19/V19_P30_TEN_GOD_MECHANISM_ARBITRATION.md",
+    "docs/v19/V19_P31_ALL_KNOWLEDGE_COVERAGE_AUDIT.md",
+    "docs/v19/V19_P31A_ALL_KNOWLEDGE_FOUNDATION_GAP_PACK.md",
+    "docs/v19/V19_P31B_ALL_KNOWLEDGE_DIRECTORY_COMPLETION.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p27_domain_completion_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p28e_ten_god_interaction_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p28f_ten_god_conflict_family_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p31a_all_knowledge_foundation_gap_knowledge_draft_seeds_v1.json",
+    "docs/bazi_knowledge/packs/p31b_all_knowledge_directory_completion_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/core/core_units_v1.md",
-    "docs/bazi_knowledge/wealth/wealth_units_v1.md"
+    "docs/bazi_knowledge/ten_god/ten_god_units_v1.md",
+    "docs/bazi_knowledge/strength/strength_units_v1.md",
+    "docs/bazi_knowledge/time_context/time_context_units_v1.md",
+    "docs/bazi_knowledge/time_context/luck_flow_activation_units_v1.md",
+    "docs/bazi_knowledge/pattern/pattern_units_v1.md",
+    "docs/bazi_knowledge/pattern/regular/regular_pattern_units_v1.md",
+    "docs/bazi_knowledge/pattern/quality/pattern_quality_units_v1.md",
+    "docs/bazi_knowledge/pattern/special/special_pattern_units_v1.md",
+    "docs/bazi_knowledge/palace/palace_units_v1.md",
+    "docs/bazi_knowledge/blind/lifa/blind_lifa_units_v1.md",
+    "docs/bazi_knowledge/blind/xiangfa/blind_xiangfa_units_v1.md",
+    "docs/bazi_knowledge/blind/jifa/blind_jifa_archive_units_v1.md",
+    "docs/bazi_knowledge/interaction/ten_god_interaction_topics_v1.md",
+    "docs/bazi_knowledge/interaction/ten_god_conflict_constraint_mixed_topic_v1.md",
+    "docs/bazi_knowledge/geo_context/geo_context_units_v1.md",
+    "docs/bazi_knowledge/answer_expression/answer_expression_units_v1.md",
+    "docs/bazi_knowledge/wealth/wealth_units_v1.md",
+    "docs/bazi_knowledge/branch_advanced/branch_advanced_units_v1.md",
+    "docs/bazi_knowledge/calendar/calendar_units_v1.md",
+    "docs/bazi_knowledge/career/career_units_v1.md",
+    "docs/bazi_knowledge/relationship/relationship_archive_units_v1.md",
+    "docs/bazi_knowledge/health/health_archive_units_v1.md",
+    "docs/bazi_knowledge/family/family_archive_units_v1.md",
+    "docs/bazi_knowledge/children/children_archive_units_v1.md",
+    "docs/bazi_knowledge/growth_phase/growth_phase_units_v1.md",
+    "docs/bazi_knowledge/nayin/nayin_archive_units_v1.md",
+    "docs/bazi_knowledge/shensha/shensha_archive_units_v1.md",
+    "docs/bazi_knowledge/auxiliary_pillars/auxiliary_pillars_archive_units_v1.md",
+    "docs/bazi_knowledge/auxiliary_symbols/auxiliary_symbols_archive_units_v1.md",
+    "docs/bazi_knowledge/useful_god/useful_god_archive_units_v1.md",
+    "docs/bazi_knowledge/timing/timing_archive_units_v1.md",
+    "docs/bazi_knowledge/lab/review_ui_units_v1.md",
+    "docs/bazi_knowledge/rule_db/rule_db_gate_units_v1.md",
+    "docs/bazi_knowledge/personality/personality_archive_units_v1.md"
   ],
   "layers": [
     {
@@ -23,8 +80,8 @@
     },
     {
       "layer": "L2_knowledge_unit_drafts",
-      "path": "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
-      "purpose": "Store structured Bazi knowledge drafts grouped by risk and domain.",
+      "path": "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json + docs/bazi_knowledge/packs/*_knowledge_draft_seeds_*.json",
+      "purpose": "Store structured Bazi knowledge drafts grouped by risk and domain. New content packs are added under packs/ instead of patching the legacy seed file.",
       "activation_policy": "requires_review_batch_then_proposal"
     },
     {
@@ -35,7 +92,7 @@
     },
     {
       "layer": "L4_rule_and_question_proposals",
-      "path": "v19.lab_interfaces:knowledge_batch_proposal_runs,guided_question_proposals,bazi_rule_proposals,synthetic_promotion_candidates",
+      "path": "v19.lab_interfaces:knowledge_batch_proposal_runs,proposal_validation_runs,proposal_review_packets,guided_question_proposals,bazi_rule_proposals,synthetic_promotion_candidates",
       "purpose": "Hold controlled proposals generated from reviewed drafts or synthetic failures.",
       "activation_policy": "validation_and_approval_required"
     },
@@ -49,39 +106,99 @@
   "domains": [
     {
       "domain": "core_structure",
+      "display_zh": "核心结构",
       "directory": "docs/bazi_knowledge/core/",
-      "current_seed_prefixes": ["core.", "p9.", "p10.", "p14."],
+      "directory_display_zh": "核心结构知识库",
+      "current_seed_prefixes": ["core.", "p9.", "p10.", "p14.", "p21.", "p26.", "p27.branch_relation"],
       "rule_policy": "R0-R2 may enter proposals after review; R3/R4 remain archive/reference unless explicitly approved."
     },
     {
       "domain": "ten_god",
+      "display_zh": "十神",
       "directory": "docs/bazi_knowledge/ten_god/",
-      "current_seed_prefixes": ["ten_god.", "core.ten_god", "p10.ten_god", "p14.ten_god"],
+      "directory_display_zh": "十神知识库",
+      "current_seed_prefixes": ["ten_god.", "core.ten_god", "p10.ten_god", "p14.ten_god", "p21.ten_god", "p26.ten_god", "p27.ten_god"],
       "rule_policy": "Relationship metadata only; no life-event verdicts."
     },
     {
       "domain": "strength",
+      "display_zh": "强弱",
       "directory": "docs/bazi_knowledge/strength/",
-      "current_seed_prefixes": ["strength.", "p10.month_command", "p14.month_command", "p14.useful_god"],
+      "directory_display_zh": "强弱证据知识库",
+      "current_seed_prefixes": ["strength.", "p10.month_command", "p14.month_command", "p14.useful_god", "p26.strength", "p27.strength"],
       "rule_policy": "Evidence model only until analyst-reviewed strength/useful-god model exists."
     },
     {
       "domain": "wealth",
+      "display_zh": "财富 / 收入结构",
       "directory": "docs/bazi_knowledge/wealth/",
-      "current_seed_prefixes": ["wealth.", "ten_god.wealth", "p14.ten_god.wealth"],
+      "directory_display_zh": "财富结构知识库",
+      "current_seed_prefixes": ["wealth.", "ten_god.wealth", "p14.ten_god.wealth", "p21.income", "p26.wealth", "p26.income", "p27.wealth"],
       "rule_policy": "May support income_stability evidence; no wealth prediction."
     },
     {
       "domain": "answer_expression",
+      "display_zh": "回答表达",
       "directory": "docs/bazi_knowledge/answer_expression/",
+      "directory_display_zh": "回答表达知识库",
       "current_seed_prefixes": ["answer.", "p10.answer", "p9.structural_signal_adapter"],
       "rule_policy": "User-facing wording guidance only; no new facts."
     },
     {
       "domain": "luck_flow",
+      "display_zh": "大运流年 / 时间背景",
       "directory": "docs/bazi_knowledge/time_context/",
-      "current_seed_prefixes": ["luck_flow.", "time."],
-      "rule_policy": "Time context only unless a future reviewed time-aware inference proposal exists."
+      "directory_display_zh": "时间背景知识库",
+      "current_seed_prefixes": ["luck_flow.", "time.", "activation.", "p21.time", "p26.time", "p27.time", "p31a.time", "p32.activation"],
+      "rule_policy": "Time context and activation may explain triggered structures; event timing and result predictions remain blocked."
+    },
+    {
+      "domain": "pattern",
+      "display_zh": "格局",
+      "directory": "docs/bazi_knowledge/pattern/",
+      "directory_display_zh": "格局知识库",
+      "current_seed_prefixes": ["p27.pattern", "p31a.pattern"],
+      "rule_policy": "Pattern candidates remain inactive by default; special/follow/transform patterns require separate model review."
+    },
+    {
+      "domain": "palace",
+      "display_zh": "宫位象法",
+      "directory": "docs/bazi_knowledge/palace/",
+      "directory_display_zh": "宫位象法知识库",
+      "current_seed_prefixes": ["p31a.palace"],
+      "rule_policy": "Palace labels may position structural evidence; no family, marriage, children, career, or late-life verdicts."
+    },
+    {
+      "domain": "blind",
+      "display_zh": "盲派理法 / 象法",
+      "directory": "docs/bazi_knowledge/blind/",
+      "directory_display_zh": "盲派知识库",
+      "current_seed_prefixes": ["p31a.blind"],
+      "rule_policy": "Blind-school concepts are structure labels or archive material only; no formulaic verdict output."
+    },
+    {
+      "domain": "interaction",
+      "display_zh": "十神组合类知识",
+      "directory": "docs/bazi_knowledge/interaction/",
+      "directory_display_zh": "十神组合类知识库",
+      "current_seed_prefixes": ["p28.interaction"],
+      "rule_policy": "First capture interaction existence and mechanism boundaries; traditional verdicts remain R3-R4 archive-only."
+    },
+    {
+      "domain": "geo_context",
+      "display_zh": "地理信息 / 环境背景",
+      "directory": "docs/bazi_knowledge/geo_context/",
+      "directory_display_zh": "地理信息与环境背景知识库",
+      "current_seed_prefixes": ["geo.", "p31a.geo", "p33.geo"],
+      "rule_policy": "Use as chart-calculation metadata or climate context only; no location-based fortune verdicts."
+    },
+    {
+      "domain": "p31b_directory_completion_domains",
+      "display_zh": "P31B 剩余目录闭环",
+      "directory": "docs/bazi_knowledge/",
+      "directory_display_zh": "全知识剩余目录补齐",
+      "current_seed_prefixes": ["p31b."],
+      "rule_policy": "Directory completion and archive boundaries only; topic-specific condition models and eval samples are required before activation."
     }
   ],
   "review_batches": [
@@ -99,6 +216,138 @@
       "batch_key": "p15.p14.r3_archive_reference_only",
       "risk": "R3",
       "recommended_action": "archive_reference_only_until_architect_or_analyst_review"
+    },
+    {
+      "batch_key": "p21.r1_guided_question_structure_boundaries",
+      "risk": "R1",
+      "recommended_action": "analyst_fast_review_before_proposal"
+    },
+    {
+      "batch_key": "p21.r2_income_collision_review",
+      "risk": "R2",
+      "recommended_action": "source_version_review_before_rule_proposal"
+    }
+  ],
+  "content_packs": [
+    {
+      "pack_id": "p21.guided_question_collision_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
+      "stage": "P21_KNOWLEDGE_BASE_V2_CONTENT_PACK",
+      "status": "draft_pack_only",
+      "draft_count": 10,
+      "risk_levels": ["R1", "R2"],
+      "source_context": [
+        "P19 chart-specific question ranking",
+        "P20 guided question diversity audit",
+        "P11 synthetic collision matrix"
+      ],
+      "activation_policy": "seed_to_review_batches_only_no_runtime_mutation"
+    },
+    {
+      "pack_id": "p26.rule_conversion_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
+      "stage": "P26_RULE_CONVERSION_KNOWLEDGE_PACK",
+      "status": "draft_pack_rule_db_ready",
+      "draft_count": 12,
+      "risk_levels": ["R1", "R2"],
+      "source_context": [
+        "P24 item decision approval preflight",
+        "P25 controlled approval execution gate",
+        "Bazi Rule DB engine adapter"
+      ],
+      "activation_policy": "seed_and_rule_db_ingest_allowed_no_result_mutation"
+    },
+    {
+      "pack_id": "p27.domain_completion_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p27_domain_completion_knowledge_draft_seeds_v1.json",
+      "stage": "P27_DOMAIN_COMPLETION_AND_SMART_RULE_GATE",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 40,
+      "risk_levels": ["R1", "R2", "R3"],
+      "source_context": [
+        "Legacy algorithm coverage review",
+        "Knowledge directory completion",
+        "P11 synthetic collision matrix"
+      ],
+      "activation_policy": "seed_to_rule_db_candidates; R1 synthetic_gate_candidate may activate only through P27 smart gate and passing P11 regression"
+    },
+    {
+      "pack_id": "p28e.ten_god_interaction_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p28e_ten_god_interaction_knowledge_draft_seeds_v1.json",
+      "stage": "P28E_TEN_GOD_INTERACTION_REVIEW",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 24,
+      "risk_levels": ["R1", "R2"],
+      "source_context": [
+        "Bazi knowledge taxonomy L3",
+        "Ten-god interaction topic review",
+        "Rule DB structural signal adapter"
+      ],
+      "activation_policy": "seed_to_rule_db_candidates; keep engine disabled until class review and synthetic regression cover the interaction family"
+    },
+    {
+      "pack_id": "p28f.ten_god_conflict_family_knowledge_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p28f_ten_god_conflict_family_knowledge_draft_seeds_v1.json",
+      "stage": "P28F_TEN_GOD_CONFLICT_FAMILY_REVIEW",
+      "status": "draft_pack_rule_db_candidate",
+      "draft_count": 20,
+      "risk_levels": ["R1", "R2"],
+      "source_context": [
+        "Ten-god conflict/constraint/mixed topic",
+        "P28E ten-god interaction review",
+        "Bazi knowledge taxonomy L3"
+      ],
+      "activation_policy": "seed_to_rule_db_candidates; keep engine disabled until the full conflict family is reviewed with synthetic collision cases"
+    },
+    {
+      "pack_id": "p31a.all_knowledge_foundation_gap_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p31a_all_knowledge_foundation_gap_knowledge_draft_seeds_v1.json",
+      "stage": "P31A_ALL_KNOWLEDGE_FOUNDATION_GAP_PACK",
+      "status": "draft_pack_foundation_gap_fill",
+      "draft_count": 35,
+      "risk_levels": ["R1", "R2", "R3"],
+      "source_context": [
+        "P31 all-knowledge coverage audit",
+        "Bazi knowledge taxonomy master",
+        "P30 dual-track migration policy"
+      ],
+      "domains": ["blind", "palace", "pattern", "luck_flow", "geo_context", "strength", "core_structure"],
+      "activation_policy": "seed_to_rule_db_candidates_only; no runtime activation until topic-specific condition models, eval samples, shadow gates, and arbitration pass"
+    },
+    {
+      "pack_id": "p31b.all_knowledge_directory_completion_pack.v1",
+      "path": "docs/bazi_knowledge/packs/p31b_all_knowledge_directory_completion_knowledge_draft_seeds_v1.json",
+      "stage": "P31B_ALL_KNOWLEDGE_DIRECTORY_COMPLETION",
+      "status": "draft_pack_directory_completion",
+      "draft_count": 36,
+      "risk_levels": ["R1", "R2", "R3"],
+      "source_context": [
+        "P31 all-knowledge coverage audit",
+        "P31A foundation gap pack",
+        "Bazi knowledge taxonomy master"
+      ],
+      "domains": [
+        "branch_advanced",
+        "calendar",
+        "career",
+        "relationship",
+        "health",
+        "family",
+        "children",
+        "growth_phase",
+        "nayin",
+        "shensha",
+        "auxiliary_pillars",
+        "auxiliary_symbols",
+        "useful_god",
+        "timing",
+        "lab",
+        "rule_db",
+        "personality",
+        "interaction",
+        "luck_flow"
+      ],
+      "activation_policy": "seed_to_rule_db_candidates_only; high-risk domains remain archive-first and all mechanism/domain rules require condition models and eval gates"
     }
   ],
   "proposal_generation": {
@@ -121,12 +370,561 @@
     ],
     "runtime_scope": "proposal_draft_only_no_runtime_mutation"
   },
+  "proposal_validation": {
+    "stage": "P17_PROPOSAL_SCHEMA_VALIDATION_RUNS",
+    "entrypoints": [
+      "GET /api/lab/proposal-validation-runs",
+      "POST /api/lab/proposal-validation-runs"
+    ],
+    "inputs": [
+      "bazi_rule_proposals",
+      "guided_question_proposals"
+    ],
+    "outputs": [
+      "proposal_validation_runs",
+      "proposal.status=validation_ready",
+      "proposal.status=validation_failed"
+    ],
+    "forbidden_outputs": [
+      "approval",
+      "version_record",
+      "runtime_mutation"
+    ],
+    "runtime_scope": "schema_validation_only_no_runtime_mutation"
+  },
+  "proposal_review_packets": {
+    "stage": "P18_PROPOSAL_APPROVAL_REVIEW_PACKETS",
+    "entrypoints": [
+      "GET /api/lab/proposal-review-packets",
+      "POST /api/lab/proposal-review-packets",
+      "POST /api/lab/proposal-review-packets/{packet_id}/decisions"
+    ],
+    "inputs": [
+      "proposal_validation_runs"
+    ],
+    "outputs": [
+      "proposal_review_packets",
+      "proposal_review_packet_decision_records"
+    ],
+    "forbidden_outputs": [
+      "auto_approval",
+      "version_record",
+      "runtime_mutation"
+    ],
+    "runtime_scope": "review_packet_only_human_decision_required"
+  },
+  "proposal_review_packet_decisions": {
+    "stage": "P23_REVIEW_PACKET_DECISION_LEDGER",
+    "entrypoints": [
+      "POST /api/lab/proposal-review-packets/{packet_id}/decisions",
+      "POST /api/lab/proposal-review-packets/{packet_id}/approval-preflight",
+      "GET /api/lab/proposal-review-packets"
+    ],
+    "inputs": [
+      "proposal_review_packets",
+      "analyst_or_admin_decision"
+    ],
+    "outputs": [
+      "proposal_review_packet_decision_records"
+    ],
+    "allowed_decisions": [
+      "approve_candidate",
+      "reject_candidate",
+      "needs_revision",
+      "hold"
+    ],
+    "forbidden_outputs": [
+      "auto_approval",
+      "NO_PROPOSAL_STATUS_CHANGE",
+      "version_record",
+      "runtime_mutation"
+    ],
+    "runtime_scope": "decision_ledger_only_no_proposal_status_change"
+  },
+  "proposal_review_approval_preflight": {
+    "stage": "P24_ITEM_DECISION_APPROVAL_PREFLIGHT",
+    "entrypoints": [
+      "POST /api/lab/proposal-review-packets/{packet_id}/approval-preflight",
+      "GET /api/lab/proposal-review-packets"
+    ],
+    "inputs": [
+      "proposal_review_packets",
+      "proposal_scoped_decision_records"
+    ],
+    "required_checks": [
+      "packet_ready",
+      "items_present",
+      "all_items_validation_passed",
+      "all_proposals_exist",
+      "all_proposals_validation_ready",
+      "all_items_have_item_decision",
+      "all_item_decisions_approve_candidate",
+      "no_packet_mutation_flags"
+    ],
+    "outputs": [
+      "approval_preflight_records"
+    ],
+    "forbidden_outputs": [
+      "auto_approval",
+      "NO_PROPOSAL_STATUS_CHANGE",
+      "version_record",
+      "runtime_mutation"
+    ],
+    "runtime_scope": "approval_preflight_report_only_no_approval_mutation"
+  },
+  "proposal_review_controlled_approval": {
+    "stage": "P25_CONTROLLED_APPROVAL_EXECUTION_GATE",
+    "entrypoints": [
+      "POST /api/lab/proposal-review-packets/{packet_id}/controlled-approval",
+      "GET /api/lab/proposal-review-packets"
+    ],
+    "inputs": [
+      "approval_review_ready_packet",
+      "approval_preflight_ready_record",
+      "proposal_scoped_approve_candidate_decisions"
+    ],
+    "required_checks": [
+      "latest_preflight_is_approval_preflight_ready",
+      "packet_items_still_validation_ready",
+      "latest_item_decisions_are_approve_candidate",
+      "no_version_record_created",
+      "no_runtime_mutation"
+    ],
+    "outputs": [
+      "approval_execution_records",
+      "proposal.status=approved"
+    ],
+    "forbidden_outputs": [
+      "auto_approval",
+      "version_record",
+      "runtime_mutation"
+    ],
+    "runtime_scope": "controlled_proposal_approval_only_no_version_or_runtime_mutation"
+  },
+  "knowledge_to_rules_fast_path": {
+    "stage": "P26_KNOWLEDGE_TO_RULES_FAST_PATH",
+    "entrypoints": [
+      "POST /api/lab/p26/knowledge-to-rules",
+      "POST /api/admin/bazi-rule-db/ingest-current",
+      "GET /api/admin/bazi-rule-db/rules"
+    ],
+    "inputs": [
+      "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
+      "P25-approved rule proposals",
+      "P25-approved guided question proposals",
+      "current knowledge drafts"
+    ],
+    "outputs": [
+      "bazi_rule_versions",
+      "guided_question_library_versions",
+      "bazi_rule_db.rules"
+    ],
+    "runtime_scope": "rule_db_engine_adapter_allowed_no_result_mutation",
+    "guardrails": [
+      "P26_KNOWLEDGE_TO_RULES_FAST_PATH",
+      "P25_APPROVAL_REQUIRED_FOR_VERSION_RECORD",
+      "RULE_DB_ENGINE_ADAPTER_ONLY",
+      "NO_RESULT_MUTATION",
+      "NO_FORTUNE"
+    ]
+  },
+  "smart_rule_activation_gate": {
+    "stage": "P27_SMART_RULE_ACTIVATION_GATE",
+    "entrypoints": [
+      "POST /api/lab/p27/smart-rule-gate",
+      "GET /api/admin/bazi-rule-db/rules"
+    ],
+    "inputs": [
+      "docs/bazi_knowledge/packs/p27_domain_completion_knowledge_draft_seeds_v1.json",
+      "bazi_rule_db.rules",
+      "P11 synthetic collision matrix"
+    ],
+    "required_checks": [
+      "knowledge_drafts_seeded",
+      "rule_db_candidates_ingested",
+      "candidate_risk_at_or_below_R1_by_default",
+      "candidate_confidence_at_or_above_gate",
+      "synthetic_gate_candidate_marker_present",
+      "pre_activation_P11_regression_pass",
+      "post_activation_P11_regression_pass_or_rollback"
+    ],
+    "outputs": [
+      "bazi_rule_db.rules.engine_enabled=true for selected low-risk candidates",
+      "last_smart_activation audit record"
+    ],
+    "runtime_scope": "rule_db_engine_adapter_signal_only_no_result_mutation",
+    "guardrails": [
+      "P27_SMART_RULE_ACTIVATION_GATE",
+      "SYNTHETIC_REGRESSION_REQUIRED",
+      "LOW_RISK_ONLY_BY_DEFAULT",
+      "TRANSPARENT_ACTIVATION_LOG",
+      "NO_RESULT_MUTATION",
+      "NO_FORTUNE"
+    ]
+  },
+  "p28g_ten_god_conflict_synthetic_matrix": {
+    "stage": "P28G_TEN_GOD_CONFLICT_SYNTHETIC_MATRIX",
+    "entrypoint": "v19.synthetic_validation.ten_god_conflict_matrix.run_p28g_ten_god_conflict_matrix",
+    "case_count": 24,
+    "expected_rule_candidates": 48,
+    "inputs": [
+      "docs/bazi_knowledge/packs/p28e_ten_god_interaction_knowledge_draft_seeds_v1.json",
+      "docs/bazi_knowledge/packs/p28f_ten_god_conflict_family_knowledge_draft_seeds_v1.json",
+      "docs/bazi_knowledge/packs/p31b_all_knowledge_directory_completion_knowledge_draft_seeds_v1.json",
+      "bazi_rule_db.rules"
+    ],
+    "outputs": [
+      "candidate coverage matrix",
+      "activation boundary summary",
+      "missing_or_misconfigured candidate list"
+    ],
+    "runtime_scope": "synthetic_coverage_review_only_no_rule_activation",
+    "guardrails": [
+      "SYNTHETIC_EXPLICIT_PILLARS_ONLY",
+      "NO_REAL_BIRTHDATA",
+      "NO_RULE_ACTIVATION",
+      "NO_TRADITIONAL_VERDICT_OUTPUT"
+    ]
+  },
+  "p28h_ten_god_conflict_review_table": {
+    "stage": "P28H_TEN_GOD_CONFLICT_REVIEW_TABLE",
+    "entrypoint": "v19.synthetic_validation.ten_god_conflict_matrix.build_p28h_ten_god_conflict_review_table",
+    "review_item_count": 24,
+    "fast_path_candidate_count": 4,
+    "condition_model_required_count": 20,
+    "inputs": [
+      "P28G_TEN_GOD_CONFLICT_SYNTHETIC_CASES",
+      "docs/bazi_knowledge/packs/p28e_ten_god_interaction_knowledge_draft_seeds_v1.json",
+      "docs/bazi_knowledge/packs/p28f_ten_god_conflict_family_knowledge_draft_seeds_v1.json",
+      "docs/bazi_knowledge/packs/p31b_all_knowledge_directory_completion_knowledge_draft_seeds_v1.json"
+    ],
+    "outputs": [
+      "review decision table",
+      "fast-path candidate list",
+      "condition model gap list",
+      "archive-only verdict list"
+    ],
+    "runtime_scope": "review_decision_table_only_no_rule_activation",
+    "guardrails": [
+      "REVIEW_TABLE_ONLY",
+      "NO_AUTO_RULE_ACTIVATION",
+      "EXISTENCE_RULES_ONLY_FOR_FAST_PATH",
+      "MECHANISM_REQUIRES_CONDITION_MODEL",
+      "TRADITIONAL_VERDICTS_ARCHIVE_ONLY"
+    ]
+  },
+  "p28i_ten_god_fast_path_gate": {
+    "stage": "P28I_TEN_GOD_FAST_PATH_GATE",
+    "entrypoint": "v19.synthetic_validation.ten_god_conflict_matrix.run_p28i_ten_god_fast_path_gate",
+    "fast_path_candidate_count": 4,
+    "eligible_count": 4,
+    "activation_result": "dry_run_pass_and_activation_ready",
+    "activated_rule_ids": [
+      "p28.interaction.shangguan_see_official.existence",
+      "p28.interaction.peer_share_wealth.existence",
+      "p28.interaction.output_mixed.existence",
+      "p28.interaction.resource_mixed.existence"
+    ],
+    "inputs": [
+      "P28H fast-path review table",
+      "bazi_rule_db.rules",
+      "P28G synthetic cases"
+    ],
+    "outputs": [
+      "fast-path gate report",
+      "specific ten-god interaction signal audit",
+      "optional engine activation for R1 existence rules"
+    ],
+    "runtime_scope": "rule_db_engine_adapter_signal_only_no_result_mutation",
+    "guardrails": [
+      "FAST_PATH_R1_EXISTENCE_ONLY",
+      "TEN_GOD_INTERACTION_SPECIFIC_MATCH_REQUIRED",
+      "SYNTHETIC_SIGNAL_AUDIT_REQUIRED",
+      "NO_MECHANISM_OR_VERDICT_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_FORTUNE"
+    ]
+  },
+  "p28j_ten_god_mechanism_condition_models": {
+    "stage": "P28J_TEN_GOD_MECHANISM_CONDITION_MODELS",
+    "entrypoint": "v19.synthetic_validation.ten_god_conflict_matrix.build_p28j_ten_god_mechanism_condition_models",
+    "mechanism_candidate_count": 20,
+    "condition_model_count": 20,
+    "activation_ready_count": 0,
+    "activation_blocked_count": 20,
+    "inputs": [
+      "P28H condition_model_required_before_activation items",
+      "bazi_rule_db.rules",
+      "P28G synthetic cases"
+    ],
+    "outputs": [
+      "mechanism condition model registry",
+      "source-layer/capacity/same-layer/palace/answer-boundary axes",
+      "P28K synthetic pair requirements"
+    ],
+    "runtime_scope": "condition_model_registry_only_no_rule_activation",
+    "guardrails": [
+      "MECHANISM_CONDITION_MODEL_ONLY",
+      "NO_MECHANISM_RULE_ACTIVATION",
+      "SOURCE_LAYER_AND_CAPACITY_REQUIRED",
+      "SYNTHETIC_PAIR_COVERAGE_REQUIRED",
+      "NO_RESULT_MUTATION",
+      "NO_FORTUNE"
+    ]
+  },
+  "p28k_ten_god_mechanism_eval_dataset": {
+    "stage": "P28K_TEN_GOD_MECHANISM_EVAL_DATASET",
+    "entrypoints": [
+      "v19.synthetic_validation.ten_god_conflict_matrix.build_p28k_ten_god_mechanism_eval_dataset",
+      "v19.synthetic_validation.ten_god_conflict_matrix.run_p28k_ten_god_mechanism_regression"
+    ],
+    "mechanism_count": 20,
+    "sample_count": 172,
+    "by_polarity": {
+      "positive": 66,
+      "negative": 66,
+      "distractor_time": 20,
+      "distractor_hidden": 20
+    },
+    "standard_samples_per_mechanism": 8,
+    "complex_samples_per_mechanism": 12,
+    "complex_mechanisms": [
+      "合杀留官",
+      "合官留杀",
+      "羊刃驾杀"
+    ],
+    "activation_allowed": false,
+    "quality_thresholds": {
+      "precision_required": 1.0,
+      "false_positive_allowed": 0,
+      "forbidden_text_allowed": 0
+    },
+    "runtime_scope": "eval_dataset_and_regression_only_no_rule_activation",
+    "guardrails": [
+      "EVAL_DATASET_ONLY",
+      "NO_MECHANISM_RULE_ACTIVATION",
+      "STRICT_POSITIVE_AXES_REQUIRED",
+      "NEGATIVE_AND_DISTRACTOR_COVERAGE_REQUIRED",
+      "NO_REAL_BIRTHDATA",
+      "NO_FORTUNE"
+    ]
+  },
+  "p28l_ten_god_mechanism_signal_gate": {
+    "stage": "P28L_TEN_GOD_MECHANISM_SIGNAL_GATE",
+    "entrypoint": "v19.synthetic_validation.ten_god_conflict_matrix.run_p28l_ten_god_mechanism_signal_gate",
+    "mechanism_count": 20,
+    "sample_count": 172,
+    "shadow_signal_pass_count": 20,
+    "false_positive_count": 0,
+    "missed_positive_count": 0,
+    "production_activation_deferred_count": 20,
+    "activation_allowed": false,
+    "activation_updated_count": 0,
+    "shadow_min_confidence": 0.6,
+    "inputs": [
+      "P28K eval dataset",
+      "P28K regression",
+      "Rule DB R2 mechanism candidates"
+    ],
+    "outputs": [
+      "shadow mechanism signal gate report",
+      "positive hit / negative no-hit audit",
+      "production activation deferral blockers"
+    ],
+    "runtime_scope": "shadow_signal_gate_only_no_runtime_rule_activation",
+    "guardrails": [
+      "SHADOW_SIGNAL_GATE_ONLY",
+      "P28K_REGRESSION_REQUIRED",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_MECHANISM_VERDICT_OUTPUT",
+      "FALSE_POSITIVE_ZERO_REQUIRED",
+      "AUDITABLE_GATE_REPORT"
+    ]
+  },
+  "p29_ten_god_mechanism_internal_scoring": {
+    "stage": "P29_TEN_GOD_MECHANISM_INTERNAL_SCORING",
+    "entrypoint": "v19.synthetic_validation.ten_god_conflict_matrix.run_p29_ten_god_mechanism_internal_scoring",
+    "mechanism_count": 20,
+    "rank_ready_count": 20,
+    "blocked_count": 0,
+    "activation_allowed": false,
+    "activation_updated_count": 0,
+    "user_facing_probability_allowed": false,
+    "score_factors": [
+      "rule_db_prior_confidence_floor",
+      "p28k_positive_hit_rate",
+      "p28k_negative_precision",
+      "p28k_sample_coverage"
+    ],
+    "inputs": [
+      "P28L shadow signal gate",
+      "Rule DB R2 mechanism candidates",
+      "P28K positive/negative sample coverage"
+    ],
+    "outputs": [
+      "internal rank score",
+      "score tier",
+      "auditable score factors"
+    ],
+    "runtime_scope": "internal_ranking_only_no_user_probability_no_rule_activation",
+    "guardrails": [
+      "INTERNAL_SCORING_ONLY",
+      "NO_USER_FACING_PROBABILITY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "P28L_SHADOW_GATE_REQUIRED",
+      "RANKING_ONLY_NO_VERDICT",
+      "AUDITABLE_SCORE_FACTORS"
+    ]
+  },
+  "p30_ten_god_mechanism_arbitration": {
+    "stage": "P30_TEN_GOD_MECHANISM_ARBITRATION",
+    "entrypoint": "v19.synthetic_validation.ten_god_conflict_matrix.run_p30_ten_god_mechanism_arbitration",
+    "scenario_count": 5,
+    "scenario_pass_count": 5,
+    "blocked_count": 0,
+    "primary_focus_count": 5,
+    "migration_backlog_count": 5,
+    "activation_allowed": false,
+    "activation_updated_count": 0,
+    "legacy_migration_policy": "dual_track_forward_first_then_backfill",
+    "uses_context_weight": true,
+    "inputs": [
+      "P29 internal scores",
+      "P28K/P28L mechanism sample gates",
+      "Rule DB R2 mechanism candidates"
+    ],
+    "outputs": [
+      "primary mechanism focus",
+      "secondary/background mechanism context",
+      "legacy knowledge migration backlog"
+    ],
+    "runtime_scope": "arbitration_only_no_rule_activation_no_user_probability",
+    "guardrails": [
+      "ARBITRATION_ONLY",
+      "P29_INTERNAL_SCORING_REQUIRED",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_USER_FACING_PROBABILITY",
+      "NO_MECHANISM_VERDICT_OUTPUT",
+      "OLD_KNOWLEDGE_MIGRATION_BACKLOG_ONLY"
+    ]
+  },
+  "p31_all_knowledge_coverage_audit": {
+    "stage": "P31_ALL_KNOWLEDGE_COVERAGE_AUDIT",
+    "entrypoint": "v19.knowledge_base_audit.run_p31_all_knowledge_coverage_audit",
+    "taxonomy_item_count": 154,
+    "knowledge_draft_count": 234,
+    "expected_directory_count": 33,
+    "existing_directory_count": 33,
+    "missing_directory_count": 0,
+    "taxonomy_status": {
+      "已有": 25,
+      "部分": 125,
+      "归档": 4
+    },
+    "runtime_scope": "audit_only_no_runtime_rule_activation",
+    "migration_policy": "dual_track_forward_first_then_backfill",
+    "guardrails": [
+      "AUDIT_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_KNOWLEDGE_REWRITE",
+      "NEW_FRAMEWORK_FIT_REVIEW",
+      "MISSING_TOPICS_TO_BACKLOG",
+      "NO_FORTUNE"
+    ]
+  },
+  "p31a_all_knowledge_foundation_gap_pack": {
+    "stage": "P31A_ALL_KNOWLEDGE_FOUNDATION_GAP_PACK",
+    "pack_id": "p31a.all_knowledge_foundation_gap_pack.v1",
+    "path": "docs/bazi_knowledge/packs/p31a_all_knowledge_foundation_gap_knowledge_draft_seeds_v1.json",
+    "draft_count": 35,
+    "knowledge_draft_count_after_seed": 198,
+    "taxonomy_missing_count_after_update": 18,
+    "domains": ["blind", "palace", "pattern", "luck_flow", "geo_context", "strength", "core_structure"],
+    "activation_allowed": false,
+    "runtime_scope": "draft_pack_only_no_runtime_activation",
+    "guardrails": [
+      "DRAFT_ONLY",
+      "FOUNDATION_GAP_FILL",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_FORTUNE",
+      "NO_TRADITIONAL_VERDICT_DIRECT_OUTPUT"
+    ]
+  },
+  "p31b_all_knowledge_directory_completion": {
+    "stage": "P31B_ALL_KNOWLEDGE_DIRECTORY_COMPLETION",
+    "pack_id": "p31b.all_knowledge_directory_completion_pack.v1",
+    "path": "docs/bazi_knowledge/packs/p31b_all_knowledge_directory_completion_knowledge_draft_seeds_v1.json",
+    "draft_count": 36,
+    "knowledge_draft_count_after_seed": 234,
+    "taxonomy_missing_count_after_update": 0,
+    "expected_directory_count": 33,
+    "existing_directory_count": 33,
+    "missing_directory_count": 0,
+    "activation_allowed": false,
+    "runtime_scope": "draft_pack_only_directory_completion_no_runtime_activation",
+    "guardrails": [
+      "DRAFT_ONLY",
+      "ALL_DIRECTORY_COMPLETION",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_FORTUNE",
+      "HIGH_RISK_DOMAINS_ARCHIVE_FIRST"
+    ]
+  },
+  "v19_framework_adaptation_review": {
+    "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
+    "decision": "extend_current_framework_do_not_replace_now",
+    "recommended_upgrades": [
+      "condition_model_registry",
+      "synthetic_pair_generator",
+      "eval_dataset_export",
+      "durable_run_ledger",
+      "smart_approval_tripwires"
+    ],
+    "external_framework_position": {
+      "openai_agents_sdk": "borrow guardrail/tripwire pattern later; do not rewrite now",
+      "openai_evals": "export local synthetic matrices as eval datasets after local pytest stabilizes",
+      "langgraph": "consider later for durable long-running workflow orchestration"
+    },
+    "runtime_scope": "architecture_review_only_no_runtime_mutation"
+  },
+  "p21_review_packet_pipeline": {
+    "stage": "P22_P21_R1_PROPOSAL_REVIEW_PACKET",
+    "entrypoints": [
+      "POST /api/lab/p21/review-packet"
+    ],
+    "eligible_batches": [
+      "p21.r1_guided_question_structure_boundaries"
+    ],
+    "blocked_until_review": [
+      "p21.r2_income_collision_review"
+    ],
+    "outputs": [
+      "knowledge_batch_proposal_runs",
+      "proposal_validation_runs",
+      "proposal_review_packets"
+    ],
+    "forbidden_outputs": [
+      "auto_approval",
+      "version_record",
+      "runtime_mutation"
+    ],
+    "runtime_scope": "review_packet_only_no_runtime_mutation"
+  },
   "guardrails": [
     "CATALOG_ONLY",
     "NO_RUNTIME_MUTATION",
     "NO_AUTO_LEARNING",
     "ANALYST_REVIEW_REQUIRED",
     "R2_R3_ANALYST_REVIEW_BEFORE_PROPOSAL",
+    "P17_SCHEMA_VALIDATION_ONLY",
+    "P18_REVIEW_PACKET_ONLY",
+    "P21_NEW_CONTENT_PACKS_SEEDED_AS_DRAFTS_ONLY",
+    "P22_P21_R1_REVIEW_PACKET_ONLY",
+    "P23_DECISION_LEDGER_ONLY",
+    "P24_APPROVAL_PREFLIGHT_ONLY",
+    "P25_CONTROLLED_APPROVAL_ONLY",
+    "P26_KNOWLEDGE_TO_RULES_FAST_PATH",
+    "P27_SMART_RULE_ACTIVATION_GATE",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

@@ -166,6 +166,12 @@ $("seedP14ReviewBatches").addEventListener("click", async () => {
   await loadKnowledgeReviewBatches();
 });
 
+$("seedP21ReviewBatches").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/knowledge-review-batches/seed-p21", {});
+  $("kbReviewBatchStatus").textContent = `P21 batches: created ${result.created_count || 0} · skipped ${result.skipped_count || 0} · new KB drafts only`;
+  await loadKnowledgeReviewBatches();
+});
+
 $("createKbReviewBatch").addEventListener("click", async () => {
   const result = await postJson("/api/lab/knowledge-review-batches", {
     batch_name: $("kbReviewBatchName").value,
@@ -198,6 +204,48 @@ $("createKbBatchProposalDrafts").addEventListener("click", async () => {
 });
 
 $("reloadKbBatchProposalRuns").addEventListener("click", () => loadKnowledgeBatchProposalRuns());
+
+$("createProposalValidationRun").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/proposal-validation-runs", {
+    actor_role: $("proposalValidationActorRole").value,
+    source_run_id: $("proposalValidationSourceRunId").value,
+    batch_key: $("proposalValidationBatchKey").value,
+    statuses: $("proposalValidationStatuses").value,
+    proposal_ids: $("proposalValidationIds").value,
+    note: "P17 schema validation only. No approval, version record, or runtime mutation.",
+  });
+  const item = result.item || {};
+  $("proposalValidationStatus").textContent = `${item.status || result.code || "validation"} · passed ${item.summary?.passed || 0}/${item.summary?.total || 0} · failed ${item.summary?.failed || 0}`;
+  await Promise.all([loadProposalValidationRuns(), loadBaziRuleProposals(), loadGuidedQuestionProposals()]);
+});
+
+$("reloadProposalValidationRuns").addEventListener("click", () => loadProposalValidationRuns());
+
+$("createProposalReviewPacket").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/proposal-review-packets", {
+    actor_role: $("proposalReviewActorRole").value,
+    validation_run_id: $("proposalReviewValidationRunId").value,
+    source_run_id: $("proposalReviewSourceRunId").value,
+    batch_key: $("proposalReviewBatchKey").value,
+    note: $("proposalReviewNote").value,
+  });
+  const item = result.item || {};
+  $("proposalReviewStatus").textContent = `${item.status || result.code || "review_packet"} · items ${item.summary?.total || 0} · passed ${item.summary?.validation_passed || 0} · blocked ${item.summary?.validation_failed || 0}`;
+  await loadProposalReviewPackets();
+});
+
+$("createP21ReviewPacket").addEventListener("click", async () => {
+  $("p21ReviewPacketStatus").textContent = "running P22 P21 review packet pipeline...";
+  const result = await postJson("/api/lab/p21/review-packet", {
+    actor_role: "admin",
+    source_question_key: "q_income_stability",
+    note: "P22 P21 R1 review packet. Human approval required; no runtime mutation.",
+  });
+  renderP21ReviewPacket(result);
+  await Promise.all([loadKnowledgeReviewBatches(), loadKnowledgeBatchProposalRuns(), loadProposalValidationRuns(), loadProposalReviewPackets(), loadBaziRuleProposals(), loadGuidedQuestionProposals()]);
+});
+
+$("reloadProposalReviewPackets").addEventListener("click", () => loadProposalReviewPackets());
 
 $("seedCurrentKnowledgeDrafts").addEventListener("click", async () => {
   const result = await postJson("/api/admin/bazi-source-archive/knowledge-drafts/seed-current", { force: false });
@@ -398,6 +446,34 @@ $("ingestBaziRuleDb").addEventListener("click", async () => {
   await loadBaziRuleDb();
 });
 
+$("executeP26KnowledgeToRules").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/p26/knowledge-to-rules", {
+    actor_role: "admin",
+    enable_engine: true,
+    note: "P26 fast path: seed new knowledge pack, version approved proposals, ingest knowledge drafts into Rule DB.",
+  });
+  const summary = result.summary || {};
+  $("ruleDbStatus").textContent = `P26 ${result.status || ""}: p26 drafts ${summary.p26_draft_count || 0} · versions ${summary.version_record_created ? "created" : "none"} · Rule DB ${summary.rule_db_rule_count || 0}`;
+  await Promise.all([loadBaziRuleDb(), loadKnowledgeDrafts(), loadBaziRuleVersions(), loadGuidedQuestionVersions()]);
+});
+
+$("executeP27SmartRuleGate").addEventListener("click", async () => {
+  const result = await postJson("/api/lab/p27/smart-rule-gate", {
+    actor_role: "admin",
+    activate: true,
+    prefixes: "p27.",
+    max_risk_level: "R1",
+    min_confidence: 0.72,
+    limit: 12,
+    note: "P27 smart gate: activate low-risk rule candidates only after P11 synthetic regression passes.",
+  });
+  const summary = result.summary || {};
+  const pre = result.pre_regression?.status || "";
+  const post = result.post_regression?.status || "";
+  $("ruleDbStatus").textContent = `P27 ${result.status || ""}: drafts ${summary.p27_draft_count || 0} · candidates ${summary.candidate_count || 0} · activated ${summary.activated_count || 0} · rollback ${summary.rolled_back_count || 0} · P11 ${pre}/${post}`;
+  await Promise.all([loadBaziRuleDb(), loadKnowledgeDrafts()]);
+});
+
 $("reloadBaziRuleDb").addEventListener("click", () => loadBaziRuleDb());
 
 $("filterBaziRuleDb").addEventListener("click", () => loadBaziRuleDb());
@@ -431,6 +507,8 @@ $("runValidation").addEventListener("click", async () => {
 });
 
 $("runSyntheticCollision").addEventListener("click", () => runSyntheticCollisionReview());
+
+$("runQuestionDiversityAudit").addEventListener("click", () => loadQuestionDiversityAudit());
 
 $("reloadSyntheticPromotions").addEventListener("click", () => loadSyntheticPromotions());
 
@@ -473,6 +551,8 @@ async function loadSourceArchive() {
   await loadKnowledgeDrafts();
   await loadKnowledgeReviewBatches();
   await loadKnowledgeBatchProposalRuns();
+  await loadProposalValidationRuns();
+  await loadProposalReviewPackets();
 }
 
 async function loadSourceGovernanceOverview() {
@@ -507,6 +587,67 @@ async function loadKnowledgeBatchProposalRuns() {
   renderKnowledgeBatchProposalRuns(result.items || []);
 }
 
+async function loadProposalValidationRuns() {
+  const result = await fetch("/api/lab/proposal-validation-runs").then((response) => response.json());
+  $("proposalValidationStatus").textContent = `P17 validation runs: ${result.count || 0} · validation only`;
+  renderProposalValidationRuns(result.items || []);
+}
+
+async function loadProposalReviewPackets() {
+  const result = await fetch("/api/lab/proposal-review-packets").then((response) => response.json());
+  const decisionCount = (result.items || []).reduce((total, item) => total + Number((item.decision_summary || {}).total || 0), 0);
+  const preflightCount = (result.items || []).reduce((total, item) => total + Number((item.approval_preflight_summary || {}).total || 0), 0);
+  const approvalCount = (result.items || []).reduce((total, item) => total + Number((item.approval_execution_summary || {}).total || 0), 0);
+  $("proposalReviewStatus").textContent = `P18 review packets: ${result.count || 0} · decisions ${decisionCount} · preflights ${preflightCount} · approvals ${approvalCount} · no runtime`;
+  renderProposalReviewPackets(result.items || []);
+}
+
+async function recordProposalReviewPacketDecision(packetId, proposalId = "") {
+  if (!packetId) {
+    return;
+  }
+  const scopedProposalId = proposalId || $("proposalPacketDecisionProposalId").value;
+  $("proposalPacketDecisionProposalId").value = scopedProposalId;
+  const result = await postJson(`/api/lab/proposal-review-packets/${encodeURIComponent(packetId)}/decisions`, {
+    actor_role: $("proposalReviewActorRole").value,
+    decision: $("proposalPacketDecision").value,
+    proposal_id: scopedProposalId,
+    note: $("proposalPacketDecisionNote").value,
+  });
+  const item = result.item || {};
+  const summary = item.decision_summary || {};
+  $("proposalReviewStatus").textContent = `${item.packet_id || packetId} · P23 decisions ${summary.total || 0} · ${result.ok ? "ledger only" : result.code || "blocked"}`;
+  await Promise.all([loadProposalReviewPackets(), loadBaziRuleProposals(), loadGuidedQuestionProposals()]);
+}
+
+async function runProposalReviewApprovalPreflight(packetId) {
+  if (!packetId) {
+    return;
+  }
+  const result = await postJson(`/api/lab/proposal-review-packets/${encodeURIComponent(packetId)}/approval-preflight`, {
+    actor_role: $("proposalReviewActorRole").value,
+    note: "P24 approval preflight report only. No approval, version record, or runtime mutation.",
+  });
+  const item = result.item || {};
+  const summary = item.summary || {};
+  $("proposalReviewStatus").textContent = `${item.status || result.code || "preflight"} · ready ${summary.ready_item_count || 0}/${summary.item_count || 0} · failed checks ${summary.failed_checks || 0}`;
+  await loadProposalReviewPackets();
+}
+
+async function executeProposalReviewApproval(packetId) {
+  if (!packetId) {
+    return;
+  }
+  const result = await postJson(`/api/lab/proposal-review-packets/${encodeURIComponent(packetId)}/controlled-approval`, {
+    actor_role: $("proposalReviewActorRole").value,
+    note: "P25 controlled approval. Proposal status only; no version record or runtime mutation.",
+  });
+  const item = result.item || {};
+  const summary = item.summary || {};
+  $("proposalReviewStatus").textContent = `${item.status || result.code || "approval"} · approved ${summary.approved_count || 0}/${summary.item_count || 0} · failed ${summary.failed_count || 0} · ${result.reused ? "reused" : "executed"}`;
+  await Promise.all([loadProposalReviewPackets(), loadBaziRuleProposals(), loadGuidedQuestionProposals(), loadBaziRuleVersions(), loadGuidedQuestionVersions()]);
+}
+
 async function loadLab() {
   const status = await fetch("/api/lab/status").then((response) => response.json());
   $("feedbackStatus").textContent = `feedback: ${status.counts?.feedback || 0} · guardrail: no auto learning`;
@@ -520,7 +661,9 @@ async function loadLab() {
   $("baziRuleStatus").textContent = `bazi rule proposals: ${status.counts?.bazi_rule_proposals || 0} · versions: ${status.counts?.bazi_rule_versions || 0}`;
   $("governanceReleaseStatus").textContent = `governance releases: ${status.counts?.governance_releases || 0} · manifest only`;
   $("kbBatchProposalStatus").textContent = `P16 runs: ${status.counts?.knowledge_batch_proposal_runs || 0} · R1 proposal draft gate`;
-  await Promise.all([loadFeedback(), loadGuidedQuestionFeedback(), loadAnswerQuality(), loadRuleImpacts(), loadRevisions(), loadActiveRevisions(), loadGuidedQuestionProposals(), loadGuidedQuestionVersions(), loadBaziRuleProposals(), loadBaziRuleVersions(), loadGovernanceReleases(), loadBaziRuleDb(), loadPromotions(), loadValidationCases(), loadLabels(), loadSyntheticCollisionReview(), loadSyntheticPromotions()]);
+  $("proposalValidationStatus").textContent = `P17 validation runs: ${status.counts?.proposal_validation_runs || 0} · validation only`;
+  $("proposalReviewStatus").textContent = `P18 review packets: ${status.counts?.proposal_review_packets || 0} · decisions ${status.counts?.proposal_review_packet_decisions || 0} · preflights ${status.counts?.proposal_review_approval_preflights || 0} · approvals ${status.counts?.proposal_review_approval_executions || 0} · no runtime`;
+  await Promise.all([loadFeedback(), loadGuidedQuestionFeedback(), loadAnswerQuality(), loadRuleImpacts(), loadRevisions(), loadActiveRevisions(), loadGuidedQuestionProposals(), loadGuidedQuestionVersions(), loadBaziRuleProposals(), loadBaziRuleVersions(), loadGovernanceReleases(), loadProposalValidationRuns(), loadProposalReviewPackets(), loadBaziRuleDb(), loadPromotions(), loadValidationCases(), loadLabels(), loadSyntheticCollisionReview(), loadQuestionDiversityAudit(), loadSyntheticPromotions()]);
 }
 
 async function loadFeedback() {
@@ -669,6 +812,12 @@ async function runSyntheticCollisionReview() {
   $("syntheticCollisionDrafts").innerHTML = "";
   const result = await postJson("/api/lab/synthetic-collision/run", {});
   renderSyntheticCollisionReview(result);
+}
+
+async function loadQuestionDiversityAudit() {
+  $("questionDiversityStatus").textContent = "running P20 guided question diversity audit...";
+  const result = await fetch("/api/lab/guided-question-diversity-audit").then((response) => response.json());
+  renderQuestionDiversityAudit(result);
 }
 
 async function loadSyntheticPromotions() {
@@ -1056,6 +1205,102 @@ function renderKnowledgeBatchProposalRuns(items) {
   }).join("");
 }
 
+function renderProposalValidationRuns(items) {
+  const box = $("proposalValidationRunList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No P17 validation runs yet.</div>";
+    return;
+  }
+  box.innerHTML = items.map((item) => {
+    const summary = item.summary || {};
+    const failed = (item.items || []).filter((row) => row.passed !== true).map((row) => row.proposal_id || row.rule_id || row.question_key).filter(Boolean);
+    const passed = (item.items || []).filter((row) => row.passed === true).map((row) => row.proposal_id || row.rule_id || row.question_key).filter(Boolean);
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.validation_run_id || "")}</span><strong>${escapeHtml(item.status || "")}</strong></div>
+      <h3>${escapeHtml(String(summary.passed || 0))}/${escapeHtml(String(summary.total || 0))} passed · failed ${escapeHtml(String(summary.failed || 0))}</h3>
+      <p>${escapeHtml(item.note || "")}</p>
+      <div class="knowledge-guard">source: ${escapeHtml(item.source_run_id || item.batch_key || "-")} · validation only</div>
+      <div class="knowledge-guard">passed: ${escapeHtml(passed.slice(0, 8).join(", ") || "-")}</div>
+      <div class="knowledge-guard">failed: ${escapeHtml(failed.slice(0, 8).join(", ") || "-")} · no approval</div>
+    </article>`;
+  }).join("");
+}
+
+function renderProposalReviewPackets(items) {
+  const box = $("proposalReviewPacketList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No P18 review packets yet.</div>";
+    return;
+  }
+  box.innerHTML = items.map((item) => {
+    const summary = item.summary || {};
+    const decisionSummary = item.decision_summary || {};
+    const latestDecision = item.latest_decision_record || {};
+    const preflightSummary = item.approval_preflight_summary || {};
+    const latestPreflight = item.latest_approval_preflight_record || {};
+    const approvalSummary = item.approval_execution_summary || {};
+    const latestApproval = item.latest_approval_execution_record || {};
+    const proposalIds = (item.items || []).map((row) => row.proposal_id || row.rule_id || row.question_key).filter(Boolean);
+    const reviewItems = (item.items || []).map((row) => {
+      const latestItemDecision = row.latest_review_decision || {};
+      const displayId = row.proposal_id || row.rule_id || row.question_key || "";
+      return `<div class="knowledge-guard">
+        ${escapeHtml(row.kind || "proposal")} · ${escapeHtml(displayId)} · status ${escapeHtml(row.proposal_status || "")} · validation ${row.validation_passed ? "pass" : "fail"} · item decision ${escapeHtml(latestItemDecision.decision || "pending")}
+        <button type="button" class="secondary" data-proposal-packet-item-decision="${escapeHtml(item.packet_id || "")}" data-proposal-id="${escapeHtml(row.proposal_id || "")}">记录条目 Decision</button>
+      </div>`;
+    }).join("");
+    const canRecordDecision = item.status === "approval_review_ready" || item.status === "blocked_by_validation";
+    const canExecuteApproval = (latestPreflight.status || preflightSummary.latest_status) === "approval_preflight_ready" && (latestApproval.status || approvalSummary.latest_status) !== "controlled_approval_executed";
+    return `<article class="knowledge-item">
+      <div class="knowledge-top"><span>${escapeHtml(item.packet_id || "")}</span><strong>${escapeHtml(item.status || "")}</strong></div>
+      <h3>${escapeHtml(String(summary.validation_passed || 0))}/${escapeHtml(String(summary.total || 0))} ready for human review</h3>
+      <p>${escapeHtml(item.note || item.blocked_reason || "")}</p>
+      <div class="knowledge-guard">validation: ${escapeHtml(item.validation_run_id || "-")} · decision: ${escapeHtml(item.recommended_decision || "")}</div>
+      <div class="knowledge-guard">P23 decisions: ${escapeHtml(String(decisionSummary.total || 0))} · latest: ${escapeHtml(latestDecision.decision || decisionSummary.latest_decision || "pending")}</div>
+      <div class="knowledge-guard">P24 preflight: ${escapeHtml(latestPreflight.status || preflightSummary.latest_status || "not_run")} · ready ${escapeHtml(String(preflightSummary.latest_ready_item_count || 0))}/${escapeHtml(String(preflightSummary.latest_item_count || 0))}</div>
+      <div class="knowledge-guard">P25 approval: ${escapeHtml(latestApproval.status || approvalSummary.latest_status || "not_run")} · approved ${escapeHtml(String(approvalSummary.latest_approved_count || 0))}/${escapeHtml(String(approvalSummary.latest_item_count || 0))}</div>
+      <div class="knowledge-guard">proposals: ${escapeHtml(proposalIds.slice(0, 10).join(", ") || "-")}</div>
+      ${reviewItems}
+      <div class="knowledge-guard">controlled approval only · no version record · no runtime mutation</div>
+      <div class="button-row">
+        <button type="button" data-proposal-packet-decision="${escapeHtml(item.packet_id || "")}" ${canRecordDecision ? "" : "disabled"}>记录 P23 Decision</button>
+        <button type="button" class="secondary" data-proposal-packet-preflight="${escapeHtml(item.packet_id || "")}">运行 P24 Preflight</button>
+        <button type="button" class="secondary" data-proposal-packet-approval="${escapeHtml(item.packet_id || "")}" ${canExecuteApproval ? "" : "disabled"}>执行 P25 Approval</button>
+      </div>
+    </article>`;
+  }).join("");
+  box.querySelectorAll("[data-proposal-packet-decision]").forEach((button) => {
+    button.addEventListener("click", () => recordProposalReviewPacketDecision(button.dataset.proposalPacketDecision || ""));
+  });
+  box.querySelectorAll("[data-proposal-packet-item-decision]").forEach((button) => {
+    button.addEventListener("click", () => recordProposalReviewPacketDecision(button.dataset.proposalPacketItemDecision || "", button.dataset.proposalId || ""));
+  });
+  box.querySelectorAll("[data-proposal-packet-preflight]").forEach((button) => {
+    button.addEventListener("click", () => runProposalReviewApprovalPreflight(button.dataset.proposalPacketPreflight || ""));
+  });
+  box.querySelectorAll("[data-proposal-packet-approval]").forEach((button) => {
+    button.addEventListener("click", () => executeProposalReviewApproval(button.dataset.proposalPacketApproval || ""));
+  });
+}
+
+function renderP21ReviewPacket(payload) {
+  const summary = payload.summary || {};
+  const proposal = payload.proposal_run || {};
+  const validation = payload.validation_run || {};
+  const packet = payload.review_packet || {};
+  const r2Gate = payload.r2_gate || {};
+  $("p21ReviewPacketStatus").textContent = `P22 ${payload.status || "-"} · R1 proposals ${summary.r1_rule_proposal_count || 0}+${summary.r1_question_proposal_count || 0} · validation ${summary.validation_passed || 0}/${summary.validation_total || 0} · R2 blocked ${summary.r2_blocked_count || 0}`;
+  $("p21ReviewPacketList").innerHTML = `<article class="knowledge-item">
+    <div class="knowledge-top"><span>${escapeHtml(payload.stage || "P22")}</span><strong>${escapeHtml(payload.status || "")}</strong></div>
+    <h3>${escapeHtml(packet.packet_id || "review packet")}</h3>
+    <p>R1 enters review packet only. R2 remains blocked before analyst/source review.</p>
+    <div class="knowledge-guard">proposal run: ${escapeHtml(proposal.run_id || "-")} · validation: ${escapeHtml(validation.validation_run_id || "-")}</div>
+    <div class="knowledge-guard">packet: ${escapeHtml(packet.status || "-")} · decision: ${escapeHtml(packet.recommended_decision || "human review required")}</div>
+    <div class="knowledge-guard">R2 gate: ${escapeHtml(r2Gate.reason || "-")} · eligible: ${r2Gate.eligible ? "yes" : "no"}</div>
+    <div class="knowledge-guard">${(payload.guardrails || []).map((item) => escapeHtml(item)).join(" · ")}</div>
+  </article>`;
+}
+
 function renderFeedback(items) {
   const box = $("feedbackList");
   if (!items.length) {
@@ -1242,6 +1487,42 @@ function renderSyntheticCollisionReview(payload) {
   $("syntheticCollisionDrafts").querySelectorAll("[data-synthetic-draft-index]").forEach((button) => {
     button.addEventListener("click", () => createSyntheticPromotionFromDraft(Number(button.dataset.syntheticDraftIndex || 0)));
   });
+}
+
+function renderQuestionDiversityAudit(payload) {
+  const summary = payload.summary || {};
+  const checks = payload.checks || [];
+  const failures = payload.failures || [];
+  const items = payload.items || [];
+  $("questionDiversityStatus").textContent = `P20 ${payload.status || "-"} · labels ${summary.top_label_sequence_count || 0} · keys ${summary.top_key_sequence_count || 0} · old static top ${summary.old_static_top_present ? "present" : "absent"} · no runtime mutation`;
+
+  $("questionDiversitySummary").innerHTML = `<article class="knowledge-item">
+    <div class="knowledge-top"><span>${escapeHtml(payload.matrix || "P11_SYNTHETIC_EXPANSION")}</span><strong>${escapeHtml(payload.status || "")}</strong></div>
+    <h3>${escapeHtml(String(payload.case_count || 0))} synthetic case(s)</h3>
+    <p>income top10 ${escapeHtml(String(summary.income_stability_top10_count || 0))} · KB changed top5 ${escapeHtml(String(summary.kb_augmented_change_count || 0))} · failures ${escapeHtml(String(summary.failure_count || 0))}</p>
+    <div class="knowledge-guard">${checks.map((item) => `${escapeHtml(item.name || "")}:${item.passed ? "pass" : "fail"}`).join(" · ")}</div>
+    <div class="knowledge-guard">${(payload.guardrails || []).map((item) => escapeHtml(item)).join(" · ")}</div>
+  </article>`;
+
+  const box = $("questionDiversityList");
+  if (!items.length) {
+    box.innerHTML = "<div class=\"knowledge-empty\">No diversity audit rows.</div>";
+    return;
+  }
+  const failureCards = failures.map((item) => `<article class="knowledge-item">
+    <div class="knowledge-top"><span>${escapeHtml(item.case_id || "")}</span><strong>${escapeHtml(item.failure_type || "")}</strong></div>
+    <h3>P20 failure</h3>
+    <p>${escapeHtml(item.message || (item.top_keys || []).join(" / ") || "")}</p>
+    <div class="knowledge-guard">audit only · no automatic question library change</div>
+  </article>`);
+  const auditCards = items.slice(0, 12).map((item) => `<article class="knowledge-item">
+    <div class="knowledge-top"><span>${escapeHtml(item.case_id || "")}</span><strong>${escapeHtml(item.structure_label || "")}</strong></div>
+    <h3>${escapeHtml(item.collision_focus || "")}</h3>
+    <p>${escapeHtml((item.top_labels || []).join(" / "))}</p>
+    <div class="knowledge-guard">keys: ${escapeHtml((item.top_keys || []).join(" / "))}</div>
+    <div class="knowledge-guard">income top10: ${item.income_stability_in_top_10 ? "yes" : "no"} · old static: ${item.old_static_top_match ? "yes" : "no"}</div>
+  </article>`);
+  box.innerHTML = failureCards.concat(auditCards).join("");
 }
 
 function renderSyntheticPromotions(items) {

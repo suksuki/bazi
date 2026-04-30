@@ -184,6 +184,7 @@
           <label>Draft / Knowledge IDs<textarea id="kbReviewBatchDraftIds" placeholder="可选；为空时按 prefix/risk/domain/category 过滤"></textarea></label>
           <div class="button-row three">
             <button type="button" id="seedP14ReviewBatches">生成 P14 Batches</button>
+            <button type="button" id="seedP21ReviewBatches" class="secondary">生成 P21 Batches</button>
             <button type="button" id="createKbReviewBatch" class="secondary">创建 Batch</button>
             <button type="button" id="reloadKbReviewBatches" class="secondary">刷新 Batches</button>
           </div>
@@ -204,6 +205,51 @@
           </div>
           <div id="kbBatchProposalStatus" class="status-line">未加载</div>
           <div id="kbBatchProposalRunList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">P17 Proposal Validation Runs</h3>
+          <p class="panel-note">批量验证 Rule / Question Proposal 草案，只写 validation 结果和 run ledger；不会 approval、version 或发布。</p>
+          <div class="grid">
+            <label>Source Run ID<input id="proposalValidationSourceRunId" placeholder="kbpr_xxx，可选" /></label>
+            <label>Batch Key<input id="proposalValidationBatchKey" placeholder="p15.p14.r1_metadata_boundaries，可选" /></label>
+            <label>Statuses<input id="proposalValidationStatuses" value="draft,validation_failed" /></label>
+            <label>Actor Role<select id="proposalValidationActorRole"><option value="admin">admin</option><option value="analyst">analyst</option><option value="system">system</option></select></label>
+          </div>
+          <label>Proposal IDs<textarea id="proposalValidationIds" placeholder="可选；brp_xxx / gqp_xxx / rule_id / question_key，逗号分隔"></textarea></label>
+          <div class="button-row">
+            <button type="button" id="createProposalValidationRun">运行 Validation</button>
+            <button type="button" id="reloadProposalValidationRuns" class="secondary">刷新 P17 Runs</button>
+          </div>
+          <div id="proposalValidationStatus" class="status-line">未加载</div>
+          <div id="proposalValidationRunList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">P18 Proposal Review Packets</h3>
+          <p class="panel-note">把 validation_ready 的 proposal 组织成审批包，供分析师/管理员逐条决定；这里不自动 approve。</p>
+          <div class="grid">
+            <label>Validation Run ID<input id="proposalReviewValidationRunId" placeholder="pvr_xxx，可选；为空取最新匹配" /></label>
+            <label>Source Run ID<input id="proposalReviewSourceRunId" placeholder="kbpr_xxx，可选" /></label>
+            <label>Batch Key<input id="proposalReviewBatchKey" placeholder="p15.p14.r1_metadata_boundaries，可选" /></label>
+            <label>Actor Role<select id="proposalReviewActorRole"><option value="admin">admin</option><option value="analyst">analyst</option><option value="system">system</option></select></label>
+          </div>
+          <label>Review Packet Note<textarea id="proposalReviewNote">P18 approval review packet only. Human decision required; no auto approval.</textarea></label>
+          <div class="grid">
+            <label>Decision<select id="proposalPacketDecision"><option value="approve_candidate">approve_candidate</option><option value="needs_revision">needs_revision</option><option value="hold">hold</option><option value="reject_candidate">reject_candidate</option></select></label>
+            <label>Proposal ID<input id="proposalPacketDecisionProposalId" placeholder="可选；为空表示整包审查" /></label>
+          </div>
+          <label>Decision Note<textarea id="proposalPacketDecisionNote">P24 item decision / preflight ledger only. No proposal status change, version record, or runtime mutation.</textarea></label>
+          <div class="button-row">
+            <button type="button" id="createProposalReviewPacket">生成 Review Packet</button>
+            <button type="button" id="reloadProposalReviewPackets" class="secondary">刷新 P18 Packets</button>
+          </div>
+          <div id="proposalReviewStatus" class="status-line">未加载</div>
+          <div id="proposalReviewPacketList" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">P22 P21 Review Packet</h3>
+          <p class="panel-note">一键把 P21 R1 知识包推进到 proposal draft、schema validation 和 review packet。R2 只显示 blocked gate；不会 approval、version 或 runtime mutation。</p>
+          <div class="button-row">
+            <button type="button" id="createP21ReviewPacket">生成 P21 Review Packet</button>
+          </div>
+          <div id="p21ReviewPacketStatus" class="status-line">未加载</div>
+          <div id="p21ReviewPacketList" class="knowledge-list"></div>
         </section>
 
         <section class="settings-panel">
@@ -375,6 +421,8 @@
           <p class="panel-note">直接规则库。当前从 Knowledge Draft 自动入库 R0-R3，R4 保持 archive-only。Rule DB 是后续 Engine Adapter 的输入，不再沿用插件黑盒。</p>
           <div class="button-row three">
             <button type="button" id="ingestBaziRuleDb">当前知识直接入库</button>
+            <button type="button" id="executeP26KnowledgeToRules" class="secondary">P26 转规则</button>
+            <button type="button" id="executeP27SmartRuleGate" class="secondary">P27 智能门禁</button>
             <button type="button" id="reloadBaziRuleDb" class="secondary">刷新 Rule DB</button>
             <button type="button" id="filterBaziRuleDb" class="secondary">筛选 Rule DB</button>
           </div>
@@ -420,6 +468,15 @@
           <div id="syntheticCollisionSummary" class="knowledge-list"></div>
           <div id="syntheticCollisionFailures" class="knowledge-list"></div>
           <div id="syntheticCollisionDrafts" class="knowledge-list"></div>
+
+          <h3 class="admin-subhead">Guided Question Diversity Audit</h3>
+          <p class="panel-note">P20 合成盘问题推荐审计。只检查每个合成盘的推荐问题是否随结构变化，不写入知识库或规则库。</p>
+          <div class="button-row">
+            <button type="button" id="runQuestionDiversityAudit" class="secondary">运行 P20 Audit</button>
+          </div>
+          <div id="questionDiversityStatus" class="status-line">未加载</div>
+          <div id="questionDiversitySummary" class="knowledge-list"></div>
+          <div id="questionDiversityList" class="knowledge-list"></div>
 
           <h3 class="admin-subhead">Controlled Promotion Queue</h3>
           <p class="panel-note">P12 晋级门。Synthetic draft 先进入候选队列；只有人工 decision 和 P11 regression gate 通过后，才允许进入 active/version record。</p>

@@ -47,8 +47,16 @@ from v19.lab_interfaces import (
     create_guided_question_proposal,
     create_knowledge_batch_proposal_drafts,
     create_knowledge_review_batch,
+    create_p21_knowledge_pack_review_packet,
+    create_proposal_validation_run,
+    create_proposal_review_approval_preflight,
+    create_proposal_review_packet,
     create_revision_proposal,
+    execute_p26_knowledge_to_rules,
+    execute_p27_smart_rule_activation,
+    execute_proposal_review_packet_approval,
     guided_question_answer_quality_report,
+    guided_question_diversity_audit,
     guided_question_feedback_summary,
     guided_question_audit_report,
     activate_revision_record,
@@ -70,6 +78,8 @@ from v19.lab_interfaces import (
     list_knowledge_batch_proposal_runs,
     list_knowledge_review_batches,
     list_promotion_requests,
+    list_proposal_validation_runs,
+    list_proposal_review_packets,
     list_revision_proposals,
     list_rule_impacts,
     list_synthetic_promotion_candidates,
@@ -78,8 +88,10 @@ from v19.lab_interfaces import (
     register_feedback,
     review_synthetic_promotion_candidate,
     record_guided_question_audit,
+    record_proposal_review_packet_decision,
     run_validation_cases,
     seed_p14_knowledge_review_batches,
+    seed_p21_knowledge_review_batches,
     seed_validation_cases,
     update_promotion_status,
     update_guided_question_review,
@@ -984,6 +996,12 @@ def lab_synthetic_collision_run_post(request: Request) -> Dict[str, Any]:
     }
 
 
+@app.get("/api/lab/guided-question-diversity-audit")
+def lab_guided_question_diversity_audit_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return guided_question_diversity_audit(load_settings())
+
+
 @app.get("/api/lab/synthetic-promotions")
 def lab_synthetic_promotions_get(request: Request, status: str = "") -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
@@ -1032,6 +1050,12 @@ def lab_knowledge_review_batch_seed_p14_post(request: Request) -> Dict[str, Any]
     return seed_p14_knowledge_review_batches(load_settings())
 
 
+@app.post("/api/lab/knowledge-review-batches/seed-p21")
+def lab_knowledge_review_batch_seed_p21_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return seed_p21_knowledge_review_batches(load_settings())
+
+
 @app.get("/api/lab/knowledge-batch-proposal-runs")
 def lab_knowledge_batch_proposal_runs_get(request: Request, status: str = "", batch_key: str = "") -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
@@ -1042,6 +1066,66 @@ def lab_knowledge_batch_proposal_runs_get(request: Request, status: str = "", ba
 def lab_knowledge_review_batch_proposal_drafts_post(batch_id: str, payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
     return create_knowledge_batch_proposal_drafts(batch_id, dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/p21/review-packet")
+def lab_p21_review_packet_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_p21_knowledge_pack_review_packet(dict(payload or {}), load_settings())
+
+
+@app.get("/api/lab/proposal-validation-runs")
+def lab_proposal_validation_runs_get(request: Request, status: str = "", source_run_id: str = "") -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return list_proposal_validation_runs(load_settings(), status=status, source_run_id=source_run_id)
+
+
+@app.post("/api/lab/proposal-validation-runs")
+def lab_proposal_validation_run_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_proposal_validation_run(dict(payload or {}), load_settings())
+
+
+@app.get("/api/lab/proposal-review-packets")
+def lab_proposal_review_packets_get(request: Request, status: str = "", validation_run_id: str = "") -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return list_proposal_review_packets(load_settings(), status=status, validation_run_id=validation_run_id)
+
+
+@app.post("/api/lab/proposal-review-packets")
+def lab_proposal_review_packet_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_proposal_review_packet(dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/proposal-review-packets/{packet_id}/decisions")
+def lab_proposal_review_packet_decision_post(packet_id: str, payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return record_proposal_review_packet_decision(packet_id, dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/proposal-review-packets/{packet_id}/approval-preflight")
+def lab_proposal_review_packet_approval_preflight_post(packet_id: str, payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return create_proposal_review_approval_preflight(packet_id, dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/proposal-review-packets/{packet_id}/controlled-approval")
+def lab_proposal_review_packet_controlled_approval_post(packet_id: str, payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return execute_proposal_review_packet_approval(packet_id, dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/p26/knowledge-to-rules")
+def lab_p26_knowledge_to_rules_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return execute_p26_knowledge_to_rules(dict(payload or {}), load_settings())
+
+
+@app.post("/api/lab/p27/smart-rule-gate")
+def lab_p27_smart_rule_gate_post(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return execute_p27_smart_rule_activation(dict(payload or {}), load_settings())
 
 
 @app.post("/api/lab/promotions")

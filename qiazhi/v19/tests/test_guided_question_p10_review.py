@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from v19.agent.income_stability import derive_income_stability
 from v19.agent.renderers import render_income_stability_answer
 from v19.agent.structure import build_agent_turn
@@ -67,6 +69,30 @@ def test_p10_ten_god_and_hidden_stem_questions_keep_their_focus() -> None:
     assert hidden_answer["source_signal_category"] == "hidden_stem"
     assert "p10.branch_hidden_stem_complete_mapping" in {row["knowledge_id"] for row in hidden_answer["applied_knowledge"]}
     assert "直接透出，还是藏在地支里面" in hidden_text
+
+
+def test_smalltalk_does_not_reuse_stale_guided_question_key() -> None:
+    answer = build_guided_question_answer(_agent_data("你好"), "q_vault_structure", "你好")
+    text = guided_answer_to_plain_text(answer, "zh")
+
+    assert answer["intent"]["supported"] is False
+    assert answer["intent"]["answer_kind"] == "unsupported"
+    assert answer["intent"]["unsupported_reason"] == "smalltalk:greeting"
+    assert answer["source_signal_category"] == ""
+    assert not answer["retrieved_facts"].get("chart_anchor")
+    assert not answer["retrieved_facts"].get("vaults")
+    assert "你好" in text
+    assert "结构有关的问题" in text
+    assert "墓库结构" not in text
+    assert "辰" not in text
+
+
+def test_oracle_manual_question_edit_drops_selected_question_key() -> None:
+    root = Path(__file__).resolve().parents[2]
+    oracle_js = (root / "v19/frontend/assets/oracle.js").read_text(encoding="utf-8")
+
+    assert "syncSelectedQuestionFromMessage" in oracle_js
+    assert "messageMatchesSelectedQuestion(message) ? selectedQuestionKey : \"\"" in oracle_js
 
 
 def test_rule_db_structured_branch_rules_do_not_cross_trigger() -> None:

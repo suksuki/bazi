@@ -10,7 +10,9 @@ from v19.runtime import RUNTIME, utc_now
 ROOT = Path(__file__).resolve().parent
 PROJECT_ROOT = ROOT.parent
 CATALOG_FILE = PROJECT_ROOT / "docs" / "bazi_knowledge" / "source_archive" / "source_catalog_v1.json"
-KNOWLEDGE_DRAFT_SEED_FILE = PROJECT_ROOT / "docs" / "bazi_knowledge" / "database" / "current_knowledge_draft_seeds_v1.json"
+DEFAULT_KNOWLEDGE_DRAFT_SEED_FILE = PROJECT_ROOT / "docs" / "bazi_knowledge" / "database" / "current_knowledge_draft_seeds_v1.json"
+KNOWLEDGE_DRAFT_SEED_FILE = DEFAULT_KNOWLEDGE_DRAFT_SEED_FILE
+KNOWLEDGE_DRAFT_PACK_DIR = PROJECT_ROOT / "docs" / "bazi_knowledge" / "packs"
 SOURCE_ARCHIVE_FILE = RUNTIME / "bazi_source_archive.json"
 SOURCE_ARCHIVE_VERSION = "v19.bazi_source_archive.v1"
 
@@ -520,10 +522,20 @@ def _load_catalog_sources() -> List[Dict[str, Any]]:
 
 
 def _load_knowledge_draft_seeds() -> List[Dict[str, Any]]:
-    if not KNOWLEDGE_DRAFT_SEED_FILE.exists():
+    seed_files = [KNOWLEDGE_DRAFT_SEED_FILE]
+    if KNOWLEDGE_DRAFT_SEED_FILE == DEFAULT_KNOWLEDGE_DRAFT_SEED_FILE and KNOWLEDGE_DRAFT_PACK_DIR.exists():
+        seed_files.extend(sorted(KNOWLEDGE_DRAFT_PACK_DIR.glob("*_knowledge_draft_seeds_*.json")))
+    rows: List[Dict[str, Any]] = []
+    for seed_file in seed_files:
+        rows.extend(_load_knowledge_draft_seed_file(seed_file))
+    return rows
+
+
+def _load_knowledge_draft_seed_file(seed_file: Path) -> List[Dict[str, Any]]:
+    if not seed_file.exists():
         return []
     try:
-        data = json.loads(KNOWLEDGE_DRAFT_SEED_FILE.read_text(encoding="utf-8"))
+        data = json.loads(seed_file.read_text(encoding="utf-8"))
     except Exception:
         return []
     rows = data.get("knowledge_drafts") if isinstance(data, dict) else []
@@ -541,7 +553,7 @@ def _find_knowledge_draft(state: Dict[str, Any], draft_id: str) -> Dict[str, Any
 def _draft_to_rule_domain(draft: Dict[str, Any]) -> str:
     domain = _clean(draft.get("domain"))
     category = _clean(draft.get("category"))
-    if domain == "ten_god" or category == "ten_god":
+    if domain in {"ten_god", "interaction"} or category in {"ten_god", "ten_god_interaction", "ten_god_interaction_mechanism"}:
         return "ten_god_relation"
     if domain == "luck_flow" or category == "timing_context":
         return "time_structure"

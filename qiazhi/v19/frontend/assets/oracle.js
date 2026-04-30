@@ -94,6 +94,7 @@ function bindEvents() {
   if (lastData) renderResult(lastData);
   });
   $("run").addEventListener("click", runAgent);
+  $("message").addEventListener("input", syncSelectedQuestionFromMessage);
 }
 
 async function loadLabels(nextLocale) {
@@ -151,11 +152,23 @@ function setQuestion(key) {
   document.querySelectorAll("[data-question-key]").forEach((button) => button.classList.toggle("active", button.dataset.questionKey === key));
 }
 
+function syncSelectedQuestionFromMessage() {
+  if (messageMatchesSelectedQuestion($("message").value.trim())) return;
+  selectedQuestionKey = "";
+  document.querySelectorAll("[data-question-key]").forEach((button) => button.classList.remove("active"));
+}
+
+function messageMatchesSelectedQuestion(message) {
+  if (!selectedQuestionKey) return false;
+  return String(message || "").trim() === questionLabel(selectedQuestionKey).trim();
+}
+
 async function runAgent() {
   $("run").disabled = true;
   $("run").textContent = t("running");
   try {
-    const result = await postJson("/api/agent/turn", { birth_input: profile.birth_input, selected_year: selectedYear, message: $("message").value.trim() || t("q_income_stability"), selected_question_key: selectedQuestionKey, session_id: sessionId });
+    const message = $("message").value.trim() || t("q_income_stability");
+    const result = await postJson("/api/agent/turn", { birth_input: profile.birth_input, selected_year: selectedYear, message, selected_question_key: messageMatchesSelectedQuestion(message) ? selectedQuestionKey : "", session_id: sessionId });
     if (!result.ok) { $("oracleStatus").textContent = result.message || result.code || "error"; return; }
     lastData = result.data;
     dynamicQuestions = dynamicQuestionsFrom(lastData);

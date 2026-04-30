@@ -1,0 +1,263 @@
+{
+  "pack_id": "p26.rule_conversion_knowledge_pack.v1",
+  "created_at": "2026-04-30",
+  "status": "draft_pack_rule_db_ready",
+  "source_context": [
+    "docs/v19/V19_P24_ITEM_DECISION_APPROVAL_PREFLIGHT.md",
+    "docs/v19/V19_P25_CONTROLLED_APPROVAL_EXECUTION_GATE.md",
+    "v19.bazi_rule_db.build_structural_rule_signals"
+  ],
+  "guardrails": [
+    "DRAFT_ONLY",
+    "RULE_DB_ENGINE_ADAPTER_CANDIDATE",
+    "NO_RESULT_MUTATION",
+    "NO_FORTUNE",
+    "NO_LIFE_EVENT_PREDICTION"
+  ],
+  "knowledge_drafts": [
+    {
+      "knowledge_id": "p26.structure.day_month_anchor_boundary",
+      "domain": "core_structure",
+      "category": "structure_anchor",
+      "title": "日干与月支是结构锚点",
+      "statement": "日干和月令应作为结构阅读的先行锚点。回答应说明日主、月令及其作为观察入口的作用，不能直接扩写成吉凶或人生结论。",
+      "structured_facts": {
+        "anchor": "day_stem",
+        "secondary_anchor": "month_branch",
+        "answer_boundary": "anchor_not_verdict"
+      },
+      "conditions": {
+        "keywords": ["日主", "月令", "结构锚点", "先看结构"]
+      },
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.82,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "rule_proposal_source"],
+      "forbidden_usage": ["fortune", "good_bad_judgement", "life_event_prediction"]
+    },
+    {
+      "knowledge_id": "p26.hidden_stem.visible_hidden_source_layer",
+      "domain": "core_structure",
+      "category": "hidden_stem",
+      "title": "藏干标记地支内部证据",
+      "statement": "藏干用于标记地支内部的容纳层。回答应区分天干透出和地支藏干，避免把隐藏层证据当成已经外显的结果。",
+      "structured_facts": {
+        "hidden_stems": {
+          "辰": ["戊", "乙", "癸"],
+          "戌": ["戊", "辛", "丁"],
+          "丑": ["己", "癸", "辛"],
+          "未": ["己", "丁", "乙"]
+        },
+        "boundary": "hidden_evidence_not_visible_result"
+      },
+      "conditions": {
+        "keywords": ["藏干", "透出", "隐藏层", "容纳层"]
+      },
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.8,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "hidden_layer_analysis"],
+      "forbidden_usage": ["direct_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "p26.branch_relation.clash_pair_layer_map",
+      "domain": "core_structure",
+      "category": "branch_relation",
+      "title": "六冲组合需要层级归因",
+      "statement": "地支冲应说明冲的地支组合和发生层级。本命冲、运命冲、流年触发冲应分层表达，不能把冲直接解释为坏事。",
+      "structured_facts": {
+        "pairs": ["子午", "丑未", "寅申", "卯酉", "辰戌", "巳亥"],
+        "relation_type": "six_clash",
+        "boundary": "relation_not_event"
+      },
+      "conditions": {
+        "keywords": ["冲", "地支冲", "本命", "大运", "流年"]
+      },
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.78,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "branch_relation_explanation"],
+      "forbidden_usage": ["bad_event_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "p26.branch_relation.harm_break_boundary",
+      "domain": "core_structure",
+      "category": "branch_relation",
+      "title": "害与破属于关系元数据",
+      "statement": "害与破属于关系元数据，应列出关系名称、地支组合和层级。当前系统只把它们作为结构提示，不把它们扩写成事件或吉凶。",
+      "structured_facts": {
+        "six_harm": ["子未", "丑午", "寅巳", "卯辰", "申亥", "酉戌"],
+        "six_break": ["子酉", "丑辰", "寅亥", "卯午", "巳申", "未戌"],
+        "boundary": "metadata_not_verdict"
+      },
+      "conditions": {
+        "keywords": ["害", "破", "关系元数据", "结构提示"]
+      },
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.74,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "branch_relation_explanation"],
+      "forbidden_usage": ["good_bad_judgement", "life_event_prediction"]
+    },
+    {
+      "knowledge_id": "p26.vault.location_hidden_stem_rule_basis",
+      "domain": "core_structure",
+      "category": "vault",
+      "title": "墓库地支需要位置与藏干语境",
+      "statement": "辰戌丑未作为墓库结构时，应先定位地支、柱位或时间层，再说明其藏干。没有单独审核过的开闭库规则时，不输出财富或事件结论。",
+      "structured_facts": {
+        "vault_branches": ["辰", "戌", "丑", "未"],
+        "required_fields": ["branch", "pillar_or_time_layer", "hidden_stems"],
+        "boundary": "location_before_interpretation"
+      },
+      "conditions": {
+        "keywords": ["墓库", "辰", "戌", "丑", "未", "藏干"]
+      },
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.8,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "vault_structure_explanation"],
+      "forbidden_usage": ["wealth_prediction", "vault_activation_prediction"]
+    },
+    {
+      "knowledge_id": "p26.time.time_context_no_natal_mutation",
+      "domain": "luck_flow",
+      "category": "time_boundary",
+      "title": "时间背景不得改写本命结构",
+      "statement": "大运和流年只能作为时间背景或触发层说明。除非有独立审核过的时间规则，时间层关系不得改写本命结构或收入稳定性结论。",
+      "structured_facts": {
+        "time_layers": ["luck_cycle", "flow_year"],
+        "allowed_output": ["time_context", "relation_layer"],
+        "forbidden_output": ["natal_rewrite", "income_result_mutation"]
+      },
+      "conditions": {
+        "keywords": ["大运", "流年", "时间背景", "不改本命"]
+      },
+      "source_refs": ["docs/v19/V19_P24_ITEM_DECISION_APPROVAL_PREFLIGHT.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.82,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "time_context_answer"],
+      "forbidden_usage": ["year_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "p26.ten_god.visible_hidden_metadata",
+      "domain": "ten_god",
+      "category": "ten_god",
+      "title": "十神证据需要标明来源层",
+      "statement": "十神关系应说明目标干来自透出还是藏干，并标记与日主的关系类别。该信息是关系元数据，不直接输出职业、财富或性格结论。",
+      "structured_facts": {
+        "anchor": "day_master",
+        "required_fields": ["target_stem", "source_layer", "ten_god_family"],
+        "boundary": "relationship_metadata_only"
+      },
+      "conditions": {
+        "keywords": ["十神", "透出", "藏干", "关系元数据"]
+      },
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.78,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "ten_god_explanation"],
+      "forbidden_usage": ["career_prediction", "wealth_prediction", "personality_judgement"]
+    },
+    {
+      "knowledge_id": "p26.wealth.star_visibility_boundary",
+      "domain": "wealth",
+      "category": "wealth_boundary",
+      "title": "可见财星只作为结构证据",
+      "statement": "财星是否透出或藏于支中，只说明财富相关十神证据的可见层级。它不能直接推出收入高低、发财或破财。",
+      "structured_facts": {
+        "anchor": "day_master",
+        "required_fields": ["wealth_stem", "visible_or_hidden_layer"],
+        "boundary": "visibility_not_money_result"
+      },
+      "conditions": {
+        "keywords": ["财星", "透出", "藏干", "收入", "可见层"]
+      },
+      "source_refs": ["docs/bazi_knowledge/wealth/wealth_units_v1.md"],
+      "risk_level": "R1",
+      "confidence_prior": 0.76,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "income_stability_context"],
+      "forbidden_usage": ["income_amount_prediction", "fortune"]
+    },
+    {
+      "knowledge_id": "p26.income.self_capacity_evidence",
+      "domain": "wealth",
+      "category": "wealth_feature",
+      "title": "日主承载力是收入结构语境",
+      "statement": "收入稳定性解释需要把日主承载力作为上下文之一。承载力只用于说明结构是否能承接财星和输出路径，不直接判断收入好坏。",
+      "structured_facts": {
+        "candidate_signal": "self_capacity_context",
+        "income_signal_keys": ["self_capacity", "support_context"],
+        "boundary": "capacity_context_not_verdict"
+      },
+      "conditions": {
+        "keywords": ["承载力", "收入稳定", "财星", "结构上下文"]
+      },
+      "source_refs": ["docs/bazi_knowledge/wealth/wealth_units_v1.md"],
+      "risk_level": "R2",
+      "confidence_prior": 0.68,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "income_stability_rule_source"],
+      "forbidden_usage": ["income_verdict", "fortune"]
+    },
+    {
+      "knowledge_id": "p26.income.wealth_accessibility_evidence",
+      "domain": "wealth",
+      "category": "wealth_mechanism",
+      "title": "财星可达性需要关系归因",
+      "statement": "财星可达性应说明财星来源、层级，以及是否被冲、合、害、破或其他关系牵制。该信息是收入结构归因，不是收入结果。",
+      "structured_facts": {
+        "candidate_signal": "wealth_accessibility_context",
+        "income_signal_keys": ["wealth_accessibility", "relation_constraint"],
+        "boundary": "accessibility_not_result"
+      },
+      "conditions": {
+        "keywords": ["财星", "可达性", "冲", "合", "牵制", "收入结构"]
+      },
+      "source_refs": ["docs/bazi_knowledge/wealth/wealth_units_v1.md"],
+      "risk_level": "R2",
+      "confidence_prior": 0.66,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "income_stability_rule_source"],
+      "forbidden_usage": ["wealth_verdict", "money_prediction"]
+    },
+    {
+      "knowledge_id": "p26.income.output_to_wealth_path",
+      "domain": "wealth",
+      "category": "wealth_mechanism",
+      "title": "食伤生财路径是变现证据",
+      "statement": "食伤到财的连接可作为变现路径证据，但需要说明输出来源、财星来源、可见或隐藏层级，以及是否有关系牵制。",
+      "structured_facts": {
+        "candidate_signal": "output_to_wealth_path",
+        "income_signal_keys": ["output_path", "wealth_source", "relation_constraint"],
+        "boundary": "conversion_path_not_amount_or_timing"
+      },
+      "conditions": {
+        "keywords": ["食伤", "生财", "变现路径", "财星来源"]
+      },
+      "source_refs": ["docs/bazi_knowledge/wealth/wealth_units_v1.md"],
+      "risk_level": "R2",
+      "confidence_prior": 0.64,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "income_path_rule_source"],
+      "forbidden_usage": ["income_amount_prediction", "timing_prediction"]
+    },
+    {
+      "knowledge_id": "p26.strength.month_command_capacity",
+      "domain": "strength",
+      "category": "strength_model",
+      "title": "月令是承载力证据",
+      "statement": "月令可作为判断结构承载力的证据来源之一。当前系统只将其作为支持、克泄或中性背景，不直接输出旺衰断语或用神结论。",
+      "structured_facts": {
+        "anchor": "month_branch",
+        "candidate_signal": "month_command_capacity_context",
+        "boundary": "capacity_evidence_not_useful_god_verdict"
+      },
+      "conditions": {
+        "keywords": ["月令", "承载力", "旺衰", "用神边界"]
+      },
+      "source_refs": ["docs/bazi_knowledge/core/core_units_v1.md"],
+      "risk_level": "R2",
+      "confidence_prior": 0.62,
+      "allowed_usage": ["rule_db", "engine_adapter_candidate", "strength_context"],
+      "forbidden_usage": ["useful_god_verdict", "fortune"]
+    }
+  ]
+}

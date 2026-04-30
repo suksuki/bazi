@@ -8,9 +8,14 @@ from typing import Any, Dict, List, Tuple
 from v19.agent import build_agent_turn
 from v19.agent.income_stability import derive_income_stability
 from v19.runtime import RUNTIME, _postgres_connection, resolve_postgres_url, utc_now
-from v19.bazi_source_archive import create_knowledge_draft, list_knowledge_drafts
+from v19.bazi_source_archive import create_knowledge_draft, list_knowledge_drafts, seed_current_knowledge_drafts
+from v19.bazi_rule_db import (
+    ingest_current_knowledge_drafts_to_rule_db,
+    set_bazi_rule_engine_activation,
+    smart_gate_bazi_rule_db_candidates,
+)
 from v19.synthetic_validation.guided_cases import P11_GUIDED_SYNTHETIC_CASES, make_synthetic_chart
-from v19.synthetic_validation.guided_runner import run_guided_synthetic_collision
+from v19.synthetic_validation.guided_runner import _agent_data_for_case, run_guided_synthetic_collision
 
 LAB_FILE = RUNTIME / "lab_interfaces.json"
 LAB_VERSION = "v19.lab_interfaces.v1"
@@ -28,6 +33,9 @@ ALLOWED_BAZI_RULE_DOMAINS = {"day_master_element", "structural_relation", "ten_g
 ALLOWED_BAZI_RULE_STATUS = {"draft", "validation_ready", "validation_failed", "approved", "rejected", "active_record"}
 ALLOWED_SYNTHETIC_PROMOTION_DECISIONS = {"approve", "reject", "needs_knowledge", "needs_rule", "needs_expression"}
 ALLOWED_SYNTHETIC_PROMOTION_STATUS = {"draft_review", "analyst_review", "proposal_created", "rejected", "deprecated"}
+ALLOWED_PROPOSAL_REVIEW_PACKET_DECISIONS = {"approve_candidate", "reject_candidate", "needs_revision", "hold"}
+P21_R1_BATCH_KEY = "p21.r1_guided_question_structure_boundaries"
+P21_R2_BATCH_KEY = "p21.r2_income_collision_review"
 
 
 def lab_status(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
@@ -51,6 +59,11 @@ def lab_status(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
             "governance_releases": len(state["governance_releases"]),
             "knowledge_review_batches": len(state["knowledge_review_batches"]),
             "knowledge_batch_proposal_runs": len(state["knowledge_batch_proposal_runs"]),
+            "proposal_validation_runs": len(state["proposal_validation_runs"]),
+            "proposal_review_packets": len(state["proposal_review_packets"]),
+            "proposal_review_packet_decisions": sum(len(row.get("decision_records") or []) for row in state["proposal_review_packets"]),
+            "proposal_review_approval_preflights": sum(len(row.get("approval_preflight_records") or []) for row in state["proposal_review_packets"]),
+            "proposal_review_approval_executions": sum(len(row.get("approval_execution_records") or []) for row in state["proposal_review_packets"]),
             "rule_impacts": len(state["rule_impacts"]),
             "revision_proposals": len(state["revision_proposals"]),
             "active_rule_revisions": len(state["active_rule_revisions"]),
@@ -308,6 +321,114 @@ def guided_question_answer_quality_report(settings: Dict[str, Any] | None = None
         "items": items[:200],
         "recommendations": _answer_quality_recommendations(by_status, risk_flags),
         "guardrails": ["QUALITY_REPORT_ONLY", "NO_AUTO_LEARNING", "NO_AUTO_RULE_UPDATE", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def guided_question_diversity_audit(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    _, storage = _load_state(settings)
+    old_static_top = (
+        "q_structure_overview",
+        "q_day_master_month_anchor",
+        "q_income_stability",
+        "q_branch_relation_detail",
+        "q_month_command_anchor",
+    )
+    rows: List[Dict[str, Any]] = []
+    failures: List[Dict[str, Any]] = []
+    top_key_sequences: Dict[Tuple[str, ...], int] = {}
+    top_label_sequences: Dict[Tuple[str, ...], int] = {}
+    source_categories: Dict[str, int] = {}
+    income_top10_count = 0
+    kb_augmented_change_count = 0
+
+    for case in P11_GUIDED_SYNTHETIC_CASES:
+        try:
+            baseline_data = _agent_data_for_case(case, with_knowledge=False)
+            kb_data = _agent_data_for_case(case, with_knowledge=True)
+        except Exception as exc:
+            failures.append({"case_id": case.case_id, "failure_type": "exception", "message": str(exc)})
+            continue
+
+        baseline_questions = [
+            row for row in ((baseline_data.get("guided_question_context") or {}).get("questions") or [])
+            if isinstance(row, dict)
+        ]
+        questions = [
+            row for row in ((kb_data.get("guided_question_context") or {}).get("questions") or [])
+            if isinstance(row, dict)
+        ]
+        top_keys = tuple(_clean(row.get("key")) for row in questions[:5])
+        top_labels = tuple(_question_label(row) for row in questions[:5])
+        baseline_top_keys = tuple(_clean(row.get("key")) for row in baseline_questions[:5])
+        top10_keys = [_clean(row.get("key")) for row in questions[:10]]
+        if "q_income_stability" in top10_keys:
+            income_top10_count += 1
+        if baseline_top_keys != top_keys:
+            kb_augmented_change_count += 1
+        top_key_sequences[top_keys] = top_key_sequences.get(top_keys, 0) + 1
+        top_label_sequences[top_labels] = top_label_sequences.get(top_labels, 0) + 1
+        for row in questions[:5]:
+            category = _question_source_category(row)
+            source_categories[category] = source_categories.get(category, 0) + 1
+        if not questions:
+            failures.append({"case_id": case.case_id, "failure_type": "no_questions"})
+        if top_keys == old_static_top:
+            failures.append({"case_id": case.case_id, "failure_type": "old_static_top_reappeared", "top_keys": list(top_keys)})
+        if "q_income_stability" not in top10_keys:
+            failures.append({"case_id": case.case_id, "failure_type": "income_stability_missing_from_top_10", "top_keys": top10_keys})
+
+        rows.append(
+            {
+                "case_id": case.case_id,
+                "structure_label": case.structure_label,
+                "collision_focus": case.collision_focus,
+                "expected_question_key": case.question_key,
+                "expected_recommended_keys": list(case.expected_recommended_keys),
+                "baseline_top_keys": list(baseline_top_keys),
+                "kb_augmented_top_keys": list(top_keys),
+                "top_keys": list(top_keys),
+                "top_labels": list(top_labels),
+                "top_source_categories": [_question_source_category(row) for row in questions[:5]],
+                "income_stability_in_top_10": "q_income_stability" in top10_keys,
+                "kb_augmented_changed_top_5": baseline_top_keys != top_keys,
+                "old_static_top_match": top_keys == old_static_top,
+            }
+        )
+
+    case_count = len(P11_GUIDED_SYNTHETIC_CASES)
+    unique_key_count = len([sequence for sequence in top_key_sequences if sequence])
+    unique_label_count = len([sequence for sequence in top_label_sequences if sequence])
+    checks = [
+        _diversity_check("p11_case_count", case_count >= 20, "P11 matrix has at least 20 synthetic cases."),
+        _diversity_check("top_key_sequence_diverse", unique_key_count >= 3, "Top question keys vary across synthetic cases."),
+        _diversity_check("top_label_sequence_diverse", unique_label_count >= 8, "Visible Chinese question labels vary across synthetic cases."),
+        _diversity_check("old_static_top_absent", not any(row.get("old_static_top_match") for row in rows), "Old static registry top five does not reappear."),
+        _diversity_check("income_stability_available", income_top10_count == case_count, "Income stability remains available in each case top ten."),
+        _diversity_check("no_audit_failures", not failures, "No diversity audit failures were recorded."),
+    ]
+    status = "pass" if all(row["passed"] for row in checks) else "fail"
+    return {
+        "ok": status == "pass",
+        "version": "v19.p20.guided_question_diversity_audit.v1",
+        "status": status,
+        "matrix": "P11_SYNTHETIC_EXPANSION",
+        "case_count": case_count,
+        "storage": storage,
+        "summary": {
+            "top_key_sequence_count": unique_key_count,
+            "top_label_sequence_count": unique_label_count,
+            "label_diversity_ratio": round(float(unique_label_count) / case_count, 3) if case_count else 0.0,
+            "old_static_top_present": any(row.get("old_static_top_match") for row in rows),
+            "old_static_top_count": len([row for row in rows if row.get("old_static_top_match")]),
+            "income_stability_top10_count": income_top10_count,
+            "kb_augmented_change_count": kb_augmented_change_count,
+            "top_source_categories": _top_counts(source_categories),
+            "failure_count": len(failures),
+        },
+        "checks": checks,
+        "items": rows,
+        "failures": failures,
+        "guardrails": ["AUDIT_ONLY", "SYNTHETIC_CASES_ONLY", "NO_AUTO_LEARNING", "NO_RUNTIME_MUTATION", "NO_AUTO_QUESTION_LIBRARY_CHANGE"],
     }
 
 
@@ -899,6 +1020,45 @@ def seed_p14_knowledge_review_batches(settings: Dict[str, Any] | None = None) ->
     }
 
 
+def seed_p21_knowledge_review_batches(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    specs = [
+        {
+            "batch_key": "p21.r1_guided_question_structure_boundaries",
+            "batch_name": "P21 R1 guided question structure boundaries",
+            "knowledge_id_prefix": "p21.",
+            "risk_levels": ["R1"],
+            "recommended_action": "analyst_fast_review_before_proposal",
+            "note": "Synthetic-matrix question diversity and structure-layer boundary drafts. Draft review only; no runtime mutation.",
+            "actor_role": "system",
+        },
+        {
+            "batch_key": "p21.r2_income_collision_review",
+            "batch_name": "P21 R2 income collision review",
+            "knowledge_id_prefix": "p21.",
+            "risk_levels": ["R2"],
+            "recommended_action": "source_version_review_before_rule_proposal",
+            "note": "Income and wealth collision drafts from synthetic gap review. Keep blocked before analyst/source review.",
+            "actor_role": "system",
+        },
+    ]
+    created = []
+    skipped = []
+    for spec in specs:
+        result = create_knowledge_review_batch(spec, settings)
+        if result.get("ok"):
+            created.append(result.get("item"))
+        else:
+            skipped.append({"batch_key": spec["batch_key"], "code": result.get("code"), "message": result.get("message")})
+    return {
+        "ok": True,
+        "created_count": len(created),
+        "skipped_count": len(skipped),
+        "created": created,
+        "skipped": skipped,
+        "guardrails": ["P21_KNOWLEDGE_PACK_REVIEW_BATCH_ONLY", "NO_RUNTIME_MUTATION", "ANALYST_REVIEW_REQUIRED"],
+    }
+
+
 def list_knowledge_review_batches(settings: Dict[str, Any] | None = None, *, status: str = "") -> Dict[str, Any]:
     state, storage = _load_state(settings)
     rows = list(state["knowledge_review_batches"])
@@ -1064,6 +1224,643 @@ def list_knowledge_batch_proposal_runs(settings: Dict[str, Any] | None = None, *
         "items": rows[:100],
         "storage": storage,
         "guardrails": ["P16_PROPOSAL_RUN_LEDGER_ONLY", "NO_RUNTIME_MUTATION", "R2_R3_ANALYST_REVIEW_BEFORE_PROPOSAL"],
+    }
+
+
+def create_p21_knowledge_pack_review_packet(payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin", "system"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin/system can create a P21 review packet."}
+
+    seed_result = seed_current_knowledge_drafts(force=False)
+    batch_seed = seed_p21_knowledge_review_batches(settings)
+    proposal_payload = {
+        "actor_role": role if role in {"analyst", "admin"} else "admin",
+        "source_question_key": _clean(payload.get("source_question_key"), "q_income_stability"),
+        "note": _clean(payload.get("note"), "P22 P21 R1 proposal draft run. Drafts only; no runtime mutation."),
+    }
+    proposal_result = create_knowledge_batch_proposal_drafts(P21_R1_BATCH_KEY, proposal_payload, settings)
+    if proposal_result.get("ok") is False and proposal_result.get("code") != "KNOWLEDGE_BATCH_PROPOSALS_EXIST":
+        return _p21_review_packet_result(
+            "proposal_blocked",
+            seed_result,
+            batch_seed,
+            proposal_result,
+            None,
+            None,
+            _p21_r2_gate(settings),
+        )
+
+    proposal_run = dict(proposal_result.get("item") or {})
+    source_run_id = _clean(proposal_run.get("run_id") or proposal_run.get("source_run_id"))
+    if not source_run_id:
+        source_run_id = _clean(proposal_run.get("knowledge_batch_proposal_run_id"))
+    if not source_run_id:
+        source_run_id = _clean(proposal_run.get("run_id"))
+
+    state, _ = _load_state(settings)
+    validation = _find_proposal_validation_run(state, source_run_id=source_run_id, batch_key=P21_R1_BATCH_KEY, status="validation_ready")
+    validation_result: Dict[str, Any]
+    if validation:
+        validation_result = {"ok": True, "item": validation, "guardrails": validation.get("guardrails") or [], "reused": True}
+    else:
+        validation_result = create_proposal_validation_run(
+            {
+                "actor_role": role,
+                "source_run_id": source_run_id,
+                "batch_key": P21_R1_BATCH_KEY,
+                "statuses": ["draft", "validation_failed", "validation_ready"],
+                "note": "P22 P21 R1 schema validation. Validation only; no approval, version record, or runtime mutation.",
+            },
+            settings,
+        )
+        if validation_result.get("ok") is False:
+            return _p21_review_packet_result(
+                "validation_blocked",
+                seed_result,
+                batch_seed,
+                proposal_result,
+                validation_result,
+                None,
+                _p21_r2_gate(settings),
+            )
+        validation = dict(validation_result.get("item") or {})
+
+    state, _ = _load_state(settings)
+    existing_packet = _find_successful_proposal_review_packet(state, validation or {})
+    if existing_packet:
+        packet_result = {"ok": True, "item": existing_packet, "guardrails": existing_packet.get("guardrails") or [], "reused": True}
+    else:
+        packet_result = create_proposal_review_packet(
+            {
+                "actor_role": role,
+                "validation_run_id": (validation or {}).get("validation_run_id"),
+                "note": "P22 P21 R1 analyst review packet. Human decision required; no auto approval or runtime mutation.",
+            },
+            settings,
+        )
+
+    status = "review_packet_ready" if packet_result.get("ok") else "review_packet_blocked"
+    return _p21_review_packet_result(status, seed_result, batch_seed, proposal_result, validation_result, packet_result, _p21_r2_gate(settings))
+
+
+def create_proposal_validation_run(payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin", "system"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin/system can run proposal validation."}
+    selected = _select_proposals_for_validation(state, payload)
+    if not selected["rule_proposals"] and not selected["guided_question_proposals"]:
+        run = _proposal_validation_run_base(payload, role)
+        run.update({"status": "empty", "summary": {"total": 0, "passed": 0, "failed": 0}, "message": "No proposal drafts matched the validation filter."})
+        state["proposal_validation_runs"].append(run)
+        saved = _save_state(state, settings)
+        return {"ok": False, "code": "PROPOSAL_VALIDATION_EMPTY", "message": run["message"], "item": run, "storage": saved, "guardrails": run["guardrails"]}
+
+    results = []
+    for proposal in selected["rule_proposals"]:
+        validated = validate_bazi_rule_proposal(str(proposal.get("proposal_id") or ""), settings)
+        results.append(_proposal_validation_item("bazi_rule_proposal", validated))
+    for proposal in selected["guided_question_proposals"]:
+        validated = validate_guided_question_proposal(str(proposal.get("proposal_id") or ""), settings)
+        results.append(_proposal_validation_item("guided_question_proposal", validated))
+
+    state, _ = _load_state(settings)
+    passed = len([row for row in results if row.get("passed") is True])
+    failed = len(results) - passed
+    run = _proposal_validation_run_base(payload, role)
+    run.update(
+        {
+            "status": "validation_ready" if failed == 0 else "validation_failed",
+            "items": results,
+            "summary": {
+                "total": len(results),
+                "passed": passed,
+                "failed": failed,
+                "rule_proposal_count": len(selected["rule_proposals"]),
+                "question_proposal_count": len(selected["guided_question_proposals"]),
+            },
+        }
+    )
+    state["proposal_validation_runs"].append(run)
+    saved = _save_state(state, settings)
+    return {"ok": failed == 0, "item": run, "storage": saved, "guardrails": run["guardrails"]}
+
+
+def list_proposal_validation_runs(settings: Dict[str, Any] | None = None, *, status: str = "", source_run_id: str = "") -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    rows = list(state["proposal_validation_runs"])
+    if status:
+        rows = [row for row in rows if row.get("status") == status]
+    if source_run_id:
+        rows = [row for row in rows if row.get("source_run_id") == source_run_id]
+    rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "items": rows[:100],
+        "storage": storage,
+        "guardrails": ["P17_VALIDATION_RUN_LEDGER_ONLY", "NO_APPROVAL", "NO_VERSION_RECORD", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def create_proposal_review_packet(payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin", "system"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin/system can create proposal review packets."}
+    validation = _select_validation_run_for_review_packet(state, payload)
+    if not validation:
+        return {"ok": False, "code": "PROPOSAL_VALIDATION_RUN_NOT_FOUND", "message": "A validation run is required before creating a review packet."}
+    existing = _find_successful_proposal_review_packet(state, validation)
+    if existing and payload.get("allow_duplicate") is not True:
+        return {
+            "ok": False,
+            "code": "PROPOSAL_REVIEW_PACKET_EXISTS",
+            "message": "Review packet already exists for this validation run.",
+            "item": existing,
+            "guardrails": existing.get("guardrails") or [],
+        }
+    items = [_proposal_review_packet_item(state, row) for row in validation.get("items") or [] if isinstance(row, dict)]
+    failed = [row for row in items if row.get("validation_passed") is not True]
+    status = "approval_review_ready" if validation.get("status") == "validation_ready" and not failed and items else "blocked_by_validation"
+    packet = {
+        "packet_id": "prp_" + uuid.uuid4().hex[:16],
+        "created_at": utc_now(),
+        "actor_role": role,
+        "actor_id": _clean(payload.get("actor_id"), role),
+        "validation_run_id": validation.get("validation_run_id"),
+        "source_run_id": validation.get("source_run_id"),
+        "batch_key": validation.get("batch_key"),
+        "status": status,
+        "recommended_decision": "analyst_review_for_approval" if status == "approval_review_ready" else "fix_failed_validation_before_approval_review",
+        "items": items,
+        "summary": _proposal_review_packet_summary(items),
+        "blocked_reason": "" if status == "approval_review_ready" else "Validation must pass before analyst/admin approval review.",
+        "runtime_mutation": False,
+        "approval_mutation": False,
+        "version_mutation": False,
+        "note": _clean(payload.get("note"), "P18 analyst approval packet. Packet only; no approval or runtime mutation."),
+        "guardrails": [
+            "P18_REVIEW_PACKET_ONLY",
+            "NO_AUTO_APPROVAL",
+            "NO_VERSION_RECORD",
+            "NO_RUNTIME_MUTATION",
+            "ANALYST_OR_ADMIN_DECISION_REQUIRED",
+        ],
+    }
+    state["proposal_review_packets"].append(packet)
+    saved = _save_state(state, settings)
+    return {"ok": status == "approval_review_ready", "item": packet, "storage": saved, "guardrails": packet["guardrails"]}
+
+
+def list_proposal_review_packets(settings: Dict[str, Any] | None = None, *, status: str = "", validation_run_id: str = "") -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    rows = [_proposal_review_packet_for_list(row) for row in state["proposal_review_packets"]]
+    if status:
+        rows = [row for row in rows if row.get("status") == status]
+    if validation_run_id:
+        rows = [row for row in rows if row.get("validation_run_id") == validation_run_id]
+    rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return {
+        "ok": True,
+        "count": len(rows),
+        "items": rows[:100],
+        "storage": storage,
+        "guardrails": ["P18_REVIEW_PACKET_LEDGER_ONLY", "NO_AUTO_APPROVAL", "NO_VERSION_RECORD", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def record_proposal_review_packet_decision(packet_id: str, payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin", "system"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin/system can record proposal review packet decisions."}
+    packet = _find_proposal_review_packet(state, packet_id)
+    if not packet:
+        return {"ok": False, "code": "PROPOSAL_REVIEW_PACKET_NOT_FOUND", "message": "Review packet not found."}
+
+    decision_rows = payload.get("decisions")
+    if isinstance(decision_rows, list) and decision_rows:
+        raw_decisions = [dict(row) for row in decision_rows if isinstance(row, dict)]
+    else:
+        raw_decisions = [dict(payload)]
+    if not raw_decisions:
+        return {"ok": False, "code": "PROPOSAL_REVIEW_DECISION_EMPTY", "message": "At least one review decision is required."}
+
+    proposal_ids = {_clean(row.get("proposal_id")) for row in packet.get("items") or [] if _clean(row.get("proposal_id"))}
+    records = []
+    for raw in raw_decisions:
+        decision = _clean(raw.get("decision") or payload.get("decision"), "hold")
+        if decision not in ALLOWED_PROPOSAL_REVIEW_PACKET_DECISIONS:
+            return {
+                "ok": False,
+                "code": "PROPOSAL_REVIEW_DECISION_NOT_ALLOWED",
+                "message": "Decision must be approve_candidate, reject_candidate, needs_revision, or hold.",
+            }
+        if packet.get("status") != "approval_review_ready" and decision == "approve_candidate":
+            return {
+                "ok": False,
+                "code": "PROPOSAL_REVIEW_PACKET_NOT_READY",
+                "message": "Only validation-ready packets can receive approve_candidate decisions.",
+            }
+        proposal_id = _clean(raw.get("proposal_id") or payload.get("proposal_id"))
+        if proposal_id and proposal_id not in proposal_ids:
+            return {"ok": False, "code": "PROPOSAL_NOT_IN_REVIEW_PACKET", "message": "Decision proposal_id is not part of this review packet."}
+        records.append(
+            {
+                "decision_record_id": "prd_" + uuid.uuid4().hex[:16],
+                "created_at": utc_now(),
+                "packet_id": packet.get("packet_id"),
+                "validation_run_id": packet.get("validation_run_id"),
+                "source_run_id": packet.get("source_run_id"),
+                "batch_key": packet.get("batch_key"),
+                "actor_role": role,
+                "actor_id": _clean(raw.get("actor_id") or payload.get("actor_id"), role),
+                "scope": "proposal" if proposal_id else "packet",
+                "proposal_id": proposal_id,
+                "decision": decision,
+                "note": _clean(raw.get("note") or payload.get("note"), "P23 review decision record."),
+                "proposal_status_mutation": False,
+                "approval_mutation": False,
+                "version_mutation": False,
+                "runtime_mutation": False,
+                "guardrails": [
+                    "P23_DECISION_LEDGER_ONLY",
+                    "NO_AUTO_APPROVAL",
+                    "NO_PROPOSAL_STATUS_CHANGE",
+                    "NO_VERSION_RECORD",
+                    "NO_RUNTIME_MUTATION",
+                ],
+            }
+        )
+
+    packet.setdefault("decision_records", []).extend(records)
+    packet["decision_summary"] = _proposal_review_decision_summary(packet.get("decision_records") or [])
+    packet["latest_decision_record"] = records[-1]
+    packet["decision_status"] = "decision_recorded"
+    packet["updated_at"] = utc_now()
+    _annotate_proposal_review_packet_items(packet, records)
+    saved = _save_state(state, settings)
+    return {
+        "ok": True,
+        "item": _proposal_review_packet_for_list(packet),
+        "decision_records": records,
+        "storage": saved,
+        "guardrails": [
+            "P23_DECISION_LEDGER_ONLY",
+            "NO_AUTO_APPROVAL",
+            "NO_PROPOSAL_STATUS_CHANGE",
+            "NO_VERSION_RECORD",
+            "NO_RUNTIME_MUTATION",
+        ],
+    }
+
+
+def create_proposal_review_approval_preflight(packet_id: str, payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin", "system"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin/system can run approval preflight."}
+    packet = _find_proposal_review_packet(state, packet_id)
+    if not packet:
+        return {"ok": False, "code": "PROPOSAL_REVIEW_PACKET_NOT_FOUND", "message": "Review packet not found."}
+
+    items = [dict(row) for row in (packet.get("items") or []) if isinstance(row, dict)]
+    latest_by_proposal = _proposal_review_latest_decisions_by_proposal(packet)
+    preflight_items = [_proposal_review_preflight_item(state, row, latest_by_proposal) for row in items]
+    missing_decisions = [row.get("proposal_id") for row in preflight_items if "missing_item_decision" in row.get("blockers", [])]
+    non_approve_decisions = [
+        {"proposal_id": row.get("proposal_id"), "decision": row.get("latest_decision")}
+        for row in preflight_items
+        if "latest_decision_not_approve_candidate" in row.get("blockers", [])
+    ]
+    status_blockers = [
+        {"proposal_id": row.get("proposal_id"), "status": row.get("current_status")}
+        for row in preflight_items
+        if "proposal_status_not_validation_ready" in row.get("blockers", [])
+    ]
+    failed_validation = [row.get("proposal_id") for row in preflight_items if "validation_not_passed" in row.get("blockers", [])]
+    missing_proposals = [row.get("proposal_id") for row in preflight_items if "proposal_not_found" in row.get("blockers", [])]
+
+    checks = [
+        _approval_preflight_check("packet_ready", packet.get("status") == "approval_review_ready", "Packet is validation-ready for analyst approval review."),
+        _approval_preflight_check("items_present", bool(items), "Review packet contains proposal items."),
+        _approval_preflight_check("all_items_validation_passed", not failed_validation, "Every packet item passed validation.", failed_validation),
+        _approval_preflight_check("all_proposals_exist", not missing_proposals, "Every packet item still maps to an existing proposal.", missing_proposals),
+        _approval_preflight_check("all_proposals_validation_ready", not status_blockers, "Every proposal is still in validation_ready status.", status_blockers),
+        _approval_preflight_check("all_items_have_item_decision", not missing_decisions, "Every proposal has a proposal-scoped analyst decision.", missing_decisions),
+        _approval_preflight_check("all_item_decisions_approve_candidate", not non_approve_decisions, "Every latest proposal-scoped decision is approve_candidate.", non_approve_decisions),
+        _approval_preflight_check("no_packet_mutation_flags", _no_review_packet_mutation_flags(packet), "Packet and decision records contain no approval/version/runtime mutation flags."),
+    ]
+    passed = len([row for row in checks if row.get("passed") is True])
+    failed = len(checks) - passed
+    status = "approval_preflight_ready" if failed == 0 else "approval_preflight_blocked"
+    record = {
+        "approval_preflight_id": "apf_" + uuid.uuid4().hex[:16],
+        "created_at": utc_now(),
+        "packet_id": packet.get("packet_id"),
+        "validation_run_id": packet.get("validation_run_id"),
+        "source_run_id": packet.get("source_run_id"),
+        "batch_key": packet.get("batch_key"),
+        "actor_role": role,
+        "actor_id": _clean(payload.get("actor_id"), role),
+        "status": status,
+        "checks": checks,
+        "items": preflight_items,
+        "summary": {
+            "total_checks": len(checks),
+            "passed_checks": passed,
+            "failed_checks": failed,
+            "item_count": len(preflight_items),
+            "ready_item_count": len([row for row in preflight_items if row.get("ready_for_approval") is True]),
+            "missing_item_decision_count": len(missing_decisions),
+            "non_approve_decision_count": len(non_approve_decisions),
+            "proposal_status_blocker_count": len(status_blockers),
+        },
+        "approval_mutation": False,
+        "proposal_status_mutation": False,
+        "version_mutation": False,
+        "runtime_mutation": False,
+        "note": _clean(payload.get("note"), "P24 approval preflight report. Report only; no approval mutation."),
+        "guardrails": [
+            "P24_APPROVAL_PREFLIGHT_ONLY",
+            "NO_AUTO_APPROVAL",
+            "NO_PROPOSAL_STATUS_CHANGE",
+            "NO_VERSION_RECORD",
+            "NO_RUNTIME_MUTATION",
+        ],
+    }
+    packet.setdefault("approval_preflight_records", []).append(record)
+    packet["latest_approval_preflight_record"] = record
+    packet["approval_preflight_status"] = status
+    packet["updated_at"] = utc_now()
+    saved = _save_state(state, settings)
+    return {
+        "ok": status == "approval_preflight_ready",
+        "item": record,
+        "packet": _proposal_review_packet_for_list(packet),
+        "storage": saved,
+        "guardrails": record["guardrails"],
+    }
+
+
+def execute_proposal_review_packet_approval(packet_id: str, payload: Dict[str, Any], settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    role = _role(payload.get("actor_role"))
+    if role not in {"analyst", "admin"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin can execute controlled approval."}
+    packet = _find_proposal_review_packet(state, packet_id)
+    if not packet:
+        return {"ok": False, "code": "PROPOSAL_REVIEW_PACKET_NOT_FOUND", "message": "Review packet not found."}
+
+    existing = _latest_successful_approval_execution(packet)
+    if existing:
+        return {
+            "ok": True,
+            "item": existing,
+            "packet": _proposal_review_packet_for_list(packet),
+            "reused": True,
+            "guardrails": existing.get("guardrails") or [],
+        }
+
+    preflight = _select_approval_preflight_record(packet, payload)
+    blockers = _approval_execution_blockers(state, packet, preflight)
+    if blockers:
+        record = _approval_execution_record(packet, preflight, payload, role, "controlled_approval_blocked", [], blockers)
+        packet.setdefault("approval_execution_records", []).append(record)
+        packet["latest_approval_execution_record"] = record
+        packet["approval_execution_status"] = record["status"]
+        packet["updated_at"] = utc_now()
+        saved = _save_state(state, settings)
+        return {
+            "ok": False,
+            "code": "P25_APPROVAL_PREFLIGHT_NOT_READY",
+            "message": "Controlled approval requires a ready P24 approval preflight and proposal-scoped approve_candidate decisions.",
+            "item": record,
+            "packet": _proposal_review_packet_for_list(packet),
+            "storage": saved,
+            "guardrails": record["guardrails"],
+        }
+
+    approval_note = _clean(payload.get("note"), "P25 controlled approval. Proposal approval only; no version record or runtime mutation.")
+    approval_items = []
+    for row in preflight.get("items") or []:
+        if not isinstance(row, dict):
+            continue
+        proposal_id = _clean(row.get("proposal_id"))
+        kind = _clean(row.get("kind"))
+        previous_status = _proposal_status_for_preflight_item(state, row)
+        if kind == "bazi_rule_proposal":
+            result = approve_bazi_rule_proposal(proposal_id, {"actor_role": role, "actor_id": _clean(payload.get("actor_id"), role), "note": approval_note}, settings)
+        else:
+            result = approve_guided_question_proposal(proposal_id, {"actor_role": role, "actor_id": _clean(payload.get("actor_id"), role), "note": approval_note}, settings)
+        approved = result.get("ok") is True
+        approved_item = dict(result.get("item") or {})
+        approval_items.append(
+            {
+                "kind": kind,
+                "proposal_id": proposal_id,
+                "previous_status": previous_status,
+                "result_status": approved_item.get("status") or result.get("code") or "",
+                "ok": approved,
+                "code": result.get("code", ""),
+                "message": result.get("message", ""),
+                "controlled_approval_mutation": approved,
+                "version_mutation": False,
+                "runtime_mutation": False,
+            }
+        )
+
+    state, _ = _load_state(settings)
+    packet = _find_proposal_review_packet(state, packet_id)
+    if not packet:
+        return {"ok": False, "code": "PROPOSAL_REVIEW_PACKET_NOT_FOUND_AFTER_APPROVAL", "message": "Review packet disappeared after approval execution."}
+    _refresh_proposal_review_packet_item_statuses(state, packet)
+    failed_items = [row for row in approval_items if row.get("ok") is not True]
+    status = "controlled_approval_executed" if not failed_items else "controlled_approval_partial"
+    record = _approval_execution_record(packet, preflight, payload, role, status, approval_items, failed_items)
+    packet.setdefault("approval_execution_records", []).append(record)
+    packet["latest_approval_execution_record"] = record
+    packet["approval_execution_status"] = status
+    packet["updated_at"] = utc_now()
+    saved = _save_state(state, settings)
+    return {
+        "ok": status == "controlled_approval_executed",
+        "item": record,
+        "packet": _proposal_review_packet_for_list(packet),
+        "storage": saved,
+        "guardrails": record["guardrails"],
+    }
+
+
+def execute_p26_knowledge_to_rules(payload: Dict[str, Any] | None = None, settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    body = dict(payload or {})
+    role = _role(body.get("actor_role"))
+    if role not in {"analyst", "admin", "system"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin/system can execute P26 knowledge-to-rules."}
+
+    seed_result = seed_current_knowledge_drafts(force=bool(body.get("force_seed")))
+    rule_db_result = ingest_current_knowledge_drafts_to_rule_db(
+        force=bool(body.get("force_rule_db")),
+        enable_engine=body.get("enable_engine") is not False,
+    )
+    state, _ = _load_state(settings)
+    approved_rule_ids = _approved_rule_proposal_ids_for_versioning(state)
+    approved_question_ids = _approved_question_proposal_ids_for_versioning(state)
+    rule_version_result: Dict[str, Any] = {"ok": True, "status": "skipped", "reason": "no_approved_rule_proposals"}
+    question_version_result: Dict[str, Any] = {"ok": True, "status": "skipped", "reason": "no_approved_guided_question_proposals"}
+
+    if approved_rule_ids:
+        rule_version_result = record_bazi_rule_version(
+            {
+                "included_proposals": approved_rule_ids,
+                "activated_by": _clean(body.get("actor_id"), role),
+                "activated_by_role": role,
+                "note": _clean(body.get("note"), "P26 converts P25-approved rule proposals into a rule version record. No runtime inference mutation."),
+            },
+            settings,
+        )
+
+    if approved_question_ids:
+        question_version_result = record_guided_question_library_version(
+            {
+                "included_proposals": approved_question_ids,
+                "activated_by": _clean(body.get("actor_id"), role),
+                "activated_by_role": role,
+                "note": _clean(body.get("note"), "P26 converts P25-approved question proposals into a question library version record. No runtime UI mutation."),
+            },
+            settings,
+        )
+
+    drafts = [row for row in (list_knowledge_drafts(q="p26.").get("items") or []) if isinstance(row, dict)]
+    failures = [
+        row
+        for row in [rule_version_result, question_version_result, rule_db_result]
+        if isinstance(row, dict) and row.get("ok") is False
+    ]
+    return {
+        "ok": not failures,
+        "stage": "P26_KNOWLEDGE_TO_RULES_FAST_PATH",
+        "status": "converted" if not failures else "conversion_blocked",
+        "seed_result": {
+            "imported_count": seed_result.get("imported_count", 0),
+            "updated_count": seed_result.get("updated_count", 0),
+            "count": seed_result.get("count", 0),
+        },
+        "rule_version": _compact_p26_result(rule_version_result, ["version_id", "included_proposals", "rule_count", "runtime_mutation", "guardrails", "status", "reason", "code", "message"]),
+        "question_version": _compact_p26_result(question_version_result, ["version_id", "included_proposals", "question_count", "runtime_mutation", "guardrails", "status", "reason", "code", "message"]),
+        "rule_db_ingestion": _compact_p26_result(rule_db_result, ["status", "draft_count", "imported_count", "updated_count", "blocked_count", "rule_count", "guardrails"]),
+        "summary": {
+            "p26_draft_count": len(drafts),
+            "approved_rule_proposals_consumed": len(approved_rule_ids) if rule_version_result.get("ok") is not False else 0,
+            "approved_question_proposals_consumed": len(approved_question_ids) if question_version_result.get("ok") is not False else 0,
+            "rule_db_rule_count": rule_db_result.get("rule_count", 0),
+            "rule_db_imported_count": rule_db_result.get("imported_count", 0),
+            "rule_db_updated_count": rule_db_result.get("updated_count", 0),
+            "version_record_created": bool((rule_version_result.get("item") or {}).get("version_id") or (question_version_result.get("item") or {}).get("version_id")),
+        },
+        "failures": failures,
+        "guardrails": [
+            "P26_KNOWLEDGE_TO_RULES_FAST_PATH",
+            "P25_APPROVAL_REQUIRED_FOR_VERSION_RECORD",
+            "RULE_DB_ENGINE_ADAPTER_ONLY",
+            "NO_RESULT_MUTATION",
+            "NO_FORTUNE",
+        ],
+    }
+
+
+def execute_p27_smart_rule_activation(payload: Dict[str, Any] | None = None, settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    body = dict(payload or {})
+    role = _role(body.get("actor_role"))
+    if role not in {"analyst", "admin", "system"}:
+        return {"ok": False, "code": "ROLE_NOT_ALLOWED", "message": "Only analyst/admin/system can execute P27 smart rule gate."}
+
+    prefixes = _string_list(body.get("prefixes")) or ["p27."]
+    max_risk_level = _clean(body.get("max_risk_level"), "R1")
+    min_confidence = _bounded_float(body.get("min_confidence"), 0.72, 0.0, 1.0)
+    limit = _bounded_int(body.get("limit"), 12, 0, 100)
+    activate = body.get("activate") is True
+
+    seed_result = seed_current_knowledge_drafts(force=bool(body.get("force_seed")))
+    rule_db_result = ingest_current_knowledge_drafts_to_rule_db(
+        force=bool(body.get("force_rule_db")),
+        enable_engine=True,
+    )
+    pre_regression = run_guided_synthetic_collision(P11_GUIDED_SYNTHETIC_CASES)
+    gate_result = smart_gate_bazi_rule_db_candidates(
+        prefixes=prefixes,
+        max_risk_level=max_risk_level,
+        min_confidence=min_confidence,
+        limit=limit,
+        activate=activate,
+        actor_role=role,
+        note=_clean(body.get("note"), "P27 smart gate activation after synthetic regression."),
+        regression_status=str(pre_regression.get("status") or ""),
+    )
+    activated_ids = [str(row.get("rule_id") or "") for row in gate_result.get("activated") or [] if row.get("rule_id")]
+    post_regression = pre_regression
+    rollback_result: Dict[str, Any] = {"ok": True, "updated_count": 0, "status": "not_needed"}
+    if activate and activated_ids and gate_result.get("ok"):
+        post_regression = run_guided_synthetic_collision(P11_GUIDED_SYNTHETIC_CASES)
+        if post_regression.get("status") != "pass":
+            rollback_result = set_bazi_rule_engine_activation(
+                activated_ids,
+                enabled=False,
+                actor_role=role,
+                note="P27 smart gate rollback because post-activation synthetic regression failed.",
+                adapter_status="candidate_waiting_synthetic_acceptance",
+            )
+            gate_result["status"] = "rolled_back"
+            gate_result["rollback"] = rollback_result
+
+    failures = []
+    if pre_regression.get("status") != "pass":
+        failures.append({"stage": "pre_regression", "status": pre_regression.get("status")})
+    if activate and post_regression.get("status") != "pass":
+        failures.append({"stage": "post_regression", "status": post_regression.get("status")})
+    if gate_result.get("ok") is False:
+        failures.append({"stage": "smart_gate", "code": gate_result.get("code"), "message": gate_result.get("message")})
+
+    return {
+        "ok": not failures,
+        "stage": "P27_SMART_RULE_ACTIVATION_GATE",
+        "status": "activated" if activate and not failures else ("dry_run" if not activate and not failures else "blocked_or_rolled_back"),
+        "seed_result": {
+            "imported_count": seed_result.get("imported_count", 0),
+            "updated_count": seed_result.get("updated_count", 0),
+            "count": seed_result.get("count", 0),
+        },
+        "rule_db_ingestion": _compact_p26_result(rule_db_result, ["status", "draft_count", "imported_count", "updated_count", "blocked_count", "rule_count", "guardrails"]),
+        "gate": _compact_p26_result(gate_result, ["status", "summary", "selected", "activated", "blocked", "rollback", "code", "message", "guardrails"]),
+        "pre_regression": {
+            "status": pre_regression.get("status"),
+            "summary": pre_regression.get("summary"),
+            "validation_run": pre_regression.get("validation_run"),
+        },
+        "post_regression": {
+            "status": post_regression.get("status"),
+            "summary": post_regression.get("summary"),
+            "validation_run": post_regression.get("validation_run"),
+        },
+        "summary": {
+            "p27_draft_count": len([row for row in (list_knowledge_drafts(q="p27.").get("items") or []) if isinstance(row, dict)]),
+            "rule_db_rule_count": rule_db_result.get("rule_count", 0),
+            "candidate_count": ((gate_result.get("summary") or {}).get("candidate_count") or 0) if isinstance(gate_result.get("summary"), dict) else 0,
+            "selected_count": ((gate_result.get("summary") or {}).get("selected_count") or 0) if isinstance(gate_result.get("summary"), dict) else 0,
+            "activated_count": ((gate_result.get("summary") or {}).get("activated_count") or 0) if isinstance(gate_result.get("summary"), dict) else 0,
+            "rolled_back_count": rollback_result.get("updated_count", 0),
+        },
+        "failures": failures,
+        "guardrails": [
+            "P27_SMART_RULE_ACTIVATION_GATE",
+            "SYNTHETIC_REGRESSION_REQUIRED",
+            "LOW_RISK_ONLY_BY_DEFAULT",
+            "TRANSPARENT_ACTIVATION_LOG",
+            "NO_RESULT_MUTATION",
+            "NO_FORTUNE",
+        ],
     }
 
 
@@ -1643,6 +2440,8 @@ def _empty_state() -> Dict[str, Any]:
         "governance_releases": [],
         "knowledge_review_batches": [],
         "knowledge_batch_proposal_runs": [],
+        "proposal_validation_runs": [],
+        "proposal_review_packets": [],
         "rule_impacts": [],
         "revision_proposals": [],
         "active_rule_revisions": [],
@@ -1709,7 +2508,7 @@ def _file_load_state() -> Dict[str, Any]:
         return _empty_state()
     state = _empty_state()
     if isinstance(payload, dict):
-        for key in ["feedback", "guided_question_reviews", "guided_question_proposals", "guided_question_library_versions", "guided_question_audits", "bazi_rule_proposals", "bazi_rule_versions", "synthetic_promotion_candidates", "governance_releases", "knowledge_review_batches", "knowledge_batch_proposal_runs", "rule_impacts", "revision_proposals", "active_rule_revisions", "validation_cases", "validation_runs", "promotion_requests"]:
+        for key in ["feedback", "guided_question_reviews", "guided_question_proposals", "guided_question_library_versions", "guided_question_audits", "bazi_rule_proposals", "bazi_rule_versions", "synthetic_promotion_candidates", "governance_releases", "knowledge_review_batches", "knowledge_batch_proposal_runs", "proposal_validation_runs", "proposal_review_packets", "rule_impacts", "revision_proposals", "active_rule_revisions", "validation_cases", "validation_runs", "promotion_requests"]:
             if isinstance(payload.get(key), list):
                 state[key] = list(payload[key])
         if isinstance(payload.get("label_contract"), dict):
@@ -1890,6 +2689,21 @@ def _answer_quality_score(text: str, context: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _quality_check(name: str, passed: bool, note: str) -> Dict[str, Any]:
+    return {"name": name, "passed": bool(passed), "note": note}
+
+
+def _question_label(row: Dict[str, Any]) -> str:
+    label = row.get("label")
+    if isinstance(label, dict):
+        return _clean(label.get("zh") or label.get("en") or next(iter(label.values()), ""))
+    return _clean(label)
+
+
+def _question_source_category(row: Dict[str, Any]) -> str:
+    return _clean(row.get("source_signal_category") or row.get("category"), "registry_baseline")
+
+
+def _diversity_check(name: str, passed: bool, note: str) -> Dict[str, Any]:
     return {"name": name, "passed": bool(passed), "note": note}
 
 
@@ -2218,7 +3032,7 @@ def _synthetic_rule_domain(candidate: Dict[str, Any]) -> str:
     tags = " ".join(_string_list(candidate.get("knowledge_tags")) + _string_list(candidate.get("failure_types")) + [_clean(candidate.get("attribution_layer"))])
     if "income" in tags or "wealth" in tags:
         return "income_stability"
-    if "ten_god" in tags:
+    if "ten_god" in tags or "interaction" in tags:
         return "ten_god_relation"
     if "time" in tags:
         return "time_structure"
@@ -2353,6 +3167,99 @@ def _find_successful_knowledge_batch_proposal_run(state: Dict[str, Any], batch: 
         if row.get("batch_id") == batch_id or row.get("batch_key") == batch_key:
             return row
     return None
+
+
+def _find_proposal_validation_run(
+    state: Dict[str, Any],
+    *,
+    source_run_id: str = "",
+    batch_key: str = "",
+    status: str = "",
+) -> Dict[str, Any] | None:
+    rows = list(state.get("proposal_validation_runs", []))
+    if source_run_id:
+        rows = [row for row in rows if row.get("source_run_id") == source_run_id]
+    if batch_key:
+        rows = [row for row in rows if row.get("batch_key") == batch_key]
+    if status:
+        rows = [row for row in rows if row.get("status") == status]
+    rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return dict(rows[0]) if rows else None
+
+
+def _p21_r2_gate(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
+    state, _ = _load_state(settings)
+    batch = _find_knowledge_review_batch(state, P21_R2_BATCH_KEY)
+    if not batch:
+        return {"batch_key": P21_R2_BATCH_KEY, "eligible": False, "reason": "P21 R2 review batch is not seeded yet.", "blocked_count": 0}
+    eligibility = _knowledge_batch_proposal_eligibility(batch)
+    return {
+        "batch_key": P21_R2_BATCH_KEY,
+        "eligible": bool(eligibility.get("eligible")),
+        "reason": eligibility.get("reason") or "",
+        "blocked_count": len(eligibility.get("blocked_items") or []) or len(batch.get("items") or []),
+        "risk_levels": list(batch.get("risk_levels") or []),
+        "guardrails": ["R2_ANALYST_SOURCE_REVIEW_REQUIRED", "NO_PROPOSAL_DRAFT_CREATED", "NO_RUNTIME_MUTATION"],
+    }
+
+
+def _p21_review_packet_result(
+    status: str,
+    seed_result: Dict[str, Any],
+    batch_seed: Dict[str, Any],
+    proposal_result: Dict[str, Any] | None,
+    validation_result: Dict[str, Any] | None,
+    packet_result: Dict[str, Any] | None,
+    r2_gate: Dict[str, Any],
+) -> Dict[str, Any]:
+    proposal_item = dict((proposal_result or {}).get("item") or {})
+    validation_item = dict((validation_result or {}).get("item") or {})
+    packet_item = dict((packet_result or {}).get("item") or {})
+    summary = {
+        "draft_seed_total": seed_result.get("count"),
+        "p21_batch_created": batch_seed.get("created_count"),
+        "p21_batch_skipped": batch_seed.get("skipped_count"),
+        "r1_rule_proposal_count": (proposal_item.get("summary") or {}).get("rule_proposal_count", 0),
+        "r1_question_proposal_count": (proposal_item.get("summary") or {}).get("question_proposal_count", 0),
+        "validation_total": (validation_item.get("summary") or {}).get("total", 0),
+        "validation_passed": (validation_item.get("summary") or {}).get("passed", 0),
+        "validation_failed": (validation_item.get("summary") or {}).get("failed", 0),
+        "review_packet_items": (packet_item.get("summary") or {}).get("total", 0),
+        "r2_eligible_for_proposal": r2_gate.get("eligible") is True,
+        "r2_blocked_count": r2_gate.get("blocked_count", 0),
+    }
+    return {
+        "ok": status == "review_packet_ready",
+        "stage": "P22_P21_R1_PROPOSAL_REVIEW_PACKET",
+        "status": status,
+        "summary": summary,
+        "seed_result": {
+            "status": seed_result.get("status"),
+            "imported_count": seed_result.get("imported_count"),
+            "updated_count": seed_result.get("updated_count"),
+            "count": seed_result.get("count"),
+        },
+        "batch_seed": {
+            "created_count": batch_seed.get("created_count"),
+            "skipped_count": batch_seed.get("skipped_count"),
+        },
+        "proposal_run": _compact_p22_item(proposal_item, ["run_id", "batch_key", "status", "summary", "runtime_mutation", "rule_proposals", "guided_question_proposals"]),
+        "validation_run": _compact_p22_item(validation_item, ["validation_run_id", "source_run_id", "batch_key", "status", "summary", "runtime_mutation", "approval_mutation", "version_mutation"]),
+        "review_packet": _compact_p22_item(packet_item, ["packet_id", "validation_run_id", "batch_key", "status", "summary", "runtime_mutation", "approval_mutation", "version_mutation", "recommended_decision"]),
+        "r2_gate": r2_gate,
+        "guardrails": [
+            "P22_REVIEW_PACKET_ONLY",
+            "P21_R1_ONLY",
+            "R2_BLOCKED_BEFORE_ANALYST_SOURCE_REVIEW",
+            "NO_AUTO_APPROVAL",
+            "NO_VERSION_RECORD",
+            "NO_RUNTIME_MUTATION",
+        ],
+    }
+
+
+def _compact_p22_item(row: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+    return {key: row.get(key) for key in keys if key in row}
 
 
 def _knowledge_batch_proposal_eligibility(batch: Dict[str, Any]) -> Dict[str, Any]:
@@ -2554,7 +3461,7 @@ def _knowledge_batch_rule_domain(draft: Dict[str, Any]) -> str:
     ).lower()
     if "wealth" in blob or "income" in blob:
         return "income_stability"
-    if "ten_god" in blob or "十神" in blob:
+    if "ten_god" in blob or "interaction" in blob or "十神" in blob:
         return "ten_god_relation"
     if "time" in blob or "luck" in blob or "flow" in blob:
         return "time_structure"
@@ -2578,6 +3485,521 @@ def _knowledge_batch_output_signal(draft: Dict[str, Any], domain: str) -> str:
     if domain == "income_stability":
         return "income_stability_evidence_boundary"
     return "structural_context_boundary"
+
+
+def _select_proposals_for_validation(state: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, List[Dict[str, Any]]]:
+    statuses = set(_string_list(payload.get("statuses")))
+    if not statuses:
+        statuses = {"draft", "validation_failed"}
+    explicit_ids = set(_string_list(payload.get("proposal_ids")))
+    rule_ids = explicit_ids | set(_string_list(payload.get("rule_proposal_ids")))
+    question_ids = explicit_ids | set(_string_list(payload.get("question_proposal_ids")))
+    source_run_id = _clean(payload.get("source_run_id"))
+    batch_key = _clean(payload.get("batch_key"))
+
+    rules = []
+    for row in state.get("bazi_rule_proposals", []):
+        evidence = dict(row.get("evidence") or {})
+        if rule_ids and row.get("proposal_id") not in rule_ids and row.get("rule_id") not in rule_ids:
+            continue
+        if not rule_ids and statuses and row.get("status") not in statuses:
+            continue
+        if source_run_id and evidence.get("run_id") != source_run_id:
+            continue
+        if batch_key and evidence.get("batch_key") != batch_key and evidence.get("batch_id") != batch_key:
+            continue
+        rules.append(row)
+
+    questions = []
+    for row in state.get("guided_question_proposals", []):
+        metadata = dict(row.get("proposed_metadata") or {})
+        if question_ids and row.get("proposal_id") not in question_ids and row.get("proposed_question_key") not in question_ids:
+            continue
+        if not question_ids and statuses and row.get("status") not in statuses:
+            continue
+        if source_run_id and metadata.get("source_run_id") != source_run_id:
+            continue
+        if batch_key and metadata.get("source_batch_key") != batch_key:
+            continue
+        questions.append(row)
+
+    rules.sort(key=lambda row: str(row.get("created_at") or ""))
+    questions.sort(key=lambda row: str(row.get("created_at") or ""))
+    return {"rule_proposals": rules[:100], "guided_question_proposals": questions[:100]}
+
+
+def _proposal_validation_run_base(payload: Dict[str, Any], role: str) -> Dict[str, Any]:
+    return {
+        "validation_run_id": "pvr_" + uuid.uuid4().hex[:16],
+        "created_at": utc_now(),
+        "actor_role": role,
+        "actor_id": _clean(payload.get("actor_id"), role),
+        "source_run_id": _clean(payload.get("source_run_id")),
+        "batch_key": _clean(payload.get("batch_key")),
+        "statuses": _string_list(payload.get("statuses")) or ["draft", "validation_failed"],
+        "runtime_mutation": False,
+        "approval_mutation": False,
+        "version_mutation": False,
+        "note": _clean(payload.get("note"), "P17 schema validation run. Validation only; no approval or runtime mutation."),
+        "items": [],
+        "summary": {"total": 0, "passed": 0, "failed": 0},
+        "guardrails": [
+            "P17_SCHEMA_VALIDATION_ONLY",
+            "NO_APPROVAL",
+            "NO_VERSION_RECORD",
+            "NO_RUNTIME_MUTATION",
+            "ANALYST_OR_ADMIN_APPROVAL_REQUIRED_AFTER_VALIDATION",
+        ],
+    }
+
+
+def _proposal_validation_item(kind: str, validated: Dict[str, Any]) -> Dict[str, Any]:
+    item = dict(validated.get("item") or {})
+    checks = [dict(row) for row in (validated.get("checks") or []) if isinstance(row, dict)]
+    failed_checks = [row.get("name") for row in checks if row.get("passed") is not True]
+    return {
+        "kind": kind,
+        "proposal_id": item.get("proposal_id"),
+        "rule_id": item.get("rule_id"),
+        "question_key": item.get("proposed_question_key"),
+        "status": item.get("status") or validated.get("code") or "",
+        "passed": bool(validated.get("passed")),
+        "check_count": len(checks),
+        "failed_checks": failed_checks,
+        "code": validated.get("code", ""),
+        "message": validated.get("message", ""),
+    }
+
+
+def _select_validation_run_for_review_packet(state: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any] | None:
+    validation_run_id = _clean(payload.get("validation_run_id"))
+    source_run_id = _clean(payload.get("source_run_id"))
+    batch_key = _clean(payload.get("batch_key"))
+    rows = list(state.get("proposal_validation_runs", []))
+    if validation_run_id:
+        rows = [row for row in rows if row.get("validation_run_id") == validation_run_id]
+    if source_run_id:
+        rows = [row for row in rows if row.get("source_run_id") == source_run_id]
+    if batch_key:
+        rows = [row for row in rows if row.get("batch_key") == batch_key]
+    rows.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return dict(rows[0]) if rows else None
+
+
+def _find_successful_proposal_review_packet(state: Dict[str, Any], validation: Dict[str, Any]) -> Dict[str, Any] | None:
+    validation_run_id = _clean(validation.get("validation_run_id"))
+    for row in state.get("proposal_review_packets", []):
+        if row.get("validation_run_id") == validation_run_id and row.get("status") == "approval_review_ready":
+            return row
+    return None
+
+
+def _find_proposal_review_packet(state: Dict[str, Any], packet_id: str) -> Dict[str, Any] | None:
+    clean = _clean(packet_id)
+    for row in state.get("proposal_review_packets", []):
+        if row.get("packet_id") == clean:
+            return row
+    return None
+
+
+def _proposal_review_packet_for_list(packet: Dict[str, Any]) -> Dict[str, Any]:
+    row = dict(packet)
+    records = [dict(item) for item in (row.get("decision_records") or []) if isinstance(item, dict)]
+    preflights = [dict(item) for item in (row.get("approval_preflight_records") or []) if isinstance(item, dict)]
+    executions = [dict(item) for item in (row.get("approval_execution_records") or []) if isinstance(item, dict)]
+    row["decision_records"] = records
+    row["decision_summary"] = _proposal_review_decision_summary(records)
+    row["approval_preflight_records"] = preflights
+    row["approval_preflight_summary"] = _proposal_review_approval_preflight_summary(preflights)
+    row["approval_execution_records"] = executions
+    row["approval_execution_summary"] = _proposal_review_approval_execution_summary(executions)
+    if records:
+        row["latest_decision_record"] = records[-1]
+        row.setdefault("decision_status", "decision_recorded")
+    else:
+        row.setdefault("decision_status", "pending")
+    if preflights:
+        row["latest_approval_preflight_record"] = preflights[-1]
+        row.setdefault("approval_preflight_status", preflights[-1].get("status") or "approval_preflight_recorded")
+    else:
+        row.setdefault("approval_preflight_status", "not_run")
+    if executions:
+        row["latest_approval_execution_record"] = executions[-1]
+        row.setdefault("approval_execution_status", executions[-1].get("status") or "approval_execution_recorded")
+    else:
+        row.setdefault("approval_execution_status", "not_run")
+    row["items"] = _proposal_review_items_with_latest_decisions(row.get("items") or [], records)
+    return row
+
+
+def _proposal_review_items_with_latest_decisions(items: List[Dict[str, Any]], records: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    latest = _proposal_review_latest_decisions_by_proposal({"decision_records": records})
+    rows = []
+    for item in items:
+        row = dict(item)
+        proposal_id = _clean(row.get("proposal_id"))
+        record = latest.get(proposal_id) if proposal_id else None
+        if record:
+            row["latest_review_decision"] = {
+                "decision_record_id": record.get("decision_record_id"),
+                "created_at": record.get("created_at"),
+                "actor_role": record.get("actor_role"),
+                "decision": record.get("decision"),
+                "note": record.get("note"),
+                "approval_mutation": False,
+                "version_mutation": False,
+                "runtime_mutation": False,
+            }
+        rows.append(row)
+    return rows
+
+
+def _annotate_proposal_review_packet_items(packet: Dict[str, Any], records: List[Dict[str, Any]]) -> None:
+    by_proposal: Dict[str, List[Dict[str, Any]]] = {}
+    for record in records:
+        proposal_id = _clean(record.get("proposal_id"))
+        if proposal_id:
+            by_proposal.setdefault(proposal_id, []).append(record)
+    if not by_proposal:
+        return
+    for item in packet.get("items") or []:
+        proposal_id = _clean(item.get("proposal_id"))
+        if proposal_id in by_proposal:
+            lightweight = [
+                {
+                    "decision_record_id": record.get("decision_record_id"),
+                    "created_at": record.get("created_at"),
+                    "actor_role": record.get("actor_role"),
+                    "decision": record.get("decision"),
+                    "note": record.get("note"),
+                    "approval_mutation": False,
+                    "version_mutation": False,
+                    "runtime_mutation": False,
+                }
+                for record in by_proposal[proposal_id]
+            ]
+            item.setdefault("review_decisions", []).extend(lightweight)
+            item["latest_review_decision"] = lightweight[-1]
+
+
+def _proposal_review_latest_decisions_by_proposal(packet: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    latest: Dict[str, Dict[str, Any]] = {}
+    for record in packet.get("decision_records") or []:
+        if not isinstance(record, dict):
+            continue
+        proposal_id = _clean(record.get("proposal_id"))
+        if proposal_id:
+            latest[proposal_id] = dict(record)
+    return latest
+
+
+def _proposal_review_preflight_item(state: Dict[str, Any], item: Dict[str, Any], latest_by_proposal: Dict[str, Dict[str, Any]]) -> Dict[str, Any]:
+    proposal_id = _clean(item.get("proposal_id"))
+    proposal = _proposal_for_review_item(state, item)
+    latest = latest_by_proposal.get(proposal_id) or {}
+    blockers = []
+    if item.get("validation_passed") is not True:
+        blockers.append("validation_not_passed")
+    if not proposal:
+        blockers.append("proposal_not_found")
+    if proposal and proposal.get("status") != "validation_ready":
+        blockers.append("proposal_status_not_validation_ready")
+    if not latest:
+        blockers.append("missing_item_decision")
+    elif latest.get("decision") != "approve_candidate":
+        blockers.append("latest_decision_not_approve_candidate")
+    return {
+        "kind": item.get("kind"),
+        "proposal_id": proposal_id,
+        "rule_id": item.get("rule_id"),
+        "question_key": item.get("question_key"),
+        "current_status": proposal.get("status") if proposal else "",
+        "validation_passed": item.get("validation_passed") is True,
+        "latest_decision": latest.get("decision", ""),
+        "latest_decision_record_id": latest.get("decision_record_id", ""),
+        "ready_for_approval": not blockers,
+        "blockers": blockers,
+        "approval_mutation": False,
+        "version_mutation": False,
+        "runtime_mutation": False,
+    }
+
+
+def _proposal_for_review_item(state: Dict[str, Any], item: Dict[str, Any]) -> Dict[str, Any] | None:
+    proposal_id = _clean(item.get("proposal_id"))
+    if item.get("kind") == "bazi_rule_proposal":
+        return _find_bazi_rule_proposal(state, proposal_id)
+    return _find_guided_question_proposal(state, proposal_id)
+
+
+def _proposal_status_for_preflight_item(state: Dict[str, Any], item: Dict[str, Any]) -> str:
+    proposal = _proposal_for_review_item(state, item) or {}
+    return _clean(proposal.get("status"))
+
+
+def _select_approval_preflight_record(packet: Dict[str, Any], payload: Dict[str, Any]) -> Dict[str, Any]:
+    preflight_id = _clean(payload.get("approval_preflight_id") or payload.get("preflight_id"))
+    records = [dict(row) for row in (packet.get("approval_preflight_records") or []) if isinstance(row, dict)]
+    if preflight_id:
+        for row in records:
+            if row.get("approval_preflight_id") == preflight_id:
+                return row
+        return {}
+    return records[-1] if records else {}
+
+
+def _latest_successful_approval_execution(packet: Dict[str, Any]) -> Dict[str, Any] | None:
+    for row in reversed(packet.get("approval_execution_records") or []):
+        if isinstance(row, dict) and row.get("status") == "controlled_approval_executed":
+            return row
+    return None
+
+
+def _approval_execution_blockers(state: Dict[str, Any], packet: Dict[str, Any], preflight: Dict[str, Any]) -> List[Dict[str, Any]]:
+    blockers: List[Dict[str, Any]] = []
+    if packet.get("status") != "approval_review_ready":
+        blockers.append({"name": "packet_not_ready", "status": packet.get("status")})
+    if not preflight:
+        blockers.append({"name": "approval_preflight_missing"})
+        return blockers
+    if preflight.get("status") != "approval_preflight_ready":
+        blockers.append({"name": "approval_preflight_not_ready", "status": preflight.get("status")})
+    summary = dict(preflight.get("summary") or {})
+    if int(summary.get("item_count") or 0) <= 0:
+        blockers.append({"name": "approval_preflight_empty"})
+    if int(summary.get("failed_checks") or 0) != 0:
+        blockers.append({"name": "approval_preflight_failed_checks", "failed_checks": summary.get("failed_checks")})
+    latest_by_proposal = _proposal_review_latest_decisions_by_proposal(packet)
+    for item in packet.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        proposal_id = _clean(item.get("proposal_id"))
+        proposal = _proposal_for_review_item(state, item)
+        latest = latest_by_proposal.get(proposal_id) or {}
+        if item.get("validation_passed") is not True:
+            blockers.append({"name": "item_validation_not_passed", "proposal_id": proposal_id})
+        if not proposal:
+            blockers.append({"name": "proposal_not_found", "proposal_id": proposal_id})
+            continue
+        if proposal.get("status") != "validation_ready":
+            blockers.append({"name": "proposal_status_not_validation_ready", "proposal_id": proposal_id, "status": proposal.get("status")})
+        if latest.get("decision") != "approve_candidate":
+            blockers.append({"name": "latest_decision_not_approve_candidate", "proposal_id": proposal_id, "decision": latest.get("decision", "")})
+    if not _no_review_packet_mutation_flags(packet):
+        blockers.append({"name": "packet_has_disallowed_mutation_flags"})
+    return blockers
+
+
+def _approval_execution_record(
+    packet: Dict[str, Any],
+    preflight: Dict[str, Any],
+    payload: Dict[str, Any],
+    role: str,
+    status: str,
+    items: List[Dict[str, Any]],
+    blockers: List[Any],
+) -> Dict[str, Any]:
+    approved_items = [row for row in items if isinstance(row, dict) and row.get("ok") is True]
+    return {
+        "approval_execution_id": "aex_" + uuid.uuid4().hex[:16],
+        "created_at": utc_now(),
+        "packet_id": packet.get("packet_id"),
+        "validation_run_id": packet.get("validation_run_id"),
+        "source_run_id": packet.get("source_run_id"),
+        "batch_key": packet.get("batch_key"),
+        "approval_preflight_id": preflight.get("approval_preflight_id", "") if isinstance(preflight, dict) else "",
+        "actor_role": role,
+        "actor_id": _clean(payload.get("actor_id"), role),
+        "status": status,
+        "items": items,
+        "blockers": blockers,
+        "summary": {
+            "item_count": len(items),
+            "approved_count": len(approved_items),
+            "failed_count": len([row for row in items if isinstance(row, dict) and row.get("ok") is not True]),
+            "blocked_count": len(blockers),
+            "rule_approved_count": len([row for row in approved_items if row.get("kind") == "bazi_rule_proposal"]),
+            "question_approved_count": len([row for row in approved_items if row.get("kind") == "guided_question_proposal"]),
+        },
+        "controlled_approval_mutation": status in {"controlled_approval_executed", "controlled_approval_partial"},
+        "auto_approval": False,
+        "version_mutation": False,
+        "runtime_mutation": False,
+        "note": _clean(payload.get("note"), "P25 controlled approval execution."),
+        "guardrails": [
+            "P25_CONTROLLED_APPROVAL_ONLY",
+            "P24_PREFLIGHT_REQUIRED",
+            "NO_AUTO_APPROVAL",
+            "NO_VERSION_RECORD",
+            "NO_RUNTIME_MUTATION",
+        ],
+    }
+
+
+def _refresh_proposal_review_packet_item_statuses(state: Dict[str, Any], packet: Dict[str, Any]) -> None:
+    for item in packet.get("items") or []:
+        if not isinstance(item, dict):
+            continue
+        proposal = _proposal_for_review_item(state, item) or {}
+        if proposal:
+            item["proposal_status"] = proposal.get("status")
+
+
+def _approved_rule_proposal_ids_for_versioning(state: Dict[str, Any]) -> List[str]:
+    versioned = _versioned_proposal_ids(state.get("bazi_rule_versions") or [])
+    rows = [
+        _clean(row.get("proposal_id"))
+        for row in state.get("bazi_rule_proposals", [])
+        if row.get("status") == "approved" and _clean(row.get("proposal_id")) not in versioned
+    ]
+    return [row for row in rows if row]
+
+
+def _approved_question_proposal_ids_for_versioning(state: Dict[str, Any]) -> List[str]:
+    versioned = _versioned_proposal_ids(state.get("guided_question_library_versions") or [])
+    rows = [
+        _clean(row.get("proposal_id"))
+        for row in state.get("guided_question_proposals", [])
+        if row.get("status") == "approved" and _clean(row.get("proposal_id")) not in versioned
+    ]
+    return [row for row in rows if row]
+
+
+def _versioned_proposal_ids(versions: List[Dict[str, Any]]) -> set[str]:
+    return {
+        _clean(proposal_id)
+        for version in versions
+        if isinstance(version, dict)
+        for proposal_id in (version.get("included_proposals") or [])
+        if _clean(proposal_id)
+    }
+
+
+def _compact_p26_result(result: Dict[str, Any], keys: List[str]) -> Dict[str, Any]:
+    item = dict(result.get("item") or {})
+    compact = {key: item.get(key) for key in keys if key in item}
+    for key in keys:
+        if key not in compact and key in result:
+            compact[key] = result.get(key)
+    compact["ok"] = result.get("ok", True)
+    return compact
+
+
+def _approval_preflight_check(name: str, passed: bool, message: str, details: Any = None) -> Dict[str, Any]:
+    row = {"name": name, "passed": bool(passed), "message": message}
+    if details not in (None, [], {}, ""):
+        row["details"] = details
+    return row
+
+
+def _no_review_packet_mutation_flags(packet: Dict[str, Any]) -> bool:
+    if packet.get("approval_mutation") or packet.get("version_mutation") or packet.get("runtime_mutation"):
+        return False
+    for record in packet.get("decision_records") or []:
+        if not isinstance(record, dict):
+            continue
+        if record.get("approval_mutation") or record.get("version_mutation") or record.get("runtime_mutation") or record.get("proposal_status_mutation"):
+            return False
+    return True
+
+
+def _proposal_review_packet_item(state: Dict[str, Any], validation_item: Dict[str, Any]) -> Dict[str, Any]:
+    kind = _clean(validation_item.get("kind"))
+    proposal_id = _clean(validation_item.get("proposal_id"))
+    if kind == "bazi_rule_proposal":
+        proposal = _find_bazi_rule_proposal(state, proposal_id) or {}
+        evidence = dict(proposal.get("evidence") or {})
+        return {
+            "kind": kind,
+            "proposal_id": proposal_id,
+            "proposal_status": proposal.get("status"),
+            "rule_id": proposal.get("rule_id"),
+            "domain": proposal.get("domain"),
+            "source_knowledge_id": evidence.get("source_knowledge_id"),
+            "source_batch_key": evidence.get("batch_key"),
+            "validation_passed": validation_item.get("passed") is True,
+            "failed_checks": list(validation_item.get("failed_checks") or []),
+            "recommended_decision": "analyst_approve_or_reject_rule_proposal",
+            "runtime_mutation": False,
+        }
+    proposal = _find_guided_question_proposal(state, proposal_id) or {}
+    metadata = dict(proposal.get("proposed_metadata") or {})
+    return {
+        "kind": kind,
+        "proposal_id": proposal_id,
+        "proposal_status": proposal.get("status"),
+        "question_key": proposal.get("proposed_question_key"),
+        "source_question_key": proposal.get("source_question_key"),
+        "source_batch_key": metadata.get("source_batch_key"),
+        "validation_passed": validation_item.get("passed") is True,
+        "failed_checks": list(validation_item.get("failed_checks") or []),
+        "recommended_decision": "analyst_approve_or_reject_question_proposal",
+        "runtime_mutation": False,
+    }
+
+
+def _proposal_review_packet_summary(items: List[Dict[str, Any]]) -> Dict[str, Any]:
+    passed = len([row for row in items if row.get("validation_passed") is True])
+    failed = len(items) - passed
+    by_kind = _count_by(items, "kind")
+    return {
+        "total": len(items),
+        "validation_passed": passed,
+        "validation_failed": failed,
+        "by_kind": _top_counts(by_kind),
+        "runtime_mutation": False,
+        "approval_mutation": False,
+        "version_mutation": False,
+    }
+
+
+def _proposal_review_decision_summary(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+    by_decision = _count_by(records, "decision") if records else {}
+    latest = dict(records[-1]) if records else {}
+    return {
+        "total": len(records),
+        "by_decision": _top_counts(by_decision),
+        "latest_decision": latest.get("decision", ""),
+        "latest_actor_role": latest.get("actor_role", ""),
+        "proposal_scoped": len([row for row in records if _clean(row.get("proposal_id"))]),
+        "packet_scoped": len([row for row in records if not _clean(row.get("proposal_id"))]),
+        "approval_mutation": False,
+        "version_mutation": False,
+        "runtime_mutation": False,
+    }
+
+
+def _proposal_review_approval_preflight_summary(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+    latest = dict(records[-1]) if records else {}
+    summary = dict(latest.get("summary") or {})
+    return {
+        "total": len(records),
+        "latest_status": latest.get("status", ""),
+        "latest_preflight_id": latest.get("approval_preflight_id", ""),
+        "latest_ready_item_count": summary.get("ready_item_count", 0),
+        "latest_item_count": summary.get("item_count", 0),
+        "latest_failed_checks": summary.get("failed_checks", 0),
+        "approval_mutation": False,
+        "version_mutation": False,
+        "runtime_mutation": False,
+    }
+
+
+def _proposal_review_approval_execution_summary(records: List[Dict[str, Any]]) -> Dict[str, Any]:
+    latest = dict(records[-1]) if records else {}
+    summary = dict(latest.get("summary") or {})
+    return {
+        "total": len(records),
+        "latest_status": latest.get("status", ""),
+        "latest_execution_id": latest.get("approval_execution_id", ""),
+        "latest_approved_count": summary.get("approved_count", 0),
+        "latest_item_count": summary.get("item_count", 0),
+        "latest_failed_count": summary.get("failed_count", 0),
+        "controlled_approval_mutation": latest.get("controlled_approval_mutation") is True,
+        "auto_approval": False,
+        "version_mutation": False,
+        "runtime_mutation": False,
+    }
 
 
 def _select_knowledge_review_drafts(payload: Dict[str, Any]) -> List[Dict[str, Any]]:
