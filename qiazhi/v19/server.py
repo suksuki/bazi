@@ -83,6 +83,7 @@ from v19.lab_interfaces import (
     guided_question_diversity_audit,
     guided_question_feedback_summary,
     guided_question_audit_report,
+    portrait_calibration_feedback_summary,
     activate_revision_record,
     approve_guided_question_proposal,
     approve_revision_proposal,
@@ -331,11 +332,13 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
     }
     data["algorithm_status"] = _algorithm_status()
     selected_question_key = str(payload.get("selected_question_key") or "").strip()
+    profile_id = str(payload.get("profile_id") or "").strip()
     data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
         data,
         message=str(payload.get("message") or ""),
         selected_question_key=selected_question_key,
     )
+    data["portrait_calibration_feedback"] = portrait_calibration_feedback_summary(settings, profile_id=profile_id)
     data["structure_portrait"] = build_structure_portrait(data)
     data["knowledge_context"] = retrieve_knowledge(data, str(payload.get("message") or ""), settings=settings)
     data["guided_question_context"] = build_guided_question_context(data)
@@ -494,6 +497,7 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
 
 @app.post("/api/agent/structure")
 def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
+    settings = load_settings()
     role = _request_role(request, dict(payload or {}).get("role"))
     body = {**dict(payload or {}), "role": role, "message": str((payload or {}).get("message") or "structure_preview")}
     try:
@@ -516,6 +520,7 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
         ],
     }
     data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(data, message=str(body.get("message") or ""))
+    data["portrait_calibration_feedback"] = portrait_calibration_feedback_summary(settings, profile_id=str(body.get("profile_id") or "").strip())
     data["structure_portrait"] = build_structure_portrait(data)
     data["guided_question_context"] = build_guided_question_context(data)
     return {
@@ -575,6 +580,7 @@ def lab_guided_question_audit_post(payload: Dict[str, Any], request: Request) ->
         message=message,
         selected_question_key=selected_question_key,
     )
+    data["portrait_calibration_feedback"] = portrait_calibration_feedback_summary(settings, profile_id=profile_id)
     data["structure_portrait"] = build_structure_portrait(data)
     data["knowledge_context"] = retrieve_knowledge(data, message, settings=settings)
     data["guided_question_context"] = build_guided_question_context(data)
@@ -994,6 +1000,12 @@ def lab_guided_question_feedback_get(request: Request, question_key: str = "", s
 def lab_guided_question_feedback_summary_get(request: Request) -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
     return guided_question_feedback_summary(load_settings())
+
+
+@app.get("/api/lab/portrait-calibration-feedback/summary")
+def lab_portrait_calibration_feedback_summary_get(request: Request, profile_id: str = "", birth_fingerprint: str = "") -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return portrait_calibration_feedback_summary(load_settings(), profile_id=profile_id, birth_fingerprint=birth_fingerprint)
 
 
 @app.post("/api/lab/guided-question-feedback/{question_key}/review")

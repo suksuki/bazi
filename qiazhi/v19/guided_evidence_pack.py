@@ -231,6 +231,12 @@ def _portrait_evidence(portrait: Dict[str, Any]) -> Dict[str, Any]:
             "analyst_hook_count": len((portrait.get("calibration_plan") or {}).get("analyst_hooks") or []),
             "feedback_update_policy": (portrait.get("calibration_plan") or {}).get("feedback_update_policy") or "",
         },
+        "calibration_feedback": {
+            "version": (portrait.get("calibration_feedback") or {}).get("version") or "",
+            "status": (portrait.get("calibration_feedback") or {}).get("status") or "",
+            "count": int((portrait.get("calibration_feedback") or {}).get("count") or 0),
+            "runtime_scope": (portrait.get("calibration_feedback") or {}).get("runtime_scope") or "",
+        },
         "label_ids": label_ids,
         "judgement_ids": judgement_ids,
         "dominant_label_ids": list((portrait.get("question_bias") or {}).get("dominant_label_ids") or portrait.get("dominant_label_ids") or [])[:6],

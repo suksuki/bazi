@@ -50,6 +50,17 @@ facts / vectors
 
 用户反馈只校准画像置信度和问题路径；命理师确认进入 audit，不自动改规则库。
 
+## P82: Portrait Calibration Runtime Loop
+
+P82 将互动校准落到完整运行链路：
+
+- Oracle 画像面板渲染用户校准卡片和命理师确认入口；
+- feedback ledger 记录 `subject_type = portrait_calibration`；
+- 后端按 `profile_id` 汇总画像反馈，避免不同命盘互相污染；
+- `build_structure_portrait` 消费反馈，只微调标签置信度、后验置信度和编译分；
+- 推荐问题和回答证据包拿到的是校准后的画像；
+- 规则库、知识库、标签含义和答案结论都不被反馈直接改写。
+
 ## P74: Portrait Evidence Pack
 
 `guided_evidence_pack` 增加 `portrait_evidence`：

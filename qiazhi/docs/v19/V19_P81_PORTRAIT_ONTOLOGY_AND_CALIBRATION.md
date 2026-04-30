@@ -77,6 +77,20 @@ Rule Graph 选中的知识路径会进入每个标签：
 - 确认时间层是否被误用为本命结构。
 - 作为 audit 信号进入后续合成验证。
 
+## P82 运行闭环
+
+P81 只定义画像本体和 hook，P82 将 hook 接入运行链路：
+
+```text
+Oracle 画像校准卡片
+→ /api/agent/feedback
+→ portrait_calibration_feedback_summary
+→ build_structure_portrait
+→ question_bias / guided answer evidence
+```
+
+反馈会按 `profile_id` 汇总，只微调画像标签的置信度和排序。普通用户反馈用于判断画像是否贴合自身经历；命理师确认用于提高或降低标签可信度。两者都不能直接改规则、改知识库、改标签含义或输出硬断语。
+
 ## 边界
 
 - 用户反馈只校准画像和问题路径。

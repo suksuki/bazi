@@ -3230,17 +3230,21 @@ def test_p51_ui_surfaces_latest_framework_context() -> None:
 
     assert "answerEvidenceSummary" in oracle_html
     assert "portraitPanel" in oracle_html
-    assert "20260430-portrait-loop" in oracle_html
+    assert "20260430-portrait-calibration" in oracle_html
     assert "personalized-question-chip" in oracle_js
     assert "question-personalization" in oracle_js
     assert "renderAnswerEvidenceSummary" in oracle_js
     assert "renderPortraitPanel" in oracle_js
     assert "portraitVisibleLabels" in oracle_js
+    assert "portraitCalibrationBlock" in oracle_js
+    assert "data-calibration-hook" in oracle_js
+    assert "portrait_calibration" in oracle_js
     assert "重点标签" in oracle_js
     assert "portrait_evidence" in oracle_js
     assert "evidence_pack" in oracle_js
     assert "answer-evidence-summary" in styles
     assert "portrait-chip" in styles
+    assert "portrait-calibration-card" in styles
 
     assert "docs/v19/V19_P51_UI_FRAMEWORK_ALIGNMENT.md" in manifest["created_from"]
     assert manifest["p51_ui_framework_alignment"]["runtime_scope"] == "ui_visibility_only_no_inference_or_answer_mutation"
@@ -3666,11 +3670,12 @@ def test_common_bazi_question_ui_fallback_library_is_aligned() -> None:
     assert "strength_structure" in oracle_js
     assert "useful_god_boundary" in oracle_js
     assert "pattern_structure" in oracle_js
-    assert "20260430-portrait-loop" in oracle_html
+    assert "20260430-portrait-calibration" in oracle_html
 
 
 def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries() -> None:
-    from v19.bazi_guided_questions import build_guided_question_answer, guided_answer_to_plain_text
+    from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
+    from v19.structure_portrait import build_structure_portrait
 
     data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
     portrait = data["structure_portrait"]
@@ -3724,6 +3729,47 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
     assert "候选标签" in useful_text or "画像标签" in useful_text
     assert "知识路径" in useful_text
 
+    target_label = portrait["labels"][0]
+    data_with_feedback = dict(data)
+    data_with_feedback["portrait_calibration_feedback"] = {
+        "version": "v19.p82.portrait_calibration_feedback_summary.v1",
+        "status": "ready",
+        "runtime_scope": "portrait_calibration_feedback_summary_only_no_rule_mutation",
+        "count": 2,
+        "by_label": {
+            target_label["label_id"]: {
+                "count": 1,
+                "rating_sum": 2,
+                "average_rating": 2.0,
+                "user_count": 0,
+                "analyst_count": 1,
+            }
+        },
+        "by_family": {
+            target_label["family"]: {
+                "count": 1,
+                "rating_sum": 1,
+                "average_rating": 1.0,
+                "user_count": 1,
+                "analyst_count": 0,
+            }
+        },
+        "guardrails": ["NO_RULE_MUTATION_FROM_CALIBRATION"],
+    }
+    adjusted = build_structure_portrait(data_with_feedback)
+    adjusted_label = next(row for row in adjusted["labels"] if row["label_id"] == target_label["label_id"])
+    assert adjusted["calibration_feedback"]["count"] == 2
+    assert adjusted_label["posterior_confidence"] > target_label["posterior_confidence"]
+    assert adjusted_label["calibration_feedback_applied"]["count"] > 0
+    assert adjusted_label["calibration_feedback_applied"]["runtime_scope"] == "portrait_confidence_adjustment_only_no_rule_mutation"
+    assert "NO_RULE_MUTATION_FROM_CALIBRATION" in adjusted_label["calibration_feedback_applied"]["guardrails"]
+
+    data_with_feedback["structure_portrait"] = adjusted
+    data_with_feedback["guided_question_context"] = build_guided_question_context(data_with_feedback)
+    adjusted_answer = build_guided_question_answer(data_with_feedback, "q_useful_god_candidates", "用神是什么？忌神是什么？")
+    assert adjusted_answer["retrieved_facts"]["structure_portrait"]["calibration_feedback"]["count"] == 2
+    assert adjusted_answer["retrieved_facts"]["structure_portrait"]["labels"][0]["calibration_feedback_applied"]
+
 
 def test_structure_portrait_bias_changes_across_synthetic_cases_and_guides_questions() -> None:
     contexts = [_agent_data_for_case(case) for case in P11_GUIDED_SYNTHETIC_CASES[:12]]
@@ -3743,6 +3789,64 @@ def test_structure_portrait_bias_changes_across_synthetic_cases_and_guides_quest
         assert any("structure_portrait" in reason for row in data["guided_question_context"]["questions"][:10] for reason in (row.get("personalization") or {}).get("reasons", []))
 
 
+def test_portrait_calibration_feedback_summary_is_profile_scoped() -> None:
+    import v19.lab_interfaces as lab_interfaces
+
+    original_load_state = lab_interfaces._load_state
+    lab_interfaces._load_state = lambda settings=None: (
+        {
+            "feedback": [
+                {
+                    "feedback_id": "fb_user",
+                    "created_at": "2026-04-30T01:00:00Z",
+                    "actor_role": "user",
+                    "subject_type": "portrait_calibration",
+                    "subject_id": "user_event_feedback.portrait.wealth.visibility",
+                    "rating": 1,
+                    "tags": ["portrait_calibration", "user", "wealth"],
+                    "payload": {"label_id": "portrait.wealth.visibility", "hook": {"family": "wealth", "hook_type": "user_event_feedback"}},
+                    "metadata": {"profile_id": "profile_a", "family": "wealth", "label_id": "portrait.wealth.visibility"},
+                },
+                {
+                    "feedback_id": "fb_analyst",
+                    "created_at": "2026-04-30T02:00:00Z",
+                    "actor_role": "analyst",
+                    "subject_type": "portrait_calibration",
+                    "subject_id": "analyst_confirmation.portrait.wealth.visibility",
+                    "rating": 2,
+                    "tags": ["portrait_calibration", "analyst", "wealth"],
+                    "payload": {"label_id": "portrait.wealth.visibility", "hook": {"family": "wealth", "hook_type": "analyst_confirmation"}},
+                    "metadata": {"profile_id": "profile_a", "family": "wealth", "label_id": "portrait.wealth.visibility"},
+                },
+                {
+                    "feedback_id": "fb_other",
+                    "created_at": "2026-04-30T03:00:00Z",
+                    "actor_role": "user",
+                    "subject_type": "portrait_calibration",
+                    "rating": -2,
+                    "tags": ["portrait_calibration", "user", "branch"],
+                    "payload": {"label_id": "portrait.branch.volatility", "hook": {"family": "branch"}},
+                    "metadata": {"profile_id": "profile_b", "family": "branch", "label_id": "portrait.branch.volatility"},
+                },
+            ]
+        },
+        {"backend": "test"},
+    )
+    try:
+        empty = lab_interfaces.portrait_calibration_feedback_summary()
+        summary = lab_interfaces.portrait_calibration_feedback_summary(profile_id="profile_a")
+    finally:
+        lab_interfaces._load_state = original_load_state
+
+    assert empty["status"] == "no_profile_scope"
+    assert empty["count"] == 0
+    assert summary["count"] == 2
+    assert summary["by_label"]["portrait.wealth.visibility"]["average_rating"] == 1.5
+    assert summary["by_label"]["portrait.wealth.visibility"]["analyst_count"] == 1
+    assert summary["by_family"]["wealth"]["count"] == 2
+    assert "NO_RULE_MUTATION_FROM_CALIBRATION" in summary["guardrails"]
+
+
 def test_structure_portrait_layer_manifest_and_structure_api_are_wired() -> None:
     from fastapi.testclient import TestClient
     from v19.server import app
@@ -3757,6 +3861,7 @@ def test_structure_portrait_layer_manifest_and_structure_api_are_wired() -> None
     assert manifest["mainline_structure_portrait_layer"]["runtime_scope"] == "structure_portrait_context_only_no_result_mutation"
     assert manifest["mainline_structure_portrait_layer"]["label_ontology_version"] == "v19.mainline.structure_portrait_label_ontology.v2"
     assert manifest["mainline_structure_portrait_layer"]["active_label_source"] == "ontology_compiler_primary_no_legacy_label_chain"
+    assert "structure_portrait.calibration_feedback" in manifest["mainline_structure_portrait_layer"]["outputs"]
     assert "MAINLINE_STRUCTURE_PORTRAIT_LAYER" in manifest["guardrails"]
     assert "结构画像层" in doc
     assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md" in roadmap
@@ -3821,7 +3926,10 @@ def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> 
     assert manifest["mainline_structure_portrait_product_loop"]["shadow_tuning_case_count"] == 20
     assert manifest["mainline_structure_portrait_product_loop"]["ontology_compiled_required"] is True
     assert manifest["mainline_structure_portrait_product_loop"]["calibration_hooks_required"] is True
+    assert manifest["mainline_structure_portrait_product_loop"]["calibration_feedback_loop"] is True
     assert manifest["mainline_structure_portrait_product_loop"]["runtime_mutation"] is False
+    assert "docs/v19/V19_P82_PORTRAIT_CALIBRATION_RUNTIME_LOOP.md" in manifest["created_from"]
+    assert "NO_RULE_MUTATION_FROM_CALIBRATION" in manifest["mainline_structure_portrait_product_loop"]["guardrails"]
     assert "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP" in manifest["guardrails"]
 
 

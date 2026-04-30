@@ -631,6 +631,7 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
             "analyst_hooks": list((portrait.get("calibration_plan") or {}).get("analyst_hooks") or [])[:3],
             "feedback_update_policy": (portrait.get("calibration_plan") or {}).get("feedback_update_policy") or "",
         },
+        "calibration_feedback": dict(portrait.get("calibration_feedback") or {}),
         "labels": [
             {
                 "label_id": str(row.get("label_id") or ""),
@@ -645,6 +646,7 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
                 "analyst_confirmation_hooks": list(row.get("analyst_confirmation_hooks") or [])[:2],
                 "answer_boundary": str(row.get("answer_boundary") or ""),
                 "knowledge_evidence_ids": list(row.get("knowledge_evidence_ids") or [])[:4],
+                "calibration_feedback_applied": dict(row.get("calibration_feedback_applied") or {}),
                 "candidate_statement": str(row.get("candidate_statement") or ""),
             }
             for row in labels[:5]

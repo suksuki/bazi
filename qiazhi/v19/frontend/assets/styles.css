@@ -1422,6 +1422,89 @@ summary em {
   margin-top: 4px;
 }
 
+.portrait-calibration {
+  border-top: 1px solid rgba(143, 226, 179, 0.12);
+  margin-top: 12px;
+  padding-top: 11px;
+}
+
+.portrait-calibration-head {
+  align-items: baseline;
+  color: var(--text-soft);
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.portrait-calibration-head span,
+.portrait-analyst-calibration summary {
+  color: #9ce5ba;
+  font-size: 11px;
+  font-weight: 950;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.portrait-calibration-head em {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+  text-align: right;
+}
+
+.portrait-calibration-list {
+  display: grid;
+  gap: 8px;
+}
+
+.portrait-calibration-card {
+  border: 1px solid rgba(143, 226, 179, 0.16);
+  border-radius: 11px;
+  background: rgba(5, 9, 8, 0.42);
+  padding: 9px;
+}
+
+.portrait-calibration-card strong {
+  color: var(--text-soft);
+  display: block;
+  font-size: 11px;
+  font-weight: 950;
+  margin-bottom: 4px;
+}
+
+.portrait-calibration-card p {
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.portrait-calibration-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
+
+.portrait-calibration-actions button {
+  width: auto;
+  min-width: 64px;
+  padding: 7px 9px;
+  font-size: 11px;
+}
+
+.portrait-analyst-calibration {
+  margin-top: 9px;
+}
+
+.portrait-analyst-calibration summary {
+  cursor: pointer;
+  list-style-position: inside;
+  margin-bottom: 8px;
+}
+
 .pillar-grid {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));

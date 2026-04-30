@@ -180,6 +180,8 @@ def build_structure_portrait(agent_data: Dict[str, Any]) -> Dict[str, Any]:
     vectors = _portrait_vectors(facts, income, rule_graph_runtime_context)
     ontology = structure_portrait_label_ontology()
     labels = _compile_portrait_labels(facts, vectors, rule_graph_runtime_context)
+    calibration_feedback = dict(agent_data.get("portrait_calibration_feedback") or {})
+    labels = _apply_calibration_feedback(labels, calibration_feedback)
     judgements = _candidate_judgements(labels, vectors)
     question_bias = _question_bias(vectors, labels)
     calibration_plan = _portrait_calibration_plan(labels)
@@ -198,6 +200,7 @@ def build_structure_portrait(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         },
         "label_compilation": _label_compilation_summary(labels),
         "calibration_plan": calibration_plan,
+        "calibration_feedback": _compact_calibration_feedback(calibration_feedback),
         "vectors": vectors,
         "candidate_judgements": judgements,
         "question_bias": question_bias,
@@ -243,11 +246,13 @@ def structure_portrait_to_prompt_context(portrait: Dict[str, Any], *, limit: int
                 "question_hooks": list(row.get("question_hooks") or [])[:4],
                 "user_calibration_hooks": list(row.get("user_calibration_hooks") or [])[:2],
                 "analyst_confirmation_hooks": list(row.get("analyst_confirmation_hooks") or [])[:2],
+                "calibration_feedback_applied": dict(row.get("calibration_feedback_applied") or {}),
                 "candidate_statement": row.get("candidate_statement") or "",
                 "answer_boundary": row.get("answer_boundary") or "",
             }
             for row in labels[:limit]
         ],
+        "calibration_feedback": dict(portrait.get("calibration_feedback") or {}),
         "candidate_judgements": judgements[:limit],
         "guardrails": [
             "USE_AS_STRUCTURE_PORTRAIT_ONLY",
@@ -368,6 +373,97 @@ def _portrait_vectors(facts: Dict[str, Any], income: Dict[str, Any], runtime_con
 def _compile_portrait_labels(facts: Dict[str, Any], vectors: Dict[str, float], runtime_context: Dict[str, Any]) -> List[Dict[str, Any]]:
     labels = [_compile_ontology_label(defn, facts, vectors, runtime_context) for defn in _LABEL_ONTOLOGY.values()]
     return sorted(labels, key=lambda row: (float(row.get("compiled_score") or row.get("score") or 0), float(row.get("confidence") or 0), str(row.get("label_id") or "")), reverse=True)
+
+
+def _apply_calibration_feedback(labels: List[Dict[str, Any]], feedback: Dict[str, Any]) -> List[Dict[str, Any]]:
+    if not feedback or int(feedback.get("count") or 0) <= 0:
+        return labels
+    by_label = {str(key): dict(value) for key, value in dict(feedback.get("by_label") or {}).items() if isinstance(value, dict)}
+    by_family = {str(key): dict(value) for key, value in dict(feedback.get("by_family") or {}).items() if isinstance(value, dict)}
+    adjusted: List[Dict[str, Any]] = []
+    for label in labels:
+        row = dict(label)
+        label_id = str(row.get("label_id") or "")
+        family = str(row.get("family") or "")
+        label_bucket = dict(by_label.get(label_id) or {})
+        family_bucket = dict(by_family.get(family) or {})
+        label_count = int(label_bucket.get("count") or 0)
+        family_count = int(family_bucket.get("count") or 0)
+        weighted_count = label_count + family_count * 0.5
+        if weighted_count <= 0:
+            adjusted.append(row)
+            continue
+        rating_sum = float(label_bucket.get("rating_sum") or 0) + float(family_bucket.get("rating_sum") or 0) * 0.5
+        average_rating = rating_sum / weighted_count
+        analyst_count = int(label_bucket.get("analyst_count") or 0) + int(family_bucket.get("analyst_count") or 0)
+        analyst_factor = 1.0 + min(analyst_count, 3) * 0.18
+        confidence_delta = max(-1.0, min(1.0, average_rating / 2.0)) * min(0.14, (0.035 + min(weighted_count, 6) * 0.012) * analyst_factor)
+        compiled_delta = confidence_delta * 0.45
+        posterior = round(_clamp(float(row.get("posterior_confidence") or row.get("confidence") or 0) + confidence_delta), 3)
+        confidence = round(_clamp(float(row.get("confidence") or 0) + confidence_delta * 0.8), 3)
+        compiled = round(_clamp(float(row.get("compiled_score") or row.get("score") or 0) + compiled_delta), 3)
+        row.update(
+            {
+                "posterior_confidence": posterior,
+                "confidence": confidence,
+                "compiled_score": compiled,
+                "score": compiled,
+                "calibration_feedback_applied": {
+                    "version": "v19.p82.portrait_calibration_feedback_application.v1",
+                    "runtime_scope": "portrait_confidence_adjustment_only_no_rule_mutation",
+                    "count": round(weighted_count, 3),
+                    "label_count": label_count,
+                    "family_count": family_count,
+                    "analyst_count": analyst_count,
+                    "average_rating": round(average_rating, 3),
+                    "confidence_delta": round(confidence_delta, 3),
+                    "compiled_score_delta": round(compiled_delta, 3),
+                    "guardrails": [
+                        "CALIBRATION_ADJUSTS_CONFIDENCE_ONLY",
+                        "NO_LABEL_VALUE_MUTATION",
+                        "NO_RULE_MUTATION_FROM_CALIBRATION",
+                    ],
+                },
+            }
+        )
+        adjusted.append(row)
+    return sorted(adjusted, key=lambda row: (float(row.get("compiled_score") or row.get("score") or 0), float(row.get("posterior_confidence") or 0), str(row.get("label_id") or "")), reverse=True)
+
+
+def _compact_calibration_feedback(feedback: Dict[str, Any]) -> Dict[str, Any]:
+    by_label = dict(feedback.get("by_label") or {}) if isinstance(feedback.get("by_label"), dict) else {}
+    by_family = dict(feedback.get("by_family") or {}) if isinstance(feedback.get("by_family"), dict) else {}
+
+    def compact_bucket_map(source: Dict[str, Any], limit: int = 8) -> Dict[str, Any]:
+        rows = []
+        for key, value in source.items():
+            if not isinstance(value, dict):
+                continue
+            rows.append(
+                (
+                    str(key),
+                    {
+                        "count": int(value.get("count") or 0),
+                        "average_rating": round(float(value.get("average_rating") or 0), 3),
+                        "user_count": int(value.get("user_count") or 0),
+                        "analyst_count": int(value.get("analyst_count") or 0),
+                        "latest_feedback_at": str(value.get("latest_feedback_at") or ""),
+                    },
+                )
+            )
+        rows.sort(key=lambda item: (int(item[1].get("count") or 0), str(item[1].get("latest_feedback_at") or "")), reverse=True)
+        return {key: value for key, value in rows[:limit]}
+
+    return {
+        "version": feedback.get("version") or "v19.p82.portrait_calibration_feedback_summary.v1",
+        "status": feedback.get("status") or ("ready" if feedback else "not_loaded"),
+        "runtime_scope": "portrait_calibration_feedback_context_only_no_rule_mutation",
+        "count": int(feedback.get("count") or 0),
+        "profile_id": str(feedback.get("profile_id") or ""),
+        "by_label": compact_bucket_map(by_label),
+        "by_family": compact_bucket_map(by_family),
+        "guardrails": list(feedback.get("guardrails") or ["NO_RULE_MUTATION_FROM_CALIBRATION"]),
+    }
 
 
 def _compile_ontology_label(defn: Dict[str, Any], facts: Dict[str, Any], vectors: Dict[str, float], runtime_context: Dict[str, Any]) -> Dict[str, Any]:

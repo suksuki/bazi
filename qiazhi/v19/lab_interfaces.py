@@ -49,6 +49,7 @@ def lab_status(settings: Dict[str, Any] | None = None) -> Dict[str, Any]:
         "counts": {
             "feedback": len(state["feedback"]),
             "guided_question_feedback": len([row for row in state["feedback"] if row.get("subject_type") == "guided_question"]),
+            "portrait_calibration_feedback": len([row for row in state["feedback"] if row.get("subject_type") == "portrait_calibration"]),
             "guided_question_reviews": len(state["guided_question_reviews"]),
             "guided_question_proposals": len(state["guided_question_proposals"]),
             "guided_question_library_versions": len(state["guided_question_library_versions"]),
@@ -186,6 +187,131 @@ def guided_question_feedback_summary(settings: Dict[str, Any] | None = None) -> 
         "items": rows,
         "storage": storage,
         "guardrails": ["QUESTION_FEEDBACK_SUMMARY_ONLY", "ANALYST_REVIEW_REQUIRED", "NO_AUTO_LEARNING"],
+    }
+
+
+def portrait_calibration_feedback_summary(
+    settings: Dict[str, Any] | None = None,
+    *,
+    profile_id: str = "",
+    birth_fingerprint: str = "",
+) -> Dict[str, Any]:
+    state, storage = _load_state(settings)
+    clean_profile_id = _clean(profile_id)
+    clean_birth_fingerprint = _clean(birth_fingerprint)
+    if not clean_profile_id and not clean_birth_fingerprint:
+        return {
+            "ok": True,
+            "version": "v19.p82.portrait_calibration_feedback_summary.v1",
+            "status": "no_profile_scope",
+            "runtime_scope": "portrait_calibration_feedback_summary_only_no_rule_mutation",
+            "count": 0,
+            "profile_id": "",
+            "birth_fingerprint": "",
+            "by_label": {},
+            "by_family": {},
+            "items": [],
+            "storage": storage,
+            "guardrails": [
+                "PORTRAIT_CALIBRATION_REQUIRES_PROFILE_SCOPE",
+                "USER_FEEDBACK_CALIBRATES_PORTRAIT_ONLY",
+                "NO_RULE_MUTATION_FROM_CALIBRATION",
+            ],
+        }
+    by_label: Dict[str, Dict[str, Any]] = {}
+    by_family: Dict[str, Dict[str, Any]] = {}
+    items: List[Dict[str, Any]] = []
+
+    def bucket(target: Dict[str, Dict[str, Any]], key: str, kind: str) -> Dict[str, Any]:
+        return target.setdefault(
+            key,
+            {
+                f"{kind}_id": key,
+                "count": 0,
+                "rating_sum": 0,
+                "average_rating": 0.0,
+                "positive_count": 0,
+                "negative_count": 0,
+                "neutral_count": 0,
+                "user_count": 0,
+                "analyst_count": 0,
+                "latest_feedback_at": "",
+                "runtime_scope": "portrait_calibration_summary_only_no_rule_mutation",
+            },
+        )
+
+    for row in state["feedback"]:
+        if row.get("subject_type") != "portrait_calibration":
+            continue
+        metadata = dict(row.get("metadata") or {})
+        payload = dict(row.get("payload") or {})
+        hook = dict(payload.get("hook") or {})
+        row_profile_id = _clean(metadata.get("profile_id"))
+        row_birth_fingerprint = _clean(metadata.get("birth_fingerprint"))
+        if clean_profile_id and row_profile_id != clean_profile_id:
+            continue
+        if clean_birth_fingerprint and row_birth_fingerprint != clean_birth_fingerprint:
+            continue
+
+        label_id = _clean(metadata.get("label_id") or payload.get("label_id") or hook.get("label_id") or row.get("subject_id"), "unknown_label")
+        family = _clean(metadata.get("family") or hook.get("family"), "structure")
+        rating = _bounded_int(row.get("rating"), 0, -2, 2)
+        actor_role = _role(row.get("actor_role"))
+        if actor_role != "analyst" and "analyst" in {str(item) for item in row.get("tags", [])}:
+            actor_role = "analyst"
+        created_at = _clean(row.get("created_at"))
+
+        compact = {
+            "feedback_id": row.get("feedback_id") or "",
+            "created_at": created_at,
+            "actor_role": actor_role,
+            "label_id": label_id,
+            "family": family,
+            "rating": rating,
+            "hook_type": _clean(metadata.get("hook_type") or hook.get("hook_type")),
+            "status": row.get("status") or "",
+        }
+        items.append(compact)
+
+        for target, key, kind in [(by_label, label_id, "label"), (by_family, family, "family")]:
+            row_bucket = bucket(target, key, kind)
+            row_bucket["count"] += 1
+            row_bucket["rating_sum"] += rating
+            if rating > 0:
+                row_bucket["positive_count"] += 1
+            elif rating < 0:
+                row_bucket["negative_count"] += 1
+            else:
+                row_bucket["neutral_count"] += 1
+            if actor_role == "analyst":
+                row_bucket["analyst_count"] += 1
+            else:
+                row_bucket["user_count"] += 1
+            row_bucket["latest_feedback_at"] = max(str(row_bucket.get("latest_feedback_at") or ""), created_at)
+
+    for row_bucket in list(by_label.values()) + list(by_family.values()):
+        count = int(row_bucket.get("count") or 0)
+        row_bucket["average_rating"] = round(float(row_bucket.get("rating_sum") or 0) / count, 3) if count else 0.0
+
+    items.sort(key=lambda row: str(row.get("created_at") or ""), reverse=True)
+    return {
+        "ok": True,
+        "version": "v19.p82.portrait_calibration_feedback_summary.v1",
+        "status": "ready",
+        "runtime_scope": "portrait_calibration_feedback_summary_only_no_rule_mutation",
+        "count": len(items),
+        "profile_id": clean_profile_id,
+        "birth_fingerprint": clean_birth_fingerprint,
+        "by_label": by_label,
+        "by_family": by_family,
+        "items": items[:50],
+        "storage": storage,
+        "guardrails": [
+            "PORTRAIT_CALIBRATION_FEEDBACK_SUMMARY_ONLY",
+            "USER_FEEDBACK_CALIBRATES_PORTRAIT_ONLY",
+            "ANALYST_CONFIRMATION_IS_AUDIT_SIGNAL",
+            "NO_RULE_MUTATION_FROM_CALIBRATION",
+        ],
     }
 
 
