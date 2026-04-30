@@ -714,7 +714,7 @@ def _structural_question_label(key: str, contract: Dict[str, Any], signal: Dict[
     category = str(signal.get("category") or "")
     if key == "q_branch_relation_detail" and text:
         return _l(
-            f"当前看得到的{text}关系，分别发生在本命还是时间背景？",
+            f"当前命中的{text}关系，分别发生在本命还是时间背景？",
             f"Do the visible relations {text} occur in the natal chart or timing context?",
             f"보이는 관계 {text}는 원국 안인가요, 시간 배경인가요?",
         )
@@ -2732,7 +2732,7 @@ def _questions_from_signal(signal: Dict[str, Any], facts: Dict[str, Any]) -> Lis
                 "beginner",
                 84,
                 {
-                    "zh": "当前命盘或时间背景触发了哪些冲合关系，它们在结构层代表什么？",
+                    "zh": "当前命中的冲合关系，哪些发生在命盘或时间背景，它们在结构层代表什么？",
                     "en": "Which clash or combination relations are triggered, and what do they mean structurally?",
                     "ko": "현재 명식이나 시간 배경에서 어떤 충합 관계가 나타나며 구조적으로 무엇을 뜻하나요?",
                 },

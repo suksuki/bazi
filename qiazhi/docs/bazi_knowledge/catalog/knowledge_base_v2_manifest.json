@@ -66,6 +66,7 @@
     "docs/v19/V19_P67_MULTILINGUAL_ANSWER_SURFACE.md",
     "docs/v19/V19_P68_TEST_TIERS.md",
     "docs/v19/V19_P69_MAINLINE_P1_SAFE_WRAPPERS.md",
+    "docs/v19/V19_P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -2420,6 +2421,26 @@
       "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
+  "p70_runtime_rule_db_route_integration": {
+    "stage": "P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION",
+    "entrypoints": [
+      "v19.rule_graph_orchestrator._runtime_rule_db_candidates",
+      "v19.rule_graph_orchestrator._rule_db_record_to_candidate",
+      "v19.rule_graph_orchestrator.orchestrate_rule_graph_paths"
+    ],
+    "status": "route_integration_ready",
+    "runtime_scope": "rule_db_route_context_only_no_result_mutation",
+    "uses_runtime_rule_db": true,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION",
+      "RULE_DB_ROUTE_CONTEXT_ONLY",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_RUNTIME_RULE_ACTIVATION"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -2502,6 +2523,7 @@
     "P67_MULTILINGUAL_ANSWER_SURFACE",
     "P68_TEST_TIERS",
     "P69_MAINLINE_P1_SAFE_WRAPPERS",
+    "P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

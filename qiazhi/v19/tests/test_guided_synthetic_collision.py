@@ -3275,6 +3275,50 @@ def test_p52_initial_question_recommendations_are_more_chart_specific() -> None:
     assert "P52_INITIAL_QUESTION_DIVERSITY_FIX" in manifest["guardrails"]
 
 
+def test_p70_rule_graph_can_route_runtime_rule_db_records(monkeypatch) -> None:
+    import v19.rule_graph_orchestrator as rgo
+
+    sample_rule = {
+        "rule_id": "v19.rule.test.runtime_income_path",
+        "knowledge_id": "test.runtime_income_path",
+        "title": "收入路径结构边界",
+        "domain": "income_stability",
+        "category": "income_path",
+        "risk_level": "R1",
+        "status": "active_in_rule_db",
+        "engine_enabled": True,
+        "engine_adapter_status": "available_for_structural_signal_adapter",
+        "input_contract": {"required": ["chart", "inference_context.income_stability"]},
+        "condition": {"conditions": {"keywords": ["收入", "财星", "食伤"]}, "structured_facts": {"candidate_signal": "output_to_wealth_path"}},
+        "output_contract": {"is_prediction": False},
+        "allowed_usage": ["rule_db", "engine_adapter_candidate"],
+        "forbidden_usage": ["direct_fortune_output"],
+    }
+    candidate = rgo._rule_db_record_to_candidate(sample_rule)
+    monkeypatch.setattr(rgo, "_runtime_rule_db_candidates", lambda: [candidate])
+
+    case = P11_GUIDED_SYNTHETIC_CASES[0]
+    data = _agent_data_for_case(case)
+    report = rgo.orchestrate_rule_graph_paths(
+        data,
+        question_key="q_income_stability",
+        message="我的收入稳定性结构如何？",
+        answer_kind="income_structure",
+        limit=12,
+    )
+    selected = report["selected_paths"]
+
+    assert report["summary"]["runtime_rule_db_candidate_count"] == 1
+    assert any(row["knowledge_id"] == "test.runtime_income_path" for row in selected)
+    runtime_path = next(row for row in selected if row["knowledge_id"] == "test.runtime_income_path")
+    assert runtime_path["source"] == "runtime_bazi_rule_db"
+    assert runtime_path["topic_lane"] == "wealth_career_bridge"
+    assert runtime_path["engine_enabled"] is True
+    assert runtime_path["runtime_allowed"] is False
+    assert runtime_path["framework_state"] == "rule_db_engine_available_route_only"
+    assert report["answer_audit"]["status"] == "pass"
+
+
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
     from v19.synthetic_validation import build_p31c_priority_topic_conversion_registry
 

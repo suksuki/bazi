@@ -41,11 +41,12 @@ def orchestrate_rule_graph_paths(
         "chart_graph": graph,
         "summary": {
             "candidate_count": len(candidates),
+            "runtime_rule_db_candidate_count": sum(1 for row in candidates if row.get("source") == "runtime_bazi_rule_db"),
             "retrieved_count": len(retrieved),
             "selected_count": len(selected),
             "canary_selected_count": sum(1 for row in selected if row.get("framework_state") == "canary_isolated_passed"),
             "runtime_allowed_count": sum(1 for row in selected if row.get("runtime_allowed") is True),
-            "engine_enabled_count": 0,
+            "engine_enabled_count": sum(1 for row in selected if row.get("engine_enabled") is True),
             "answer_mutation_count": 0,
             "by_topic_lane": _count_by(selected, "topic_lane"),
         },
@@ -250,7 +251,16 @@ def rule_graph_paths_to_signals(report: Dict[str, Any], *, limit: int = 6) -> Li
 
 
 def _load_rule_candidates() -> List[Dict[str, Any]]:
-    return [dict(row) for row in _cached_rule_candidates()]
+    candidates = [dict(row) for row in _cached_rule_candidates()]
+    runtime_candidates = _runtime_rule_db_candidates()
+    seen = {str(row.get("candidate_rule_id") or row.get("knowledge_id") or "") for row in candidates}
+    for row in runtime_candidates:
+        key = str(row.get("candidate_rule_id") or row.get("knowledge_id") or "")
+        if not key or key in seen:
+            continue
+        candidates.append(row)
+        seen.add(key)
+    return candidates
 
 
 @lru_cache(maxsize=1)
@@ -263,6 +273,66 @@ def _cached_rule_candidates() -> Tuple[Dict[str, Any], ...]:
     candidates.extend(dict(row) for row in build_p61_domain_route_backfill_candidates().get("candidates") or [])
     candidates.extend(dict(row) for row in build_p69_mainline_p1_safe_wrappers().get("candidates") or [])
     return tuple(candidates)
+
+
+def _runtime_rule_db_candidates() -> List[Dict[str, Any]]:
+    try:
+        from v19.bazi_rule_db import list_bazi_rules
+    except Exception:
+        return []
+    try:
+        rules = list_bazi_rules().get("items") or []
+    except Exception:
+        return []
+    candidates: List[Dict[str, Any]] = []
+    for rule in rules:
+        if not isinstance(rule, dict):
+            continue
+        if str(rule.get("status") or "") not in {"active_in_rule_db", "active_record", "approved"}:
+            continue
+        candidate = _rule_db_record_to_candidate(rule)
+        if candidate:
+            candidates.append(candidate)
+    return candidates
+
+
+def _rule_db_record_to_candidate(rule: Dict[str, Any]) -> Dict[str, Any]:
+    knowledge_id = str(rule.get("knowledge_id") or "")
+    rule_id = str(rule.get("rule_id") or "")
+    if not knowledge_id and not rule_id:
+        return {}
+    domain = str(rule.get("domain") or "")
+    category = str(rule.get("category") or "")
+    condition = dict(rule.get("condition") or {})
+    output_contract = dict(rule.get("output_contract") or {})
+    structured = condition.get("structured_facts") if isinstance(condition.get("structured_facts"), dict) else {}
+    keywords = []
+    raw_conditions = condition.get("conditions") if isinstance(condition.get("conditions"), dict) else {}
+    if isinstance(raw_conditions.get("keywords"), list):
+        keywords = [str(item) for item in raw_conditions.get("keywords") if str(item)]
+    if not keywords and isinstance(structured, dict):
+        keywords = [str(key) for key in structured.keys() if str(key)]
+    allowed = [str(item) for item in rule.get("allowed_usage") or [] if str(item)]
+    forbidden = [str(item) for item in rule.get("forbidden_usage") or [] if str(item)]
+    input_contract = dict(rule.get("input_contract") or {})
+    return {
+        "source": "runtime_bazi_rule_db",
+        "candidate_rule_id": rule_id,
+        "knowledge_id": knowledge_id or rule_id,
+        "title": rule.get("title") or knowledge_id or rule_id,
+        "domain": domain,
+        "category": category,
+        "risk_level": rule.get("risk_level") or "",
+        "status": rule.get("status") or "",
+        "engine_enabled": rule.get("engine_enabled") is True,
+        "engine_adapter_status": rule.get("engine_adapter_status") or "",
+        "condition_axes_required": list(input_contract.get("required") or []) + keywords[:8],
+        "expected_question_keys": _candidate_question_keys_from_rule(domain, category, output_contract),
+        "forbidden_outputs": forbidden,
+        "allowed_usage": allowed,
+        "conversion_mode": "runtime_rule_db_engine_candidate" if rule.get("engine_enabled") is True else "runtime_rule_db_route_candidate",
+        "audit_tags": ["runtime_rule_db", "route_selection_only", "no_result_mutation"],
+    }
 
 
 def _score_candidate(candidate: Dict[str, Any], graph: Dict[str, Any], intent: Dict[str, Any]) -> Dict[str, Any]:
@@ -292,6 +362,10 @@ def _score_candidate(candidate: Dict[str, Any], graph: Dict[str, Any], intent: D
         domain in set(intent.get("preferred_domains") or []) or topic_lane in set(intent.get("preferred_lanes") or [])
     ):
         base += 30
+    if str(candidate.get("source") or "") == "runtime_bazi_rule_db" and (
+        domain in set(intent.get("preferred_domains") or []) or topic_lane in set(intent.get("preferred_lanes") or [])
+    ):
+        base += 18 if candidate.get("engine_enabled") is True else 8
     if _title_matches_intent(title, intent):
         base += 10
     if not matched and topic_lane not in set(intent.get("preferred_lanes") or []) and domain not in set(intent.get("preferred_domains") or []):
@@ -304,6 +378,7 @@ def _score_candidate(candidate: Dict[str, Any], graph: Dict[str, Any], intent: D
         "knowledge_id": knowledge_id,
         "title": title,
         "domain": domain,
+        "category": candidate.get("category") or "",
         "topic_lane": topic_lane,
         "risk_level": candidate.get("risk_level") or "",
         "risk_rank": risk_rank,
@@ -314,6 +389,9 @@ def _score_candidate(candidate: Dict[str, Any], graph: Dict[str, Any], intent: D
         "forbidden_outputs": candidate.get("forbidden_outputs") or [],
         "conversion_mode": candidate.get("conversion_mode") or "",
         "audit_tags": candidate.get("audit_tags") or [],
+        "source": candidate.get("source") or "compiled_candidate_builder",
+        "engine_enabled": candidate.get("engine_enabled") is True,
+        "engine_adapter_status": candidate.get("engine_adapter_status") or "",
         "framework_state": framework_state,
         "runtime_allowed": framework_state == "canary_isolated_passed",
         "reason": _path_reason(candidate, matched, intent, framework_state),
@@ -352,11 +430,12 @@ def _matched_features(candidate: Dict[str, Any], feature_tags: Set[str]) -> List
 def _topic_lane(candidate: Dict[str, Any]) -> str:
     domain = str(candidate.get("domain") or "")
     knowledge_id = str(candidate.get("knowledge_id") or "")
-    if domain in {"interaction", "ten_god"}:
+    category = str(candidate.get("category") or "")
+    if domain in {"interaction", "ten_god", "ten_god_relation"} or category.startswith("ten_god"):
         return "ten_god_mechanism"
-    if domain == "pattern":
+    if domain == "pattern" or category in {"pattern", "pattern_structure"}:
         return "pattern_structure"
-    if domain in {"wealth", "career"}:
+    if domain in {"wealth", "career", "income_stability"} or category.startswith("wealth") or category.startswith("income"):
         return "wealth_career_bridge"
     if domain in {"relationship", "health", "family", "children", "personality"}:
         return "domain_safety_bridge"
@@ -364,7 +443,7 @@ def _topic_lane(candidate: Dict[str, Any]) -> str:
         return "blind_lifa_palace"
     if domain in {"auxiliary_pillars", "auxiliary_symbols", "geo_context", "nayin", "shensha"}:
         return "auxiliary_evidence"
-    if domain == "luck_flow" or any(token in knowledge_id for token in ["branch", "time", "luck", "stem_combination", "vault", "month_command", "hidden_stem"]):
+    if domain in {"luck_flow", "time_structure", "structural_relation"} or category in {"branch_relation", "time_boundary", "timing_context", "vault"} or any(token in knowledge_id for token in ["branch", "time", "luck", "stem_combination", "vault", "month_command", "hidden_stem"]):
         return "branch_time_activation"
     return "core_strength_foundation"
 
@@ -373,6 +452,11 @@ def _signal_category_for_path(path: Dict[str, Any]) -> str:
     knowledge_id = str(path.get("knowledge_id") or "")
     topic_lane = str(path.get("topic_lane") or "")
     domain = str(path.get("domain") or "")
+    category = str(path.get("category") or "")
+    if category in {"hidden_stem", "structure_anchor", "strength_model", "five_element_relation"}:
+        return category
+    if category.startswith("wealth") or category.startswith("income"):
+        return "wealth_boundary" if category == "wealth_boundary" else "income_structure"
     if "five_element" in knowledge_id:
         return "five_element_relation"
     if "stem_attributes" in knowledge_id or "stem" in knowledge_id:
@@ -397,6 +481,12 @@ def _signal_category_for_path(path: Dict[str, Any]) -> str:
 
 
 def _framework_state(candidate: Dict[str, Any]) -> str:
+    if str(candidate.get("source") or "") == "runtime_bazi_rule_db":
+        if candidate.get("engine_enabled") is True and str(candidate.get("risk_level") or "") in {"R0", "R1"}:
+            return "rule_db_engine_available_route_only"
+        if str(candidate.get("risk_level") or "") in {"R0", "R1"}:
+            return "rule_db_active_route_candidate"
+        return "rule_db_shadow_route_candidate"
     if str(candidate.get("knowledge_id") or "") in CANARY_RUNTIME_KNOWLEDGE_IDS:
         return "canary_isolated_passed"
     if str(candidate.get("risk_level") or "") in {"R0", "R1"}:
@@ -424,18 +514,37 @@ def _preferred_lanes_for_intent(route: str) -> List[str]:
 
 def _preferred_domains_for_intent(route: str) -> List[str]:
     return {
-        "income_structure": ["wealth", "interaction", "ten_god", "luck_flow"],
-        "career_structure": ["career", "interaction", "pattern"],
+        "income_structure": ["wealth", "income_stability", "interaction", "ten_god", "ten_god_relation", "luck_flow", "time_structure"],
+        "career_structure": ["career", "interaction", "ten_god_relation", "pattern"],
         "pattern_structure": ["pattern", "career", "interaction"],
         "blind_lifa_boundary": ["blind", "palace", "core_structure"],
         "auxiliary_evidence": ["auxiliary_pillars", "auxiliary_symbols", "geo_context", "nayin", "shensha"],
         "relationship_structure": ["relationship", "ten_god", "interaction", "palace", "luck_flow"],
         "health_structure": ["health", "strength", "core_structure", "luck_flow", "ten_god"],
-        "time_boundary": ["luck_flow", "timing", "core_structure"],
-        "branch_relation": ["core_structure", "luck_flow", "branch_advanced"],
-        "metadata_boundary": ["core_structure", "five_element", "ten_god", "strength"],
-        "structure_overview": ["core_structure", "five_element", "strength", "luck_flow"],
+        "time_boundary": ["luck_flow", "time_structure", "timing", "core_structure", "structural_relation"],
+        "branch_relation": ["core_structure", "structural_relation", "luck_flow", "time_structure", "branch_advanced"],
+        "metadata_boundary": ["core_structure", "day_master_element", "five_element", "ten_god", "ten_god_relation", "strength"],
+        "structure_overview": ["core_structure", "day_master_element", "structural_relation", "five_element", "strength", "luck_flow"],
     }.get(route, ["core_structure", "strength"])
+
+
+def _candidate_question_keys_from_rule(domain: str, category: str, output_contract: Dict[str, Any]) -> List[str]:
+    raw = output_contract.get("question_keys")
+    if isinstance(raw, list) and raw:
+        return [str(item) for item in raw if str(item)]
+    if category.startswith("ten_god"):
+        return ["q_ten_god_metadata", "q_signal_combination", "q_read_result_not_fortune"]
+    if category == "branch_relation" or domain == "structural_relation":
+        return ["q_branch_relation_detail", "q_time_vs_natal_relation", "q_combination_context"]
+    if category in {"time_boundary", "timing_context"} or domain == "time_structure":
+        return ["q_time_context_boundary", "q_luck_flow_layers", "q_time_not_inference"]
+    if domain == "income_stability" or category.startswith("wealth") or category.startswith("income"):
+        return ["q_income_factors", "q_income_path_structure", "q_signal_combination"]
+    if category == "hidden_stem":
+        return ["q_hidden_stem_role", "q_ten_god_metadata", "q_element_flow_metadata"]
+    if category in {"structure_anchor", "strength_model"}:
+        return ["q_day_master_month_anchor", "q_month_command_anchor", "q_structure_overview"]
+    return ["q_structure_overview", "follow_rule_basis"]
 
 
 def _title_matches_intent(title: str, intent: Dict[str, Any]) -> bool:
