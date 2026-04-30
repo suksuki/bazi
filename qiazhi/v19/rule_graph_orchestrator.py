@@ -161,6 +161,10 @@ def infer_question_intent(question_key: str = "", message: str = "", answer_kind
     lowered = seed.lower()
     if answer_kind:
         route = answer_kind
+    elif any(token in lowered for token in ["useful god", "favorable element", "unfavorable god"]) or any(token in seed for token in ["用神", "忌神", "喜神", "喜用", "喜什么五行", "忌什么五行"]):
+        route = "useful_god_boundary"
+    elif any(token in lowered for token in ["strength", "strong", "weak"]) or any(token in seed for token in ["身强", "身弱", "强弱", "旺衰", "日主强", "日主弱"]):
+        route = "strength_assessment"
     elif any(token in lowered for token in ["pattern"]) or any(token in seed for token in ["格局", "成格", "破格", "从格", "化格", "羊刃"]):
         route = "pattern_structure"
     elif any(token in lowered for token in ["blind", "source target", "work efficiency"]) or any(token in seed for token in ["盲派", "做功", "原神", "目标神", "换象", "带象"]):
@@ -424,6 +428,8 @@ def _matched_features(candidate: Dict[str, Any], feature_tags: Set[str]) -> List
         "branch": {"branch", "地支"},
         "hidden_stem": {"hidden_stem", "藏干"},
         "ten_god": {"ten_god", "十神", "财", "官", "杀", "印", "食", "伤", "比劫"},
+        "strength": {"strength", "身强", "身弱", "强弱", "旺衰", "日主", "承载"},
+        "useful_god": {"useful_god", "用神", "忌神", "喜神", "喜用", "扶抑", "调候"},
         "branch_relation": {"branch_relation", "冲", "合", "刑", "害", "破", "relation"},
         "time_relation": {"time_relation", "time_layer", "流年", "大运", "引动"},
         "domain_safety": {"relationship", "health", "关系", "感情", "健康", "安全", "降级", "domain_answer_boundary"},
@@ -433,6 +439,10 @@ def _matched_features(candidate: Dict[str, Any], feature_tags: Set[str]) -> List
             matches.add(label)
     if "element:" in " ".join(feature_tags) and any(token in text for token in ["五行", "element", "生克"]):
         matches.add("five_element")
+    if "visible_stem" in feature_tags and any(token in text for token in ["身强", "身弱", "强弱", "旺衰", "日主", "strength"]):
+        matches.add("strength")
+    if "element:" in " ".join(feature_tags) and any(token in text for token in ["用神", "忌神", "喜神", "喜用", "useful_god"]):
+        matches.add("useful_god")
     return sorted(matches)
 
 
@@ -448,6 +458,8 @@ def _topic_lane(candidate: Dict[str, Any]) -> str:
         return "wealth_career_bridge"
     if domain in {"relationship", "health", "family", "children", "personality"}:
         return "domain_safety_bridge"
+    if domain in {"strength", "useful_god", "day_master_element", "five_element"} or category in {"strength_model", "useful_god", "useful_god_boundary", "five_element_relation"}:
+        return "core_strength_foundation"
     if domain in {"blind", "palace"}:
         return "blind_lifa_palace"
     if domain in {"auxiliary_pillars", "auxiliary_symbols", "geo_context", "nayin", "shensha"}:
@@ -507,6 +519,8 @@ def _framework_state(candidate: Dict[str, Any]) -> str:
 
 def _preferred_lanes_for_intent(route: str) -> List[str]:
     return {
+        "strength_assessment": ["core_strength_foundation", "ten_god_mechanism", "branch_time_activation"],
+        "useful_god_boundary": ["core_strength_foundation", "ten_god_mechanism", "pattern_structure", "branch_time_activation"],
         "income_structure": ["wealth_career_bridge", "ten_god_mechanism", "branch_time_activation"],
         "career_structure": ["wealth_career_bridge", "ten_god_mechanism", "pattern_structure"],
         "pattern_structure": ["pattern_structure", "ten_god_mechanism", "core_strength_foundation"],
@@ -523,6 +537,8 @@ def _preferred_lanes_for_intent(route: str) -> List[str]:
 
 def _preferred_domains_for_intent(route: str) -> List[str]:
     return {
+        "strength_assessment": ["strength", "core_structure", "day_master_element", "five_element", "ten_god", "time_structure"],
+        "useful_god_boundary": ["useful_god", "strength", "core_structure", "five_element", "ten_god", "pattern", "time_structure"],
         "income_structure": ["wealth", "income_stability", "interaction", "ten_god", "ten_god_relation", "luck_flow", "time_structure"],
         "career_structure": ["career", "interaction", "ten_god_relation", "pattern"],
         "pattern_structure": ["pattern", "career", "interaction"],
@@ -551,8 +567,10 @@ def _candidate_question_keys_from_rule(domain: str, category: str, output_contra
         return ["q_income_factors", "q_income_path_structure", "q_signal_combination"]
     if category == "hidden_stem":
         return ["q_hidden_stem_role", "q_ten_god_metadata", "q_element_flow_metadata"]
-    if category in {"structure_anchor", "strength_model"}:
-        return ["q_day_master_month_anchor", "q_month_command_anchor", "q_structure_overview"]
+    if domain in {"strength", "day_master_element"} or category in {"structure_anchor", "strength_model"}:
+        return ["q_strength_assessment", "q_day_master_month_anchor", "q_month_command_anchor"]
+    if domain == "useful_god" or category in {"useful_god", "useful_god_boundary"}:
+        return ["q_useful_god_candidates", "q_strength_assessment", "q_favorable_elements_boundary"]
     return ["q_structure_overview", "follow_rule_basis"]
 
 
@@ -560,6 +578,8 @@ def _title_matches_intent(title: str, intent: Dict[str, Any]) -> bool:
     route = str(intent.get("intent") or "")
     route_tokens = {
         "income_structure": ["财", "收入", "财富"],
+        "strength_assessment": ["身强", "身弱", "强弱", "旺衰", "日主", "承载"],
+        "useful_god_boundary": ["用神", "忌神", "喜神", "喜用", "扶抑", "调候"],
         "career_structure": ["事业", "官", "杀"],
         "pattern_structure": ["格局", "成格", "破格", "从格", "化格", "羊刃"],
         "blind_lifa_boundary": ["盲派", "做功", "原神", "目标神", "换象", "带象"],

@@ -1235,7 +1235,7 @@ def _registry_questions(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
 def _baseline_questions(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
     keys = ["q_income_stability"]
     if facts.get("day_stem") or facts.get("month_branch"):
-        keys.extend(["q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure"])
+        keys.extend(["q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure", "q_ten_god_focus"])
     if not facts.get("day_stem") and not facts.get("month_branch"):
         keys.append("q_structure_overview")
     rows = []
@@ -1931,10 +1931,14 @@ def _guided_answer_kind_from_signal(signal: Dict[str, Any]) -> str:
         return "time_boundary"
     if category in {"wealth_feature", "wealth_mechanism"} or domain in {"income_stability", "wealth"}:
         return "income_structure"
-    if category in {"ten_god", "ten_god_interaction", "hidden_stem", "stem_branch_attribute", "five_element_relation", "stem_relation", "strength_model"}:
+    if category == "strength_model" or domain in {"strength", "day_master_element"}:
+        return "strength_assessment"
+    if category in {"useful_god", "useful_god_boundary"} or domain == "useful_god":
+        return "useful_god_boundary"
+    if category in {"ten_god", "ten_god_interaction", "hidden_stem", "stem_branch_attribute", "five_element_relation", "stem_relation"}:
         return "metadata_boundary"
     if category == "pattern_structure":
-        return "result_boundary"
+        return "pattern_structure"
     return ""
 
 
@@ -2766,7 +2770,7 @@ def _match_rule(rule: Dict[str, Any], facts: Dict[str, Any]) -> Dict[str, Any]:
         return {"matched": True, "reason": "ten_god_metadata_available", "observed": []}
     if category == "timing_context":
         return {"matched": True, "reason": "time_context_available", "observed": [facts.get("flow_branch"), facts.get("luck_branch")]}
-    if category in {"core_symbol", "stem_branch_attribute", "hidden_stem", "five_element_relation", "stem_relation", "strength_model"}:
+    if category in {"core_symbol", "stem_branch_attribute", "hidden_stem", "five_element_relation", "stem_relation", "strength_model", "useful_god", "useful_god_boundary"} or domain in {"strength", "useful_god", "day_master_element"}:
         # These may have richer structured-matching above; fallback remains permissive for continuity.
         return {"matched": bool(facts["branches"] or facts["stems"]), "reason": "core_structure_available", "observed": []}
     if category == "pattern_structure":
@@ -3033,6 +3037,38 @@ def _questions_from_signal(signal: Dict[str, Any], facts: Dict[str, Any]) -> Lis
                     ["q_cautious_reading", "q_time_context_boundary", "q_read_result_not_fortune"],
                 )
             )
+    elif category == "strength_model" or domain in {"strength", "day_master_element"}:
+        questions.append(
+            _question(
+                "q_strength_assessment",
+                "strength_structure",
+                "beginner",
+                92,
+                {
+                    "zh": "这个八字的日主强弱，应该先看哪些结构证据？",
+                    "en": "Which structural evidence comes first for day-master strength?",
+                    "ko": "이 사주의 일간 강약은 어떤 구조 근거를 먼저 봐야 하나요?",
+                },
+                signal,
+                ["q_day_master_month_anchor", "q_month_command_anchor", "q_useful_god_candidates"],
+            )
+        )
+    elif category in {"useful_god", "useful_god_boundary"} or domain == "useful_god":
+        questions.append(
+            _question(
+                "q_useful_god_candidates",
+                "useful_god_boundary",
+                "intermediate",
+                90,
+                {
+                    "zh": "这张命盘的用神忌神，当前只能先形成哪些候选路径？",
+                    "en": "What useful or unfavorable-god candidate paths can be formed now?",
+                    "ko": "이 명식의 용신·기신은 현재 어떤 후보 경로로만 볼 수 있나요?",
+                },
+                signal,
+                ["q_strength_assessment", "q_favorable_elements_boundary", "q_unfavorable_god_boundary"],
+            )
+        )
     elif category == "ten_god":
         questions.append(
             _question(
@@ -3306,6 +3342,9 @@ def _question_contract_from_signal(key: str, signal: Dict[str, Any]) -> Dict[str
         "vault": (["vaults", "hidden_stems", "chart_anchor"], "explain_vault_structure_only"),
         "time_boundary": (["time_context", "relations"], "explain_time_context_only"),
         "income_structure": (["income_signals", "chart_anchor", "relations"], "explain_income_structure_signal_only"),
+        "strength_assessment": (["chart_anchor", "month_branch", "hidden_stems", "stem_elements"], "explain_day_master_strength_as_evidence_bundle_not_verdict"),
+        "useful_god_boundary": (["chart_anchor", "month_branch", "hidden_stems", "stem_elements", "relations"], "explain_useful_god_as_candidate_path_requiring_strength_and_structure_gate"),
+        "pattern_structure": (["chart_anchor", "month_branch", "hidden_stems", "relations"], "explain_pattern_as_structure_index_not_fate_verdict"),
         "metadata_boundary": (["chart_anchor", "hidden_stems"], "explain_metadata_boundary"),
         "result_boundary": (["income_signals", "guardrails"], "explain_result_boundary"),
         "rule_basis": (["source_signal", "observed_facts"], "explain_rule_basis"),
@@ -3403,6 +3442,7 @@ def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_contex
         "q_branch_relation_detail",
         "kbq_vault_structure",
         "kbq_ten_god_interaction_boundary",
+        "q_ten_god_focus",
         "kbq_time_vs_natal_relation",
         "q_month_command_anchor",
         "q_ten_god_metadata",

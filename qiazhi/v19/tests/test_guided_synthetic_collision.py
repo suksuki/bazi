@@ -3587,6 +3587,7 @@ def test_mainline_runtime_rule_db_isolated_canary_trial_has_no_production_leak()
 
 def test_common_bazi_questions_are_registered_and_answered_with_boundaries() -> None:
     from v19.bazi_guided_questions import build_guided_question_answer
+    from v19.rule_graph_orchestrator import infer_question_intent
 
     data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
     context = data["guided_question_context"]
@@ -3595,6 +3596,12 @@ def test_common_bazi_questions_are_registered_and_answered_with_boundaries() -> 
     assert "q_strength_assessment" in keys[:10]
     assert "q_useful_god_candidates" in keys[:10]
     assert "q_pattern_structure" in keys[:10]
+    assert any("ten_god" in key for key in keys[:10])
+    assert any(row["key"] in {"q_branch_relation_detail", "q_time_context_boundary", "kbq_time_layer_boundary", "kbq_time_vs_natal_relation"} for row in context["questions"][:10])
+
+    assert infer_question_intent("q_strength_assessment", "这个八字是强还是弱？")["intent"] == "strength_assessment"
+    assert infer_question_intent("q_useful_god_candidates", "用神是什么？忌神是什么？")["intent"] == "useful_god_boundary"
+    assert infer_question_intent("q_pattern_structure", "这个八字格局怎么看？")["intent"] == "pattern_structure"
 
     strength = build_guided_question_answer(data, "q_strength_assessment", "这个八字是强还是弱？")
     useful = build_guided_question_answer(data, "q_useful_god_candidates", "用神是什么？忌神是什么？")
@@ -3603,6 +3610,9 @@ def test_common_bazi_questions_are_registered_and_answered_with_boundaries() -> 
     assert strength["intent"]["answer_kind"] == "strength_assessment"
     assert useful["intent"]["answer_kind"] == "useful_god_boundary"
     assert pattern["intent"]["answer_kind"] == "pattern_structure"
+    assert strength["rule_graph_context"]["question_intent"]["intent"] == "strength_assessment"
+    assert useful["rule_graph_context"]["question_intent"]["intent"] == "useful_god_boundary"
+    assert pattern["rule_graph_context"]["question_intent"]["intent"] == "pattern_structure"
     strength_text = "\n".join(str(line) for line in strength["content"]["zh"])
     useful_text = "\n".join(str(line) for line in useful["content"]["zh"])
     pattern_text = "\n".join(str(line) for line in pattern["content"]["zh"])
@@ -3612,6 +3622,35 @@ def test_common_bazi_questions_are_registered_and_answered_with_boundaries() -> 
     for text in [strength_text, useful_text, pattern_text]:
         for forbidden in ["一定", "发财", "破财", "必然", "应期"]:
             assert forbidden not in text
+    assert "喜木火" not in useful_text
+    assert "忌金水" not in useful_text
+
+
+def test_common_bazi_question_ranking_stays_chart_specific_across_synthetic_cases() -> None:
+    common_keys = {"q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure", "q_ten_god_focus"}
+    contexts = [_agent_data_for_case(case)["guided_question_context"] for case in P11_GUIDED_SYNTHETIC_CASES[:12]]
+    top_signatures = [tuple(row["key"] for row in context["questions"][:5]) for context in contexts]
+    first_positions = [
+        tuple((key, next((index for index, row in enumerate(context["questions"][:10]) if row["key"] == key), -1)) for key in sorted(common_keys))
+        for context in contexts
+    ]
+    assert len(set(top_signatures)) >= 6
+    assert len(set(first_positions)) >= 2
+    assert any(context["questions"][0]["key"] not in common_keys for context in contexts)
+    assert all(any(row["key"] in common_keys for row in context["questions"][:10]) for context in contexts)
+
+
+def test_common_bazi_question_ui_fallback_library_is_aligned() -> None:
+    root = Path(__file__).resolve().parents[2]
+    oracle_js = (root / "v19/frontend/assets/oracle.js").read_text(encoding="utf-8")
+    oracle_html = (root / "v19/frontend/oracle.html").read_text(encoding="utf-8")
+
+    for token in ["q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure", "q_ten_god_focus"]:
+        assert token in oracle_js
+    assert "strength_structure" in oracle_js
+    assert "useful_god_boundary" in oracle_js
+    assert "pattern_structure" in oracle_js
+    assert "20260430-common-intents" in oracle_html
 
 
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:

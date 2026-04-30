@@ -3,6 +3,10 @@ const params = new URLSearchParams(window.location.search);
 const profileId = params.get("profile_id") || "";
 const QUESTION_LIBRARY = [
   { key: "q_structure_overview", theme: "structure_basis", required: ["chart"], depth: "beginner", phase: "before_result", related_questions: ["q_day_master_month_anchor", "q_hidden_stem_role", "q_income_stability", "q_time_context"], forbidden_prediction: true },
+  { key: "q_strength_assessment", theme: "strength_structure", required: ["chart"], depth: "beginner", phase: "any", related_questions: ["q_day_master_month_anchor", "q_month_command_anchor", "q_useful_god_candidates"], forbidden_prediction: true, label: { zh: "这个八字的日主强弱，应该先看哪些证据？", en: "Which evidence should be checked first for day-master strength?", ko: "이 사주의 일간 강약은 어떤 근거를 먼저 봐야 하나요?" } },
+  { key: "q_useful_god_candidates", theme: "useful_god_boundary", required: ["chart"], depth: "intermediate", phase: "any", related_questions: ["q_strength_assessment", "q_favorable_elements_boundary", "q_unfavorable_god_boundary"], forbidden_prediction: true, label: { zh: "这张命盘的用神，当前只能先形成哪些候选路径？", en: "What useful-god candidate paths can be formed at this stage?", ko: "이 명식의 용신은 현재 어떤 후보 경로로만 볼 수 있나요?" } },
+  { key: "q_pattern_structure", theme: "pattern_structure", required: ["chart"], depth: "intermediate", phase: "any", related_questions: ["q_strength_assessment", "q_ten_god_focus", "q_read_result_not_fortune"], forbidden_prediction: true, label: { zh: "这个八字的格局，应该先按哪些结构入口判断？", en: "Which structural entries should be checked first for chart pattern?", ko: "이 사주의 격국은 어떤 구조 입구부터 봐야 하나요?" } },
+  { key: "q_ten_god_focus", theme: "structure_basis", required: ["chart"], depth: "intermediate", phase: "any", related_questions: ["q_ten_god_metadata", "q_pattern_structure", "q_income_factors"], forbidden_prediction: true, label: { zh: "财、官、印、食伤里，当前哪些十神关系更值得先看？", en: "Among wealth, officer, resource, and output, which Ten God relations deserve first attention?", ko: "재성·관성·인성·식상 중 어떤 십성 관계를 먼저 봐야 하나요?" } },
   { key: "q_income_stability", theme: "income_stability", required: ["chart"], depth: "beginner", phase: "any", related_questions: ["q_income_factors", "q_signal_combination", "q_day_master_month_anchor", "follow_rule_basis"], forbidden_prediction: true },
   { key: "q_income_factors", theme: "income_stability", required: ["chart"], depth: "beginner", phase: "any", related_questions: ["q_signal_combination", "q_income_continuity", "q_wealth_accessibility", "q_volatility_factors"], forbidden_prediction: true },
   { key: "q_read_result_not_fortune", theme: "structure_basis", required: ["result"], depth: "beginner", phase: "after_result", related_questions: ["q_no_good_bad", "q_result_card_boundary", "follow_rule_basis", "q_time_context_boundary"], forbidden_prediction: true },
@@ -309,6 +313,9 @@ function questionScore(item, context, options, related) {
   if (!context.result && item.phase === "before_result") score += 60;
   if (context.result && item.phase === "after_result") score += 60;
   if (item.theme === "income_stability") score += context.result ? 25 : 15;
+  if (item.theme === "strength_structure") score += context.result ? 18 : 36;
+  if (item.theme === "useful_god_boundary") score += context.result ? 14 : 28;
+  if (item.theme === "pattern_structure") score += context.result ? 14 : 24;
   if (item.dynamic) score += Number(item.personalized_score ?? item.score ?? 0);
   if (item.theme === "structure_basis") score += context.result ? 18 : 30;
   if (item.theme === "time_context" && context.time_relation) score += 35;
