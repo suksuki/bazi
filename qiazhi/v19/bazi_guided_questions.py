@@ -922,9 +922,13 @@ def guided_answer_to_text(answer: Dict[str, Any], locale: str = "zh") -> str:
 
 
 def guided_answer_to_plain_text(answer: Dict[str, Any], locale: str = "zh") -> str:
+    locale = _normalize_locale(locale)
+    intent = dict(answer.get("intent") or {})
+    if intent.get("supported") is False:
+        return _unsupported_plain_text(str(intent.get("unsupported_reason") or ""), locale)
     composed = answer.get("composed_text")
     if isinstance(composed, dict):
-        text = str(composed.get(locale) or composed.get("zh") or "").strip()
+        text = str(composed.get(locale) or (composed.get("zh") if locale == "zh" else "") or "").strip()
         if text:
             return text
     summary = _local_text(answer.get("summary"), locale).strip()
@@ -941,17 +945,61 @@ def guided_answer_to_plain_text(answer: Dict[str, Any], locale: str = "zh") -> s
             label = _local_text(item.get("label"), locale).strip()
             value = _local_text(item.get("value"), locale).strip()
             note = _local_text(item.get("note"), locale).strip()
-            if label and value and note:
+            if locale == "en":
+                if label and value and note:
+                    items.append(f"{label}: {value}. {note}")
+                elif label and value:
+                    items.append(f"{label}: {value}")
+                elif value:
+                    items.append(value)
+            elif locale == "ko":
+                if label and value and note:
+                    items.append(f"{label}: {value}. {note}")
+                elif label and value:
+                    items.append(f"{label}: {value}")
+                elif value:
+                    items.append(value)
+            elif label and value and note:
                 items.append(f"{label}是{value}，{note}")
             elif label and value:
                 items.append(f"{label}是{value}")
             elif value:
                 items.append(value)
         if items:
-            sentences.append((f"{title}里，" if title else "") + "；".join(items) + "。")
+            if locale == "en":
+                sentences.append((f"In {title}: " if title else "") + "; ".join(items) + ".")
+            elif locale == "ko":
+                sentences.append((f"{title}: " if title else "") + "; ".join(items) + ".")
+            else:
+                sentences.append((f"{title}里，" if title else "") + "；".join(items) + "。")
     if relation:
         sentences.append(relation)
     return "\n\n".join(sentence for sentence in sentences if sentence)
+
+
+def _normalize_locale(value: str) -> str:
+    clean = str(value or "zh").strip().lower()
+    if clean in {"en", "en-us", "english"}:
+        return "en"
+    if clean in {"ko", "ko-kr", "kr", "korean"}:
+        return "ko"
+    return "zh"
+
+
+def _unsupported_plain_text(reason: str, locale: str) -> str:
+    reason = str(reason or "")
+    locale = _normalize_locale(locale)
+    if reason.startswith("smalltalk:greeting"):
+        return {
+            "zh": "你好。我可以继续帮你看这张命盘，但需要你问一个和结构有关的问题。比如可以问：这张命盘先看哪些结构特征、日主和月令怎么读、藏干代表什么、或者收入稳定性结构如何。",
+            "en": "Hello. I can keep reading this chart, but I need a structure-related question. You can ask what structural features appear first, how to read the day master and month branch, what hidden stems mean, or how the income-stability structure looks.",
+            "ko": "안녕하세요. 이 명식을 계속 볼 수 있지만 구조와 관련된 질문이 필요합니다. 먼저 보이는 구조 특징, 일간과 월령 읽기, 지장간의 의미, 소득 안정성 구조 등을 물어볼 수 있습니다.",
+        }[locale]
+    return {
+        "zh": "这个问题当前不在系统支持的结构分析范围内，所以我不会硬编答案。目前可以可靠回答的是：四柱结构、日主和月令、藏干、地支冲合、墓库、大运和流年作为时间背景，以及收入、事业、关系、健康这几类结构边界信号。",
+        "en": "This question is outside the currently supported structural-reading scope, so I will not invent an answer. The reliable scope now covers pillar structure, day master and month branch, hidden stems, branch relations, vault branches, luck cycle and flow year as timing context, plus income, career, relationship, and health structural-boundary signals.",
+        "ko": "이 질문은 현재 지원하는 구조 분석 범위를 벗어나므로 답을 지어내지 않습니다. 현재 안정적으로 답할 수 있는 범위는 사주 구조, 일간과 월령, 지장간, 지지 충합, 묘고, 대운과 세운의 시간 배경, 그리고 소득·직업·관계·건강의 구조 경계 신호입니다.",
+    }[locale]
 
 
 def _chart_facts(chart: Dict[str, Any], time_context: Dict[str, Any]) -> Dict[str, Any]:
@@ -1812,17 +1860,18 @@ def _serializable_relation_map(raw: Dict[str, Any]) -> Dict[str, List[str]]:
 def _guided_answer_kind(question_key: str, message: str) -> str:
     key = str(question_key or "")
     text = str(message or "")
-    if key == "q_career_structure" or "career" in key or "事业" in text or "职业" in text or "工作" in text:
+    lowered = text.lower()
+    if key == "q_career_structure" or "career" in key or any(token in lowered for token in ["career", "work", "job"]) or any(token in text for token in ["事业", "职业", "工作", "직업", "커리어"]):
         return "career_structure"
-    if key == "q_relationship_structure" or "relationship" in key or any(token in text for token in ["感情", "伴侣", "配偶", "婚姻"]):
+    if key == "q_relationship_structure" or "relationship" in key or any(token in lowered for token in ["relationship", "partner", "marriage"]) or any(token in text for token in ["感情", "伴侣", "配偶", "婚姻", "관계", "연애", "배우자", "결혼"]):
         return "relationship_structure"
-    if key == "q_health_structure" or "health" in key or "健康" in text or "身体" in text:
+    if key == "q_health_structure" or "health" in key or any(token in lowered for token in ["health", "body"]) or any(token in text for token in ["健康", "身体", "건강", "몸"]):
         return "health_structure"
-    if key in {"q_branch_relation_detail", "q_time_vs_natal_relation", "q_combination_context", "q_three_harmony_context"} or "branch_relation" in key or key == "q_time_context" or any(token in text for token in ["冲合", "冲", "合", "刑", "害", "破", "关系", "三合", "三会", "六合"]):
+    if key in {"q_branch_relation_detail", "q_time_vs_natal_relation", "q_combination_context", "q_three_harmony_context"} or "branch_relation" in key or key == "q_time_context" or any(token in lowered for token in ["branch relation", "clash", "combination"]) or any(token in text for token in ["冲合", "冲", "合", "刑", "害", "破", "关系", "三合", "三会", "六合", "충", "합"]):
         return "branch_relation"
-    if "vault" in key or "墓库" in text:
+    if "vault" in key or "vault" in lowered or any(token in text for token in ["墓库", "묘고"]):
         return "vault"
-    if key in {"q_time_context_boundary", "q_luck_flow_layers", "q_time_not_inference"} or "时间结构" in text or "大运" in text or "流年" in text:
+    if key in {"q_time_context_boundary", "q_luck_flow_layers", "q_time_not_inference"} or any(token in lowered for token in ["time context", "luck cycle", "flow year"]) or any(token in text for token in ["时间结构", "大运", "流年", "대운", "세운"]):
         return "time_boundary"
     if key in {
         "q_income_stability",
@@ -1833,11 +1882,11 @@ def _guided_answer_kind(question_key: str, message: str) -> str:
         "q_signal_combination",
         "q_primary_auxiliary_signals",
         "q_volatility_factors",
-    } or "income" in key or "wealth" in key or "收入" in text or "财富" in text:
+    } or "income" in key or "wealth" in key or any(token in lowered for token in ["income", "wealth"]) or any(token in text for token in ["收入", "财富", "소득", "수입", "재물"]):
         return "income_structure"
     if key in {"q_read_result_not_fortune", "q_no_good_bad", "q_result_card_boundary", "q_cautious_reading"}:
         return "result_boundary"
-    if key in {"q_day_master_month_anchor", "q_hidden_stem_role"} or "ten_god" in key or "十神" in text or "藏干" in text or "日主" in text or "月令" in text:
+    if key in {"q_day_master_month_anchor", "q_hidden_stem_role"} or "ten_god" in key or any(token in lowered for token in ["ten god", "day master", "month branch", "hidden stem"]) or any(token in text for token in ["十神", "藏干", "日主", "月令", "십성", "일간", "월지", "지장간"]):
         return "metadata_boundary"
     if key == "follow_rule_basis" or "规则依据" in text:
         return "rule_basis"

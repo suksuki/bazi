@@ -7,6 +7,7 @@ from v19.rule_graph_orchestrator import orchestrate_rule_graph_paths
 from v19.synthetic_validation.domain_route_backfill import build_p61_domain_route_backfill_candidates
 from v19.synthetic_validation.guided_cases import P11_GUIDED_SYNTHETIC_CASES
 from v19.synthetic_validation.guided_runner import _agent_data_for_case
+from v19.synthetic_validation.mainline_p1_safe_wrappers import build_p69_mainline_p1_safe_wrappers
 from v19.synthetic_validation.rule_conversion_validation import build_p39_rule_conversion_candidates, run_p39_rule_conversion_regression
 
 
@@ -72,10 +73,14 @@ P65_GUARDRAILS = [
 def build_p65_mainline_completion_audit() -> Dict[str, Any]:
     p39 = build_p39_rule_conversion_candidates()
     p61 = build_p61_domain_route_backfill_candidates()
+    p69 = build_p69_mainline_p1_safe_wrappers()
     p39_candidates = [dict(row) for row in p39.get("candidates") or [] if isinstance(row, dict)]
     p61_candidates = [dict(row) for row in p61.get("candidates") or [] if isinstance(row, dict)]
+    p69_candidates = [dict(row) for row in p69.get("candidates") or [] if isinstance(row, dict)]
     blocked = [dict(row) for row in p39.get("blocked") or [] if isinstance(row, dict)]
-    all_candidates = p39_candidates + p61_candidates
+    all_candidates = p39_candidates + p61_candidates + p69_candidates
+    safe_wrapped_ids = {str(row.get("knowledge_id") or "") for row in p61_candidates + p69_candidates if row.get("knowledge_id")}
+    unwrapped_blocked = [row for row in blocked if str(row.get("knowledge_id") or "") not in safe_wrapped_ids]
     route_matrix = _route_selection_matrix(all_candidates)
     answer_surface = _answer_surface_matrix()
     selected_ids = {kid for row in route_matrix for kid in row.get("selected_knowledge_ids") or []}
@@ -86,7 +91,7 @@ def build_p65_mainline_completion_audit() -> Dict[str, Any]:
     priority_actions = _priority_actions(
         answer_kind_gaps=answer_kind_gaps,
         route_not_applied=route_not_applied,
-        blocked=blocked,
+        blocked=unwrapped_blocked,
         never_selected_ids=never_selected,
         candidates=all_candidates,
     )
@@ -100,6 +105,9 @@ def build_p65_mainline_completion_audit() -> Dict[str, Any]:
             "p39_candidate_count": len(p39_candidates),
             "p39_blocked_count": len(blocked),
             "p61_route_wrapper_count": len(p61_candidates),
+            "p69_safe_wrapper_count": len(p69_candidates),
+            "r3_r4_safe_wrapper_coverage_count": len({str(row.get("knowledge_id") or "") for row in blocked} & safe_wrapped_ids),
+            "r3_r4_unwrapped_count": len(unwrapped_blocked),
             "rule_graph_candidate_count": len(all_candidates),
             "route_matrix_row_count": len(route_matrix),
             "route_selected_unique_count": len(selected_ids),

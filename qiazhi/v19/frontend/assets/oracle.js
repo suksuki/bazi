@@ -168,7 +168,7 @@ async function runAgent() {
   $("run").textContent = t("running");
   try {
     const message = $("message").value.trim() || t("q_income_stability");
-    const result = await postJson("/api/agent/turn", { birth_input: profile.birth_input, selected_year: selectedYear, message, selected_question_key: messageMatchesSelectedQuestion(message) ? selectedQuestionKey : "", session_id: sessionId });
+    const result = await postJson("/api/agent/turn", { birth_input: profile.birth_input, selected_year: selectedYear, message, selected_question_key: messageMatchesSelectedQuestion(message) ? selectedQuestionKey : "", session_id: sessionId, locale });
     if (!result.ok) { $("oracleStatus").textContent = result.message || result.code || "error"; return; }
     lastData = result.data;
     dynamicQuestions = dynamicQuestionsFrom(lastData);

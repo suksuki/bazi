@@ -279,8 +279,8 @@ def test_p61_relationship_health_domain_route_backfill_is_safe_and_selected() ->
     health = orchestrate_rule_graph_paths(data, message="我的健康结构有什么需要注意的边界？", limit=8)
     assert any(row["domain"] == "relationship" and row["topic_lane"] == "domain_safety_bridge" for row in relationship["selected_paths"])
     assert any(row["domain"] == "health" and row["topic_lane"] == "domain_safety_bridge" for row in health["selected_paths"])
-    assert relationship["summary"]["candidate_count"] == 354
-    assert health["summary"]["candidate_count"] == 354
+    assert relationship["summary"]["candidate_count"] == 436
+    assert health["summary"]["candidate_count"] == 436
 
     domain_eval = run_p60_domain_route_eval()
     gate = run_p60_smart_approval_gate()
@@ -430,12 +430,15 @@ def test_p65_mainline_completion_audit_locks_core_chain_before_new_frameworks() 
     assert audit["summary"]["p39_candidate_count"] == 348
     assert audit["summary"]["p39_blocked_count"] == 88
     assert audit["summary"]["p61_route_wrapper_count"] == 6
-    assert audit["summary"]["rule_graph_candidate_count"] == 354
+    assert audit["summary"]["p69_safe_wrapper_count"] == 82
+    assert audit["summary"]["r3_r4_safe_wrapper_coverage_count"] == 88
+    assert audit["summary"]["r3_r4_unwrapped_count"] == 0
+    assert audit["summary"]["rule_graph_candidate_count"] == 436
     assert audit["summary"]["route_matrix_row_count"] == 24
     assert audit["summary"]["answer_kind_gap_count"] == 0
     assert audit["summary"]["route_selected_not_applied_row_count"] == 0
     assert audit["summary"]["p0_action_count"] == 0
-    assert audit["summary"]["p1_action_count"] == 2
+    assert audit["summary"]["p1_action_count"] == 1
     assert audit["summary"]["runtime_mutation"] is False
 
     p0_ids = {row["action_id"] for row in audit["priority_actions"] if row["priority"] == "P0"}
@@ -461,7 +464,9 @@ def test_p65_mainline_completion_audit_locks_core_chain_before_new_frameworks() 
     assert "/api/lab/mainline-completion-audit/run" in server
     assert "docs/v19/V19_P65_MAINLINE_COMPLETION_AUDIT.md" in manifest["created_from"]
     assert "docs/v19/V19_P66_MAINLINE_P0_APPLICATION.md" in manifest["created_from"]
-    assert manifest["p65_mainline_completion_audit"]["rule_graph_candidate_count"] == 354
+    assert manifest["p65_mainline_completion_audit"]["rule_graph_candidate_count"] == 436
+    assert manifest["p65_mainline_completion_audit"]["p69_safe_wrapper_count"] == 82
+    assert manifest["p65_mainline_completion_audit"]["r3_r4_unwrapped_count"] == 0
     assert manifest["p65_mainline_completion_audit"]["answer_kind_gap_count"] == 0
     assert manifest["p65_mainline_completion_audit"]["route_selected_not_applied_row_count"] == 0
     assert manifest["p65_mainline_completion_audit"]["runtime_mutation"] is False
@@ -3165,7 +3170,7 @@ def test_p50_guided_answer_evidence_pack_unifies_answer_contexts() -> None:
     pack = answer["evidence_pack"]
     prompt_context = evidence_pack_to_prompt_context(pack)
     rewrite_messages = _guided_answer_rewrite_messages(answer, case.message)
-    rewrite_payload = json.loads(rewrite_messages[2]["content"].split("只能使用这些结构事实组织回答：\n", 1)[1])
+    rewrite_payload = json.loads(rewrite_messages[2]["content"].split("\n", 1)[1])
 
     assert pack["status"] == "ready"
     assert pack["question"]["question_key"] == case.question_key
@@ -3186,6 +3191,7 @@ def test_p50_guided_answer_evidence_pack_unifies_answer_contexts() -> None:
     assert answer["retrieved_facts"]["evidence_pack"]["binding_count"] == len(pack["evidence_bindings"])
     assert prompt_context["runtime_scope"] == "llm_prompt_evidence_pack_context_only"
     assert prompt_context["bindings"]
+    assert rewrite_payload["target_locale"] == "zh"
     assert rewrite_payload["evidence_pack"]["status"] == "ready"
     assert rewrite_payload["evidence_pack"]["bindings"]
     assert "docs/v19/V19_P50_GUIDED_ANSWER_EVIDENCE_PACK.md" in manifest["created_from"]

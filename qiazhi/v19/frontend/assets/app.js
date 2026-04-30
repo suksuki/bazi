@@ -60,6 +60,7 @@ function buildPayload() {
     selected_year: Number($("flowYear").value),
     message: $("message").value.trim() || "请基于当前结构上下文继续。",
     session_id: sessionId,
+    locale: localStorage.getItem("v19_oracle_locale") || "zh",
   };
 }
 

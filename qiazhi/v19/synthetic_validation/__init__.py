@@ -40,6 +40,7 @@ from v19.synthetic_validation.domain_route_backfill import (
     build_p61_domain_route_backfill_eval_dataset,
     run_p61_domain_route_backfill_regression,
 )
+from v19.synthetic_validation.mainline_p1_safe_wrappers import build_p69_mainline_p1_safe_wrappers, run_p69_mainline_p1_regression
 from v19.synthetic_validation.rule_audit_application import (
     build_p40_condition_model_synthetic_dataset,
     build_p40_framework_rule_registry,
@@ -107,6 +108,7 @@ __all__ = [
     "build_p39_rule_conversion_eval_dataset",
     "build_p61_domain_route_backfill_candidates",
     "build_p61_domain_route_backfill_eval_dataset",
+    "build_p69_mainline_p1_safe_wrappers",
     "build_p62_silent_training_ledger",
     "build_p63_silent_eval_queue",
     "build_p64_interactive_calibration_design",
@@ -147,6 +149,7 @@ __all__ = [
     "run_p31m_priority_topic_adapter_fact_enrichment",
     "run_p39_rule_conversion_regression",
     "run_p61_domain_route_backfill_regression",
+    "run_p69_mainline_p1_regression",
     "run_p62_silent_training_ledger_regression",
     "run_p63_silent_eval_queue_regression",
     "run_p64_interactive_calibration_design_regression",

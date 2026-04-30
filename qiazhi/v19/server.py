@@ -52,6 +52,8 @@ from v19.synthetic_validation import (
     build_p61_domain_route_backfill_candidates,
     build_p61_domain_route_backfill_eval_dataset,
     run_p61_domain_route_backfill_regression,
+    build_p69_mainline_p1_safe_wrappers,
+    run_p69_mainline_p1_regression,
     build_p62_silent_training_ledger,
     run_p62_silent_training_ledger_regression,
     build_p63_silent_eval_queue,
@@ -309,11 +311,13 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
     settings = load_settings()
     role = _request_role(request, dict(payload or {}).get("role"))
     payload = {**dict(payload or {}), "role": role}
+    locale = _request_locale(request, payload)
     result = build_agent_turn(payload)
     if not result.get("ok"):
         return result
 
     data = dict(result.get("data") or {})
+    data["locale"] = locale
     income_stability = derive_income_stability(dict(data.get("chart") or {}))
     data["inference_context"] = {
         "supported_theme": "income_stability",
@@ -340,7 +344,7 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
     llm = dict(settings.get("llm") or {})
     deterministic_income = _mentions_income_stability(str(payload.get("message") or ""))
     if deterministic_income:
-        deterministic_text = render_income_stability_answer(income_stability)
+        deterministic_text = render_income_stability_answer(income_stability, locale=locale)
         data["deterministic_outputs"] = {
             "income_stability": {
                 "renderer": "v19.income_stability.deterministic_renderer.v1",
@@ -350,6 +354,7 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
         }
         data["agent_reply"] = {
             "role": "v19_deterministic_income_renderer",
+            "locale": locale,
             "content": deterministic_text.splitlines(),
             "guardrails": [
                 "DETERMINISTIC_PRIMARY_OUTPUT",
@@ -359,18 +364,19 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
             ],
         }
     if deterministic_guided_answer:
-        fallback_text = guided_answer_to_plain_text(data["guided_question_answer"], "zh")
-        data["guided_question_answer"]["text"] = {"zh": fallback_text}
-        data["guided_question_answer"]["content"] = {"zh": fallback_text.splitlines()}
+        fallback_text = guided_answer_to_plain_text(data["guided_question_answer"], locale)
+        _set_guided_answer_locale_text(data["guided_question_answer"], locale, fallback_text)
         deterministic_outputs = dict(data.get("deterministic_outputs") or {})
         deterministic_outputs["guided_question_answer"] = {
             "renderer": "v19.guided_question_answer.text.v1",
             "primary_user_output": True,
             "llm_may_rephrase": True,
+            "locale": locale,
         }
         data["deterministic_outputs"] = deterministic_outputs
         data["agent_reply"] = {
             "role": "v19_guided_question_answer_renderer",
+            "locale": locale,
             "content": fallback_text.splitlines(),
             "guardrails": [
                 "QUESTION_TO_ANSWER_WORKFLOW",
@@ -387,13 +393,13 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
 
     if deterministic_guided_answer and llm.get("enabled") and llm.get("execute_llm", True):
         try:
-            raw_llm_text = _call_llm_guarded(llm, _guided_answer_rewrite_messages(data["guided_question_answer"], str(payload.get("message") or "")))
-            assistant_text = _guard_guided_answer_rewrite(raw_llm_text, fallback_text, data["guided_question_answer"])
+            raw_llm_text = _call_llm_guarded(llm, _guided_answer_rewrite_messages(data["guided_question_answer"], str(payload.get("message") or ""), locale))
+            assistant_text = _guard_guided_answer_rewrite(raw_llm_text, fallback_text, data["guided_question_answer"], locale)
             llm_rejected = assistant_text != raw_llm_text
-            data["guided_question_answer"]["text"] = {"zh": assistant_text}
-            data["guided_question_answer"]["content"] = {"zh": assistant_text.splitlines() or [assistant_text]}
+            _set_guided_answer_locale_text(data["guided_question_answer"], locale, assistant_text)
             data["agent_reply"] = {
                 "role": "v19_guided_question_answer_llm_rewriter" if not llm_rejected else "v19_guided_question_answer_composer_contract_fallback",
+                "locale": locale,
                 "content": assistant_text.splitlines() or [assistant_text],
                 "guardrails": [
                     "LLM_REPHRASES_STRUCTURED_FACTS_ONLY",
@@ -432,6 +438,7 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
             assistant_text = _call_llm_guarded(llm, messages)
             data["agent_reply"] = {
                 "role": "v19_llm_agent",
+                "locale": locale,
                 "content": assistant_text.splitlines() or [assistant_text],
                 "guardrails": ["structure_context_only", "llm_enabled", "auditable_context"],
             }
@@ -452,10 +459,12 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
             "birth_input": payload.get("birth_input"),
             "selected_year": payload.get("selected_year"),
             "message": str(payload.get("message") or ""),
+            "locale": locale,
         },
         "assistant": {
             "role": data["agent_reply"]["role"],
             "text": assistant_text,
+            "locale": locale,
             "structured": data,
             "llm_status": llm_status,
         },
@@ -1113,6 +1122,26 @@ def lab_domain_route_backfill_run_post(request: Request) -> Dict[str, Any]:
     }
 
 
+@app.get("/api/lab/mainline-p1-safe-wrappers")
+def lab_mainline_p1_safe_wrappers_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P69_MAINLINE_P1_SAFE_WRAPPERS",
+        "registry": build_p69_mainline_p1_safe_wrappers(),
+    }
+
+
+@app.post("/api/lab/mainline-p1-safe-wrappers/run")
+def lab_mainline_p1_safe_wrappers_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P69_MAINLINE_P1_SAFE_WRAPPERS",
+        "regression": run_p69_mainline_p1_regression(),
+    }
+
+
 @app.get("/api/lab/silent-training-ledger")
 def lab_silent_training_ledger_get(request: Request) -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
@@ -1469,10 +1498,14 @@ def _call_llm_guarded(llm: Dict[str, Any], messages: list[Dict[str, str]]) -> st
         raise TimeoutError(f"LLM fuse timeout after {timeout:g}s; returned structure + knowledge fallback.") from exc
 
 
-def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str) -> list[Dict[str, str]]:
+def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str, locale: str = "zh") -> list[Dict[str, str]]:
+    locale = _normalize_locale(locale)
+    language = {"zh": "Simplified Chinese", "en": "English", "ko": "Korean"}[locale]
     compact = {
         "question_key": answer.get("question_key"),
         "question_text": answer.get("question_text"),
+        "target_locale": locale,
+        "target_language": language,
         "question_contract": answer.get("question_contract"),
         "intent": answer.get("intent"),
         "answer_kind": answer.get("answer_kind"),
@@ -1490,19 +1523,19 @@ def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str) -
         {
             "role": "system",
             "content": (
-                "你是 V19 八字结构回答的文字编辑器。只把给定结构事实改写成自然中文，不新增事实、不改结论、不做预测。"
-                "不要使用表格、标题、项目符号、英文 key、规则名或审计口吻。"
-                "用用户能听懂的话回答当前问题，控制在 2 到 4 个自然段。"
-                "边界只作为写作约束，不要机械复述免责声明；除非用户明确询问边界，否则不要单独写“不是预测”或“不改变 income_stability”这类句子。"
-                "优先使用 knowledge_context 中的结构解释知识来组织语言，尤其是月令、日主、藏干、十神、五行、墓库、地支关系和时间背景边界。"
-                "回答必须像在解释用户刚问的问题：先回应问题意图，再说观察到的结构事实，再用一两句普通话说明它代表的结构意义。"
-                "不要输出 rule_id、signal_id、internal key、debug 字段；如果问题超出支持范围，只说明当前支持结构阅读，并引导用户改问一个结构问题。"
-                "如果 intent.supported=false，只能说明当前不支持这个问题，不能绕开限制作答。"
-                "优先保持 composed_text 的意思，不能加入 retrieved_facts 或 observed_facts 之外的新事实。"
+                "You are the V19 Bazi structural-answer copy editor. Rewrite only the supplied structural facts; do not add facts, change conclusions, or predict outcomes. "
+                f"Write the final answer in {language}. "
+                "Do not use tables, headings, bullets, English internal keys, rule names, or audit tone. "
+                "Answer the current question in 2 to 4 natural paragraphs. "
+                "Boundaries are writing constraints; do not mechanically repeat disclaimers unless the user explicitly asks about boundaries. "
+                "Use knowledge_context only as readable structural evidence. "
+                "Never output rule_id, signal_id, internal keys, debug fields, fortune claims, medical conclusions, relationship outcomes, or timing predictions. "
+                "If intent.supported=false, only explain the support boundary and guide the user to ask a structural question. "
+                "Keep the meaning of the localized deterministic answer and do not introduce anything outside retrieved_facts or observed_facts."
             ),
         },
-        {"role": "user", "content": "用户问题：\n" + (user_message or "")},
-        {"role": "user", "content": "只能使用这些结构事实组织回答：\n" + json.dumps(compact, ensure_ascii=False, sort_keys=True)},
+        {"role": "user", "content": "User question:\n" + (user_message or "")},
+        {"role": "user", "content": "Use only this structural context:\n" + json.dumps(compact, ensure_ascii=False, sort_keys=True)},
     ]
 
 
@@ -1553,16 +1586,69 @@ def _looks_truncated_guided_answer(text: str) -> bool:
     return False
 
 
-def _guard_guided_answer_rewrite(text: str, fallback_text: str, answer: Dict[str, Any]) -> str:
+def _set_guided_answer_locale_text(answer: Dict[str, Any], locale: str, text: str) -> None:
+    locale = _normalize_locale(locale)
+    clean = str(text or "").strip()
+    text_map = dict(answer.get("text") or {})
+    content = dict(answer.get("content") or {})
+    for item in ("zh", "en", "ko"):
+        if not str(text_map.get(item) or "").strip():
+            fallback = guided_answer_to_plain_text(answer, item).strip()
+            text_map[item] = fallback
+            content[item] = fallback.splitlines() or ([fallback] if fallback else [])
+    text_map[locale] = clean
+    content[locale] = clean.splitlines() or ([clean] if clean else [])
+    answer["text"] = text_map
+    answer["content"] = content
+    answer["selected_locale"] = locale
+
+
+def _unsupported_rewrite_mentions_boundary(text: str, locale: str = "zh") -> bool:
+    clean = str(text or "").lower()
+    if _normalize_locale(locale) == "zh":
+        return "不支持" in clean or "不会硬编" in clean or "结构" in clean
+    if _normalize_locale(locale) == "ko":
+        return "지원" in clean or "구조" in clean or "범위" in clean
+    return "not supported" in clean or "support" in clean or "structural" in clean or "structure" in clean
+
+
+def _guard_guided_answer_rewrite(text: str, fallback_text: str, answer: Dict[str, Any], locale: str = "zh") -> str:
     clean = str(text or "").strip()
     if not clean:
         return fallback_text
     if _looks_truncated_guided_answer(clean):
         return fallback_text
     intent = dict(answer.get("intent") or {})
-    if intent.get("supported") is False and "不支持" not in clean and "不会硬编" not in clean:
+    if intent.get("supported") is False and not _unsupported_rewrite_mentions_boundary(clean, locale):
         return fallback_text
-    forbidden = ["一定", "必然", "发财", "破财", "今年会", "明年会", "好运", "坏运", "财运很好", "财运很差", "婚姻会", "健康会"]
+    forbidden = [
+        "一定",
+        "必然",
+        "发财",
+        "破财",
+        "今年会",
+        "明年会",
+        "好运",
+        "坏运",
+        "财运很好",
+        "财运很差",
+        "婚姻会",
+        "健康会",
+        "will definitely",
+        "definitely will",
+        "get rich",
+        "lose money",
+        "bad luck",
+        "good luck",
+        "divorce",
+        "disease",
+        "반드시",
+        "무조건",
+        "부자가",
+        "파재",
+        "이혼",
+        "질병",
+    ]
     if any(term in clean for term in forbidden):
         return fallback_text
     return clean
@@ -1732,6 +1818,27 @@ def _mentions_income_stability(message: str) -> bool:
         or "소득 안정" in text
         or "수입 안정" in text
     )
+
+
+def _request_locale(request: Request, payload: Dict[str, Any]) -> str:
+    raw = str(payload.get("locale") or request.query_params.get("locale") or "").strip()
+    if not raw:
+        try:
+            raw = parse_qs(urlsplit(str(request.headers.get("referer") or "")).query).get("locale", [""])[0]
+        except Exception:
+            raw = ""
+    return _normalize_locale(raw)
+
+
+def _normalize_locale(value: Any) -> str:
+    clean = str(value or "zh").strip().lower()
+    if clean in {"zh", "zh-cn", "cn", "chinese"}:
+        return "zh"
+    if clean in {"en", "en-us", "english"}:
+        return "en"
+    if clean in {"ko", "kr", "ko-kr", "korean"}:
+        return "ko"
+    return "zh"
 
 
 def _request_role(request: Request, fallback: Any = "") -> str:

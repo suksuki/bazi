@@ -63,6 +63,9 @@
     "docs/v19/V19_P64_INTERACTIVE_CALIBRATION_DESIGN.md",
     "docs/v19/V19_P65_MAINLINE_COMPLETION_AUDIT.md",
     "docs/v19/V19_P66_MAINLINE_P0_APPLICATION.md",
+    "docs/v19/V19_P67_MULTILINGUAL_ANSWER_SURFACE.md",
+    "docs/v19/V19_P68_TEST_TIERS.md",
+    "docs/v19/V19_P69_MAINLINE_P1_SAFE_WRAPPERS.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -2259,13 +2262,15 @@
     "p39_candidate_count": 348,
     "p39_blocked_count": 88,
     "p61_route_wrapper_count": 6,
-    "rule_graph_candidate_count": 354,
+    "p69_safe_wrapper_count": 82,
+    "r3_r4_safe_wrapper_coverage_count": 88,
+    "r3_r4_unwrapped_count": 0,
+    "rule_graph_candidate_count": 436,
     "route_matrix_row_count": 24,
     "answer_kind_gap_count": 0,
     "route_selected_not_applied_row_count": 0,
     "p0_actions": [],
     "p1_actions": [
-      "r3_r4_safe_wrapper_review",
       "rule_graph_selection_coverage"
     ],
     "p2_actions": [
@@ -2313,6 +2318,106 @@
       "NO_DOMAIN_RESULT_PREDICTION",
       "NO_MEDICAL_OR_LIFESPAN_INFERENCE",
       "NO_INTERNAL_IDS_IN_USER_TEXT"
+    ]
+  },
+  "p67_multilingual_answer_surface": {
+    "stage": "P67_MULTILINGUAL_ANSWER_SURFACE",
+    "entrypoints": [
+      "POST /api/agent/turn",
+      "v19.bazi_guided_questions.guided_answer_to_plain_text",
+      "v19.agent.renderers.render_income_stability_answer",
+      "v19/frontend/assets/oracle.js"
+    ],
+    "status": "pass",
+    "runtime_scope": "answer_surface_locale_only_no_inference_mutation",
+    "supported_locales": [
+      "zh",
+      "en",
+      "ko"
+    ],
+    "completed": [
+      "agent_turn_locale_propagation",
+      "guided_answer_text_content_zh_en_ko",
+      "llm_rewrite_target_locale",
+      "income_renderer_locale_support",
+      "frontend_agent_turn_locale_payload"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P67_MULTILINGUAL_ANSWER_SURFACE",
+      "LOCALE_SURFACE_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION",
+      "NO_INTERNAL_IDS_IN_USER_TEXT"
+    ]
+  },
+  "p68_test_tiers": {
+    "stage": "P68_TEST_TIERS",
+    "entrypoints": [
+      "v19/scripts/test_fast.sh",
+      "v19/scripts/test_targeted.sh",
+      "v19/scripts/test_full.sh"
+    ],
+    "status": "pass",
+    "runtime_scope": "developer_workflow_only_no_runtime_mutation",
+    "tiers": [
+      "fast",
+      "targeted",
+      "full"
+    ],
+    "recommended_policy": [
+      "small_change_run_fast",
+      "mainline_change_run_targeted",
+      "phase_closure_run_full"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P68_TEST_TIERS",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_TEST_POLICY_FULL_ONLY"
+    ]
+  },
+  "p69_mainline_p1_safe_wrappers": {
+    "stage": "P69_MAINLINE_P1_SAFE_WRAPPERS",
+    "entrypoints": [
+      "v19.synthetic_validation.mainline_p1_safe_wrappers.build_p69_mainline_p1_safe_wrappers",
+      "v19.synthetic_validation.mainline_p1_safe_wrappers.run_p69_mainline_p1_regression",
+      "GET /api/lab/mainline-p1-safe-wrappers",
+      "POST /api/lab/mainline-p1-safe-wrappers/run"
+    ],
+    "status": "pass",
+    "runtime_scope": "r3_r4_archive_safe_wrapper_candidates_only",
+    "source_blocked_count": 88,
+    "existing_p61_wrapped_count": 6,
+    "candidate_count": 82,
+    "total_safe_wrapper_coverage_count": 88,
+    "unwrapped_source_count": 0,
+    "coverage_row_count": 4,
+    "coverage_failed": 0,
+    "rule_graph_candidate_count": 436,
+    "engine_enabled_count": 0,
+    "activation_allowed_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "wrapper_modes": [
+      "route_only_safe_wrapper",
+      "boundary_only_safe_wrapper",
+      "evidence_only_label"
+    ],
+    "guardrails": [
+      "P69_MAINLINE_P1_SAFE_WRAPPERS",
+      "R3_R4_SOURCE_RISK_PRESERVED",
+      "SAFE_WRAPPER_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
   "v19_framework_adaptation_review": {
@@ -2394,6 +2499,9 @@
     "P64_INTERACTIVE_CALIBRATION_DESIGN",
     "P65_MAINLINE_COMPLETION_AUDIT",
     "P66_MAINLINE_P0_APPLICATION",
+    "P67_MULTILINGUAL_ANSWER_SURFACE",
+    "P68_TEST_TIERS",
+    "P69_MAINLINE_P1_SAFE_WRAPPERS",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }
