@@ -48,11 +48,13 @@ def list_knowledge_units(settings: Dict[str, Any] | None = None, *, domain: str 
 def retrieve_knowledge(structure_payload: Dict[str, Any], user_message: str, settings: Dict[str, Any] | None = None, *, limit: int = 6) -> Dict[str, Any]:
     records = _ensure_seeded(settings)
     keywords = _context_keywords(structure_payload, user_message)
+    route_context = _route_knowledge_context(structure_payload)
     scored: List[Tuple[int, Dict[str, Any]]] = []
     for record in records.values():
         row = _public_record(record)
         blob = _search_blob(row)
         score = 0
+        route_score, route_reasons = _route_knowledge_score(row, route_context)
         knowledge_id = str(row.get("knowledge_id") or "")
         for keyword in keywords:
             if keyword and keyword in blob:
@@ -87,18 +89,20 @@ def retrieve_knowledge(structure_payload: Dict[str, Any], user_message: str, set
                 score += 4
         if "income" in _norm(user_message) and domain in {"ten_god", "strength", "theme_mapping"}:
             score += 3
+        score += route_score
         if score > 0:
-            scored.append((score, row))
+            scored.append((score, {**row, "route_match_score": route_score, "route_match_reasons": route_reasons}))
     if not scored:
         scored = [(1, _public_record(record)) for record in records.values()]
     scored.sort(key=lambda pair: (-pair[0], str(pair[1].get("knowledge_id") or "")))
     items = [{**row, "match_score": score} for score, row in scored[:limit]]
     return {
         "enabled": True,
-        "mode": "reviewed_evidence_templates_only",
+        "mode": "reviewed_evidence_templates_with_rule_graph_route_bias" if route_context.get("applied") else "reviewed_evidence_templates_only",
         "runtime_scope": "agent_context_not_prediction",
-        "guardrails": ["NO_DIRECT_PREDICTION", "NO_SCORE", "NO_FORTUNE", "NO_TRADITIONAL_NARRATIVE"],
+        "guardrails": ["NO_DIRECT_PREDICTION", "NO_SCORE", "NO_FORTUNE", "NO_TRADITIONAL_NARRATIVE", "ROUTE_BIAS_CONTEXT_ONLY"],
         "query_keywords": keywords,
+        "route_context": route_context,
         "items": items,
     }
 
@@ -188,6 +192,105 @@ def _context_keywords(structure_payload: Dict[str, Any], user_message: str) -> L
     if time_context.get("luck_cycle"):
         words.update(["luck_cycle", "大运", "relation"])
     return sorted(words)[:24]
+
+
+def _route_knowledge_context(structure_payload: Dict[str, Any]) -> Dict[str, Any]:
+    runtime_context = structure_payload.get("rule_graph_runtime_context") if isinstance(structure_payload.get("rule_graph_runtime_context"), dict) else {}
+    knowledge_route = runtime_context.get("knowledge_route") if isinstance(runtime_context.get("knowledge_route"), dict) else {}
+    selected_paths = [dict(row) for row in runtime_context.get("selected_paths") or [] if isinstance(row, dict)]
+    selected_ids = [str(item) for item in knowledge_route.get("selected_knowledge_ids") or [] if str(item)]
+    if not selected_ids:
+        selected_ids = [str(row.get("knowledge_id") or "") for row in selected_paths if row.get("knowledge_id")]
+    lane_counts = dict(knowledge_route.get("by_topic_lane") or {})
+    domain_counts = dict(knowledge_route.get("by_domain") or {})
+    route_terms = set()
+    for value in selected_ids:
+        route_terms.update(_route_terms_from_text(value))
+    for row in selected_paths:
+        route_terms.update(_route_terms_from_text(row.get("title")))
+        route_terms.update(_route_terms_from_text(row.get("topic_lane")))
+        route_terms.update(_route_terms_from_text(row.get("domain")))
+        route_terms.update(str(item) for item in row.get("matched_features") or [] if str(item))
+    return {
+        "status": "ready" if runtime_context else "not_available",
+        "applied": bool(runtime_context),
+        "source": "rule_graph_runtime_context" if runtime_context else "",
+        "selected_knowledge_ids": selected_ids[:16],
+        "by_topic_lane": lane_counts,
+        "by_domain": domain_counts,
+        "route_terms": sorted(route_terms)[:24],
+        "runtime_scope": "knowledge_retrieval_route_bias_only_no_rule_activation",
+    }
+
+
+def _route_knowledge_score(row: Dict[str, Any], route_context: Dict[str, Any]) -> Tuple[int, List[str]]:
+    if not route_context.get("applied"):
+        return 0, []
+    knowledge_id = str(row.get("knowledge_id") or "")
+    domain = str(row.get("domain") or "")
+    blob = _search_blob(row)
+    selected_ids = set(str(item) for item in route_context.get("selected_knowledge_ids") or [] if str(item))
+    lane_counts = {str(key): int(value or 0) for key, value in (route_context.get("by_topic_lane") or {}).items()}
+    domain_counts = {str(key): int(value or 0) for key, value in (route_context.get("by_domain") or {}).items()}
+    route_terms = [str(item) for item in route_context.get("route_terms") or [] if str(item)]
+    score = 0
+    reasons: List[str] = []
+    if knowledge_id in selected_ids:
+        score += 18
+        reasons.append("selected_knowledge_id")
+    if domain in domain_counts:
+        score += min(10, 4 + domain_counts.get(domain, 0) * 2)
+        reasons.append(f"domain:{domain}")
+    lane_score, lane_reason = _route_lane_domain_score(domain, lane_counts)
+    if lane_score:
+        score += lane_score
+        reasons.append(lane_reason)
+    term_hits = [term for term in route_terms if term and term in blob]
+    if term_hits:
+        score += min(10, len(term_hits) * 2)
+        reasons.append("route_terms:" + ",".join(term_hits[:4]))
+    cap = 24 if knowledge_id in selected_ids else 12
+    return min(score, cap), reasons[:5]
+
+
+def _route_lane_domain_score(domain: str, lane_counts: Dict[str, int]) -> Tuple[int, str]:
+    lane_domain_map = {
+        "branch_time_activation": {"core_structure", "luck_flow"},
+        "ten_god_mechanism": {"ten_god", "wealth"},
+        "wealth_career_bridge": {"wealth", "theme_mapping"},
+        "core_strength_foundation": {"core_structure", "five_element", "strength"},
+        "pattern_structure": {"core_structure", "theme_mapping"},
+        "blind_lifa_palace": {"core_structure"},
+    }
+    score = 0
+    reason = ""
+    for lane, domains in lane_domain_map.items():
+        if domain in domains and lane_counts.get(lane, 0) > 0:
+            candidate = min(8, 3 + lane_counts.get(lane, 0))
+            if candidate > score:
+                score = candidate
+                reason = f"lane:{lane}"
+    return score, reason
+
+
+def _route_terms_from_text(value: Any) -> set[str]:
+    text = _norm(value)
+    terms = set()
+    mapping = {
+        "hidden_stem": ["hidden_stem", "藏干"],
+        "month_command": ["month_command", "月令", "月支"],
+        "vault": ["vault", "墓库", "墓", "库"],
+        "branch_relation": ["branch_relation", "冲", "合", "刑", "害", "破", "地支"],
+        "time_relation": ["time_relation", "time_layer", "流年", "大运", "引动"],
+        "ten_god": ["ten_god", "十神", "财星", "官杀", "印星", "食伤", "比劫"],
+        "five_element": ["five_element", "五行", "生克"],
+        "income": ["income", "income_stability", "收入", "财富"],
+        "strength": ["strength", "旺衰", "身强", "身弱", "承载力"],
+    }
+    for key, values in mapping.items():
+        if key in text or any(str(item).lower() in text for item in values):
+            terms.update(values)
+    return {term.lower() for term in terms if term}
 
 
 def _search_blob(row: Dict[str, Any]) -> str:

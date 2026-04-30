@@ -2689,6 +2689,69 @@ def test_p47_rule_graph_runtime_context_routes_measurement_chain() -> None:
     assert "USE_AS_ROUTE_HINTS_ONLY" in compact["rule_graph_runtime_context"]["guardrails"]
 
 
+def test_p48_initial_questions_are_personalized_by_rule_graph_routes() -> None:
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    first = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])["guided_question_context"]
+    branch_heavy = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[3])["guided_question_context"]
+
+    first_personalization = first["question_personalization_context"]
+    branch_personalization = branch_heavy["question_personalization_context"]
+    first_top = first["questions"][:6]
+    branch_top = branch_heavy["questions"][:6]
+
+    assert first_personalization["status"] == "ready"
+    assert branch_personalization["status"] == "ready"
+    assert first_personalization["source"] == "rule_graph_runtime_context"
+    assert branch_personalization["source"] == "rule_graph_runtime_context"
+    assert first_personalization["route_bucket_order"]
+    assert branch_personalization["route_bucket_order"]
+    assert first_personalization["route_bucket_order"] != branch_personalization["route_bucket_order"]
+    assert [row["key"] for row in first_top] != [row["key"] for row in branch_top]
+    assert all((row.get("personalization") or {}).get("applied") is True for row in first_top[:5])
+    assert all(int(row.get("personalized_score") or 0) >= int(row.get("score") or 0) for row in first_top + branch_top)
+    assert "q_income_stability" in [row["key"] for row in first["questions"][:10]]
+    assert "q_income_stability" in [row["key"] for row in branch_heavy["questions"][:10]]
+    assert "RULE_GRAPH_PERSONALIZED_QUESTION_RANKING" in first["guardrails"]
+    assert first_personalization["runtime_scope"] == "question_ranking_only_no_inference_mutation"
+    assert "docs/v19/V19_P48_PERSONALIZED_QUESTION_ROUTING.md" in manifest["created_from"]
+    assert manifest["p48_personalized_question_routing"]["answer_mutation_count"] == 0
+    assert "P48_PERSONALIZED_QUESTION_ROUTING" in manifest["guardrails"]
+
+
+def test_p49_route_aware_knowledge_retrieval_uses_rule_graph_context() -> None:
+    from v19.bazi_guided_questions import build_guided_question_answer
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    branch_case = P11_GUIDED_SYNTHETIC_CASES[3]
+    month_case = next(row for row in P11_GUIDED_SYNTHETIC_CASES if row.case_id == "syn.guided.p11.month_command_neutral_with_income_collision")
+    branch_data = _agent_data_for_case(branch_case)
+    month_data = _agent_data_for_case(month_case)
+    branch_kc = branch_data["knowledge_context"]
+    month_kc = month_data["knowledge_context"]
+    branch_answer = build_guided_question_answer(branch_data, branch_case.question_key, branch_case.message)
+    month_answer = build_guided_question_answer(month_data, month_case.question_key, month_case.message)
+
+    assert branch_kc["mode"] == "reviewed_evidence_templates_with_rule_graph_route_bias"
+    assert branch_kc["route_context"]["status"] == "ready"
+    assert branch_kc["route_context"]["source"] == "rule_graph_runtime_context"
+    assert branch_kc["route_context"]["runtime_scope"] == "knowledge_retrieval_route_bias_only_no_rule_activation"
+    assert any(int(row.get("route_match_score") or 0) > 0 for row in branch_kc["items"])
+    assert any(row.get("route_match_reasons") for row in branch_kc["items"])
+    assert branch_kc["items"][0]["knowledge_id"] == "p10.branch_penalty_harm_break_boundary"
+    assert "p10.branch_penalty_harm_break_boundary" in [row["knowledge_id"] for row in branch_answer["applied_knowledge"]]
+    assert any(int(row.get("route_match_score") or 0) > 0 for row in branch_answer["applied_knowledge"])
+
+    assert month_kc["route_context"]["status"] == "ready"
+    assert month_kc["items"][0]["knowledge_id"] == "p10.month_command_season_not_verdict"
+    assert "p10.month_command_season_not_verdict" in [row["knowledge_id"] for row in month_answer["applied_knowledge"]]
+    assert int(month_kc["items"][0].get("route_match_score") or 0) <= 12
+    assert manifest["p49_route_aware_knowledge_retrieval"]["route_bias_policy"]["generic_route_match_cap"] == 12
+    assert "docs/v19/V19_P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL.md" in manifest["created_from"]
+    assert "P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL" in manifest["guardrails"]
+
+
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
     from v19.synthetic_validation import build_p31c_priority_topic_conversion_registry
 

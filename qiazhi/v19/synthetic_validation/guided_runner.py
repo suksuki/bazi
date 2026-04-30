@@ -166,17 +166,17 @@ def _agent_data_for_case(case: GuidedSyntheticCase, *, with_knowledge: bool = Tr
         "income_stability": derive_income_stability(data["chart"]),
         "guardrails": ["SYNTHETIC_INFERENCE_CONTEXT"],
     }
+    data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
+        data,
+        message=case.message,
+        selected_question_key=case.question_key,
+    )
     data["knowledge_context"] = retrieve_knowledge(data, case.message) if with_knowledge else {
         "version": "v19.synthetic.baseline.no_knowledge",
         "items": [],
         "count": 0,
         "runtime_scope": "baseline_without_kb_augmentation",
     }
-    data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
-        data,
-        message=case.message,
-        selected_question_key=case.question_key,
-    )
     data["guided_question_context"] = build_guided_question_context(data)
     return data
 

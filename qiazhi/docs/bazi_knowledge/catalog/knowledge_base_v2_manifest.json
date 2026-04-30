@@ -48,6 +48,8 @@
     "docs/v19/V19_P45_CANARY_RUNTIME_TRIAL.md",
     "docs/v19/V19_P46_RULE_GRAPH_ORCHESTRATOR.md",
     "docs/v19/V19_P47_RULE_GRAPH_RUNTIME_CONTEXT.md",
+    "docs/v19/V19_P48_PERSONALIZED_QUESTION_ROUTING.md",
+    "docs/v19/V19_P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -1647,6 +1649,81 @@
       "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
+  "p48_personalized_question_routing": {
+    "stage": "P48_PERSONALIZED_QUESTION_ROUTING",
+    "entrypoints": [
+      "v19.bazi_guided_questions.build_guided_question_context",
+      "v19.bazi_guided_questions._question_personalization_context",
+      "v19.bazi_guided_questions._personalize_questions",
+      "v19.bazi_guided_questions._rank_questions_for_chart"
+    ],
+    "runtime_scope": "question_ranking_only_no_inference_mutation",
+    "input_context": [
+      "rule_graph_runtime_context",
+      "rule_graph_context",
+      "chart_facts",
+      "structural_rule_signals"
+    ],
+    "outputs": [
+      "guided_question_context.question_personalization_context",
+      "questions[].personalized_score",
+      "questions[].personalization"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "RULE_GRAPH_PERSONALIZED_QUESTION_RANKING",
+      "PERSONALIZE_QUESTION_ORDER_ONLY",
+      "KEEP_BASELINE_ENTRY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p49_route_aware_knowledge_retrieval": {
+    "stage": "P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL",
+    "entrypoints": [
+      "v19.knowledge_store.retrieve_knowledge",
+      "v19.knowledge_store._route_knowledge_context",
+      "v19.knowledge_store._route_knowledge_score",
+      "v19.bazi_guided_questions.build_guided_question_answer",
+      "POST /api/agent/turn",
+      "POST /api/lab/guided-question-audit"
+    ],
+    "runtime_scope": "knowledge_retrieval_route_bias_only_no_rule_activation",
+    "input_context": [
+      "rule_graph_runtime_context",
+      "user_question",
+      "chart_facts",
+      "inference_context"
+    ],
+    "outputs": [
+      "knowledge_context.route_context",
+      "knowledge_context.items[].route_match_score",
+      "knowledge_context.items[].route_match_reasons",
+      "applied_knowledge[].route_match_score",
+      "applied_knowledge[].route_match_reasons"
+    ],
+    "route_bias_policy": {
+      "exact_selected_id_cap": 24,
+      "generic_route_match_cap": 12,
+      "explicit_question_intent_priority": "stronger_than_generic_route_bias"
+    },
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "ROUTE_AWARE_KNOWLEDGE_RETRIEVAL",
+      "ROUTE_BIAS_CONTEXT_ONLY",
+      "EXPLICIT_QUESTION_INTENT_PROTECTED",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -1711,6 +1788,8 @@
     "P45_CANARY_RUNTIME_TRIAL",
     "P46_RULE_GRAPH_ORCHESTRATOR",
     "P47_RULE_GRAPH_RUNTIME_CONTEXT",
+    "P48_PERSONALIZED_QUESTION_ROUTING",
+    "P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

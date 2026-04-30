@@ -412,8 +412,10 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
             graph_question["runtime_scope"] = "rule_graph_question_hint_only_no_result_mutation"
             graph_question["guardrails"] = list(graph_question.get("guardrails") or []) + ["RULE_GRAPH_HINT_ONLY"]
             questions.append(graph_question)
+    personalization_context = _question_personalization_context(agent_data, facts, rule_graph_context)
+    questions = _personalize_questions(questions, personalization_context)
     questions = _dedupe_questions(questions)
-    ranked_questions = _rank_questions_for_chart(questions)
+    ranked_questions = _rank_questions_for_chart(questions, personalization_context)
     return {
         "available": True,
         "runtime_scope": "guided_questions_only_no_inference_mutation",
@@ -426,6 +428,7 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         "question_count": len(questions),
         "signals": _prioritize_context_signals(signals)[:30],
         "rule_graph_context": rule_graph_context,
+        "question_personalization_context": personalization_context,
         "questions": ranked_questions[:10],
         "question_registry": {
             "version": QUESTION_REGISTRY_VERSION,
@@ -435,6 +438,7 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         "guardrails": [
             "RULE_DB_GUIDES_QUESTIONS_ONLY",
             "RULE_GRAPH_PATH_SELECTION",
+            "RULE_GRAPH_PERSONALIZED_QUESTION_RANKING",
             "NO_RESULT_MUTATION",
             "NO_FORTUNE",
             "NO_TIME_AWARE_INFERENCE",
@@ -447,6 +451,76 @@ def _prioritize_context_signals(signals: List[Dict[str, Any]]) -> List[Dict[str,
     graph = [row for row in signals if str(row.get("source") or "") == "rule_graph_orchestrator"]
     graph = sorted(graph, key=lambda row: int(row.get("score") or 0), reverse=True)
     return legacy[:24] + graph[:6] + legacy[24:]
+
+
+def _question_personalization_context(agent_data: Dict[str, Any], facts: Dict[str, Any], rule_graph_context: Dict[str, Any]) -> Dict[str, Any]:
+    runtime_context = dict(agent_data.get("rule_graph_runtime_context") or {})
+    selected_paths = [dict(row) for row in runtime_context.get("selected_paths") or [] if isinstance(row, dict)]
+    if not selected_paths:
+        selected_paths = [dict(row) for row in rule_graph_context.get("selected_paths") or [] if isinstance(row, dict)]
+    lane_counts = dict((runtime_context.get("knowledge_route") or {}).get("by_topic_lane") or {})
+    if not lane_counts:
+        lane_counts = _count_values(str(row.get("topic_lane") or "") for row in selected_paths)
+    domain_counts = dict((runtime_context.get("knowledge_route") or {}).get("by_domain") or {})
+    if not domain_counts:
+        domain_counts = _count_values(str(row.get("domain") or "") for row in selected_paths)
+    route_bucket_order = _route_bucket_order(lane_counts, facts)
+    selected_knowledge_ids = [str(row.get("knowledge_id") or "") for row in selected_paths if row.get("knowledge_id")]
+    return {
+        "version": "v19.p48.question_personalization.v1",
+        "status": "ready" if selected_paths else "fallback_without_rule_graph_paths",
+        "runtime_scope": "question_ranking_only_no_inference_mutation",
+        "source": "rule_graph_runtime_context" if runtime_context else "rule_graph_context",
+        "route_bucket_order": route_bucket_order,
+        "route_lane_counts": lane_counts,
+        "route_domain_counts": domain_counts,
+        "selected_knowledge_ids": selected_knowledge_ids[:12],
+        "selected_route_count": int(runtime_context.get("route_count") or 0),
+        "guardrails": [
+            "PERSONALIZE_QUESTION_ORDER_ONLY",
+            "KEEP_BASELINE_ENTRY",
+            "NO_RESULT_MUTATION",
+            "NO_FORTUNE",
+        ],
+    }
+
+
+def _personalize_questions(rows: List[Dict[str, Any]], personalization_context: Dict[str, Any]) -> List[Dict[str, Any]]:
+    out: List[Dict[str, Any]] = []
+    selected_ids = set(str(item) for item in personalization_context.get("selected_knowledge_ids") or [] if str(item))
+    bucket_order = [str(item) for item in personalization_context.get("route_bucket_order") or [] if str(item)]
+    bucket_rank = {bucket: index for index, bucket in enumerate(bucket_order)}
+    lane_counts = dict(personalization_context.get("route_lane_counts") or {})
+    domain_counts = dict(personalization_context.get("route_domain_counts") or {})
+    for row in rows:
+        item = dict(row)
+        bucket = _question_bucket(item)
+        route_boost = 0
+        route_reasons: List[str] = []
+        if bucket in bucket_rank:
+            route_boost += max(4, 18 - bucket_rank[bucket] * 2)
+            route_reasons.append(f"bucket:{bucket}")
+        knowledge_id = str(item.get("source_knowledge_id") or "")
+        if knowledge_id and knowledge_id in selected_ids:
+            route_boost += 10
+            route_reasons.append(f"knowledge:{knowledge_id}")
+        source_category = str(item.get("source_signal_category") or "")
+        if _category_matches_route(source_category, lane_counts, domain_counts):
+            route_boost += 6
+            route_reasons.append(f"category:{source_category}")
+        route_boost = min(route_boost, 24)
+        base_score = int(item.get("score") or 0)
+        item["personalized_score"] = base_score + route_boost
+        item["personalization"] = {
+            "applied": route_boost > 0,
+            "route_boost": route_boost,
+            "bucket": bucket,
+            "reasons": route_reasons[:4],
+            "source": personalization_context.get("source") or "",
+            "runtime_scope": "question_ranking_only_no_result_mutation",
+        }
+        out.append(item)
+    return out
 
 
 def _structural_signals_from_facts(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -1263,6 +1337,8 @@ def _compact_knowledge_item(row: Dict[str, Any]) -> Dict[str, Any]:
         "statement": row.get("statement"),
         "evidence_type": row.get("evidence_type"),
         "match_score": row.get("match_score"),
+        "route_match_score": row.get("route_match_score"),
+        "route_match_reasons": list(row.get("route_match_reasons") or []),
     }
 
 
@@ -2668,7 +2744,7 @@ def _question_preference(row: Dict[str, Any]) -> Tuple[int, int, int]:
         "rule_graph_dynamic_question": 1,
         "question_registry": 1,
     }.get(source, 0)
-    return (_question_source_match_rank(row), int(row.get("score") or 0), source_rank)
+    return (_question_source_match_rank(row), int(row.get("personalized_score") or row.get("score") or 0), source_rank)
 
 
 def _question_source_match_rank(row: Dict[str, Any]) -> int:
@@ -2700,11 +2776,14 @@ def _question_source_match_rank(row: Dict[str, Any]) -> int:
     return rank
 
 
-def _rank_questions_for_chart(rows: List[Dict[str, Any]], limit: int = 10) -> List[Dict[str, Any]]:
+def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_context: Dict[str, Any] | None = None, limit: int = 10) -> List[Dict[str, Any]]:
     sorted_rows = sorted(rows, key=lambda row: _question_preference(row), reverse=True)
     selected: List[Dict[str, Any]] = []
     used = set()
-    for bucket in ["vault", "branch_relation", "time_context", "income_stability", "metadata"]:
+    bucket_order = list((personalization_context or {}).get("route_bucket_order") or [])
+    if not bucket_order:
+        bucket_order = ["vault", "branch_relation", "time_context", "income_stability", "metadata"]
+    for bucket in bucket_order[:5]:
         pick = next((row for row in sorted_rows if row.get("key") not in used and _question_bucket(row) == bucket), None)
         if pick:
             selected.append(pick)
@@ -2742,6 +2821,64 @@ def _question_bucket(row: Dict[str, Any]) -> str:
     if theme == "boundary" or intent == "result_boundary":
         return "boundary"
     return "structure_basis"
+
+
+def _route_bucket_order(lane_counts: Dict[str, int], facts: Dict[str, Any]) -> List[str]:
+    lane_to_buckets = {
+        "branch_time_activation": ["branch_relation", "time_context", "vault"],
+        "ten_god_mechanism": ["metadata", "income_stability", "structure_basis"],
+        "wealth_career_bridge": ["income_stability", "metadata", "structure_basis"],
+        "core_strength_foundation": ["metadata", "structure_basis"],
+        "pattern_structure": ["structure_basis", "boundary"],
+        "blind_lifa_palace": ["vault", "branch_relation", "structure_basis"],
+    }
+    ordered: List[str] = []
+    for lane, _count in sorted(lane_counts.items(), key=lambda item: (-int(item[1] or 0), str(item[0]))):
+        for bucket in lane_to_buckets.get(str(lane), []):
+            if bucket not in ordered:
+                ordered.append(bucket)
+    if facts.get("has_time_relation"):
+        _prepend_once(ordered, "time_context")
+    if facts.get("has_branch_relation"):
+        _prepend_once(ordered, "branch_relation")
+    if facts.get("has_vault") or facts.get("flow_is_vault") or facts.get("luck_is_vault"):
+        _prepend_once(ordered, "vault")
+    for bucket in ["income_stability", "metadata", "structure_basis", "boundary"]:
+        if bucket not in ordered:
+            ordered.append(bucket)
+    return ordered[:7]
+
+
+def _prepend_once(rows: List[str], value: str) -> None:
+    if value in rows:
+        rows.remove(value)
+    rows.insert(0, value)
+
+
+def _category_matches_route(category: str, lane_counts: Dict[str, int], domain_counts: Dict[str, int]) -> bool:
+    active_lanes = {str(key) for key, value in lane_counts.items() if int(value or 0) > 0}
+    active_domains = {str(key) for key, value in domain_counts.items() if int(value or 0) > 0}
+    if category in {"wealth_feature", "wealth_mechanism", "wealth_boundary"}:
+        return bool(active_lanes & {"wealth_career_bridge", "ten_god_mechanism"} or active_domains & {"wealth", "income_stability"})
+    if category in {"branch_relation", "timing_context", "vault"}:
+        return "branch_time_activation" in active_lanes or "luck_flow" in active_domains
+    if category in {"ten_god", "ten_god_interaction", "hidden_stem", "hidden_stems"}:
+        return "ten_god_mechanism" in active_lanes or active_domains & {"ten_god", "interaction"}
+    if category in {"strength_model", "structure_anchor", "stem_branch_attribute", "five_element_relation"}:
+        return "core_strength_foundation" in active_lanes or active_domains & {"core_structure", "five_element", "strength"}
+    if category in {"pattern_structure", "core_symbol"}:
+        return bool(active_lanes & {"pattern_structure", "core_strength_foundation"})
+    return False
+
+
+def _count_values(values: Iterable[str]) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for value in values:
+        clean = str(value or "")
+        if not clean:
+            continue
+        counts[clean] = counts.get(clean, 0) + 1
+    return counts
 
 
 def _has_three_harmony(branches: List[str]) -> bool:

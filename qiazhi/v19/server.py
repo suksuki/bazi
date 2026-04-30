@@ -305,13 +305,13 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
         ],
     }
     data["algorithm_status"] = _algorithm_status()
-    data["knowledge_context"] = retrieve_knowledge(data, str(payload.get("message") or ""), settings=settings)
     selected_question_key = str(payload.get("selected_question_key") or "").strip()
     data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
         data,
         message=str(payload.get("message") or ""),
         selected_question_key=selected_question_key,
     )
+    data["knowledge_context"] = retrieve_knowledge(data, str(payload.get("message") or ""), settings=settings)
     data["guided_question_context"] = build_guided_question_context(data)
     data["guided_question_answer"] = build_guided_question_answer(data, selected_question_key, str(payload.get("message") or ""))
     deterministic_guided_answer = data["guided_question_answer"].get("available") is True
@@ -524,12 +524,12 @@ def lab_guided_question_audit_post(payload: Dict[str, Any], request: Request) ->
         "income_stability": income_stability,
         "guardrails": ["AUDIT_INFERENCE_CONTEXT", "NO_RESULT_MUTATION", "NO_LLM"],
     }
-    data["knowledge_context"] = retrieve_knowledge(data, message, settings=settings)
     data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
         data,
         message=message,
         selected_question_key=selected_question_key,
     )
+    data["knowledge_context"] = retrieve_knowledge(data, message, settings=settings)
     data["guided_question_context"] = build_guided_question_context(data)
     answer = build_guided_question_answer(data, selected_question_key, message)
     audit = _guided_question_audit_report(data, answer)
