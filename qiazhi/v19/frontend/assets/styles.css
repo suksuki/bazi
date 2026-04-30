@@ -1334,6 +1334,7 @@ summary em {
 }
 
 .pillar-section,
+.portrait-section,
 .pillar-loading {
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1370,6 +1371,55 @@ summary em {
 .pillar-subhead {
   margin: 12px 0 8px;
   text-transform: uppercase;
+}
+
+.portrait-panel {
+  margin-top: 10px;
+}
+
+.portrait-section {
+  background: rgba(58, 166, 117, 0.055);
+}
+
+.portrait-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 11px;
+}
+
+.portrait-chip {
+  align-items: center;
+  border: 1px solid rgba(143, 226, 179, 0.18);
+  border-radius: 999px;
+  color: var(--text-soft);
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 850;
+  gap: 7px;
+  line-height: 1.35;
+  min-height: 30px;
+  padding: 6px 10px;
+}
+
+.portrait-chip b {
+  color: #9ce5ba;
+  font-size: 11px;
+  font-weight: 950;
+}
+
+.portrait-judgements {
+  border-top: 1px solid rgba(143, 226, 179, 0.12);
+  color: var(--text-muted);
+  font-size: 12px;
+  font-weight: 750;
+  line-height: 1.55;
+  margin: 12px 0 0;
+  padding: 10px 0 0 18px;
+}
+
+.portrait-judgements li + li {
+  margin-top: 4px;
 }
 
 .pillar-grid {

@@ -92,10 +92,13 @@ function bindEvents() {
     localStorage.setItem("v19_oracle_locale", locale);
     await loadLabels(locale);
     renderStaticLabels();
-  if (structureData) renderPillarPanel(structureData);
-  renderQuestions();
-  if (structureData) renderQuestionContext(structureData);
-  if (lastData) renderResult(lastData);
+    if (structureData) {
+      renderPillarPanel(structureData);
+      renderPortraitPanel(structureData);
+    }
+    renderQuestions();
+    if (structureData) renderQuestionContext(structureData);
+    if (lastData) renderResult(lastData);
   });
   $("run").addEventListener("click", runAgent);
   $("message").addEventListener("input", syncSelectedQuestionFromMessage);
@@ -139,6 +142,7 @@ async function loadStructure() {
   structureData = result.data;
   dynamicQuestions = dynamicQuestionsFrom(structureData);
   renderPillarPanel(structureData);
+  renderPortraitPanel(structureData);
   renderQuestionContext(structureData);
 }
 
@@ -205,6 +209,22 @@ function renderPillarPanel(data) {
   const activeLuck = data.time_context?.luck_cycle || null;
   const flow = data.time_context?.flow_year || {};
   $("pillarPanel").innerHTML = `<section class="pillar-section"><div class="pillar-panel-head"><span>${escapeHtml(t("pillar_panel"))}</span></div><div class="pillar-subhead">${escapeHtml(t("natal_chart"))}</div><div class="pillar-grid natal-pillars">${["year","month","day","hour"].map((key)=>pillarCell(t(key), pillars[key], key==="day")).join("")}</div><div class="pillar-context-grid"><article class="context-pillar luck-context" tabindex="0"><span>${escapeHtml(t("current_luck_cycle"))}</span><strong>${escapeHtml(activeLuck?.pillar?.display || "-")}</strong><em>${activeLuck ? `${activeLuck.start_age}-${activeLuck.end_age}` : t("context_only")}</em>${activeLuck?.pillar ? `<div class="pillar-tooltip">${escapeHtml(pillarTooltip(activeLuck.pillar, false))}</div>` : ""}</article><article class="context-pillar flow-context" tabindex="0"><span>${escapeHtml(t("flow_year"))}</span><strong>${escapeHtml(flow.pillar?.display || "-")}</strong><em>${escapeHtml(String(flow.year || ""))} · ${escapeHtml(t("context_only"))}</em>${flow.pillar ? `<div class="pillar-tooltip">${escapeHtml(pillarTooltip(flow.pillar, false))}</div>` : ""}</article></div></section>`;
+}
+
+function renderPortraitPanel(data) {
+  if (!$("portraitPanel")) return;
+  const portrait = data.structure_portrait || data.guided_question_context?.structure_portrait || {};
+  const labels = Array.isArray(portrait.labels) ? portrait.labels.slice(0, 8) : [];
+  const judgements = Array.isArray(portrait.candidate_judgements) ? portrait.candidate_judgements.slice(0, 3) : [];
+  if (!portrait.status || !labels.length) {
+    $("portraitPanel").classList.add("hidden");
+    $("portraitPanel").innerHTML = "";
+    return;
+  }
+  $("portraitPanel").classList.remove("hidden");
+  const chips = labels.map((row) => `<span class="portrait-chip"><b>${escapeHtml(portraitFamilyLabel(row.family))}</b>${escapeHtml(portraitValueLabel(row.value))}</span>`).join("");
+  const judgementRows = judgements.map((row) => `<li>${escapeHtml(row.text || row.candidate_statement || row.statement || row.judgement_id || "")}</li>`).join("");
+  $("portraitPanel").innerHTML = `<section class="portrait-section"><div class="pillar-panel-head"><span>${escapeHtml(portraitTitleLabel())}</span><em>${escapeHtml(portraitEvidenceLabel(portrait))}</em></div><div class="portrait-chip-row">${chips}</div>${judgementRows ? `<ul class="portrait-judgements">${judgementRows}</ul>` : ""}</section>`;
 }
 
 function pillarCell(label, pillar, isDay) { return `<article class="pillar-cell ${isDay ? "day-master-cell" : ""}" tabindex="0"><span>${escapeHtml(label)}</span><strong>${escapeHtml(pillar?.display || "-")}</strong><em>${isDay ? escapeHtml(t("day_master")) : escapeHtml(pillar?.stem_element || "")}</em><div class="pillar-tooltip">${escapeHtml(pillarTooltip(pillar || {}, isDay))}</div></article>`; }
@@ -354,15 +374,17 @@ function renderAnswerEvidenceSummary(answer) {
   const facts = (pack.fact_evidence || {}).present_fact_scopes || [];
   const knowledgeIds = (pack.knowledge_evidence || {}).applied_ids || pack.knowledge_ids || [];
   const runtimeIds = (pack.rule_graph_evidence || {}).runtime_selected_knowledge_ids || pack.runtime_selected_knowledge_ids || [];
+  const portraitLabels = (pack.portrait_evidence || {}).label_ids || (answer.structure_portrait || {}).labels || [];
+  const portraitCount = Array.isArray(portraitLabels) ? portraitLabels.length : 0;
   const audit = (pack.audit || {}).status || pack.audit_status || "";
   const status = pack.status || "";
-  if (!status && !facts.length && !knowledgeIds.length && !runtimeIds.length) {
+  if (!status && !facts.length && !knowledgeIds.length && !runtimeIds.length && !portraitCount) {
     $("answerEvidenceSummary").classList.add("hidden");
     $("answerEvidenceSummary").innerHTML = "";
     return;
   }
   $("answerEvidenceSummary").classList.remove("hidden");
-  $("answerEvidenceSummary").innerHTML = `<span>${escapeHtml(evidenceSummaryLabel())}</span><strong>${escapeHtml(`${facts.length} facts · ${knowledgeIds.length} knowledge · ${runtimeIds.length} route · ${audit || status || "-"}`)}</strong>`;
+  $("answerEvidenceSummary").innerHTML = `<span>${escapeHtml(evidenceSummaryLabel())}</span><strong>${escapeHtml(`${facts.length} facts · ${knowledgeIds.length} knowledge · ${runtimeIds.length} route · ${portraitCount} portrait · ${audit || status || "-"}`)}</strong>`;
 }
 function relatedQuestionSet(key) {
   const item = findQuestion(key);
@@ -413,6 +435,92 @@ function answerText(answer) {
 }
 function structureMatchLabel() {
   return ({ zh: "结构匹配", en: "Structure match", ko: "구조 매칭" }[locale] || "Structure match");
+}
+function portraitTitleLabel() {
+  return ({ zh: "结构画像", en: "Structure portrait", ko: "구조 프로필" }[locale] || "Structure portrait");
+}
+function portraitEvidenceLabel(portrait) {
+  const count = Number(portrait.label_count || (portrait.labels || []).length || 0);
+  return ({ zh: `${count} 个候选标签`, en: `${count} candidate labels`, ko: `후보 라벨 ${count}개` }[locale] || `${count} candidate labels`);
+}
+function portraitFamilyLabel(value) {
+  const table = {
+    zh: { strength: "强弱", useful_god: "用神", ten_god: "十神", wealth: "财富", branch: "地支", time: "时间", pattern: "格局" },
+    en: { strength: "Strength", useful_god: "Useful god", ten_god: "Ten God", wealth: "Wealth", branch: "Branches", time: "Time", pattern: "Pattern" },
+    ko: { strength: "강약", useful_god: "용신", ten_god: "십성", wealth: "재성", branch: "지지", time: "시간", pattern: "격국" },
+  };
+  return (table[locale] || table.zh)[value] || value || t("unknown");
+}
+function portraitValueLabel(value) {
+  const table = {
+    zh: {
+      balanced_or_uncertain_candidate: "均衡候选",
+      weaker_capacity_candidate: "偏弱候选",
+      stronger_capacity_candidate: "偏强候选",
+      weak_candidate: "偏弱候选",
+      strong_candidate: "偏强候选",
+      candidate_only: "仅候选",
+      insufficient_evidence: "证据不足",
+      active: "活跃",
+      limited: "有限",
+      visible: "可见",
+      weak_or_hidden: "弱或隐藏",
+      stable_candidate: "稳定候选",
+      stability_needs_review: "需复核",
+      quiet: "较静",
+      trigger_context: "触发背景",
+      background_only: "仅背景",
+      pattern_index_available: "可建索引",
+      pattern_index_weak: "索引较弱",
+      index_candidate: "索引候选",
+      insufficient_index: "索引不足",
+    },
+    en: {
+      balanced_or_uncertain_candidate: "balanced candidate",
+      weaker_capacity_candidate: "weaker candidate",
+      stronger_capacity_candidate: "stronger candidate",
+      weak_candidate: "weak candidate",
+      strong_candidate: "strong candidate",
+      candidate_only: "candidate only",
+      insufficient_evidence: "insufficient",
+      active: "active",
+      limited: "limited",
+      visible: "visible",
+      weak_or_hidden: "weak/hidden",
+      stable_candidate: "stable candidate",
+      stability_needs_review: "review needed",
+      quiet: "quiet",
+      trigger_context: "trigger context",
+      background_only: "background only",
+      pattern_index_available: "index available",
+      pattern_index_weak: "weak index",
+      index_candidate: "index candidate",
+      insufficient_index: "insufficient index",
+    },
+    ko: {
+      balanced_or_uncertain_candidate: "균형 후보",
+      weaker_capacity_candidate: "약한 후보",
+      stronger_capacity_candidate: "강한 후보",
+      weak_candidate: "약한 후보",
+      strong_candidate: "강한 후보",
+      candidate_only: "후보만",
+      insufficient_evidence: "근거 부족",
+      active: "활성",
+      limited: "제한",
+      visible: "가시",
+      weak_or_hidden: "약함/숨김",
+      stable_candidate: "안정 후보",
+      stability_needs_review: "검토 필요",
+      quiet: "조용함",
+      trigger_context: "촉발 배경",
+      background_only: "배경만",
+      pattern_index_available: "색인 가능",
+      pattern_index_weak: "색인 약함",
+      index_candidate: "색인 후보",
+      insufficient_index: "색인 부족",
+    },
+  };
+  return (table[locale] || table.zh)[value] || String(value || t("unknown"));
 }
 function evidenceSummaryLabel() {
   return ({ zh: "回答依据", en: "Answer evidence", ko: "답변 근거" }[locale] || "Answer evidence");

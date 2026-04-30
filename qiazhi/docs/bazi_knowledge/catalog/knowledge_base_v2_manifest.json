@@ -71,6 +71,7 @@
     "docs/v19/V19_MAINLINE_RUNTIME_RULE_DB_READINESS.md",
     "docs/v19/V19_MAINLINE_COMMON_BAZI_QUESTION_INTENTS.md",
     "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md",
+    "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -2117,16 +2118,19 @@
     "input_stages": [
       "P59_SILENT_EVOLUTION_SYSTEM",
       "P60_DOMAIN_ROUTE_EVAL",
-      "P61_DOMAIN_ROUTE_BACKFILL"
+      "P61_DOMAIN_ROUTE_BACKFILL",
+      "MAINLINE_STRUCTURE_PORTRAIT_LAYER"
     ],
-    "ledger_entry_count": 3,
-    "training_signal_count": 3,
+    "ledger_entry_count": 4,
+    "training_signal_count": 4,
     "learning_permissions": {
       "allowed": [
         "question_routing_weight_review",
         "eval_sampling_priority_review",
         "draft_priority_review",
-        "shadow_dataset_expansion"
+        "shadow_dataset_expansion",
+        "portrait_question_routing_weight_review",
+        "portrait_eval_sampling_priority_review"
       ],
       "blocked": [
         "core_rule_truth_update",
@@ -2162,16 +2166,18 @@
     "status": "pass",
     "runtime_scope": "silent_eval_queue_definition_only_no_runtime_mutation",
     "source_stage": "P62_SILENT_TRAINING_LEDGER",
-    "queue_item_count": 4,
+    "queue_item_count": 5,
     "queue_task_types": [
       "route_weight_shadow_review",
       "recurring_route_wrapper_regression",
       "domain_gap_watch_closeout",
-      "domain_safety_negative_sample_expansion"
+      "domain_safety_negative_sample_expansion",
+      "portrait_route_weight_shadow_review"
     ],
     "required_runners": [
       "v19.synthetic_validation.silent_evolution.run_p60_domain_route_eval",
-      "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression"
+      "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression",
+      "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_synthetic_matrix_regression"
     ],
     "checkpoint_policy": {
       "resume_policy": "rerun_failed_or_stale_report_only_items",
@@ -2512,6 +2518,42 @@
       "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
+  "mainline_structure_portrait_product_loop": {
+    "stage": "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP",
+    "entrypoints": [
+      "v19.frontend.oracle.renderPortraitPanel",
+      "v19.guided_evidence_pack.build_guided_answer_evidence_pack",
+      "v19.synthetic_validation.structure_portrait_matrix.build_structure_portrait_synthetic_matrix",
+      "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_synthetic_matrix_regression",
+      "v19.synthetic_validation.silent_training_ledger.build_p62_silent_training_ledger",
+      "v19.synthetic_validation.silent_eval_queue.build_p63_silent_eval_queue"
+    ],
+    "status": "portrait_product_loop_ready",
+    "runtime_scope": "portrait_ui_evidence_eval_signal_only_no_result_mutation",
+    "outputs": [
+      "oracle.profile_summary.portraitPanel",
+      "guided_answer.evidence_pack.portrait_evidence",
+      "synthetic_validation.structure_portrait_matrix",
+      "silent_training_ledger.portrait_routing_signal",
+      "silent_eval_queue.portrait_route_weight_shadow_review"
+    ],
+    "synthetic_case_count": 12,
+    "minimum_vector_signature_count": 5,
+    "minimum_question_signature_count": 6,
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP",
+      "PORTRAIT_ROUTE_VALIDATION_ONLY",
+      "CANDIDATE_JUDGEMENT_ONLY",
+      "NO_HARD_USEFUL_GOD_VERDICT",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -2597,6 +2639,7 @@
     "P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION",
     "P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS",
     "MAINLINE_STRUCTURE_PORTRAIT_LAYER",
+    "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

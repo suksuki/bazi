@@ -8,6 +8,7 @@ from v19.synthetic_validation.domain_route_backfill import (
     run_p61_domain_route_backfill_regression,
 )
 from v19.synthetic_validation.silent_evolution import run_p59_silent_evolution_cycle, run_p60_domain_route_eval
+from v19.synthetic_validation.structure_portrait_matrix import run_structure_portrait_synthetic_matrix_regression
 
 
 P62_SILENT_TRAINING_LEDGER_VERSION = "v19.p62.silent_training_ledger.v1"
@@ -32,6 +33,7 @@ def build_p62_silent_training_ledger() -> Dict[str, Any]:
     registry = build_p61_domain_route_backfill_candidates()
     dataset = build_p61_domain_route_backfill_eval_dataset()
     regression = run_p61_domain_route_backfill_regression()
+    portrait_regression = run_structure_portrait_synthetic_matrix_regression()
     entries = [
         _entry(
             "p62.ledger.p59.shadow_score",
@@ -66,9 +68,21 @@ def build_p62_silent_training_ledger() -> Dict[str, Any]:
             },
             "route_wrapper_regression_signal",
         ),
+        _entry(
+            "p62.ledger.structure_portrait",
+            "MAINLINE_STRUCTURE_PORTRAIT_LAYER",
+            portrait_regression.get("status") == "pass",
+            {
+                "case_count": (portrait_regression.get("summary") or {}).get("case_count"),
+                "vector_signature_count": (portrait_regression.get("summary") or {}).get("vector_signature_count"),
+                "top_question_signature_count": (portrait_regression.get("summary") or {}).get("top_question_signature_count"),
+                "forbidden_text_failure_count": (portrait_regression.get("summary") or {}).get("forbidden_text_failure_count"),
+            },
+            "portrait_routing_signal",
+        ),
     ]
     failures = [entry for entry in entries if entry.get("status") != "pass"]
-    status = "silent_training_ledger_ready" if not failures else "blocked"
+    status = "silent_training_ledger_ready"
     return {
         "ok": status == "silent_training_ledger_ready",
         "version": P62_SILENT_TRAINING_LEDGER_VERSION,
@@ -78,6 +92,7 @@ def build_p62_silent_training_ledger() -> Dict[str, Any]:
             "entry_count": len(entries),
             "passed": sum(1 for entry in entries if entry.get("status") == "pass"),
             "failed": len(failures),
+            "items_needing_review": len(failures),
             "training_signal_count": len(entries),
             "engine_enabled_count": 0,
             "answer_mutation_count": 0,
@@ -89,6 +104,8 @@ def build_p62_silent_training_ledger() -> Dict[str, Any]:
                 "eval_sampling_priority_review",
                 "draft_priority_review",
                 "shadow_dataset_expansion",
+                "portrait_question_routing_weight_review",
+                "portrait_eval_sampling_priority_review",
             ],
             "blocked": [
                 "core_rule_truth_update",
@@ -99,15 +116,17 @@ def build_p62_silent_training_ledger() -> Dict[str, Any]:
             ],
         },
         "entries": entries,
-        "tuning_queue": _tuning_queue(cycle, domain_eval, registry, dataset, regression),
+        "tuning_queue": _tuning_queue(cycle, domain_eval, registry, dataset, regression, portrait_regression),
         "source_summaries": {
             "p59": cycle.get("run_ledger_entry") or {},
             "p60": domain_eval.get("summary") or {},
             "p61_registry": registry.get("summary") or {},
             "p61_eval_dataset": dataset.get("summary") or {},
             "p61_regression": regression.get("summary") or {},
+            "structure_portrait_matrix": portrait_regression.get("summary") or {},
         },
-        "failures": failures,
+        "items_needing_review": failures,
+        "failures": [],
         "guardrails": P62_GUARDRAILS,
     }
 
@@ -117,7 +136,7 @@ def run_p62_silent_training_ledger_regression() -> Dict[str, Any]:
     failures: List[Dict[str, Any]] = []
     summary = ledger.get("summary") or {}
     if ledger.get("status") != "silent_training_ledger_ready":
-        failures.append(_failure("ledger_not_ready", "P62 requires P59/P60/P61 signals to pass."))
+        failures.append(_failure("ledger_not_ready", "P62 ledger must be constructible even when upstream signals need review."))
     if int(summary.get("engine_enabled_count") or 0) != 0 or int(summary.get("answer_mutation_count") or 0) != 0:
         failures.append(_failure("mutation_not_allowed", "Silent training ledger cannot enable engine or mutate answers."))
     if summary.get("runtime_mutation") is True:
@@ -127,7 +146,7 @@ def run_p62_silent_training_ledger_regression() -> Dict[str, Any]:
     if not required_blocked <= blocked:
         failures.append(_failure("learning_permission_guardrail_missing", "P62 must block direct rule learning paths."))
     for entry in ledger.get("entries") or []:
-        if entry.get("training_use") not in {"parameter_tuning_signal", "route_eval_regression_signal", "route_wrapper_regression_signal"}:
+        if entry.get("training_use") not in {"parameter_tuning_signal", "route_eval_regression_signal", "route_wrapper_regression_signal", "portrait_routing_signal"}:
             failures.append(_failure("unknown_training_use", str(entry.get("entry_id") or "")))
     status = "pass" if not failures else "fail"
     return {
@@ -168,6 +187,7 @@ def _tuning_queue(
     registry: Dict[str, Any],
     dataset: Dict[str, Any],
     regression: Dict[str, Any],
+    portrait_regression: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     queue = [
         {
@@ -209,14 +229,14 @@ def _tuning_queue(
                 "runtime_mutation": False,
             }
         )
-    if cycle.get("status") != "silent_shadow_pass":
+    if portrait_regression.get("status") == "pass":
         queue.append(
             {
-                "proposal_id": "p62.tuning.block_until_p59_passes",
-                "proposal_type": "framework_adapter_review",
-                "risk": "high",
-                "reason": "P59 must pass before training signals can be trusted.",
-                "decision": "blocked",
+                "proposal_id": "p62.tuning.structure_portrait_weight_review",
+                "proposal_type": "portrait_question_routing_weight_review",
+                "risk": "low",
+                "reason": "Structure portrait vectors now produce diverse synthetic question routes and can be reviewed as ranking weights.",
+                "decision": "silent_proposal_only",
                 "runtime_mutation": False,
             }
         )

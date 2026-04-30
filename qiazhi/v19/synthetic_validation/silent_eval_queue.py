@@ -180,6 +180,19 @@ def _task_mapping(proposal_type: str) -> Dict[str, Any]:
                 "runtime_mutation": False,
             },
         }
+    if proposal_type == "portrait_question_routing_weight_review":
+        return {
+            "task_type": "portrait_route_weight_shadow_review",
+            "runner": "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_synthetic_matrix_regression",
+            "cadence": "on_portrait_or_question_ranking_change",
+            "input_scope": ["structure_portrait.vectors", "guided_question_context.questions", "portrait_question_bias"],
+            "expected_invariants": {
+                "vector_signature_count": 5,
+                "top_question_signature_count": 6,
+                "forbidden_text_failure_count": 0,
+                "runtime_mutation": False,
+            },
+        }
     return {
         "task_type": "generic_silent_review",
         "runner": "manual_review_only",
@@ -192,7 +205,7 @@ def _task_mapping(proposal_type: str) -> Dict[str, Any]:
 def _priority_for(proposal_type: str, risk: str) -> str:
     if risk == "high":
         return "blocked"
-    if proposal_type in {"question_routing_weight_review", "eval_sampling_priority_review"}:
+    if proposal_type in {"question_routing_weight_review", "eval_sampling_priority_review", "portrait_question_routing_weight_review"}:
         return "high"
     if risk == "medium":
         return "medium"

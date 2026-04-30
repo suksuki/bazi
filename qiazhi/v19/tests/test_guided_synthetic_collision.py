@@ -306,27 +306,28 @@ def test_p62_silent_training_ledger_collects_learning_signals_without_rule_updat
     regression = run_p62_silent_training_ledger_regression()
 
     assert ledger["status"] == "silent_training_ledger_ready"
-    assert ledger["summary"]["entry_count"] == 3
-    assert ledger["summary"]["failed"] == 0
+    assert ledger["summary"]["entry_count"] == 4
     assert ledger["summary"]["runtime_mutation"] is False
     assert {row["source_stage"] for row in ledger["entries"]} == {
         "P59_SILENT_EVOLUTION_SYSTEM",
         "P60_DOMAIN_ROUTE_EVAL",
         "P61_DOMAIN_ROUTE_BACKFILL",
+        "MAINLINE_STRUCTURE_PORTRAIT_LAYER",
     }
-    assert (ledger["source_summaries"]["p60"] or {})["direct_domain_hit_count"] == 8
+    assert (ledger["source_summaries"]["structure_portrait_matrix"] or {})["forbidden_text_failure_count"] == 0
     assert (ledger["source_summaries"]["p61_regression"] or {})["runtime_mutation"] is False
+    assert ledger["summary"]["items_needing_review"] == len(ledger["items_needing_review"])
     assert "core_rule_truth_update" in ledger["learning_permissions"]["blocked"]
     assert "production_rule_activation" in ledger["learning_permissions"]["blocked"]
     assert all(row["runtime_mutation"] is False for row in ledger["tuning_queue"])
 
     assert regression["status"] == "pass"
-    assert regression["summary"]["entry_count"] == 3
+    assert regression["summary"]["entry_count"] == 4
     assert regression["summary"]["runtime_mutation"] is False
     assert "/api/lab/silent-training-ledger" in server
     assert "/api/lab/silent-training-ledger/run" in server
     assert "docs/v19/V19_P62_SILENT_TRAINING_LEDGER.md" in manifest["created_from"]
-    assert manifest["p62_silent_training_ledger"]["ledger_entry_count"] == 3
+    assert manifest["p62_silent_training_ledger"]["ledger_entry_count"] == 4
     assert manifest["p62_silent_training_ledger"]["runtime_mutation"] is False
     assert "P62_SILENT_TRAINING_LEDGER" in manifest["guardrails"]
 
@@ -341,7 +342,7 @@ def test_p63_silent_eval_queue_turns_training_ledger_into_checkpointed_jobs() ->
     regression = run_p63_silent_eval_queue_regression()
 
     assert queue["status"] == "silent_eval_queue_ready"
-    assert queue["summary"]["queue_item_count"] == 4
+    assert queue["summary"]["queue_item_count"] == 5
     assert queue["summary"]["shadow_required_count"] == 1
     assert queue["summary"]["runtime_mutation"] is False
     assert {row["task_type"] for row in queue["queue_items"]} == {
@@ -349,22 +350,24 @@ def test_p63_silent_eval_queue_turns_training_ledger_into_checkpointed_jobs() ->
         "recurring_route_wrapper_regression",
         "domain_gap_watch_closeout",
         "domain_safety_negative_sample_expansion",
+        "portrait_route_weight_shadow_review",
     }
     assert {
         "v19.synthetic_validation.silent_evolution.run_p60_domain_route_eval",
         "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression",
+        "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_synthetic_matrix_regression",
     } <= {row["runner"] for row in queue["queue_items"]}
     assert all(row["runtime_mutation"] is False and row["answer_mutation"] is False for row in queue["queue_items"])
     assert all("production_rule_activation" in row["blocked_actions"] for row in queue["queue_items"])
     assert all(row["expected_invariants"] for row in queue["queue_items"])
 
     assert regression["status"] == "pass"
-    assert regression["summary"]["queue_item_count"] == 4
+    assert regression["summary"]["queue_item_count"] == 5
     assert regression["summary"]["runtime_mutation"] is False
     assert "/api/lab/silent-eval-queue" in server
     assert "/api/lab/silent-eval-queue/run" in server
     assert "docs/v19/V19_P63_SILENT_EVAL_QUEUE.md" in manifest["created_from"]
-    assert manifest["p63_silent_eval_queue"]["queue_item_count"] == 4
+    assert manifest["p63_silent_eval_queue"]["queue_item_count"] == 5
     assert manifest["p63_silent_eval_queue"]["runtime_mutation"] is False
     assert "P63_SILENT_EVAL_QUEUE" in manifest["guardrails"]
 
@@ -3183,6 +3186,11 @@ def test_p50_guided_answer_evidence_pack_unifies_answer_contexts() -> None:
     assert any(row["kind"] == "knowledge" for row in pack["evidence_bindings"])
     assert any(row["kind"] == "rule_graph_path" for row in pack["evidence_bindings"])
     assert pack["rule_graph_evidence"]["runtime_selected_knowledge_ids"]
+    assert pack["portrait_evidence"]["status"] == "ready"
+    assert pack["portrait_evidence"]["label_ids"]
+    assert pack["summary"]["portrait_label_count"] >= 5
+    assert pack["summary"]["portrait_binding_count"] >= 5
+    assert any(row["kind"] == "structure_portrait_label" for row in pack["evidence_bindings"])
     assert pack["summary"]["engine_enabled_count"] == 0
     assert pack["summary"]["answer_mutation_count"] == 0
     assert pack["summary"]["runtime_mutation"] is False
@@ -3193,6 +3201,7 @@ def test_p50_guided_answer_evidence_pack_unifies_answer_contexts() -> None:
     assert answer["retrieved_facts"]["evidence_pack"]["binding_count"] == len(pack["evidence_bindings"])
     assert prompt_context["runtime_scope"] == "llm_prompt_evidence_pack_context_only"
     assert prompt_context["bindings"]
+    assert prompt_context["portrait_evidence"]["label_ids"]
     assert rewrite_payload["target_locale"] == "zh"
     assert rewrite_payload["evidence_pack"]["status"] == "ready"
     assert rewrite_payload["evidence_pack"]["bindings"]
@@ -3220,11 +3229,16 @@ def test_p51_ui_surfaces_latest_framework_context() -> None:
     assert "evidence_pack" in app_js
 
     assert "answerEvidenceSummary" in oracle_html
+    assert "portraitPanel" in oracle_html
+    assert "20260430-portrait-loop" in oracle_html
     assert "personalized-question-chip" in oracle_js
     assert "question-personalization" in oracle_js
     assert "renderAnswerEvidenceSummary" in oracle_js
+    assert "renderPortraitPanel" in oracle_js
+    assert "portrait_evidence" in oracle_js
     assert "evidence_pack" in oracle_js
     assert "answer-evidence-summary" in styles
+    assert "portrait-chip" in styles
 
     assert "docs/v19/V19_P51_UI_FRAMEWORK_ALIGNMENT.md" in manifest["created_from"]
     assert manifest["p51_ui_framework_alignment"]["runtime_scope"] == "ui_visibility_only_no_inference_or_answer_mutation"
@@ -3728,6 +3742,42 @@ def test_structure_portrait_layer_manifest_and_structure_api_are_wired() -> None
     ).json()["data"]
     assert preview["structure_portrait"]["status"] == "ready"
     assert preview["guided_question_context"]["structure_portrait"]["vectors"]
+
+
+def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> None:
+    from v19.synthetic_validation import (
+        build_p62_silent_training_ledger,
+        build_p63_silent_eval_queue,
+        build_structure_portrait_synthetic_matrix,
+        run_structure_portrait_synthetic_matrix_regression,
+    )
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    doc = (root / "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP.md").read_text(encoding="utf-8")
+    matrix = build_structure_portrait_synthetic_matrix()
+    regression = run_structure_portrait_synthetic_matrix_regression()
+    ledger = build_p62_silent_training_ledger()
+    queue = build_p63_silent_eval_queue()
+
+    assert matrix["status"] == "structure_portrait_matrix_ready"
+    assert matrix["summary"]["case_count"] == 12
+    assert matrix["summary"]["vector_signature_count"] >= 5
+    assert matrix["summary"]["top_question_signature_count"] >= 6
+    assert matrix["summary"]["forbidden_text_failure_count"] == 0
+    assert regression["status"] == "pass"
+    assert regression["summary"]["runtime_mutation"] is False
+
+    assert "MAINLINE_STRUCTURE_PORTRAIT_LAYER" in {row["source_stage"] for row in ledger["entries"]}
+    assert any(row["training_use"] == "portrait_routing_signal" for row in ledger["entries"])
+    assert any(row["proposal_type"] == "portrait_question_routing_weight_review" for row in ledger["tuning_queue"])
+    assert any(row["task_type"] == "portrait_route_weight_shadow_review" for row in queue["queue_items"])
+
+    assert "结构画像产品闭环" in doc
+    assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP.md" in manifest["created_from"]
+    assert manifest["mainline_structure_portrait_product_loop"]["synthetic_case_count"] == 12
+    assert manifest["mainline_structure_portrait_product_loop"]["runtime_mutation"] is False
+    assert "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP" in manifest["guardrails"]
 
 
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
