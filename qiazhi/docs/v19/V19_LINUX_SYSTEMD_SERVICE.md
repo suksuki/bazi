@@ -33,6 +33,13 @@ HOST=0.0.0.0 PORT=9019 USE_SYSTEMD=1 ./deploy_linux.sh
 
 `qiazhi/v19/.runtime/` is server-local runtime state. Back it up before major deploys if needed, but it is no longer tracked by Git.
 
+To sync the current codebase knowledge seeds, source archive, draft units, and Rule DB into the server runtime:
+
+```bash
+cd ~/bazi/qiazhi/v19/scripts
+BASE_URL=http://127.0.0.1:9019 INGEST_RULE_DB=1 RUN_AUDIT=1 ./sync_knowledge_runtime.sh
+```
+
 To restore from the newest local backup file:
 
 ```bash
