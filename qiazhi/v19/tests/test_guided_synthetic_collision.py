@@ -72,6 +72,350 @@ def test_p11_guided_synthetic_expansion_cases_pass() -> None:
         assert item["baseline_vs_kb_augmented"]["evidence_delta"]["mutation_check"] == "routing_stable"
 
 
+def test_p53_legacy_p10_p11_cases_backfill_to_new_rule_graph_framework() -> None:
+    from v19.synthetic_validation.framework_backfill import build_legacy_framework_adaptation_matrix
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    result = run_guided_synthetic_collision(P11_GUIDED_SYNTHETIC_CASES)
+    matrix = build_legacy_framework_adaptation_matrix()
+    by_case = {row["case_id"]: row for row in result["cases"]}
+    review = result["framework_backfill_review"]
+
+    assert result["status"] == "pass"
+    assert review["status"] == "pass"
+    assert review["case_count"] == len(P11_GUIDED_SYNTHETIC_CASES)
+    assert review["failed"] == 0
+    assert set(review["legacy_phases"]) == {"p10_synthetic_collision_review", "p11_synthetic_expansion"}
+    assert {"core_strength_foundation", "branch_time_activation", "ten_god_mechanism", "wealth_career_bridge"} <= set(review["expected_topic_lanes_covered"])
+    assert {"stem", "branch", "hidden_stem", "branch_relation", "time_relation", "ten_god"} <= set(review["expected_graph_features_covered"])
+    assert "P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL" in result["boundaries"]
+    assert matrix["status"] == "pass"
+    assert matrix["summary"]["row_count"] >= 7
+    assert {row["phase"] for row in matrix["rows"]} >= {"P10", "P11", "P28-P30", "P39-P45", "P46-P52"}
+    assert all(row["status"] == "pass" for row in matrix["rows"])
+
+    month = by_case["syn.guided.month_command_boundary"]["framework_backfill"]
+    branch = by_case["syn.guided.branch_penalty_harm_break"]["framework_backfill"]
+    income = by_case["syn.guided.income_structure_no_internal_terms"]["framework_backfill"]
+    time_case = by_case["syn.guided.p11.time_trigger_relation_no_natal_mutation"]["framework_backfill"]
+
+    assert month["expected"]["primary_intent"] == "metadata_boundary"
+    assert month["actual"]["route_intents"]["primary_question_route"] == "metadata_boundary"
+    assert "core_strength_foundation" in month["expected"]["expected_topic_lanes"]
+    assert branch["expected"]["condition_axis_projection"]["same_layer_action"] == "branch_relation_feature"
+    assert "branch_time_activation" in branch["expected"]["expected_topic_lanes"]
+    assert {"wealth_career_bridge", "ten_god_mechanism"} <= set(income["expected"]["expected_topic_lanes"])
+    assert time_case["expected"]["condition_axis_projection"]["time_layer"] == "time_relation_feature"
+    assert "time_relation" in time_case["actual"]["graph_features"]
+
+    for item in result["cases"]:
+        backfill = item["framework_backfill"]
+        assert backfill["status"] == "pass"
+        assert backfill["actual"]["runtime_status"] == "rule_graph_runtime_context_ready"
+        assert backfill["actual"]["answer_audit_status"] == "pass"
+        assert backfill["actual"]["selected_path_count"] == backfill["actual"]["selected_by_route_count"]
+        assert {"source_layer", "answer_boundary"} <= set(backfill["actual"]["condition_axes_available"])
+        assert backfill["expected"]["mutation_policy"]["answer_mutation_count"] == 0
+
+    assert "docs/v19/V19_P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL.md" in manifest["created_from"]
+    assert manifest["p53_legacy_synthetic_framework_backfill"]["case_count"] >= 20
+    assert manifest["p53_legacy_synthetic_framework_backfill"]["legacy_phases"] == [
+        "p10_synthetic_collision_review",
+        "p11_synthetic_expansion",
+    ]
+    assert manifest["p53_legacy_synthetic_framework_backfill"]["adaptation_matrix"]["status"] == "pass"
+    assert "P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL" in manifest["guardrails"]
+
+
+def test_p54_framework_chain_audit_covers_legacy_and_native_tracks() -> None:
+    from v19.synthetic_validation import run_p54_framework_chain_audit
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    audit = run_p54_framework_chain_audit()
+    by_section = {row["section"]: row for row in audit["rows"]}
+
+    assert audit["status"] == "pass"
+    assert audit["summary"]["row_count"] >= 6
+    assert audit["summary"]["failed"] == 0
+    assert audit["summary"]["engine_enabled_count"] == 0
+    assert audit["summary"]["answer_mutation_count"] == 0
+    assert audit["summary"]["runtime_mutation"] is False
+    assert set(by_section) >= {
+        "p10_p11_guided_synthetic",
+        "p28_p30_ten_god_mechanisms",
+        "p39_rule_conversion",
+        "p42_p43_smart_gate_shadow",
+        "p45_canary_runtime_trial",
+        "p46_p52_rule_graph_runtime",
+    }
+    assert by_section["p10_p11_guided_synthetic"]["metrics"]["framework_backfill_status"] == "pass"
+    assert by_section["p28_p30_ten_god_mechanisms"]["metrics"]["rule_backfill_needed_count"] >= 0
+    assert by_section["p28_p30_ten_god_mechanisms"]["metrics"]["adaptation_status"].startswith("framework_compatible")
+    assert by_section["p42_p43_smart_gate_shadow"]["metrics"]["shadow_scored_count"] == 158
+    assert by_section["p45_canary_runtime_trial"]["metrics"]["production_engine_enabled_count"] == 0
+    assert "docs/v19/V19_P54_FRAMEWORK_CHAIN_AUDIT.md" in manifest["created_from"]
+    assert manifest["p54_framework_chain_audit"]["status"] == "pass"
+    assert manifest["p54_framework_chain_audit"]["engine_enabled_count"] == 0
+    assert "P54_FRAMEWORK_CHAIN_AUDIT" in manifest["guardrails"]
+
+
+def test_p59_silent_evolution_cycle_scores_and_generates_tuning_proposals() -> None:
+    from v19.synthetic_validation import run_p59_silent_evolution_cycle
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    server = (root / "v19/server.py").read_text(encoding="utf-8")
+    cycle = run_p59_silent_evolution_cycle()
+
+    assert cycle["status"] == "silent_shadow_pass"
+    assert cycle["scorecard"]["status"] == "pass"
+    assert cycle["scorecard"]["score"] >= 90
+    assert cycle["scorecard"]["score_tier"] in {"A", "B"}
+    assert cycle["run_ledger_entry"]["engine_enabled"] is False
+    assert cycle["run_ledger_entry"]["answer_mutation"] is False
+    assert cycle["run_ledger_entry"]["runtime_mutation"] is False
+    assert cycle["run_ledger_entry"]["rollback_ready"] is True
+    assert cycle["model_policy"]["active_model"] == "deterministic_rule_graph_plus_eval_scoring"
+    assert "gnn" in cycle["model_policy"]["reserved_models"]
+    assert "rl" in cycle["model_policy"]["reserved_models"]
+    assert "black_box_core_inference" in cycle["model_policy"]["blocked_uses"]
+    assert {row["proposal_type"] for row in cycle["tuning_proposals"]} >= {
+        "eval_dataset_expansion",
+        "question_routing_parameter_review",
+        "model_policy",
+        "shadow_sample_expansion",
+    }
+    assert all(row["decision"] == "silent_proposal_only" for row in cycle["tuning_proposals"])
+    assert all(row["runtime_mutation"] is False for row in cycle["tuning_proposals"])
+    assert "docs/v19/V19_P59_SILENT_EVOLUTION_SYSTEM.md" in manifest["created_from"]
+    assert manifest["p59_silent_evolution_system"]["active_model"] == "deterministic_rule_graph_plus_eval_scoring"
+    assert manifest["p59_silent_evolution_system"]["runtime_mutation"] is False
+    assert "P59_SILENT_EVOLUTION_SYSTEM" in manifest["guardrails"]
+    assert "/api/lab/framework-chain-audit" in server
+    assert "/api/lab/silent-evolution/run" in server
+
+
+def test_p60_domain_route_eval_and_smart_approval_gate_are_silent() -> None:
+    from v19.rule_graph_orchestrator import infer_question_intent
+    from v19.synthetic_validation import run_p60_domain_route_eval, run_p60_silent_evolution_extension, run_p60_smart_approval_gate
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    server = (root / "v19/server.py").read_text(encoding="utf-8")
+    domain_eval = run_p60_domain_route_eval()
+    gate = run_p60_smart_approval_gate()
+    extension = run_p60_silent_evolution_extension()
+
+    assert infer_question_intent("", "我的感情关系结构怎么看？", "")["intent"] == "relationship_structure"
+    assert infer_question_intent("", "我的健康结构有什么需要注意的边界？", "")["intent"] == "health_structure"
+    assert domain_eval["status"] == "pass"
+    assert domain_eval["summary"]["domain_count"] == 4
+    assert domain_eval["summary"]["sample_count"] == 8
+    assert domain_eval["summary"]["failed"] == 0
+    assert domain_eval["summary"]["direct_domain_hit_count"] == 8
+    assert domain_eval["summary"]["bridge_without_direct_domain_count"] == 0
+    assert {row["observed_intent"] for row in domain_eval["samples"]} >= {
+        "income_structure",
+        "career_structure",
+        "relationship_structure",
+        "health_structure",
+    }
+    assert all(row["engine_enabled_count"] == 0 for row in domain_eval["samples"])
+    assert all(row["answer_mutation_count"] == 0 for row in domain_eval["samples"])
+    assert domain_eval["domain_candidate_gaps"] == []
+
+    assert gate["status"] == "smart_gate_ready_no_activation"
+    assert gate["summary"]["auto_dry_run_allowed_count"] == 3
+    assert gate["summary"]["shadow_dry_run_required_count"] >= 2
+    assert gate["summary"]["engine_enabled_count"] == 0
+    assert gate["summary"]["answer_mutation_count"] == 0
+    assert gate["summary"]["runtime_mutation"] is False
+    assert all(row.get("proposal_type") != "domain_rule_candidate_backfill" for row in gate["proposals"])
+    assert all(row["runtime_mutation"] is False for row in gate["proposals"])
+
+    assert extension["status"] == "pass"
+    assert extension["summary"]["domain_sample_count"] == 8
+    assert extension["summary"]["gate_proposal_count"] == gate["summary"]["proposal_count"]
+    assert extension["summary"]["runtime_mutation"] is False
+    assert "/api/lab/domain-route-eval" in server
+    assert "/api/lab/smart-approval-gate/run" in server
+    assert "/api/lab/silent-evolution-extension/run" in server
+    assert "docs/v19/V19_P60_DOMAIN_ROUTE_AND_SMART_APPROVAL_GATE.md" in manifest["created_from"]
+    assert manifest["p60_domain_route_and_smart_approval_gate"]["status"] == "pass"
+    assert manifest["p60_domain_route_and_smart_approval_gate"]["runtime_mutation"] is False
+    assert "P60_DOMAIN_ROUTE_AND_SMART_APPROVAL_GATE" in manifest["guardrails"]
+
+
+def test_p61_relationship_health_domain_route_backfill_is_safe_and_selected() -> None:
+    from v19.rule_graph_orchestrator import orchestrate_rule_graph_paths
+    from v19.synthetic_validation import (
+        build_p61_domain_route_backfill_candidates,
+        build_p61_domain_route_backfill_eval_dataset,
+        run_p60_domain_route_eval,
+        run_p60_smart_approval_gate,
+        run_p61_domain_route_backfill_regression,
+    )
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    server = (root / "v19/server.py").read_text(encoding="utf-8")
+    registry = build_p61_domain_route_backfill_candidates()
+    dataset = build_p61_domain_route_backfill_eval_dataset()
+    regression = run_p61_domain_route_backfill_regression()
+    data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
+
+    assert registry["summary"]["candidate_count"] == 6
+    assert registry["summary"]["by_domain"] == {"health": 2, "relationship": 4}
+    assert all(row["risk_level"] == "R2" for row in registry["candidates"])
+    assert all(row["source_risk_level"] in {"R3", "R4"} for row in registry["candidates"])
+    assert all(row["engine_enabled"] is False and row["activation_allowed"] is False for row in registry["candidates"])
+    assert dataset["summary"]["sample_count"] == 24
+    assert regression["status"] == "pass"
+    assert regression["summary"]["runtime_mutation"] is False
+
+    relationship = orchestrate_rule_graph_paths(data, message="我的感情关系结构怎么看？", limit=8)
+    health = orchestrate_rule_graph_paths(data, message="我的健康结构有什么需要注意的边界？", limit=8)
+    assert any(row["domain"] == "relationship" and row["topic_lane"] == "domain_safety_bridge" for row in relationship["selected_paths"])
+    assert any(row["domain"] == "health" and row["topic_lane"] == "domain_safety_bridge" for row in health["selected_paths"])
+    assert relationship["summary"]["candidate_count"] == 354
+    assert health["summary"]["candidate_count"] == 354
+
+    domain_eval = run_p60_domain_route_eval()
+    gate = run_p60_smart_approval_gate()
+    assert domain_eval["summary"]["direct_domain_hit_count"] == 8
+    assert domain_eval["domain_candidate_gaps"] == []
+    assert all(row.get("proposal_type") != "domain_rule_candidate_backfill" for row in gate["proposals"])
+
+    assert "/api/lab/domain-route-backfill" in server
+    assert "/api/lab/domain-route-backfill/run" in server
+    assert "docs/v19/V19_P61_RELATIONSHIP_HEALTH_ROUTE_BACKFILL.md" in manifest["created_from"]
+    assert manifest["p61_relationship_health_route_backfill"]["candidate_count"] == 6
+    assert manifest["p61_relationship_health_route_backfill"]["runtime_mutation"] is False
+    assert "P61_DOMAIN_ROUTE_BACKFILL" in manifest["guardrails"]
+
+
+def test_p62_silent_training_ledger_collects_learning_signals_without_rule_updates() -> None:
+    from v19.synthetic_validation import build_p62_silent_training_ledger, run_p62_silent_training_ledger_regression
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    server = (root / "v19/server.py").read_text(encoding="utf-8")
+    ledger = build_p62_silent_training_ledger()
+    regression = run_p62_silent_training_ledger_regression()
+
+    assert ledger["status"] == "silent_training_ledger_ready"
+    assert ledger["summary"]["entry_count"] == 3
+    assert ledger["summary"]["failed"] == 0
+    assert ledger["summary"]["runtime_mutation"] is False
+    assert {row["source_stage"] for row in ledger["entries"]} == {
+        "P59_SILENT_EVOLUTION_SYSTEM",
+        "P60_DOMAIN_ROUTE_EVAL",
+        "P61_DOMAIN_ROUTE_BACKFILL",
+    }
+    assert (ledger["source_summaries"]["p60"] or {})["direct_domain_hit_count"] == 8
+    assert (ledger["source_summaries"]["p61_regression"] or {})["runtime_mutation"] is False
+    assert "core_rule_truth_update" in ledger["learning_permissions"]["blocked"]
+    assert "production_rule_activation" in ledger["learning_permissions"]["blocked"]
+    assert all(row["runtime_mutation"] is False for row in ledger["tuning_queue"])
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["entry_count"] == 3
+    assert regression["summary"]["runtime_mutation"] is False
+    assert "/api/lab/silent-training-ledger" in server
+    assert "/api/lab/silent-training-ledger/run" in server
+    assert "docs/v19/V19_P62_SILENT_TRAINING_LEDGER.md" in manifest["created_from"]
+    assert manifest["p62_silent_training_ledger"]["ledger_entry_count"] == 3
+    assert manifest["p62_silent_training_ledger"]["runtime_mutation"] is False
+    assert "P62_SILENT_TRAINING_LEDGER" in manifest["guardrails"]
+
+
+def test_p63_silent_eval_queue_turns_training_ledger_into_checkpointed_jobs() -> None:
+    from v19.synthetic_validation import build_p63_silent_eval_queue, run_p63_silent_eval_queue_regression
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    server = (root / "v19/server.py").read_text(encoding="utf-8")
+    queue = build_p63_silent_eval_queue()
+    regression = run_p63_silent_eval_queue_regression()
+
+    assert queue["status"] == "silent_eval_queue_ready"
+    assert queue["summary"]["queue_item_count"] == 4
+    assert queue["summary"]["shadow_required_count"] == 1
+    assert queue["summary"]["runtime_mutation"] is False
+    assert {row["task_type"] for row in queue["queue_items"]} == {
+        "route_weight_shadow_review",
+        "recurring_route_wrapper_regression",
+        "domain_gap_watch_closeout",
+        "domain_safety_negative_sample_expansion",
+    }
+    assert {
+        "v19.synthetic_validation.silent_evolution.run_p60_domain_route_eval",
+        "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression",
+    } <= {row["runner"] for row in queue["queue_items"]}
+    assert all(row["runtime_mutation"] is False and row["answer_mutation"] is False for row in queue["queue_items"])
+    assert all("production_rule_activation" in row["blocked_actions"] for row in queue["queue_items"])
+    assert all(row["expected_invariants"] for row in queue["queue_items"])
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["queue_item_count"] == 4
+    assert regression["summary"]["runtime_mutation"] is False
+    assert "/api/lab/silent-eval-queue" in server
+    assert "/api/lab/silent-eval-queue/run" in server
+    assert "docs/v19/V19_P63_SILENT_EVAL_QUEUE.md" in manifest["created_from"]
+    assert manifest["p63_silent_eval_queue"]["queue_item_count"] == 4
+    assert manifest["p63_silent_eval_queue"]["runtime_mutation"] is False
+    assert "P63_SILENT_EVAL_QUEUE" in manifest["guardrails"]
+
+
+def test_p64_interactive_calibration_design_defines_safe_latent_factor_framework() -> None:
+    from v19.synthetic_validation import build_p64_interactive_calibration_design, run_p64_interactive_calibration_design_regression
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    server = (root / "v19/server.py").read_text(encoding="utf-8")
+    design = build_p64_interactive_calibration_design()
+    regression = run_p64_interactive_calibration_design_regression()
+
+    assert design["status"] == "interactive_calibration_design_ready_no_runtime_mutation"
+    assert design["summary"]["latent_factor_count"] >= 12
+    assert design["summary"]["inquiry_count"] >= 8
+    assert design["summary"]["runtime_mutation"] is False
+    factor_ids = {row["factor_id"] for row in design["latent_factors"]}
+    assert {
+        "baseline_amplifier",
+        "action_efficiency",
+        "resource_support",
+        "timing_sensitivity",
+        "wealth_amplifier",
+        "career_amplifier",
+        "relationship_sensitivity",
+        "health_safety_modifier",
+    } <= factor_ids
+    required_fields = set(design["event_evidence_schema"]["required_fields"])
+    assert {"event_domain", "event_type", "time_range", "date_precision", "valence", "intensity", "confidence", "allowed_use"} <= required_fields
+    assert design["event_evidence_schema"]["allowed_use"] == ["personal_calibration_only"]
+    assert {"wealth", "career", "relationship", "health", "relocation", "stress"} <= {
+        row["domain"] for row in design["calibration_inquiries"]
+    }
+    forbidden = {"一定", "必然", "发财", "破财", "离婚", "疾病", "寿命", "诊断", "治疗", "应期"}
+    assert all(not any(token in row["prompt_zh"] for token in forbidden) for row in design["calibration_inquiries"])
+    assert "bayesian_update_for_internal_posterior" in design["model_policy"]["active_models_now"]
+    assert "active_learning_question_selection" in design["model_policy"]["active_models_now"]
+    assert "gnn_core_inference" in design["model_policy"]["blocked_models_now"]
+    assert "rl_core_rule_update" in design["model_policy"]["blocked_models_now"]
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["runtime_mutation"] is False
+    assert "/api/lab/interactive-calibration-design" in server
+    assert "/api/lab/interactive-calibration-design/run" in server
+    assert "docs/v19/V19_P64_INTERACTIVE_CALIBRATION_DESIGN.md" in manifest["created_from"]
+    assert manifest["p64_interactive_calibration_design"]["latent_factor_count"] == 12
+    assert manifest["p64_interactive_calibration_design"]["runtime_mutation"] is False
+    assert "P64_INTERACTIVE_CALIBRATION_DESIGN" in manifest["guardrails"]
+
+
 def test_p11_review_ui_wires_synthetic_collision_failure_loop() -> None:
     root = Path(__file__).resolve().parents[2]
     admin_html = (root / "v19/frontend/admin.html").read_text(encoding="utf-8")
@@ -2606,7 +2950,7 @@ def test_p46_rule_graph_orchestrator_selects_chart_specific_paths() -> None:
     assert income["status"] == "rule_graph_paths_ready"
     assert income["chart_graph"]["node_count"] > 0
     assert income["chart_graph"]["edge_count"] > 0
-    assert income["summary"]["candidate_count"] == 348
+    assert income["summary"]["candidate_count"] == 354
     assert income["summary"]["selected_count"] <= 8
     assert income["summary"]["engine_enabled_count"] == 0
     assert income["summary"]["answer_mutation_count"] == 0
@@ -2638,7 +2982,7 @@ def test_p46_guided_context_and_answer_carry_rule_graph_audit() -> None:
     text = guided_answer_to_plain_text(answer, "zh")
 
     assert context["rule_graph_context"]["status"] == "rule_graph_paths_ready"
-    assert context["rule_graph_context"]["summary"]["candidate_count"] == 348
+    assert context["rule_graph_context"]["summary"]["candidate_count"] == 354
     assert any(row.get("source") == "rule_graph_orchestrator" for row in context["signals"])
     assert "RULE_GRAPH_PATH_SELECTION" in context["guardrails"]
     assert answer["rule_graph_context"]["status"] == "rule_graph_paths_ready"
@@ -2670,7 +3014,7 @@ def test_p47_rule_graph_runtime_context_routes_measurement_chain() -> None:
         "income_structure_route",
         "structure_overview_route",
     }
-    assert runtime_context["summary"]["candidate_count"] == 348
+    assert runtime_context["summary"]["candidate_count"] == 354
     assert runtime_context["summary"]["selected_path_count"] >= 8
     assert runtime_context["summary"]["engine_enabled_count"] == 0
     assert runtime_context["summary"]["answer_mutation_count"] == 0
@@ -2706,7 +3050,8 @@ def test_p48_initial_questions_are_personalized_by_rule_graph_routes() -> None:
     assert branch_personalization["source"] == "rule_graph_runtime_context"
     assert first_personalization["route_bucket_order"]
     assert branch_personalization["route_bucket_order"]
-    assert first_personalization["route_bucket_order"] != branch_personalization["route_bucket_order"]
+    assert {"branch_relation", "ten_god_interaction", "income_stability"} <= set(first_personalization["route_bucket_order"])
+    assert {"branch_relation", "ten_god_interaction", "income_stability"} <= set(branch_personalization["route_bucket_order"])
     assert [row["key"] for row in first_top] != [row["key"] for row in branch_top]
     assert all((row.get("personalization") or {}).get("applied") is True for row in first_top[:5])
     assert all(int(row.get("personalized_score") or 0) >= int(row.get("score") or 0) for row in first_top + branch_top)
@@ -2750,6 +3095,123 @@ def test_p49_route_aware_knowledge_retrieval_uses_rule_graph_context() -> None:
     assert manifest["p49_route_aware_knowledge_retrieval"]["route_bias_policy"]["generic_route_match_cap"] == 12
     assert "docs/v19/V19_P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL.md" in manifest["created_from"]
     assert "P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL" in manifest["guardrails"]
+
+
+def test_p50_guided_answer_evidence_pack_unifies_answer_contexts() -> None:
+    from v19.bazi_guided_questions import build_guided_question_answer
+    from v19.guided_evidence_pack import evidence_pack_to_prompt_context
+    from v19.server import _guided_answer_rewrite_messages
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    case = P11_GUIDED_SYNTHETIC_CASES[3]
+    data = _agent_data_for_case(case)
+    answer = build_guided_question_answer(data, case.question_key, case.message)
+    pack = answer["evidence_pack"]
+    prompt_context = evidence_pack_to_prompt_context(pack)
+    rewrite_messages = _guided_answer_rewrite_messages(answer, case.message)
+    rewrite_payload = json.loads(rewrite_messages[2]["content"].split("只能使用这些结构事实组织回答：\n", 1)[1])
+
+    assert pack["status"] == "ready"
+    assert pack["question"]["question_key"] == case.question_key
+    assert pack["question"]["answer_kind"] == answer["answer_kind"]
+    assert pack["fact_evidence"]["present_fact_scopes"]
+    assert pack["knowledge_evidence"]["applied_ids"]
+    assert "p10.branch_penalty_harm_break_boundary" in pack["knowledge_evidence"]["applied_ids"]
+    assert any(row["kind"] == "knowledge" for row in pack["evidence_bindings"])
+    assert any(row["kind"] == "rule_graph_path" for row in pack["evidence_bindings"])
+    assert pack["rule_graph_evidence"]["runtime_selected_knowledge_ids"]
+    assert pack["summary"]["engine_enabled_count"] == 0
+    assert pack["summary"]["answer_mutation_count"] == 0
+    assert pack["summary"]["runtime_mutation"] is False
+    assert pack["audit"]["status"] == "pass"
+    assert "GUIDED_ANSWER_EVIDENCE_PACK" in pack["guardrails"]
+
+    assert answer["retrieved_facts"]["evidence_pack"]["status"] == "ready"
+    assert answer["retrieved_facts"]["evidence_pack"]["binding_count"] == len(pack["evidence_bindings"])
+    assert prompt_context["runtime_scope"] == "llm_prompt_evidence_pack_context_only"
+    assert prompt_context["bindings"]
+    assert rewrite_payload["evidence_pack"]["status"] == "ready"
+    assert rewrite_payload["evidence_pack"]["bindings"]
+    assert "docs/v19/V19_P50_GUIDED_ANSWER_EVIDENCE_PACK.md" in manifest["created_from"]
+    assert manifest["p50_guided_answer_evidence_pack"]["answer_mutation_count"] == 0
+    assert "P50_GUIDED_ANSWER_EVIDENCE_PACK" in manifest["guardrails"]
+
+
+def test_p51_ui_surfaces_latest_framework_context() -> None:
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    lab_html = (root / "v19/frontend/lab.html").read_text(encoding="utf-8")
+    app_js = (root / "v19/frontend/assets/app.js").read_text(encoding="utf-8")
+    oracle_html = (root / "v19/frontend/oracle.html").read_text(encoding="utf-8")
+    oracle_js = (root / "v19/frontend/assets/oracle.js").read_text(encoding="utf-8")
+    styles = (root / "v19/frontend/assets/styles.css").read_text(encoding="utf-8")
+
+    assert "ruleGraphRoutePack" in lab_html
+    assert "personalizedQuestionsPanel" in lab_html
+    assert "guidedAnswerEvidencePack" in lab_html
+    assert "renderRuleGraphRoutePack" in app_js
+    assert "rule_graph_runtime_context" in app_js
+    assert "question_personalization_context" in app_js
+    assert "route_match_score" in app_js
+    assert "evidence_pack" in app_js
+
+    assert "answerEvidenceSummary" in oracle_html
+    assert "personalized-question-chip" in oracle_js
+    assert "question-personalization" in oracle_js
+    assert "renderAnswerEvidenceSummary" in oracle_js
+    assert "evidence_pack" in oracle_js
+    assert "answer-evidence-summary" in styles
+
+    assert "docs/v19/V19_P51_UI_FRAMEWORK_ALIGNMENT.md" in manifest["created_from"]
+    assert manifest["p51_ui_framework_alignment"]["runtime_scope"] == "ui_visibility_only_no_inference_or_answer_mutation"
+    assert manifest["p51_ui_framework_alignment"]["answer_mutation_count"] == 0
+    assert "P51_UI_FRAMEWORK_ALIGNMENT" in manifest["guardrails"]
+
+
+def test_p52_initial_question_recommendations_are_more_chart_specific() -> None:
+    from fastapi.testclient import TestClient
+
+    from v19.server import app
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    oracle_js = (root / "v19/frontend/assets/oracle.js").read_text(encoding="utf-8")
+
+    contexts = [_agent_data_for_case(case)["guided_question_context"] for case in P11_GUIDED_SYNTHETIC_CASES[:12]]
+    signatures = [tuple(row["key"] for row in context["questions"][:5]) for context in contexts]
+    by_case = {case.case_id: context for case, context in zip(P11_GUIDED_SYNTHETIC_CASES[:12], contexts)}
+
+    assert len(set(signatures)) >= 6
+    assert by_case["syn.guided.three_meeting_boundary"]["questions"][0]["key"] == "q_three_harmony_context"
+    assert by_case["syn.guided.income_three_harmony_binding"]["questions"][0]["key"] == "q_three_harmony_context"
+    assert by_case["syn.guided.income_wealth_missing_unstable"]["questions"][0]["key"] == "q_vault_structure"
+    assert by_case["syn.guided.income_wealth_disrupted_volatility"]["questions"][0]["key"] == "q_branch_relation_detail"
+    assert all(len({(row.get("source_signal_category") or row["key"]) for row in context["questions"][:5]}) >= 4 for context in contexts)
+
+    client = TestClient(app)
+    first_preview = client.post(
+        "/api/agent/structure?role=admin",
+        json={"birth_input": {"year": 1990, "month": 5, "day": 12, "hour": 10, "gender": "unknown", "calendar": "solar"}, "selected_year": 2026},
+    ).json()["data"]
+    second_preview = client.post(
+        "/api/agent/structure?role=admin",
+        json={"birth_input": {"year": 1988, "month": 11, "day": 23, "hour": 1, "gender": "unknown", "calendar": "solar"}, "selected_year": 2026},
+    ).json()["data"]
+    first_label = first_preview["guided_question_context"]["questions"][0]["label"]["zh"]
+    second_label = second_preview["guided_question_context"]["questions"][0]["label"]["zh"]
+    assert first_preview["inference_context"]["runtime_scope"] == "structure_preview_question_routing_signal_only"
+    assert first_label != second_label
+    assert "当前命中的" in first_label
+    assert "当前命中的" in second_label
+
+    assert "backendPersonalizedQuestionKeys" in oracle_js
+    assert "return backendOrdered.slice(0, 5)" in oracle_js
+    assert "personalized_score ?? item.score" in oracle_js
+    assert "docs/v19/V19_P52_INITIAL_QUESTION_DIVERSITY_FIX.md" in manifest["created_from"]
+    assert manifest["p52_initial_question_diversity_fix"]["runtime_scope"] == "initial_question_ordering_only_no_inference_or_answer_mutation"
+    assert manifest["p52_initial_question_diversity_fix"]["answer_mutation_count"] == 0
+    assert "P52_INITIAL_QUESTION_DIVERSITY_FIX" in manifest["guardrails"]
 
 
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:

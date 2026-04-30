@@ -566,10 +566,21 @@ h3 {
 }
 
 .time-grid,
-.evidence-grid {
+.evidence-grid,
+.framework-grid {
   display: grid;
   grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
   gap: 14px;
+}
+
+.framework-grid {
+  border-top: 1px solid rgba(143, 226, 179, 0.12);
+  margin-top: 16px;
+  padding-top: 4px;
+}
+
+.span-full {
+  grid-column: 1 / -1;
 }
 
 .time-summary {
@@ -944,7 +955,8 @@ summary em {
 
   .income-instrument,
   .time-grid,
-  .evidence-grid {
+  .evidence-grid,
+  .framework-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -1215,6 +1227,26 @@ summary em {
 
 .answer-prose p:last-child {
   margin-bottom: 0;
+}
+
+.answer-evidence-summary {
+  align-items: center;
+  border: 1px dashed rgba(143, 226, 179, 0.22);
+  border-radius: var(--radius);
+  color: var(--text-muted);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 8px;
+  line-height: 1.5;
+  margin-top: 16px;
+  padding: 10px 12px;
+}
+
+.answer-evidence-summary strong {
+  color: #bde8cc;
+  font-size: 12px;
+  overflow-wrap: anywhere;
 }
 
 #questionAnswer {

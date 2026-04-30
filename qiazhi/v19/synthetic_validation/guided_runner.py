@@ -8,6 +8,7 @@ from v19.agent.income_stability import derive_income_stability
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
 from v19.knowledge_store import retrieve_knowledge
 from v19.rule_graph_runtime_context import build_rule_graph_runtime_context
+from v19.synthetic_validation.framework_backfill import build_guided_case_framework_backfill, summarize_framework_backfill
 from v19.synthetic_validation.guided_cases import GuidedSyntheticCase
 
 
@@ -41,6 +42,7 @@ def run_guided_synthetic_collision(cases: Iterable[GuidedSyntheticCase | Mapping
         },
         "cases": case_results,
         "collision_review": _collision_review(case_results),
+        "framework_backfill_review": summarize_framework_backfill(case_results),
         "evolution_report": _evolution_report(failures),
         "boundaries": [
             "SYNTHETIC_CASES_ONLY",
@@ -48,6 +50,7 @@ def run_guided_synthetic_collision(cases: Iterable[GuidedSyntheticCase | Mapping
             "KNOWLEDGE_AND_RULE_PROPOSALS_ONLY",
             "ANALYST_REVIEW_REQUIRED_FOR_ACTIVATION",
             "NO_AUTO_RUNTIME_MUTATION",
+            "P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL",
         ],
     }
 
@@ -70,6 +73,7 @@ def _run_case(case: GuidedSyntheticCase) -> Dict[str, Any]:
             "status": "fail",
             "tags": list(case.tags),
             "knowledge_tags": _standard_knowledge_tags(case),
+            "framework_backfill": {},
             "failures": [{"failure_type": "exception", "message": str(exc)}],
             "observed": {},
         }
@@ -109,6 +113,8 @@ def _run_case(case: GuidedSyntheticCase) -> Dict[str, Any]:
     failures.extend(_missing_items("relation_type_missing", case.expected_relation_types, relation_types))
     failures.extend(_missing_text(case.expected_text_contains, text))
     failures.extend(_forbidden_text(case.forbidden_text, text))
+    framework_backfill = build_guided_case_framework_backfill(case, agent_data)
+    failures.extend(framework_backfill.get("failures") or [])
 
     return {
         "case_id": case.case_id,
@@ -117,11 +123,15 @@ def _run_case(case: GuidedSyntheticCase) -> Dict[str, Any]:
         "collision_focus": case.collision_focus,
         "tags": list(case.tags),
         "knowledge_tags": _standard_knowledge_tags(case),
+        "framework_backfill": framework_backfill,
         "failures": failures,
         "observed": {
             "recommended_keys": recommended_keys,
             "wealth_question_keys": [key for key in recommended_keys if key in _wealth_question_keys()],
             "standardized_knowledge_tags": _standard_knowledge_tags(case),
+            "framework_backfill_status": framework_backfill.get("status") or "",
+            "framework_expected_topic_lanes": list((framework_backfill.get("expected") or {}).get("expected_topic_lanes") or []),
+            "framework_expected_graph_features": list((framework_backfill.get("expected") or {}).get("expected_graph_features") or []),
             "answer_kind": answer.get("answer_kind") or "",
             "source_signal_category": answer.get("source_signal_category") or "",
             "applied_knowledge_ids": applied_ids,
@@ -301,6 +311,8 @@ def _evolution_report(failures: List[Dict[str, Any]]) -> Dict[str, Any]:
 
 
 def _proposal_target(failure_types: List[str]) -> str:
+    if any(item.startswith("framework_") for item in failure_types):
+        return "framework_backfill_adapter_draft"
     if any(item in failure_types for item in {"answer_text_missing", "forbidden_text_present"}):
         return "answer_expression_seed_draft"
     if any(item in failure_types for item in {"knowledge_id_missing", "knowledge_delta_missing"}):
@@ -313,6 +325,8 @@ def _proposal_target(failure_types: List[str]) -> str:
 
 
 def _failure_attribution(failure_types: List[str]) -> str:
+    if any(item.startswith("framework_") for item in failure_types):
+        return "legacy_framework_backfill_layer"
     if any(item in failure_types for item in {"recommended_question_missing", "wealth_question_missing"}):
         return "question_recommendation_layer"
     if any(item in failure_types for item in {"knowledge_id_missing", "knowledge_delta_missing"}):
@@ -325,6 +339,8 @@ def _failure_attribution(failure_types: List[str]) -> str:
 
 
 def _failure_attribution_layer(failure_types: List[str]) -> str:
+    if any(item.startswith("framework_") for item in failure_types):
+        return "framework"
     if any(item in failure_types for item in {"recommended_question_missing", "wealth_question_missing"}):
         return "recommendation"
     if any(item in failure_types for item in {"knowledge_id_missing", "knowledge_delta_missing"}):
@@ -342,6 +358,7 @@ def _draft_type_for_target(target: str) -> str:
         "knowledge_seed_draft": "knowledge_seed",
         "rule_db_structured_fact_draft": "rule_draft",
         "guided_question_ranking_draft": "question_recommendation_draft",
+        "framework_backfill_adapter_draft": "framework_adapter",
     }
     return mapping.get(target, "review_draft")
 
@@ -352,5 +369,6 @@ def _suggested_action(target: str) -> str:
         "knowledge_seed_draft": "draft_or_reweight_knowledge_seed_then_rerun_collision",
         "rule_db_structured_fact_draft": "draft_structured_rule_or_relation_mapping_then_rerun_collision",
         "guided_question_ranking_draft": "review_question_score_or_signal_mapping_then_rerun_collision",
+        "framework_backfill_adapter_draft": "update_legacy_case_framework_contract_then_rerun_collision",
     }
     return actions.get(target, "analyst_review_then_rerun_collision")

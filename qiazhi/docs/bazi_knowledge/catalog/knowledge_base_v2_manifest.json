@@ -50,6 +50,17 @@
     "docs/v19/V19_P47_RULE_GRAPH_RUNTIME_CONTEXT.md",
     "docs/v19/V19_P48_PERSONALIZED_QUESTION_ROUTING.md",
     "docs/v19/V19_P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL.md",
+    "docs/v19/V19_P50_GUIDED_ANSWER_EVIDENCE_PACK.md",
+    "docs/v19/V19_P51_UI_FRAMEWORK_ALIGNMENT.md",
+    "docs/v19/V19_P52_INITIAL_QUESTION_DIVERSITY_FIX.md",
+    "docs/v19/V19_P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL.md",
+    "docs/v19/V19_P54_FRAMEWORK_CHAIN_AUDIT.md",
+    "docs/v19/V19_P59_SILENT_EVOLUTION_SYSTEM.md",
+    "docs/v19/V19_P60_DOMAIN_ROUTE_AND_SMART_APPROVAL_GATE.md",
+    "docs/v19/V19_P61_RELATIONSHIP_HEALTH_ROUTE_BACKFILL.md",
+    "docs/v19/V19_P62_SILENT_TRAINING_LEDGER.md",
+    "docs/v19/V19_P63_SILENT_EVAL_QUEUE.md",
+    "docs/v19/V19_P64_INTERACTIVE_CALIBRATION_DESIGN.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -1724,6 +1735,514 @@
       "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
+  "p50_guided_answer_evidence_pack": {
+    "stage": "P50_GUIDED_ANSWER_EVIDENCE_PACK",
+    "entrypoints": [
+      "v19.guided_evidence_pack.build_guided_answer_evidence_pack",
+      "v19.guided_evidence_pack.evidence_pack_to_prompt_context",
+      "v19.guided_evidence_pack.evidence_pack_summary",
+      "v19.bazi_guided_questions.build_guided_question_answer",
+      "v19.server._guided_answer_rewrite_messages"
+    ],
+    "runtime_scope": "guided_answer_evidence_pack_context_only_no_mutation",
+    "input_context": [
+      "retrieved_facts",
+      "applied_knowledge",
+      "knowledge_context",
+      "rule_graph_context",
+      "rule_graph_runtime_context"
+    ],
+    "outputs": [
+      "guided_question_answer.evidence_pack",
+      "retrieved_facts.evidence_pack",
+      "llm_prompt.evidence_pack"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "GUIDED_ANSWER_EVIDENCE_PACK",
+      "FACTS_KNOWLEDGE_RULE_GRAPH_UNIFIED",
+      "CONTEXT_ONLY_NO_RESULT_MUTATION",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p51_ui_framework_alignment": {
+    "stage": "P51_UI_FRAMEWORK_ALIGNMENT",
+    "entrypoints": [
+      "v19/frontend/lab.html",
+      "v19/frontend/assets/app.js",
+      "v19/frontend/oracle.html",
+      "v19/frontend/assets/oracle.js",
+      "v19/frontend/assets/styles.css"
+    ],
+    "runtime_scope": "ui_visibility_only_no_inference_or_answer_mutation",
+    "input_context": [
+      "rule_graph_runtime_context",
+      "guided_question_context.question_personalization_context",
+      "knowledge_context.items[].route_match_score",
+      "guided_question_answer.evidence_pack"
+    ],
+    "outputs": [
+      "lab.rule_graph_route_pack_panel",
+      "lab.personalized_questions_panel",
+      "lab.guided_answer_evidence_pack_panel",
+      "oracle.personalized_question_chips",
+      "oracle.answer_evidence_summary"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "UI_FRAMEWORK_ALIGNMENT",
+      "DISPLAY_CONTEXT_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p52_initial_question_diversity_fix": {
+    "stage": "P52_INITIAL_QUESTION_DIVERSITY_FIX",
+    "entrypoints": [
+      "v19.bazi_guided_questions._rank_questions_for_chart",
+      "v19.bazi_guided_questions._branch_relation_question_keys",
+      "POST /api/agent/structure",
+      "v19/frontend/assets/oracle.js"
+    ],
+    "runtime_scope": "initial_question_ordering_only_no_inference_or_answer_mutation",
+    "input_context": [
+      "guided_question_context.questions",
+      "guided_question_context.question_personalization_context",
+      "chart_facts.relation_pairs_by_type",
+      "chart_facts.hidden_stems_by_branch",
+      "chart_facts.vault_branches",
+      "structure_preview.income_stability_question_routing_signal"
+    ],
+    "outputs": [
+      "more_varied_first_screen_question_signatures",
+      "branch_relation_specific_question_keys",
+      "oracle_backend_order_preserved"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "INITIAL_QUESTION_DIVERSITY_ONLY",
+      "DISPLAY_AND_ORDERING_CONTEXT_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p53_legacy_synthetic_framework_backfill": {
+    "stage": "P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL",
+    "entrypoints": [
+      "v19.synthetic_validation.framework_backfill.build_guided_case_framework_backfill",
+      "v19.synthetic_validation.framework_backfill.summarize_framework_backfill",
+      "v19.synthetic_validation.guided_runner.run_guided_synthetic_collision"
+    ],
+    "runtime_scope": "p10_p11_legacy_synthetic_matrix_rule_graph_compatibility_review",
+    "legacy_phases": [
+      "p10_synthetic_collision_review",
+      "p11_synthetic_expansion"
+    ],
+    "case_count": 20,
+    "compatibility_contract": [
+      "primary_intent",
+      "expected_route_ids",
+      "expected_topic_lanes",
+      "expected_graph_features",
+      "condition_axes_expected",
+      "condition_axis_projection",
+      "mutation_policy"
+    ],
+    "topic_lanes_required": [
+      "core_strength_foundation",
+      "branch_time_activation",
+      "ten_god_mechanism",
+      "wealth_career_bridge"
+    ],
+    "graph_features_required": [
+      "stem",
+      "branch",
+      "hidden_stem",
+      "branch_relation",
+      "time_relation",
+      "ten_god"
+    ],
+    "adaptation_matrix": {
+      "status": "pass",
+      "runtime_scope": "p10_to_p52_framework_adaptation_inventory",
+      "rows": [
+        {
+          "phase": "P10",
+          "framework_track": "backfilled_to_rule_graph_runtime_contract"
+        },
+        {
+          "phase": "P11",
+          "framework_track": "backfilled_to_rule_graph_runtime_contract"
+        },
+        {
+          "phase": "P12-P27",
+          "framework_track": "governance_boundary_compatible"
+        },
+        {
+          "phase": "P28-P30",
+          "framework_track": "native_condition_model_eval_dataset"
+        },
+        {
+          "phase": "P31-P38",
+          "framework_track": "native_knowledge_catalog_to_condition_model_track"
+        },
+        {
+          "phase": "P39-P45",
+          "framework_track": "native_condition_model_and_smart_gate_track"
+        },
+        {
+          "phase": "P46-P52",
+          "framework_track": "native_rule_graph_runtime_track"
+        }
+      ]
+    },
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL",
+      "BACKFILL_EXPECTATIONS_ONLY",
+      "DETERMINISTIC_RULE_GRAPH_COMPATIBILITY_CHECK",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p54_framework_chain_audit": {
+    "stage": "P54_FRAMEWORK_CHAIN_AUDIT",
+    "entrypoints": [
+      "v19.synthetic_validation.silent_evolution.run_p54_framework_chain_audit",
+      "v19.synthetic_validation.framework_backfill.build_legacy_framework_adaptation_matrix",
+      "v19.synthetic_validation.guided_runner.run_guided_synthetic_collision",
+      "v19.synthetic_validation.dry_run_shadow_scoring.build_p43_feedback_ledger",
+      "GET /api/lab/framework-chain-audit"
+    ],
+    "status": "pass",
+    "runtime_scope": "framework_chain_compatibility_audit_only_no_runtime_mutation",
+    "audit_rows": [
+      "p10_p11_guided_synthetic",
+      "p28_p30_ten_god_mechanisms",
+      "p39_rule_conversion",
+      "p42_p43_smart_gate_shadow",
+      "p45_canary_runtime_trial",
+      "p46_p52_rule_graph_runtime"
+    ],
+    "known_backlog": [
+      "p28_p30_rule_db_backfill_if_shadow_signal_pass_count_is_below_mechanism_count"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P54_FRAMEWORK_CHAIN_AUDIT",
+      "AUDIT_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p59_silent_evolution_system": {
+    "stage": "P59_SILENT_EVOLUTION_SYSTEM",
+    "entrypoints": [
+      "v19.synthetic_validation.silent_evolution.run_p59_silent_evolution_cycle",
+      "v19.synthetic_validation.silent_evolution.run_p54_framework_chain_audit",
+      "POST /api/lab/silent-evolution/run"
+    ],
+    "runtime_scope": "silent_training_and_tuning_proposal_only_no_runtime_mutation",
+    "active_model": "deterministic_rule_graph_plus_eval_scoring",
+    "active_algorithms": [
+      "rule_graph_path_selection",
+      "condition_model_eval_dataset",
+      "dry_run_shadow_scoring",
+      "canary_runtime_trial",
+      "auto_evaluator_scorecard"
+    ],
+    "reserved_models": {
+      "bayesian_scoring": "internal ranking only after stable eval ledgers accumulate",
+      "gnn": "path embedding or rerank only after labeled eval dataset exists",
+      "rl": "question ordering and dialog policy only, not core rule truth"
+    },
+    "outputs": [
+      "scorecard",
+      "run_ledger_entry",
+      "tuning_proposals",
+      "model_policy",
+      "downstream_plan"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P59_SILENT_EVOLUTION_SYSTEM",
+      "SILENT_SHADOW_TRAINING_ONLY",
+      "AUTO_EVALUATION_ONLY",
+      "TUNING_PROPOSALS_ONLY",
+      "NO_USER_FEEDBACK_DIRECT_RULE_UPDATE",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p60_domain_route_and_smart_approval_gate": {
+    "stage": "P60_DOMAIN_ROUTE_AND_SMART_APPROVAL_GATE",
+    "entrypoints": [
+      "v19.synthetic_validation.silent_evolution.run_p60_domain_route_eval",
+      "v19.synthetic_validation.silent_evolution.run_p60_smart_approval_gate",
+      "v19.synthetic_validation.silent_evolution.run_p60_silent_evolution_extension",
+      "GET /api/lab/domain-route-eval",
+      "POST /api/lab/smart-approval-gate/run",
+      "POST /api/lab/silent-evolution-extension/run"
+    ],
+    "status": "pass",
+    "runtime_scope": "domain_route_eval_and_smart_gate_only_no_runtime_mutation",
+    "domain_routes": [
+      "income_structure",
+      "career_structure",
+      "relationship_structure",
+      "health_structure"
+    ],
+    "domain_eval_samples": 8,
+    "direct_domain_hit_after_p61": 8,
+    "known_domain_candidate_gaps": [],
+    "resolved_domain_candidate_gaps": {
+      "stage": "P61_RELATIONSHIP_HEALTH_ROUTE_BACKFILL",
+      "domains": [
+        "relationship",
+        "health"
+      ],
+      "mode": "route_only_safe_wrapper"
+    },
+    "smart_gate_policy": {
+      "low": "auto_dry_run_allowed",
+      "medium": "shadow_dry_run_required",
+      "high": "human_review_required"
+    },
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P60_DOMAIN_ROUTE_AND_SMART_APPROVAL_GATE",
+      "P60_DOMAIN_ROUTE_EVAL",
+      "P60_SMART_APPROVAL_GATE",
+      "LOW_RISK_AUTO_DRY_RUN_ONLY",
+      "MEDIUM_RISK_SHADOW_DRY_RUN_REQUIRED",
+      "HIGH_RISK_HUMAN_REVIEW_REQUIRED",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p61_relationship_health_route_backfill": {
+    "stage": "P61_RELATIONSHIP_HEALTH_ROUTE_BACKFILL",
+    "entrypoints": [
+      "v19.synthetic_validation.domain_route_backfill.build_p61_domain_route_backfill_candidates",
+      "v19.synthetic_validation.domain_route_backfill.build_p61_domain_route_backfill_eval_dataset",
+      "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression",
+      "GET /api/lab/domain-route-backfill",
+      "POST /api/lab/domain-route-backfill/run"
+    ],
+    "status": "pass",
+    "runtime_scope": "relationship_health_route_candidate_backfill_only_no_runtime_mutation",
+    "source_knowledge_ids": [
+      "p36.relationship.spouse_palace.existence",
+      "p36.relationship.spouse_palace.boundary",
+      "p36.relationship.ten_god_context.existence",
+      "p36.relationship.ten_god_context.boundary",
+      "p36.health.archive_boundary.existence",
+      "p36.health.archive_boundary.boundary"
+    ],
+    "candidate_count": 6,
+    "eval_sample_count": 24,
+    "domains": [
+      "relationship",
+      "health"
+    ],
+    "route_lane": "domain_safety_bridge",
+    "conversion_mode": "route_only_safe_wrapper",
+    "source_risk_preserved": [
+      "R3",
+      "R4"
+    ],
+    "wrapper_risk_level": "R2",
+    "engine_enabled_count": 0,
+    "activation_updated_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P61_DOMAIN_ROUTE_BACKFILL",
+      "ROUTE_ONLY_SAFE_WRAPPER",
+      "SOURCE_R3_R4_STAYS_ARCHIVE",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p62_silent_training_ledger": {
+    "stage": "P62_SILENT_TRAINING_LEDGER",
+    "entrypoints": [
+      "v19.synthetic_validation.silent_training_ledger.build_p62_silent_training_ledger",
+      "v19.synthetic_validation.silent_training_ledger.run_p62_silent_training_ledger_regression",
+      "GET /api/lab/silent-training-ledger",
+      "POST /api/lab/silent-training-ledger/run"
+    ],
+    "status": "pass",
+    "runtime_scope": "silent_learning_signal_ledger_only_no_runtime_mutation",
+    "input_stages": [
+      "P59_SILENT_EVOLUTION_SYSTEM",
+      "P60_DOMAIN_ROUTE_EVAL",
+      "P61_DOMAIN_ROUTE_BACKFILL"
+    ],
+    "ledger_entry_count": 3,
+    "training_signal_count": 3,
+    "learning_permissions": {
+      "allowed": [
+        "question_routing_weight_review",
+        "eval_sampling_priority_review",
+        "draft_priority_review",
+        "shadow_dataset_expansion"
+      ],
+      "blocked": [
+        "core_rule_truth_update",
+        "production_rule_activation",
+        "user_feedback_direct_rule_update",
+        "answer_conclusion_update",
+        "domain_prediction_update"
+      ]
+    },
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P62_SILENT_TRAINING_LEDGER",
+      "TRAINING_SIGNAL_ONLY",
+      "DETERMINISTIC_EVAL_SIGNAL",
+      "NO_CORE_RULE_TRUTH_UPDATE",
+      "NO_USER_FEEDBACK_DIRECT_RULE_UPDATE",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_BLACK_BOX_CORE_INFERENCE"
+    ]
+  },
+  "p63_silent_eval_queue": {
+    "stage": "P63_SILENT_EVAL_QUEUE",
+    "entrypoints": [
+      "v19.synthetic_validation.silent_eval_queue.build_p63_silent_eval_queue",
+      "v19.synthetic_validation.silent_eval_queue.run_p63_silent_eval_queue_regression",
+      "GET /api/lab/silent-eval-queue",
+      "POST /api/lab/silent-eval-queue/run"
+    ],
+    "status": "pass",
+    "runtime_scope": "silent_eval_queue_definition_only_no_runtime_mutation",
+    "source_stage": "P62_SILENT_TRAINING_LEDGER",
+    "queue_item_count": 4,
+    "queue_task_types": [
+      "route_weight_shadow_review",
+      "recurring_route_wrapper_regression",
+      "domain_gap_watch_closeout",
+      "domain_safety_negative_sample_expansion"
+    ],
+    "required_runners": [
+      "v19.synthetic_validation.silent_evolution.run_p60_domain_route_eval",
+      "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression"
+    ],
+    "checkpoint_policy": {
+      "resume_policy": "rerun_failed_or_stale_report_only_items",
+      "write_policy": "report_only_no_runtime_or_rule_db_write"
+    },
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P63_SILENT_EVAL_QUEUE",
+      "EVAL_QUEUE_ONLY",
+      "CHECKPOINTED_REPORT_ONLY",
+      "NO_CORE_RULE_TRUTH_UPDATE",
+      "NO_USER_FEEDBACK_DIRECT_RULE_UPDATE",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p64_interactive_calibration_design": {
+    "stage": "P64_INTERACTIVE_CALIBRATION_DESIGN",
+    "entrypoints": [
+      "v19.synthetic_validation.calibration_design.build_p64_interactive_calibration_design",
+      "v19.synthetic_validation.calibration_design.run_p64_interactive_calibration_design_regression",
+      "GET /api/lab/interactive-calibration-design",
+      "POST /api/lab/interactive-calibration-design/run"
+    ],
+    "status": "pass",
+    "runtime_scope": "architecture_and_schema_spec_only_no_runtime_mutation",
+    "architecture_position": "after_rule_graph_before_personalized_route_rerank",
+    "latent_factor_count": 12,
+    "event_schema": {
+      "ledger_name": "User Event Evidence Ledger",
+      "allowed_use": "personal_calibration_only",
+      "required_fields": [
+        "event_domain",
+        "event_type",
+        "time_range",
+        "date_precision",
+        "valence",
+        "intensity",
+        "confidence",
+        "allowed_use"
+      ]
+    },
+    "inquiry_count": 8,
+    "active_models_now": [
+      "rule_graph_structural_prior",
+      "deterministic_factor_scoring",
+      "bayesian_update_for_internal_posterior",
+      "active_learning_question_selection"
+    ],
+    "reserved_models_later": [
+      "factor_graph",
+      "gnn_path_rerank",
+      "contextual_bandit_question_ordering",
+      "rl_dialog_policy_only"
+    ],
+    "blocked_models_now": [
+      "gnn_core_inference",
+      "rl_core_rule_update",
+      "user_feedback_to_rule_truth",
+      "black_box_domain_prediction"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P64_INTERACTIVE_CALIBRATION_DESIGN",
+      "CALIBRATION_SPEC_ONLY",
+      "USER_EVENT_EVIDENCE_ONLY",
+      "NO_CORE_RULE_TRUTH_UPDATE",
+      "NO_USER_FEEDBACK_DIRECT_RULE_UPDATE",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_MEDICAL_OR_LIFESPAN_INFERENCE",
+      "NO_BLACK_BOX_CORE_INFERENCE"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -1790,6 +2309,17 @@
     "P47_RULE_GRAPH_RUNTIME_CONTEXT",
     "P48_PERSONALIZED_QUESTION_ROUTING",
     "P49_ROUTE_AWARE_KNOWLEDGE_RETRIEVAL",
+    "P50_GUIDED_ANSWER_EVIDENCE_PACK",
+    "P51_UI_FRAMEWORK_ALIGNMENT",
+    "P52_INITIAL_QUESTION_DIVERSITY_FIX",
+    "P53_LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL",
+    "P54_FRAMEWORK_CHAIN_AUDIT",
+    "P59_SILENT_EVOLUTION_SYSTEM",
+    "P60_DOMAIN_ROUTE_AND_SMART_APPROVAL_GATE",
+    "P61_DOMAIN_ROUTE_BACKFILL",
+    "P62_SILENT_TRAINING_LEDGER",
+    "P63_SILENT_EVAL_QUEUE",
+    "P64_INTERACTIVE_CALIBRATION_DESIGN",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

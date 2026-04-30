@@ -11,6 +11,7 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from v19.guided_evidence_pack import evidence_pack_to_prompt_context
 from v19.llm import build_agent_messages, call_llm, list_llm_models, probe_llm, test_llm_chat
 from v19.agent import build_agent_turn
 from v19.agent.income_stability import derive_income_stability
@@ -40,7 +41,24 @@ from v19.bazi_rule_db import (
 )
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
 from v19.rule_graph_runtime_context import build_rule_graph_runtime_context
-from v19.synthetic_validation import P11_GUIDED_SYNTHETIC_CASES, run_guided_synthetic_collision
+from v19.synthetic_validation import (
+    P11_GUIDED_SYNTHETIC_CASES,
+    run_guided_synthetic_collision,
+    run_p54_framework_chain_audit,
+    run_p59_silent_evolution_cycle,
+    run_p60_domain_route_eval,
+    run_p60_silent_evolution_extension,
+    run_p60_smart_approval_gate,
+    build_p61_domain_route_backfill_candidates,
+    build_p61_domain_route_backfill_eval_dataset,
+    run_p61_domain_route_backfill_regression,
+    build_p62_silent_training_ledger,
+    run_p62_silent_training_ledger_regression,
+    build_p63_silent_eval_queue,
+    run_p63_silent_eval_queue_regression,
+    build_p64_interactive_calibration_design,
+    run_p64_interactive_calibration_design_regression,
+)
 from v19.lab_interfaces import (
     approve_bazi_rule_proposal,
     create_promotion_request,
@@ -472,6 +490,18 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
     if not result.get("ok"):
         return result
     data = dict(result.get("data") or {})
+    income_stability = derive_income_stability(dict(data.get("chart") or {}))
+    data["inference_context"] = {
+        "supported_theme": "income_stability",
+        "income_stability": income_stability,
+        "runtime_scope": "structure_preview_question_routing_signal_only",
+        "guardrails": [
+            "QUESTION_ROUTING_SIGNAL_ONLY",
+            "NO_RESULT_CARD_RENDER",
+            "NO_LLM",
+            "NO_FORTUNE",
+        ],
+    }
     data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(data, message=str(body.get("message") or ""))
     data["guided_question_context"] = build_guided_question_context(data)
     return {
@@ -482,9 +512,10 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
             "chart": data.get("chart"),
             "time_context": data.get("time_context"),
             "luck_cycles": data.get("luck_cycles"),
+            "inference_context": data.get("inference_context"),
             "rule_graph_runtime_context": data.get("rule_graph_runtime_context"),
             "guided_question_context": data.get("guided_question_context"),
-            "guardrails": ["STRUCTURE_PREVIEW_ONLY", "NO_INFERENCE", "NO_LLM"],
+            "guardrails": ["STRUCTURE_PREVIEW_ONLY", "QUESTION_ROUTING_SIGNAL_ONLY", "NO_RESULT_CARD_RENDER", "NO_LLM"],
         },
     }
 
@@ -1009,6 +1040,137 @@ def lab_synthetic_collision_run_post(request: Request) -> Dict[str, Any]:
     }
 
 
+@app.get("/api/lab/framework-chain-audit")
+def lab_framework_chain_audit_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P54_FRAMEWORK_CHAIN_AUDIT",
+        "audit": run_p54_framework_chain_audit(),
+    }
+
+
+@app.post("/api/lab/silent-evolution/run")
+def lab_silent_evolution_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P59_SILENT_EVOLUTION_SYSTEM",
+        "cycle": run_p59_silent_evolution_cycle(),
+    }
+
+
+@app.get("/api/lab/domain-route-eval")
+def lab_domain_route_eval_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P60_DOMAIN_ROUTE_EVAL",
+        "eval": run_p60_domain_route_eval(),
+    }
+
+
+@app.post("/api/lab/smart-approval-gate/run")
+def lab_smart_approval_gate_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P60_SMART_APPROVAL_GATE",
+        "gate": run_p60_smart_approval_gate(),
+    }
+
+
+@app.post("/api/lab/silent-evolution-extension/run")
+def lab_silent_evolution_extension_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P60_SILENT_EVOLUTION_EXTENSION",
+        "extension": run_p60_silent_evolution_extension(),
+    }
+
+
+@app.get("/api/lab/domain-route-backfill")
+def lab_domain_route_backfill_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P61_DOMAIN_ROUTE_BACKFILL",
+        "registry": build_p61_domain_route_backfill_candidates(),
+        "eval_dataset": build_p61_domain_route_backfill_eval_dataset(),
+    }
+
+
+@app.post("/api/lab/domain-route-backfill/run")
+def lab_domain_route_backfill_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P61_DOMAIN_ROUTE_BACKFILL",
+        "regression": run_p61_domain_route_backfill_regression(),
+    }
+
+
+@app.get("/api/lab/silent-training-ledger")
+def lab_silent_training_ledger_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P62_SILENT_TRAINING_LEDGER",
+        "ledger": build_p62_silent_training_ledger(),
+    }
+
+
+@app.post("/api/lab/silent-training-ledger/run")
+def lab_silent_training_ledger_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P62_SILENT_TRAINING_LEDGER",
+        "regression": run_p62_silent_training_ledger_regression(),
+    }
+
+
+@app.get("/api/lab/silent-eval-queue")
+def lab_silent_eval_queue_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P63_SILENT_EVAL_QUEUE",
+        "queue": build_p63_silent_eval_queue(),
+    }
+
+
+@app.post("/api/lab/silent-eval-queue/run")
+def lab_silent_eval_queue_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P63_SILENT_EVAL_QUEUE",
+        "regression": run_p63_silent_eval_queue_regression(),
+    }
+
+
+@app.get("/api/lab/interactive-calibration-design")
+def lab_interactive_calibration_design_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P64_INTERACTIVE_CALIBRATION_DESIGN",
+        "design": build_p64_interactive_calibration_design(),
+    }
+
+
+@app.post("/api/lab/interactive-calibration-design/run")
+def lab_interactive_calibration_design_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P64_INTERACTIVE_CALIBRATION_DESIGN",
+        "regression": run_p64_interactive_calibration_design_regression(),
+    }
+
+
 @app.get("/api/lab/guided-question-diversity-audit")
 def lab_guided_question_diversity_audit_get(request: Request) -> Dict[str, Any]:
     _require_role(request, {"practitioner", "admin"})
@@ -1296,6 +1458,7 @@ def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str) -
         "sections": answer.get("sections"),
         "retrieved_facts": answer.get("retrieved_facts"),
         "observed_facts": answer.get("observed_facts"),
+        "evidence_pack": evidence_pack_to_prompt_context(dict(answer.get("evidence_pack") or {})),
         "knowledge_context": answer.get("knowledge_context"),
         "composed_text": answer.get("composed_text"),
         "result_relation": answer.get("result_relation"),

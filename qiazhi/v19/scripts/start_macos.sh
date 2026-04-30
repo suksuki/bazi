@@ -4,11 +4,15 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 V19_DIR="$(cd "${SCRIPT_DIR}/.." && pwd)"
 REPO_ROOT="$(cd "${V19_DIR}/.." && pwd)"
+source "${SCRIPT_DIR}/server_process.sh"
 
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 HOST="${HOST:-127.0.0.1}"
 PORT="${PORT:-9019}"
 URL="http://${HOST}:${PORT}"
+RUNTIME_DIR="${RUNTIME_DIR:-${V19_DIR}/.runtime}"
+LOG_FILE="${LOG_FILE:-${RUNTIME_DIR}/server_${PORT}.log}"
+PID_FILE="${PID_FILE:-${RUNTIME_DIR}/server_${PORT}.pid}"
 
 export PYTHONPATH="${REPO_ROOT}:${PYTHONPATH:-}"
 
@@ -28,48 +32,6 @@ then
   exit 1
 fi
 
-EXISTING_PIDS="$(lsof -tiTCP:"${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
-if [ -n "${EXISTING_PIDS}" ]; then
-  echo "Port ${PORT} is already in use. Stopping existing process(es): ${EXISTING_PIDS}"
-  kill ${EXISTING_PIDS} >/dev/null 2>&1 || true
-  sleep 0.5
-fi
-
-EXISTING_PIDS="$(lsof -tiTCP:"${PORT}" -sTCP:LISTEN 2>/dev/null || true)"
-if [ -n "${EXISTING_PIDS}" ]; then
-  echo "Port ${PORT} is still in use. Force stopping process(es): ${EXISTING_PIDS}"
-  kill -9 ${EXISTING_PIDS} >/dev/null 2>&1 || true
-  sleep 0.2
-fi
-
-cd "${REPO_ROOT}"
-
-"${PYTHON_BIN}" -m uvicorn v19.server:app --host "${HOST}" --port "${PORT}" &
-SERVER_PID=$!
-
-cleanup() {
-  if kill -0 "${SERVER_PID}" >/dev/null 2>&1; then
-    kill "${SERVER_PID}" >/dev/null 2>&1 || true
-  fi
-}
-
-trap cleanup INT TERM EXIT
-
-for _ in {1..40}; do
-  if "${PYTHON_BIN}" - "${URL}/health" <<'PY' >/dev/null 2>&1
-import sys
-import urllib.request
-
-urllib.request.urlopen(sys.argv[1], timeout=0.25).read()
-PY
-  then
-    break
-  fi
-  sleep 0.25
-done
-
-echo "V19 backend API: ${URL}/api/agent/turn"
-echo "V19 frontend:    ${URL}"
+v19_stop_existing_server "${PORT}" "${PID_FILE}"
+v19_start_server_detached "${PYTHON_BIN}" "${REPO_ROOT}" "${HOST}" "${PORT}" "${LOG_FILE}" "${PID_FILE}"
 open "${URL}" >/dev/null 2>&1 || true
-
-wait "${SERVER_PID}"

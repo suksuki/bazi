@@ -93,6 +93,9 @@ function render(result, payload) {
   renderLuckCycles(data);
   renderSignalEvidence(data);
   renderKnowledge(data);
+  renderRuleGraphRoutePack(data);
+  renderPersonalizedQuestions(data);
+  renderGuidedAnswerEvidencePack(data);
   renderConversation(data);
   renderAlgorithmStatus(data);
   renderTrace(data);
@@ -235,6 +238,78 @@ function renderKnowledge(data) {
     : `<div class="knowledge-empty">No knowledge unit retrieved.</div>`;
 }
 
+function renderRuleGraphRoutePack(data) {
+  const runtime = data.rule_graph_runtime_context || {};
+  const route = runtime.knowledge_route || {};
+  const routes = Array.isArray(runtime.routes) ? runtime.routes : [];
+  const selected = Array.isArray(runtime.selected_paths) ? runtime.selected_paths : [];
+  const lanes = Object.entries(route.by_topic_lane || {}).slice(0, 8);
+  $("ruleGraphRouteMeta").textContent = runtime.status
+    ? `${runtime.status} · ${selected.length} path(s) · ${runtime.route_count || 0} route(s)`
+    : "not available";
+  const routeCards = routes.slice(0, 3).map((row) => `<article class="knowledge-item compact-evidence">
+    <div class="knowledge-top"><span>${escapeHtml(row.route_id || "route")}</span><strong>${escapeHtml(row.intent || "")}</strong></div>
+    <h3>${escapeHtml((row.selected_knowledge_ids || []).slice(0, 3).join(" · ") || "No selected knowledge")}</h3>
+    <p>${escapeHtml(`selected ${row.selected_count || 0} / candidates ${row.candidate_count || 0} · audit ${row.answer_audit_status || "-"}`)}</p>
+  </article>`);
+  const laneCard = `<article class="knowledge-item compact-evidence">
+    <div class="knowledge-top"><span>topic lanes</span><strong>${escapeHtml((runtime.answer_audit || {}).status || "-")}</strong></div>
+    <h3>${escapeHtml(lanes.map(([key, value]) => `${key}:${value}`).join(" · ") || "No lane counts")}</h3>
+    <p>${escapeHtml(`scope ${runtime.runtime_scope || ""} · mutation ${((runtime.summary || {}).runtime_mutation === true) ? "yes" : "no"}`)}</p>
+  </article>`;
+  $("ruleGraphRoutePack").innerHTML = runtime.status
+    ? [laneCard, ...routeCards].join("")
+    : `<div class="knowledge-empty">No rule graph runtime context recorded.</div>`;
+}
+
+function renderPersonalizedQuestions(data) {
+  const context = data.guided_question_context || {};
+  const personalization = context.question_personalization_context || {};
+  const questions = Array.isArray(context.questions) ? context.questions : [];
+  $("personalizedQuestionsMeta").textContent = questions.length
+    ? `${questions.length} question(s) · ${personalization.status || "ready"}`
+    : "no question context";
+  $("personalizedQuestionsPanel").innerHTML = questions.length
+    ? questions.slice(0, 8).map((row) => {
+        const meta = row.personalization || {};
+        const reasons = Array.isArray(meta.reasons) ? meta.reasons.join(" · ") : "";
+        return `<article class="knowledge-item compact-evidence">
+          <div class="knowledge-top"><span>${escapeHtml(row.key || "question")}</span><strong>${escapeHtml(`score ${row.personalized_score ?? row.score ?? "-"}`)}</strong></div>
+          <h3>${escapeHtml(localizedText(row.label) || row.key || "")}</h3>
+          <p>${escapeHtml(`bucket ${meta.bucket || "-"} · route boost ${meta.route_boost || 0}${reasons ? ` · ${reasons}` : ""}`)}</p>
+        </article>`;
+      }).join("")
+    : `<div class="knowledge-empty">No personalized guided questions recorded.</div>`;
+}
+
+function renderGuidedAnswerEvidencePack(data) {
+  const answer = data.guided_question_answer || {};
+  const pack = answer.evidence_pack || {};
+  const summary = pack.summary || {};
+  const facts = (pack.fact_evidence || {}).present_fact_scopes || [];
+  const knowledgeIds = (pack.knowledge_evidence || {}).applied_ids || [];
+  const runtimeIds = (pack.rule_graph_evidence || {}).runtime_selected_knowledge_ids || [];
+  const bindings = Array.isArray(pack.evidence_bindings) ? pack.evidence_bindings : [];
+  $("evidencePackMeta").textContent = pack.status
+    ? `${pack.status} · ${bindings.length} binding(s) · audit ${(pack.audit || {}).status || "-"}`
+    : "not available";
+  if (!pack.status) {
+    $("guidedAnswerEvidencePack").innerHTML = `<div class="knowledge-empty">No guided answer evidence pack recorded.</div>`;
+    return;
+  }
+  const cards = [
+    ["Fact scopes", facts.join(" · ") || "-", `count ${summary.fact_scope_count || facts.length}`],
+    ["Applied knowledge", knowledgeIds.slice(0, 8).join(" · ") || "-", `bindings ${summary.knowledge_binding_count || 0}`],
+    ["Runtime route knowledge", runtimeIds.slice(0, 8).join(" · ") || "-", `rule graph bindings ${summary.rule_graph_binding_count || 0}`],
+    ["Mutation guard", `answer ${summary.answer_mutation_count || 0} · runtime ${summary.runtime_mutation === true ? "yes" : "no"}`, pack.runtime_scope || ""],
+  ];
+  $("guidedAnswerEvidencePack").innerHTML = cards.map(([title, value, sub]) => `<article class="knowledge-item compact-evidence">
+    <div class="knowledge-top"><span>${escapeHtml(title)}</span><strong>evidence_pack</strong></div>
+    <h3>${escapeHtml(value)}</h3>
+    ${sub ? `<p>${escapeHtml(sub)}</p>` : ""}
+  </article>`).join("");
+}
+
 function renderConversation(data) {
   const history = Array.isArray(data.history) ? data.history : [];
   $("agentMeta").textContent = history.length ? `${history.length} message(s)` : "secondary layer";
@@ -274,6 +349,8 @@ function showError(code, message) {
 
 function knowledgeItem(item) {
   const facts = Array.isArray(item.structured_facts) ? item.structured_facts.slice(0, 5).join(" · ") : "";
+  const routeScore = Number(item.route_match_score || 0);
+  const routeReasons = Array.isArray(item.route_match_reasons) ? item.route_match_reasons.join(" · ") : "";
   return `<article class="knowledge-item">
     <div class="knowledge-top">
       <span>${escapeHtml(item.knowledge_id || "")}</span>
@@ -282,7 +359,8 @@ function knowledgeItem(item) {
     <h3>${escapeHtml(item.title || "")}</h3>
     <p>${escapeHtml(item.statement || "")}</p>
     ${facts ? `<div class="knowledge-facts">${escapeHtml(facts)}</div>` : ""}
-    <div class="knowledge-guard">Evidence only · no direct prediction · score ${escapeHtml(item.match_score ?? "-")}</div>
+    <div class="knowledge-guard">Evidence only · no direct prediction · score ${escapeHtml(item.match_score ?? "-")}${routeScore ? ` · route +${escapeHtml(routeScore)}` : ""}</div>
+    ${routeReasons ? `<div class="knowledge-guard">route reasons · ${escapeHtml(routeReasons)}</div>` : ""}
   </article>`;
 }
 
@@ -343,6 +421,13 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#039;",
   })[char]);
+}
+
+function localizedText(value) {
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    return value.zh || value.en || value.ko || "";
+  }
+  return String(value || "");
 }
 
 function storageText(storage) {

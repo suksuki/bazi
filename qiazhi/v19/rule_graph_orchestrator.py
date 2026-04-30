@@ -163,6 +163,10 @@ def infer_question_intent(question_key: str = "", message: str = "", answer_kind
         route = "income_structure"
     elif any(token in seed for token in ["事业", "官", "杀", "career"]):
         route = "career_structure"
+    elif any(token in seed for token in ["感情", "关系", "婚", "伴侣", "配偶", "relationship", "partner"]):
+        route = "relationship_structure"
+    elif any(token in seed for token in ["健康", "身体", "安全", "health", "safety"]):
+        route = "health_structure"
     elif any(token in seed for token in ["流年", "大运", "时间", "time", "luck"]):
         route = "time_boundary"
     elif any(token in seed for token in ["冲", "合", "刑", "害", "破", "地支", "relation"]):
@@ -244,9 +248,12 @@ def _load_rule_candidates() -> List[Dict[str, Any]]:
 
 @lru_cache(maxsize=1)
 def _cached_rule_candidates() -> Tuple[Dict[str, Any], ...]:
+    from v19.synthetic_validation.domain_route_backfill import build_p61_domain_route_backfill_candidates
     from v19.synthetic_validation.rule_conversion_validation import build_p39_rule_conversion_candidates
 
-    return tuple(dict(row) for row in build_p39_rule_conversion_candidates().get("candidates") or [])
+    candidates = [dict(row) for row in build_p39_rule_conversion_candidates().get("candidates") or []]
+    candidates.extend(dict(row) for row in build_p61_domain_route_backfill_candidates().get("candidates") or [])
+    return tuple(candidates)
 
 
 def _score_candidate(candidate: Dict[str, Any], graph: Dict[str, Any], intent: Dict[str, Any]) -> Dict[str, Any]:
@@ -261,6 +268,8 @@ def _score_candidate(candidate: Dict[str, Any], graph: Dict[str, Any], intent: D
         base += 32
     if domain in set(intent.get("preferred_domains") or []):
         base += 24
+    if topic_lane == "domain_safety_bridge" and domain in set(intent.get("preferred_domains") or []):
+        base += 26
     base += min(len(matched) * 7, 28)
     if knowledge_id in CANARY_RUNTIME_KNOWLEDGE_IDS:
         base += 16
@@ -315,6 +324,7 @@ def _matched_features(candidate: Dict[str, Any], feature_tags: Set[str]) -> List
         "ten_god": {"ten_god", "十神", "财", "官", "杀", "印", "食", "伤", "比劫"},
         "branch_relation": {"branch_relation", "冲", "合", "刑", "害", "破", "relation"},
         "time_relation": {"time_relation", "time_layer", "流年", "大运", "引动"},
+        "domain_safety": {"relationship", "health", "关系", "感情", "健康", "安全", "降级", "domain_answer_boundary"},
     }
     for label, tokens in feature_map.items():
         if any(tag.startswith(label) or tag == label for tag in feature_tags) and any(token in text for token in tokens):
@@ -333,6 +343,8 @@ def _topic_lane(candidate: Dict[str, Any]) -> str:
         return "pattern_structure"
     if domain in {"wealth", "career"}:
         return "wealth_career_bridge"
+    if domain in {"relationship", "health", "family", "children", "personality"}:
+        return "domain_safety_bridge"
     if domain in {"blind", "palace"}:
         return "blind_lifa_palace"
     if domain == "luck_flow" or any(token in knowledge_id for token in ["branch", "time", "luck", "stem_combination", "vault", "month_command", "hidden_stem"]):
@@ -354,6 +366,8 @@ def _signal_category_for_path(path: Dict[str, Any]) -> str:
         return "ten_god_interaction"
     if topic_lane == "wealth_career_bridge":
         return "wealth_boundary" if domain == "wealth" else "pattern_structure"
+    if topic_lane == "domain_safety_bridge":
+        return f"{domain}_boundary" if domain else "domain_safety_boundary"
     if topic_lane == "pattern_structure":
         return "pattern_structure"
     if topic_lane == "core_strength_foundation":
@@ -375,6 +389,8 @@ def _preferred_lanes_for_intent(route: str) -> List[str]:
     return {
         "income_structure": ["wealth_career_bridge", "ten_god_mechanism", "branch_time_activation"],
         "career_structure": ["wealth_career_bridge", "ten_god_mechanism", "pattern_structure"],
+        "relationship_structure": ["domain_safety_bridge", "core_strength_foundation", "ten_god_mechanism", "branch_time_activation", "blind_lifa_palace"],
+        "health_structure": ["domain_safety_bridge", "core_strength_foundation", "branch_time_activation", "ten_god_mechanism"],
         "time_boundary": ["branch_time_activation", "core_strength_foundation"],
         "branch_relation": ["branch_time_activation", "core_strength_foundation"],
         "metadata_boundary": ["core_strength_foundation", "ten_god_mechanism", "branch_time_activation"],
@@ -386,6 +402,8 @@ def _preferred_domains_for_intent(route: str) -> List[str]:
     return {
         "income_structure": ["wealth", "interaction", "ten_god", "luck_flow"],
         "career_structure": ["career", "interaction", "pattern"],
+        "relationship_structure": ["relationship", "ten_god", "interaction", "palace", "luck_flow"],
+        "health_structure": ["health", "strength", "core_structure", "luck_flow", "ten_god"],
         "time_boundary": ["luck_flow", "core_structure"],
         "branch_relation": ["core_structure", "luck_flow"],
         "metadata_boundary": ["core_structure", "five_element", "ten_god", "strength"],
@@ -398,6 +416,8 @@ def _title_matches_intent(title: str, intent: Dict[str, Any]) -> bool:
     route_tokens = {
         "income_structure": ["财", "收入", "财富"],
         "career_structure": ["事业", "官", "杀"],
+        "relationship_structure": ["感情", "关系", "婚", "伴侣", "配偶"],
+        "health_structure": ["健康", "身体", "安全"],
         "time_boundary": ["流年", "大运", "引动", "时间"],
         "branch_relation": ["冲", "合", "刑", "害", "破", "地支"],
         "metadata_boundary": ["五行", "天干", "藏干", "十神", "日主", "月令"],

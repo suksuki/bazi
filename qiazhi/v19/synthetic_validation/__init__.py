@@ -1,6 +1,7 @@
 from v19.synthetic_validation.cases import DEFAULT_SYNTHETIC_CASES
 from v19.synthetic_validation.guided_cases import P10_GUIDED_SYNTHETIC_CASES, P11_GUIDED_SYNTHETIC_CASES, GuidedSyntheticCase
 from v19.synthetic_validation.guided_runner import run_guided_synthetic_collision
+from v19.synthetic_validation.framework_backfill import build_guided_case_framework_backfill, build_legacy_framework_adaptation_matrix, summarize_framework_backfill
 from v19.synthetic_validation.runner import run_synthetic_validation
 from v19.synthetic_validation.schema import SyntheticCase
 from v19.synthetic_validation.ten_god_conflict_matrix import (
@@ -33,6 +34,11 @@ from v19.synthetic_validation.rule_conversion_validation import (
     build_p39_rule_conversion_candidates,
     build_p39_rule_conversion_eval_dataset,
     run_p39_rule_conversion_regression,
+)
+from v19.synthetic_validation.domain_route_backfill import (
+    build_p61_domain_route_backfill_candidates,
+    build_p61_domain_route_backfill_eval_dataset,
+    run_p61_domain_route_backfill_regression,
 )
 from v19.synthetic_validation.rule_audit_application import (
     build_p40_condition_model_synthetic_dataset,
@@ -72,6 +78,16 @@ from v19.synthetic_validation.canary_runtime_trial import (
     run_p45_canary_release_regression,
     run_p45_canary_runtime_trial,
 )
+from v19.synthetic_validation.silent_evolution import (
+    run_p54_framework_chain_audit,
+    run_p59_silent_evolution_cycle,
+    run_p60_domain_route_eval,
+    run_p60_silent_evolution_extension,
+    run_p60_smart_approval_gate,
+)
+from v19.synthetic_validation.silent_training_ledger import build_p62_silent_training_ledger, run_p62_silent_training_ledger_regression
+from v19.synthetic_validation.silent_eval_queue import build_p63_silent_eval_queue, run_p63_silent_eval_queue_regression
+from v19.synthetic_validation.calibration_design import build_p64_interactive_calibration_design, run_p64_interactive_calibration_design_regression
 
 __all__ = [
     "DEFAULT_SYNTHETIC_CASES",
@@ -81,11 +97,18 @@ __all__ = [
     "GuidedSyntheticCase",
     "SyntheticCase",
     "build_p28h_ten_god_conflict_review_table",
+    "build_guided_case_framework_backfill",
+    "build_legacy_framework_adaptation_matrix",
     "build_p28j_ten_god_mechanism_condition_models",
     "build_p28k_ten_god_mechanism_eval_dataset",
     "build_p31c_priority_topic_conversion_registry",
     "build_p39_rule_conversion_candidates",
     "build_p39_rule_conversion_eval_dataset",
+    "build_p61_domain_route_backfill_candidates",
+    "build_p61_domain_route_backfill_eval_dataset",
+    "build_p62_silent_training_ledger",
+    "build_p63_silent_eval_queue",
+    "build_p64_interactive_calibration_design",
     "build_p40_condition_model_synthetic_dataset",
     "build_p40_framework_rule_registry",
     "build_p40_rule_audit_report",
@@ -102,6 +125,7 @@ __all__ = [
     "build_p45_canary_activation_plan",
     "build_p45_canary_eval_dataset",
     "run_guided_synthetic_collision",
+    "summarize_framework_backfill",
     "run_p28g_ten_god_conflict_matrix",
     "run_p28i_ten_god_fast_path_gate",
     "run_p28k_ten_god_mechanism_regression",
@@ -120,6 +144,10 @@ __all__ = [
     "run_p31l_priority_topic_adapter_readiness",
     "run_p31m_priority_topic_adapter_fact_enrichment",
     "run_p39_rule_conversion_regression",
+    "run_p61_domain_route_backfill_regression",
+    "run_p62_silent_training_ledger_regression",
+    "run_p63_silent_eval_queue_regression",
+    "run_p64_interactive_calibration_design_regression",
     "run_p40_condition_model_synthetic_regression",
     "run_p40_rule_audit_application_regression",
     "run_p41_condition_deep_regression",
@@ -131,5 +159,10 @@ __all__ = [
     "run_p44_release_candidate_regression",
     "run_p45_canary_release_regression",
     "run_p45_canary_runtime_trial",
+    "run_p54_framework_chain_audit",
+    "run_p59_silent_evolution_cycle",
+    "run_p60_domain_route_eval",
+    "run_p60_silent_evolution_extension",
+    "run_p60_smart_approval_gate",
     "run_synthetic_validation",
 ]

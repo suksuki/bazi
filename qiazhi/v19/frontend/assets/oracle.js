@@ -140,7 +140,7 @@ async function loadStructure() {
 
 function renderQuestions() {
   const keys = guidanceQuestionKeys(structureData, lastData);
-  $("questionChips").innerHTML = keys.map((key) => `<button type="button" class="oracle-chip ${key === selectedQuestionKey ? "active" : ""}" data-question-key="${key}"><span>${escapeHtml(questionLabel(key))}</span></button>`).join("");
+  $("questionChips").innerHTML = keys.map((key) => questionChip(key, key === selectedQuestionKey, "data-question-key")).join("");
   document.querySelectorAll("[data-question-key]").forEach((button) => button.addEventListener("click", () => setQuestion(button.dataset.questionKey || "q_income_stability")));
 }
 
@@ -188,10 +188,12 @@ function renderGuidedAnswer(data) {
   const answer = data.guided_question_answer || {};
   if (!answer.available) {
     $("questionAnswer").innerHTML = `<div class="answer-prose"><p>${escapeHtml(t("answer_empty"))}</p></div>`;
+    renderAnswerEvidenceSummary({});
     return;
   }
   const text = answerText(answer);
   $("questionAnswer").innerHTML = `<div class="answer-prose">${text.split(/\n{2,}/).filter(Boolean).map((paragraph) => `<p>${escapeHtml(paragraph.trim())}</p>`).join("")}</div>`;
+  renderAnswerEvidenceSummary(answer);
 }
 
 function renderPillarPanel(data) {
@@ -208,7 +210,7 @@ function renderQuestionContext(data) { const day = data.chart?.pillars?.day?.dis
 function renderNextQuestions() {
   const keys = rankedQuestionKeys(structureData, lastData, { afterResult: true, pathFirst: true }).slice(0, 5);
   $("nextQuestionBlock").classList.toggle("hidden", !keys.length);
-  $("nextQuestions").innerHTML = keys.map((key) => `<button type="button" class="oracle-chip" data-next-key="${key}"><span>${escapeHtml(questionLabel(key))}</span></button>`).join("");
+  $("nextQuestions").innerHTML = keys.map((key) => questionChip(key, false, "data-next-key")).join("");
   document.querySelectorAll("[data-next-key]").forEach((button)=>button.addEventListener("click",()=>{setQuestion(button.dataset.nextKey||"q_income_stability"); $("message").focus();}));
   renderQuestions();
 }
@@ -240,6 +242,7 @@ async function submitQuestionFeedback(rating, answer = {}) {
       source_signal_id: answer.source_signal_id || "",
       source_signal_category: answer.source_signal_category || "",
       retrieved_facts: answer.retrieved_facts || {},
+      evidence_pack: answer.evidence_pack || {},
       observed_facts: answer.observed_facts || {},
       answer_text: answerText(answer).slice(0, 2000),
     },
@@ -256,6 +259,7 @@ async function submitQuestionFeedback(rating, answer = {}) {
       source_signal_id: answer.source_signal_id || "",
       source_signal_category: answer.source_signal_category || "",
       retrieved_facts: answer.retrieved_facts || {},
+      evidence_pack: answer.evidence_pack || {},
       observed_facts: answer.observed_facts || {},
       forbidden_prediction: true,
     },
@@ -268,7 +272,11 @@ async function submitQuestionFeedback(rating, answer = {}) {
   }
   $("oracleStatus").textContent = result.ok === false ? (result.message || result.code || "feedback failed") : t("answer_feedback_saved");
 }
-function guidanceQuestionKeys(structure, result) { return rankedQuestionKeys(structure, result, { afterResult: Boolean(result) }).slice(0, 5); }
+function guidanceQuestionKeys(structure, result) {
+  const backendOrdered = backendPersonalizedQuestionKeys();
+  if (backendOrdered.length) return backendOrdered.slice(0, 5);
+  return rankedQuestionKeys(structure, result, { afterResult: Boolean(result) }).slice(0, 5);
+}
 function rankedQuestionKeys(structure, result, options = {}) {
   const signals = signalMapFromResult(result);
   const rel = structure?.time_context?.flow_year?.relations_with_natal || {};
@@ -301,7 +309,7 @@ function questionScore(item, context, options, related) {
   if (!context.result && item.phase === "before_result") score += 60;
   if (context.result && item.phase === "after_result") score += 60;
   if (item.theme === "income_stability") score += context.result ? 25 : 15;
-  if (item.dynamic) score += Number(item.score || 0);
+  if (item.dynamic) score += Number(item.personalized_score ?? item.score ?? 0);
   if (item.theme === "structure_basis") score += context.result ? 18 : 30;
   if (item.theme === "time_context" && context.time_relation) score += 35;
   if (item.theme === "boundary" && context.result) score += 22;
@@ -317,6 +325,37 @@ function questionScore(item, context, options, related) {
   if (feedback > 0) score += 14;
   if (feedback < 0) score -= 45;
   return score;
+}
+function questionChip(key, active = false, dataAttribute = "data-question-key") {
+  const item = findQuestion(key) || {};
+  const personal = item.personalization || {};
+  const boost = Number(personal.route_boost || 0);
+  const score = item.personalized_score ?? item.score;
+  const meta = boost > 0 ? `${structureMatchLabel()} +${boost}${score ? ` · ${score}` : ""}` : "";
+  return `<button type="button" class="oracle-chip personalized-question-chip ${active ? "active" : ""}" ${dataAttribute}="${escapeHtml(key)}"><span>${escapeHtml(questionLabel(key))}</span>${meta ? `<small class="question-personalization">${escapeHtml(meta)}</small>` : ""}</button>`;
+}
+function backendPersonalizedQuestionKeys() {
+  if (!dynamicQuestions.length) return [];
+  return uniqueKeys(dynamicQuestions
+    .filter((item) => item && item.key)
+    .filter((item) => !FORBIDDEN_QUESTION_PATTERN.test(questionLabel(item.key)))
+    .map((item) => item.key));
+}
+function renderAnswerEvidenceSummary(answer) {
+  if (!$("answerEvidenceSummary")) return;
+  const pack = answer.evidence_pack || (answer.retrieved_facts || {}).evidence_pack || {};
+  const facts = (pack.fact_evidence || {}).present_fact_scopes || [];
+  const knowledgeIds = (pack.knowledge_evidence || {}).applied_ids || pack.knowledge_ids || [];
+  const runtimeIds = (pack.rule_graph_evidence || {}).runtime_selected_knowledge_ids || pack.runtime_selected_knowledge_ids || [];
+  const audit = (pack.audit || {}).status || pack.audit_status || "";
+  const status = pack.status || "";
+  if (!status && !facts.length && !knowledgeIds.length && !runtimeIds.length) {
+    $("answerEvidenceSummary").classList.add("hidden");
+    $("answerEvidenceSummary").innerHTML = "";
+    return;
+  }
+  $("answerEvidenceSummary").classList.remove("hidden");
+  $("answerEvidenceSummary").innerHTML = `<span>${escapeHtml(evidenceSummaryLabel())}</span><strong>${escapeHtml(`${facts.length} facts · ${knowledgeIds.length} knowledge · ${runtimeIds.length} route · ${audit || status || "-"}`)}</strong>`;
 }
 function relatedQuestionSet(key) {
   const item = findQuestion(key);
@@ -364,6 +403,12 @@ function answerText(answer) {
     if (Array.isArray(lines) && lines.join("").trim()) return lines.join("\n").trim();
   }
   return [localText(answer.summary), localText(answer.result_relation)].filter(Boolean).join("\n\n");
+}
+function structureMatchLabel() {
+  return ({ zh: "结构匹配", en: "Structure match", ko: "구조 매칭" }[locale] || "Structure match");
+}
+function evidenceSummaryLabel() {
+  return ({ zh: "回答依据", en: "Answer evidence", ko: "답변 근거" }[locale] || "Answer evidence");
 }
 function relationPayloadCount(...payloads) {
   return payloads.reduce((total, payload) => total + Object.values(payload || {}).reduce((sum, value) => sum + (Array.isArray(value) ? value.length : 0), 0), 0);

@@ -5,6 +5,7 @@ from typing import Any, Dict, Iterable, List, Set, Tuple
 from v19.agent.structure import THREE_HARMONIES
 from v19.bazi_rule_db import build_structural_rule_signals
 from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem, ten_god
+from v19.guided_evidence_pack import build_guided_answer_evidence_pack, evidence_pack_summary
 from v19.rule_graph_orchestrator import (
     audit_selected_paths_for_answer,
     orchestrate_rule_graph_paths,
@@ -528,6 +529,7 @@ def _structural_signals_from_facts(facts: Dict[str, Any]) -> List[Dict[str, Any]
     relations = sorted(str(item) for item in facts.get("relation_types") or [] if str(item))
     relation_pairs = [str(item) for item in facts.get("relation_pairs") or [] if str(item)]
     if relations or relation_pairs:
+        branch_question_keys = _branch_relation_question_keys(facts)
         signals.append(
             _structural_signal(
                 "struct.branch_relations",
@@ -535,7 +537,7 @@ def _structural_signals_from_facts(facts: Dict[str, Any]) -> List[Dict[str, Any]
                 relation_pairs or relations,
                 ["relations"],
                 "命盘或时间背景存在可见地支关系，适合先解释发生在哪一层。",
-                ["q_branch_relation_detail", "q_combination_context", "q_time_vs_natal_relation"],
+                branch_question_keys,
                 86,
             )
         )
@@ -590,6 +592,22 @@ def _structural_signals_from_facts(facts: Dict[str, Any]) -> List[Dict[str, Any]
             )
         )
     return signals
+
+
+def _branch_relation_question_keys(facts: Dict[str, Any]) -> List[str]:
+    if facts.get("has_time_relation") and not facts.get("has_branch_relation"):
+        keys = ["q_time_vs_natal_relation", "q_branch_relation_detail"]
+    elif facts.get("has_three_harmony") or facts.get("has_three_meeting") or "three_harmony" in (facts.get("relation_types") or set()) or "three_meeting" in (facts.get("relation_types") or set()):
+        keys = ["q_three_harmony_context", "q_branch_relation_detail"]
+    elif facts.get("has_combination"):
+        keys = ["q_combination_context", "q_branch_relation_detail"]
+    elif facts.get("has_harm") or facts.get("has_break") or facts.get("has_clash"):
+        keys = ["q_branch_relation_detail", "q_time_vs_natal_relation"]
+    else:
+        keys = ["q_branch_relation_detail"]
+    if facts.get("has_time_relation") and "q_time_vs_natal_relation" not in keys:
+        keys.append("q_time_vs_natal_relation")
+    return keys[:3]
 
 
 def _structural_signal(signal_id: str, category: str, observed: List[str], fact_scopes: List[str], reason: str, question_keys: List[str], score: int) -> Dict[str, Any]:
@@ -657,6 +675,12 @@ def _structural_question_label(key: str, contract: Dict[str, Any], signal: Dict[
             f"这里的{text}关系，只能说明什么结构连接？",
             f"What structural link can the relation {text} indicate here?",
             f"여기서 {text} 관계는 어떤 구조 연결만 뜻하나요?",
+        )
+    if key == "q_three_harmony_context" and text:
+        return _l(
+            f"这里的{text}成组关系，只能说明什么结构连接？",
+            f"What structural link can the grouped relation {text} indicate here?",
+            f"여기서 {text} 묶음 관계는 어떤 구조 연결만 뜻하나요?",
         )
     if key == "q_time_vs_natal_relation" and text:
         return _l(
@@ -762,6 +786,19 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
             "answer_audit_status": (runtime_context.get("answer_audit") or {}).get("status") or "",
             "runtime_scope": "measurement_route_pack_context_only_no_mutation",
         }
+    evidence_pack = build_guided_answer_evidence_pack(
+        question_key=clean_key,
+        question_text=clean_message,
+        answer_kind=answer_kind,
+        intent=intent,
+        source_signal=source_signal,
+        retrieved_facts=retrieved_facts,
+        applied_knowledge=applied_knowledge,
+        knowledge_context=knowledge_context,
+        rule_graph_context=rule_graph_context,
+        rule_graph_runtime_context=runtime_context,
+    )
+    retrieved_facts["evidence_pack"] = evidence_pack_summary(evidence_pack)
     sections = _guided_answer_sections(answer_kind, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
     summary = _guided_answer_summary(answer_kind, source_signal)
     result_relation = _l("", "", "")
@@ -790,6 +827,7 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         "rule_graph_context": rule_graph_context,
         "rule_graph_runtime_context": runtime_context,
         "rule_graph_answer_audit": rule_graph_answer_audit,
+        "evidence_pack": evidence_pack,
         "applied_knowledge": applied_knowledge,
         "observed_facts": _guided_answer_observed_facts(chart, time_context, facts, income_bundle, source_question, source_signal, answer_kind),
         "composed_text": {"zh": compose_guided_question_answer(clean_message, intent, retrieved_facts, summary, result_relation, applied_knowledge)},
@@ -2777,30 +2815,124 @@ def _question_source_match_rank(row: Dict[str, Any]) -> int:
 
 
 def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_context: Dict[str, Any] | None = None, limit: int = 10) -> List[Dict[str, Any]]:
-    sorted_rows = sorted(rows, key=lambda row: _question_preference(row), reverse=True)
+    sorted_rows = sorted(rows, key=lambda row: _question_runtime_preference(row, personalization_context), reverse=True)
     selected: List[Dict[str, Any]] = []
     used = set()
-    bucket_order = list((personalization_context or {}).get("route_bucket_order") or [])
-    if not bucket_order:
-        bucket_order = ["vault", "branch_relation", "time_context", "income_stability", "metadata"]
-    for bucket in bucket_order[:5]:
-        pick = next((row for row in sorted_rows if row.get("key") not in used and _question_bucket(row) == bucket), None)
-        if pick:
-            selected.append(pick)
-            used.add(pick.get("key"))
-    for key in ["q_income_stability", "kbq_time_vs_natal_relation", "q_month_command_anchor", "q_ten_god_metadata", "q_hidden_stem_role"]:
+    bucket_counts: Dict[str, int] = {}
+    category_counts: Dict[str, int] = {}
+
+    for row in sorted_rows:
+        if len(selected) >= min(limit, 5):
+            break
+        key = row.get("key")
+        if key in used or _question_specificity_score(row) < 18:
+            continue
+        bucket = _question_bucket(row)
+        category = _question_category_key(row)
+        if bucket_counts.get(bucket, 0) >= 2:
+            continue
+        if category_counts.get(category, 0) >= 1:
+            continue
+        selected.append(row)
+        used.add(key)
+        bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
+        category_counts[category] = category_counts.get(category, 0) + 1
+
+    anchor_keys = [
+        "q_branch_relation_detail",
+        "kbq_vault_structure",
+        "kbq_ten_god_interaction_boundary",
+        "q_income_stability",
+        "kbq_time_vs_natal_relation",
+        "q_month_command_anchor",
+        "q_ten_god_metadata",
+        "q_hidden_stem_role",
+    ]
+    for key in anchor_keys:
         pick = next((row for row in sorted_rows if row.get("key") == key and row.get("key") not in used), None)
         if pick:
             selected.append(pick)
             used.add(pick.get("key"))
+            bucket = _question_bucket(pick)
+            bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
+        if len(selected) >= limit:
+            break
+
     for row in sorted_rows:
         if row.get("key") in used:
             continue
+        bucket = _question_bucket(row)
+        if bucket_counts.get(bucket, 0) >= 3 and len(selected) < limit - 2:
+            continue
         selected.append(row)
         used.add(row.get("key"))
+        bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
         if len(selected) >= limit:
             break
     return selected
+
+
+def _question_runtime_preference(row: Dict[str, Any], personalization_context: Dict[str, Any] | None = None) -> Tuple[int, int, int, int, int]:
+    return (
+        _question_bucket_priority(row, personalization_context),
+        _question_specificity_score(row),
+        _question_source_match_rank(row),
+        int(row.get("personalized_score") or row.get("score") or 0),
+        _question_source_priority(row),
+    )
+
+
+def _question_bucket_priority(row: Dict[str, Any], personalization_context: Dict[str, Any] | None = None) -> int:
+    bucket = _question_bucket(row)
+    order = [str(item) for item in (personalization_context or {}).get("route_bucket_order") or [] if str(item)]
+    if bucket in order:
+        return max(1, 30 - order.index(bucket) * 3)
+    return 0
+
+
+def _question_category_key(row: Dict[str, Any]) -> str:
+    return str(row.get("source_signal_category") or _question_bucket(row) or row.get("key") or "")
+
+
+def _question_source_priority(row: Dict[str, Any]) -> int:
+    return {
+        "structural_rule_signal": 6,
+        "rule_db_dynamic_question": 5,
+        "rule_graph_dynamic_question": 4,
+        "baseline_question_fallback": 2,
+        "question_registry": 1,
+    }.get(str(row.get("source") or ""), 0)
+
+
+def _question_specificity_score(row: Dict[str, Any]) -> int:
+    key = str(row.get("key") or "")
+    category = str(row.get("source_signal_category") or "")
+    signal_id = str(row.get("source_signal_id") or "")
+    source = str(row.get("source") or "")
+    observed = [str(item) for item in row.get("observed") or [] if str(item)]
+    bucket = _question_bucket(row)
+    score = 0
+    if observed:
+        score += 14 + min(10, len(observed) * 2)
+    if signal_id:
+        score += 10
+    if source == "structural_rule_signal":
+        score += 10
+    elif source == "rule_db_dynamic_question":
+        score += 7
+    elif source == "baseline_question_fallback":
+        score -= 8
+    if category in {"branch_relation", "hidden_stem", "vault", "ten_god_interaction", "timing_context", "wealth_metadata", "wealth_boundary", "wealth_feature", "wealth_mechanism"}:
+        score += 8
+    if bucket in {"branch_relation", "time_context", "metadata", "ten_god_interaction"}:
+        score += 4
+    if bucket == "vault":
+        score += 2 if len(observed) >= 2 else -4
+    if key in {"q_structure_overview", "kbq_structure_anchor_chain"} and not observed:
+        score -= 8
+    if key == "q_income_stability":
+        score += 6
+    return score
 
 
 def _question_bucket(row: Dict[str, Any]) -> str:
@@ -2808,6 +2940,9 @@ def _question_bucket(row: Dict[str, Any]) -> str:
     theme = str(row.get("theme") or "")
     intent = str(row.get("intent") or "")
     answer_scope = str(row.get("answer_scope") or "")
+    category = str(row.get("source_signal_category") or "")
+    if category == "ten_god_interaction":
+        return "ten_god_interaction"
     if "vault" in key or intent == "vault" or "vault" in answer_scope:
         return "vault"
     if "branch_relation" in key or intent == "branch_relation" or "combination" in key or "harmony" in key:
@@ -2826,7 +2961,7 @@ def _question_bucket(row: Dict[str, Any]) -> str:
 def _route_bucket_order(lane_counts: Dict[str, int], facts: Dict[str, Any]) -> List[str]:
     lane_to_buckets = {
         "branch_time_activation": ["branch_relation", "time_context", "vault"],
-        "ten_god_mechanism": ["metadata", "income_stability", "structure_basis"],
+        "ten_god_mechanism": ["ten_god_interaction", "metadata", "income_stability", "structure_basis"],
         "wealth_career_bridge": ["income_stability", "metadata", "structure_basis"],
         "core_strength_foundation": ["metadata", "structure_basis"],
         "pattern_structure": ["structure_basis", "boundary"],
@@ -2837,12 +2972,15 @@ def _route_bucket_order(lane_counts: Dict[str, int], facts: Dict[str, Any]) -> L
         for bucket in lane_to_buckets.get(str(lane), []):
             if bucket not in ordered:
                 ordered.append(bucket)
-    if facts.get("has_time_relation"):
-        _prepend_once(ordered, "time_context")
     if facts.get("has_branch_relation"):
         _prepend_once(ordered, "branch_relation")
+    if facts.get("has_time_relation") and "time_context" not in ordered:
+        ordered.insert(min(3, len(ordered)), "time_context")
     if facts.get("has_vault") or facts.get("flow_is_vault") or facts.get("luck_is_vault"):
-        _prepend_once(ordered, "vault")
+        if not facts.get("has_time_relation") and not facts.get("has_branch_relation"):
+            _prepend_once(ordered, "vault")
+        elif "vault" not in ordered:
+            ordered.insert(min(2, len(ordered)), "vault")
     for bucket in ["income_stability", "metadata", "structure_basis", "boundary"]:
         if bucket not in ordered:
             ordered.append(bucket)
