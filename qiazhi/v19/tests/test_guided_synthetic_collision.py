@@ -3235,6 +3235,8 @@ def test_p51_ui_surfaces_latest_framework_context() -> None:
     assert "question-personalization" in oracle_js
     assert "renderAnswerEvidenceSummary" in oracle_js
     assert "renderPortraitPanel" in oracle_js
+    assert "portraitVisibleLabels" in oracle_js
+    assert "重点标签" in oracle_js
     assert "portrait_evidence" in oracle_js
     assert "evidence_pack" in oracle_js
     assert "answer-evidence-summary" in styles

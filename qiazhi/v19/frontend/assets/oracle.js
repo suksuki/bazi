@@ -216,9 +216,10 @@ function renderPillarPanel(data) {
 function renderPortraitPanel(data) {
   if (!$("portraitPanel")) return;
   const portrait = data.structure_portrait || data.guided_question_context?.structure_portrait || {};
-  const labels = Array.isArray(portrait.labels) ? portrait.labels.slice(0, 8) : [];
+  const allLabels = Array.isArray(portrait.labels) ? portrait.labels : [];
+  const labels = portraitVisibleLabels(portrait, 5);
   const judgements = Array.isArray(portrait.candidate_judgements) ? portrait.candidate_judgements.slice(0, 3) : [];
-  if (!portrait.status || !labels.length) {
+  if (!portrait.status || !allLabels.length || !labels.length) {
     $("portraitPanel").classList.add("hidden");
     $("portraitPanel").innerHTML = "";
     return;
@@ -226,7 +227,7 @@ function renderPortraitPanel(data) {
   $("portraitPanel").classList.remove("hidden");
   const chips = labels.map((row) => `<span class="portrait-chip"><b>${escapeHtml(portraitFamilyLabel(row.family))}</b>${escapeHtml(portraitValueLabel(row.value))}</span>`).join("");
   const judgementRows = judgements.map((row) => `<li>${escapeHtml(row.text || row.candidate_statement || row.statement || row.judgement_id || "")}</li>`).join("");
-  $("portraitPanel").innerHTML = `<section class="portrait-section"><div class="pillar-panel-head"><span>${escapeHtml(portraitTitleLabel())}</span><em>${escapeHtml(portraitEvidenceLabel(portrait))}</em></div><div class="portrait-chip-row">${chips}</div>${judgementRows ? `<ul class="portrait-judgements">${judgementRows}</ul>` : ""}</section>`;
+  $("portraitPanel").innerHTML = `<section class="portrait-section"><div class="pillar-panel-head"><span>${escapeHtml(portraitTitleLabel())}</span><em>${escapeHtml(portraitEvidenceLabel(portrait, labels.length, allLabels.length))}</em></div><div class="portrait-chip-row">${chips}</div>${judgementRows ? `<ul class="portrait-judgements">${judgementRows}</ul>` : ""}</section>`;
 }
 
 function pillarCell(label, pillar, isDay) { return `<article class="pillar-cell ${isDay ? "day-master-cell" : ""}" tabindex="0"><span>${escapeHtml(label)}</span><strong>${escapeHtml(pillar?.display || "-")}</strong><em>${isDay ? escapeHtml(t("day_master")) : escapeHtml(pillar?.stem_element || "")}</em><div class="pillar-tooltip">${escapeHtml(pillarTooltip(pillar || {}, isDay))}</div></article>`; }
@@ -441,9 +442,54 @@ function structureMatchLabel() {
 function portraitTitleLabel() {
   return ({ zh: "结构画像", en: "Structure portrait", ko: "구조 프로필" }[locale] || "Structure portrait");
 }
-function portraitEvidenceLabel(portrait) {
-  const count = Number(portrait.label_count || (portrait.labels || []).length || 0);
-  return ({ zh: `${count} 个候选标签`, en: `${count} candidate labels`, ko: `후보 라벨 ${count}개` }[locale] || `${count} candidate labels`);
+function portraitEvidenceLabel(portrait, visibleCount, totalCount) {
+  const total = Number(totalCount || portrait.label_count || (portrait.labels || []).length || 0);
+  const visible = Number(visibleCount || 0);
+  if (visible && total && visible < total) {
+    return ({ zh: `重点 ${visible} / 全部 ${total}`, en: `Top ${visible} / ${total}`, ko: `중점 ${visible} / 전체 ${total}` }[locale] || `Top ${visible} / ${total}`);
+  }
+  return ({ zh: `${total} 个重点标签`, en: `${total} key labels`, ko: `중점 라벨 ${total}개` }[locale] || `${total} key labels`);
+}
+function portraitVisibleLabels(portrait, limit = 5) {
+  const labels = Array.isArray(portrait.labels) ? portrait.labels.filter((row) => row && typeof row === "object") : [];
+  if (!labels.length) return [];
+  const judgementFamilies = new Set((portrait.candidate_judgements || []).map((row) => String(row?.family || "")).filter(Boolean));
+  const lowSignalValues = new Set(["limited", "weak_or_hidden", "background_only", "insufficient_evidence", "insufficient_index"]);
+  const familyWeights = { strength: 0.14, useful_god: 0.16, pattern: 0.12, branch: 0.12, time: 0.08, wealth: 0.1, ten_god: 0.04 };
+  const ranked = labels
+    .map((row, index) => {
+      const score = Number(row.score || 0);
+      const confidence = Number(row.confidence || 0);
+      const family = String(row.family || "");
+      const judged = judgementFamilies.has(family);
+      const lowSignal = lowSignalValues.has(String(row.value || ""));
+      return {
+        ...row,
+        _portraitRank: score + confidence * 0.12 + (familyWeights[family] || 0) + (judged ? 0.16 : 0) - (lowSignal && !judged ? 0.18 : 0) - index * 0.001,
+        _lowSignal: lowSignal,
+        _judged: judged,
+      };
+    })
+    .filter((row) => !row._lowSignal || row._judged || Number(row.score || 0) >= 0.5)
+    .sort((a, b) => b._portraitRank - a._portraitRank);
+  const out = [];
+  const seenFamilies = new Set();
+  for (const row of ranked) {
+    const family = String(row.family || "");
+    if (seenFamilies.has(family)) continue;
+    out.push(row);
+    seenFamilies.add(family);
+    if (out.length >= limit) break;
+  }
+  if (out.length >= 3) return out;
+  for (const row of labels) {
+    const family = String(row.family || "");
+    if (seenFamilies.has(family)) continue;
+    out.push(row);
+    seenFamilies.add(family);
+    if (out.length >= Math.min(limit, 3)) break;
+  }
+  return out;
 }
 function portraitFamilyLabel(value) {
   const table = {
@@ -461,7 +507,7 @@ function portraitValueLabel(value) {
       stronger_capacity_candidate: "偏强候选",
       weak_candidate: "偏弱候选",
       strong_candidate: "偏强候选",
-      candidate_only: "仅候选",
+      candidate_only: "候选路径",
       insufficient_evidence: "证据不足",
       active: "活跃",
       limited: "有限",
@@ -483,7 +529,7 @@ function portraitValueLabel(value) {
       stronger_capacity_candidate: "stronger candidate",
       weak_candidate: "weak candidate",
       strong_candidate: "strong candidate",
-      candidate_only: "candidate only",
+      candidate_only: "candidate path",
       insufficient_evidence: "insufficient",
       active: "active",
       limited: "limited",
@@ -505,7 +551,7 @@ function portraitValueLabel(value) {
       stronger_capacity_candidate: "강한 후보",
       weak_candidate: "약한 후보",
       strong_candidate: "강한 후보",
-      candidate_only: "후보만",
+      candidate_only: "후보 경로",
       insufficient_evidence: "근거 부족",
       active: "활성",
       limited: "제한",
