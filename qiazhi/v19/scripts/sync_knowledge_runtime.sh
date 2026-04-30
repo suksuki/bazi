@@ -87,11 +87,7 @@ if [[ "${RUN_AUDIT}" == "1" ]]; then
   "${PYTHON_BIN}" "${SCRIPT_DIR}/p9_knowledge_rule_coverage.py" --base-url "${BASE_URL}" --role "${ROLE}"
 
   echo "V19 knowledge sync: guided answer quality audit"
-  if [[ "${SAVE_AUDIT}" == "1" ]]; then
-    "${PYTHON_BIN}" "${SCRIPT_DIR}/p7_answer_quality_report.py" --base-url "${BASE_URL}" --role "${ROLE}" --save
-  else
-    "${PYTHON_BIN}" "${SCRIPT_DIR}/p7_answer_quality_report.py" --base-url "${BASE_URL}" --role "${ROLE}"
-  fi
+  BASE_URL="${BASE_URL}" ROLE="${ROLE}" SAVE_AUDIT="${SAVE_AUDIT}" "${SCRIPT_DIR}/p7_answer_quality_audit.sh"
 fi
 
 echo "V19 knowledge sync: done"
