@@ -48,6 +48,14 @@
 - `v19.synthetic_validation.rule_db_readiness.build_runtime_rule_db_synthetic_eval_dataset`
 - `v19.synthetic_validation.rule_db_readiness.run_runtime_rule_db_synthetic_eval_regression`
 - `v19.synthetic_validation.rule_db_readiness.run_runtime_rule_db_synthetic_route_regression`
+- `v19.synthetic_validation.rule_db_readiness.run_runtime_rule_db_answer_guardrail_regression`
+- `v19.synthetic_validation.rule_db_readiness.build_runtime_rule_db_controlled_activation_plan`
+- `v19.synthetic_validation.rule_db_readiness.build_runtime_rule_db_rollback_manifest`
+- `v19.synthetic_validation.rule_db_readiness.run_runtime_rule_db_controlled_activation_regression`
+- `v19.synthetic_validation.rule_db_readiness.build_runtime_rule_db_isolated_canary_plan`
+- `v19.synthetic_validation.rule_db_readiness.build_runtime_rule_db_isolated_canary_eval_dataset`
+- `v19.synthetic_validation.rule_db_readiness.run_runtime_rule_db_isolated_canary_trial`
+- `v19.synthetic_validation.rule_db_readiness.run_runtime_rule_db_isolated_canary_release_regression`
 
 回归测试覆盖：
 
@@ -92,3 +100,53 @@
 - 藏干或来源层干扰不能替代透出/同层作用
 
 这一步仍然不启用规则，只检查误触发和漏触发。
+
+## 回答 Guardrail 回归
+
+`run_runtime_rule_db_answer_guardrail_regression` 在影子路由通过后检查回答边界：
+
+- 正例回答只能说明结构线索
+- 非正例必须说明不能作为命中依据
+- 禁止发财、破财、必然、应期等断语
+- 禁止输出 `rule_id`、`signal_id`、`runtime_rule_db`、`engine_adapter_status` 等内部术语
+- `activation_updated_count` 固定为 0
+
+这一步用于进入受控启用计划前的最后文本门禁。
+
+## 受控启用计划
+
+`build_runtime_rule_db_controlled_activation_plan` 只生成计划，不启用规则：
+
+- R0 进入 `ring0_canary`
+- R1 进入 `ring1_internal`
+- 每条候选必须通过 readiness、eval dataset、shadow route、answer guardrail
+- 每条候选必须有 kill switch
+- `engine_enabled_count`、`answer_mutation_count`、`activation_updated_count` 全部固定为 0
+
+`build_runtime_rule_db_rollback_manifest` 为每条候选生成回滚项：
+
+- 回滚动作：`disable_engine_and_remove_from_release_ring`
+- 回滚后 engine 必须为 disabled
+- 不修改回答，不修改运行时状态
+
+`run_runtime_rule_db_controlled_activation_regression` 验证计划、回滚、ring 分配和 no-activation 边界。
+
+## 隔离 Canary
+
+`build_runtime_rule_db_isolated_canary_plan` 只选择 `ring0_canary` 候选进入隔离 canary：
+
+- canary engine 只在内部信号路径启用
+- production engine 固定 disabled
+- 每个 canary 必须有 rollback 和 kill switch
+- 不修改用户回答
+
+`build_runtime_rule_db_isolated_canary_eval_dataset` 为每个 canary 生成 6 个样本：
+
+- canary internal signal contract
+- production route no-signal contract
+- answer no-mutation contract
+- forbidden text contract
+- rollback execution contract
+- kill switch contract
+
+`run_runtime_rule_db_isolated_canary_release_regression` 验证隔离 canary 没有生产泄漏，且回滚/kill switch 都可用。

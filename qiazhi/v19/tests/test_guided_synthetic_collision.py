@@ -3453,6 +3453,138 @@ def test_mainline_runtime_rule_db_synthetic_route_regression_blocks_false_positi
     assert "SHADOW_ROUTE_ONLY" in result["guardrails"]
 
 
+def test_mainline_runtime_rule_db_answer_guardrail_regression_blocks_unsafe_text() -> None:
+    from v19.synthetic_validation import run_runtime_rule_db_answer_guardrail_regression
+
+    result = run_runtime_rule_db_answer_guardrail_regression()
+
+    assert result["status"] == "answer_guardrail_pass_no_activation"
+    assert result["summary"]["sample_count"] == 16
+    assert result["summary"]["forbidden_text_failure_count"] == 0
+    assert result["summary"]["internal_term_failure_count"] == 0
+    assert result["summary"]["unsupported_answer_count"] == 0
+    assert result["summary"]["activation_updated_count"] == 0
+    assert all("只说明结构线索" in row["answer_preview"] for row in result["answers"] if row["polarity"] == "positive")
+    assert all("不能作为命中依据" in row["answer_preview"] for row in result["answers"] if row["polarity"] != "positive")
+    assert "ANSWER_GUARDRAIL" in result["guardrails"]
+
+
+def test_mainline_runtime_rule_db_controlled_activation_plan_has_rollback_and_no_activation() -> None:
+    from v19.synthetic_validation import (
+        build_runtime_rule_db_controlled_activation_plan,
+        build_runtime_rule_db_rollback_manifest,
+        run_runtime_rule_db_controlled_activation_regression,
+    )
+
+    fixtures = [
+        {
+            "rule_id": "v19.rule.ready.r0",
+            "knowledge_id": "ready.r0",
+            "title": "ready.r0",
+            "domain": "ten_god_relation",
+            "category": "ten_god_interaction",
+            "risk_level": "R0",
+            "confidence": 0.9,
+            "engine_enabled": False,
+            "input_contract": {"required": ["chart"]},
+            "condition": {"structured_facts": {"candidate_signal": "ready.r0"}},
+            "allowed_usage": ["rule_db"],
+            "forbidden_usage": [],
+        },
+        {
+            "rule_id": "v19.rule.ready.r1",
+            "knowledge_id": "ready.r1",
+            "title": "ready.r1",
+            "domain": "income_stability",
+            "category": "income_path",
+            "risk_level": "R1",
+            "confidence": 0.8,
+            "engine_enabled": False,
+            "input_contract": {"required": ["chart"]},
+            "condition": {"structured_facts": {"candidate_signal": "ready.r1"}},
+            "allowed_usage": ["rule_db"],
+            "forbidden_usage": ["direct_fortune_output"],
+        },
+    ]
+    plan = build_runtime_rule_db_controlled_activation_plan(fixtures, limit=5)
+    rollback = build_runtime_rule_db_rollback_manifest(fixtures, limit=5)
+    regression = run_runtime_rule_db_controlled_activation_regression()
+
+    assert plan["status"] == "controlled_activation_plan_ready_no_runtime_activation"
+    assert plan["summary"]["activation_candidate_count"] == 2
+    assert plan["summary"]["ring0_canary_count"] == 1
+    assert plan["summary"]["ring1_internal_count"] == 1
+    assert plan["summary"]["activation_updated_count"] == 0
+    assert all(row["engine_enabled"] is False for row in plan["activation_candidates"])
+    assert all(row["kill_switch"] for row in plan["activation_candidates"])
+    assert rollback["summary"]["rollback_item_count"] == 2
+    assert rollback["summary"]["missing_rollback_count"] == 0
+    assert regression["status"] == "pass"
+    assert regression["summary"]["activation_updated_count"] == 0
+    assert "CONTROLLED_ACTIVATION_PLAN_ONLY" in regression["guardrails"]
+
+
+def test_mainline_runtime_rule_db_isolated_canary_trial_has_no_production_leak() -> None:
+    from v19.synthetic_validation import (
+        build_runtime_rule_db_isolated_canary_eval_dataset,
+        build_runtime_rule_db_isolated_canary_plan,
+        run_runtime_rule_db_isolated_canary_release_regression,
+        run_runtime_rule_db_isolated_canary_trial,
+    )
+
+    fixtures = [
+        {
+            "rule_id": "v19.rule.ready.r0",
+            "knowledge_id": "ready.r0",
+            "title": "ready.r0",
+            "domain": "ten_god_relation",
+            "category": "ten_god_interaction",
+            "risk_level": "R0",
+            "confidence": 0.9,
+            "engine_enabled": False,
+            "input_contract": {"required": ["chart"]},
+            "condition": {"structured_facts": {"candidate_signal": "ready.r0"}},
+            "allowed_usage": ["rule_db"],
+            "forbidden_usage": [],
+        },
+        {
+            "rule_id": "v19.rule.ready.r1",
+            "knowledge_id": "ready.r1",
+            "title": "ready.r1",
+            "domain": "income_stability",
+            "category": "income_path",
+            "risk_level": "R1",
+            "confidence": 0.8,
+            "engine_enabled": False,
+            "input_contract": {"required": ["chart"]},
+            "condition": {"structured_facts": {"candidate_signal": "ready.r1"}},
+            "allowed_usage": ["rule_db"],
+            "forbidden_usage": ["direct_fortune_output"],
+        },
+    ]
+    plan = build_runtime_rule_db_isolated_canary_plan(fixtures, limit=5)
+    dataset = build_runtime_rule_db_isolated_canary_eval_dataset(fixtures, limit=5)
+    trial = run_runtime_rule_db_isolated_canary_trial()
+    regression = run_runtime_rule_db_isolated_canary_release_regression()
+
+    assert plan["status"] == "isolated_canary_plan_ready_no_production_activation"
+    assert plan["summary"]["ring0_canary_count"] == 1
+    assert plan["summary"]["production_engine_enabled_count"] == 0
+    assert plan["summary"]["rollback_covered_count"] == 1
+    assert plan["summary"]["kill_switch_covered_count"] == 1
+    assert dataset["summary"]["sample_count"] == 6
+    assert dataset["summary"]["min_samples_per_canary"] == 6
+    assert trial["status"] == "pass"
+    assert trial["summary"]["production_signal_leak_count"] == 0
+    assert trial["summary"]["production_engine_enabled_count"] == 0
+    assert trial["summary"]["answer_mutation_count"] == 0
+    assert trial["summary"]["rollback_ready_count"] == 1
+    assert trial["summary"]["kill_switch_ready_count"] == 1
+    assert regression["status"] == "pass"
+    assert regression["summary"]["activation_updated_count"] == 0
+    assert "CANARY_TRIAL_NO_PRODUCTION_ACTIVATION" in trial["guardrails"]
+
+
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
     from v19.synthetic_validation import build_p31c_priority_topic_conversion_registry
 

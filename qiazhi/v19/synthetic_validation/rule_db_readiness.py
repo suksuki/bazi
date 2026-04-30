@@ -291,6 +291,343 @@ def run_runtime_rule_db_synthetic_route_regression() -> Dict[str, Any]:
     }
 
 
+def run_runtime_rule_db_answer_guardrail_regression() -> Dict[str, Any]:
+    route_regression = run_runtime_rule_db_synthetic_route_regression()
+    dataset = build_runtime_rule_db_synthetic_eval_dataset(
+        [
+            _fixture_rule("ready.ten_god", "ten_god_relation", "ten_god_interaction", "R1", 0.82, True, False),
+            _fixture_rule("ready.income", "income_stability", "income_path", "R1", 0.8, True, False),
+        ],
+        limit=10,
+    )
+    route_by_case = {str(row.get("case_id") or ""): row for row in route_regression.get("routes") or []}
+    answer_results = [_evaluate_answer_guardrail(sample, route_by_case.get(str(sample.get("case_id") or ""), {})) for sample in dataset["samples"]]
+    failures = [failure for row in answer_results for failure in row["failures"]]
+    forbidden_text_failure_count = sum(1 for failure in failures if failure.get("failure_type") == "forbidden_text_present")
+    internal_term_failure_count = sum(1 for failure in failures if failure.get("failure_type") == "internal_term_present")
+    unsupported_answer_count = sum(1 for failure in failures if failure.get("failure_type") == "unsupported_route_answer")
+    status = "answer_guardrail_pass_no_activation" if route_regression.get("ok") and not failures else "blocked"
+    return {
+        "ok": status == "answer_guardrail_pass_no_activation",
+        "version": "v19.mainline.runtime_rule_db_answer_guardrail_regression.v1",
+        "status": status,
+        "summary": {
+            "sample_count": len(answer_results),
+            "answer_passed": sum(1 for row in answer_results if row["status"] == "pass"),
+            "answer_failed": sum(1 for row in answer_results if row["status"] == "fail"),
+            "forbidden_text_failure_count": forbidden_text_failure_count,
+            "internal_term_failure_count": internal_term_failure_count,
+            "unsupported_answer_count": unsupported_answer_count,
+            "route_regression_status": route_regression.get("status"),
+            "activation_updated_count": 0,
+        },
+        "answers": answer_results,
+        "failures": failures,
+        "activation_policy": {
+            "current_stage": "Answer guardrail regression over runtime Rule DB synthetic route samples.",
+            "runtime_activation": "No Rule DB engine activation is allowed from answer guardrail checks.",
+            "next": "Only samples passing readiness, eval dataset, route regression, and answer guardrails can enter controlled activation planning.",
+        },
+        "guardrails": route_regression["guardrails"] + ["ANSWER_GUARDRAIL", "NO_INTERNAL_TERMS", "NO_PREDICTION_TEXT"],
+    }
+
+
+def build_runtime_rule_db_controlled_activation_plan(
+    rules: Iterable[Dict[str, Any]] | None = None,
+    *,
+    max_direct_gate_risk: str = "R1",
+    min_confidence: float = 0.62,
+    limit: int = 24,
+) -> Dict[str, Any]:
+    source_rules = list(rules if rules is not None else bazi_rule_db.list_bazi_rules().get("rules") or [])
+    answer_gate = _runtime_pipeline_gate(source_rules, max_direct_gate_risk=max_direct_gate_risk, min_confidence=min_confidence, limit=limit)
+    candidates = [
+        _activation_plan_row(row)
+        for row in answer_gate["readiness"].get("selected_for_next_synthetic_gate") or []
+        if answer_gate["ok"]
+    ]
+    return {
+        "ok": answer_gate["ok"],
+        "version": "v19.mainline.runtime_rule_db_controlled_activation_plan.v1",
+        "status": "controlled_activation_plan_ready_no_runtime_activation" if answer_gate["ok"] else "controlled_activation_plan_blocked",
+        "runtime_scope": "activation_planning_only_no_runtime_mutation",
+        "summary": {
+            "source_rule_count": len(source_rules),
+            "activation_candidate_count": len(candidates),
+            "ring0_canary_count": sum(1 for row in candidates if row["release_ring"] == "ring0_canary"),
+            "ring1_internal_count": sum(1 for row in candidates if row["release_ring"] == "ring1_internal"),
+            "pipeline_gate_status": answer_gate["status"],
+            "engine_enabled_count": 0,
+            "answer_mutation_count": 0,
+            "activation_updated_count": 0,
+            "runtime_mutation": False,
+            "by_domain": _count_by(candidates, "domain"),
+        },
+        "activation_candidates": candidates,
+        "release_policy": {
+            "ring0_canary": "R0 candidates may enter the smallest isolated canary ring after explicit execution.",
+            "ring1_internal": "R1 candidates remain internal-only until canary telemetry is clean.",
+            "production": "Production activation is outside this planning stage.",
+        },
+        "pipeline_gate": {
+            "readiness_status": answer_gate["readiness"].get("status"),
+            "eval_status": answer_gate["eval"].get("status"),
+            "route_status": answer_gate["route"].get("status"),
+            "answer_guardrail_status": answer_gate["answer"].get("status"),
+        },
+        "guardrails": [
+            "CONTROLLED_ACTIVATION_PLAN_ONLY",
+            "NO_ENGINE_ACTIVATION",
+            "NO_RESULT_MUTATION",
+            "ROLLBACK_REQUIRED",
+            "CANARY_FIRST",
+        ],
+    }
+
+
+def build_runtime_rule_db_rollback_manifest(
+    rules: Iterable[Dict[str, Any]] | None = None,
+    *,
+    max_direct_gate_risk: str = "R1",
+    min_confidence: float = 0.62,
+    limit: int = 24,
+) -> Dict[str, Any]:
+    plan = build_runtime_rule_db_controlled_activation_plan(
+        rules,
+        max_direct_gate_risk=max_direct_gate_risk,
+        min_confidence=min_confidence,
+        limit=limit,
+    )
+    items = [_rollback_row(row) for row in plan.get("activation_candidates") or []]
+    return {
+        "ok": plan.get("ok") is True,
+        "version": "v19.mainline.runtime_rule_db_rollback_manifest.v1",
+        "status": "rollback_manifest_ready_no_runtime_activation" if plan.get("ok") else "rollback_manifest_blocked",
+        "runtime_scope": "rollback_planning_only_no_runtime_mutation",
+        "summary": {
+            "activation_candidate_count": plan["summary"]["activation_candidate_count"],
+            "rollback_item_count": len(items),
+            "missing_rollback_count": plan["summary"]["activation_candidate_count"] - len(items),
+            "engine_enabled_count": 0,
+            "answer_mutation_count": 0,
+            "activation_updated_count": 0,
+            "runtime_mutation": False,
+        },
+        "items": items,
+        "guardrails": plan["guardrails"] + ["ROLLBACK_MANIFEST", "KILL_SWITCH_REQUIRED"],
+    }
+
+
+def run_runtime_rule_db_controlled_activation_regression() -> Dict[str, Any]:
+    fixtures = [
+        _fixture_rule("ready.r0.ten_god", "ten_god_relation", "ten_god_interaction", "R0", 0.9, True, False),
+        _fixture_rule("ready.r1.income", "income_stability", "income_path", "R1", 0.8, True, False),
+        _fixture_rule("shadow.r2.income", "income_stability", "income_collision", "R2", 0.78, True, False),
+    ]
+    plan = build_runtime_rule_db_controlled_activation_plan(fixtures, limit=10)
+    rollback = build_runtime_rule_db_rollback_manifest(fixtures, limit=10)
+    failures: List[Dict[str, Any]] = []
+    if plan["status"] != "controlled_activation_plan_ready_no_runtime_activation":
+        failures.append({"failure_type": "activation_plan_not_ready"})
+    if plan["summary"]["activation_updated_count"] != 0 or plan["summary"]["engine_enabled_count"] != 0:
+        failures.append({"failure_type": "runtime_activation_not_allowed"})
+    if rollback["summary"]["missing_rollback_count"] != 0:
+        failures.append({"failure_type": "rollback_manifest_incomplete"})
+    if plan["summary"]["ring0_canary_count"] != 1:
+        failures.append({"failure_type": "ring0_count_mismatch", "actual": plan["summary"]["ring0_canary_count"]})
+    if plan["summary"]["ring1_internal_count"] != 1:
+        failures.append({"failure_type": "ring1_count_mismatch", "actual": plan["summary"]["ring1_internal_count"]})
+    status = "pass" if not failures else "fail"
+    return {
+        "ok": status == "pass",
+        "version": "v19.mainline.runtime_rule_db_controlled_activation_regression.v1",
+        "status": status,
+        "summary": {
+            "activation_candidate_count": plan["summary"]["activation_candidate_count"],
+            "ring0_canary_count": plan["summary"]["ring0_canary_count"],
+            "ring1_internal_count": plan["summary"]["ring1_internal_count"],
+            "rollback_item_count": rollback["summary"]["rollback_item_count"],
+            "missing_rollback_count": rollback["summary"]["missing_rollback_count"],
+            "engine_enabled_count": 0,
+            "answer_mutation_count": 0,
+            "activation_updated_count": 0,
+            "runtime_mutation": False,
+        },
+        "activation_plan": plan,
+        "rollback_manifest": rollback,
+        "failures": failures,
+        "guardrails": plan["guardrails"] + ["REGRESSION_ONLY_NO_ACTIVATION"],
+    }
+
+
+def build_runtime_rule_db_isolated_canary_plan(
+    rules: Iterable[Dict[str, Any]] | None = None,
+    *,
+    max_direct_gate_risk: str = "R1",
+    min_confidence: float = 0.62,
+    limit: int = 24,
+) -> Dict[str, Any]:
+    plan = build_runtime_rule_db_controlled_activation_plan(
+        rules,
+        max_direct_gate_risk=max_direct_gate_risk,
+        min_confidence=min_confidence,
+        limit=limit,
+    )
+    rollback = build_runtime_rule_db_rollback_manifest(
+        rules,
+        max_direct_gate_risk=max_direct_gate_risk,
+        min_confidence=min_confidence,
+        limit=limit,
+    )
+    rollback_by_candidate = {str(row.get("activation_candidate_id") or ""): row for row in rollback.get("items") or []}
+    canaries = [
+        _canary_row(row, rollback_by_candidate.get(str(row.get("activation_candidate_id") or "")))
+        for row in plan.get("activation_candidates") or []
+        if row.get("release_ring") == "ring0_canary"
+    ]
+    failures = []
+    if plan.get("status") != "controlled_activation_plan_ready_no_runtime_activation":
+        failures.append({"failure_type": "activation_plan_not_ready"})
+    if any(not row.get("rollback_id") for row in canaries):
+        failures.append({"failure_type": "rollback_missing"})
+    if any(row.get("production_engine_enabled") for row in canaries):
+        failures.append({"failure_type": "production_engine_enabled"})
+    return {
+        "ok": not failures,
+        "version": "v19.mainline.runtime_rule_db_isolated_canary_plan.v1",
+        "status": "isolated_canary_plan_ready_no_production_activation" if not failures else "isolated_canary_plan_blocked",
+        "runtime_scope": "isolated_canary_planning_no_production_mutation",
+        "summary": {
+            "controlled_plan_status": plan.get("status"),
+            "ring0_canary_count": len(canaries),
+            "canary_runtime_enabled_count": sum(1 for row in canaries if row.get("canary_engine_enabled") is True),
+            "production_engine_enabled_count": sum(1 for row in canaries if row.get("production_engine_enabled") is True),
+            "rollback_covered_count": sum(1 for row in canaries if row.get("rollback_id")),
+            "kill_switch_covered_count": sum(1 for row in canaries if row.get("kill_switch_enabled") is True),
+            "answer_mutation_count": 0,
+            "production_runtime_mutation": False,
+        },
+        "canaries": canaries,
+        "failures": failures,
+        "canary_policy": {
+            "scope": "Isolated internal signal route only.",
+            "production": "Production engine remains disabled.",
+            "rollback": "Every canary requires rollback and kill switch coverage.",
+        },
+        "guardrails": plan["guardrails"] + ["ISOLATED_CANARY_ONLY", "PRODUCTION_ENGINE_DISABLED"],
+    }
+
+
+def build_runtime_rule_db_isolated_canary_eval_dataset(
+    rules: Iterable[Dict[str, Any]] | None = None,
+    *,
+    max_direct_gate_risk: str = "R1",
+    min_confidence: float = 0.62,
+    limit: int = 24,
+) -> Dict[str, Any]:
+    plan = build_runtime_rule_db_isolated_canary_plan(
+        rules,
+        max_direct_gate_risk=max_direct_gate_risk,
+        min_confidence=min_confidence,
+        limit=limit,
+    )
+    samples = [sample for canary in plan.get("canaries") or [] for sample in _canary_samples(canary)]
+    return {
+        "ok": plan.get("ok") is True,
+        "version": "v19.mainline.runtime_rule_db_isolated_canary_eval_dataset.v1",
+        "status": "isolated_canary_eval_dataset_ready_no_production_activation",
+        "runtime_scope": "isolated_canary_eval_dataset_no_production_mutation",
+        "summary": {
+            "ring0_canary_count": plan["summary"]["ring0_canary_count"],
+            "sample_count": len(samples),
+            "min_samples_per_canary": len(_canary_sample_types()) if plan["summary"]["ring0_canary_count"] else 0,
+            "canary_runtime_enabled_count": plan["summary"]["canary_runtime_enabled_count"],
+            "production_engine_enabled_count": 0,
+            "answer_mutation_count": 0,
+            "by_sample_type": _count_by(samples, "sample_type"),
+        },
+        "samples": samples,
+        "source_plan_summary": plan["summary"],
+        "guardrails": plan["guardrails"] + ["CANARY_EVAL_DATASET_ONLY"],
+    }
+
+
+def run_runtime_rule_db_isolated_canary_trial() -> Dict[str, Any]:
+    fixtures = [
+        _fixture_rule("ready.r0.ten_god", "ten_god_relation", "ten_god_interaction", "R0", 0.9, True, False),
+        _fixture_rule("ready.r1.income", "income_stability", "income_path", "R1", 0.8, True, False),
+    ]
+    dataset = build_runtime_rule_db_isolated_canary_eval_dataset(fixtures, limit=10)
+    sample_results = [_evaluate_canary_sample(sample) for sample in dataset.get("samples") or []]
+    failures = [failure for row in sample_results for failure in row["failures"]]
+    status = "pass" if dataset.get("ok") is True and not failures else "fail"
+    return {
+        "ok": status == "pass",
+        "version": "v19.mainline.runtime_rule_db_isolated_canary_trial.v1",
+        "status": status,
+        "summary": {
+            "ring0_canary_count": dataset["summary"]["ring0_canary_count"],
+            "sample_count": len(sample_results),
+            "sample_passed": sum(1 for row in sample_results if row["status"] == "pass"),
+            "sample_failed": sum(1 for row in sample_results if row["status"] == "fail"),
+            "canary_internal_signal_count": sum(1 for row in sample_results if row["canary_internal_signal"] is True),
+            "production_signal_leak_count": sum(1 for row in sample_results if row["production_signal_leak"] is True),
+            "forbidden_text_failure_count": sum(1 for failure in failures if failure.get("failure_type") == "forbidden_text_contract_failed"),
+            "rollback_ready_count": _unique_count(dataset.get("samples") or [], "rollback_ready"),
+            "kill_switch_ready_count": _unique_count(dataset.get("samples") or [], "kill_switch_ready"),
+            "canary_runtime_enabled_count": dataset["summary"]["canary_runtime_enabled_count"],
+            "production_engine_enabled_count": 0,
+            "answer_mutation_count": 0,
+            "production_runtime_mutation": False,
+            "activation_updated_count": 0,
+        },
+        "samples": sample_results,
+        "eval_dataset": dataset,
+        "failures": failures,
+        "guardrails": dataset["guardrails"] + ["CANARY_TRIAL_NO_PRODUCTION_ACTIVATION"],
+    }
+
+
+def run_runtime_rule_db_isolated_canary_release_regression() -> Dict[str, Any]:
+    trial = run_runtime_rule_db_isolated_canary_trial()
+    failures = []
+    if trial.get("status") != "pass":
+        failures.append({"failure_type": "canary_trial_failed"})
+    if trial["summary"]["production_signal_leak_count"] != 0:
+        failures.append({"failure_type": "production_signal_leak"})
+    if trial["summary"]["production_engine_enabled_count"] != 0:
+        failures.append({"failure_type": "production_engine_enabled"})
+    if trial["summary"]["answer_mutation_count"] != 0:
+        failures.append({"failure_type": "answer_mutation_not_allowed"})
+    if trial["summary"]["rollback_ready_count"] != trial["summary"]["ring0_canary_count"]:
+        failures.append({"failure_type": "rollback_coverage_failed"})
+    if trial["summary"]["kill_switch_ready_count"] != trial["summary"]["ring0_canary_count"]:
+        failures.append({"failure_type": "kill_switch_coverage_failed"})
+    status = "pass" if not failures else "fail"
+    return {
+        "ok": status == "pass",
+        "version": "v19.mainline.runtime_rule_db_isolated_canary_release_regression.v1",
+        "status": status,
+        "summary": {
+            "ring0_canary_count": trial["summary"]["ring0_canary_count"],
+            "sample_count": trial["summary"]["sample_count"],
+            "sample_failed": trial["summary"]["sample_failed"],
+            "canary_runtime_enabled_count": trial["summary"]["canary_runtime_enabled_count"],
+            "production_engine_enabled_count": 0,
+            "production_signal_leak_count": trial["summary"]["production_signal_leak_count"],
+            "forbidden_text_failure_count": trial["summary"]["forbidden_text_failure_count"],
+            "rollback_ready_count": trial["summary"]["rollback_ready_count"],
+            "kill_switch_ready_count": trial["summary"]["kill_switch_ready_count"],
+            "answer_mutation_count": 0,
+            "activation_updated_count": 0,
+            "production_runtime_mutation": False,
+        },
+        "canary_trial": trial,
+        "failures": failures,
+        "guardrails": trial["guardrails"] + ["RELEASE_REGRESSION_ONLY_NO_PRODUCTION_ACTIVATION"],
+    }
+
+
 def run_runtime_rule_db_synthetic_gate_queue_regression() -> Dict[str, Any]:
     fixtures = [
         _fixture_rule("ready.ten_god", "ten_god_relation", "ten_god_interaction", "R1", 0.82, True, False),
@@ -318,6 +655,267 @@ def run_runtime_rule_db_synthetic_gate_queue_regression() -> Dict[str, Any]:
         "queue": queue,
         "checks": checks,
     }
+
+
+def _runtime_pipeline_gate(
+    rules: List[Dict[str, Any]],
+    *,
+    max_direct_gate_risk: str,
+    min_confidence: float,
+    limit: int,
+) -> Dict[str, Any]:
+    readiness = build_runtime_rule_db_readiness_audit(
+        rules,
+        max_direct_gate_risk=max_direct_gate_risk,
+        min_confidence=min_confidence,
+        limit=limit,
+    )
+    dataset = build_runtime_rule_db_synthetic_eval_dataset(
+        rules,
+        max_direct_gate_risk=max_direct_gate_risk,
+        min_confidence=min_confidence,
+        limit=limit,
+    )
+    eval_results = [_evaluate_runtime_eval_sample(sample) for sample in dataset["samples"]]
+    eval_failures = [failure for row in eval_results for failure in row["failures"]]
+    route_results = [_evaluate_route_sample(sample) for sample in dataset["samples"]]
+    route_failures = [failure for row in route_results for failure in row["failures"]]
+    route_by_case = {str(row.get("case_id") or ""): row for row in route_results}
+    answer_results = [_evaluate_answer_guardrail(sample, route_by_case.get(str(sample.get("case_id") or ""), {})) for sample in dataset["samples"]]
+    answer_failures = [failure for row in answer_results for failure in row["failures"]]
+    ok = not eval_failures and not route_failures and not answer_failures
+    return {
+        "ok": ok,
+        "status": "pipeline_gate_pass" if ok else "pipeline_gate_blocked",
+        "readiness": readiness,
+        "eval": {
+            "status": "pass" if not eval_failures else "fail",
+            "failure_count": len(eval_failures),
+        },
+        "route": {
+            "status": "shadow_route_pass_no_activation" if not route_failures else "blocked",
+            "failure_count": len(route_failures),
+        },
+        "answer": {
+            "status": "answer_guardrail_pass_no_activation" if not answer_failures else "blocked",
+            "failure_count": len(answer_failures),
+        },
+    }
+
+
+def _activation_plan_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    risk = str(row.get("risk_level") or "R1")
+    return {
+        "activation_candidate_id": f"runtime.activation.{_slug(str(row.get('knowledge_id') or 'unknown'))}",
+        "rule_id": row.get("rule_id") or "",
+        "knowledge_id": row.get("knowledge_id") or "",
+        "domain": row.get("domain") or "",
+        "category": row.get("category") or "",
+        "risk_level": risk,
+        "confidence": row.get("confidence"),
+        "release_ring": "ring0_canary" if risk == "R0" else "ring1_internal",
+        "preconditions": [
+            "readiness_audit_passed",
+            "synthetic_eval_dataset_passed",
+            "shadow_route_regression_passed",
+            "answer_guardrail_passed",
+            "rollback_manifest_ready",
+        ],
+        "engine_enabled": False,
+        "answer_mutation": False,
+        "runtime_mutation": False,
+        "kill_switch": f"disable:{row.get('rule_id') or row.get('knowledge_id') or ''}",
+    }
+
+
+def _rollback_row(row: Dict[str, Any]) -> Dict[str, Any]:
+    return {
+        "rollback_id": f"runtime.rollback.{_slug(str(row.get('knowledge_id') or 'unknown'))}",
+        "activation_candidate_id": row.get("activation_candidate_id") or "",
+        "rule_id": row.get("rule_id") or "",
+        "knowledge_id": row.get("knowledge_id") or "",
+        "release_ring": row.get("release_ring") or "",
+        "rollback_action": "disable_engine_and_remove_from_release_ring",
+        "kill_switch": row.get("kill_switch") or "",
+        "engine_enabled_after_rollback": False,
+        "answer_mutation": False,
+        "runtime_mutation": False,
+    }
+
+
+def _canary_row(candidate: Dict[str, Any], rollback: Dict[str, Any] | None) -> Dict[str, Any]:
+    return {
+        "canary_id": f"runtime.canary.{_slug(str(candidate.get('knowledge_id') or 'unknown'))}",
+        "activation_candidate_id": candidate.get("activation_candidate_id") or "",
+        "rule_id": candidate.get("rule_id") or "",
+        "knowledge_id": candidate.get("knowledge_id") or "",
+        "domain": candidate.get("domain") or "",
+        "category": candidate.get("category") or "",
+        "risk_level": candidate.get("risk_level") or "",
+        "release_ring": candidate.get("release_ring") or "",
+        "canary_engine_enabled": True,
+        "production_engine_enabled": False,
+        "answer_mutation": False,
+        "production_runtime_mutation": False,
+        "rollback_id": (rollback or {}).get("rollback_id") or "",
+        "kill_switch": candidate.get("kill_switch") or "",
+        "kill_switch_enabled": bool(candidate.get("kill_switch")),
+        "canary_scope": "isolated_internal_signal_route",
+    }
+
+
+def _canary_samples(canary: Dict[str, Any]) -> List[Dict[str, Any]]:
+    return [_canary_sample(canary, sample_type, index) for index, sample_type in enumerate(_canary_sample_types(), start=1)]
+
+
+def _canary_sample_types() -> List[str]:
+    return [
+        "canary_internal_signal_contract",
+        "production_route_no_signal_contract",
+        "answer_text_no_mutation_contract",
+        "forbidden_text_contract",
+        "rollback_execution_contract",
+        "kill_switch_contract",
+    ]
+
+
+def _canary_sample(canary: Dict[str, Any], sample_type: str, index: int) -> Dict[str, Any]:
+    return {
+        "case_id": f"runtime.canary.{_slug(str(canary.get('knowledge_id') or 'unknown'))}.{index}.{sample_type}",
+        "canary_id": canary.get("canary_id") or "",
+        "activation_candidate_id": canary.get("activation_candidate_id") or "",
+        "rule_id": canary.get("rule_id") or "",
+        "knowledge_id": canary.get("knowledge_id") or "",
+        "domain": canary.get("domain") or "",
+        "sample_type": sample_type,
+        "canary_engine_enabled": canary.get("canary_engine_enabled") is True,
+        "production_engine_enabled": False,
+        "expected_internal_signal": sample_type == "canary_internal_signal_contract",
+        "production_signal_leak": False,
+        "answer_mutation": False,
+        "rollback_ready": sample_type == "rollback_execution_contract",
+        "kill_switch_ready": sample_type == "kill_switch_contract",
+        "forbidden_text": _forbidden_text_for_domain(str(canary.get("domain") or "")),
+        "generated_answer_text": "",
+        "audit_tags": ["runtime_rule_db_isolated_canary", sample_type],
+    }
+
+
+def _evaluate_canary_sample(sample: Dict[str, Any]) -> Dict[str, Any]:
+    failures: List[Dict[str, Any]] = []
+    if sample.get("production_engine_enabled") is True:
+        failures.append(_sample_failure(sample, "production_engine_enabled", "Production engine must stay disabled."))
+    if sample.get("answer_mutation") is True:
+        failures.append(_sample_failure(sample, "answer_mutation_not_allowed", "Canary trial must not mutate user answers."))
+    if sample.get("production_signal_leak") is True:
+        failures.append(_sample_failure(sample, "production_signal_leak", "Canary signal cannot leak into production route."))
+    if sample.get("sample_type") == "canary_internal_signal_contract" and sample.get("canary_engine_enabled") is not True:
+        failures.append(_sample_failure(sample, "canary_engine_disabled", "Canary route must enable isolated canary engine."))
+    if sample.get("sample_type") == "rollback_execution_contract" and sample.get("rollback_ready") is not True:
+        failures.append(_sample_failure(sample, "rollback_contract_failed", "Rollback marker must be ready."))
+    if sample.get("sample_type") == "kill_switch_contract" and sample.get("kill_switch_ready") is not True:
+        failures.append(_sample_failure(sample, "kill_switch_contract_failed", "Kill switch marker must be ready."))
+    answer_text = str(sample.get("generated_answer_text") or "")
+    for token in sample.get("forbidden_text") or []:
+        if str(token) and str(token) in answer_text:
+            failures.append(_sample_failure(sample, "forbidden_text_contract_failed", str(token)))
+            break
+    return {
+        "case_id": sample.get("case_id") or "",
+        "knowledge_id": sample.get("knowledge_id") or "",
+        "sample_type": sample.get("sample_type") or "",
+        "status": "fail" if failures else "pass",
+        "canary_internal_signal": sample.get("sample_type") == "canary_internal_signal_contract",
+        "production_signal_leak": sample.get("production_signal_leak") is True,
+        "failures": failures,
+    }
+
+
+def _unique_count(samples: List[Dict[str, Any]], key: str) -> int:
+    return len({str(sample.get("activation_candidate_id") or sample.get("rule_id") or "") for sample in samples if sample.get(key) is True})
+
+
+def _sample_failure(sample: Dict[str, Any], failure_type: str, detail: str) -> Dict[str, str]:
+    return {
+        "case_id": str(sample.get("case_id") or ""),
+        "knowledge_id": str(sample.get("knowledge_id") or ""),
+        "failure_type": failure_type,
+        "detail": detail,
+    }
+
+
+def _evaluate_answer_guardrail(sample: Dict[str, Any], route: Dict[str, Any]) -> Dict[str, Any]:
+    answer = _render_guarded_answer(sample, route)
+    failures: List[Dict[str, Any]] = []
+    normalized = " ".join(answer.split())
+    for token in sample.get("forbidden_text") or []:
+        if str(token) and str(token) in normalized:
+            failures.append({"case_id": sample.get("case_id"), "failure_type": "forbidden_text_present", "forbidden": str(token)})
+    for token in _internal_answer_terms():
+        if token in normalized:
+            failures.append({"case_id": sample.get("case_id"), "failure_type": "internal_term_present", "term": token})
+    if sample.get("polarity") == "positive" and not route.get("matched_route_ids"):
+        failures.append({"case_id": sample.get("case_id"), "failure_type": "unsupported_route_answer"})
+    if sample.get("polarity") != "positive" and "不能作为命中依据" not in answer:
+        failures.append({"case_id": sample.get("case_id"), "failure_type": "non_positive_boundary_missing"})
+    if sample.get("polarity") == "positive" and "只说明结构线索" not in answer:
+        failures.append({"case_id": sample.get("case_id"), "failure_type": "positive_boundary_missing"})
+    return {
+        "case_id": sample.get("case_id"),
+        "source_knowledge_id": sample.get("source_knowledge_id") or "",
+        "polarity": sample.get("polarity") or "",
+        "answer_preview": normalized[:240],
+        "status": "fail" if failures else "pass",
+        "failures": failures,
+    }
+
+
+def _render_guarded_answer(sample: Dict[str, Any], route: Dict[str, Any]) -> str:
+    domain = str(sample.get("domain") or "")
+    category = str(sample.get("category") or "")
+    polarity = str(sample.get("polarity") or "")
+    topic = _answer_topic_label(domain, category)
+    if polarity == "positive" and route.get("matched_route_ids"):
+        return (
+            f"这条样本可以作为{topic}的结构线索来读。"
+            "它只说明结构线索和证据来源，不直接推出事件结果。"
+            "后续仍要看同层作用、承载条件和时间背景是否同时成立。"
+        )
+    return (
+        f"这条样本暂时不能作为命中依据，当前只涉及{topic}的边界检查。"
+        "原因是条件轴里存在来源层、同层作用、承载或时间边界的阻断。"
+        "它可以保留为反例或干扰例，用来防止误触发。"
+    )
+
+
+def _answer_topic_label(domain: str, category: str) -> str:
+    if domain == "income_stability":
+        return "收入稳定性"
+    if domain == "time_structure":
+        return "时间背景"
+    if domain == "structural_relation":
+        return "地支关系"
+    if domain == "day_master_element":
+        return "日主与月令"
+    if category:
+        return "十神关系"
+    return "命盘结构"
+
+
+def _internal_answer_terms() -> List[str]:
+    return [
+        "rule_id",
+        "signal_id",
+        "source_signal_id",
+        "question_basis",
+        "GUIDED_ANSWER",
+        "DETERMINISTIC",
+        "ResultCard",
+        "income_stability",
+        "runtime_rule_db",
+        "engine_adapter_status",
+        "synthetic_gate",
+    ]
 
 
 def _evaluate_route_sample(sample: Dict[str, Any]) -> Dict[str, Any]:
@@ -638,6 +1236,10 @@ def _eval_requirements(rows: List[Dict[str, Any]]) -> Dict[str, Dict[str, Any]]:
 
 def _count_by(rows: Iterable[Dict[str, Any]], key: str) -> Dict[str, int]:
     return dict(Counter(str(row.get(key) or "unknown") for row in rows))
+
+
+def _slug(value: str) -> str:
+    return "".join(ch if ch.isalnum() else "_" for ch in str(value or "")).strip("_")
 
 
 def _bounded_float(value: Any, default: float) -> float:
