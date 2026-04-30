@@ -70,6 +70,7 @@
     "docs/v19/V19_P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS.md",
     "docs/v19/V19_MAINLINE_RUNTIME_RULE_DB_READINESS.md",
     "docs/v19/V19_MAINLINE_COMMON_BAZI_QUESTION_INTENTS.md",
+    "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -2469,6 +2470,48 @@
       "NO_FORTUNE"
     ]
   },
+  "mainline_structure_portrait_layer": {
+    "stage": "MAINLINE_STRUCTURE_PORTRAIT_LAYER",
+    "entrypoints": [
+      "v19.structure_portrait.build_structure_portrait",
+      "v19.structure_portrait.structure_portrait_to_prompt_context",
+      "v19.bazi_guided_questions.build_guided_question_context",
+      "v19.bazi_guided_questions.build_guided_question_answer",
+      "POST /api/agent/structure",
+      "POST /api/agent/turn"
+    ],
+    "status": "structure_portrait_layer_ready",
+    "runtime_scope": "structure_portrait_context_only_no_result_mutation",
+    "outputs": [
+      "structure_portrait.labels",
+      "structure_portrait.vectors",
+      "structure_portrait.candidate_judgements",
+      "guided_question_context.structure_portrait",
+      "guided_question_context.question_personalization_context.portrait_question_bias"
+    ],
+    "vector_keys": [
+      "strength_capacity",
+      "useful_god_candidate_confidence",
+      "wealth_visibility",
+      "wealth_stability",
+      "ten_god_activity",
+      "branch_volatility",
+      "time_trigger_activity",
+      "pattern_index_strength",
+      "evidence_confidence"
+    ],
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "STRUCTURE_PORTRAIT_CONTEXT_ONLY",
+      "CANDIDATE_JUDGEMENT_ONLY",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_RULE_ACTIVATION",
+      "NO_HARD_USEFUL_GOD_VERDICT",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -2553,6 +2596,7 @@
     "P69_MAINLINE_P1_SAFE_WRAPPERS",
     "P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION",
     "P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS",
+    "MAINLINE_STRUCTURE_PORTRAIT_LAYER",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

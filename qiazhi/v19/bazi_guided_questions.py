@@ -577,6 +577,7 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         "available": True,
         "runtime_scope": "guided_questions_only_no_inference_mutation",
         "rule_signal_count": len(signals),
+        "structure_portrait": _compact_structure_portrait(agent_data.get("structure_portrait") or {}),
         "rule_signal_adapter": {
             "version": rule_signal_report.get("version") or "",
             "count": rule_signal_report.get("count") or 0,
@@ -610,8 +611,41 @@ def _prioritize_context_signals(signals: List[Dict[str, Any]]) -> List[Dict[str,
     return legacy[:24] + graph[:6] + legacy[24:]
 
 
+def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
+    if not isinstance(portrait, dict) or not portrait:
+        return {}
+    labels = [dict(row) for row in portrait.get("labels") or [] if isinstance(row, dict)]
+    judgements = [dict(row) for row in portrait.get("candidate_judgements") or [] if isinstance(row, dict)]
+    return {
+        "version": portrait.get("version") or "",
+        "status": portrait.get("status") or "",
+        "runtime_scope": portrait.get("runtime_scope") or "",
+        "vectors": dict(portrait.get("vectors") or {}),
+        "dominant_label_ids": [str(row.get("label_id") or "") for row in labels[:5]],
+        "candidate_judgement_ids": [str(row.get("judgement_id") or "") for row in judgements[:5]],
+        "question_bias": dict(portrait.get("question_bias") or {}),
+    }
+
+
+def _merge_portrait_bucket_order(route_bucket_order: List[str], portrait_bias: Dict[str, Any]) -> List[str]:
+    ordered = [str(item) for item in route_bucket_order if str(item)]
+    bucket_boosts = dict(portrait_bias.get("bucket_boosts") or {})
+    boosted = [key for key, _value in sorted(bucket_boosts.items(), key=lambda row: float(row[1] or 0), reverse=True) if str(key)]
+    # Portrait scores are a secondary bias. They may add missing buckets, but
+    # must not override the Rule Graph bucket order for explicit chart hits.
+    for bucket in boosted[:3]:
+        if bucket not in ordered:
+            ordered.append(bucket)
+    out: List[str] = []
+    for bucket in ordered:
+        if bucket not in out:
+            out.append(bucket)
+    return out[:8]
+
+
 def _question_personalization_context(agent_data: Dict[str, Any], facts: Dict[str, Any], rule_graph_context: Dict[str, Any]) -> Dict[str, Any]:
     runtime_context = dict(agent_data.get("rule_graph_runtime_context") or {})
+    structure_portrait = dict(agent_data.get("structure_portrait") or {})
     selected_paths = [dict(row) for row in runtime_context.get("selected_paths") or [] if isinstance(row, dict)]
     if not selected_paths:
         selected_paths = [dict(row) for row in rule_graph_context.get("selected_paths") or [] if isinstance(row, dict)]
@@ -622,6 +656,8 @@ def _question_personalization_context(agent_data: Dict[str, Any], facts: Dict[st
     if not domain_counts:
         domain_counts = _count_values(str(row.get("domain") or "") for row in selected_paths)
     route_bucket_order = _route_bucket_order(lane_counts, facts)
+    portrait_bias = dict(structure_portrait.get("question_bias") or {})
+    route_bucket_order = _merge_portrait_bucket_order(route_bucket_order, portrait_bias)
     selected_knowledge_ids = [str(row.get("knowledge_id") or "") for row in selected_paths if row.get("knowledge_id")]
     return {
         "version": "v19.p48.question_personalization.v1",
@@ -633,8 +669,12 @@ def _question_personalization_context(agent_data: Dict[str, Any], facts: Dict[st
         "route_domain_counts": domain_counts,
         "selected_knowledge_ids": selected_knowledge_ids[:12],
         "selected_route_count": int(runtime_context.get("route_count") or 0),
+        "structure_portrait_status": structure_portrait.get("status") or "",
+        "portrait_vector_summary": dict(structure_portrait.get("vectors") or {}),
+        "portrait_question_bias": portrait_bias,
         "guardrails": [
             "PERSONALIZE_QUESTION_ORDER_ONLY",
+            "STRUCTURE_PORTRAIT_RANKING_BIAS_ONLY",
             "KEEP_BASELINE_ENTRY",
             "NO_RESULT_MUTATION",
             "NO_FORTUNE",
@@ -649,6 +689,9 @@ def _personalize_questions(rows: List[Dict[str, Any]], personalization_context: 
     bucket_rank = {bucket: index for index, bucket in enumerate(bucket_order)}
     lane_counts = dict(personalization_context.get("route_lane_counts") or {})
     domain_counts = dict(personalization_context.get("route_domain_counts") or {})
+    portrait_bias = dict(personalization_context.get("portrait_question_bias") or {})
+    portrait_bucket_boosts = dict(portrait_bias.get("bucket_boosts") or {})
+    portrait_question_boosts = dict(portrait_bias.get("question_boosts") or {})
     for row in rows:
         item = dict(row)
         bucket = _question_bucket(item)
@@ -665,7 +708,11 @@ def _personalize_questions(rows: List[Dict[str, Any]], personalization_context: 
         if _category_matches_route(source_category, lane_counts, domain_counts):
             route_boost += 6
             route_reasons.append(f"category:{source_category}")
-        route_boost = min(route_boost, 24)
+        portrait_boost = float(portrait_bucket_boosts.get(bucket) or 0) + float(portrait_question_boosts.get(str(item.get("key") or "")) or 0)
+        if portrait_boost:
+            route_boost += min(18, int(round(portrait_boost)))
+            route_reasons.append("structure_portrait")
+        route_boost = min(route_boost, 34)
         base_score = int(item.get("score") or 0)
         item["personalized_score"] = base_score + route_boost
         item["personalization"] = {
@@ -961,6 +1008,9 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
             "answer_audit_status": (runtime_context.get("answer_audit") or {}).get("status") or "",
             "runtime_scope": "measurement_route_pack_context_only_no_mutation",
         }
+    structure_portrait = dict(agent_data.get("structure_portrait") or {})
+    if structure_portrait:
+        retrieved_facts["structure_portrait"] = _compact_structure_portrait(structure_portrait)
     evidence_pack = build_guided_answer_evidence_pack(
         question_key=clean_key,
         question_text=clean_message,
@@ -1001,6 +1051,7 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         "knowledge_context": knowledge_context,
         "rule_graph_context": rule_graph_context,
         "rule_graph_runtime_context": runtime_context,
+        "structure_portrait": _compact_structure_portrait(structure_portrait),
         "rule_graph_answer_audit": rule_graph_answer_audit,
         "evidence_pack": evidence_pack,
         "applied_knowledge": applied_knowledge,
@@ -3418,7 +3469,7 @@ def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_contex
         if len(selected) >= min(limit, 5):
             break
         key = row.get("key")
-        if key in used or _question_specificity_score(row) < 18:
+        if key in used or _question_effective_specificity_score(row, personalization_context) < 18:
             continue
         bucket = _question_bucket(row)
         category = _question_category_key(row)
@@ -3449,6 +3500,8 @@ def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_contex
         "q_hidden_stem_role",
     ]
     for key in anchor_keys:
+        if not _anchor_question_allowed_by_portrait(key, personalization_context):
+            continue
         pick = next((row for row in sorted_rows if row.get("key") == key and row.get("key") not in used), None)
         if pick:
             selected.append(pick)
@@ -3472,14 +3525,31 @@ def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_contex
     return selected
 
 
+def _anchor_question_allowed_by_portrait(key: str, personalization_context: Dict[str, Any] | None) -> bool:
+    vectors = dict((personalization_context or {}).get("portrait_vector_summary") or {})
+    if key in {"kbq_wealth_access_route", "kbq_income_path_route"} and vectors:
+        return float(vectors.get("wealth_visibility") or 0) >= 0.2
+    return True
+
+
 def _question_runtime_preference(row: Dict[str, Any], personalization_context: Dict[str, Any] | None = None) -> Tuple[int, int, int, int, int]:
+    specificity = _question_effective_specificity_score(row, personalization_context)
     return (
         _question_bucket_priority(row, personalization_context),
-        _question_specificity_score(row),
+        specificity,
         _question_source_match_rank(row),
         int(row.get("personalized_score") or row.get("score") or 0),
         _question_source_priority(row),
     )
+
+
+def _question_effective_specificity_score(row: Dict[str, Any], personalization_context: Dict[str, Any] | None = None) -> int:
+    specificity = _question_specificity_score(row)
+    vectors = dict((personalization_context or {}).get("portrait_vector_summary") or {})
+    key = str(row.get("key") or "")
+    if (key.startswith("kbq_wealth") or key in {"kbq_income_path_route"}) and vectors and float(vectors.get("wealth_visibility") or 0) < 0.2:
+        specificity -= 24
+    return specificity
 
 
 def _question_bucket_priority(row: Dict[str, Any], personalization_context: Dict[str, Any] | None = None) -> int:
@@ -3532,7 +3602,9 @@ def _question_specificity_score(row: Dict[str, Any]) -> int:
     if bucket == "vault":
         score += 2 if len(observed) >= 2 else -4
     if key in {"q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure"}:
-        score += 10
+        score += 20
+    if key == "q_ten_god_focus":
+        score += 16
     if key in {"q_structure_overview", "kbq_structure_anchor_chain"} and not observed:
         score -= 8
     if key == "q_income_stability":

@@ -7,6 +7,7 @@ import urllib.request
 from typing import Any, Dict, List
 
 from v19.rule_graph_runtime_context import rule_graph_runtime_context_to_prompt_context
+from v19.structure_portrait import structure_portrait_to_prompt_context
 from v19.runtime import resolve_llm_base_url
 
 
@@ -96,6 +97,9 @@ def build_agent_messages(structure_payload: Dict[str, Any], user_message: str, p
             dict(structure_payload.get("rule_graph_runtime_context") or {})
         )
         if structure_payload.get("rule_graph_runtime_context")
+        else {},
+        "structure_portrait": structure_portrait_to_prompt_context(dict(structure_payload.get("structure_portrait") or {}))
+        if structure_payload.get("structure_portrait")
         else {},
         "guardrails": ["structure context only", "no unsupported facts", "state uncertainty", "keep audit trail"],
     }

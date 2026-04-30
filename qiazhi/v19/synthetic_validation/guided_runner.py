@@ -8,6 +8,7 @@ from v19.agent.income_stability import derive_income_stability
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
 from v19.knowledge_store import retrieve_knowledge
 from v19.rule_graph_runtime_context import build_rule_graph_runtime_context
+from v19.structure_portrait import build_structure_portrait
 from v19.synthetic_validation.framework_backfill import build_guided_case_framework_backfill, summarize_framework_backfill
 from v19.synthetic_validation.guided_cases import GuidedSyntheticCase
 
@@ -181,6 +182,7 @@ def _agent_data_for_case(case: GuidedSyntheticCase, *, with_knowledge: bool = Tr
         message=case.message,
         selected_question_key=case.question_key,
     )
+    data["structure_portrait"] = build_structure_portrait(data)
     data["knowledge_context"] = retrieve_knowledge(data, case.message) if with_knowledge else {
         "version": "v19.synthetic.baseline.no_knowledge",
         "items": [],

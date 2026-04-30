@@ -41,6 +41,7 @@ from v19.bazi_rule_db import (
 )
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
 from v19.rule_graph_runtime_context import build_rule_graph_runtime_context
+from v19.structure_portrait import build_structure_portrait
 from v19.synthetic_validation import (
     P11_GUIDED_SYNTHETIC_CASES,
     run_guided_synthetic_collision,
@@ -335,6 +336,7 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
         message=str(payload.get("message") or ""),
         selected_question_key=selected_question_key,
     )
+    data["structure_portrait"] = build_structure_portrait(data)
     data["knowledge_context"] = retrieve_knowledge(data, str(payload.get("message") or ""), settings=settings)
     data["guided_question_context"] = build_guided_question_context(data)
     data["guided_question_answer"] = build_guided_question_answer(data, selected_question_key, str(payload.get("message") or ""))
@@ -514,6 +516,7 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
         ],
     }
     data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(data, message=str(body.get("message") or ""))
+    data["structure_portrait"] = build_structure_portrait(data)
     data["guided_question_context"] = build_guided_question_context(data)
     return {
         "ok": True,
@@ -525,6 +528,7 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
             "luck_cycles": data.get("luck_cycles"),
             "inference_context": data.get("inference_context"),
             "rule_graph_runtime_context": data.get("rule_graph_runtime_context"),
+            "structure_portrait": data.get("structure_portrait"),
             "guided_question_context": data.get("guided_question_context"),
             "guardrails": ["STRUCTURE_PREVIEW_ONLY", "QUESTION_ROUTING_SIGNAL_ONLY", "NO_RESULT_CARD_RENDER", "NO_LLM"],
         },
@@ -571,6 +575,7 @@ def lab_guided_question_audit_post(payload: Dict[str, Any], request: Request) ->
         message=message,
         selected_question_key=selected_question_key,
     )
+    data["structure_portrait"] = build_structure_portrait(data)
     data["knowledge_context"] = retrieve_knowledge(data, message, settings=settings)
     data["guided_question_context"] = build_guided_question_context(data)
     answer = build_guided_question_answer(data, selected_question_key, message)

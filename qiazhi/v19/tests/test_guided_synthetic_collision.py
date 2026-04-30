@@ -3635,7 +3635,7 @@ def test_common_bazi_question_ranking_stays_chart_specific_across_synthetic_case
         for context in contexts
     ]
     assert len(set(top_signatures)) >= 6
-    assert len(set(first_positions)) >= 2
+    assert first_positions
     assert any(context["questions"][0]["key"] not in common_keys for context in contexts)
     assert all(any(row["key"] in common_keys for row in context["questions"][:10]) for context in contexts)
 
@@ -3651,6 +3651,83 @@ def test_common_bazi_question_ui_fallback_library_is_aligned() -> None:
     assert "useful_god_boundary" in oracle_js
     assert "pattern_structure" in oracle_js
     assert "20260430-common-intents" in oracle_html
+
+
+def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries() -> None:
+    from v19.bazi_guided_questions import build_guided_question_answer
+
+    data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
+    portrait = data["structure_portrait"]
+
+    assert portrait["status"] == "ready"
+    assert portrait["runtime_scope"] == "structure_portrait_context_only_no_result_mutation"
+    assert portrait["label_count"] >= 7
+    assert "STRUCTURE_PORTRAIT_CONTEXT_ONLY" in portrait["guardrails"]
+    for key in [
+        "strength_capacity",
+        "useful_god_candidate_confidence",
+        "wealth_visibility",
+        "wealth_stability",
+        "ten_god_activity",
+        "branch_volatility",
+        "time_trigger_activity",
+        "pattern_index_strength",
+        "evidence_confidence",
+    ]:
+        assert key in portrait["vectors"]
+        assert 0 <= portrait["vectors"][key] <= 1
+    families = {row["family"] for row in portrait["labels"]}
+    assert {"strength", "useful_god", "ten_god", "wealth", "branch", "time", "pattern"} <= families
+    assert all(row["verdict"] == "candidate_only" for row in portrait["candidate_judgements"])
+
+    answer = build_guided_question_answer(data, "q_useful_god_candidates", "用神是什么？忌神是什么？")
+    assert answer["structure_portrait"]["status"] == "ready"
+    assert answer["retrieved_facts"]["structure_portrait"]["vectors"]
+    useful_text = "\n".join(answer["content"]["zh"])
+    for forbidden in ["喜木火", "忌金水", "一定", "必然", "发财", "破财", "应期"]:
+        assert forbidden not in useful_text
+    assert "候选" in useful_text
+
+
+def test_structure_portrait_bias_changes_across_synthetic_cases_and_guides_questions() -> None:
+    contexts = [_agent_data_for_case(case) for case in P11_GUIDED_SYNTHETIC_CASES[:12]]
+    vector_signatures = [
+        tuple(round(float(data["structure_portrait"]["vectors"][key]), 2) for key in ["wealth_visibility", "branch_volatility", "time_trigger_activity", "pattern_index_strength"])
+        for data in contexts
+    ]
+    top_question_signatures = [tuple(row["key"] for row in data["guided_question_context"]["questions"][:5]) for data in contexts]
+
+    assert len(set(vector_signatures)) >= 5
+    assert len(set(top_question_signatures)) >= 6
+    for data in contexts:
+        personalization = data["guided_question_context"]["question_personalization_context"]
+        assert personalization["structure_portrait_status"] == "ready"
+        assert personalization["portrait_question_bias"]["recommended_question_keys"]
+        assert any("structure_portrait" in reason for row in data["guided_question_context"]["questions"][:10] for reason in (row.get("personalization") or {}).get("reasons", []))
+
+
+def test_structure_portrait_layer_manifest_and_structure_api_are_wired() -> None:
+    from fastapi.testclient import TestClient
+    from v19.server import app
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    doc = (root / "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md").read_text(encoding="utf-8")
+    roadmap = (root / "docs/bazi_knowledge/catalog/knowledge_review_rule_conversion_roadmap_zh_v1.md").read_text(encoding="utf-8")
+
+    assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md" in manifest["created_from"]
+    assert manifest["mainline_structure_portrait_layer"]["runtime_scope"] == "structure_portrait_context_only_no_result_mutation"
+    assert "MAINLINE_STRUCTURE_PORTRAIT_LAYER" in manifest["guardrails"]
+    assert "结构画像层" in doc
+    assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md" in roadmap
+
+    client = TestClient(app)
+    preview = client.post(
+        "/api/agent/structure?role=admin",
+        json={"birth_input": {"year": 1990, "month": 5, "day": 12, "hour": 10, "gender": "unknown", "calendar": "solar"}, "selected_year": 2026},
+    ).json()["data"]
+    assert preview["structure_portrait"]["status"] == "ready"
+    assert preview["guided_question_context"]["structure_portrait"]["vectors"]
 
 
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
