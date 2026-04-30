@@ -76,6 +76,27 @@ PY
   return 1
 }
 
+v19_wait_for_url() {
+  local python_bin="$1"
+  local url="$2"
+  local attempts="${3:-60}"
+  local i
+
+  for ((i = 0; i < attempts; i += 1)); do
+    if "${python_bin}" - "${url}/health" <<'PY' >/dev/null 2>&1
+import sys
+import urllib.request
+
+urllib.request.urlopen(sys.argv[1], timeout=0.25).read()
+PY
+    then
+      return 0
+    fi
+    sleep 0.25
+  done
+  return 1
+}
+
 v19_start_server_detached() {
   local python_bin="$1"
   local repo_root="$2"
