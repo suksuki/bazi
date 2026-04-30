@@ -39,6 +39,7 @@ from v19.bazi_rule_db import (
     list_bazi_rules,
 )
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
+from v19.rule_graph_runtime_context import build_rule_graph_runtime_context
 from v19.synthetic_validation import P11_GUIDED_SYNTHETIC_CASES, run_guided_synthetic_collision
 from v19.lab_interfaces import (
     approve_bazi_rule_proposal,
@@ -305,8 +306,13 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
     }
     data["algorithm_status"] = _algorithm_status()
     data["knowledge_context"] = retrieve_knowledge(data, str(payload.get("message") or ""), settings=settings)
-    data["guided_question_context"] = build_guided_question_context(data)
     selected_question_key = str(payload.get("selected_question_key") or "").strip()
+    data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
+        data,
+        message=str(payload.get("message") or ""),
+        selected_question_key=selected_question_key,
+    )
+    data["guided_question_context"] = build_guided_question_context(data)
     data["guided_question_answer"] = build_guided_question_answer(data, selected_question_key, str(payload.get("message") or ""))
     deterministic_guided_answer = data["guided_question_answer"].get("available") is True
     prior_session = get_session(str(payload.get("session_id") or ""), settings=settings)
@@ -466,6 +472,7 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
     if not result.get("ok"):
         return result
     data = dict(result.get("data") or {})
+    data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(data, message=str(body.get("message") or ""))
     data["guided_question_context"] = build_guided_question_context(data)
     return {
         "ok": True,
@@ -475,6 +482,7 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
             "chart": data.get("chart"),
             "time_context": data.get("time_context"),
             "luck_cycles": data.get("luck_cycles"),
+            "rule_graph_runtime_context": data.get("rule_graph_runtime_context"),
             "guided_question_context": data.get("guided_question_context"),
             "guardrails": ["STRUCTURE_PREVIEW_ONLY", "NO_INFERENCE", "NO_LLM"],
         },
@@ -517,6 +525,11 @@ def lab_guided_question_audit_post(payload: Dict[str, Any], request: Request) ->
         "guardrails": ["AUDIT_INFERENCE_CONTEXT", "NO_RESULT_MUTATION", "NO_LLM"],
     }
     data["knowledge_context"] = retrieve_knowledge(data, message, settings=settings)
+    data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
+        data,
+        message=message,
+        selected_question_key=selected_question_key,
+    )
     data["guided_question_context"] = build_guided_question_context(data)
     answer = build_guided_question_answer(data, selected_question_key, message)
     audit = _guided_question_audit_report(data, answer)

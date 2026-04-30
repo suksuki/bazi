@@ -2584,6 +2584,111 @@ def test_p45_canary_runtime_trial_is_isolated_and_reversible() -> None:
     assert "P45_CANARY_RUNTIME_TRIAL" in manifest["guardrails"]
 
 
+def test_p46_rule_graph_orchestrator_selects_chart_specific_paths() -> None:
+    from v19.rule_graph_orchestrator import orchestrate_rule_graph_paths
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
+    income = orchestrate_rule_graph_paths(
+        data,
+        question_key="q_income_stability",
+        message="我的收入稳定性结构如何？",
+        answer_kind="income_structure",
+    )
+    metadata = orchestrate_rule_graph_paths(
+        data,
+        question_key="q_element_flow_metadata",
+        message="五行生克如何只按结构关系阅读？",
+        answer_kind="metadata_boundary",
+    )
+
+    assert income["status"] == "rule_graph_paths_ready"
+    assert income["chart_graph"]["node_count"] > 0
+    assert income["chart_graph"]["edge_count"] > 0
+    assert income["summary"]["candidate_count"] == 348
+    assert income["summary"]["selected_count"] <= 8
+    assert income["summary"]["engine_enabled_count"] == 0
+    assert income["summary"]["answer_mutation_count"] == 0
+    assert income["question_intent"]["intent"] == "income_structure"
+    assert income["selected_paths"]
+    assert {row["topic_lane"] for row in income["selected_paths"]} & {"wealth_career_bridge", "ten_god_mechanism"}
+    assert all(row["score"] > 0 for row in income["selected_paths"])
+    assert income["answer_audit"]["status"] == "pass"
+
+    assert metadata["question_intent"]["intent"] == "metadata_boundary"
+    assert metadata["summary"]["canary_selected_count"] == 2
+    assert metadata["summary"]["runtime_allowed_count"] == 2
+    assert {row["knowledge_id"] for row in metadata["selected_paths"] if row["runtime_allowed"]} == {
+        "core.five_element_relations.v1",
+        "core.stem_attributes.v1",
+    }
+    assert metadata["future_model_slots"]["gnn"].startswith("reserved")
+    assert "docs/v19/V19_P46_RULE_GRAPH_ORCHESTRATOR.md" in manifest["created_from"]
+    assert manifest["p46_rule_graph_orchestrator"]["engine_enabled_count"] == 0
+    assert "P46_RULE_GRAPH_ORCHESTRATOR" in manifest["guardrails"]
+
+
+def test_p46_guided_context_and_answer_carry_rule_graph_audit() -> None:
+    from v19.bazi_guided_questions import build_guided_question_answer, guided_answer_to_plain_text
+
+    data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
+    context = data["guided_question_context"]
+    answer = build_guided_question_answer(data, "q_element_flow_metadata", "五行生克如何只按结构关系阅读？")
+    text = guided_answer_to_plain_text(answer, "zh")
+
+    assert context["rule_graph_context"]["status"] == "rule_graph_paths_ready"
+    assert context["rule_graph_context"]["summary"]["candidate_count"] == 348
+    assert any(row.get("source") == "rule_graph_orchestrator" for row in context["signals"])
+    assert "RULE_GRAPH_PATH_SELECTION" in context["guardrails"]
+    assert answer["rule_graph_context"]["status"] == "rule_graph_paths_ready"
+    assert answer["rule_graph_answer_audit"]["status"] == "pass"
+    assert answer["retrieved_facts"]["rule_graph_context"]["answer_audit_status"] == "pass"
+    assert answer["rule_graph_context"]["summary"]["engine_enabled_count"] == 0
+    assert answer["rule_graph_context"]["summary"]["answer_mutation_count"] == 0
+    assert "五行" in text or "结构" in text
+    for forbidden in ["发财", "破财", "官非", "灾祸", "疾病", "应期", "必然", "一定"]:
+        assert forbidden not in text
+
+
+def test_p47_rule_graph_runtime_context_routes_measurement_chain() -> None:
+    from v19.bazi_guided_questions import build_guided_question_answer
+    from v19.llm import build_agent_messages
+    from v19.rule_graph_runtime_context import rule_graph_runtime_context_to_prompt_context
+
+    data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
+    runtime_context = data["rule_graph_runtime_context"]
+    answer = build_guided_question_answer(data, "q_income_stability", "我的收入稳定性结构如何？")
+    prompt_messages = build_agent_messages(data, "我的收入稳定性结构如何？", [])
+    compact = json.loads(prompt_messages[1]["content"].split("STRUCTURE_CONTEXT_JSON:\n", 1)[1])
+    prompt_context = rule_graph_runtime_context_to_prompt_context(runtime_context)
+
+    assert runtime_context["status"] == "rule_graph_runtime_context_ready"
+    assert runtime_context["route_count"] >= 2
+    assert {row["route_id"] for row in runtime_context["routes"]} >= {
+        "primary_question_route",
+        "income_structure_route",
+        "structure_overview_route",
+    }
+    assert runtime_context["summary"]["candidate_count"] == 348
+    assert runtime_context["summary"]["selected_path_count"] >= 8
+    assert runtime_context["summary"]["engine_enabled_count"] == 0
+    assert runtime_context["summary"]["answer_mutation_count"] == 0
+    assert runtime_context["summary"]["runtime_mutation"] is False
+    assert runtime_context["answer_audit"]["status"] == "pass"
+    assert runtime_context["knowledge_route"]["selected_knowledge_ids"]
+    assert runtime_context["knowledge_route"]["selected_rule_ids"]
+    assert set(runtime_context["knowledge_route"]["by_topic_lane"]) & {"wealth_career_bridge", "ten_god_mechanism", "branch_time_activation"}
+    assert all(row.get("selected_by_route") for row in runtime_context["selected_paths"])
+
+    assert answer["rule_graph_runtime_context"]["status"] == "rule_graph_runtime_context_ready"
+    assert answer["retrieved_facts"]["rule_graph_runtime_context"]["answer_audit_status"] == "pass"
+    assert prompt_context["runtime_scope"] == "llm_context_route_hints_only_no_answer_mutation"
+    assert prompt_context["evidence_bindings"]
+    assert compact["rule_graph_runtime_context"]["selected_knowledge_ids"] == prompt_context["selected_knowledge_ids"]
+    assert "USE_AS_ROUTE_HINTS_ONLY" in compact["rule_graph_runtime_context"]["guardrails"]
+
+
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
     from v19.synthetic_validation import build_p31c_priority_topic_conversion_registry
 

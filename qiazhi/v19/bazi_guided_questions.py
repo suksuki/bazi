@@ -5,6 +5,11 @@ from typing import Any, Dict, Iterable, List, Set, Tuple
 from v19.agent.structure import THREE_HARMONIES
 from v19.bazi_rule_db import build_structural_rule_signals
 from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem, ten_god
+from v19.rule_graph_orchestrator import (
+    audit_selected_paths_for_answer,
+    orchestrate_rule_graph_paths,
+    rule_graph_paths_to_signals,
+)
 
 
 QUESTION_REGISTRY_VERSION = "v19.question_registry.p9.structural_rule_signals.v1"
@@ -397,6 +402,16 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
             continue
         signals.append(signal)
         questions.extend(_questions_from_signal(signal, facts))
+    rule_graph_context = orchestrate_rule_graph_paths(agent_data, limit=8)
+    for signal in rule_graph_paths_to_signals(rule_graph_context, limit=6):
+        signals.append(signal)
+        for question in _questions_from_signal(signal, facts):
+            graph_question = dict(question)
+            graph_question["source"] = "rule_graph_dynamic_question"
+            graph_question["score"] = min(int(graph_question.get("score") or 0), 54)
+            graph_question["runtime_scope"] = "rule_graph_question_hint_only_no_result_mutation"
+            graph_question["guardrails"] = list(graph_question.get("guardrails") or []) + ["RULE_GRAPH_HINT_ONLY"]
+            questions.append(graph_question)
     questions = _dedupe_questions(questions)
     ranked_questions = _rank_questions_for_chart(questions)
     return {
@@ -409,7 +424,8 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
             "runtime_scope": rule_signal_report.get("runtime_scope") or "",
         },
         "question_count": len(questions),
-        "signals": signals[:24],
+        "signals": _prioritize_context_signals(signals)[:30],
+        "rule_graph_context": rule_graph_context,
         "questions": ranked_questions[:10],
         "question_registry": {
             "version": QUESTION_REGISTRY_VERSION,
@@ -418,11 +434,19 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         },
         "guardrails": [
             "RULE_DB_GUIDES_QUESTIONS_ONLY",
+            "RULE_GRAPH_PATH_SELECTION",
             "NO_RESULT_MUTATION",
             "NO_FORTUNE",
             "NO_TIME_AWARE_INFERENCE",
         ],
     }
+
+
+def _prioritize_context_signals(signals: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    legacy = [row for row in signals if str(row.get("source") or "") != "rule_graph_orchestrator"]
+    graph = [row for row in signals if str(row.get("source") or "") == "rule_graph_orchestrator"]
+    graph = sorted(graph, key=lambda row: int(row.get("score") or 0), reverse=True)
+    return legacy[:24] + graph[:6] + legacy[24:]
 
 
 def _structural_signals_from_facts(facts: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -632,6 +656,14 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         source_signal = {}
     intent["source_signal_id"] = source_signal.get("signal_id") if source_signal else ""
     intent["source_signal_category"] = source_signal.get("category") if source_signal else ""
+    rule_graph_context = orchestrate_rule_graph_paths(
+        agent_data,
+        question_key=clean_key,
+        message=clean_message,
+        answer_kind=answer_kind,
+        limit=6,
+    )
+    rule_graph_answer_audit = audit_selected_paths_for_answer(rule_graph_context.get("selected_paths") or [])
     knowledge_context = dict(agent_data.get("knowledge_context") or {})
     applied_knowledge = _select_answer_knowledge(knowledge_context, answer_kind, clean_key, clean_message, source_signal)
     retrieved_facts = retrieve_guided_question_facts(intent, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
@@ -640,6 +672,22 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         "items": applied_knowledge,
         "runtime_scope": "answer_composer_context_only",
     }
+    retrieved_facts["rule_graph_context"] = {
+        "selected_path_ids": [str(item.get("path_id") or "") for item in rule_graph_context.get("selected_paths") or []],
+        "selected_knowledge_ids": [str(item.get("knowledge_id") or "") for item in rule_graph_context.get("selected_paths") or []],
+        "answer_audit_status": rule_graph_answer_audit.get("status"),
+        "runtime_scope": "answer_pre_audit_context_only_no_mutation",
+    }
+    runtime_context = dict(agent_data.get("rule_graph_runtime_context") or {})
+    if runtime_context:
+        retrieved_facts["rule_graph_runtime_context"] = {
+            "status": runtime_context.get("status") or "",
+            "selected_knowledge_ids": list((runtime_context.get("knowledge_route") or {}).get("selected_knowledge_ids") or [])[:8],
+            "selected_rule_ids": list((runtime_context.get("knowledge_route") or {}).get("selected_rule_ids") or [])[:8],
+            "route_count": runtime_context.get("route_count") or 0,
+            "answer_audit_status": (runtime_context.get("answer_audit") or {}).get("status") or "",
+            "runtime_scope": "measurement_route_pack_context_only_no_mutation",
+        }
     sections = _guided_answer_sections(answer_kind, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
     summary = _guided_answer_summary(answer_kind, source_signal)
     result_relation = _l("", "", "")
@@ -665,6 +713,9 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         "summary": summary,
         "sections": sections,
         "knowledge_context": knowledge_context,
+        "rule_graph_context": rule_graph_context,
+        "rule_graph_runtime_context": runtime_context,
+        "rule_graph_answer_audit": rule_graph_answer_audit,
         "applied_knowledge": applied_knowledge,
         "observed_facts": _guided_answer_observed_facts(chart, time_context, facts, income_bundle, source_question, source_signal, answer_kind),
         "composed_text": {"zh": compose_guided_question_answer(clean_message, intent, retrieved_facts, summary, result_relation, applied_knowledge)},
@@ -2614,6 +2665,7 @@ def _question_preference(row: Dict[str, Any]) -> Tuple[int, int, int]:
         "rule_db_dynamic_question": 4,
         "structural_rule_signal": 3,
         "baseline_question_fallback": 2,
+        "rule_graph_dynamic_question": 1,
         "question_registry": 1,
     }.get(source, 0)
     return (_question_source_match_rank(row), int(row.get("score") or 0), source_rank)
@@ -2624,25 +2676,28 @@ def _question_source_match_rank(row: Dict[str, Any]) -> int:
     category = str(row.get("source_signal_category") or "")
     signal_id = str(row.get("source_signal_id") or "")
     source_blob = f"{category} {signal_id}"
+    rank = 0
     if "hidden_stem" in key and ("hidden_stem" in source_blob or "hidden_stems" in source_blob):
-        return 8
-    if "ten_god" in key and "ten_god" in source_blob:
-        return 8
-    if "month_command" in key and ("structure_anchor" in source_blob or "strength_model" in source_blob):
-        return 8
-    if "day_master" in key and ("structure_anchor" in source_blob or "strength_model" in source_blob):
-        return 8
-    if "vault" in key and "vault" in source_blob:
-        return 8
-    if any(token in key for token in ["branch_relation", "combination", "harmony", "disruption"]) and "branch_relation" in source_blob:
-        return 8
-    if "time" in key and ("timing_context" in source_blob or "time" in source_blob):
-        return 8
-    if ("income" in key or "wealth" in key) and ("wealth" in source_blob or "income" in source_blob):
-        return 8
-    if row.get("source") == "baseline_question_fallback":
-        return 2
-    return 0
+        rank = 8
+    elif "ten_god" in key and "ten_god" in source_blob:
+        rank = 8
+    elif "month_command" in key and ("structure_anchor" in source_blob or "strength_model" in source_blob):
+        rank = 8
+    elif "day_master" in key and ("structure_anchor" in source_blob or "strength_model" in source_blob):
+        rank = 8
+    elif "vault" in key and "vault" in source_blob:
+        rank = 8
+    elif any(token in key for token in ["branch_relation", "combination", "harmony", "disruption"]) and "branch_relation" in source_blob:
+        rank = 8
+    elif "time" in key and ("timing_context" in source_blob or "time" in source_blob):
+        rank = 8
+    elif ("income" in key or "wealth" in key) and ("wealth" in source_blob or "income" in source_blob):
+        rank = 8
+    elif row.get("source") == "baseline_question_fallback":
+        rank = 2
+    if row.get("source") == "rule_graph_dynamic_question":
+        return min(rank, 1)
+    return rank
 
 
 def _rank_questions_for_chart(rows: List[Dict[str, Any]], limit: int = 10) -> List[Dict[str, Any]]:

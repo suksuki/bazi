@@ -6,6 +6,7 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List
 
+from v19.rule_graph_runtime_context import rule_graph_runtime_context_to_prompt_context
 from v19.runtime import resolve_llm_base_url
 
 
@@ -91,6 +92,11 @@ def build_agent_messages(structure_payload: Dict[str, Any], user_message: str, p
         "time_context": structure_payload.get("time_context"),
         "inference_context": structure_payload.get("inference_context"),
         "knowledge_context": structure_payload.get("knowledge_context"),
+        "rule_graph_runtime_context": rule_graph_runtime_context_to_prompt_context(
+            dict(structure_payload.get("rule_graph_runtime_context") or {})
+        )
+        if structure_payload.get("rule_graph_runtime_context")
+        else {},
         "guardrails": ["structure context only", "no unsupported facts", "state uncertainty", "keep audit trail"],
     }
     messages: List[Dict[str, str]] = [

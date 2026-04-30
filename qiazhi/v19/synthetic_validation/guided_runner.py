@@ -7,6 +7,7 @@ from typing import Any, Dict, Iterable, List, Mapping
 from v19.agent.income_stability import derive_income_stability
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
 from v19.knowledge_store import retrieve_knowledge
+from v19.rule_graph_runtime_context import build_rule_graph_runtime_context
 from v19.synthetic_validation.guided_cases import GuidedSyntheticCase
 
 
@@ -171,6 +172,11 @@ def _agent_data_for_case(case: GuidedSyntheticCase, *, with_knowledge: bool = Tr
         "count": 0,
         "runtime_scope": "baseline_without_kb_augmentation",
     }
+    data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(
+        data,
+        message=case.message,
+        selected_question_key=case.question_key,
+    )
     data["guided_question_context"] = build_guided_question_context(data)
     return data
 

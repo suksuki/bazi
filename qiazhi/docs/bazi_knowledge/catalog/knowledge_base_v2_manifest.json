@@ -46,6 +46,8 @@
     "docs/v19/V19_P43_DRY_RUN_SHADOW_SCORING.md",
     "docs/v19/V19_P44_CONTROLLED_ACTIVATION_CANDIDATES.md",
     "docs/v19/V19_P45_CANARY_RUNTIME_TRIAL.md",
+    "docs/v19/V19_P46_RULE_GRAPH_ORCHESTRATOR.md",
+    "docs/v19/V19_P47_RULE_GRAPH_RUNTIME_CONTEXT.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -1573,6 +1575,78 @@
       "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
+  "p46_rule_graph_orchestrator": {
+    "stage": "P46_RULE_GRAPH_ORCHESTRATOR",
+    "entrypoints": [
+      "v19.rule_graph_orchestrator.build_chart_rule_graph",
+      "v19.rule_graph_orchestrator.orchestrate_rule_graph_paths",
+      "v19.bazi_guided_questions.build_guided_question_context",
+      "v19.bazi_guided_questions.build_guided_question_answer"
+    ],
+    "runtime_scope": "chart_specific_rule_path_selection_no_answer_mutation",
+    "candidate_source": "P39 eligible rule candidates with P45 canary state markers",
+    "graph_layers": ["natal", "hidden", "time"],
+    "path_selection": {
+      "scoring": "deterministic_intent_domain_feature_risk_canary_score",
+      "arbitration": [
+        "natal_structure_before_time_layer",
+        "visible_layer_before_hidden_stem_layer",
+        "canary_paths_internal_signal_only",
+        "r2_shadow_scoring_only",
+        "no_domain_prediction_output"
+      ]
+    },
+    "future_model_slots": {
+      "gnn": "reserved_for_path_embedding_or_rerank_after_labeled_eval_dataset_exists",
+      "rl": "reserved_for_question_ordering_and_dialog_policy_not_core_rule_truth"
+    },
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "RULE_GRAPH_ORCHESTRATION",
+      "DETERMINISTIC_PATH_SCORING",
+      "NO_BLACK_BOX_CORE_INFERENCE",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_ANSWER_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
+  "p47_rule_graph_runtime_context": {
+    "stage": "P47_RULE_GRAPH_RUNTIME_CONTEXT",
+    "entrypoints": [
+      "v19.rule_graph_runtime_context.build_rule_graph_runtime_context",
+      "v19.rule_graph_runtime_context.rule_graph_runtime_context_to_prompt_context",
+      "POST /api/agent/turn",
+      "POST /api/agent/structure",
+      "POST /api/lab/guided-question-audit",
+      "v19.llm.build_agent_messages"
+    ],
+    "runtime_scope": "measurement_route_pack_no_result_mutation",
+    "route_views": [
+      "primary_question_route",
+      "income_structure_route",
+      "structure_overview_route"
+    ],
+    "uses": [
+      "chart_specific_rule_path_selection",
+      "knowledge_rule_route_pack",
+      "llm_safe_prompt_context",
+      "guided_answer_pre_audit_context"
+    ],
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "RULE_GRAPH_RUNTIME_CONTEXT",
+      "PATH_SELECTION_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_BLACK_BOX_CORE_INFERENCE",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -1635,6 +1709,8 @@
     "P43_DRY_RUN_SHADOW_SCORING",
     "P44_CONTROLLED_ACTIVATION_CANDIDATES",
     "P45_CANARY_RUNTIME_TRIAL",
+    "P46_RULE_GRAPH_ORCHESTRATOR",
+    "P47_RULE_GRAPH_RUNTIME_CONTEXT",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }
