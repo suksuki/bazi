@@ -67,6 +67,7 @@
     "docs/v19/V19_P68_TEST_TIERS.md",
     "docs/v19/V19_P69_MAINLINE_P1_SAFE_WRAPPERS.md",
     "docs/v19/V19_P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION.md",
+    "docs/v19/V19_P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -2441,6 +2442,31 @@
       "NO_RUNTIME_RULE_ACTIVATION"
     ]
   },
+  "p71_runtime_rule_db_category_questions": {
+    "stage": "P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS",
+    "entrypoints": [
+      "v19.rule_graph_orchestrator.rule_graph_paths_to_signals",
+      "v19.bazi_guided_questions._questions_from_signal",
+      "v19.bazi_guided_questions._question"
+    ],
+    "status": "category_question_routes_ready",
+    "runtime_scope": "guided_question_ordering_only_no_result_mutation",
+    "new_question_keys": [
+      "kbq_income_path_route",
+      "kbq_income_collision_route",
+      "kbq_wealth_access_route"
+    ],
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS",
+      "RULE_DB_CATEGORY_QUESTION_HINT_ONLY",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_FORTUNE"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -2524,6 +2550,7 @@
     "P68_TEST_TIERS",
     "P69_MAINLINE_P1_SAFE_WRAPPERS",
     "P70_RUNTIME_RULE_DB_ROUTE_INTEGRATION",
+    "P71_RUNTIME_RULE_DB_CATEGORY_QUESTIONS",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

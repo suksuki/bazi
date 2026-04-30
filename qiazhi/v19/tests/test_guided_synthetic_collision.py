@@ -3103,6 +3103,8 @@ def test_p48_initial_questions_are_personalized_by_rule_graph_routes() -> None:
     branch_personalization = branch_heavy["question_personalization_context"]
     first_top = first["questions"][:6]
     branch_top = branch_heavy["questions"][:6]
+    first_top_signature = [(row["key"], (row.get("label") or {}).get("zh", "")) for row in first_top]
+    branch_top_signature = [(row["key"], (row.get("label") or {}).get("zh", "")) for row in branch_top]
 
     assert first_personalization["status"] == "ready"
     assert branch_personalization["status"] == "ready"
@@ -3112,7 +3114,7 @@ def test_p48_initial_questions_are_personalized_by_rule_graph_routes() -> None:
     assert branch_personalization["route_bucket_order"]
     assert {"branch_relation", "ten_god_interaction", "income_stability"} <= set(first_personalization["route_bucket_order"])
     assert {"branch_relation", "ten_god_interaction", "income_stability"} <= set(branch_personalization["route_bucket_order"])
-    assert [row["key"] for row in first_top] != [row["key"] for row in branch_top]
+    assert first_top_signature != branch_top_signature
     assert all((row.get("personalization") or {}).get("applied") is True for row in first_top[:5])
     assert all(int(row.get("personalized_score") or 0) >= int(row.get("score") or 0) for row in first_top + branch_top)
     assert "q_income_stability" in [row["key"] for row in first["questions"][:10]]
@@ -3317,6 +3319,45 @@ def test_p70_rule_graph_can_route_runtime_rule_db_records(monkeypatch) -> None:
     assert runtime_path["runtime_allowed"] is False
     assert runtime_path["framework_state"] == "rule_db_engine_available_route_only"
     assert report["answer_audit"]["status"] == "pass"
+
+
+def test_p71_runtime_rule_db_categories_create_specific_guided_questions(monkeypatch) -> None:
+    import v19.rule_graph_orchestrator as rgo
+
+    sample_rule = {
+        "rule_id": "v19.rule.test.runtime_income_collision",
+        "knowledge_id": "test.runtime_income_collision",
+        "title": "收入牵制结构边界",
+        "domain": "income_stability",
+        "category": "income_collision",
+        "risk_level": "R2",
+        "status": "active_in_rule_db",
+        "engine_enabled": False,
+        "engine_adapter_status": "candidate_waiting_synthetic_acceptance",
+        "input_contract": {"required": ["chart", "inference_context.income_stability"]},
+        "condition": {"conditions": {"keywords": ["收入", "财星", "牵制"]}, "structured_facts": {"candidate_signal": "wealth_visible_with_binding"}},
+        "output_contract": {"is_prediction": False},
+        "allowed_usage": ["rule_db", "shadow_signal_candidate"],
+        "forbidden_usage": ["direct_fortune_output", "wealth_verdict"],
+    }
+    candidate = rgo._rule_db_record_to_candidate(sample_rule)
+    monkeypatch.setattr(rgo, "_runtime_rule_db_candidates", lambda: [candidate])
+
+    data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
+    context = data["guided_question_context"]
+    questions = context["questions"]
+    by_key = {row["key"]: row for row in questions}
+
+    assert "kbq_income_collision_route" in by_key
+    question = by_key["kbq_income_collision_route"]
+    assert question["source"] == "rule_graph_dynamic_question"
+    assert question["source_knowledge_id"] == "test.runtime_income_collision"
+    assert question["source_rule_category"] == "income_collision"
+    assert question["source_framework_state"] == "rule_db_shadow_route_candidate"
+    assert question["source_engine_enabled"] is False
+    assert "财富断语" in question["label"]["zh"]
+    assert (question.get("personalization") or {}).get("applied") is True
+    assert question["runtime_scope"] == "runtime_rule_graph_question_hint_only_no_result_mutation"
 
 
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:

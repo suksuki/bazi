@@ -227,6 +227,9 @@ def _wealth_question_keys() -> set[str]:
         "q_signal_combination",
         "q_primary_auxiliary_signals",
         "q_volatility_factors",
+        "kbq_income_path_route",
+        "kbq_income_collision_route",
+        "kbq_wealth_access_route",
         "kbq_wealth_feature_boundary",
         "kbq_wealth_metadata_boundary",
     }

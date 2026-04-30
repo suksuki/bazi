@@ -461,6 +461,18 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
             graph_question["runtime_scope"] = "rule_graph_question_hint_only_no_result_mutation"
             graph_question["guardrails"] = list(graph_question.get("guardrails") or []) + ["RULE_GRAPH_HINT_ONLY"]
             questions.append(graph_question)
+    runtime_rule_graph_context = dict(agent_data.get("rule_graph_runtime_context") or {})
+    if runtime_rule_graph_context:
+        runtime_signal_report = {"selected_paths": runtime_rule_graph_context.get("selected_paths") or []}
+        for signal in rule_graph_paths_to_signals(runtime_signal_report, limit=14):
+            signals.append(signal)
+            for question in _questions_from_signal(signal, facts):
+                graph_question = dict(question)
+                graph_question["source"] = "rule_graph_dynamic_question"
+                graph_question["score"] = min(int(graph_question.get("score") or 0), 58)
+                graph_question["runtime_scope"] = "runtime_rule_graph_question_hint_only_no_result_mutation"
+                graph_question["guardrails"] = list(graph_question.get("guardrails") or []) + ["RUNTIME_RULE_GRAPH_HINT_ONLY"]
+                questions.append(graph_question)
     personalization_context = _question_personalization_context(agent_data, facts, rule_graph_context)
     questions = _personalize_questions(questions, personalization_context)
     questions = _dedupe_questions(questions)
@@ -2690,6 +2702,7 @@ def _signal_from_rule(rule: Dict[str, Any], match: Dict[str, Any]) -> Dict[str, 
 def _questions_from_signal(signal: Dict[str, Any], facts: Dict[str, Any]) -> List[Dict[str, Any]]:
     category = str(signal.get("category") or "")
     domain = str(signal.get("domain") or "")
+    source_rule_category = str(signal.get("source_rule_category") or "")
     questions: List[Dict[str, Any]] = []
     if category == "vault":
         observed = "、".join(facts.get("vault_branches") or []) or "墓库"
@@ -2886,6 +2899,54 @@ def _questions_from_signal(signal: Dict[str, Any], facts: Dict[str, Any]) -> Lis
             )
         )
     elif domain == "income_stability":
+        if source_rule_category in {"income_path", "wealth_path"}:
+            questions.append(
+                _question(
+                    "kbq_income_path_route",
+                    "income_stability",
+                    "intermediate",
+                    86,
+                    {
+                        "zh": "当前命中的收入路径线索，如何只作为结构转换路径阅读？",
+                        "en": "How should the matched income-path clue be read only as a structural conversion path?",
+                        "ko": "현재 확인된 소득 경로 단서는 구조 전환 경로로만 어떻게 읽어야 하나요?",
+                    },
+                    signal,
+                    ["q_income_path_structure", "q_income_factors", "follow_rule_basis"],
+                )
+            )
+        elif source_rule_category in {"income_collision", "wealth_collision", "income_constraint"}:
+            questions.append(
+                _question(
+                    "kbq_income_collision_route",
+                    "income_stability",
+                    "intermediate",
+                    86,
+                    {
+                        "zh": "当前命中的收入牵制线索，如何只作为稳定性归因而不是财富断语？",
+                        "en": "How should the matched income-constraint clue be used only as stability attribution, not a wealth verdict?",
+                        "ko": "현재 확인된 소득 제약 단서는 재물 단정이 아니라 안정성 귀인으로만 어떻게 써야 하나요?",
+                    },
+                    signal,
+                    ["q_signal_combination", "q_income_factors", "follow_rule_basis"],
+                )
+            )
+        elif source_rule_category in {"wealth_boundary", "wealth_feature", "wealth_mechanism"}:
+            questions.append(
+                _question(
+                    "kbq_wealth_access_route",
+                    "income_stability",
+                    "intermediate",
+                    84,
+                    {
+                        "zh": "当前命中的财星可见性或可达性线索，如何只作为收入结构证据？",
+                        "en": "How should the matched wealth visibility or accessibility clue be used only as income-structure evidence?",
+                        "ko": "현재 확인된 재성의 가시성 또는 접근성 단서는 소득 구조 근거로만 어떻게 써야 하나요?",
+                    },
+                    signal,
+                    ["q_wealth_accessibility", "q_income_factors", "follow_rule_basis"],
+                )
+            )
         questions.append(
             _question(
                 "kbq_wealth_feature_boundary",
@@ -3002,6 +3063,10 @@ def _question(key: str, theme: str, depth: str, score: int, label: Dict[str, str
         "label": label,
         "source_signal_id": signal.get("signal_id"),
         "source_signal_category": signal.get("category") or "",
+        "source_rule_category": signal.get("source_rule_category") or "",
+        "source_topic_lane": signal.get("topic_lane") or "",
+        "source_framework_state": signal.get("framework_state") or "",
+        "source_engine_enabled": signal.get("engine_enabled") is True,
         "source_rule_id": signal.get("rule_id"),
         "source_knowledge_id": signal.get("knowledge_id"),
         "risk_level": signal.get("risk_level"),
@@ -3115,6 +3180,9 @@ def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_contex
         "q_branch_relation_detail",
         "kbq_vault_structure",
         "kbq_ten_god_interaction_boundary",
+        "kbq_income_collision_route",
+        "kbq_income_path_route",
+        "kbq_wealth_access_route",
         "q_income_stability",
         "kbq_time_vs_natal_relation",
         "q_month_command_anchor",
@@ -3164,7 +3232,7 @@ def _question_bucket_priority(row: Dict[str, Any], personalization_context: Dict
 
 
 def _question_category_key(row: Dict[str, Any]) -> str:
-    return str(row.get("source_signal_category") or _question_bucket(row) or row.get("key") or "")
+    return str(row.get("source_rule_category") or row.get("source_signal_category") or _question_bucket(row) or row.get("key") or "")
 
 
 def _question_source_priority(row: Dict[str, Any]) -> int:
@@ -3180,6 +3248,7 @@ def _question_source_priority(row: Dict[str, Any]) -> int:
 def _question_specificity_score(row: Dict[str, Any]) -> int:
     key = str(row.get("key") or "")
     category = str(row.get("source_signal_category") or "")
+    source_rule_category = str(row.get("source_rule_category") or "")
     signal_id = str(row.get("source_signal_id") or "")
     source = str(row.get("source") or "")
     observed = [str(item) for item in row.get("observed") or [] if str(item)]
@@ -3197,6 +3266,8 @@ def _question_specificity_score(row: Dict[str, Any]) -> int:
         score -= 8
     if category in {"branch_relation", "hidden_stem", "vault", "ten_god_interaction", "timing_context", "wealth_metadata", "wealth_boundary", "wealth_feature", "wealth_mechanism"}:
         score += 8
+    if source_rule_category in {"income_path", "income_collision", "wealth_boundary", "wealth_feature", "wealth_mechanism"}:
+        score += 16
     if bucket in {"branch_relation", "time_context", "metadata", "ten_god_interaction"}:
         score += 4
     if bucket == "vault":

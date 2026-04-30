@@ -198,6 +198,8 @@ def arbitrate_rule_paths(scored: List[Dict[str, Any]], *, limit: int = 8) -> Lis
     for row in scored:
         lane = str(row.get("topic_lane") or "unknown")
         max_per_lane = 3 if lane in {"core_strength_foundation", "branch_time_activation", "ten_god_mechanism"} else 2
+        if lane == "wealth_career_bridge":
+            max_per_lane = 3
         if used_lanes.get(lane, 0) >= max_per_lane:
             continue
         selected.append(row)
@@ -240,6 +242,13 @@ def rule_graph_paths_to_signals(report: Dict[str, Any], *, limit: int = 6) -> Li
                 "knowledge_id": path.get("knowledge_id") or "",
                 "rule_id": path.get("candidate_rule_id") or "",
                 "risk_level": path.get("risk_level") or "",
+                "source": path.get("source") or "",
+                "topic_lane": path.get("topic_lane") or "",
+                "source_rule_category": path.get("category") or "",
+                "expected_question_keys": list(path.get("expected_question_keys") or []),
+                "framework_state": path.get("framework_state") or "",
+                "engine_enabled": path.get("engine_enabled") is True,
+                "engine_adapter_status": path.get("engine_adapter_status") or "",
                 "observed": path.get("matched_features") or [],
                 "reason": path.get("reason") or "",
                 "score": int(path.get("score") or 0),
@@ -365,7 +374,7 @@ def _score_candidate(candidate: Dict[str, Any], graph: Dict[str, Any], intent: D
     if str(candidate.get("source") or "") == "runtime_bazi_rule_db" and (
         domain in set(intent.get("preferred_domains") or []) or topic_lane in set(intent.get("preferred_lanes") or [])
     ):
-        base += 18 if candidate.get("engine_enabled") is True else 8
+        base += 36 if candidate.get("engine_enabled") is True else 26
     if _title_matches_intent(title, intent):
         base += 10
     if not matched and topic_lane not in set(intent.get("preferred_lanes") or []) and domain not in set(intent.get("preferred_domains") or []):
