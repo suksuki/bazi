@@ -288,6 +288,7 @@
 - 合成盘验证画像与问题推荐不塌缩；
 - 静默学习只收集画像路由信号。
 - P77-P80 继续补齐 UI QA、回答正文引用、20 合成盘影子调优、常用命理入口。
+- P81 将标签画像升级为本体编译器主链，标签必须绑定 required evidence、source layer、Rule Graph knowledge path、question hooks、answer boundary，并增加用户/命理师互动校准 hooks。
 
 边界：
 

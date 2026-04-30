@@ -618,14 +618,33 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
     judgements = [dict(row) for row in portrait.get("candidate_judgements") or [] if isinstance(row, dict)]
     return {
         "version": portrait.get("version") or "",
+        "label_ontology_version": portrait.get("label_ontology_version") or "",
         "status": portrait.get("status") or "",
         "runtime_scope": portrait.get("runtime_scope") or "",
         "vectors": dict(portrait.get("vectors") or {}),
+        "label_compilation": dict(portrait.get("label_compilation") or {}),
+        "calibration_plan": {
+            "version": (portrait.get("calibration_plan") or {}).get("version") or "",
+            "status": (portrait.get("calibration_plan") or {}).get("status") or "",
+            "runtime_scope": (portrait.get("calibration_plan") or {}).get("runtime_scope") or "",
+            "user_hooks": list((portrait.get("calibration_plan") or {}).get("user_hooks") or [])[:3],
+            "analyst_hooks": list((portrait.get("calibration_plan") or {}).get("analyst_hooks") or [])[:3],
+            "feedback_update_policy": (portrait.get("calibration_plan") or {}).get("feedback_update_policy") or "",
+        },
         "labels": [
             {
                 "label_id": str(row.get("label_id") or ""),
                 "family": str(row.get("family") or ""),
                 "value": str(row.get("value") or ""),
+                "score": row.get("score"),
+                "confidence": row.get("confidence"),
+                "compiled_score": row.get("compiled_score"),
+                "posterior_confidence": row.get("posterior_confidence"),
+                "question_hooks": list(row.get("question_hooks") or [])[:4],
+                "user_calibration_hooks": list(row.get("user_calibration_hooks") or [])[:2],
+                "analyst_confirmation_hooks": list(row.get("analyst_confirmation_hooks") or [])[:2],
+                "answer_boundary": str(row.get("answer_boundary") or ""),
+                "knowledge_evidence_ids": list(row.get("knowledge_evidence_ids") or [])[:4],
                 "candidate_statement": str(row.get("candidate_statement") or ""),
             }
             for row in labels[:5]
@@ -2736,12 +2755,26 @@ def _portrait_answer_items(portrait: Dict[str, Any], answer_kind: str) -> List[D
     if label_texts:
         items.append(
             _item(
-                _l("画像标签", "Portrait labels", "프로필 라벨"),
+                _l("知识画像标签", "Knowledge portrait labels", "지식 프로필 라벨"),
                 _l("；".join(label_texts), "; ".join(label_texts_en), "; ".join(label_texts_ko)),
                 _l(
-                    "这些标签只用于证据排序和问题路径选择，不是命运断语。",
-                    "These labels only rank evidence and select question paths; they are not verdicts.",
-                    "이 라벨은 근거 정렬과 질문 경로 선택에만 쓰이며 단정이 아닙니다.",
+                    "这些标签来自标签本体、命盘事实和规则图知识路径，只用于证据排序和问题路径选择，不是命运断语。",
+                    "These labels come from the label ontology, chart facts, and Rule Graph knowledge paths. They rank evidence and select question paths; they are not verdicts.",
+                    "이 라벨은 라벨 본체, 명식 사실, 규칙 그래프 지식 경로에서 오며 근거 정렬과 질문 경로 선택에만 쓰입니다.",
+                ),
+            )
+        )
+    compilation = dict(portrait.get("label_compilation") or {})
+    if compilation.get("knowledge_evidence_count"):
+        count = int(compilation.get("knowledge_evidence_count") or 0)
+        items.append(
+            _item(
+                _l("知识路径支持", "Knowledge-path support", "지식 경로 지원"),
+                _l(f"已绑定 {count} 条规则图知识路径", f"{count} Rule Graph knowledge paths bound", f"규칙 그래프 지식 경로 {count}개 연결"),
+                _l(
+                    "这些路径只提高标签置信度和问题相关性，不直接激活规则或改写结论。",
+                    "These paths only raise label confidence and question relevance; they do not activate rules or mutate conclusions.",
+                    "이 경로는 라벨 신뢰도와 질문 관련성만 높이며 규칙을 직접 활성화하거나 결론을 바꾸지 않습니다.",
                 ),
             )
         )
@@ -2786,7 +2819,7 @@ def _portrait_compose_sentence(portrait: Dict[str, Any], answer_kind: str) -> st
         return ""
     parts = []
     if label_text:
-        parts.append(f"当前结构画像把这题放在这些候选标签下参考：{label_text}")
+        parts.append(f"当前知识画像把这题放在这些候选标签下参考：{label_text}")
     if judgement_text:
         parts.append(judgement_text.rstrip("。.!?！？"))
     return "。".join(parts) + "。这些画像只帮助选择证据和提问路径，不直接生成喜忌或结果断语。"

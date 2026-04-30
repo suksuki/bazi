@@ -3676,8 +3676,14 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
     portrait = data["structure_portrait"]
 
     assert portrait["status"] == "ready"
+    assert portrait["label_ontology_version"] == "v19.mainline.structure_portrait_label_ontology.v2"
     assert portrait["runtime_scope"] == "structure_portrait_context_only_no_result_mutation"
     assert portrait["label_count"] >= 7
+    assert portrait["label_compilation"]["status"] == "compiled"
+    assert portrait["label_compilation"]["knowledge_evidence_count"] > 0
+    assert portrait["calibration_plan"]["status"] == "ready"
+    assert portrait["calibration_plan"]["user_hooks"]
+    assert portrait["calibration_plan"]["analyst_hooks"]
     assert "STRUCTURE_PORTRAIT_CONTEXT_ONLY" in portrait["guardrails"]
     for key in [
         "strength_capacity",
@@ -3694,11 +3700,18 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
         assert 0 <= portrait["vectors"][key] <= 1
     families = {row["family"] for row in portrait["labels"]}
     assert {"strength", "useful_god", "ten_god", "wealth", "branch", "time", "pattern"} <= families
+    for row in portrait["labels"]:
+        assert row["ontology_version"] == "v19.mainline.structure_portrait_label_ontology.v2"
+        assert row["compiled_score"] >= 0
+        assert row["question_hooks"]
+        assert row["answer_boundary"]
     assert all(row["verdict"] == "candidate_only" for row in portrait["candidate_judgements"])
 
     answer = build_guided_question_answer(data, "q_useful_god_candidates", "用神是什么？忌神是什么？")
     assert answer["structure_portrait"]["status"] == "ready"
     assert answer["retrieved_facts"]["structure_portrait"]["vectors"]
+    assert answer["retrieved_facts"]["structure_portrait"]["label_compilation"]["status"] == "compiled"
+    assert answer["retrieved_facts"]["structure_portrait"]["calibration_plan"]["user_hooks"]
     assert answer["retrieved_facts"]["structure_portrait"]["labels"]
     assert answer["retrieved_facts"]["structure_portrait"]["candidate_judgements"]
     useful_text = "\n".join(answer["content"]["zh"])
@@ -3707,8 +3720,9 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
         assert forbidden not in useful_text
         assert forbidden not in useful_plain
     assert "候选" in useful_text
-    assert "结构画像" in useful_plain
+    assert "知识画像" in useful_plain or "结构画像" in useful_plain
     assert "候选标签" in useful_text or "画像标签" in useful_text
+    assert "知识路径" in useful_text
 
 
 def test_structure_portrait_bias_changes_across_synthetic_cases_and_guides_questions() -> None:
@@ -3724,6 +3738,7 @@ def test_structure_portrait_bias_changes_across_synthetic_cases_and_guides_quest
     for data in contexts:
         personalization = data["guided_question_context"]["question_personalization_context"]
         assert personalization["structure_portrait_status"] == "ready"
+        assert personalization["portrait_question_bias"]["label_driven"] is True
         assert personalization["portrait_question_bias"]["recommended_question_keys"]
         assert any("structure_portrait" in reason for row in data["guided_question_context"]["questions"][:10] for reason in (row.get("personalization") or {}).get("reasons", []))
 
@@ -3738,7 +3753,10 @@ def test_structure_portrait_layer_manifest_and_structure_api_are_wired() -> None
     roadmap = (root / "docs/bazi_knowledge/catalog/knowledge_review_rule_conversion_roadmap_zh_v1.md").read_text(encoding="utf-8")
 
     assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md" in manifest["created_from"]
+    assert "docs/v19/V19_P81_PORTRAIT_ONTOLOGY_AND_CALIBRATION.md" in manifest["created_from"]
     assert manifest["mainline_structure_portrait_layer"]["runtime_scope"] == "structure_portrait_context_only_no_result_mutation"
+    assert manifest["mainline_structure_portrait_layer"]["label_ontology_version"] == "v19.mainline.structure_portrait_label_ontology.v2"
+    assert manifest["mainline_structure_portrait_layer"]["active_label_source"] == "ontology_compiler_primary_no_legacy_label_chain"
     assert "MAINLINE_STRUCTURE_PORTRAIT_LAYER" in manifest["guardrails"]
     assert "结构画像层" in doc
     assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md" in roadmap
@@ -3777,6 +3795,9 @@ def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> 
     assert matrix["summary"]["vector_signature_count"] >= 5
     assert matrix["summary"]["top_question_signature_count"] >= 6
     assert matrix["summary"]["forbidden_text_failure_count"] == 0
+    assert matrix["summary"]["ontology_compiled_count"] == 12
+    assert matrix["summary"]["calibration_ready_count"] == 12
+    assert matrix["summary"]["knowledge_evidence_case_count"] == 12
     assert regression["status"] == "pass"
     assert regression["summary"]["runtime_mutation"] is False
     assert tuning["status"] == "portrait_shadow_tuning_ready"
@@ -3794,10 +3815,12 @@ def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> 
     assert any(row["runner"] == "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_shadow_tuning_regression" for row in queue["queue_items"])
 
     assert "结构画像产品闭环" in doc
-    assert "P77-P80" in doc
+    assert "P77-P81" in doc
     assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP.md" in manifest["created_from"]
     assert manifest["mainline_structure_portrait_product_loop"]["synthetic_case_count"] == 12
     assert manifest["mainline_structure_portrait_product_loop"]["shadow_tuning_case_count"] == 20
+    assert manifest["mainline_structure_portrait_product_loop"]["ontology_compiled_required"] is True
+    assert manifest["mainline_structure_portrait_product_loop"]["calibration_hooks_required"] is True
     assert manifest["mainline_structure_portrait_product_loop"]["runtime_mutation"] is False
     assert "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP" in manifest["guardrails"]
 

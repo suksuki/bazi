@@ -36,14 +36,23 @@ def build_structure_portrait_synthetic_matrix(limit: int = 12) -> Dict[str, Any]
         questions = [dict(row) for row in context.get("questions") or [] if isinstance(row, dict)]
         labels = [dict(row) for row in portrait.get("labels") or [] if isinstance(row, dict)]
         judgements = [dict(row) for row in portrait.get("candidate_judgements") or [] if isinstance(row, dict)]
+        compilation = dict(portrait.get("label_compilation") or {})
+        calibration = dict(portrait.get("calibration_plan") or {})
         forbidden_failures = _forbidden_failures(labels, judgements)
         rows.append(
             {
                 "case_id": case.case_id,
                 "expected_question_key": case.question_key,
                 "portrait_status": portrait.get("status") or "",
+                "label_ontology_version": portrait.get("label_ontology_version") or "",
+                "label_compilation_status": compilation.get("status") or "",
+                "knowledge_evidence_count": int(compilation.get("knowledge_evidence_count") or 0),
+                "calibration_status": calibration.get("status") or "",
+                "user_hook_count": len(calibration.get("user_hooks") or []),
+                "analyst_hook_count": len(calibration.get("analyst_hooks") or []),
                 "label_ids": [str(row.get("label_id") or "") for row in labels],
                 "label_families": sorted({str(row.get("family") or "") for row in labels if row.get("family")}),
+                "compiled_scores": [float(row.get("compiled_score") or 0) for row in labels],
                 "vectors": dict(portrait.get("vectors") or {}),
                 "candidate_judgement_ids": [str(row.get("judgement_id") or "") for row in judgements],
                 "top_question_keys": [str(row.get("key") or "") for row in questions[:5]],
@@ -66,6 +75,11 @@ def build_structure_portrait_synthetic_matrix(limit: int = 12) -> Dict[str, Any]
             "vector_signature_count": len(vector_signatures),
             "top_question_signature_count": len(question_signatures),
             "label_family_coverage": sorted(label_families),
+            "ontology_compiled_count": sum(1 for row in rows if row.get("label_compilation_status") == "compiled"),
+            "calibration_ready_count": sum(1 for row in rows if row.get("calibration_status") == "ready"),
+            "knowledge_evidence_case_count": sum(1 for row in rows if int(row.get("knowledge_evidence_count") or 0) > 0),
+            "user_hook_count": sum(int(row.get("user_hook_count") or 0) for row in rows),
+            "analyst_hook_count": sum(int(row.get("analyst_hook_count") or 0) for row in rows),
             "forbidden_text_failure_count": forbidden_failure_count,
             "engine_enabled_count": 0,
             "answer_mutation_count": 0,
@@ -92,6 +106,12 @@ def run_structure_portrait_synthetic_matrix_regression() -> Dict[str, Any]:
         failures.append(_failure("label_family_coverage_gap", ",".join(sorted(REQUIRED_LABEL_FAMILIES - observed))))
     if int(summary.get("forbidden_text_failure_count") or 0) != 0:
         failures.append(_failure("forbidden_text_leak", "Portrait labels or judgements leaked hard verdict language."))
+    if int(summary.get("ontology_compiled_count") or 0) < int(summary.get("case_count") or 0):
+        failures.append(_failure("ontology_compilation_gap", "Every portrait case must be compiled from the label ontology."))
+    if int(summary.get("calibration_ready_count") or 0) < int(summary.get("case_count") or 0):
+        failures.append(_failure("calibration_hook_gap", "Every portrait case must expose user and analyst calibration hooks."))
+    if int(summary.get("knowledge_evidence_case_count") or 0) < int(summary.get("case_count") or 0):
+        failures.append(_failure("knowledge_evidence_gap", "Every portrait case must bind at least one Rule Graph knowledge path."))
     for row in matrix.get("cases") or []:
         if row.get("runtime_mutation") is True or row.get("answer_mutation") is True:
             failures.append(_failure("mutation_not_allowed", str(row.get("case_id") or "")))
@@ -99,6 +119,8 @@ def run_structure_portrait_synthetic_matrix_regression() -> Dict[str, Any]:
             failures.append(_failure("portrait_not_ready", str(row.get("case_id") or "")))
         if not row.get("top_question_keys"):
             failures.append(_failure("question_route_missing", str(row.get("case_id") or "")))
+        if not row.get("user_hook_count") or not row.get("analyst_hook_count"):
+            failures.append(_failure("calibration_hooks_missing", str(row.get("case_id") or "")))
     status = "pass" if not failures else "fail"
     return {
         "ok": status == "pass",

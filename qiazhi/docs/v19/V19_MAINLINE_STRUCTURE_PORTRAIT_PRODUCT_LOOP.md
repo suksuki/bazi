@@ -1,6 +1,6 @@
 # V19 结构画像产品闭环
 
-P77-P80 将画像层继续推进到 UI QA、回答正文、影子调优和常用命理入口。
+P77-P81 将画像层继续推进到 UI QA、回答正文、影子调优、常用命理入口和标签本体编译器。
 
 ## 目标
 
@@ -10,6 +10,7 @@ P77-P80 将画像层继续推进到 UI QA、回答正文、影子调优和常用
 - 回答证据包能携带画像来源；
 - 合成盘能验证画像不会把问题推荐收敛成同一套；
 - 静默学习系统能收集画像路由信号，但不自动改规则。
+- 标签由本体编译器生成，并绑定规则图知识路径、问题钩子、回答边界和互动校准 hooks。
 
 ## P73: Portrait UI
 
@@ -21,6 +22,33 @@ Oracle 首屏新增 `portraitPanel`，展示：
 - 1-3 条候选判断。
 
 UI 只展示“重点标签”和“结构提示”；背景、弱证据、重复家族标签保留给路由和审计，不直接铺到首屏。界面不展示喜忌硬结论，也不输出概率断言。
+
+## P81: Portrait Ontology And Calibration
+
+画像标签主链改为：
+
+```text
+facts / vectors
+→ label ontology
+→ Rule Graph knowledge support
+→ compiled score
+→ posterior confidence
+→ question hooks / answer boundary / calibration hooks
+```
+
+旧粗标签生成链路不再作为主逻辑保留；底层 facts 和 vectors 只作为本体编译器输入。
+
+每个标签都必须带：
+
+- `required_evidence`
+- `source_layers`
+- `question_hooks`
+- `answer_boundary`
+- `knowledge_evidence_ids`
+- `user_calibration_hooks`
+- `analyst_confirmation_hooks`
+
+用户反馈只校准画像置信度和问题路径；命理师确认进入 audit，不自动改规则库。
 
 ## P74: Portrait Evidence Pack
 

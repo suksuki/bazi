@@ -222,6 +222,15 @@ def _portrait_evidence(portrait: Dict[str, Any]) -> Dict[str, Any]:
     return {
         "status": portrait.get("status") or "",
         "runtime_scope": "portrait_evidence_context_only_no_verdict",
+        "label_ontology_version": portrait.get("label_ontology_version") or "",
+        "label_compilation": dict(portrait.get("label_compilation") or {}),
+        "calibration_plan": {
+            "version": (portrait.get("calibration_plan") or {}).get("version") or "",
+            "status": (portrait.get("calibration_plan") or {}).get("status") or "",
+            "user_hook_count": len((portrait.get("calibration_plan") or {}).get("user_hooks") or []),
+            "analyst_hook_count": len((portrait.get("calibration_plan") or {}).get("analyst_hooks") or []),
+            "feedback_update_policy": (portrait.get("calibration_plan") or {}).get("feedback_update_policy") or "",
+        },
         "label_ids": label_ids,
         "judgement_ids": judgement_ids,
         "dominant_label_ids": list((portrait.get("question_bias") or {}).get("dominant_label_ids") or portrait.get("dominant_label_ids") or [])[:6],
@@ -250,6 +259,9 @@ def _portrait_bindings(portrait: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "title": row.get("family") or "",
                 "domain": row.get("family") or "",
                 "reason": row.get("candidate_statement") or "",
+                "compiled_score": row.get("compiled_score"),
+                "posterior_confidence": row.get("posterior_confidence"),
+                "knowledge_evidence_ids": list(row.get("knowledge_evidence_ids") or [])[:4],
                 "answer_boundary": "portrait_candidate_context_only_not_verdict",
             }
         )
