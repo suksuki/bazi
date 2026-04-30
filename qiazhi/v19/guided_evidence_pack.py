@@ -224,6 +224,13 @@ def _portrait_evidence(portrait: Dict[str, Any]) -> Dict[str, Any]:
         "runtime_scope": "portrait_evidence_context_only_no_verdict",
         "label_ontology_version": portrait.get("label_ontology_version") or "",
         "label_compilation": dict(portrait.get("label_compilation") or {}),
+        "portrait_options": {
+            "version": (portrait.get("portrait_options") or {}).get("version") or "",
+            "status": (portrait.get("portrait_options") or {}).get("status") or "",
+            "option_count": int((portrait.get("portrait_options") or {}).get("option_count") or 0),
+            "selected_count": int((portrait.get("portrait_options") or {}).get("selected_count") or 0),
+        },
+        "confirmed_portrait_assertions": list(portrait.get("confirmed_portrait_assertions") or [])[:6],
         "calibration_plan": {
             "version": (portrait.get("calibration_plan") or {}).get("version") or "",
             "status": (portrait.get("calibration_plan") or {}).get("status") or "",
@@ -268,6 +275,7 @@ def _portrait_bindings(portrait: Dict[str, Any]) -> List[Dict[str, Any]]:
                 "compiled_score": row.get("compiled_score"),
                 "posterior_confidence": row.get("posterior_confidence"),
                 "knowledge_evidence_ids": list(row.get("knowledge_evidence_ids") or [])[:4],
+                "selected_option": dict(row.get("selected_option") or {}),
                 "answer_boundary": "portrait_candidate_context_only_not_verdict",
             }
         )

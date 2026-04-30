@@ -226,7 +226,7 @@ function renderPortraitPanel(data) {
     return;
   }
   $("portraitPanel").classList.remove("hidden");
-  const chips = labels.map((row) => `<span class="portrait-chip"><b>${escapeHtml(portraitFamilyLabel(row.family))}</b>${escapeHtml(portraitValueLabel(row.value))}</span>`).join("");
+  const chips = labels.map((row) => `<span class="portrait-chip"><b>${escapeHtml(portraitFamilyLabel(row.family))}</b>${escapeHtml(portraitChipValue(row))}</span>`).join("");
   const judgementRows = judgements.map((row) => `<li>${escapeHtml(row.text || row.candidate_statement || row.statement || row.judgement_id || "")}</li>`).join("");
   $("portraitPanel").innerHTML = `<section class="portrait-section"><div class="pillar-panel-head"><span>${escapeHtml(portraitTitleLabel())}</span><em>${escapeHtml(portraitEvidenceLabel(portrait, labels.length, allLabels.length))}</em></div><div class="portrait-chip-row">${chips}</div>${judgementRows ? `<ul class="portrait-judgements">${judgementRows}</ul>` : ""}${portraitCalibrationBlock(portrait)}</section>`;
   bindPortraitCalibrationActions(portrait);
@@ -302,68 +302,69 @@ async function submitQuestionFeedback(rating, answer = {}) {
   $("oracleStatus").textContent = result.ok === false ? (result.message || result.code || "feedback failed") : t("answer_feedback_saved");
 }
 function portraitCalibrationBlock(portrait) {
-  const userHooks = portraitCalibrationHooks(portrait, "user").slice(0, 3);
-  const analystHooks = portraitCalibrationHooks(portrait, "analyst").slice(0, 2);
-  if (!userHooks.length && !analystHooks.length) return "";
-  const userRows = userHooks.map((hook) => portraitCalibrationCard(hook, "user")).join("");
-  const analystRows = analystHooks.map((hook) => portraitCalibrationCard(hook, "analyst")).join("");
+  const labels = portraitOptionLabels(portrait).slice(0, 3);
+  const analystLabels = portraitOptionLabels(portrait).slice(0, 5);
+  if (!labels.length && !analystLabels.length) return "";
+  const userRows = labels.map((label) => portraitOptionCard(label, "user")).join("");
+  const analystRows = analystLabels.map((label) => portraitOptionCard(label, "analyst")).join("");
   return `<div class="portrait-calibration"><div class="portrait-calibration-head"><span>${escapeHtml(portraitCalibrationTitleLabel())}</span><em>${escapeHtml(portraitCalibrationNoteLabel())}</em></div>${userRows ? `<div class="portrait-calibration-list">${userRows}</div>` : ""}${analystRows ? `<details class="portrait-analyst-calibration"><summary>${escapeHtml(portraitAnalystTitleLabel())}</summary><div class="portrait-calibration-list">${analystRows}</div></details>` : ""}</div>`;
 }
-function portraitCalibrationCard(hook, role) {
-  const hookId = String(hook.hook_id || "");
-  const ratingLabels = portraitCalibrationRatingLabels(role);
-  return `<article class="portrait-calibration-card"><strong>${escapeHtml(portraitFamilyLabel(hook.family || ""))}</strong><p>${escapeHtml(hook.question || "")}</p><div class="portrait-calibration-actions"><button type="button" class="secondary" data-calibration-hook="${escapeHtml(hookId)}" data-calibration-role="${escapeHtml(role)}" data-calibration-rating="1">${escapeHtml(ratingLabels.yes)}</button><button type="button" class="secondary" data-calibration-hook="${escapeHtml(hookId)}" data-calibration-role="${escapeHtml(role)}" data-calibration-rating="0">${escapeHtml(ratingLabels.unsure)}</button><button type="button" class="secondary" data-calibration-hook="${escapeHtml(hookId)}" data-calibration-role="${escapeHtml(role)}" data-calibration-rating="-1">${escapeHtml(ratingLabels.no)}</button><button type="button" class="secondary" data-calibration-draft="${escapeHtml(hookId)}">${escapeHtml(portraitCalibrationDraftLabel())}</button></div></article>`;
+function portraitOptionCard(label, role) {
+  const options = Array.isArray(label.selection_options) ? label.selection_options.slice(0, 4) : [];
+  const state = String((label.selected_option || {}).selection_state || "system_suggested");
+  const stateText = portraitSelectionStateLabel(state);
+  const buttons = options.map((option) => {
+    const selected = String((label.selected_option || {}).option_id || "") === String(option.option_id || "");
+    return `<button type="button" class="secondary portrait-option-button ${selected ? "active" : ""}" data-calibration-option="${escapeHtml(option.option_id || "")}" data-calibration-label="${escapeHtml(label.label_id || "")}" data-calibration-role="${escapeHtml(role)}" data-calibration-rating="1"><span>${escapeHtml(option.title || "")}</span><small>${escapeHtml(portraitOptionScoreLabel(option))}</small></button>`;
+  }).join("");
+  return `<article class="portrait-calibration-card"><div class="portrait-option-card-head"><strong>${escapeHtml(portraitFamilyLabel(label.family || ""))}</strong><em>${escapeHtml(stateText)}</em></div><p>${escapeHtml(portraitOptionInstructionLabel(role))}</p><div class="portrait-calibration-actions portrait-option-actions">${buttons}<button type="button" class="secondary" data-calibration-option-unsure="${escapeHtml(label.label_id || "")}" data-calibration-role="${escapeHtml(role)}" data-calibration-rating="0">${escapeHtml(portraitOptionUnsureLabel())}</button></div></article>`;
 }
 function bindPortraitCalibrationActions(portrait) {
-  document.querySelectorAll("[data-calibration-hook]").forEach((button) => {
+  document.querySelectorAll("[data-calibration-option]").forEach((button) => {
     button.addEventListener("click", () => {
-      const hook = portraitCalibrationHookById(portrait, button.dataset.calibrationHook || "");
-      submitPortraitCalibrationFeedback(hook, Number(button.dataset.calibrationRating || 0), button.dataset.calibrationRole || "user", button);
+      const label = portraitLabelById(portrait, button.dataset.calibrationLabel || "");
+      const option = portraitOptionById(label, button.dataset.calibrationOption || "");
+      submitPortraitCalibrationFeedback(label, option, Number(button.dataset.calibrationRating || 1), button.dataset.calibrationRole || "user", button);
     });
   });
-  document.querySelectorAll("[data-calibration-draft]").forEach((button) => {
+  document.querySelectorAll("[data-calibration-option-unsure]").forEach((button) => {
     button.addEventListener("click", () => {
-      const hook = portraitCalibrationHookById(portrait, button.dataset.calibrationDraft || "");
-      if (!hook) return;
-      selectedQuestionKey = "";
-      $("message").value = `${portraitCalibrationDraftPromptLabel()}\n${hook.question || ""}\n${portraitCalibrationDraftPrefixLabel()}`;
-      document.querySelectorAll("[data-question-key]").forEach((node) => node.classList.remove("active"));
-      $("message").focus();
+      const label = portraitLabelById(portrait, button.dataset.calibrationOptionUnsure || "");
+      submitPortraitCalibrationFeedback(label, null, Number(button.dataset.calibrationRating || 0), button.dataset.calibrationRole || "user", button);
     });
   });
 }
-function portraitCalibrationHooks(portrait, role) {
-  const plan = portrait.calibration_plan || {};
-  const key = role === "analyst" ? "analyst_hooks" : "user_hooks";
-  return Array.isArray(plan[key]) ? plan[key].filter((row) => row && typeof row === "object" && row.question) : [];
+function portraitOptionLabels(portrait) {
+  return Array.isArray(portrait.labels) ? portrait.labels.filter((row) => row && typeof row === "object" && Array.isArray(row.selection_options) && row.selection_options.length) : [];
 }
-function portraitCalibrationHookById(portrait, hookId) {
-  const hooks = [...portraitCalibrationHooks(portrait, "user"), ...portraitCalibrationHooks(portrait, "analyst")];
-  return hooks.find((row) => String(row.hook_id || "") === String(hookId || "")) || null;
+function portraitLabelById(portrait, labelId) {
+  return portraitOptionLabels(portrait).find((row) => String(row.label_id || "") === String(labelId || "")) || null;
 }
-async function submitPortraitCalibrationFeedback(hook, rating, role, button) {
-  if (!hook) return;
+function portraitOptionById(label, optionId) {
+  const options = Array.isArray(label?.selection_options) ? label.selection_options : [];
+  return options.find((row) => String(row.option_id || "") === String(optionId || "")) || null;
+}
+async function submitPortraitCalibrationFeedback(label, option, rating, role, button) {
+  if (!label) return;
   if (button) button.disabled = true;
   const currentPortrait = (lastData?.structure_portrait || structureData?.structure_portrait || {});
+  const cleanRating = Number(rating || 0);
   const payload = {
     actor_role: role === "analyst" ? "analyst" : "user",
     subject_type: "portrait_calibration",
-    subject_id: hook.hook_id || "",
-    rating,
-    comment: `portrait_calibration:${role}:${hook.family || "structure"}:${rating}`,
-    tags: ["portrait_calibration", role, hook.family || "structure"],
-    suggested_action: role === "analyst" ? "analyst_confirmation_queue" : "portrait_confidence_calibration",
+    subject_id: option?.option_id || label.label_id || "",
+    rating: cleanRating,
+    comment: `portrait_option:${role}:${label.family || "structure"}:${option?.option_id || "uncertain"}:${cleanRating}`,
+    tags: ["portrait_calibration", "portrait_option", role, label.family || "structure"],
+    suggested_action: role === "analyst" ? "analyst_option_confirmation" : "portrait_option_selection",
     payload: {
-      hook,
-      label_id: hook.label_id || "",
-      update_target: "structure_portrait_confidence_only",
+      label_id: label.label_id || "",
+      option: option || {},
+      update_target: "confirmed_portrait_assertions_and_confidence",
       structure_portrait: {
         label_ontology_version: currentPortrait.label_ontology_version || "",
+        option_model_version: currentPortrait.portrait_options?.version || "",
         label_compilation: currentPortrait.label_compilation || {},
-        calibration_plan: {
-          version: (currentPortrait.calibration_plan || {}).version || "",
-          status: (currentPortrait.calibration_plan || {}).status || "",
-        },
       },
       runtime_mutation: false,
       rule_mutation: false,
@@ -372,9 +373,10 @@ async function submitPortraitCalibrationFeedback(hook, rating, role, button) {
       profile_id: profileId,
       session_id: sessionId,
       selected_year: selectedYear,
-      hook_type: hook.hook_type || role,
-      family: hook.family || "",
-      label_id: hook.label_id || "",
+      hook_type: "portrait_option_selection",
+      family: label.family || "",
+      label_id: label.label_id || "",
+      option_id: option?.option_id || "",
     },
   };
   const result = await postJson("/api/agent/feedback", payload);
@@ -532,42 +534,42 @@ function portraitTitleLabel() {
   return ({ zh: "知识画像", en: "Knowledge portrait", ko: "지식 프로필" }[locale] || "Knowledge portrait");
 }
 function portraitCalibrationTitleLabel() {
-  return ({ zh: "校准画像", en: "Calibrate portrait", ko: "프로필 보정" }[locale] || "Calibrate portrait");
+  return ({ zh: "选择画像", en: "Select portrait", ko: "프로필 선택" }[locale] || "Select portrait");
 }
 function portraitCalibrationNoteLabel() {
-  return ({ zh: "反馈只调整画像置信度和提问顺序", en: "Feedback only tunes portrait confidence and question order", ko: "피드백은 프로필 신뢰도와 질문 순서만 조정합니다" }[locale] || "Feedback only tunes portrait confidence and question order");
+  return ({ zh: "选择只确认个人画像，不改命盘和规则", en: "Selection confirms this portrait only; it does not change chart facts or rules", ko: "선택은 개인 프로필만 확인하며 명식 사실이나 규칙은 바꾸지 않습니다" }[locale] || "Selection confirms this portrait only.");
 }
 function portraitAnalystTitleLabel() {
   return ({ zh: "命理师确认入口", en: "Practitioner confirmation", ko: "명리사 확인" }[locale] || "Practitioner confirmation");
 }
-function portraitCalibrationRatingLabels(role) {
-  if (role === "analyst") {
-    return {
-      yes: ({ zh: "成立", en: "Valid", ko: "성립" }[locale] || "Valid"),
-      unsure: ({ zh: "待复核", en: "Review", ko: "재검토" }[locale] || "Review"),
-      no: ({ zh: "不成立", en: "Invalid", ko: "불성립" }[locale] || "Invalid"),
-    };
-  }
-  return {
-    yes: ({ zh: "符合", en: "Fits", ko: "맞음" }[locale] || "Fits"),
-    unsure: ({ zh: "不确定", en: "Unsure", ko: "불확실" }[locale] || "Unsure"),
-    no: ({ zh: "不符合", en: "Doesn't fit", ko: "맞지 않음" }[locale] || "Doesn't fit"),
-  };
-}
-function portraitCalibrationDraftLabel() {
-  return ({ zh: "展开说", en: "Explain", ko: "설명" }[locale] || "Explain");
-}
-function portraitCalibrationDraftPromptLabel() {
-  return ({ zh: "我想补充这条画像校准信息：", en: "I want to add calibration detail for this portrait signal:", ko: "이 프로필 신호 보정 정보를 추가하고 싶습니다:" }[locale] || "I want to add calibration detail for this portrait signal:");
-}
-function portraitCalibrationDraftPrefixLabel() {
-  return ({ zh: "我的实际情况是：", en: "My actual experience is:", ko: "실제 경험은:" }[locale] || "My actual experience is:");
-}
 function portraitCalibrationSavedLabel() {
-  return ({ zh: "画像校准已记录，并会回流到当前画像置信度。", en: "Portrait calibration saved and will flow back into portrait confidence.", ko: "프로필 보정이 저장되어 현재 프로필 신뢰도에 반영됩니다." }[locale] || "Portrait calibration saved.");
+  return ({ zh: "画像选择已记录，并会回流到当前画像和提问顺序。", en: "Portrait selection saved and will flow back into portrait and question order.", ko: "프로필 선택이 저장되어 현재 프로필과 질문 순서에 반영됩니다." }[locale] || "Portrait selection saved.");
 }
 function portraitCalibrationSavedShortLabel() {
   return ({ zh: "已记录", en: "Saved", ko: "저장됨" }[locale] || "Saved");
+}
+function portraitOptionInstructionLabel(role) {
+  if (role === "analyst") return ({ zh: "选择最成立的命理画像", en: "Select the strongest portrait assertion", ko: "가장 성립하는 프로필을 선택하세요" }[locale] || "Select the strongest portrait assertion");
+  return ({ zh: "选择最像自己的那一项", en: "Select the one that fits you best", ko: "가장 잘 맞는 항목을 선택하세요" }[locale] || "Select the one that fits you best");
+}
+function portraitOptionUnsureLabel() {
+  return ({ zh: "暂不确定", en: "Unsure", ko: "아직 모름" }[locale] || "Unsure");
+}
+function portraitSelectionStateLabel(state) {
+  const table = {
+    zh: { analyst_confirmed: "命理师已确认", user_confirmed: "你已确认", rejected: "已否定", uncertain: "待确认", system_suggested: "系统建议" },
+    en: { analyst_confirmed: "Practitioner confirmed", user_confirmed: "Confirmed by you", rejected: "Rejected", uncertain: "Uncertain", system_suggested: "Suggested" },
+    ko: { analyst_confirmed: "명리사 확인", user_confirmed: "사용자 확인", rejected: "부정됨", uncertain: "미확정", system_suggested: "시스템 제안" },
+  };
+  return (table[locale] || table.zh)[state] || (table[locale] || table.zh).system_suggested;
+}
+function portraitOptionScoreLabel(option) {
+  const score = Math.round(Number(option?.score || 0) * 100);
+  return ({ zh: `画像 ${score}`, en: `portrait ${score}`, ko: `프로필 ${score}` }[locale] || `portrait ${score}`);
+}
+function portraitChipValue(row) {
+  const selected = row?.selected_option || {};
+  return selected.title || row.display_value || portraitValueLabel(row.value);
 }
 function portraitEvidenceLabel(portrait, visibleCount, totalCount) {
   const total = Number(totalCount || portrait.label_count || (portrait.labels || []).length || 0);

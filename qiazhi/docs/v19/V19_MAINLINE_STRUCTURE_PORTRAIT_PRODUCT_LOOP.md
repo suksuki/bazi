@@ -61,6 +61,20 @@ P82 将互动校准落到完整运行链路：
 - 推荐问题和回答证据包拿到的是校准后的画像；
 - 规则库、知识库、标签含义和答案结论都不被反馈直接改写。
 
+## P83: Portrait Option Model
+
+P83 修正 P82 的产品形态：校准不再是“系统继续问用户一个问题”，而是由系统列出画像选项，让用户或命理师直接选择。
+
+新增：
+
+- `structure_portrait.portrait_options`
+- `structure_portrait.labels[].selection_options`
+- `structure_portrait.labels[].selected_option`
+- `structure_portrait.confirmed_portrait_assertions`
+- feedback summary 的 `by_option`
+
+用户选择后，画像项可以从 `system_suggested` 进入 `user_confirmed`；命理师选择后进入 `analyst_confirmed`。确认画像只影响个性化画像、推荐问题和回答证据路径，不改命盘事实，不改规则库。
+
 ## P74: Portrait Evidence Pack
 
 `guided_evidence_pack` 增加 `portrait_evidence`：

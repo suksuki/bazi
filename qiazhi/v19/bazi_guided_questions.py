@@ -623,6 +623,8 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
         "runtime_scope": portrait.get("runtime_scope") or "",
         "vectors": dict(portrait.get("vectors") or {}),
         "label_compilation": dict(portrait.get("label_compilation") or {}),
+        "portrait_options": dict(portrait.get("portrait_options") or {}),
+        "confirmed_portrait_assertions": list(portrait.get("confirmed_portrait_assertions") or [])[:6],
         "calibration_plan": {
             "version": (portrait.get("calibration_plan") or {}).get("version") or "",
             "status": (portrait.get("calibration_plan") or {}).get("status") or "",
@@ -641,12 +643,17 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
                 "confidence": row.get("confidence"),
                 "compiled_score": row.get("compiled_score"),
                 "posterior_confidence": row.get("posterior_confidence"),
+                "display_value": str(row.get("display_value") or ""),
+                "selected_option": dict(row.get("selected_option") or {}),
+                "selection_options": list(row.get("selection_options") or [])[:5],
+                "portrait_assertion_state": str(row.get("portrait_assertion_state") or ""),
                 "question_hooks": list(row.get("question_hooks") or [])[:4],
                 "user_calibration_hooks": list(row.get("user_calibration_hooks") or [])[:2],
                 "analyst_confirmation_hooks": list(row.get("analyst_confirmation_hooks") or [])[:2],
                 "answer_boundary": str(row.get("answer_boundary") or ""),
                 "knowledge_evidence_ids": list(row.get("knowledge_evidence_ids") or [])[:4],
                 "calibration_feedback_applied": dict(row.get("calibration_feedback_applied") or {}),
+                "portrait_option_feedback_applied": dict(row.get("portrait_option_feedback_applied") or {}),
                 "candidate_statement": str(row.get("candidate_statement") or ""),
             }
             for row in labels[:5]
@@ -2820,8 +2827,10 @@ def _portrait_compose_sentence(portrait: Dict[str, Any], answer_kind: str) -> st
     if not label_text and not judgement_text:
         return ""
     parts = []
+    confirmed = [dict(row) for row in portrait.get("confirmed_portrait_assertions") or [] if isinstance(row, dict)]
     if label_text:
-        parts.append(f"当前知识画像把这题放在这些候选标签下参考：{label_text}")
+        prefix = "当前知识画像已确认这些画像项" if confirmed else "当前知识画像建议先看这些画像项"
+        parts.append(f"{prefix}：{label_text}")
     if judgement_text:
         parts.append(judgement_text.rstrip("。.!?！？"))
     return "。".join(parts) + "。这些画像只帮助选择证据和提问路径，不直接生成喜忌或结果断语。"
@@ -2863,7 +2872,12 @@ def _portrait_label_from_id(label_id: str) -> Dict[str, str]:
 
 def _portrait_label_text(row: Dict[str, Any], locale: str) -> str:
     family = _local_text(_portrait_family_l(str(row.get("family") or "")), locale)
-    value = _local_text(_portrait_value_l(str(row.get("value") or "")), locale)
+    selected = dict(row.get("selected_option") or {})
+    value = _local_text(selected.get("title") or "", locale) or str(row.get("display_value") or "") or _local_text(_portrait_value_l(str(row.get("value") or "")), locale)
+    state = str(selected.get("selection_state") or row.get("portrait_assertion_state") or "")
+    if state in {"user_confirmed", "analyst_confirmed"}:
+        marker = _local_text(_l("已确认", "confirmed", "확인됨"), locale)
+        value = f"{value}（{marker}）" if locale == "zh" else f"{value} ({marker})"
     return f"{family}: {value}" if family and value else value or family
 
 

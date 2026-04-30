@@ -210,6 +210,7 @@ def portrait_calibration_feedback_summary(
             "birth_fingerprint": "",
             "by_label": {},
             "by_family": {},
+            "by_option": {},
             "items": [],
             "storage": storage,
             "guardrails": [
@@ -220,6 +221,7 @@ def portrait_calibration_feedback_summary(
         }
     by_label: Dict[str, Dict[str, Any]] = {}
     by_family: Dict[str, Dict[str, Any]] = {}
+    by_option: Dict[str, Dict[str, Any]] = {}
     items: List[Dict[str, Any]] = []
 
     def bucket(target: Dict[str, Dict[str, Any]], key: str, kind: str) -> Dict[str, Any]:
@@ -253,8 +255,10 @@ def portrait_calibration_feedback_summary(
         if clean_birth_fingerprint and row_birth_fingerprint != clean_birth_fingerprint:
             continue
 
-        label_id = _clean(metadata.get("label_id") or payload.get("label_id") or hook.get("label_id") or row.get("subject_id"), "unknown_label")
+        option_payload = dict(payload.get("option") or {})
+        label_id = _clean(metadata.get("label_id") or payload.get("label_id") or hook.get("label_id") or option_payload.get("label_id") or row.get("subject_id"), "unknown_label")
         family = _clean(metadata.get("family") or hook.get("family"), "structure")
+        option_id = _clean(metadata.get("option_id") or option_payload.get("option_id"))
         rating = _bounded_int(row.get("rating"), 0, -2, 2)
         actor_role = _role(row.get("actor_role"))
         if actor_role != "analyst" and "analyst" in {str(item) for item in row.get("tags", [])}:
@@ -267,13 +271,17 @@ def portrait_calibration_feedback_summary(
             "actor_role": actor_role,
             "label_id": label_id,
             "family": family,
+            "option_id": option_id,
             "rating": rating,
             "hook_type": _clean(metadata.get("hook_type") or hook.get("hook_type")),
             "status": row.get("status") or "",
         }
         items.append(compact)
 
-        for target, key, kind in [(by_label, label_id, "label"), (by_family, family, "family")]:
+        bucket_targets = [(by_label, label_id, "label"), (by_family, family, "family")]
+        if option_id:
+            bucket_targets.append((by_option, option_id, "option"))
+        for target, key, kind in bucket_targets:
             row_bucket = bucket(target, key, kind)
             row_bucket["count"] += 1
             row_bucket["rating_sum"] += rating
@@ -289,7 +297,7 @@ def portrait_calibration_feedback_summary(
                 row_bucket["user_count"] += 1
             row_bucket["latest_feedback_at"] = max(str(row_bucket.get("latest_feedback_at") or ""), created_at)
 
-    for row_bucket in list(by_label.values()) + list(by_family.values()):
+    for row_bucket in list(by_label.values()) + list(by_family.values()) + list(by_option.values()):
         count = int(row_bucket.get("count") or 0)
         row_bucket["average_rating"] = round(float(row_bucket.get("rating_sum") or 0) / count, 3) if count else 0.0
 
@@ -304,6 +312,7 @@ def portrait_calibration_feedback_summary(
         "birth_fingerprint": clean_birth_fingerprint,
         "by_label": by_label,
         "by_family": by_family,
+        "by_option": by_option,
         "items": items[:50],
         "storage": storage,
         "guardrails": [

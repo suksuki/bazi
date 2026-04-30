@@ -73,3 +73,15 @@ Oracle 画像面板展示两类校准入口：
 - 画像编译器能应用反馈并保持 `NO_RULE_MUTATION_FROM_CALIBRATION`。
 - 回答证据包能看到校准后的画像。
 - 合成测试仍保持 forbidden text 为 0。
+
+## P83 修正
+
+P82 的第一版校准入口仍偏“问答式”，并且画像值太多停留在候选态。P83 将校准入口改为画像选项：
+
+- UI 直接列出画像选项；
+- 用户和命理师选择画像项；
+- feedback 记录 `option_id`；
+- 后端按 `by_option` 汇总；
+- 已确认选项生成 `confirmed_portrait_assertions`。
+
+P82 保留为反馈回流边界，P83 成为画像确认的产品形态。

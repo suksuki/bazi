@@ -1474,6 +1474,21 @@ summary em {
   margin-bottom: 4px;
 }
 
+.portrait-option-card-head {
+  align-items: baseline;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.portrait-option-card-head em {
+  color: var(--text-muted);
+  font-size: 10px;
+  font-style: normal;
+  font-weight: 850;
+  text-align: right;
+}
+
 .portrait-calibration-card p {
   color: var(--text-muted);
   font-size: 12px;
@@ -1493,6 +1508,32 @@ summary em {
   min-width: 64px;
   padding: 7px 9px;
   font-size: 11px;
+}
+
+.portrait-option-actions {
+  align-items: stretch;
+}
+
+.portrait-option-button {
+  align-items: flex-start;
+  display: inline-flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 100%;
+  min-width: 92px;
+  text-align: left;
+}
+
+.portrait-option-button.active {
+  border-color: var(--primary);
+  background: rgba(58, 166, 117, 0.18);
+  color: var(--text-main);
+}
+
+.portrait-option-button small {
+  color: var(--text-muted);
+  font-size: 9px;
+  font-weight: 800;
 }
 
 .portrait-analyst-calibration {

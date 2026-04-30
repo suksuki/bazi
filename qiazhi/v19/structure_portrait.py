@@ -8,6 +8,7 @@ from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem,
 STRUCTURE_PORTRAIT_VERSION = "v19.mainline.structure_portrait.v1"
 PORTRAIT_LABEL_ONTOLOGY_VERSION = "v19.mainline.structure_portrait_label_ontology.v2"
 PORTRAIT_CALIBRATION_VERSION = "v19.mainline.structure_portrait_calibration_hooks.v1"
+PORTRAIT_OPTION_VERSION = "v19.mainline.structure_portrait_options.v1"
 FORBIDDEN_PORTRAIT_OUTPUTS = ["一定", "必然", "发财", "破财", "应期", "灾祸", "疾病", "喜木火", "忌金水", "改运"]
 WEALTH_GODS = {"正财", "偏财"}
 OUTPUT_GODS = {"食神", "伤官"}
@@ -182,9 +183,12 @@ def build_structure_portrait(agent_data: Dict[str, Any]) -> Dict[str, Any]:
     labels = _compile_portrait_labels(facts, vectors, rule_graph_runtime_context)
     calibration_feedback = dict(agent_data.get("portrait_calibration_feedback") or {})
     labels = _apply_calibration_feedback(labels, calibration_feedback)
+    labels = _apply_portrait_option_feedback(labels, calibration_feedback)
     judgements = _candidate_judgements(labels, vectors)
     question_bias = _question_bias(vectors, labels)
     calibration_plan = _portrait_calibration_plan(labels)
+    portrait_options = _portrait_options_summary(labels)
+    confirmed_assertions = _confirmed_portrait_assertions(labels)
     return {
         "ok": True,
         "version": STRUCTURE_PORTRAIT_VERSION,
@@ -199,6 +203,8 @@ def build_structure_portrait(agent_data: Dict[str, Any]) -> Dict[str, Any]:
             "scoring_model": ontology["scoring_model"],
         },
         "label_compilation": _label_compilation_summary(labels),
+        "portrait_options": portrait_options,
+        "confirmed_portrait_assertions": confirmed_assertions,
         "calibration_plan": calibration_plan,
         "calibration_feedback": _compact_calibration_feedback(calibration_feedback),
         "vectors": vectors,
@@ -216,6 +222,7 @@ def build_structure_portrait(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         },
         "guardrails": [
             "STRUCTURE_PORTRAIT_CONTEXT_ONLY",
+            "PORTRAIT_OPTIONS_SELECTION_ONLY",
             "CANDIDATE_JUDGEMENT_ONLY",
             "NO_RESULT_MUTATION",
             "NO_RULE_ACTIVATION",
@@ -243,19 +250,26 @@ def structure_portrait_to_prompt_context(portrait: Dict[str, Any], *, limit: int
                 "confidence": row.get("confidence"),
                 "compiled_score": row.get("compiled_score"),
                 "posterior_confidence": row.get("posterior_confidence"),
+                "display_value": row.get("display_value") or row.get("value") or "",
+                "selected_option": dict(row.get("selected_option") or {}),
+                "selection_options": list(row.get("selection_options") or [])[:5],
                 "question_hooks": list(row.get("question_hooks") or [])[:4],
                 "user_calibration_hooks": list(row.get("user_calibration_hooks") or [])[:2],
                 "analyst_confirmation_hooks": list(row.get("analyst_confirmation_hooks") or [])[:2],
                 "calibration_feedback_applied": dict(row.get("calibration_feedback_applied") or {}),
+                "portrait_option_feedback_applied": dict(row.get("portrait_option_feedback_applied") or {}),
                 "candidate_statement": row.get("candidate_statement") or "",
                 "answer_boundary": row.get("answer_boundary") or "",
             }
             for row in labels[:limit]
         ],
         "calibration_feedback": dict(portrait.get("calibration_feedback") or {}),
+        "portrait_options": dict(portrait.get("portrait_options") or {}),
+        "confirmed_portrait_assertions": list(portrait.get("confirmed_portrait_assertions") or [])[:limit],
         "candidate_judgements": judgements[:limit],
         "guardrails": [
             "USE_AS_STRUCTURE_PORTRAIT_ONLY",
+            "PORTRAIT_OPTIONS_SELECTION_ONLY",
             "NO_HARD_VERDICT",
             "NO_DOMAIN_RESULT_PREDICTION",
         ],
@@ -375,6 +389,108 @@ def _compile_portrait_labels(facts: Dict[str, Any], vectors: Dict[str, float], r
     return sorted(labels, key=lambda row: (float(row.get("compiled_score") or row.get("score") or 0), float(row.get("confidence") or 0), str(row.get("label_id") or "")), reverse=True)
 
 
+def _portrait_options_for_label(label_id: str, facts: Dict[str, Any], vectors: Dict[str, float]) -> List[Dict[str, Any]]:
+    strength = float(vectors.get("strength_capacity") or 0)
+    wealth_visibility = float(vectors.get("wealth_visibility") or 0)
+    wealth_stability = float(vectors.get("wealth_stability") or 0)
+    branch_volatility = float(vectors.get("branch_volatility") or 0)
+    time_activity = float(vectors.get("time_trigger_activity") or 0)
+    pattern_strength = float(vectors.get("pattern_index_strength") or 0)
+    ten_god_activity = float(vectors.get("ten_god_activity") or 0)
+    useful_confidence = float(vectors.get("useful_god_candidate_confidence") or 0)
+    wealth_count = int(facts.get("wealth_count") or 0)
+    output_count = int(facts.get("output_count") or 0)
+    peer_count = int(facts.get("peer_count") or 0)
+    resource_count = int(facts.get("resource_count") or 0)
+    relation_count = len(facts.get("relation_types") or [])
+    time_relation_count = int(facts.get("time_relation_count") or 0)
+
+    def option(option_id: str, title: str, detail: str, score: float, evidence: List[str], boundary: str = "画像选项只用于个性化校准，不直接生成命运断语。") -> Dict[str, Any]:
+        return {
+            "option_id": option_id,
+            "label_id": label_id,
+            "title": title,
+            "detail": detail,
+            "score": round(_clamp(score), 3),
+            "option_model_version": PORTRAIT_OPTION_VERSION,
+            "evidence_refs": evidence,
+            "selection_state": "system_suggested",
+            "boundary": boundary,
+            "runtime_scope": "portrait_option_selection_only_no_rule_mutation",
+        }
+
+    options: List[Dict[str, Any]]
+    if label_id == "portrait.strength.capacity_candidate":
+        options = [
+            option("portrait.option.strength.strong_capacity", "承载偏强", "月令、同类或印星支持较明显，先按承载较足的画像观察。", strength, ["chart.month_branch", "chart.hidden_stems", "ten_god.resource"]),
+            option("portrait.option.strength.weak_capacity", "承载偏弱", "财官食伤或结构张力消耗较明显，先按承载需补的画像观察。", 1 - strength, ["ten_god.wealth", "ten_god.output", "chart.relations"]),
+            option("portrait.option.strength.balanced_capacity", "中和待辨", "强弱证据没有明显偏向，适合继续看透藏、根气和时间触发。", 1 - abs(strength - 0.5) * 2, ["chart.day_stem", "chart.month_branch"]),
+        ]
+    elif label_id == "portrait.useful_god.candidate_boundary":
+        options = [
+            option("portrait.option.useful_god.support_capacity", "先看扶身路径", "承载证据不足或波动明显时，优先复核印比是否能形成支持路径。", (1 - strength) * 0.45 + resource_count * 0.12 + useful_confidence * 0.25, ["ten_god.resource", "ten_god.peer", "chart.month_branch"]),
+            option("portrait.option.useful_god.output_flow", "先看输出通关", "食伤或流通路径较明显时，优先复核输出是否能疏通结构。", output_count * 0.16 + ten_god_activity * 0.25 + useful_confidence * 0.2, ["ten_god.output", "five_element.flow"]),
+            option("portrait.option.useful_god.constraint_order", "先看约束秩序", "官杀或关系约束较明显时，优先复核约束是否成秩序而非压力。", int(facts.get("officer_count") or 0) * 0.15 + relation_count * 0.08 + useful_confidence * 0.2, ["ten_god.officer", "chart.relations"]),
+            option("portrait.option.useful_god.not_ready", "暂不定喜忌", "证据轴还没有闭合，先不把用神忌神写成硬结论。", 1 - useful_confidence, ["portrait.evidence_gate"], "用神忌神不足以确认时必须保持未定。"),
+        ]
+    elif label_id == "portrait.ten_god.activity":
+        options = [
+            option("portrait.option.ten_god.visible_relation", "透出关系明显", "天干关系更适合作为第一观察入口。", min(len(facts.get("stems") or []), 4) / 4 * 0.5 + ten_god_activity * 0.4, ["chart.visible_stems", "ten_god.mapping"]),
+            option("portrait.option.ten_god.hidden_relation", "藏干关系更重", "关键关系更多藏在地支，需要区分透出和隐藏来源。", min(len(facts.get("hidden_stems") or []), 8) / 8 * 0.5 + ten_god_activity * 0.3, ["chart.hidden_stems", "ten_god.mapping"]),
+            option("portrait.option.ten_god.mechanism_path", "机制路径待验", "十神同见不等于成机制，需要继续看同层作用路径。", ten_god_activity * 0.55 + relation_count * 0.08, ["ten_god.mechanism", "chart.relations"]),
+        ]
+    elif label_id == "portrait.wealth.visibility":
+        options = [
+            option("portrait.option.wealth.visible", "财星可见", "财星或生财素材已经能被观察到，适合进入财富结构问题。", wealth_visibility, ["ten_god.wealth", "ten_god.output"]),
+            option("portrait.option.wealth.hidden", "财弱或隐藏", "财富素材不够外显，需要先看藏干和时间触发。", 1 - wealth_visibility, ["chart.hidden_stems", "time_context"]),
+            option("portrait.option.wealth.output_generates", "食伤生财入口", "输出星能提供生财路径，但仍要看承载和牵制。", output_count * 0.18 + wealth_visibility * 0.45, ["ten_god.output", "ten_god.wealth"]),
+        ]
+    elif label_id == "portrait.wealth.stability":
+        options = [
+            option("portrait.option.wealth.stable_access", "收入结构较稳", "财星可见且波动较低，适合看稳定收入结构。", wealth_stability, ["inference_context.income_stability", "ten_god.wealth"]),
+            option("portrait.option.wealth.constrained", "财受牵制", "财星可见但受承载、比劫或关系牵制，需要复核稳定性。", wealth_visibility * 0.35 + (1 - wealth_stability) * 0.35 + peer_count * 0.1, ["ten_god.peer", "chart.relations"]),
+            option("portrait.option.wealth.volatility", "财富波动明显", "财富结构受地支关系或时间触发影响较明显。", branch_volatility * 0.45 + (1 - wealth_stability) * 0.25, ["chart.relations", "time_context"]),
+        ]
+    elif label_id == "portrait.branch.volatility":
+        options = [
+            option("portrait.option.branch.natal_tension", "本命结构张力", "本命地支关系本身已经形成明显牵动。", min(relation_count, 4) / 4 * 0.65 + branch_volatility * 0.25, ["chart.relations"]),
+            option("portrait.option.branch.time_triggered", "时间层触发", "张力主要来自大运或流年触发，不能改写本命。", min(time_relation_count, 4) / 4 * 0.65 + time_activity * 0.25, ["time_context.relations_with_natal"]),
+            option("portrait.option.branch.quiet", "地支关系较静", "关系牵动不明显，先不把冲合刑害作为主线。", 1 - branch_volatility, ["chart.relations"]),
+        ]
+    elif label_id == "portrait.time.trigger":
+        options = [
+            option("portrait.option.time.active_trigger", "大运流年触发明显", "当前时间背景与本命有连接，适合继续看触发层。", time_activity, ["time_context.luck_cycle", "time_context.flow_year"]),
+            option("portrait.option.time.background", "仅作时间背景", "时间层只是背景信息，不能替代本命结构判断。", 1 - time_activity, ["time_context.boundary"], "时间背景不能直接读成结果。"),
+            option("portrait.option.time.natal_priority", "本命结构优先", "当前更适合先稳定本命结构，再看时间触发。", (1 - time_activity) * 0.5 + pattern_strength * 0.2, ["chart.pillars", "chart.relations"]),
+        ]
+    elif label_id == "portrait.pattern.index":
+        options = [
+            option("portrait.option.pattern.index_available", "格局索引已建立", "月令、十神和关系入口足以作为格局复核索引。", pattern_strength, ["chart.month_branch", "ten_god.mapping", "chart.relations"]),
+            option("portrait.option.pattern.formation_review", "成格条件待验", "已有格局入口，但需要同层验证成格条件。", pattern_strength * 0.65 + ten_god_activity * 0.18, ["pattern.formation_condition"]),
+            option("portrait.option.pattern.breaking_review", "破格条件待验", "结构张力或关系牵制需要纳入破格复核。", pattern_strength * 0.45 + branch_volatility * 0.35, ["pattern.breaking_condition", "chart.relations"]),
+            option("portrait.option.pattern.not_primary", "暂不以格局为主", "格局证据不够集中，先按十神、强弱或地支关系阅读。", 1 - pattern_strength, ["portrait.evidence_gate"]),
+        ]
+    else:
+        options = [option("portrait.option.structure.review", "结构待复核", "当前标签需要继续复核。", 0.5, ["structure_portrait"])]
+
+    options.sort(key=lambda row: float(row.get("score") or 0), reverse=True)
+    return options
+
+
+def _attach_portrait_options(row: Dict[str, Any], facts: Dict[str, Any], vectors: Dict[str, float]) -> Dict[str, Any]:
+    options = _portrait_options_for_label(str(row.get("label_id") or ""), facts, vectors)
+    selected = dict(options[0]) if options else {}
+    if selected:
+        selected["selection_state"] = "system_suggested"
+    out = dict(row)
+    out["option_model_version"] = PORTRAIT_OPTION_VERSION
+    out["selection_options"] = options[:5]
+    out["selected_option"] = selected
+    out["display_value"] = selected.get("title") or out.get("value") or ""
+    out["portrait_assertion_state"] = selected.get("selection_state") or "system_suggested"
+    return out
+
+
 def _apply_calibration_feedback(labels: List[Dict[str, Any]], feedback: Dict[str, Any]) -> List[Dict[str, Any]]:
     if not feedback or int(feedback.get("count") or 0) <= 0:
         return labels
@@ -430,9 +546,136 @@ def _apply_calibration_feedback(labels: List[Dict[str, Any]], feedback: Dict[str
     return sorted(adjusted, key=lambda row: (float(row.get("compiled_score") or row.get("score") or 0), float(row.get("posterior_confidence") or 0), str(row.get("label_id") or "")), reverse=True)
 
 
+def _apply_portrait_option_feedback(labels: List[Dict[str, Any]], feedback: Dict[str, Any]) -> List[Dict[str, Any]]:
+    if not feedback or int(feedback.get("count") or 0) <= 0:
+        return labels
+    by_option = {str(key): dict(value) for key, value in dict(feedback.get("by_option") or {}).items() if isinstance(value, dict)}
+    if not by_option:
+        return labels
+    adjusted: List[Dict[str, Any]] = []
+    for label in labels:
+        row = dict(label)
+        options = [dict(item) for item in row.get("selection_options") or [] if isinstance(item, dict)]
+        if not options:
+            adjusted.append(row)
+            continue
+        scored_options: List[Dict[str, Any]] = []
+        confirmed_options: List[Dict[str, Any]] = []
+        for option in options:
+            option_id = str(option.get("option_id") or "")
+            bucket = dict(by_option.get(option_id) or {})
+            count = int(bucket.get("count") or 0)
+            average = float(bucket.get("average_rating") or 0)
+            analyst_count = int(bucket.get("analyst_count") or 0)
+            user_count = int(bucket.get("user_count") or 0)
+            boost = max(-1.0, min(1.0, average / 2.0)) * min(0.24, 0.08 + count * 0.035 + analyst_count * 0.04)
+            option["base_score"] = option.get("base_score", option.get("score"))
+            option["score"] = round(_clamp(float(option.get("score") or 0) + boost), 3)
+            if count:
+                state = "analyst_confirmed" if analyst_count and average > 0 else "user_confirmed" if average > 0 else "rejected" if average < 0 else "uncertain"
+                option["selection_state"] = state
+                option["selection_feedback"] = {
+                    "count": count,
+                    "average_rating": round(average, 3),
+                    "user_count": user_count,
+                    "analyst_count": analyst_count,
+                    "score_delta": round(boost, 3),
+                    "runtime_scope": "portrait_option_selection_summary_only_no_rule_mutation",
+                }
+                if average > 0:
+                    confirmed_options.append(option)
+            scored_options.append(option)
+        scored_options.sort(key=lambda item: (float(item.get("score") or 0), int((item.get("selection_feedback") or {}).get("analyst_count") or 0)), reverse=True)
+        selected = dict(confirmed_options[0] if confirmed_options else scored_options[0])
+        if not selected.get("selection_feedback"):
+            selected["selection_state"] = "system_suggested"
+        row["selection_options"] = scored_options[:5]
+        row["selected_option"] = selected
+        row["display_value"] = selected.get("title") or row.get("display_value") or row.get("value") or ""
+        row["portrait_assertion_state"] = selected.get("selection_state") or "system_suggested"
+        if selected.get("selection_feedback"):
+            row["portrait_option_feedback_applied"] = {
+                "option_id": selected.get("option_id") or "",
+                "selection_state": selected.get("selection_state") or "",
+                "runtime_scope": "portrait_option_selection_only_no_rule_mutation",
+                "guardrails": [
+                    "OPTION_SELECTION_PERSONALIZES_PORTRAIT_ONLY",
+                    "NO_CHART_FACT_MUTATION",
+                    "NO_RULE_MUTATION_FROM_CALIBRATION",
+                ],
+            }
+        adjusted.append(row)
+    return sorted(adjusted, key=lambda row: (float(row.get("compiled_score") or row.get("score") or 0), float((row.get("selected_option") or {}).get("score") or 0), str(row.get("label_id") or "")), reverse=True)
+
+
+def _portrait_options_summary(labels: List[Dict[str, Any]]) -> Dict[str, Any]:
+    options = []
+    selected = []
+    for label in labels:
+        for option in label.get("selection_options") or []:
+            if isinstance(option, dict):
+                options.append(option)
+        chosen = dict(label.get("selected_option") or {})
+        if chosen:
+            selected.append(
+                {
+                    "label_id": label.get("label_id") or "",
+                    "family": label.get("family") or "",
+                    "option_id": chosen.get("option_id") or "",
+                    "title": chosen.get("title") or "",
+                    "score": chosen.get("score"),
+                    "selection_state": chosen.get("selection_state") or "system_suggested",
+                }
+            )
+    return {
+        "version": PORTRAIT_OPTION_VERSION,
+        "status": "ready" if options else "no_options",
+        "runtime_scope": "portrait_option_model_only_no_rule_mutation",
+        "option_count": len(options),
+        "selected_count": len(selected),
+        "selected": selected[:8],
+        "families": sorted({str(label.get("family") or "") for label in labels if label.get("family")}),
+        "guardrails": [
+            "PORTRAIT_OPTIONS_ARE_PERSONALIZATION_SIGNALS",
+            "NO_CHART_FACT_MUTATION",
+            "NO_RULE_MUTATION_FROM_CALIBRATION",
+        ],
+    }
+
+
+def _confirmed_portrait_assertions(labels: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    assertions = []
+    for label in labels:
+        selected = dict(label.get("selected_option") or {})
+        state = str(selected.get("selection_state") or "")
+        if state not in {"user_confirmed", "analyst_confirmed"}:
+            continue
+        assertions.append(
+            {
+                "assertion_id": f"assertion.{selected.get('option_id') or label.get('label_id')}",
+                "label_id": label.get("label_id") or "",
+                "family": label.get("family") or "",
+                "option_id": selected.get("option_id") or "",
+                "title": selected.get("title") or "",
+                "detail": selected.get("detail") or "",
+                "selection_state": state,
+                "confidence": label.get("confidence"),
+                "posterior_confidence": label.get("posterior_confidence"),
+                "runtime_scope": "confirmed_portrait_assertion_personalization_only",
+                "guardrails": [
+                    "CONFIRMED_PORTRAIT_DOES_NOT_MUTATE_CHART",
+                    "CONFIRMED_PORTRAIT_DOES_NOT_MUTATE_RULES",
+                    "ANSWER_STILL_REQUIRES_EVIDENCE_BOUNDARY",
+                ],
+            }
+        )
+    return assertions[:8]
+
+
 def _compact_calibration_feedback(feedback: Dict[str, Any]) -> Dict[str, Any]:
     by_label = dict(feedback.get("by_label") or {}) if isinstance(feedback.get("by_label"), dict) else {}
     by_family = dict(feedback.get("by_family") or {}) if isinstance(feedback.get("by_family"), dict) else {}
+    by_option = dict(feedback.get("by_option") or {}) if isinstance(feedback.get("by_option"), dict) else {}
 
     def compact_bucket_map(source: Dict[str, Any], limit: int = 8) -> Dict[str, Any]:
         rows = []
@@ -462,6 +705,7 @@ def _compact_calibration_feedback(feedback: Dict[str, Any]) -> Dict[str, Any]:
         "profile_id": str(feedback.get("profile_id") or ""),
         "by_label": compact_bucket_map(by_label),
         "by_family": compact_bucket_map(by_family),
+        "by_option": compact_bucket_map(by_option),
         "guardrails": list(feedback.get("guardrails") or ["NO_RULE_MUTATION_FROM_CALIBRATION"]),
     }
 
@@ -514,7 +758,7 @@ def _compile_ontology_label(defn: Dict[str, Any], facts: Dict[str, Any], vectors
             "runtime_scope": "ontology_compiled_structure_label_context_only_no_verdict",
         }
     )
-    return row
+    return _attach_portrait_options(row, facts, vectors)
 
 
 def _ontology_label_value(label_id: str, vectors: Dict[str, float]) -> str:

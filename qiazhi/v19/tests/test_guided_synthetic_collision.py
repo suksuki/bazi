@@ -3230,14 +3230,16 @@ def test_p51_ui_surfaces_latest_framework_context() -> None:
 
     assert "answerEvidenceSummary" in oracle_html
     assert "portraitPanel" in oracle_html
-    assert "20260430-portrait-calibration" in oracle_html
+    assert "20260501-portrait-options" in oracle_html
     assert "personalized-question-chip" in oracle_js
     assert "question-personalization" in oracle_js
     assert "renderAnswerEvidenceSummary" in oracle_js
     assert "renderPortraitPanel" in oracle_js
     assert "portraitVisibleLabels" in oracle_js
     assert "portraitCalibrationBlock" in oracle_js
-    assert "data-calibration-hook" in oracle_js
+    assert "portraitOptionCard" in oracle_js
+    assert "data-calibration-option" in oracle_js
+    assert "portrait_option" in oracle_js
     assert "portrait_calibration" in oracle_js
     assert "重点标签" in oracle_js
     assert "portrait_evidence" in oracle_js
@@ -3245,6 +3247,7 @@ def test_p51_ui_surfaces_latest_framework_context() -> None:
     assert "answer-evidence-summary" in styles
     assert "portrait-chip" in styles
     assert "portrait-calibration-card" in styles
+    assert "portrait-option-button" in styles
 
     assert "docs/v19/V19_P51_UI_FRAMEWORK_ALIGNMENT.md" in manifest["created_from"]
     assert manifest["p51_ui_framework_alignment"]["runtime_scope"] == "ui_visibility_only_no_inference_or_answer_mutation"
@@ -3670,7 +3673,7 @@ def test_common_bazi_question_ui_fallback_library_is_aligned() -> None:
     assert "strength_structure" in oracle_js
     assert "useful_god_boundary" in oracle_js
     assert "pattern_structure" in oracle_js
-    assert "20260430-portrait-calibration" in oracle_html
+    assert "20260501-portrait-options" in oracle_html
 
 
 def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries() -> None:
@@ -3686,10 +3689,16 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
     assert portrait["label_count"] >= 7
     assert portrait["label_compilation"]["status"] == "compiled"
     assert portrait["label_compilation"]["knowledge_evidence_count"] > 0
+    assert portrait["portrait_options"]["version"] == "v19.mainline.structure_portrait_options.v1"
+    assert portrait["portrait_options"]["status"] == "ready"
+    assert portrait["portrait_options"]["option_count"] >= portrait["label_count"]
+    assert portrait["portrait_options"]["selected_count"] >= portrait["label_count"]
+    assert portrait["confirmed_portrait_assertions"] == []
     assert portrait["calibration_plan"]["status"] == "ready"
     assert portrait["calibration_plan"]["user_hooks"]
     assert portrait["calibration_plan"]["analyst_hooks"]
     assert "STRUCTURE_PORTRAIT_CONTEXT_ONLY" in portrait["guardrails"]
+    assert "PORTRAIT_OPTIONS_SELECTION_ONLY" in portrait["guardrails"]
     for key in [
         "strength_capacity",
         "useful_god_candidate_confidence",
@@ -3710,14 +3719,20 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
         assert row["compiled_score"] >= 0
         assert row["question_hooks"]
         assert row["answer_boundary"]
+        assert row["selection_options"]
+        assert row["selected_option"]["option_model_version"] == "v19.mainline.structure_portrait_options.v1"
+        assert row["selected_option"]["title"]
+        assert row["portrait_assertion_state"] in {"system_suggested", "user_confirmed", "analyst_confirmed", "rejected", "uncertain"}
     assert all(row["verdict"] == "candidate_only" for row in portrait["candidate_judgements"])
 
     answer = build_guided_question_answer(data, "q_useful_god_candidates", "用神是什么？忌神是什么？")
     assert answer["structure_portrait"]["status"] == "ready"
     assert answer["retrieved_facts"]["structure_portrait"]["vectors"]
     assert answer["retrieved_facts"]["structure_portrait"]["label_compilation"]["status"] == "compiled"
+    assert answer["retrieved_facts"]["structure_portrait"]["portrait_options"]["option_count"] >= portrait["label_count"]
     assert answer["retrieved_facts"]["structure_portrait"]["calibration_plan"]["user_hooks"]
     assert answer["retrieved_facts"]["structure_portrait"]["labels"]
+    assert answer["retrieved_facts"]["structure_portrait"]["labels"][0]["selected_option"]
     assert answer["retrieved_facts"]["structure_portrait"]["candidate_judgements"]
     useful_text = "\n".join(answer["content"]["zh"])
     useful_plain = guided_answer_to_plain_text(answer, "zh")
@@ -3726,10 +3741,11 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
         assert forbidden not in useful_plain
     assert "候选" in useful_text
     assert "知识画像" in useful_plain or "结构画像" in useful_plain
-    assert "候选标签" in useful_text or "画像标签" in useful_text
+    assert "画像项" in useful_text or "画像标签" in useful_text
     assert "知识路径" in useful_text
 
     target_label = portrait["labels"][0]
+    target_option = target_label["selection_options"][1] if len(target_label["selection_options"]) > 1 else target_label["selection_options"][0]
     data_with_feedback = dict(data)
     data_with_feedback["portrait_calibration_feedback"] = {
         "version": "v19.p82.portrait_calibration_feedback_summary.v1",
@@ -3738,6 +3754,15 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
         "count": 2,
         "by_label": {
             target_label["label_id"]: {
+                "count": 1,
+                "rating_sum": 2,
+                "average_rating": 2.0,
+                "user_count": 0,
+                "analyst_count": 1,
+            }
+        },
+        "by_option": {
+            target_option["option_id"]: {
                 "count": 1,
                 "rating_sum": 2,
                 "average_rating": 2.0,
@@ -3759,16 +3784,26 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
     adjusted = build_structure_portrait(data_with_feedback)
     adjusted_label = next(row for row in adjusted["labels"] if row["label_id"] == target_label["label_id"])
     assert adjusted["calibration_feedback"]["count"] == 2
+    assert adjusted["calibration_feedback"]["by_option"][target_option["option_id"]]["average_rating"] == 2.0
+    assert adjusted["portrait_options"]["selected_count"] >= portrait["label_count"]
+    assert adjusted["confirmed_portrait_assertions"]
+    assert adjusted["confirmed_portrait_assertions"][0]["option_id"] == target_option["option_id"]
     assert adjusted_label["posterior_confidence"] > target_label["posterior_confidence"]
+    assert adjusted_label["selected_option"]["option_id"] == target_option["option_id"]
+    assert adjusted_label["selected_option"]["selection_state"] == "analyst_confirmed"
+    assert adjusted_label["portrait_assertion_state"] == "analyst_confirmed"
     assert adjusted_label["calibration_feedback_applied"]["count"] > 0
     assert adjusted_label["calibration_feedback_applied"]["runtime_scope"] == "portrait_confidence_adjustment_only_no_rule_mutation"
     assert "NO_RULE_MUTATION_FROM_CALIBRATION" in adjusted_label["calibration_feedback_applied"]["guardrails"]
+    assert adjusted_label["portrait_option_feedback_applied"]["runtime_scope"] == "portrait_option_selection_only_no_rule_mutation"
 
     data_with_feedback["structure_portrait"] = adjusted
     data_with_feedback["guided_question_context"] = build_guided_question_context(data_with_feedback)
     adjusted_answer = build_guided_question_answer(data_with_feedback, "q_useful_god_candidates", "用神是什么？忌神是什么？")
     assert adjusted_answer["retrieved_facts"]["structure_portrait"]["calibration_feedback"]["count"] == 2
-    assert adjusted_answer["retrieved_facts"]["structure_portrait"]["labels"][0]["calibration_feedback_applied"]
+    assert adjusted_answer["retrieved_facts"]["structure_portrait"]["portrait_options"]["selected_count"] >= portrait["label_count"]
+    assert adjusted_answer["retrieved_facts"]["structure_portrait"]["confirmed_portrait_assertions"][0]["option_id"] == target_option["option_id"]
+    assert any(row["calibration_feedback_applied"] for row in adjusted_answer["retrieved_facts"]["structure_portrait"]["labels"])
 
 
 def test_structure_portrait_bias_changes_across_synthetic_cases_and_guides_questions() -> None:
@@ -3804,8 +3839,12 @@ def test_portrait_calibration_feedback_summary_is_profile_scoped() -> None:
                     "subject_id": "user_event_feedback.portrait.wealth.visibility",
                     "rating": 1,
                     "tags": ["portrait_calibration", "user", "wealth"],
-                    "payload": {"label_id": "portrait.wealth.visibility", "hook": {"family": "wealth", "hook_type": "user_event_feedback"}},
-                    "metadata": {"profile_id": "profile_a", "family": "wealth", "label_id": "portrait.wealth.visibility"},
+                    "payload": {
+                        "label_id": "portrait.wealth.visibility",
+                        "hook": {"family": "wealth", "hook_type": "user_event_feedback"},
+                        "option": {"option_id": "portrait.option.wealth.visible", "title": "财星可见"},
+                    },
+                    "metadata": {"profile_id": "profile_a", "family": "wealth", "label_id": "portrait.wealth.visibility", "option_id": "portrait.option.wealth.visible"},
                 },
                 {
                     "feedback_id": "fb_analyst",
@@ -3815,8 +3854,12 @@ def test_portrait_calibration_feedback_summary_is_profile_scoped() -> None:
                     "subject_id": "analyst_confirmation.portrait.wealth.visibility",
                     "rating": 2,
                     "tags": ["portrait_calibration", "analyst", "wealth"],
-                    "payload": {"label_id": "portrait.wealth.visibility", "hook": {"family": "wealth", "hook_type": "analyst_confirmation"}},
-                    "metadata": {"profile_id": "profile_a", "family": "wealth", "label_id": "portrait.wealth.visibility"},
+                    "payload": {
+                        "label_id": "portrait.wealth.visibility",
+                        "hook": {"family": "wealth", "hook_type": "analyst_confirmation"},
+                        "option": {"option_id": "portrait.option.wealth.visible", "title": "财星可见"},
+                    },
+                    "metadata": {"profile_id": "profile_a", "family": "wealth", "label_id": "portrait.wealth.visibility", "option_id": "portrait.option.wealth.visible"},
                 },
                 {
                     "feedback_id": "fb_other",
@@ -3844,6 +3887,9 @@ def test_portrait_calibration_feedback_summary_is_profile_scoped() -> None:
     assert summary["by_label"]["portrait.wealth.visibility"]["average_rating"] == 1.5
     assert summary["by_label"]["portrait.wealth.visibility"]["analyst_count"] == 1
     assert summary["by_family"]["wealth"]["count"] == 2
+    assert summary["by_option"]["portrait.option.wealth.visible"]["count"] == 2
+    assert summary["by_option"]["portrait.option.wealth.visible"]["average_rating"] == 1.5
+    assert summary["items"][0]["option_id"] == "portrait.option.wealth.visible"
     assert "NO_RULE_MUTATION_FROM_CALIBRATION" in summary["guardrails"]
 
 
@@ -3860,9 +3906,15 @@ def test_structure_portrait_layer_manifest_and_structure_api_are_wired() -> None
     assert "docs/v19/V19_P81_PORTRAIT_ONTOLOGY_AND_CALIBRATION.md" in manifest["created_from"]
     assert manifest["mainline_structure_portrait_layer"]["runtime_scope"] == "structure_portrait_context_only_no_result_mutation"
     assert manifest["mainline_structure_portrait_layer"]["label_ontology_version"] == "v19.mainline.structure_portrait_label_ontology.v2"
+    assert manifest["mainline_structure_portrait_layer"]["portrait_option_version"] == "v19.mainline.structure_portrait_options.v1"
     assert manifest["mainline_structure_portrait_layer"]["active_label_source"] == "ontology_compiler_primary_no_legacy_label_chain"
     assert "structure_portrait.calibration_feedback" in manifest["mainline_structure_portrait_layer"]["outputs"]
+    assert "structure_portrait.portrait_options" in manifest["mainline_structure_portrait_layer"]["outputs"]
+    assert "structure_portrait.confirmed_portrait_assertions" in manifest["mainline_structure_portrait_layer"]["outputs"]
+    assert "docs/v19/V19_P83_PORTRAIT_OPTION_MODEL.md" in manifest["created_from"]
+    assert "PORTRAIT_OPTIONS_SELECTION_ONLY" in manifest["mainline_structure_portrait_layer"]["guardrails"]
     assert "MAINLINE_STRUCTURE_PORTRAIT_LAYER" in manifest["guardrails"]
+    assert "P83_PORTRAIT_OPTION_MODEL" in manifest["guardrails"]
     assert "结构画像层" in doc
     assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_LAYER.md" in roadmap
 
@@ -3927,8 +3979,16 @@ def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> 
     assert manifest["mainline_structure_portrait_product_loop"]["ontology_compiled_required"] is True
     assert manifest["mainline_structure_portrait_product_loop"]["calibration_hooks_required"] is True
     assert manifest["mainline_structure_portrait_product_loop"]["calibration_feedback_loop"] is True
+    assert manifest["mainline_structure_portrait_product_loop"]["portrait_option_model"] is True
+    assert manifest["mainline_structure_portrait_product_loop"]["confirmed_portrait_assertions_required"] is True
     assert manifest["mainline_structure_portrait_product_loop"]["runtime_mutation"] is False
     assert "docs/v19/V19_P82_PORTRAIT_CALIBRATION_RUNTIME_LOOP.md" in manifest["created_from"]
+    assert "docs/v19/V19_P83_PORTRAIT_OPTION_MODEL.md" in manifest["created_from"]
+    assert "structure_portrait.confirmed_portrait_assertions" in manifest["mainline_structure_portrait_product_loop"]["outputs"]
+    assert "feedback.summary.by_option" in manifest["mainline_structure_portrait_product_loop"]["outputs"]
+    assert "v19.frontend.oracle.portraitOptionCard" in manifest["mainline_structure_portrait_product_loop"]["entrypoints"]
+    assert "PORTRAIT_OPTIONS_SELECTION_ONLY" in manifest["mainline_structure_portrait_product_loop"]["guardrails"]
+    assert "CONFIRMED_PORTRAIT_DOES_NOT_MUTATE_RULES" in manifest["mainline_structure_portrait_product_loop"]["guardrails"]
     assert "NO_RULE_MUTATION_FROM_CALIBRATION" in manifest["mainline_structure_portrait_product_loop"]["guardrails"]
     assert "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP" in manifest["guardrails"]
 
