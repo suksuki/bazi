@@ -2177,7 +2177,7 @@
     "required_runners": [
       "v19.synthetic_validation.silent_evolution.run_p60_domain_route_eval",
       "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression",
-      "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_synthetic_matrix_regression"
+      "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_shadow_tuning_regression"
     ],
     "checkpoint_policy": {
       "resume_policy": "rerun_failed_or_stale_report_only_items",
@@ -2525,6 +2525,8 @@
       "v19.guided_evidence_pack.build_guided_answer_evidence_pack",
       "v19.synthetic_validation.structure_portrait_matrix.build_structure_portrait_synthetic_matrix",
       "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_synthetic_matrix_regression",
+      "v19.synthetic_validation.structure_portrait_matrix.build_structure_portrait_shadow_tuning_report",
+      "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_shadow_tuning_regression",
       "v19.synthetic_validation.silent_training_ledger.build_p62_silent_training_ledger",
       "v19.synthetic_validation.silent_eval_queue.build_p63_silent_eval_queue"
     ],
@@ -2534,10 +2536,12 @@
       "oracle.profile_summary.portraitPanel",
       "guided_answer.evidence_pack.portrait_evidence",
       "synthetic_validation.structure_portrait_matrix",
+      "synthetic_validation.structure_portrait_shadow_tuning_report",
       "silent_training_ledger.portrait_routing_signal",
       "silent_eval_queue.portrait_route_weight_shadow_review"
     ],
     "synthetic_case_count": 12,
+    "shadow_tuning_case_count": 20,
     "minimum_vector_signature_count": 5,
     "minimum_question_signature_count": 6,
     "engine_enabled_count": 0,

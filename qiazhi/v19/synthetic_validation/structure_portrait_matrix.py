@@ -10,6 +10,8 @@ from v19.synthetic_validation.guided_runner import _agent_data_for_case
 
 STRUCTURE_PORTRAIT_MATRIX_VERSION = "v19.mainline.structure_portrait_matrix.v1"
 STRUCTURE_PORTRAIT_MATRIX_REGRESSION_VERSION = "v19.mainline.structure_portrait_matrix_regression.v1"
+STRUCTURE_PORTRAIT_SHADOW_TUNING_VERSION = "v19.mainline.structure_portrait_shadow_tuning.v1"
+STRUCTURE_PORTRAIT_SHADOW_TUNING_REGRESSION_VERSION = "v19.mainline.structure_portrait_shadow_tuning_regression.v1"
 
 REQUIRED_LABEL_FAMILIES = {"strength", "useful_god", "ten_god", "wealth", "branch", "time", "pattern"}
 
@@ -116,9 +118,151 @@ def run_structure_portrait_synthetic_matrix_regression() -> Dict[str, Any]:
     }
 
 
+@lru_cache(maxsize=4)
+def build_structure_portrait_shadow_tuning_report(limit: int = 20) -> Dict[str, Any]:
+    matrix = build_structure_portrait_synthetic_matrix(limit)
+    cases = [dict(row) for row in matrix.get("cases") or [] if isinstance(row, dict)]
+    bucket_counts: Dict[str, int] = {}
+    for row in cases:
+        for key in list(row.get("top_question_keys") or [])[:5]:
+            bucket = _question_bucket(str(key or ""))
+            bucket_counts[bucket] = bucket_counts.get(bucket, 0) + 1
+    vector_signatures = int((matrix.get("summary") or {}).get("vector_signature_count") or 0)
+    question_signatures = int((matrix.get("summary") or {}).get("top_question_signature_count") or 0)
+    proposals = _shadow_weight_proposals(bucket_counts, len(cases), vector_signatures, question_signatures)
+    return {
+        "ok": True,
+        "version": STRUCTURE_PORTRAIT_SHADOW_TUNING_VERSION,
+        "status": "portrait_shadow_tuning_ready",
+        "runtime_scope": "portrait_weight_shadow_tuning_report_only_no_runtime_mutation",
+        "summary": {
+            "case_count": len(cases),
+            "vector_signature_count": vector_signatures,
+            "top_question_signature_count": question_signatures,
+            "bucket_coverage_count": len(bucket_counts),
+            "proposal_count": len(proposals),
+            "forbidden_text_failure_count": int((matrix.get("summary") or {}).get("forbidden_text_failure_count") or 0),
+            "engine_enabled_count": 0,
+            "answer_mutation_count": 0,
+            "runtime_mutation": False,
+        },
+        "bucket_counts": bucket_counts,
+        "proposals": proposals,
+        "source_matrix_summary": matrix.get("summary") or {},
+        "guardrails": GUARDRAILS + [
+            "SHADOW_TUNING_ONLY",
+            "NO_PRODUCTION_WEIGHT_UPDATE",
+            "NO_AUTO_LEARNING",
+        ],
+    }
+
+
+@lru_cache(maxsize=4)
+def run_structure_portrait_shadow_tuning_regression() -> Dict[str, Any]:
+    report = build_structure_portrait_shadow_tuning_report()
+    summary = dict(report.get("summary") or {})
+    failures: List[Dict[str, str]] = []
+    if int(summary.get("case_count") or 0) < 20:
+        failures.append(_failure("case_count_too_low", "P79 shadow tuning expects all 20 P11 synthetic cases."))
+    if int(summary.get("vector_signature_count") or 0) < 8:
+        failures.append(_failure("vector_signature_count_too_low", "Portrait vectors need enough spread before tuning review."))
+    if int(summary.get("top_question_signature_count") or 0) < 6:
+        failures.append(_failure("question_signature_count_too_low", "Question routes should stay diverse under portrait weighting."))
+    if int(summary.get("bucket_coverage_count") or 0) < 5:
+        failures.append(_failure("bucket_coverage_too_low", "Common Bazi entry buckets must be represented."))
+    if int(summary.get("forbidden_text_failure_count") or 0) != 0:
+        failures.append(_failure("forbidden_text_leak", "Shadow tuning cannot proceed with hard-verdict language."))
+    if summary.get("runtime_mutation") is True or int(summary.get("engine_enabled_count") or 0) != 0:
+        failures.append(_failure("mutation_not_allowed", "Shadow tuning must not mutate runtime or enable rules."))
+    for proposal in report.get("proposals") or []:
+        if proposal.get("decision") != "shadow_review_only" or proposal.get("runtime_mutation") is True:
+            failures.append(_failure("proposal_boundary_invalid", str(proposal.get("proposal_id") or "")))
+    status = "pass" if not failures else "fail"
+    return {
+        "ok": status == "pass",
+        "version": STRUCTURE_PORTRAIT_SHADOW_TUNING_REGRESSION_VERSION,
+        "status": status,
+        "runtime_scope": "portrait_shadow_tuning_regression_no_runtime_mutation",
+        "summary": {
+            **summary,
+            "failure_count": len(failures),
+            "engine_enabled_count": 0,
+            "answer_mutation_count": 0,
+            "runtime_mutation": False,
+        },
+        "report": report,
+        "failures": failures,
+        "guardrails": report.get("guardrails") or GUARDRAILS,
+    }
+
+
 def _vector_signature(vectors: Dict[str, Any]) -> Tuple[float, ...]:
     keys = ["wealth_visibility", "branch_volatility", "time_trigger_activity", "pattern_index_strength", "useful_god_candidate_confidence"]
     return tuple(round(float(vectors.get(key) or 0), 2) for key in keys)
+
+
+def _question_bucket(key: str) -> str:
+    if key in {"q_strength_assessment", "q_useful_god_candidates", "q_unfavorable_god_boundary", "q_favorable_elements_boundary"}:
+        return "strength_useful_god"
+    if key == "q_pattern_structure":
+        return "pattern_structure"
+    if "income" in key or "wealth" in key:
+        return "income_stability"
+    if "branch" in key or "combination" in key or "harmony" in key or "disruption" in key:
+        return "branch_relation"
+    if "time" in key or "luck" in key:
+        return "time_context"
+    if "ten_god" in key or "hidden" in key or "month_command" in key or "day_master" in key:
+        return "metadata"
+    if "vault" in key:
+        return "vault"
+    return "structure_basis"
+
+
+def _shadow_weight_proposals(bucket_counts: Dict[str, int], case_count: int, vector_signatures: int, question_signatures: int) -> List[Dict[str, Any]]:
+    proposals: List[Dict[str, Any]] = []
+    target = max(case_count, 1)
+    expected = {
+        "strength_useful_god": 0.45,
+        "pattern_structure": 0.22,
+        "branch_relation": 0.35,
+        "time_context": 0.18,
+        "income_stability": 0.28,
+        "metadata": 0.35,
+    }
+    for bucket, minimum_ratio in expected.items():
+        observed_ratio = bucket_counts.get(bucket, 0) / target
+        action = "keep"
+        if observed_ratio < minimum_ratio * 0.55:
+            action = "review_increase"
+        elif observed_ratio > minimum_ratio * 2.4:
+            action = "review_decrease"
+        proposals.append(
+            {
+                "proposal_id": f"p79.shadow_weight.{bucket}",
+                "bucket": bucket,
+                "action": action,
+                "observed_ratio": round(observed_ratio, 3),
+                "minimum_ratio": minimum_ratio,
+                "reason": "Review only. The proposal is based on synthetic portrait routing spread, not user outcome feedback.",
+                "decision": "shadow_review_only",
+                "runtime_mutation": False,
+            }
+        )
+    if vector_signatures >= 8 and question_signatures >= 6:
+        proposals.append(
+            {
+                "proposal_id": "p79.shadow_weight.keep_portrait_secondary_bias",
+                "bucket": "global",
+                "action": "keep_secondary_bias",
+                "observed_ratio": 1.0,
+                "minimum_ratio": 1.0,
+                "reason": "Vector and question-route diversity are sufficient; portrait should remain secondary to Rule Graph path order.",
+                "decision": "shadow_review_only",
+                "runtime_mutation": False,
+            }
+        )
+    return proposals
 
 
 def _forbidden_failures(labels: List[Dict[str, Any]], judgements: List[Dict[str, Any]]) -> List[Dict[str, str]]:

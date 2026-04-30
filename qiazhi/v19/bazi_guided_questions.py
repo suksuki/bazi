@@ -621,7 +621,24 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
         "status": portrait.get("status") or "",
         "runtime_scope": portrait.get("runtime_scope") or "",
         "vectors": dict(portrait.get("vectors") or {}),
+        "labels": [
+            {
+                "label_id": str(row.get("label_id") or ""),
+                "family": str(row.get("family") or ""),
+                "value": str(row.get("value") or ""),
+                "candidate_statement": str(row.get("candidate_statement") or ""),
+            }
+            for row in labels[:5]
+        ],
         "dominant_label_ids": [str(row.get("label_id") or "") for row in labels[:5]],
+        "candidate_judgements": [
+            {
+                "judgement_id": str(row.get("judgement_id") or ""),
+                "family": str(row.get("family") or ""),
+                "text": str(row.get("text") or ""),
+            }
+            for row in judgements[:5]
+        ],
         "candidate_judgement_ids": [str(row.get("judgement_id") or "") for row in judgements[:5]],
         "question_bias": dict(portrait.get("question_bias") or {}),
     }
@@ -1580,6 +1597,25 @@ def compose_guided_question_answer(
             paragraphs.append(f"你问的是收入稳定性结构。当前可见的相关信号是：{signal_text}。这些信号说明结构状态；具体财富事件需要另按时间与事实条件分析。")
         else:
             paragraphs.append("你问的是收入稳定性结构，但当前没有取到可用的收入结构信号，所以这里不能硬生成结论。")
+    elif answer_kind == "strength_assessment":
+        day = anchor.get("day_pillar") or "日柱未取到"
+        month = anchor.get("month_pillar") or "月柱未取到"
+        month_branch = anchor.get("month_branch") or ""
+        hidden = dict(facts.get("hidden_stems") or {})
+        hidden_text = "；".join(f"{branch}藏{stems}" for branch, stems in hidden.items()) or "当前没有可展开的藏干信息"
+        paragraphs.append(f"你问的是日主强弱。当前先看证据束：日柱是{day}，月柱是{month}，月支{month_branch or '未取到'}提供季节背景，藏干层看到{hidden_text}。")
+        paragraphs.append("这一步只能形成强弱承载的候选证据；还要合并透出、根气、克泄耗和扶助关系，不能只靠一个字直接断身强或身弱。")
+    elif answer_kind == "useful_god_boundary":
+        day = anchor.get("day_pillar") or "日柱未取到"
+        month = anchor.get("month_pillar") or "月柱未取到"
+        relation_text = "；".join(_relation_fact_sentence(row) for row in relations[:3]) if relations else "当前没有明确地支关系条目"
+        paragraphs.append(f"你问的是用神或忌神。当前只能先放在候选路径里看：日柱是{day}，月柱是{month}，可见关系是{relation_text}。")
+        paragraphs.append("用神忌神要先过强弱承载、结构病点、调候/通关/扶抑等证据门槛；证据不够时，只能说候选方向，不能直接给喜用、忌神或补救建议。")
+    elif answer_kind == "pattern_structure":
+        month = anchor.get("month_pillar") or "月柱未取到"
+        relation_text = "；".join(_relation_fact_sentence(row) for row in relations[:3]) if relations else "当前没有明确地支关系条目"
+        paragraphs.append(f"你问的是格局。当前先把它当结构索引：月柱是{month}，可见地支关系是{relation_text}。")
+        paragraphs.append("格局要回到月令来源、透干、藏干、成格条件和破格因素是否同层成立来验证；格局名本身不能直接翻译成命运判断。")
     elif answer_kind in {"career_structure", "relationship_structure", "health_structure"}:
         label = _domain_answer_label(answer_kind)
         focus = _domain_answer_focus(answer_kind, knowledge_items, source_signal)
@@ -1627,6 +1663,9 @@ def compose_guided_question_answer(
         paragraphs.append(f"如果只看结构，这张命盘可以先抓三个入口：日柱是{day}，月柱是{month}，地支关系是{relation_text}，墓库观察是{vault_text}。")
         paragraphs.append("这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。")
 
+    portrait_sentence = _portrait_compose_sentence(dict(facts.get("structure_portrait") or {}), answer_kind)
+    if portrait_sentence:
+        paragraphs.append(portrait_sentence)
     return "\n\n".join(paragraph for paragraph in paragraphs if paragraph and paragraph.strip())
 
 
@@ -2183,74 +2222,89 @@ def _guided_answer_sections(
     source_signal: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     source_section = _source_signal_section(source_question or {}, source_signal or {})
+    portrait_sections = _portrait_answer_sections(dict(guided_context.get("structure_portrait") or {}), answer_kind)
     if answer_kind == "branch_relation":
         return source_section + [
             _section("实际触发的关系", "Actual triggered relations", "실제 트리거된 관계", _relation_answer_items(chart, time_context, source_signal or {})),
+            *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("relations")),
         ]
     if answer_kind == "vault":
         return source_section + [
             _section("实际命中的墓库结构", "Actual triggered vault structure", "실제 트리거된 묘고 구조", _vault_answer_items(chart, time_context, facts, source_signal or {})),
+            *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("vault")),
         ]
     if answer_kind == "time_boundary":
         return source_section + [
             _section("时间背景层", "Time-context layer", "시간 배경층", _time_answer_items(time_context)),
+            *portrait_sections,
             _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("time")),
         ]
     if answer_kind == "income_structure":
         return source_section + [
             _section("当前结构信号", "Current structural signals", "현재 구조 신호", _income_answer_items(income_bundle)),
+            *portrait_sections,
             _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("income")),
         ]
     if answer_kind == "strength_assessment":
         return source_section + [
             _section("强弱承载证据", "Strength-capacity evidence", "강약 수용 근거", _strength_answer_items(chart, facts, source_signal or {})),
+            *portrait_sections,
             _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("strength")),
         ]
     if answer_kind == "useful_god_boundary":
         return source_section + [
             _section("用神/忌神候选路径", "Useful/unfavorable-god candidate paths", "용신/기신 후보 경로", _useful_god_answer_items(chart, facts, source_signal or {})),
+            *portrait_sections,
             _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("useful_god")),
         ]
     if answer_kind == "pattern_structure":
         return source_section + [
             _section("格局结构入口", "Pattern structural entries", "격국 구조 입구", _pattern_answer_items(chart, facts, source_signal or {})),
+            *portrait_sections,
             _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("pattern")),
         ]
     if answer_kind == "career_structure":
         return source_section + [
             _section("事业结构路径", "Career structure path", "직업 구조 경로", _domain_answer_items("career_structure", source_signal or {})),
+            *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("career")),
         ]
     if answer_kind == "relationship_structure":
         return source_section + [
             _section("关系结构路径", "Relationship structure path", "관계 구조 경로", _domain_answer_items("relationship_structure", source_signal or {})),
+            *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("relationship")),
         ]
     if answer_kind == "health_structure":
         return source_section + [
             _section("健康结构路径", "Health structure path", "건강 구조 경로", _domain_answer_items("health_structure", source_signal or {})),
+            *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("health")),
         ]
     if answer_kind == "result_boundary":
         return source_section + [
             _section("如何读结果卡", "How to read the result card", "결과 카드 읽는 법", _result_boundary_items(income_bundle)),
+            *portrait_sections,
             _section("禁止外推", "Do not extrapolate", "확대 해석 금지", _boundary_items("result")),
         ]
     if answer_kind == "metadata_boundary":
         return source_section + [
             _section("结构元数据", "Structure metadata", "구조 메타데이터", _metadata_answer_items(chart)),
+            *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("metadata")),
         ]
     if answer_kind == "rule_basis":
         return source_section + [
             _section("规则摘要", "Rule summary", "규칙 요약", _rule_basis_items(income_bundle)),
+            *portrait_sections,
             _section("审计边界", "Audit boundary", "감사 경계", _boundary_items("rule_basis")),
         ]
     return source_section + [
         _section("结构基点", "Structural anchors", "구조 기준점", _overview_answer_items(chart, facts)),
         _section("可见关系", "Visible relations", "보이는 관계", _relation_answer_items(chart, time_context)),
+        *portrait_sections,
         _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("overview")),
     ]
 
@@ -2662,6 +2716,188 @@ def _recommendation_items(guided_context: Dict[str, Any]) -> List[Dict[str, Any]
     if not items:
         items.append(_item(_l("推荐背景", "Recommendation background", "추천 배경"), _l("来自当前命盘结构预览", "From the current chart-structure preview", "현재 명식 구조 미리보기에서 옴"), _l("用于引导提问。", "Used to guide questions.", "질문 안내에 사용됩니다.")))
     return items
+
+
+def _portrait_answer_sections(portrait: Dict[str, Any], answer_kind: str) -> List[Dict[str, Any]]:
+    items = _portrait_answer_items(portrait, answer_kind)
+    if not items:
+        return []
+    return [_section("结构画像参考", "Structure portrait reference", "구조 프로필 참고", items)]
+
+
+def _portrait_answer_items(portrait: Dict[str, Any], answer_kind: str) -> List[Dict[str, Any]]:
+    if not portrait or portrait.get("status") != "ready":
+        return []
+    labels = _portrait_relevant_labels(portrait, answer_kind)
+    label_texts = [_portrait_label_text(row, "zh") for row in labels[:4]]
+    label_texts_en = [_portrait_label_text(row, "en") for row in labels[:4]]
+    label_texts_ko = [_portrait_label_text(row, "ko") for row in labels[:4]]
+    items: List[Dict[str, Any]] = []
+    if label_texts:
+        items.append(
+            _item(
+                _l("画像标签", "Portrait labels", "프로필 라벨"),
+                _l("；".join(label_texts), "; ".join(label_texts_en), "; ".join(label_texts_ko)),
+                _l(
+                    "这些标签只用于证据排序和问题路径选择，不是命运断语。",
+                    "These labels only rank evidence and select question paths; they are not verdicts.",
+                    "이 라벨은 근거 정렬과 질문 경로 선택에만 쓰이며 단정이 아닙니다.",
+                ),
+            )
+        )
+    judgements = [dict(row) for row in portrait.get("candidate_judgements") or [] if isinstance(row, dict)]
+    judgement_text = _portrait_judgement_user_text(judgements[:2], "zh")
+    if judgement_text:
+        items.append(
+            _item(
+                _l("候选判断", "Candidate judgement", "후보 판단"),
+                _l(judgement_text, _portrait_judgement_user_text(judgements[:2], "en"), _portrait_judgement_user_text(judgements[:2], "ko")),
+                _l(
+                    "证据不足时继续保留为候选，不直接输出喜忌或结果。",
+                    "When evidence is insufficient it remains a candidate, not a direct favorable/unfavorable or outcome claim.",
+                    "근거가 부족하면 후보로만 남기며 희기나 결과를 직접 출력하지 않습니다.",
+                ),
+            )
+        )
+    vectors = dict(portrait.get("vectors") or {})
+    if vectors:
+        items.append(
+            _item(
+                _l("证据门槛", "Evidence gate", "근거 기준"),
+                _l(_portrait_gate_text(vectors, "zh"), _portrait_gate_text(vectors, "en"), _portrait_gate_text(vectors, "ko")),
+                _l(
+                    "门槛只是内部组织依据，用户侧只看可解释事实。",
+                    "The gate is an internal organization aid; users see explainable facts.",
+                    "기준은 내부 조직 기준이며 사용자에게는 설명 가능한 사실만 보입니다.",
+                ),
+            )
+        )
+    return items
+
+
+def _portrait_compose_sentence(portrait: Dict[str, Any], answer_kind: str) -> str:
+    if not portrait or portrait.get("status") != "ready":
+        return ""
+    labels = _portrait_relevant_labels(portrait, answer_kind)
+    label_text = "；".join(_portrait_label_text(row, "zh") for row in labels[:3])
+    judgements = [dict(row) for row in portrait.get("candidate_judgements") or [] if isinstance(row, dict)]
+    judgement_text = _portrait_judgement_user_text(judgements[:1], "zh")
+    if not label_text and not judgement_text:
+        return ""
+    parts = []
+    if label_text:
+        parts.append(f"当前结构画像把这题放在这些候选标签下参考：{label_text}")
+    if judgement_text:
+        parts.append(judgement_text.rstrip("。.!?！？"))
+    return "。".join(parts) + "。这些画像只帮助选择证据和提问路径，不直接生成喜忌或结果断语。"
+
+
+def _portrait_relevant_labels(portrait: Dict[str, Any], answer_kind: str) -> List[Dict[str, Any]]:
+    labels = [dict(row) for row in portrait.get("labels") or [] if isinstance(row, dict)]
+    if not labels:
+        labels = [{"label_id": str(item), **_portrait_label_from_id(str(item))} for item in portrait.get("dominant_label_ids") or [] if str(item)]
+    preferred = {
+        "strength_assessment": {"strength", "useful_god", "branch", "pattern"},
+        "useful_god_boundary": {"useful_god", "strength", "branch", "pattern"},
+        "pattern_structure": {"pattern", "ten_god", "branch", "strength"},
+        "income_structure": {"wealth", "branch", "time", "strength"},
+        "branch_relation": {"branch", "time", "wealth", "pattern"},
+        "time_boundary": {"time", "branch", "pattern"},
+        "metadata_boundary": {"ten_god", "strength", "pattern", "wealth"},
+    }.get(str(answer_kind or ""), {"strength", "useful_god", "ten_god", "wealth", "branch", "time", "pattern"})
+    ranked = [row for row in labels if str(row.get("family") or "") in preferred]
+    ranked.extend(row for row in labels if row not in ranked)
+    return ranked[:5]
+
+
+def _portrait_label_from_id(label_id: str) -> Dict[str, str]:
+    parts = str(label_id or "").split(".")
+    family = parts[1] if len(parts) > 1 else "structure"
+    value = {
+        "capacity_candidate": "balanced_or_uncertain_candidate",
+        "candidate_boundary": "candidate_only",
+        "activity": "active",
+        "visibility": "visible",
+        "stability": "stability_needs_review",
+        "volatility": "active",
+        "trigger": "trigger_context",
+        "index": "index_candidate",
+    }.get(parts[-1] if parts else "", "candidate_only")
+    return {"family": family, "value": value}
+
+
+def _portrait_label_text(row: Dict[str, Any], locale: str) -> str:
+    family = _local_text(_portrait_family_l(str(row.get("family") or "")), locale)
+    value = _local_text(_portrait_value_l(str(row.get("value") or "")), locale)
+    return f"{family}: {value}" if family and value else value or family
+
+
+def _portrait_family_l(value: str) -> Dict[str, str]:
+    return {
+        "strength": _l("强弱", "Strength", "강약"),
+        "useful_god": _l("用神", "Useful-god", "용신"),
+        "ten_god": _l("十神", "Ten God", "십성"),
+        "wealth": _l("财富", "Wealth", "재성"),
+        "branch": _l("地支关系", "Branch relation", "지지 관계"),
+        "time": _l("时间层", "Timing layer", "시간층"),
+        "pattern": _l("格局", "Pattern", "격국"),
+        "structure": _l("结构", "Structure", "구조"),
+    }.get(str(value or ""), _l(str(value or "结构"), str(value or "Structure"), str(value or "구조")))
+
+
+def _portrait_value_l(value: str) -> Dict[str, str]:
+    return {
+        "balanced_or_uncertain_candidate": _l("均衡或待定候选", "balanced or uncertain candidate", "균형 또는 미정 후보"),
+        "weaker_capacity_candidate": _l("偏弱承载候选", "weaker-capacity candidate", "약한 수용 후보"),
+        "stronger_capacity_candidate": _l("偏强承载候选", "stronger-capacity candidate", "강한 수용 후보"),
+        "candidate_only": _l("仅候选", "candidate only", "후보만"),
+        "insufficient_evidence": _l("证据不足", "insufficient evidence", "근거 부족"),
+        "active": _l("活跃", "active", "활성"),
+        "limited": _l("有限", "limited", "제한적"),
+        "visible": _l("可见", "visible", "가시"),
+        "weak_or_hidden": _l("弱或隐藏", "weak or hidden", "약하거나 숨김"),
+        "stable_candidate": _l("稳定候选", "stable candidate", "안정 후보"),
+        "stability_needs_review": _l("稳定性需复核", "stability needs review", "안정성 검토 필요"),
+        "quiet": _l("较静", "quiet", "조용함"),
+        "trigger_context": _l("触发背景", "trigger context", "촉발 배경"),
+        "background_only": _l("仅背景", "background only", "배경만"),
+        "index_candidate": _l("索引候选", "index candidate", "색인 후보"),
+        "insufficient_index": _l("索引不足", "insufficient index", "색인 부족"),
+    }.get(str(value or ""), _l(str(value or "候选"), str(value or "candidate"), str(value or "후보")))
+
+
+def _portrait_judgement_user_text(judgements: List[Dict[str, Any]], locale: str) -> str:
+    texts: List[str] = []
+    for row in judgements:
+        text = str(row.get("text") or "")
+        if not text:
+            text = _portrait_judgement_text_from_id(str(row.get("judgement_id") or ""), locale)
+        elif locale != "zh":
+            text = _portrait_judgement_text_from_id(str(row.get("judgement_id") or ""), locale) or text
+        if text:
+            texts.append(text)
+    return "；".join(texts[:2])
+
+
+def _portrait_judgement_text_from_id(judgement_id: str, locale: str) -> str:
+    table = {
+        "portrait.judgement.useful_god_candidate_only": _l("用神忌神只保留为候选路径", "Useful and unfavorable gods remain candidate paths", "용신·기신은 후보 경로로만 둡니다"),
+        "portrait.judgement.branch_volatility_review": _l("地支张力需要先分清本命和时间层", "Branch tension must be separated by natal and timing layers first", "지지 장력은 본명과 시간층을 먼저 구분해야 합니다"),
+        "portrait.judgement.wealth_visible_stability_review": _l("财星可见但稳定性仍需承载和牵制证据", "Wealth signs are visible, but stability still needs capacity and constraint evidence", "재성은 보이나 안정성은 수용과 견제 근거가 더 필요합니다"),
+        "portrait.judgement.pattern_index_candidate": _l("格局只有索引入口，仍需同层验证", "Pattern is only an index entry and still needs same-layer validation", "격국은 색인 입구일 뿐 같은 층 검증이 필요합니다"),
+        "portrait.judgement.structure_evidence_first": _l("先以结构证据和候选判断为主", "Structure evidence and candidate judgement come first", "구조 근거와 후보 판단을 우선합니다"),
+    }
+    return _local_text(table.get(str(judgement_id or ""), _l("")), locale)
+
+
+def _portrait_gate_text(vectors: Dict[str, Any], locale: str) -> str:
+    useful = float(vectors.get("useful_god_candidate_confidence") or 0)
+    evidence = float(vectors.get("evidence_confidence") or 0)
+    if locale == "en":
+        return f"candidate confidence {useful:.2f}; evidence confidence {evidence:.2f}"
+    if locale == "ko":
+        return f"후보 신뢰도 {useful:.2f}; 근거 신뢰도 {evidence:.2f}"
+    return f"候选置信 {useful:.2f}；证据置信 {evidence:.2f}"
 
 
 def _boundary_items(kind: str) -> List[Dict[str, Any]]:

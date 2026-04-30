@@ -90,7 +90,12 @@ from v19.synthetic_validation.silent_training_ledger import build_p62_silent_tra
 from v19.synthetic_validation.silent_eval_queue import build_p63_silent_eval_queue, run_p63_silent_eval_queue_regression
 from v19.synthetic_validation.calibration_design import build_p64_interactive_calibration_design, run_p64_interactive_calibration_design_regression
 from v19.synthetic_validation.mainline_completion_audit import build_p65_mainline_completion_audit, run_p65_mainline_completion_regression
-from v19.synthetic_validation.structure_portrait_matrix import build_structure_portrait_synthetic_matrix, run_structure_portrait_synthetic_matrix_regression
+from v19.synthetic_validation.structure_portrait_matrix import (
+    build_structure_portrait_shadow_tuning_report,
+    build_structure_portrait_synthetic_matrix,
+    run_structure_portrait_shadow_tuning_regression,
+    run_structure_portrait_synthetic_matrix_regression,
+)
 from v19.synthetic_validation.rule_db_readiness import (
     build_runtime_rule_db_controlled_activation_plan,
     build_runtime_rule_db_isolated_canary_eval_dataset,
@@ -132,6 +137,7 @@ __all__ = [
     "build_p64_interactive_calibration_design",
     "build_p65_mainline_completion_audit",
     "build_structure_portrait_synthetic_matrix",
+    "build_structure_portrait_shadow_tuning_report",
     "build_runtime_rule_db_readiness_audit",
     "build_runtime_rule_db_controlled_activation_plan",
     "build_runtime_rule_db_isolated_canary_eval_dataset",
@@ -181,6 +187,7 @@ __all__ = [
     "run_p64_interactive_calibration_design_regression",
     "run_p65_mainline_completion_regression",
     "run_structure_portrait_synthetic_matrix_regression",
+    "run_structure_portrait_shadow_tuning_regression",
     "run_runtime_rule_db_readiness_regression",
     "run_runtime_rule_db_answer_guardrail_regression",
     "run_runtime_rule_db_controlled_activation_regression",

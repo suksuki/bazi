@@ -355,7 +355,7 @@ def test_p63_silent_eval_queue_turns_training_ledger_into_checkpointed_jobs() ->
     assert {
         "v19.synthetic_validation.silent_evolution.run_p60_domain_route_eval",
         "v19.synthetic_validation.domain_route_backfill.run_p61_domain_route_backfill_regression",
-        "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_synthetic_matrix_regression",
+        "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_shadow_tuning_regression",
     } <= {row["runner"] for row in queue["queue_items"]}
     assert all(row["runtime_mutation"] is False and row["answer_mutation"] is False for row in queue["queue_items"])
     assert all("production_rule_activation" in row["blocked_actions"] for row in queue["queue_items"])
@@ -3659,16 +3659,16 @@ def test_common_bazi_question_ui_fallback_library_is_aligned() -> None:
     oracle_js = (root / "v19/frontend/assets/oracle.js").read_text(encoding="utf-8")
     oracle_html = (root / "v19/frontend/oracle.html").read_text(encoding="utf-8")
 
-    for token in ["q_strength_assessment", "q_useful_god_candidates", "q_pattern_structure", "q_ten_god_focus"]:
+    for token in ["q_strength_assessment", "q_useful_god_candidates", "q_unfavorable_god_boundary", "q_favorable_elements_boundary", "q_pattern_structure", "q_ten_god_focus"]:
         assert token in oracle_js
     assert "strength_structure" in oracle_js
     assert "useful_god_boundary" in oracle_js
     assert "pattern_structure" in oracle_js
-    assert "20260430-common-intents" in oracle_html
+    assert "20260430-portrait-loop" in oracle_html
 
 
 def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries() -> None:
-    from v19.bazi_guided_questions import build_guided_question_answer
+    from v19.bazi_guided_questions import build_guided_question_answer, guided_answer_to_plain_text
 
     data = _agent_data_for_case(P11_GUIDED_SYNTHETIC_CASES[0])
     portrait = data["structure_portrait"]
@@ -3697,10 +3697,16 @@ def test_structure_portrait_layer_builds_labels_vectors_and_candidate_boundaries
     answer = build_guided_question_answer(data, "q_useful_god_candidates", "用神是什么？忌神是什么？")
     assert answer["structure_portrait"]["status"] == "ready"
     assert answer["retrieved_facts"]["structure_portrait"]["vectors"]
+    assert answer["retrieved_facts"]["structure_portrait"]["labels"]
+    assert answer["retrieved_facts"]["structure_portrait"]["candidate_judgements"]
     useful_text = "\n".join(answer["content"]["zh"])
+    useful_plain = guided_answer_to_plain_text(answer, "zh")
     for forbidden in ["喜木火", "忌金水", "一定", "必然", "发财", "破财", "应期"]:
         assert forbidden not in useful_text
+        assert forbidden not in useful_plain
     assert "候选" in useful_text
+    assert "结构画像" in useful_plain
+    assert "候选标签" in useful_text or "画像标签" in useful_text
 
 
 def test_structure_portrait_bias_changes_across_synthetic_cases_and_guides_questions() -> None:
@@ -3748,7 +3754,9 @@ def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> 
     from v19.synthetic_validation import (
         build_p62_silent_training_ledger,
         build_p63_silent_eval_queue,
+        build_structure_portrait_shadow_tuning_report,
         build_structure_portrait_synthetic_matrix,
+        run_structure_portrait_shadow_tuning_regression,
         run_structure_portrait_synthetic_matrix_regression,
     )
 
@@ -3757,6 +3765,8 @@ def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> 
     doc = (root / "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP.md").read_text(encoding="utf-8")
     matrix = build_structure_portrait_synthetic_matrix()
     regression = run_structure_portrait_synthetic_matrix_regression()
+    tuning = build_structure_portrait_shadow_tuning_report()
+    tuning_regression = run_structure_portrait_shadow_tuning_regression()
     ledger = build_p62_silent_training_ledger()
     queue = build_p63_silent_eval_queue()
 
@@ -3767,15 +3777,25 @@ def test_structure_portrait_product_loop_surfaces_evidence_and_silent_eval() -> 
     assert matrix["summary"]["forbidden_text_failure_count"] == 0
     assert regression["status"] == "pass"
     assert regression["summary"]["runtime_mutation"] is False
+    assert tuning["status"] == "portrait_shadow_tuning_ready"
+    assert tuning["summary"]["case_count"] == 20
+    assert tuning["summary"]["vector_signature_count"] >= 8
+    assert tuning["summary"]["top_question_signature_count"] >= 6
+    assert tuning["summary"]["proposal_count"] >= 6
+    assert all(row["decision"] == "shadow_review_only" for row in tuning["proposals"])
+    assert tuning_regression["status"] == "pass"
 
     assert "MAINLINE_STRUCTURE_PORTRAIT_LAYER" in {row["source_stage"] for row in ledger["entries"]}
     assert any(row["training_use"] == "portrait_routing_signal" for row in ledger["entries"])
     assert any(row["proposal_type"] == "portrait_question_routing_weight_review" for row in ledger["tuning_queue"])
     assert any(row["task_type"] == "portrait_route_weight_shadow_review" for row in queue["queue_items"])
+    assert any(row["runner"] == "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_shadow_tuning_regression" for row in queue["queue_items"])
 
     assert "结构画像产品闭环" in doc
+    assert "P77-P80" in doc
     assert "docs/v19/V19_MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP.md" in manifest["created_from"]
     assert manifest["mainline_structure_portrait_product_loop"]["synthetic_case_count"] == 12
+    assert manifest["mainline_structure_portrait_product_loop"]["shadow_tuning_case_count"] == 20
     assert manifest["mainline_structure_portrait_product_loop"]["runtime_mutation"] is False
     assert "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP" in manifest["guardrails"]
 
