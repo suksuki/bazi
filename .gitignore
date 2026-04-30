@@ -7,6 +7,7 @@ qiazhi/**/__pycache__/
 qiazhi/**/*.pyc
 qiazhi/v17_rebirth/.runtime/
 qiazhi/v17_rebirth/.runlogs/
+qiazhi/v19/.runtime/
 qiazhi/v19/.runtime/server_*.log
 qiazhi/v19/.runtime/server_*.pid
 
