@@ -58,6 +58,8 @@ from v19.synthetic_validation import (
     run_p63_silent_eval_queue_regression,
     build_p64_interactive_calibration_design,
     run_p64_interactive_calibration_design_regression,
+    build_p65_mainline_completion_audit,
+    run_p65_mainline_completion_regression,
 )
 from v19.lab_interfaces import (
     approve_bazi_rule_proposal,
@@ -1168,6 +1170,26 @@ def lab_interactive_calibration_design_run_post(request: Request) -> Dict[str, A
         "ok": True,
         "stage": "P64_INTERACTIVE_CALIBRATION_DESIGN",
         "regression": run_p64_interactive_calibration_design_regression(),
+    }
+
+
+@app.get("/api/lab/mainline-completion-audit")
+def lab_mainline_completion_audit_get(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P65_MAINLINE_COMPLETION_AUDIT",
+        "audit": build_p65_mainline_completion_audit(),
+    }
+
+
+@app.post("/api/lab/mainline-completion-audit/run")
+def lab_mainline_completion_audit_run_post(request: Request) -> Dict[str, Any]:
+    _require_role(request, {"practitioner", "admin"})
+    return {
+        "ok": True,
+        "stage": "P65_MAINLINE_COMPLETION_AUDIT",
+        "regression": run_p65_mainline_completion_regression(),
     }
 
 

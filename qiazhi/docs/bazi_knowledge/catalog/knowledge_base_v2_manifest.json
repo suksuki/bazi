@@ -61,6 +61,8 @@
     "docs/v19/V19_P62_SILENT_TRAINING_LEDGER.md",
     "docs/v19/V19_P63_SILENT_EVAL_QUEUE.md",
     "docs/v19/V19_P64_INTERACTIVE_CALIBRATION_DESIGN.md",
+    "docs/v19/V19_P65_MAINLINE_COMPLETION_AUDIT.md",
+    "docs/v19/V19_P66_MAINLINE_P0_APPLICATION.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -2243,6 +2245,76 @@
       "NO_BLACK_BOX_CORE_INFERENCE"
     ]
   },
+  "p65_mainline_completion_audit": {
+    "stage": "P65_MAINLINE_COMPLETION_AUDIT",
+    "entrypoints": [
+      "v19.synthetic_validation.mainline_completion_audit.build_p65_mainline_completion_audit",
+      "v19.synthetic_validation.mainline_completion_audit.run_p65_mainline_completion_regression",
+      "GET /api/lab/mainline-completion-audit",
+      "POST /api/lab/mainline-completion-audit/run"
+    ],
+    "status": "pass",
+    "runtime_scope": "audit_only_no_runtime_mutation",
+    "knowledge_draft_count": 436,
+    "p39_candidate_count": 348,
+    "p39_blocked_count": 88,
+    "p61_route_wrapper_count": 6,
+    "rule_graph_candidate_count": 354,
+    "route_matrix_row_count": 24,
+    "answer_kind_gap_count": 0,
+    "route_selected_not_applied_row_count": 0,
+    "p0_actions": [],
+    "p1_actions": [
+      "r3_r4_safe_wrapper_review",
+      "rule_graph_selection_coverage"
+    ],
+    "p2_actions": [
+      "freeze_new_framework_expansion"
+    ],
+    "current_focus": "core_chain_locked_continue_p1_rule_coverage_before_more_framework_expansion",
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P65_MAINLINE_COMPLETION_AUDIT",
+      "AUDIT_ONLY",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_ANSWER_MUTATION",
+      "NO_NEW_FRAMEWORK_EXPANSION",
+      "PRIORITIZE_CORE_MEASUREMENT_CHAIN"
+    ]
+  },
+  "p66_mainline_p0_application": {
+    "stage": "P66_MAINLINE_P0_APPLICATION",
+    "entrypoints": [
+      "v19.bazi_guided_questions.build_guided_question_answer",
+      "v19.bazi_guided_questions.route_guided_question_intent",
+      "v19.synthetic_validation.mainline_completion_audit.run_p65_mainline_completion_regression"
+    ],
+    "status": "pass",
+    "runtime_scope": "answer_surface_and_evidence_binding_no_runtime_mutation",
+    "completed": [
+      "career_structure_answer_kind",
+      "relationship_structure_answer_kind",
+      "health_structure_answer_kind",
+      "rule_graph_selected_knowledge_bound_to_applied_knowledge"
+    ],
+    "answer_kind_gap_count": 0,
+    "route_selected_not_applied_row_count": 0,
+    "p0_action_count": 0,
+    "engine_enabled_count": 0,
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "P66_MAINLINE_P0_APPLICATION",
+      "NO_RUNTIME_RULE_ACTIVATION",
+      "NO_RESULT_MUTATION",
+      "NO_DOMAIN_RESULT_PREDICTION",
+      "NO_MEDICAL_OR_LIFESPAN_INFERENCE",
+      "NO_INTERNAL_IDS_IN_USER_TEXT"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -2320,6 +2392,8 @@
     "P62_SILENT_TRAINING_LEDGER",
     "P63_SILENT_EVAL_QUEUE",
     "P64_INTERACTIVE_CALIBRATION_DESIGN",
+    "P65_MAINLINE_COMPLETION_AUDIT",
+    "P66_MAINLINE_P0_APPLICATION",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

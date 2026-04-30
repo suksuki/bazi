@@ -112,6 +112,54 @@ QUESTION_REGISTRY: Dict[str, Dict[str, Any]] = {
             "ko": "이 명식의 묘고 구조는 구조 층에서만 어떻게 읽어야 하나요?",
         },
     },
+    "q_career_structure": {
+        "theme": "career_structure",
+        "depth": "beginner",
+        "phase": "any",
+        "intent": "career_structure",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "relations", "source_signal"],
+        "answer_scope": "explain_career_as_structure_boundary_not_outcome",
+        "score": 72,
+        "related_questions": ["q_ten_god_metadata", "q_structure_overview", "q_time_context_boundary"],
+        "label": {
+            "zh": "这张命盘的事业结构，应该先看哪些结构路径？",
+            "en": "Which structural paths should be checked first for career structure in this chart?",
+            "ko": "이 명식의 직업 구조는 어떤 구조 경로를 먼저 봐야 하나요?",
+        },
+    },
+    "q_relationship_structure": {
+        "theme": "relationship_structure",
+        "depth": "beginner",
+        "phase": "any",
+        "intent": "relationship_structure",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "relations", "source_signal", "time_context"],
+        "answer_scope": "explain_relationship_as_structure_boundary_not_outcome",
+        "score": 70,
+        "related_questions": ["q_branch_relation_detail", "q_ten_god_metadata", "q_time_context_boundary"],
+        "label": {
+            "zh": "这张命盘的关系结构，应该如何只按结构层阅读？",
+            "en": "How should relationship structure in this chart be read only at the structural layer?",
+            "ko": "이 명식의 관계 구조는 구조 층에서만 어떻게 읽어야 하나요?",
+        },
+    },
+    "q_health_structure": {
+        "theme": "health_structure",
+        "depth": "beginner",
+        "phase": "any",
+        "intent": "health_structure",
+        "required": ["chart"],
+        "required_facts": ["chart_anchor", "relations", "source_signal", "time_context"],
+        "answer_scope": "explain_health_as_structure_boundary_not_body_verdict",
+        "score": 68,
+        "related_questions": ["q_day_master_month_anchor", "q_branch_relation_detail", "q_time_context_boundary"],
+        "label": {
+            "zh": "这张命盘的健康结构，只能读到哪些结构边界？",
+            "en": "Which structural boundaries can be read for health structure in this chart?",
+            "ko": "이 명식의 건강 구조에서는 어떤 구조 경계만 읽을 수 있나요?",
+        },
+    },
     "q_element_flow_metadata": {
         "theme": "structure_basis",
         "depth": "intermediate",
@@ -764,6 +812,7 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
     rule_graph_answer_audit = audit_selected_paths_for_answer(rule_graph_context.get("selected_paths") or [])
     knowledge_context = dict(agent_data.get("knowledge_context") or {})
     applied_knowledge = _select_answer_knowledge(knowledge_context, answer_kind, clean_key, clean_message, source_signal)
+    applied_knowledge = _merge_rule_graph_answer_knowledge(applied_knowledge, rule_graph_context)
     retrieved_facts = retrieve_guided_question_facts(intent, chart, time_context, facts, income_bundle, guided_context, source_question, source_signal)
     retrieved_facts["knowledge_context"] = {
         "applied_ids": [str(item.get("knowledge_id") or "") for item in applied_knowledge if item.get("knowledge_id")],
@@ -1128,6 +1177,9 @@ def route_guided_question_intent(question_key: str, message: str, source_signal:
         "vault": ("intent.vault_structure", "structural_relation", ["pillars", "vault_branches", "hidden_stems"]),
         "time_boundary": ("intent.time_context_boundary", "time_structure", ["pillars", "luck_cycle", "flow_year", "time_relations"]),
         "income_structure": ("intent.income_structure", "income_stability", ["income_signals", "pillars", "relations"]),
+        "career_structure": ("intent.career_structure", "career_structure", ["pillars", "relations", "source_signal"]),
+        "relationship_structure": ("intent.relationship_structure", "relationship_structure", ["pillars", "relations", "source_signal", "time_context"]),
+        "health_structure": ("intent.health_structure", "health_structure", ["pillars", "relations", "source_signal", "time_context"]),
         "result_boundary": ("intent.result_boundary", "boundary", ["income_signals", "guardrails"]),
         "metadata_boundary": ("intent.structure_metadata", "metadata", ["pillars", "hidden_stems", "stem_elements"]),
         "rule_basis": ("intent.rule_basis", "rule_explanation", ["source_signal", "observed_facts"]),
@@ -1253,7 +1305,7 @@ def compose_guided_question_answer(
             )
         return (
             "这个问题当前不在系统支持的结构分析范围内，所以我不会硬编答案。"
-            "目前可以可靠回答的是：四柱结构、日主和月令、藏干、地支冲合、墓库、大运和流年作为时间背景，以及收入稳定性这一项结构信号。"
+            "目前可以可靠回答的是：四柱结构、日主和月令、藏干、地支冲合、墓库、大运和流年作为时间背景，以及收入、事业、关系、健康这几类结构边界信号。"
             "你可以换成上方推荐问题，或把问题改成“这张命盘先看哪些结构特征？”这类结构问题。"
         )
     answer_kind = str(intent.get("answer_kind") or "structure_overview")
@@ -1263,6 +1315,7 @@ def compose_guided_question_answer(
     time_context = dict(facts.get("time_context") or {})
     income_signals = dict(facts.get("income_signals") or {})
     knowledge_items = list(applied_knowledge or [])
+    source_signal = dict(facts.get("source_signal") or {})
     paragraphs: List[str] = []
 
     if answer_kind == "branch_relation":
@@ -1288,6 +1341,11 @@ def compose_guided_question_answer(
             paragraphs.append(f"你问的是收入稳定性结构。当前可见的相关信号是：{signal_text}。这些信号说明结构状态；具体财富事件需要另按时间与事实条件分析。")
         else:
             paragraphs.append("你问的是收入稳定性结构，但当前没有取到可用的收入结构信号，所以这里不能硬生成结论。")
+    elif answer_kind in {"career_structure", "relationship_structure", "health_structure"}:
+        label = _domain_answer_label(answer_kind)
+        focus = _domain_answer_focus(answer_kind, knowledge_items, source_signal)
+        paragraphs.append(f"你问的是{label}。这里先按结构边界读：{focus}")
+        paragraphs.append(_domain_answer_boundary(answer_kind))
     elif answer_kind == "metadata_boundary":
         day = anchor.get("day_pillar") or "日柱未取到"
         day_stem = anchor.get("day_stem") or ""
@@ -1365,6 +1423,48 @@ def _select_answer_knowledge(
             selected.append(_compact_knowledge_item(row))
     selected.extend(style_rows[:2])
     return selected[:6]
+
+
+def _merge_rule_graph_answer_knowledge(applied_knowledge: List[Dict[str, Any]], rule_graph_context: Dict[str, Any], *, limit: int = 12) -> List[Dict[str, Any]]:
+    merged: List[Dict[str, Any]] = []
+    seen = set()
+    for row in applied_knowledge:
+        if not isinstance(row, dict):
+            continue
+        knowledge_id = str(row.get("knowledge_id") or "")
+        if knowledge_id and knowledge_id in seen:
+            continue
+        if knowledge_id:
+            seen.add(knowledge_id)
+        merged.append(dict(row))
+    for path in rule_graph_context.get("selected_paths") or []:
+        if not isinstance(path, dict):
+            continue
+        knowledge_id = str(path.get("knowledge_id") or "")
+        if not knowledge_id or knowledge_id in seen:
+            continue
+        seen.add(knowledge_id)
+        merged.append(_compact_rule_graph_knowledge_item(path))
+        if len(merged) >= limit:
+            break
+    return merged[:limit]
+
+
+def _compact_rule_graph_knowledge_item(path: Dict[str, Any]) -> Dict[str, Any]:
+    reason = str(path.get("reason") or "当前命盘结构路径选中该知识；只作为回答证据，不作为结论。")
+    return {
+        "knowledge_id": path.get("knowledge_id") or "",
+        "domain": path.get("domain") or "",
+        "title": path.get("title") or path.get("knowledge_id") or "",
+        "statement": reason,
+        "evidence_type": "rule_graph_route_evidence",
+        "match_score": path.get("score"),
+        "route_match_score": path.get("score"),
+        "route_match_reasons": ["rule_graph_selected_path"],
+        "topic_lane": path.get("topic_lane") or "",
+        "framework_state": path.get("framework_state") or "",
+        "runtime_allowed": path.get("runtime_allowed") is True,
+    }
 
 
 def _compact_knowledge_item(row: Dict[str, Any]) -> Dict[str, Any]:
@@ -1516,11 +1616,24 @@ def _unsupported_question_reason(text: str) -> str:
     greetings = {"你好", "您好", "hello", "hi", "hey", "嗨", "哈喽", "在吗", "早", "早上好", "晚上好"}
     if compact in greetings:
         return "smalltalk:greeting"
-    unsupported_terms = ["婚姻", "感情", "健康", "疾病", "子女", "父母", "官司", "升职", "考试", "什么时候", "哪一年", "发财", "破财", "好不好", "会不会"]
+    hard_unsupported_terms = ["疾病", "子女", "父母", "官司", "升职", "考试", "什么时候", "哪一年", "发财", "破财", "好不好", "会不会"]
+    for term in hard_unsupported_terms:
+        if term in clean:
+            return f"unsupported_topic:{term}"
+    if _is_supported_domain_structure_question(clean):
+        return ""
+    unsupported_terms = ["婚姻", "感情", "健康"]
     for term in unsupported_terms:
         if term in clean:
             return f"unsupported_topic:{term}"
     return ""
+
+
+def _is_supported_domain_structure_question(text: str) -> bool:
+    clean = str(text or "")
+    domain_tokens = ["事业", "职业", "工作", "感情", "关系", "婚姻", "伴侣", "配偶", "健康", "身体"]
+    boundary_tokens = ["结构", "边界", "信号", "路径", "怎么看", "如何看", "如何读", "只按结构", "需要注意"]
+    return any(token in clean for token in domain_tokens) and any(token in clean for token in boundary_tokens)
 
 
 def _retrieved_relation_facts(chart: Dict[str, Any], facts: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -1699,6 +1812,12 @@ def _serializable_relation_map(raw: Dict[str, Any]) -> Dict[str, List[str]]:
 def _guided_answer_kind(question_key: str, message: str) -> str:
     key = str(question_key or "")
     text = str(message or "")
+    if key == "q_career_structure" or "career" in key or "事业" in text or "职业" in text or "工作" in text:
+        return "career_structure"
+    if key == "q_relationship_structure" or "relationship" in key or any(token in text for token in ["感情", "伴侣", "配偶", "婚姻"]):
+        return "relationship_structure"
+    if key == "q_health_structure" or "health" in key or "健康" in text or "身体" in text:
+        return "health_structure"
     if key in {"q_branch_relation_detail", "q_time_vs_natal_relation", "q_combination_context", "q_three_harmony_context"} or "branch_relation" in key or key == "q_time_context" or any(token in text for token in ["冲合", "冲", "合", "刑", "害", "破", "关系", "三合", "三会", "六合"]):
         return "branch_relation"
     if "vault" in key or "墓库" in text:
@@ -1748,6 +1867,21 @@ def _guided_answer_summary(answer_kind: str, source_signal: Dict[str, Any] | Non
             "收入稳定性这里按结构读：重点是承载力、财富结构出现度、可达性、波动和牵制这些信号怎样组合，而不是判断你会不会发财。",
             "Income stability is read structurally here: the system looks at capacity, wealth-structure presence, accessibility, volatility, and constraints, not whether someone will become rich.",
             "여기서 소득 안정성은 구조로 읽습니다. 수용력, 재성 구조의 출현, 접근성, 변동성, 견제가 어떻게 조합되는지를 보는 것이지 재물운을 예측하는 것이 아닙니다.",
+        ),
+        "career_structure": _l(
+            "事业问题先按结构读：看约束、输出、承载、格局和时间层是否形成可解释路径，不直接推出职业成败。",
+            "Career questions are read structurally: constraints, output, capacity, pattern, and timing context are checked as explainable paths, not as success/failure verdicts.",
+            "직업 질문은 구조로 읽습니다. 제약, 표현, 수용력, 격국, 시간층이 설명 가능한 경로를 이루는지 보며 성패 단정은 하지 않습니다.",
+        ),
+        "relationship_structure": _l(
+            "关系问题先按结构读：看关系符号、宫位线索、十神互动和时间层牵动，不直接推出感情结果。",
+            "Relationship questions are read structurally: relationship symbols, palace clues, Ten God interaction, and timing triggers are checked, not relationship outcomes.",
+            "관계 질문은 구조로 읽습니다. 관계 기호, 궁위 단서, 십성 상호작용, 시간층 작용을 보며 결과를 단정하지 않습니다.",
+        ),
+        "health_structure": _l(
+            "健康问题先按结构读：看承载、偏枯、冲合牵动和时间层压力，不输出身体结论。",
+            "Health questions are read structurally: capacity, imbalance, branch movement, and timing pressure are checked, with no body-condition verdict.",
+            "건강 질문은 구조로 읽습니다. 수용력, 치우침, 충합 작용, 시간층 압력을 보며 신체 상태를 단정하지 않습니다.",
         ),
         "result_boundary": _l(
             "结果卡只是一张结构摘要：它告诉你当前支持的结构主题怎么归类，不负责给人生下判断。",
@@ -1803,6 +1937,21 @@ def _guided_answer_sections(
         return source_section + [
             _section("当前结构信号", "Current structural signals", "현재 구조 신호", _income_answer_items(income_bundle)),
             _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("income")),
+        ]
+    if answer_kind == "career_structure":
+        return source_section + [
+            _section("事业结构路径", "Career structure path", "직업 구조 경로", _domain_answer_items("career_structure", source_signal or {})),
+            _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("career")),
+        ]
+    if answer_kind == "relationship_structure":
+        return source_section + [
+            _section("关系结构路径", "Relationship structure path", "관계 구조 경로", _domain_answer_items("relationship_structure", source_signal or {})),
+            _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("relationship")),
+        ]
+    if answer_kind == "health_structure":
+        return source_section + [
+            _section("健康结构路径", "Health structure path", "건강 구조 경로", _domain_answer_items("health_structure", source_signal or {})),
+            _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("health")),
         ]
     if answer_kind == "result_boundary":
         return source_section + [
@@ -2025,6 +2174,81 @@ def _income_answer_items(income_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:
         value = str(signals.get(key) or "unknown")
         items.append(_item(_l(zh, en, ko), _value_l(value), _l("来自当前结构信号汇总。", "Comes from the current structural signal summary.", "현재 구조 신호 요약에서 온 값입니다.")))
     return items
+
+
+def _domain_answer_label(answer_kind: str) -> str:
+    return {
+        "career_structure": "事业结构",
+        "relationship_structure": "关系结构",
+        "health_structure": "健康结构",
+    }.get(str(answer_kind or ""), "领域结构")
+
+
+def _domain_answer_focus(answer_kind: str, knowledge_items: List[Dict[str, Any]], source_signal: Dict[str, Any]) -> str:
+    observed = "、".join(_plain_observed_values(source_signal.get("observed") or []))
+    domains = _dedupe_keep_order([str(row.get("domain") or "") for row in knowledge_items if str(row.get("domain") or "") and str(row.get("domain") or "") != "answer_expression"])
+    if observed:
+        basis = f"当前命中的结构事实是{observed}"
+    elif domains:
+        basis = "当前证据集中在" + "、".join(_domain_readable_name(item) for item in domains[:4])
+    else:
+        basis = "当前先取四柱、地支关系、十神和时间背景作为入口"
+    detail = {
+        "career_structure": "重点看约束关系、输出关系、承载力和格局线索有没有形成同一条解释路径。",
+        "relationship_structure": "重点看关系符号、宫位线索、十神互动和时间层牵动是否只是结构连接。",
+        "health_structure": "重点看承载力、偏枯、冲合牵动和时间层压力是否只是结构压力信号。",
+    }.get(str(answer_kind or ""), "重点看结构事实是否足以支持当前问题。")
+    return f"{basis}；{detail}"
+
+
+def _domain_answer_boundary(answer_kind: str) -> str:
+    return {
+        "career_structure": "所以这里能回答“哪些事业相关结构值得先看”，不能回答职业成败、升迁时间或外部结果。",
+        "relationship_structure": "所以这里能回答“关系结构从哪里出现、被什么牵动”，不能回答婚恋结果或具体事件。",
+        "health_structure": "所以这里能回答“健康主题下有哪些结构压力或边界”，不能回答身体状态或医学结论。",
+    }.get(str(answer_kind or ""), "所以这里只回答结构边界，不扩写成结果。")
+
+
+def _domain_answer_items(answer_kind: str, source_signal: Dict[str, Any]) -> List[Dict[str, Any]]:
+    observed = "、".join(_plain_observed_values(source_signal.get("observed") or []))
+    configs = {
+        "career_structure": [
+            ("事业入口", "Career entry", "직업 입구", "官杀、食伤、财星和格局路径", "Constraints, output, wealth link, and pattern path", "관살, 식상, 재성 연결, 격국 경로"),
+            ("可解释内容", "Explainable content", "설명 가능한 내용", "哪些结构因素支持这个问题被提出", "Which structural factors support asking this question", "이 질문을 제기하게 한 구조 요소"),
+        ],
+        "relationship_structure": [
+            ("关系入口", "Relationship entry", "관계 입구", "关系符号、宫位线索、十神互动和时间牵动", "Relationship symbols, palace clues, Ten God interaction, and timing movement", "관계 기호, 궁위 단서, 십성 상호작용, 시간 작용"),
+            ("可解释内容", "Explainable content", "설명 가능한 내용", "关系结构从哪里出现、在哪一层被牵动", "Where the relationship structure appears and which layer moves it", "관계 구조가 어디서 나타나고 어느 층에서 움직이는지"),
+        ],
+        "health_structure": [
+            ("健康入口", "Health entry", "건강 입구", "承载力、偏枯、冲合牵动和时间层压力", "Capacity, imbalance, branch movement, and timing pressure", "수용력, 치우침, 충합 작용, 시간층 압력"),
+            ("可解释内容", "Explainable content", "설명 가능한 내용", "哪些结构压力被看见，以及它们属于本命还是时间背景", "Which structural pressures are visible and whether they are natal or timing context", "어떤 구조 압력이 보이며 원국인지 시간 배경인지"),
+        ],
+    }
+    rows = configs.get(str(answer_kind or ""), [])
+    items = [
+        _item(_l(zh, en, ko), _l(value_zh, value_en, value_ko), _l("只作为结构阅读路径。", "Used only as a structural reading path.", "구조 읽기 경로로만 사용됩니다."))
+        for zh, en, ko, value_zh, value_en, value_ko in rows
+    ]
+    if observed:
+        items.insert(0, _item(_l("当前命中", "Current match", "현재 일치"), _l(observed, observed, observed), _l("来自当前问题背后的结构信号。", "Comes from the structural signal behind the current question.", "현재 질문 뒤의 구조 신호에서 온 값입니다.")))
+    return items or [_item(_l("结构入口", "Structural entry", "구조 입구"), _l("四柱、关系、时间背景", "Pillars, relations, and timing context", "사주, 관계, 시간 배경"), _l("只说明阅读顺序。", "Only explains reading order.", "읽기 순서만 설명합니다."))]
+
+
+def _domain_readable_name(domain: str) -> str:
+    return {
+        "career": "事业",
+        "relationship": "关系",
+        "health": "健康",
+        "wealth": "财富",
+        "ten_god": "十神",
+        "interaction": "结构互动",
+        "pattern": "格局",
+        "core_structure": "基础结构",
+        "strength": "强弱承载",
+        "luck_flow": "时间背景",
+        "palace": "宫位",
+    }.get(str(domain or ""), str(domain or "结构"))
 
 
 def _result_boundary_items(income_bundle: Dict[str, Any]) -> List[Dict[str, Any]]:

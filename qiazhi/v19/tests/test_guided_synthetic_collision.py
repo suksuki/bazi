@@ -416,6 +416,61 @@ def test_p64_interactive_calibration_design_defines_safe_latent_factor_framework
     assert "P64_INTERACTIVE_CALIBRATION_DESIGN" in manifest["guardrails"]
 
 
+def test_p65_mainline_completion_audit_locks_core_chain_before_new_frameworks() -> None:
+    from v19.synthetic_validation import build_p65_mainline_completion_audit, run_p65_mainline_completion_regression
+
+    root = Path(__file__).resolve().parents[2]
+    manifest = json.loads((root / "docs/bazi_knowledge/catalog/knowledge_base_v2_manifest.json").read_text(encoding="utf-8"))
+    server = (root / "v19/server.py").read_text(encoding="utf-8")
+    audit = build_p65_mainline_completion_audit()
+    regression = run_p65_mainline_completion_regression()
+
+    assert audit["status"] == "mainline_completion_audit_ready"
+    assert audit["summary"]["knowledge_draft_count"] == 436
+    assert audit["summary"]["p39_candidate_count"] == 348
+    assert audit["summary"]["p39_blocked_count"] == 88
+    assert audit["summary"]["p61_route_wrapper_count"] == 6
+    assert audit["summary"]["rule_graph_candidate_count"] == 354
+    assert audit["summary"]["route_matrix_row_count"] == 24
+    assert audit["summary"]["answer_kind_gap_count"] == 0
+    assert audit["summary"]["route_selected_not_applied_row_count"] == 0
+    assert audit["summary"]["p0_action_count"] == 0
+    assert audit["summary"]["p1_action_count"] == 2
+    assert audit["summary"]["runtime_mutation"] is False
+
+    p0_ids = {row["action_id"] for row in audit["priority_actions"] if row["priority"] == "P0"}
+    assert p0_ids == set()
+    for row in audit["answer_surface_matrix"]:
+        assert row["observed_answer_kind"] == row["expected_answer_kind"]
+        assert row["supported"] is True
+        assert row["unsupported_reason"] == ""
+        assert row["route_selected_not_applied_count"] == 0
+        assert set(row["rule_graph_selected_knowledge_ids"]) <= set(row["applied_knowledge_ids"])
+    observed_by_route = {row["route_id"]: row["observed_answer_kind"] for row in audit["answer_surface_matrix"]}
+    assert observed_by_route["career"] == "career_structure"
+    assert observed_by_route["relationship"] == "relationship_structure"
+    assert observed_by_route["health"] == "health_structure"
+    assert audit["conversion_coverage"]["blocked_by_risk"] == {"R3": 76, "R4": 12}
+
+    assert regression["status"] == "pass"
+    assert regression["summary"]["p39_regression_status"] == "pass"
+    assert regression["summary"]["answer_kind_gap_count"] == 0
+    assert regression["summary"]["route_selected_not_applied_row_count"] == 0
+    assert regression["summary"]["runtime_mutation"] is False
+    assert "/api/lab/mainline-completion-audit" in server
+    assert "/api/lab/mainline-completion-audit/run" in server
+    assert "docs/v19/V19_P65_MAINLINE_COMPLETION_AUDIT.md" in manifest["created_from"]
+    assert "docs/v19/V19_P66_MAINLINE_P0_APPLICATION.md" in manifest["created_from"]
+    assert manifest["p65_mainline_completion_audit"]["rule_graph_candidate_count"] == 354
+    assert manifest["p65_mainline_completion_audit"]["answer_kind_gap_count"] == 0
+    assert manifest["p65_mainline_completion_audit"]["route_selected_not_applied_row_count"] == 0
+    assert manifest["p65_mainline_completion_audit"]["runtime_mutation"] is False
+    assert manifest["p66_mainline_p0_application"]["p0_action_count"] == 0
+    assert manifest["p66_mainline_p0_application"]["runtime_mutation"] is False
+    assert "P65_MAINLINE_COMPLETION_AUDIT" in manifest["guardrails"]
+    assert "P66_MAINLINE_P0_APPLICATION" in manifest["guardrails"]
+
+
 def test_p11_review_ui_wires_synthetic_collision_failure_loop() -> None:
     root = Path(__file__).resolve().parents[2]
     admin_html = (root / "v19/frontend/admin.html").read_text(encoding="utf-8")

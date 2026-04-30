@@ -88,6 +88,7 @@ from v19.synthetic_validation.silent_evolution import (
 from v19.synthetic_validation.silent_training_ledger import build_p62_silent_training_ledger, run_p62_silent_training_ledger_regression
 from v19.synthetic_validation.silent_eval_queue import build_p63_silent_eval_queue, run_p63_silent_eval_queue_regression
 from v19.synthetic_validation.calibration_design import build_p64_interactive_calibration_design, run_p64_interactive_calibration_design_regression
+from v19.synthetic_validation.mainline_completion_audit import build_p65_mainline_completion_audit, run_p65_mainline_completion_regression
 
 __all__ = [
     "DEFAULT_SYNTHETIC_CASES",
@@ -109,6 +110,7 @@ __all__ = [
     "build_p62_silent_training_ledger",
     "build_p63_silent_eval_queue",
     "build_p64_interactive_calibration_design",
+    "build_p65_mainline_completion_audit",
     "build_p40_condition_model_synthetic_dataset",
     "build_p40_framework_rule_registry",
     "build_p40_rule_audit_report",
@@ -148,6 +150,7 @@ __all__ = [
     "run_p62_silent_training_ledger_regression",
     "run_p63_silent_eval_queue_regression",
     "run_p64_interactive_calibration_design_regression",
+    "run_p65_mainline_completion_regression",
     "run_p40_condition_model_synthetic_regression",
     "run_p40_rule_audit_application_regression",
     "run_p41_condition_deep_regression",
