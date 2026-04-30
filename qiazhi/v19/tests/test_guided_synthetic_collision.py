@@ -3360,6 +3360,99 @@ def test_p71_runtime_rule_db_categories_create_specific_guided_questions(monkeyp
     assert question["runtime_scope"] == "runtime_rule_graph_question_hint_only_no_result_mutation"
 
 
+def test_mainline_runtime_rule_db_readiness_audit_classifies_activation_pipeline() -> None:
+    from v19.synthetic_validation import run_runtime_rule_db_readiness_regression
+
+    result = run_runtime_rule_db_readiness_regression()
+    audit = result["audit"]
+
+    assert result["status"] == "pass"
+    assert audit["status"] == "readiness_audit_only_no_activation"
+    assert audit["summary"]["synthetic_gate_candidate_count"] == 1
+    assert audit["summary"]["shadow_eval_candidate_count"] == 1
+    assert audit["summary"]["adapter_fact_gap_count"] == 1
+    assert audit["summary"]["blocked_count"] == 1
+    assert audit["selected_for_next_synthetic_gate"][0]["knowledge_id"] == "ready.ten_god"
+    assert audit["selected_for_next_synthetic_gate"][0]["synthetic_gate"] == "required"
+    assert "ten_god_relation" in audit["eval_requirements"]
+    assert "NO_ENGINE_ACTIVATION" in audit["guardrails"]
+
+
+def test_mainline_runtime_rule_db_synthetic_gate_queue_builds_case_slots() -> None:
+    from v19.synthetic_validation import run_runtime_rule_db_synthetic_gate_queue_regression
+
+    result = run_runtime_rule_db_synthetic_gate_queue_regression()
+    queue = result["queue"]
+
+    assert result["status"] == "pass"
+    assert queue["status"] == "synthetic_gate_queue_ready_no_activation"
+    assert queue["candidate_count"] == 2
+    assert queue["case_count"] == 16
+    assert "NO_SYNTHETIC_CASE_AUTO_PASS" in queue["guardrails"]
+    assert {case["polarity"] for case in queue["cases"]} == {
+        "positive",
+        "negative",
+        "time_interference",
+        "hidden_source_interference",
+    }
+    assert all("source_layer" in case["condition_axes_expected"] for case in queue["cases"])
+
+
+def test_mainline_runtime_rule_db_synthetic_eval_dataset_is_runnable_contract() -> None:
+    from v19.synthetic_validation import build_runtime_rule_db_synthetic_eval_dataset, run_runtime_rule_db_synthetic_eval_regression
+
+    result = run_runtime_rule_db_synthetic_eval_regression()
+    dataset = build_runtime_rule_db_synthetic_eval_dataset(
+        [
+            {
+                "rule_id": "v19.rule.ready.ten_god",
+                "knowledge_id": "ready.ten_god",
+                "title": "ready.ten_god",
+                "domain": "ten_god_relation",
+                "category": "ten_god_interaction",
+                "risk_level": "R1",
+                "confidence": 0.82,
+                "engine_enabled": False,
+                "input_contract": {"required": ["chart"]},
+                "condition": {"structured_facts": {"candidate_signal": "ready.ten_god"}},
+                "allowed_usage": ["rule_db"],
+                "forbidden_usage": [],
+            }
+        ],
+        limit=5,
+    )
+
+    assert result["status"] == "pass"
+    assert dataset["status"] == "runtime_rule_db_eval_dataset_ready_no_activation"
+    assert dataset["summary"]["sample_count"] == 8
+    assert dataset["summary"]["min_samples_per_rule"] == 8
+    assert dataset["summary"]["by_polarity"] == {
+        "positive": 3,
+        "negative": 3,
+        "time_interference": 1,
+        "hidden_source_interference": 1,
+    }
+    assert all(sample["chart"]["status"] == "ok" for sample in dataset["samples"])
+    assert all(sample["expected_signal"] for sample in dataset["samples"] if sample["polarity"] == "positive")
+    assert all(sample["forbidden_signals"] for sample in dataset["samples"] if sample["polarity"] != "positive")
+    assert result["summary"]["activation_updated_count"] == 0
+
+
+def test_mainline_runtime_rule_db_synthetic_route_regression_blocks_false_positive_routes() -> None:
+    from v19.synthetic_validation import run_runtime_rule_db_synthetic_route_regression
+
+    result = run_runtime_rule_db_synthetic_route_regression()
+
+    assert result["status"] == "shadow_route_pass_no_activation"
+    assert result["summary"]["sample_count"] == 16
+    assert result["summary"]["false_positive_count"] == 0
+    assert result["summary"]["missed_positive_count"] == 0
+    assert result["summary"]["activation_updated_count"] == 0
+    assert all(route["matched_route_ids"] for route in result["routes"] if route["polarity"] == "positive")
+    assert all(not route["matched_route_ids"] for route in result["routes"] if route["polarity"] != "positive")
+    assert "SHADOW_ROUTE_ONLY" in result["guardrails"]
+
+
 def test_p31c_priority_topic_conversion_registry_batches_partial_topics() -> None:
     from v19.synthetic_validation import build_p31c_priority_topic_conversion_registry
 

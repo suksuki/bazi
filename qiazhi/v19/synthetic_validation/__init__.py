@@ -90,6 +90,15 @@ from v19.synthetic_validation.silent_training_ledger import build_p62_silent_tra
 from v19.synthetic_validation.silent_eval_queue import build_p63_silent_eval_queue, run_p63_silent_eval_queue_regression
 from v19.synthetic_validation.calibration_design import build_p64_interactive_calibration_design, run_p64_interactive_calibration_design_regression
 from v19.synthetic_validation.mainline_completion_audit import build_p65_mainline_completion_audit, run_p65_mainline_completion_regression
+from v19.synthetic_validation.rule_db_readiness import (
+    build_runtime_rule_db_readiness_audit,
+    build_runtime_rule_db_synthetic_eval_dataset,
+    build_runtime_rule_db_synthetic_gate_queue,
+    run_runtime_rule_db_readiness_regression,
+    run_runtime_rule_db_synthetic_eval_regression,
+    run_runtime_rule_db_synthetic_gate_queue_regression,
+    run_runtime_rule_db_synthetic_route_regression,
+)
 
 __all__ = [
     "DEFAULT_SYNTHETIC_CASES",
@@ -113,6 +122,9 @@ __all__ = [
     "build_p63_silent_eval_queue",
     "build_p64_interactive_calibration_design",
     "build_p65_mainline_completion_audit",
+    "build_runtime_rule_db_readiness_audit",
+    "build_runtime_rule_db_synthetic_eval_dataset",
+    "build_runtime_rule_db_synthetic_gate_queue",
     "build_p40_condition_model_synthetic_dataset",
     "build_p40_framework_rule_registry",
     "build_p40_rule_audit_report",
@@ -154,6 +166,10 @@ __all__ = [
     "run_p63_silent_eval_queue_regression",
     "run_p64_interactive_calibration_design_regression",
     "run_p65_mainline_completion_regression",
+    "run_runtime_rule_db_readiness_regression",
+    "run_runtime_rule_db_synthetic_eval_regression",
+    "run_runtime_rule_db_synthetic_gate_queue_regression",
+    "run_runtime_rule_db_synthetic_route_regression",
     "run_p40_condition_model_synthetic_regression",
     "run_p40_rule_audit_application_regression",
     "run_p41_condition_deep_regression",
