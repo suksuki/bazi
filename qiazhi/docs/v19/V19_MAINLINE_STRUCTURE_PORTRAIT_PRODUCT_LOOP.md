@@ -75,6 +75,20 @@ P83 修正 P82 的产品形态：校准不再是“系统继续问用户一个�
 
 用户选择后，画像项可以从 `system_suggested` 进入 `user_confirmed`；命理师选择后进入 `analyst_confirmed`。确认画像只影响个性化画像、推荐问题和回答证据路径，不改命盘事实，不改规则库。
 
+## P84: Bazi Feature Spine
+
+P84 将画像、规则、知识、推荐问题和回答证据包接到同一条命理特征主干：
+
+```text
+规则图 / 知识路径
+→ bazi_feature_layer.features
+→ portrait_projection
+→ feature_question_bias
+→ guided answer feature_evidence
+```
+
+从 P84 起，画像不再作为主推理源头，而是命理特征的可视化投影和校准入口。旧的画像问答 hook 和 `structure_portrait.question_bias` 不再进入主链路；推荐问题只读取 `bazi_feature_layer.question_bias`，回答优先围绕命理特征说明作用路径和证据门槛。
+
 ## P74: Portrait Evidence Pack
 
 `guided_evidence_pack` 增加 `portrait_evidence`：

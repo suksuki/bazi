@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import Any, Dict, Iterable, List, Set, Tuple
 
 from v19.agent.structure import THREE_HARMONIES
+from v19.bazi_features import build_bazi_feature_layer, compact_bazi_feature_layer
 from v19.bazi_rule_db import build_structural_rule_signals
 from v19.core.chart import BRANCH_HIDDEN_STEMS, VAULT_BRANCHES, element_of_stem, ten_god
 from v19.guided_evidence_pack import build_guided_answer_evidence_pack, evidence_pack_summary
@@ -535,6 +536,11 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
     chart = dict(agent_data.get("chart") or {})
     time_context = dict(agent_data.get("time_context") or {})
     inference_context = dict(agent_data.get("inference_context") or {})
+    feature_layer = dict(agent_data.get("bazi_feature_layer") or {})
+    if agent_data.get("structure_portrait"):
+        feature_layer = build_bazi_feature_layer(agent_data)
+    elif not feature_layer:
+        feature_layer = build_bazi_feature_layer(agent_data)
     facts = _chart_facts(chart, time_context)
     signals: List[Dict[str, Any]] = []
     questions: List[Dict[str, Any]] = _baseline_questions(facts)
@@ -569,7 +575,8 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
                 graph_question["runtime_scope"] = "runtime_rule_graph_question_hint_only_no_result_mutation"
                 graph_question["guardrails"] = list(graph_question.get("guardrails") or []) + ["RUNTIME_RULE_GRAPH_HINT_ONLY"]
                 questions.append(graph_question)
-    personalization_context = _question_personalization_context(agent_data, facts, rule_graph_context)
+    agent_data_for_personalization = {**agent_data, "bazi_feature_layer": feature_layer}
+    personalization_context = _question_personalization_context(agent_data_for_personalization, facts, rule_graph_context)
     questions = _personalize_questions(questions, personalization_context)
     questions = _dedupe_questions(questions)
     ranked_questions = _rank_questions_for_chart(questions, personalization_context)
@@ -577,6 +584,7 @@ def build_guided_question_context(agent_data: Dict[str, Any]) -> Dict[str, Any]:
         "available": True,
         "runtime_scope": "guided_questions_only_no_inference_mutation",
         "rule_signal_count": len(signals),
+        "bazi_feature_layer": compact_bazi_feature_layer(feature_layer),
         "structure_portrait": _compact_structure_portrait(agent_data.get("structure_portrait") or {}),
         "rule_signal_adapter": {
             "version": rule_signal_report.get("version") or "",
@@ -629,8 +637,8 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
             "version": (portrait.get("calibration_plan") or {}).get("version") or "",
             "status": (portrait.get("calibration_plan") or {}).get("status") or "",
             "runtime_scope": (portrait.get("calibration_plan") or {}).get("runtime_scope") or "",
-            "user_hooks": list((portrait.get("calibration_plan") or {}).get("user_hooks") or [])[:3],
-            "analyst_hooks": list((portrait.get("calibration_plan") or {}).get("analyst_hooks") or [])[:3],
+            "legacy_hooks_deprecated": True,
+            "active_calibration_surface": "portrait_options",
             "feedback_update_policy": (portrait.get("calibration_plan") or {}).get("feedback_update_policy") or "",
         },
         "calibration_feedback": dict(portrait.get("calibration_feedback") or {}),
@@ -648,8 +656,6 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
                 "selection_options": list(row.get("selection_options") or [])[:5],
                 "portrait_assertion_state": str(row.get("portrait_assertion_state") or ""),
                 "question_hooks": list(row.get("question_hooks") or [])[:4],
-                "user_calibration_hooks": list(row.get("user_calibration_hooks") or [])[:2],
-                "analyst_confirmation_hooks": list(row.get("analyst_confirmation_hooks") or [])[:2],
                 "answer_boundary": str(row.get("answer_boundary") or ""),
                 "knowledge_evidence_ids": list(row.get("knowledge_evidence_ids") or [])[:4],
                 "calibration_feedback_applied": dict(row.get("calibration_feedback_applied") or {}),
@@ -668,22 +674,18 @@ def _compact_structure_portrait(portrait: Dict[str, Any]) -> Dict[str, Any]:
             for row in judgements[:5]
         ],
         "candidate_judgement_ids": [str(row.get("judgement_id") or "") for row in judgements[:5]],
-        "question_bias": dict(portrait.get("question_bias") or {}),
     }
 
 
-def _merge_portrait_bucket_order(route_bucket_order: List[str], portrait_bias: Dict[str, Any]) -> List[str]:
+def _merge_feature_bucket_order(route_bucket_order: List[str], feature_bias: Dict[str, Any]) -> List[str]:
     ordered = [str(item) for item in route_bucket_order if str(item)]
-    bucket_boosts = dict(portrait_bias.get("bucket_boosts") or {})
-    boosted = [key for key, _value in sorted(bucket_boosts.items(), key=lambda row: float(row[1] or 0), reverse=True) if str(key)]
-    # Portrait scores are a secondary bias. They may add missing buckets, but
-    # must not override the Rule Graph bucket order for explicit chart hits.
-    for bucket in boosted[:3]:
-        if bucket not in ordered:
-            ordered.append(bucket)
+    feature_order = [str(item) for item in feature_bias.get("route_bucket_order") or [] if str(item)]
+    bucket_boosts = dict(feature_bias.get("bucket_boosts") or {})
+    if not feature_order:
+        feature_order = [key for key, _value in sorted(bucket_boosts.items(), key=lambda row: float(row[1] or 0), reverse=True) if str(key)]
     out: List[str] = []
-    for bucket in ordered:
-        if bucket not in out:
+    for bucket in feature_order[:4] + ordered:
+        if bucket and bucket not in out:
             out.append(bucket)
     return out[:8]
 
@@ -691,6 +693,7 @@ def _merge_portrait_bucket_order(route_bucket_order: List[str], portrait_bias: D
 def _question_personalization_context(agent_data: Dict[str, Any], facts: Dict[str, Any], rule_graph_context: Dict[str, Any]) -> Dict[str, Any]:
     runtime_context = dict(agent_data.get("rule_graph_runtime_context") or {})
     structure_portrait = dict(agent_data.get("structure_portrait") or {})
+    feature_layer = dict(agent_data.get("bazi_feature_layer") or {})
     selected_paths = [dict(row) for row in runtime_context.get("selected_paths") or [] if isinstance(row, dict)]
     if not selected_paths:
         selected_paths = [dict(row) for row in rule_graph_context.get("selected_paths") or [] if isinstance(row, dict)]
@@ -701,25 +704,29 @@ def _question_personalization_context(agent_data: Dict[str, Any], facts: Dict[st
     if not domain_counts:
         domain_counts = _count_values(str(row.get("domain") or "") for row in selected_paths)
     route_bucket_order = _route_bucket_order(lane_counts, facts)
-    portrait_bias = dict(structure_portrait.get("question_bias") or {})
-    route_bucket_order = _merge_portrait_bucket_order(route_bucket_order, portrait_bias)
+    feature_bias = dict(feature_layer.get("question_bias") or {})
+    route_bucket_order = _merge_feature_bucket_order(route_bucket_order, feature_bias)
     selected_knowledge_ids = [str(row.get("knowledge_id") or "") for row in selected_paths if row.get("knowledge_id")]
     return {
-        "version": "v19.p48.question_personalization.v1",
+        "version": "v19.p84.feature_spine_question_personalization.v1",
         "status": "ready" if selected_paths else "fallback_without_rule_graph_paths",
         "runtime_scope": "question_ranking_only_no_inference_mutation",
-        "source": "rule_graph_runtime_context" if runtime_context else "rule_graph_context",
+        "source": "bazi_feature_layer",
         "route_bucket_order": route_bucket_order,
         "route_lane_counts": lane_counts,
         "route_domain_counts": domain_counts,
         "selected_knowledge_ids": selected_knowledge_ids[:12],
         "selected_route_count": int(runtime_context.get("route_count") or 0),
+        "bazi_feature_status": feature_layer.get("status") or "",
+        "bazi_feature_top_ids": [str(row.get("feature_id") or "") for row in feature_layer.get("top_features") or [] if isinstance(row, dict)][:8],
+        "feature_question_bias": feature_bias,
         "structure_portrait_status": structure_portrait.get("status") or "",
         "portrait_vector_summary": dict(structure_portrait.get("vectors") or {}),
-        "portrait_question_bias": portrait_bias,
+        "portrait_projection_role": "calibration_surface_only_not_question_driver",
         "guardrails": [
+            "BAZI_FEATURE_SPINE_DRIVES_QUESTION_ORDER",
             "PERSONALIZE_QUESTION_ORDER_ONLY",
-            "STRUCTURE_PORTRAIT_RANKING_BIAS_ONLY",
+            "STRUCTURE_PORTRAIT_IS_FEATURE_PROJECTION",
             "KEEP_BASELINE_ENTRY",
             "NO_RESULT_MUTATION",
             "NO_FORTUNE",
@@ -734,9 +741,9 @@ def _personalize_questions(rows: List[Dict[str, Any]], personalization_context: 
     bucket_rank = {bucket: index for index, bucket in enumerate(bucket_order)}
     lane_counts = dict(personalization_context.get("route_lane_counts") or {})
     domain_counts = dict(personalization_context.get("route_domain_counts") or {})
-    portrait_bias = dict(personalization_context.get("portrait_question_bias") or {})
-    portrait_bucket_boosts = dict(portrait_bias.get("bucket_boosts") or {})
-    portrait_question_boosts = dict(portrait_bias.get("question_boosts") or {})
+    feature_bias = dict(personalization_context.get("feature_question_bias") or {})
+    feature_bucket_boosts = dict(feature_bias.get("bucket_boosts") or {})
+    feature_question_boosts = dict(feature_bias.get("question_boosts") or {})
     for row in rows:
         item = dict(row)
         bucket = _question_bucket(item)
@@ -753,10 +760,10 @@ def _personalize_questions(rows: List[Dict[str, Any]], personalization_context: 
         if _category_matches_route(source_category, lane_counts, domain_counts):
             route_boost += 6
             route_reasons.append(f"category:{source_category}")
-        portrait_boost = float(portrait_bucket_boosts.get(bucket) or 0) + float(portrait_question_boosts.get(str(item.get("key") or "")) or 0)
-        if portrait_boost:
-            route_boost += min(18, int(round(portrait_boost)))
-            route_reasons.append("structure_portrait")
+        feature_boost = float(feature_bucket_boosts.get(bucket) or 0) + float(feature_question_boosts.get(str(item.get("key") or "")) or 0)
+        if feature_boost:
+            route_boost += min(22, int(round(feature_boost)))
+            route_reasons.append("bazi_feature_spine")
         route_boost = min(route_boost, 34)
         base_score = int(item.get("score") or 0)
         item["personalized_score"] = base_score + route_boost
@@ -1056,6 +1063,13 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
     structure_portrait = dict(agent_data.get("structure_portrait") or {})
     if structure_portrait:
         retrieved_facts["structure_portrait"] = _compact_structure_portrait(structure_portrait)
+    bazi_feature_layer = dict(agent_data.get("bazi_feature_layer") or {})
+    if structure_portrait:
+        bazi_feature_layer = build_bazi_feature_layer({**agent_data, "structure_portrait": structure_portrait})
+    elif not bazi_feature_layer:
+        bazi_feature_layer = build_bazi_feature_layer({**agent_data, "structure_portrait": structure_portrait})
+    if bazi_feature_layer:
+        retrieved_facts["bazi_feature_layer"] = compact_bazi_feature_layer(bazi_feature_layer)
     evidence_pack = build_guided_answer_evidence_pack(
         question_key=clean_key,
         question_text=clean_message,
@@ -1096,6 +1110,7 @@ def build_guided_question_answer(agent_data: Dict[str, Any], question_key: str =
         "knowledge_context": knowledge_context,
         "rule_graph_context": rule_graph_context,
         "rule_graph_runtime_context": runtime_context,
+        "bazi_feature_layer": compact_bazi_feature_layer(bazi_feature_layer),
         "structure_portrait": _compact_structure_portrait(structure_portrait),
         "rule_graph_answer_audit": rule_graph_answer_audit,
         "evidence_pack": evidence_pack,
@@ -1691,9 +1706,9 @@ def compose_guided_question_answer(
         paragraphs.append(f"如果只看结构，这张命盘可以先抓三个入口：日柱是{day}，月柱是{month}，地支关系是{relation_text}，墓库观察是{vault_text}。")
         paragraphs.append("这些入口只是帮你建立阅读顺序：先知道结构事实在哪里，再讨论某个主题是否有足够证据。")
 
-    portrait_sentence = _portrait_compose_sentence(dict(facts.get("structure_portrait") or {}), answer_kind)
-    if portrait_sentence:
-        paragraphs.append(portrait_sentence)
+    feature_sentence = _feature_compose_sentence(dict(facts.get("bazi_feature_layer") or {}), answer_kind)
+    if feature_sentence:
+        paragraphs.append(feature_sentence)
     return "\n\n".join(paragraph for paragraph in paragraphs if paragraph and paragraph.strip())
 
 
@@ -2250,91 +2265,144 @@ def _guided_answer_sections(
     source_signal: Dict[str, Any] | None = None,
 ) -> List[Dict[str, Any]]:
     source_section = _source_signal_section(source_question or {}, source_signal or {})
-    portrait_sections = _portrait_answer_sections(dict(guided_context.get("structure_portrait") or {}), answer_kind)
+    feature_sections = _feature_answer_sections(dict(guided_context.get("bazi_feature_layer") or {}), answer_kind)
+    portrait_sections: List[Dict[str, Any]] = []
     if answer_kind == "branch_relation":
         return source_section + [
             _section("实际触发的关系", "Actual triggered relations", "실제 트리거된 관계", _relation_answer_items(chart, time_context, source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("relations")),
         ]
     if answer_kind == "vault":
         return source_section + [
             _section("实际命中的墓库结构", "Actual triggered vault structure", "실제 트리거된 묘고 구조", _vault_answer_items(chart, time_context, facts, source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("vault")),
         ]
     if answer_kind == "time_boundary":
         return source_section + [
             _section("时间背景层", "Time-context layer", "시간 배경층", _time_answer_items(time_context)),
+            *feature_sections,
             *portrait_sections,
             _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("time")),
         ]
     if answer_kind == "income_structure":
         return source_section + [
             _section("当前结构信号", "Current structural signals", "현재 구조 신호", _income_answer_items(income_bundle)),
+            *feature_sections,
             *portrait_sections,
             _section("结果卡边界", "Result-card boundary", "결과 카드 경계", _boundary_items("income")),
         ]
     if answer_kind == "strength_assessment":
         return source_section + [
             _section("强弱承载证据", "Strength-capacity evidence", "강약 수용 근거", _strength_answer_items(chart, facts, source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("strength")),
         ]
     if answer_kind == "useful_god_boundary":
         return source_section + [
             _section("用神/忌神候选路径", "Useful/unfavorable-god candidate paths", "용신/기신 후보 경로", _useful_god_answer_items(chart, facts, source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("useful_god")),
         ]
     if answer_kind == "pattern_structure":
         return source_section + [
             _section("格局结构入口", "Pattern structural entries", "격국 구조 입구", _pattern_answer_items(chart, facts, source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("回答边界", "Answer boundary", "답변 경계", _boundary_items("pattern")),
         ]
     if answer_kind == "career_structure":
         return source_section + [
             _section("事业结构路径", "Career structure path", "직업 구조 경로", _domain_answer_items("career_structure", source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("career")),
         ]
     if answer_kind == "relationship_structure":
         return source_section + [
             _section("关系结构路径", "Relationship structure path", "관계 구조 경로", _domain_answer_items("relationship_structure", source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("relationship")),
         ]
     if answer_kind == "health_structure":
         return source_section + [
             _section("健康结构路径", "Health structure path", "건강 구조 경로", _domain_answer_items("health_structure", source_signal or {})),
+            *feature_sections,
             *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("health")),
         ]
     if answer_kind == "result_boundary":
         return source_section + [
             _section("如何读结果卡", "How to read the result card", "결과 카드 읽는 법", _result_boundary_items(income_bundle)),
+            *feature_sections,
             *portrait_sections,
             _section("禁止外推", "Do not extrapolate", "확대 해석 금지", _boundary_items("result")),
         ]
     if answer_kind == "metadata_boundary":
         return source_section + [
             _section("结构元数据", "Structure metadata", "구조 메타데이터", _metadata_answer_items(chart)),
+            *feature_sections,
             *portrait_sections,
             _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("metadata")),
         ]
     if answer_kind == "rule_basis":
         return source_section + [
             _section("规则摘要", "Rule summary", "규칙 요약", _rule_basis_items(income_bundle)),
+            *feature_sections,
             *portrait_sections,
             _section("审计边界", "Audit boundary", "감사 경계", _boundary_items("rule_basis")),
         ]
     return source_section + [
         _section("结构基点", "Structural anchors", "구조 기준점", _overview_answer_items(chart, facts)),
         _section("可见关系", "Visible relations", "보이는 관계", _relation_answer_items(chart, time_context)),
+        *feature_sections,
         *portrait_sections,
         _section("阅读边界", "Reading boundary", "읽기 경계", _boundary_items("overview")),
     ]
+
+
+def _feature_answer_sections(feature_layer: Dict[str, Any], answer_kind: str) -> List[Dict[str, Any]]:
+    features = _feature_relevant_items(feature_layer, answer_kind)
+    if not features:
+        return []
+    items: List[Dict[str, Any]] = []
+    for feature in features[:3]:
+        evidence = "；".join(str(item) for item in feature.get("evidence") or [] if str(item)) or "由规则图、知识库和画像选项共同支持"
+        boundary = str(feature.get("answer_boundary") or "只作命理特征解释，不输出结果断语。")
+        items.append(
+            _item(
+                _l(str(feature.get("title") or "命理特征"), str(feature.get("title") or "Bazi feature"), str(feature.get("title") or "명리 특징")),
+                _l(evidence, evidence, evidence),
+                _l(boundary, boundary, boundary),
+            )
+        )
+    return [_section("命理特征主线", "Bazi feature spine", "명리 특징 축", items)]
+
+
+def _feature_relevant_items(feature_layer: Dict[str, Any], answer_kind: str) -> List[Dict[str, Any]]:
+    features = [dict(row) for row in feature_layer.get("features") or [] if isinstance(row, dict)]
+    if not features:
+        return []
+    preferred = {
+        "strength_assessment": {"strength", "useful_god", "branch", "pattern"},
+        "useful_god_boundary": {"useful_god", "strength", "ten_god", "pattern"},
+        "pattern_structure": {"pattern", "ten_god", "branch", "strength"},
+        "income_structure": {"wealth", "branch", "time", "strength"},
+        "branch_relation": {"branch", "time", "wealth", "pattern"},
+        "time_boundary": {"time", "branch", "pattern"},
+        "metadata_boundary": {"ten_god", "strength", "wealth", "pattern"},
+        "career_structure": {"ten_god", "pattern", "strength", "time"},
+        "relationship_structure": {"ten_god", "branch", "time", "pattern"},
+        "health_structure": {"strength", "branch", "time", "pattern"},
+    }.get(answer_kind, {"strength", "wealth", "branch", "time", "pattern", "ten_god", "useful_god"})
+    filtered = [row for row in features if str(row.get("domain") or "") in preferred and str(row.get("feature_state") or "") != "rejected"]
+    return filtered or [row for row in features if str(row.get("feature_state") or "") != "rejected"][:3]
 
 
 def _source_signal_section(question: Dict[str, Any], signal: Dict[str, Any]) -> List[Dict[str, Any]]:
@@ -2744,6 +2812,31 @@ def _recommendation_items(guided_context: Dict[str, Any]) -> List[Dict[str, Any]
     if not items:
         items.append(_item(_l("推荐背景", "Recommendation background", "추천 배경"), _l("来自当前命盘结构预览", "From the current chart-structure preview", "현재 명식 구조 미리보기에서 옴"), _l("用于引导提问。", "Used to guide questions.", "질문 안내에 사용됩니다.")))
     return items
+
+
+def _feature_compose_sentence(feature_layer: Dict[str, Any], answer_kind: str) -> str:
+    if not feature_layer or feature_layer.get("status") not in {"ready", "partial"}:
+        return ""
+    features = _feature_relevant_items(feature_layer, answer_kind)
+    if not features:
+        return ""
+    ready = [row for row in features if str(row.get("answer_readiness") or "") in {"ready", "boundary_ready", "review_ready"}]
+    selected = ready[:3] or features[:3]
+    names = "、".join(str(row.get("title") or "") for row in selected if row.get("title"))
+    if not names:
+        return ""
+    evidence_bits: List[str] = []
+    for row in selected[:2]:
+        for item in row.get("evidence") or []:
+            text = str(item or "").strip("。")
+            if text and text not in evidence_bits:
+                evidence_bits.append(text)
+            if len(evidence_bits) >= 2:
+                break
+    evidence_text = "；".join(evidence_bits[:2])
+    if evidence_text:
+        return f"命理特征层把这题落到这些主线上：{names}。依据是：{evidence_text}。所以回答会先解释这些作用路径和证据门槛，不直接跳到吉凶或结果。"
+    return f"命理特征层把这题落到这些主线上：{names}。所以回答会围绕特征的作用路径和证据门槛展开，不直接跳到吉凶或结果。"
 
 
 def _portrait_answer_sections(portrait: Dict[str, Any], answer_kind: str) -> List[Dict[str, Any]]:
@@ -3775,6 +3868,9 @@ def _rank_questions_for_chart(rows: List[Dict[str, Any]], personalization_contex
         "q_useful_god_candidates",
         "q_pattern_structure",
         "q_income_stability",
+        "q_time_context_boundary",
+        "q_time_vs_natal_relation",
+        "q_time_context",
         "q_branch_relation_detail",
         "kbq_vault_structure",
         "kbq_ten_god_interaction_boundary",

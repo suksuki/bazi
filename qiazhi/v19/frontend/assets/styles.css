@@ -1388,6 +1388,17 @@ summary em {
   margin-top: 11px;
 }
 
+.portrait-feature-subhead {
+  color: var(--text-muted);
+  font-size: 11px;
+  font-weight: 850;
+  margin: 12px 0 -2px;
+}
+
+.feature-chip-row {
+  margin-bottom: 4px;
+}
+
 .portrait-chip {
   align-items: center;
   border: 1px solid rgba(143, 226, 179, 0.18);
@@ -1400,6 +1411,11 @@ summary em {
   line-height: 1.35;
   min-height: 30px;
   padding: 6px 10px;
+}
+
+.feature-chip {
+  background: rgba(45, 71, 92, 0.22);
+  border-color: rgba(96, 165, 250, 0.5);
 }
 
 .portrait-chip b {

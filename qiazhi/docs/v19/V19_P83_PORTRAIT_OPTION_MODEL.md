@@ -56,7 +56,20 @@ Oracle 不再把校准入口做成问答，而是直接显示选项按钮：
 - 选择画像不改命盘事实；
 - 选择画像不改规则库；
 - 选择画像不直接产生喜忌、吉凶、应期或财富结果；
-- 选择画像只影响个性化画像排序、推荐问题和回答证据路径。
+- 选择画像只校准命理特征的置信度和展示投影；推荐问题和回答证据路径由 P84 `bazi_feature_layer` 读取这些特征后接管。
+
+## P84 后的定位
+
+P83 画像选项不再单独承担推荐问题和回答组织。P84 新增 `bazi_feature_layer` 后，画像选项成为命理特征的确认入口：
+
+```text
+画像选项选择
+→ confirmed_portrait_assertions
+→ bazi_feature_layer.feature_state / confidence
+→ 推荐问题和回答证据包
+```
+
+因此画像系统保留产品表达，但主链路由命理特征层接管；旧 `structure_portrait.question_bias` 不再作为问题排序或回答组织输入。
 
 ## 验收
 

@@ -182,10 +182,10 @@ def _task_mapping(proposal_type: str) -> Dict[str, Any]:
         }
     if proposal_type == "portrait_question_routing_weight_review":
         return {
-            "task_type": "portrait_route_weight_shadow_review",
+            "task_type": "feature_spine_route_weight_shadow_review",
             "runner": "v19.synthetic_validation.structure_portrait_matrix.run_structure_portrait_shadow_tuning_regression",
-            "cadence": "on_portrait_or_question_ranking_change",
-            "input_scope": ["structure_portrait.vectors", "guided_question_context.questions", "portrait_question_bias"],
+            "cadence": "on_feature_spine_or_question_ranking_change",
+            "input_scope": ["bazi_feature_layer.question_bias", "structure_portrait.vectors", "guided_question_context.questions"],
             "expected_invariants": {
                 "case_count": 20,
                 "vector_signature_count": 8,

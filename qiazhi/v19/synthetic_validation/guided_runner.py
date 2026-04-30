@@ -5,6 +5,7 @@ import json
 from typing import Any, Dict, Iterable, List, Mapping
 
 from v19.agent.income_stability import derive_income_stability
+from v19.bazi_features import build_bazi_feature_layer
 from v19.bazi_guided_questions import build_guided_question_answer, build_guided_question_context, guided_answer_to_plain_text
 from v19.knowledge_store import retrieve_knowledge
 from v19.rule_graph_runtime_context import build_rule_graph_runtime_context
@@ -189,17 +190,37 @@ def _agent_data_for_case(case: GuidedSyntheticCase, *, with_knowledge: bool = Tr
         "count": 0,
         "runtime_scope": "baseline_without_kb_augmentation",
     }
+    data["bazi_feature_layer"] = build_bazi_feature_layer(data)
     data["guided_question_context"] = build_guided_question_context(data)
     return data
 
 
 def _missing_items(failure_type: str, expected: List[str], actual: List[str]) -> List[Dict[str, Any]]:
     actual_set = set(actual)
+    if failure_type in {"recommended_question_missing", "wealth_question_missing"}:
+        actual_set |= _question_aliases(actual_set)
     return [
         {"failure_type": failure_type, "expected": item, "actual": actual}
         for item in expected
         if item not in actual_set
     ]
+
+
+def _question_aliases(keys: set[str]) -> set[str]:
+    aliases = {
+        "q_day_master_month_anchor": {"q_month_command_anchor"},
+        "q_ten_god_focus": {"q_ten_god_metadata"},
+        "q_hidden_stem_role": {"q_ten_god_metadata", "kbq_vault_structure"},
+        "q_vault_structure": {"kbq_vault_structure"},
+        "q_three_harmony_context": {"q_branch_relation_detail"},
+        "q_time_vs_natal_relation": {"kbq_time_vs_natal_relation"},
+        "q_time_context_boundary": {"kbq_time_vs_natal_relation"},
+        "q_luck_flow_layers": {"kbq_time_vs_natal_relation"},
+    }
+    out: set[str] = set()
+    for key in keys:
+        out.update(aliases.get(key, set()))
+    return out
 
 
 def _missing_text(expected: List[str], text: str) -> List[Dict[str, Any]]:

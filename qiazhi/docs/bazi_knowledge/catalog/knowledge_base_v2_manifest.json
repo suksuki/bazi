@@ -75,6 +75,7 @@
     "docs/v19/V19_P81_PORTRAIT_ONTOLOGY_AND_CALIBRATION.md",
     "docs/v19/V19_P82_PORTRAIT_CALIBRATION_RUNTIME_LOOP.md",
     "docs/v19/V19_P83_PORTRAIT_OPTION_MODEL.md",
+    "docs/v19/V19_P84_BAZI_FEATURE_SPINE.md",
     "docs/bazi_knowledge/database/current_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p21_guided_question_collision_knowledge_draft_seeds_v1.json",
     "docs/bazi_knowledge/packs/p26_rule_conversion_knowledge_draft_seeds_v1.json",
@@ -2505,7 +2506,7 @@
       "structure_portrait.vectors",
       "structure_portrait.candidate_judgements",
       "guided_question_context.structure_portrait",
-      "guided_question_context.question_personalization_context.portrait_question_bias"
+      "bazi_feature_layer.portrait_projection"
     ],
     "label_ontology_version": "v19.mainline.structure_portrait_label_ontology.v2",
     "calibration_hooks_version": "v19.mainline.structure_portrait_calibration_hooks.v1",
@@ -2602,6 +2603,52 @@
       "NO_DOMAIN_RESULT_PREDICTION"
     ]
   },
+  "mainline_bazi_feature_spine": {
+    "stage": "P84_BAZI_FEATURE_SPINE",
+    "entrypoints": [
+      "v19.bazi_features.build_bazi_feature_layer",
+      "v19.bazi_features.compact_bazi_feature_layer",
+      "v19.bazi_guided_questions.build_guided_question_context",
+      "v19.bazi_guided_questions.build_guided_question_answer",
+      "v19.guided_evidence_pack.build_guided_answer_evidence_pack",
+      "v19.frontend.oracle.renderPortraitPanel",
+      "POST /api/agent/structure",
+      "POST /api/agent/turn"
+    ],
+    "status": "feature_spine_ready",
+    "runtime_scope": "bazi_feature_spine_context_only_no_rule_mutation",
+    "schema_version": "v19.p84.bazi_feature_schema.v1",
+    "feature_schema_version": "v19.p84.bazi_feature_schema.v1",
+    "outputs": [
+      "bazi_feature_layer.features",
+      "bazi_feature_layer.question_bias",
+      "bazi_feature_layer.portrait_projection",
+      "guided_question_context.bazi_feature_layer",
+      "guided_question_context.question_personalization_context.feature_question_bias",
+      "guided_answer.retrieved_facts.bazi_feature_layer",
+      "guided_answer.evidence_pack.feature_evidence",
+      "oracle.profile_summary.feature_chips"
+    ],
+    "replaces_main_chain": [
+      "structure_portrait.question_bias",
+      "portrait_calibration_hooks_as_question_driver"
+    ],
+    "legacy_kept_for_compatibility": [
+      "structure_portrait.calibration_plan",
+      "structure_portrait.labels"
+    ],
+    "answer_mutation_count": 0,
+    "runtime_mutation": false,
+    "guardrails": [
+      "BAZI_FEATURE_SPINE",
+      "FEATURES_BRIDGE_RULES_PORTRAIT_QUESTIONS_ANSWERS",
+      "PORTRAIT_IS_FEATURE_PROJECTION",
+      "USER_FEEDBACK_CALIBRATES_FEATURE_CONFIDENCE_ONLY",
+      "NO_RULE_MUTATION_FROM_FEEDBACK",
+      "NO_HARD_VERDICT",
+      "NO_DOMAIN_RESULT_PREDICTION"
+    ]
+  },
   "v19_framework_adaptation_review": {
     "stage": "P28J_FRAMEWORK_ADAPTATION_REVIEW",
     "decision": "extend_current_framework_do_not_replace_now",
@@ -2689,6 +2736,7 @@
     "MAINLINE_STRUCTURE_PORTRAIT_LAYER",
     "MAINLINE_STRUCTURE_PORTRAIT_PRODUCT_LOOP",
     "P83_PORTRAIT_OPTION_MODEL",
+    "P84_BAZI_FEATURE_SPINE",
     "P11_REGRESSION_REQUIRED_BEFORE_RELEASE_RECORD"
   ]
 }

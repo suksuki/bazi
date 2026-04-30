@@ -53,17 +53,18 @@ Oracle 画像面板展示两类校准入口：
 - 正向反馈轻微提高相关标签置信度；
 - 负向反馈轻微降低相关标签置信度；
 - 命理师确认会放大一点权重；
-- 只影响排序、推荐问题和回答证据包。
+- P84 后只校准 `bazi_feature_layer` 的特征状态、置信度和画像投影，不直接驱动问题排序或回答组织。
 
 ### 4. 推荐与回答
 
-校准后的画像继续进入：
+校准后的画像继续作为 feature spine 的投影和反馈来源：
 
-- `guided_question_context.question_personalization_context.portrait_question_bias`
+- `bazi_feature_layer.question_bias`
+- `guided_question_context.question_personalization_context.feature_question_bias`
 - `guided_question_answer.retrieved_facts.structure_portrait`
 - `guided_answer.evidence_pack.portrait_evidence`
 
-因此用户持续确认后，首屏推荐问题和回答依据会越来越贴近这张命盘的画像。
+因此用户持续确认后，首屏推荐问题和回答依据会通过命理特征主干贴近这张命盘，而不是直接读取旧画像 bias。
 
 ## 验收
 

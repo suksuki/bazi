@@ -16,6 +16,7 @@ from v19.llm import build_agent_messages, call_llm, list_llm_models, probe_llm, 
 from v19.agent import build_agent_turn
 from v19.agent.income_stability import derive_income_stability
 from v19.agent.renderers import render_income_stability_answer
+from v19.bazi_features import build_bazi_feature_layer
 from v19.knowledge_store import knowledge_status, list_knowledge_units, retrieve_knowledge, seed_knowledge
 from v19.bazi_source_archive import (
     build_rule_proposal_from_knowledge_draft,
@@ -341,6 +342,7 @@ def agent_turn(payload: Dict[str, Any], request: Request) -> Dict[str, Any]:
     data["portrait_calibration_feedback"] = portrait_calibration_feedback_summary(settings, profile_id=profile_id)
     data["structure_portrait"] = build_structure_portrait(data)
     data["knowledge_context"] = retrieve_knowledge(data, str(payload.get("message") or ""), settings=settings)
+    data["bazi_feature_layer"] = build_bazi_feature_layer(data)
     data["guided_question_context"] = build_guided_question_context(data)
     data["guided_question_answer"] = build_guided_question_answer(data, selected_question_key, str(payload.get("message") or ""))
     deterministic_guided_answer = data["guided_question_answer"].get("available") is True
@@ -522,6 +524,7 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
     data["rule_graph_runtime_context"] = build_rule_graph_runtime_context(data, message=str(body.get("message") or ""))
     data["portrait_calibration_feedback"] = portrait_calibration_feedback_summary(settings, profile_id=str(body.get("profile_id") or "").strip())
     data["structure_portrait"] = build_structure_portrait(data)
+    data["bazi_feature_layer"] = build_bazi_feature_layer(data)
     data["guided_question_context"] = build_guided_question_context(data)
     return {
         "ok": True,
@@ -533,6 +536,7 @@ def agent_structure_preview(payload: Dict[str, Any], request: Request) -> Dict[s
             "luck_cycles": data.get("luck_cycles"),
             "inference_context": data.get("inference_context"),
             "rule_graph_runtime_context": data.get("rule_graph_runtime_context"),
+            "bazi_feature_layer": data.get("bazi_feature_layer"),
             "structure_portrait": data.get("structure_portrait"),
             "guided_question_context": data.get("guided_question_context"),
             "guardrails": ["STRUCTURE_PREVIEW_ONLY", "QUESTION_ROUTING_SIGNAL_ONLY", "NO_RESULT_CARD_RENDER", "NO_LLM"],
@@ -583,6 +587,7 @@ def lab_guided_question_audit_post(payload: Dict[str, Any], request: Request) ->
     data["portrait_calibration_feedback"] = portrait_calibration_feedback_summary(settings, profile_id=profile_id)
     data["structure_portrait"] = build_structure_portrait(data)
     data["knowledge_context"] = retrieve_knowledge(data, message, settings=settings)
+    data["bazi_feature_layer"] = build_bazi_feature_layer(data)
     data["guided_question_context"] = build_guided_question_context(data)
     answer = build_guided_question_answer(data, selected_question_key, message)
     audit = _guided_question_audit_report(data, answer)
@@ -1530,6 +1535,7 @@ def _guided_answer_rewrite_messages(answer: Dict[str, Any], user_message: str, l
         "sections": answer.get("sections"),
         "retrieved_facts": answer.get("retrieved_facts"),
         "observed_facts": answer.get("observed_facts"),
+        "bazi_feature_layer": (answer.get("retrieved_facts") or {}).get("bazi_feature_layer") or answer.get("bazi_feature_layer"),
         "evidence_pack": evidence_pack_to_prompt_context(dict(answer.get("evidence_pack") or {})),
         "knowledge_context": answer.get("knowledge_context"),
         "composed_text": answer.get("composed_text"),

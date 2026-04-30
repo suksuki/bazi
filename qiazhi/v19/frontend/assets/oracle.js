@@ -217,18 +217,21 @@ function renderPillarPanel(data) {
 function renderPortraitPanel(data) {
   if (!$("portraitPanel")) return;
   const portrait = data.structure_portrait || data.guided_question_context?.structure_portrait || {};
+  const featureLayer = data.bazi_feature_layer || data.guided_question_context?.bazi_feature_layer || {};
+  const features = portraitVisibleFeatures(featureLayer, 4);
   const allLabels = Array.isArray(portrait.labels) ? portrait.labels : [];
   const labels = portraitVisibleLabels(portrait, 5);
   const judgements = Array.isArray(portrait.candidate_judgements) ? portrait.candidate_judgements.slice(0, 3) : [];
-  if (!portrait.status || !allLabels.length || !labels.length) {
+  if ((!portrait.status || !allLabels.length || !labels.length) && !features.length) {
     $("portraitPanel").classList.add("hidden");
     $("portraitPanel").innerHTML = "";
     return;
   }
   $("portraitPanel").classList.remove("hidden");
   const chips = labels.map((row) => `<span class="portrait-chip"><b>${escapeHtml(portraitFamilyLabel(row.family))}</b>${escapeHtml(portraitChipValue(row))}</span>`).join("");
+  const featureChips = features.map((row) => `<span class="portrait-chip feature-chip"><b>${escapeHtml(featureDomainLabel(row.domain))}</b>${escapeHtml(row.title || row.feature_id || "")}</span>`).join("");
   const judgementRows = judgements.map((row) => `<li>${escapeHtml(row.text || row.candidate_statement || row.statement || row.judgement_id || "")}</li>`).join("");
-  $("portraitPanel").innerHTML = `<section class="portrait-section"><div class="pillar-panel-head"><span>${escapeHtml(portraitTitleLabel())}</span><em>${escapeHtml(portraitEvidenceLabel(portrait, labels.length, allLabels.length))}</em></div><div class="portrait-chip-row">${chips}</div>${judgementRows ? `<ul class="portrait-judgements">${judgementRows}</ul>` : ""}${portraitCalibrationBlock(portrait)}</section>`;
+  $("portraitPanel").innerHTML = `<section class="portrait-section"><div class="pillar-panel-head"><span>${escapeHtml(portraitTitleLabel())}</span><em>${escapeHtml(portraitEvidenceLabel(portrait, labels.length, allLabels.length, featureLayer))}</em></div>${featureChips ? `<div class="portrait-feature-subhead">${escapeHtml(featureSpineTitleLabel())}</div><div class="portrait-chip-row feature-chip-row">${featureChips}</div>` : ""}${chips ? `<div class="portrait-feature-subhead">${escapeHtml(portraitProjectionTitleLabel())}</div><div class="portrait-chip-row">${chips}</div>` : ""}${judgementRows ? `<ul class="portrait-judgements">${judgementRows}</ul>` : ""}${portraitCalibrationBlock(portrait)}</section>`;
   bindPortraitCalibrationActions(portrait);
 }
 
@@ -468,17 +471,19 @@ function renderAnswerEvidenceSummary(answer) {
   const facts = (pack.fact_evidence || {}).present_fact_scopes || [];
   const knowledgeIds = (pack.knowledge_evidence || {}).applied_ids || pack.knowledge_ids || [];
   const runtimeIds = (pack.rule_graph_evidence || {}).runtime_selected_knowledge_ids || pack.runtime_selected_knowledge_ids || [];
+  const featureIds = (pack.feature_evidence || {}).feature_ids || [];
   const portraitLabels = (pack.portrait_evidence || {}).label_ids || (answer.structure_portrait || {}).labels || [];
+  const featureCount = Array.isArray(featureIds) ? featureIds.length : 0;
   const portraitCount = Array.isArray(portraitLabels) ? portraitLabels.length : 0;
   const audit = (pack.audit || {}).status || pack.audit_status || "";
   const status = pack.status || "";
-  if (!status && !facts.length && !knowledgeIds.length && !runtimeIds.length && !portraitCount) {
+  if (!status && !facts.length && !knowledgeIds.length && !runtimeIds.length && !featureCount && !portraitCount) {
     $("answerEvidenceSummary").classList.add("hidden");
     $("answerEvidenceSummary").innerHTML = "";
     return;
   }
   $("answerEvidenceSummary").classList.remove("hidden");
-  $("answerEvidenceSummary").innerHTML = `<span>${escapeHtml(evidenceSummaryLabel())}</span><strong>${escapeHtml(`${facts.length} facts · ${knowledgeIds.length} knowledge · ${runtimeIds.length} route · ${portraitCount} portrait · ${audit || status || "-"}`)}</strong>`;
+  $("answerEvidenceSummary").innerHTML = `<span>${escapeHtml(evidenceSummaryLabel())}</span><strong>${escapeHtml(`${facts.length} facts · ${knowledgeIds.length} knowledge · ${runtimeIds.length} route · ${featureCount} features · ${portraitCount} portrait · ${audit || status || "-"}`)}</strong>`;
 }
 function relatedQuestionSet(key) {
   const item = findQuestion(key);
@@ -531,7 +536,13 @@ function structureMatchLabel() {
   return ({ zh: "结构匹配", en: "Structure match", ko: "구조 매칭" }[locale] || "Structure match");
 }
 function portraitTitleLabel() {
-  return ({ zh: "知识画像", en: "Knowledge portrait", ko: "지식 프로필" }[locale] || "Knowledge portrait");
+  return ({ zh: "命理特征与画像", en: "Bazi features and portrait", ko: "명리 특징과 프로필" }[locale] || "Bazi features and portrait");
+}
+function featureSpineTitleLabel() {
+  return ({ zh: "命理特征", en: "Bazi features", ko: "명리 특징" }[locale] || "Bazi features");
+}
+function portraitProjectionTitleLabel() {
+  return ({ zh: "画像投影", en: "Portrait projection", ko: "프로필 투영" }[locale] || "Portrait projection");
 }
 function portraitCalibrationTitleLabel() {
   return ({ zh: "选择画像", en: "Select portrait", ko: "프로필 선택" }[locale] || "Select portrait");
@@ -571,13 +582,27 @@ function portraitChipValue(row) {
   const selected = row?.selected_option || {};
   return selected.title || row.display_value || portraitValueLabel(row.value);
 }
-function portraitEvidenceLabel(portrait, visibleCount, totalCount) {
+function portraitEvidenceLabel(portrait, visibleCount, totalCount, featureLayer = {}) {
+  const featureCount = Number(featureLayer.feature_count || (featureLayer.features || []).length || 0);
+  if (featureCount) {
+    return ({ zh: `特征 ${featureCount} / 画像 ${Number(totalCount || 0)}`, en: `${featureCount} features / ${Number(totalCount || 0)} portrait`, ko: `특징 ${featureCount} / 프로필 ${Number(totalCount || 0)}` }[locale] || `${featureCount} features`);
+  }
   const total = Number(totalCount || portrait.label_count || (portrait.labels || []).length || 0);
   const visible = Number(visibleCount || 0);
   if (visible && total && visible < total) {
     return ({ zh: `重点 ${visible} / 全部 ${total}`, en: `Top ${visible} / ${total}`, ko: `중점 ${visible} / 전체 ${total}` }[locale] || `Top ${visible} / ${total}`);
   }
   return ({ zh: `${total} 个重点标签`, en: `${total} key labels`, ko: `중점 라벨 ${total}개` }[locale] || `${total} key labels`);
+}
+function portraitVisibleFeatures(layer, limit = 4) {
+  const rows = Array.isArray(layer.features) ? layer.features.filter((row) => row && typeof row === "object" && row.feature_state !== "rejected") : [];
+  return rows
+    .map((row) => ({ ...row, _score: Number(row.confidence || 0) * 100 + (row.answer_readiness === "ready" ? 12 : 0) + (String(row.feature_state || "").includes("confirmed") ? 16 : 0) }))
+    .sort((a, b) => b._score - a._score)
+    .slice(0, limit);
+}
+function featureDomainLabel(domain) {
+  return ({ strength: t("strength_structure"), useful_god: t("useful_god_boundary"), wealth: t("income_stability"), branch: t("branch_relation"), time: t("time_context"), pattern: t("pattern_structure"), ten_god: t("ten_god") }[domain] || domain || "feature");
 }
 function portraitVisibleLabels(portrait, limit = 5) {
   const labels = Array.isArray(portrait.labels) ? portrait.labels.filter((row) => row && typeof row === "object") : [];

@@ -42,9 +42,10 @@ def build_legacy_framework_adaptation_matrix() -> Dict[str, Any]:
 
 def build_guided_case_framework_backfill(case: GuidedSyntheticCase, agent_data: Dict[str, Any]) -> Dict[str, Any]:
     runtime_context = dict(agent_data.get("rule_graph_runtime_context") or {})
+    feature_layer = dict(agent_data.get("bazi_feature_layer") or {})
     chart_graph = build_chart_rule_graph(dict(agent_data.get("chart") or {}), dict(agent_data.get("time_context") or {}))
     expected = _expected_framework_contract(case)
-    actual = _actual_framework_state(runtime_context, chart_graph)
+    actual = _actual_framework_state(runtime_context, chart_graph, feature_layer)
     failures = _validate_backfill(expected, actual)
     return {
         "version": LEGACY_SYNTHETIC_FRAMEWORK_BACKFILL_VERSION,
@@ -110,9 +111,10 @@ def _expected_framework_contract(case: GuidedSyntheticCase) -> Dict[str, Any]:
     }
 
 
-def _actual_framework_state(runtime_context: Dict[str, Any], chart_graph: Dict[str, Any]) -> Dict[str, Any]:
+def _actual_framework_state(runtime_context: Dict[str, Any], chart_graph: Dict[str, Any], feature_layer: Dict[str, Any] | None = None) -> Dict[str, Any]:
     routes = [dict(row) for row in runtime_context.get("routes") or [] if isinstance(row, dict)]
     selected_paths = [dict(row) for row in runtime_context.get("selected_paths") or [] if isinstance(row, dict)]
+    features = [dict(row) for row in (feature_layer or {}).get("features") or [] if isinstance(row, dict)]
     selected_axes = sorted(
         {
             str(axis)
@@ -121,6 +123,8 @@ def _actual_framework_state(runtime_context: Dict[str, Any], chart_graph: Dict[s
             if str(axis)
         }
     )
+    feature_axes = _feature_condition_axes(features)
+    selected_axes = sorted(set(selected_axes) | set(feature_axes))
     matched_features = sorted(
         {
             str(feature)
@@ -129,6 +133,7 @@ def _actual_framework_state(runtime_context: Dict[str, Any], chart_graph: Dict[s
             if str(feature)
         }
     )
+    matched_features = sorted(set(matched_features) | {str(row.get("domain") or "") for row in features if row.get("domain")})
     return {
         "runtime_status": runtime_context.get("status") or "",
         "runtime_scope": runtime_context.get("runtime_scope") or "",
@@ -142,10 +147,21 @@ def _actual_framework_state(runtime_context: Dict[str, Any], chart_graph: Dict[s
         "graph_features": sorted(str(tag) for tag in chart_graph.get("feature_tags") or [] if str(tag)),
         "matched_features": matched_features,
         "condition_axes_available": selected_axes,
+        "bazi_feature_status": (feature_layer or {}).get("status") or "",
+        "bazi_feature_count": int((feature_layer or {}).get("feature_count") or len(features)),
         "summary": dict(runtime_context.get("summary") or {}),
         "answer_audit_status": (runtime_context.get("answer_audit") or {}).get("status") or "",
         "guardrails": list(runtime_context.get("guardrails") or []),
     }
+
+
+def _feature_condition_axes(features: List[Dict[str, Any]]) -> List[str]:
+    if not features:
+        return []
+    axes = {"source_layer", "capacity_strength", "same_layer_action", "answer_boundary"}
+    if any("time" in {str(item) for item in row.get("source_layer") or []} or str(row.get("domain") or "") == "time" for row in features):
+        axes.add("time_layer")
+    return sorted(axes)
 
 
 def _validate_backfill(expected: Dict[str, Any], actual: Dict[str, Any]) -> List[Dict[str, Any]]:

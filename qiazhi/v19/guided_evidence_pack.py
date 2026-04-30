@@ -23,8 +23,10 @@ def build_guided_answer_evidence_pack(
     answer_paths = [dict(row) for row in rule_graph_context.get("selected_paths") or [] if isinstance(row, dict)]
     runtime_paths = [dict(row) for row in rule_graph_runtime_context.get("selected_paths") or [] if isinstance(row, dict)]
     portrait = dict(retrieved_facts.get("structure_portrait") or {})
-    bindings = _evidence_bindings(applied, answer_paths, runtime_paths) + _portrait_bindings(portrait)
+    feature_layer = dict(retrieved_facts.get("bazi_feature_layer") or {})
+    bindings = _evidence_bindings(applied, answer_paths, runtime_paths) + _feature_bindings(feature_layer) + _portrait_bindings(portrait)
     fact_summary = _fact_summary(retrieved_facts)
+    feature_evidence = _feature_evidence(feature_layer)
     portrait_evidence = _portrait_evidence(portrait)
     return {
         "ok": True,
@@ -68,12 +70,15 @@ def build_guided_answer_evidence_pack(
             "runtime_selected_knowledge_ids": list((rule_graph_runtime_context.get("knowledge_route") or {}).get("selected_knowledge_ids") or [])[:12],
             "runtime_selected_rule_ids": list((rule_graph_runtime_context.get("knowledge_route") or {}).get("selected_rule_ids") or [])[:12],
         },
+        "feature_evidence": feature_evidence,
         "portrait_evidence": portrait_evidence,
         "evidence_bindings": bindings,
         "summary": {
             "fact_scope_count": len(fact_summary.get("present_fact_scopes") or []),
             "knowledge_binding_count": sum(1 for row in bindings if row.get("kind") == "knowledge"),
             "rule_graph_binding_count": sum(1 for row in bindings if row.get("kind") == "rule_graph_path"),
+            "feature_binding_count": sum(1 for row in bindings if row.get("kind") == "bazi_feature"),
+            "feature_count": len(feature_evidence.get("feature_ids") or []),
             "portrait_binding_count": sum(1 for row in bindings if row.get("kind") == "structure_portrait_label"),
             "portrait_label_count": len(portrait_evidence.get("label_ids") or []),
             "portrait_judgement_count": len(portrait_evidence.get("judgement_ids") or []),
@@ -85,6 +90,7 @@ def build_guided_answer_evidence_pack(
             "status": "pass",
             "checks": [
                 {"name": "facts_present", "passed": bool(fact_summary.get("present_fact_scopes")), "note": "Evidence pack includes retrieved fact scopes."},
+                {"name": "feature_spine_present", "passed": feature_evidence.get("status") in {"ready", "no_features", ""}, "note": "Bazi feature spine is carried as context when available."},
                 {"name": "portrait_context_boundary", "passed": portrait_evidence.get("runtime_mutation") is False, "note": "Structure portrait remains a candidate context only."},
                 {"name": "answer_mutation_disabled", "passed": True, "note": "Evidence pack is context only."},
                 {"name": "rule_activation_disabled", "passed": True, "note": "Evidence pack does not activate rules."},
@@ -93,6 +99,7 @@ def build_guided_answer_evidence_pack(
         "guardrails": [
             "GUIDED_ANSWER_EVIDENCE_PACK",
             "FACTS_KNOWLEDGE_RULE_GRAPH_UNIFIED",
+            "BAZI_FEATURE_SPINE_UNIFIED",
             "CONTEXT_ONLY_NO_RESULT_MUTATION",
             "NO_RUNTIME_RULE_ACTIVATION",
             "NO_ANSWER_MUTATION",
@@ -120,6 +127,7 @@ def evidence_pack_to_prompt_context(evidence_pack: Dict[str, Any], *, limit: int
             }
             for row in bindings[:limit]
         ],
+        "feature_evidence": dict(evidence_pack.get("feature_evidence") or {}),
         "portrait_evidence": dict(evidence_pack.get("portrait_evidence") or {}),
         "guardrails": [
             "USE_EVIDENCE_PACK_ONLY",
@@ -137,6 +145,8 @@ def evidence_pack_summary(evidence_pack: Dict[str, Any]) -> Dict[str, Any]:
         "runtime_scope": evidence_pack.get("runtime_scope") or "",
         "knowledge_ids": list((evidence_pack.get("knowledge_evidence") or {}).get("applied_ids") or []),
         "runtime_selected_knowledge_ids": list((evidence_pack.get("rule_graph_evidence") or {}).get("runtime_selected_knowledge_ids") or [])[:8],
+        "feature_ids": list((evidence_pack.get("feature_evidence") or {}).get("feature_ids") or [])[:8],
+        "feature_status": (evidence_pack.get("feature_evidence") or {}).get("status") or "",
         "portrait_label_ids": list((evidence_pack.get("portrait_evidence") or {}).get("label_ids") or [])[:8],
         "portrait_judgement_ids": list((evidence_pack.get("portrait_evidence") or {}).get("judgement_ids") or [])[:8],
         "portrait_status": (evidence_pack.get("portrait_evidence") or {}).get("status") or "",
@@ -149,7 +159,7 @@ def evidence_pack_summary(evidence_pack: Dict[str, Any]) -> Dict[str, Any]:
 
 def _fact_summary(retrieved_facts: Dict[str, Any]) -> Dict[str, Any]:
     present = []
-    for key in ["chart_anchor", "relations", "vaults", "hidden_stems", "time_context", "income_signals", "source_signal", "structure_portrait"]:
+    for key in ["chart_anchor", "relations", "vaults", "hidden_stems", "time_context", "income_signals", "source_signal", "bazi_feature_layer", "structure_portrait"]:
         value = retrieved_facts.get(key)
         if value:
             present.append(key)
@@ -210,6 +220,52 @@ def _evidence_bindings(
     return bindings[:24]
 
 
+def _feature_evidence(feature_layer: Dict[str, Any]) -> Dict[str, Any]:
+    features = [dict(row) for row in feature_layer.get("features") or [] if isinstance(row, dict)]
+    feature_ids = [str(row.get("feature_id") or "") for row in features[:8] if row.get("feature_id")]
+    return {
+        "status": feature_layer.get("status") or ("ready" if features else ""),
+        "runtime_scope": "bazi_feature_evidence_context_only_no_verdict",
+        "schema_version": feature_layer.get("schema_version") or "",
+        "feature_ids": feature_ids,
+        "top_features": list(feature_layer.get("top_features") or [])[:6],
+        "question_bias": {
+            "recommended_question_keys": list((feature_layer.get("question_bias") or {}).get("recommended_question_keys") or [])[:8],
+            "dominant_feature_ids": list((feature_layer.get("question_bias") or {}).get("dominant_feature_ids") or [])[:8],
+        },
+        "guardrails": [
+            "FEATURES_BRIDGE_RULES_PORTRAIT_QUESTIONS_ANSWERS",
+            "FEATURE_CONTEXT_ONLY",
+            "NO_HARD_VERDICT",
+            "NO_DOMAIN_RESULT_PREDICTION",
+        ],
+        "runtime_mutation": False,
+    }
+
+
+def _feature_bindings(feature_layer: Dict[str, Any]) -> List[Dict[str, Any]]:
+    bindings: List[Dict[str, Any]] = []
+    for row in [dict(item) for item in feature_layer.get("features") or [] if isinstance(item, dict)][:8]:
+        feature_id = str(row.get("feature_id") or "")
+        if not feature_id:
+            continue
+        bindings.append(
+            {
+                "kind": "bazi_feature",
+                "id": feature_id,
+                "title": row.get("title") or "",
+                "domain": row.get("domain") or "",
+                "reason": "；".join(str(item) for item in row.get("evidence") or [] if str(item))[:240],
+                "confidence": row.get("confidence"),
+                "answer_readiness": row.get("answer_readiness") or "",
+                "knowledge_units": list(row.get("knowledge_units") or [])[:4],
+                "rule_paths": list(row.get("rule_paths") or [])[:4],
+                "answer_boundary": row.get("answer_boundary") or "bazi_feature_context_only_not_verdict",
+            }
+        )
+    return bindings[:8]
+
+
 def _portrait_evidence(portrait: Dict[str, Any]) -> Dict[str, Any]:
     labels = [dict(row) for row in portrait.get("labels") or [] if isinstance(row, dict)]
     judgements = [dict(row) for row in portrait.get("candidate_judgements") or [] if isinstance(row, dict)]
@@ -246,8 +302,8 @@ def _portrait_evidence(portrait: Dict[str, Any]) -> Dict[str, Any]:
         },
         "label_ids": label_ids,
         "judgement_ids": judgement_ids,
-        "dominant_label_ids": list((portrait.get("question_bias") or {}).get("dominant_label_ids") or portrait.get("dominant_label_ids") or [])[:6],
-        "recommended_question_keys": list((portrait.get("question_bias") or {}).get("recommended_question_keys") or [])[:6],
+        "dominant_label_ids": list(portrait.get("dominant_label_ids") or label_ids or [])[:6],
+        "projection_role": "feature_projection_and_calibration_surface_only",
         "vectors": {key: portrait.get("vectors", {}).get(key) for key in ["strength_capacity", "useful_god_candidate_confidence", "wealth_visibility", "branch_volatility", "time_trigger_activity", "pattern_index_strength"] if key in (portrait.get("vectors") or {})},
         "guardrails": [
             "PORTRAIT_EVIDENCE_CONTEXT_ONLY",

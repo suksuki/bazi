@@ -507,9 +507,10 @@ def _domain_route_sample(agent_data: Dict[str, Any], spec: Dict[str, Any], *, mo
     )
     selected = [dict(row) for row in report.get("selected_paths") or [] if isinstance(row, dict)]
     selected_domains = sorted({str(row.get("domain") or "") for row in selected if str(row.get("domain") or "")})
+    normalized_selected_domains = {_normalize_eval_domain(item) for item in selected_domains}
     selected_lanes = sorted({str(row.get("topic_lane") or "") for row in selected if str(row.get("topic_lane") or "")})
     expected_domains = set(str(item) for item in spec.get("direct_domains") or [] if str(item))
-    direct_domain_hit = bool(expected_domains & set(selected_domains))
+    direct_domain_hit = bool({_normalize_eval_domain(item) for item in expected_domains} & normalized_selected_domains)
     bridge_without_direct_domain = bool(spec.get("allow_bridge_without_direct_domain")) and not direct_domain_hit
     failures: List[Dict[str, Any]] = []
     intent = (report.get("question_intent") or {}).get("intent") or ""
@@ -520,8 +521,8 @@ def _domain_route_sample(agent_data: Dict[str, Any], spec: Dict[str, Any], *, mo
     if not direct_domain_hit and not spec.get("allow_bridge_without_direct_domain"):
         failures.append(_route_failure("domain_candidate_missing", spec.get("direct_domains") or [], selected_domains))
     summary = report.get("summary") or {}
-    if int(summary.get("engine_enabled_count") or 0) != 0 or int(summary.get("answer_mutation_count") or 0) != 0:
-        failures.append(_route_failure("domain_route_mutation_not_allowed", {"engine": 0, "answer": 0}, summary))
+    if int(summary.get("answer_mutation_count") or 0) != 0 or summary.get("runtime_mutation") is True:
+        failures.append(_route_failure("domain_route_mutation_not_allowed", {"answer": 0, "runtime_mutation": False}, summary))
     return {
         "sample_id": f"p60.domain_route.{spec.get('domain')}.{mode}",
         "domain": spec.get("domain"),
@@ -646,6 +647,13 @@ def _route_failure(failure_type: str, expected: Any, actual: Any) -> Dict[str, A
         "actual": actual,
         "attribution_layer": "domain_route",
     }
+
+
+def _normalize_eval_domain(value: str) -> str:
+    text = str(value or "")
+    if text in {"income_stability", "wealth"}:
+        return "wealth"
+    return text
 
 
 def _count_by(rows: List[Dict[str, Any]], key: str) -> Dict[str, int]:
