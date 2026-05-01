@@ -20,10 +20,16 @@ Endpoints:
 - `GET /api/v20/knowledge/source-catalog`
 - `GET /api/v20/knowledge/coverage-report`
 - `GET /api/v20/knowledge/release-manifest`
+- `GET /api/v20/knowledge/v19-migration-audit`
 
 These endpoints do not activate rules, write database rows, or treat knowledge
 as truth. They make missing sources, duplicate ids, unreviewed sources, and
 coverage gaps visible before a release.
+
+The V19 migration audit scans `docs/bazi_knowledge` and classifies legacy files
+into review lanes such as reviewed-unit seed, draft-unit review, archive-only
+reference, and rule-conversion candidate. No legacy document can enter runtime
+directly.
 
 ## Portrait Calibration
 

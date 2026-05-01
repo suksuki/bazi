@@ -5,6 +5,7 @@ from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
+from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
@@ -30,6 +31,7 @@ def system_status_report() -> dict[str, object]:
     knowledge_sources = build_knowledge_source_catalog()
     knowledge_coverage = build_knowledge_coverage_report()
     knowledge_release = build_knowledge_release_manifest()
+    v19_knowledge_migration = build_v19_knowledge_migration_audit()
     dependencies = dependency_readiness_report()
     sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
@@ -50,6 +52,8 @@ def system_status_report() -> dict[str, object]:
         "knowledge_coverage_status": knowledge_coverage["status"],
         "knowledge_gap_count": knowledge_coverage["gap_count"],
         "knowledge_release_status": knowledge_release["status"],
+        "v19_knowledge_migration_status": v19_knowledge_migration["status"],
+        "v19_knowledge_candidate_count": v19_knowledge_migration["candidate_count"],
         "access_role_count": len(access_role_manifest()["roles"]),
         "test_area_count": matrix["area_count"],
         "learning_status": evolution["status"],

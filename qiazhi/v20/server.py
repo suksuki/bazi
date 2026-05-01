@@ -19,6 +19,7 @@ from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
+from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
@@ -174,6 +175,10 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/knowledge/release-manifest")
     def knowledge_release_manifest() -> dict[str, object]:
         return build_knowledge_release_manifest()
+
+    @app.get("/api/v20/knowledge/v19-migration-audit")
+    def knowledge_v19_migration_audit() -> dict[str, object]:
+        return build_v19_knowledge_migration_audit()
 
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:

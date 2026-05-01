@@ -7,6 +7,7 @@ from v20.features.schema import FeatureLayer
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
 from v20.knowledge.loader import default_knowledge_units
+from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import KnowledgeRetrievalPolicy, knowledge_retrieval_manifest, rank_knowledge_units
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.retrieval import retrieve_knowledge
@@ -112,3 +113,22 @@ def test_v20_knowledge_rebuild_endpoints_are_read_only() -> None:
     assert coverage["runtime_mutation"] is False
     assert release["runtime_mutation"] is False
     assert release["status"] == "ready_for_release_review"
+
+
+def test_v20_v19_knowledge_migration_audit_is_draft_only() -> None:
+    audit = build_v19_knowledge_migration_audit()
+
+    assert audit["status"] == "audit_ready"
+    assert audit["candidate_count"] >= 50
+    assert audit["runtime_mutation"] is False
+    assert "direct_runtime_import" in audit["blocked_actions"]
+    assert "V19_KNOWLEDGE_MIGRATION_AUDIT_ONLY" in audit["guardrails"]
+
+
+def test_v20_v19_knowledge_migration_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    audit = client.get("/api/v20/knowledge/v19-migration-audit").json()
+
+    assert audit["runtime_mutation"] is False
+    assert audit["candidate_count"] >= 50
+    assert "draft_unit_review" in audit["migration_lanes"]
