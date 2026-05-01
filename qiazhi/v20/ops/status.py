@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from v20.access.roles import access_role_manifest
+from v20.corpus.artifacts import read_corpus_artifact_status, read_corpus_coverage_summary
 from v20.corpus.full_precompute import build_full_precompute_manifest
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.question_ranker import question_ranking_manifest
@@ -52,6 +53,8 @@ def system_status_report() -> dict[str, object]:
     evolution = build_evolution_dry_run_plan()
     learning_run_plan = build_learning_run_plan()
     precompute_manifest = build_full_precompute_manifest()
+    corpus_artifacts = read_corpus_artifact_status()
+    corpus_summary = read_corpus_coverage_summary()
     return {
         "version": "v20.system_status_report.v1",
         "status": "ok" if ops_validation["ok"] else "degraded",
@@ -84,6 +87,8 @@ def system_status_report() -> dict[str, object]:
         "knowledge_rule_proposal_preflight_status": rule_proposal_preflight["status"],
         "full_precompute_status": precompute_manifest["status"],
         "full_precompute_estimated_minutes": precompute_manifest["cost_estimate"]["estimated_total_minutes"],
+        "corpus_artifact_status": corpus_artifacts["status"],
+        "corpus_cluster_count": corpus_summary.get("cluster_count", 0),
         "access_role_count": len(access_role_manifest()["roles"]),
         "test_area_count": matrix["area_count"],
         "learning_status": evolution["status"],

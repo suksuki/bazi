@@ -37,6 +37,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/knowledge/first-wave-rule-proposal-preflight" in script.text
     assert "/api/v20/corpus/full-precompute/manifest" in script.text
     assert "/api/v20/corpus/full-precompute/status" in script.text
+    assert "/api/v20/corpus/artifacts/status" in script.text
+    assert "/api/v20/corpus/artifacts/coverage-summary" in script.text
     assert "setInterval(loadOps, 5000)" in script.text
     assert "/api/v20/learning/run-plan" in script.text
     assert "full_runtime" not in script.text

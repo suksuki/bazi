@@ -175,6 +175,8 @@ const loadOps = async () => {
       portraitOntology,
       fullPrecompute,
       fullPrecomputeStatus,
+      corpusArtifactStatus,
+      corpusCoverageSummary,
       dependencies,
       sync,
       policyReview,
@@ -199,6 +201,8 @@ const loadOps = async () => {
       requestJson("/api/v20/portrait/ontology"),
       requestJson("/api/v20/corpus/full-precompute/manifest"),
       requestJson("/api/v20/corpus/full-precompute/status"),
+      requestJson("/api/v20/corpus/artifacts/status"),
+      requestJson("/api/v20/corpus/artifacts/coverage-summary"),
       requestJson("/api/v20/runtime/dependencies"),
       requestJson("/api/v20/ops/sync-readiness"),
       requestJson("/api/v20/learning/policy-review"),
@@ -206,7 +210,8 @@ const loadOps = async () => {
     ]);
     document.querySelector("#runtimeStatus").innerHTML = `<span>${health.active_profile}</span><strong>${health.status}</strong>`;
     setText("#profileBadge", health.active_profile);
-    setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards · precompute ${fullPrecompute.status} · job ${fullPrecomputeStatus.status}`);
+    const clusterText = corpusCoverageSummary.cluster_count ? ` · clusters ${corpusCoverageSummary.cluster_count}` : "";
+    setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards · precompute ${fullPrecompute.status} · job ${fullPrecomputeStatus.status} · artifacts ${corpusArtifactStatus.status}${clusterText}`);
     setProgress("#corpusProgressBar", fullPrecomputeStatus.progress_ratio || 0);
     setText("#corpusProgressMeta", renderCorpusProgress(fullPrecomputeStatus, fullPrecompute));
     setText("#validationState", `${validation.ok ? "pass" : "blocked"} · ${validation.case_count} cases`);

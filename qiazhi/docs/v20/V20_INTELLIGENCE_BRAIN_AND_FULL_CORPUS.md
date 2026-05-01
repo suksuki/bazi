@@ -60,6 +60,47 @@ The job writes:
 - `v20/.runtime/corpus/full_precompute/<run_id>/progress.json`
 - `v20/.runtime/corpus/full_precompute/latest_status.json`
 
+After the full run, build the usable data artifacts:
+
+```bash
+python3 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main
+```
+
+Artifact outputs:
+
+- `artifacts/coverage_summary.json`: coverage distributions, top clusters,
+  evidence-density averages.
+- `artifacts/corpus_index.sqlite`: local query index for case lookup and
+  similar-chart retrieval.
+- `artifacts/flat_labels.jsonl`: flat training/export rows.
+- `artifacts/portrait_axis_learning.json`: portrait axis frequencies,
+  co-occurrence priors, and clustering scope.
+- `artifacts/rule_proposal_support.json`: rule-proposal support counts across
+  the full corpus.
+- `artifacts/postgres_import_manifest.json`: explicit Postgres import plan.
+- `artifacts/parquet_export_manifest.json`: Parquet conversion plan. Current
+  local environment lacks `pyarrow`, so flat JSONL is the authoritative export
+  source until the Parquet dependency is installed.
+
+Artifact endpoints:
+
+- `GET /api/v20/corpus/artifacts/status`
+- `GET /api/v20/corpus/artifacts/coverage-summary`
+- `GET /api/v20/corpus/similar?case_id=v20.full_corpus.case.000000`
+- `GET /api/v20/intelligence/generation-manifest`
+- `GET /api/v20/validation/intelligence-generation`
+
+Explicit export/import commands:
+
+```bash
+python3 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main
+python3 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main --apply
+python3 v20/scripts/export_corpus_parquet.py --run-id v20_full_518k_20260501_main
+```
+
+Postgres import requires `V20_DATABASE_URL` and `--apply`. Parquet export
+requires `pyarrow`; without it the script returns a blocked dependency report.
+
 The label snapshot contains structural labels only:
 
 - chart facts

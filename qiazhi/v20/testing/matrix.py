@@ -85,6 +85,8 @@ TEST_COVERAGE_AREAS = (
         "contracts": (
             "518400 coverage plan",
             "FullCorpusPrecompute",
+            "CorpusArtifactIndex",
+            "CorpusSimilaritySearch",
             "SyntheticSuite",
             "EvolutionDryRunPlan",
             "FeedbackLedger",

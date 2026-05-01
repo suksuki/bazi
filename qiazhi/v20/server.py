@@ -10,10 +10,12 @@ from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
 from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest, PortraitCalibrationRequest
 from v20.api.runtime import run_runtime_from_pillars
+from v20.corpus.artifacts import find_similar_cases, read_corpus_artifact_status, read_corpus_coverage_summary
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.corpus.full_precompute import build_full_precompute_manifest, preview_full_precompute_batch
 from v20.corpus.job_runner import read_full_precompute_status
 from v20.features.calibration import confidence_calibration_manifest
+from v20.intelligence.generation import build_intelligence_generation_manifest
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
@@ -51,6 +53,7 @@ from v20.storage.postgres_schema import build_postgres_schema_contract, migratio
 from v20.storage.local_jsonl import local_jsonl_store_from_env
 from v20.testing.matrix import build_test_coverage_matrix
 from v20.testing.tiers import test_tier_manifest
+from v20.validation.intelligence_generation import validate_intelligence_generation
 from v20.validation.suite import run_synthetic_suite
 
 
@@ -276,6 +279,18 @@ def create_app() -> FastAPI:
     def corpus_full_precompute_status(run_id: str = "") -> dict[str, object]:
         return read_full_precompute_status(run_id)
 
+    @app.get("/api/v20/corpus/artifacts/status")
+    def corpus_artifact_status(run_id: str = "") -> dict[str, object]:
+        return read_corpus_artifact_status(run_id or "v20_full_518k_20260501_main")
+
+    @app.get("/api/v20/corpus/artifacts/coverage-summary")
+    def corpus_artifact_coverage_summary(run_id: str = "") -> dict[str, object]:
+        return read_corpus_coverage_summary(run_id or "v20_full_518k_20260501_main")
+
+    @app.get("/api/v20/corpus/similar")
+    def corpus_similar(case_id: str, run_id: str = "", limit: int = 8) -> dict[str, object]:
+        return find_similar_cases(case_id, run_id=run_id or "v20_full_518k_20260501_main", limit=limit)
+
     @app.get("/api/v20/validation/synthetic-suite")
     def synthetic_suite() -> dict[str, object]:
         return run_synthetic_suite()
@@ -295,6 +310,14 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/learning/policy-review")
     def learning_policy_review_manifest() -> dict[str, object]:
         return policy_review_manifest()
+
+    @app.get("/api/v20/intelligence/generation-manifest")
+    def intelligence_generation_manifest() -> dict[str, object]:
+        return build_intelligence_generation_manifest()
+
+    @app.get("/api/v20/validation/intelligence-generation")
+    def intelligence_generation_validation() -> dict[str, object]:
+        return validate_intelligence_generation()
 
     @app.post("/api/v20/learning/policy-review")
     def learning_policy_review(payload: PolicyReviewRequest) -> dict[str, object]:

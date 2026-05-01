@@ -37,6 +37,8 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["knowledge_rule_proposal_preflight_status"] == "ready_for_shadow_training"
     assert report["full_precompute_status"] == "ready_for_dry_run"
     assert report["full_precompute_estimated_minutes"] > 0
+    assert report["corpus_artifact_status"] in {"not_built", "running", "completed"}
+    assert report["corpus_cluster_count"] >= 0
     assert report["access_role_count"] == 4
     assert report["test_area_count"] >= 7
     assert report["learning_status"] == "ready_for_dry_run"
