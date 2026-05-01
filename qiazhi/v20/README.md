@@ -12,6 +12,7 @@ ChartInput
 -> BaziFeature[]
 -> KnowledgeRef[] and knowledge alignment
 -> Bazi measurement QuestionCandidate[]
+-> Professional domain reading path
 -> EvidencePack
 -> AnswerPlan
 -> bounded LLM assist contracts
@@ -30,6 +31,7 @@ Initial boundaries:
 - Knowledge is reviewed evidence context, not rule truth.
 - Portraits, recommended questions, and answers are Bazi measurement projections over features.
 - Domain projections are the anti-corruption layer between features and applied topics.
+- Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
 - Learning, LLM, corpus, and ranking systems are assistive and governed.
 - Postgres is the persistent authority; Redis is ephemeral cache/queue/lock state.
@@ -43,6 +45,7 @@ Primary V20 modules:
 - `knowledge`: reviewed units, feature-aligned retrieval, audit, and coverage checks.
 - `graph`: chart graph and rule-path candidates.
 - `interaction`: Bazi measurement question ranking, portrait projection, and feedback capture.
+- `answer`: evidence-backed answer planning, professional domain reading paths, and bounded answer composition.
 - `llm`: bounded contracts plus hard text enforcement for intent routing, question suggestion, feature-candidate proposals, answer-plan assistance, multilingual rendering, feedback summaries, and safety review.
 - `validation`: synthetic and golden-case gates.
 - `corpus`: dry-run full-corpus precompute scaffolding.

@@ -52,6 +52,7 @@ QUESTION_LABELS = {
 }
 
 APPLIED_DOMAIN_QUESTION_KEYS = {
+    "wealth": "q_income_stability",
     "career": "q_career_structure",
     "relationship": "q_relationship_structure",
     "health": "q_health_balance_boundary",

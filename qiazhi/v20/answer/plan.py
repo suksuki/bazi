@@ -4,6 +4,7 @@ from dataclasses import asdict, dataclass
 from typing import Any
 
 from v20.answer.domain_projection import build_domain_projection
+from v20.answer.domain_reading import build_domain_reading_sections
 from v20.answer.evidence import EvidencePack
 from v20.answer.measurement_policy import (
     domain_label,
@@ -79,6 +80,18 @@ def build_answer_plan(question: QuestionCandidate, feature_layer: FeatureLayer, 
             measurement_stage=question.measurement_stage,
         )
     ]
+    for row in build_domain_reading_sections(question, tuple(selected), feature_layer):
+        sections.append(
+            AnswerSection(
+                title=row.title,
+                body=row.body,
+                feature_ids=row.feature_ids,
+                domain=row.domain,
+                section_type=row.section_type,
+                measurement_topic=domain_label(row.domain),
+                measurement_stage=measurement_stage(row.domain),
+            )
+        )
     for feature in selected[:4]:
         topic = domain_label(feature.domain)
         focus = measurement_focus(feature)

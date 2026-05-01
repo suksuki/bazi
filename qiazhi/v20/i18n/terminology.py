@@ -47,11 +47,15 @@ TOPIC_LABELS = {
 SECTION_TITLES = {
     "en": {
         "measurement_scope": "Measurement Scope",
+        "domain_measurement_path": "Professional Reading Path",
+        "measurement_next_step": "Next Review Step",
         "feature_measurement": "Feature Reading",
         "prediction_boundary": "Prediction Boundary",
     },
     "ko": {
         "measurement_scope": "측산 범위",
+        "domain_measurement_path": "전문 해석 경로",
+        "measurement_next_step": "다음 검토 단계",
         "feature_measurement": "특징 해석",
         "prediction_boundary": "예측 경계",
     },
@@ -94,6 +98,10 @@ def localized_section_body(section: AnswerSection, locale: str) -> str:
 def _body_en(section: AnswerSection, topic: str, source_count: int) -> str:
     if section.section_type == "measurement_scope":
         return f"This answer uses the selected question as an entry into {topic}, with structure, evidence, and boundaries kept together."
+    if section.section_type == "domain_measurement_path":
+        return f"The professional reading path stays within {topic}, using only compiled Bazi features and reviewed evidence."
+    if section.section_type == "measurement_next_step":
+        return f"The next review step is to deepen {topic} through source features rather than a fixed verdict."
     if section.section_type == "prediction_boundary":
         return "The answer gives structural reading and candidate paths only; it does not turn features into fixed events, fixed fortune verdicts, or unsupported timing."
     return f"Measurement focus stays on {topic}. The section is supported by {source_count} compiled source feature(s) and remains evidence-bounded."
@@ -102,6 +110,10 @@ def _body_en(section: AnswerSection, topic: str, source_count: int) -> str:
 def _body_ko(section: AnswerSection, topic: str, source_count: int) -> str:
     if section.section_type == "measurement_scope":
         return f"선택된 질문을 {topic} 측산의 입구로 삼고, 구조와 근거와 경계를 함께 유지합니다."
+    if section.section_type == "domain_measurement_path":
+        return f"전문 해석 경로는 {topic} 안에서 유지되며, 컴파일된 사주 특징과 검토된 근거만 사용합니다."
+    if section.section_type == "measurement_next_step":
+        return f"다음 검토는 고정 판단이 아니라 출처 특징을 통해 {topic}을 더 깊게 읽는 것입니다."
     if section.section_type == "prediction_boundary":
         return "이 답변은 구조 해석과 후보 경로만 제시하며, 특징을 확정 사건이나 고정된 길흉 또는 근거 없는 시기로 바꾸지 않습니다."
     return f"측산 초점은 {topic}에 머무릅니다. 이 단락은 컴파일된 출처 특징 {source_count}개로 뒷받침되며 근거 경계를 유지합니다."

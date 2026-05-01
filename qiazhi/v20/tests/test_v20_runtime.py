@@ -153,6 +153,49 @@ def test_v20_answers_include_verified_hidden_ten_god_material() -> None:
     assert "feature." not in result["answer_text"]
 
 
+def test_v20_p85_applied_domain_answers_use_professional_reading_paths() -> None:
+    result = run_runtime_from_pillars(
+        "壬寅",
+        "甲辰",
+        "丙子",
+        "甲午",
+        input_id="v20.p85.wealth",
+        question_key="q_income_stability",
+        flow_year_pillar="丙午",
+        luck_pillar="庚戌",
+    )
+
+    assert "q_income_stability" in {row["question_key"] for row in result["questions"]}
+    assert result["selected_question"]["question_key"] == "q_income_stability"
+    assert result["selected_question"]["domain"] == "wealth"
+    assert "财运结构读法" in result["answer_text"]
+    assert "财星材料是否可见" in result["answer_text"]
+    assert "已接入材料" in result["answer_text"]
+    assert "下一步复核" in result["answer_text"]
+    assert "具体收益结果" in result["answer_text"]
+    assert "feature." not in result["answer_text"]
+
+
+def test_v20_p85_time_answer_preserves_trigger_path_section() -> None:
+    result = run_runtime_from_pillars(
+        "壬寅",
+        "甲辰",
+        "丙子",
+        "甲午",
+        input_id="v20.p85.time",
+        question_key="q_time_relation_triggers",
+        flow_year_pillar="丙午",
+        luck_pillar="庚戌",
+    )
+
+    assert "时间触发读法" in result["answer_text"]
+    assert "庚戌、丙午" in result["answer_text"]
+    assert "偏财、比肩" in result["answer_text"]
+    assert "月柱辰与大运戌冲" in result["answer_text"]
+    assert "下一步复核" in result["answer_text"]
+    assert "feature." not in result["answer_text"]
+
+
 def test_v20_multilingual_answer_rendering_uses_deterministic_terms() -> None:
     en = run_runtime_from_pillars(
         "甲子",
