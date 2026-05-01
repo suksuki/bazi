@@ -88,6 +88,10 @@ from v20.validation.rule_synthetic import (
     read_rule_synthetic_training_artifact,
     run_rule_synthetic_suite,
 )
+from v20.validation.rule_portrait_batch import (
+    read_rule_portrait_batch_artifact,
+    run_rule_portrait_batch,
+)
 from v20.validation.suite import run_synthetic_suite
 
 
@@ -444,6 +448,10 @@ def create_app() -> FastAPI:
     def rule_synthetic_suite() -> dict[str, object]:
         return run_rule_synthetic_suite()
 
+    @app.get("/api/v20/validation/rule-portrait-batch")
+    def rule_portrait_batch() -> dict[str, object]:
+        return run_rule_portrait_batch()
+
     @app.get("/api/v20/learning/evolution-plan")
     def evolution_plan() -> dict[str, object]:
         return build_evolution_dry_run_plan()
@@ -457,6 +465,12 @@ def create_app() -> FastAPI:
         if status:
             return read_rule_synthetic_training_artifact()
         return build_rule_synthetic_training_report()
+
+    @app.get("/api/v20/learning/rule-portrait-batch")
+    def learning_rule_portrait_batch(status: bool = False) -> dict[str, object]:
+        if status:
+            return read_rule_portrait_batch_artifact()
+        return run_rule_portrait_batch()
 
     @app.get("/api/v20/learning/registries")
     def learning_registries() -> dict[str, object]:

@@ -20,6 +20,7 @@ ChartInput
 -> Reviewed knowledge evidence support
 -> Shadow rule candidate support
 -> Synthetic rule collision validation/training gate
+-> Rule/portrait/question batch generation and validation
 -> Rule candidate validation and bounded question reranking
 -> Bazi-domain alignment gate for rules, portraits, and questions
 -> EvidencePack
@@ -49,6 +50,7 @@ Initial boundaries:
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
 - Shadow rule candidates report current-chart feature collisions, but still cannot activate as rule truth without validation and promotion.
 - Rule learning is synthetic-case driven. The 518K corpus supplies coverage and ranking priors, not rule truth.
+- Rule and portrait batches can be generated and validated by script before any promotion discussion.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
 - LLM can act as a practitioner-style answer composer only after FeatureDiscovery, KnowledgeSemanticModel, PortraitIntelligence, and AnswerPlan have prepared verified context.
 - Rule candidates may reorder existing questions only through a capped shadow signal and synthetic validation.
