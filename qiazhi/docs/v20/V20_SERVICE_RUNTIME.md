@@ -51,6 +51,10 @@ Background service control:
 ./v20/scripts/service_macos.sh stop
 ```
 
+The macOS background script loads `v20/.runtime/local/service.env` when present.
+Keep local Postgres, Redis, and LLM connection settings there instead of typing
+them before every restart.
+
 Generate a launchd plist for review without installing it:
 
 ```bash
@@ -78,6 +82,9 @@ Background service control:
 ./v20/scripts/service_linux.sh logs
 ./v20/scripts/service_linux.sh stop
 ```
+
+The Linux background script loads `v20/.runtime/linux_0_13/service.env` when
+present. These env files are runtime-local and ignored by git.
 
 Generate a systemd unit for review without installing it:
 

@@ -5,10 +5,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT_DIR="$(cd "${SCRIPT_DIR}/../.." && pwd)"
 cd "${ROOT_DIR}"
 
+DEFAULT_RUNTIME_DIR="${V20_RUNTIME_DIR:-v20/.runtime/linux_0_13}"
+SERVICE_ENV_FILE="${V20_ENV_FILE:-${DEFAULT_RUNTIME_DIR}/service.env}"
+if [[ -f "${SERVICE_ENV_FILE}" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "${SERVICE_ENV_FILE}"
+  set +a
+fi
+
 export V20_ENV="${V20_ENV:-linux_0_13}"
 export V20_HOST="${V20_HOST:-0.0.0.0}"
 export V20_PORT="${V20_PORT:-9020}"
-export V20_RUNTIME_DIR="${V20_RUNTIME_DIR:-v20/.runtime/linux_0_13}"
+export V20_RUNTIME_DIR="${V20_RUNTIME_DIR:-${DEFAULT_RUNTIME_DIR}}"
 export V20_SERVICE_NAME="${V20_SERVICE_NAME:-qiazhi-v20}"
 
 PID_FILE="${V20_PID_FILE:-${V20_RUNTIME_DIR}/service_${V20_PORT}.pid}"
@@ -23,6 +32,7 @@ Usage: $0 {start|stop|restart|status|logs|systemd-unit}
 Environment:
   V20_DATABASE_URL, V20_REDIS_URL, V20_LLM_* are passed through from the shell.
   V20_RUNTIME_DIR=${V20_RUNTIME_DIR}
+  V20_ENV_FILE=${SERVICE_ENV_FILE}
   V20_PID_FILE=${PID_FILE}
   V20_LOG_FILE=${LOG_FILE}
   V20_SCREEN_NAME=${SCREEN_NAME}

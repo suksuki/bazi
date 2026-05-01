@@ -233,6 +233,8 @@ def test_v20_service_scripts_and_docs_are_wired() -> None:
     assert "V20_ENV=\"${V20_ENV:-linux_0_13}\"" in linux.read_text(encoding="utf-8")
     assert "launchd-plist" in macos_service.read_text(encoding="utf-8")
     assert "systemd-unit" in linux_service.read_text(encoding="utf-8")
+    assert "SERVICE_ENV_FILE" in macos_service.read_text(encoding="utf-8")
+    assert "SERVICE_ENV_FILE" in linux_service.read_text(encoding="utf-8")
     assert "Stopping unmanaged V20 macOS listener" in macos_service.read_text(encoding="utf-8")
     assert "Stopping unmanaged V20 Linux listener" in linux_service.read_text(encoding="utf-8")
     assert "screen -dmS" in macos_service.read_text(encoding="utf-8")
