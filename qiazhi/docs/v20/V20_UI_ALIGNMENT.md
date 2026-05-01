@@ -1,6 +1,9 @@
 # V20 UI Alignment
 
-The V20 UI is served from `v20/frontend` through the V20 FastAPI runtime:
+The V20 UI is served from `v20/frontend` through the V20 FastAPI runtime.
+The default view is the user role projection, so the browser does not fetch
+internal feature evidence, knowledge refs, rule paths, or chart graphs unless a
+non-user role is selected.
 
 - `GET /v20/ui/`
 - `GET /v20/ui/app.js`

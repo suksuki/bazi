@@ -34,19 +34,12 @@ const measure = async () => {
     const role = payload.role_key || "full";
     delete payload.role_key;
     const endpoint = role === "full" ? "/api/v20/measure" : `/api/v20/measure/view/${role}`;
-    const result = await requestJson("/api/v20/measure", {
+    const result = await requestJson(endpoint, {
       method: "POST",
       body: JSON.stringify(payload),
     });
-    const view = role === "full" ? result : await requestJson(endpoint, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    if (role !== "full") {
-      view.full_runtime = result;
-    }
-    state.latest = view;
-    renderRuntime(view);
+    state.latest = result;
+    renderRuntime(result);
   } catch (error) {
     setText("#answerText", `测算失败：${error.message}`);
   } finally {
@@ -57,20 +50,29 @@ const measure = async () => {
 
 const renderRuntime = (result) => {
   const selected = result.selected_question || {};
-  const fullRuntime = result.full_runtime || result;
+  const role = result.role?.role_key || "full";
+  setRoleMode(role);
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
-  setText("#featureCount", result.feature_layer?.feature_count ?? fullRuntime.feature_layer?.feature_count ?? 0);
+  setText("#featureCount", result.feature_layer?.feature_count ?? "hidden");
   setText("#topicCount", result.measurement_report?.topic_count ?? 0);
-  setText("#knowledgeCount", result.knowledge_report?.count ?? fullRuntime.knowledge_report?.count ?? 0);
-  setText("#coreCapacity", result.core_inference?.day_master_capacity || fullRuntime.core_inference?.day_master_capacity || result.role?.role_key || "core");
+  setText("#knowledgeCount", result.knowledge_report?.count ?? "hidden");
+  setText("#coreCapacity", result.core_inference?.day_master_capacity || role || "core");
   setText("#appliedDomains", (result.measurement_report?.applied_domain_keys || []).join(" / "));
-  setText("#llmStatus", `llm ${result.llm_assist?.status || fullRuntime.llm_assist?.status || "hidden"}`);
+  setText("#llmStatus", `llm ${result.llm_assist?.status || "hidden"}`);
   setText("#answerText", result.answer_text || "");
-  renderQuestionSelect(fullRuntime.questions || result.questions || [], selected.question_key || "");
-  renderFeatures(result.feature_layer?.features || fullRuntime.feature_layer?.features || []);
+  renderQuestionSelect(result.questions || [], selected.question_key || "");
+  renderFeatures(result.feature_layer?.features || []);
   renderTopics(result.measurement_report?.topics || []);
   renderQuestions(result.questions || [], selected.question_key || "");
-  renderPortrait(result.portrait_projection?.axes || fullRuntime.portrait_projection?.axes || []);
+  renderPortrait(result.portrait_projection?.axes || []);
+};
+
+const setRoleMode = (role) => {
+  document.body.dataset.role = role;
+  const showAdvanced = role !== "user" && role !== "admin";
+  document.querySelectorAll(".role-advanced").forEach((node) => {
+    node.hidden = !showAdvanced;
+  });
 };
 
 const renderQuestionSelect = (questions, selectedKey) => {
@@ -88,6 +90,10 @@ const renderQuestionSelect = (questions, selectedKey) => {
 const renderFeatures = (features) => {
   const root = document.querySelector("#featureChips");
   root.innerHTML = "";
+  if (!features.length) {
+    root.innerHTML = '<div class="empty-note">当前角色隐藏内部特征证据。</div>';
+    return;
+  }
   features.slice(0, 8).forEach((feature) => {
     const row = document.createElement("div");
     row.className = "chip";
@@ -127,6 +133,10 @@ const renderQuestions = (questions, selectedKey) => {
 const renderPortrait = (axes) => {
   const root = document.querySelector("#portraitAxes");
   root.innerHTML = "";
+  if (!axes.length) {
+    root.innerHTML = '<div class="empty-note">当前角色隐藏画像校准面。</div>';
+    return;
+  }
   axes.forEach((axis) => {
     const row = document.createElement("div");
     row.className = "axis-row";
@@ -166,7 +176,7 @@ const submitFeedback = async () => {
     setText("#feedbackOutput", "请输入反馈。");
     return;
   }
-  const latest = state.latest?.full_runtime || state.latest || {};
+  const latest = state.latest || {};
   const featureIds = (latest.feature_layer?.features || []).slice(0, 4).map((feature) => feature.feature_id);
   feedbackButton.disabled = true;
   feedbackButton.textContent = "分析中";
@@ -181,7 +191,7 @@ const submitFeedback = async () => {
       }),
     });
     setText("#feedbackState", result.learning_proposal?.status || "recorded");
-    setText("#feedbackOutput", `hash ${result.source_hash}\n${result.redacted_summary}\nproposal ${result.learning_proposal?.proposal_type}`);
+setText("#feedbackOutput", `hash ${result.source_hash}\n${result.redacted_summary}\nproposal ${result.learning_proposal?.proposal_type}`);
   } catch (error) {
     setText("#feedbackOutput", `反馈分析失败：${error.message}`);
   } finally {

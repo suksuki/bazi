@@ -240,7 +240,8 @@ textarea {
 .chip,
 .topic-row,
 .question-row,
-.axis-row {
+.axis-row,
+.empty-note {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
@@ -262,6 +263,15 @@ textarea {
 .axis-row span {
   color: var(--muted);
   font-size: 13px;
+}
+
+.empty-note {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .chip[data-domain="strength"] {

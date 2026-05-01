@@ -64,11 +64,11 @@
               <label>
                 角色视图
                 <select name="role_key" id="roleSelect">
-                  <option value="full">开发全量</option>
                   <option value="user">用户</option>
                   <option value="analyst">分析师</option>
                   <option value="lab">实验室</option>
                   <option value="admin">管理员</option>
+                  <option value="full">开发全量</option>
                 </select>
               </label>
               <label>
@@ -104,7 +104,7 @@
           </div>
 
           <div class="main-grid">
-            <section class="surface">
+            <section class="surface role-advanced" id="featureSurface">
               <div class="surface-head">
                 <h3>命理特征主线</h3>
                 <span id="coreCapacity">core</span>
@@ -128,7 +128,7 @@
               <div class="question-list" id="questionList"></div>
             </section>
 
-            <section class="surface">
+            <section class="surface role-advanced" id="portraitSurface">
               <div class="surface-head">
                 <h3>画像投影</h3>
                 <span>calibration only</span>
@@ -157,7 +157,7 @@
             <pre id="feedbackOutput">等待反馈。</pre>
           </section>
 
-          <section class="ops-grid">
+          <section class="ops-grid role-advanced" id="opsSurface">
             <div class="surface compact">
               <h3>合成验证</h3>
               <p id="validationState">checking</p>
