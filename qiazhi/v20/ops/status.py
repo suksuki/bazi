@@ -3,6 +3,7 @@ from __future__ import annotations
 from v20.access.roles import access_role_manifest
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.question_ranker import question_ranking_manifest
+from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.policy_review import policy_review_manifest
@@ -21,6 +22,7 @@ def system_status_report() -> dict[str, object]:
     ops_validation = validate_runtime_config(config)
     storage = build_postgres_schema_contract()
     redis = redis_contract_manifest()
+    knowledge_catalog = build_knowledge_catalog()
     dependencies = dependency_readiness_report()
     sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
@@ -34,6 +36,8 @@ def system_status_report() -> dict[str, object]:
         "sync_readiness": sync,
         "storage_table_count": storage.to_dict()["table_count"],
         "redis_validation": validate_redis_contract(redis),
+        "knowledge_catalog_status": knowledge_catalog["status"],
+        "knowledge_unit_count": knowledge_catalog["unit_count"],
         "access_role_count": len(access_role_manifest()["roles"]),
         "test_area_count": matrix["area_count"],
         "learning_status": evolution["status"],

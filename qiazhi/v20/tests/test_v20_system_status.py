@@ -14,6 +14,8 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["storage_table_count"] == 6
     assert report["sync_readiness"]["status"] == "ready_for_manual_sync"
     assert report["redis_validation"]["ok"] is True
+    assert report["knowledge_catalog_status"] == "ready"
+    assert report["knowledge_unit_count"] >= 12
     assert report["access_role_count"] == 4
     assert report["test_area_count"] >= 7
     assert report["learning_status"] == "ready_for_dry_run"

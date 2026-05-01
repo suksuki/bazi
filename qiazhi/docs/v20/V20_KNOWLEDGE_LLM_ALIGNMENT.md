@@ -11,19 +11,29 @@ Current V20 knowledge contracts:
 - `KnowledgeUnit`: reviewed source unit with domain, source refs, feature hooks, question hooks, evidence template, and boundary.
 - `KnowledgeRef`: runtime-safe citation object selected from reviewed units.
 - `KnowledgeRetrievalReport`: feature-spine retrieval result with guardrails.
+- `KnowledgeCatalog`: read-only catalog of domains, feature hooks, question
+  hooks, retrieval tags, duplicate ids, and audit status.
 - `knowledge_feature_alignment`: audit that every runtime feature domain has reviewed knowledge coverage.
 - `audit_default_knowledge_units`: baseline check for review status, evidence templates, and forbidden direct-rule usage.
 
-The first covered domains are:
+The current covered domains are:
 
 - `strength`
 - `useful_god`
 - `ten_god`
+- `element`
 - `branch`
+- `time`
 - `wealth`
+- `career`
+- `relationship`
+- `health`
 - `pattern`
 
 Later V20 phases can add embedding retrieval and multilingual terminology maps, but every retrieved unit must remain reviewed and evidence-only.
+
+`GET /api/v20/knowledge/catalog` exposes this coverage without activating
+rules or connecting to an external vector store.
 
 ## LLM System
 

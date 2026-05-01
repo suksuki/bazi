@@ -16,6 +16,7 @@ from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
+from v20.knowledge.catalog import build_knowledge_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
 from v20.learning.registries import registry_manifest
@@ -152,6 +153,10 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/knowledge/retrieval-policy")
     def knowledge_retrieval_policy() -> dict[str, object]:
         return knowledge_retrieval_manifest()
+
+    @app.get("/api/v20/knowledge/catalog")
+    def knowledge_catalog() -> dict[str, object]:
+        return build_knowledge_catalog()
 
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:

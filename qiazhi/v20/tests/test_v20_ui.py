@@ -19,9 +19,11 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert '<option value="user">用户</option>' in page.text
     assert "反馈学习" in page.text
     assert "同步边界" in page.text
+    assert "知识库" in page.text
     assert "measurement_report" in script.text
     assert "/api/v20/measure/view/" in script.text
     assert "/api/v20/ops/sync-readiness" in script.text
+    assert "/api/v20/knowledge/catalog" in script.text
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" in script.text
     assert "/api/v20/learning/policy-review" in script.text

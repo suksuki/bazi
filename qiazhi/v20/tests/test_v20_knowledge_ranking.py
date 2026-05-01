@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from v20.api.runtime import run_runtime_from_pillars
 from v20.features.schema import FeatureLayer
+from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.ranking import KnowledgeRetrievalPolicy, knowledge_retrieval_manifest, rank_knowledge_units
 from v20.knowledge.retrieval import retrieve_knowledge
@@ -55,3 +56,27 @@ def test_v20_retrieve_knowledge_accepts_policy_without_creating_refs() -> None:
     assert report.refs
     assert report.refs[0].domain == "health"
     assert all(ref.reviewed for ref in report.refs)
+
+
+def test_v20_knowledge_catalog_reports_coverage_and_hooks() -> None:
+    catalog = build_knowledge_catalog()
+
+    assert catalog["status"] == "ready"
+    assert catalog["runtime_mutation"] is False
+    assert catalog["unit_count"] >= 12
+    assert {"strength", "useful_god", "element", "time"} <= {
+        row["domain"] for row in catalog["domains"]
+    }
+    assert "feature.useful_god.candidate_paths" in catalog["feature_hooks"]
+    assert "q_useful_god_evidence_gaps" in catalog["question_hooks"]
+    assert not catalog["duplicate_ids"]
+
+
+def test_v20_knowledge_catalog_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v20/knowledge/catalog")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["runtime_mutation"] is False
+    assert data["audit"]["status"] == "pass"
