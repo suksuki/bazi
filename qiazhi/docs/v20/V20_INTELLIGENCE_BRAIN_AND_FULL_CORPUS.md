@@ -45,6 +45,20 @@ V20 now has deterministic enumerators for this space and a precompute preview:
 
 - `GET /api/v20/corpus/full-precompute/manifest`
 - `GET /api/v20/corpus/full-precompute/preview?start=0&limit=4`
+- `GET /api/v20/corpus/full-precompute/status`
+
+Local job command:
+
+```bash
+python3 v20/scripts/run_full_precompute.py --run-id v20_full_518k_main --limit 518400 --status-every 500
+```
+
+The job writes:
+
+- `v20/.runtime/corpus/full_precompute/<run_id>/snapshots.jsonl`
+- `v20/.runtime/corpus/full_precompute/<run_id>/errors.jsonl`
+- `v20/.runtime/corpus/full_precompute/<run_id>/progress.json`
+- `v20/.runtime/corpus/full_precompute/latest_status.json`
 
 The label snapshot contains structural labels only:
 

@@ -12,6 +12,7 @@ from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.corpus.full_precompute import build_full_precompute_manifest, preview_full_precompute_batch
+from v20.corpus.job_runner import read_full_precompute_status
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
@@ -270,6 +271,10 @@ def create_app() -> FastAPI:
                 status_code=400,
                 detail={"error": "V20_CORPUS_PRECOMPUTE_INPUT_INVALID", "message": str(exc)},
             ) from exc
+
+    @app.get("/api/v20/corpus/full-precompute/status")
+    def corpus_full_precompute_status(run_id: str = "") -> dict[str, object]:
+        return read_full_precompute_status(run_id)
 
     @app.get("/api/v20/validation/synthetic-suite")
     def synthetic_suite() -> dict[str, object]:

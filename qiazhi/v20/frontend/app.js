@@ -12,6 +12,13 @@ const setText = (selector, value) => {
   if (node) node.textContent = value;
 };
 
+const setProgress = (selector, ratio) => {
+  const node = document.querySelector(selector);
+  if (!node) return;
+  const percent = Math.max(0, Math.min(100, Math.round((Number(ratio) || 0) * 1000) / 10));
+  node.style.width = `${percent}%`;
+};
+
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, {
     headers: { "Content-Type": "application/json" },
@@ -167,6 +174,7 @@ const loadOps = async () => {
       firstWaveRulePreflight,
       portraitOntology,
       fullPrecompute,
+      fullPrecomputeStatus,
       dependencies,
       sync,
       policyReview,
@@ -190,6 +198,7 @@ const loadOps = async () => {
       requestJson("/api/v20/knowledge/first-wave-rule-proposal-preflight"),
       requestJson("/api/v20/portrait/ontology"),
       requestJson("/api/v20/corpus/full-precompute/manifest"),
+      requestJson("/api/v20/corpus/full-precompute/status"),
       requestJson("/api/v20/runtime/dependencies"),
       requestJson("/api/v20/ops/sync-readiness"),
       requestJson("/api/v20/learning/policy-review"),
@@ -197,7 +206,9 @@ const loadOps = async () => {
     ]);
     document.querySelector("#runtimeStatus").innerHTML = `<span>${health.active_profile}</span><strong>${health.status}</strong>`;
     setText("#profileBadge", health.active_profile);
-    setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards · precompute ${fullPrecompute.status} · ~${fullPrecompute.cost_estimate.estimated_total_minutes}m`);
+    setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards · precompute ${fullPrecompute.status} · job ${fullPrecomputeStatus.status}`);
+    setProgress("#corpusProgressBar", fullPrecomputeStatus.progress_ratio || 0);
+    setText("#corpusProgressMeta", renderCorpusProgress(fullPrecomputeStatus, fullPrecompute));
     setText("#validationState", `${validation.ok ? "pass" : "blocked"} · ${validation.case_count} cases`);
     setText("#learningState", `${learning.status} · ${learningRun.estimated_batch_count} batches`);
     setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · drafts ${knowledgeDraftImport.candidate_count} · queue ${knowledgeReviewQueue.domain_count} · packets ${firstWavePackets.domain_count} · assist ${firstWaveAssist.total_suggestion_count} · rule ${firstWaveRuleProposals.proposal_count}/${firstWaveRulePreflight.status} · approval ${firstWaveApproval.status} · portrait ${portraitOntology.status}`);
@@ -209,6 +220,18 @@ const loadOps = async () => {
     document.querySelector("#runtimeStatus").innerHTML = `<span>health</span><strong>error</strong>`;
     setText("#validationState", error.message);
   }
+};
+
+const renderCorpusProgress = (status, manifest) => {
+  if (!status || status.status === "not_started") {
+    return `not started · estimated ${manifest.cost_estimate.estimated_total_minutes}m`;
+  }
+  const done = status.completed_from_start ?? 0;
+  const total = status.target_count ?? manifest.target_case_count;
+  const percent = Math.round((Number(status.progress_ratio || 0) * 100) * 10) / 10;
+  const rate = status.cases_per_second ?? 0;
+  const eta = status.eta_seconds == null ? "eta n/a" : `eta ${Math.ceil(status.eta_seconds / 60)}m`;
+  return `${done}/${total} · ${percent}% · ${rate}/s · ${eta}`;
 };
 
 const submitFeedback = async () => {
@@ -250,3 +273,4 @@ feedbackButton.addEventListener("click", submitFeedback);
 
 loadOps();
 measure();
+setInterval(loadOps, 5000);

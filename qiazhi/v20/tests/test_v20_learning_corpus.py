@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from v20.corpus.coverage import FULL_CORPUS_TARGET_COUNT, build_corpus_coverage_plan
 from v20.corpus.enumerator import canonical_case_at, hour_pillar_for, iter_canonical_cases, month_pillar_for
 from v20.corpus.full_precompute import build_full_precompute_manifest, preview_full_precompute_batch, shard_for_index
+from v20.corpus.job_runner import FullPrecomputeJobConfig, read_full_precompute_status, run_full_precompute_job
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
 from v20.server import app
@@ -82,11 +83,29 @@ def test_v20_full_precompute_preview_builds_structural_label_snapshots() -> None
     assert shard["shard_id"] == "v20.corpus.shard.015"
 
 
+def test_v20_full_precompute_job_writes_resumable_progress(tmp_path) -> None:
+    config = FullPrecomputeJobConfig(run_id="test_518k_job", start=0, limit=3, status_every=1)
+    result = run_full_precompute_job(config, runtime_dir=tmp_path)
+    status = read_full_precompute_status("test_518k_job", runtime_dir=tmp_path)
+    latest = read_full_precompute_status(runtime_dir=tmp_path)
+    snapshot_path = tmp_path / "corpus" / "full_precompute" / "test_518k_job" / "snapshots.jsonl"
+
+    assert result["status"] == "completed"
+    assert result["completed_from_start"] == 3
+    assert status["next_index"] == 3
+    assert latest["run_id"] == "test_518k_job"
+    assert snapshot_path.exists()
+    assert len(snapshot_path.read_text(encoding="utf-8").splitlines()) == 3
+    resumed = run_full_precompute_job(config, runtime_dir=tmp_path)
+    assert resumed["processed_this_session"] == 0
+
+
 def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     client = TestClient(app)
     corpus = client.get("/api/v20/corpus/coverage").json()
     precompute = client.get("/api/v20/corpus/full-precompute/manifest").json()
     preview = client.get("/api/v20/corpus/full-precompute/preview?start=0&limit=1").json()
+    status = client.get("/api/v20/corpus/full-precompute/status").json()
     suite = client.get("/api/v20/validation/synthetic-suite").json()
     evolution = client.get("/api/v20/learning/evolution-plan").json()
     run_plan = client.get("/api/v20/learning/run-plan").json()
@@ -97,6 +116,7 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert precompute["runtime_mutation"] is False
     assert preview["returned_count"] == 1
     assert preview["snapshots"][0]["label_snapshot"]["snapshot_hash"]
+    assert status["runtime_mutation"] is False
     assert suite["ok"] is True
     assert suite["runtime_mutation"] is False
     assert evolution["status"] == "ready_for_dry_run"

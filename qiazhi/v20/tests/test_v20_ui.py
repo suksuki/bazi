@@ -20,6 +20,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "反馈学习" in page.text
     assert "同步边界" in page.text
     assert "知识库" in page.text
+    assert "corpusProgressBar" in page.text
     assert "measurement_report" in script.text
     assert "/api/v20/measure/view/" in script.text
     assert "/api/v20/ops/sync-readiness" in script.text
@@ -35,6 +36,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/knowledge/first-wave-rule-proposals" in script.text
     assert "/api/v20/knowledge/first-wave-rule-proposal-preflight" in script.text
     assert "/api/v20/corpus/full-precompute/manifest" in script.text
+    assert "/api/v20/corpus/full-precompute/status" in script.text
+    assert "setInterval(loadOps, 5000)" in script.text
     assert "/api/v20/learning/run-plan" in script.text
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" in script.text

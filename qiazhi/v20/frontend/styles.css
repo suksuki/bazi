@@ -316,6 +316,10 @@ textarea {
   background: var(--green);
 }
 
+.progress-meter {
+  margin-top: 10px;
+}
+
 .answer-surface pre {
   white-space: pre-wrap;
   margin: 14px 0 0;
