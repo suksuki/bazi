@@ -18,6 +18,7 @@ from v20.knowledge.rule_extraction import (
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight, build_first_wave_rule_proposals
 from v20.llm.contracts import LLM_CONTRACTS
 from v20.llm.provider import llm_provider_readiness_report
+from v20.validation.rule_synthetic import build_rule_synthetic_training_report, run_rule_synthetic_suite
 from v20.validation.suite import run_synthetic_suite
 
 
@@ -31,6 +32,8 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
     llm_rule_extraction_validation = validate_llm_rule_extraction_report(limit=2)
     portrait = portrait_ontology_manifest()
     synthetic = run_synthetic_suite()
+    rule_synthetic = run_rule_synthetic_suite()
+    rule_synthetic_training = build_rule_synthetic_training_report()
     corpus_status = read_full_precompute_status()
     corpus_artifacts = read_corpus_artifact_status()
     corpus_summary = read_corpus_coverage_summary()
@@ -75,12 +78,15 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             ],
             "source_authority": rule_extraction["source_authority"],
             "corpus_role": rule_extraction["corpus_role"],
+            "synthetic_role": "primary_rule_collision_validation_and_training_gate",
             "generated_artifacts": [
                 "KnowledgeRuleProposal",
                 "ExtractedRuleAtom",
                 "ExtractedRuleCandidate",
                 "candidate_rule_path",
                 "shadow_training_signal",
+                "SyntheticRuleCase",
+                "rule_synthetic_training_report",
             ],
             "proposal_count": rule_proposals["proposal_count"],
             "extracted_candidate_count": rule_extraction["candidate_count"],
@@ -91,7 +97,10 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             "llm_extraction_fallback_count": llm_rule_extraction["fallback_count"],
             "llm_extraction_validation_status": llm_rule_extraction_validation["status"],
             "preflight_status": rule_preflight["status"],
-            "shadow_training_allowed": True,
+            "synthetic_rule_suite_status": rule_synthetic["status"],
+            "synthetic_rule_case_count": rule_synthetic["case_count"],
+            "synthetic_rule_training_status": rule_synthetic_training["status"],
+            "shadow_training_allowed": rule_synthetic_training["status"] == "ready",
             "user_visible_runtime_allowed": False,
             "promotion_requirement_count": rule_preflight["promotion_requirement_count"],
         },
@@ -123,7 +132,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "portrait_intelligence_axes",
                 "shadow_rule_candidate_ranking",
                 "bounded_llm_intent_assist",
-                "full_corpus_training_artifacts",
+            "full_corpus_training_artifacts",
             ],
             "generated_artifacts": [
                 "FeatureDiscoveryReport",
@@ -183,19 +192,24 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
         },
         "validation_policy": {
             "synthetic_required_for": [
+                "rule_shadow_training_gate",
                 "user_visible_rule_promotion",
                 "knowledge_release_promotion",
                 "answer_boundary_release",
                 "learned_ranking_policy_promotion",
             ],
             "synthetic_not_required_for": [
-                "shadow_training",
+                "full_corpus_coverage_priors",
+                "feature_discovery_shadow_priors",
                 "candidate_generation",
                 "offline_clustering",
                 "coverage_gap_detection",
             ],
             "current_synthetic_status": "pass" if synthetic["ok"] else "fail",
             "synthetic_case_count": synthetic["case_count"],
+            "rule_synthetic_status": rule_synthetic["status"],
+            "rule_synthetic_case_count": rule_synthetic["case_count"],
+            "rule_synthetic_training_status": rule_synthetic_training["status"],
             "full_corpus_status": corpus_status["status"],
             "full_corpus_completed": corpus_status.get("completed_from_start", 0),
             "corpus_artifact_status": corpus_artifacts["status"],

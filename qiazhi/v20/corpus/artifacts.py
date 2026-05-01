@@ -98,6 +98,8 @@ def build_corpus_artifacts(
         "day_master_element": Counter(),
         "day_master_capacity": Counter(),
         "feature_domains": Counter(),
+        "salience_feature_ids": Counter(),
+        "salience_domains": Counter(),
         "macro_feature_domains": Counter(),
         "measurement_domains": Counter(),
         "portrait_domains": Counter(),
@@ -466,12 +468,12 @@ SQLITE_INSERT = """
 INSERT INTO corpus_cases (
   line_no, case_id, input_hash, snapshot_hash, pillar_displays,
   day_master, day_master_element, day_master_capacity,
-  feature_ids,
+  feature_ids, salience_feature_ids, salience_domains,
   feature_domains, macro_feature_domains, measurement_domains, portrait_domains,
   relation_types, visible_ten_gods, hidden_ten_gods, question_keys, knowledge_ids,
   useful_god_candidate_count, wealth_feature_present, cluster_key, tag_signature,
   feature_count, knowledge_ref_count, portrait_axis_count
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 
@@ -494,6 +496,8 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           day_master_element TEXT NOT NULL,
           day_master_capacity TEXT NOT NULL,
           feature_ids TEXT NOT NULL,
+          salience_feature_ids TEXT NOT NULL,
+          salience_domains TEXT NOT NULL,
           feature_domains TEXT NOT NULL,
           macro_feature_domains TEXT NOT NULL,
           measurement_domains TEXT NOT NULL,
@@ -541,6 +545,8 @@ def _flat_label_row(line_no: int, label: dict[str, object]) -> dict[str, object]
         "day_master_element": label["day_master_element"],
         "day_master_capacity": label["day_master_capacity"],
         "feature_ids": _label_feature_ids(label),
+        "salience_feature_ids": _label_salience_feature_ids(label),
+        "salience_domains": label.get("salience_domains", ()),
         "feature_domains": label.get("feature_domains", ()),
         "macro_feature_domains": label.get("macro_feature_domains", ()),
         "measurement_domains": label.get("measurement_domains", ()),
@@ -571,6 +577,8 @@ def _sqlite_row(row: dict[str, object]) -> tuple[object, ...]:
         row["day_master_element"],
         row["day_master_capacity"],
         _join(row["feature_ids"]),
+        _join(row["salience_feature_ids"]),
+        _join(row["salience_domains"]),
         _join(row["feature_domains"]),
         _join(row["macro_feature_domains"]),
         _join(row["measurement_domains"]),
@@ -595,6 +603,8 @@ def _update_counters(counters: dict[str, Counter[str]], label: dict[str, object]
         counters[key][str(label.get(key, ""))] += 1
     for key in (
         "feature_domains",
+        "salience_feature_ids",
+        "salience_domains",
         "macro_feature_domains",
         "measurement_domains",
         "portrait_domains",
@@ -613,6 +623,13 @@ def _label_feature_ids(label: dict[str, object]) -> tuple[str, ...]:
     return tuple(str(item) for item in label.get("feature_ids", ()) if str(item))
 
 
+def _label_salience_feature_ids(label: dict[str, object]) -> tuple[str, ...]:
+    explicit = tuple(str(item) for item in label.get("salience_feature_ids", ()) if str(item))
+    if explicit:
+        return explicit
+    return tuple(feature_id for feature_id in _label_feature_ids(label) if _is_salience_feature_id(feature_id))
+
+
 def _label_tags(label: dict[str, object]) -> set[str]:
     tags = {
         f"day_master:{label.get('day_master', '')}",
@@ -623,8 +640,11 @@ def _label_tags(label: dict[str, object]) -> set[str]:
     }
     for feature_id in _label_feature_ids(label):
         tags.add(f"feature_id:{feature_id}")
+    for feature_id in _label_salience_feature_ids(label):
+        tags.add(f"salience_feature_id:{feature_id}")
     for key in (
         "feature_domains",
+        "salience_domains",
         "macro_feature_domains",
         "measurement_domains",
         "portrait_domains",
@@ -656,18 +676,22 @@ def _rule_support_seed() -> dict[str, dict[str, object]]:
                 "cluster_counts": Counter(),
                 "day_master_capacity_counts": Counter(),
                 "feature_counts": Counter(),
+                "salience_feature_counts": Counter(),
+                "salience_signature_counts": Counter(),
             }
     return rows
 
 
 def _update_rule_support(rule_support: dict[str, dict[str, object]], label: dict[str, object]) -> None:
     feature_ids = _label_feature_ids(label)
+    salience_feature_ids = set(_label_salience_feature_ids(label))
     cluster_key = _cluster_key(label)
     for row in rule_support.values():
         hooks = tuple(str(item) for item in row["emits_feature_hooks"])
         matched_features = tuple(
             feature_id for feature_id in feature_ids if any(feature_id.startswith(hook) for hook in hooks)
         )
+        matched_salience_features = tuple(feature_id for feature_id in matched_features if feature_id in salience_feature_ids)
         if hooks and all(any(feature_id.startswith(hook) for feature_id in feature_ids) for hook in hooks):
             row["support_count"] = int(row["support_count"]) + 1
             samples = row["sample_case_ids"]
@@ -677,6 +701,8 @@ def _update_rule_support(rule_support: dict[str, dict[str, object]], label: dict
             cluster_counter = row["cluster_counts"]
             capacity_counter = row["day_master_capacity_counts"]
             feature_counter = row["feature_counts"]
+            salience_counter = row["salience_feature_counts"]
+            salience_signature_counter = row["salience_signature_counts"]
             if isinstance(exact_counter, Counter):
                 exact_counter[_join(matched_features)] += 1
             if isinstance(cluster_counter, Counter):
@@ -685,6 +711,10 @@ def _update_rule_support(rule_support: dict[str, dict[str, object]], label: dict
                 capacity_counter[str(label.get("day_master_capacity", ""))] += 1
             if isinstance(feature_counter, Counter):
                 feature_counter.update(matched_features)
+            if isinstance(salience_counter, Counter):
+                salience_counter.update(matched_salience_features)
+            if isinstance(salience_signature_counter, Counter) and matched_salience_features:
+                salience_signature_counter[_join(matched_salience_features)] += 1
 
 
 def _update_portrait_cooccurrence(cooccurrence: Counter[str], label: dict[str, object]) -> None:
@@ -1056,6 +1086,7 @@ def _rule_support_public_row(row: dict[str, object], total: int) -> dict[str, ob
         "support_ratio": round(support_count / total, 6) if total else 0,
         "support_quality": _support_quality(support_count, total),
         "sample_case_ids": row["sample_case_ids"],
+        "truth_scope": "coverage_prior_only_not_rule_truth",
     }
 
 
@@ -1065,6 +1096,8 @@ def _rule_training_public_row(row: dict[str, object], total: int) -> dict[str, o
     cluster_counts = row.get("cluster_counts")
     capacity_counts = row.get("day_master_capacity_counts")
     feature_counts = row.get("feature_counts")
+    salience_feature_counts = row.get("salience_feature_counts")
+    salience_signature_counts = row.get("salience_signature_counts")
     if not isinstance(exact_signatures, Counter):
         exact_signatures = Counter()
     if not isinstance(cluster_counts, Counter):
@@ -1073,6 +1106,10 @@ def _rule_training_public_row(row: dict[str, object], total: int) -> dict[str, o
         capacity_counts = Counter()
     if not isinstance(feature_counts, Counter):
         feature_counts = Counter()
+    if not isinstance(salience_feature_counts, Counter):
+        salience_feature_counts = Counter()
+    if not isinstance(salience_signature_counts, Counter):
+        salience_signature_counts = Counter()
     support_ratio = support_count / total if total else 0
     return {
         "proposal_id": row["proposal_id"],
@@ -1097,8 +1134,11 @@ def _rule_training_public_row(row: dict[str, object], total: int) -> dict[str, o
         ],
         "day_master_capacity_distribution": dict(capacity_counts.most_common()),
         "top_matched_feature_ids": _counter_top_with_weight(feature_counts, support_count, limit=16),
+        "top_matched_salience_feature_ids": _counter_top_with_weight(salience_feature_counts, support_count, limit=16),
+        "top_salience_feature_signatures": _counter_top_with_weight(salience_signature_counts, support_count, limit=16),
         "sample_case_ids": row["sample_case_ids"],
         "next_training_action": _next_training_action(support_count, total),
+        "truth_scope": "coverage_prior_only_not_rule_truth",
     }
 
 
@@ -1276,6 +1316,7 @@ def _similarity_score(query_tags: set[str], candidate_tags: set[str]) -> float:
         return 0
     weights = {
         "feature_id": 3.0,
+        "salience_feature_id": 3.4,
         "relation_types": 2.0,
         "visible_ten_gods": 1.5,
         "hidden_ten_gods": 1.5,
@@ -1305,8 +1346,11 @@ def _row_tags(row: sqlite3.Row) -> set[str]:
     }
     if "feature_ids" in row.keys():
         tags.update(f"feature_id:{item}" for item in _split(row["feature_ids"]))
+    if "salience_feature_ids" in row.keys():
+        tags.update(f"salience_feature_id:{item}" for item in _split(row["salience_feature_ids"]))
     for column in (
         "feature_domains",
+        "salience_domains",
         "macro_feature_domains",
         "measurement_domains",
         "portrait_domains",
@@ -1331,6 +1375,19 @@ def _split(value: object) -> list[str]:
 def _stable_id(prefix: str, value: str) -> str:
     digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
     return f"v20.{prefix}.{digest}"
+
+
+def _is_salience_feature_id(feature_id: str) -> bool:
+    return str(feature_id).startswith(
+        (
+            "feature.ten_god.focus.",
+            "feature.element.prominent.",
+            "feature.element.weak.",
+            "feature.branch.relation_type.",
+            "feature.time.relation_type.",
+            "feature.time.ten_god.",
+        )
+    )
 
 
 def _read_json_if_exists(path: Path) -> dict[str, object]:

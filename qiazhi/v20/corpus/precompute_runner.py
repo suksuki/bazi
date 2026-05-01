@@ -73,6 +73,20 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
         "day_master_element": chart.get("day_master_element", ""),
         "day_master_capacity": core.get("day_master_capacity", ""),
         "feature_ids": tuple(str(row.get("feature_id", "")) for row in features),
+        "salience_feature_ids": tuple(
+            str(row.get("feature_id", ""))
+            for row in features
+            if _is_salience_feature_id(str(row.get("feature_id", "")))
+        ),
+        "salience_domains": tuple(
+            sorted(
+                {
+                    str(row.get("domain", ""))
+                    for row in features
+                    if row.get("domain") and _is_salience_feature_id(str(row.get("feature_id", "")))
+                }
+            )
+        ),
         "feature_domains": tuple(sorted({str(row.get("domain", "")) for row in features if row.get("domain")})),
         "macro_feature_domains": tuple(
             sorted(
@@ -109,3 +123,16 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
         json.dumps(label_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
     ).hexdigest()[:16]
     return label_payload
+
+
+def _is_salience_feature_id(feature_id: str) -> bool:
+    return feature_id.startswith(
+        (
+            "feature.ten_god.focus.",
+            "feature.element.prominent.",
+            "feature.element.weak.",
+            "feature.branch.relation_type.",
+            "feature.time.relation_type.",
+            "feature.time.ten_god.",
+        )
+    )

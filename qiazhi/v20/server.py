@@ -82,6 +82,11 @@ from v20.storage.local_jsonl import local_jsonl_store_from_env
 from v20.testing.matrix import build_test_coverage_matrix
 from v20.testing.tiers import test_tier_manifest
 from v20.validation.intelligence_generation import validate_intelligence_generation
+from v20.validation.rule_synthetic import (
+    build_rule_synthetic_training_report,
+    read_rule_synthetic_training_artifact,
+    run_rule_synthetic_suite,
+)
 from v20.validation.suite import run_synthetic_suite
 
 
@@ -430,6 +435,10 @@ def create_app() -> FastAPI:
     def synthetic_suite() -> dict[str, object]:
         return run_synthetic_suite()
 
+    @app.get("/api/v20/validation/rule-synthetic-suite")
+    def rule_synthetic_suite() -> dict[str, object]:
+        return run_rule_synthetic_suite()
+
     @app.get("/api/v20/learning/evolution-plan")
     def evolution_plan() -> dict[str, object]:
         return build_evolution_dry_run_plan()
@@ -437,6 +446,12 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/learning/run-plan")
     def learning_run_plan() -> dict[str, object]:
         return build_learning_run_plan()
+
+    @app.get("/api/v20/learning/rule-synthetic-training")
+    def learning_rule_synthetic_training(status: bool = False) -> dict[str, object]:
+        if status:
+            return read_rule_synthetic_training_artifact()
+        return build_rule_synthetic_training_report()
 
     @app.get("/api/v20/learning/registries")
     def learning_registries() -> dict[str, object]:

@@ -226,6 +226,12 @@ Runtime rule candidates now also report current-chart feature collisions. A
 candidate can say which compiled features matched its feature-hook conditions,
 making the rule layer more concrete while preserving the shadow-only boundary.
 
+P90 makes synthetic rule validation the rule-training gate. The 518K corpus can
+show whether a proposal is broad, sparse, or useful as a ranking prior, but it
+cannot prove a rule. Rule atoms must be validated against curated synthetic
+charts with expected feature collisions, expected question routes, and forbidden
+output checks before they can affect shadow rule weighting.
+
 The LLM draft endpoint is executable only under explicit env flags. If the LLM
 provider is not ready, V20 records `provider_not_ready` and uses the
 deterministic extractor as fallback. This keeps rule extraction useful on local

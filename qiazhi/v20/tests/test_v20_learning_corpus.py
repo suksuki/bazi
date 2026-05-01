@@ -16,6 +16,7 @@ from v20.corpus.full_precompute import build_full_precompute_manifest, preview_f
 from v20.corpus.job_runner import FullPrecomputeJobConfig, read_full_precompute_status, run_full_precompute_job
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
+from v20.validation.rule_synthetic import build_rule_synthetic_training_report, run_rule_synthetic_suite
 from v20.server import app
 from v20.validation.suite import run_synthetic_suite
 
@@ -33,10 +34,17 @@ def test_v20_corpus_coverage_plan_tracks_518k_without_mutation() -> None:
 
 def test_v20_synthetic_suite_and_evolution_plan_are_dry_run_only() -> None:
     suite = run_synthetic_suite()
+    rule_suite = run_rule_synthetic_suite()
+    rule_training = build_rule_synthetic_training_report()
     evolution = build_evolution_dry_run_plan(validation_report=suite)
 
     assert suite["ok"] is True
     assert suite["runtime_mutation"] is False
+    assert rule_suite["ok"] is True
+    assert rule_suite["case_count"] >= 4
+    assert rule_training["status"] == "ready"
+    assert "FULL_CORPUS_REMAINS_PRIOR_AND_COVERAGE_ONLY" in rule_training["guardrails"]
+    assert all(row["runtime_allowed"] is False for row in rule_training["rule_domain_training"])
     assert evolution["status"] == "ready_for_dry_run"
     assert "learning_to_rank_question_order" in evolution["allowed_algorithm_tracks"]
     assert "neural_conclusion_generation" in evolution["deferred_algorithm_tracks"]
@@ -148,6 +156,8 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     artifact_clusters = client.get("/api/v20/corpus/artifacts/cluster-model").json()
     artifact_training = client.get("/api/v20/corpus/artifacts/training").json()
     suite = client.get("/api/v20/validation/synthetic-suite").json()
+    rule_suite = client.get("/api/v20/validation/rule-synthetic-suite").json()
+    rule_training = client.get("/api/v20/learning/rule-synthetic-training").json()
     evolution = client.get("/api/v20/learning/evolution-plan").json()
     run_plan = client.get("/api/v20/learning/run-plan").json()
 
@@ -164,6 +174,10 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert artifact_training["runtime_mutation"] is False
     assert suite["ok"] is True
     assert suite["runtime_mutation"] is False
+    assert rule_suite["ok"] is True
+    assert rule_suite["runtime_mutation"] is False
+    assert rule_training["status"] == "ready"
+    assert rule_training["runtime_mutation"] is False
     assert evolution["status"] == "ready_for_dry_run"
     assert evolution["runtime_mutation"] is False
     assert run_plan["target_case_count"] == 518_400
