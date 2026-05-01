@@ -71,12 +71,23 @@ Artifact outputs:
 - `artifacts/coverage_summary.json`: coverage distributions, top clusters,
   evidence-density averages.
 - `artifacts/corpus_index.sqlite`: local query index for case lookup and
-  similar-chart retrieval.
+  similar-chart retrieval. It stores feature ids, cluster keys, and structural
+  tag signatures for weighted similarity search.
 - `artifacts/flat_labels.jsonl`: flat training/export rows.
+- `artifacts/cluster_model.json`: deterministic structural clusters with
+  centroid tags, feature signatures, portrait-axis priors, and rare-cluster
+  gap hints.
+- `artifacts/similarity_index_manifest.json`: similarity-search contract and
+  candidate/scoring policy.
 - `artifacts/portrait_axis_learning.json`: portrait axis frequencies,
   co-occurrence priors, and clustering scope.
+- `artifacts/portrait_axis_training.json`: portrait calibration model with
+  axis priors, feature-based sub-axis hints, and cluster lift diagnostics.
 - `artifacts/rule_proposal_support.json`: rule-proposal support counts across
   the full corpus.
+- `artifacts/rule_proposal_training.json`: shadow-training view for proposals,
+  including selectivity, exact feature signatures, cluster priors, and next
+  training actions.
 - `artifacts/postgres_import_manifest.json`: explicit Postgres import plan.
 - `artifacts/parquet_export_manifest.json`: Parquet conversion plan. Current
   local environment lacks `pyarrow`, so flat JSONL is the authoritative export
@@ -86,6 +97,8 @@ Artifact endpoints:
 
 - `GET /api/v20/corpus/artifacts/status`
 - `GET /api/v20/corpus/artifacts/coverage-summary`
+- `GET /api/v20/corpus/artifacts/cluster-model`
+- `GET /api/v20/corpus/artifacts/training`
 - `GET /api/v20/corpus/similar?case_id=v20.full_corpus.case.000000`
 - `GET /api/v20/intelligence/generation-manifest`
 - `GET /api/v20/validation/intelligence-generation`
@@ -93,6 +106,8 @@ Artifact endpoints:
 Explicit export/import commands:
 
 ```bash
+python3 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main --clusters
+python3 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main --training
 python3 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main
 python3 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main --apply
 python3 v20/scripts/export_corpus_parquet.py --run-id v20_full_518k_20260501_main

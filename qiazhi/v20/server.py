@@ -10,7 +10,13 @@ from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
 from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest, PortraitCalibrationRequest
 from v20.api.runtime import run_runtime_from_pillars
-from v20.corpus.artifacts import find_similar_cases, read_corpus_artifact_status, read_corpus_coverage_summary
+from v20.corpus.artifacts import (
+    find_similar_cases,
+    read_corpus_artifact_status,
+    read_corpus_cluster_model,
+    read_corpus_coverage_summary,
+    read_corpus_training_artifacts,
+)
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.corpus.full_precompute import build_full_precompute_manifest, preview_full_precompute_batch
 from v20.corpus.job_runner import read_full_precompute_status
@@ -286,6 +292,14 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/corpus/artifacts/coverage-summary")
     def corpus_artifact_coverage_summary(run_id: str = "") -> dict[str, object]:
         return read_corpus_coverage_summary(run_id or "v20_full_518k_20260501_main")
+
+    @app.get("/api/v20/corpus/artifacts/cluster-model")
+    def corpus_artifact_cluster_model(run_id: str = "") -> dict[str, object]:
+        return read_corpus_cluster_model(run_id or "v20_full_518k_20260501_main")
+
+    @app.get("/api/v20/corpus/artifacts/training")
+    def corpus_artifact_training(run_id: str = "") -> dict[str, object]:
+        return read_corpus_training_artifacts(run_id or "v20_full_518k_20260501_main")
 
     @app.get("/api/v20/corpus/similar")
     def corpus_similar(case_id: str, run_id: str = "", limit: int = 8) -> dict[str, object]:

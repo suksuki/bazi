@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 import sqlite3
 import time
 from collections import Counter, defaultdict
@@ -25,8 +26,12 @@ class CorpusArtifactPaths:
     coverage_summary_path: Path
     flat_labels_path: Path
     sqlite_index_path: Path
+    cluster_model_path: Path
+    similarity_manifest_path: Path
     portrait_learning_path: Path
+    portrait_training_path: Path
     rule_support_path: Path
+    rule_training_path: Path
     postgres_manifest_path: Path
     parquet_manifest_path: Path
     status_path: Path
@@ -40,8 +45,12 @@ class CorpusArtifactPaths:
             "coverage_summary_path": str(self.coverage_summary_path),
             "flat_labels_path": str(self.flat_labels_path),
             "sqlite_index_path": str(self.sqlite_index_path),
+            "cluster_model_path": str(self.cluster_model_path),
+            "similarity_manifest_path": str(self.similarity_manifest_path),
             "portrait_learning_path": str(self.portrait_learning_path),
+            "portrait_training_path": str(self.portrait_training_path),
             "rule_support_path": str(self.rule_support_path),
+            "rule_training_path": str(self.rule_training_path),
             "postgres_manifest_path": str(self.postgres_manifest_path),
             "parquet_manifest_path": str(self.parquet_manifest_path),
             "status_path": str(self.status_path),
@@ -59,8 +68,12 @@ def corpus_artifact_paths(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir:
         coverage_summary_path=artifact_dir / "coverage_summary.json",
         flat_labels_path=artifact_dir / "flat_labels.jsonl",
         sqlite_index_path=artifact_dir / "corpus_index.sqlite",
+        cluster_model_path=artifact_dir / "cluster_model.json",
+        similarity_manifest_path=artifact_dir / "similarity_index_manifest.json",
         portrait_learning_path=artifact_dir / "portrait_axis_learning.json",
+        portrait_training_path=artifact_dir / "portrait_axis_training.json",
         rule_support_path=artifact_dir / "rule_proposal_support.json",
+        rule_training_path=artifact_dir / "rule_proposal_training.json",
         postgres_manifest_path=artifact_dir / "postgres_import_manifest.json",
         parquet_manifest_path=artifact_dir / "parquet_export_manifest.json",
         status_path=artifact_dir / "artifact_status.json",
@@ -98,6 +111,9 @@ def build_corpus_artifacts(
     cooccurrence: Counter[str] = Counter()
     cluster_counts: Counter[str] = Counter()
     cluster_examples: dict[str, list[str]] = defaultdict(list)
+    cluster_tag_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    cluster_feature_counts: dict[str, Counter[str]] = defaultdict(Counter)
+    cluster_portrait_counts: dict[str, Counter[str]] = defaultdict(Counter)
     rule_support = _rule_support_seed()
     total = 0
     feature_count_sum = 0
@@ -124,7 +140,13 @@ def build_corpus_artifacts(
             _update_rule_support(rule_support, label)
             _update_portrait_cooccurrence(cooccurrence, label)
             cluster_key = _cluster_key(label)
+            feature_ids = _label_feature_ids(label)
+            portrait_domains = tuple(str(item) for item in label.get("portrait_domains", ()))
+            label_tags = _label_tags(label)
             cluster_counts[cluster_key] += 1
+            cluster_tag_counts[cluster_key].update(label_tags)
+            cluster_feature_counts[cluster_key].update(feature_ids)
+            cluster_portrait_counts[cluster_key].update(portrait_domains)
             if len(cluster_examples[cluster_key]) < 5:
                 cluster_examples[cluster_key].append(str(label["case_id"]))
             density = label.get("evidence_density", {})
@@ -159,12 +181,36 @@ def build_corpus_artifacts(
         elapsed_seconds=time.monotonic() - started,
     )
     portrait_learning = _portrait_learning_summary(paths, total, counters, cooccurrence, cluster_counts)
+    cluster_model = _cluster_model(
+        paths=paths,
+        total=total,
+        cluster_counts=cluster_counts,
+        cluster_examples=cluster_examples,
+        cluster_tag_counts=cluster_tag_counts,
+        cluster_feature_counts=cluster_feature_counts,
+        cluster_portrait_counts=cluster_portrait_counts,
+    )
+    similarity_manifest = _similarity_manifest(paths, total, cluster_counts)
+    portrait_training = _portrait_training_summary(
+        paths=paths,
+        total=total,
+        counters=counters,
+        cooccurrence=cooccurrence,
+        cluster_counts=cluster_counts,
+        cluster_portrait_counts=cluster_portrait_counts,
+        cluster_feature_counts=cluster_feature_counts,
+    )
     rule_support_summary = _rule_support_summary(paths, total, rule_support)
+    rule_training = _rule_training_summary(paths, total, rule_support)
     postgres_manifest = _postgres_import_manifest(paths, total)
     parquet_manifest = _parquet_manifest(paths, total)
     _write_json(paths.coverage_summary_path, coverage)
+    _write_json(paths.cluster_model_path, cluster_model)
+    _write_json(paths.similarity_manifest_path, similarity_manifest)
     _write_json(paths.portrait_learning_path, portrait_learning)
+    _write_json(paths.portrait_training_path, portrait_training)
     _write_json(paths.rule_support_path, rule_support_summary)
+    _write_json(paths.rule_training_path, rule_training)
     _write_json(paths.postgres_manifest_path, postgres_manifest)
     _write_json(paths.parquet_manifest_path, parquet_manifest)
     status = _status_payload(paths, "completed", total, started_at, time.monotonic() - started)
@@ -172,8 +218,12 @@ def build_corpus_artifacts(
         "coverage_summary": str(paths.coverage_summary_path),
         "sqlite_index": str(paths.sqlite_index_path),
         "flat_labels": str(paths.flat_labels_path),
+        "cluster_model": str(paths.cluster_model_path),
+        "similarity_manifest": str(paths.similarity_manifest_path),
         "portrait_axis_learning": str(paths.portrait_learning_path),
+        "portrait_axis_training": str(paths.portrait_training_path),
         "rule_proposal_support": str(paths.rule_support_path),
+        "rule_proposal_training": str(paths.rule_training_path),
         "postgres_import_manifest": str(paths.postgres_manifest_path),
         "parquet_export_manifest": str(paths.parquet_manifest_path),
     }
@@ -200,6 +250,33 @@ def read_corpus_coverage_summary(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runti
     if not path.exists():
         return {"version": "v20.corpus_coverage_summary.v1", "status": "not_built", "runtime_mutation": False}
     return json.loads(path.read_text(encoding="utf-8")) | {"runtime_mutation": False}
+
+
+def read_corpus_cluster_model(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir: Path | None = None) -> dict[str, object]:
+    path = corpus_artifact_paths(run_id, runtime_dir=runtime_dir).cluster_model_path
+    if not path.exists():
+        return {"version": "v20.corpus_cluster_model.v1", "status": "not_built", "runtime_mutation": False}
+    return json.loads(path.read_text(encoding="utf-8")) | {"runtime_mutation": False}
+
+
+def read_corpus_training_artifacts(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir: Path | None = None) -> dict[str, object]:
+    paths = corpus_artifact_paths(run_id, runtime_dir=runtime_dir)
+    return {
+        "version": "v20.corpus_training_artifacts.v1",
+        "run_id": run_id,
+        "status": "ready"
+        if paths.portrait_training_path.exists() and paths.rule_training_path.exists()
+        else "not_built",
+        "portrait_axis_training": _read_json_if_exists(paths.portrait_training_path),
+        "rule_proposal_training": _read_json_if_exists(paths.rule_training_path),
+        "similarity_manifest": _read_json_if_exists(paths.similarity_manifest_path),
+        "runtime_mutation": False,
+        "guardrails": [
+            "TRAINING_ARTIFACTS_ARE_OFFLINE_SIGNALS",
+            "NO_RULE_ACTIVATION",
+            "NO_USER_VISIBLE_VERDICT",
+        ],
+    }
 
 
 def find_similar_cases(
@@ -230,23 +307,15 @@ def find_similar_cases(
             "matches": [],
             "runtime_mutation": False,
         }
-    candidates = conn.execute(
-        """
-        SELECT * FROM corpus_cases
-        WHERE case_id != ?
-          AND day_master_element = ?
-          AND day_master_capacity = ?
-        LIMIT 5000
-        """,
-        (case_id, query["day_master_element"], query["day_master_capacity"]),
-    ).fetchall()
+    candidates = _similarity_candidates(conn, query)
     conn.close()
     query_tags = _row_tags(query)
     scored = []
     for candidate in candidates:
         tags = _row_tags(candidate)
-        score = len(query_tags & tags) / max(1, len(query_tags | tags))
-        scored.append((score, candidate))
+        shared_tags = tuple(sorted(query_tags & tags))
+        score = _similarity_score(query_tags, tags)
+        scored.append((score, shared_tags, candidate))
     matches = [
         {
             "case_id": row["case_id"],
@@ -255,11 +324,15 @@ def find_similar_cases(
             "score": round(score, 4),
             "day_master": row["day_master"],
             "day_master_capacity": row["day_master_capacity"],
+            "cluster_key": row["cluster_key"],
             "feature_domains": _split(row["feature_domains"]),
+            "feature_ids": _split(row["feature_ids"]),
             "portrait_domains": _split(row["portrait_domains"]),
             "relation_types": _split(row["relation_types"]),
+            "shared_tag_count": len(shared_tags),
+            "shared_tags": list(shared_tags[:12]),
         }
-        for score, row in sorted(scored, key=lambda item: (-item[0], item[1]["case_id"]))[:limit]
+        for score, shared_tags, row in sorted(scored, key=lambda item: (-item[0], item[2]["case_id"]))[:limit]
     ]
     return {
         "version": "v20.corpus_similar_cases.v1",
@@ -270,8 +343,10 @@ def find_similar_cases(
             "pillar_displays": json.loads(query["pillar_displays"]),
             "day_master": query["day_master"],
             "day_master_capacity": query["day_master_capacity"],
+            "cluster_key": query["cluster_key"],
         },
         "match_count": len(matches),
+        "candidate_count": len(candidates),
         "matches": matches,
         "runtime_mutation": False,
         "guardrails": [
@@ -286,10 +361,12 @@ SQLITE_INSERT = """
 INSERT INTO corpus_cases (
   line_no, case_id, input_hash, snapshot_hash, pillar_displays,
   day_master, day_master_element, day_master_capacity,
+  feature_ids,
   feature_domains, macro_feature_domains, measurement_domains, portrait_domains,
   relation_types, visible_ten_gods, hidden_ten_gods, question_keys, knowledge_ids,
-  useful_god_candidate_count, wealth_feature_present, feature_count, knowledge_ref_count, portrait_axis_count
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+  useful_god_candidate_count, wealth_feature_present, cluster_key, tag_signature,
+  feature_count, knowledge_ref_count, portrait_axis_count
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 
@@ -311,6 +388,7 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           day_master TEXT NOT NULL,
           day_master_element TEXT NOT NULL,
           day_master_capacity TEXT NOT NULL,
+          feature_ids TEXT NOT NULL,
           feature_domains TEXT NOT NULL,
           macro_feature_domains TEXT NOT NULL,
           measurement_domains TEXT NOT NULL,
@@ -322,6 +400,8 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           knowledge_ids TEXT NOT NULL,
           useful_god_candidate_count INTEGER NOT NULL,
           wealth_feature_present INTEGER NOT NULL,
+          cluster_key TEXT NOT NULL,
+          tag_signature TEXT NOT NULL,
           feature_count INTEGER NOT NULL,
           knowledge_ref_count INTEGER NOT NULL,
           portrait_axis_count INTEGER NOT NULL
@@ -337,6 +417,7 @@ def _create_indexes(conn: sqlite3.Connection) -> None:
         "CREATE INDEX idx_corpus_hash ON corpus_cases(input_hash)",
         "CREATE INDEX idx_corpus_day_master ON corpus_cases(day_master)",
         "CREATE INDEX idx_corpus_element_capacity ON corpus_cases(day_master_element, day_master_capacity)",
+        "CREATE INDEX idx_corpus_cluster_key ON corpus_cases(cluster_key)",
         "CREATE INDEX idx_corpus_wealth ON corpus_cases(wealth_feature_present)",
     ):
         conn.execute(sql)
@@ -354,6 +435,7 @@ def _flat_label_row(line_no: int, label: dict[str, object]) -> dict[str, object]
         "day_master": label["day_master"],
         "day_master_element": label["day_master_element"],
         "day_master_capacity": label["day_master_capacity"],
+        "feature_ids": _label_feature_ids(label),
         "feature_domains": label.get("feature_domains", ()),
         "macro_feature_domains": label.get("macro_feature_domains", ()),
         "measurement_domains": label.get("measurement_domains", ()),
@@ -365,6 +447,8 @@ def _flat_label_row(line_no: int, label: dict[str, object]) -> dict[str, object]
         "knowledge_ids": label.get("knowledge_ids", ()),
         "useful_god_candidate_count": label.get("useful_god_candidate_count", 0),
         "wealth_feature_present": label.get("wealth_feature_present", False),
+        "cluster_key": _cluster_key(label),
+        "tag_signature": tuple(sorted(_label_tags(label))),
         "feature_count": density.get("feature_count", 0),
         "knowledge_ref_count": density.get("knowledge_ref_count", 0),
         "portrait_axis_count": density.get("portrait_axis_count", 0),
@@ -381,6 +465,7 @@ def _sqlite_row(row: dict[str, object]) -> tuple[object, ...]:
         row["day_master"],
         row["day_master_element"],
         row["day_master_capacity"],
+        _join(row["feature_ids"]),
         _join(row["feature_domains"]),
         _join(row["macro_feature_domains"]),
         _join(row["measurement_domains"]),
@@ -392,6 +477,8 @@ def _sqlite_row(row: dict[str, object]) -> tuple[object, ...]:
         _join(row["knowledge_ids"]),
         int(row["useful_god_candidate_count"]),
         1 if row["wealth_feature_present"] else 0,
+        row["cluster_key"],
+        _join(row["tag_signature"]),
         int(row["feature_count"]),
         int(row["knowledge_ref_count"]),
         int(row["portrait_axis_count"]),
@@ -417,6 +504,35 @@ def _update_counters(counters: dict[str, Counter[str]], label: dict[str, object]
     counters["wealth_feature_present"]["true" if label.get("wealth_feature_present") else "false"] += 1
 
 
+def _label_feature_ids(label: dict[str, object]) -> tuple[str, ...]:
+    return tuple(str(item) for item in label.get("feature_ids", ()) if str(item))
+
+
+def _label_tags(label: dict[str, object]) -> set[str]:
+    tags = {
+        f"day_master:{label.get('day_master', '')}",
+        f"element:{label.get('day_master_element', '')}",
+        f"capacity:{label.get('day_master_capacity', '')}",
+        f"wealth:{1 if label.get('wealth_feature_present') else 0}",
+        f"useful_god_candidate_count:{label.get('useful_god_candidate_count', 0)}",
+    }
+    for feature_id in _label_feature_ids(label):
+        tags.add(f"feature_id:{feature_id}")
+    for key in (
+        "feature_domains",
+        "macro_feature_domains",
+        "measurement_domains",
+        "portrait_domains",
+        "relation_types",
+        "visible_ten_gods",
+        "hidden_ten_gods",
+        "question_keys",
+        "knowledge_ids",
+    ):
+        tags.update(f"{key}:{item}" for item in label.get(key, ()))
+    return {tag for tag in tags if not tag.endswith(":")}
+
+
 def _rule_support_seed() -> dict[str, dict[str, object]]:
     proposals = build_first_wave_rule_proposals(limit_per_domain=10)
     rows = {}
@@ -427,21 +543,43 @@ def _rule_support_seed() -> dict[str, dict[str, object]]:
                 "domain": proposal["domain"],
                 "source_knowledge_id": proposal["source_knowledge_id"],
                 "emits_feature_hooks": proposal["emits_feature_hooks"],
+                "supports_question_hooks": proposal["supports_question_hooks"],
+                "condition_model": proposal["condition_model"],
                 "support_count": 0,
                 "sample_case_ids": [],
+                "exact_signature_counts": Counter(),
+                "cluster_counts": Counter(),
+                "day_master_capacity_counts": Counter(),
+                "feature_counts": Counter(),
             }
     return rows
 
 
 def _update_rule_support(rule_support: dict[str, dict[str, object]], label: dict[str, object]) -> None:
-    feature_ids = tuple(str(item) for item in label.get("feature_ids", ()))
+    feature_ids = _label_feature_ids(label)
+    cluster_key = _cluster_key(label)
     for row in rule_support.values():
         hooks = tuple(str(item) for item in row["emits_feature_hooks"])
+        matched_features = tuple(
+            feature_id for feature_id in feature_ids if any(feature_id.startswith(hook) for hook in hooks)
+        )
         if hooks and all(any(feature_id.startswith(hook) for feature_id in feature_ids) for hook in hooks):
             row["support_count"] = int(row["support_count"]) + 1
             samples = row["sample_case_ids"]
             if isinstance(samples, list) and len(samples) < 5:
                 samples.append(str(label["case_id"]))
+            exact_counter = row["exact_signature_counts"]
+            cluster_counter = row["cluster_counts"]
+            capacity_counter = row["day_master_capacity_counts"]
+            feature_counter = row["feature_counts"]
+            if isinstance(exact_counter, Counter):
+                exact_counter[_join(matched_features)] += 1
+            if isinstance(cluster_counter, Counter):
+                cluster_counter[cluster_key] += 1
+            if isinstance(capacity_counter, Counter):
+                capacity_counter[str(label.get("day_master_capacity", ""))] += 1
+            if isinstance(feature_counter, Counter):
+                feature_counter.update(matched_features)
 
 
 def _update_portrait_cooccurrence(cooccurrence: Counter[str], label: dict[str, object]) -> None:
@@ -537,12 +675,184 @@ def _portrait_learning_summary(
     }
 
 
+def _cluster_model(
+    *,
+    paths: CorpusArtifactPaths,
+    total: int,
+    cluster_counts: Counter[str],
+    cluster_examples: dict[str, list[str]],
+    cluster_tag_counts: dict[str, Counter[str]],
+    cluster_feature_counts: dict[str, Counter[str]],
+    cluster_portrait_counts: dict[str, Counter[str]],
+) -> dict[str, object]:
+    clusters = []
+    rare_clusters = []
+    for key, count in cluster_counts.most_common():
+        share = count / total if total else 0
+        if count <= 12 or share < 0.001:
+            rare_clusters.append(key)
+        clusters.append(
+            {
+                "cluster_id": _stable_id("cluster", key),
+                "cluster_key": key,
+                "count": count,
+                "share": round(share, 6),
+                "centroid_tags": _counter_top_with_weight(cluster_tag_counts[key], count, limit=24),
+                "top_feature_ids": _counter_top_with_weight(cluster_feature_counts[key], count, limit=16),
+                "top_portrait_axes": _counter_top_with_weight(cluster_portrait_counts[key], count, limit=10),
+                "sample_case_ids": cluster_examples.get(key, []),
+                "training_use": [
+                    "similar_case_candidate_pool",
+                    "coverage_gap_prior",
+                    "portrait_axis_calibration_group",
+                    "rule_proposal_shadow_support_group",
+                ],
+            }
+        )
+    return {
+        "version": "v20.corpus_cluster_model.v1",
+        "status": "ready",
+        "run_id": paths.run_id,
+        "case_count": total,
+        "cluster_count": len(cluster_counts),
+        "clustering_method": "deterministic_structural_signature",
+        "signature_dimensions": [
+            "day_master_element",
+            "day_master_capacity",
+            "relation_types",
+            "wealth_feature_present",
+            "useful_god_candidate_count",
+        ],
+        "clusters": clusters,
+        "coverage_gaps": {
+            "rare_cluster_count": len(rare_clusters),
+            "rare_cluster_keys": rare_clusters[:80],
+        },
+        "runtime_mutation": False,
+        "guardrails": [
+            "CLUSTERS_ARE_STRUCTURAL_GROUPS",
+            "NO_DESTINY_OUTCOME_LABEL",
+            "NO_RULE_ACTIVATION",
+        ],
+    }
+
+
+def _similarity_manifest(paths: CorpusArtifactPaths, total: int, cluster_counts: Counter[str]) -> dict[str, object]:
+    return {
+        "version": "v20.corpus_similarity_index_manifest.v1",
+        "status": "ready",
+        "run_id": paths.run_id,
+        "case_count": total,
+        "sqlite_index": str(paths.sqlite_index_path),
+        "candidate_strategy": [
+            "same_cluster_key_first",
+            "same_day_master_element_and_capacity_fallback",
+            "bounded_candidate_pool",
+        ],
+        "scoring": "weighted_jaccard_over_structural_tags",
+        "tag_sources": [
+            "feature_ids",
+            "feature_domains",
+            "portrait_domains",
+            "relation_types",
+            "ten_god_labels",
+            "question_keys",
+            "knowledge_ids",
+        ],
+        "cluster_count": len(cluster_counts),
+        "runtime_mutation": False,
+        "guardrails": [
+            "SIMILARITY_IS_RETRIEVAL_ONLY",
+            "NO_PERSON_OUTCOME_TRANSFER",
+            "NO_EVENT_PREDICTION_BY_NEIGHBOR",
+        ],
+    }
+
+
+def _portrait_training_summary(
+    *,
+    paths: CorpusArtifactPaths,
+    total: int,
+    counters: dict[str, Counter[str]],
+    cooccurrence: Counter[str],
+    cluster_counts: Counter[str],
+    cluster_portrait_counts: dict[str, Counter[str]],
+    cluster_feature_counts: dict[str, Counter[str]],
+) -> dict[str, object]:
+    axis_rows = []
+    for axis, count in counters["portrait_domains"].most_common():
+        ratio = count / total if total else 0
+        cluster_lift = []
+        for cluster_key, cluster_count in cluster_counts.items():
+            axis_count = cluster_portrait_counts[cluster_key][axis]
+            if not axis_count:
+                continue
+            local_ratio = axis_count / cluster_count
+            lift = local_ratio / ratio if ratio else 0
+            if lift >= 1.05 or local_ratio >= 0.95:
+                cluster_lift.append(
+                    {
+                        "cluster_id": _stable_id("cluster", cluster_key),
+                        "cluster_key": cluster_key,
+                        "cluster_count": cluster_count,
+                        "axis_ratio": round(local_ratio, 6),
+                        "lift": round(lift, 4),
+                    }
+                )
+        axis_rows.append(
+            {
+                "axis": axis,
+                "count": count,
+                "global_ratio": round(ratio, 6),
+                "top_clusters": sorted(
+                    cluster_lift,
+                    key=lambda row: (-float(row["lift"]), -int(row["cluster_count"]), str(row["cluster_key"])),
+                )[:16],
+                "top_feature_ids": _counter_top_with_weight(
+                    _feature_counts_for_axis(axis, cluster_portrait_counts, cluster_feature_counts),
+                    count,
+                    limit=16,
+                ),
+                "diagnostic": "flat_axis_needs_sub_axis_modeling" if ratio > 0.95 else "selective_axis",
+            }
+        )
+    return {
+        "version": "v20.portrait_axis_training.v1",
+        "status": "ready",
+        "run_id": paths.run_id,
+        "case_count": total,
+        "axis_models": axis_rows,
+        "axis_cooccurrence_top": [
+            {"pair": key.split("|"), "count": count}
+            for key, count in cooccurrence.most_common(50)
+        ],
+        "training_targets": [
+            "portrait_axis_prior",
+            "portrait_sub_axis_split_proposal",
+            "feedback_calibration_weight",
+            "domain_language_boundary_selection",
+        ],
+        "known_limitations": [
+            "Phase-1 portrait domains are often always present; sub-axis labels must be learned from feature ids and feedback.",
+        ],
+        "runtime_mutation": False,
+        "guardrails": [
+            "PORTRAIT_TRAINING_IS_CALIBRATION_ONLY",
+            "NO_PERSONALITY_VERDICT",
+            "NO_QUESTION_BIAS_ACTIVATION",
+        ],
+    }
+
+
 def _rule_support_summary(
     paths: CorpusArtifactPaths,
     total: int,
     support: dict[str, dict[str, object]],
 ) -> dict[str, object]:
-    proposals = sorted(support.values(), key=lambda row: (-int(row["support_count"]), str(row["proposal_id"])))
+    proposals = sorted(
+        (_rule_support_public_row(row, total) for row in support.values()),
+        key=lambda row: (-int(row["support_count"]), str(row["proposal_id"])),
+    )
     return {
         "version": "v20.rule_proposal_support_summary.v1",
         "status": "ready",
@@ -562,6 +872,163 @@ def _rule_support_summary(
             "NO_USER_VISIBLE_VERDICT",
         ],
     }
+
+
+def _rule_training_summary(
+    paths: CorpusArtifactPaths,
+    total: int,
+    support: dict[str, dict[str, object]],
+) -> dict[str, object]:
+    proposals = sorted(
+        (_rule_training_public_row(row, total) for row in support.values()),
+        key=lambda row: (-float(row["selectivity_score"]), -int(row["support_count"]), str(row["proposal_id"])),
+    )
+    return {
+        "version": "v20.rule_proposal_training.v1",
+        "status": "ready",
+        "run_id": paths.run_id,
+        "case_count": total,
+        "proposal_count": len(proposals),
+        "proposals": proposals,
+        "training_targets": [
+            "proposal_selectivity",
+            "exact_feature_signature_support",
+            "cluster_condition_prior",
+            "shadow_rule_path_priority",
+            "synthetic_case_gap_proposal",
+        ],
+        "release_policy": {
+            "shadow_training_allowed": True,
+            "user_visible_runtime_allowed": False,
+            "promotion_requires": [
+                "synthetic_validation",
+                "shadow_runtime_diff_report",
+                "forbidden_output_scan",
+                "decision_registry_approval",
+            ],
+        },
+        "runtime_mutation": False,
+        "guardrails": [
+            "TRAINING_ONLY",
+            "NO_RULE_ACTIVATION",
+            "NO_USER_VISIBLE_VERDICT",
+        ],
+    }
+
+
+def _counter_top_with_weight(counter: Counter[str], denominator: int, *, limit: int) -> list[dict[str, object]]:
+    return [
+        {
+            "value": value,
+            "count": count,
+            "weight": round(count / denominator, 6) if denominator else 0,
+        }
+        for value, count in counter.most_common(limit)
+    ]
+
+
+def _feature_counts_for_axis(
+    axis: str,
+    cluster_portrait_counts: dict[str, Counter[str]],
+    cluster_feature_counts: dict[str, Counter[str]],
+) -> Counter[str]:
+    rows: Counter[str] = Counter()
+    for cluster_key, portrait_counts in cluster_portrait_counts.items():
+        if portrait_counts[axis]:
+            rows.update(cluster_feature_counts[cluster_key])
+    return rows
+
+
+def _rule_support_public_row(row: dict[str, object], total: int) -> dict[str, object]:
+    support_count = int(row["support_count"])
+    return {
+        "proposal_id": row["proposal_id"],
+        "domain": row["domain"],
+        "source_knowledge_id": row["source_knowledge_id"],
+        "emits_feature_hooks": row["emits_feature_hooks"],
+        "supports_question_hooks": row["supports_question_hooks"],
+        "support_count": support_count,
+        "support_ratio": round(support_count / total, 6) if total else 0,
+        "support_quality": _support_quality(support_count, total),
+        "sample_case_ids": row["sample_case_ids"],
+    }
+
+
+def _rule_training_public_row(row: dict[str, object], total: int) -> dict[str, object]:
+    support_count = int(row["support_count"])
+    exact_signatures = row.get("exact_signature_counts")
+    cluster_counts = row.get("cluster_counts")
+    capacity_counts = row.get("day_master_capacity_counts")
+    feature_counts = row.get("feature_counts")
+    if not isinstance(exact_signatures, Counter):
+        exact_signatures = Counter()
+    if not isinstance(cluster_counts, Counter):
+        cluster_counts = Counter()
+    if not isinstance(capacity_counts, Counter):
+        capacity_counts = Counter()
+    if not isinstance(feature_counts, Counter):
+        feature_counts = Counter()
+    support_ratio = support_count / total if total else 0
+    return {
+        "proposal_id": row["proposal_id"],
+        "domain": row["domain"],
+        "source_knowledge_id": row["source_knowledge_id"],
+        "condition_model": row["condition_model"],
+        "emits_feature_hooks": row["emits_feature_hooks"],
+        "supports_question_hooks": row["supports_question_hooks"],
+        "support_count": support_count,
+        "support_ratio": round(support_ratio, 6),
+        "support_quality": _support_quality(support_count, total),
+        "selectivity_score": _selectivity_score(support_count, total),
+        "top_exact_feature_signatures": _counter_top_with_weight(exact_signatures, support_count, limit=16),
+        "top_clusters": [
+            {
+                "cluster_id": _stable_id("cluster", key),
+                "cluster_key": key,
+                "count": count,
+                "weight": round(count / support_count, 6) if support_count else 0,
+            }
+            for key, count in cluster_counts.most_common(16)
+        ],
+        "day_master_capacity_distribution": dict(capacity_counts.most_common()),
+        "top_matched_feature_ids": _counter_top_with_weight(feature_counts, support_count, limit=16),
+        "sample_case_ids": row["sample_case_ids"],
+        "next_training_action": _next_training_action(support_count, total),
+    }
+
+
+def _support_quality(support_count: int, total: int) -> str:
+    if total <= 0 or support_count <= 0:
+        return "no_support"
+    ratio = support_count / total
+    if ratio >= 0.95:
+        return "too_broad_needs_subconditions"
+    if ratio <= 0.001:
+        return "too_sparse_needs_more_evidence"
+    return "usable_shadow_signal"
+
+
+def _selectivity_score(support_count: int, total: int) -> float:
+    quality = _support_quality(support_count, total)
+    if quality == "usable_shadow_signal":
+        ratio = support_count / total
+        return round(1 - abs(0.2 - ratio), 6)
+    if quality == "too_broad_needs_subconditions":
+        return 0.2
+    if quality == "too_sparse_needs_more_evidence":
+        return 0.1
+    return 0
+
+
+def _next_training_action(support_count: int, total: int) -> str:
+    quality = _support_quality(support_count, total)
+    if quality == "too_broad_needs_subconditions":
+        return "split_by_exact_feature_signature_and_cluster"
+    if quality == "too_sparse_needs_more_evidence":
+        return "generate_synthetic_edge_cases_and_review_hooks"
+    if quality == "no_support":
+        return "review_knowledge_hook_mapping"
+    return "rank_in_shadow_training"
 
 
 def _postgres_import_manifest(paths: CorpusArtifactPaths, total: int) -> dict[str, object]:
@@ -633,13 +1100,71 @@ def _status_payload(
     }
 
 
+def _similarity_candidates(conn: sqlite3.Connection, query: sqlite3.Row) -> list[sqlite3.Row]:
+    rows = conn.execute(
+        """
+        SELECT * FROM corpus_cases
+        WHERE case_id != ?
+          AND cluster_key = ?
+        LIMIT 4000
+        """,
+        (query["case_id"], query["cluster_key"]),
+    ).fetchall()
+    seen = {row["case_id"] for row in rows}
+    if len(rows) < 4000:
+        fallback = conn.execute(
+            """
+            SELECT * FROM corpus_cases
+            WHERE case_id != ?
+              AND day_master_element = ?
+              AND day_master_capacity = ?
+            LIMIT 4000
+            """,
+            (query["case_id"], query["day_master_element"], query["day_master_capacity"]),
+        ).fetchall()
+        for row in fallback:
+            if row["case_id"] not in seen:
+                rows.append(row)
+                seen.add(row["case_id"])
+            if len(rows) >= 5000:
+                break
+    return rows
+
+
+def _similarity_score(query_tags: set[str], candidate_tags: set[str]) -> float:
+    if not query_tags and not candidate_tags:
+        return 0
+    weights = {
+        "feature_id": 3.0,
+        "relation_types": 2.0,
+        "visible_ten_gods": 1.5,
+        "hidden_ten_gods": 1.5,
+        "question_keys": 1.25,
+        "knowledge_ids": 1.25,
+    }
+    union = query_tags | candidate_tags
+    intersection = query_tags & candidate_tags
+    numerator = sum(_tag_weight(tag, weights) for tag in intersection)
+    denominator = sum(_tag_weight(tag, weights) for tag in union)
+    return numerator / denominator if denominator else 0
+
+
+def _tag_weight(tag: str, weights: dict[str, float]) -> float:
+    key = tag.split(":", 1)[0]
+    return weights.get(key, 1.0)
+
+
 def _row_tags(row: sqlite3.Row) -> set[str]:
+    if "tag_signature" in row.keys() and row["tag_signature"]:
+        return set(_split(row["tag_signature"]))
     tags = {
         f"day_master:{row['day_master']}",
         f"element:{row['day_master_element']}",
         f"capacity:{row['day_master_capacity']}",
         f"wealth:{row['wealth_feature_present']}",
     }
+    if "feature_ids" in row.keys():
+        tags.update(f"feature_id:{item}" for item in _split(row["feature_ids"]))
     for column in (
         "feature_domains",
         "macro_feature_domains",
@@ -659,6 +1184,17 @@ def _join(values: object) -> str:
 
 def _split(value: object) -> list[str]:
     return [item for item in str(value or "").split("|") if item]
+
+
+def _stable_id(prefix: str, value: str) -> str:
+    digest = hashlib.sha256(value.encode("utf-8")).hexdigest()[:12]
+    return f"v20.{prefix}.{digest}"
+
+
+def _read_json_if_exists(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {"status": "not_built", "path": str(path)}
+    return json.loads(path.read_text(encoding="utf-8"))
 
 
 def _write_json(path: Path, payload: dict[str, object]) -> None:

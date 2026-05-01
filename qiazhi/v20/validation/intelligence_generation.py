@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from v20.corpus.artifacts import read_corpus_training_artifacts
 from v20.intelligence.generation import build_intelligence_generation_manifest
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight
 from v20.validation.suite import run_synthetic_suite
@@ -9,6 +10,7 @@ def validate_intelligence_generation() -> dict[str, object]:
     manifest = build_intelligence_generation_manifest()
     synthetic = run_synthetic_suite()
     rule_preflight = build_first_wave_rule_proposal_preflight(limit_per_domain=1)
+    corpus_training = read_corpus_training_artifacts()
     failures = []
     if synthetic["ok"] is not True:
         failures.append("synthetic_suite_failed")
@@ -34,6 +36,7 @@ def validate_intelligence_generation() -> dict[str, object]:
             "allowed": rule_preflight["ok"],
             "rule_preflight_status": rule_preflight["status"],
             "proposal_count": rule_preflight["proposal_count"],
+            "corpus_training_artifact_status": corpus_training["status"],
         },
         "promotion": {
             "user_visible_rule_promotion_ready": False,

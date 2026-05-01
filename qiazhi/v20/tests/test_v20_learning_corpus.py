@@ -6,7 +6,9 @@ from v20.corpus.artifacts import (
     build_corpus_artifacts,
     find_similar_cases,
     read_corpus_artifact_status,
+    read_corpus_cluster_model,
     read_corpus_coverage_summary,
+    read_corpus_training_artifacts,
 )
 from v20.corpus.coverage import FULL_CORPUS_TARGET_COUNT, build_corpus_coverage_plan
 from v20.corpus.enumerator import canonical_case_at, hour_pillar_for, iter_canonical_cases, month_pillar_for
@@ -112,6 +114,8 @@ def test_v20_corpus_artifacts_build_coverage_index_and_similarity(tmp_path) -> N
     status = build_corpus_artifacts("test_artifacts", runtime_dir=tmp_path, status_every=2)
     artifact_status = read_corpus_artifact_status("test_artifacts", runtime_dir=tmp_path)
     summary = read_corpus_coverage_summary("test_artifacts", runtime_dir=tmp_path)
+    clusters = read_corpus_cluster_model("test_artifacts", runtime_dir=tmp_path)
+    training = read_corpus_training_artifacts("test_artifacts", runtime_dir=tmp_path)
     similar = find_similar_cases("v20.full_corpus.case.000000", run_id="test_artifacts", runtime_dir=tmp_path, limit=3)
 
     assert status["status"] == "completed"
@@ -121,8 +125,15 @@ def test_v20_corpus_artifacts_build_coverage_index_and_similarity(tmp_path) -> N
     assert summary["case_count"] == 6
     assert summary["distributions"]["feature_domains"]["strength"] == 6
     assert summary["cluster_count"] >= 1
+    assert clusters["status"] == "ready"
+    assert clusters["clusters"][0]["centroid_tags"]
+    assert training["status"] == "ready"
+    assert training["portrait_axis_training"]["status"] == "ready"
+    assert training["rule_proposal_training"]["status"] == "ready"
     assert similar["status"] == "ready"
     assert similar["match_count"] >= 1
+    assert similar["candidate_count"] >= similar["match_count"]
+    assert similar["matches"][0]["shared_tag_count"] >= 1
     assert "NO_DESTINY_OUTCOME_INFERENCE" in similar["guardrails"]
 
 
@@ -134,6 +145,8 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     status = client.get("/api/v20/corpus/full-precompute/status").json()
     artifact_status = client.get("/api/v20/corpus/artifacts/status").json()
     artifact_summary = client.get("/api/v20/corpus/artifacts/coverage-summary").json()
+    artifact_clusters = client.get("/api/v20/corpus/artifacts/cluster-model").json()
+    artifact_training = client.get("/api/v20/corpus/artifacts/training").json()
     suite = client.get("/api/v20/validation/synthetic-suite").json()
     evolution = client.get("/api/v20/learning/evolution-plan").json()
     run_plan = client.get("/api/v20/learning/run-plan").json()
@@ -147,6 +160,8 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert status["runtime_mutation"] is False
     assert artifact_status["runtime_mutation"] is False
     assert artifact_summary["runtime_mutation"] is False
+    assert artifact_clusters["runtime_mutation"] is False
+    assert artifact_training["runtime_mutation"] is False
     assert suite["ok"] is True
     assert suite["runtime_mutation"] is False
     assert evolution["status"] == "ready_for_dry_run"

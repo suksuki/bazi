@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from v20.corpus.job_runner import read_full_precompute_status
-from v20.corpus.artifacts import read_corpus_artifact_status, read_corpus_coverage_summary
+from v20.corpus.artifacts import (
+    read_corpus_artifact_status,
+    read_corpus_cluster_model,
+    read_corpus_coverage_summary,
+    read_corpus_training_artifacts,
+)
 from v20.interaction.portrait_ontology import portrait_ontology_manifest
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight, build_first_wave_rule_proposals
@@ -19,6 +24,8 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
     corpus_status = read_full_precompute_status()
     corpus_artifacts = read_corpus_artifact_status()
     corpus_summary = read_corpus_coverage_summary()
+    corpus_clusters = read_corpus_cluster_model()
+    corpus_training = read_corpus_training_artifacts()
     llm = llm_provider_readiness_report()
     return {
         "version": "v20.intelligence_generation_manifest.v1",
@@ -124,6 +131,8 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             "full_corpus_completed": corpus_status.get("completed_from_start", 0),
             "corpus_artifact_status": corpus_artifacts["status"],
             "corpus_cluster_count": corpus_summary.get("cluster_count", 0),
+            "corpus_cluster_model_status": corpus_clusters["status"],
+            "corpus_training_artifact_status": corpus_training["status"],
         },
         "runtime_mutation": False,
         "guardrails": [

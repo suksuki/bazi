@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from v20.access.roles import access_role_manifest
-from v20.corpus.artifacts import read_corpus_artifact_status, read_corpus_coverage_summary
+from v20.corpus.artifacts import (
+    read_corpus_artifact_status,
+    read_corpus_cluster_model,
+    read_corpus_coverage_summary,
+    read_corpus_training_artifacts,
+)
 from v20.corpus.full_precompute import build_full_precompute_manifest
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.question_ranker import question_ranking_manifest
@@ -55,6 +60,8 @@ def system_status_report() -> dict[str, object]:
     precompute_manifest = build_full_precompute_manifest()
     corpus_artifacts = read_corpus_artifact_status()
     corpus_summary = read_corpus_coverage_summary()
+    corpus_clusters = read_corpus_cluster_model()
+    corpus_training = read_corpus_training_artifacts()
     return {
         "version": "v20.system_status_report.v1",
         "status": "ok" if ops_validation["ok"] else "degraded",
@@ -89,6 +96,8 @@ def system_status_report() -> dict[str, object]:
         "full_precompute_estimated_minutes": precompute_manifest["cost_estimate"]["estimated_total_minutes"],
         "corpus_artifact_status": corpus_artifacts["status"],
         "corpus_cluster_count": corpus_summary.get("cluster_count", 0),
+        "corpus_cluster_model_status": corpus_clusters["status"],
+        "corpus_training_artifact_status": corpus_training["status"],
         "access_role_count": len(access_role_manifest()["roles"]),
         "test_area_count": matrix["area_count"],
         "learning_status": evolution["status"],
