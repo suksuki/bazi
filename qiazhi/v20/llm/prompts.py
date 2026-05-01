@@ -4,6 +4,7 @@ from v20.answer.prompt_context import answer_plan_prompt_context
 from v20.answer.plan import AnswerPlan
 from v20.features.schema import FeatureLayer
 from v20.interaction.questions import QuestionCandidate
+from v20.knowledge.schema import KnowledgeUnit
 
 
 def answer_rewrite_prompt(plan: AnswerPlan, *, locale: str = "en", tone: str = "clear") -> dict[str, object]:
@@ -49,6 +50,27 @@ def feature_candidate_prompt(user_text: str, feature_layer: FeatureLayer, *, loc
         "user_text": user_text,
         "feature_domains": sorted({feature.domain for feature in feature_layer.features}),
         "instruction": "Propose candidate domains only. The feature compiler owns runtime features.",
+    }
+
+
+def rule_extraction_prompt(
+    unit: KnowledgeUnit,
+    *,
+    corpus_validation_signal: dict[str, object] | None = None,
+    locale: str = "zh",
+) -> dict[str, object]:
+    return {
+        "task": "rule_extraction_draft",
+        "locale": locale,
+        "reviewed_knowledge_unit": unit.to_dict(),
+        "feature_hook_contracts": list(unit.feature_hooks),
+        "question_hook_contracts": list(unit.question_hooks),
+        "corpus_validation_signal": corpus_validation_signal or {"status": "not_available"},
+        "instruction": (
+            "Extract draft condition atoms from the reviewed knowledge unit only. "
+            "Corpus data may suggest validation gaps but must not author new rules. "
+            "Do not activate runtime rules or add fortune conclusions."
+        ),
     }
 
 

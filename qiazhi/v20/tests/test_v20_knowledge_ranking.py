@@ -22,6 +22,7 @@ from v20.knowledge.rule_proposal import (
     build_knowledge_rule_proposals,
     build_rule_proposal_preflight,
 )
+from v20.knowledge.rule_extraction import build_rule_extraction_report, validate_rule_extraction_report
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.server import app
 
@@ -77,6 +78,7 @@ def test_v20_knowledge_catalog_reports_coverage_and_hooks() -> None:
     catalog = build_knowledge_catalog()
 
     assert catalog["status"] == "ready"
+    assert catalog["completeness_status"] == "phase1_seed_coverage_ready_depth_incomplete"
     assert catalog["runtime_mutation"] is False
     assert catalog["unit_count"] >= 12
     assert {"strength", "useful_god", "element", "time"} <= {
@@ -108,6 +110,7 @@ def test_v20_knowledge_source_coverage_and_release_are_ready() -> None:
     assert source_catalog["source_count"] >= 12
     assert not source_catalog["missing_source_refs"]
     assert coverage["status"] == "pass"
+    assert coverage["completeness_status"] == "domain_seed_coverage_pass_depth_incomplete"
     assert coverage["gap_count"] == 0
     assert release["status"] == "ready_for_release_review"
     assert "record_decision_registry_approval" in release["release_steps"]
@@ -312,12 +315,35 @@ def test_v20_rule_proposal_preflight_allows_shadow_training_before_promotion() -
     assert first_wave["runtime_mutation"] is False
 
 
+def test_v20_rule_extraction_is_knowledge_first_with_corpus_validation_only() -> None:
+    report = build_rule_extraction_report("strength", limit=1)
+    validation = validate_rule_extraction_report("strength", limit=1)
+    candidate = report["candidates"][0]
+    atom_types = {row["atom_type"] for row in candidate["condition_atoms"]}
+
+    assert report["status"] == "ready"
+    assert report["source_authority"] == "reviewed_bazi_knowledge_base"
+    assert report["corpus_role"] == "coverage_validation_and_refinement_only"
+    assert report["llm_role"] == "candidate_atom_drafting_only_validator_required"
+    assert candidate["source_knowledge_id"] == "v20.core.strength_boundary"
+    assert candidate["source_authority"] == "reviewed_bazi_knowledge_base"
+    assert candidate["runtime_allowed"] is False
+    assert candidate["shadow_training_allowed"] is True
+    assert candidate["corpus_validation_signal"]["role"] == "coverage_validation_not_rule_source"
+    assert "feature_hook_prefix" in atom_types
+    assert "boundary_guard" in atom_types
+    assert validation["status"] == "pass"
+    assert validation["runtime_mutation"] is False
+
+
 def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     client = TestClient(app)
     report = client.get("/api/v20/knowledge/rule-proposals/strength").json()
     first_wave = client.get("/api/v20/knowledge/first-wave-rule-proposals").json()
     preflight = client.get("/api/v20/knowledge/rule-proposal-preflight/strength").json()
     first_preflight = client.get("/api/v20/knowledge/first-wave-rule-proposal-preflight").json()
+    extraction = client.get("/api/v20/knowledge/rule-extraction/strength").json()
+    extraction_validation = client.get("/api/v20/knowledge/rule-extraction-validation/strength").json()
 
     assert report["runtime_mutation"] is False
     assert report["status"] == "ready"
@@ -327,3 +353,8 @@ def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     assert preflight["status"] == "ready_for_shadow_training"
     assert first_preflight["runtime_mutation"] is False
     assert first_preflight["status"] == "ready_for_shadow_training"
+    assert extraction["runtime_mutation"] is False
+    assert extraction["source_authority"] == "reviewed_bazi_knowledge_base"
+    assert extraction["corpus_role"] == "coverage_validation_and_refinement_only"
+    assert extraction_validation["runtime_mutation"] is False
+    assert extraction_validation["status"] == "pass"

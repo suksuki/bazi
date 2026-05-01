@@ -66,6 +66,25 @@ class LLMFeatureCandidate:
 
 
 @dataclass(frozen=True)
+class LLMRuleExtractionDraft:
+    condition_atoms: tuple[dict[str, object], ...]
+    emits_feature_hooks: tuple[str, ...]
+    supports_question_hooks: tuple[str, ...]
+    boundary: str
+    risk_notes: tuple[str, ...]
+    contract_task: str = "rule_extraction_draft"
+    status: str = "draft_only"
+    guardrails: tuple[str, ...] = (
+        "KNOWLEDGE_BASE_REMAINS_RULE_AUTHORITY",
+        "VALIDATOR_REQUIRED_BEFORE_SHADOW_USE",
+        "NO_RUNTIME_RULE_ACTIVATION",
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class LLMSafetyReview:
     ok: bool
     failures: tuple[str, ...]

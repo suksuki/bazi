@@ -33,6 +33,7 @@ def build_knowledge_coverage_report(units: tuple[KnowledgeUnit, ...] | None = No
     return {
         "version": "v20.knowledge_coverage_report.v1",
         "status": "pass" if not gaps else "needs_review",
+        "completeness_status": "domain_seed_coverage_pass_depth_incomplete",
         "required_domain_count": len(required_domains),
         "covered_domain_count": len(covered_domains),
         "missing_domains": missing_domains,
@@ -41,6 +42,11 @@ def build_knowledge_coverage_report(units: tuple[KnowledgeUnit, ...] | None = No
         "gaps": gaps,
         "catalog_status": catalog["status"],
         "source_catalog_status": source_catalog["status"],
+        "known_limits": [
+            "coverage_pass_means_required_domains_have_seed_units",
+            "coverage_pass_does_not_mean_full_rule_or_source_completeness",
+            "deep_rule_extraction_requires_more_reviewed_knowledge_units",
+        ],
         "runtime_mutation": False,
         "guardrails": [
             "KNOWLEDGE_COVERAGE_AUDIT_ONLY",

@@ -9,6 +9,7 @@ from v20.corpus.precompute_runner import precompute_case
 from v20.llm.contracts import ANSWER_PLAN_REWRITE
 from v20.llm.tasks import (
     accept_or_fallback_rewrite,
+    draft_rule_extraction_from_knowledge,
     interpret_user_intent,
     propose_feature_candidates,
     review_output_safety,
@@ -16,6 +17,7 @@ from v20.llm.tasks import (
 )
 from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.audit import audit_default_knowledge_units
+from v20.knowledge.loader import default_knowledge_units
 from v20.validation.evaluator import evaluate_answer_plan
 from v20.validation.golden import GOLDEN_CASES
 
@@ -165,6 +167,7 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     intent = interpret_user_intent("我想看财和用神，以及有没有地支冲合", feature_layer)
     suggestions = suggest_question_candidates("我想看财和用神", feature_layer, questions)
     proposals = propose_feature_candidates("我想看财和用神", feature_layer)
+    rule_draft = draft_rule_extraction_from_knowledge(default_knowledge_units()[0])
 
     assert audit["status"] == "pass"
     assert alignment["status"] == "pass"
@@ -173,6 +176,9 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     assert suggestions["runtime_mutation"] is False
     assert proposals["runtime_mutation"] is False
     assert all(row["status"] == "proposal_only" for row in proposals["candidates"])
+    assert rule_draft["runtime_mutation"] is False
+    assert rule_draft["validation"]["ok"] is True
+    assert rule_draft["draft"]["status"] == "draft_only"
     assert routed["llm_assist"]["status"] == "ready"
     assert routed["llm_assist"]["routed_question_key"] == "q_useful_god_candidates"
     assert routed["llm_assist"]["context_pack"]["user_text_present"] is True

@@ -4,15 +4,17 @@ from v20.answer.composer import compose_answer
 from v20.answer.plan import AnswerPlan
 from v20.features.schema import FeatureLayer
 from v20.interaction.questions import QuestionCandidate
-from v20.llm.contracts import ANSWER_PLAN_REWRITE, SAFETY_REVIEW
+from v20.knowledge.schema import KnowledgeUnit
+from v20.llm.contracts import ANSWER_PLAN_REWRITE, RULE_EXTRACTION_DRAFT, SAFETY_REVIEW
 from v20.llm.structured_outputs import (
     LLMFeatureCandidate,
     LLMFeedbackSummary,
     LLMIntentParse,
     LLMQuestionSuggestion,
+    LLMRuleExtractionDraft,
     LLMSafetyReview,
 )
-from v20.llm.validators import validate_llm_output
+from v20.llm.validators import validate_llm_output, validate_llm_structured_output
 
 DOMAIN_ROUTE_PRIORITY = {
     "useful_god": 0,
@@ -114,6 +116,38 @@ def propose_feature_candidates(user_text: str, feature_layer: FeatureLayer, *, l
         "candidates": [row.to_dict() for row in candidates],
         "runtime_mutation": False,
         "guardrails": ["CANDIDATE_ONLY", "FEATURE_COMPILER_HAS_FINAL_SAY"],
+    }
+
+
+def draft_rule_extraction_from_knowledge(unit: KnowledgeUnit, *, locale: str = "zh") -> dict[str, object]:
+    draft = LLMRuleExtractionDraft(
+        condition_atoms=tuple(
+            {
+                "atom_type": "feature_hook_prefix",
+                "operator": "prefix_match",
+                "value": hook,
+                "source_knowledge_id": unit.knowledge_id,
+            }
+            for hook in unit.feature_hooks
+        ),
+        emits_feature_hooks=unit.feature_hooks,
+        supports_question_hooks=unit.question_hooks,
+        boundary=unit.boundary,
+        risk_notes=("draft_requires_deterministic_validator",),
+    )
+    payload = draft.to_dict()
+    return {
+        "version": "v20.llm_rule_extraction_draft.v1",
+        "contract": "rule_extraction_draft",
+        "locale": locale,
+        "draft": payload,
+        "validation": validate_llm_structured_output(RULE_EXTRACTION_DRAFT, payload),
+        "runtime_mutation": False,
+        "guardrails": [
+            "DRAFT_ONLY",
+            "KNOWLEDGE_UNIT_IS_SOURCE",
+            "NO_RUNTIME_RULE_ACTIVATION",
+        ],
     }
 
 

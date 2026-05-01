@@ -21,6 +21,8 @@ def build_knowledge_catalog(units: tuple[KnowledgeUnit, ...] | None = None) -> d
     return {
         "version": "v20.knowledge_catalog.v1",
         "status": status,
+        "completeness_status": "phase1_seed_coverage_ready_depth_incomplete",
+        "completion_scope": "reviewed_core_domain_seed_units_not_full_bazi_canon",
         "unit_count": len(rows),
         "reviewed_unit_count": sum(1 for unit in rows if unit.status == "reviewed"),
         "domain_count": len(domain_counts),
@@ -39,6 +41,12 @@ def build_knowledge_catalog(units: tuple[KnowledgeUnit, ...] | None = None) -> d
         "audit": audit,
         "source_catalog_status": source_catalog["status"],
         "missing_source_refs": source_catalog["missing_source_refs"],
+        "known_limits": [
+            "classical_source_corpus_not_fully_imported",
+            "school_variant_rules_not_exhaustive",
+            "combination_exception_rules_need_review",
+            "time_layer_and_domain_specific_rules_need_expansion",
+        ],
         "runtime_mutation": False,
         "guardrails": [
             "KNOWLEDGE_CATALOG_IS_READ_ONLY",

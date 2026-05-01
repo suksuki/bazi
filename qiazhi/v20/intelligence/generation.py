@@ -9,6 +9,7 @@ from v20.corpus.artifacts import (
 )
 from v20.interaction.portrait_ontology import portrait_ontology_manifest
 from v20.knowledge.catalog import build_knowledge_catalog
+from v20.knowledge.rule_extraction import build_rule_extraction_report, validate_rule_extraction_report
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight, build_first_wave_rule_proposals
 from v20.llm.contracts import LLM_CONTRACTS
 from v20.llm.provider import llm_provider_readiness_report
@@ -19,6 +20,8 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
     knowledge = build_knowledge_catalog()
     rule_proposals = build_first_wave_rule_proposals(limit_per_domain=1)
     rule_preflight = build_first_wave_rule_proposal_preflight(limit_per_domain=1)
+    rule_extraction = build_rule_extraction_report(limit=12)
+    rule_extraction_validation = validate_rule_extraction_report(limit=12)
     portrait = portrait_ontology_manifest()
     synthetic = run_synthetic_suite()
     corpus_status = read_full_precompute_status()
@@ -63,12 +66,19 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "boundary_text",
                 "future_llm_rule_proposal_drafts",
             ],
+            "source_authority": rule_extraction["source_authority"],
+            "corpus_role": rule_extraction["corpus_role"],
             "generated_artifacts": [
                 "KnowledgeRuleProposal",
+                "ExtractedRuleAtom",
+                "ExtractedRuleCandidate",
                 "candidate_rule_path",
                 "shadow_training_signal",
             ],
             "proposal_count": rule_proposals["proposal_count"],
+            "extracted_candidate_count": rule_extraction["candidate_count"],
+            "extracted_atom_count": rule_extraction["atom_count"],
+            "extraction_validation_status": rule_extraction_validation["status"],
             "preflight_status": rule_preflight["status"],
             "shadow_training_allowed": True,
             "user_visible_runtime_allowed": False,

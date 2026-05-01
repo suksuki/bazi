@@ -59,6 +59,21 @@ FEATURE_CANDIDATE_PROPOSAL = LLMTaskContract(
     ),
 )
 
+RULE_EXTRACTION_DRAFT = LLMTaskContract(
+    task_name="rule_extraction_draft",
+    allowed_inputs=("reviewed_knowledge_unit", "feature_hook_contracts", "question_hook_contracts", "corpus_validation_signal", "locale"),
+    required_outputs=("condition_atoms", "emits_feature_hooks", "supports_question_hooks", "boundary", "risk_notes"),
+    forbidden_outputs=("chart_fact_generation", "runtime_rule_activation", "core_rule_truth_override", "fortune_verdict"),
+    fallback="deterministic_knowledge_rule_extractor",
+    guardrails=(
+        "LLM_TASK_BOUNDED",
+        "DRAFT_ONLY",
+        "KNOWLEDGE_BASE_REMAINS_RULE_AUTHORITY",
+        "CORPUS_IS_VALIDATION_NOT_SOURCE",
+        "VALIDATOR_REQUIRED",
+    ),
+)
+
 ANSWER_PLAN_ASSIST = LLMTaskContract(
     task_name="answer_plan_assist",
     allowed_inputs=("answer_plan", "feature_layer", "knowledge_refs", "locale"),
@@ -109,6 +124,7 @@ LLM_CONTRACTS = (
     INTENT_PARSE,
     QUESTION_SUGGESTION,
     FEATURE_CANDIDATE_PROPOSAL,
+    RULE_EXTRACTION_DRAFT,
     ANSWER_PLAN_ASSIST,
     ANSWER_PLAN_REWRITE,
     MULTILINGUAL_RENDER,

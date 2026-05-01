@@ -148,11 +148,20 @@ Endpoints:
 - `GET /api/v20/knowledge/first-wave-rule-proposals`
 - `GET /api/v20/knowledge/rule-proposal-preflight/{domain}`
 - `GET /api/v20/knowledge/first-wave-rule-proposal-preflight`
+- `GET /api/v20/knowledge/rule-extraction`
+- `GET /api/v20/knowledge/rule-extraction-validation`
 
 Per the current product direction, proposals are not blocked from shadow
 training. Static contract failures can still block malformed proposals, but
 synthetic validation and DecisionRegistry approval are promotion requirements
 for user-visible runtime, not prerequisites for learning.
+
+Rule extraction itself is driven by the reviewed knowledge base, not by the
+518K corpus. The corpus is only a validation and refinement layer that reports
+whether extracted conditions are too broad, too sparse, or good enough for
+shadow ranking. LLM assistance is similarly bounded: it may draft candidate
+atoms from reviewed knowledge text, but it cannot create chart facts, activate
+rules, or produce final Bazi conclusions.
 
 This keeps V20 open to self-training while preserving a clear boundary between
 shadow intelligence and public-facing Bazi conclusions.

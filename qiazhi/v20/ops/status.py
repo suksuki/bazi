@@ -20,6 +20,7 @@ from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.review_packet import build_first_wave_review_packets
 from v20.knowledge.review_assist import build_first_wave_review_assist
 from v20.knowledge.review_queue import build_knowledge_review_queue
+from v20.knowledge.rule_extraction import build_rule_extraction_report, validate_rule_extraction_report
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight, build_first_wave_rule_proposals
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
@@ -52,6 +53,8 @@ def system_status_report() -> dict[str, object]:
     first_wave_assist = build_first_wave_review_assist(limit_per_domain=2)
     rule_proposals = build_first_wave_rule_proposals(limit_per_domain=1)
     rule_proposal_preflight = build_first_wave_rule_proposal_preflight(limit_per_domain=1)
+    rule_extraction = build_rule_extraction_report(limit=12)
+    rule_extraction_validation = validate_rule_extraction_report(limit=12)
     dependencies = dependency_readiness_report()
     sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
@@ -92,6 +95,9 @@ def system_status_report() -> dict[str, object]:
         "knowledge_rule_proposal_status": rule_proposals["status"],
         "knowledge_rule_proposal_count": rule_proposals["proposal_count"],
         "knowledge_rule_proposal_preflight_status": rule_proposal_preflight["status"],
+        "knowledge_rule_extraction_status": rule_extraction["status"],
+        "knowledge_rule_extraction_candidate_count": rule_extraction["candidate_count"],
+        "knowledge_rule_extraction_validation_status": rule_extraction_validation["status"],
         "full_precompute_status": precompute_manifest["status"],
         "full_precompute_estimated_minutes": precompute_manifest["cost_estimate"]["estimated_total_minutes"],
         "corpus_artifact_status": corpus_artifacts["status"],

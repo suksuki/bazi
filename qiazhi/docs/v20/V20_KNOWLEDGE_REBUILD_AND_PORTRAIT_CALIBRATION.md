@@ -33,10 +33,20 @@ Endpoints:
 - `GET /api/v20/knowledge/first-wave-rule-proposals`
 - `GET /api/v20/knowledge/rule-proposal-preflight/{domain}`
 - `GET /api/v20/knowledge/first-wave-rule-proposal-preflight`
+- `GET /api/v20/knowledge/rule-extraction`
+- `GET /api/v20/knowledge/rule-extraction/{domain}`
+- `GET /api/v20/knowledge/rule-extraction-validation`
+- `GET /api/v20/knowledge/rule-extraction-validation/{domain}`
 
 These endpoints do not activate rules, write database rows, or treat knowledge
 as truth. They make missing sources, duplicate ids, unreviewed sources, and
 coverage gaps visible before a release.
+
+Current completeness status is `phase1_seed_coverage_ready_depth_incomplete`.
+That means the reviewed seed units cover the main V20 domains, but this is not
+yet a full Bazi canon. Classical source coverage, school variants, combination
+exceptions, time-layer details, and applied-domain rules still need deeper
+import, review, and extraction.
 
 The V19 migration audit scans `docs/bazi_knowledge` and classifies legacy files
 into review lanes such as reviewed-unit seed, draft-unit review, archive-only
@@ -70,6 +80,18 @@ are released to shadow training by default so the system can learn from them
 early. Static contract failures still block malformed proposals, but synthetic
 validation and DecisionRegistry approval are promotion gates for user-visible
 runtime, not blockers for shadow learning.
+
+Rule extraction is knowledge-first. The source of a rule candidate is the
+reviewed Bazi knowledge base: `KnowledgeUnit.summary`, `evidence_template`,
+`boundary`, `feature_hooks`, `question_hooks`, and source refs. The extractor
+turns those fields into `ExtractedRuleAtom[]`, `ExtractedRuleCandidate[]`, and
+projection-only candidate rule paths.
+
+The 518K corpus does not author rules. It only attaches validation signals:
+coverage, support quality, overly broad conditions, sparse hooks, and
+subcondition hints for shadow review. LLM can draft missing atoms from reviewed
+knowledge text, but deterministic validation remains authoritative and no LLM
+draft can activate runtime rules.
 
 ## Portrait Calibration
 
