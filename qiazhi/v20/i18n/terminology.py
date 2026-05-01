@@ -48,6 +48,7 @@ SECTION_TITLES = {
     "en": {
         "measurement_scope": "Measurement Scope",
         "domain_measurement_path": "Professional Reading Path",
+        "knowledge_evidence_support": "Knowledge Evidence",
         "measurement_next_step": "Next Review Step",
         "feature_measurement": "Feature Reading",
         "prediction_boundary": "Prediction Boundary",
@@ -55,6 +56,7 @@ SECTION_TITLES = {
     "ko": {
         "measurement_scope": "측산 범위",
         "domain_measurement_path": "전문 해석 경로",
+        "knowledge_evidence_support": "지식 근거",
         "measurement_next_step": "다음 검토 단계",
         "feature_measurement": "특징 해석",
         "prediction_boundary": "예측 경계",
@@ -100,6 +102,8 @@ def _body_en(section: AnswerSection, topic: str, source_count: int) -> str:
         return f"This answer uses the selected question as an entry into {topic}, with structure, evidence, and boundaries kept together."
     if section.section_type == "domain_measurement_path":
         return f"The professional reading path stays within {topic}, using only compiled Bazi features and reviewed evidence."
+    if section.section_type == "knowledge_evidence_support":
+        return f"Reviewed knowledge is used only as evidence support for {topic}, not as rule truth."
     if section.section_type == "measurement_next_step":
         return f"The next review step is to deepen {topic} through source features rather than a fixed verdict."
     if section.section_type == "prediction_boundary":
@@ -112,6 +116,8 @@ def _body_ko(section: AnswerSection, topic: str, source_count: int) -> str:
         return f"선택된 질문을 {topic} 측산의 입구로 삼고, 구조와 근거와 경계를 함께 유지합니다."
     if section.section_type == "domain_measurement_path":
         return f"전문 해석 경로는 {topic} 안에서 유지되며, 컴파일된 사주 특징과 검토된 근거만 사용합니다."
+    if section.section_type == "knowledge_evidence_support":
+        return f"검토된 지식은 {topic}의 근거 보조로만 사용되며 규칙 진실로 쓰지 않습니다."
     if section.section_type == "measurement_next_step":
         return f"다음 검토는 고정 판단이 아니라 출처 특징을 통해 {topic}을 더 깊게 읽는 것입니다."
     if section.section_type == "prediction_boundary":

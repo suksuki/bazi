@@ -8,6 +8,7 @@ The user-facing answer path is now:
 ```text
 QuestionCandidate
 -> DomainReadingSection[]
+-> KnowledgeEvidenceSupport
 -> Feature-backed AnswerSection[]
 -> EvidencePack
 -> deterministic answer
@@ -44,4 +45,20 @@ P85 adds runtime tests for:
 
 - applied-domain wealth answers using the professional reading path
 - time answers preserving explicit trigger material
+- reviewed knowledge evidence support inside answer plans
 - no internal feature IDs leaking into user-facing answers
+
+## P85-2 Knowledge Evidence
+
+Professional reading paths now receive `KnowledgeRetrievalReport` from the
+runtime. User-facing answers expose only safe Chinese knowledge labels and usage
+boundaries, such as:
+
+- 财星材料边界
+- 十神解释边界
+- 日主强弱证据边界
+- 时间层触发边界
+
+The original knowledge IDs, English templates, and rule hooks remain internal.
+Knowledge still cannot activate rules or create conclusions; it only supports
+the reading path and evidence boundary.

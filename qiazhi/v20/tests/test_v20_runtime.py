@@ -171,9 +171,14 @@ def test_v20_p85_applied_domain_answers_use_professional_reading_paths() -> None
     assert "财运结构读法" in result["answer_text"]
     assert "财星材料是否可见" in result["answer_text"]
     assert "已接入材料" in result["answer_text"]
+    assert "知识依据" in result["answer_text"]
+    assert "财星材料边界" in result["answer_text"]
     assert "下一步复核" in result["answer_text"]
     assert "具体收益结果" in result["answer_text"]
     assert "feature." not in result["answer_text"]
+    assert "knowledge_evidence_support" in {
+        row["section_type"] for row in result["answer_plan"]["sections"]
+    }
 
 
 def test_v20_p85_time_answer_preserves_trigger_path_section() -> None:
@@ -192,6 +197,7 @@ def test_v20_p85_time_answer_preserves_trigger_path_section() -> None:
     assert "庚戌、丙午" in result["answer_text"]
     assert "偏财、比肩" in result["answer_text"]
     assert "月柱辰与大运戌冲" in result["answer_text"]
+    assert "时间层触发边界" in result["answer_text"]
     assert "下一步复核" in result["answer_text"]
     assert "feature." not in result["answer_text"]
 

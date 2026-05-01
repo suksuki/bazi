@@ -16,6 +16,7 @@ from v20.answer.measurement_policy import (
 )
 from v20.features.schema import FeatureLayer
 from v20.interaction.questions import QuestionCandidate
+from v20.knowledge.schema import KnowledgeRetrievalReport
 
 
 @dataclass(frozen=True)
@@ -62,7 +63,12 @@ class AnswerPlan:
         }
 
 
-def build_answer_plan(question: QuestionCandidate, feature_layer: FeatureLayer, evidence_pack: EvidencePack) -> AnswerPlan:
+def build_answer_plan(
+    question: QuestionCandidate,
+    feature_layer: FeatureLayer,
+    evidence_pack: EvidencePack,
+    knowledge_report: KnowledgeRetrievalReport | None = None,
+) -> AnswerPlan:
     selected = [feature for feature in feature_layer.features if feature.feature_id in question.source_feature_ids]
     if not selected:
         selected = list(feature_layer.features[:3])
@@ -80,7 +86,8 @@ def build_answer_plan(question: QuestionCandidate, feature_layer: FeatureLayer, 
             measurement_stage=question.measurement_stage,
         )
     ]
-    for row in build_domain_reading_sections(question, tuple(selected), feature_layer):
+    knowledge_refs = tuple(knowledge_report.refs) if knowledge_report is not None else ()
+    for row in build_domain_reading_sections(question, tuple(selected), feature_layer, knowledge_refs):
         sections.append(
             AnswerSection(
                 title=row.title,

@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from v20.answer.measurement_policy import domain_label, feature_public_summary
 from v20.features.schema import BaziFeature, FeatureLayer
 from v20.interaction.questions import QuestionCandidate
+from v20.knowledge.schema import KnowledgeRef
 
 
 @dataclass(frozen=True)
@@ -98,11 +99,27 @@ QUESTION_READING_OVERRIDES = {
     "q_useful_god_evidence_gaps": "useful_god",
 }
 
+KNOWLEDGE_LABELS_ZH = {
+    "v20.core.strength_boundary": "日主强弱证据边界",
+    "v20.core.branch_relation_boundary": "地支关系分层边界",
+    "v20.core.time_layer_boundary": "时间层触发边界",
+    "v20.core.wealth_material_boundary": "财星材料边界",
+    "v20.applied.career_projection_boundary": "事业投影边界",
+    "v20.applied.relationship_projection_boundary": "关系投影边界",
+    "v20.applied.health_projection_boundary": "健康边界投影",
+    "v20.core.useful_god_gate": "用神证据门槛",
+    "v20.core.useful_god_candidate_paths": "用神候选路径",
+    "v20.core.ten_god_boundary": "十神解释边界",
+    "v20.core.element_distribution_boundary": "五行分布边界",
+    "v20.core.pattern_review_boundary": "格局审查边界",
+}
+
 
 def build_domain_reading_sections(
     question: QuestionCandidate,
     selected_features: tuple[BaziFeature, ...],
     feature_layer: FeatureLayer,
+    knowledge_refs: tuple[KnowledgeRef, ...] = (),
 ) -> tuple[DomainReadingSection, ...]:
     domain = QUESTION_READING_OVERRIDES.get(question.question_key, question.domain)
     blueprint = DOMAIN_READING_BLUEPRINTS.get(domain)
@@ -110,10 +127,12 @@ def build_domain_reading_sections(
         return ()
     feature_ids = _domain_feature_ids(domain, selected_features, feature_layer)
     material = _material_sentence(domain, selected_features, feature_layer)
+    knowledge = _knowledge_sentence(domain, knowledge_refs)
     body = (
         f"{blueprint['entry']} "
         f"{blueprint['method']} "
         f"{material} "
+        f"{knowledge} "
         f"{blueprint['boundary']}"
     ).strip()
     return (
@@ -123,6 +142,13 @@ def build_domain_reading_sections(
             feature_ids=feature_ids,
             domain=domain,
             section_type="domain_measurement_path",
+        ),
+        DomainReadingSection(
+            title="知识依据",
+            body=_knowledge_detail_sentence(domain, knowledge_refs),
+            feature_ids=feature_ids,
+            domain=domain,
+            section_type="knowledge_evidence_support",
         ),
         DomainReadingSection(
             title="下一步复核",
@@ -192,9 +218,71 @@ def _next_step_sentence(domain: str, question: QuestionCandidate) -> str:
     return f"建议继续围绕「{question.title}」补充证据来源和结构边界。"
 
 
+def _knowledge_sentence(domain: str, knowledge_refs: tuple[KnowledgeRef, ...]) -> str:
+    labels = _knowledge_labels(domain, knowledge_refs)[:4]
+    if not labels:
+        return "知识依据：当前仅使用 feature spine 的结构材料，等待更多已审查知识补充。"
+    return f"知识依据：已选取 {len(labels)} 条已审查知识边界，包括" + "、".join(labels[:3]) + "。"
+
+
+def _knowledge_detail_sentence(domain: str, knowledge_refs: tuple[KnowledgeRef, ...]) -> str:
+    refs = _relevant_knowledge_refs(domain, knowledge_refs)
+    if not refs:
+        return "当前没有匹配到该领域的已审查知识条目，回答只保留结构材料和测算边界。"
+    rows = []
+    for ref in refs[:4]:
+        label = KNOWLEDGE_LABELS_ZH.get(ref.knowledge_id, ref.title)
+        rows.append(f"{label}：{_knowledge_usage(ref)}")
+    return "；".join(rows) + "。"
+
+
+def _knowledge_labels(domain: str, knowledge_refs: tuple[KnowledgeRef, ...]) -> list[str]:
+    return [
+        KNOWLEDGE_LABELS_ZH.get(ref.knowledge_id, ref.title)
+        for ref in _relevant_knowledge_refs(domain, knowledge_refs)
+    ]
+
+
+def _knowledge_usage(ref: KnowledgeRef) -> str:
+    if ref.domain == "wealth":
+        return "只支持财星材料、来源层和收入结构边界"
+    if ref.domain == "career":
+        return "只支持事业角色、工作结构和候选主轴"
+    if ref.domain == "relationship":
+        return "只支持关系互动结构和候选张力"
+    if ref.domain == "health":
+        return "只支持五行平衡和结构压力边界"
+    if ref.domain == "time":
+        return "只支持已给定时间干支与原局互动"
+    if ref.domain == "useful_god":
+        return "只支持候选路径和证据缺口复核"
+    if ref.domain == "ten_god":
+        return "只支持十神来源层和结构主题入口"
+    if ref.domain == "branch":
+        return "只支持地支关系名称和层级边界"
+    if ref.domain == "element":
+        return "只支持五行分布和结构偏向"
+    if ref.domain == "strength":
+        return "只支持承载力证据和扶抑压力边界"
+    if ref.domain == "pattern":
+        return "只支持格局审查索引"
+    return "只作为已审查证据边界使用"
+
+
+def _relevant_knowledge_refs(domain: str, knowledge_refs: tuple[KnowledgeRef, ...]) -> tuple[KnowledgeRef, ...]:
+    support_domains = _support_domains(domain)
+    domains = set(support_domains)
+    exact = [ref for ref in knowledge_refs if ref.domain == domain]
+    related = sorted(
+        [ref for ref in knowledge_refs if ref.domain in domains and ref.domain != domain],
+        key=lambda ref: (support_domains.index(ref.domain), ref.knowledge_id),
+    )
+    return tuple(dict.fromkeys([*exact, *related]))
+
+
 def _support_domains(domain: str) -> tuple[str, ...]:
     if domain == "wealth":
-        return ("wealth", "ten_god", "strength", "branch", "useful_god", "time")
+        return ("wealth", "ten_god", "strength", "branch", "time", "useful_god")
     if domain == "career":
         return ("ten_god", "strength", "branch", "pattern", "useful_god", "time")
     if domain == "relationship":

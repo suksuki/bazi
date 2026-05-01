@@ -53,7 +53,7 @@ def run_runtime_from_pillars(
     selected_question = _select_question(questions, question_key or str(llm_routing_assist.get("routed_question_key", "")))
     knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
     evidence_pack = build_evidence_pack(feature_layer)
-    answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack)
+    answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack, knowledge_report)
     portrait = portrait_projection(feature_layer, knowledge_report)
     measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
     deterministic_answer_text = compose_answer(answer_plan, locale=locale)
