@@ -5,11 +5,14 @@ from fastapi import FastAPI, HTTPException
 from v20 import V20_VERSION
 from v20.api.schemas import MeasureRequest
 from v20.api.runtime import run_runtime_from_pillars
+from v20.corpus.coverage import build_corpus_coverage_plan
+from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.profiles import validate_runtime_config
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 from v20.testing.tiers import test_tier_manifest
+from v20.validation.suite import run_synthetic_suite
 
 
 def create_app() -> FastAPI:
@@ -89,6 +92,22 @@ def create_app() -> FastAPI:
             "validation": validate_redis_contract(contract),
             "runtime_mutation": False,
         }
+
+    @app.get("/api/v20/corpus/coverage")
+    def corpus_coverage() -> dict[str, object]:
+        return {
+            "version": "v20.corpus_coverage_response.v1",
+            "plan": build_corpus_coverage_plan().to_dict(),
+            "runtime_mutation": False,
+        }
+
+    @app.get("/api/v20/validation/synthetic-suite")
+    def synthetic_suite() -> dict[str, object]:
+        return run_synthetic_suite()
+
+    @app.get("/api/v20/learning/evolution-plan")
+    def evolution_plan() -> dict[str, object]:
+        return build_evolution_dry_run_plan()
 
     @app.post("/api/v20/measure")
     @app.post("/api/v20/runtime/measure")

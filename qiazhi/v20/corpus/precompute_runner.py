@@ -10,8 +10,10 @@ def precompute_case(case: CanonicalCase) -> dict[str, object]:
         "version": "v20.corpus_precompute.v1",
         "case": case.to_dict(),
         "feature_count": result["feature_layer"]["feature_count"],
+        "measurement_topic_count": result["measurement_report"]["topic_count"],
         "question_count": len(result["questions"]),
         "answer_plan_version": result["answer_plan"]["version"],
+        "llm_assist_status": result["llm_assist"]["status"],
         "runtime_mutation": False,
         "guardrails": ["PRECOMPUTE_DRY_RUN_ONLY", "NO_PROMOTION"],
     }
