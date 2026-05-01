@@ -13,6 +13,7 @@ ChartInput
 -> KnowledgeRef[] and knowledge alignment
 -> KnowledgeSemanticModel
 -> FeatureDiscovery report and 518K corpus training priors
+-> Chart-specific salience features and rule collision summaries
 -> PortraitIntelligence
 -> Bazi measurement QuestionCandidate[]
 -> Professional domain reading path
@@ -35,6 +36,7 @@ Initial boundaries:
 - Core facts are deterministic and typed.
 - Feature Spine is the central runtime contract.
 - Macro features give UI and LLM compact context while subfeatures remain the source of truth.
+- Chart-specific salience features make different charts surface different ten-god, element, branch, and time-trigger material.
 - Knowledge is reviewed evidence context, not rule truth.
 - Feature Discovery is the central runtime intelligence router: it fuses compiled features, reviewed knowledge, portrait axes, shadow rule candidates, user interaction, bounded LLM assist, and 518K corpus training artifacts into ranked features and domain hypotheses.
 - Knowledge Semantic Model turns reviewed knowledge into feature hooks, question hooks, portrait label candidates, interaction keywords, and rule-atom signals.
@@ -42,6 +44,7 @@ Initial boundaries:
 - Portraits, recommended questions, and answers are Bazi measurement projections over features.
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
+- Shadow rule candidates report current-chart feature collisions, but still cannot activate as rule truth without validation and promotion.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
 - LLM can act as a practitioner-style answer composer only after FeatureDiscovery, KnowledgeSemanticModel, PortraitIntelligence, and AnswerPlan have prepared verified context.
 - Rule candidates may reorder existing questions only through a capped shadow signal and synthetic validation.

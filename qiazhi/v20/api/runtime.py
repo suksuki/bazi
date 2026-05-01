@@ -83,7 +83,7 @@ def run_runtime_from_pillars(
     selected_question = _select_question(questions, question_key or str(llm_routing_assist.get("routed_question_key", "")))
     knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
     evidence_pack = build_evidence_pack(feature_layer)
-    rule_candidate_report = build_rule_candidate_support(selected_question)
+    rule_candidate_report = build_rule_candidate_support(selected_question, feature_layer=feature_layer)
     rule_candidate_validation = validate_rule_candidate_support(rule_candidate_report)
     rule_candidate_ranking_validation = validate_rule_candidate_question_ranking(rule_candidate_ranking)
     answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack, knowledge_report, rule_candidate_report)

@@ -106,6 +106,9 @@ def applied_domains() -> tuple[str, ...]:
 
 
 def feature_label(feature: BaziFeature) -> str:
+    dynamic = _dynamic_feature_label(feature)
+    if dynamic:
+        return dynamic
     return FEATURE_LABELS.get(feature.feature_id, feature.title)
 
 
@@ -114,6 +117,10 @@ def feature_public_summary(feature: BaziFeature) -> str:
         return _strength_summary(feature)
     if feature.feature_id == "feature.useful_god.candidate_paths":
         return _useful_god_summary(feature.calibration_state)
+    if feature.feature_id.startswith("feature.element.prominent.") or feature.feature_id.startswith("feature.element.weak."):
+        return _element_emphasis_summary(feature)
+    if feature.feature_id.startswith("feature.ten_god.focus."):
+        return _ten_god_focus_summary(feature)
     if feature.domain == "ten_god":
         return _ten_god_summary(feature)
     if feature.feature_id == "feature.element.balance_distribution":
@@ -186,21 +193,42 @@ def _ten_god_summary(feature: BaziFeature) -> str:
     labels = _unique(ref.title for ref in feature.evidence_refs if ref.title)
     if not labels:
         return ""
-    prefix = "藏干十神材料" if "hidden" in feature.source_layers else "明透十神材料"
+    if "visible" in feature.source_layers and "hidden" in feature.source_layers:
+        prefix = "明透与藏干十神材料"
+    elif "hidden" in feature.source_layers:
+        prefix = "藏干十神材料"
+    else:
+        prefix = "明透十神材料"
     return f"{prefix}：" + "、".join(labels[:8]) + "。"
 
 
+def _ten_god_focus_summary(feature: BaziFeature) -> str:
+    parsed = _parse_state(feature.calibration_state)
+    label = parsed.get("label", "")
+    weight = parsed.get("weight", "")
+    positions = _unique(ref.title for ref in feature.evidence_refs if ref.title)
+    if label and positions:
+        suffix = f"，累计权重 {weight}" if weight else ""
+        return f"十神焦点：{label}在" + "、".join(positions[:5]) + f"出现{suffix}。"
+    return _ten_god_summary(feature)
+
+
 def _branch_summary(feature: BaziFeature) -> str:
-    relations = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "branch_relation" and ref.title)
+    relations = _unique(
+        ref.title
+        for ref in feature.evidence_refs
+        if ref.kind in {"branch_relation", "branch_relation_focus"} and ref.title
+    )
     if not relations:
         return ""
-    return "地支结构材料：" + "、".join(relations[:6]) + "。"
+    prefix = "地支结构焦点" if feature.feature_id.startswith("feature.branch.relation_type.") else "地支结构材料"
+    return f"{prefix}：" + "、".join(relations[:6]) + "。"
 
 
 def _time_summary(feature: BaziFeature) -> str:
     pillars = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "time_pillar" and ref.title)
-    ten_gods = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "ten_god" and ref.title)
-    relations = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "branch_relation" and ref.title)
+    ten_gods = _unique(ref.title for ref in feature.evidence_refs if ref.kind in {"ten_god", "time_ten_god_focus"} and ref.title)
+    relations = _unique(ref.title for ref in feature.evidence_refs if ref.kind in {"branch_relation", "time_relation_focus"} and ref.title)
     rows = []
     if pillars:
         rows.append("时间干支：" + "、".join(pillars[:4]))
@@ -243,6 +271,21 @@ def _element_summary(calibration_state: str) -> str:
     return ""
 
 
+def _element_emphasis_summary(feature: BaziFeature) -> str:
+    parsed = _parse_state(feature.calibration_state)
+    element = ELEMENT_LABELS_ZH.get(parsed.get("element", ""), parsed.get("element", ""))
+    state = parsed.get("state", "")
+    value = parsed.get("value", "")
+    spread = parsed.get("spread", "")
+    if not element:
+        labels = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "element_emphasis" and ref.title)
+        return "结构摘要：" + "、".join(labels[:2]) + "。" if labels else ""
+    state_label = "偏显" if state == "prominent" else "偏弱"
+    detail = f"={value}" if value else ""
+    spread_detail = f"，五行差距 {spread}" if spread else ""
+    return f"结构摘要：{element}{state_label}{detail}{spread_detail}。"
+
+
 def _element_list(value: str) -> str:
     labels = [ELEMENT_LABELS_ZH.get(row, "") for row in value.split(",") if row]
     return "、".join(label for label in labels if label)
@@ -259,3 +302,45 @@ def _source_layer_label(value: str) -> str:
 
 def _unique(items) -> list[str]:
     return list(dict.fromkeys(str(item) for item in items if str(item)))
+
+
+def _dynamic_feature_label(feature: BaziFeature) -> str:
+    parsed = _parse_state(feature.calibration_state)
+    if feature.feature_id.startswith("feature.ten_god.focus."):
+        label = parsed.get("label", "")
+        return f"{label}成为十神焦点" if label else "十神焦点特征"
+    if feature.feature_id.startswith("feature.element.prominent."):
+        element = ELEMENT_LABELS_ZH.get(parsed.get("element", ""), "")
+        return f"{element}偏显特征" if element else "五行偏显特征"
+    if feature.feature_id.startswith("feature.element.weak."):
+        element = ELEMENT_LABELS_ZH.get(parsed.get("element", ""), "")
+        return f"{element}偏弱特征" if element else "五行偏弱特征"
+    if feature.feature_id.startswith("feature.branch.relation_type."):
+        return f"地支{_relation_label(parsed.get('relation_type', feature.feature_id.rsplit('.', 1)[-1]))}关系焦点"
+    if feature.feature_id.startswith("feature.time.relation_type."):
+        return f"时间层{_relation_label(parsed.get('relation_type', feature.feature_id.rsplit('.', 1)[-1]))}触发焦点"
+    if feature.feature_id.startswith("feature.time.ten_god."):
+        ten_god = parsed.get("ten_god", "")
+        return f"时间层{ten_god}材料" if ten_god else "时间层十神材料"
+    return ""
+
+
+def _relation_label(value: str) -> str:
+    return {
+        "clash": "冲",
+        "harmony": "合",
+        "harm": "害",
+        "break": "破",
+        "punishment": "刑",
+        "three_harmony": "三合",
+        "three_meeting": "三会",
+    }.get(value, value)
+
+
+def _parse_state(value: str) -> dict[str, str]:
+    rows: dict[str, str] = {}
+    for item in str(value or "").split(";"):
+        key, _, raw = item.partition("=")
+        if key and raw:
+            rows[key] = raw
+    return rows

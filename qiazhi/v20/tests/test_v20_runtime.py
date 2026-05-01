@@ -60,6 +60,7 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]
     assert result["rule_candidate_support"]["runtime_mutation"] is False
     assert result["rule_candidate_support"]["candidate_count"] >= 1
+    assert any(row["matched_feature_count"] >= 1 for row in result["rule_candidate_support"]["candidates"])
     assert result["rule_candidate_validation"]["ok"] is True
     assert result["rule_candidate_ranking_validation"]["ok"] is True
     assert result["rule_candidate_ranking"]["policy"]["status"] == "active_shadow"
@@ -268,6 +269,7 @@ def test_v20_p85_applied_domain_answers_use_professional_reading_paths() -> None
     assert "财星材料边界" in result["answer_text"]
     assert "规则候选" in result["answer_text"]
     assert "影子复核" in result["answer_text"]
+    assert "当前盘命中" in result["answer_text"]
     assert "下一步复核" in result["answer_text"]
     assert "具体收益结果" in result["answer_text"]
     assert "feature." not in result["answer_text"]

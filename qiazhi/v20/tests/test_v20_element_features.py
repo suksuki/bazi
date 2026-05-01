@@ -22,11 +22,14 @@ def test_v20_feature_layer_includes_element_balance_feature() -> None:
     facts = build_chart_facts(chart_input_from_displays("甲子", "戊辰", "甲午", "辛酉"))
     layer = compile_features(facts, infer_core(facts))
     feature = next(row for row in layer.features if row.feature_id == "feature.element.balance_distribution")
+    emphasis_features = [row for row in layer.features if row.feature_id.startswith("feature.element.prominent.")]
 
     assert feature.domain == "element"
     assert feature.evidence_refs
     assert "q_element_balance" in feature.question_hooks
     assert feature.boundary
+    assert emphasis_features
+    assert any(row.evidence_refs[0].kind == "element_emphasis" for row in emphasis_features)
 
 
 def test_v20_runtime_routes_element_questions_and_knowledge() -> None:

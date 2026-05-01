@@ -20,6 +20,14 @@ policy. It can explain why a feature is being surfaced. It cannot create chart
 facts, activate a rule candidate, or turn corpus statistics into a deterministic
 fortune conclusion.
 
+P89 adds chart-specific salience to this runtime brain. The compiler now emits
+focused features for repeated or visible ten-gods, element emphasis, branch
+relation types, and explicit time-layer triggers. Recommended question keys
+remain stable, but question titles can now include chart-specific material such
+as visible wealth sources, concrete branch interactions, or supplied luck/flow
+pillars. This is the current bridge between deterministic feature extraction and
+future learned ranking.
+
 ## Knowledge Semantic And Portrait Intelligence
 
 `KnowledgeSemanticModel` now converts reviewed knowledge into a runtime semantic
@@ -213,6 +221,10 @@ whether extracted conditions are too broad, too sparse, or good enough for
 shadow ranking. LLM assistance is similarly bounded: it may draft candidate
 atoms from reviewed knowledge text, but it cannot create chart facts, activate
 rules, or produce final Bazi conclusions.
+
+Runtime rule candidates now also report current-chart feature collisions. A
+candidate can say which compiled features matched its feature-hook conditions,
+making the rule layer more concrete while preserving the shadow-only boundary.
 
 The LLM draft endpoint is executable only under explicit env flags. If the LLM
 provider is not ready, V20 records `provider_not_ready` and uses the

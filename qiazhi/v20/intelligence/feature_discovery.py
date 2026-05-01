@@ -246,6 +246,7 @@ def _ranked_feature_rows(
         rule_weight = _rule_weight_for_feature(feature.domain, rule_weights)
         training_weight = _training_weight_for_feature(feature.domain, training_weights)
         semantic_weight = _semantic_weight_for_feature(feature.domain, semantic_weights)
+        specificity_weight = _specificity_weight_for_feature(feature)
         evidence_weight = min(0.1, len(feature.evidence_refs) * 0.018)
         knowledge_weight = min(0.1, knowledge_count * 0.022)
         portrait_weight = 0.0
@@ -261,6 +262,7 @@ def _ranked_feature_rows(
             + interaction_weight
             + training_weight
             + semantic_weight
+            + specificity_weight
             + readiness_weight
         )
         sources = ["feature_spine"]
@@ -276,6 +278,8 @@ def _ranked_feature_rows(
             sources.append("corpus_training_prior")
         if semantic_weight:
             sources.append("knowledge_semantic_model")
+        if specificity_weight:
+            sources.append("chart_specific_salience")
         rows.append(
             {
                 "feature_id": feature.feature_id,
@@ -293,6 +297,7 @@ def _ranked_feature_rows(
                 "interaction_weight": round(interaction_weight, 3),
                 "training_weight": round(training_weight, 3),
                 "semantic_weight": round(semantic_weight, 3),
+                "specificity_weight": round(specificity_weight, 3),
                 "related_interaction_domains": related_interactions,
                 "sources": sources,
                 "summary": feature_public_summary(feature) or feature.boundary,
@@ -609,6 +614,23 @@ def _semantic_weight_for_feature(domain: str, semantic_weights: dict[str, float]
         default=0.0,
     )
     return min(0.06, max(direct, related))
+
+
+def _specificity_weight_for_feature(feature: BaziFeature) -> float:
+    if feature.feature_id.startswith(
+        (
+            "feature.ten_god.focus.",
+            "feature.element.prominent.",
+            "feature.element.weak.",
+            "feature.branch.relation_type.",
+            "feature.time.relation_type.",
+            "feature.time.ten_god.",
+        )
+    ):
+        return min(0.07, 0.025 + len(feature.evidence_refs) * 0.012)
+    if feature.feature_id in {"feature.wealth.material_available", "feature.wealth.material_not_visible"}:
+        return min(0.045, 0.018 + len(feature.evidence_refs) * 0.006)
+    return 0.0
 
 
 def _feature_reason(

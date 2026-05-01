@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from v20.answer.measurement_policy import applied_domains, feature_domains_for_applied_domain
-from v20.features.schema import FeatureLayer
+from v20.answer.measurement_policy import applied_domains, feature_domains_for_applied_domain, feature_label
+from v20.features.schema import BaziFeature, FeatureLayer
 from v20.interaction.question_ranker import QuestionRankingPolicy
 from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.rule_proposal import build_knowledge_rule_proposals
@@ -26,7 +26,12 @@ CONDITION_LABELS_ZH = {
 }
 
 
-def build_rule_candidate_support(question: QuestionCandidate, *, limit: int = 4) -> dict[str, object]:
+def build_rule_candidate_support(
+    question: QuestionCandidate,
+    *,
+    feature_layer: FeatureLayer | None = None,
+    limit: int = 4,
+) -> dict[str, object]:
     domains = _candidate_domains(question.domain)
     candidates: list[dict[str, object]] = []
     for domain in domains:
@@ -34,7 +39,7 @@ def build_rule_candidate_support(question: QuestionCandidate, *, limit: int = 4)
         for proposal in report.get("proposals", ()):
             if not isinstance(proposal, dict):
                 continue
-            candidates.append(_safe_candidate(proposal))
+            candidates.append(_safe_candidate(proposal, feature_layer))
             if len(candidates) >= limit:
                 break
         if len(candidates) >= limit:
@@ -119,9 +124,10 @@ def rule_candidate_section_body(report: dict[str, object]) -> str:
         return "当前没有可展示的规则候选，回答只保留特征、知识依据和测算边界。"
     rows = []
     for row in candidates[:4]:
+        match = _match_summary(row)
         rows.append(
             f"{row.get('label', '规则候选')}：{row.get('condition_summary', '')}，"
-            f"{row.get('validation_summary', '')}"
+            f"{match}{row.get('validation_summary', '')}"
         )
     return "；".join(rows) + "。这些规则候选只进入影子复核，不激活为用户可见断语。"
 
@@ -137,7 +143,7 @@ def _proposal_count(domain: str, *, limit: int = 1) -> int:
     return int(report.get("proposal_count", 0))
 
 
-def _safe_candidate(proposal: dict[str, object]) -> dict[str, object]:
+def _safe_candidate(proposal: dict[str, object], feature_layer: FeatureLayer | None = None) -> dict[str, object]:
     domain = str(proposal.get("domain", ""))
     condition_model = proposal.get("condition_model", {})
     condition_type = ""
@@ -146,12 +152,16 @@ def _safe_candidate(proposal: dict[str, object]) -> dict[str, object]:
         condition_type = str(condition_model.get("type", ""))
         all_of = condition_model.get("all_of", ())
         condition_count = len(all_of) if isinstance(all_of, list | tuple) else 0
+    matched = _matched_features(proposal, feature_layer)
     return {
         "rule_id": proposal.get("proposal_id", ""),
         "label": RULE_LABELS_ZH.get(domain, f"{domain}规则候选"),
         "domain": domain,
         "source_knowledge_id": proposal.get("source_knowledge_id", ""),
         "condition_summary": _condition_summary(condition_type, condition_count),
+        "matched_feature_count": len(matched),
+        "matched_feature_ids": tuple(feature.feature_id for feature in matched[:8]),
+        "matched_feature_labels": tuple(feature_label(feature) for feature in matched[:5]),
         "validation_summary": _validation_summary(proposal),
         "activation_scope": proposal.get("activation_scope", "shadow_training_and_candidate_rule_graph"),
         "status": proposal.get("status", "released_to_shadow_training"),
@@ -162,6 +172,40 @@ def _safe_candidate(proposal: dict[str, object]) -> dict[str, object]:
             "PROMOTION_REQUIRED_BEFORE_RUNTIME_ACTIVATION",
         ],
     }
+
+
+def _matched_features(proposal: dict[str, object], feature_layer: FeatureLayer | None) -> tuple[BaziFeature, ...]:
+    if feature_layer is None:
+        return ()
+    condition_model = proposal.get("condition_model", {})
+    if not isinstance(condition_model, dict):
+        return ()
+    all_of = condition_model.get("all_of", ())
+    if not isinstance(all_of, list | tuple):
+        return ()
+    prefixes = tuple(
+        str(row.get("feature_hook_prefix", ""))
+        for row in all_of
+        if isinstance(row, dict) and row.get("feature_hook_prefix")
+    )
+    if not prefixes:
+        return ()
+    matched = [
+        feature
+        for feature in feature_layer.features
+        if any(feature.feature_id.startswith(prefix) for prefix in prefixes)
+    ]
+    return tuple(sorted(matched, key=lambda feature: (feature.confidence, feature.feature_id), reverse=True))
+
+
+def _match_summary(candidate: dict[str, object]) -> str:
+    count = int(candidate.get("matched_feature_count", 0) or 0)
+    if not count:
+        return ""
+    labels = [str(row) for row in candidate.get("matched_feature_labels", ()) if str(row)]
+    if labels:
+        return f"当前盘命中 {count} 个特征（" + "、".join(labels[:3]) + "），"
+    return f"当前盘命中 {count} 个特征，"
 
 
 def _condition_summary(condition_type: str, condition_count: int) -> str:

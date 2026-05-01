@@ -62,3 +62,23 @@ def test_v20_question_ranking_policy_endpoint_and_runtime_remain_feature_backed(
     assert manifest["runtime_mutation"] is False
     assert result["questions"]
     assert all(row["source_feature_ids"] for row in result["questions"])
+
+
+def test_v20_questions_surface_chart_specific_material_without_new_keys() -> None:
+    baseline = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="ranker.baseline")
+    timed = run_runtime_from_pillars(
+        "庚午",
+        "辛巳",
+        "丁丑",
+        "乙巳",
+        input_id="ranker.timed",
+        flow_year_pillar="丙午",
+        luck_pillar="甲申",
+    )
+
+    assert {row["question_key"] for row in baseline["questions"]} != set()
+    assert {row["question_key"] for row in baseline["questions"]} >= {"q_strength_assessment", "q_branch_relation_detail"}
+    assert {row["question_key"] for row in timed["questions"]} >= {"q_time_layer_context", "q_income_stability"}
+    assert any("年柱子与日柱午冲" in row["title"] for row in baseline["questions"])
+    assert any("正财" in row["title"] and "财运结构边界" in row["title"] for row in timed["questions"])
+    assert any("chart_specific_salience" in row["sources"] for row in timed["feature_discovery"]["ranked_features"])

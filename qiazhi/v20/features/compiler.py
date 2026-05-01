@@ -37,6 +37,18 @@ RELATION_LABELS_ZH = {
     "three_harmony": "三合",
     "three_meeting": "三会",
 }
+TEN_GOD_KEYS = {
+    "比肩": "bi_jian",
+    "劫财": "jie_cai",
+    "食神": "shi_shen",
+    "伤官": "shang_guan",
+    "偏财": "pian_cai",
+    "正财": "zheng_cai",
+    "七杀": "qi_sha",
+    "正官": "zheng_guan",
+    "偏印": "pian_yin",
+    "正印": "zheng_yin",
+}
 
 
 def compile_features(
@@ -51,8 +63,10 @@ def compile_features(
         _useful_god_gate_feature(inference),
     ]
     features.extend(_ten_god_features(facts))
+    features.extend(_ten_god_focus_features(facts))
     features.extend(_useful_god_candidate_features(facts, inference))
     features.append(_element_balance_feature(facts))
+    features.extend(_element_emphasis_features(facts))
     features.extend(_branch_features(facts))
     features.extend(_time_features(time_context or TimeContext()))
     features.extend(_wealth_features(facts))
@@ -172,6 +186,50 @@ def _ten_god_features(facts: ChartFacts) -> list[BaziFeature]:
     return features
 
 
+def _ten_god_focus_features(facts: ChartFacts) -> list[BaziFeature]:
+    grouped: dict[str, list[object]] = {}
+    for row in [*facts.visible_ten_gods, *facts.hidden_ten_gods]:
+        if row.label:
+            grouped.setdefault(row.label, []).append(row)
+    features = []
+    for label, rows in sorted(grouped.items(), key=lambda item: (sum(row.weight for row in item[1]), item[0]), reverse=True):
+        total_weight = round(sum(row.weight for row in rows), 3)
+        visible_count = sum(1 for row in rows if row.layer == "visible")
+        if total_weight < 1.45 and visible_count == 0:
+            continue
+        key = TEN_GOD_KEYS.get(label, label)
+        evidence_refs = tuple(
+            EvidenceRef(
+                f"ten_god.focus.{key}.{row.layer}.{row.pillar}",
+                "ten_god_focus",
+                f"{label}@{POSITION_LABELS_ZH.get(row.pillar, row.pillar)}",
+                row.layer,
+            )
+            for row in rows[:8]
+        )
+        hooks = ["q_ten_god_focus", "q_hidden_stem_role"]
+        if label in {"正财", "偏财"}:
+            hooks.insert(0, "q_income_factors")
+        if label in {"正官", "七杀"}:
+            hooks.insert(0, "q_career_structure")
+        features.append(
+            BaziFeature(
+                feature_id=f"feature.ten_god.focus.{key}",
+                title=f"{label} ten-god focus is chart-specific",
+                domain="ten_god",
+                source_layers=tuple(sorted({row.layer for row in rows})),
+                evidence_refs=evidence_refs,
+                confidence=bounded_confidence(0.33, min(0.24, total_weight * 0.045 + visible_count * 0.045)),
+                readiness="ready",
+                boundary=boundary_for("ten_god"),
+                question_hooks=tuple(dict.fromkeys(hooks)),
+                answer_hooks=("metadata_boundary",),
+                calibration_state=f"label={label};weight={total_weight};visible={visible_count};count={len(rows)}",
+            )
+        )
+    return features[:4]
+
+
 def _element_balance_feature(facts: ChartFacts) -> BaziFeature:
     distribution = element_distribution(facts)
     strongest = strongest_elements(distribution)
@@ -201,6 +259,59 @@ def _element_balance_feature(facts: ChartFacts) -> BaziFeature:
     )
 
 
+def _element_emphasis_features(facts: ChartFacts) -> list[BaziFeature]:
+    distribution = element_distribution(facts)
+    if not distribution:
+        return []
+    peak = max(distribution.values())
+    floor = min(distribution.values())
+    spread = round(peak - floor, 3)
+    if spread < 1.2:
+        return []
+    features: list[BaziFeature] = []
+    for element in strongest_elements(distribution):
+        label = ELEMENT_LABELS_ZH.get(element, element)
+        features.append(
+            BaziFeature(
+                feature_id=f"feature.element.prominent.{element}",
+                title=f"{label} element is structurally prominent",
+                domain="element",
+                source_layers=("core", "hidden"),
+                evidence_refs=(
+                    EvidenceRef(f"element.prominent.{element}", "element_emphasis", f"{label}偏显={distribution[element]}", "core"),
+                    EvidenceRef("element.spread", "element_distribution", f"spread={spread}", "core"),
+                ),
+                confidence=bounded_confidence(0.34, min(0.25, spread * 0.055)),
+                readiness="boundary_ready",
+                boundary=boundary_for("element"),
+                question_hooks=("q_element_balance", "q_element_support_pressure"),
+                answer_hooks=("element_balance",),
+                calibration_state=f"element={element};state=prominent;value={distribution[element]};spread={spread}",
+            )
+        )
+    for element in weakest_elements(distribution):
+        label = ELEMENT_LABELS_ZH.get(element, element)
+        features.append(
+            BaziFeature(
+                feature_id=f"feature.element.weak.{element}",
+                title=f"{label} element is structurally thin",
+                domain="element",
+                source_layers=("core", "hidden"),
+                evidence_refs=(
+                    EvidenceRef(f"element.weak.{element}", "element_emphasis", f"{label}偏弱={distribution[element]}", "core"),
+                    EvidenceRef("element.spread", "element_distribution", f"spread={spread}", "core"),
+                ),
+                confidence=bounded_confidence(0.31, min(0.22, spread * 0.045)),
+                readiness="boundary_ready",
+                boundary=boundary_for("element"),
+                question_hooks=("q_element_support_pressure", "q_element_balance"),
+                answer_hooks=("element_balance",),
+                calibration_state=f"element={element};state=weak;value={distribution[element]};spread={spread}",
+            )
+        )
+    return features
+
+
 def _branch_features(facts: ChartFacts) -> list[BaziFeature]:
     if not facts.relation_hits:
         return [
@@ -226,7 +337,7 @@ def _branch_features(facts: ChartFacts) -> list[BaziFeature]:
         )
         for row in facts.relation_hits[:6]
     )
-    return [
+    features = [
         BaziFeature(
             feature_id="feature.branch.visible_relation",
             title="Visible branch relation requires layer review",
@@ -240,6 +351,35 @@ def _branch_features(facts: ChartFacts) -> list[BaziFeature]:
             answer_hooks=("branch_relation",),
         )
     ]
+    by_type: dict[str, list[object]] = {}
+    for hit in facts.relation_hits:
+        by_type.setdefault(hit.relation_type, []).append(hit)
+    for relation_type, hits in sorted(by_type.items(), key=lambda item: (len(item[1]), item[0]), reverse=True):
+        refs = tuple(
+            EvidenceRef(
+                f"branch.{relation_type}.{'.'.join(row.branches)}.{index}",
+                "branch_relation_focus",
+                _relation_title(row),
+                row.layer,
+            )
+            for index, row in enumerate(hits[:4])
+        )
+        features.append(
+            BaziFeature(
+                feature_id=f"feature.branch.relation_type.{relation_type}",
+                title=f"Branch {relation_type} relation is chart-specific",
+                domain="branch",
+                source_layers=("natal",),
+                evidence_refs=refs,
+                confidence=bounded_confidence(0.34, len(refs) * 0.055),
+                readiness="ready",
+                boundary=boundary_for("branch"),
+                question_hooks=("q_branch_relation_detail", "q_structure_overview"),
+                answer_hooks=("branch_relation",),
+                calibration_state=f"relation_type={relation_type};count={len(hits)}",
+            )
+        )
+    return features
 
 
 def _time_features(time_context: TimeContext) -> list[BaziFeature]:
@@ -258,7 +398,7 @@ def _time_features(time_context: TimeContext) -> list[BaziFeature]:
                 "time",
             )
         )
-    return [
+    features = [
         BaziFeature(
             feature_id="feature.time.explicit_context",
             title="Explicit time layer is available",
@@ -272,6 +412,55 @@ def _time_features(time_context: TimeContext) -> list[BaziFeature]:
             answer_hooks=("timing_context",),
         )
     ]
+    if time_context.relation_hits:
+        by_type: dict[str, list[object]] = {}
+        for hit in time_context.relation_hits:
+            by_type.setdefault(hit.relation_type, []).append(hit)
+        for relation_type, hits in sorted(by_type.items(), key=lambda item: (len(item[1]), item[0]), reverse=True):
+            features.append(
+                BaziFeature(
+                    feature_id=f"feature.time.relation_type.{relation_type}",
+                    title=f"Time-layer {relation_type} trigger is available",
+                    domain="time",
+                    source_layers=("time",),
+                    evidence_refs=tuple(
+                        EvidenceRef(
+                            f"time.relation.focus.{relation_type}.{index}",
+                            "time_relation_focus",
+                            _relation_title(hit),
+                            "time",
+                        )
+                        for index, hit in enumerate(hits[:4])
+                    ),
+                    confidence=bounded_confidence(0.34, len(hits[:4]) * 0.06),
+                    readiness="review_ready",
+                    boundary=boundary_for("time"),
+                    question_hooks=("q_time_relation_triggers", "q_time_layer_context"),
+                    answer_hooks=("timing_context",),
+                    calibration_state=f"relation_type={relation_type};count={len(hits)}",
+                )
+            )
+    for layer in time_context.layers[:3]:
+        label = layer.ten_god.label
+        key = TEN_GOD_KEYS.get(label, label)
+        features.append(
+            BaziFeature(
+                feature_id=f"feature.time.ten_god.{layer.layer_key}.{key}",
+                title=f"Time-layer {label} material is available",
+                domain="time",
+                source_layers=("time",),
+                evidence_refs=(
+                    EvidenceRef(f"time.ten_god.focus.{layer.layer_key}", "time_ten_god_focus", f"{layer.pillar.display}={label}", "time"),
+                ),
+                confidence=0.41,
+                readiness="review_ready",
+                boundary=boundary_for("time"),
+                question_hooks=("q_time_layer_context", "q_time_relation_triggers"),
+                answer_hooks=("timing_context",),
+                calibration_state=f"layer={layer.layer_key};ten_god={label};pillar={layer.pillar.display}",
+            )
+        )
+    return features
 
 
 def _wealth_features(facts: ChartFacts) -> list[BaziFeature]:
