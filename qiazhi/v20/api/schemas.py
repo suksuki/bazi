@@ -32,3 +32,10 @@ class FeedbackRequest(BaseModel):
     feedback_text: str = Field(..., min_length=1, max_length=2000)
     feature_ids: list[str] = Field(default_factory=list)
     locale: str = "zh"
+
+
+class PolicyReviewRequest(BaseModel):
+    policy_type: str = Field(..., pattern="^(question_ranking|knowledge_retrieval|confidence_calibration)$")
+    policy_payload: dict[str, object] = Field(default_factory=dict)
+    source: str = "manual_review"
+    eval_report_id: str = ""

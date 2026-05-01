@@ -8,7 +8,7 @@ from fastapi.staticfiles import StaticFiles
 from v20 import V20_VERSION
 from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
-from v20.api.schemas import FeedbackRequest, MeasureRequest
+from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.features.calibration import confidence_calibration_manifest
@@ -16,6 +16,7 @@ from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.learning.evolution import build_evolution_dry_run_plan
+from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
 from v20.learning.registries import registry_manifest
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
@@ -151,6 +152,22 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/learning/registries")
     def learning_registries() -> dict[str, object]:
         return registry_manifest()
+
+    @app.get("/api/v20/learning/policy-review")
+    def learning_policy_review_manifest() -> dict[str, object]:
+        return policy_review_manifest()
+
+    @app.post("/api/v20/learning/policy-review")
+    def learning_policy_review(payload: PolicyReviewRequest) -> dict[str, object]:
+        try:
+            return review_policy_proposal(
+                policy_type=payload.policy_type,
+                policy_payload=payload.policy_payload,
+                source=payload.source,
+                eval_report_id=payload.eval_report_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail={"error": "V20_POLICY_REVIEW_INVALID", "message": str(exc)}) from exc
 
     @app.post("/api/v20/feedback/analyze")
     def feedback_analyze(payload: FeedbackRequest) -> dict[str, object]:
