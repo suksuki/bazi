@@ -32,6 +32,7 @@ def build_evolution_dry_run_plan(
         "blocked_actions": [
             "core_rule_mutation_without_decision",
             "feature_compiler_rewrite_from_model_output",
+            "feature_creation_from_calibration_policy",
             "automatic_fortune_conclusion_generation",
             "production_promotion_without_artifact_and_decision_records",
         ],

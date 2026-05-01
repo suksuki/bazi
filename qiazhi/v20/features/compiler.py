@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from v20.core.schemas import ChartFacts, CoreInference, TimeContext
 from v20.features.boundaries import boundary_for
+from v20.features.calibration import ConfidenceCalibrationPolicy, calibrate_features
 from v20.features.confidence import bounded_confidence
 from v20.features.hierarchy import cluster_features
 from v20.features.schema import BaziFeature, EvidenceRef, FeatureLayer
@@ -16,6 +17,7 @@ def compile_features(
     inference: CoreInference,
     rule_paths: tuple[object, ...] = (),
     time_context: TimeContext | None = None,
+    calibration_policy: ConfidenceCalibrationPolicy | None = None,
 ) -> FeatureLayer:
     features: list[BaziFeature] = [
         _strength_feature(inference),
@@ -27,6 +29,7 @@ def compile_features(
     features.extend(_wealth_features(facts))
     features.append(_pattern_index_feature(facts))
     features = _dedupe(features)
+    features = list(calibrate_features(features, calibration_policy))
     features.sort(key=lambda row: (row.confidence, row.feature_id), reverse=True)
     macro_features = cluster_features(features)
     return FeatureLayer(version=FEATURE_LAYER_VERSION, features=tuple(features), macro_features=macro_features)

@@ -11,6 +11,7 @@ from v20.access.roles import access_role_manifest
 from v20.api.schemas import FeedbackRequest, MeasureRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
+from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
@@ -126,6 +127,10 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/knowledge/retrieval-policy")
     def knowledge_retrieval_policy() -> dict[str, object]:
         return knowledge_retrieval_manifest()
+
+    @app.get("/api/v20/features/confidence-calibration")
+    def feature_confidence_calibration() -> dict[str, object]:
+        return confidence_calibration_manifest()
 
     @app.get("/api/v20/corpus/coverage")
     def corpus_coverage() -> dict[str, object]:

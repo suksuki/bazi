@@ -19,10 +19,12 @@ TEST_COVERAGE_AREAS = (
             "v20/tests/test_v20_runtime.py",
             "v20/tests/test_v20_question_ranking.py",
             "v20/tests/test_v20_knowledge_ranking.py",
+            "v20/tests/test_v20_confidence_calibration.py",
         ),
         "contracts": (
             "KnowledgeRef",
             "KnowledgeRetrievalPolicy",
+            "ConfidenceCalibrationPolicy",
             "llm_assist",
             "deterministic_i18n_terms",
             "QuestionRankingPolicy",
