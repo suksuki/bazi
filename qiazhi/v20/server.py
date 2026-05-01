@@ -17,6 +17,7 @@ from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
+from v20.testing.matrix import build_test_coverage_matrix
 from v20.testing.tiers import test_tier_manifest
 from v20.validation.suite import run_synthetic_suite
 
@@ -82,6 +83,10 @@ def create_app() -> FastAPI:
             "manifest": manifest,
             "runtime_mutation": False,
         }
+
+    @app.get("/api/v20/testing/matrix")
+    def testing_matrix() -> dict[str, object]:
+        return build_test_coverage_matrix()
 
     @app.get("/api/v20/storage/schema")
     def storage_schema() -> dict[str, object]:

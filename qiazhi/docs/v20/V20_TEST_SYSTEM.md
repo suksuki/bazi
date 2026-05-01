@@ -52,6 +52,16 @@ Before a phase commit:
 ./v20/scripts/test_full.sh
 ```
 
+Coverage matrix:
+
+```text
+GET /api/v20/testing/matrix
+```
+
+The matrix records which fast-tier files cover runtime feature spine, explicit
+time layer, knowledge/LLM/i18n, access roles, ops/storage/Redis,
+corpus/learning/validation, and UI shell contracts.
+
 Service opt-in:
 
 ```bash

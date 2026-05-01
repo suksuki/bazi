@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from fastapi.testclient import TestClient
+
+from v20.server import app
+from v20.testing.matrix import build_test_coverage_matrix
 from v20.testing.runner import run_tier
 from v20.testing.tiers import get_tier, test_tier_manifest as build_test_tier_manifest
 
@@ -46,3 +50,29 @@ def test_v20_test_scripts_and_docs_are_wired() -> None:
     assert "V20 uses bounded test tiers" in doc
     assert "RUN_V20_SERVICE_TESTS=1" in doc
     assert "RUN_V20_CORPUS_TESTS=1" in doc
+
+
+def test_v20_test_coverage_matrix_tracks_mainline_areas() -> None:
+    matrix = build_test_coverage_matrix()
+    areas = {row["area"] for row in matrix["areas"]}
+
+    assert matrix["runtime_mutation"] is False
+    assert {
+        "runtime_feature_spine",
+        "explicit_time_layer",
+        "knowledge_llm_i18n",
+        "access_roles",
+        "ops_storage_redis",
+        "corpus_learning_validation",
+        "ui_static_shell",
+    } <= areas
+
+
+def test_v20_testing_matrix_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v20/testing/matrix")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["runtime_mutation"] is False
+    assert data["default_tier"] == "fast"
