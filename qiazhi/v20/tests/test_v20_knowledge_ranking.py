@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from v20.api.runtime import run_runtime_from_pillars
 from v20.features.schema import FeatureLayer
+from v20.knowledge.approval import build_first_wave_approval_preflight, build_knowledge_approval_preflight
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
 from v20.knowledge.draft_import import build_knowledge_draft_import_preview
@@ -215,3 +216,27 @@ def test_v20_knowledge_review_packet_endpoints_are_read_only() -> None:
     assert packet["status"] == "ready_for_review"
     assert packets["runtime_mutation"] is False
     assert packets["status"] == "ready"
+
+
+def test_v20_knowledge_approval_preflight_blocks_incomplete_drafts() -> None:
+    report = build_knowledge_approval_preflight("strength")
+    first_wave = build_first_wave_approval_preflight()
+
+    assert report["ok"] is False
+    assert report["status"] == "blocked"
+    assert report["runtime_mutation"] is False
+    assert any("missing_evidence_template" in row for row in report["failures"])
+    assert first_wave["status"] == "blocked"
+    assert first_wave["blocked_domain_count"] >= 1
+    assert "NO_AUTOMATIC_REVIEWED_STATUS" in first_wave["guardrails"]
+
+
+def test_v20_knowledge_approval_preflight_endpoints_are_read_only() -> None:
+    client = TestClient(app)
+    report = client.get("/api/v20/knowledge/approval-preflight/strength").json()
+    first_wave = client.get("/api/v20/knowledge/first-wave-approval-preflight").json()
+
+    assert report["runtime_mutation"] is False
+    assert report["status"] == "blocked"
+    assert first_wave["runtime_mutation"] is False
+    assert first_wave["status"] == "blocked"

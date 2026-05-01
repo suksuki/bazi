@@ -17,6 +17,7 @@ from v20.interaction.feedback_record import record_feedback_analysis
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
+from v20.knowledge.approval import build_first_wave_approval_preflight, build_knowledge_approval_preflight
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
 from v20.knowledge.draft_import import build_knowledge_draft_import_preview
@@ -198,6 +199,14 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/knowledge/first-wave-review-packets")
     def knowledge_first_wave_review_packets() -> dict[str, object]:
         return build_first_wave_review_packets()
+
+    @app.get("/api/v20/knowledge/approval-preflight/{domain}")
+    def knowledge_approval_preflight(domain: str) -> dict[str, object]:
+        return build_knowledge_approval_preflight(domain)
+
+    @app.get("/api/v20/knowledge/first-wave-approval-preflight")
+    def knowledge_first_wave_approval_preflight() -> dict[str, object]:
+        return build_first_wave_approval_preflight()
 
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:

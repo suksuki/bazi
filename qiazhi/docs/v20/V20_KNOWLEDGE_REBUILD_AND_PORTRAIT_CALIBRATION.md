@@ -25,6 +25,8 @@ Endpoints:
 - `GET /api/v20/knowledge/review-queue`
 - `GET /api/v20/knowledge/review-packet/{domain}`
 - `GET /api/v20/knowledge/first-wave-review-packets`
+- `GET /api/v20/knowledge/approval-preflight/{domain}`
+- `GET /api/v20/knowledge/first-wave-approval-preflight`
 
 These endpoints do not activate rules, write database rows, or treat knowledge
 as truth. They make missing sources, duplicate ids, unreviewed sources, and
@@ -47,6 +49,11 @@ pattern, and time context.
 Review packets turn a domain queue into draft `KnowledgeUnit` skeletons with
 missing fields, release blockers, review checklist, and validation
 requirements. They are not runtime-retrievable until reviewed and released.
+
+Approval preflight checks whether a packet has source refs, evidence templates,
+boundaries, feature hooks, question hooks, and decision requirements satisfied.
+Current migrated drafts are expected to be blocked until reviewers complete
+those fields.
 
 ## Portrait Calibration
 

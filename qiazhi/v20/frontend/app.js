@@ -160,6 +160,7 @@ const loadOps = async () => {
       knowledgeDraftImport,
       knowledgeReviewQueue,
       firstWavePackets,
+      firstWaveApproval,
       dependencies,
       sync,
       policyReview,
@@ -177,6 +178,7 @@ const loadOps = async () => {
       requestJson("/api/v20/knowledge/draft-import-preview"),
       requestJson("/api/v20/knowledge/review-queue"),
       requestJson("/api/v20/knowledge/first-wave-review-packets"),
+      requestJson("/api/v20/knowledge/first-wave-approval-preflight"),
       requestJson("/api/v20/runtime/dependencies"),
       requestJson("/api/v20/ops/sync-readiness"),
       requestJson("/api/v20/learning/policy-review"),
@@ -187,7 +189,7 @@ const loadOps = async () => {
     setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards`);
     setText("#validationState", `${validation.ok ? "pass" : "blocked"} · ${validation.case_count} cases`);
     setText("#learningState", `${learning.status} · ${learningRun.estimated_batch_count} batches`);
-    setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · drafts ${knowledgeDraftImport.candidate_count} · queue ${knowledgeReviewQueue.domain_count} domains · packets ${firstWavePackets.domain_count} · gaps ${knowledgeCoverage.gap_count} · ${knowledgeRelease.status}`);
+    setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · drafts ${knowledgeDraftImport.candidate_count} · queue ${knowledgeReviewQueue.domain_count} domains · packets ${firstWavePackets.domain_count} · preflight ${firstWaveApproval.status} · gaps ${knowledgeCoverage.gap_count}`);
     setText("#dependencyState", `pg ${dependencies.postgres.ready_for_connection ? "ready" : "config"} · redis ${dependencies.redis.ready_for_connection ? "ready" : "config"}`);
     setText("#syncState", `${sync.status} · ${sync.direction_count} directions`);
     setText("#policyState", `${policyReview.supported_policy_types.length} policy types · dry-run`);

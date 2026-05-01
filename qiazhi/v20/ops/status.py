@@ -3,6 +3,7 @@ from __future__ import annotations
 from v20.access.roles import access_role_manifest
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.question_ranker import question_ranking_manifest
+from v20.knowledge.approval import build_first_wave_approval_preflight
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
 from v20.knowledge.draft_import import build_knowledge_draft_import_preview
@@ -38,6 +39,7 @@ def system_status_report() -> dict[str, object]:
     knowledge_draft_import = build_knowledge_draft_import_preview(limit=12)
     knowledge_review_queue = build_knowledge_review_queue(limit_per_domain=3)
     first_wave_packets = build_first_wave_review_packets(limit_per_domain=2)
+    first_wave_preflight = build_first_wave_approval_preflight()
     dependencies = dependency_readiness_report()
     sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
@@ -66,6 +68,8 @@ def system_status_report() -> dict[str, object]:
         "knowledge_review_domain_count": knowledge_review_queue["domain_count"],
         "knowledge_first_wave_packet_status": first_wave_packets["status"],
         "knowledge_first_wave_domain_count": first_wave_packets["domain_count"],
+        "knowledge_first_wave_approval_status": first_wave_preflight["status"],
+        "knowledge_first_wave_blocked_domain_count": first_wave_preflight["blocked_domain_count"],
         "access_role_count": len(access_role_manifest()["roles"]),
         "test_area_count": matrix["area_count"],
         "learning_status": evolution["status"],

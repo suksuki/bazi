@@ -1,4 +1,5 @@
 from v20.knowledge.alignment import knowledge_feature_alignment
+from v20.knowledge.approval import build_first_wave_approval_preflight, build_knowledge_approval_preflight
 from v20.knowledge.audit import audit_default_knowledge_units
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
@@ -17,7 +18,9 @@ __all__ = [
     "KnowledgeSource",
     "KnowledgeUnit",
     "audit_default_knowledge_units",
+    "build_first_wave_approval_preflight",
     "build_knowledge_catalog",
+    "build_knowledge_approval_preflight",
     "build_knowledge_coverage_report",
     "build_knowledge_draft_import_preview",
     "build_knowledge_release_manifest",
