@@ -1,6 +1,9 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 from fastapi import FastAPI, HTTPException
+from fastapi.staticfiles import StaticFiles
 
 from v20 import V20_VERSION
 from v20.api.schemas import MeasureRequest
@@ -21,6 +24,9 @@ def create_app() -> FastAPI:
         version=V20_VERSION,
         description="Independent V20 Bazi measurement runtime.",
     )
+    frontend_dir = Path(__file__).resolve().parent / "frontend"
+    if frontend_dir.exists():
+        app.mount("/v20/ui", StaticFiles(directory=frontend_dir, html=True), name="v20_ui")
 
     @app.get("/health")
     def health() -> dict[str, object]:

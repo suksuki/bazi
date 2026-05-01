@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V20 命理测算台</title>
+    <link rel="stylesheet" href="/v20/ui/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Qiazhi V20</p>
+          <h1>命理测算台</h1>
+        </div>
+        <div class="status-strip" id="runtimeStatus">
+          <span>health</span>
+          <strong>checking</strong>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="input-panel" aria-label="测算输入">
+          <div class="panel-head">
+            <h2>四柱输入</h2>
+            <span id="profileBadge">local</span>
+          </div>
+          <form id="measureForm">
+            <label>
+              年柱
+              <input name="year" maxlength="2" value="甲子" autocomplete="off" />
+            </label>
+            <label>
+              月柱
+              <input name="month" maxlength="2" value="戊辰" autocomplete="off" />
+            </label>
+            <label>
+              日柱
+              <input name="day" maxlength="2" value="甲午" autocomplete="off" />
+            </label>
+            <label>
+              时柱
+              <input name="hour" maxlength="2" value="辛酉" autocomplete="off" />
+            </label>
+            <label class="wide">
+              用户问题
+              <textarea name="user_text" rows="3">我想看财和用神</textarea>
+            </label>
+            <div class="form-row">
+              <label>
+                语言
+                <select name="locale">
+                  <option value="zh">中文</option>
+                  <option value="en">English</option>
+                  <option value="ko">한국어</option>
+                </select>
+              </label>
+              <label>
+                问题键
+                <select name="question_key" id="questionSelect">
+                  <option value="">自动路由</option>
+                </select>
+              </label>
+            </div>
+            <button type="submit" class="primary-action">开始测算</button>
+          </form>
+        </aside>
+
+        <section class="result-stage" aria-live="polite">
+          <div class="summary-band">
+            <div>
+              <p class="eyebrow">selected question</p>
+              <h2 id="selectedQuestion">等待测算</h2>
+            </div>
+            <div class="summary-metrics">
+              <span><strong id="featureCount">0</strong> features</span>
+              <span><strong id="topicCount">0</strong> topics</span>
+              <span><strong id="knowledgeCount">0</strong> refs</span>
+            </div>
+          </div>
+
+          <div class="main-grid">
+            <section class="surface">
+              <div class="surface-head">
+                <h3>命理特征主线</h3>
+                <span id="coreCapacity">core</span>
+              </div>
+              <div class="chip-grid" id="featureChips"></div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-head">
+                <h3>测算主题</h3>
+                <span id="appliedDomains">domain</span>
+              </div>
+              <div class="topic-list" id="measurementTopics"></div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-head">
+                <h3>推荐问题</h3>
+                <span>feature-backed</span>
+              </div>
+              <div class="question-list" id="questionList"></div>
+            </section>
+
+            <section class="surface">
+              <div class="surface-head">
+                <h3>画像投影</h3>
+                <span>calibration only</span>
+              </div>
+              <div class="axis-list" id="portraitAxes"></div>
+            </section>
+          </div>
+
+          <section class="answer-surface">
+            <div class="surface-head">
+              <h3>回答计划</h3>
+              <span id="llmStatus">llm idle</span>
+            </div>
+            <pre id="answerText">V20 runtime ready.</pre>
+          </section>
+
+          <section class="ops-grid">
+            <div class="surface compact">
+              <h3>合成验证</h3>
+              <p id="validationState">checking</p>
+            </div>
+            <div class="surface compact">
+              <h3>语料覆盖</h3>
+              <p id="corpusState">checking</p>
+            </div>
+            <div class="surface compact">
+              <h3>学习进化</h3>
+              <p id="learningState">checking</p>
+            </div>
+          </section>
+        </section>
+      </main>
+    </div>
+    <script src="/v20/ui/app.js" defer></script>
+  </body>
+</html>
