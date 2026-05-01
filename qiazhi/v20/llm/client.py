@@ -46,7 +46,10 @@ def call_structured_llm(
         return _fallback_result(contract, cfg, "execute_flag_disabled")
     call_error = ""
     try:
-        payload = _post_chat_completion(contract, prompt, cfg)
+        if cfg.provider == "ollama_native":
+            payload = _post_ollama_native_completion(contract, prompt, cfg)
+        else:
+            payload = _post_chat_completion(contract, prompt, cfg)
     except Exception as exc:
         call_error = f"openai_compatible_failed:{type(exc).__name__}"
         if cfg.provider == "ollama":
@@ -105,6 +108,7 @@ def _post_ollama_native_completion(
         "model": cfg.model,
         "messages": _structured_messages(contract, prompt),
         "stream": False,
+        "format": "json",
         "think": False,
         "options": {
             "temperature": cfg.temperature,
@@ -171,14 +175,46 @@ def _parse_json_content(content: str) -> dict[str, object]:
     try:
         payload = json.loads(content)
     except json.JSONDecodeError:
-        start = content.find("{")
-        end = content.rfind("}")
-        if start < 0 or end <= start:
+        for candidate in _json_object_candidates(content):
+            try:
+                payload = json.loads(candidate)
+                break
+            except json.JSONDecodeError:
+                continue
+        else:
             raise
-        payload = json.loads(content[start : end + 1])
     if not isinstance(payload, dict):
         raise TypeError("LLM structured output must be a JSON object.")
     return payload
+
+
+def _json_object_candidates(content: str) -> list[str]:
+    candidates: list[str] = []
+    starts = [index for index, char in enumerate(content) if char == "{"]
+    for start in starts:
+        depth = 0
+        in_string = False
+        escaped = False
+        for index in range(start, len(content)):
+            char = content[index]
+            if in_string:
+                if escaped:
+                    escaped = False
+                elif char == "\\":
+                    escaped = True
+                elif char == '"':
+                    in_string = False
+                continue
+            if char == '"':
+                in_string = True
+            elif char == "{":
+                depth += 1
+            elif char == "}":
+                depth -= 1
+                if depth == 0:
+                    candidates.append(content[start : index + 1])
+                    break
+    return candidates
 
 
 def _fallback_result(contract: LLMTaskContract, cfg: LLMProviderConfig, reason: str) -> dict[str, object]:

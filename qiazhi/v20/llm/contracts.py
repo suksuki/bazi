@@ -90,6 +90,33 @@ ANSWER_PLAN_REWRITE = LLMTaskContract(
     fallback="deterministic_answer",
 )
 
+PRACTITIONER_ANSWER = LLMTaskContract(
+    task_name="practitioner_answer",
+    allowed_inputs=(
+        "chart_facts",
+        "time_context",
+        "selected_question",
+        "feature_discovery",
+        "knowledge_semantic_model",
+        "portrait_intelligence",
+        "rule_candidate_support",
+        "answer_plan",
+        "verified_answer_text",
+        "locale",
+    ),
+    required_outputs=("text", "mainline", "question_answer", "evidence_notes", "next_questions", "boundary_notes"),
+    forbidden_outputs=("new_chart_fact", "rule_activation", "unsupported_claim", "fortune_verdict", "private_data_inference"),
+    fallback="deterministic_answer",
+    runtime_scope="evidence_bounded_practitioner_answer",
+    guardrails=(
+        "LLM_TASK_BOUNDED",
+        "PRACTITIONER_STYLE_ALLOWED_AFTER_EVIDENCE_PACK",
+        "NO_FACT_GENERATION",
+        "NO_RULE_MUTATION",
+        "DETERMINISTIC_VALIDATOR_FINAL",
+    ),
+)
+
 MULTILINGUAL_RENDER = LLMTaskContract(
     task_name="multilingual_render",
     allowed_inputs=("verified_answer_text", "locale", "terminology_map"),
@@ -127,6 +154,7 @@ LLM_CONTRACTS = (
     RULE_EXTRACTION_DRAFT,
     ANSWER_PLAN_ASSIST,
     ANSWER_PLAN_REWRITE,
+    PRACTITIONER_ANSWER,
     MULTILINGUAL_RENDER,
     FEEDBACK_SUMMARY,
     SAFETY_REVIEW,

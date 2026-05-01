@@ -182,11 +182,11 @@ const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") =
   button.disabled = busy;
   button.textContent = busy ? text.running : text.run;
   chatButton.disabled = busy;
-  chatButton.textContent = busy ? (llmMode === "rewrite" ? "生成中" : "测算中") : "发送";
+  chatButton.textContent = busy ? (llmMode === "practitioner" ? "生成中" : "测算中") : "发送";
   document.querySelectorAll(".chat-question-chip, .question-row").forEach((node) => {
     node.disabled = busy;
   });
-  if (busy) setText("#llmStatus", llmMode === "rewrite" ? "llm generating" : "测算中");
+  if (busy) setText("#llmStatus", llmMode === "practitioner" ? "llm practitioner" : "测算中");
 };
 
 const renderPillars = (chart, timeContext = {}) => {
@@ -299,7 +299,7 @@ const runQuestion = (question) => {
     force: true,
     interactionText: title,
     interactionSource: "推荐问题",
-    llmMode: "rewrite",
+    llmMode: "practitioner",
   });
 };
 
@@ -402,6 +402,8 @@ const renderChatTranscript = () => {
 
 const llmStatusLabel = (result) => {
   const assist = result?.llm_assist || {};
+  const practitioner = assist.practitioner_answer || {};
+  if (practitioner.status && practitioner.status !== "not_requested") return `llm practitioner ${practitioner.status}`;
   const rewrite = assist.answer_rewrite || {};
   if (rewrite.status && rewrite.status !== "not_requested") return `llm ${rewrite.status}`;
   return `llm ${assist.status || "idle"}`;
@@ -578,7 +580,7 @@ form.addEventListener("submit", (event) => {
     force: true,
     interactionText: form.elements.user_text.value.trim(),
     interactionSource: "手动测算",
-    llmMode: "rewrite",
+    llmMode: "practitioner",
   });
 });
 feedbackButton.addEventListener("click", submitFeedback);
@@ -609,7 +611,7 @@ chatButton.addEventListener("click", () => {
     force: true,
     interactionText: value,
     interactionSource: "继续追问",
-    llmMode: "rewrite",
+    llmMode: "practitioner",
   });
 });
 chatText.addEventListener("keydown", (event) => {
@@ -626,7 +628,7 @@ chatText.addEventListener("keydown", (event) => {
       force: true,
       interactionText: value,
       interactionSource: "继续追问",
-      llmMode: "rewrite",
+      llmMode: "practitioner",
     });
   }
 });

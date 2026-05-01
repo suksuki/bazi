@@ -169,6 +169,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "knowledge_extraction_draft",
                 "rule_proposal_draft",
                 "portrait_template_draft",
+                "evidence_bounded_practitioner_answer",
                 "answer_plan_rewrite",
                 "feedback_summary",
                 "safety_review_advisory",

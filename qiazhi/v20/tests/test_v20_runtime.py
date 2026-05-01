@@ -7,6 +7,7 @@ from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.canonical_case import CanonicalCase
 from v20.corpus.precompute_runner import precompute_case
 from v20.llm.contracts import ANSWER_PLAN_REWRITE
+from v20.llm.practitioner import accept_or_fallback_practitioner_answer
 from v20.llm.tasks import (
     accept_or_fallback_rewrite,
     draft_rule_extraction_from_knowledge,
@@ -67,6 +68,7 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["llm_assist"]["context_pack"]["publishable"] is False
     assert result["llm_assist"]["context_pack"]["runtime_mutation"] is False
     assert "answer_plan_rewrite" in result["llm_assist"]["context_pack"]["task_contexts"]
+    assert "practitioner_answer" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert result["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
     assert result["portrait_intelligence"]["version"] == "v20.portrait_intelligence.v1"
     assert result["portrait_intelligence"]["axis_models"]
@@ -133,6 +135,15 @@ def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
         user_text="请按命理结构说明一下",
         llm_mode="rewrite",
     )
+    practitioner = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.validation.practitioner",
+        user_text="请像命理师一样说明主线",
+        llm_mode="practitioner",
+    )
     case = GOLDEN_CASES[0]
     eval_result = evaluate_answer_plan(
         case,
@@ -154,6 +165,39 @@ def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
     assert rewritten["llm_assist"]["answer_rewrite"]["status"] == "fallback"
     assert rewritten["llm_assist"]["answer_rewrite"]["source"] == "deterministic_fallback"
     assert rewritten["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+    assert practitioner["llm_assist"]["practitioner_answer"]["status"] == "fallback"
+    assert practitioner["llm_assist"]["practitioner_answer"]["source"] == "deterministic_fallback"
+    assert practitioner["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+
+
+def test_v20_practitioner_answer_accepts_only_verified_context_text() -> None:
+    safe = accept_or_fallback_practitioner_answer(
+        {
+            "text": "命理主线先看日主承载、十神来源和地支互动，再回答当前问题的结构边界。",
+            "mainline": "日主承载、十神来源、地支互动。",
+            "question_answer": "只解释已验证结构，不扩展为事件。",
+            "evidence_notes": ["已接入特征发现和知识边界。"],
+            "next_questions": ["是否继续看用神候选？"],
+            "boundary_notes": ["不输出固定吉凶。"],
+        },
+        "deterministic",
+    )
+    bad = accept_or_fallback_practitioner_answer(
+        {
+            "text": "你一定发财。",
+            "mainline": "越界",
+            "question_answer": "越界",
+            "evidence_notes": [],
+            "next_questions": [],
+            "boundary_notes": [],
+        },
+        "deterministic",
+    )
+
+    assert safe["ok"] is True
+    assert safe["source"] == "llm_practitioner_answer"
+    assert bad["ok"] is False
+    assert bad["source"] == "deterministic_fallback"
 
 
 def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:

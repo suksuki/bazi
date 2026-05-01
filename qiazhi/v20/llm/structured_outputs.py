@@ -100,6 +100,27 @@ class LLMSafetyReview:
 
 
 @dataclass(frozen=True)
+class LLMPractitionerAnswer:
+    text: str
+    mainline: str
+    question_answer: str
+    evidence_notes: tuple[str, ...]
+    next_questions: tuple[str, ...]
+    boundary_notes: tuple[str, ...]
+    contract_task: str = "practitioner_answer"
+    status: str = "answer_candidate"
+    guardrails: tuple[str, ...] = (
+        "ANSWER_FROM_VERIFIED_CONTEXT_ONLY",
+        "NO_NEW_CHART_FACTS",
+        "NO_RULE_ACTIVATION",
+        "DETERMINISTIC_VALIDATOR_FINAL",
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class LLMFeedbackSummary:
     summary: str
     candidate_domains: tuple[str, ...]

@@ -22,6 +22,7 @@ ChartInput
 -> EvidencePack
 -> AnswerPlan
 -> bounded LLM assist contracts
+-> evidence-bounded LLM practitioner answer when explicitly requested
 -> ops profile and store contracts
 -> deterministic answer
 ```
@@ -42,6 +43,7 @@ Initial boundaries:
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
+- LLM can act as a practitioner-style answer composer only after FeatureDiscovery, KnowledgeSemanticModel, PortraitIntelligence, and AnswerPlan have prepared verified context.
 - Rule candidates may reorder existing questions only through a capped shadow signal and synthetic validation.
 - Learning, LLM, corpus, and ranking systems are assistive and governed.
 - Postgres is the persistent authority; Redis is ephemeral cache/queue/lock state.

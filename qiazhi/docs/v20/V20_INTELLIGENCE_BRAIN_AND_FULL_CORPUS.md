@@ -38,6 +38,21 @@ sub-axis label candidates, calibration prompts, and profile tags. These are
 training and interaction surfaces only; they do not create personality labels,
 fortune conclusions, or rule activations.
 
+## LLM Practitioner Answer
+
+V20 now has an explicit `llm_mode="practitioner"` lane. This lane gives LLM a
+verified context pack after the deterministic spine has already produced chart
+facts, feature discovery, knowledge semantics, portrait intelligence, rule
+candidate support, and an answer plan.
+
+The LLM may synthesize a practitioner-style answer, but it must return
+structured JSON and pass deterministic validation. If the provider is disabled,
+the call fails, the output violates boundaries, or internal ids leak, V20 falls
+back to the deterministic answer.
+
+This changes LLM's role from passive rewrite to bounded professional synthesis
+without giving it authority over facts, rules, or conclusions.
+
 ## Service Configuration
 
 LLM, Postgres, and Redis are configured by environment variables only. No

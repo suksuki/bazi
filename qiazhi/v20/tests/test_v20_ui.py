@@ -72,9 +72,10 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "rule-candidate" in script.text
     assert "规则候选验证" in script.text
     assert "特征发现验证" in script.text
-    assert "chatButton.textContent = busy ? (llmMode === \"rewrite\" ? \"生成中\" : \"测算中\") : \"发送\"" in script.text
+    assert "chatButton.textContent = busy ? (llmMode === \"practitioner\" ? \"生成中\" : \"测算中\") : \"发送\"" in script.text
     assert "payload.llm_mode = llmMode" in script.text
-    assert "llmMode: \"rewrite\"" in script.text
+    assert "llmMode: \"practitioner\"" in script.text
+    assert "assist.practitioner_answer" in script.text
     assert "appendChatTurn(interactionText" in script.text
     assert ".chat-transcript" in style.text
     assert ".evidence-row.rule-candidate" in style.text

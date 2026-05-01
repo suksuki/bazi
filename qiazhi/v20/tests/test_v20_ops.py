@@ -4,7 +4,7 @@ import json
 
 from fastapi.testclient import TestClient
 
-from v20.llm.client import call_structured_llm
+from v20.llm.client import _parse_json_content, call_structured_llm
 from v20.llm.contracts import ANSWER_PLAN_REWRITE
 from v20.llm.provider import LLMProviderConfig, llm_provider_readiness_report, resolve_llm_base_url
 from v20.ops.config import load_runtime_config_from_env
@@ -173,6 +173,17 @@ def test_v20_ollama_llm_calls_fallback_to_native_chat(monkeypatch) -> None:
     assert native_body["stream"] is False
     assert native_body["think"] is False
     assert native_body["options"]["num_predict"] == 800
+
+
+def test_v20_llm_json_parser_extracts_first_complete_object() -> None:
+    payload = _parse_json_content(
+        "```json\n"
+        "{\"text\":\"safe\", \"mainline\":\"ok\", \"nested\":{\"value\":\"}\"}}\n"
+        "```\nextra {not json}"
+    )
+
+    assert payload["text"] == "safe"
+    assert payload["nested"] == {"value": "}"}
 
 
 def test_v20_dependency_endpoint_is_read_only() -> None:

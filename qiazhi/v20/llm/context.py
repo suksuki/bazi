@@ -8,6 +8,7 @@ from v20.llm.contracts import (
     ANSWER_PLAN_REWRITE,
     FEATURE_CANDIDATE_PROPOSAL,
     INTENT_PARSE,
+    PRACTITIONER_ANSWER,
     QUESTION_SUGGESTION,
     SAFETY_REVIEW,
 )
@@ -54,6 +55,14 @@ def build_llm_context_pack(
             "answer_plan_rewrite": {
                 "contract": ANSWER_PLAN_REWRITE.to_dict(),
                 "prompt": answer_rewrite_prompt(answer_plan, locale=locale),
+            },
+            "practitioner_answer": {
+                "contract": PRACTITIONER_ANSWER.to_dict(),
+                "prompt": {
+                    "task": "practitioner_answer",
+                    "status": "requires_chart_feature_discovery_knowledge_semantic_and_portrait_context",
+                    "fallback": "deterministic_answer",
+                },
             },
             "safety_review": {
                 "contract": SAFETY_REVIEW.to_dict(),

@@ -37,6 +37,55 @@ def answer_rewrite_prompt(
     }
 
 
+def practitioner_answer_prompt(
+    *,
+    chart_facts: dict[str, object],
+    time_context: dict[str, object],
+    selected_question: dict[str, object],
+    feature_discovery: dict[str, object],
+    knowledge_semantic_model: dict[str, object],
+    portrait_intelligence: dict[str, object],
+    rule_candidate_support: dict[str, object],
+    answer_plan: AnswerPlan,
+    verified_answer_text: str,
+    locale: str = "zh",
+) -> dict[str, object]:
+    return {
+        "task": "practitioner_answer",
+        "locale": locale,
+        "role": "evidence_bounded_bazi_practitioner",
+        "context": {
+            "chart": _compact_chart(chart_facts),
+            "time_context": _compact_time_context(time_context),
+            "selected_question": _compact_selected_question(selected_question),
+            "top_discovered_features": _compact_discovered_features(feature_discovery),
+            "top_domain_hypotheses": _compact_domain_hypotheses(feature_discovery),
+            "knowledge_semantic_domains": _compact_knowledge_semantic_domains(knowledge_semantic_model),
+            "portrait_axes": _compact_portrait_axes(portrait_intelligence),
+            "rule_candidates": _compact_rule_candidates(rule_candidate_support),
+            "answer_plan": _compact_answer_plan(answer_plan),
+            "verified_answer_text": _clip(verified_answer_text, 2200),
+        },
+        "output_schema": {
+            "text": "string",
+            "mainline": "string",
+            "question_answer": "string",
+            "evidence_notes": ["string"],
+            "next_questions": ["string"],
+            "boundary_notes": ["string"],
+        },
+        "instruction": (
+            "Return only one JSON object. Act as a professional Bazi practitioner, but use only the supplied verified context. "
+            "Write a useful answer for the selected question: start with the chart's main structural line, then answer the question, "
+            "then explain key evidence, useful follow-up questions, and boundaries. "
+            "Keep the whole response concise: text under 900 Chinese characters, 2-4 evidence notes, 2-4 next questions, and 1-3 boundary notes. "
+            "Do not wrap JSON in markdown fences. "
+            "Do not create stems, branches, ten-gods, events, timing, private facts, or conclusions that are not present in the context. "
+            "Do not mention internal ids. Do not output fixed good/bad verdicts or guarantee outcomes."
+        ),
+    }
+
+
 def intent_parse_prompt(user_text: str, *, locale: str = "zh") -> dict[str, object]:
     return {
         "task": "intent_parse",
@@ -101,3 +150,136 @@ def safety_review_prompt(candidate_text: str, *, locale: str = "zh") -> dict[str
         "candidate_text": candidate_text,
         "instruction": "Review for forbidden claims, internal identifiers, privacy leaks, and missing boundaries.",
     }
+
+
+def _compact_chart(chart_facts: dict[str, object]) -> dict[str, object]:
+    return {
+        "day_master": chart_facts.get("day_master", ""),
+        "day_master_element": chart_facts.get("day_master_element", ""),
+        "pillars": chart_facts.get("pillars", {}),
+        "visible_ten_gods": chart_facts.get("visible_ten_gods", [])[:8],
+        "hidden_ten_gods": chart_facts.get("hidden_ten_gods", [])[:12],
+    }
+
+
+def _compact_time_context(time_context: dict[str, object]) -> dict[str, object]:
+    return {
+        "status": time_context.get("status", ""),
+        "layers": time_context.get("layers", [])[:4],
+        "relation_hits": time_context.get("relation_hits", [])[:8],
+    }
+
+
+def _compact_selected_question(selected_question: dict[str, object]) -> dict[str, object]:
+    return {
+        "title": selected_question.get("title", ""),
+        "domain": selected_question.get("domain", ""),
+        "measurement_topic": selected_question.get("measurement_topic", ""),
+        "boundary": _clip(str(selected_question.get("boundary", "")), 220),
+    }
+
+
+def _compact_discovered_features(feature_discovery: dict[str, object]) -> list[dict[str, object]]:
+    rows = []
+    for row in (feature_discovery.get("ranked_features") or [])[:6]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "title": row.get("title", ""),
+                "domain_label": row.get("domain_label", row.get("domain", "")),
+                "score": row.get("discovery_score", 0),
+                "reason": _clip(str(row.get("reason", "")), 180),
+                "summary": _clip(str(row.get("summary", "")), 180),
+            }
+        )
+    return rows
+
+
+def _compact_domain_hypotheses(feature_discovery: dict[str, object]) -> list[dict[str, object]]:
+    return [
+        {
+            "domain": row.get("domain", ""),
+            "label": row.get("label", ""),
+            "score": row.get("discovery_score", 0),
+            "status": row.get("status", ""),
+        }
+        for row in (feature_discovery.get("domain_hypotheses") or [])[:5]
+        if isinstance(row, dict)
+    ]
+
+
+def _compact_knowledge_semantic_domains(model: dict[str, object]) -> list[dict[str, object]]:
+    rows = []
+    for row in (model.get("domain_models") or [])[:7]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "label": row.get("label", ""),
+                "stage": row.get("measurement_stage", ""),
+                "portrait_labels": [
+                    item.get("label", "")
+                    for item in (row.get("portrait_label_candidates") or [])[:3]
+                    if isinstance(item, dict)
+                ],
+                "boundary": _clip(str(row.get("boundary_summary", "")), 180),
+            }
+        )
+    return rows
+
+
+def _compact_portrait_axes(report: dict[str, object]) -> list[dict[str, object]]:
+    rows = []
+    for row in (report.get("axis_models") or [])[:5]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "label": row.get("label", ""),
+                "domain": row.get("domain", ""),
+                "score": row.get("intelligence_score", 0),
+                "sub_axes": [
+                    item.get("label", "")
+                    for item in (row.get("sub_axis_candidates") or [])[:3]
+                    if isinstance(item, dict)
+                ],
+                "calibration_prompt": _clip(str(row.get("calibration_prompt", "")), 160),
+            }
+        )
+    return rows
+
+
+def _compact_rule_candidates(report: dict[str, object]) -> list[dict[str, object]]:
+    return [
+        {
+            "label": row.get("label", ""),
+            "domain": row.get("domain", ""),
+            "condition": _clip(str(row.get("condition_summary", "")), 160),
+            "validation": _clip(str(row.get("validation_summary", "")), 160),
+        }
+        for row in (report.get("candidates") or [])[:3]
+        if isinstance(row, dict)
+    ]
+
+
+def _compact_answer_plan(plan: AnswerPlan) -> dict[str, object]:
+    return {
+        "question_key": plan.question_key,
+        "sections": [
+            {
+                "title": section.title,
+                "domain": section.domain,
+                "body": _clip(section.body, 260),
+            }
+            for section in plan.sections[:6]
+        ],
+        "guardrails": list(plan.guardrails),
+    }
+
+
+def _clip(value: str, limit: int) -> str:
+    text = str(value or "").strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"

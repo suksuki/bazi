@@ -65,7 +65,7 @@ def llm_provider_readiness_report(config: LLMProviderConfig | None = None) -> di
     cfg = config or load_llm_provider_config_from_env()
     api_key_present = bool(os.getenv(cfg.api_key_env))
     audit_api_key_present = bool(os.getenv(cfg.audit_api_key_env))
-    local_provider = cfg.provider.lower() in {"ollama", "local", "local_openai_compatible"}
+    local_provider = cfg.provider.lower() in {"ollama", "ollama_native", "local", "local_openai_compatible"}
     resolved_url = cfg.resolved_base_url()
     ready = bool(cfg.enabled and resolved_url and (api_key_present or local_provider))
     return {
