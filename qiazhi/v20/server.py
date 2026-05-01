@@ -22,6 +22,7 @@ from v20.knowledge.coverage import build_knowledge_coverage_report
 from v20.knowledge.draft_import import build_knowledge_draft_import_preview
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.release import build_knowledge_release_manifest
+from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
@@ -184,6 +185,10 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/knowledge/draft-import-preview")
     def knowledge_draft_import_preview() -> dict[str, object]:
         return build_knowledge_draft_import_preview()
+
+    @app.get("/api/v20/knowledge/review-queue")
+    def knowledge_review_queue() -> dict[str, object]:
+        return build_knowledge_review_queue()
 
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:

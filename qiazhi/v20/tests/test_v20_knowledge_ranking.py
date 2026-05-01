@@ -11,6 +11,7 @@ from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import KnowledgeRetrievalPolicy, knowledge_retrieval_manifest, rank_knowledge_units
 from v20.knowledge.release import build_knowledge_release_manifest
+from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.server import app
@@ -154,3 +155,27 @@ def test_v20_knowledge_draft_import_preview_endpoint_is_read_only() -> None:
     assert preview["runtime_mutation"] is False
     assert preview["candidate_count"] >= 50
     assert preview["migration_audit_status"] == "audit_ready"
+
+
+def test_v20_knowledge_review_queue_prioritizes_core_bazi_domains() -> None:
+    queue = build_knowledge_review_queue(limit_per_domain=3)
+
+    assert queue["status"] == "ready"
+    assert queue["runtime_mutation"] is False
+    assert queue["candidate_count"] >= 400
+    domains = [row["domain"] for row in queue["domains"]]
+    assert "strength" in domains
+    assert "ten_god" in domains
+    assert queue["core_domain_priority"][:3] == ("strength", "ten_god", "useful_god")
+    first_strength = next(row for row in queue["domains"] if row["domain"] == "strength")
+    assert first_strength["recommended_first_batch"]
+    assert first_strength["review_policy"] == "core_bazi_first_wave_review"
+
+
+def test_v20_knowledge_review_queue_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    queue = client.get("/api/v20/knowledge/review-queue").json()
+
+    assert queue["runtime_mutation"] is False
+    assert queue["status"] == "ready"
+    assert "NO_RUNTIME_ACTIVATION_FROM_QUEUE" in queue["guardrails"]
