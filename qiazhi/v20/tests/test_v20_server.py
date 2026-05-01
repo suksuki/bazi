@@ -31,6 +31,7 @@ def test_v20_measure_endpoint_returns_bazi_measurement_runtime() -> None:
             "day": "甲午",
             "hour": "辛酉",
             "input_id": "server.test",
+            "user_text": "我想看财和用神",
             "locale": "zh",
         },
     )
@@ -42,6 +43,10 @@ def test_v20_measure_endpoint_returns_bazi_measurement_runtime() -> None:
     assert data["runtime_mutation"] is False
     assert data["feature_layer"]["macro_feature_count"] >= 4
     assert data["knowledge_alignment"]["status"] == "pass"
+    assert data["measurement_report"]["core_focus"] == "bazi_measurement"
+    assert data["selected_question"]["question_key"]
+    assert data["llm_assist"]["status"] == "ready"
+    assert data["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
     assert "八字测算重点" in data["answer_text"]
     assert "feature." not in data["answer_text"]
     assert "core." not in data["answer_text"]

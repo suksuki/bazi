@@ -11,8 +11,14 @@ def retrieve_knowledge_refs(feature_layer: FeatureLayer) -> tuple[KnowledgeRef, 
     return retrieve_knowledge(feature_layer).refs
 
 
-def retrieve_knowledge(feature_layer: FeatureLayer, *, units: tuple[KnowledgeUnit, ...] | None = None) -> KnowledgeRetrievalReport:
+def retrieve_knowledge(
+    feature_layer: FeatureLayer,
+    *,
+    units: tuple[KnowledgeUnit, ...] | None = None,
+    requested_domains: tuple[str, ...] = (),
+) -> KnowledgeRetrievalReport:
     domains = {feature.domain for feature in feature_layer.features}
+    domains.update(requested_domains)
     feature_ids = {feature.feature_id for feature in feature_layer.features}
     selected: list[KnowledgeRef] = []
     for unit in units or default_knowledge_units():

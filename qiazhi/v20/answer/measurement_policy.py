@@ -8,6 +8,9 @@ DOMAIN_LABELS = {
     "ten_god": "十神结构",
     "branch": "地支关系",
     "wealth": "财星与收入结构",
+    "career": "事业角色与工作结构",
+    "relationship": "关系互动结构",
+    "health": "五行平衡与健康边界",
     "pattern": "格局审查",
 }
 
@@ -26,7 +29,17 @@ MEASUREMENT_STAGE = {
     "ten_god": "structure",
     "branch": "structure",
     "wealth": "domain_reading",
+    "career": "domain_reading",
+    "relationship": "domain_reading",
+    "health": "domain_reading",
     "pattern": "arbitration",
+}
+
+APPLIED_DOMAIN_FEATURE_MAP = {
+    "wealth": ("wealth", "ten_god", "strength", "branch"),
+    "career": ("ten_god", "pattern", "strength", "branch"),
+    "relationship": ("ten_god", "branch", "strength"),
+    "health": ("strength", "branch", "pattern"),
 }
 
 FEATURE_LABELS = {
@@ -54,6 +67,14 @@ def measurement_focus(feature: BaziFeature) -> str:
 
 def measurement_stage(domain: str) -> str:
     return MEASUREMENT_STAGE.get(domain, "structure")
+
+
+def feature_domains_for_applied_domain(domain: str) -> tuple[str, ...]:
+    return APPLIED_DOMAIN_FEATURE_MAP.get(domain, (domain,))
+
+
+def applied_domains() -> tuple[str, ...]:
+    return tuple(APPLIED_DOMAIN_FEATURE_MAP)
 
 
 def feature_label(feature: BaziFeature) -> str:

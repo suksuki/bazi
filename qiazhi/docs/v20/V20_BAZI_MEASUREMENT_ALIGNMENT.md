@@ -19,9 +19,26 @@ The initial topic map is:
 - `ten_god`: 十神结构
 - `branch`: 地支关系
 - `wealth`: 财星与收入结构
+- `career`: 事业角色与工作结构
+- `relationship`: 关系互动结构
+- `health`: 五行平衡与健康边界
 - `pattern`: 格局审查
 
 These are not final fortune verdicts. They are bounded measurement paths that can become richer as rule paths, time context, corpus coverage, and validation improve.
+
+## Measurement Report
+
+V20 now exposes `measurement_report` as the shared runtime view for UI,
+LLM, portrait projection, recommended questions, and answer planning.
+
+- Foundation topics remain `strength`, `ten_god`, `branch`, `pattern`, and
+  `useful_god`.
+- Applied Bazi measurement topics are generated only through controlled
+  domain projection: `wealth`, `career`, `relationship`, and `health`.
+- Applied questions must cite source `BaziFeature` ids and keep deterministic
+  prediction boundaries.
+- Portrait output remains a calibration surface. It does not rank questions,
+  mutate answers, or create fortune conclusions.
 
 ## Prediction Boundary
 

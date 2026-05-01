@@ -14,7 +14,9 @@ from v20.interaction.portrait_projection import portrait_projection
 from v20.interaction.questions import recommend_questions
 from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.retrieval import retrieve_knowledge
+from v20.llm.assist import attach_answer_safety_review, build_llm_routing_assist
 from v20.llm.contracts import LLM_CONTRACTS
+from v20.measurement.report import build_measurement_report
 
 
 def run_runtime_from_pillars(
@@ -25,6 +27,7 @@ def run_runtime_from_pillars(
     *,
     input_id: str = "",
     question_key: str = "",
+    user_text: str = "",
     locale: str = "zh",
 ) -> dict[str, object]:
     chart_input = chart_input_from_displays(year, month, day, hour, input_id=input_id)
@@ -34,12 +37,16 @@ def run_runtime_from_pillars(
     chart_graph = build_chart_graph(chart_facts)
     rule_paths = select_rule_paths(chart_graph)
     feature_layer = compile_features(chart_facts, core, rule_paths)
-    knowledge_report = retrieve_knowledge(feature_layer)
     questions = recommend_questions(feature_layer)
-    selected_question = _select_question(questions, question_key)
+    llm_routing_assist = build_llm_routing_assist(user_text, feature_layer, questions, locale=locale)
+    selected_question = _select_question(questions, question_key or str(llm_routing_assist.get("routed_question_key", "")))
+    knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
     evidence_pack = build_evidence_pack(feature_layer)
     answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack)
+    portrait = portrait_projection(feature_layer)
+    measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
     answer_text = compose_answer(answer_plan, locale=locale)
+    llm_assist = attach_answer_safety_review(llm_routing_assist, answer_text)
     return {
         "version": "v20.runtime_result.v1",
         "input_id": input_id,
@@ -54,11 +61,14 @@ def run_runtime_from_pillars(
         "knowledge_refs": [row.to_dict() for row in knowledge_report.refs],
         "knowledge_alignment": knowledge_feature_alignment(feature_layer),
         "questions": [row.to_dict() for row in questions],
-        "portrait_projection": portrait_projection(feature_layer),
+        "selected_question": selected_question.to_dict(),
+        "portrait_projection": portrait,
+        "measurement_report": measurement_report.to_dict(),
         "answer_plan": answer_plan.to_dict(),
         "answer_text": answer_text,
         "prediction_policy": prediction_policy(),
         "llm_capabilities": [contract.to_dict() for contract in LLM_CONTRACTS],
+        "llm_assist": llm_assist,
         "runtime_mutation": False,
         "guardrails": ["V20_INDEPENDENT_RUNTIME", "FEATURE_SPINE_FIRST", "NO_V19_IMPORTS"],
     }

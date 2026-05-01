@@ -3,7 +3,12 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass
 from typing import Any
 
-from v20.answer.measurement_policy import domain_label, measurement_stage
+from v20.answer.measurement_policy import (
+    applied_domains,
+    domain_label,
+    feature_domains_for_applied_domain,
+    measurement_stage,
+)
 from v20.features.schema import FeatureLayer
 
 
@@ -34,11 +39,20 @@ QUESTION_LABELS = {
     "q_structure_overview": "这个八字的整体结构主线是什么？",
     "q_income_stability": "财星与收入结构的测算边界是什么？",
     "q_income_factors": "哪些因素会影响财星材料的可用性？",
+    "q_career_structure": "事业角色与工作结构应从哪条主线测算？",
+    "q_relationship_structure": "关系互动结构的测算入口是什么？",
+    "q_health_balance_boundary": "五行平衡与健康边界应如何测算？",
     "q_pattern_structure": "格局审查应从哪里开始？",
 }
 
+APPLIED_DOMAIN_QUESTION_KEYS = {
+    "career": "q_career_structure",
+    "relationship": "q_relationship_structure",
+    "health": "q_health_balance_boundary",
+}
 
-def recommend_questions(feature_layer: FeatureLayer, *, limit: int = 8) -> tuple[QuestionCandidate, ...]:
+
+def recommend_questions(feature_layer: FeatureLayer, *, limit: int = 12) -> tuple[QuestionCandidate, ...]:
     rows: dict[str, QuestionCandidate] = {}
     for feature in feature_layer.features:
         for index, hook in enumerate(feature.question_hooks):
@@ -56,5 +70,32 @@ def recommend_questions(feature_layer: FeatureLayer, *, limit: int = 8) -> tuple
                 measurement_stage=measurement_stage(feature.domain),
             )
             rows[hook] = candidate
+    _add_applied_domain_questions(rows, feature_layer)
     ordered = sorted(rows.values(), key=lambda row: (row.score, row.question_key), reverse=True)
     return tuple(ordered[:limit])
+
+
+def _add_applied_domain_questions(rows: dict[str, QuestionCandidate], feature_layer: FeatureLayer) -> None:
+    for domain in applied_domains():
+        hook = APPLIED_DOMAIN_QUESTION_KEYS.get(domain)
+        if not hook:
+            continue
+        source_domains = feature_domains_for_applied_domain(domain)
+        sources = tuple(feature for feature in feature_layer.features if feature.domain in source_domains)
+        if not sources:
+            continue
+        feature_ids = tuple(
+            feature.feature_id
+            for feature in sorted(sources, key=lambda row: row.confidence, reverse=True)[:8]
+        )
+        score = round(max(feature.confidence for feature in sources) + min(0.08, len(sources) * 0.012), 3)
+        rows[hook] = QuestionCandidate(
+            question_key=hook,
+            title=QUESTION_LABELS[hook],
+            domain=domain,
+            score=score,
+            source_feature_ids=feature_ids,
+            boundary=f"{domain_label(domain)}必须经由 feature spine 的受控领域投影进入回答。",
+            measurement_topic=domain_label(domain),
+            measurement_stage=measurement_stage(domain),
+        )

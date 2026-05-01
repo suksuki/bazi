@@ -42,6 +42,21 @@ Current V20 LLM contracts:
 
 LLM output is always checked for forbidden claims and internal identifier leaks before it can be user-facing. Failed output falls back to deterministic V20 text.
 
+## Runtime LLM Assist
+
+`llm_assist` is now part of the V20 runtime response:
+
+- `user_text` is parsed as a routing hint, not as evidence.
+- LLM question suggestions can route to an existing feature-backed
+  `QuestionCandidate`, but cannot create unsupported questions.
+- LLM feature candidates remain `proposal_only`; the compiler owns runtime
+  `BaziFeature` creation.
+- Answer text receives deterministic safety review before publication.
+
+When `user_text` is absent, `llm_assist.status` stays `idle`; the runtime still
+attaches an answer safety review so UI and server layers can rely on the same
+guardrail surface.
+
 ## Core Boundary
 
 The V20 mainline remains deterministic:

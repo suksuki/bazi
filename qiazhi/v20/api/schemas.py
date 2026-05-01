@@ -10,6 +10,7 @@ class MeasureRequest(BaseModel):
     hour: str = Field(..., min_length=2, max_length=2)
     input_id: str = ""
     question_key: str = ""
+    user_text: str = ""
     locale: str = "zh"
 
 

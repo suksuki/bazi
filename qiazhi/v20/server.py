@@ -101,6 +101,7 @@ def create_app() -> FastAPI:
                 payload.hour,
                 input_id=payload.input_id,
                 question_key=payload.question_key,
+                user_text=payload.user_text,
                 locale=payload.locale,
             )
         except ValueError as exc:

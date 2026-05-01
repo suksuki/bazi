@@ -34,6 +34,7 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert {row["domain"] for row in result["feature_layer"]["macro_features"]} >= {"strength", "branch", "wealth"}
     assert {row["domain"] for row in result["feature_layer"]["features"]} >= {"strength", "useful_god", "branch", "wealth"}
     assert result["questions"]
+    assert result["selected_question"]["question_key"]
     assert result["knowledge_alignment"]["status"] == "pass"
     assert result["knowledge_report"]["count"] >= 6
     assert all(row["reviewed"] and row["evidence_template"] for row in result["knowledge_refs"])
@@ -43,14 +44,20 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["answer_plan"]["domain_projection"]["guardrails"]
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]
     assert result["prediction_policy"]["core_focus"] == "bazi_measurement"
+    assert result["llm_assist"]["status"] == "idle"
+    assert result["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
     assert "八字测算重点" in result["answer_text"]
     assert "确定事件" in result["answer_text"]
     assert "core." not in result["answer_text"]
     assert "feature." not in result["answer_text"]
     assert result["portrait_projection"]["role"] == "bazi_feature_projection_and_calibration_surface_only"
     assert result["portrait_projection"]["axes"]
+    assert result["measurement_report"]["core_focus"] == "bazi_measurement"
+    assert result["measurement_report"]["selected_question_key"] == result["selected_question"]["question_key"]
+    assert {"career", "relationship", "health"} <= set(result["measurement_report"]["applied_domain_keys"])
     assert all(row["role"] == "bazi_measurement_entry" for row in result["questions"])
     assert all(row["measurement_topic"] for row in result["questions"])
+    assert {"career", "relationship", "health"} <= {row["domain"] for row in result["questions"]}
 
 
 def test_v20_validation_and_llm_fallback_are_guarded() -> None:
@@ -77,6 +84,14 @@ def test_v20_validation_and_llm_fallback_are_guarded() -> None:
 
 def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="v20.llm")
+    routed = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.llm.routed",
+        user_text="我想看财和用神",
+    )
     feature_layer = _feature_layer_obj(result)
     questions = _question_objs(result)
 
@@ -93,6 +108,10 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     assert suggestions["runtime_mutation"] is False
     assert proposals["runtime_mutation"] is False
     assert all(row["status"] == "proposal_only" for row in proposals["candidates"])
+    assert routed["llm_assist"]["status"] == "ready"
+    assert routed["llm_assist"]["routed_question_key"] == "q_useful_god_candidates"
+    assert routed["selected_question"]["question_key"] == "q_useful_god_candidates"
+    assert routed["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
 
 
 def test_v20_corpus_precompute_is_dry_run_only() -> None:
