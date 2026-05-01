@@ -6,6 +6,7 @@ from v20.api.runtime import run_runtime_from_pillars
 from v20.features.schema import FeatureLayer
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
+from v20.knowledge.draft_import import build_knowledge_draft_import_preview
 from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import KnowledgeRetrievalPolicy, knowledge_retrieval_manifest, rank_knowledge_units
@@ -132,3 +133,24 @@ def test_v20_v19_knowledge_migration_endpoint_is_read_only() -> None:
     assert audit["runtime_mutation"] is False
     assert audit["candidate_count"] >= 50
     assert "draft_unit_review" in audit["migration_lanes"]
+
+
+def test_v20_knowledge_draft_import_preview_is_not_runtime_activation() -> None:
+    preview = build_knowledge_draft_import_preview(limit=8)
+
+    assert preview["status"] == "preview_ready"
+    assert preview["candidate_count"] >= 50
+    assert preview["returned_candidate_count"] == 8
+    assert preview["runtime_mutation"] is False
+    assert preview["target_status"] == "draft_review_required"
+    assert all(row["target_status"] == "draft_review_required" for row in preview["candidates"])
+    assert "NO_RUNTIME_KNOWLEDGE_ACTIVATION" in preview["guardrails"]
+
+
+def test_v20_knowledge_draft_import_preview_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    preview = client.get("/api/v20/knowledge/draft-import-preview").json()
+
+    assert preview["runtime_mutation"] is False
+    assert preview["candidate_count"] >= 50
+    assert preview["migration_audit_status"] == "audit_ready"

@@ -157,6 +157,7 @@ const loadOps = async () => {
       knowledgeCoverage,
       knowledgeRelease,
       v19KnowledgeAudit,
+      knowledgeDraftImport,
       dependencies,
       sync,
       policyReview,
@@ -171,6 +172,7 @@ const loadOps = async () => {
       requestJson("/api/v20/knowledge/coverage-report"),
       requestJson("/api/v20/knowledge/release-manifest"),
       requestJson("/api/v20/knowledge/v19-migration-audit"),
+      requestJson("/api/v20/knowledge/draft-import-preview"),
       requestJson("/api/v20/runtime/dependencies"),
       requestJson("/api/v20/ops/sync-readiness"),
       requestJson("/api/v20/learning/policy-review"),
@@ -181,7 +183,7 @@ const loadOps = async () => {
     setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards`);
     setText("#validationState", `${validation.ok ? "pass" : "blocked"} · ${validation.case_count} cases`);
     setText("#learningState", `${learning.status} · ${learningRun.estimated_batch_count} batches`);
-    setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · gaps ${knowledgeCoverage.gap_count} · ${knowledgeRelease.status}`);
+    setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · drafts ${knowledgeDraftImport.candidate_count} · gaps ${knowledgeCoverage.gap_count} · ${knowledgeRelease.status}`);
     setText("#dependencyState", `pg ${dependencies.postgres.ready_for_connection ? "ready" : "config"} · redis ${dependencies.redis.ready_for_connection ? "ready" : "config"}`);
     setText("#syncState", `${sync.status} · ${sync.direction_count} directions`);
     setText("#policyState", `${policyReview.supported_policy_types.length} policy types · dry-run`);

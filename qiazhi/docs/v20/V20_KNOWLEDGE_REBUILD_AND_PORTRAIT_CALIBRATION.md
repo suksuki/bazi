@@ -21,6 +21,7 @@ Endpoints:
 - `GET /api/v20/knowledge/coverage-report`
 - `GET /api/v20/knowledge/release-manifest`
 - `GET /api/v20/knowledge/v19-migration-audit`
+- `GET /api/v20/knowledge/draft-import-preview`
 
 These endpoints do not activate rules, write database rows, or treat knowledge
 as truth. They make missing sources, duplicate ids, unreviewed sources, and
@@ -30,6 +31,11 @@ The V19 migration audit scans `docs/bazi_knowledge` and classifies legacy files
 into review lanes such as reviewed-unit seed, draft-unit review, archive-only
 reference, and rule-conversion candidate. No legacy document can enter runtime
 directly.
+
+The draft import preview parses legacy `knowledge_drafts` JSON seed packs into
+V20 draft candidates. Each candidate remains `draft_review_required` until
+source refs, evidence templates, boundaries, feature hooks, question hooks, and
+synthetic validation are reviewed.
 
 ## Portrait Calibration
 
