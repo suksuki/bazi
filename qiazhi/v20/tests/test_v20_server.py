@@ -220,11 +220,20 @@ def test_v20_service_scripts_and_docs_are_wired() -> None:
     root = Path(__file__).resolve().parents[2]
     macos = root / "v20/scripts/start_macos.sh"
     linux = root / "v20/scripts/start_linux.sh"
+    macos_service = root / "v20/scripts/service_macos.sh"
+    linux_service = root / "v20/scripts/service_linux.sh"
     doc = root / "docs/v20/V20_SERVICE_RUNTIME.md"
 
     assert "v20.server:app" in macos.read_text(encoding="utf-8")
+    assert "exec \"${PYTHON_BIN}\" -m uvicorn" in macos.read_text(encoding="utf-8")
     assert "source \"${SCRIPT_DIR}/_python.sh\"" in macos.read_text(encoding="utf-8")
     assert "source \"${SCRIPT_DIR}/_python.sh\"" in linux.read_text(encoding="utf-8")
     assert "V20_ENV=\"${V20_ENV:-local_macos}\"" in macos.read_text(encoding="utf-8")
     assert "V20_ENV=\"${V20_ENV:-linux_0_13}\"" in linux.read_text(encoding="utf-8")
+    assert "launchd-plist" in macos_service.read_text(encoding="utf-8")
+    assert "systemd-unit" in linux_service.read_text(encoding="utf-8")
+    assert macos_service.stat().st_mode & 0o111
+    assert linux_service.stat().st_mode & 0o111
+    assert "service_macos.sh start" in doc.read_text(encoding="utf-8")
+    assert "service_linux.sh start" in doc.read_text(encoding="utf-8")
     assert "POST /api/v20/measure" in doc.read_text(encoding="utf-8")

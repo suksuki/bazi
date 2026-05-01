@@ -11,4 +11,4 @@ PORT="${V20_PORT:-9020}"
 export PYTHONPATH="${PWD}:${PYTHONPATH:-}"
 export V20_ENV="${V20_ENV:-linux_0_13}"
 
-"${PYTHON_BIN}" -m uvicorn v20.server:app --host "${HOST}" --port "${PORT}"
+exec "${PYTHON_BIN}" -m uvicorn v20.server:app --host "${HOST}" --port "${PORT}"

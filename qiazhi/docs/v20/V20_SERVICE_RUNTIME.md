@@ -42,6 +42,21 @@ python3.12 -m venv .venv312
 ./v20/scripts/start_macos.sh
 ```
 
+Background service control:
+
+```bash
+./v20/scripts/service_macos.sh start
+./v20/scripts/service_macos.sh status
+./v20/scripts/service_macos.sh logs
+./v20/scripts/service_macos.sh stop
+```
+
+Generate a launchd plist for review without installing it:
+
+```bash
+./v20/scripts/service_macos.sh launchd-plist
+```
+
 Defaults:
 
 - `V20_ENV=local_macos`
@@ -53,6 +68,21 @@ Defaults:
 
 ```bash
 V20_ENV=linux_0_13 ./v20/scripts/start_linux.sh
+```
+
+Background service control:
+
+```bash
+./v20/scripts/service_linux.sh start
+./v20/scripts/service_linux.sh status
+./v20/scripts/service_linux.sh logs
+./v20/scripts/service_linux.sh stop
+```
+
+Generate a systemd unit for review without installing it:
+
+```bash
+./v20/scripts/service_linux.sh systemd-unit
 ```
 
 Defaults:
@@ -69,9 +99,10 @@ GET /api/v20/ops/service-unit/local_macos
 GET /api/v20/ops/service-unit/linux_0_13
 ```
 
-These endpoints return reviewed launch commands or systemd unit text, health
-check URLs, and UI URLs. They do not start processes or render secret values.
-Remote install still requires human review on the target host.
+These endpoints return reviewed launchd plist or systemd unit text, service
+script commands, health check URLs, and UI URLs. They do not start processes,
+install OS services, or render secret values. Remote install still requires
+human review on the target host.
 
 ## Measurement Request
 

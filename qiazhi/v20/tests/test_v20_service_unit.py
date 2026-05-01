@@ -11,18 +11,24 @@ def test_v20_linux_service_unit_manifest_is_systemd_without_secrets(monkeypatch)
     manifest = service_unit_manifest("linux_0_13")
 
     assert manifest["unit_type"] == "systemd"
-    assert "ExecStart=/usr/bin/env python3.12 -m uvicorn v20.server:app" in manifest["unit"]
+    assert "ExecStart=" in manifest["unit"]
+    assert "/v20/scripts/start_linux.sh" in manifest["unit"]
     assert "V20_ENV=linux_0_13" in manifest["unit"]
+    assert manifest["service_script"] == "./v20/scripts/service_linux.sh"
+    assert manifest["background_commands"]["status"] == "./v20/scripts/service_linux.sh status"
     assert manifest["health_check"] == "http://0.13:9020/health"
     assert manifest["runtime_mutation"] is False
     assert "NO_SECRET_VALUES_RENDERED" in manifest["guardrails"]
 
 
-def test_v20_macos_service_unit_manifest_is_foreground_command() -> None:
+def test_v20_macos_service_unit_manifest_is_launchd_and_background_script() -> None:
     manifest = service_unit_manifest("local_macos")
 
-    assert manifest["unit_type"] == "foreground_command"
-    assert "./v20/scripts/start_macos.sh" in manifest["unit"]
+    assert manifest["unit_type"] == "launchd"
+    assert "com.qiazhi.v20.local" in manifest["unit"]
+    assert "start_macos.sh" in manifest["unit"]
+    assert manifest["service_script"] == "./v20/scripts/service_macos.sh"
+    assert manifest["background_commands"]["start"] == "./v20/scripts/service_macos.sh start"
     assert manifest["ui_url"] == "http://127.0.0.1:9020/v20/ui/"
 
 
@@ -33,4 +39,4 @@ def test_v20_service_unit_endpoint_is_read_only() -> None:
 
     assert linux["runtime_mutation"] is False
     assert linux["unit_type"] == "systemd"
-    assert local["unit_type"] == "foreground_command"
+    assert local["unit_type"] == "launchd"

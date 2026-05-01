@@ -76,4 +76,12 @@ Run the local V20 service:
 ./v20/scripts/start_macos.sh
 ```
 
+Run the local V20 service in the background:
+
+```bash
+./v20/scripts/service_macos.sh start
+./v20/scripts/service_macos.sh status
+./v20/scripts/service_macos.sh logs
+```
+
 The first service surface exposes `/health`, `/api/v20/measure`, ops config, and test-tier metadata. Health and ops endpoints are read-only and do not connect to Redis or Postgres.
