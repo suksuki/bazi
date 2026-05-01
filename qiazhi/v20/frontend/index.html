@@ -62,6 +62,16 @@
             </label>
             <div class="form-row">
               <label>
+                角色视图
+                <select name="role_key" id="roleSelect">
+                  <option value="full">开发全量</option>
+                  <option value="user">用户</option>
+                  <option value="analyst">分析师</option>
+                  <option value="lab">实验室</option>
+                  <option value="admin">管理员</option>
+                </select>
+              </label>
+              <label>
                 语言
                 <select name="locale">
                   <option value="zh">中文</option>
@@ -135,6 +145,18 @@
             <pre id="answerText">V20 runtime ready.</pre>
           </section>
 
+          <section class="answer-surface">
+            <div class="surface-head">
+              <h3>反馈学习</h3>
+              <span id="feedbackState">record only</span>
+            </div>
+            <div class="feedback-row">
+              <textarea id="feedbackText" rows="3" placeholder="记录一次校准反馈"></textarea>
+              <button type="button" id="feedbackButton">分析反馈</button>
+            </div>
+            <pre id="feedbackOutput">等待反馈。</pre>
+          </section>
+
           <section class="ops-grid">
             <div class="surface compact">
               <h3>合成验证</h3>
@@ -147,6 +169,18 @@
             <div class="surface compact">
               <h3>学习进化</h3>
               <p id="learningState">checking</p>
+            </div>
+            <div class="surface compact">
+              <h3>运行依赖</h3>
+              <p id="dependencyState">checking</p>
+            </div>
+            <div class="surface compact">
+              <h3>策略审查</h3>
+              <p id="policyState">checking</p>
+            </div>
+            <div class="surface compact">
+              <h3>测试矩阵</h3>
+              <p id="testMatrixState">checking</p>
             </div>
           </section>
         </section>

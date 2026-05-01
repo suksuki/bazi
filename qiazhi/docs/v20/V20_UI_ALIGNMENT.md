@@ -10,6 +10,7 @@ The first screen is the actual Bazi measurement workspace. It renders:
 
 - four-pillar input and natural-language `user_text`
 - optional explicit time pillars for flow year, luck pillar, and flow month
+- role-projected runtime views for user, analyst, lab, and admin
 - selected feature-backed question
 - `BaziFeature` chips
 - `measurement_report` topics
@@ -17,6 +18,7 @@ The first screen is the actual Bazi measurement workspace. It renders:
 - portrait projection as calibration-only axes
 - deterministic answer text with LLM assist status
 - corpus, synthetic validation, and learning evolution status
+- dependency, policy review, testing matrix, and feedback-learning status
 
 The UI does not import V19, does not call portrait bias, and does not create
 fortune conclusions on the client. It is a runtime viewer and operator surface

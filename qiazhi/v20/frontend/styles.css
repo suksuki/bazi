@@ -314,6 +314,23 @@ textarea {
   line-height: 1.62;
 }
 
+.feedback-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 120px;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.feedback-row button {
+  min-height: 42px;
+  border: 1px solid var(--green);
+  border-radius: 8px;
+  color: var(--green);
+  background: #ffffff;
+  font-weight: 750;
+  cursor: pointer;
+}
+
 .ops-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -352,6 +369,7 @@ textarea {
 
   .main-grid,
   .ops-grid,
+  .feedback-row,
   .form-row,
   form {
     grid-template-columns: 1fr;

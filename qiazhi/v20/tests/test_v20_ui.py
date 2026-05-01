@@ -15,7 +15,11 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
     assert "flow_year_pillar" in page.text
+    assert "role_key" in page.text
+    assert "反馈学习" in page.text
     assert "measurement_report" in script.text
+    assert "/api/v20/feedback/analyze" in script.text
+    assert "/api/v20/learning/policy-review" in script.text
     assert ".workspace" in style.text
     assert script.status_code == 200
     assert style.status_code == 200
