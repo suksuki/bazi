@@ -6,7 +6,7 @@ from fastapi.testclient import TestClient
 
 from v20.server import app
 from v20.testing.matrix import build_test_coverage_matrix
-from v20.testing.runner import run_tier
+from v20.testing.runner import main as runner_main, run_tier
 from v20.testing.tiers import get_tier, test_tier_manifest as build_test_tier_manifest
 
 
@@ -30,6 +30,15 @@ def test_v20_test_runner_dry_run_expands_local_commands() -> None:
     compile_cmd = result["commands"][0]
     assert compile_cmd["status"] == "dry_run"
     assert "v20/api/runtime.py" in compile_cmd["argv"]
+
+
+def test_v20_test_runner_cli_accepts_flags_after_tier(capsys) -> None:
+    code = runner_main(["smoke", "--dry-run", "--json"])
+
+    output = capsys.readouterr().out
+    assert code == 0
+    assert '"tier": "smoke"' in output
+    assert '"status": "dry_run"' in output
 
 
 def test_v20_test_scripts_and_docs_are_wired() -> None:

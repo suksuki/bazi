@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import subprocess
 import sys
@@ -41,16 +42,25 @@ def run_tier(name: str, extra_args: tuple[str, ...] = (), *, dry_run: bool = Fal
 
 
 def main(argv: list[str] | None = None) -> int:
+    raw_args = list(sys.argv[1:] if argv is None else argv)
+    dry_run = _pop_flag(raw_args, "--dry-run")
+    json_output = _pop_flag(raw_args, "--json")
     parser = argparse.ArgumentParser(description="Run V20 bounded test tiers.")
     parser.add_argument("tier", choices=[tier.name for tier in TEST_TIERS] + ["list"])
     parser.add_argument("pytest_args", nargs=argparse.REMAINDER)
-    parser.add_argument("--dry-run", action="store_true")
-    args = parser.parse_args(argv)
+    args = parser.parse_args(raw_args)
     if args.tier == "list":
-        _print_manifest()
+        manifest = test_tier_manifest()
+        if json_output:
+            print(json.dumps(manifest, ensure_ascii=False, indent=2, sort_keys=True))
+        else:
+            _print_manifest(manifest)
         return 0
-    result = run_tier(args.tier, tuple(args.pytest_args), dry_run=args.dry_run)
-    _print_result(result)
+    result = run_tier(args.tier, tuple(args.pytest_args), dry_run=dry_run)
+    if json_output:
+        print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
+    else:
+        _print_result(result)
     return 0 if result["ok"] else 1
 
 
@@ -104,8 +114,16 @@ def _result(tier: TestTier, rows: list[dict[str, object]], duration: float, *, o
     }
 
 
-def _print_manifest() -> None:
-    manifest = test_tier_manifest()
+def _pop_flag(argv: list[str], flag: str) -> bool:
+    found = False
+    while flag in argv:
+        argv.remove(flag)
+        found = True
+    return found
+
+
+def _print_manifest(manifest: dict[str, object] | None = None) -> None:
+    manifest = manifest or test_tier_manifest()
     print("V20 test tiers:")
     for tier in manifest["tiers"]:
         print(f"- {tier['name']}: budget={tier['budget_seconds']}s purpose={tier['purpose']}")

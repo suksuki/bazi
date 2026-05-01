@@ -46,6 +46,12 @@ Focused check:
 ./v20/scripts/test_targeted.sh "knowledge or llm"
 ```
 
+Dry run and JSON report:
+
+```bash
+./v20/scripts/test_fast.sh --dry-run --json
+```
+
 Before a phase commit:
 
 ```bash
