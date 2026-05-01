@@ -20,6 +20,24 @@ policy. It can explain why a feature is being surfaced. It cannot create chart
 facts, activate a rule candidate, or turn corpus statistics into a deterministic
 fortune conclusion.
 
+## Knowledge Semantic And Portrait Intelligence
+
+`KnowledgeSemanticModel` now converts reviewed knowledge into a runtime semantic
+index:
+
+- feature hooks
+- question hooks
+- portrait label candidates
+- interaction keywords
+- deterministic rule-atom support
+- LLM structured draft lane metadata
+
+`PortraitIntelligence` consumes that semantic index plus feature discovery and
+the existing portrait projection. Its output is a ranked set of portrait axes,
+sub-axis label candidates, calibration prompts, and profile tags. These are
+training and interaction surfaces only; they do not create personality labels,
+fortune conclusions, or rule activations.
+
 ## Service Configuration
 
 LLM, Postgres, and Redis are configured by environment variables only. No

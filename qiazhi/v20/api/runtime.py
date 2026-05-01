@@ -16,6 +16,11 @@ from v20.intelligence.feature_discovery import (
     build_feature_discovery_report,
     validate_feature_discovery_report,
 )
+from v20.intelligence.knowledge_semantic_model import (
+    build_knowledge_semantic_model,
+    validate_knowledge_semantic_model,
+)
+from v20.interaction.portrait_intelligence import build_portrait_intelligence, validate_portrait_intelligence
 from v20.interaction.portrait_projection import portrait_projection
 from v20.interaction.questions import recommend_questions
 from v20.knowledge.alignment import knowledge_feature_alignment
@@ -57,6 +62,11 @@ def run_runtime_from_pillars(
     feature_layer = compile_features(chart_facts, core, rule_paths, time_context)
     preliminary_knowledge_report = retrieve_knowledge(feature_layer)
     preliminary_portrait = portrait_projection(feature_layer, preliminary_knowledge_report)
+    preliminary_knowledge_semantic_model = build_knowledge_semantic_model(
+        feature_layer,
+        preliminary_knowledge_report,
+        user_text=user_text,
+    )
     _rule_candidate_ranking_policy, rule_candidate_ranking = build_rule_candidate_question_ranking(feature_layer)
     preliminary_feature_discovery = build_feature_discovery_report(
         feature_layer,
@@ -64,6 +74,7 @@ def run_runtime_from_pillars(
         portrait_projection=preliminary_portrait,
         user_text=user_text,
         rule_candidate_ranking=rule_candidate_ranking,
+        knowledge_semantic_model=preliminary_knowledge_semantic_model,
     )
     feature_discovery_question_policy = build_feature_discovery_question_policy(preliminary_feature_discovery)
     questions = recommend_questions(feature_layer, ranking_policy=feature_discovery_question_policy)
@@ -76,6 +87,12 @@ def run_runtime_from_pillars(
     rule_candidate_ranking_validation = validate_rule_candidate_question_ranking(rule_candidate_ranking)
     answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack, knowledge_report, rule_candidate_report)
     portrait = portrait_projection(feature_layer, knowledge_report)
+    knowledge_semantic_model = build_knowledge_semantic_model(
+        feature_layer,
+        knowledge_report,
+        user_text=user_text,
+    )
+    knowledge_semantic_validation = validate_knowledge_semantic_model(knowledge_semantic_model)
     feature_discovery = build_feature_discovery_report(
         feature_layer,
         knowledge_report=knowledge_report,
@@ -83,9 +100,17 @@ def run_runtime_from_pillars(
         user_text=user_text,
         rule_candidate_ranking=rule_candidate_ranking,
         llm_assist=llm_routing_assist,
+        knowledge_semantic_model=knowledge_semantic_model,
         selected_question=selected_question,
     )
     feature_discovery_validation = validate_feature_discovery_report(feature_discovery)
+    portrait_intelligence = build_portrait_intelligence(
+        feature_layer,
+        portrait,
+        knowledge_semantic_model=knowledge_semantic_model,
+        feature_discovery=feature_discovery,
+    )
+    portrait_intelligence_validation = validate_portrait_intelligence(portrait_intelligence)
     measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
     deterministic_answer_text = compose_answer(answer_plan, locale=locale)
     answer_text = deterministic_answer_text
@@ -128,6 +153,8 @@ def run_runtime_from_pillars(
         "knowledge_report": knowledge_report.to_dict(),
         "knowledge_refs": [row.to_dict() for row in knowledge_report.refs],
         "knowledge_alignment": knowledge_feature_alignment(feature_layer),
+        "knowledge_semantic_model": knowledge_semantic_model,
+        "knowledge_semantic_validation": knowledge_semantic_validation,
         "feature_discovery": feature_discovery,
         "feature_discovery_validation": feature_discovery_validation,
         "rule_candidate_ranking": rule_candidate_ranking,
@@ -137,6 +164,8 @@ def run_runtime_from_pillars(
         "questions": [row.to_dict() for row in questions],
         "selected_question": selected_question.to_dict(),
         "portrait_projection": portrait,
+        "portrait_intelligence": portrait_intelligence,
+        "portrait_intelligence_validation": portrait_intelligence_validation,
         "measurement_report": measurement_report.to_dict(),
         "answer_plan": answer_plan.to_dict(),
         "answer_text": answer_text,

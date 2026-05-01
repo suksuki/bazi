@@ -165,7 +165,7 @@ const renderRuntime = (result) => {
   renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
   renderFeatures(discovery.ranked_features || featureLayer.macro_features || featureLayer.features || []);
-  renderPortrait(result.portrait_projection?.axes || []);
+  renderPortrait(result.portrait_intelligence?.axis_models || result.portrait_projection?.axes || []);
   renderQuestions(result.questions || [], selected.question_key || "");
   renderChatQuestions(result.questions || [], selected.question_key || "");
   renderQuestionSelect(result.questions || [], selected.question_key || "");
@@ -247,9 +247,12 @@ const renderPortrait = (axes) => {
   axes.slice(0, 8).forEach((axis) => {
     const row = el("div", "axis-row");
     row.append(el("strong", "", axis.label || axis.axis_id));
-    row.append(el("span", "", `${axis.domain} · ${axis.feature_count} features · ${axis.knowledge_ref_count ?? 0} refs`));
+    const score = axis.intelligence_score ?? axis.peak_confidence ?? 0;
+    row.append(el("span", "", `${axis.domain} · ${axis.feature_count} features · ${axis.knowledge_ref_count ?? 0} refs · score ${score}`));
+    const subAxes = (axis.sub_axis_candidates || []).map((row) => row.label).filter(Boolean).slice(0, 3);
+    if (subAxes.length) row.append(el("p", "", subAxes.join(" / ")));
     const meter = el("i");
-    meter.style.width = `${Math.round(Number(axis.peak_confidence || 0) * 100)}%`;
+    meter.style.width = `${Math.round(Number(score || 0) * 100)}%`;
     const bar = el("div", "meter");
     bar.append(meter);
     row.append(bar);

@@ -11,7 +11,9 @@ ChartInput
 -> RulePath candidates
 -> BaziFeature[]
 -> KnowledgeRef[] and knowledge alignment
+-> KnowledgeSemanticModel
 -> FeatureDiscovery report and 518K corpus training priors
+-> PortraitIntelligence
 -> Bazi measurement QuestionCandidate[]
 -> Professional domain reading path
 -> Reviewed knowledge evidence support
@@ -34,6 +36,8 @@ Initial boundaries:
 - Macro features give UI and LLM compact context while subfeatures remain the source of truth.
 - Knowledge is reviewed evidence context, not rule truth.
 - Feature Discovery is the central runtime intelligence router: it fuses compiled features, reviewed knowledge, portrait axes, shadow rule candidates, user interaction, bounded LLM assist, and 518K corpus training artifacts into ranked features and domain hypotheses.
+- Knowledge Semantic Model turns reviewed knowledge into feature hooks, question hooks, portrait label candidates, interaction keywords, and rule-atom signals.
+- Portrait Intelligence turns raw portrait axes into knowledge-backed sub-axis candidates and calibration prompts.
 - Portraits, recommended questions, and answers are Bazi measurement projections over features.
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.

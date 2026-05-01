@@ -41,6 +41,7 @@ def build_feature_discovery_report(
     user_text: str = "",
     rule_candidate_ranking: dict[str, object] | None = None,
     llm_assist: dict[str, object] | None = None,
+    knowledge_semantic_model: dict[str, object] | None = None,
     selected_question: object | dict[str, object] | None = None,
     limit: int = 12,
 ) -> dict[str, object]:
@@ -55,6 +56,7 @@ def build_feature_discovery_report(
         for row in training_signal.get("domain_priors", ())
         if isinstance(row, dict)
     }
+    semantic_weights = _semantic_domain_weights(knowledge_semantic_model or {})
 
     feature_rows = _ranked_feature_rows(
         feature_layer.features,
@@ -63,6 +65,7 @@ def build_feature_discovery_report(
         rule_weights=rule_weights,
         interaction_domains=interaction_domains,
         training_weights=training_weights,
+        semantic_weights=semantic_weights,
     )
     domain_rows = _ranked_domain_rows(
         feature_rows,
@@ -73,6 +76,7 @@ def build_feature_discovery_report(
         interaction_domains=interaction_domains,
         selected_domain=selected_domain,
         training_weights=training_weights,
+        semantic_weights=semantic_weights,
     )
     question_policy = build_feature_discovery_question_policy({"domain_hypotheses": domain_rows})
     top_domains = [str(row["domain"]) for row in domain_rows[:5]]
@@ -90,6 +94,12 @@ def build_feature_discovery_report(
             "source": _interaction_source(user_text, llm_assist, selected_domain),
         },
         "training_signal": training_signal,
+        "knowledge_semantic_signal": {
+            "status": knowledge_semantic_model.get("status", "not_provided") if isinstance(knowledge_semantic_model, dict) else "not_provided",
+            "domain_count": len(semantic_weights),
+            "semantic_domains": tuple(sorted(semantic_weights)),
+            "runtime_mutation": False,
+        },
         "question_policy": question_policy.to_dict(),
         "next_actions": _next_actions(training_signal, domain_rows),
         "runtime_mutation": False,
@@ -220,6 +230,7 @@ def _ranked_feature_rows(
     rule_weights: dict[str, float],
     interaction_domains: tuple[str, ...],
     training_weights: dict[str, float],
+    semantic_weights: dict[str, float],
 ) -> list[dict[str, object]]:
     rows = []
     for feature in features:
@@ -234,6 +245,7 @@ def _ranked_feature_rows(
             interaction_weight = 0.09
         rule_weight = _rule_weight_for_feature(feature.domain, rule_weights)
         training_weight = _training_weight_for_feature(feature.domain, training_weights)
+        semantic_weight = _semantic_weight_for_feature(feature.domain, semantic_weights)
         evidence_weight = min(0.1, len(feature.evidence_refs) * 0.018)
         knowledge_weight = min(0.1, knowledge_count * 0.022)
         portrait_weight = 0.0
@@ -248,6 +260,7 @@ def _ranked_feature_rows(
             + rule_weight
             + interaction_weight
             + training_weight
+            + semantic_weight
             + readiness_weight
         )
         sources = ["feature_spine"]
@@ -261,6 +274,8 @@ def _ranked_feature_rows(
             sources.append("interaction_focus")
         if training_weight:
             sources.append("corpus_training_prior")
+        if semantic_weight:
+            sources.append("knowledge_semantic_model")
         rows.append(
             {
                 "feature_id": feature.feature_id,
@@ -277,6 +292,7 @@ def _ranked_feature_rows(
                 "rule_candidate_weight": round(rule_weight, 3),
                 "interaction_weight": round(interaction_weight, 3),
                 "training_weight": round(training_weight, 3),
+                "semantic_weight": round(semantic_weight, 3),
                 "related_interaction_domains": related_interactions,
                 "sources": sources,
                 "summary": feature_public_summary(feature) or feature.boundary,
@@ -298,6 +314,7 @@ def _ranked_domain_rows(
     interaction_domains: tuple[str, ...],
     selected_domain: str,
     training_weights: dict[str, float],
+    semantic_weights: dict[str, float],
 ) -> list[dict[str, object]]:
     domains = set(interaction_domains)
     if selected_domain:
@@ -306,6 +323,7 @@ def _ranked_domain_rows(
     domains.update(str(ref.get("domain", "")) for ref in knowledge_refs if ref.get("domain"))
     domains.update(str(axis.get("domain", "")) for axis in portrait_axes if axis.get("domain"))
     domains.update(rule_weights)
+    domains.update(semantic_weights)
     for domain in applied_domains():
         if any(feature.domain in feature_domains_for_applied_domain(domain) for feature in features):
             domains.add(domain)
@@ -339,12 +357,16 @@ def _ranked_domain_rows(
         training_weight = training_weights.get(domain, 0.0)
         if not training_weight and not direct_features:
             training_weight = max((training_weights.get(source, 0.0) for source in source_domains), default=0.0) * 0.7
+        semantic_weight = semantic_weights.get(domain, 0.0)
+        if not semantic_weight and not direct_features:
+            semantic_weight = max((semantic_weights.get(source, 0.0) for source in source_domains), default=0.0) * 0.7
         score = _bounded_score(
             peak_feature_score * 0.58
             + min(0.13, knowledge_count * 0.024)
             + min(0.1, portrait_count * 0.034)
             + min(0.07, rule_weight)
             + min(0.055, training_weight)
+            + min(0.06, semantic_weight)
             + interaction_weight
             + selected_weight
         )
@@ -360,6 +382,7 @@ def _ranked_domain_rows(
                 "portrait_axis_count": portrait_count,
                 "rule_candidate_weight": round(rule_weight, 3),
                 "training_weight": round(training_weight, 3),
+                "semantic_weight": round(semantic_weight, 3),
                 "interaction_match": domain in interaction_domains,
                 "source_feature_ids": [str(row["feature_id"]) for row in source_feature_rows[:8]],
                 "status": "active_focus" if domain in interaction_domains or domain == selected_domain else "candidate",
@@ -565,6 +588,27 @@ def _training_weight_for_feature(domain: str, training_weights: dict[str, float]
         default=0.0,
     )
     return min(0.055, max(direct, related))
+
+
+def _semantic_domain_weights(model: dict[str, object]) -> dict[str, float]:
+    rows = {}
+    for row in model.get("domain_models", ()) if isinstance(model, dict) else ():
+        if isinstance(row, dict) and row.get("domain"):
+            rows[str(row["domain"])] = min(0.08, float(row.get("semantic_weight", 0.0)))
+    return rows
+
+
+def _semantic_weight_for_feature(domain: str, semantic_weights: dict[str, float]) -> float:
+    direct = semantic_weights.get(domain, 0.0)
+    related = max(
+        (
+            weight * 0.65
+            for applied_domain, weight in semantic_weights.items()
+            if domain in feature_domains_for_applied_domain(applied_domain)
+        ),
+        default=0.0,
+    )
+    return min(0.06, max(direct, related))
 
 
 def _feature_reason(

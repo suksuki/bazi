@@ -31,6 +31,10 @@ from v20.corpus.full_precompute import build_full_precompute_manifest, preview_f
 from v20.corpus.job_runner import read_full_precompute_status
 from v20.features.calibration import confidence_calibration_manifest
 from v20.intelligence.generation import build_intelligence_generation_manifest
+from v20.intelligence.knowledge_semantic_model import (
+    build_knowledge_semantic_model,
+    validate_knowledge_semantic_model,
+)
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
@@ -446,9 +450,17 @@ def create_app() -> FastAPI:
     def intelligence_generation_manifest() -> dict[str, object]:
         return build_intelligence_generation_manifest()
 
+    @app.get("/api/v20/intelligence/knowledge-semantic-model")
+    def intelligence_knowledge_semantic_model() -> dict[str, object]:
+        return build_knowledge_semantic_model()
+
     @app.get("/api/v20/validation/intelligence-generation")
     def intelligence_generation_validation() -> dict[str, object]:
         return validate_intelligence_generation()
+
+    @app.get("/api/v20/validation/knowledge-semantic-model")
+    def intelligence_knowledge_semantic_model_validation() -> dict[str, object]:
+        return validate_knowledge_semantic_model(build_knowledge_semantic_model())
 
     @app.post("/api/v20/learning/policy-review")
     def learning_policy_review(payload: PolicyReviewRequest) -> dict[str, object]:

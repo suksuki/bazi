@@ -66,6 +66,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "renderChatQuestions(result.questions || [], selected.question_key || \"\")" in script.text
     assert "const discovery = result.feature_discovery || {}" in script.text
     assert "renderFeatures(discovery.ranked_features || featureLayer.macro_features || featureLayer.features || [])" in script.text
+    assert "renderPortrait(result.portrait_intelligence?.axis_models || result.portrait_projection?.axes || [])" in script.text
+    assert "axis.sub_axis_candidates" in script.text
     assert "result.feature_discovery_validation || {}" in script.text
     assert "rule-candidate" in script.text
     assert "规则候选验证" in script.text

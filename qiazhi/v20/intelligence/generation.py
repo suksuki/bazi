@@ -118,7 +118,9 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             "source_layers": [
                 "compiled_bazi_features",
                 "reviewed_knowledge_refs",
+                "knowledge_semantic_model",
                 "portrait_projection_axes",
+                "portrait_intelligence_axes",
                 "shadow_rule_candidate_ranking",
                 "bounded_llm_intent_assist",
                 "full_corpus_training_artifacts",
@@ -126,6 +128,8 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             "generated_artifacts": [
                 "FeatureDiscoveryReport",
                 "FeatureDiscoveryTrainingSignal",
+                "KnowledgeSemanticModel",
+                "PortraitIntelligence",
                 "feature_discovery_question_policy",
                 "ranked_domain_hypotheses",
             ],
@@ -138,6 +142,24 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "NO_RUNTIME_RULE_ACTIVATION",
                 "NO_DESTINY_LABEL_TRAINING",
             ],
+        },
+        "knowledge_semantic_modeling": {
+            "source_layers": [
+                "reviewed_knowledge_units",
+                "feature_hook_contracts",
+                "question_hook_contracts",
+                "deterministic_rule_extraction",
+                "llm_structured_draft_lane",
+            ],
+            "generated_artifacts": [
+                "domain_semantic_models",
+                "portrait_label_candidates",
+                "interaction_keyword_index",
+                "rule_atom_count_signal",
+            ],
+            "runtime_role": "semantic_index_for_feature_discovery_portrait_and_interaction",
+            "llm_role": "draft_only_validator_required",
+            "runtime_mutation": False,
         },
         "llm_generation": {
             "ready_for_connection": llm["ready_for_connection"],

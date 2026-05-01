@@ -40,11 +40,14 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["questions"]
     assert result["selected_question"]["question_key"]
     assert result["knowledge_alignment"]["status"] == "pass"
+    assert result["knowledge_semantic_model"]["status"] == "ready"
+    assert result["knowledge_semantic_validation"]["ok"] is True
     assert result["feature_discovery"]["version"] == "v20.feature_discovery.v1"
     assert result["feature_discovery"]["status"] == "ready"
     assert result["feature_discovery"]["ranked_features"]
     assert result["feature_discovery"]["domain_hypotheses"]
     assert result["feature_discovery"]["training_signal"]["runtime_mutation"] is False
+    assert result["feature_discovery"]["knowledge_semantic_signal"]["status"] == "ready"
     assert result["feature_discovery"]["question_policy"]["source"] == "feature_discovery_fusion"
     assert result["feature_discovery_validation"]["ok"] is True
     assert result["knowledge_report"]["count"] >= 6
@@ -65,6 +68,9 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["llm_assist"]["context_pack"]["runtime_mutation"] is False
     assert "answer_plan_rewrite" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert result["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+    assert result["portrait_intelligence"]["version"] == "v20.portrait_intelligence.v1"
+    assert result["portrait_intelligence"]["axis_models"]
+    assert result["portrait_intelligence_validation"]["ok"] is True
 
 
 def test_v20_feature_discovery_fuses_interaction_knowledge_portrait_and_training() -> None:
@@ -88,8 +94,12 @@ def test_v20_feature_discovery_fuses_interaction_knowledge_portrait_and_training
     assert {"career", "wealth"} & domains
     assert any("corpus_training_prior" in row["sources"] for row in top_features)
     assert discovery["training_signal"]["status"] in {"ready", "not_built"}
+    assert discovery["knowledge_semantic_signal"]["status"] == "ready"
     assert discovery["question_policy"]["status"] in {"active_shadow", "empty"}
     assert result["feature_discovery_validation"]["status"] == "pass"
+    assert result["knowledge_semantic_validation"]["status"] == "pass"
+    assert result["portrait_intelligence_validation"]["status"] == "pass"
+    assert result["portrait_intelligence"]["axis_models"][0]["sub_axis_candidates"]
     assert result["runtime_mutation"] is False
     assert "八字测算重点" in result["answer_text"]
     assert "确定事件" in result["answer_text"]

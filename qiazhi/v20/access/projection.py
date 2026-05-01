@@ -132,4 +132,53 @@ def _sanitize_user_payload(payload: dict[str, object]) -> dict[str, object]:
             if isinstance(row, dict)
         ]
         sanitized["portrait_projection"] = portrait
+    if isinstance(sanitized.get("portrait_intelligence"), dict):
+        intelligence = dict(sanitized["portrait_intelligence"])
+        intelligence["axis_models"] = [
+            {
+                "domain": row.get("domain", ""),
+                "label": row.get("label", ""),
+                "measurement_stage": row.get("measurement_stage", ""),
+                "intelligence_score": row.get("intelligence_score", 0),
+                "feature_count": row.get("feature_count", 0),
+                "knowledge_ref_count": row.get("knowledge_ref_count", 0),
+                "sub_axis_candidates": [
+                    {
+                        "label": candidate.get("label", ""),
+                        "domain": candidate.get("domain", ""),
+                        "status": candidate.get("status", ""),
+                    }
+                    for candidate in row.get("sub_axis_candidates", [])
+                    if isinstance(candidate, dict)
+                ],
+                "calibration_prompt": row.get("calibration_prompt", ""),
+            }
+            for row in intelligence.get("axis_models", [])
+            if isinstance(row, dict)
+        ]
+        intelligence["profile_tags"] = [
+            {
+                "label": row.get("label", ""),
+                "domain": row.get("domain", ""),
+                "score": row.get("score", 0),
+                "source": row.get("source", ""),
+            }
+            for row in intelligence.get("profile_tags", [])
+            if isinstance(row, dict)
+        ]
+        intelligence["interaction_prompts"] = [
+            {
+                "domain": row.get("domain", ""),
+                "label": row.get("label", ""),
+                "prompt": row.get("prompt", ""),
+            }
+            for row in intelligence.get("interaction_prompts", [])
+            if isinstance(row, dict)
+        ]
+        intelligence.pop("training_lane", None)
+        intelligence["guardrails"] = [
+            "USER_VIEW_SANITIZED_PORTRAIT_INTELLIGENCE",
+            "NO_INTERNAL_FEATURE_IDS_OR_SOURCE_KNOWLEDGE_IDS",
+        ]
+        sanitized["portrait_intelligence"] = intelligence
     return sanitized
