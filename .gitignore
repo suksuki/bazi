@@ -10,6 +10,9 @@ qiazhi/v17_rebirth/.runlogs/
 qiazhi/v19/.runtime/
 qiazhi/v19/.runtime/server_*.log
 qiazhi/v19/.runtime/server_*.pid
+qiazhi/v20/.runtime/
+qiazhi/v20/.runtime/server_*.log
+qiazhi/v20/.runtime/server_*.pid
 
 # OS/editor noise
 .DS_Store
