@@ -100,13 +100,13 @@ const measure = async ({ force = false } = {}) => {
   if (!hasCompletePillars(payload)) return;
   if (state.isMeasuring) {
     state.pendingMeasure = true;
+    setText("#llmStatus", "排队中");
     return;
   }
-  const button = form.querySelector("button[type='submit']");
   state.isMeasuring = true;
   state.lastMeasureKey = key;
-  button.disabled = true;
-  button.textContent = text.running;
+  setMeasureBusy(true, text);
+  setText("#answerText", "正在根据当前问题重新测算。");
   try {
     const role = measurementRole(payload.role_key);
     delete payload.role_key;
@@ -122,8 +122,7 @@ const measure = async ({ force = false } = {}) => {
     state.lastMeasureKey = "";
   } finally {
     state.isMeasuring = false;
-    button.disabled = false;
-    button.textContent = currentText().run;
+    setMeasureBusy(false, currentText());
     if (state.pendingMeasure) {
       state.pendingMeasure = false;
       scheduleMeasure({ force: true });
@@ -158,8 +157,18 @@ const renderRuntime = (result) => {
   renderFeatures(featureLayer.macro_features || featureLayer.features || []);
   renderPortrait(result.portrait_projection?.axes || []);
   renderQuestions(result.questions || [], selected.question_key || "");
+  renderChatQuestions(result.questions || [], selected.question_key || "");
   renderQuestionSelect(result.questions || [], selected.question_key || "");
   renderEvidence(result.knowledge_refs || []);
+};
+
+const setMeasureBusy = (busy, text = currentText()) => {
+  const button = form.querySelector("button[type='submit']");
+  button.disabled = busy;
+  button.textContent = busy ? text.running : text.run;
+  chatButton.disabled = busy;
+  chatButton.textContent = busy ? "测算中" : "发送";
+  if (busy) setText("#llmStatus", "测算中");
 };
 
 const renderPillars = (chart, timeContext = {}) => {
@@ -235,17 +244,33 @@ const renderQuestions = (questions, selectedKey) => {
     return;
   }
   questions.slice(0, 5).forEach((question) => {
-    const button = el("button", `question-row${question.question_key === selectedKey ? " active" : ""}`);
-    button.type = "button";
-    button.append(el("strong", "", question.title || question.question_key));
-    button.append(el("span", "", question.measurement_topic || question.domain || "命理测算"));
-    button.addEventListener("click", () => {
-      questionSelect.value = question.question_key;
-      setInquiryText(question.title || question.question_key || "", { syncOnly: true });
-      measure({ force: true });
-    });
-    root.append(button);
+    root.append(questionButton(question, selectedKey, "question-row"));
   });
+};
+
+const renderChatQuestions = (questions, selectedKey) => {
+  const root = document.querySelector("#chatQuestionList");
+  clear(root);
+  questions.slice(0, 5).forEach((question) => {
+    root.append(questionButton(question, selectedKey, "chat-question-chip"));
+  });
+};
+
+const questionButton = (question, selectedKey, className) => {
+  const button = el("button", `${className}${question.question_key === selectedKey ? " active" : ""}`);
+  button.type = "button";
+  button.append(el("strong", "", question.title || question.question_key));
+  if (className === "question-row") {
+    button.append(el("span", "", question.measurement_topic || question.domain || "命理测算"));
+  }
+  button.addEventListener("click", () => runQuestion(question));
+  return button;
+};
+
+const runQuestion = (question) => {
+  questionSelect.value = question.question_key;
+  setInquiryText(question.title || question.question_key || "", { syncOnly: true });
+  measure({ force: true });
 };
 
 const renderQuestionSelect = (questions, selectedKey) => {
@@ -309,6 +334,7 @@ const renderInitialPanels = () => {
   renderFeatures([]);
   renderPortrait([]);
   renderQuestions([], "");
+  renderChatQuestions([], "");
   renderEvidence([]);
 };
 
@@ -456,11 +482,17 @@ form.querySelectorAll("input, textarea, select").forEach((node) => {
     });
   }
 });
-chatButton.addEventListener("click", () => setInquiryText(chatText.value));
+chatButton.addEventListener("click", () => {
+  questionSelect.value = "";
+  setInquiryText(chatText.value, { syncOnly: true });
+  measure({ force: true });
+});
 chatText.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
     event.preventDefault();
-    setInquiryText(chatText.value);
+    questionSelect.value = "";
+    setInquiryText(chatText.value, { syncOnly: true });
+    measure({ force: true });
   }
 });
 

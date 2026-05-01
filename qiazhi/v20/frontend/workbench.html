@@ -130,16 +130,16 @@
               <div id="featureChips" class="feature-grid"></div>
             </article>
 
-            <article class="panel portrait-panel-card">
-              <div class="section-head">
+            <details class="panel portrait-panel-card">
+              <summary class="section-head portrait-summary">
                 <div>
                   <p class="section-kicker">Portrait</p>
                   <h2 data-ui="portrait_title">画像投影</h2>
                 </div>
-                <span class="small-pill">calibration</span>
-              </div>
+                <span class="small-pill">参考 · 展开</span>
+              </summary>
               <div id="portraitAxes" class="axis-list"></div>
-            </article>
+            </details>
 
             <article class="panel questions-panel-card">
               <div class="section-head">
@@ -163,6 +163,7 @@
                 <span id="llmStatus" class="small-pill">llm idle</span>
               </div>
               <pre id="answerText">等待测算。</pre>
+              <div id="chatQuestionList" class="chat-question-list" aria-label="推荐问题"></div>
               <div class="dialog-row" aria-label="八字对话">
                 <textarea id="chatText" rows="3" placeholder="输入想继续看的方向"></textarea>
                 <button type="button" id="chatButton">发送</button>
@@ -202,6 +203,6 @@
         </section>
       </main>
     </div>
-    <script src="/v20/ui/app.js?v=20260501-reading" defer></script>
+    <script src="/v20/ui/app.js?v=20260501-chat" defer></script>
   </body>
 </html>

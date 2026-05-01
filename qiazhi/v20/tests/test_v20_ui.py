@@ -47,6 +47,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "selectedProfileCard" in page.text
     assert "chatText" in page.text
     assert "chatButton" in page.text
+    assert "chatQuestionList" in page.text
+    assert "portrait-summary" in page.text
     assert "profileImportButton" not in page.text
     assert "反馈校准" in page.text
     assert "命理特征主线" in page.text
@@ -60,6 +62,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "scheduleMeasure({ force: true })" in script.text
     assert "document.body.classList.toggle(\"profile-reading\", Boolean(params.get(\"profile_id\")))" in script.text
     assert "questions.slice(0, 5)" in script.text
+    assert "renderChatQuestions(result.questions || [], selected.question_key || \"\")" in script.text
+    assert "chatButton.textContent = busy ? \"测算中\" : \"发送\"" in script.text
     assert "applyProfileDefaults(profile)" in script.text
     assert "role: measurementRole(params.get(\"role\") || document.body.dataset.role)" in profiles_script.text
     assert "const endpoint = `/api/v20/measure/view/${role}`" in script.text
@@ -76,6 +80,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert ".measure-layout" in style.text
     assert "body.profile-reading .control-panel" in style.text
     assert "body.profile-reading .feature-spine-panel" in style.text
+    assert "body.profile-reading .questions-panel-card" in style.text
+    assert "body.profile-reading .chat-question-list" in style.text
     assert "body.profile-reading .pillar-panel" in style.text
     assert ".profiles-layout" in style.text
     assert ".entry-page" in style.text

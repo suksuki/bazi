@@ -360,6 +360,7 @@ textarea:focus {
 .mini-action,
 .feedback-row button,
 .dialog-row button,
+.chat-question-chip,
 .question-row {
   border: 1px solid transparent;
   border-radius: 8px;
@@ -560,6 +561,7 @@ textarea:focus {
 
 .feature-card strong,
 .axis-row strong,
+.chat-question-chip strong,
 .question-row strong,
 .evidence-row strong {
   display: block;
@@ -603,6 +605,45 @@ textarea:focus {
 .question-row.active {
   border-color: rgba(71, 179, 125, 0.74);
   background: var(--green-soft);
+}
+
+.portrait-panel-card summary {
+  list-style: none;
+}
+
+.portrait-panel-card summary::-webkit-details-marker {
+  display: none;
+}
+
+.portrait-summary {
+  cursor: pointer;
+}
+
+.portrait-panel-card:not([open]) {
+  align-self: start;
+}
+
+.chat-question-list {
+  display: none;
+  gap: 8px;
+  flex-wrap: wrap;
+  border-top: 1px solid var(--line);
+  margin-top: 16px;
+  padding-top: 14px;
+}
+
+.chat-question-chip {
+  min-height: 38px;
+  border-color: rgba(71, 179, 125, 0.38);
+  background: rgba(71, 179, 125, 0.1);
+  color: var(--text);
+  text-align: left;
+  padding: 9px 11px;
+}
+
+.chat-question-chip.active {
+  border-color: rgba(71, 179, 125, 0.82);
+  background: rgba(71, 179, 125, 0.22);
 }
 
 .answer-panel pre,
@@ -793,6 +834,7 @@ body.profile-reading .measure-layout {
 body.profile-reading .control-panel,
 body.profile-reading .run-summary,
 body.profile-reading .feature-spine-panel,
+body.profile-reading .questions-panel-card,
 body.profile-reading .side-panel,
 body.profile-reading .feedback-panel,
 body.profile-reading .tag-line {
@@ -813,6 +855,14 @@ body.profile-reading .pillar-panel {
 
 body.profile-reading .question-list {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.profile-reading .portrait-panel-card {
+  grid-column: 1 / -1;
+}
+
+body.profile-reading .chat-question-list {
+  display: flex;
 }
 
 body.profile-reading .answer-grid {
