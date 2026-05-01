@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from v20.corpus.coverage import FULL_CORPUS_TARGET_COUNT, build_corpus_coverage_plan
 from v20.learning.evolution import build_evolution_dry_run_plan
+from v20.learning.run_plan import build_learning_run_plan
 from v20.server import app
 from v20.validation.suite import run_synthetic_suite
 
@@ -31,11 +32,24 @@ def test_v20_synthetic_suite_and_evolution_plan_are_dry_run_only() -> None:
     assert evolution["runtime_mutation"] is False
 
 
+def test_v20_learning_run_plan_maps_518k_to_structural_artifacts() -> None:
+    run_plan = build_learning_run_plan(corpus_plan=build_corpus_coverage_plan(shard_count=16, batch_size=512))
+
+    assert run_plan["status"] == "ready_for_dry_run"
+    assert run_plan["target_case_count"] == 518_400
+    assert run_plan["shard_count"] == 16
+    assert run_plan["estimated_batch_count"] > 0
+    assert "corpus_snapshot_manifest" in run_plan["artifact_outputs"]
+    assert "NO_DESTINY_TRUTH_LABELS" in run_plan["guardrails"]
+    assert all(stage["runtime_mutation"] is False for stage in run_plan["stages"])
+
+
 def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     client = TestClient(app)
     corpus = client.get("/api/v20/corpus/coverage").json()
     suite = client.get("/api/v20/validation/synthetic-suite").json()
     evolution = client.get("/api/v20/learning/evolution-plan").json()
+    run_plan = client.get("/api/v20/learning/run-plan").json()
 
     assert corpus["plan"]["target_case_count"] == 518_400
     assert corpus["runtime_mutation"] is False
@@ -43,3 +57,5 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert suite["runtime_mutation"] is False
     assert evolution["status"] == "ready_for_dry_run"
     assert evolution["runtime_mutation"] is False
+    assert run_plan["target_case_count"] == 518_400
+    assert run_plan["runtime_mutation"] is False

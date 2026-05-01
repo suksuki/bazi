@@ -19,6 +19,8 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["access_role_count"] == 4
     assert report["test_area_count"] >= 7
     assert report["learning_status"] == "ready_for_dry_run"
+    assert report["learning_run_plan_status"] == "ready_for_dry_run"
+    assert report["learning_target_case_count"] == 518_400
     assert set(report["policy_surfaces"]) >= {
         "question_ranking",
         "knowledge_retrieval",

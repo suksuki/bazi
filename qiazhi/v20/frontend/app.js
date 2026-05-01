@@ -147,11 +147,12 @@ const renderPortrait = (axes) => {
 
 const loadOps = async () => {
   try {
-    const [health, corpus, validation, learning, knowledgeCatalog, dependencies, sync, policyReview, matrix] = await Promise.all([
+    const [health, corpus, validation, learning, learningRun, knowledgeCatalog, dependencies, sync, policyReview, matrix] = await Promise.all([
       requestJson("/health"),
       requestJson("/api/v20/corpus/coverage"),
       requestJson("/api/v20/validation/synthetic-suite"),
       requestJson("/api/v20/learning/evolution-plan"),
+      requestJson("/api/v20/learning/run-plan"),
       requestJson("/api/v20/knowledge/catalog"),
       requestJson("/api/v20/runtime/dependencies"),
       requestJson("/api/v20/ops/sync-readiness"),
@@ -162,7 +163,7 @@ const loadOps = async () => {
     setText("#profileBadge", health.active_profile);
     setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards`);
     setText("#validationState", `${validation.ok ? "pass" : "blocked"} · ${validation.case_count} cases`);
-    setText("#learningState", `${learning.status} · ${learning.allowed_algorithm_tracks.length} tracks`);
+    setText("#learningState", `${learning.status} · ${learningRun.estimated_batch_count} batches`);
     setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units`);
     setText("#dependencyState", `pg ${dependencies.postgres.ready_for_connection ? "ready" : "config"} · redis ${dependencies.redis.ready_for_connection ? "ready" : "config"}`);
     setText("#syncState", `${sync.status} · ${sync.direction_count} directions`);

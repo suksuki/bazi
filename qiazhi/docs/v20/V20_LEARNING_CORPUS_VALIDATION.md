@@ -9,12 +9,18 @@ The first full-coverage target is `518,400` structural Bazi cases. V20 exposes
 this as a sharded coverage plan, not as automatic conclusions:
 
 - `GET /api/v20/corpus/coverage`
+- `GET /api/v20/learning/run-plan`
 - `FULL_CORPUS_TARGET_COUNT = 518_400`
 - each shard records case ranges, batch size, and batch count
 - precompute snapshots store feature counts, measurement topic counts, question
   counts, and answer-plan versions
 
 The corpus is a structural map. It does not store destiny truth labels.
+
+`GET /api/v20/learning/run-plan` maps the 518K target into structural
+precompute, coverage-gap clustering, shadow policy learning, and validation /
+decision-gate stages. The plan returns shard previews, estimated batch count,
+expected artifact outputs, and blocked outputs; it does not run the corpus job.
 
 ## Synthetic Validation
 
