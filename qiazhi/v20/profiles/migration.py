@@ -32,7 +32,12 @@ def v19_profile_migration_preview(source_path: Path | None = None) -> dict[str, 
     }
 
 
-def import_v19_profiles_to_postgres(*, apply: bool = False, source_path: Path | None = None) -> dict[str, object]:
+def import_v19_profiles_to_postgres(
+    *,
+    apply: bool = False,
+    source_path: Path | None = None,
+    owner_id: str = "admin",
+) -> dict[str, object]:
     path = source_path or DEFAULT_V19_PROFILE_PATH
     rows = _read_v19_profiles(path)
     url = os.getenv("V20_DATABASE_URL", "")
@@ -41,6 +46,7 @@ def import_v19_profiles_to_postgres(*, apply: bool = False, source_path: Path | 
         "status": "dry_run",
         "source_path": str(path),
         "target_table": "v20_user_profiles",
+        "target_owner_id": owner_id,
         "profile_count": len(rows),
         "apply": apply,
         "database_url_present": bool(url),
@@ -66,7 +72,7 @@ def import_v19_profiles_to_postgres(*, apply: bool = False, source_path: Path | 
                 cur.execute(_CREATE_PROFILE_TABLE_SQL)
                 imported = 0
                 for row in rows:
-                    normalized = _normalize_profile(row)
+                    normalized = _normalize_profile(row, owner_id=owner_id)
                     cur.execute(
                         """
                         INSERT INTO v20_user_profiles (profile_id, owner_id, source_ref, status, payload)
@@ -119,7 +125,7 @@ def _profile_preview(row: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _normalize_profile(row: dict[str, object]) -> dict[str, object]:
+def _normalize_profile(row: dict[str, object], *, owner_id: str = "admin") -> dict[str, object]:
     profile_id = str(row.get("id") or "").strip()
     if not profile_id:
         digest = hashlib.sha256(json.dumps(row, sort_keys=True, ensure_ascii=False).encode("utf-8")).hexdigest()[:16]
@@ -129,13 +135,14 @@ def _normalize_profile(row: dict[str, object]) -> dict[str, object]:
     return {
         "version": "v20.user_profile.v1",
         "profile_id": profile_id,
-        "owner_id": str(row.get("owner_id") or "guest"),
+        "owner_id": str(owner_id or "admin"),
         "display_name": str(row.get("name") or "V19 Profile"),
         "birth_input": birth,
         "metadata": {
             **metadata,
             "source_system": "v19",
             "source_profile_id": profile_id,
+            "source_owner_id": str(row.get("owner_id") or ""),
             "location_preserved": bool(birth.get("location")),
         },
         "source_ref": f"v19:bazi_profiles:{profile_id}",

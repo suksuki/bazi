@@ -6,7 +6,15 @@ from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 
 from v20 import V20_VERSION
-from v20.access.auth import auth_status, guest_login, logout, password_login, register_user
+from v20.access.auth import (
+    auth_status,
+    guest_login,
+    import_v19_auth_sessions,
+    logout,
+    password_login,
+    register_user,
+    v19_auth_migration_preview,
+)
 from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
 from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest, PortraitCalibrationRequest
@@ -127,6 +135,14 @@ def create_app() -> FastAPI:
     def auth_logout(response: Response, request: Request) -> dict[str, object]:
         return logout(response, request)
 
+    @app.get("/api/v20/auth/v19-migration-preview")
+    def auth_v19_migration_preview() -> dict[str, object]:
+        return v19_auth_migration_preview()
+
+    @app.post("/api/v20/auth/import-v19")
+    def auth_import_v19(apply: bool = False, payload: dict = None) -> dict[str, object]:
+        return import_v19_auth_sessions(apply=apply, admin_password=str((payload or {}).get("admin_password") or ""))
+
     @app.get("/api/v20/system/status")
     def system_status() -> dict[str, object]:
         return system_status_report()
@@ -223,8 +239,8 @@ def create_app() -> FastAPI:
         return v19_profile_migration_preview()
 
     @app.post("/api/v20/profiles/import-v19")
-    def profiles_import_v19(apply: bool = False) -> dict[str, object]:
-        return import_v19_profiles_to_postgres(apply=apply)
+    def profiles_import_v19(apply: bool = False, owner_id: str = "admin") -> dict[str, object]:
+        return import_v19_profiles_to_postgres(apply=apply, owner_id=owner_id)
 
     @app.get("/api/v20/questions/ranking-policy")
     def question_ranking_policy() -> dict[str, object]:

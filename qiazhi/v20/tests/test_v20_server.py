@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
 
 from fastapi.testclient import TestClient
 
@@ -129,6 +130,8 @@ def test_v20_v19_profile_migration_preview_is_read_only() -> None:
     client = TestClient(app)
     preview = client.get("/api/v20/profiles/v19-migration-preview").json()
     dry_run = client.post("/api/v20/profiles/import-v19").json()
+    auth_preview = client.get("/api/v20/auth/v19-migration-preview").json()
+    auth_dry_run = client.post("/api/v20/auth/import-v19").json()
 
     assert preview["version"] == "v20.v19_profile_migration_preview.v1"
     assert preview["target_table"] == "v20_user_profiles"
@@ -136,8 +139,16 @@ def test_v20_v19_profile_migration_preview_is_read_only() -> None:
     assert "V19_SOURCE_IS_READ_ONLY" in preview["guardrails"]
     assert dry_run["version"] == "v20.v19_profile_postgres_import.v1"
     assert dry_run["status"] == "dry_run"
+    assert dry_run["target_owner_id"] == "admin"
     assert dry_run["apply"] is False
     assert dry_run["runtime_mutation"] is False
+    assert auth_preview["version"] == "v20.v19_auth_migration_preview.v1"
+    assert auth_preview["session_count"] >= 1
+    assert auth_preview["runtime_mutation"] is False
+    assert "NO_SESSION_TOKENS_RENDERED" in auth_preview["guardrails"]
+    assert auth_dry_run["version"] == "v20.v19_auth_session_import.v1"
+    assert auth_dry_run["status"] == "dry_run"
+    assert auth_dry_run["runtime_mutation"] is False
 
 
 def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatch) -> None:
@@ -165,6 +176,27 @@ def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatc
     assert registered["ok"] is True
     assert registered["session"]["role"] == "analyst"
     assert logged_in["session"]["role"] == "analyst"
+
+
+def test_v20_can_import_v19_auth_sessions_and_accept_legacy_cookie(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
+    client = TestClient(app)
+
+    result = client.post("/api/v20/auth/import-v19?apply=true", json={"admin_password": "abcd1235"}).json()
+    source = Path(__file__).resolve().parents[2] / "v19/.runtime/auth_sessions.json"
+    token = next(iter(json.loads(source.read_text(encoding="utf-8")).keys()))
+
+    client.cookies.set("v19_auth_session", token)
+    me = client.get("/api/v20/auth/me").json()
+
+    assert result["status"] == "imported"
+    assert result["admin_password_configured"] is True
+    assert result["imported_sessions"] >= 1
+    assert "v19_auth_session" in result["recognized_cookie_names"]
+    assert me["authenticated"] is True
+    assert me["session"]["role"] in {"user", "analyst", "admin"}
+    login = client.post("/api/v20/auth/login", json={"username": "admin", "password": "abcd1235"}).json()
+    assert login["session"]["role"] == "admin"
 
 
 def test_v20_service_scripts_and_docs_are_wired() -> None:
