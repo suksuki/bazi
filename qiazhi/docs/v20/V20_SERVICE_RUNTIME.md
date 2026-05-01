@@ -43,6 +43,17 @@ Defaults:
 - `V20_HOST=0.0.0.0`
 - `V20_PORT=9020`
 
+## Service Unit Manifest
+
+```text
+GET /api/v20/ops/service-unit/local_macos
+GET /api/v20/ops/service-unit/linux_0_13
+```
+
+These endpoints return reviewed launch commands or systemd unit text, health
+check URLs, and UI URLs. They do not start processes or render secret values.
+Remote install still requires human review on the target host.
+
 ## Measurement Request
 
 ```json

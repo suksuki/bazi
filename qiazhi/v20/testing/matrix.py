@@ -39,8 +39,13 @@ TEST_COVERAGE_AREAS = (
     },
     {
         "area": "ops_storage_redis",
-        "tests": ("v20/tests/test_v20_ops.py", "v20/tests/test_v20_storage.py", "v20/tests/test_v20_redis.py"),
-        "contracts": ("RuntimeConfig", "Postgres schema", "Redis keyspaces", "dependency_readiness"),
+        "tests": (
+            "v20/tests/test_v20_ops.py",
+            "v20/tests/test_v20_storage.py",
+            "v20/tests/test_v20_redis.py",
+            "v20/tests/test_v20_service_unit.py",
+        ),
+        "contracts": ("RuntimeConfig", "Postgres schema", "Redis keyspaces", "dependency_readiness", "service_unit_manifest"),
         "tier": "fast",
     },
     {

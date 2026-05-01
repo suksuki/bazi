@@ -21,6 +21,7 @@ from v20.learning.registries import registry_manifest
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
+from v20.ops.service_unit import service_unit_manifest
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 from v20.testing.matrix import build_test_coverage_matrix
@@ -80,6 +81,13 @@ def create_app() -> FastAPI:
             "runtime_mutation": False,
             "guardrails": ["NO_SECRET_VALUES_RENDERED", "PROFILE_RESPONSE_IS_CONFIG_ONLY"],
         }
+
+    @app.get("/api/v20/ops/service-unit/{profile_name}")
+    def ops_service_unit(profile_name: str) -> dict[str, object]:
+        try:
+            return service_unit_manifest(profile_name)
+        except KeyError as exc:
+            raise HTTPException(status_code=404, detail={"error": "V20_PROFILE_NOT_FOUND", "profile": profile_name}) from exc
 
     @app.get("/api/v20/testing/tiers")
     def testing_tiers() -> dict[str, object]:
