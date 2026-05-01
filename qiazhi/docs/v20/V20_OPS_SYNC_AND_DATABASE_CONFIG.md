@@ -92,3 +92,21 @@ It defines reviewed authoritative tables but does not apply migrations automatic
 - `v20_corpus_snapshots`
 
 Applying migrations will require an explicit command, backup policy, and server profile in a later phase.
+
+## Redis Keyspace Contract
+
+The Redis contract is exposed at:
+
+```text
+GET /api/v20/redis/contract
+```
+
+Initial keyspaces:
+
+- `v20:cache:request:` for short-lived deterministic response fragments.
+- `v20:rate:` for rate counters.
+- `v20:queue:job:` for eval/corpus/learning worker dispatch handles.
+- `v20:lock:` for short TTL distributed locks.
+- `v20:runtime:short:` for temporary interaction state.
+
+Every Redis keyspace must have a TTL and must be reconstructable from Postgres or deterministic runtime state. Redis remains non-authoritative.

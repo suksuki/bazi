@@ -66,6 +66,7 @@ def test_v20_ops_and_testing_metadata_endpoints_hide_secrets() -> None:
     profile = client.get("/api/v20/ops/profile/linux_0_13").json()
     tiers = client.get("/api/v20/testing/tiers").json()
     storage = client.get("/api/v20/storage/schema").json()
+    redis = client.get("/api/v20/redis/contract").json()
 
     assert ops["validation"]["ok"] is True
     assert ops["config"]["profiles"][0]["postgres"]["secret_policy"] == "env_names_only_no_secret_values"
@@ -76,6 +77,9 @@ def test_v20_ops_and_testing_metadata_endpoints_hide_secrets() -> None:
     assert storage["schema"]["backend"] == "postgres"
     assert storage["schema"]["table_count"] == 6
     assert storage["runtime_mutation"] is False
+    assert redis["validation"]["ok"] is True
+    assert redis["contract"]["keyspace_count"] == 5
+    assert redis["runtime_mutation"] is False
 
 
 def test_v20_service_scripts_and_docs_are_wired() -> None:

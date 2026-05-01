@@ -7,6 +7,7 @@ from v20.api.schemas import MeasureRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.profiles import validate_runtime_config
+from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 from v20.testing.tiers import test_tier_manifest
 
@@ -76,6 +77,16 @@ def create_app() -> FastAPI:
             "version": "v20.storage_schema_response.v1",
             "schema": build_postgres_schema_contract().to_dict(),
             "migration_manifest": migration_manifest(),
+            "runtime_mutation": False,
+        }
+
+    @app.get("/api/v20/redis/contract")
+    def redis_contract() -> dict[str, object]:
+        contract = redis_contract_manifest()
+        return {
+            "version": "v20.redis_contract_response.v1",
+            "contract": contract.to_dict(),
+            "validation": validate_redis_contract(contract),
             "runtime_mutation": False,
         }
 
