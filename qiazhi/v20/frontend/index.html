@@ -3,206 +3,70 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>V20 命理测算台</title>
+    <title>掐指一算 V20</title>
     <link rel="stylesheet" href="/v20/ui/styles.css" />
   </head>
   <body>
-    <div class="app-shell">
-      <header class="topbar">
-        <div class="brand">
-          <div class="brand-mark">掐</div>
+    <main class="entry-page">
+      <header class="entry-hero">
+        <div class="brand compact-brand">
+          <div class="brand-mark large">掐</div>
           <div>
             <p class="eyebrow">Qiazhi V20</p>
-            <h1 data-ui="app_title">命理测算台</h1>
+            <h1 data-entry="title">进入掐指一算</h1>
+            <p data-entry="subtitle">选择游客、命理师或 Admin 入口，进入 V20 命理测算系统。</p>
           </div>
         </div>
-        <nav class="top-actions" aria-label="V20 navigation">
-          <a href="/v20/ui/" aria-current="page" data-ui="nav_measure">测算</a>
-          <a href="/v20/ui/admin.html">Admin</a>
-          <span id="runtimeStatus" class="status-pill">checking</span>
-        </nav>
+        <label class="locale-switch">
+          <span data-entry="language">语言</span>
+          <select id="entryLocale">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="ko">한국어</option>
+          </select>
+        </label>
       </header>
 
-      <main class="measure-layout">
-        <aside class="control-panel" aria-label="测算输入">
-          <form id="measureForm">
-            <section class="control-section">
-              <div class="section-head compact">
-                <div>
-                  <p class="section-kicker">Chart</p>
-                  <h2>四柱</h2>
-                </div>
-                <span id="profileBadge" class="small-pill">local</span>
-              </div>
-              <div class="pillar-input-grid">
-                <label>年柱<input name="year" maxlength="2" value="甲子" autocomplete="off" /></label>
-                <label>月柱<input name="month" maxlength="2" value="戊辰" autocomplete="off" /></label>
-                <label>日柱<input name="day" maxlength="2" value="甲午" autocomplete="off" /></label>
-                <label>时柱<input name="hour" maxlength="2" value="辛酉" autocomplete="off" /></label>
-              </div>
-            </section>
+      <section class="entry-grid">
+        <article class="entry-card primary-entry">
+          <p class="section-kicker">Fast start</p>
+          <h2 data-entry="guest_title">游客即时测算</h2>
+          <p data-entry="guest_desc">不需要账号，直接进入测算台。适合快速体验和临时问盘。</p>
+          <button type="button" id="guestStart" data-entry="guest_button">游客进入</button>
+        </article>
 
-            <section class="control-section">
-              <p class="section-kicker">Question</p>
-              <label>用户关心<textarea name="user_text" rows="4">我想看事业和财运</textarea></label>
-              <label>推荐问题<select name="question_key" id="questionSelect"><option value="">自动路由</option></select></label>
-            </section>
-
-            <section class="control-section">
-              <p class="section-kicker">Time</p>
-              <div class="pillar-input-grid">
-                <label>流年<input name="flow_year_pillar" maxlength="2" placeholder="庚子" autocomplete="off" /></label>
-                <label>大运<input name="luck_pillar" maxlength="2" placeholder="乙亥" autocomplete="off" /></label>
-              </div>
-              <label>流月<input name="flow_month_pillar" maxlength="2" placeholder="辛丑" autocomplete="off" /></label>
-            </section>
-
-            <section class="control-section">
-              <p class="section-kicker">View</p>
-              <div class="pillar-input-grid">
-                <label>视图
-                  <select name="role_key" id="roleSelect">
-                  <option value="analyst" selected>命理师</option>
-                  <option value="user">游客</option>
-                  <option value="lab">实验室</option>
-                  <option value="admin">Admin</option>
-                  <option value="full">开发全量</option>
-                  </select>
-                </label>
-                <label>语言
-                  <select name="locale" id="localeSelect">
-                    <option value="zh">中文</option>
-                    <option value="en">English</option>
-                    <option value="ko">한국어</option>
-                  </select>
-                </label>
-              </div>
-            </section>
-
-            <section class="control-section">
-              <div class="section-head compact">
-                <div>
-                  <p class="section-kicker">Profile</p>
-                  <h2 data-ui="profiles_title">用户档案</h2>
-                </div>
-                <span id="profileMigrationState" class="small-pill">V19</span>
-              </div>
-              <select id="profileSelect" aria-label="profile select">
-                <option value="">游客即时测算</option>
+        <article class="entry-card">
+          <p class="section-kicker">Account</p>
+          <h2 data-entry="login_title">本地账号登录</h2>
+          <p data-entry="login_desc">用于保留多用户、命理师工作流和后续用户档案。</p>
+          <div class="entry-form">
+            <label><span data-entry="username">用户名</span><input id="loginName" autocomplete="username" placeholder="local_user" /></label>
+            <label><span data-entry="password">密码</span><input id="loginPassword" type="password" autocomplete="current-password" /></label>
+            <label><span data-entry="role">角色</span>
+              <select id="loginRole">
+                <option value="user" data-entry-option="role_guest">游客</option>
+                <option value="analyst" data-entry-option="role_practitioner">命理师</option>
+                <option value="admin">Admin</option>
               </select>
-              <button type="button" id="profileImportButton" class="mini-action secondary">迁移 V19 档案</button>
-            </section>
+            </label>
+          </div>
+          <div class="button-row">
+            <button type="button" id="loginButton" data-entry="login_button">登录</button>
+            <button type="button" id="registerButton" class="secondary" data-entry="register_button">注册</button>
+          </div>
+        </article>
 
-            <button type="submit" class="primary-action">开始测算</button>
-          </form>
-        </aside>
+        <article class="entry-card">
+          <p class="section-kicker">Admin</p>
+          <h2>DB / LLM</h2>
+          <p data-entry="admin_desc">Admin 页面只保留数据库与 LLM 运行状态，复杂知识和规则治理不放在入口页。</p>
+          <a class="entry-link" href="/v20/ui/admin.html">Admin</a>
+          <a class="entry-link subtle" href="/v20/ui/workbench.html" data-entry="workbench_link">直接进入测算台</a>
+        </article>
+      </section>
 
-        <section class="result-stage" aria-live="polite">
-          <section class="run-summary">
-            <div>
-              <p class="section-kicker">Selected</p>
-              <h2 id="selectedQuestion">等待测算</h2>
-              <p id="selectedBoundary" class="muted-line">V20 runtime ready.</p>
-            </div>
-            <div class="summary-metrics">
-              <span><strong id="featureCount">0</strong>特征</span>
-              <span><strong id="questionCount">0</strong>问题</span>
-              <span><strong id="knowledgeCount">0</strong>证据</span>
-            </div>
-          </section>
-
-          <section class="dashboard-grid">
-            <article class="panel chart-panel">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Pillars</p>
-                  <h2 data-ui="chart_title">命盘结构</h2>
-                </div>
-                <span id="dayMasterBadge" class="small-pill">日主</span>
-              </div>
-              <div id="pillarPanel" class="pillar-panel"></div>
-              <div id="tenGodLine" class="tag-line"></div>
-            </article>
-
-            <article class="panel">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Feature Spine</p>
-                  <h2 data-ui="features_title">命理特征主线</h2>
-                </div>
-                <span id="coreCapacity" class="small-pill">core</span>
-              </div>
-              <div id="featureChips" class="feature-grid"></div>
-            </article>
-
-            <article class="panel">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Portrait</p>
-                  <h2 data-ui="portrait_title">画像投影</h2>
-                </div>
-                <span class="small-pill">calibration</span>
-              </div>
-              <div id="portraitAxes" class="axis-list"></div>
-            </article>
-
-            <article class="panel">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Questions</p>
-                  <h2 data-ui="questions_title">推荐问题</h2>
-                </div>
-                <span class="small-pill">feature-backed</span>
-              </div>
-              <div id="questionList" class="question-list"></div>
-            </article>
-          </section>
-
-          <section class="answer-grid">
-            <article class="panel answer-panel">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Answer</p>
-                  <h2 data-ui="answer_title">八字专业回复</h2>
-                </div>
-                <span id="llmStatus" class="small-pill">llm idle</span>
-              </div>
-              <pre id="answerText">等待测算。</pre>
-            </article>
-
-            <aside class="panel side-panel">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Evidence</p>
-                  <h2 data-ui="evidence_title">证据与系统状态</h2>
-                </div>
-              </div>
-              <div id="evidenceList" class="evidence-list"></div>
-              <div class="system-strip">
-                <span id="corpusState">corpus</span>
-                <span id="ruleState">rules</span>
-                <span id="dbState">db</span>
-              </div>
-            </aside>
-          </section>
-
-          <section class="panel feedback-panel">
-            <div class="section-head">
-              <div>
-                <p class="section-kicker">Learning</p>
-                <h2 data-ui="feedback_title">反馈校准</h2>
-              </div>
-              <span id="feedbackState" class="small-pill">record only</span>
-            </div>
-            <div class="feedback-row">
-              <textarea id="feedbackText" rows="3" placeholder="记录一次校准反馈"></textarea>
-              <button type="button" id="feedbackButton">分析反馈</button>
-            </div>
-            <pre id="feedbackOutput">等待反馈。</pre>
-          </section>
-        </section>
-      </main>
-    </div>
-    <script src="/v20/ui/app.js" defer></script>
+      <div id="entryStatus" class="status-line">checking</div>
+    </main>
+    <script src="/v20/ui/entry.js" defer></script>
   </body>
 </html>

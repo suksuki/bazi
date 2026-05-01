@@ -140,6 +140,33 @@ def test_v20_v19_profile_migration_preview_is_read_only() -> None:
     assert dry_run["runtime_mutation"] is False
 
 
+def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
+    client = TestClient(app)
+
+    guest = client.post("/api/v20/auth/guest", json={"locale": "zh"}).json()
+    me = client.get("/api/v20/auth/me").json()
+
+    assert guest["ok"] is True
+    assert guest["session"]["role"] == "user"
+    assert me["authenticated"] is True
+    assert me["session"]["role"] == "user"
+
+    practitioner = TestClient(app)
+    registered = practitioner.post(
+        "/api/v20/auth/register",
+        json={"username": "local_practitioner", "password": "pass1234", "role": "analyst", "locale": "zh"},
+    ).json()
+    logged_in = practitioner.post(
+        "/api/v20/auth/login",
+        json={"username": "local_practitioner", "password": "pass1234", "locale": "zh"},
+    ).json()
+
+    assert registered["ok"] is True
+    assert registered["session"]["role"] == "analyst"
+    assert logged_in["session"]["role"] == "analyst"
+
+
 def test_v20_service_scripts_and_docs_are_wired() -> None:
     root = Path(__file__).resolve().parents[2]
     macos = root / "v20/scripts/start_macos.sh"

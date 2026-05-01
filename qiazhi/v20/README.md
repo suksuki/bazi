@@ -60,7 +60,8 @@ Storage boundary:
 
 UI boundary:
 
-- `/v20/ui/` is the multi-role, multi-language measurement workspace for guest, practitioner, lab, and admin projections.
+- `/v20/ui/` is the multi-role, multi-language entry/login surface for guest, practitioner, and admin access.
+- `/v20/ui/workbench.html` is the measurement workspace for Bazi feature, portrait, question, and answer projections.
 - `/v20/ui/admin.html` is intentionally limited to DB and LLM status so operations stay readable.
 
 Default local validation:

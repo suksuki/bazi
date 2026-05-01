@@ -1,4 +1,5 @@
 const state = { latest: null };
+const params = new URLSearchParams(window.location.search);
 
 const form = document.querySelector("#measureForm");
 const questionSelect = document.querySelector("#questionSelect");
@@ -364,6 +365,8 @@ localeSelect.addEventListener("change", () => {
   loadProfiles();
 });
 
+if (params.get("locale")) localeSelect.value = params.get("locale");
+if (params.get("role")) roleSelect.value = params.get("role");
 applyLocale(localeSelect.value);
 loadStatus();
 loadProfiles();

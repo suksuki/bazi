@@ -2,10 +2,11 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request, Response
 from fastapi.staticfiles import StaticFiles
 
 from v20 import V20_VERSION
+from v20.access.auth import auth_status, guest_login, logout, password_login, register_user
 from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
 from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest, PortraitCalibrationRequest
@@ -99,6 +100,32 @@ def create_app() -> FastAPI:
                 "NO_SECRET_VALUES_RENDERED",
             ],
         }
+
+    @app.get("/api/v20/auth/me")
+    def auth_me(request: Request) -> dict[str, object]:
+        return auth_status(request)
+
+    @app.post("/api/v20/auth/guest")
+    def auth_guest(response: Response, payload: dict = None) -> dict[str, object]:
+        return guest_login(response, locale=str((payload or {}).get("locale") or "zh"))
+
+    @app.post("/api/v20/auth/login")
+    def auth_login(payload: dict[str, object], response: Response) -> dict[str, object]:
+        result = password_login(payload, response)
+        if not result.get("ok"):
+            raise HTTPException(status_code=401, detail=result)
+        return result
+
+    @app.post("/api/v20/auth/register")
+    def auth_register(payload: dict[str, object], response: Response) -> dict[str, object]:
+        result = register_user(payload, response)
+        if not result.get("ok"):
+            raise HTTPException(status_code=400, detail=result)
+        return result
+
+    @app.post("/api/v20/auth/logout")
+    def auth_logout(response: Response, request: Request) -> dict[str, object]:
+        return logout(response, request)
 
     @app.get("/api/v20/system/status")
     def system_status() -> dict[str, object]:
