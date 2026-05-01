@@ -12,13 +12,13 @@ TEST_TIERS: tuple[TestTier, ...] = (
         commands=(
             TestCommand(
                 name="py_compile_v20",
-                argv=("python3", "-m", "py_compile", "__V20_PY_FILES__"),
+                argv=("__PYTHON_BIN__", "-m", "py_compile", "__V20_PY_FILES__"),
                 purpose="Compile V20 Python files only.",
             ),
             TestCommand(
                 name="runtime_spine_smoke",
                 argv=(
-                    "python3",
+                    "__PYTHON_BIN__",
                     "-m",
                     "pytest",
                     "-q",
@@ -37,12 +37,12 @@ TEST_TIERS: tuple[TestTier, ...] = (
         commands=(
             TestCommand(
                 name="py_compile_v20",
-                argv=("python3", "-m", "py_compile", "__V20_PY_FILES__"),
+                argv=("__PYTHON_BIN__", "-m", "py_compile", "__V20_PY_FILES__"),
                 purpose="Compile V20 Python files only.",
             ),
             TestCommand(
                 name="pytest_v20_unit_contracts",
-                argv=("python3", "-m", "pytest", "-q", "v20/tests"),
+                argv=("__PYTHON_BIN__", "-m", "pytest", "-q", "v20/tests"),
                 purpose="Run V20 unit and contract tests.",
             ),
         ),
@@ -55,7 +55,7 @@ TEST_TIERS: tuple[TestTier, ...] = (
         commands=(
             TestCommand(
                 name="pytest_v20_targeted",
-                argv=("python3", "-m", "pytest", "-q", "v20/tests", "__PYTEST_ARGS__"),
+                argv=("__PYTHON_BIN__", "-m", "pytest", "-q", "v20/tests", "__PYTEST_ARGS__"),
                 purpose="Run explicit pytest selectors without expanding to slow suites.",
             ),
         ),
@@ -68,12 +68,12 @@ TEST_TIERS: tuple[TestTier, ...] = (
         commands=(
             TestCommand(
                 name="py_compile_v20",
-                argv=("python3", "-m", "py_compile", "__V20_PY_FILES__"),
+                argv=("__PYTHON_BIN__", "-m", "py_compile", "__V20_PY_FILES__"),
                 purpose="Compile V20 Python files only.",
             ),
             TestCommand(
                 name="pytest_v20_all_local",
-                argv=("python3", "-m", "pytest", "-q", "v20/tests"),
+                argv=("__PYTHON_BIN__", "-m", "pytest", "-q", "v20/tests"),
                 purpose="Run all local V20 tests.",
             ),
             TestCommand(
@@ -91,7 +91,7 @@ TEST_TIERS: tuple[TestTier, ...] = (
         commands=(
             TestCommand(
                 name="pytest_v20_services",
-                argv=("python3", "-m", "pytest", "-q", "v20/tests", "-k", "service or postgres or redis or sync"),
+                argv=("__PYTHON_BIN__", "-m", "pytest", "-q", "v20/tests", "-k", "service or postgres or redis or sync"),
                 purpose="Service-dependent tests; skipped unless the env gate is set.",
                 opt_in_env="RUN_V20_SERVICE_TESTS",
             ),
@@ -111,7 +111,7 @@ TEST_TIERS: tuple[TestTier, ...] = (
         commands=(
             TestCommand(
                 name="pytest_v20_corpus",
-                argv=("python3", "-m", "pytest", "-q", "v20/tests", "-k", "corpus or coverage or full_518k"),
+                argv=("__PYTHON_BIN__", "-m", "pytest", "-q", "v20/tests", "-k", "corpus or coverage or full_518k"),
                 purpose="Long-running corpus tests; never part of default loops.",
                 opt_in_env="RUN_V20_CORPUS_TESTS",
             ),

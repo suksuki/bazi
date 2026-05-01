@@ -223,6 +223,8 @@ def test_v20_service_scripts_and_docs_are_wired() -> None:
     doc = root / "docs/v20/V20_SERVICE_RUNTIME.md"
 
     assert "v20.server:app" in macos.read_text(encoding="utf-8")
+    assert "source \"${SCRIPT_DIR}/_python.sh\"" in macos.read_text(encoding="utf-8")
+    assert "source \"${SCRIPT_DIR}/_python.sh\"" in linux.read_text(encoding="utf-8")
     assert "V20_ENV=\"${V20_ENV:-local_macos}\"" in macos.read_text(encoding="utf-8")
     assert "V20_ENV=\"${V20_ENV:-linux_0_13}\"" in linux.read_text(encoding="utf-8")
     assert "POST /api/v20/measure" in doc.read_text(encoding="utf-8")

@@ -1,5 +1,6 @@
 # Local dependency/runtime artifacts
 qiazhi/.venv/
+qiazhi/.venv312/
 qiazhi/.pnpm-store/
 qiazhi/.pycache/
 qiazhi/.pycache_tmp/

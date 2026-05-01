@@ -31,6 +31,13 @@ and test matrix coverage. It is read-only and safe for monitoring.
 
 ## Local macOS
 
+Recommended Python setup:
+
+```bash
+python3.12 -m venv .venv312
+.venv312/bin/python -m pip install -r v20/requirements.txt
+```
+
 ```bash
 ./v20/scripts/start_macos.sh
 ```
@@ -40,6 +47,7 @@ Defaults:
 - `V20_ENV=local_macos`
 - `V20_HOST=127.0.0.1`
 - `V20_PORT=9020`
+- `PYTHON_BIN=python3.12` unless explicitly overridden with another Python 3.12 executable
 
 ## Linux 0.13
 
@@ -52,6 +60,7 @@ Defaults:
 - `V20_ENV=linux_0_13`
 - `V20_HOST=0.0.0.0`
 - `V20_PORT=9020`
+- `PYTHON_BIN=python3.12` unless explicitly overridden with another Python 3.12 executable
 
 ## Service Unit Manifest
 

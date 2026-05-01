@@ -2,6 +2,17 @@
 
 V20 uses bounded test tiers so the default developer loop stays fast as the system grows.
 
+V20's runtime Python is `3.12`. The shell scripts resolve Python in this order:
+explicit `PYTHON_BIN`, `.venv312/bin/python`, then `python3.12`; any older
+interpreter is rejected before tests or services start.
+
+Recommended local setup:
+
+```bash
+python3.12 -m venv .venv312
+.venv312/bin/python -m pip install -r v20/requirements.txt
+```
+
 ## Principle
 
 V19 eventually made full test runs too expensive for every small edit. V20 keeps Markdown documentation, but the executable source of truth is `v20.testing.tiers.TEST_TIERS`.

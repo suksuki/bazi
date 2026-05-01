@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import shutil
 import subprocess
 import sys
 import time
@@ -71,9 +72,15 @@ def _expand_argv(argv: tuple[str, ...], root: Path, extra_args: tuple[str, ...])
             expanded.extend(_v20_py_files(root))
         elif item == "__PYTEST_ARGS__":
             expanded.extend(_normalize_pytest_args(extra_args))
+        elif item == "__PYTHON_BIN__":
+            expanded.append(_python_bin())
         else:
             expanded.append(item)
     return expanded
+
+
+def _python_bin() -> str:
+    return os.getenv("PYTHON_BIN") or shutil.which("python3.12") or sys.executable or "python3.12"
 
 
 def _v20_py_files(root: Path) -> list[str]:

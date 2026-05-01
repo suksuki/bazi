@@ -11,7 +11,7 @@ def test_v20_linux_service_unit_manifest_is_systemd_without_secrets(monkeypatch)
     manifest = service_unit_manifest("linux_0_13")
 
     assert manifest["unit_type"] == "systemd"
-    assert "ExecStart=/usr/bin/env python3 -m uvicorn v20.server:app" in manifest["unit"]
+    assert "ExecStart=/usr/bin/env python3.12 -m uvicorn v20.server:app" in manifest["unit"]
     assert "V20_ENV=linux_0_13" in manifest["unit"]
     assert manifest["health_check"] == "http://0.13:9020/health"
     assert manifest["runtime_mutation"] is False

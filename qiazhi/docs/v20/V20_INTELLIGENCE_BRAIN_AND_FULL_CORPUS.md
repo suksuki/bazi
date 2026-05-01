@@ -50,7 +50,7 @@ V20 now has deterministic enumerators for this space and a precompute preview:
 Local job command:
 
 ```bash
-python3 v20/scripts/run_full_precompute.py --run-id v20_full_518k_main --limit 518400 --status-every 500
+python3.12 v20/scripts/run_full_precompute.py --run-id v20_full_518k_main --limit 518400 --status-every 500
 ```
 
 The job writes:
@@ -63,7 +63,7 @@ The job writes:
 After the full run, build the usable data artifacts:
 
 ```bash
-python3 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main
+python3.12 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main
 ```
 
 Artifact outputs:
@@ -106,11 +106,11 @@ Artifact endpoints:
 Explicit export/import commands:
 
 ```bash
-python3 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main --clusters
-python3 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main --training
-python3 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main
-python3 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main --apply
-python3 v20/scripts/export_corpus_parquet.py --run-id v20_full_518k_20260501_main
+python3.12 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main --clusters
+python3.12 v20/scripts/build_corpus_artifacts.py --run-id v20_full_518k_20260501_main --training
+python3.12 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main
+python3.12 v20/scripts/import_corpus_postgres.py --run-id v20_full_518k_20260501_main --apply
+python3.12 v20/scripts/export_corpus_parquet.py --run-id v20_full_518k_20260501_main
 ```
 
 Postgres import requires `V20_DATABASE_URL` and `--apply`. Parquet export

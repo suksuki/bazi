@@ -39,7 +39,7 @@ def _systemd_unit(profile: ServerProfile) -> str:
             f"Environment=V20_HOST={profile.bind_host}",
             f"Environment=V20_PORT={profile.port}",
             "Environment=PYTHONPATH=%h/DEV/AIProjects/bazi/qiazhi",
-            "ExecStart=/usr/bin/env python3 -m uvicorn v20.server:app --host ${V20_HOST} --port ${V20_PORT}",
+            "ExecStart=/usr/bin/env python3.12 -m uvicorn v20.server:app --host ${V20_HOST} --port ${V20_PORT}",
             "Restart=on-failure",
             "RestartSec=3",
             "",

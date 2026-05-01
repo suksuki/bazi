@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/../.."
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+source "${SCRIPT_DIR}/_python.sh"
 "${PYTHON_BIN}" -m v20.testing.runner full "$@"

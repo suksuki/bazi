@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-cd "$(dirname "$0")/../.."
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "${SCRIPT_DIR}/../.."
 
-PYTHON_BIN="${PYTHON_BIN:-python3}"
+source "${SCRIPT_DIR}/_python.sh"
 HOST="${V20_HOST:-127.0.0.1}"
 PORT="${V20_PORT:-9020}"
 
