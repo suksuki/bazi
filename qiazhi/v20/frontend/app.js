@@ -5,6 +5,9 @@ const state = {
   isMeasuring: false,
   pendingMeasure: false,
   lastMeasureKey: "",
+  chatTurns: [],
+  chatSeq: 0,
+  activeLlmMode: "deterministic",
 };
 const params = new URLSearchParams(window.location.search);
 
@@ -15,6 +18,7 @@ const localeSelect = document.querySelector("#localeSelect");
 const feedbackButton = document.querySelector("#feedbackButton");
 const chatText = document.querySelector("#chatText");
 const chatButton = document.querySelector("#chatButton");
+const chatTranscript = document.querySelector("#chatTranscript");
 
 const UI_TEXT = {
   zh: {
@@ -92,9 +96,10 @@ const el = (tag, className = "", text = "") => {
   return node;
 };
 
-const measure = async ({ force = false } = {}) => {
+const measure = async ({ force = false, interactionText = "", interactionSource = "", llmMode = "deterministic" } = {}) => {
   const text = currentText();
   const payload = payloadFromForm();
+  payload.llm_mode = llmMode;
   const key = JSON.stringify(payload);
   if (!force && key === state.lastMeasureKey) return;
   if (!hasCompletePillars(payload)) return;
@@ -105,7 +110,9 @@ const measure = async ({ force = false } = {}) => {
   }
   state.isMeasuring = true;
   state.lastMeasureKey = key;
-  setMeasureBusy(true, text);
+  state.activeLlmMode = llmMode;
+  const turnId = interactionText ? appendChatTurn(interactionText, interactionSource || "提问") : "";
+  setMeasureBusy(true, text, llmMode);
   setText("#answerText", "正在根据当前问题重新测算。");
   try {
     const role = measurementRole(payload.role_key);
@@ -117,12 +124,14 @@ const measure = async ({ force = false } = {}) => {
     });
     state.latest = result;
     renderRuntime(result);
+    if (turnId) completeChatTurn(turnId, result.answer_text || "", result);
   } catch (error) {
     setText("#answerText", `测算失败：${error.message}`);
+    if (turnId) failChatTurn(turnId, error.message);
     state.lastMeasureKey = "";
   } finally {
     state.isMeasuring = false;
-    setMeasureBusy(false, currentText());
+    setMeasureBusy(false, currentText(), state.activeLlmMode);
     if (state.pendingMeasure) {
       state.pendingMeasure = false;
       scheduleMeasure({ force: true });
@@ -149,7 +158,7 @@ const renderRuntime = (result) => {
   setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
   setText("#coreCapacity", result.core_inference?.day_master_capacity || "core");
   setText("#dayMasterBadge", `日主 ${chart.day_master || "-"}`);
-  setText("#llmStatus", `llm ${result.llm_assist?.status || "idle"}`);
+  setText("#llmStatus", llmStatusLabel(result));
   setText("#answerText", result.answer_text || "");
 
   renderPillars(chart, result.time_context || {});
@@ -162,13 +171,16 @@ const renderRuntime = (result) => {
   renderEvidence(result.knowledge_refs || []);
 };
 
-const setMeasureBusy = (busy, text = currentText()) => {
+const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") => {
   const button = form.querySelector("button[type='submit']");
   button.disabled = busy;
   button.textContent = busy ? text.running : text.run;
   chatButton.disabled = busy;
-  chatButton.textContent = busy ? "测算中" : "发送";
-  if (busy) setText("#llmStatus", "测算中");
+  chatButton.textContent = busy ? (llmMode === "rewrite" ? "生成中" : "测算中") : "发送";
+  document.querySelectorAll(".chat-question-chip, .question-row").forEach((node) => {
+    node.disabled = busy;
+  });
+  if (busy) setText("#llmStatus", llmMode === "rewrite" ? "llm generating" : "测算中");
 };
 
 const renderPillars = (chart, timeContext = {}) => {
@@ -268,9 +280,15 @@ const questionButton = (question, selectedKey, className) => {
 };
 
 const runQuestion = (question) => {
+  const title = question.title || question.question_key || "";
   questionSelect.value = question.question_key;
-  setInquiryText(question.title || question.question_key || "", { syncOnly: true });
-  measure({ force: true });
+  setInquiryText(title, { syncOnly: true });
+  measure({
+    force: true,
+    interactionText: title,
+    interactionSource: "推荐问题",
+    llmMode: "rewrite",
+  });
 };
 
 const renderQuestionSelect = (questions, selectedKey) => {
@@ -295,6 +313,67 @@ const renderEvidence = (refs) => {
     root.append(row);
   });
   if (!refs.length) root.append(el("div", "empty-note", "暂无可展示证据。"));
+};
+
+const appendChatTurn = (questionText, source) => {
+  const id = `turn-${++state.chatSeq}`;
+  state.chatTurns.push({
+    id,
+    source,
+    questionText,
+    answerText: "正在生成回复...",
+    status: "pending",
+    llmStatus: "llm generating",
+  });
+  renderChatTranscript();
+  return id;
+};
+
+const completeChatTurn = (id, answerText, result) => {
+  const turn = state.chatTurns.find((item) => item.id === id);
+  if (!turn) return;
+  turn.answerText = answerText || "本轮没有生成可展示回复。";
+  turn.status = "ready";
+  turn.llmStatus = llmStatusLabel(result);
+  renderChatTranscript();
+};
+
+const failChatTurn = (id, message) => {
+  const turn = state.chatTurns.find((item) => item.id === id);
+  if (!turn) return;
+  turn.answerText = `测算失败：${message}`;
+  turn.status = "error";
+  turn.llmStatus = "error";
+  renderChatTranscript();
+};
+
+const renderChatTranscript = () => {
+  if (!chatTranscript) return;
+  clear(chatTranscript);
+  if (!state.chatTurns.length) {
+    chatTranscript.hidden = true;
+    return;
+  }
+  chatTranscript.hidden = false;
+  state.chatTurns.slice(-4).forEach((turn) => {
+    const row = el("article", `chat-turn ${turn.status}`);
+    const question = el("div", "chat-bubble user");
+    question.append(el("span", "", turn.source || "提问"));
+    question.append(el("strong", "", turn.questionText));
+    const answer = el("div", "chat-bubble assistant");
+    answer.append(el("span", "", turn.llmStatus || turn.status));
+    answer.append(el("p", "", turn.answerText));
+    row.append(question);
+    row.append(answer);
+    chatTranscript.append(row);
+  });
+};
+
+const llmStatusLabel = (result) => {
+  const assist = result?.llm_assist || {};
+  const rewrite = assist.answer_rewrite || {};
+  if (rewrite.status && rewrite.status !== "not_requested") return `llm ${rewrite.status}`;
+  return `llm ${assist.status || "idle"}`;
 };
 
 const loadStatus = async () => {
@@ -464,7 +543,12 @@ const profileMeta = (profile) => {
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  measure({ force: true });
+  measure({
+    force: true,
+    interactionText: form.elements.user_text.value.trim(),
+    interactionSource: "手动测算",
+    llmMode: "rewrite",
+  });
 });
 feedbackButton.addEventListener("click", submitFeedback);
 localeSelect.addEventListener("change", () => {
@@ -483,16 +567,36 @@ form.querySelectorAll("input, textarea, select").forEach((node) => {
   }
 });
 chatButton.addEventListener("click", () => {
+  const value = chatText.value.trim();
+  if (!value) {
+    setText("#answerText", "请输入想继续看的方向。");
+    return;
+  }
   questionSelect.value = "";
-  setInquiryText(chatText.value, { syncOnly: true });
-  measure({ force: true });
+  setInquiryText(value, { syncOnly: true });
+  measure({
+    force: true,
+    interactionText: value,
+    interactionSource: "继续追问",
+    llmMode: "rewrite",
+  });
 });
 chatText.addEventListener("keydown", (event) => {
   if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
     event.preventDefault();
+    const value = chatText.value.trim();
+    if (!value) {
+      setText("#answerText", "请输入想继续看的方向。");
+      return;
+    }
     questionSelect.value = "";
-    setInquiryText(chatText.value, { syncOnly: true });
-    measure({ force: true });
+    setInquiryText(value, { syncOnly: true });
+    measure({
+      force: true,
+      interactionText: value,
+      interactionSource: "继续追问",
+      llmMode: "rewrite",
+    });
   }
 });
 

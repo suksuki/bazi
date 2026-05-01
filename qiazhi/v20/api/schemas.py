@@ -15,6 +15,7 @@ class MeasureRequest(BaseModel):
     question_key: str = ""
     user_text: str = ""
     locale: str = "zh"
+    llm_mode: str = Field("deterministic", pattern="^(deterministic|rewrite)$")
 
 
 class MeasureResponse(BaseModel):

@@ -48,6 +48,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "chatText" in page.text
     assert "chatButton" in page.text
     assert "chatQuestionList" in page.text
+    assert "chatTranscript" in page.text
     assert "portrait-summary" in page.text
     assert "profileImportButton" not in page.text
     assert "反馈校准" in page.text
@@ -63,7 +64,11 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "document.body.classList.toggle(\"profile-reading\", Boolean(params.get(\"profile_id\")))" in script.text
     assert "questions.slice(0, 5)" in script.text
     assert "renderChatQuestions(result.questions || [], selected.question_key || \"\")" in script.text
-    assert "chatButton.textContent = busy ? \"测算中\" : \"发送\"" in script.text
+    assert "chatButton.textContent = busy ? (llmMode === \"rewrite\" ? \"生成中\" : \"测算中\") : \"发送\"" in script.text
+    assert "payload.llm_mode = llmMode" in script.text
+    assert "llmMode: \"rewrite\"" in script.text
+    assert "appendChatTurn(interactionText" in script.text
+    assert ".chat-transcript" in style.text
     assert "applyProfileDefaults(profile)" in script.text
     assert "role: measurementRole(params.get(\"role\") || document.body.dataset.role)" in profiles_script.text
     assert "const endpoint = `/api/v20/measure/view/${role}`" in script.text

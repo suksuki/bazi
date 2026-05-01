@@ -71,8 +71,19 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert {"career", "relationship", "health", "element"} <= {row["domain"] for row in result["questions"]}
 
 
-def test_v20_validation_and_llm_fallback_are_guarded() -> None:
+def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
+    monkeypatch.setenv("V20_LLM_ENABLED", "0")
+    monkeypatch.setenv("V20_LLM_EXECUTE", "0")
     result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="v20.validation")
+    rewritten = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.validation.rewrite",
+        user_text="请按命理结构说明一下",
+        llm_mode="rewrite",
+    )
     case = GOLDEN_CASES[0]
     eval_result = evaluate_answer_plan(
         case,
@@ -91,6 +102,9 @@ def test_v20_validation_and_llm_fallback_are_guarded() -> None:
     assert ANSWER_PLAN_REWRITE.task_name == "answer_plan_rewrite"
     safe = review_output_safety(result["answer_text"])
     assert safe["result"]["ok"] is True
+    assert rewritten["llm_assist"]["answer_rewrite"]["status"] == "fallback"
+    assert rewritten["llm_assist"]["answer_rewrite"]["source"] == "deterministic_fallback"
+    assert rewritten["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
 
 
 def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:

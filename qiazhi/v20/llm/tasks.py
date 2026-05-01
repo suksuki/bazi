@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from v20.answer.composer import compose_answer
 from v20.answer.plan import AnswerPlan
 from v20.features.schema import FeatureLayer
@@ -7,7 +9,8 @@ from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.schema import KnowledgeUnit
 from v20.llm.client import call_structured_llm
 from v20.llm.contracts import ANSWER_PLAN_REWRITE, RULE_EXTRACTION_DRAFT, SAFETY_REVIEW
-from v20.llm.prompts import rule_extraction_prompt
+from v20.llm.prompts import answer_rewrite_prompt, rule_extraction_prompt
+from v20.llm.provider import load_llm_provider_config_from_env
 from v20.llm.structured_outputs import (
     LLMFeatureCandidate,
     LLMFeedbackSummary,
@@ -34,6 +37,59 @@ def accept_or_fallback_rewrite(plan: AnswerPlan, candidate_text: str, *, locale:
     if validation["ok"]:
         return {"ok": True, "text": candidate_text, "validation": validation, "source": "llm_rewrite"}
     return {"ok": False, "text": compose_answer(plan, locale=locale), "validation": validation, "source": "deterministic_fallback"}
+
+
+def rewrite_answer_plan_with_llm(
+    plan: AnswerPlan,
+    deterministic_text: str,
+    *,
+    locale: str = "zh",
+    tone: str = "clear",
+) -> dict[str, object]:
+    prompt = answer_rewrite_prompt(
+        plan,
+        locale=locale,
+        tone=tone,
+        verified_answer_text=deterministic_text,
+    )
+    cfg = load_llm_provider_config_from_env()
+    call = call_structured_llm(
+        ANSWER_PLAN_REWRITE,
+        prompt,
+        config=replace(cfg, max_tokens=min(cfg.max_tokens, 320)),
+    )
+    if call["status"] == "accepted":
+        text = str(call.get("output", {}).get("text") or "")
+        accepted = accept_or_fallback_rewrite(plan, text, locale=locale)
+        if accepted["ok"]:
+            return {
+                "version": "v20.llm_answer_rewrite.v1",
+                "status": "accepted",
+                "text": accepted["text"],
+                "source": accepted["source"],
+                "llm_call": call,
+                "validation": accepted["validation"],
+                "runtime_mutation": False,
+                "guardrails": [
+                    "LLM_REWRITE_FROM_VERIFIED_PLAN_ONLY",
+                    "DETERMINISTIC_VALIDATOR_FINAL",
+                    "FALLBACK_ON_CONTRACT_FAILURE",
+                ],
+            }
+    return {
+        "version": "v20.llm_answer_rewrite.v1",
+        "status": "fallback",
+        "text": deterministic_text,
+        "source": "deterministic_fallback",
+        "llm_call": call,
+        "validation": call.get("validation", {}),
+        "runtime_mutation": False,
+        "guardrails": [
+            "LLM_REWRITE_NOT_PUBLISHED",
+            "DETERMINISTIC_ANSWER_USED",
+            "NO_FACT_OR_RULE_MUTATION",
+        ],
+    }
 
 
 def interpret_user_intent(user_text: str, feature_layer: FeatureLayer | None = None, *, locale: str = "zh") -> dict[str, object]:

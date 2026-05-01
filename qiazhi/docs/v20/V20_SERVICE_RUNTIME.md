@@ -55,6 +55,10 @@ The macOS background script loads `v20/.runtime/local/service.env` when present.
 Keep local Postgres, Redis, and LLM connection settings there instead of typing
 them before every restart.
 
+For Ollama providers, V20 follows the V19 connection shape: it first tries the
+OpenAI-compatible chat endpoint, then falls back to native `/api/chat` with
+`stream:false` and `think:false` when the compatible endpoint is empty or fails.
+
 Generate a launchd plist for review without installing it:
 
 ```bash

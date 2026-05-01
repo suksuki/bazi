@@ -526,6 +526,7 @@ def create_app() -> FastAPI:
                 luck_pillar=payload.luck_pillar,
                 flow_month_pillar=payload.flow_month_pillar,
                 locale=payload.locale,
+                llm_mode=payload.llm_mode,
             )
         except ValueError as exc:
             raise HTTPException(
@@ -548,6 +549,7 @@ def create_app() -> FastAPI:
                 luck_pillar=payload.luck_pillar,
                 flow_month_pillar=payload.flow_month_pillar,
                 locale=payload.locale,
+                llm_mode=payload.llm_mode,
             )
             return project_runtime_for_role(result, role_key)
         except ValueError as exc:

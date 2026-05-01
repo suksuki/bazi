@@ -44,10 +44,18 @@ def call_structured_llm(
         return _fallback_result(contract, cfg, "provider_not_ready")
     if not cfg.execute_llm:
         return _fallback_result(contract, cfg, "execute_flag_disabled")
+    call_error = ""
     try:
         payload = _post_chat_completion(contract, prompt, cfg)
     except Exception as exc:
-        return _fallback_result(contract, cfg, f"call_failed:{type(exc).__name__}")
+        call_error = f"openai_compatible_failed:{type(exc).__name__}"
+        if cfg.provider == "ollama":
+            try:
+                payload = _post_ollama_native_completion(contract, prompt, cfg)
+            except Exception as native_exc:
+                return _fallback_result(contract, cfg, f"{call_error};ollama_native_failed:{type(native_exc).__name__}")
+        else:
+            return _fallback_result(contract, cfg, f"call_failed:{type(exc).__name__}")
     validation = validate_llm_structured_output(contract, payload)
     return LLMStructuredCallResult(
         status="accepted" if validation["ok"] else "rejected",
@@ -56,7 +64,7 @@ def call_structured_llm(
         task_name=contract.task_name,
         output=payload if validation["ok"] else {},
         validation=validation,
-        fallback_reason="" if validation["ok"] else "validation_failed",
+        fallback_reason=call_error if validation["ok"] else "validation_failed",
         executed=True,
     ).to_dict()
 
@@ -71,29 +79,40 @@ def _post_chat_completion(
         "temperature": cfg.temperature,
         "max_tokens": cfg.max_tokens,
         "response_format": {"type": "json_object"},
-        "messages": [
-            {
-                "role": "system",
-                "content": (
-                    "You are a bounded extraction assistant. Return one JSON object only. "
-                    "Do not add chart facts, activate rules, or write conclusions."
-                ),
-            },
-            {
-                "role": "user",
-                "content": json.dumps(
-                    {
-                        "contract": contract.to_dict(),
-                        "prompt": prompt,
-                    },
-                    ensure_ascii=False,
-                    sort_keys=True,
-                ),
-            },
-        ],
+        "messages": _structured_messages(contract, prompt),
     }
+    if cfg.provider == "ollama":
+        body["think"] = False
     request = urllib.request.Request(
         f"{cfg.resolved_base_url().rstrip('/')}/chat/completions",
+        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers=_headers(cfg),
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=_compatible_timeout(cfg)) as response:
+        raw = response.read().decode("utf-8")
+    response_payload = json.loads(raw)
+    content = response_payload["choices"][0]["message"]["content"]
+    return _parse_json_content(str(content))
+
+
+def _post_ollama_native_completion(
+    contract: LLMTaskContract,
+    prompt: dict[str, object],
+    cfg: LLMProviderConfig,
+) -> dict[str, object]:
+    body = {
+        "model": cfg.model,
+        "messages": _structured_messages(contract, prompt),
+        "stream": False,
+        "think": False,
+        "options": {
+            "temperature": cfg.temperature,
+            "num_predict": cfg.max_tokens,
+        },
+    }
+    request = urllib.request.Request(
+        f"{cfg.resolved_base_url().rstrip('/').removesuffix('/v1')}/api/chat",
         data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
         headers=_headers(cfg),
         method="POST",
@@ -101,8 +120,37 @@ def _post_chat_completion(
     with urllib.request.urlopen(request, timeout=cfg.http_timeout_sec) as response:
         raw = response.read().decode("utf-8")
     response_payload = json.loads(raw)
-    content = response_payload["choices"][0]["message"]["content"]
-    return _parse_json_content(str(content))
+    message = response_payload.get("message") if isinstance(response_payload, dict) else {}
+    content = ""
+    if isinstance(message, dict):
+        content = str(message.get("content") or message.get("thinking") or "").strip()
+    if not content and isinstance(response_payload, dict):
+        content = str(response_payload.get("response") or "").strip()
+    return _parse_json_content(content)
+
+
+def _structured_messages(contract: LLMTaskContract, prompt: dict[str, object]) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are a bounded Bazi assistant. Return exactly one JSON object in message.content "
+                f"with these keys only: {', '.join(contract.required_outputs)}. "
+                "Do not echo the input. Do not add chart facts, activate rules, or write conclusions."
+            ),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(
+                {
+                    "contract": contract.to_dict(),
+                    "prompt": prompt,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        },
+    ]
 
 
 def _headers(cfg: LLMProviderConfig) -> dict[str, str]:
@@ -111,6 +159,12 @@ def _headers(cfg: LLMProviderConfig) -> dict[str, str]:
     if api_key:
         headers["Authorization"] = f"Bearer {api_key}"
     return headers
+
+
+def _compatible_timeout(cfg: LLMProviderConfig) -> float:
+    if cfg.provider == "ollama":
+        return min(cfg.http_timeout_sec, 8.0)
+    return cfg.http_timeout_sec
 
 
 def _parse_json_content(content: str) -> dict[str, object]:

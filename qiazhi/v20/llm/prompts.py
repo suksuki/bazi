@@ -7,13 +7,32 @@ from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.schema import KnowledgeUnit
 
 
-def answer_rewrite_prompt(plan: AnswerPlan, *, locale: str = "en", tone: str = "clear") -> dict[str, object]:
+def answer_rewrite_prompt(
+    plan: AnswerPlan,
+    *,
+    locale: str = "en",
+    tone: str = "clear",
+    verified_answer_text: str = "",
+) -> dict[str, object]:
+    context = answer_plan_prompt_context(plan)
+    if verified_answer_text:
+        context = {
+            "version": "v20.answer_rewrite_compact_context.v1",
+            "verified_answer_text": verified_answer_text,
+            "domain_boundary": context["domain_boundary"],
+            "evidence_summary": context["evidence_summary"],
+            "guardrails": context["guardrails"],
+        }
     return {
         "task": "answer_plan_rewrite",
         "locale": locale,
         "tone": tone,
-        "context": answer_plan_prompt_context(plan),
-        "instruction": "Rewrite only the verified answer plan. Do not add facts or conclusions.",
+        "context": context,
+        "output_schema": {"text": "string"},
+        "instruction": (
+            "Return only {\"text\":\"...\"}. Rewrite the verified answer into one concise, user-facing paragraph under 260 Chinese characters or locale equivalent. "
+            "Do not echo the context, do not include answer_plan, and do not add facts or conclusions."
+        ),
     }
 
 

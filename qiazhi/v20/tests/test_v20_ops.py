@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import json
+
 from fastapi.testclient import TestClient
 
-from v20.llm.provider import llm_provider_readiness_report, resolve_llm_base_url
+from v20.llm.client import call_structured_llm
+from v20.llm.contracts import ANSWER_PLAN_REWRITE
+from v20.llm.provider import LLMProviderConfig, llm_provider_readiness_report, resolve_llm_base_url
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import default_runtime_config, validate_runtime_config
@@ -82,6 +86,93 @@ def test_v20_llm_provider_readiness_hides_secret_values(monkeypatch) -> None:
 def test_v20_llm_base_url_resolution_matches_v19_shape() -> None:
     assert resolve_llm_base_url("", "127.0.0.1", 11434) == "http://127.0.0.1:11434/v1"
     assert resolve_llm_base_url("http://localhost:8000/v1", "ignored", 1) == "http://localhost:8000/v1"
+
+
+def test_v20_ollama_llm_calls_disable_thinking_stream(monkeypatch) -> None:
+    captured: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self) -> bytes:
+            return json.dumps({"choices": [{"message": {"content": "{\"text\":\"safe rewrite\"}"}}]}).encode()
+
+    def fake_urlopen(request, timeout):  # noqa: ANN001
+        captured.update(json.loads(request.data.decode()))
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr("v20.llm.client.urllib.request.urlopen", fake_urlopen)
+    result = call_structured_llm(
+        ANSWER_PLAN_REWRITE,
+        {"task": "answer_plan_rewrite", "context": {}, "instruction": "Rewrite safely."},
+        config=LLMProviderConfig(
+            enabled=True,
+            execute_llm=True,
+            provider="ollama",
+            host="127.0.0.1",
+            port=11434,
+            base_url="",
+            model="gemma4:latest",
+            embedding_model="",
+        ),
+    )
+
+    assert result["status"] == "accepted"
+    assert captured["think"] is False
+    assert captured["response_format"] == {"type": "json_object"}
+    assert captured["timeout"] == 8.0
+
+
+def test_v20_ollama_llm_calls_fallback_to_native_chat(monkeypatch) -> None:
+    endpoints: list[str] = []
+    native_body: dict[str, object] = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def read(self) -> bytes:
+            return json.dumps({"message": {"content": "{\"text\":\"native safe rewrite\"}"}}).encode()
+
+    def fake_urlopen(request, timeout):  # noqa: ANN001
+        endpoints.append(request.full_url)
+        if request.full_url.endswith("/chat/completions"):
+            raise TimeoutError("openai-compatible timed out")
+        native_body.update(json.loads(request.data.decode()))
+        native_body["timeout"] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr("v20.llm.client.urllib.request.urlopen", fake_urlopen)
+    result = call_structured_llm(
+        ANSWER_PLAN_REWRITE,
+        {"task": "answer_plan_rewrite", "context": {}, "instruction": "Rewrite safely."},
+        config=LLMProviderConfig(
+            enabled=True,
+            execute_llm=True,
+            provider="ollama",
+            host="127.0.0.1",
+            port=11434,
+            base_url="",
+            model="gemma4:latest",
+            embedding_model="",
+        ),
+    )
+
+    assert result["status"] == "accepted"
+    assert result["model"] == "gemma4:latest"
+    assert result["fallback_reason"] == "openai_compatible_failed:TimeoutError"
+    assert endpoints[-1].endswith("/api/chat")
+    assert native_body["stream"] is False
+    assert native_body["think"] is False
+    assert native_body["options"]["num_predict"] == 800
 
 
 def test_v20_dependency_endpoint_is_read_only() -> None:

@@ -17,6 +17,7 @@ from v20.knowledge.retrieval import retrieve_knowledge
 from v20.llm.assist import attach_answer_safety_review, build_llm_routing_assist
 from v20.llm.context import build_llm_context_pack
 from v20.llm.contracts import LLM_CONTRACTS
+from v20.llm.tasks import rewrite_answer_plan_with_llm
 from v20.measurement.report import build_measurement_report
 
 
@@ -33,6 +34,7 @@ def run_runtime_from_pillars(
     luck_pillar: str = "",
     flow_month_pillar: str = "",
     locale: str = "zh",
+    llm_mode: str = "deterministic",
 ) -> dict[str, object]:
     chart_input = chart_input_from_displays(year, month, day, hour, input_id=input_id)
     chart_facts = build_chart_facts(chart_input)
@@ -54,8 +56,25 @@ def run_runtime_from_pillars(
     answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack)
     portrait = portrait_projection(feature_layer, knowledge_report)
     measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
-    answer_text = compose_answer(answer_plan, locale=locale)
+    deterministic_answer_text = compose_answer(answer_plan, locale=locale)
+    answer_text = deterministic_answer_text
+    answer_rewrite = {
+        "version": "v20.llm_answer_rewrite.v1",
+        "status": "not_requested",
+        "text": deterministic_answer_text,
+        "source": "deterministic_answer",
+        "runtime_mutation": False,
+        "guardrails": ["DETERMINISTIC_ANSWER_DEFAULT", "LLM_REWRITE_REQUIRES_EXPLICIT_MODE"],
+    }
+    if llm_mode == "rewrite":
+        answer_rewrite = rewrite_answer_plan_with_llm(
+            answer_plan,
+            deterministic_answer_text,
+            locale=locale,
+        )
+        answer_text = str(answer_rewrite.get("text") or deterministic_answer_text)
     llm_assist = attach_answer_safety_review(llm_routing_assist, answer_text)
+    llm_assist["answer_rewrite"] = answer_rewrite
     llm_assist["context_pack"] = build_llm_context_pack(
         user_text,
         feature_layer,
