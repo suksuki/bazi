@@ -60,7 +60,7 @@ GET /api/v20/testing/matrix
 
 The matrix records which fast-tier files cover runtime feature spine, explicit
 time layer, knowledge/LLM/i18n, access roles, ops/storage/Redis,
-corpus/learning/validation, and UI shell contracts.
+corpus/learning/feedback/validation, and UI shell contracts.
 
 Service opt-in:
 

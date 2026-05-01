@@ -24,3 +24,11 @@ class MeasureResponse(BaseModel):
     runtime_mutation: bool
     answer_text: str
     guardrails: list[str]
+
+
+class FeedbackRequest(BaseModel):
+    input_id: str = ""
+    source_role: str = "user"
+    feedback_text: str = Field(..., min_length=1, max_length=2000)
+    feature_ids: list[str] = Field(default_factory=list)
+    locale: str = "zh"

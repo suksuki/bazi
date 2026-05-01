@@ -33,8 +33,12 @@ TEST_COVERAGE_AREAS = (
     },
     {
         "area": "corpus_learning_validation",
-        "tests": ("v20/tests/test_v20_learning_corpus.py", "v20/tests/test_v20_runtime.py"),
-        "contracts": ("518400 coverage plan", "SyntheticSuite", "EvolutionDryRunPlan"),
+        "tests": (
+            "v20/tests/test_v20_learning_corpus.py",
+            "v20/tests/test_v20_feedback_learning.py",
+            "v20/tests/test_v20_runtime.py",
+        ),
+        "contracts": ("518400 coverage plan", "SyntheticSuite", "EvolutionDryRunPlan", "FeedbackLedger"),
         "tier": "fast",
     },
     {

@@ -8,10 +8,12 @@ from fastapi.staticfiles import StaticFiles
 from v20 import V20_VERSION
 from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
-from v20.api.schemas import MeasureRequest
+from v20.api.schemas import FeedbackRequest, MeasureRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
+from v20.interaction.feedback_analysis import analyze_feedback
 from v20.learning.evolution import build_evolution_dry_run_plan
+from v20.learning.registries import registry_manifest
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
@@ -130,6 +132,20 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/learning/evolution-plan")
     def evolution_plan() -> dict[str, object]:
         return build_evolution_dry_run_plan()
+
+    @app.get("/api/v20/learning/registries")
+    def learning_registries() -> dict[str, object]:
+        return registry_manifest()
+
+    @app.post("/api/v20/feedback/analyze")
+    def feedback_analyze(payload: FeedbackRequest) -> dict[str, object]:
+        return analyze_feedback(
+            input_id=payload.input_id,
+            source_role=payload.source_role,
+            feedback_text=payload.feedback_text,
+            feature_ids=tuple(payload.feature_ids),
+            locale=payload.locale,
+        )
 
     @app.post("/api/v20/measure")
     @app.post("/api/v20/runtime/measure")
