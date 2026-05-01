@@ -359,6 +359,7 @@ textarea:focus {
 .primary-action,
 .mini-action,
 .feedback-row button,
+.dialog-row button,
 .question-row {
   border: 1px solid transparent;
   border-radius: 8px;
@@ -376,7 +377,8 @@ textarea:focus {
 
 .primary-action:disabled,
 .mini-action:disabled,
-.feedback-row button:disabled {
+.feedback-row button:disabled,
+.dialog-row button:disabled {
   cursor: wait;
   opacity: 0.68;
 }
@@ -623,7 +625,8 @@ textarea:focus {
   padding-top: 14px;
 }
 
-.feedback-row {
+.feedback-row,
+.dialog-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
   gap: 10px;
@@ -631,6 +634,7 @@ textarea:focus {
 }
 
 .feedback-row button,
+.dialog-row button,
 .mini-action {
   min-height: 38px;
   background: var(--green);
@@ -780,6 +784,45 @@ textarea:focus {
   display: none !important;
 }
 
+body.profile-reading .measure-layout {
+  grid-template-columns: 1fr;
+  width: min(1360px, 100%);
+  margin: 0 auto;
+}
+
+body.profile-reading .control-panel,
+body.profile-reading .run-summary,
+body.profile-reading .feature-spine-panel,
+body.profile-reading .side-panel,
+body.profile-reading .feedback-panel,
+body.profile-reading .tag-line {
+  display: none;
+}
+
+body.profile-reading .dashboard-grid {
+  grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+}
+
+body.profile-reading .chart-panel {
+  grid-column: 1 / -1;
+}
+
+body.profile-reading .pillar-panel {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+body.profile-reading .question-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+body.profile-reading .answer-grid {
+  grid-template-columns: 1fr;
+}
+
+body.profile-reading .answer-panel {
+  min-height: 300px;
+}
+
 @media (max-width: 1120px) {
   .measure-layout,
   .admin-layout,
@@ -792,6 +835,10 @@ textarea:focus {
   .control-panel {
     position: static;
     max-height: none;
+  }
+
+  body.profile-reading .pillar-panel {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
@@ -824,7 +871,14 @@ textarea:focus {
     width: 100%;
   }
 
-  .feedback-row {
+  .feedback-row,
+  .dialog-row,
+  body.profile-reading .question-list {
+    grid-template-columns: 1fr;
+  }
+
+  body.profile-reading .pillar-panel,
+  body.profile-reading .dashboard-grid {
     grid-template-columns: 1fr;
   }
 

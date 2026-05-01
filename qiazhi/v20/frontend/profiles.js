@@ -155,7 +155,24 @@ const measureUrl = (profile) => {
     profile_id: profile.profile_id || "",
     profile_name: profile.display_name || "",
   });
+  appendProfileDefaults(query, profile);
   return `/v20/ui/workbench.html?${query.toString()}`;
+};
+
+const appendProfileDefaults = (query, profile) => {
+  const defaults = profile.chart_defaults || {};
+  const pillars = defaults.pillars || {};
+  const timePillars = defaults.time_pillars || {};
+  [
+    ["year", pillars.year],
+    ["month", pillars.month],
+    ["day", pillars.day],
+    ["hour", pillars.hour],
+    ["flow_year_pillar", timePillars.flow_year],
+    ["luck_pillar", timePillars.luck],
+  ].forEach(([key, value]) => {
+    if (value) query.set(key, value);
+  });
 };
 
 const updateLinks = () => {

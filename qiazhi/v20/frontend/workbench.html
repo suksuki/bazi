@@ -119,7 +119,7 @@
               <div id="tenGodLine" class="tag-line"></div>
             </article>
 
-            <article class="panel">
+            <article class="panel feature-spine-panel">
               <div class="section-head">
                 <div>
                   <p class="section-kicker">Feature Spine</p>
@@ -130,7 +130,7 @@
               <div id="featureChips" class="feature-grid"></div>
             </article>
 
-            <article class="panel">
+            <article class="panel portrait-panel-card">
               <div class="section-head">
                 <div>
                   <p class="section-kicker">Portrait</p>
@@ -141,7 +141,7 @@
               <div id="portraitAxes" class="axis-list"></div>
             </article>
 
-            <article class="panel">
+            <article class="panel questions-panel-card">
               <div class="section-head">
                 <div>
                   <p class="section-kicker">Questions</p>
@@ -163,6 +163,10 @@
                 <span id="llmStatus" class="small-pill">llm idle</span>
               </div>
               <pre id="answerText">等待测算。</pre>
+              <div class="dialog-row" aria-label="八字对话">
+                <textarea id="chatText" rows="3" placeholder="输入想继续看的方向"></textarea>
+                <button type="button" id="chatButton">发送</button>
+              </div>
             </article>
 
             <aside class="panel side-panel">
@@ -198,6 +202,6 @@
         </section>
       </main>
     </div>
-    <script src="/v20/ui/app.js?v=20260501-rolefix" defer></script>
+    <script src="/v20/ui/app.js?v=20260501-reading" defer></script>
   </body>
 </html>

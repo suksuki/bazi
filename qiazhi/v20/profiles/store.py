@@ -3,6 +3,8 @@ from __future__ import annotations
 import os
 from typing import Any
 
+from v20.core.calendar import chart_defaults_from_birth_input
+
 
 def list_profiles_from_postgres(*, owner_id: str = "", limit: int = 80) -> dict[str, object]:
     url = os.getenv("V20_DATABASE_URL", "")
@@ -93,11 +95,13 @@ def _public_profile(row: dict[str, Any]) -> dict[str, object]:
     payload = dict(row.get("payload") or {})
     birth = dict(payload.get("birth_input") or {})
     metadata = dict(payload.get("metadata") or {})
+    chart_defaults = chart_defaults_from_birth_input(birth) if birth else {}
     return {
         "profile_id": str(row.get("profile_id") or payload.get("profile_id") or ""),
         "owner_id": str(row.get("owner_id") or payload.get("owner_id") or ""),
         "display_name": str(payload.get("display_name") or "V20 Profile"),
         "birth_input": birth,
+        "chart_defaults": chart_defaults,
         "source_ref": str(row.get("source_ref") or payload.get("source_ref") or ""),
         "status": str(row.get("status") or ""),
         "created_at": _iso(row.get("created_at") or payload.get("created_at") or ""),

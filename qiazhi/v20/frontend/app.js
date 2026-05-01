@@ -13,6 +13,8 @@ const questionSelect = document.querySelector("#questionSelect");
 const roleSelect = document.querySelector("#roleSelect");
 const localeSelect = document.querySelector("#localeSelect");
 const feedbackButton = document.querySelector("#feedbackButton");
+const chatText = document.querySelector("#chatText");
+const chatButton = document.querySelector("#chatButton");
 
 const UI_TEXT = {
   zh: {
@@ -151,7 +153,7 @@ const renderRuntime = (result) => {
   setText("#llmStatus", `llm ${result.llm_assist?.status || "idle"}`);
   setText("#answerText", result.answer_text || "");
 
-  renderPillars(chart);
+  renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
   renderFeatures(featureLayer.macro_features || featureLayer.features || []);
   renderPortrait(result.portrait_projection?.axes || []);
@@ -160,21 +162,24 @@ const renderRuntime = (result) => {
   renderEvidence(result.knowledge_refs || []);
 };
 
-const renderPillars = (chart) => {
+const renderPillars = (chart, timeContext = {}) => {
   const root = document.querySelector("#pillarPanel");
   clear(root);
   const pillars = chart.pillars || {};
+  const timePillars = Object.fromEntries((timeContext.layers || []).map((layer) => [layer.layer_key, layer.pillar || {}]));
   [
-    ["year", "年"],
-    ["month", "月"],
-    ["day", "日"],
-    ["hour", "时"],
-  ].forEach(([key, label]) => {
-    const pillar = pillars[key] || {};
+    ["year", "年柱", "原局"],
+    ["month", "月柱", "原局"],
+    ["day", "日柱", "日主"],
+    ["hour", "时柱", "原局"],
+    ["luck", "大运", "运势背景"],
+    ["flow_year", "流年", "当前触发"],
+  ].forEach(([key, label, hint]) => {
+    const pillar = pillars[key] || timePillars[key] || fallbackPillar(key);
     const card = el("div", `pillar-card ${key === "day" ? "active" : ""}`);
     card.append(el("span", "", label));
     card.append(el("strong", "", `${pillar.stem || "-"}${pillar.branch || ""}`));
-    card.append(el("em", "", key === "day" ? "day master" : key));
+    card.append(el("em", "", hint));
     root.append(card);
   });
 };
@@ -229,13 +234,14 @@ const renderQuestions = (questions, selectedKey) => {
     root.append(el("div", "empty-note", "确认四柱后会生成建议问题。"));
     return;
   }
-  questions.slice(0, 12).forEach((question) => {
+  questions.slice(0, 5).forEach((question) => {
     const button = el("button", `question-row${question.question_key === selectedKey ? " active" : ""}`);
     button.type = "button";
     button.append(el("strong", "", question.title || question.question_key));
-    button.append(el("span", "", `${question.measurement_topic || question.domain} · score ${question.score ?? "-"}`));
+    button.append(el("span", "", question.measurement_topic || question.domain || "命理测算"));
     button.addEventListener("click", () => {
       questionSelect.value = question.question_key;
+      setInquiryText(question.title || question.question_key || "", { syncOnly: true });
       measure({ force: true });
     });
     root.append(button);
@@ -318,6 +324,7 @@ const loadActiveProfile = async () => {
     const result = await requestJson(`/api/v20/profiles/${encodeURIComponent(profileId)}`);
     const profile = result.profile || {};
     state.activeProfile = profile;
+    applyProfileDefaults(profile);
     setText("#selectedProfileName", profile.display_name || profile.profile_id || profileId);
     setText("#selectedProfileMeta", profileMeta(profile));
   } catch (error) {
@@ -331,6 +338,60 @@ const payloadFromForm = () => {
 };
 
 const hasCompletePillars = (payload) => ["year", "month", "day", "hour"].every((key) => String(payload[key] || "").trim().length === 2);
+
+const fallbackPillar = (key) => {
+  const fieldByKey = {
+    luck: "luck_pillar",
+    flow_year: "flow_year_pillar",
+  };
+  const value = String(form.elements[fieldByKey[key]]?.value || "").trim();
+  if (value.length < 2) return {};
+  return { stem: value.slice(0, 1), branch: value.slice(1, 2) };
+};
+
+const setInquiryText = (value, { syncOnly = false } = {}) => {
+  const text = String(value || "");
+  form.elements.user_text.value = text;
+  if (chatText && chatText.value !== text) chatText.value = text;
+  if (!syncOnly) scheduleMeasure({ force: true });
+};
+
+const hydrateFormFromParams = () => {
+  [
+    "year",
+    "month",
+    "day",
+    "hour",
+    "flow_year_pillar",
+    "luck_pillar",
+    "flow_month_pillar",
+    "user_text",
+    "question_key",
+  ].forEach((key) => {
+    const value = params.get(key);
+    if (value !== null && form.elements[key]) form.elements[key].value = value;
+  });
+  if (chatText) chatText.value = form.elements.user_text.value || "";
+};
+
+const applyProfileDefaults = (profile) => {
+  const defaults = profile.chart_defaults || {};
+  const pillars = defaults.pillars || {};
+  const timePillars = defaults.time_pillars || {};
+  [
+    ["year", pillars.year],
+    ["month", pillars.month],
+    ["day", pillars.day],
+    ["hour", pillars.hour],
+    ["flow_year_pillar", timePillars.flow_year],
+    ["luck_pillar", timePillars.luck],
+  ].forEach(([key, value]) => {
+    if (value && form.elements[key]) form.elements[key].value = value;
+  });
+  if (defaults.status === "ready") {
+    setText("#profileBadge", "profile chart");
+  }
+};
 
 const submitFeedback = async () => {
   const text = document.querySelector("#feedbackText").value.trim();
@@ -389,13 +450,26 @@ form.querySelectorAll("input, textarea, select").forEach((node) => {
   if (node.tagName === "INPUT" || node.tagName === "TEXTAREA") {
     node.addEventListener("input", () => scheduleMeasure());
   }
+  if (node.name === "user_text") {
+    node.addEventListener("input", () => {
+      if (chatText && chatText.value !== node.value) chatText.value = node.value;
+    });
+  }
+});
+chatButton.addEventListener("click", () => setInquiryText(chatText.value));
+chatText.addEventListener("keydown", (event) => {
+  if ((event.metaKey || event.ctrlKey) && event.key === "Enter") {
+    event.preventDefault();
+    setInquiryText(chatText.value);
+  }
 });
 
 if (params.get("locale")) localeSelect.value = params.get("locale");
 roleSelect.value = measurementRole(params.get("role") || roleSelect.value);
+document.body.classList.toggle("profile-reading", Boolean(params.get("profile_id")));
+hydrateFormFromParams();
 applyLocale(localeSelect.value);
 renderInitialPanels();
 loadStatus();
-loadActiveProfile();
-scheduleMeasure({ force: true });
+loadActiveProfile().finally(() => scheduleMeasure({ force: true }));
 setInterval(loadStatus, 10000);

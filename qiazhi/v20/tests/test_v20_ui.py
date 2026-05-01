@@ -34,6 +34,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "importProfilesButton" in profiles.text
     assert "/api/v20/profiles?owner_id=admin" in profiles_script.text
     assert "/api/v20/profiles/import-v19?apply=true&owner_id=admin" in profiles_script.text
+    assert "appendProfileDefaults(query, profile)" in profiles_script.text
+    assert "flow_year_pillar" in profiles_script.text
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
     assert "flow_year_pillar" in page.text
@@ -43,6 +45,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert '<option value="admin">' not in page.text
     assert '<option value="full">' not in page.text
     assert "selectedProfileCard" in page.text
+    assert "chatText" in page.text
+    assert "chatButton" in page.text
     assert "profileImportButton" not in page.text
     assert "反馈校准" in page.text
     assert "命理特征主线" in page.text
@@ -54,6 +58,9 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/profiles/" in script.text
     assert "/api/v20/profiles/import-v19?apply=true" not in script.text
     assert "scheduleMeasure({ force: true })" in script.text
+    assert "document.body.classList.toggle(\"profile-reading\", Boolean(params.get(\"profile_id\")))" in script.text
+    assert "questions.slice(0, 5)" in script.text
+    assert "applyProfileDefaults(profile)" in script.text
     assert "role: measurementRole(params.get(\"role\") || document.body.dataset.role)" in profiles_script.text
     assert "const endpoint = `/api/v20/measure/view/${role}`" in script.text
     assert "确认四柱后会生成建议问题" in script.text
@@ -67,6 +74,9 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "Knowledge Evidence Store" not in admin.text
     assert "八字资料来源库" not in admin.text
     assert ".measure-layout" in style.text
+    assert "body.profile-reading .control-panel" in style.text
+    assert "body.profile-reading .feature-spine-panel" in style.text
+    assert "body.profile-reading .pillar-panel" in style.text
     assert ".profiles-layout" in style.text
     assert ".entry-page" in style.text
     assert ".admin-layout" in style.text
