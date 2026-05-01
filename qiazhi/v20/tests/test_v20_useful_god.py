@@ -50,6 +50,10 @@ def test_v20_runtime_routes_useful_god_candidates_without_verdict() -> None:
     }
     assert result["selected_question"]["question_key"] == "q_useful_god_candidates"
     assert "useful_god" in {row["domain"] for row in result["knowledge_refs"]}
+    assert "候选摘要" in result["answer_text"]
     assert "固定吉凶" in result["answer_text"]
+    assert "candidate_only" not in result["answer_text"]
+    assert "feature." not in result["answer_text"]
+    assert "core." not in result["answer_text"]
     assert "喜用神已定" not in result["answer_text"]
     assert "忌神已定" not in result["answer_text"]

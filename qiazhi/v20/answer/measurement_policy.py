@@ -65,6 +65,25 @@ FEATURE_LABELS = {
     "feature.pattern.review_index": "格局审查索引已建立",
 }
 
+ELEMENT_LABELS_ZH = {
+    "wood": "木",
+    "fire": "火",
+    "earth": "土",
+    "metal": "金",
+    "water": "水",
+}
+
+USEFUL_GOD_PATH_LABELS_ZH = {
+    "resource_support": "印星扶助路径",
+    "peer_stabilizer": "比劫稳定路径",
+    "output_release": "食伤泄秀路径",
+    "wealth_channel": "财星通道路径",
+    "authority_constraint_review": "官杀约束复核路径",
+    "support_vs_release_review": "扶助与泄秀裁决路径",
+    "output_pressure_review": "食伤压力复核路径",
+    "weak_element_gap_review": "弱项证据缺口复核路径",
+}
+
 
 def domain_label(domain: str) -> str:
     return DOMAIN_LABELS.get(domain, domain)
@@ -88,6 +107,14 @@ def applied_domains() -> tuple[str, ...]:
 
 def feature_label(feature: BaziFeature) -> str:
     return FEATURE_LABELS.get(feature.feature_id, feature.title)
+
+
+def feature_public_summary(feature: BaziFeature) -> str:
+    if feature.feature_id == "feature.useful_god.candidate_paths":
+        return _useful_god_summary(feature.calibration_state)
+    if feature.feature_id == "feature.element.balance_distribution":
+        return _element_summary(feature.calibration_state)
+    return ""
 
 
 def prediction_policy() -> dict[str, object]:
@@ -114,3 +141,41 @@ def prediction_policy() -> dict[str, object]:
             "TIME_PREDICTION_REQUIRES_TIME_CONTEXT",
         ],
     }
+
+
+def _useful_god_summary(calibration_state: str) -> str:
+    rows = []
+    for item in calibration_state.split(";"):
+        parts = item.split(":")
+        if len(parts) < 2:
+            continue
+        path_key, element = parts[0], parts[1]
+        path_label = USEFUL_GOD_PATH_LABELS_ZH.get(path_key)
+        element_label = ELEMENT_LABELS_ZH.get(element)
+        if path_label and element_label:
+            rows.append(f"{path_label}（{element_label}）")
+    if not rows:
+        return ""
+    return "候选摘要：" + "、".join(rows[:4]) + "。"
+
+
+def _element_summary(calibration_state: str) -> str:
+    parsed: dict[str, str] = {}
+    for item in calibration_state.split(";"):
+        key, _, value = item.partition("=")
+        if key and value:
+            parsed[key] = value
+    strongest = _element_list(parsed.get("strongest", ""))
+    weakest = _element_list(parsed.get("weakest", ""))
+    if strongest and weakest:
+        return f"结构摘要：相对集中在{strongest}，相对不足在{weakest}。"
+    if strongest:
+        return f"结构摘要：相对集中在{strongest}。"
+    if weakest:
+        return f"结构摘要：相对不足在{weakest}。"
+    return ""
+
+
+def _element_list(value: str) -> str:
+    labels = [ELEMENT_LABELS_ZH.get(row, "") for row in value.split(",") if row]
+    return "、".join(label for label in labels if label)

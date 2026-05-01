@@ -5,7 +5,14 @@ from typing import Any
 
 from v20.answer.domain_projection import build_domain_projection
 from v20.answer.evidence import EvidencePack
-from v20.answer.measurement_policy import domain_label, feature_label, measurement_focus, measurement_stage, prediction_policy
+from v20.answer.measurement_policy import (
+    domain_label,
+    feature_label,
+    feature_public_summary,
+    measurement_focus,
+    measurement_stage,
+    prediction_policy,
+)
 from v20.features.schema import FeatureLayer
 from v20.interaction.questions import QuestionCandidate
 
@@ -75,12 +82,15 @@ def build_answer_plan(question: QuestionCandidate, feature_layer: FeatureLayer, 
     for feature in selected[:4]:
         topic = domain_label(feature.domain)
         focus = measurement_focus(feature)
+        public_summary = feature_public_summary(feature)
+        summary_sentence = f" {public_summary}" if public_summary else ""
         sections.append(
             AnswerSection(
                 title=f"{topic}：{feature_label(feature)}",
                 body=(
                     f"测算焦点：{focus}。{feature.boundary} "
                     f"已接入 {len(feature.evidence_refs)} 条已审查证据来源。"
+                    f"{summary_sentence}"
                 ),
                 feature_ids=(feature.feature_id,),
                 domain=feature.domain,
