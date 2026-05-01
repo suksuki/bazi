@@ -5,6 +5,7 @@ from fastapi.testclient import TestClient
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import default_runtime_config, validate_runtime_config
+from v20.ops.sync import sync_readiness_report
 from v20.server import app
 
 
@@ -67,3 +68,25 @@ def test_v20_dependency_endpoint_is_read_only() -> None:
     assert data["runtime_mutation"] is False
     assert data["postgres"]["connection_policy"] == "explicit_repository_command_only"
     assert data["redis"]["connection_policy"] == "ephemeral_cache_queue_lock_only"
+
+
+def test_v20_sync_readiness_keeps_redis_ephemeral_and_postgres_reviewed() -> None:
+    report = sync_readiness_report(default_runtime_config())
+
+    assert report["status"] == "ready_for_manual_sync"
+    assert report["runtime_mutation"] is False
+    assert report["direction_count"] == 2
+    assert all(row["redis_sync"] == "disabled_ephemeral_cache_must_be_rebuilt" for row in report["directions"])
+    assert all("confirm_git_status_clean" in row["preflight"] for row in report["directions"])
+    assert all("secrets" in row["protected_scopes"] for row in report["directions"])
+
+
+def test_v20_sync_readiness_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v20/ops/sync-readiness")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["runtime_mutation"] is False
+    assert data["direction_count"] == 2
+    assert "NO_SECRET_VALUES_RENDERED" in data["guardrails"]

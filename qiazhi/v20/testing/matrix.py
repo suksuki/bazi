@@ -61,6 +61,7 @@ TEST_COVERAGE_AREAS = (
             "RuntimeConfig",
             "Postgres schema",
             "Redis keyspaces",
+            "SyncReadiness",
             "dependency_readiness",
             "service_unit_manifest",
             "system_status",

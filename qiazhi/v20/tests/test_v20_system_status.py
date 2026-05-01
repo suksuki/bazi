@@ -12,6 +12,7 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["status"] == "ok"
     assert report["runtime_mutation"] is False
     assert report["storage_table_count"] == 6
+    assert report["sync_readiness"]["status"] == "ready_for_manual_sync"
     assert report["redis_validation"]["ok"] is True
     assert report["access_role_count"] == 4
     assert report["test_area_count"] >= 7
@@ -34,3 +35,4 @@ def test_v20_system_status_endpoint_is_safe_for_monitoring() -> None:
     assert data["runtime_mutation"] is False
     assert "NO_SECRET_VALUES_RENDERED" in data["guardrails"]
     assert data["dependency_readiness"]["runtime_mutation"] is False
+    assert data["sync_readiness"]["runtime_mutation"] is False

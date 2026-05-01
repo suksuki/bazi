@@ -7,6 +7,7 @@ V20 now exposes a minimal FastAPI runtime over the deterministic measurement cor
 - `GET /health`
 - `GET /api/v20/ops/config`
 - `GET /api/v20/ops/profile/{profile_name}`
+- `GET /api/v20/ops/sync-readiness`
 - `GET /api/v20/system/status`
 - `GET /api/v20/testing/tiers`
 - `GET /api/v20/storage/schema`
@@ -19,6 +20,10 @@ The health and ops endpoints do not connect to Postgres or Redis. They only repo
 The storage schema endpoint returns the reviewed Postgres migration contract. It does not apply migrations.
 
 The Redis contract endpoint returns keyspace, TTL, and ownership rules. It does not connect to Redis.
+
+The sync-readiness endpoint reports the macOS <-> Linux 0.13 directions,
+preflight checks, Postgres promotion boundary, and Redis rebuild policy. It
+does not run git, rsync, database exports, or remote commands.
 
 `GET /api/v20/system/status` aggregates ops validation, dependency readiness,
 storage/Redis contracts, access roles, policy surfaces, learning dry-run state,

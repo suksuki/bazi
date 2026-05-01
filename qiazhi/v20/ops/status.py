@@ -10,6 +10,7 @@ from v20.learning.registries import registry_manifest
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
+from v20.ops.sync import sync_readiness_report
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract
 from v20.testing.matrix import build_test_coverage_matrix
@@ -21,6 +22,7 @@ def system_status_report() -> dict[str, object]:
     storage = build_postgres_schema_contract()
     redis = redis_contract_manifest()
     dependencies = dependency_readiness_report()
+    sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
     evolution = build_evolution_dry_run_plan()
     return {
@@ -29,6 +31,7 @@ def system_status_report() -> dict[str, object]:
         "active_profile": config.active_profile,
         "ops_validation": ops_validation,
         "dependency_readiness": dependencies,
+        "sync_readiness": sync,
         "storage_table_count": storage.to_dict()["table_count"],
         "redis_validation": validate_redis_contract(redis),
         "access_role_count": len(access_role_manifest()["roles"]),
