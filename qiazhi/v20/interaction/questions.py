@@ -32,6 +32,7 @@ class QuestionCandidate:
 QUESTION_LABELS = {
     "q_strength_assessment": "先看日主强弱与承载力吗？",
     "q_useful_god_candidates": "哪些用神路径可以作为候选？",
+    "q_useful_god_evidence_gaps": "用神候选还缺哪些证据复核？",
     "q_ten_god_focus": "十神显隐关系里先看哪一组？",
     "q_ten_god_metadata": "十神信息应如何进入测算？",
     "q_element_balance": "五行分布的结构偏向是什么？",

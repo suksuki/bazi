@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from v20.core.elements import element_distribution, strongest_elements, weakest_elements
 from v20.core.schemas import ChartFacts, CoreInference, TimeContext
+from v20.core.useful_god import derive_useful_god_candidates
 from v20.features.boundaries import boundary_for
 from v20.features.calibration import ConfidenceCalibrationPolicy, calibrate_features
 from v20.features.confidence import bounded_confidence
@@ -25,6 +26,7 @@ def compile_features(
         _useful_god_gate_feature(inference),
     ]
     features.extend(_ten_god_features(facts))
+    features.extend(_useful_god_candidate_features(facts, inference))
     features.append(_element_balance_feature(facts))
     features.extend(_branch_features(facts))
     features.extend(_time_features(time_context or TimeContext()))
@@ -75,6 +77,37 @@ def _useful_god_gate_feature(inference: CoreInference) -> BaziFeature:
         question_hooks=("q_useful_god_candidates",),
         answer_hooks=("useful_god_boundary",),
     )
+
+
+def _useful_god_candidate_features(facts: ChartFacts, inference: CoreInference) -> list[BaziFeature]:
+    candidates = derive_useful_god_candidates(facts, inference)
+    if not candidates:
+        return []
+    refs = tuple(
+        EvidenceRef(
+            f"useful_god.{row.path_key}.{row.element}",
+            "useful_god_candidate",
+            f"{row.path_type}:{row.element}",
+            "core",
+        )
+        for row in candidates[:6]
+    )
+    summary = ";".join(f"{row.path_key}:{row.element}:{row.status}" for row in candidates[:4])
+    return [
+        BaziFeature(
+            feature_id="feature.useful_god.candidate_paths",
+            title="Useful-god candidate paths are compiled",
+            domain="useful_god",
+            source_layers=("core", "element", "strength"),
+            evidence_refs=refs,
+            confidence=max(row.confidence for row in candidates),
+            readiness="review_ready",
+            boundary=boundary_for("useful_god"),
+            question_hooks=("q_useful_god_candidates", "q_useful_god_evidence_gaps"),
+            answer_hooks=("useful_god_candidate_paths",),
+            calibration_state=summary,
+        )
+    ]
 
 
 def _ten_god_features(facts: ChartFacts) -> list[BaziFeature]:

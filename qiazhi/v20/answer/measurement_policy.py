@@ -53,6 +53,7 @@ FEATURE_LABELS = {
     "feature.strength.capacity_needs_support": "日主承载力需要扶助复核",
     "feature.strength.borderline_capacity": "日主承载力接近边界",
     "feature.useful_god.evidence_gate": "用神候选需要证据门槛",
+    "feature.useful_god.candidate_paths": "用神候选路径已编译",
     "feature.ten_god.visible_relation": "明透十神关系可进入测算",
     "feature.ten_god.hidden_relation": "藏干十神关系可进入测算",
     "feature.element.balance_distribution": "五行分布可进入结构测算",

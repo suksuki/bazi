@@ -35,6 +35,9 @@ LLM, portrait projection, recommended questions, and answer planning.
 
 - Foundation topics remain `strength`, `ten_god`, `branch`, `pattern`, and
   `useful_god`.
+- Useful-god measurement now enters through deterministic candidate paths
+  compiled from capacity, five-element distribution, and support/pressure
+  evidence. It does not declare fixed favorable or unfavorable gods.
 - Applied Bazi measurement topics are generated only through controlled
   domain projection: `wealth`, `career`, `relationship`, and `health`.
 - Applied questions must cite source `BaziFeature` ids and keep deterministic
