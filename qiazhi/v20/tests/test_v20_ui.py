@@ -10,6 +10,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
 
     entry = client.get("/v20/ui/")
     entry_script = client.get("/v20/ui/entry.js")
+    profiles = client.get("/v20/ui/profiles.html")
+    profiles_script = client.get("/v20/ui/profiles.js")
     page = client.get("/v20/ui/workbench.html")
     script = client.get("/v20/ui/app.js")
     admin = client.get("/v20/ui/admin.html")
@@ -24,14 +26,22 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/auth/guest" in entry_script.text
     assert "/api/v20/auth/login" in entry_script.text
     assert "/api/v20/auth/register" in entry_script.text
+    assert "/v20/ui/profiles.html" in entry.text
+    assert "goProfiles" in entry_script.text
+    assert profiles.status_code == 200
+    assert "V20 八字档案管理" in profiles.text
+    assert "profileList" in profiles.text
+    assert "importProfilesButton" in profiles.text
+    assert "/api/v20/profiles?owner_id=admin" in profiles_script.text
+    assert "/api/v20/profiles/import-v19?apply=true&owner_id=admin" in profiles_script.text
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
     assert "flow_year_pillar" in page.text
     assert "role_key" in page.text
     assert '<option value="analyst" selected>命理师</option>' in page.text
     assert '<option value="user">游客</option>' in page.text
-    assert "用户档案" in page.text
-    assert "profileImportButton" in page.text
+    assert "selectedProfileCard" in page.text
+    assert "profileImportButton" not in page.text
     assert "反馈校准" in page.text
     assert "命理特征主线" in page.text
     assert "画像投影" in page.text
@@ -39,17 +49,19 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/measure/view/" in script.text
     assert "/api/v20/system/status" in script.text
     assert "/api/v20/runtime/dependencies" in script.text
-    assert "/api/v20/profiles/v19-migration-preview" in script.text
-    assert "/api/v20/profiles/import-v19?apply=true" in script.text
+    assert "/api/v20/profiles/" in script.text
+    assert "/api/v20/profiles/import-v19?apply=true" not in script.text
     assert "명리사" in script.text
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" in script.text
     assert "DB / LLM" in admin.text
+    assert "/v20/ui/profiles.html" in admin.text
     assert "/api/v20/admin/db" in admin_script.text
     assert "/api/v20/admin/llm" in admin_script.text
     assert "Knowledge Evidence Store" not in admin.text
     assert "八字资料来源库" not in admin.text
     assert ".measure-layout" in style.text
+    assert ".profiles-layout" in style.text
     assert ".entry-page" in style.text
     assert ".admin-layout" in style.text
     assert "@media (max-width: 1120px)" in style.text
@@ -59,3 +71,4 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert admin_script.status_code == 200
     assert style.status_code == 200
     assert entry_script.status_code == 200
+    assert profiles_script.status_code == 200

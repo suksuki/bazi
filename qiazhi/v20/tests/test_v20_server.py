@@ -151,6 +151,23 @@ def test_v20_v19_profile_migration_preview_is_read_only() -> None:
     assert auth_dry_run["runtime_mutation"] is False
 
 
+def test_v20_profile_list_endpoint_is_read_only_without_database_url(tmp_path, monkeypatch) -> None:
+    monkeypatch.delenv("V20_DATABASE_URL", raising=False)
+    monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
+    client = TestClient(app)
+    client.post("/api/v20/auth/guest", json={"locale": "zh"})
+
+    response = client.get("/api/v20/profiles")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["version"] == "v20.profile_list.v1"
+    assert data["status"] == "blocked_missing_V20_DATABASE_URL"
+    assert data["profiles"] == []
+    assert data["runtime_mutation"] is False
+    assert "NO_SECRET_VALUES_RENDERED" in data["guardrails"]
+
+
 def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
     client = TestClient(app)

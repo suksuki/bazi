@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V20 八字档案管理</title>
+    <link rel="stylesheet" href="/v20/ui/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">掐</div>
+          <div>
+            <p class="eyebrow">Qiazhi V20</p>
+            <h1 data-profile-ui="app_title">八字档案管理</h1>
+          </div>
+        </div>
+        <nav class="top-actions" aria-label="V20 navigation">
+          <a href="/v20/ui/">入口</a>
+          <a href="/v20/ui/profiles.html" aria-current="page" data-profile-ui="nav_profiles">档案</a>
+          <a href="/v20/ui/workbench.html" data-profile-ui="nav_measure">测算</a>
+          <a href="/v20/ui/admin.html">Admin</a>
+          <span id="profileRuntimeStatus" class="status-pill">checking</span>
+        </nav>
+      </header>
+
+      <main class="profiles-layout">
+        <section class="profile-command-panel">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Profiles</p>
+              <h2 data-profile-ui="list_title">档案列表</h2>
+            </div>
+            <span id="profileCount" class="small-pill">0</span>
+          </div>
+          <div class="profile-command-row">
+            <a id="instantMeasureLink" class="mini-action" href="/v20/ui/workbench.html" data-profile-ui="instant_measure">临时测算</a>
+            <button type="button" id="importProfilesButton" class="mini-action secondary" data-profile-ui="import_profiles">迁移 V19 档案</button>
+            <label class="compact-select">
+              <span data-profile-ui="language">语言</span>
+              <select id="profileLocale">
+                <option value="zh">中文</option>
+                <option value="en">English</option>
+                <option value="ko">한국어</option>
+              </select>
+            </label>
+          </div>
+          <div id="profileStatus" class="status-line">loading</div>
+        </section>
+
+        <section id="profileList" class="profile-grid" aria-live="polite"></section>
+      </main>
+    </div>
+    <script src="/v20/ui/profiles.js" defer></script>
+  </body>
+</html>

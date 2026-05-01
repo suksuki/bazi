@@ -18,6 +18,7 @@
         </div>
         <nav class="top-actions" aria-label="V20 navigation">
           <a href="/v20/ui/">入口</a>
+          <a href="/v20/ui/profiles.html" data-ui="nav_profiles">档案</a>
           <a href="/v20/ui/workbench.html" aria-current="page" data-ui="nav_measure">测算</a>
           <a href="/v20/ui/admin.html">Admin</a>
           <span id="runtimeStatus" class="status-pill">checking</span>
@@ -27,6 +28,7 @@
       <main class="measure-layout">
         <aside class="control-panel" aria-label="测算输入">
           <form id="measureForm">
+            <input type="hidden" name="input_id" id="inputId" value="" />
             <section class="control-section">
               <div class="section-head compact">
                 <div>
@@ -80,25 +82,20 @@
               </div>
             </section>
 
-            <section class="control-section">
-              <div class="section-head compact">
-                <div>
-                  <p class="section-kicker">Profile</p>
-                  <h2 data-ui="profiles_title">用户档案</h2>
-                </div>
-                <span id="profileMigrationState" class="small-pill">V19</span>
-              </div>
-              <select id="profileSelect" aria-label="profile select">
-                <option value="">游客即时测算</option>
-              </select>
-              <button type="button" id="profileImportButton" class="mini-action secondary">迁移 V19 档案</button>
-            </section>
-
             <button type="submit" class="primary-action">开始测算</button>
           </form>
         </aside>
 
         <section class="result-stage" aria-live="polite">
+          <section id="selectedProfileCard" class="context-strip" hidden>
+            <div>
+              <p class="section-kicker">Profile</p>
+              <h2 id="selectedProfileName">档案</h2>
+              <p id="selectedProfileMeta" class="muted-line"></p>
+            </div>
+            <a id="backToProfiles" class="mini-action secondary" href="/v20/ui/profiles.html">档案管理</a>
+          </section>
+
           <section class="run-summary">
             <div>
               <p class="section-kicker">Selected</p>

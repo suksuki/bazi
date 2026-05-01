@@ -273,7 +273,9 @@ pre {
 }
 
 .control-panel,
-.panel {
+.panel,
+.context-strip,
+.profile-command-panel {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -383,6 +385,15 @@ textarea:focus {
   display: grid;
   gap: 14px;
   min-width: 0;
+}
+
+.context-strip,
+.profile-command-panel {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 15px;
 }
 
 .run-summary {
@@ -642,6 +653,71 @@ textarea:focus {
   gap: 8px;
 }
 
+.profiles-layout {
+  display: grid;
+  gap: 16px;
+  padding: 16px clamp(12px, 2.5vw, 28px) 28px;
+}
+
+.profile-command-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+}
+
+.profile-command-row {
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.profile-command-panel .status-line {
+  grid-column: 1 / -1;
+}
+
+.compact-select {
+  min-width: 150px;
+}
+
+.profile-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.profile-card {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  min-height: 176px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 15px;
+}
+
+.profile-card h2 {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+
+.profile-card p {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  min-height: 20px;
+}
+
+.profile-tag-row,
+.profile-card-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .admin-layout {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -708,7 +784,8 @@ textarea:focus {
   .measure-layout,
   .admin-layout,
   .answer-grid,
-  .entry-grid {
+  .entry-grid,
+  .profile-grid {
     grid-template-columns: 1fr;
   }
 
@@ -721,7 +798,8 @@ textarea:focus {
 @media (max-width: 760px) {
   .topbar,
   .run-summary,
-  .entry-hero {
+  .entry-hero,
+  .context-strip {
     align-items: stretch;
     flex-direction: column;
   }
@@ -747,6 +825,14 @@ textarea:focus {
   }
 
   .feedback-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-command-row {
+    justify-content: flex-start;
+  }
+
+  .profile-command-panel {
     grid-template-columns: 1fr;
   }
 }

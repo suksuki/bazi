@@ -1,19 +1,17 @@
-const state = { latest: null };
+const state = { latest: null, activeProfile: null };
 const params = new URLSearchParams(window.location.search);
 
 const form = document.querySelector("#measureForm");
 const questionSelect = document.querySelector("#questionSelect");
 const roleSelect = document.querySelector("#roleSelect");
 const localeSelect = document.querySelector("#localeSelect");
-const profileSelect = document.querySelector("#profileSelect");
-const profileImportButton = document.querySelector("#profileImportButton");
 const feedbackButton = document.querySelector("#feedbackButton");
 
 const UI_TEXT = {
   zh: {
     app_title: "命理测算台",
+    nav_profiles: "档案",
     nav_measure: "测算",
-    profiles_title: "用户档案",
     chart_title: "命盘结构",
     features_title: "命理特征主线",
     portrait_title: "画像投影",
@@ -23,14 +21,12 @@ const UI_TEXT = {
     feedback_title: "反馈校准",
     run: "开始测算",
     running: "测算中",
-    guest_profile: "游客即时测算",
-    import_profiles: "迁移 V19 档案",
     roles: { user: "游客", analyst: "命理师", lab: "实验室", admin: "Admin", full: "开发全量" },
   },
   en: {
     app_title: "Bazi Workbench",
+    nav_profiles: "Profiles",
     nav_measure: "Reading",
-    profiles_title: "Profiles",
     chart_title: "Chart Structure",
     features_title: "Bazi Feature Spine",
     portrait_title: "Portrait Projection",
@@ -40,14 +36,12 @@ const UI_TEXT = {
     feedback_title: "Feedback Calibration",
     run: "Run Reading",
     running: "Reading",
-    guest_profile: "Guest instant reading",
-    import_profiles: "Import V19 Profiles",
     roles: { user: "Guest", analyst: "Practitioner", lab: "Lab", admin: "Admin", full: "Developer" },
   },
   ko: {
     app_title: "사주 분석 작업대",
+    nav_profiles: "프로필",
     nav_measure: "분석",
-    profiles_title: "사용자 프로필",
     chart_title: "명식 구조",
     features_title: "명리 특징 축",
     portrait_title: "프로필 투영",
@@ -57,8 +51,6 @@ const UI_TEXT = {
     feedback_title: "피드백 보정",
     run: "분석 시작",
     running: "분석 중",
-    guest_profile: "게스트 즉시 분석",
-    import_profiles: "V19 프로필 가져오기",
     roles: { user: "게스트", analyst: "명리사", lab: "실험실", admin: "Admin", full: "개발자" },
   },
 };
@@ -262,46 +254,6 @@ const loadStatus = async () => {
   }
 };
 
-const loadProfiles = async () => {
-  try {
-    const preview = await requestJson("/api/v20/profiles/v19-migration-preview");
-    renderProfiles(preview);
-  } catch (error) {
-    setText("#profileMigrationState", "profile error");
-  }
-};
-
-const renderProfiles = (preview) => {
-  const text = currentText();
-  profileSelect.innerHTML = "";
-  const guest = document.createElement("option");
-  guest.value = "";
-  guest.textContent = text.guest_profile;
-  profileSelect.append(guest);
-  (preview.sample_profiles || []).forEach((profile) => {
-    const option = document.createElement("option");
-    option.value = profile.profile_id;
-    option.textContent = `${profile.name} · ${profile.birth_year || "-"} · ${profile.owner_id || "guest"}`;
-    profileSelect.append(option);
-  });
-  setText("#profileMigrationState", `V19 ${preview.profile_count || 0}`);
-};
-
-const importV19Profiles = async () => {
-  profileImportButton.disabled = true;
-  profileImportButton.textContent = "importing";
-  try {
-    const result = await requestJson("/api/v20/profiles/import-v19?apply=true", { method: "POST" });
-    setText("#profileMigrationState", `${result.status} ${result.imported_or_updated || 0}`);
-    await loadProfiles();
-  } catch (error) {
-    setText("#profileMigrationState", "import error");
-  } finally {
-    profileImportButton.disabled = false;
-    profileImportButton.textContent = currentText().import_profiles;
-  }
-};
-
 const applyLocale = (locale) => {
   const text = UI_TEXT[locale] || UI_TEXT.zh;
   document.documentElement.lang = locale === "ko" ? "ko" : locale === "en" ? "en" : "zh-CN";
@@ -314,9 +266,24 @@ const applyLocale = (locale) => {
   });
   const submit = form.querySelector("button[type='submit']");
   submit.textContent = text.run;
-  profileImportButton.textContent = text.import_profiles;
-  if (profileSelect.options.length) {
-    profileSelect.options[0].textContent = text.guest_profile;
+};
+
+const loadActiveProfile = async () => {
+  const profileId = params.get("profile_id") || "";
+  if (!profileId) return;
+  document.querySelector("#selectedProfileCard").hidden = false;
+  document.querySelector("#inputId").value = `profile:${profileId}`;
+  setText("#selectedProfileName", params.get("profile_name") || profileId);
+  const backParams = new URLSearchParams({ role: roleSelect.value, locale: localeSelect.value });
+  document.querySelector("#backToProfiles").href = `/v20/ui/profiles.html?${backParams.toString()}`;
+  try {
+    const result = await requestJson(`/api/v20/profiles/${encodeURIComponent(profileId)}`);
+    const profile = result.profile || {};
+    state.activeProfile = profile;
+    setText("#selectedProfileName", profile.display_name || profile.profile_id || profileId);
+    setText("#selectedProfileMeta", profileMeta(profile));
+  } catch (error) {
+    setText("#selectedProfileMeta", "profile unavailable");
   }
 };
 
@@ -353,22 +320,27 @@ const submitFeedback = async () => {
 
 const unique = (items) => Array.from(new Set(items));
 const currentText = () => UI_TEXT[localeSelect.value] || UI_TEXT.zh;
+const profileMeta = (profile) => {
+  const birth = profile.birth_input || {};
+  const date = [birth.year, String(birth.month || "").padStart(2, "0"), String(birth.day || "").padStart(2, "0")]
+    .filter((value) => value && value !== "00")
+    .join("-");
+  const time = birth.hour !== undefined ? `${String(birth.hour).padStart(2, "0")}:${String(birth.minute || 0).padStart(2, "0")}` : "";
+  return [date, time, profile.owner_id || "", profile.status || ""].filter(Boolean).join(" · ");
+};
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   measure();
 });
 feedbackButton.addEventListener("click", submitFeedback);
-profileImportButton.addEventListener("click", importV19Profiles);
 localeSelect.addEventListener("change", () => {
   applyLocale(localeSelect.value);
-  loadProfiles();
 });
 
 if (params.get("locale")) localeSelect.value = params.get("locale");
 if (params.get("role")) roleSelect.value = params.get("role");
 applyLocale(localeSelect.value);
 loadStatus();
-loadProfiles();
-measure();
+loadActiveProfile();
 setInterval(loadStatus, 10000);

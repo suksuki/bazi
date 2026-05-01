@@ -16,7 +16,7 @@ const ENTRY_TEXT = {
     login_button: "登录",
     register_button: "注册",
     admin_desc: "Admin 页面只保留数据库与 LLM 运行状态，复杂知识和规则治理不放在入口页。",
-    workbench_link: "直接进入测算台",
+    profiles_link: "档案管理",
   },
   en: {
     title: "Enter Qiazhi",
@@ -35,7 +35,7 @@ const ENTRY_TEXT = {
     login_button: "Log In",
     register_button: "Register",
     admin_desc: "Admin only shows database and LLM status; deeper rule governance stays out of the entry page.",
-    workbench_link: "Open Workbench",
+    profiles_link: "Profiles",
   },
   ko: {
     title: "Qiazhi 시작",
@@ -54,7 +54,7 @@ const ENTRY_TEXT = {
     login_button: "로그인",
     register_button: "등록",
     admin_desc: "Admin은 DB와 LLM 상태만 표시합니다. 복잡한 규칙 관리는 입구에 두지 않습니다.",
-    workbench_link: "작업대 열기",
+    profiles_link: "프로필",
   },
 };
 
@@ -95,6 +95,13 @@ const goWorkbench = (session) => {
   window.location.href = `/v20/ui/workbench.html?${params.toString()}`;
 };
 
+const goProfiles = (session) => {
+  const role = session?.role || document.querySelector("#loginRole").value || "user";
+  const locale = localeSelect.value || "zh";
+  const params = new URLSearchParams({ role, locale });
+  window.location.href = `/v20/ui/profiles.html?${params.toString()}`;
+};
+
 const guestStart = async () => {
   statusLine.textContent = "...";
   const result = await requestJson("/api/v20/auth/guest", {
@@ -114,7 +121,7 @@ const login = async () => {
       locale: localeSelect.value,
     }),
   });
-  goWorkbench(result.session);
+  goProfiles(result.session);
 };
 
 const register = async () => {
@@ -128,7 +135,7 @@ const register = async () => {
       locale: localeSelect.value,
     }),
   });
-  goWorkbench(result.session);
+  goProfiles(result.session);
 };
 
 const loadMe = async () => {
