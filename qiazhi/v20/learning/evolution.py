@@ -40,6 +40,12 @@ def build_evolution_dry_run_plan(
             "ArtifactRegistry",
             "RunRegistry",
             "DecisionRegistry",
+            "FeedbackLedger",
+        ],
+        "promotable_policy_targets": [
+            "question_ranking_policy",
+            "knowledge_retrieval_weight",
+            "confidence_calibration_weight",
         ],
         "runtime_mutation": False,
         "guardrails": [

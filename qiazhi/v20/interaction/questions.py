@@ -10,6 +10,7 @@ from v20.answer.measurement_policy import (
     measurement_stage,
 )
 from v20.features.schema import FeatureLayer
+from v20.interaction.question_ranker import QuestionRankingPolicy, rank_question_rows
 
 
 @dataclass(frozen=True)
@@ -54,7 +55,12 @@ APPLIED_DOMAIN_QUESTION_KEYS = {
 }
 
 
-def recommend_questions(feature_layer: FeatureLayer, *, limit: int = 12) -> tuple[QuestionCandidate, ...]:
+def recommend_questions(
+    feature_layer: FeatureLayer,
+    *,
+    limit: int = 12,
+    ranking_policy: QuestionRankingPolicy | None = None,
+) -> tuple[QuestionCandidate, ...]:
     rows: dict[str, QuestionCandidate] = {}
     for feature in feature_layer.features:
         for index, hook in enumerate(feature.question_hooks):
@@ -73,7 +79,7 @@ def recommend_questions(feature_layer: FeatureLayer, *, limit: int = 12) -> tupl
             )
             rows[hook] = candidate
     _add_applied_domain_questions(rows, feature_layer)
-    ordered = sorted(rows.values(), key=lambda row: (row.score, row.question_key), reverse=True)
+    ordered = rank_question_rows(tuple(rows.values()), ranking_policy)
     return tuple(ordered[:limit])
 
 
