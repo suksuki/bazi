@@ -64,9 +64,12 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "document.body.classList.toggle(\"profile-reading\", Boolean(params.get(\"profile_id\")))" in script.text
     assert "questions.slice(0, 5)" in script.text
     assert "renderChatQuestions(result.questions || [], selected.question_key || \"\")" in script.text
-    assert "renderEvidence(result.knowledge_refs || [], result.rule_candidate_support || {}, result.rule_candidate_validation || {})" in script.text
+    assert "const discovery = result.feature_discovery || {}" in script.text
+    assert "renderFeatures(discovery.ranked_features || featureLayer.macro_features || featureLayer.features || [])" in script.text
+    assert "result.feature_discovery_validation || {}" in script.text
     assert "rule-candidate" in script.text
     assert "规则候选验证" in script.text
+    assert "特征发现验证" in script.text
     assert "chatButton.textContent = busy ? (llmMode === \"rewrite\" ? \"生成中\" : \"测算中\") : \"发送\"" in script.text
     assert "payload.llm_mode = llmMode" in script.text
     assert "llmMode: \"rewrite\"" in script.text

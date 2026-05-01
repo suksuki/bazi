@@ -11,6 +11,7 @@ ChartInput
 -> RulePath candidates
 -> BaziFeature[]
 -> KnowledgeRef[] and knowledge alignment
+-> FeatureDiscovery report and 518K corpus training priors
 -> Bazi measurement QuestionCandidate[]
 -> Professional domain reading path
 -> Reviewed knowledge evidence support
@@ -32,6 +33,7 @@ Initial boundaries:
 - Feature Spine is the central runtime contract.
 - Macro features give UI and LLM compact context while subfeatures remain the source of truth.
 - Knowledge is reviewed evidence context, not rule truth.
+- Feature Discovery is the central runtime intelligence router: it fuses compiled features, reviewed knowledge, portrait axes, shadow rule candidates, user interaction, bounded LLM assist, and 518K corpus training artifacts into ranked features and domain hypotheses.
 - Portraits, recommended questions, and answers are Bazi measurement projections over features.
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
@@ -46,6 +48,7 @@ Primary V20 modules:
 
 - `core`: typed chart facts, ten-god metadata, relations, and strength evidence.
 - `features`: the common feature spine used by questions, knowledge, answers, validation, and learning.
+- `intelligence`: feature discovery fusion, training-signal ingestion, and intelligence generation manifests.
 - `knowledge`: reviewed units, feature-aligned retrieval, audit, and coverage checks.
 - `graph`: chart graph and rule-path candidates.
 - `interaction`: Bazi measurement question ranking, portrait projection, and feedback capture.

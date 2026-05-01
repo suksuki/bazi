@@ -50,6 +50,55 @@ def _sanitize_user_payload(payload: dict[str, object]) -> dict[str, object]:
             if isinstance(row, dict)
         ]
         sanitized["measurement_report"] = report
+    if isinstance(sanitized.get("feature_discovery"), dict):
+        discovery = dict(sanitized["feature_discovery"])
+        discovery["ranked_features"] = [
+            {
+                "title": row.get("title", ""),
+                "domain": row.get("domain", ""),
+                "domain_label": row.get("domain_label", ""),
+                "measurement_stage": row.get("measurement_stage", ""),
+                "discovery_score": row.get("discovery_score", 0),
+                "summary": row.get("summary", ""),
+                "reason": row.get("reason", ""),
+                "boundary": row.get("boundary", ""),
+            }
+            for row in discovery.get("ranked_features", [])
+            if isinstance(row, dict)
+        ]
+        discovery["domain_hypotheses"] = [
+            {
+                "domain": row.get("domain", ""),
+                "label": row.get("label", ""),
+                "measurement_stage": row.get("measurement_stage", ""),
+                "discovery_score": row.get("discovery_score", 0),
+                "feature_count": row.get("feature_count", 0),
+                "related_feature_count": row.get("related_feature_count", 0),
+                "knowledge_ref_count": row.get("knowledge_ref_count", 0),
+                "interaction_match": row.get("interaction_match", False),
+                "status": row.get("status", ""),
+            }
+            for row in discovery.get("domain_hypotheses", [])
+            if isinstance(row, dict)
+        ]
+        training = discovery.get("training_signal", {})
+        if isinstance(training, dict):
+            discovery["training_signal"] = {
+                "status": training.get("status", ""),
+                "run_id": training.get("run_id", ""),
+                "case_count": training.get("case_count", 0),
+                "artifact_status": training.get("artifact_status", ""),
+                "similarity_status": training.get("similarity_status", ""),
+                "cluster_count": training.get("cluster_count", 0),
+                "training_tracks": training.get("training_tracks", ()),
+                "runtime_mutation": False,
+            }
+        discovery.pop("question_policy", None)
+        discovery["guardrails"] = [
+            "USER_VIEW_SANITIZED_FEATURE_DISCOVERY",
+            "NO_INTERNAL_FEATURE_IDS_OR_POLICY_WEIGHTS",
+        ]
+        sanitized["feature_discovery"] = discovery
     if isinstance(sanitized.get("portrait_projection"), dict):
         portrait = dict(sanitized["portrait_projection"])
         portrait["axes"] = [

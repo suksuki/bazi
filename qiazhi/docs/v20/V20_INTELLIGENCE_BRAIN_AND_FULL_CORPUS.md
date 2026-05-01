@@ -4,6 +4,22 @@ V20 treats the knowledge base as the source layer, the feature spine as the
 runtime language, and learning systems as a shadow brain that can improve
 retrieval, ranking, calibration, clustering, and proposal generation.
 
+## Runtime Feature Discovery
+
+The runtime brain is now `FeatureDiscovery`:
+
+`BaziFeature[] + KnowledgeRef[] + PortraitProjection + ShadowRuleCandidates + UserInteraction + LLMAssist + 518K TrainingArtifacts -> ranked features + ranked domain hypotheses`.
+
+This is the coordination point for the knowledge system, portrait system,
+interaction system, question ranking, and answer planning. It gives V20 one
+shared answer to "which Bazi features matter first for this chart and this
+question?"
+
+The layer can reorder existing feature-backed questions through a capped shadow
+policy. It can explain why a feature is being surfaced. It cannot create chart
+facts, activate a rule candidate, or turn corpus statistics into a deterministic
+fortune conclusion.
+
 ## Service Configuration
 
 LLM, Postgres, and Redis are configured by environment variables only. No

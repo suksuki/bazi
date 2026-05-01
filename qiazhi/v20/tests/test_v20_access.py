@@ -15,7 +15,10 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert {"user", "analyst", "lab", "admin"} <= set(roles)
     assert "answer_text" in roles["user"]["allowed_runtime_fields"]
     assert "knowledge_refs" in roles["user"]["blocked_runtime_fields"]
+    assert "feature_discovery" in roles["user"]["allowed_runtime_fields"]
     assert "feature_layer" in roles["analyst"]["allowed_runtime_fields"]
+    assert "feature_discovery" in roles["analyst"]["allowed_runtime_fields"]
+    assert "feature_discovery_validation" in roles["analyst"]["allowed_runtime_fields"]
     assert "rule_candidate_support" in roles["analyst"]["allowed_runtime_fields"]
     assert "rule_candidate_validation" in roles["analyst"]["allowed_runtime_fields"]
     assert "rule_candidate_ranking" in roles["lab"]["allowed_runtime_fields"]
@@ -42,6 +45,9 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "rule_candidate_support" not in projected
     assert "rule_candidate_validation" not in projected
     assert "chart_graph" not in projected
+    assert "feature_discovery" in projected
+    assert "feature_id" not in projected["feature_discovery"]["ranked_features"][0]
+    assert "question_policy" not in projected["feature_discovery"]
     assert all("source_feature_ids" not in row for row in projected["questions"])
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])
     assert all("feature_ids" not in row for row in projected["portrait_projection"]["axes"])
@@ -70,4 +76,5 @@ def test_v20_role_measure_endpoint_projects_by_role() -> None:
     assert "feature_layer" not in user
     assert analyst["role"]["role_key"] == "analyst"
     assert "feature_layer" in analyst
+    assert "feature_discovery_validation" in analyst
     assert roles["runtime_mutation"] is False

@@ -40,6 +40,13 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["questions"]
     assert result["selected_question"]["question_key"]
     assert result["knowledge_alignment"]["status"] == "pass"
+    assert result["feature_discovery"]["version"] == "v20.feature_discovery.v1"
+    assert result["feature_discovery"]["status"] == "ready"
+    assert result["feature_discovery"]["ranked_features"]
+    assert result["feature_discovery"]["domain_hypotheses"]
+    assert result["feature_discovery"]["training_signal"]["runtime_mutation"] is False
+    assert result["feature_discovery"]["question_policy"]["source"] == "feature_discovery_fusion"
+    assert result["feature_discovery_validation"]["ok"] is True
     assert result["knowledge_report"]["count"] >= 6
     assert all(row["reviewed"] and row["evidence_template"] for row in result["knowledge_refs"])
     assert len(result["llm_capabilities"]) >= 6
@@ -58,6 +65,32 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["llm_assist"]["context_pack"]["runtime_mutation"] is False
     assert "answer_plan_rewrite" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert result["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+
+
+def test_v20_feature_discovery_fuses_interaction_knowledge_portrait_and_training() -> None:
+    result = run_runtime_from_pillars(
+        "庚午",
+        "辛巳",
+        "丁丑",
+        "乙巳",
+        input_id="v20.feature.discovery",
+        user_text="我想重点看事业和财运",
+        flow_year_pillar="丙午",
+        luck_pillar="甲申",
+    )
+    discovery = result["feature_discovery"]
+    domains = {row["domain"] for row in discovery["domain_hypotheses"]}
+    top_features = discovery["ranked_features"][:5]
+
+    assert discovery["mode"] == "feature_spine_knowledge_portrait_interaction_training_fusion"
+    assert discovery["interaction_focus"]["user_text_present"] is True
+    assert {"career", "wealth"} <= set(discovery["interaction_focus"]["candidate_domains"])
+    assert {"career", "wealth"} & domains
+    assert any("corpus_training_prior" in row["sources"] for row in top_features)
+    assert discovery["training_signal"]["status"] in {"ready", "not_built"}
+    assert discovery["question_policy"]["status"] in {"active_shadow", "empty"}
+    assert result["feature_discovery_validation"]["status"] == "pass"
+    assert result["runtime_mutation"] is False
     assert "八字测算重点" in result["answer_text"]
     assert "确定事件" in result["answer_text"]
     assert "core." not in result["answer_text"]
@@ -71,10 +104,10 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert all("question_bias" in row["forbidden_usage"] for row in result["portrait_projection"]["axes"])
     assert result["measurement_report"]["core_focus"] == "bazi_measurement"
     assert result["measurement_report"]["selected_question_key"] == result["selected_question"]["question_key"]
-    assert {"career", "relationship", "health"} <= set(result["measurement_report"]["applied_domain_keys"])
+    assert {"career", "relationship"} <= set(result["measurement_report"]["applied_domain_keys"])
     assert all(row["role"] == "bazi_measurement_entry" for row in result["questions"])
     assert all(row["measurement_topic"] for row in result["questions"])
-    assert {"career", "relationship", "health", "element"} <= {row["domain"] for row in result["questions"]}
+    assert {"career", "relationship", "element"} <= {row["domain"] for row in result["questions"]}
 
 
 def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:

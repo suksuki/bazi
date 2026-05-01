@@ -40,7 +40,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
     return {
         "version": "v20.intelligence_generation_manifest.v1",
         "status": "ready",
-        "current_mode": "deterministic_generation_with_llm_ready_contracts",
+        "current_mode": "feature_discovery_fusion_with_shadow_training_priors",
         "knowledge_generation": {
             "source_layers": [
                 "reviewed_seed_knowledge_units",
@@ -113,6 +113,31 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             "runtime_role": "feature_projection_and_calibration_surface",
             "shadow_learning_allowed": True,
             "user_visible_runtime_allowed": True,
+        },
+        "feature_discovery_generation": {
+            "source_layers": [
+                "compiled_bazi_features",
+                "reviewed_knowledge_refs",
+                "portrait_projection_axes",
+                "shadow_rule_candidate_ranking",
+                "bounded_llm_intent_assist",
+                "full_corpus_training_artifacts",
+            ],
+            "generated_artifacts": [
+                "FeatureDiscoveryReport",
+                "FeatureDiscoveryTrainingSignal",
+                "feature_discovery_question_policy",
+                "ranked_domain_hypotheses",
+            ],
+            "runtime_role": "central_intelligence_router_for_features_questions_portraits_and_answers",
+            "training_role": "518k_corpus_priors_reorder_questions_and_surface_candidate_domains_only",
+            "runtime_mutation": False,
+            "user_visible_runtime_allowed": True,
+            "guardrails": [
+                "NO_CORE_FACT_MUTATION",
+                "NO_RUNTIME_RULE_ACTIVATION",
+                "NO_DESTINY_LABEL_TRAINING",
+            ],
         },
         "llm_generation": {
             "ready_for_connection": llm["ready_for_connection"],

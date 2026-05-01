@@ -148,12 +148,13 @@ const renderRuntime = (result) => {
   const selected = result.selected_question || {};
   const chart = result.chart_facts || {};
   const featureLayer = result.feature_layer || {};
+  const discovery = result.feature_discovery || {};
   const role = result.role?.role_key || measurementRole(roleSelect.value);
 
   document.body.dataset.role = role;
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
   setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
-  setText("#featureCount", featureLayer.feature_count ?? 0);
+  setText("#featureCount", discovery.ranked_features?.length ?? featureLayer.feature_count ?? 0);
   setText("#questionCount", (result.questions || []).length);
   setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
   setText("#coreCapacity", result.core_inference?.day_master_capacity || "core");
@@ -163,12 +164,17 @@ const renderRuntime = (result) => {
 
   renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
-  renderFeatures(featureLayer.macro_features || featureLayer.features || []);
+  renderFeatures(discovery.ranked_features || featureLayer.macro_features || featureLayer.features || []);
   renderPortrait(result.portrait_projection?.axes || []);
   renderQuestions(result.questions || [], selected.question_key || "");
   renderChatQuestions(result.questions || [], selected.question_key || "");
   renderQuestionSelect(result.questions || [], selected.question_key || "");
-  renderEvidence(result.knowledge_refs || [], result.rule_candidate_support || {}, result.rule_candidate_validation || {});
+  renderEvidence(
+    result.knowledge_refs || [],
+    result.rule_candidate_support || {},
+    result.rule_candidate_validation || {},
+    result.feature_discovery_validation || {}
+  );
 };
 
 const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") => {
@@ -215,15 +221,18 @@ const renderFeatures = (features) => {
   const root = document.querySelector("#featureChips");
   clear(root);
   if (!features.length) {
-    root.append(el("div", "empty-note", "当前视图隐藏内部特征。"));
+    root.append(el("div", "empty-note", "当前尚未发现可展示的命理特征。"));
     return;
   }
   features.slice(0, 10).forEach((feature) => {
     const card = el("div", "feature-card");
     card.dataset.domain = feature.domain || "general";
     card.append(el("strong", "", feature.title || feature.feature_id || feature.macro_id || "feature"));
-    card.append(el("span", "", `${feature.domain || "domain"} · confidence ${feature.peak_confidence ?? feature.confidence ?? "-"}`));
-    if (feature.summary) card.append(el("p", "", feature.summary));
+    const score = feature.discovery_score ?? feature.peak_confidence ?? feature.confidence ?? "-";
+    const label = feature.domain_label || feature.domain || "domain";
+    card.append(el("span", "", `${label} · discovery ${score}`));
+    if (feature.reason) card.append(el("p", "", feature.reason));
+    else if (feature.summary) card.append(el("p", "", feature.summary));
     root.append(card);
   });
 };
@@ -303,7 +312,7 @@ const renderQuestionSelect = (questions, selectedKey) => {
   questionSelect.value = current;
 };
 
-const renderEvidence = (refs, ruleCandidateSupport = {}, ruleCandidateValidation = {}) => {
+const renderEvidence = (refs, ruleCandidateSupport = {}, ruleCandidateValidation = {}, featureDiscoveryValidation = {}) => {
   const root = document.querySelector("#evidenceList");
   clear(root);
   refs.slice(0, 5).forEach((ref) => {
@@ -323,6 +332,12 @@ const renderEvidence = (refs, ruleCandidateSupport = {}, ruleCandidateValidation
     const row = el("div", "evidence-row validation");
     row.append(el("strong", "", "规则候选验证"));
     row.append(el("span", "", `${ruleCandidateValidation.status} · ${ruleCandidateValidation.candidate_count ?? 0} candidates`));
+    root.append(row);
+  }
+  if (featureDiscoveryValidation.status) {
+    const row = el("div", "evidence-row validation");
+    row.append(el("strong", "", "特征发现验证"));
+    row.append(el("span", "", `${featureDiscoveryValidation.status} · ${featureDiscoveryValidation.feature_count ?? 0} features`));
     root.append(row);
   }
   if (!refs.length && !ruleCandidates.length) root.append(el("div", "empty-note", "暂无可展示证据。"));

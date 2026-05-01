@@ -11,6 +11,11 @@ from v20.core.time_context import build_time_context
 from v20.features.compiler import compile_features
 from v20.graph.chart_graph import build_chart_graph
 from v20.graph.rule_graph import select_rule_paths
+from v20.intelligence.feature_discovery import (
+    build_feature_discovery_question_policy,
+    build_feature_discovery_report,
+    validate_feature_discovery_report,
+)
 from v20.interaction.portrait_projection import portrait_projection
 from v20.interaction.questions import recommend_questions
 from v20.knowledge.alignment import knowledge_feature_alignment
@@ -50,8 +55,18 @@ def run_runtime_from_pillars(
     chart_graph = build_chart_graph(chart_facts)
     rule_paths = select_rule_paths(chart_graph)
     feature_layer = compile_features(chart_facts, core, rule_paths, time_context)
-    rule_candidate_ranking_policy, rule_candidate_ranking = build_rule_candidate_question_ranking(feature_layer)
-    questions = recommend_questions(feature_layer, ranking_policy=rule_candidate_ranking_policy)
+    preliminary_knowledge_report = retrieve_knowledge(feature_layer)
+    preliminary_portrait = portrait_projection(feature_layer, preliminary_knowledge_report)
+    _rule_candidate_ranking_policy, rule_candidate_ranking = build_rule_candidate_question_ranking(feature_layer)
+    preliminary_feature_discovery = build_feature_discovery_report(
+        feature_layer,
+        knowledge_report=preliminary_knowledge_report,
+        portrait_projection=preliminary_portrait,
+        user_text=user_text,
+        rule_candidate_ranking=rule_candidate_ranking,
+    )
+    feature_discovery_question_policy = build_feature_discovery_question_policy(preliminary_feature_discovery)
+    questions = recommend_questions(feature_layer, ranking_policy=feature_discovery_question_policy)
     llm_routing_assist = build_llm_routing_assist(user_text, feature_layer, questions, locale=locale)
     selected_question = _select_question(questions, question_key or str(llm_routing_assist.get("routed_question_key", "")))
     knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
@@ -61,6 +76,16 @@ def run_runtime_from_pillars(
     rule_candidate_ranking_validation = validate_rule_candidate_question_ranking(rule_candidate_ranking)
     answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack, knowledge_report, rule_candidate_report)
     portrait = portrait_projection(feature_layer, knowledge_report)
+    feature_discovery = build_feature_discovery_report(
+        feature_layer,
+        knowledge_report=knowledge_report,
+        portrait_projection=portrait,
+        user_text=user_text,
+        rule_candidate_ranking=rule_candidate_ranking,
+        llm_assist=llm_routing_assist,
+        selected_question=selected_question,
+    )
+    feature_discovery_validation = validate_feature_discovery_report(feature_discovery)
     measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
     deterministic_answer_text = compose_answer(answer_plan, locale=locale)
     answer_text = deterministic_answer_text
@@ -103,6 +128,8 @@ def run_runtime_from_pillars(
         "knowledge_report": knowledge_report.to_dict(),
         "knowledge_refs": [row.to_dict() for row in knowledge_report.refs],
         "knowledge_alignment": knowledge_feature_alignment(feature_layer),
+        "feature_discovery": feature_discovery,
+        "feature_discovery_validation": feature_discovery_validation,
         "rule_candidate_ranking": rule_candidate_ranking,
         "rule_candidate_ranking_validation": rule_candidate_ranking_validation,
         "rule_candidate_support": rule_candidate_report,
