@@ -6,7 +6,9 @@ V20 keeps the P84 feature spine, but the product center is Bazi measurement.
 
 The portrait, question, and answer systems are now projections over verified features:
 
-- Portrait is a Bazi feature projection and calibration surface. It does not drive conclusions.
+- Portrait is a Bazi feature projection and calibration surface. Reviewed
+  knowledge may support its wording and boundaries, but it does not drive
+  conclusions.
 - Recommended questions are measurement entries, not generic engagement prompts.
 - Answers are measurement plans composed from selected features, evidence packs, knowledge boundaries, and prediction policy.
 
@@ -45,9 +47,10 @@ LLM, portrait projection, recommended questions, and answer planning.
 - Time-layer questions require explicit supplied pillars such as
   `flow_year_pillar`, `luck_pillar`, or `flow_month_pillar`; V20 does not infer
   calendar facts from free text.
-- Portrait output remains a calibration surface. It can record redacted
-  calibration signals, but it does not rank questions, mutate answers, or
-  create fortune conclusions.
+- Portrait output remains a calibration surface. It can expose reviewed
+  knowledge provenance for analysts and record redacted calibration signals,
+  but it does not rank questions, mutate answers, or create fortune
+  conclusions.
 
 ## Prediction Boundary
 

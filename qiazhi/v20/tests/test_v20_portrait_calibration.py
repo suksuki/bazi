@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from v20.api.runtime import run_runtime_from_pillars
+from v20.interaction.portrait_ontology import portrait_ontology_manifest
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
 from v20.server import app
 from v20.storage.local_jsonl import LocalJsonlStore
@@ -72,3 +74,27 @@ def test_v20_portrait_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -
     assert analyzed["runtime_mutation"] is False
     assert recorded["runtime_mutation"] is True
     assert recorded["storage"]["ledger_name"] == "portrait_calibration_ledger"
+
+
+def test_v20_portrait_projection_uses_reviewed_knowledge_as_boundary_only() -> None:
+    result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="portrait.knowledge")
+    portrait = result["portrait_projection"]
+    strength_axis = next(row for row in portrait["axes"] if row["domain"] == "strength")
+
+    assert portrait["source_policy"] == "feature_first_knowledge_supported"
+    assert strength_axis["knowledge_ref_count"] >= 1
+    assert strength_axis["knowledge_links"][0]["reviewed"] is True
+    assert strength_axis["evidence_boundaries"]
+    assert "fortune_verdict" in strength_axis["forbidden_usage"]
+    assert "question_bias" in strength_axis["forbidden_usage"]
+
+
+def test_v20_portrait_ontology_endpoint_is_contract_only() -> None:
+    client = TestClient(app)
+    manifest = portrait_ontology_manifest()
+    endpoint = client.get("/api/v20/portrait/ontology").json()
+
+    assert endpoint == manifest
+    assert endpoint["runtime_mutation"] is False
+    assert endpoint["source_policy"] == "feature_first_knowledge_supported"
+    assert "direct_personality_verdict" in endpoint["forbidden_knowledge_usage"]

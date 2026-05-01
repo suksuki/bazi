@@ -54,8 +54,13 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert "确定事件" in result["answer_text"]
     assert "core." not in result["answer_text"]
     assert "feature." not in result["answer_text"]
+    assert result["portrait_projection"]["version"] == "v20.portrait_projection.v2"
     assert result["portrait_projection"]["role"] == "bazi_feature_projection_and_calibration_surface_only"
     assert result["portrait_projection"]["axes"]
+    assert result["portrait_projection"]["source_policy"] == "feature_first_knowledge_supported"
+    assert "KNOWLEDGE_SUPPORTS_LABELS_NOT_VERDICTS" in result["portrait_projection"]["guardrails"]
+    assert any(row["knowledge_ref_count"] >= 1 for row in result["portrait_projection"]["axes"])
+    assert all("question_bias" in row["forbidden_usage"] for row in result["portrait_projection"]["axes"])
     assert result["measurement_report"]["core_focus"] == "bazi_measurement"
     assert result["measurement_report"]["selected_question_key"] == result["selected_question"]["question_key"]
     assert {"career", "relationship", "health"} <= set(result["measurement_report"]["applied_domain_keys"])

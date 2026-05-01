@@ -39,6 +39,10 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "chart_graph" not in projected
     assert all("source_feature_ids" not in row for row in projected["questions"])
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])
+    assert all("feature_ids" not in row for row in projected["portrait_projection"]["axes"])
+    assert all("knowledge_links" not in row for row in projected["portrait_projection"]["axes"])
+    assert all("feature_id" not in row for row in projected["portrait_projection"]["items"])
+    assert all("knowledge_links" not in row for row in projected["portrait_projection"]["items"])
 
 
 def test_v20_role_measure_endpoint_projects_by_role() -> None:

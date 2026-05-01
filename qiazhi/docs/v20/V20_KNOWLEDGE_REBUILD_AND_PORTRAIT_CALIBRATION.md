@@ -63,7 +63,22 @@ they do not write fields, approve drafts, or make units runtime-retrievable.
 
 ## Portrait Calibration
 
-The portrait system remains a projection over compiled `BaziFeature[]`.
+The portrait system remains a projection over compiled `BaziFeature[]`, but it
+now also carries reviewed knowledge provenance.
+
+Portrait data has three sources with separate duties:
+
+- `BaziFeature[]`: decides which portrait axes exist, their confidence, and
+  the source feature ids.
+- reviewed `KnowledgeUnit`: supplies axis language, evidence boundaries, and
+  calibration prompts.
+- calibration ledger: records whether a user or analyst confirms, rejects, or
+  requests review for a projection.
+
+Knowledge can shape portrait wording and boundaries, but it cannot create
+personality verdicts, rank recommended questions, drive answers, or activate
+rules. User role projection hides internal feature ids and knowledge links;
+analyst and lab views can inspect provenance.
 
 It can now emit calibration signals:
 
@@ -74,6 +89,7 @@ It can now emit calibration signals:
 
 Endpoints:
 
+- `GET /api/v20/portrait/ontology`
 - `POST /api/v20/portrait/calibration/analyze`
 - `POST /api/v20/portrait/calibration/record`
 

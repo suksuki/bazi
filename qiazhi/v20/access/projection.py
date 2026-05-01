@@ -50,4 +50,37 @@ def _sanitize_user_payload(payload: dict[str, object]) -> dict[str, object]:
             if isinstance(row, dict)
         ]
         sanitized["measurement_report"] = report
+    if isinstance(sanitized.get("portrait_projection"), dict):
+        portrait = dict(sanitized["portrait_projection"])
+        portrait["axes"] = [
+            {
+                "domain": row.get("domain", ""),
+                "label": row.get("label", ""),
+                "measurement_stage": row.get("measurement_stage", ""),
+                "feature_count": row.get("feature_count", 0),
+                "peak_confidence": row.get("peak_confidence", 0),
+                "calibration_state": row.get("calibration_state", ""),
+                "knowledge_ref_count": row.get("knowledge_ref_count", 0),
+                "source_policy": row.get("source_policy", ""),
+                "allowed_feedback_signals": row.get("allowed_feedback_signals", ()),
+            }
+            for row in portrait.get("axes", [])
+            if isinstance(row, dict)
+        ]
+        portrait["items"] = [
+            {
+                "title": row.get("title", ""),
+                "domain": row.get("domain", ""),
+                "measurement_topic": row.get("measurement_topic", ""),
+                "measurement_stage": row.get("measurement_stage", ""),
+                "measurement_focus": row.get("measurement_focus", ""),
+                "confidence": row.get("confidence", 0),
+                "calibration_state": row.get("calibration_state", ""),
+                "knowledge_ref_count": row.get("knowledge_ref_count", 0),
+                "source_policy": row.get("source_policy", ""),
+            }
+            for row in portrait.get("items", [])
+            if isinstance(row, dict)
+        ]
+        sanitized["portrait_projection"] = portrait
     return sanitized

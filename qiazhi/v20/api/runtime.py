@@ -52,7 +52,7 @@ def run_runtime_from_pillars(
     knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
     evidence_pack = build_evidence_pack(feature_layer)
     answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack)
-    portrait = portrait_projection(feature_layer)
+    portrait = portrait_projection(feature_layer, knowledge_report)
     measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
     answer_text = compose_answer(answer_plan, locale=locale)
     llm_assist = attach_answer_safety_review(llm_routing_assist, answer_text)

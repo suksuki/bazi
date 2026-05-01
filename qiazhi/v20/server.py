@@ -15,6 +15,7 @@ from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
+from v20.interaction.portrait_ontology import portrait_ontology_manifest
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.approval import build_first_wave_approval_preflight, build_knowledge_approval_preflight
@@ -220,6 +221,10 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:
         return confidence_calibration_manifest()
+
+    @app.get("/api/v20/portrait/ontology")
+    def portrait_ontology() -> dict[str, object]:
+        return portrait_ontology_manifest()
 
     @app.get("/api/v20/corpus/coverage")
     def corpus_coverage() -> dict[str, object]:
