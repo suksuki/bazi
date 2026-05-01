@@ -8,7 +8,7 @@ def portrait_ontology_manifest() -> dict[str, object]:
         "version": "v20.portrait_ontology_manifest.v1",
         "status": "ready",
         "source_policy": PORTRAIT_SOURCE_POLICY,
-        "axis_source": "compiled_bazi_feature_domain",
+        "axis_source": "runtime_rule_decision_domain",
         "knowledge_role": "reviewed_knowledge_units_provide_language_boundaries_and_evidence_prompts",
         "calibration_role": "append_only_feedback_signal_for_later_review",
         "allowed_knowledge_usage": [
@@ -31,7 +31,7 @@ def portrait_ontology_manifest() -> dict[str, object]:
         ],
         "guardrails": [
             "PORTRAIT_ONTOLOGY_IS_CONTRACT_ONLY",
-            "FEATURE_SPINE_REMAINS_SOURCE_OF_TRUTH",
+            "RULE_DECISION_REMAINS_SOURCE_OF_TRUTH",
             "REVIEWED_KNOWLEDGE_REQUIRED_FOR_RUNTIME_LANGUAGE",
             "NO_RUNTIME_MUTATION",
         ],

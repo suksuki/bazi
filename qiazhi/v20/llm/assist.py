@@ -27,7 +27,7 @@ def build_llm_routing_assist(
             "runtime_mutation": False,
             "guardrails": [
                 "LLM_ASSIST_OPTIONAL",
-                "FEATURE_RANKER_REMAINS_AUTHORITATIVE",
+                "DYNAMIC_DECISION_QUESTIONS_REMAIN_AUTHORITATIVE",
                 "NO_CORE_FACT_MUTATION",
             ],
         }
@@ -47,7 +47,7 @@ def build_llm_routing_assist(
         "guardrails": [
             "LLM_INTENT_IS_ROUTING_HINT_ONLY",
             "LLM_FEATURE_CANDIDATES_ARE_PROPOSAL_ONLY",
-            "QUESTION_RANKER_AND_VALIDATOR_HAVE_FINAL_SAY",
+            "DYNAMIC_DECISION_QUESTION_RANKER_HAS_FINAL_SAY",
             "NO_CORE_FACT_MUTATION",
         ],
     }

@@ -51,9 +51,9 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "chatTranscript" in page.text
     assert "portrait-summary" in page.text
     assert "profileImportButton" not in page.text
-    assert "反馈校准" in page.text
-    assert "命理特征主线" in page.text
-    assert "画像投影" in page.text
+    assert "反馈校准" not in page.text
+    assert "动态裁决主线" in page.text
+    assert "动态命理画像" in page.text
     assert "八字专业回复" in page.text
     assert "/api/v20/measure/view/" in script.text
     assert "/api/v20/system/status" in script.text
@@ -64,21 +64,19 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "document.body.classList.toggle(\"profile-reading\", Boolean(params.get(\"profile_id\")))" in script.text
     assert "questions.slice(0, 5)" in script.text
     assert "renderChatQuestions(result.questions || [], selected.question_key || \"\")" in script.text
-    assert "const discovery = result.feature_discovery || {}" in script.text
-    assert "renderFeatures(discovery.ranked_features || featureLayer.macro_features || featureLayer.features || [])" in script.text
-    assert "renderPortrait(result.portrait_intelligence?.axis_models || result.portrait_projection?.axes || [])" in script.text
-    assert "axis.sub_axis_candidates" in script.text
-    assert "result.feature_discovery_validation || {}" in script.text
-    assert "rule-candidate" in script.text
-    assert "规则候选验证" in script.text
-    assert "特征发现验证" in script.text
+    assert "const decisionReport = result.decision_report || {}" in script.text
+    assert "renderFeatures(decisionReport.decisions" in script.text
+    assert "renderPortrait(dynamicPortrait.tags || [])" in script.text
+    assert "result.decision_validation || {}" in script.text
+    assert "rule-candidate" not in script.text
+    assert "规则候选验证" not in script.text
+    assert "特征发现验证" not in script.text
     assert "chatButton.textContent = busy ? (llmMode === \"practitioner\" ? \"生成中\" : \"测算中\") : \"发送\"" in script.text
     assert "payload.llm_mode = llmMode" in script.text
     assert "llmMode: \"practitioner\"" in script.text
     assert "assist.practitioner_answer" in script.text
     assert "appendChatTurn(interactionText" in script.text
     assert ".chat-transcript" in style.text
-    assert ".evidence-row.rule-candidate" in style.text
     assert ".evidence-row.validation" in style.text
     assert "applyProfileDefaults(profile)" in script.text
     assert "role: measurementRole(params.get(\"role\") || document.body.dataset.role)" in profiles_script.text
@@ -86,7 +84,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "确认四柱后会生成建议问题" in script.text
     assert "명리사" in script.text
     assert "full_runtime" not in script.text
-    assert "/api/v20/feedback/record" in script.text
+    assert "/api/v20/feedback/record" not in script.text
     assert "DB / LLM" in admin.text
     assert "/v20/ui/profiles.html" in admin.text
     assert "/api/v20/admin/db" in admin_script.text

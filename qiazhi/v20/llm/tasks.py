@@ -145,14 +145,14 @@ def suggest_question_candidates(
                     ),
                 )
             )
-    suggestions = [row for _priority, _domain_priority, _question_key, row in sorted(ranked)]
+    suggestions = [row for _priority, _domain_priority, _question_key, row in sorted(ranked, key=lambda item: item[:3])]
     return {
         "version": "v20.llm_question_suggestion.v1",
         "contract": "question_suggestion",
         "locale": locale,
         "suggestions": [row.to_dict() for row in suggestions[:3]],
         "runtime_mutation": False,
-        "guardrails": ["LLM_SUGGESTS_ONLY", "FEATURE_RANKER_REMAINS_AUTHORITATIVE"],
+        "guardrails": ["LLM_SUGGESTS_ONLY", "DYNAMIC_DECISION_QUESTION_RANKER_REMAINS_AUTHORITATIVE"],
     }
 
 

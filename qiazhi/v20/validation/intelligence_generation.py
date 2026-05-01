@@ -28,7 +28,7 @@ def validate_intelligence_generation() -> dict[str, object]:
         failures.append("no_reviewed_knowledge_units")
     if manifest["rule_generation"]["proposal_count"] <= 0:
         failures.append("no_rule_proposals")
-    if manifest["portrait_generation"]["source_policy"] != "feature_first_knowledge_supported":
+    if manifest["portrait_generation"]["source_policy"] != "dynamic_rule_decision_supported":
         failures.append("portrait_source_policy_mismatch")
     if manifest.get("bazi_domain_alignment", {}).get("version") != "v20.bazi_domain_alignment_manifest.v1":
         failures.append("bazi_domain_alignment_manifest_missing")

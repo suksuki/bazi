@@ -92,7 +92,7 @@ def test_v20_full_precompute_preview_builds_structural_label_snapshots() -> None
     assert preview["runtime_mutation"] is False
     assert preview["returned_count"] == 2
     assert first_snapshot["snapshot_hash"]
-    assert first_snapshot["label_policy"] == "structural_feature_and_portrait_tags_only"
+    assert first_snapshot["label_policy"] == "structural_features_and_dynamic_decision_portrait_tags_only"
     assert first_snapshot["feature_domains"]
     assert first_snapshot["portrait_domains"]
     assert "NO_DESTINY_TRUTH_LABEL" in first_snapshot["guardrails"]

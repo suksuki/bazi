@@ -194,9 +194,9 @@ def _ten_god_summary(feature: BaziFeature) -> str:
     if not labels:
         return ""
     if "visible" in feature.source_layers and "hidden" in feature.source_layers:
-        prefix = "明透与藏干十神材料"
+        prefix = "明透与藏干十神依据"
     elif "hidden" in feature.source_layers:
-        prefix = "藏干十神材料"
+        prefix = "藏干十神依据"
     else:
         prefix = "明透十神材料"
     return f"{prefix}：" + "、".join(labels[:8]) + "。"

@@ -15,7 +15,6 @@ const form = document.querySelector("#measureForm");
 const questionSelect = document.querySelector("#questionSelect");
 const roleSelect = document.querySelector("#roleSelect");
 const localeSelect = document.querySelector("#localeSelect");
-const feedbackButton = document.querySelector("#feedbackButton");
 const chatText = document.querySelector("#chatText");
 const chatButton = document.querySelector("#chatButton");
 const chatTranscript = document.querySelector("#chatTranscript");
@@ -26,8 +25,8 @@ const UI_TEXT = {
     nav_profiles: "档案",
     nav_measure: "测算",
     chart_title: "命盘结构",
-    features_title: "命理特征主线",
-    portrait_title: "画像投影",
+    features_title: "动态裁决主线",
+    portrait_title: "动态命理画像",
     questions_title: "推荐问题",
     answer_title: "八字专业回复",
     evidence_title: "证据与系统状态",
@@ -41,8 +40,8 @@ const UI_TEXT = {
     nav_profiles: "Profiles",
     nav_measure: "Reading",
     chart_title: "Chart Structure",
-    features_title: "Bazi Feature Spine",
-    portrait_title: "Portrait Projection",
+    features_title: "Dynamic Decision Spine",
+    portrait_title: "Dynamic Bazi Portrait",
     questions_title: "Recommended Questions",
     answer_title: "Professional Bazi Reply",
     evidence_title: "Evidence and System",
@@ -56,8 +55,8 @@ const UI_TEXT = {
     nav_profiles: "프로필",
     nav_measure: "분석",
     chart_title: "명식 구조",
-    features_title: "명리 특징 축",
-    portrait_title: "프로필 투영",
+    features_title: "동적 판정 축",
+    portrait_title: "동적 명리 프로필",
     questions_title: "추천 질문",
     answer_title: "전문 사주 답변",
     evidence_title: "근거와 시스템",
@@ -148,13 +147,14 @@ const renderRuntime = (result) => {
   const selected = result.selected_question || {};
   const chart = result.chart_facts || {};
   const featureLayer = result.feature_layer || {};
-  const discovery = result.feature_discovery || {};
+  const decisionReport = result.decision_report || {};
+  const dynamicPortrait = result.dynamic_portrait || decisionReport.dynamic_portrait || {};
   const role = result.role?.role_key || measurementRole(roleSelect.value);
 
   document.body.dataset.role = role;
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
   setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
-  setText("#featureCount", discovery.ranked_features?.length ?? featureLayer.feature_count ?? 0);
+  setText("#featureCount", decisionReport.decision_count ?? featureLayer.feature_count ?? 0);
   setText("#questionCount", (result.questions || []).length);
   setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
   setText("#coreCapacity", result.core_inference?.day_master_capacity || "core");
@@ -164,16 +164,14 @@ const renderRuntime = (result) => {
 
   renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
-  renderFeatures(discovery.ranked_features || featureLayer.macro_features || featureLayer.features || []);
-  renderPortrait(result.portrait_intelligence?.axis_models || result.portrait_projection?.axes || []);
+  renderFeatures(decisionReport.decisions || featureLayer.macro_features || featureLayer.features || []);
+  renderPortrait(dynamicPortrait.tags || []);
   renderQuestions(result.questions || [], selected.question_key || "");
   renderChatQuestions(result.questions || [], selected.question_key || "");
   renderQuestionSelect(result.questions || [], selected.question_key || "");
   renderEvidence(
     result.knowledge_refs || [],
-    result.rule_candidate_support || {},
-    result.rule_candidate_validation || {},
-    result.feature_discovery_validation || {}
+    result.decision_validation || {}
   );
 };
 
@@ -227,11 +225,13 @@ const renderFeatures = (features) => {
   features.slice(0, 10).forEach((feature) => {
     const card = el("div", "feature-card");
     card.dataset.domain = feature.domain || "general";
-    card.append(el("strong", "", feature.title || feature.feature_id || feature.macro_id || "feature"));
-    const score = feature.discovery_score ?? feature.peak_confidence ?? feature.confidence ?? "-";
+    card.append(el("strong", "", feature.label || feature.title || feature.feature_id || feature.macro_id || "feature"));
+    const score = feature.score ?? feature.discovery_score ?? feature.peak_confidence ?? feature.confidence ?? "-";
     const label = feature.domain_label || feature.domain || "domain";
-    card.append(el("span", "", `${label} · discovery ${score}`));
-    if (feature.reason) card.append(el("p", "", feature.reason));
+    const role = feature.role ? ` · ${feature.role}` : "";
+    card.append(el("span", "", `${label} · score ${score}${role}`));
+    if (feature.support) card.append(el("p", "", feature.support.slice(0, 3).join(" / ")));
+    else if (feature.reason) card.append(el("p", "", feature.reason));
     else if (feature.summary) card.append(el("p", "", feature.summary));
     root.append(card);
   });
@@ -246,11 +246,11 @@ const renderPortrait = (axes) => {
   }
   axes.slice(0, 8).forEach((axis) => {
     const row = el("div", "axis-row");
-    row.append(el("strong", "", axis.label || axis.axis_id));
-    const score = axis.intelligence_score ?? axis.peak_confidence ?? 0;
-    row.append(el("span", "", `${axis.domain} · ${axis.feature_count} features · ${axis.knowledge_ref_count ?? 0} refs · score ${score}`));
-    const subAxes = (axis.sub_axis_candidates || []).map((row) => row.label).filter(Boolean).slice(0, 3);
-    if (subAxes.length) row.append(el("p", "", subAxes.join(" / ")));
+    row.append(el("strong", "", axis.label || axis.axis_id || "动态画像"));
+    const score = axis.score ?? axis.intelligence_score ?? axis.peak_confidence ?? 0;
+    row.append(el("span", "", axis.summary || `${axis.domain || "命理"} · score ${score}`));
+    const seeds = (axis.question_seeds || []).filter(Boolean).slice(0, 2);
+    if (seeds.length) row.append(el("p", "", seeds.join(" / ")));
     const meter = el("i");
     meter.style.width = `${Math.round(Number(score || 0) * 100)}%`;
     const bar = el("div", "meter");
@@ -315,7 +315,7 @@ const renderQuestionSelect = (questions, selectedKey) => {
   questionSelect.value = current;
 };
 
-const renderEvidence = (refs, ruleCandidateSupport = {}, ruleCandidateValidation = {}, featureDiscoveryValidation = {}) => {
+const renderEvidence = (refs, decisionValidation = {}) => {
   const root = document.querySelector("#evidenceList");
   clear(root);
   refs.slice(0, 5).forEach((ref) => {
@@ -324,26 +324,13 @@ const renderEvidence = (refs, ruleCandidateSupport = {}, ruleCandidateValidation
     row.append(el("span", "", `${ref.domain || "domain"} · ${ref.reviewed ? "reviewed" : "draft"}`));
     root.append(row);
   });
-  const ruleCandidates = ruleCandidateSupport.candidates || [];
-  ruleCandidates.slice(0, 4).forEach((candidate) => {
-    const row = el("div", "evidence-row rule-candidate");
-    row.append(el("strong", "", candidate.label || "规则候选"));
-    row.append(el("span", "", `${candidate.domain || "domain"} · ${candidate.status || "shadow"}`));
-    root.append(row);
-  });
-  if (ruleCandidateValidation.status) {
+  if (decisionValidation.status) {
     const row = el("div", "evidence-row validation");
-    row.append(el("strong", "", "规则候选验证"));
-    row.append(el("span", "", `${ruleCandidateValidation.status} · ${ruleCandidateValidation.candidate_count ?? 0} candidates`));
+    row.append(el("strong", "", "动态裁决验证"));
+    row.append(el("span", "", `${decisionValidation.status} · ${decisionValidation.decision_count ?? 0} decisions`));
     root.append(row);
   }
-  if (featureDiscoveryValidation.status) {
-    const row = el("div", "evidence-row validation");
-    row.append(el("strong", "", "特征发现验证"));
-    row.append(el("span", "", `${featureDiscoveryValidation.status} · ${featureDiscoveryValidation.feature_count ?? 0} features`));
-    root.append(row);
-  }
-  if (!refs.length && !ruleCandidates.length) root.append(el("div", "empty-note", "暂无可展示证据。"));
+  if (!refs.length && !decisionValidation.status) root.append(el("div", "empty-note", "暂无可展示证据。"));
 };
 
 const appendChatTurn = (questionText, source) => {
@@ -447,7 +434,7 @@ const renderInitialPanels = () => {
   renderPortrait([]);
   renderQuestions([], "");
   renderChatQuestions([], "");
-  renderEvidence([], {}, {});
+  renderEvidence([], {});
 };
 
 const loadActiveProfile = async () => {
@@ -531,37 +518,6 @@ const applyProfileDefaults = (profile) => {
   }
 };
 
-const submitFeedback = async () => {
-  const text = document.querySelector("#feedbackText").value.trim();
-  if (!text) {
-    setText("#feedbackOutput", "请输入反馈。");
-    return;
-  }
-  const latest = state.latest || {};
-  const featureIds = (latest.feature_layer?.features || []).slice(0, 4).map((feature) => feature.feature_id);
-  feedbackButton.disabled = true;
-  feedbackButton.textContent = "分析中";
-  try {
-    const result = await requestJson("/api/v20/feedback/record", {
-      method: "POST",
-      body: JSON.stringify({
-        input_id: latest.input_id || "ui.feedback",
-        source_role: measurementRole(roleSelect.value),
-        feedback_text: text,
-        feature_ids: featureIds,
-      }),
-    });
-    const analysis = result.analysis || {};
-    setText("#feedbackState", result.storage?.record_id || "recorded");
-    setText("#feedbackOutput", `${analysis.redacted_summary || ""}\nproposal ${analysis.learning_proposal?.proposal_type || "-"}\nledger ${result.storage?.relative_path || "-"}`);
-  } catch (error) {
-    setText("#feedbackOutput", `反馈分析失败：${error.message}`);
-  } finally {
-    feedbackButton.disabled = false;
-    feedbackButton.textContent = "分析反馈";
-  }
-};
-
 const unique = (items) => Array.from(new Set(items));
 const currentText = () => UI_TEXT[localeSelect.value] || UI_TEXT.zh;
 const measurementRole = (role) => (role === "user" ? "user" : "analyst");
@@ -583,7 +539,6 @@ form.addEventListener("submit", (event) => {
     llmMode: "practitioner",
   });
 });
-feedbackButton.addEventListener("click", submitFeedback);
 localeSelect.addEventListener("change", () => {
   applyLocale(localeSelect.value);
   scheduleMeasure({ force: true });

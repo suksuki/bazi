@@ -76,17 +76,16 @@ def test_v20_portrait_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -
     assert recorded["storage"]["ledger_name"] == "portrait_calibration_ledger"
 
 
-def test_v20_portrait_projection_uses_reviewed_knowledge_as_boundary_only() -> None:
+def test_v20_dynamic_portrait_uses_decisions_as_runtime_source() -> None:
     result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="portrait.knowledge")
-    portrait = result["portrait_projection"]
-    strength_axis = next(row for row in portrait["axes"] if row["domain"] == "strength")
+    portrait = result["dynamic_portrait"]
+    strength_tag = next(row for row in portrait["tags"] if row["domain"] == "strength")
 
-    assert portrait["source_policy"] == "feature_first_knowledge_supported"
-    assert strength_axis["knowledge_ref_count"] >= 1
-    assert strength_axis["knowledge_links"][0]["reviewed"] is True
-    assert strength_axis["evidence_boundaries"]
-    assert "fortune_verdict" in strength_axis["forbidden_usage"]
-    assert "question_bias" in strength_axis["forbidden_usage"]
+    assert portrait["source"] == "runtime_rule_decisions"
+    assert portrait["tag_count"] >= 1
+    assert strength_tag["source_decision_keys"]
+    assert "PORTRAIT_FROM_RULE_DECISION_ONLY" in strength_tag["guardrails"]
+    assert "NO_STATIC_518K_PORTRAIT_TRUTH" in strength_tag["guardrails"]
 
 
 def test_v20_portrait_ontology_endpoint_is_contract_only() -> None:
@@ -96,5 +95,5 @@ def test_v20_portrait_ontology_endpoint_is_contract_only() -> None:
 
     assert endpoint == manifest
     assert endpoint["runtime_mutation"] is False
-    assert endpoint["source_policy"] == "feature_first_knowledge_supported"
+    assert endpoint["source_policy"] == "dynamic_rule_decision_supported"
     assert "direct_personality_verdict" in endpoint["forbidden_knowledge_usage"]

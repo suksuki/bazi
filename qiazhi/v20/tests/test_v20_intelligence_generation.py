@@ -17,13 +17,13 @@ def test_v20_intelligence_generation_manifest_names_generation_boundaries() -> N
     assert manifest["rule_generation"]["user_visible_runtime_allowed"] is False
     assert manifest["rule_generation"]["synthetic_role"] == "primary_rule_collision_validation_and_training_gate"
     assert manifest["rule_generation"]["synthetic_rule_training_status"] == "ready"
-    assert manifest["portrait_generation"]["source_policy"] == "feature_first_knowledge_supported"
+    assert manifest["portrait_generation"]["source_policy"] == "dynamic_rule_decision_supported"
     assert manifest["portrait_generation"]["bazi_alignment_required"] is True
-    assert manifest["feature_discovery_generation"]["runtime_role"] == "central_intelligence_router_for_features_questions_portraits_and_answers"
-    assert manifest["feature_discovery_generation"]["question_alignment_policy"] == "v20.bazi_domain_alignment_manifest.v1"
+    assert manifest["decision_generation"]["runtime_role"] == "central_runtime_intelligence_for_portraits_questions_and_llm_context"
+    assert manifest["decision_generation"]["question_alignment_policy"] == "v20.bazi_domain_alignment_manifest.v1"
     assert manifest["bazi_domain_alignment"]["core_domains"]
     assert "career" in manifest["bazi_domain_alignment"]["applied_domains"]
-    assert manifest["knowledge_semantic_modeling"]["runtime_role"] == "semantic_index_for_feature_discovery_portrait_and_interaction"
+    assert manifest["knowledge_semantic_modeling"]["runtime_role"] == "semantic_index_for_dynamic_decision_knowledge_and_interaction"
     assert "knowledge_extraction_draft" in manifest["llm_generation"]["allowed_roles"]
     assert "evidence_bounded_practitioner_answer" in manifest["llm_generation"]["allowed_roles"]
     assert "core_rule_truth_override" in manifest["llm_generation"]["forbidden_roles"]

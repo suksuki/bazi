@@ -4,7 +4,7 @@ from dataclasses import asdict, dataclass, field
 from typing import Any
 
 
-PORTRAIT_SOURCE_POLICY = "feature_first_knowledge_supported"
+PORTRAIT_SOURCE_POLICY = "dynamic_rule_decision_supported"
 
 
 @dataclass(frozen=True)

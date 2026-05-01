@@ -102,11 +102,11 @@ def run_rule_portrait_batch(
         "runtime_mutation": False,
         "guardrails": [
             "BATCH_GENERATION_AND_VALIDATION_ONLY",
-            "RULES_REMAIN_SHADOW_CANDIDATES",
-            "PORTRAITS_REMAIN_FEATURE_PROJECTIONS",
+            "RULE_EXTRACTION_REMAINS_OFFLINE_DRAFT",
+            "PORTRAITS_COME_FROM_RUNTIME_RULE_DECISIONS",
             "QUESTIONS_REQUIRE_BAZI_DOMAIN_ALIGNMENT",
             "NO_POSTGRES_WRITE",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "NO_RUNTIME_RULE_PROMOTION",
         ],
     }
 
@@ -211,39 +211,29 @@ def _evaluate_batch_case(
     )
     features = [row for row in runtime.get("feature_layer", {}).get("features", ()) if isinstance(row, dict)]
     questions = [row for row in runtime.get("questions", ()) if isinstance(row, dict)]
-    portrait_axes = [
-        row for row in runtime.get("portrait_projection", {}).get("axes", ()) if isinstance(row, dict)
+    decisions = [
+        row for row in runtime.get("decision_report", {}).get("decisions", ()) if isinstance(row, dict)
     ]
-    portrait_models = [
-        row for row in runtime.get("portrait_intelligence", {}).get("axis_models", ()) if isinstance(row, dict)
-    ]
-    rule_candidates = [
-        row
-        for row in runtime.get("rule_candidate_support", {}).get("candidates", ())
-        if isinstance(row, dict)
+    portrait_tags = [
+        row for row in runtime.get("dynamic_portrait", {}).get("tags", ()) if isinstance(row, dict)
     ]
     feature_domains = tuple(sorted({str(row.get("domain", "")) for row in features if row.get("domain")}))
     question_keys = tuple(str(row.get("question_key", "")) for row in questions if row.get("question_key"))
-    rule_domains = tuple(dict.fromkeys(str(row.get("domain", "")) for row in rule_candidates if row.get("domain")))
-    portrait_domains = tuple(str(row.get("domain", "")) for row in portrait_axes if row.get("domain"))
+    rule_domains = _decision_domains(decisions)
+    portrait_domains = tuple(dict.fromkeys(str(row.get("domain", "")) for row in portrait_tags if row.get("domain")))
     failures = []
     failures.extend(_missing("feature_domain", case.case_id, case.expected_feature_domains, feature_domains))
     failures.extend(_missing("question_key", case.case_id, case.expected_question_keys, question_keys))
     failures.extend(_missing("rule_domain", case.case_id, case.expected_rule_domains, rule_domains))
     if not questions:
         failures.append(f"no_questions:{case.case_id}")
-    if not portrait_axes:
-        failures.append(f"no_portrait_axes:{case.case_id}")
-    if not rule_candidates:
-        failures.append(f"no_rule_candidates:{case.case_id}")
+    if not portrait_tags:
+        failures.append(f"no_dynamic_portrait_tags:{case.case_id}")
+    if not decisions:
+        failures.append(f"no_rule_decisions:{case.case_id}")
     failures.extend(_alignment_failures("question", case.case_id, questions, "alignment_status"))
-    failures.extend(_alignment_failures("portrait_axis", case.case_id, portrait_axes, "alignment_status"))
-    failures.extend(_alignment_failures("portrait_model", case.case_id, portrait_models, "alignment_status", allow_missing=True))
-    failures.extend(_rule_alignment_failures(case.case_id, rule_candidates))
-    if runtime.get("rule_candidate_validation", {}).get("ok") is not True:
-        failures.append(f"rule_candidate_validation_failed:{case.case_id}")
-    if runtime.get("portrait_intelligence_validation", {}).get("ok") is not True:
-        failures.append(f"portrait_intelligence_validation_failed:{case.case_id}")
+    if runtime.get("decision_validation", {}).get("ok") is not True:
+        failures.append(f"decision_validation_failed:{case.case_id}")
     return {
         "version": "v20.rule_portrait_batch_case_result.v1",
         "case_id": case.case_id,
@@ -259,21 +249,12 @@ def _evaluate_batch_case(
             dict.fromkeys(str(row.get("alignment_status", "")) for row in questions if row.get("alignment_status"))
         ),
         "portrait_domains": portrait_domains,
-        "portrait_alignment_statuses": tuple(
-            dict.fromkeys(str(row.get("alignment_status", "")) for row in portrait_axes if row.get("alignment_status"))
-        ),
-        "rule_candidate_domains": rule_domains,
-        "rule_alignment_statuses": tuple(
-            dict.fromkeys(
-                str(row.get("bazi_alignment", {}).get("status", ""))
-                for row in rule_candidates
-                if isinstance(row.get("bazi_alignment"), dict)
-            )
-        ),
+        "decision_domains": rule_domains,
+        "decision_statuses": tuple(dict.fromkeys(str(row.get("status", "")) for row in decisions if row.get("status"))),
         "feature_count": len(features),
         "question_count": len(questions),
-        "portrait_axis_count": len(portrait_axes),
-        "rule_candidate_count": len(rule_candidates),
+        "portrait_tag_count": len(portrait_tags),
+        "decision_count": len(decisions),
         "runtime_mutation": False,
     }
 
@@ -301,6 +282,14 @@ def _coverage_summary(rule_rows: list[dict[str, object]], case_rows: list[dict[s
         "rule_domains": rule_domains,
         "portrait_domains": portrait_domains,
         "feature_domains_seen": question_domains,
+        "decision_domains_seen": sorted(
+            {
+                str(domain)
+                for row in case_rows
+                for domain in row.get("decision_domains", ())
+                if str(domain)
+            }
+        ),
         "aligned_rule_domain_count": sum(1 for row in rule_rows if row.get("ok") is True),
         "passing_case_count": sum(1 for row in case_rows if row.get("ok") is True),
         "runtime_mutation": False,
@@ -356,18 +345,26 @@ def _alignment_failures(
     return failures
 
 
-def _rule_alignment_failures(case_id: str, rows: list[dict[str, object]]) -> list[str]:
-    failures = []
-    for row in rows:
-        rule_id = str(row.get("rule_id", ""))
-        alignment = row.get("bazi_alignment", {})
-        if not isinstance(alignment, dict) or alignment.get("ok") is not True:
-            failures.append(f"rule_alignment_failed:{case_id}:{rule_id}")
-        if row.get("runtime_allowed") is True:
-            failures.append(f"rule_runtime_allowed:{case_id}:{rule_id}")
-    return failures
-
-
 def _emit(progress: ProgressCallback | None, message: str) -> None:
     if progress is not None:
         progress(message)
+
+
+def _decision_domains(rows: list[dict[str, object]]) -> tuple[str, ...]:
+    domains: list[str] = []
+    for row in rows:
+        domains.append(str(row.get("domain", "")))
+        rule_key = str(row.get("rule_key", ""))
+        for marker, domain in (
+            (".ten_god.", "ten_god"),
+            (".wealth.", "wealth"),
+            (".strength.", "strength"),
+            (".branch.", "branch"),
+            (".time.", "time"),
+            (".element.", "element"),
+            (".useful_god.", "useful_god"),
+            (".pattern.", "pattern"),
+        ):
+            if marker in rule_key:
+                domains.append(domain)
+    return tuple(dict.fromkeys(domain for domain in domains if domain))

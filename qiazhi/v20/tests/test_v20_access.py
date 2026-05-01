@@ -15,16 +15,13 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert {"user", "analyst", "lab", "admin"} <= set(roles)
     assert "answer_text" in roles["user"]["allowed_runtime_fields"]
     assert "knowledge_refs" in roles["user"]["blocked_runtime_fields"]
-    assert "feature_discovery" in roles["user"]["allowed_runtime_fields"]
-    assert "portrait_intelligence" in roles["user"]["allowed_runtime_fields"]
+    assert "decision_report" in roles["user"]["allowed_runtime_fields"]
+    assert "dynamic_portrait" in roles["user"]["allowed_runtime_fields"]
     assert "feature_layer" in roles["analyst"]["allowed_runtime_fields"]
     assert "knowledge_semantic_model" in roles["analyst"]["allowed_runtime_fields"]
-    assert "feature_discovery" in roles["analyst"]["allowed_runtime_fields"]
-    assert "feature_discovery_validation" in roles["analyst"]["allowed_runtime_fields"]
-    assert "portrait_intelligence_validation" in roles["analyst"]["allowed_runtime_fields"]
-    assert "rule_candidate_support" in roles["analyst"]["allowed_runtime_fields"]
-    assert "rule_candidate_validation" in roles["analyst"]["allowed_runtime_fields"]
-    assert "rule_candidate_ranking" in roles["lab"]["allowed_runtime_fields"]
+    assert "decision_report" in roles["analyst"]["allowed_runtime_fields"]
+    assert "decision_validation" in roles["analyst"]["allowed_runtime_fields"]
+    assert "rule_candidate_support" not in roles["analyst"]["allowed_runtime_fields"]
     assert "chart_graph" in roles["lab"]["allowed_runtime_fields"]
     assert manifest["runtime_mutation"] is False
 
@@ -48,18 +45,12 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "rule_candidate_support" not in projected
     assert "rule_candidate_validation" not in projected
     assert "chart_graph" not in projected
-    assert "feature_discovery" in projected
-    assert "feature_id" not in projected["feature_discovery"]["ranked_features"][0]
-    assert "question_policy" not in projected["feature_discovery"]
-    assert "portrait_intelligence" in projected
-    assert "matched_feature_ids" not in projected["portrait_intelligence"]["axis_models"][0]["sub_axis_candidates"][0]
-    assert "training_lane" not in projected["portrait_intelligence"]
+    assert "decision_report" in projected
+    assert "dynamic_portrait" in projected
+    assert "feature_ids" not in projected["decision_report"]["decisions"][0]
+    assert "source_decision_keys" not in projected["dynamic_portrait"]["tags"][0]
     assert all("source_feature_ids" not in row for row in projected["questions"])
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])
-    assert all("feature_ids" not in row for row in projected["portrait_projection"]["axes"])
-    assert all("knowledge_links" not in row for row in projected["portrait_projection"]["axes"])
-    assert all("feature_id" not in row for row in projected["portrait_projection"]["items"])
-    assert all("knowledge_links" not in row for row in projected["portrait_projection"]["items"])
 
 
 def test_v20_role_measure_endpoint_projects_by_role() -> None:
@@ -83,6 +74,6 @@ def test_v20_role_measure_endpoint_projects_by_role() -> None:
     assert analyst["role"]["role_key"] == "analyst"
     assert "feature_layer" in analyst
     assert "knowledge_semantic_model" in analyst
-    assert "feature_discovery_validation" in analyst
-    assert "portrait_intelligence_validation" in analyst
+    assert "decision_validation" in analyst
+    assert "dynamic_portrait" in analyst
     assert roles["runtime_mutation"] is False

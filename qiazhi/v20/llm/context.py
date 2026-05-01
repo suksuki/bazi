@@ -29,14 +29,20 @@ def build_llm_context_pack(
     answer_plan: AnswerPlan,
     answer_text: str,
     *,
+    decision_report: dict[str, object] | None = None,
+    dynamic_portrait: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
+    decision_report = decision_report or {}
+    dynamic_portrait = dynamic_portrait or {}
     return {
         "version": "v20.llm_context_pack.v1",
         "locale": locale,
         "user_text_present": bool(user_text.strip()),
         "feature_domains": sorted({feature.domain for feature in feature_layer.features}),
         "macro_feature_count": len(feature_layer.macro_features),
+        "decision_count": int(decision_report.get("decision_count", 0) or 0),
+        "dynamic_portrait_tag_count": int(dynamic_portrait.get("tag_count", 0) or 0),
         "question_count": len(questions),
         "knowledge_ref_count": len(knowledge_report.refs),
         "task_contexts": {
@@ -60,7 +66,7 @@ def build_llm_context_pack(
                 "contract": PRACTITIONER_ANSWER.to_dict(),
                 "prompt": {
                     "task": "practitioner_answer",
-                    "status": "requires_chart_feature_discovery_knowledge_semantic_and_portrait_context",
+                    "status": "requires_chart_decision_report_dynamic_portrait_and_knowledge_context",
                     "fallback": "deterministic_answer",
                 },
             },
@@ -73,7 +79,7 @@ def build_llm_context_pack(
         "runtime_mutation": False,
         "guardrails": [
             "LLM_CONTEXT_PACK_IS_INTERNAL_ASSISTIVE_INPUT",
-            "FEATURE_LAYER_AND_ANSWER_PLAN_ARE_SOURCE_OF_TRUTH",
+            "DECISION_REPORT_AND_ANSWER_PLAN_ARE_SOURCE_OF_TRUTH",
             "LLM_OUTPUT_MUST_PASS_VALIDATORS_BEFORE_PUBLICATION",
             "NO_CORE_FACT_OR_RULE_MUTATION",
         ],

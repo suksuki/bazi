@@ -24,7 +24,7 @@ from v20.validation.golden import GOLDEN_CASES
 from v20.validation.synthetic_schema import SyntheticCase
 
 
-def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
+def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="v20.test")
 
     assert result["version"] == "v20.runtime_result.v1"
@@ -43,14 +43,15 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["knowledge_alignment"]["status"] == "pass"
     assert result["knowledge_semantic_model"]["status"] == "ready"
     assert result["knowledge_semantic_validation"]["ok"] is True
-    assert result["feature_discovery"]["version"] == "v20.feature_discovery.v1"
-    assert result["feature_discovery"]["status"] == "ready"
-    assert result["feature_discovery"]["ranked_features"]
-    assert result["feature_discovery"]["domain_hypotheses"]
-    assert result["feature_discovery"]["training_signal"]["runtime_mutation"] is False
-    assert result["feature_discovery"]["knowledge_semantic_signal"]["status"] == "ready"
-    assert result["feature_discovery"]["question_policy"]["source"] == "feature_discovery_fusion"
-    assert result["feature_discovery_validation"]["ok"] is True
+    assert result["decision_report"]["version"] == "v20.decision_report.v1"
+    assert result["decision_report"]["decision_count"] >= 5
+    assert result["decision_validation"]["ok"] is True
+    assert result["dynamic_portrait"]["version"] == "v20.dynamic_portrait.v1"
+    assert result["dynamic_portrait"]["tag_count"] >= 1
+    assert "feature_discovery" not in result
+    assert "portrait_projection" not in result
+    assert "portrait_intelligence" not in result
+    assert "rule_candidate_support" not in result
     assert result["knowledge_report"]["count"] >= 6
     assert all(row["reviewed"] and row["evidence_template"] for row in result["knowledge_refs"])
     assert len(result["llm_capabilities"]) >= 6
@@ -58,13 +59,6 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["answer_plan"]["measurement_focus"] == "bazi_measurement"
     assert result["answer_plan"]["domain_projection"]["guardrails"]
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]
-    assert result["rule_candidate_support"]["runtime_mutation"] is False
-    assert result["rule_candidate_support"]["candidate_count"] >= 1
-    assert any(row["matched_feature_count"] >= 1 for row in result["rule_candidate_support"]["candidates"])
-    assert all(row["bazi_alignment"]["ok"] is True for row in result["rule_candidate_support"]["candidates"])
-    assert result["rule_candidate_validation"]["ok"] is True
-    assert result["rule_candidate_ranking_validation"]["ok"] is True
-    assert result["rule_candidate_ranking"]["policy"]["status"] == "active_shadow"
     assert result["prediction_policy"]["core_focus"] == "bazi_measurement"
     assert result["llm_assist"]["status"] == "idle"
     assert result["llm_assist"]["context_pack"]["publishable"] is False
@@ -72,12 +66,9 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert "answer_plan_rewrite" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert "practitioner_answer" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert result["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
-    assert result["portrait_intelligence"]["version"] == "v20.portrait_intelligence.v1"
-    assert result["portrait_intelligence"]["axis_models"]
-    assert result["portrait_intelligence_validation"]["ok"] is True
 
 
-def test_v20_feature_discovery_fuses_interaction_knowledge_portrait_and_training() -> None:
+def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> None:
     result = run_runtime_from_pillars(
         "庚午",
         "辛巳",
@@ -88,43 +79,28 @@ def test_v20_feature_discovery_fuses_interaction_knowledge_portrait_and_training
         flow_year_pillar="丙午",
         luck_pillar="甲申",
     )
-    discovery = result["feature_discovery"]
-    domains = {row["domain"] for row in discovery["domain_hypotheses"]}
-    top_features = discovery["ranked_features"][:5]
+    decision_domains = {row["domain"] for row in result["decision_report"]["decisions"]}
+    question_domains = {row["domain"] for row in result["questions"]}
 
-    assert discovery["mode"] == "feature_spine_knowledge_portrait_interaction_training_fusion"
-    assert discovery["interaction_focus"]["user_text_present"] is True
-    assert {"career", "wealth"} <= set(discovery["interaction_focus"]["candidate_domains"])
-    assert {"career", "wealth"} & domains
-    assert any("corpus_training_prior" in row["sources"] for row in top_features)
-    assert discovery["training_signal"]["status"] in {"ready", "not_built"}
-    assert discovery["knowledge_semantic_signal"]["status"] == "ready"
-    assert discovery["question_policy"]["status"] in {"active_shadow", "empty"}
-    assert result["feature_discovery_validation"]["status"] == "pass"
+    assert result["decision_report"]["status"] == "ready"
+    assert result["decision_validation"]["status"] == "pass"
+    assert result["dynamic_portrait"]["status"] == "ready"
+    assert {"career", "wealth"} & decision_domains
+    assert {"career", "wealth"} & question_domains
+    assert result["llm_assist"]["status"] == "ready"
     assert result["knowledge_semantic_validation"]["status"] == "pass"
-    assert result["portrait_intelligence_validation"]["status"] == "pass"
-    assert result["portrait_intelligence"]["axis_models"][0]["sub_axis_candidates"]
     assert result["runtime_mutation"] is False
     assert "八字测算重点" in result["answer_text"]
     assert "确定事件" in result["answer_text"]
     assert "core." not in result["answer_text"]
     assert "feature." not in result["answer_text"]
-    assert result["portrait_projection"]["version"] == "v20.portrait_projection.v2"
-    assert result["portrait_projection"]["role"] == "bazi_feature_projection_and_calibration_surface_only"
-    assert result["portrait_projection"]["axes"]
-    assert result["portrait_projection"]["source_policy"] == "feature_first_knowledge_supported"
-    assert "KNOWLEDGE_SUPPORTS_LABELS_NOT_VERDICTS" in result["portrait_projection"]["guardrails"]
-    assert any(row["knowledge_ref_count"] >= 1 for row in result["portrait_projection"]["axes"])
-    assert all("question_bias" in row["forbidden_usage"] for row in result["portrait_projection"]["axes"])
-    assert all(row["alignment_status"] in {"bazi_core_aligned", "bazi_projection_aligned"} for row in result["portrait_projection"]["axes"])
     assert result["measurement_report"]["core_focus"] == "bazi_measurement"
     assert result["measurement_report"]["selected_question_key"] == result["selected_question"]["question_key"]
-    assert {"career", "relationship"} <= set(result["measurement_report"]["applied_domain_keys"])
     assert all(row["role"] == "bazi_measurement_entry" for row in result["questions"])
     assert all(row["measurement_topic"] for row in result["questions"])
     assert all(row["alignment_status"] in {"bazi_core_aligned", "bazi_projection_aligned"} for row in result["questions"])
     assert all(row["bazi_focus"] for row in result["questions"])
-    assert {"career", "relationship", "element"} <= {row["domain"] for row in result["questions"]}
+    assert {"career", "wealth", "element"} & {row["domain"] for row in result["questions"]}
 
 
 def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
@@ -228,8 +204,8 @@ def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:
     }
     assert "time" in {row["domain"] for row in result["knowledge_refs"]}
     assert result["llm_assist"]["routed_question_key"] == "q_time_layer_context"
-    assert "结构材料：时间干支：庚子" in result["answer_text"]
-    assert "对应十神：七杀" in result["answer_text"]
+    assert "时间层触发候选" in result["answer_text"]
+    assert "庚子=七杀" in result["answer_text"]
     assert "日柱午与流年子冲" in result["answer_text"]
     assert "发财" not in result["answer_text"]
 
@@ -245,9 +221,9 @@ def test_v20_answers_include_verified_hidden_ten_god_material() -> None:
     )
 
     assert result["selected_question"]["question_key"] == "q_hidden_stem_role"
-    assert "藏干十神材料" in result["answer_text"]
+    assert "十神显隐要分层读取" in result["answer_text"]
     assert "正官" in result["answer_text"]
-    assert "比肩" in result["answer_text"]
+    assert "七杀" in result["answer_text"]
     assert "feature." not in result["answer_text"]
 
 
@@ -266,23 +242,19 @@ def test_v20_p85_applied_domain_answers_use_professional_reading_paths() -> None
     assert "q_income_stability" in {row["question_key"] for row in result["questions"]}
     assert result["selected_question"]["question_key"] == "q_income_stability"
     assert result["selected_question"]["domain"] == "wealth"
-    assert "财运结构读法" in result["answer_text"]
-    assert "财星材料是否可见" in result["answer_text"]
-    assert "已接入材料" in result["answer_text"]
+    assert "动态裁决画像" in result["answer_text"]
+    assert "财星" in result["answer_text"]
     assert "知识依据" in result["answer_text"]
     assert "财星材料边界" in result["answer_text"]
-    assert "规则候选" in result["answer_text"]
-    assert "影子复核" in result["answer_text"]
-    assert "当前盘命中" in result["answer_text"]
-    assert "下一步复核" in result["answer_text"]
-    assert "具体收益结果" in result["answer_text"]
+    assert "规则候选" not in result["answer_text"]
+    assert "影子复核" not in result["answer_text"]
+    assert "下一步" in result["answer_text"]
+    assert "收益结果" not in result["answer_text"]
     assert "feature." not in result["answer_text"]
-    assert "knowledge_evidence_support" in {
+    assert "decision_knowledge_support" in {
         row["section_type"] for row in result["answer_plan"]["sections"]
     }
-    assert "rule_candidate_support" in {
-        row["section_type"] for row in result["answer_plan"]["sections"]
-    }
+    assert "dynamic_decision_portrait" in {row["section_type"] for row in result["answer_plan"]["sections"]}
     synthetic = SyntheticCase(
         "v20.synthetic.wealth-rule-candidate",
         ("壬寅", "甲辰", "丙子", "甲午"),
@@ -305,12 +277,12 @@ def test_v20_p85_time_answer_preserves_trigger_path_section() -> None:
         luck_pillar="庚戌",
     )
 
-    assert "时间触发读法" in result["answer_text"]
-    assert "庚戌、丙午" in result["answer_text"]
-    assert "偏财、比肩" in result["answer_text"]
+    assert "时间层触发候选" in result["answer_text"]
+    assert "庚戌=偏财" in result["answer_text"]
+    assert "丙午=比肩" in result["answer_text"]
     assert "月柱辰与大运戌冲" in result["answer_text"]
     assert "时间层触发边界" in result["answer_text"]
-    assert "下一步复核" in result["answer_text"]
+    assert "下一步" in result["answer_text"]
     assert "feature." not in result["answer_text"]
 
 

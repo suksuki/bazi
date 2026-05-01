@@ -43,7 +43,8 @@ def question_ranking_manifest() -> dict[str, object]:
             "synthetic_suite_result",
             "corpus_coverage_gap",
             "question_selection_outcome",
-            "shadow_rule_candidate_validation",
+            "decision_report_validation",
+            "practitioner_control_feedback",
         ],
         "blocked_learning_outputs": [
             "new_question_key",
@@ -54,7 +55,7 @@ def question_ranking_manifest() -> dict[str, object]:
         "runtime_mutation": False,
         "guardrails": [
             "QUESTION_RANKING_IS_REORDER_ONLY",
-            "FEATURE_SPINE_CANDIDATES_ARE_AUTHORITATIVE",
+            "DYNAMIC_DECISION_CANDIDATES_ARE_AUTHORITATIVE",
             "LEARNED_POLICY_REQUIRES_PROMOTION_GATE",
         ],
     }

@@ -44,7 +44,7 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
             "feature.ten_god.focus.zheng_cai",
         ),
         expected_question_keys=("q_income_stability", "q_income_factors"),
-        notes="财星材料显现，用来验证财星规则候选是否能命中当前盘特征。",
+        notes="财星材料显现，用来验证财星规则裁决是否能命中当前盘特征。",
     ),
     SyntheticRuleCase(
         case_id="v20.rule.synthetic.branch_collision",
@@ -56,7 +56,7 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
             "feature.branch.relation_type.clash",
         ),
         expected_question_keys=("q_branch_relation_detail",),
-        notes="原局地支冲破并见，用来验证地支关系规则候选的碰撞能力。",
+        notes="原局地支冲破并见，用来验证地支关系规则裁决的碰撞能力。",
     ),
     SyntheticRuleCase(
         case_id="v20.rule.synthetic.element_prominent",
@@ -68,7 +68,7 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
             "feature.element.weak.metal",
         ),
         expected_question_keys=("q_element_balance", "q_element_support_pressure"),
-        notes="木偏显、金偏弱，用来验证五行规则候选是否命中特征而不落入健康断语。",
+        notes="木偏显、金偏弱，用来验证五行规则裁决是否命中特征而不落入健康断语。",
     ),
     SyntheticRuleCase(
         case_id="v20.rule.synthetic.time_trigger",
@@ -250,17 +250,21 @@ def _evaluate_rule_case(case: SyntheticRuleCase) -> dict[str, object]:
         for row in runtime.get("questions", ())
         if isinstance(row, dict) and row.get("question_key")
     )
-    candidates = [
-        row for row in runtime.get("rule_candidate_support", {}).get("candidates", ())
+    decisions = [
+        row for row in runtime.get("decision_report", {}).get("decisions", ())
         if isinstance(row, dict)
     ]
-    candidate_domains = tuple(dict.fromkeys(str(row.get("domain", "")) for row in candidates if row.get("domain")))
+    hits = [
+        row for row in runtime.get("decision_report", {}).get("hits", ())
+        if isinstance(row, dict)
+    ]
+    candidate_domains = _decision_domains((*decisions, *hits))
     matched_by_domain: dict[str, tuple[str, ...]] = {}
-    for row in candidates:
-        domain = str(row.get("domain", ""))
-        matched = tuple(str(item) for item in row.get("matched_feature_ids", ()) if str(item))
-        if matched:
-            matched_by_domain[domain] = matched
+    for row in decisions:
+        for domain in _row_domains(row):
+            matched = tuple(str(item) for item in row.get("feature_ids", ()) if str(item))
+            if matched:
+                matched_by_domain[domain] = matched
     failures = []
     for prefix in case.expected_feature_prefixes:
         if not any(feature_id.startswith(prefix) for feature_id in feature_ids):
@@ -270,9 +274,9 @@ def _evaluate_rule_case(case: SyntheticRuleCase) -> dict[str, object]:
             failures.append(f"missing_expected_question:{case.case_id}:{key}")
     for domain in case.expected_rule_domains:
         if domain not in candidate_domains:
-            failures.append(f"missing_expected_rule_domain:{case.case_id}:{domain}")
+            failures.append(f"missing_expected_decision_domain:{case.case_id}:{domain}")
         elif not matched_by_domain.get(domain):
-            failures.append(f"rule_domain_without_feature_collision:{case.case_id}:{domain}")
+            failures.append(f"decision_domain_without_feature_anchor:{case.case_id}:{domain}")
     answer_text = str(runtime.get("answer_text", ""))
     for text in case.forbidden_text:
         if text and text in answer_text:
@@ -291,5 +295,30 @@ def _evaluate_rule_case(case: SyntheticRuleCase) -> dict[str, object]:
         "selected_question_key": runtime["selected_question"]["question_key"],
         "answer_boundary_ok": not any(text and text in answer_text for text in case.forbidden_text),
         "runtime_mutation": False,
-        "guardrails": ["SYNTHETIC_CASE_RESULT_ONLY", "NO_RUNTIME_RULE_ACTIVATION"],
+        "guardrails": ["SYNTHETIC_CASE_RESULT_ONLY", "NO_RUNTIME_RULE_PROMOTION"],
     }
+
+
+def _decision_domains(rows: tuple[dict[str, object], ...]) -> tuple[str, ...]:
+    domains: list[str] = []
+    for row in rows:
+        domains.extend(_row_domains(row))
+    return tuple(dict.fromkeys(domain for domain in domains if domain))
+
+
+def _row_domains(row: dict[str, object]) -> tuple[str, ...]:
+    domains = [str(row.get("domain", ""))]
+    rule_key = str(row.get("rule_key", ""))
+    for marker, domain in (
+        (".ten_god.", "ten_god"),
+        (".wealth.", "wealth"),
+        (".strength.", "strength"),
+        (".branch.", "branch"),
+        (".time.", "time"),
+        (".element.", "element"),
+        (".useful_god.", "useful_god"),
+        (".pattern.", "pattern"),
+    ):
+        if marker in rule_key:
+            domains.append(domain)
+    return tuple(dict.fromkeys(domain for domain in domains if domain))

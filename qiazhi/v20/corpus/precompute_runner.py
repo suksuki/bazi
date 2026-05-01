@@ -36,7 +36,7 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
     measurement_report = runtime_result["measurement_report"]
     questions = runtime_result["questions"]
     knowledge_refs = runtime_result["knowledge_refs"]
-    portrait = runtime_result["portrait_projection"]
+    portrait = runtime_result["dynamic_portrait"]
     features = tuple(row for row in feature_layer["features"] if isinstance(row, dict))
     relation_types = tuple(
         sorted(
@@ -100,7 +100,7 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
         "measurement_domains": tuple(measurement_report.get("applied_domain_keys", ())),
         "question_keys": tuple(str(row.get("question_key", "")) for row in questions if isinstance(row, dict)),
         "knowledge_ids": tuple(str(row.get("knowledge_id", "")) for row in knowledge_refs if isinstance(row, dict)),
-        "portrait_domains": tuple(str(row.get("domain", "")) for row in portrait.get("axes", ()) if isinstance(row, dict)),
+        "portrait_domains": tuple(str(row.get("domain", "")) for row in portrait.get("tags", ()) if isinstance(row, dict)),
         "relation_types": relation_types,
         "visible_ten_gods": visible_ten_gods,
         "hidden_ten_gods": hidden_ten_gods,
@@ -109,9 +109,9 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
         "evidence_density": {
             "feature_count": feature_layer.get("feature_count", 0),
             "knowledge_ref_count": runtime_result["knowledge_report"].get("count", 0),
-            "portrait_axis_count": portrait.get("axis_count", 0),
+            "portrait_tag_count": portrait.get("tag_count", 0),
         },
-        "label_policy": "structural_feature_and_portrait_tags_only",
+        "label_policy": "structural_features_and_dynamic_decision_portrait_tags_only",
         "guardrails": [
             "NO_DESTINY_TRUTH_LABEL",
             "NO_EVENT_OUTCOME_LABEL",

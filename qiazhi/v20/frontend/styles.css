@@ -561,10 +561,6 @@ textarea:focus {
   border-left-color: var(--blue);
 }
 
-.evidence-row.rule-candidate {
-  border-left: 4px solid var(--gold);
-}
-
 .evidence-row.validation {
   border-left: 4px solid var(--blue);
 }
@@ -708,8 +704,7 @@ textarea:focus {
   border-color: rgba(71, 179, 125, 0.42);
 }
 
-.answer-panel pre,
-.feedback-panel pre {
+.answer-panel pre {
   color: #dbe8e3;
   font-size: 14px;
   line-height: 1.7;
@@ -728,7 +723,6 @@ textarea:focus {
   padding-top: 14px;
 }
 
-.feedback-row,
 .dialog-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
@@ -736,7 +730,6 @@ textarea:focus {
   margin-top: 14px;
 }
 
-.feedback-row button,
 .dialog-row button,
 .mini-action {
   min-height: 38px;
@@ -898,7 +891,6 @@ body.profile-reading .run-summary,
 body.profile-reading .feature-spine-panel,
 body.profile-reading .questions-panel-card,
 body.profile-reading .side-panel,
-body.profile-reading .feedback-panel,
 body.profile-reading .tag-line {
   display: none;
 }

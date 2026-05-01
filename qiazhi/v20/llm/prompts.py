@@ -42,12 +42,11 @@ def practitioner_answer_prompt(
     chart_facts: dict[str, object],
     time_context: dict[str, object],
     selected_question: dict[str, object],
-    feature_discovery: dict[str, object],
     knowledge_semantic_model: dict[str, object],
-    portrait_intelligence: dict[str, object],
-    rule_candidate_support: dict[str, object],
     answer_plan: AnswerPlan,
     verified_answer_text: str,
+    decision_report: dict[str, object] | None = None,
+    dynamic_portrait: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
     return {
@@ -58,11 +57,9 @@ def practitioner_answer_prompt(
             "chart": _compact_chart(chart_facts),
             "time_context": _compact_time_context(time_context),
             "selected_question": _compact_selected_question(selected_question),
-            "top_discovered_features": _compact_discovered_features(feature_discovery),
-            "top_domain_hypotheses": _compact_domain_hypotheses(feature_discovery),
+            "rule_decisions": _compact_decisions(decision_report or {}),
+            "dynamic_portrait": _compact_dynamic_portrait(dynamic_portrait or {}),
             "knowledge_semantic_domains": _compact_knowledge_semantic_domains(knowledge_semantic_model),
-            "portrait_axes": _compact_portrait_axes(portrait_intelligence),
-            "rule_candidates": _compact_rule_candidates(rule_candidate_support),
             "answer_plan": _compact_answer_plan(answer_plan),
             "verified_answer_text": _clip(verified_answer_text, 2200),
         },
@@ -76,8 +73,8 @@ def practitioner_answer_prompt(
         },
         "instruction": (
             "Return only one JSON object. Act as a professional Bazi practitioner, but use only the supplied verified context. "
-            "Write a useful answer for the selected question: start with the chart's main structural line, then answer the question, "
-            "then explain key evidence, useful follow-up questions, and boundaries. "
+            "Write a useful answer for the selected question: start from the provided rule decisions and dynamic portrait, "
+            "then answer the question, then explain key evidence, useful follow-up questions, and boundaries. "
             "Keep the whole response concise: text under 900 Chinese characters, 2-4 evidence notes, 2-4 next questions, and 1-3 boundary notes. "
             "Do not wrap JSON in markdown fences. "
             "Do not create stems, branches, ten-gods, events, timing, private facts, or conclusions that are not present in the context. "
@@ -179,34 +176,40 @@ def _compact_selected_question(selected_question: dict[str, object]) -> dict[str
     }
 
 
-def _compact_discovered_features(feature_discovery: dict[str, object]) -> list[dict[str, object]]:
+def _compact_decisions(report: dict[str, object]) -> list[dict[str, object]]:
     rows = []
-    for row in (feature_discovery.get("ranked_features") or [])[:6]:
+    for row in (report.get("decisions") or [])[:7]:
         if not isinstance(row, dict):
             continue
         rows.append(
             {
-                "title": row.get("title", ""),
-                "domain_label": row.get("domain_label", row.get("domain", "")),
-                "score": row.get("discovery_score", 0),
-                "reason": _clip(str(row.get("reason", "")), 180),
-                "summary": _clip(str(row.get("summary", "")), 180),
+                "label": row.get("label", ""),
+                "domain": row.get("domain", ""),
+                "status": row.get("status", ""),
+                "role": row.get("role", ""),
+                "score": row.get("score", 0),
+                "support": list(row.get("support", ())[:4]) if isinstance(row.get("support", ()), (list, tuple)) else [],
+                "weakening": list(row.get("weakening", ())[:3]) if isinstance(row.get("weakening", ()), (list, tuple)) else [],
+                "question_seeds": list(row.get("question_seeds", ())[:3]) if isinstance(row.get("question_seeds", ()), (list, tuple)) else [],
             }
         )
     return rows
 
 
-def _compact_domain_hypotheses(feature_discovery: dict[str, object]) -> list[dict[str, object]]:
-    return [
-        {
-            "domain": row.get("domain", ""),
-            "label": row.get("label", ""),
-            "score": row.get("discovery_score", 0),
-            "status": row.get("status", ""),
-        }
-        for row in (feature_discovery.get("domain_hypotheses") or [])[:5]
-        if isinstance(row, dict)
-    ]
+def _compact_dynamic_portrait(portrait: dict[str, object]) -> list[dict[str, object]]:
+    rows = []
+    for row in (portrait.get("tags") or [])[:6]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "label": row.get("label", ""),
+                "domain": row.get("domain", ""),
+                "summary": _clip(str(row.get("summary", "")), 160),
+                "score": row.get("score", 0),
+            }
+        )
+    return rows
 
 
 def _compact_knowledge_semantic_domains(model: dict[str, object]) -> list[dict[str, object]]:
@@ -227,40 +230,6 @@ def _compact_knowledge_semantic_domains(model: dict[str, object]) -> list[dict[s
             }
         )
     return rows
-
-
-def _compact_portrait_axes(report: dict[str, object]) -> list[dict[str, object]]:
-    rows = []
-    for row in (report.get("axis_models") or [])[:5]:
-        if not isinstance(row, dict):
-            continue
-        rows.append(
-            {
-                "label": row.get("label", ""),
-                "domain": row.get("domain", ""),
-                "score": row.get("intelligence_score", 0),
-                "sub_axes": [
-                    item.get("label", "")
-                    for item in (row.get("sub_axis_candidates") or [])[:3]
-                    if isinstance(item, dict)
-                ],
-                "calibration_prompt": _clip(str(row.get("calibration_prompt", "")), 160),
-            }
-        )
-    return rows
-
-
-def _compact_rule_candidates(report: dict[str, object]) -> list[dict[str, object]]:
-    return [
-        {
-            "label": row.get("label", ""),
-            "domain": row.get("domain", ""),
-            "condition": _clip(str(row.get("condition_summary", "")), 160),
-            "validation": _clip(str(row.get("validation_summary", "")), 160),
-        }
-        for row in (report.get("candidates") or [])[:3]
-        if isinstance(row, dict)
-    ]
 
 
 def _compact_answer_plan(plan: AnswerPlan) -> dict[str, object]:

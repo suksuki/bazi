@@ -3,7 +3,6 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from v20.answer.measurement_policy import domain_label, feature_public_summary
-from v20.answer.rule_candidate_support import rule_candidate_section_body
 from v20.features.schema import BaziFeature, FeatureLayer
 from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.schema import KnowledgeRef
@@ -151,13 +150,6 @@ def build_domain_reading_sections(
             feature_ids=feature_ids,
             domain=domain,
             section_type="knowledge_evidence_support",
-        ),
-        DomainReadingSection(
-            title="规则候选",
-            body=rule_candidate_section_body(rule_candidate_report or {}),
-            feature_ids=feature_ids,
-            domain=domain,
-            section_type="rule_candidate_support",
         ),
         DomainReadingSection(
             title="下一步复核",

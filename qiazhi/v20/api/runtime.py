@@ -4,25 +4,19 @@ from v20.answer.composer import compose_answer
 from v20.answer.evidence import build_evidence_pack
 from v20.answer.measurement_policy import prediction_policy
 from v20.answer.plan import build_answer_plan
-from v20.answer.rule_candidate_support import build_rule_candidate_question_ranking, build_rule_candidate_support
 from v20.core.chart import build_chart_facts, chart_input_from_displays
 from v20.core.strength import infer_core
 from v20.core.time_context import build_time_context
+from v20.decision.engine import build_decision_report
+from v20.decision.questions import recommend_decision_questions, resolve_requested_question
+from v20.decision.validation import validate_decision_report
 from v20.features.compiler import compile_features
 from v20.graph.chart_graph import build_chart_graph
 from v20.graph.rule_graph import select_rule_paths
-from v20.intelligence.feature_discovery import (
-    build_feature_discovery_question_policy,
-    build_feature_discovery_report,
-    validate_feature_discovery_report,
-)
 from v20.intelligence.knowledge_semantic_model import (
     build_knowledge_semantic_model,
     validate_knowledge_semantic_model,
 )
-from v20.interaction.portrait_intelligence import build_portrait_intelligence, validate_portrait_intelligence
-from v20.interaction.portrait_projection import portrait_projection
-from v20.interaction.questions import recommend_questions
 from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.llm.assist import attach_answer_safety_review, build_llm_routing_assist
@@ -31,7 +25,6 @@ from v20.llm.contracts import LLM_CONTRACTS
 from v20.llm.practitioner import build_practitioner_answer_with_llm
 from v20.llm.tasks import rewrite_answer_plan_with_llm
 from v20.measurement.report import build_measurement_report
-from v20.validation.rule_candidate_gate import validate_rule_candidate_question_ranking, validate_rule_candidate_support
 
 
 def run_runtime_from_pillars(
@@ -61,58 +54,34 @@ def run_runtime_from_pillars(
     chart_graph = build_chart_graph(chart_facts)
     rule_paths = select_rule_paths(chart_graph)
     feature_layer = compile_features(chart_facts, core, rule_paths, time_context)
-    preliminary_knowledge_report = retrieve_knowledge(feature_layer)
-    preliminary_portrait = portrait_projection(feature_layer, preliminary_knowledge_report)
-    preliminary_knowledge_semantic_model = build_knowledge_semantic_model(
-        feature_layer,
-        preliminary_knowledge_report,
-        user_text=user_text,
-    )
-    _rule_candidate_ranking_policy, rule_candidate_ranking = build_rule_candidate_question_ranking(feature_layer)
-    preliminary_feature_discovery = build_feature_discovery_report(
-        feature_layer,
-        knowledge_report=preliminary_knowledge_report,
-        portrait_projection=preliminary_portrait,
-        user_text=user_text,
-        rule_candidate_ranking=rule_candidate_ranking,
-        knowledge_semantic_model=preliminary_knowledge_semantic_model,
-    )
-    feature_discovery_question_policy = build_feature_discovery_question_policy(preliminary_feature_discovery)
-    questions = recommend_questions(feature_layer, ranking_policy=feature_discovery_question_policy)
+    decision_report = build_decision_report(chart_facts, core, feature_layer, time_context)
+    decision_validation = validate_decision_report(decision_report)
+    dynamic_portrait = decision_report.get("dynamic_portrait", {})
+    questions = recommend_decision_questions(decision_report, feature_layer)
     llm_routing_assist = build_llm_routing_assist(user_text, feature_layer, questions, locale=locale)
-    selected_question = _select_question(questions, question_key or str(llm_routing_assist.get("routed_question_key", "")))
+    selected_question = resolve_requested_question(
+        questions,
+        question_key or str(llm_routing_assist.get("routed_question_key", "")),
+        feature_layer,
+    )
+    if all(question.question_key != selected_question.question_key for question in questions):
+        questions = (selected_question, *questions)
     knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
     evidence_pack = build_evidence_pack(feature_layer)
-    rule_candidate_report = build_rule_candidate_support(selected_question, feature_layer=feature_layer)
-    rule_candidate_validation = validate_rule_candidate_support(rule_candidate_report)
-    rule_candidate_ranking_validation = validate_rule_candidate_question_ranking(rule_candidate_ranking)
-    answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack, knowledge_report, rule_candidate_report)
-    portrait = portrait_projection(feature_layer, knowledge_report)
+    answer_plan = build_answer_plan(
+        selected_question,
+        feature_layer,
+        evidence_pack,
+        knowledge_report,
+        decision_report=decision_report,
+    )
     knowledge_semantic_model = build_knowledge_semantic_model(
         feature_layer,
         knowledge_report,
         user_text=user_text,
     )
     knowledge_semantic_validation = validate_knowledge_semantic_model(knowledge_semantic_model)
-    feature_discovery = build_feature_discovery_report(
-        feature_layer,
-        knowledge_report=knowledge_report,
-        portrait_projection=portrait,
-        user_text=user_text,
-        rule_candidate_ranking=rule_candidate_ranking,
-        llm_assist=llm_routing_assist,
-        knowledge_semantic_model=knowledge_semantic_model,
-        selected_question=selected_question,
-    )
-    feature_discovery_validation = validate_feature_discovery_report(feature_discovery)
-    portrait_intelligence = build_portrait_intelligence(
-        feature_layer,
-        portrait,
-        knowledge_semantic_model=knowledge_semantic_model,
-        feature_discovery=feature_discovery,
-    )
-    portrait_intelligence_validation = validate_portrait_intelligence(portrait_intelligence)
-    measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
+    measurement_report = build_measurement_report(feature_layer, questions, answer_plan, dynamic_portrait if isinstance(dynamic_portrait, dict) else {})
     deterministic_answer_text = compose_answer(answer_plan, locale=locale)
     answer_text = deterministic_answer_text
     answer_rewrite = {
@@ -143,10 +112,9 @@ def run_runtime_from_pillars(
             chart_facts=chart_facts.to_dict(),
             time_context=time_context.to_dict(),
             selected_question=selected_question.to_dict(),
-            feature_discovery=feature_discovery,
+            decision_report=decision_report,
             knowledge_semantic_model=knowledge_semantic_model,
-            portrait_intelligence=portrait_intelligence,
-            rule_candidate_support=rule_candidate_report,
+            dynamic_portrait=dynamic_portrait if isinstance(dynamic_portrait, dict) else {},
             answer_plan=answer_plan,
             deterministic_answer_text=deterministic_answer_text,
             locale=locale,
@@ -162,6 +130,8 @@ def run_runtime_from_pillars(
         knowledge_report,
         answer_plan,
         answer_text,
+        decision_report=decision_report,
+        dynamic_portrait=dynamic_portrait if isinstance(dynamic_portrait, dict) else {},
         locale=locale,
     )
     return {
@@ -179,17 +149,11 @@ def run_runtime_from_pillars(
         "knowledge_alignment": knowledge_feature_alignment(feature_layer),
         "knowledge_semantic_model": knowledge_semantic_model,
         "knowledge_semantic_validation": knowledge_semantic_validation,
-        "feature_discovery": feature_discovery,
-        "feature_discovery_validation": feature_discovery_validation,
-        "rule_candidate_ranking": rule_candidate_ranking,
-        "rule_candidate_ranking_validation": rule_candidate_ranking_validation,
-        "rule_candidate_support": rule_candidate_report,
-        "rule_candidate_validation": rule_candidate_validation,
+        "decision_report": decision_report,
+        "decision_validation": decision_validation,
+        "dynamic_portrait": dynamic_portrait,
         "questions": [row.to_dict() for row in questions],
         "selected_question": selected_question.to_dict(),
-        "portrait_projection": portrait,
-        "portrait_intelligence": portrait_intelligence,
-        "portrait_intelligence_validation": portrait_intelligence_validation,
         "measurement_report": measurement_report.to_dict(),
         "answer_plan": answer_plan.to_dict(),
         "answer_text": answer_text,
@@ -197,15 +161,5 @@ def run_runtime_from_pillars(
         "llm_capabilities": [contract.to_dict() for contract in LLM_CONTRACTS],
         "llm_assist": llm_assist,
         "runtime_mutation": False,
-        "guardrails": ["V20_INDEPENDENT_RUNTIME", "FEATURE_SPINE_FIRST", "NO_V19_IMPORTS"],
+        "guardrails": ["V20_INDEPENDENT_RUNTIME", "DYNAMIC_DECISION_SPINE_FIRST", "NO_V19_IMPORTS"],
     }
-
-
-def _select_question(questions: tuple[object, ...], question_key: str):
-    if question_key:
-        for question in questions:
-            if getattr(question, "question_key", "") == question_key:
-                return question
-    if not questions:
-        raise ValueError("No question candidates available.")
-    return questions[0]

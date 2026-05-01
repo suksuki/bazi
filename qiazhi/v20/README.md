@@ -2,7 +2,7 @@
 
 V20 is a clean, independent Bazi system.
 
-The first implementation goal is a small deterministic mainline:
+The current implementation goal is a small dynamic-decision mainline:
 
 ```text
 ChartInput
@@ -12,16 +12,14 @@ ChartInput
 -> BaziFeature[]
 -> KnowledgeRef[] and knowledge alignment
 -> KnowledgeSemanticModel
--> FeatureDiscovery report and 518K corpus training priors
--> Chart-specific salience features and rule collision summaries
--> PortraitIntelligence
--> Bazi measurement QuestionCandidate[]
+-> RuleHit[]
+-> RuleDecision[]
+-> DynamicPortrait
+-> Bazi measurement QuestionCandidate[] from dynamic decisions
 -> Professional domain reading path
 -> Reviewed knowledge evidence support
--> Shadow rule candidate support
 -> Synthetic rule collision validation/training gate
 -> Rule/portrait/question batch generation and validation
--> Rule candidate validation and bounded question reranking
 -> Bazi-domain alignment gate for rules, portraits, and questions
 -> EvidencePack
 -> AnswerPlan
@@ -37,23 +35,23 @@ regression source, and knowledge/documentation source.
 Initial boundaries:
 
 - Core facts are deterministic and typed.
-- Feature Spine is the central runtime contract.
-- Macro features give UI and LLM compact context while subfeatures remain the source of truth.
-- Chart-specific salience features make different charts surface different ten-god, element, branch, and time-trigger material.
+- Feature Spine is an intermediate evidence contract, not the user-facing intelligence layer.
+- Runtime user-facing intelligence is the Dynamic Decision Spine: RuleHit -> RuleDecision -> DynamicPortrait -> Questions -> LLM answer.
+- Macro features and 518K corpus labels can support offline training, but they must not become runtime portrait truth.
 - Knowledge is reviewed evidence context, not rule truth.
-- Feature Discovery is the central runtime intelligence router: it fuses compiled features, reviewed knowledge, portrait axes, shadow rule candidates, user interaction, bounded LLM assist, and 518K corpus training artifacts into ranked features and domain hypotheses.
+- Feature Discovery is no longer the user measurement driver. It may remain as an offline/admin experiment for coverage and training signals.
 - Knowledge Semantic Model turns reviewed knowledge into feature hooks, question hooks, portrait label candidates, interaction keywords, and rule-atom signals.
-- Portrait Intelligence turns raw portrait axes into knowledge-backed sub-axis candidates and calibration prompts.
-- Portraits, recommended questions, and answers are Bazi measurement projections over features.
+- Dynamic Portrait turns current-chart rule decisions into user-facing命理画像标签.
+- Recommended questions and answers are driven by dynamic rule decisions, with features and knowledge as evidence.
 - Rules, portrait axes, and recommended questions must pass Bazi-domain alignment before ranking or display.
 - Domain projections are the anti-corruption layer between features and applied topics.
-- Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
-- Shadow rule candidates report current-chart feature collisions, but still cannot activate as rule truth without validation and promotion.
-- Rule learning is synthetic-case driven. The 518K corpus supplies coverage and ranking priors, not rule truth.
+- Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from current-chart rule decisions, compiled evidence, and reviewed knowledge boundaries.
+- Old feature-discovery and shadow-rule-candidate experiments are offline/lab-only. They must not drive the user measurement page, dynamic portrait, recommended questions, or LLM practitioner context.
+- Rule and decision learning are synthetic-case and practitioner-calibration driven. The 518K corpus supplies coverage, similarity, and offline priors, not runtime portrait truth.
 - Rule and portrait batches can be generated and validated by script before any promotion discussion.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
-- LLM can act as a practitioner-style answer composer only after FeatureDiscovery, KnowledgeSemanticModel, PortraitIntelligence, and AnswerPlan have prepared verified context.
-- Rule candidates may reorder existing questions only through a capped shadow signal and synthetic validation.
+- LLM can act as a practitioner-style answer composer only after RuleDecision, DynamicPortrait, KnowledgeSemanticModel, and AnswerPlan have prepared verified context.
+- Rule and question ranking proposals are trained offline by scripts/admin review, then promoted only through synthetic validation and a decision registry record.
 - Learning, LLM, corpus, and ranking systems are assistive and governed.
 - Postgres is the persistent authority; Redis is ephemeral cache/queue/lock state.
 - macOS and Linux `0.13` runtime profiles are explicit and host-local runtime files are not synced by default.
@@ -63,7 +61,8 @@ Primary V20 modules:
 
 - `core`: typed chart facts, ten-god metadata, relations, and strength evidence.
 - `features`: the common feature spine used by questions, knowledge, answers, validation, and learning.
-- `intelligence`: feature discovery fusion, training-signal ingestion, and intelligence generation manifests.
+- `decision`: runtime rule hits, rule decisions, dynamic portrait tags, practitioner controls, and decision validation.
+- `intelligence`: offline/admin feature discovery, training-signal ingestion, and intelligence generation manifests.
 - `knowledge`: reviewed units, feature-aligned retrieval, audit, and coverage checks.
 - `graph`: chart graph and rule-path candidates.
 - `interaction`: Bazi measurement question ranking, portrait projection, and feedback capture.
@@ -87,8 +86,14 @@ Storage boundary:
 UI boundary:
 
 - `/v20/ui/` is the multi-role, multi-language entry/login surface for guest, practitioner, and admin access.
-- `/v20/ui/workbench.html` is the measurement workspace for Bazi feature, portrait, question, and answer projections.
+- `/v20/ui/workbench.html` is the measurement workspace for six-pillar chart context, dynamic decision portrait, recommendation questions, and the practitioner-style dialog.
 - `/v20/ui/admin.html` is intentionally limited to DB and LLM status so operations stay readable.
+- Training, corpus precompute, rule extraction, portrait batch validation, and decision-parameter learning are script/admin surfaces only. They are not shown in the user measurement workspace.
+- `v20/scripts/run_decision_training_plan.py` lists the current offline training targets and the scripts that manage them.
+
+See also:
+
+- `docs/V20_DYNAMIC_DECISION_SPINE.md`
 
 Default local validation:
 

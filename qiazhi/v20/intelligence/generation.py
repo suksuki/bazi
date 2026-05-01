@@ -7,7 +7,6 @@ from v20.corpus.artifacts import (
     read_corpus_coverage_summary,
     read_corpus_training_artifacts,
 )
-from v20.interaction.portrait_ontology import portrait_ontology_manifest
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.rule_extraction import (
     build_llm_rule_extraction_report,
@@ -31,7 +30,6 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
     rule_extraction_validation = validate_rule_extraction_report(limit=12)
     llm_rule_extraction = build_llm_rule_extraction_report(limit=2)
     llm_rule_extraction_validation = validate_llm_rule_extraction_report(limit=2)
-    portrait = portrait_ontology_manifest()
     synthetic = run_synthetic_suite()
     rule_synthetic = run_rule_synthetic_suite()
     rule_synthetic_training = build_rule_synthetic_training_report()
@@ -45,7 +43,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
     return {
         "version": "v20.intelligence_generation_manifest.v1",
         "status": "ready",
-        "current_mode": "feature_discovery_fusion_with_shadow_training_priors",
+        "current_mode": "dynamic_decision_spine_with_offline_training_priors",
         "knowledge_generation": {
             "source_layers": [
                 "reviewed_seed_knowledge_units",
@@ -108,52 +106,51 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
         },
         "portrait_generation": {
             "source_layers": [
-                "compiled_bazi_features",
+                "runtime_rule_decisions",
                 "reviewed_knowledge_boundaries",
-                "feature_confidence",
-                "calibration_ledger",
-                "full_corpus_label_snapshots",
+                "practitioner_calibration_ledger",
+                "offline_training_priors",
             ],
             "generated_artifacts": [
-                "PortraitProjection",
-                "PortraitAxis",
-                "PortraitKnowledgeLink",
-                "FeatureCalibrationSignal",
+                "DynamicPortrait",
+                "DynamicPortraitTag",
+                "PractitionerControl",
+                "DecisionCalibrationSignal",
             ],
-            "source_policy": portrait["source_policy"],
+            "source_policy": "dynamic_rule_decision_supported",
             "bazi_alignment_required": True,
-            "runtime_role": "feature_projection_and_calibration_surface",
+            "runtime_role": "rule_decision_to_dynamic_portrait",
             "shadow_learning_allowed": True,
             "user_visible_runtime_allowed": True,
         },
-        "feature_discovery_generation": {
+        "decision_generation": {
             "source_layers": [
-                "compiled_bazi_features",
-                "reviewed_knowledge_refs",
-                "knowledge_semantic_model",
-                "portrait_projection_axes",
-                "portrait_intelligence_axes",
-                "shadow_rule_candidate_ranking",
+                "chart_facts",
+                "core_inference",
+                "compiled_features_as_evidence",
+                "reviewed_knowledge_rules",
+                "deterministic_rule_hit_templates",
+                "practitioner_structured_overrides",
                 "bounded_llm_intent_assist",
-            "full_corpus_training_artifacts",
+                "offline_synthetic_and_corpus_training_artifacts",
             ],
             "generated_artifacts": [
-                "FeatureDiscoveryReport",
-                "FeatureDiscoveryTrainingSignal",
-                "KnowledgeSemanticModel",
-                "PortraitIntelligence",
-                "feature_discovery_question_policy",
-                "ranked_domain_hypotheses",
+                "RuleHit",
+                "RuleDecision",
+                "DynamicPortrait",
+                "PractitionerControl",
+                "decision_question_candidates",
+                "decision_parameter_training_signal",
             ],
-            "runtime_role": "central_intelligence_router_for_features_questions_portraits_and_answers",
+            "runtime_role": "central_runtime_intelligence_for_portraits_questions_and_llm_context",
             "question_alignment_policy": bazi_alignment["version"],
-            "training_role": "518k_corpus_priors_reorder_questions_and_surface_candidate_domains_only",
+            "training_role": "offline_priors_calibrate_decision_parameters_only",
             "runtime_mutation": False,
             "user_visible_runtime_allowed": True,
             "guardrails": [
                 "NO_CORE_FACT_MUTATION",
-                "NO_RUNTIME_RULE_ACTIVATION",
-                "NO_DESTINY_LABEL_TRAINING",
+                "NO_518K_STATIC_PORTRAIT_TRUTH",
+                "PRACTITIONER_OVERRIDE_IS_STRUCTURED_SIGNAL",
                 "BAZI_DOMAIN_ALIGNMENT_REQUIRED",
             ],
         },
@@ -172,7 +169,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "interaction_keyword_index",
                 "rule_atom_count_signal",
             ],
-            "runtime_role": "semantic_index_for_feature_discovery_portrait_and_interaction",
+            "runtime_role": "semantic_index_for_dynamic_decision_knowledge_and_interaction",
             "llm_role": "draft_only_validator_required",
             "runtime_mutation": False,
         },
@@ -206,7 +203,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             ],
             "synthetic_not_required_for": [
                 "full_corpus_coverage_priors",
-                "feature_discovery_shadow_priors",
+                "offline_decision_prior_training",
                 "candidate_generation",
                 "offline_clustering",
                 "coverage_gap_detection",
