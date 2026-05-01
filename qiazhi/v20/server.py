@@ -6,6 +6,8 @@ from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 
 from v20 import V20_VERSION
+from v20.access.projection import project_runtime_for_role
+from v20.access.roles import access_role_manifest
 from v20.api.schemas import MeasureRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
@@ -99,6 +101,10 @@ def create_app() -> FastAPI:
             "runtime_mutation": False,
         }
 
+    @app.get("/api/v20/access/roles")
+    def access_roles() -> dict[str, object]:
+        return access_role_manifest()
+
     @app.get("/api/v20/corpus/coverage")
     def corpus_coverage() -> dict[str, object]:
         return {
@@ -136,6 +142,29 @@ def create_app() -> FastAPI:
             raise HTTPException(
                 status_code=400,
                 detail={"error": "V20_MEASURE_INPUT_INVALID", "message": str(exc)},
+            ) from exc
+
+    @app.post("/api/v20/measure/view/{role_key}")
+    def measure_view(role_key: str, payload: MeasureRequest) -> dict[str, object]:
+        try:
+            result = run_runtime_from_pillars(
+                payload.year,
+                payload.month,
+                payload.day,
+                payload.hour,
+                input_id=payload.input_id,
+                question_key=payload.question_key,
+                user_text=payload.user_text,
+                flow_year_pillar=payload.flow_year_pillar,
+                luck_pillar=payload.luck_pillar,
+                flow_month_pillar=payload.flow_month_pillar,
+                locale=payload.locale,
+            )
+            return project_runtime_for_role(result, role_key)
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "V20_ROLE_MEASURE_INPUT_INVALID", "message": str(exc)},
             ) from exc
 
     return app
