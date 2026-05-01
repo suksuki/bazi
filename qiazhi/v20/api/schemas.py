@@ -34,6 +34,15 @@ class FeedbackRequest(BaseModel):
     locale: str = "zh"
 
 
+class PortraitCalibrationRequest(BaseModel):
+    input_id: str = ""
+    feature_id: str = Field(..., min_length=1, max_length=160)
+    source_role: str = "user"
+    signal: str = Field(..., pattern="^(confirm|reject|needs_review|evidence_gap)$")
+    note: str = Field("", max_length=1000)
+    locale: str = "zh"
+
+
 class PolicyReviewRequest(BaseModel):
     policy_type: str = Field(..., pattern="^(question_ranking|knowledge_retrieval|confidence_calibration)$")
     policy_payload: dict[str, object] = Field(default_factory=dict)

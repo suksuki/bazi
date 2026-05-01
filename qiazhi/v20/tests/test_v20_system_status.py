@@ -16,6 +16,10 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["redis_validation"]["ok"] is True
     assert report["knowledge_catalog_status"] == "ready"
     assert report["knowledge_unit_count"] >= 12
+    assert report["knowledge_source_catalog_status"] == "ready"
+    assert report["knowledge_coverage_status"] == "pass"
+    assert report["knowledge_gap_count"] == 0
+    assert report["knowledge_release_status"] == "ready_for_release_review"
     assert report["access_role_count"] == 4
     assert report["test_area_count"] >= 7
     assert report["learning_status"] == "ready_for_dry_run"

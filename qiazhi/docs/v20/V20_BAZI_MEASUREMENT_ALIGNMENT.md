@@ -45,8 +45,9 @@ LLM, portrait projection, recommended questions, and answer planning.
 - Time-layer questions require explicit supplied pillars such as
   `flow_year_pillar`, `luck_pillar`, or `flow_month_pillar`; V20 does not infer
   calendar facts from free text.
-- Portrait output remains a calibration surface. It does not rank questions,
-  mutate answers, or create fortune conclusions.
+- Portrait output remains a calibration surface. It can record redacted
+  calibration signals, but it does not rank questions, mutate answers, or
+  create fortune conclusions.
 
 ## Prediction Boundary
 

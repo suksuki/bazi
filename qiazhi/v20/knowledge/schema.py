@@ -5,6 +5,26 @@ from typing import Any
 
 
 @dataclass(frozen=True)
+class KnowledgeSource:
+    source_ref: str
+    title: str
+    source_type: str
+    path: str
+    review_status: str = "reviewed"
+    release_scope: str = "v20_reference"
+    notes: str = ""
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["guardrails"] = [
+            "SOURCE_REF_IS_TRACEABILITY_HANDLE",
+            "SOURCE_DOES_NOT_ACTIVATE_RULES",
+            "REVIEW_STATUS_REQUIRED_FOR_RELEASE",
+        ]
+        return payload
+
+
+@dataclass(frozen=True)
 class KnowledgeUnit:
     knowledge_id: str
     title: str

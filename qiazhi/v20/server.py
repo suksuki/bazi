@@ -8,15 +8,19 @@ from fastapi.staticfiles import StaticFiles
 from v20 import V20_VERSION
 from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
-from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest
+from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest, PortraitCalibrationRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
+from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.catalog import build_knowledge_catalog
+from v20.knowledge.coverage import build_knowledge_coverage_report
+from v20.knowledge.release import build_knowledge_release_manifest
+from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
@@ -159,6 +163,18 @@ def create_app() -> FastAPI:
     def knowledge_catalog() -> dict[str, object]:
         return build_knowledge_catalog()
 
+    @app.get("/api/v20/knowledge/source-catalog")
+    def knowledge_source_catalog() -> dict[str, object]:
+        return build_knowledge_source_catalog()
+
+    @app.get("/api/v20/knowledge/coverage-report")
+    def knowledge_coverage_report() -> dict[str, object]:
+        return build_knowledge_coverage_report()
+
+    @app.get("/api/v20/knowledge/release-manifest")
+    def knowledge_release_manifest() -> dict[str, object]:
+        return build_knowledge_release_manifest()
+
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:
         return confidence_calibration_manifest()
@@ -222,6 +238,34 @@ def create_app() -> FastAPI:
             feature_ids=tuple(payload.feature_ids),
             locale=payload.locale,
         )
+
+    @app.post("/api/v20/portrait/calibration/analyze")
+    def portrait_calibration_analyze(payload: PortraitCalibrationRequest) -> dict[str, object]:
+        try:
+            return analyze_portrait_calibration(
+                input_id=payload.input_id,
+                feature_id=payload.feature_id,
+                source_role=payload.source_role,
+                signal=payload.signal,
+                note=payload.note,
+                locale=payload.locale,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail={"error": "V20_PORTRAIT_CALIBRATION_INVALID", "message": str(exc)}) from exc
+
+    @app.post("/api/v20/portrait/calibration/record")
+    def portrait_calibration_record(payload: PortraitCalibrationRequest) -> dict[str, object]:
+        try:
+            return record_portrait_calibration(
+                input_id=payload.input_id,
+                feature_id=payload.feature_id,
+                source_role=payload.source_role,
+                signal=payload.signal,
+                note=payload.note,
+                locale=payload.locale,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail={"error": "V20_PORTRAIT_CALIBRATION_INVALID", "message": str(exc)}) from exc
 
     @app.post("/api/v20/measure")
     @app.post("/api/v20/runtime/measure")

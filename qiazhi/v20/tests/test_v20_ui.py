@@ -24,6 +24,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/measure/view/" in script.text
     assert "/api/v20/ops/sync-readiness" in script.text
     assert "/api/v20/knowledge/catalog" in script.text
+    assert "/api/v20/knowledge/coverage-report" in script.text
+    assert "/api/v20/knowledge/release-manifest" in script.text
     assert "/api/v20/learning/run-plan" in script.text
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" in script.text

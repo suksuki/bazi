@@ -1,0 +1,46 @@
+# V20 Knowledge Rebuild And Portrait Calibration
+
+V20 uses the feature spine to rebuild the knowledge and portrait systems that
+became too entangled in V19.
+
+## Knowledge Rebuild
+
+Knowledge is now split into four auditable surfaces:
+
+- `KnowledgeUnit`: reviewed evidence unit used by runtime retrieval.
+- `KnowledgeSource`: traceability handle for the document or implementation
+  note behind a unit.
+- `KnowledgeCoverageReport`: domain, source, and question-hook gap check.
+- `KnowledgeReleaseManifest`: release-review bundle for future Postgres seed or
+  artifact promotion.
+
+Endpoints:
+
+- `GET /api/v20/knowledge/catalog`
+- `GET /api/v20/knowledge/source-catalog`
+- `GET /api/v20/knowledge/coverage-report`
+- `GET /api/v20/knowledge/release-manifest`
+
+These endpoints do not activate rules, write database rows, or treat knowledge
+as truth. They make missing sources, duplicate ids, unreviewed sources, and
+coverage gaps visible before a release.
+
+## Portrait Calibration
+
+The portrait system remains a projection over compiled `BaziFeature[]`.
+
+It can now emit calibration signals:
+
+- `confirm`
+- `reject`
+- `needs_review`
+- `evidence_gap`
+
+Endpoints:
+
+- `POST /api/v20/portrait/calibration/analyze`
+- `POST /api/v20/portrait/calibration/record`
+
+Recorded calibration is append-only and redacted. It can feed later learning,
+ranking, confidence, or coverage review proposals, but it cannot mutate chart
+facts, rules, recommended questions, or answer conclusions.

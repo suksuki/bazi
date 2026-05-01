@@ -5,9 +5,12 @@ from fastapi.testclient import TestClient
 from v20.api.runtime import run_runtime_from_pillars
 from v20.features.schema import FeatureLayer
 from v20.knowledge.catalog import build_knowledge_catalog
+from v20.knowledge.coverage import build_knowledge_coverage_report
 from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.ranking import KnowledgeRetrievalPolicy, knowledge_retrieval_manifest, rank_knowledge_units
+from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.retrieval import retrieve_knowledge
+from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.server import app
 
 
@@ -70,6 +73,8 @@ def test_v20_knowledge_catalog_reports_coverage_and_hooks() -> None:
     assert "feature.useful_god.candidate_paths" in catalog["feature_hooks"]
     assert "q_useful_god_evidence_gaps" in catalog["question_hooks"]
     assert not catalog["duplicate_ids"]
+    assert catalog["source_catalog_status"] == "ready"
+    assert not catalog["missing_source_refs"]
 
 
 def test_v20_knowledge_catalog_endpoint_is_read_only() -> None:
@@ -80,3 +85,30 @@ def test_v20_knowledge_catalog_endpoint_is_read_only() -> None:
     data = response.json()
     assert data["runtime_mutation"] is False
     assert data["audit"]["status"] == "pass"
+
+
+def test_v20_knowledge_source_coverage_and_release_are_ready() -> None:
+    source_catalog = build_knowledge_source_catalog()
+    coverage = build_knowledge_coverage_report()
+    release = build_knowledge_release_manifest()
+
+    assert source_catalog["status"] == "ready"
+    assert source_catalog["source_count"] >= 12
+    assert not source_catalog["missing_source_refs"]
+    assert coverage["status"] == "pass"
+    assert coverage["gap_count"] == 0
+    assert release["status"] == "ready_for_release_review"
+    assert "record_decision_registry_approval" in release["release_steps"]
+    assert release["runtime_mutation"] is False
+
+
+def test_v20_knowledge_rebuild_endpoints_are_read_only() -> None:
+    client = TestClient(app)
+    source_catalog = client.get("/api/v20/knowledge/source-catalog").json()
+    coverage = client.get("/api/v20/knowledge/coverage-report").json()
+    release = client.get("/api/v20/knowledge/release-manifest").json()
+
+    assert source_catalog["runtime_mutation"] is False
+    assert coverage["runtime_mutation"] is False
+    assert release["runtime_mutation"] is False
+    assert release["status"] == "ready_for_release_review"

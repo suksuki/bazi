@@ -5,6 +5,7 @@ from collections import Counter
 from v20.knowledge.audit import audit_default_knowledge_units
 from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.schema import KnowledgeUnit
+from v20.knowledge.source_catalog import build_knowledge_source_catalog
 
 
 def build_knowledge_catalog(units: tuple[KnowledgeUnit, ...] | None = None) -> dict[str, object]:
@@ -15,7 +16,8 @@ def build_knowledge_catalog(units: tuple[KnowledgeUnit, ...] | None = None) -> d
     retrieval_tags = sorted({tag for unit in rows for tag in unit.retrieval_tags})
     duplicate_ids = _duplicate_ids(rows)
     audit = audit_default_knowledge_units() if units is None else _audit_units(rows)
-    status = "ready" if audit["status"] == "pass" and not duplicate_ids else "needs_review"
+    source_catalog = build_knowledge_source_catalog(units=rows)
+    status = "ready" if audit["status"] == "pass" and not duplicate_ids and source_catalog["status"] == "ready" else "needs_review"
     return {
         "version": "v20.knowledge_catalog.v1",
         "status": status,
@@ -35,6 +37,8 @@ def build_knowledge_catalog(units: tuple[KnowledgeUnit, ...] | None = None) -> d
         "retrieval_tags": retrieval_tags,
         "duplicate_ids": duplicate_ids,
         "audit": audit,
+        "source_catalog_status": source_catalog["status"],
+        "missing_source_refs": source_catalog["missing_source_refs"],
         "runtime_mutation": False,
         "guardrails": [
             "KNOWLEDGE_CATALOG_IS_READ_ONLY",
