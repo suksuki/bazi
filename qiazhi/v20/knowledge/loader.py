@@ -1,0 +1,76 @@
+from __future__ import annotations
+
+from v20.knowledge.schema import KnowledgeUnit
+
+
+def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
+    return (
+        KnowledgeUnit(
+            "v20.core.strength_boundary",
+            "Strength evidence boundary",
+            "strength",
+            "Day-master capacity should be explained through support, pressure, and uncertainty evidence.",
+            "Use support score, pressure score, and source-layer evidence before naming any capacity tendency.",
+            "Do not hard-judge strong or weak in Phase 1.",
+            source_refs=("docs/v20.prestart.strength",),
+            feature_hooks=("feature.strength",),
+            question_hooks=("q_strength_assessment",),
+        ),
+        KnowledgeUnit(
+            "v20.core.branch_relation_boundary",
+            "Branch relation boundary",
+            "branch",
+            "Branch relations identify visible structural interactions and must be layer-aware.",
+            "Name the relation type and branches; explain that relation names alone do not imply good or bad outcomes.",
+            "Do not infer fortune from clash, harmony, punishment, harm, break, three harmony, or three meeting.",
+            source_refs=("docs/v20.prestart.branch",),
+            feature_hooks=("feature.branch",),
+            question_hooks=("q_branch_relation_detail",),
+        ),
+        KnowledgeUnit(
+            "v20.core.wealth_material_boundary",
+            "Wealth material boundary",
+            "wealth",
+            "Wealth ten-god material can describe structural availability, source layer, and constraints.",
+            "Use visible/hidden wealth ten-god evidence and relation context as structural material only.",
+            "Do not predict wealth events, amounts, gains, losses, or timing.",
+            source_refs=("docs/v20.prestart.wealth",),
+            feature_hooks=("feature.wealth",),
+            question_hooks=("q_income_stability",),
+        ),
+        KnowledgeUnit(
+            "v20.core.useful_god_gate",
+            "Useful-god evidence gate",
+            "useful_god",
+            "Useful-god discussion requires candidate paths and explicit evidence gates.",
+            "Explain whether support, output, constraint, or unresolved evidence paths are present.",
+            "Do not state fixed favorable or unfavorable gods in Phase 1.",
+            source_refs=("docs/v20.prestart.useful_god",),
+            feature_hooks=("feature.useful_god",),
+            question_hooks=("q_useful_god_candidates",),
+        ),
+        KnowledgeUnit(
+            "v20.core.ten_god_boundary",
+            "Ten-god interpretation boundary",
+            "ten_god",
+            "Ten-god labels describe relation type and source layer before any applied domain reading.",
+            "Name whether the relation is visible or hidden, then keep it as structural material unless a verified feature connects it to a question.",
+            "Do not convert ten-god labels directly into personality, career, money, relationship, or health conclusions.",
+            source_refs=("docs/v20.prestart.ten_god",),
+            feature_hooks=("feature.ten_god",),
+            question_hooks=("q_ten_god_focus", "q_hidden_stem_role", "q_ten_god_metadata"),
+            retrieval_tags=("visible", "hidden", "relation_label"),
+        ),
+        KnowledgeUnit(
+            "v20.core.pattern_review_boundary",
+            "Pattern review boundary",
+            "pattern",
+            "Pattern material is a review index that needs rule-path and evidence arbitration.",
+            "Use pattern evidence to open a structured review path, not to name a final pattern prematurely.",
+            "Do not declare a fixed pattern, grade, or outcome from a preliminary index.",
+            source_refs=("docs/v20.prestart.pattern",),
+            feature_hooks=("feature.pattern",),
+            question_hooks=("q_pattern_structure",),
+            retrieval_tags=("review_index", "arbitration", "rule_path"),
+        ),
+    )

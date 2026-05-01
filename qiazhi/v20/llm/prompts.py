@@ -1,0 +1,61 @@
+from __future__ import annotations
+
+from v20.answer.prompt_context import answer_plan_prompt_context
+from v20.answer.plan import AnswerPlan
+from v20.features.schema import FeatureLayer
+from v20.interaction.questions import QuestionCandidate
+
+
+def answer_rewrite_prompt(plan: AnswerPlan, *, locale: str = "en", tone: str = "clear") -> dict[str, object]:
+    return {
+        "task": "answer_plan_rewrite",
+        "locale": locale,
+        "tone": tone,
+        "context": answer_plan_prompt_context(plan),
+        "instruction": "Rewrite only the verified answer plan. Do not add facts or conclusions.",
+    }
+
+
+def intent_parse_prompt(user_text: str, *, locale: str = "zh") -> dict[str, object]:
+    return {
+        "task": "intent_parse",
+        "locale": locale,
+        "user_text": user_text,
+        "instruction": "Extract routing intent only. Do not create chart facts, rule activations, or conclusions.",
+    }
+
+
+def question_suggestion_prompt(
+    user_text: str,
+    feature_layer: FeatureLayer,
+    questions: tuple[QuestionCandidate, ...],
+    *,
+    locale: str = "zh",
+) -> dict[str, object]:
+    return {
+        "task": "question_suggestion",
+        "locale": locale,
+        "user_text": user_text,
+        "feature_domains": sorted({feature.domain for feature in feature_layer.features}),
+        "question_keys": [question.question_key for question in questions],
+        "instruction": "Suggest only from existing feature-backed question keys.",
+    }
+
+
+def feature_candidate_prompt(user_text: str, feature_layer: FeatureLayer, *, locale: str = "zh") -> dict[str, object]:
+    return {
+        "task": "feature_candidate_proposal",
+        "locale": locale,
+        "user_text": user_text,
+        "feature_domains": sorted({feature.domain for feature in feature_layer.features}),
+        "instruction": "Propose candidate domains only. The feature compiler owns runtime features.",
+    }
+
+
+def safety_review_prompt(candidate_text: str, *, locale: str = "zh") -> dict[str, object]:
+    return {
+        "task": "safety_review",
+        "locale": locale,
+        "candidate_text": candidate_text,
+        "instruction": "Review for forbidden claims, internal identifiers, privacy leaks, and missing boundaries.",
+    }
