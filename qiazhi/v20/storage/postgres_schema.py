@@ -9,7 +9,7 @@ def build_postgres_schema_contract() -> StorageSchemaContract:
         version="v20.postgres_schema_contract.v1",
         backend="postgres",
         tables=tables,
-        migrations=(_initial_migration(tables),),
+        migrations=(_initial_migration(tables), _corpus_index_migration()),
     )
 
 
@@ -142,6 +142,22 @@ def _initial_migration(tables: tuple[TableSpec, ...]) -> MigrationSpec:
         migration_id="v20_0001_initial_authoritative_tables",
         description="Create V20 authoritative Postgres tables without mutating runtime truth.",
         sql=sql,
+    )
+
+
+def _corpus_index_migration() -> MigrationSpec:
+    return MigrationSpec(
+        migration_id="v20_0002_corpus_query_indexes",
+        description="Create query indexes for the 518K corpus snapshots so Postgres can replace local SQLite as the query authority.",
+        sql=(
+            "CREATE INDEX IF NOT EXISTS idx_v20_corpus_snapshots_input_hash ON v20_corpus_snapshots(input_hash);",
+            "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_day_master ON v20_corpus_snapshots ((payload->>'day_master'));",
+            "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_day_master_element ON v20_corpus_snapshots ((payload->>'day_master_element'));",
+            "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_day_master_capacity ON v20_corpus_snapshots ((payload->>'day_master_capacity'));",
+            "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_cluster_key ON v20_corpus_snapshots ((payload->>'cluster_key'));",
+            "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_wealth ON v20_corpus_snapshots (((payload->>'wealth_feature_present')::boolean));",
+            "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_gin ON v20_corpus_snapshots USING gin (payload);",
+        ),
     )
 
 

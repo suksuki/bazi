@@ -50,6 +50,12 @@ Primary V20 modules:
 - `ops`: macOS/Linux profiles, Postgres/Redis contracts, and sync guardrails.
 - `testing`: bounded test tiers, executable test manifest, and fast local scripts.
 
+Storage boundary:
+
+- Postgres is the authoritative store for V20 corpus snapshots, registries, feedback, decisions, rule proposals, and LLM artifacts.
+- SQLite is allowed only as a disposable local cache/index for offline similarity probes and fast rebuilds. It is not synced between macOS and Linux, and it must be rebuildable from `v20_corpus_snapshots` or versioned corpus artifacts.
+- The 518K structural corpus can be imported into `v20_corpus_snapshots`; query indexes cover case lookup, day-master filters, cluster search, wealth filters, and JSONB containment over feature/portrait tags.
+
 Default local validation:
 
 ```bash

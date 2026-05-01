@@ -90,6 +90,7 @@ def main() -> int:
                     batch.clear()
             if batch:
                 inserted += _insert_batch(cur, execute_values, batch)
+            _create_indexes(cur)
         conn.commit()
     payload["status"] = "imported"
     payload["inserted_or_updated"] = inserted
@@ -112,6 +113,19 @@ def _insert_batch(cur, execute_values, batch) -> int:
         batch,
     )
     return len(batch)
+
+
+def _create_indexes(cur) -> None:
+    for statement in (
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_snapshots_input_hash ON v20_corpus_snapshots(input_hash)",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_day_master ON v20_corpus_snapshots ((payload->>'day_master'))",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_day_master_element ON v20_corpus_snapshots ((payload->>'day_master_element'))",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_day_master_capacity ON v20_corpus_snapshots ((payload->>'day_master_capacity'))",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_cluster_key ON v20_corpus_snapshots ((payload->>'cluster_key'))",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_wealth ON v20_corpus_snapshots (((payload->>'wealth_feature_present')::boolean))",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_gin ON v20_corpus_snapshots USING gin (payload)",
+    ):
+        cur.execute(statement)
 
 
 if __name__ == "__main__":

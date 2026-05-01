@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import hashlib
+import os
 import sqlite3
 import time
 from collections import Counter, defaultdict
@@ -286,11 +287,17 @@ def find_similar_cases(
     limit: int = 8,
     runtime_dir: Path | None = None,
 ) -> dict[str, object]:
+    postgres_result = _find_similar_cases_postgres(case_id, limit=limit)
+    if postgres_result["status"] in {"ready", "case_not_found"}:
+        return postgres_result
+
     paths = corpus_artifact_paths(run_id, runtime_dir=runtime_dir)
     if not paths.sqlite_index_path.exists():
         return {
             "version": "v20.corpus_similar_cases.v1",
             "status": "index_not_built",
+            "backend": "sqlite",
+            "postgres_status": postgres_result["status"],
             "case_id": case_id,
             "matches": [],
             "runtime_mutation": False,
@@ -337,6 +344,8 @@ def find_similar_cases(
     return {
         "version": "v20.corpus_similar_cases.v1",
         "status": "ready",
+        "backend": "sqlite",
+        "postgres_status": postgres_result["status"],
         "case_id": case_id,
         "query": {
             "input_hash": query["input_hash"],
@@ -354,6 +363,102 @@ def find_similar_cases(
             "NO_DESTINY_OUTCOME_INFERENCE",
             "NO_RULE_ACTIVATION",
         ],
+    }
+
+
+def _find_similar_cases_postgres(case_id: str, *, limit: int) -> dict[str, object]:
+    url = os.getenv("V20_DATABASE_URL", "")
+    if not url:
+        return {
+            "version": "v20.corpus_similar_cases.v1",
+            "status": "postgres_not_configured",
+            "backend": "postgres",
+            "case_id": case_id,
+            "matches": [],
+            "runtime_mutation": False,
+        }
+    try:
+        import psycopg2
+        from psycopg2.extras import RealDictCursor
+    except Exception as exc:
+        return _postgres_similarity_blocked(case_id, "postgres_driver_missing", str(exc))
+    try:
+        with psycopg2.connect(url) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT payload FROM v20_corpus_snapshots WHERE snapshot_id = %s", (case_id,))
+                query_row = cur.fetchone()
+                if query_row is None:
+                    return {
+                        "version": "v20.corpus_similar_cases.v1",
+                        "status": "case_not_found",
+                        "backend": "postgres",
+                        "case_id": case_id,
+                        "matches": [],
+                        "runtime_mutation": False,
+                    }
+                query = query_row["payload"]
+                candidates = _postgres_similarity_candidates(cur, query)
+    except Exception as exc:
+        return _postgres_similarity_blocked(case_id, "postgres_query_error", str(exc))
+    query_tags = _row_tags(query)
+    scored = []
+    for candidate in candidates:
+        tags = _row_tags(candidate)
+        shared_tags = tuple(sorted(query_tags & tags))
+        score = _similarity_score(query_tags, tags)
+        scored.append((score, shared_tags, candidate))
+    matches = [
+        {
+            "case_id": row["case_id"],
+            "input_hash": row["input_hash"],
+            "pillar_displays": _split(row["pillar_displays"]),
+            "score": round(score, 4),
+            "day_master": row["day_master"],
+            "day_master_capacity": row["day_master_capacity"],
+            "cluster_key": row["cluster_key"],
+            "feature_domains": _split(row["feature_domains"]),
+            "feature_ids": _split(row["feature_ids"]),
+            "portrait_domains": _split(row["portrait_domains"]),
+            "relation_types": _split(row["relation_types"]),
+            "shared_tag_count": len(shared_tags),
+            "shared_tags": list(shared_tags[:12]),
+        }
+        for score, shared_tags, row in sorted(scored, key=lambda item: (-item[0], item[2]["case_id"]))[:limit]
+    ]
+    return {
+        "version": "v20.corpus_similar_cases.v1",
+        "status": "ready",
+        "backend": "postgres",
+        "case_id": case_id,
+        "query": {
+            "input_hash": query["input_hash"],
+            "pillar_displays": _split(query["pillar_displays"]),
+            "day_master": query["day_master"],
+            "day_master_capacity": query["day_master_capacity"],
+            "cluster_key": query["cluster_key"],
+        },
+        "match_count": len(matches),
+        "candidate_count": len(candidates),
+        "matches": matches,
+        "runtime_mutation": False,
+        "guardrails": [
+            "SIMILARITY_IS_STRUCTURAL_RETRIEVAL",
+            "POSTGRES_AUTHORITATIVE_CORPUS_QUERY",
+            "NO_DESTINY_OUTCOME_INFERENCE",
+            "NO_RULE_ACTIVATION",
+        ],
+    }
+
+
+def _postgres_similarity_blocked(case_id: str, status: str, error: str) -> dict[str, object]:
+    return {
+        "version": "v20.corpus_similar_cases.v1",
+        "status": status,
+        "backend": "postgres",
+        "case_id": case_id,
+        "matches": [],
+        "error": error,
+        "runtime_mutation": False,
     }
 
 
@@ -1131,6 +1236,41 @@ def _similarity_candidates(conn: sqlite3.Connection, query: sqlite3.Row) -> list
     return rows
 
 
+def _postgres_similarity_candidates(cur, query: dict[str, object]) -> list[dict[str, object]]:
+    cur.execute(
+        """
+        SELECT payload FROM v20_corpus_snapshots
+        WHERE snapshot_id != %s
+          AND payload->>'cluster_key' = %s
+        ORDER BY snapshot_id
+        LIMIT 4000
+        """,
+        (query["case_id"], query["cluster_key"]),
+    )
+    rows = [dict(row["payload"]) for row in cur.fetchall()]
+    seen = {row["case_id"] for row in rows}
+    if len(rows) < 4000:
+        cur.execute(
+            """
+            SELECT payload FROM v20_corpus_snapshots
+            WHERE snapshot_id != %s
+              AND payload->>'day_master_element' = %s
+              AND payload->>'day_master_capacity' = %s
+            ORDER BY snapshot_id
+            LIMIT 4000
+            """,
+            (query["case_id"], query["day_master_element"], query["day_master_capacity"]),
+        )
+        for result in cur.fetchall():
+            row = dict(result["payload"])
+            if row["case_id"] not in seen:
+                rows.append(row)
+                seen.add(row["case_id"])
+            if len(rows) >= 5000:
+                break
+    return rows
+
+
 def _similarity_score(query_tags: set[str], candidate_tags: set[str]) -> float:
     if not query_tags and not candidate_tags:
         return 0
@@ -1183,6 +1323,8 @@ def _join(values: object) -> str:
 
 
 def _split(value: object) -> list[str]:
+    if isinstance(value, (list, tuple)):
+        return [str(item) for item in value if str(item)]
     return [item for item in str(value or "").split("|") if item]
 
 
