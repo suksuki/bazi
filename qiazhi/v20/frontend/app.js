@@ -168,7 +168,7 @@ const renderRuntime = (result) => {
   renderQuestions(result.questions || [], selected.question_key || "");
   renderChatQuestions(result.questions || [], selected.question_key || "");
   renderQuestionSelect(result.questions || [], selected.question_key || "");
-  renderEvidence(result.knowledge_refs || [], result.rule_candidate_support || {});
+  renderEvidence(result.knowledge_refs || [], result.rule_candidate_support || {}, result.rule_candidate_validation || {});
 };
 
 const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") => {
@@ -303,7 +303,7 @@ const renderQuestionSelect = (questions, selectedKey) => {
   questionSelect.value = current;
 };
 
-const renderEvidence = (refs, ruleCandidateSupport = {}) => {
+const renderEvidence = (refs, ruleCandidateSupport = {}, ruleCandidateValidation = {}) => {
   const root = document.querySelector("#evidenceList");
   clear(root);
   refs.slice(0, 5).forEach((ref) => {
@@ -319,6 +319,12 @@ const renderEvidence = (refs, ruleCandidateSupport = {}) => {
     row.append(el("span", "", `${candidate.domain || "domain"} · ${candidate.status || "shadow"}`));
     root.append(row);
   });
+  if (ruleCandidateValidation.status) {
+    const row = el("div", "evidence-row validation");
+    row.append(el("strong", "", "规则候选验证"));
+    row.append(el("span", "", `${ruleCandidateValidation.status} · ${ruleCandidateValidation.candidate_count ?? 0} candidates`));
+    root.append(row);
+  }
   if (!refs.length && !ruleCandidates.length) root.append(el("div", "empty-note", "暂无可展示证据。"));
 };
 
@@ -421,7 +427,7 @@ const renderInitialPanels = () => {
   renderPortrait([]);
   renderQuestions([], "");
   renderChatQuestions([], "");
-  renderEvidence([], {});
+  renderEvidence([], {}, {});
 };
 
 const loadActiveProfile = async () => {

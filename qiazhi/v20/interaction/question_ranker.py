@@ -43,6 +43,7 @@ def question_ranking_manifest() -> dict[str, object]:
             "synthetic_suite_result",
             "corpus_coverage_gap",
             "question_selection_outcome",
+            "shadow_rule_candidate_validation",
         ],
         "blocked_learning_outputs": [
             "new_question_key",

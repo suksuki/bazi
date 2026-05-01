@@ -15,6 +15,7 @@ ChartInput
 -> Professional domain reading path
 -> Reviewed knowledge evidence support
 -> Shadow rule candidate support
+-> Rule candidate validation and bounded question reranking
 -> EvidencePack
 -> AnswerPlan
 -> bounded LLM assist contracts
@@ -35,6 +36,7 @@ Initial boundaries:
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
+- Rule candidates may reorder existing questions only through a capped shadow signal and synthetic validation.
 - Learning, LLM, corpus, and ranking systems are assistive and governed.
 - Postgres is the persistent authority; Redis is ephemeral cache/queue/lock state.
 - macOS and Linux `0.13` runtime profiles are explicit and host-local runtime files are not synced by default.

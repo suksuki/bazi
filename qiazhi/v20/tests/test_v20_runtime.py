@@ -18,8 +18,9 @@ from v20.llm.tasks import (
 from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.audit import audit_default_knowledge_units
 from v20.knowledge.loader import default_knowledge_units
-from v20.validation.evaluator import evaluate_answer_plan
+from v20.validation.evaluator import evaluate_answer_plan, evaluate_runtime_result
 from v20.validation.golden import GOLDEN_CASES
+from v20.validation.synthetic_schema import SyntheticCase
 
 
 def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
@@ -48,6 +49,9 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]
     assert result["rule_candidate_support"]["runtime_mutation"] is False
     assert result["rule_candidate_support"]["candidate_count"] >= 1
+    assert result["rule_candidate_validation"]["ok"] is True
+    assert result["rule_candidate_ranking_validation"]["ok"] is True
+    assert result["rule_candidate_ranking"]["policy"]["status"] == "active_shadow"
     assert result["prediction_policy"]["core_focus"] == "bazi_measurement"
     assert result["llm_assist"]["status"] == "idle"
     assert result["llm_assist"]["context_pack"]["publishable"] is False
@@ -186,6 +190,14 @@ def test_v20_p85_applied_domain_answers_use_professional_reading_paths() -> None
     assert "rule_candidate_support" in {
         row["section_type"] for row in result["answer_plan"]["sections"]
     }
+    synthetic = SyntheticCase(
+        "v20.synthetic.wealth-rule-candidate",
+        ("壬寅", "甲辰", "丙子", "甲午"),
+        expected_feature_domains=("wealth", "ten_god", "strength"),
+        expected_question_keys=("q_income_stability",),
+        expected_rule_candidate_domains=("wealth",),
+    )
+    assert evaluate_runtime_result(synthetic, result)["ok"] is True
 
 
 def test_v20_p85_time_answer_preserves_trigger_path_section() -> None:

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from v20.answer.measurement_policy import feature_domains_for_applied_domain
+from v20.answer.measurement_policy import applied_domains, feature_domains_for_applied_domain
+from v20.features.schema import FeatureLayer
+from v20.interaction.question_ranker import QuestionRankingPolicy
 from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.rule_proposal import build_knowledge_rule_proposals
 
@@ -53,6 +55,64 @@ def build_rule_candidate_support(question: QuestionCandidate, *, limit: int = 4)
     }
 
 
+def build_rule_candidate_question_ranking(
+    feature_layer: FeatureLayer,
+    *,
+    limit_per_domain: int = 1,
+) -> tuple[QuestionRankingPolicy, dict[str, object]]:
+    domains = tuple(
+        dict.fromkeys(
+            [
+                *(feature.domain for feature in feature_layer.features),
+                *applied_domains(),
+            ]
+        )
+    )
+    rows = []
+    weights: dict[str, float] = {}
+    for domain in domains:
+        exact_count = _proposal_count(domain, limit=limit_per_domain)
+        support_count = sum(
+            _proposal_count(source_domain, limit=limit_per_domain)
+            for source_domain in feature_domains_for_applied_domain(domain)
+            if source_domain != domain
+        )
+        if not exact_count and not support_count:
+            continue
+        weight = round(min(0.055, exact_count * 0.014 + support_count * 0.006), 3)
+        weights[domain] = weight
+        rows.append(
+            {
+                "domain": domain,
+                "exact_rule_candidate_count": exact_count,
+                "support_rule_candidate_count": support_count,
+                "ranking_weight": weight,
+                "status": "shadow_signal",
+            }
+        )
+    policy = QuestionRankingPolicy(
+        policy_id="v20.question_ranking.rule_candidate_shadow",
+        domain_weights=weights,
+        max_adjustment=0.055,
+        source="shadow_rule_candidate_support",
+        status="active_shadow",
+    )
+    return policy, {
+        "version": "v20.rule_candidate_question_ranking.v1",
+        "status": "active_shadow" if rows else "empty",
+        "domain_count": len(rows),
+        "domain_signals": rows,
+        "policy": policy.to_dict(),
+        "runtime_mutation": False,
+        "guardrails": [
+            "RULE_CANDIDATE_RANKING_REORDERS_ONLY",
+            "NO_NEW_QUESTION_GENERATION",
+            "NO_RUNTIME_RULE_ACTIVATION",
+            "BOUNDED_SHADOW_SIGNAL",
+        ],
+    }
+
+
 def rule_candidate_section_body(report: dict[str, object]) -> str:
     candidates = [row for row in report.get("candidates", ()) if isinstance(row, dict)]
     if not candidates:
@@ -70,6 +130,11 @@ def _candidate_domains(domain: str) -> tuple[str, ...]:
     domains = [domain]
     domains.extend(feature_domains_for_applied_domain(domain))
     return tuple(dict.fromkeys(domains))
+
+
+def _proposal_count(domain: str, *, limit: int = 1) -> int:
+    report = build_knowledge_rule_proposals(domain, limit=limit)
+    return int(report.get("proposal_count", 0))
 
 
 def _safe_candidate(proposal: dict[str, object]) -> dict[str, object]:

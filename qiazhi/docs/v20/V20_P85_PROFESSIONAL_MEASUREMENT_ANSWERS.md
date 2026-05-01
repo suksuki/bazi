@@ -87,3 +87,24 @@ Each candidate exposes only:
 The condition model, feature hooks, and promotion details remain internal. A
 candidate rule cannot create a verdict or mutate runtime behavior until future
 synthetic validation, decision registry approval, and promotion gates pass.
+
+## P85-4 Validation And Ranking Loop
+
+Rule candidates now feed two bounded runtime surfaces:
+
+- `rule_candidate_validation`: checks that selected candidates remain
+  shadow-only, carry collision-condition summaries, and still require
+  validation before promotion.
+- `rule_candidate_ranking`: gives existing `QuestionCandidate[]` rows a small
+  bounded reorder signal from available shadow rule candidates.
+
+The ranking signal is reorder-only:
+
+- it cannot create new question keys
+- it cannot activate a rule
+- it cannot override feature-backed candidates
+- each domain adjustment is capped at `0.055`
+
+Synthetic runtime evaluation can now assert expected rule-candidate domains,
+which lets golden cases check feature coverage, question coverage, answer text,
+runtime mutation invariants, and shadow-rule availability together.

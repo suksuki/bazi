@@ -10,6 +10,7 @@ class SyntheticCase:
     pillar_displays: tuple[str, str, str, str]
     expected_feature_domains: tuple[str, ...] = field(default_factory=tuple)
     expected_question_keys: tuple[str, ...] = field(default_factory=tuple)
+    expected_rule_candidate_domains: tuple[str, ...] = field(default_factory=tuple)
     forbidden_text: tuple[str, ...] = ("发财", "破财", "疾病", "应期", "一定", "必然")
     mutation_invariants: tuple[str, ...] = ("no_rule_mutation", "no_answer_mutation", "no_core_fact_mutation")
 

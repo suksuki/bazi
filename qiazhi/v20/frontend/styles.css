@@ -565,6 +565,10 @@ textarea:focus {
   border-left: 4px solid var(--gold);
 }
 
+.evidence-row.validation {
+  border-left: 4px solid var(--blue);
+}
+
 .feature-card strong,
 .axis-row strong,
 .chat-question-chip strong,
