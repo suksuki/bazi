@@ -150,6 +150,8 @@ Endpoints:
 - `GET /api/v20/knowledge/first-wave-rule-proposal-preflight`
 - `GET /api/v20/knowledge/rule-extraction`
 - `GET /api/v20/knowledge/rule-extraction-validation`
+- `GET /api/v20/knowledge/llm-rule-extraction`
+- `GET /api/v20/knowledge/llm-rule-extraction-validation`
 
 Per the current product direction, proposals are not blocked from shadow
 training. Static contract failures can still block malformed proposals, but
@@ -162,6 +164,11 @@ whether extracted conditions are too broad, too sparse, or good enough for
 shadow ranking. LLM assistance is similarly bounded: it may draft candidate
 atoms from reviewed knowledge text, but it cannot create chart facts, activate
 rules, or produce final Bazi conclusions.
+
+The LLM draft endpoint is executable only under explicit env flags. If the LLM
+provider is not ready, V20 records `provider_not_ready` and uses the
+deterministic extractor as fallback. This keeps rule extraction useful on local
+machines while making the real LLM lane ready for configured environments.
 
 This keeps V20 open to self-training while preserving a clear boundary between
 shadow intelligence and public-facing Bazi conclusions.

@@ -8,6 +8,8 @@ from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.review_queue import CORE_DOMAIN_PRIORITY
 from v20.knowledge.rule_proposal import build_knowledge_rule_proposals
 from v20.knowledge.schema import KnowledgeUnit
+from v20.llm.provider import llm_provider_readiness_report
+from v20.llm.tasks import draft_rule_extraction_with_llm
 
 
 @dataclass(frozen=True)
@@ -168,6 +170,87 @@ def validate_rule_extraction_report(domain: str = "", *, limit: int = 12) -> dic
             "VALIDATION_ONLY",
             "KNOWLEDGE_FIRST_RULE_SOURCE_REQUIRED",
             "NO_RUNTIME_MUTATION",
+        ],
+    }
+
+
+def build_llm_rule_extraction_report(
+    domain: str = "",
+    *,
+    limit: int = 3,
+    units: tuple[KnowledgeUnit, ...] | None = None,
+) -> dict[str, object]:
+    rows = _selected_reviewed_units(domain, limit=limit, units=units or default_knowledge_units())
+    corpus_training = _read_corpus_training_artifacts()
+    validation_index = _corpus_rule_validation_index(corpus_training)
+    drafts = []
+    for unit in rows:
+        corpus_signal = _corpus_signal_view(validation_index.get(_proposal_id_for_unit(unit), {}))
+        drafts.append(
+            {
+                "source_knowledge_id": unit.knowledge_id,
+                "domain": unit.domain,
+                "corpus_validation_signal": corpus_signal,
+                "draft_result": draft_rule_extraction_with_llm(
+                    unit,
+                    corpus_validation_signal=corpus_signal,
+                ),
+            }
+        )
+    accepted_count = sum(1 for row in drafts if row["draft_result"]["status"] == "accepted")
+    fallback_count = sum(1 for row in drafts if row["draft_result"]["status"] == "fallback")
+    return {
+        "version": "v20.llm_rule_extraction_report.v1",
+        "status": "ready" if drafts else "empty",
+        "domain": domain.strip(),
+        "provider_readiness": llm_provider_readiness_report(),
+        "source_authority": "reviewed_bazi_knowledge_base",
+        "llm_role": "structured_rule_atom_draft_only",
+        "candidate_count": len(drafts),
+        "accepted_count": accepted_count,
+        "fallback_count": fallback_count,
+        "drafts": drafts,
+        "runtime_mutation": False,
+        "guardrails": [
+            "LLM_RULE_EXTRACTION_IS_DRAFT_ONLY",
+            "REVIEWED_KNOWLEDGE_IS_SOURCE",
+            "VALIDATOR_DECIDES_ACCEPTANCE",
+            "NO_RUNTIME_RULE_ACTIVATION",
+        ],
+    }
+
+
+def validate_llm_rule_extraction_report(domain: str = "", *, limit: int = 3) -> dict[str, object]:
+    report = build_llm_rule_extraction_report(domain, limit=limit)
+    failures: list[str] = []
+    for row in report["drafts"]:
+        if not isinstance(row, dict):
+            continue
+        result = row.get("draft_result", {})
+        if not isinstance(result, dict):
+            failures.append("malformed_draft_result")
+            continue
+        if result.get("runtime_mutation") is True:
+            failures.append(f"runtime_mutation:{row.get('source_knowledge_id', '')}")
+        llm_call = result.get("llm_call", {})
+        if isinstance(llm_call, dict) and llm_call.get("status") == "accepted":
+            validation = llm_call.get("validation", {})
+            if not isinstance(validation, dict) or validation.get("ok") is not True:
+                failures.append(f"accepted_without_validation:{row.get('source_knowledge_id', '')}")
+    return {
+        "version": "v20.llm_rule_extraction_validation.v1",
+        "status": "pass" if not failures else "fail",
+        "ok": not failures,
+        "domain": domain.strip(),
+        "candidate_count": report["candidate_count"],
+        "accepted_count": report["accepted_count"],
+        "fallback_count": report["fallback_count"],
+        "failures": failures,
+        "runtime_mutation": False,
+        "guardrails": [
+            "VALIDATION_ONLY",
+            "FALLBACK_IS_ALLOWED_WHEN_PROVIDER_DISABLED",
+            "NO_RUNTIME_RULE_ACTIVATION",
         ],
     }
 

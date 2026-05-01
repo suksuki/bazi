@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from v20.corpus.artifacts import read_corpus_training_artifacts
 from v20.intelligence.generation import build_intelligence_generation_manifest
-from v20.knowledge.rule_extraction import validate_rule_extraction_report
+from v20.knowledge.rule_extraction import validate_llm_rule_extraction_report, validate_rule_extraction_report
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight
 from v20.validation.suite import run_synthetic_suite
 
@@ -12,6 +12,7 @@ def validate_intelligence_generation() -> dict[str, object]:
     synthetic = run_synthetic_suite()
     rule_preflight = build_first_wave_rule_proposal_preflight(limit_per_domain=1)
     rule_extraction = validate_rule_extraction_report(limit=12)
+    llm_rule_extraction = validate_llm_rule_extraction_report(limit=2)
     corpus_training = read_corpus_training_artifacts()
     failures = []
     if synthetic["ok"] is not True:
@@ -26,6 +27,8 @@ def validate_intelligence_generation() -> dict[str, object]:
         failures.append("rule_proposals_not_ready_for_shadow_training")
     if rule_extraction["status"] != "pass":
         failures.append("rule_extraction_validation_failed")
+    if llm_rule_extraction["status"] != "pass":
+        failures.append("llm_rule_extraction_validation_failed")
     return {
         "version": "v20.intelligence_generation_validation.v1",
         "status": "pass" if not failures else "fail",
@@ -42,6 +45,8 @@ def validate_intelligence_generation() -> dict[str, object]:
             "proposal_count": rule_preflight["proposal_count"],
             "rule_extraction_status": rule_extraction["status"],
             "rule_extraction_candidate_count": rule_extraction["candidate_count"],
+            "llm_rule_extraction_status": llm_rule_extraction["status"],
+            "llm_rule_extraction_fallback_count": llm_rule_extraction["fallback_count"],
             "corpus_training_artifact_status": corpus_training["status"],
         },
         "promotion": {

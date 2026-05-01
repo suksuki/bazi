@@ -25,6 +25,9 @@ def validate_llm_structured_output(contract: LLMTaskContract, payload: dict[str,
     missing = [key for key in contract.required_outputs if key not in payload]
     if missing:
         failures.extend(f"missing:{key}" for key in missing)
+    forbidden = [key for key in contract.forbidden_outputs if key in payload]
+    if forbidden:
+        failures.extend(f"forbidden_output_key:{key}" for key in forbidden)
     public_text = " ".join(
         str(value)
         for key, value in payload.items()

@@ -1,0 +1,146 @@
+from __future__ import annotations
+
+import json
+import os
+import urllib.request
+from dataclasses import asdict, dataclass
+from typing import Any
+
+from v20.llm.contracts import LLMTaskContract
+from v20.llm.provider import LLMProviderConfig, llm_provider_readiness_report, load_llm_provider_config_from_env
+from v20.llm.validators import validate_llm_structured_output
+
+
+@dataclass(frozen=True)
+class LLMStructuredCallResult:
+    status: str
+    provider: str
+    model: str
+    task_name: str
+    output: dict[str, object]
+    validation: dict[str, object]
+    fallback_reason: str
+    executed: bool = False
+    runtime_mutation: bool = False
+    guardrails: tuple[str, ...] = (
+        "LLM_CALL_RESULT_IS_DRAFT_ONLY",
+        "NO_SECRET_VALUES_RENDERED",
+        "DETERMINISTIC_VALIDATOR_REQUIRED",
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+def call_structured_llm(
+    contract: LLMTaskContract,
+    prompt: dict[str, object],
+    *,
+    config: LLMProviderConfig | None = None,
+) -> dict[str, object]:
+    cfg = config or load_llm_provider_config_from_env()
+    readiness = llm_provider_readiness_report(cfg)
+    if not readiness["ready_for_connection"]:
+        return _fallback_result(contract, cfg, "provider_not_ready")
+    if not cfg.execute_llm:
+        return _fallback_result(contract, cfg, "execute_flag_disabled")
+    try:
+        payload = _post_chat_completion(contract, prompt, cfg)
+    except Exception as exc:
+        return _fallback_result(contract, cfg, f"call_failed:{type(exc).__name__}")
+    validation = validate_llm_structured_output(contract, payload)
+    return LLMStructuredCallResult(
+        status="accepted" if validation["ok"] else "rejected",
+        provider=cfg.provider,
+        model=cfg.model,
+        task_name=contract.task_name,
+        output=payload if validation["ok"] else {},
+        validation=validation,
+        fallback_reason="" if validation["ok"] else "validation_failed",
+        executed=True,
+    ).to_dict()
+
+
+def _post_chat_completion(
+    contract: LLMTaskContract,
+    prompt: dict[str, object],
+    cfg: LLMProviderConfig,
+) -> dict[str, object]:
+    body = {
+        "model": cfg.model,
+        "temperature": cfg.temperature,
+        "max_tokens": cfg.max_tokens,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are a bounded extraction assistant. Return one JSON object only. "
+                    "Do not add chart facts, activate rules, or write conclusions."
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "contract": contract.to_dict(),
+                        "prompt": prompt,
+                    },
+                    ensure_ascii=False,
+                    sort_keys=True,
+                ),
+            },
+        ],
+    }
+    request = urllib.request.Request(
+        f"{cfg.resolved_base_url().rstrip('/')}/chat/completions",
+        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers=_headers(cfg),
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=cfg.http_timeout_sec) as response:
+        raw = response.read().decode("utf-8")
+    response_payload = json.loads(raw)
+    content = response_payload["choices"][0]["message"]["content"]
+    return _parse_json_content(str(content))
+
+
+def _headers(cfg: LLMProviderConfig) -> dict[str, str]:
+    headers = {"Content-Type": "application/json"}
+    api_key = os.getenv(cfg.api_key_env, "")
+    if api_key:
+        headers["Authorization"] = f"Bearer {api_key}"
+    return headers
+
+
+def _parse_json_content(content: str) -> dict[str, object]:
+    try:
+        payload = json.loads(content)
+    except json.JSONDecodeError:
+        start = content.find("{")
+        end = content.rfind("}")
+        if start < 0 or end <= start:
+            raise
+        payload = json.loads(content[start : end + 1])
+    if not isinstance(payload, dict):
+        raise TypeError("LLM structured output must be a JSON object.")
+    return payload
+
+
+def _fallback_result(contract: LLMTaskContract, cfg: LLMProviderConfig, reason: str) -> dict[str, object]:
+    validation = {
+        "ok": False,
+        "task_name": contract.task_name,
+        "failures": [reason],
+        "fallback": contract.fallback,
+        "guardrails": ["LLM_CALL_SKIPPED_OR_FAILED", "DETERMINISTIC_FALLBACK_REQUIRED"],
+    }
+    return LLMStructuredCallResult(
+        status="fallback",
+        provider=cfg.provider,
+        model=cfg.model,
+        task_name=contract.task_name,
+        output={},
+        validation=validation,
+        fallback_reason=reason,
+    ).to_dict()

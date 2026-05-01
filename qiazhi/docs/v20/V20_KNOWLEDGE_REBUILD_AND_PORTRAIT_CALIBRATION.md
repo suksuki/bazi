@@ -37,6 +37,10 @@ Endpoints:
 - `GET /api/v20/knowledge/rule-extraction/{domain}`
 - `GET /api/v20/knowledge/rule-extraction-validation`
 - `GET /api/v20/knowledge/rule-extraction-validation/{domain}`
+- `GET /api/v20/knowledge/llm-rule-extraction`
+- `GET /api/v20/knowledge/llm-rule-extraction/{domain}`
+- `GET /api/v20/knowledge/llm-rule-extraction-validation`
+- `GET /api/v20/knowledge/llm-rule-extraction-validation/{domain}`
 
 These endpoints do not activate rules, write database rows, or treat knowledge
 as truth. They make missing sources, duplicate ids, unreviewed sources, and
@@ -92,6 +96,13 @@ coverage, support quality, overly broad conditions, sparse hooks, and
 subcondition hints for shadow review. LLM can draft missing atoms from reviewed
 knowledge text, but deterministic validation remains authoritative and no LLM
 draft can activate runtime rules.
+
+LLM extraction is now executable behind explicit provider flags. With
+`V20_LLM_ENABLED=1` and `V20_LLM_EXECUTE=1`, V20 sends a structured
+`rule_extraction_draft` prompt to the configured OpenAI-compatible provider.
+When the provider is disabled or validation fails, V20 returns deterministic
+fallback atoms and records the fallback reason. No LLM output can enter runtime
+without the same review and promotion gates as deterministic extraction.
 
 ## Portrait Calibration
 

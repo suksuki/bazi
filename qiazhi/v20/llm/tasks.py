@@ -5,7 +5,9 @@ from v20.answer.plan import AnswerPlan
 from v20.features.schema import FeatureLayer
 from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.schema import KnowledgeUnit
+from v20.llm.client import call_structured_llm
 from v20.llm.contracts import ANSWER_PLAN_REWRITE, RULE_EXTRACTION_DRAFT, SAFETY_REVIEW
+from v20.llm.prompts import rule_extraction_prompt
 from v20.llm.structured_outputs import (
     LLMFeatureCandidate,
     LLMFeedbackSummary,
@@ -146,6 +148,50 @@ def draft_rule_extraction_from_knowledge(unit: KnowledgeUnit, *, locale: str = "
         "guardrails": [
             "DRAFT_ONLY",
             "KNOWLEDGE_UNIT_IS_SOURCE",
+            "NO_RUNTIME_RULE_ACTIVATION",
+        ],
+    }
+
+
+def draft_rule_extraction_with_llm(
+    unit: KnowledgeUnit,
+    *,
+    corpus_validation_signal: dict[str, object] | None = None,
+    locale: str = "zh",
+) -> dict[str, object]:
+    prompt = rule_extraction_prompt(unit, corpus_validation_signal=corpus_validation_signal, locale=locale)
+    call = call_structured_llm(RULE_EXTRACTION_DRAFT, prompt)
+    fallback = draft_rule_extraction_from_knowledge(unit, locale=locale)
+    if call["status"] == "accepted":
+        return {
+            "version": "v20.llm_rule_extraction_execution.v1",
+            "status": "accepted",
+            "source": "llm_structured_output",
+            "contract": "rule_extraction_draft",
+            "locale": locale,
+            "draft": call["output"],
+            "llm_call": call,
+            "fallback": fallback["draft"],
+            "runtime_mutation": False,
+            "guardrails": [
+                "LLM_OUTPUT_VALIDATED",
+                "DRAFT_ONLY",
+                "NO_RUNTIME_RULE_ACTIVATION",
+            ],
+        }
+    return {
+        "version": "v20.llm_rule_extraction_execution.v1",
+        "status": "fallback",
+        "source": "deterministic_fallback",
+        "contract": "rule_extraction_draft",
+        "locale": locale,
+        "draft": fallback["draft"],
+        "llm_call": call,
+        "fallback": fallback["draft"],
+        "runtime_mutation": False,
+        "guardrails": [
+            "LLM_NOT_ACCEPTED_OR_NOT_EXECUTED",
+            "DETERMINISTIC_FALLBACK_USED",
             "NO_RUNTIME_RULE_ACTIVATION",
         ],
     }

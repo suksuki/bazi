@@ -43,7 +43,12 @@ from v20.knowledge.rule_proposal import (
     build_knowledge_rule_proposals,
     build_rule_proposal_preflight,
 )
-from v20.knowledge.rule_extraction import build_rule_extraction_report, validate_rule_extraction_report
+from v20.knowledge.rule_extraction import (
+    build_llm_rule_extraction_report,
+    build_rule_extraction_report,
+    validate_llm_rule_extraction_report,
+    validate_rule_extraction_report,
+)
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
@@ -267,6 +272,22 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/knowledge/rule-extraction-validation/{domain}")
     def knowledge_rule_extraction_validation_domain(domain: str) -> dict[str, object]:
         return validate_rule_extraction_report(domain)
+
+    @app.get("/api/v20/knowledge/llm-rule-extraction")
+    def knowledge_llm_rule_extraction() -> dict[str, object]:
+        return build_llm_rule_extraction_report()
+
+    @app.get("/api/v20/knowledge/llm-rule-extraction/{domain}")
+    def knowledge_llm_rule_extraction_domain(domain: str) -> dict[str, object]:
+        return build_llm_rule_extraction_report(domain)
+
+    @app.get("/api/v20/knowledge/llm-rule-extraction-validation")
+    def knowledge_llm_rule_extraction_validation() -> dict[str, object]:
+        return validate_llm_rule_extraction_report()
+
+    @app.get("/api/v20/knowledge/llm-rule-extraction-validation/{domain}")
+    def knowledge_llm_rule_extraction_validation_domain(domain: str) -> dict[str, object]:
+        return validate_llm_rule_extraction_report(domain)
 
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:

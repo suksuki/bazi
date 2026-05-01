@@ -22,7 +22,12 @@ from v20.knowledge.rule_proposal import (
     build_knowledge_rule_proposals,
     build_rule_proposal_preflight,
 )
-from v20.knowledge.rule_extraction import build_rule_extraction_report, validate_rule_extraction_report
+from v20.knowledge.rule_extraction import (
+    build_llm_rule_extraction_report,
+    build_rule_extraction_report,
+    validate_llm_rule_extraction_report,
+    validate_rule_extraction_report,
+)
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.server import app
 
@@ -336,6 +341,23 @@ def test_v20_rule_extraction_is_knowledge_first_with_corpus_validation_only() ->
     assert validation["runtime_mutation"] is False
 
 
+def test_v20_llm_rule_extraction_uses_safe_fallback_when_provider_disabled() -> None:
+    report = build_llm_rule_extraction_report("strength", limit=1)
+    validation = validate_llm_rule_extraction_report("strength", limit=1)
+    draft = report["drafts"][0]["draft_result"]
+
+    assert report["status"] == "ready"
+    assert report["source_authority"] == "reviewed_bazi_knowledge_base"
+    assert report["llm_role"] == "structured_rule_atom_draft_only"
+    assert report["accepted_count"] == 0
+    assert report["fallback_count"] == 1
+    assert draft["status"] == "fallback"
+    assert draft["source"] == "deterministic_fallback"
+    assert draft["llm_call"]["fallback_reason"] in {"provider_not_ready", "execute_flag_disabled"}
+    assert validation["status"] == "pass"
+    assert validation["runtime_mutation"] is False
+
+
 def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     client = TestClient(app)
     report = client.get("/api/v20/knowledge/rule-proposals/strength").json()
@@ -344,6 +366,8 @@ def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     first_preflight = client.get("/api/v20/knowledge/first-wave-rule-proposal-preflight").json()
     extraction = client.get("/api/v20/knowledge/rule-extraction/strength").json()
     extraction_validation = client.get("/api/v20/knowledge/rule-extraction-validation/strength").json()
+    llm_extraction = client.get("/api/v20/knowledge/llm-rule-extraction/strength").json()
+    llm_validation = client.get("/api/v20/knowledge/llm-rule-extraction-validation/strength").json()
 
     assert report["runtime_mutation"] is False
     assert report["status"] == "ready"
@@ -358,3 +382,7 @@ def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     assert extraction["corpus_role"] == "coverage_validation_and_refinement_only"
     assert extraction_validation["runtime_mutation"] is False
     assert extraction_validation["status"] == "pass"
+    assert llm_extraction["runtime_mutation"] is False
+    assert llm_extraction["status"] == "ready"
+    assert llm_validation["runtime_mutation"] is False
+    assert llm_validation["status"] == "pass"

@@ -45,6 +45,18 @@ rules or connecting to an external vector store.
 `GET /api/v20/knowledge/release-manifest` expose the rebuilt knowledge release
 surface. They are read-only and require decision approval before any promotion.
 
+Rule extraction has two surfaces:
+
+- deterministic extraction from reviewed knowledge:
+  `GET /api/v20/knowledge/rule-extraction`
+- optional LLM extraction draft:
+  `GET /api/v20/knowledge/llm-rule-extraction`
+
+The LLM surface only executes a provider call when `V20_LLM_ENABLED=1`,
+`V20_LLM_EXECUTE=1`, and the provider is ready. Otherwise it records a safe
+deterministic fallback. Accepted LLM outputs must satisfy the structured
+contract before they can become review drafts.
+
 ## LLM System
 
 LLM is a controlled collaborator. It can improve interaction, routing, clarity, multilingual rendering, feedback summaries, and safety review, but it cannot own Bazi facts or mutate rule truth.
@@ -54,6 +66,8 @@ Current V20 LLM contracts:
 - `intent_parse`: turns user text into routing hints and candidate domains.
 - `question_suggestion`: suggests from existing feature-backed question candidates.
 - `feature_candidate_proposal`: proposes domains for review without writing runtime features.
+- `rule_extraction_draft`: extracts draft rule atoms from reviewed
+  `KnowledgeUnit` text and hook contracts; it cannot activate rules.
 - `answer_plan_assist`: helps organize verified answer-plan material.
 - `answer_plan_rewrite`: rewrites only verified answer plans.
 - `multilingual_render`: renders verified answers across locales without adding claims.
