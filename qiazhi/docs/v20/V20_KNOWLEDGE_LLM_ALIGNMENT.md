@@ -52,6 +52,8 @@ LLM output is always checked for forbidden claims and internal identifier leaks 
 - LLM feature candidates remain `proposal_only`; the compiler owns runtime
   `BaziFeature` creation.
 - Answer text receives deterministic safety review before publication.
+- English and Korean answer rendering use deterministic V20 terminology maps
+  before any future LLM rewrite is allowed.
 
 When `user_text` is absent, `llm_assist.status` stays `idle`; the runtime still
 attaches an answer safety review so UI and server layers can rely on the same

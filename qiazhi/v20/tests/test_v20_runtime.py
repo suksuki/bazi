@@ -109,6 +109,36 @@ def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:
     assert "发财" not in result["answer_text"]
 
 
+def test_v20_multilingual_answer_rendering_uses_deterministic_terms() -> None:
+    en = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.locale.en",
+        locale="en",
+        user_text="timing",
+        flow_year_pillar="庚子",
+    )
+    ko = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.locale.ko",
+        locale="ko",
+        user_text="세운",
+        flow_year_pillar="庚子",
+    )
+
+    assert "time layer and flow triggers" in en["answer_text"]
+    assert "命理测算主线" not in en["answer_text"]
+    assert "시간층과 세운 촉발" in ko["answer_text"]
+    assert "命理测算主线" not in ko["answer_text"]
+    assert en["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+    assert ko["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+
+
 def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="v20.llm")
     routed = run_runtime_from_pillars(
