@@ -87,14 +87,15 @@ def test_v20_rule_promotion_gate_batches_shadow_rules_for_review() -> None:
     assert gate["packet_count"] >= 12
     assert gate["runtime_promotion_candidate_count"] == 0
     assert gate["blocked_count"] == 0
-    assert gate["needs_subcondition_count"] >= 1
-    assert "needs_subcondition_split" in gate["lane_counts"]
+    assert gate["needs_subcondition_count"] == 0
+    assert gate["subcondition_review_ready_count"] >= 1
+    assert "subcondition_review_ready" in gate["lane_counts"]
     assert "DECISION_REGISTRY_REQUIRED_FOR_ANY_PROMOTION" in gate["guardrails"]
     assert summary["packet_count"] == gate["packet_count"]
     assert all("human_decision_options" in row for row in summary["packets"])
-    assert any("split_rule" in row["human_decision_options"] for row in summary["packets"])
+    assert any("approve_subconditions_for_shadow_eval" in row["human_decision_options"] for row in summary["packets"])
     assert split["status"] == "ready"
-    assert split["packet_count"] == gate["needs_subcondition_count"]
+    assert split["packet_count"] == gate["subcondition_review_ready_count"]
     assert split["subcondition_count"] >= split["packet_count"]
     assert split["quality_status"] == "ready_for_review"
     assert all(row["runtime_allowed"] is False for row in split["packets"])
@@ -155,6 +156,10 @@ def test_v20_full_precompute_preview_builds_structural_label_snapshots() -> None
     assert first_snapshot["label_policy"] == "structural_features_and_dynamic_decision_portrait_tags_only"
     assert first_snapshot["feature_domains"]
     assert first_snapshot["portrait_domains"]
+    assert first_snapshot["wealth_material_level"] in {"visible", "hidden_only", "not_visible"}
+    assert first_snapshot["useful_god_candidate_count"] >= 1
+    assert first_snapshot["mainline_domains"]
+    assert first_snapshot["evidence_density"]["mainline_count"] == len(first_snapshot["mainline_domains"])
     assert "NO_DESTINY_TRUTH_LABEL" in first_snapshot["guardrails"]
     assert shard["shard_id"] == "v20.corpus.shard.015"
 
@@ -199,8 +204,13 @@ def test_v20_corpus_artifacts_build_coverage_index_and_similarity(tmp_path) -> N
     assert latest_artifact_status["status"] == "completed"
     assert summary["case_count"] == 6
     assert summary["distributions"]["feature_domains"]["strength"] == 6
+    assert "wealth_material_level" in summary["distributions"]
+    assert "mainline_domains" in summary["distributions"]
+    assert summary["averages"]["portrait_axis_count"] > 0
     assert summary["cluster_count"] >= 1
     assert clusters["status"] == "ready"
+    assert "wealth_material_level" in clusters["signature_dimensions"]
+    assert "mainline_domains" in clusters["signature_dimensions"]
     assert clusters["clusters"][0]["centroid_tags"]
     assert training["status"] == "ready"
     assert training["portrait_axis_training"]["status"] == "ready"
@@ -208,7 +218,11 @@ def test_v20_corpus_artifacts_build_coverage_index_and_similarity(tmp_path) -> N
     assert similar["status"] == "ready"
     assert similar["match_count"] >= 1
     assert similar["candidate_count"] >= similar["match_count"]
+    assert "wealth_material_level" in similar["query"]
+    assert "mainline_domains" in similar["query"]
     assert similar["matches"][0]["shared_tag_count"] >= 1
+    assert "wealth_material_level" in similar["matches"][0]
+    assert "mainline_domains" in similar["matches"][0]
     assert "NO_DESTINY_OUTCOME_INFERENCE" in similar["guardrails"]
 
 
@@ -280,7 +294,7 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert promotion_packets["runtime_mutation"] is False
     assert promotion_packets["packet_count"] == promotion_gate["packet_count"]
     assert subcondition_split["runtime_mutation"] is False
-    assert subcondition_split["packet_count"] == promotion_gate["needs_subcondition_count"]
+    assert subcondition_split["packet_count"] == promotion_gate["subcondition_review_ready_count"]
     assert decision_registry_review["runtime_mutation"] is False
     assert decision_registry_review["decision_record_count"] >= subcondition_split["subcondition_count"]
     assert decision_registry_review["runtime_activation_count"] == 0

@@ -40,7 +40,7 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
         question_key="q_income_stability",
         expected_rule_domains=("wealth", "ten_god", "strength"),
         expected_feature_prefixes=(
-            "feature.wealth.material_available",
+            "feature.wealth.visible_material",
             "feature.ten_god.focus.zheng_cai",
         ),
         expected_question_keys=("q_income_stability", "q_income_factors"),

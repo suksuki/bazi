@@ -60,7 +60,8 @@ FEATURE_LABELS = {
     "feature.branch.visible_relation": "可见地支关系需要分层判断",
     "feature.branch.relation_quiet": "地支关系相对平静",
     "feature.time.explicit_context": "显式时间层可进入触发测算",
-    "feature.wealth.material_available": "财星材料在结构中可见",
+    "feature.wealth.visible_material": "财星明透材料在结构中可见",
+    "feature.wealth.hidden_material": "财星仅藏于地支，需要透出或引动复核",
     "feature.wealth.material_not_visible": "财星材料未直接显现",
     "feature.pattern.review_index": "格局审查索引已建立",
 }
@@ -248,7 +249,9 @@ def _wealth_summary(feature: BaziFeature) -> str:
         if ref.title and ref.title != "no wealth ten-god material found"
     ]
     if labels:
-        return "财星材料：" + "、".join(_unique(labels)[:6]) + "。"
+        prefix = "财星藏干线索：" if feature.feature_id == "feature.wealth.hidden_material" else "财星材料："
+        suffix = " 需看透出、引动或成链证据。" if feature.feature_id == "feature.wealth.hidden_material" else ""
+        return prefix + "、".join(_unique(labels)[:6]) + "。" + suffix
     if feature.feature_id == "feature.wealth.material_not_visible":
         return "财星材料：原局明透与藏干未直接形成财星入口，需从结构路径复核。"
     return ""

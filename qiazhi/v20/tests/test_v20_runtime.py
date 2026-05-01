@@ -133,6 +133,28 @@ def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> Non
     assert {"career", "wealth", "element"} & {row["domain"] for row in result["questions"]}
 
 
+def test_v20_hidden_wealth_stays_boundary_not_mainline() -> None:
+    result = run_runtime_from_pillars("甲子", "丙寅", "甲辰", "辛酉", input_id="v20.hidden.wealth")
+
+    wealth_features = {
+        row["feature_id"]
+        for row in result["feature_layer"]["features"]
+        if row["domain"] == "wealth"
+    }
+    mainline_domains = [row["domain"] for row in result["decision_report"]["mainlines"]]
+    wealth_decisions = {
+        row["decision_key"]: row
+        for row in result["decision_report"]["decisions"]
+        if row["domain"] == "wealth"
+    }
+
+    assert "feature.wealth.hidden_material" in wealth_features
+    assert "feature.wealth.visible_material" not in wealth_features
+    assert "wealth" not in mainline_domains[:3]
+    assert wealth_decisions["decision.wealth.material"]["status"] == "hidden_material_review"
+    assert all("食伤生财" not in row["title"] for row in result["questions"][:3])
+
+
 def test_v20_dynamic_decisions_use_practitioner_ready_bazi_rule_language() -> None:
     result = run_runtime_from_pillars(
         "甲子",

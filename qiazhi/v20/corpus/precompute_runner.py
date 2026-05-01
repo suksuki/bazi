@@ -38,6 +38,7 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
     knowledge_refs = runtime_result["knowledge_refs"]
     portrait = runtime_result["dynamic_portrait"]
     features = tuple(row for row in feature_layer["features"] if isinstance(row, dict))
+    mainlines = tuple(row for row in runtime_result.get("decision_report", {}).get("mainlines", ()) if isinstance(row, dict))
     relation_types = tuple(
         sorted(
             {
@@ -88,6 +89,9 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
             )
         ),
         "feature_domains": tuple(sorted({str(row.get("domain", "")) for row in features if row.get("domain")})),
+        "wealth_material_level": _wealth_material_level(features),
+        "mainline_keys": tuple(str(row.get("mainline_key", "")) for row in mainlines if row.get("mainline_key")),
+        "mainline_domains": tuple(str(row.get("domain", "")) for row in mainlines if row.get("domain")),
         "macro_feature_domains": tuple(
             sorted(
                 {
@@ -104,12 +108,13 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
         "relation_types": relation_types,
         "visible_ten_gods": visible_ten_gods,
         "hidden_ten_gods": hidden_ten_gods,
-        "useful_god_candidate_count": sum(1 for row in features if str(row.get("domain", "")) == "useful_god"),
-        "wealth_feature_present": any(str(row.get("domain", "")) == "wealth" for row in features),
+        "useful_god_candidate_count": _useful_god_candidate_count(features),
+        "wealth_feature_present": any(str(row.get("feature_id", "")) == "feature.wealth.visible_material" for row in features),
         "evidence_density": {
             "feature_count": feature_layer.get("feature_count", 0),
             "knowledge_ref_count": runtime_result["knowledge_report"].get("count", 0),
             "portrait_tag_count": portrait.get("tag_count", 0),
+            "mainline_count": len(mainlines),
         },
         "label_policy": "structural_features_and_dynamic_decision_portrait_tags_only",
         "guardrails": [
@@ -136,3 +141,24 @@ def _is_salience_feature_id(feature_id: str) -> bool:
             "feature.time.ten_god.",
         )
     )
+
+
+def _wealth_material_level(features: tuple[dict[str, object], ...]) -> str:
+    ids = {str(row.get("feature_id", "")) for row in features}
+    if "feature.wealth.visible_material" in ids:
+        return "visible"
+    if "feature.wealth.hidden_material" in ids:
+        return "hidden_only"
+    if "feature.wealth.material_not_visible" in ids:
+        return "not_visible"
+    return "unknown"
+
+
+def _useful_god_candidate_count(features: tuple[dict[str, object], ...]) -> int:
+    for feature in features:
+        if str(feature.get("feature_id", "")) != "feature.useful_god.candidate_paths":
+            continue
+        refs = feature.get("evidence_refs", ())
+        if isinstance(refs, (list, tuple)):
+            return len(refs)
+    return 0

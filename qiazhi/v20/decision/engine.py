@@ -60,6 +60,8 @@ def _build_hits(
         )
     ]
     wealth_labels = _labels_present(labels, {"正财", "偏财"})
+    visible_wealth_labels = _labels_present(facts.visible_ten_gods, {"正财", "偏财"})
+    hidden_wealth_labels = _labels_present(facts.hidden_ten_gods, {"正财", "偏财"})
     peer_labels = _labels_present(labels, {"比肩", "劫财"})
     resource_labels = _labels_present(labels, {"正印", "偏印"})
     authority_labels = _labels_present(labels, {"正官", "七杀"})
@@ -121,15 +123,15 @@ def _build_hits(
             rule_key="rule.wealth.material",
             label="财星材料",
             domain="wealth",
-            status="hit" if wealth_labels else "not_visible",
-            score=0.68 if wealth_labels else 0.32,
+            status=_wealth_material_status(visible_wealth_labels, hidden_wealth_labels),
+            score=_wealth_material_score(visible_wealth_labels, hidden_wealth_labels),
             evidence=tuple(f"{row.label}@{_position_label(row.pillar)}{_layer_label(row.layer)}" for row in wealth_labels[:6])
             or ("原局明透与藏干未直接见财星",),
-            missing_evidence=() if wealth_labels else ("财星入口需要从十神关系和大运流年旁路复核",),
+            missing_evidence=_wealth_missing_evidence(visible_wealth_labels, hidden_wealth_labels),
             feature_ids=feature_ids_by_domain.get("wealth", ()),
         )
     )
-    if wealth_labels and peer_labels:
+    if visible_wealth_labels and peer_labels:
         hits.append(
             RuleHit(
                 rule_key="rule.wealth.peer_competition",
@@ -139,7 +141,7 @@ def _build_hits(
                 score=0.67,
                 evidence=tuple(
                     f"{row.label}@{_position_label(row.pillar)}{_layer_label(row.layer)}"
-                    for row in [*wealth_labels[:3], *peer_labels[:3]]
+                    for row in [*visible_wealth_labels[:3], *peer_labels[:3]]
                 ),
                 missing_evidence=("需继续裁决财星承载力和通道",),
                 feature_ids=_merge_feature_ids(feature_ids_by_domain, ("wealth", "ten_god", "strength")),
@@ -179,8 +181,12 @@ def _build_hits(
         left="正官",
         right="七杀",
     ))
+    output_wealth_labels = tuple(
+        row for row in labels
+        if getattr(row, "label", "") not in {"正财", "偏财"} or getattr(row, "layer", "") == "visible"
+    )
     hits.append(_ten_god_pair_hit(
-        labels,
+        output_wealth_labels,
         feature_ids_by_domain,
         rule_key="rule.ten_god.output_to_wealth",
         label="食伤生财",
@@ -188,7 +194,7 @@ def _build_hits(
         left=("食神", "伤官"),
         right=("正财", "偏财"),
     ))
-    if output_labels and wealth_labels:
+    if output_labels and visible_wealth_labels:
         hits.append(
             RuleHit(
                 rule_key="rule.wealth.output_wealth_capacity_chain",
@@ -199,7 +205,7 @@ def _build_hits(
                 evidence=tuple(
                     [
                         *(_ten_god_public_row(row) for row in output_labels[:2]),
-                        *(_ten_god_public_row(row) for row in wealth_labels[:2]),
+                        *(_ten_god_public_row(row) for row in visible_wealth_labels[:2]),
                         _strength_label(core.day_master_capacity),
                     ]
                 ),
@@ -287,7 +293,7 @@ def _build_hits(
                 feature_ids=feature_ids_by_domain.get("time", ()),
             )
         )
-    if "wealth" in {row.domain for row in hits} and core.day_master_capacity != "supported_capacity" and wealth_labels:
+    if "wealth" in {row.domain for row in hits} and core.day_master_capacity != "supported_capacity" and visible_wealth_labels:
         hits.append(
             RuleHit(
                 rule_key="rule.wealth.capacity_gate",
@@ -333,6 +339,15 @@ def _build_decisions(hits: list[RuleHit], facts: ChartFacts, core: CoreInference
                 role="domain_material",
                 portrait_tags=("财星线索可见", "财运要看来源与承受力"),
                 question_seeds=("财运主要从哪些位置和十神线索看？",),
+            ))
+        elif hit.rule_key == "rule.wealth.material" and hit.status == "hidden_only":
+            decisions.append(_decision_from_hit(
+                hit,
+                label="财星藏于地支需先辨明暗",
+                status="hidden_material_review",
+                role="domain_boundary",
+                portrait_tags=("财星藏干只作潜在线索",),
+                question_seeds=("藏干里的财星，要先看能不能透出或被引动吗？",),
             ))
         elif hit.rule_key == "rule.wealth.capacity_gate":
             decisions.append(_decision_from_hit(
@@ -568,7 +583,7 @@ def _wealth_mainlines(by_key: dict[str, RuleDecision]) -> list[MainlineDecision]
                 question_seed=chain.question_seeds[0] if chain.question_seeds else "食伤生财路径先复核哪一段？",
             )
         ]
-    if material:
+    if material and material.status not in {"hidden_material_review", "evidence_gap"}:
         return [
             MainlineDecision(
                 mainline_key="mainline.wealth.material",
@@ -803,6 +818,34 @@ def _all_ten_gods(facts: ChartFacts) -> tuple[object, ...]:
 
 def _labels_present(rows: tuple[object, ...], labels: set[str]) -> list[object]:
     return [row for row in rows if getattr(row, "label", "") in labels]
+
+
+def _wealth_material_status(visible_rows: list[object], hidden_rows: list[object]) -> str:
+    if visible_rows:
+        return "hit"
+    if hidden_rows:
+        return "hidden_only"
+    return "not_visible"
+
+
+def _wealth_material_score(visible_rows: list[object], hidden_rows: list[object]) -> float:
+    if visible_rows:
+        return round(min(0.78, 0.58 + len(visible_rows[:3]) * 0.055 + _weighted_sum(hidden_rows[:4]) * 0.025), 3)
+    if hidden_rows:
+        return round(min(0.52, 0.34 + _weighted_sum(hidden_rows[:5]) * 0.045), 3)
+    return 0.24
+
+
+def _wealth_missing_evidence(visible_rows: list[object], hidden_rows: list[object]) -> tuple[str, ...]:
+    if visible_rows:
+        return ()
+    if hidden_rows:
+        return ("财星只在藏干，不直接作为财运主线，需看透出、引动或成链证据",)
+    return ("财星入口需要从十神关系和大运流年旁路复核",)
+
+
+def _weighted_sum(rows: list[object]) -> float:
+    return round(sum(float(getattr(row, "weight", 1.0)) for row in rows), 3)
 
 
 def _ten_god_pair_hit(

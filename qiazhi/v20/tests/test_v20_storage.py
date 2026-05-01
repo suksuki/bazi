@@ -44,6 +44,8 @@ def test_v20_initial_migration_is_non_destructive_and_review_gated() -> None:
     assert index_migration["destructive"] is False
     assert any("USING gin (payload)" in statement for statement in index_migration["sql"])
     assert any("payload->>'cluster_key'" in statement for statement in index_migration["sql"])
+    assert any("payload->>'wealth_material_level'" in statement for statement in index_migration["sql"])
+    assert any("payload->'mainline_domains'" in statement for statement in index_migration["sql"])
     assert feedback_index_migration["migration_id"] == "v20_0003_feedback_ledger_indexes"
     assert feedback_index_migration["destructive"] is False
     assert any("idx_v20_feedback_ledger_payload_gin" in statement for statement in feedback_index_migration["sql"])
@@ -64,6 +66,9 @@ def test_v20_corpus_storage_policy_makes_sqlite_disposable() -> None:
     assert "SQLITE_IS_DERIVED_AND_DISPOSABLE" in policy["guardrails"]
     assert index_plan["table"] == "v20_corpus_snapshots"
     assert "idx_v20_corpus_payload_gin" in index_plan["indexes"]
+    assert "idx_v20_corpus_payload_wealth_level" in index_plan["indexes"]
+    assert "idx_v20_corpus_payload_mainline_domains" in index_plan["indexes"]
+    assert "mainline_domain_filter" in index_plan["query_surfaces"]
     assert "jsonb_containment_for_feature_and_portrait_tags" in index_plan["query_surfaces"]
 
 

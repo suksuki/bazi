@@ -121,6 +121,9 @@ def build_corpus_artifacts(
         "knowledge_ids": Counter(),
         "useful_god_candidate_count": Counter(),
         "wealth_feature_present": Counter(),
+        "wealth_material_level": Counter(),
+        "mainline_keys": Counter(),
+        "mainline_domains": Counter(),
     }
     cooccurrence: Counter[str] = Counter()
     cluster_counts: Counter[str] = Counter()
@@ -170,7 +173,7 @@ def build_corpus_artifacts(
             density = label.get("evidence_density", {})
             feature_count_sum += int(density.get("feature_count", 0))
             knowledge_ref_count_sum += int(density.get("knowledge_ref_count", 0))
-            portrait_axis_count_sum += int(density.get("portrait_axis_count", 0))
+            portrait_axis_count_sum += int(density.get("portrait_axis_count", density.get("portrait_tag_count", 0)))
             total += 1
             if conn is not None and len(batch) >= 2_000:
                 conn.executemany(SQLITE_INSERT, batch)
@@ -381,6 +384,8 @@ def find_similar_cases(
             "feature_ids": _split(row["feature_ids"]),
             "portrait_domains": _split(row["portrait_domains"]),
             "relation_types": _split(row["relation_types"]),
+            "wealth_material_level": row["wealth_material_level"] if "wealth_material_level" in row.keys() else "",
+            "mainline_domains": _split(row["mainline_domains"]) if "mainline_domains" in row.keys() else [],
             "shared_tag_count": len(shared_tags),
             "shared_tags": list(shared_tags[:12]),
         }
@@ -398,6 +403,8 @@ def find_similar_cases(
             "day_master": query["day_master"],
             "day_master_capacity": query["day_master_capacity"],
             "cluster_key": query["cluster_key"],
+            "wealth_material_level": query["wealth_material_level"] if "wealth_material_level" in query.keys() else "",
+            "mainline_domains": _split(query["mainline_domains"]) if "mainline_domains" in query.keys() else [],
         },
         "match_count": len(matches),
         "candidate_count": len(candidates),
@@ -465,6 +472,8 @@ def _find_similar_cases_postgres(case_id: str, *, limit: int) -> dict[str, objec
             "feature_ids": _split(row["feature_ids"]),
             "portrait_domains": _split(row["portrait_domains"]),
             "relation_types": _split(row["relation_types"]),
+            "wealth_material_level": row.get("wealth_material_level", ""),
+            "mainline_domains": _split(row.get("mainline_domains", ())),
             "shared_tag_count": len(shared_tags),
             "shared_tags": list(shared_tags[:12]),
         }
@@ -481,6 +490,8 @@ def _find_similar_cases_postgres(case_id: str, *, limit: int) -> dict[str, objec
             "day_master": query["day_master"],
             "day_master_capacity": query["day_master_capacity"],
             "cluster_key": query["cluster_key"],
+            "wealth_material_level": query.get("wealth_material_level", ""),
+            "mainline_domains": _split(query.get("mainline_domains", ())),
         },
         "match_count": len(matches),
         "candidate_count": len(candidates),
@@ -514,9 +525,10 @@ INSERT INTO corpus_cases (
   feature_ids, salience_feature_ids, salience_domains,
   feature_domains, macro_feature_domains, measurement_domains, portrait_domains,
   relation_types, visible_ten_gods, hidden_ten_gods, question_keys, knowledge_ids,
-  useful_god_candidate_count, wealth_feature_present, cluster_key, tag_signature,
+  mainline_keys, mainline_domains, useful_god_candidate_count,
+  wealth_feature_present, wealth_material_level, cluster_key, tag_signature,
   feature_count, knowledge_ref_count, portrait_axis_count
-) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 """
 
 
@@ -550,8 +562,11 @@ def _create_schema(conn: sqlite3.Connection) -> None:
           hidden_ten_gods TEXT NOT NULL,
           question_keys TEXT NOT NULL,
           knowledge_ids TEXT NOT NULL,
+          mainline_keys TEXT NOT NULL,
+          mainline_domains TEXT NOT NULL,
           useful_god_candidate_count INTEGER NOT NULL,
           wealth_feature_present INTEGER NOT NULL,
+          wealth_material_level TEXT NOT NULL,
           cluster_key TEXT NOT NULL,
           tag_signature TEXT NOT NULL,
           feature_count INTEGER NOT NULL,
@@ -571,6 +586,8 @@ def _create_indexes(conn: sqlite3.Connection) -> None:
         "CREATE INDEX idx_corpus_element_capacity ON corpus_cases(day_master_element, day_master_capacity)",
         "CREATE INDEX idx_corpus_cluster_key ON corpus_cases(cluster_key)",
         "CREATE INDEX idx_corpus_wealth ON corpus_cases(wealth_feature_present)",
+        "CREATE INDEX idx_corpus_wealth_level ON corpus_cases(wealth_material_level)",
+        "CREATE INDEX idx_corpus_mainline_domains ON corpus_cases(mainline_domains)",
     ):
         conn.execute(sql)
     conn.commit()
@@ -599,13 +616,16 @@ def _flat_label_row(line_no: int, label: dict[str, object]) -> dict[str, object]
         "hidden_ten_gods": label.get("hidden_ten_gods", ()),
         "question_keys": label.get("question_keys", ()),
         "knowledge_ids": label.get("knowledge_ids", ()),
+        "mainline_keys": label.get("mainline_keys", ()),
+        "mainline_domains": label.get("mainline_domains", ()),
         "useful_god_candidate_count": label.get("useful_god_candidate_count", 0),
         "wealth_feature_present": label.get("wealth_feature_present", False),
+        "wealth_material_level": label.get("wealth_material_level", "unknown"),
         "cluster_key": _cluster_key(label),
         "tag_signature": tuple(sorted(_label_tags(label))),
         "feature_count": density.get("feature_count", 0),
         "knowledge_ref_count": density.get("knowledge_ref_count", 0),
-        "portrait_axis_count": density.get("portrait_axis_count", 0),
+        "portrait_axis_count": density.get("portrait_axis_count", density.get("portrait_tag_count", 0)),
     }
 
 
@@ -631,8 +651,11 @@ def _sqlite_row(row: dict[str, object]) -> tuple[object, ...]:
         _join(row["hidden_ten_gods"]),
         _join(row["question_keys"]),
         _join(row["knowledge_ids"]),
+        _join(row["mainline_keys"]),
+        _join(row["mainline_domains"]),
         int(row["useful_god_candidate_count"]),
         1 if row["wealth_feature_present"] else 0,
+        str(row["wealth_material_level"]),
         row["cluster_key"],
         _join(row["tag_signature"]),
         int(row["feature_count"]),
@@ -656,10 +679,13 @@ def _update_counters(counters: dict[str, Counter[str]], label: dict[str, object]
         "hidden_ten_gods",
         "question_keys",
         "knowledge_ids",
+        "mainline_keys",
+        "mainline_domains",
     ):
         counters[key].update(str(item) for item in label.get(key, ()))
     counters["useful_god_candidate_count"][str(label.get("useful_god_candidate_count", 0))] += 1
     counters["wealth_feature_present"]["true" if label.get("wealth_feature_present") else "false"] += 1
+    counters["wealth_material_level"][str(label.get("wealth_material_level", "unknown"))] += 1
 
 
 def _label_feature_ids(label: dict[str, object]) -> tuple[str, ...]:
@@ -678,7 +704,7 @@ def _label_tags(label: dict[str, object]) -> set[str]:
         f"day_master:{label.get('day_master', '')}",
         f"element:{label.get('day_master_element', '')}",
         f"capacity:{label.get('day_master_capacity', '')}",
-        f"wealth:{1 if label.get('wealth_feature_present') else 0}",
+        f"wealth:{label.get('wealth_material_level', 'unknown')}",
         f"useful_god_candidate_count:{label.get('useful_god_candidate_count', 0)}",
     }
     for feature_id in _label_feature_ids(label):
@@ -696,6 +722,8 @@ def _label_tags(label: dict[str, object]) -> set[str]:
         "hidden_ten_gods",
         "question_keys",
         "knowledge_ids",
+        "mainline_keys",
+        "mainline_domains",
     ):
         tags.update(f"{key}:{item}" for item in label.get(key, ()))
     return {tag for tag in tags if not tag.endswith(":")}
@@ -769,7 +797,8 @@ def _update_portrait_cooccurrence(cooccurrence: Counter[str], label: dict[str, o
 
 def _cluster_key(label: dict[str, object]) -> str:
     relation = "+".join(str(item) for item in label.get("relation_types", ())) or "quiet"
-    wealth = "wealth" if label.get("wealth_feature_present") else "no_wealth"
+    wealth = str(label.get("wealth_material_level", "")) or ("visible_wealth" if label.get("wealth_feature_present") else "no_wealth")
+    mainline = "+".join(str(item) for item in label.get("mainline_domains", ())[:3]) or "no_mainline"
     return "|".join(
         (
             str(label.get("day_master_element", "")),
@@ -777,6 +806,7 @@ def _cluster_key(label: dict[str, object]) -> str:
             relation,
             wealth,
             f"useful{label.get('useful_god_candidate_count', 0)}",
+            mainline,
         )
     )
 
@@ -899,7 +929,9 @@ def _cluster_model(
             "day_master_capacity",
             "relation_types",
             "wealth_feature_present",
+            "wealth_material_level",
             "useful_god_candidate_count",
+            "mainline_domains",
         ],
         "clusters": clusters,
         "coverage_gaps": {
@@ -936,6 +968,8 @@ def _similarity_manifest(paths: CorpusArtifactPaths, total: int, cluster_counts:
             "ten_god_labels",
             "question_keys",
             "knowledge_ids",
+            "wealth_material_level",
+            "mainline_domains",
         ],
         "cluster_count": len(cluster_counts),
         "runtime_mutation": False,
@@ -1427,11 +1461,16 @@ def _tag_weight(tag: str, weights: dict[str, float]) -> float:
 def _row_tags(row: sqlite3.Row) -> set[str]:
     if "tag_signature" in row.keys() and row["tag_signature"]:
         return set(_split(row["tag_signature"]))
+    wealth_material = (
+        row["wealth_material_level"]
+        if "wealth_material_level" in row.keys()
+        else ("visible" if row["wealth_feature_present"] else "not_visible")
+    )
     tags = {
         f"day_master:{row['day_master']}",
         f"element:{row['day_master_element']}",
         f"capacity:{row['day_master_capacity']}",
-        f"wealth:{row['wealth_feature_present']}",
+        f"wealth:{wealth_material}",
     }
     if "feature_ids" in row.keys():
         tags.update(f"feature_id:{item}" for item in _split(row["feature_ids"]))
@@ -1446,8 +1485,11 @@ def _row_tags(row: sqlite3.Row) -> set[str]:
         "relation_types",
         "visible_ten_gods",
         "hidden_ten_gods",
+        "mainline_keys",
+        "mainline_domains",
     ):
-        tags.update(f"{column}:{item}" for item in _split(row[column]))
+        if column in row.keys():
+            tags.update(f"{column}:{item}" for item in _split(row[column]))
     return tags
 
 

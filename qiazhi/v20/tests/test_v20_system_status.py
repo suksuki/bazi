@@ -59,9 +59,10 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["rule_promotion_packet_count"] >= 12
     assert report["rule_promotion_runtime_candidate_count"] == 0
     assert report["rule_promotion_blocked_count"] == 0
-    assert report["rule_promotion_needs_subcondition_count"] >= 1
+    assert report["rule_promotion_needs_subcondition_count"] == 0
+    assert report["rule_promotion_subcondition_review_ready_count"] >= 1
     assert report["rule_subcondition_split_status"] == "ready"
-    assert report["rule_subcondition_split_packet_count"] == report["rule_promotion_needs_subcondition_count"]
+    assert report["rule_subcondition_split_packet_count"] == report["rule_promotion_subcondition_review_ready_count"]
     assert report["rule_subcondition_split_subcondition_count"] >= report["rule_subcondition_split_packet_count"]
     assert report["decision_registry_review_status"] == "ready"
     assert report["decision_registry_review_record_count"] >= report["rule_subcondition_split_subcondition_count"]

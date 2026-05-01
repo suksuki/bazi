@@ -42,6 +42,8 @@ def corpus_postgres_index_plan() -> dict[str, object]:
             "idx_v20_corpus_payload_day_master_capacity",
             "idx_v20_corpus_payload_cluster_key",
             "idx_v20_corpus_payload_wealth",
+            "idx_v20_corpus_payload_wealth_level",
+            "idx_v20_corpus_payload_mainline_domains",
             "idx_v20_corpus_payload_gin",
         ],
         "query_surfaces": [
@@ -49,6 +51,8 @@ def corpus_postgres_index_plan() -> dict[str, object]:
             "same_day_master_search",
             "cluster_key_search",
             "wealth_feature_filter",
+            "wealth_material_level_filter",
+            "mainline_domain_filter",
             "jsonb_containment_for_feature_and_portrait_tags",
         ],
         "runtime_mutation": False,

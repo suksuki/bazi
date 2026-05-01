@@ -134,7 +134,7 @@ def read_decision_registry_review_artifact(*, output_dir: Path | None = None) ->
 
 def _decision_records_for_packet(packet: dict[str, object], split_packet: dict[str, object]) -> tuple[dict[str, object], ...]:
     lane = str(packet.get("review_lane", ""))
-    if lane == "needs_subcondition_split":
+    if lane in {"needs_subcondition_split", "subcondition_review_ready"}:
         subconditions = [
             _subcondition_record(packet, row)
             for row in split_packet.get("subconditions", ())

@@ -149,6 +149,7 @@ def system_status_report() -> dict[str, object]:
         "rule_promotion_runtime_candidate_count": rule_promotion_gate["runtime_promotion_candidate_count"],
         "rule_promotion_blocked_count": rule_promotion_gate["blocked_count"],
         "rule_promotion_needs_subcondition_count": rule_promotion_gate["needs_subcondition_count"],
+        "rule_promotion_subcondition_review_ready_count": rule_promotion_gate["subcondition_review_ready_count"],
         "rule_subcondition_split_status": rule_subcondition_split["status"],
         "rule_subcondition_split_packet_count": rule_subcondition_split["packet_count"],
         "rule_subcondition_split_subcondition_count": rule_subcondition_split["subcondition_count"],

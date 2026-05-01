@@ -464,7 +464,9 @@ def _time_features(time_context: TimeContext) -> list[BaziFeature]:
 
 
 def _wealth_features(facts: ChartFacts) -> list[BaziFeature]:
-    labels = [row for row in [*facts.visible_ten_gods, *facts.hidden_ten_gods] if row.label in WEALTH_LABELS]
+    visible_labels = [row for row in facts.visible_ten_gods if row.label in WEALTH_LABELS]
+    hidden_labels = [row for row in facts.hidden_ten_gods if row.label in WEALTH_LABELS]
+    labels = [*visible_labels, *hidden_labels]
     if not labels:
         return [
             BaziFeature(
@@ -480,18 +482,42 @@ def _wealth_features(facts: ChartFacts) -> list[BaziFeature]:
                 answer_hooks=("income_structure",),
             )
         ]
+    if not visible_labels:
+        hidden_weight = round(sum(row.weight for row in hidden_labels), 3)
+        return [
+            BaziFeature(
+                feature_id="feature.wealth.hidden_material",
+                title="Wealth material is hidden-stem only",
+                domain="wealth",
+                source_layers=("hidden",),
+                evidence_refs=tuple(
+                    EvidenceRef(f"wealth.hidden.{row.pillar}.{index}", "ten_god", row.label, row.layer)
+                    for index, row in enumerate(hidden_labels[:6])
+                ),
+                confidence=bounded_confidence(0.27, min(0.18, hidden_weight * 0.035)),
+                readiness="boundary_ready",
+                boundary=boundary_for("wealth"),
+                question_hooks=("q_income_factors", "q_hidden_stem_role"),
+                answer_hooks=("income_structure",),
+                calibration_state=f"visibility=hidden_only;weight={hidden_weight};count={len(hidden_labels)}",
+            )
+        ]
     return [
         BaziFeature(
-            feature_id="feature.wealth.material_available",
+            feature_id="feature.wealth.visible_material",
             title="Wealth material is structurally available",
             domain="wealth",
             source_layers=tuple(sorted({row.layer for row in labels})),
-            evidence_refs=tuple(EvidenceRef(f"wealth.{row.layer}.{row.pillar}", "ten_god", row.label, row.layer) for row in labels[:6]),
-            confidence=bounded_confidence(0.34, len(labels) * 0.04),
+            evidence_refs=tuple(
+                EvidenceRef(f"wealth.{row.layer}.{row.pillar}.{index}", "ten_god", row.label, row.layer)
+                for index, row in enumerate(labels[:6])
+            ),
+            confidence=bounded_confidence(0.38, len(visible_labels) * 0.07 + len(hidden_labels) * 0.025),
             readiness="ready",
             boundary=boundary_for("wealth"),
             question_hooks=("q_income_stability", "q_income_factors"),
             answer_hooks=("income_structure",),
+            calibration_state=f"visibility=visible;visible={len(visible_labels)};hidden={len(hidden_labels)}",
         )
     ]
 

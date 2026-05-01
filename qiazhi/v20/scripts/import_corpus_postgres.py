@@ -167,6 +167,8 @@ def _create_indexes(cur) -> None:
         "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_day_master_capacity ON v20_corpus_snapshots ((payload->>'day_master_capacity'))",
         "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_cluster_key ON v20_corpus_snapshots ((payload->>'cluster_key'))",
         "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_wealth ON v20_corpus_snapshots (((payload->>'wealth_feature_present')::boolean))",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_wealth_level ON v20_corpus_snapshots ((payload->>'wealth_material_level'))",
+        "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_mainline_domains ON v20_corpus_snapshots USING gin ((payload->'mainline_domains'))",
         "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_gin ON v20_corpus_snapshots USING gin (payload)",
     ):
         cur.execute(statement)

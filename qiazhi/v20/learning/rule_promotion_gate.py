@@ -4,12 +4,23 @@ import hashlib
 from collections import Counter
 from typing import Any
 
+from v20.learning.rule_subcondition_split import build_rule_subcondition_split_report
 from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 
 
 def build_rule_promotion_gate_report(domain: str = "", *, limit: int = 64) -> dict[str, object]:
     validation = build_knowledge_rule_validation_report(domain, limit=limit)
-    packets = tuple(_packet_from_validation(row) for row in validation.get("definitions", ()) if isinstance(row, dict))
+    split = build_rule_subcondition_split_report(domain, limit=limit)
+    split_by_rule_key = {
+        str(row.get("rule_key", "")): row
+        for row in split.get("packets", ())
+        if isinstance(row, dict) and row.get("rule_key")
+    }
+    packets = tuple(
+        _packet_from_validation(row, split_by_rule_key.get(str(row.get("rule_key", "")), {}))
+        for row in validation.get("definitions", ())
+        if isinstance(row, dict)
+    )
     lane_counts = Counter(str(row["review_lane"]) for row in packets)
     action_counts = Counter(str(row["recommended_action"]) for row in packets)
     return {
@@ -21,6 +32,7 @@ def build_rule_promotion_gate_report(domain: str = "", *, limit: int = 64) -> di
         "shadow_weight_candidate_count": sum(1 for row in packets if row["shadow_weight_candidate"]),
         "blocked_count": sum(1 for row in packets if row["review_lane"].startswith("blocked")),
         "needs_subcondition_count": sum(1 for row in packets if row["review_lane"] == "needs_subcondition_split"),
+        "subcondition_review_ready_count": sum(1 for row in packets if row["review_lane"] == "subcondition_review_ready"),
         "lane_counts": dict(sorted(lane_counts.items())),
         "recommended_actions": dict(sorted(action_counts.items())),
         "packets": packets,
@@ -29,6 +41,9 @@ def build_rule_promotion_gate_report(domain: str = "", *, limit: int = 64) -> di
             "definition_count": validation.get("definition_count", 0),
             "synthetic_covered_count": validation.get("synthetic_covered_count", 0),
             "missing_synthetic_count": validation.get("missing_synthetic_count", 0),
+            "subcondition_split_status": split.get("status", ""),
+            "subcondition_packet_count": split.get("packet_count", 0),
+            "subcondition_count": split.get("subcondition_count", 0),
         },
         "runtime_mutation": False,
         "guardrails": [
@@ -52,6 +67,7 @@ def build_rule_promotion_packet_summary(domain: str = "", *, limit: int = 64) ->
         "shadow_weight_candidate_count": gate["shadow_weight_candidate_count"],
         "blocked_count": gate["blocked_count"],
         "needs_subcondition_count": gate["needs_subcondition_count"],
+        "subcondition_review_ready_count": gate["subcondition_review_ready_count"],
         "lane_counts": gate["lane_counts"],
         "recommended_actions": gate["recommended_actions"],
         "packets": [
@@ -64,6 +80,8 @@ def build_rule_promotion_packet_summary(domain: str = "", *, limit: int = 64) ->
                 "review_lane": row["review_lane"],
                 "recommended_action": row["recommended_action"],
                 "human_decision_options": row["human_decision_options"],
+                "subcondition_count": row.get("subcondition_count", 0),
+                "counterexample_candidate_count": row.get("counterexample_candidate_count", 0),
                 "risk": row["risk"],
             }
             for row in packets
@@ -72,9 +90,9 @@ def build_rule_promotion_packet_summary(domain: str = "", *, limit: int = 64) ->
     }
 
 
-def _packet_from_validation(row: dict[str, object]) -> dict[str, Any]:
+def _packet_from_validation(row: dict[str, object], split_packet: dict[str, object]) -> dict[str, Any]:
     validation_state = str(row.get("validation_state", ""))
-    review_lane = _review_lane(validation_state)
+    review_lane = _review_lane(validation_state, split_packet)
     recommended_action = _recommended_action(review_lane)
     packet_id = _packet_id(row)
     return {
@@ -93,6 +111,10 @@ def _packet_from_validation(row: dict[str, object]) -> dict[str, Any]:
         "support_quality": row.get("support_quality", ""),
         "support_ratio": row.get("support_ratio", 0.0),
         "top_matched_feature_ids": row.get("top_matched_feature_ids", ()),
+        "subcondition_count": len(split_packet.get("subconditions", ())) if split_packet else 0,
+        "counterexample_candidate_count": len(split_packet.get("counterexample_candidates", ())) if split_packet else 0,
+        "subcondition_packet_id": split_packet.get("packet_id", "") if split_packet else "",
+        "subcondition_quality_status": "ready" if split_packet and split_packet.get("corpus_state") == "ready" else "missing",
         "validation_state": validation_state,
         "review_lane": review_lane,
         "recommended_action": recommended_action,
@@ -110,7 +132,7 @@ def _packet_from_validation(row: dict[str, object]) -> dict[str, Any]:
     }
 
 
-def _review_lane(validation_state: str) -> str:
+def _review_lane(validation_state: str, split_packet: dict[str, object]) -> str:
     if validation_state == "blocked_by_contract_failure":
         return "blocked_contract_failure"
     if validation_state == "needs_synthetic_case":
@@ -118,6 +140,8 @@ def _review_lane(validation_state: str) -> str:
     if validation_state == "needs_rule_or_case_fix":
         return "blocked_rule_or_case_mismatch"
     if validation_state == "synthetic_passed_needs_subconditions":
+        if split_packet and split_packet.get("corpus_state") == "ready" and split_packet.get("subconditions"):
+            return "subcondition_review_ready"
         return "needs_subcondition_split"
     if validation_state == "synthetic_passed_waiting_for_corpus_prior":
         return "waiting_for_corpus_prior"
@@ -132,6 +156,7 @@ def _recommended_action(review_lane: str) -> str:
         "blocked_missing_synthetic_case": "generate_synthetic_case_then_revalidate",
         "blocked_rule_or_case_mismatch": "repair_rule_atoms_or_expected_case",
         "needs_subcondition_split": "split_rule_by_feature_signature_and_add_counterexamples",
+        "subcondition_review_ready": "review_subconditions_for_shadow_eval",
         "waiting_for_corpus_prior": "build_or_import_corpus_prior",
         "candidate_for_shadow_weight_review": "create_decision_registry_review_for_shadow_weight",
         "manual_review_required": "manual_architect_review",
@@ -144,6 +169,8 @@ def _human_decision_options(review_lane: str) -> tuple[str, ...]:
         return ("approve_shadow_weight", "request_more_cases", "defer", "reject")
     if review_lane == "needs_subcondition_split":
         return ("split_rule", "add_counterexample", "defer", "reject")
+    if review_lane == "subcondition_review_ready":
+        return ("approve_subconditions_for_shadow_eval", "add_counterexample", "split_again", "defer", "reject")
     if review_lane == "blocked_missing_synthetic_case":
         return ("generate_synthetic_case", "defer", "reject")
     if review_lane.startswith("blocked"):
@@ -157,6 +184,8 @@ def _required_evidence(review_lane: str) -> tuple[str, ...]:
         return (*common, "shadow weight eval artifact")
     if review_lane == "needs_subcondition_split":
         return (*common, "subcondition candidates", "counterexample cases")
+    if review_lane == "subcondition_review_ready":
+        return (*common, "reviewed subcondition candidates", "counterexample cases", "shadow eval artifact")
     if review_lane == "blocked_missing_synthetic_case":
         return (*common, "domain synthetic case")
     return common
