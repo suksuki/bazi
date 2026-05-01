@@ -22,6 +22,7 @@ from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
 from v20.ops.service_unit import service_unit_manifest
+from v20.ops.status import system_status_report
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 from v20.testing.matrix import build_test_coverage_matrix
@@ -57,6 +58,10 @@ def create_app() -> FastAPI:
                 "NO_SECRET_VALUES_RENDERED",
             ],
         }
+
+    @app.get("/api/v20/system/status")
+    def system_status() -> dict[str, object]:
+        return system_status_report()
 
     @app.get("/api/v20/ops/config")
     def ops_config() -> dict[str, object]:

@@ -44,8 +44,16 @@ TEST_COVERAGE_AREAS = (
             "v20/tests/test_v20_storage.py",
             "v20/tests/test_v20_redis.py",
             "v20/tests/test_v20_service_unit.py",
+            "v20/tests/test_v20_system_status.py",
         ),
-        "contracts": ("RuntimeConfig", "Postgres schema", "Redis keyspaces", "dependency_readiness", "service_unit_manifest"),
+        "contracts": (
+            "RuntimeConfig",
+            "Postgres schema",
+            "Redis keyspaces",
+            "dependency_readiness",
+            "service_unit_manifest",
+            "system_status",
+        ),
         "tier": "fast",
     },
     {
