@@ -81,6 +81,8 @@ def default_runtime_config(*, active_profile: str = "local_macos") -> RuntimeCon
 def validate_runtime_config(config: RuntimeConfig) -> dict[str, object]:
     failures: list[str] = []
     names = [profile.name for profile in config.profiles]
+    if config.active_profile not in names:
+        failures.append(f"active_profile_not_defined:{config.active_profile}")
     if len(names) != len(set(names)):
         failures.append("duplicate_profile_name")
     for profile in config.profiles:

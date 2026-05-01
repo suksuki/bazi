@@ -73,3 +73,22 @@ Linux `0.13`:
 - runtime dir: `v20/.runtime/linux_0_13`
 
 These defaults are config contracts only; the V20 server process and database migrations will be added in later implementation phases.
+
+## Initial Schema Contract
+
+The first Postgres schema contract is exposed at:
+
+```text
+GET /api/v20/storage/schema
+```
+
+It defines reviewed authoritative tables but does not apply migrations automatically:
+
+- `v20_knowledge_units`
+- `v20_artifact_registry`
+- `v20_run_registry`
+- `v20_decision_registry`
+- `v20_feedback_ledger`
+- `v20_corpus_snapshots`
+
+Applying migrations will require an explicit command, backup policy, and server profile in a later phase.

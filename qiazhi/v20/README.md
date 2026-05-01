@@ -55,3 +55,11 @@ Default local validation:
 ```bash
 ./v20/scripts/test_fast.sh
 ```
+
+Run the local V20 service:
+
+```bash
+./v20/scripts/start_macos.sh
+```
+
+The first service surface exposes `/health`, `/api/v20/measure`, ops config, and test-tier metadata. Health and ops endpoints are read-only and do not connect to Redis or Postgres.
