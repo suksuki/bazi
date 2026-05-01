@@ -51,6 +51,9 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/runtime/dependencies" in script.text
     assert "/api/v20/profiles/" in script.text
     assert "/api/v20/profiles/import-v19?apply=true" not in script.text
+    assert "scheduleMeasure({ force: true })" in script.text
+    assert "if (!params.get(\"profile_id\")) scheduleMeasure({ force: true })" in script.text
+    assert "确认四柱后会生成建议问题" in script.text
     assert "명리사" in script.text
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" in script.text

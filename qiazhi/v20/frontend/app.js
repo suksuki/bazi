@@ -1,4 +1,11 @@
-const state = { latest: null, activeProfile: null };
+const state = {
+  latest: null,
+  activeProfile: null,
+  measureTimer: null,
+  isMeasuring: false,
+  pendingMeasure: false,
+  lastMeasureKey: "",
+};
 const params = new URLSearchParams(window.location.search);
 
 const form = document.querySelector("#measureForm");
@@ -83,11 +90,19 @@ const el = (tag, className = "", text = "") => {
   return node;
 };
 
-const measure = async () => {
+const measure = async ({ force = false } = {}) => {
   const text = currentText();
-  const data = new FormData(form);
-  const payload = Object.fromEntries(data.entries());
+  const payload = payloadFromForm();
+  const key = JSON.stringify(payload);
+  if (!force && key === state.lastMeasureKey) return;
+  if (!hasCompletePillars(payload)) return;
+  if (state.isMeasuring) {
+    state.pendingMeasure = true;
+    return;
+  }
   const button = form.querySelector("button[type='submit']");
+  state.isMeasuring = true;
+  state.lastMeasureKey = key;
   button.disabled = true;
   button.textContent = text.running;
   try {
@@ -102,10 +117,21 @@ const measure = async () => {
     renderRuntime(result);
   } catch (error) {
     setText("#answerText", `测算失败：${error.message}`);
+    state.lastMeasureKey = "";
   } finally {
+    state.isMeasuring = false;
     button.disabled = false;
     button.textContent = currentText().run;
+    if (state.pendingMeasure) {
+      state.pendingMeasure = false;
+      scheduleMeasure({ force: true });
+    }
   }
+};
+
+const scheduleMeasure = ({ force = false } = {}) => {
+  clearTimeout(state.measureTimer);
+  state.measureTimer = setTimeout(() => measure({ force }), 280);
 };
 
 const renderRuntime = (result) => {
@@ -199,6 +225,10 @@ const renderPortrait = (axes) => {
 const renderQuestions = (questions, selectedKey) => {
   const root = document.querySelector("#questionList");
   clear(root);
+  if (!questions.length) {
+    root.append(el("div", "empty-note", "确认四柱后会生成建议问题。"));
+    return;
+  }
   questions.slice(0, 12).forEach((question) => {
     const button = el("button", `question-row${question.question_key === selectedKey ? " active" : ""}`);
     button.type = "button";
@@ -206,7 +236,7 @@ const renderQuestions = (questions, selectedKey) => {
     button.append(el("span", "", `${question.measurement_topic || question.domain} · score ${question.score ?? "-"}`));
     button.addEventListener("click", () => {
       questionSelect.value = question.question_key;
-      measure();
+      measure({ force: true });
     });
     root.append(button);
   });
@@ -268,6 +298,14 @@ const applyLocale = (locale) => {
   submit.textContent = text.run;
 };
 
+const renderInitialPanels = () => {
+  renderPillars({});
+  renderFeatures([]);
+  renderPortrait([]);
+  renderQuestions([], "");
+  renderEvidence([]);
+};
+
 const loadActiveProfile = async () => {
   const profileId = params.get("profile_id") || "";
   if (!profileId) return;
@@ -286,6 +324,13 @@ const loadActiveProfile = async () => {
     setText("#selectedProfileMeta", "profile unavailable");
   }
 };
+
+const payloadFromForm = () => {
+  const data = new FormData(form);
+  return Object.fromEntries(data.entries());
+};
+
+const hasCompletePillars = (payload) => ["year", "month", "day", "hour"].every((key) => String(payload[key] || "").trim().length === 2);
 
 const submitFeedback = async () => {
   const text = document.querySelector("#feedbackText").value.trim();
@@ -331,16 +376,25 @@ const profileMeta = (profile) => {
 
 form.addEventListener("submit", (event) => {
   event.preventDefault();
-  measure();
+  measure({ force: true });
 });
 feedbackButton.addEventListener("click", submitFeedback);
 localeSelect.addEventListener("change", () => {
   applyLocale(localeSelect.value);
+  scheduleMeasure({ force: true });
+});
+form.querySelectorAll("input, textarea, select").forEach((node) => {
+  node.addEventListener("change", () => scheduleMeasure({ force: true }));
+  if (node.tagName === "INPUT" || node.tagName === "TEXTAREA") {
+    node.addEventListener("input", () => scheduleMeasure());
+  }
 });
 
 if (params.get("locale")) localeSelect.value = params.get("locale");
 if (params.get("role")) roleSelect.value = params.get("role");
 applyLocale(localeSelect.value);
+renderInitialPanels();
 loadStatus();
 loadActiveProfile();
+if (!params.get("profile_id")) scheduleMeasure({ force: true });
 setInterval(loadStatus, 10000);
