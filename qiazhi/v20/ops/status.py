@@ -9,6 +9,7 @@ from v20.knowledge.draft_import import build_knowledge_draft_import_preview
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.release import build_knowledge_release_manifest
+from v20.knowledge.review_packet import build_first_wave_review_packets
 from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
@@ -36,6 +37,7 @@ def system_status_report() -> dict[str, object]:
     v19_knowledge_migration = build_v19_knowledge_migration_audit()
     knowledge_draft_import = build_knowledge_draft_import_preview(limit=12)
     knowledge_review_queue = build_knowledge_review_queue(limit_per_domain=3)
+    first_wave_packets = build_first_wave_review_packets(limit_per_domain=2)
     dependencies = dependency_readiness_report()
     sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
@@ -62,6 +64,8 @@ def system_status_report() -> dict[str, object]:
         "knowledge_draft_candidate_count": knowledge_draft_import["candidate_count"],
         "knowledge_review_queue_status": knowledge_review_queue["status"],
         "knowledge_review_domain_count": knowledge_review_queue["domain_count"],
+        "knowledge_first_wave_packet_status": first_wave_packets["status"],
+        "knowledge_first_wave_domain_count": first_wave_packets["domain_count"],
         "access_role_count": len(access_role_manifest()["roles"]),
         "test_area_count": matrix["area_count"],
         "learning_status": evolution["status"],

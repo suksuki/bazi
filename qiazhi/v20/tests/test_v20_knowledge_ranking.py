@@ -11,6 +11,7 @@ from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import KnowledgeRetrievalPolicy, knowledge_retrieval_manifest, rank_knowledge_units
 from v20.knowledge.release import build_knowledge_release_manifest
+from v20.knowledge.review_packet import build_first_wave_review_packets, build_knowledge_review_packet
 from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
@@ -179,3 +180,38 @@ def test_v20_knowledge_review_queue_endpoint_is_read_only() -> None:
     assert queue["runtime_mutation"] is False
     assert queue["status"] == "ready"
     assert "NO_RUNTIME_ACTIVATION_FROM_QUEUE" in queue["guardrails"]
+
+
+def test_v20_knowledge_review_packet_builds_draft_unit_skeletons() -> None:
+    packet = build_knowledge_review_packet("strength", limit=4)
+
+    assert packet["status"] == "ready_for_review"
+    assert packet["runtime_mutation"] is False
+    assert packet["candidate_count"] >= 4
+    assert packet["selected_count"] == 4
+    assert len(packet["proposed_units"]) == 4
+    assert all(row["status"] == "draft_review_required" for row in packet["proposed_units"])
+    assert "draft_units_have_missing_required_fields" in packet["release_blockers"]
+    assert "DECISION_RECORD_REQUIRED_FOR_RELEASE" in packet["guardrails"]
+
+
+def test_v20_first_wave_review_packets_prioritize_available_core_domains() -> None:
+    packets = build_first_wave_review_packets(limit_per_domain=2)
+
+    assert packets["status"] == "ready"
+    assert packets["runtime_mutation"] is False
+    assert packets["domain_count"] >= 5
+    domains = [row["domain"] for row in packets["packets"]]
+    assert domains[:3] == ["strength", "ten_god", "useful_god"]
+    assert all(row["selected_count"] <= 2 for row in packets["packets"])
+
+
+def test_v20_knowledge_review_packet_endpoints_are_read_only() -> None:
+    client = TestClient(app)
+    packet = client.get("/api/v20/knowledge/review-packet/strength").json()
+    packets = client.get("/api/v20/knowledge/first-wave-review-packets").json()
+
+    assert packet["runtime_mutation"] is False
+    assert packet["status"] == "ready_for_review"
+    assert packets["runtime_mutation"] is False
+    assert packets["status"] == "ready"

@@ -23,6 +23,8 @@ Endpoints:
 - `GET /api/v20/knowledge/v19-migration-audit`
 - `GET /api/v20/knowledge/draft-import-preview`
 - `GET /api/v20/knowledge/review-queue`
+- `GET /api/v20/knowledge/review-packet/{domain}`
+- `GET /api/v20/knowledge/first-wave-review-packets`
 
 These endpoints do not activate rules, write database rows, or treat knowledge
 as truth. They make missing sources, duplicate ids, unreviewed sources, and
@@ -41,6 +43,10 @@ synthetic validation are reviewed.
 The review queue groups draft candidates by domain and prioritizes core Bazi
 domains first: strength, ten god, useful god, five elements, branches, wealth,
 pattern, and time context.
+
+Review packets turn a domain queue into draft `KnowledgeUnit` skeletons with
+missing fields, release blockers, review checklist, and validation
+requirements. They are not runtime-retrievable until reviewed and released.
 
 ## Portrait Calibration
 
