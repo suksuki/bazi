@@ -5,7 +5,13 @@ from v20.corpus.canonical_case import CanonicalCase
 
 
 def precompute_case(case: CanonicalCase) -> dict[str, object]:
-    result = run_runtime_from_pillars(*case.pillar_displays, input_id=case.case_id)
+    result = run_runtime_from_pillars(
+        *case.pillar_displays,
+        input_id=case.case_id,
+        flow_year_pillar=case.time_pillars.get("flow_year", ""),
+        luck_pillar=case.time_pillars.get("luck", ""),
+        flow_month_pillar=case.time_pillars.get("flow_month", ""),
+    )
     return {
         "version": "v20.corpus_precompute.v1",
         "case": case.to_dict(),

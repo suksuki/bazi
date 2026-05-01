@@ -51,6 +51,10 @@ Defaults:
   "month": "戊辰",
   "day": "甲午",
   "hour": "辛酉",
+  "flow_year_pillar": "庚子",
+  "luck_pillar": "",
+  "flow_month_pillar": "",
+  "user_text": "我想看流年触发",
   "input_id": "demo",
   "question_key": "",
   "locale": "zh"
@@ -58,6 +62,9 @@ Defaults:
 ```
 
 The response is the same deterministic runtime envelope produced by `v20.api.runtime.run_runtime_from_pillars`.
+Time fields are optional and must be explicit two-character pillars. They create
+a `time_context` and `feature.time.explicit_context`; they do not create fixed
+event predictions or calendar-derived timing facts.
 
 ## Guardrails
 

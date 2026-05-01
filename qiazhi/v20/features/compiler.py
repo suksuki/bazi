@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from v20.core.schemas import ChartFacts, CoreInference
+from v20.core.schemas import ChartFacts, CoreInference, TimeContext
 from v20.features.boundaries import boundary_for
 from v20.features.confidence import bounded_confidence
 from v20.features.hierarchy import cluster_features
@@ -11,13 +11,19 @@ FEATURE_LAYER_VERSION = "v20.feature_layer.v1"
 WEALTH_LABELS = {"正财", "偏财"}
 
 
-def compile_features(facts: ChartFacts, inference: CoreInference, rule_paths: tuple[object, ...] = ()) -> FeatureLayer:
+def compile_features(
+    facts: ChartFacts,
+    inference: CoreInference,
+    rule_paths: tuple[object, ...] = (),
+    time_context: TimeContext | None = None,
+) -> FeatureLayer:
     features: list[BaziFeature] = [
         _strength_feature(inference),
         _useful_god_gate_feature(inference),
     ]
     features.extend(_ten_god_features(facts))
     features.extend(_branch_features(facts))
+    features.extend(_time_features(time_context or TimeContext()))
     features.extend(_wealth_features(facts))
     features.append(_pattern_index_feature(facts))
     features = _dedupe(features)
@@ -140,6 +146,31 @@ def _branch_features(facts: ChartFacts) -> list[BaziFeature]:
             boundary=boundary_for("branch"),
             question_hooks=("q_branch_relation_detail", "q_time_vs_natal_relation"),
             answer_hooks=("branch_relation",),
+        )
+    ]
+
+
+def _time_features(time_context: TimeContext) -> list[BaziFeature]:
+    if time_context.status != "ready" or not time_context.layers:
+        return []
+    refs: list[EvidenceRef] = []
+    for layer in time_context.layers:
+        refs.append(EvidenceRef(f"time.{layer.layer_key}.{layer.pillar.display}", "time_pillar", layer.pillar.display, "time"))
+        refs.append(EvidenceRef(f"time.ten_god.{layer.layer_key}.{layer.ten_god.label}", "ten_god", layer.ten_god.label, "time"))
+    for hit in time_context.relation_hits[:6]:
+        refs.append(EvidenceRef(f"time.relation.{hit.relation_type}.{'.'.join(hit.positions)}", "branch_relation", hit.relation_type, "time"))
+    return [
+        BaziFeature(
+            feature_id="feature.time.explicit_context",
+            title="Explicit time layer is available",
+            domain="time",
+            source_layers=("time",),
+            evidence_refs=tuple(refs[:10]),
+            confidence=bounded_confidence(0.34, len(refs) * 0.035),
+            readiness="review_ready",
+            boundary=boundary_for("time"),
+            question_hooks=("q_time_layer_context", "q_time_relation_triggers"),
+            answer_hooks=("timing_context",),
         )
     ]
 

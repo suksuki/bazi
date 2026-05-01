@@ -54,6 +54,22 @@ class RelationHit:
 
 
 @dataclass(frozen=True)
+class TimeLayerFact:
+    layer_key: str
+    pillar: Pillar
+    ten_god: TenGodPosition
+    relation_hits: tuple[RelationHit, ...] = field(default_factory=tuple)
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "layer_key": self.layer_key,
+            "pillar": self.pillar.to_dict(),
+            "ten_god": self.ten_god.to_dict(),
+            "relation_hits": [row.to_dict() for row in self.relation_hits],
+        }
+
+
+@dataclass(frozen=True)
 class ChartFacts:
     version: str
     pillars: dict[str, Pillar]
@@ -90,10 +106,23 @@ class TimeContext:
     version: str = "v20.time_context.v1"
     status: str = "not_provided"
     note: str = "Time layer is background only until explicit luck/flow facts are supplied."
-    guardrails: tuple[str, ...] = ("TIME_LAYER_BACKGROUND_ONLY", "NO_TIMING_PREDICTION")
+    layers: tuple[TimeLayerFact, ...] = field(default_factory=tuple)
+    relation_hits: tuple[RelationHit, ...] = field(default_factory=tuple)
+    guardrails: tuple[str, ...] = (
+        "TIME_LAYER_REQUIRES_EXPLICIT_PILLAR",
+        "NO_CALENDAR_INFERENCE_FROM_TEXT",
+        "NO_TIMING_PREDICTION_WITHOUT_EVIDENCE",
+    )
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        return {
+            "version": self.version,
+            "status": self.status,
+            "note": self.note,
+            "layers": [row.to_dict() for row in self.layers],
+            "relation_hits": [row.to_dict() for row in self.relation_hits],
+            "guardrails": list(self.guardrails),
+        }
 
 
 @dataclass(frozen=True)

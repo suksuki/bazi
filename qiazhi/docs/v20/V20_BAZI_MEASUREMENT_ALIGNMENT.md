@@ -18,6 +18,7 @@ The initial topic map is:
 - `useful_god`: 用神候选
 - `ten_god`: 十神结构
 - `branch`: 地支关系
+- `time`: 时间层与流年触发
 - `wealth`: 财星与收入结构
 - `career`: 事业角色与工作结构
 - `relationship`: 关系互动结构
@@ -37,6 +38,9 @@ LLM, portrait projection, recommended questions, and answer planning.
   domain projection: `wealth`, `career`, `relationship`, and `health`.
 - Applied questions must cite source `BaziFeature` ids and keep deterministic
   prediction boundaries.
+- Time-layer questions require explicit supplied pillars such as
+  `flow_year_pillar`, `luck_pillar`, or `flow_month_pillar`; V20 does not infer
+  calendar facts from free text.
 - Portrait output remains a calibration surface. It does not rank questions,
   mutate answers, or create fortune conclusions.
 

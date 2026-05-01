@@ -9,6 +9,7 @@ The V20 UI is served from `v20/frontend` through the V20 FastAPI runtime:
 The first screen is the actual Bazi measurement workspace. It renders:
 
 - four-pillar input and natural-language `user_text`
+- optional explicit time pillars for flow year, luck pillar, and flow month
 - selected feature-backed question
 - `BaziFeature` chips
 - `measurement_report` topics

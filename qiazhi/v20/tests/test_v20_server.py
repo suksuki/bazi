@@ -65,6 +65,27 @@ def test_v20_measure_endpoint_rejects_invalid_pillar_without_mutation() -> None:
     assert "hour stem is not supported" in detail["message"]
 
 
+def test_v20_measure_endpoint_accepts_explicit_time_layer() -> None:
+    client = TestClient(app)
+    response = client.post(
+        "/api/v20/measure",
+        json={
+            "year": "甲子",
+            "month": "戊辰",
+            "day": "甲午",
+            "hour": "辛酉",
+            "flow_year_pillar": "庚子",
+            "user_text": "我想看流年触发",
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["time_context"]["status"] == "ready"
+    assert data["selected_question"]["domain"] == "time"
+    assert data["runtime_mutation"] is False
+
+
 def test_v20_ops_and_testing_metadata_endpoints_hide_secrets() -> None:
     client = TestClient(app)
     ops = client.get("/api/v20/ops/config").json()

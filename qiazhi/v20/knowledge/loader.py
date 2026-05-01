@@ -28,6 +28,18 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             question_hooks=("q_branch_relation_detail",),
         ),
         KnowledgeUnit(
+            "v20.core.time_layer_boundary",
+            "Time layer boundary",
+            "time",
+            "Time layers can describe explicit luck or flow pillar interaction with the natal chart.",
+            "Use only supplied time pillars, time ten-god labels, and time-to-natal relation hits as evidence.",
+            "Do not infer exact dates, fixed events, guaranteed timing, or calendar facts that were not supplied.",
+            source_refs=("docs/v20.prestart.time_layer",),
+            feature_hooks=("feature.time",),
+            question_hooks=("q_time_layer_context", "q_time_relation_triggers"),
+            retrieval_tags=("time_layer", "flow_year", "luck"),
+        ),
+        KnowledgeUnit(
             "v20.core.wealth_material_boundary",
             "Wealth material boundary",
             "wealth",

@@ -6,7 +6,7 @@ from v20.answer.measurement_policy import prediction_policy
 from v20.answer.plan import build_answer_plan
 from v20.core.chart import build_chart_facts, chart_input_from_displays
 from v20.core.strength import infer_core
-from v20.core.time_context import empty_time_context
+from v20.core.time_context import build_time_context
 from v20.features.compiler import compile_features
 from v20.graph.chart_graph import build_chart_graph
 from v20.graph.rule_graph import select_rule_paths
@@ -28,15 +28,23 @@ def run_runtime_from_pillars(
     input_id: str = "",
     question_key: str = "",
     user_text: str = "",
+    flow_year_pillar: str = "",
+    luck_pillar: str = "",
+    flow_month_pillar: str = "",
     locale: str = "zh",
 ) -> dict[str, object]:
     chart_input = chart_input_from_displays(year, month, day, hour, input_id=input_id)
     chart_facts = build_chart_facts(chart_input)
-    time_context = empty_time_context()
+    time_context = build_time_context(
+        chart_facts,
+        flow_year_pillar=flow_year_pillar,
+        luck_pillar=luck_pillar,
+        flow_month_pillar=flow_month_pillar,
+    )
     core = infer_core(chart_facts)
     chart_graph = build_chart_graph(chart_facts)
     rule_paths = select_rule_paths(chart_graph)
-    feature_layer = compile_features(chart_facts, core, rule_paths)
+    feature_layer = compile_features(chart_facts, core, rule_paths, time_context)
     questions = recommend_questions(feature_layer)
     llm_routing_assist = build_llm_routing_assist(user_text, feature_layer, questions, locale=locale)
     selected_question = _select_question(questions, question_key or str(llm_routing_assist.get("routed_question_key", "")))

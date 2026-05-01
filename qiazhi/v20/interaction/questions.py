@@ -36,6 +36,8 @@ QUESTION_LABELS = {
     "q_hidden_stem_role": "藏干在这个八字里承担什么结构作用？",
     "q_branch_relation_detail": "地支冲合刑害有哪些可见结构？",
     "q_time_vs_natal_relation": "原局与时间层应如何分开判断？",
+    "q_time_layer_context": "显式时间层会触发哪些结构互动？",
+    "q_time_relation_triggers": "时间干支与原局的触发边界是什么？",
     "q_structure_overview": "这个八字的整体结构主线是什么？",
     "q_income_stability": "财星与收入结构的测算边界是什么？",
     "q_income_factors": "哪些因素会影响财星材料的可用性？",

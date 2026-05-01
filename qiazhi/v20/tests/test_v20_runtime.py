@@ -27,6 +27,7 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["runtime_mutation"] is False
     assert result["locale"] == "zh"
     assert result["chart_facts"]["day_master"] == "甲"
+    assert result["time_context"]["status"] == "not_provided"
     assert result["core_inference"]["guardrails"]
     assert result["feature_layer"]["status"] == "ready"
     assert result["feature_layer"]["feature_count"] >= 5
@@ -80,6 +81,32 @@ def test_v20_validation_and_llm_fallback_are_guarded() -> None:
     assert ANSWER_PLAN_REWRITE.task_name == "answer_plan_rewrite"
     safe = review_output_safety(result["answer_text"])
     assert safe["result"]["ok"] is True
+
+
+def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:
+    result = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.time",
+        user_text="我想看流年触发",
+        flow_year_pillar="庚子",
+    )
+
+    assert result["time_context"]["status"] == "ready"
+    assert result["time_context"]["layers"][0]["layer_key"] == "flow_year"
+    assert result["time_context"]["layers"][0]["ten_god"]["label"] == "七杀"
+    assert {row["layer"] for row in result["time_context"]["relation_hits"]} == {"time"}
+    assert "time" in {row["domain"] for row in result["feature_layer"]["features"]}
+    assert result["selected_question"]["question_key"] == "q_time_layer_context"
+    assert result["selected_question"]["domain"] == "time"
+    assert {"q_time_layer_context", "q_time_relation_triggers"} <= {
+        row["question_key"] for row in result["questions"]
+    }
+    assert "time" in {row["domain"] for row in result["knowledge_refs"]}
+    assert result["llm_assist"]["routed_question_key"] == "q_time_layer_context"
+    assert "发财" not in result["answer_text"]
 
 
 def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:

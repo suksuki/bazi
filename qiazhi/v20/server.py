@@ -127,6 +127,9 @@ def create_app() -> FastAPI:
                 input_id=payload.input_id,
                 question_key=payload.question_key,
                 user_text=payload.user_text,
+                flow_year_pillar=payload.flow_year_pillar,
+                luck_pillar=payload.luck_pillar,
+                flow_month_pillar=payload.flow_month_pillar,
                 locale=payload.locale,
             )
         except ValueError as exc:

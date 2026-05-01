@@ -8,6 +8,9 @@ class MeasureRequest(BaseModel):
     month: str = Field(..., min_length=2, max_length=2)
     day: str = Field(..., min_length=2, max_length=2)
     hour: str = Field(..., min_length=2, max_length=2)
+    flow_year_pillar: str = Field("", min_length=0, max_length=2)
+    luck_pillar: str = Field("", min_length=0, max_length=2)
+    flow_month_pillar: str = Field("", min_length=0, max_length=2)
     input_id: str = ""
     question_key: str = ""
     user_text: str = ""

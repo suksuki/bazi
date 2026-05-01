@@ -141,6 +141,7 @@ def _domains_from_text(text: str) -> tuple[str, ...]:
         ("strength", ("身强", "身弱", "强弱", "strength", "capacity", "강약")),
         ("useful_god", ("用神", "喜忌", "useful", "favorable", "용신")),
         ("branch", ("冲", "合", "刑", "害", "地支", "branch", "clash", "합", "충")),
+        ("time", ("流年", "大运", "时间", "应期", "year", "luck", "timing", "세운", "대운")),
         ("ten_god", ("十神", "正官", "七杀", "食神", "ten god", "십성")),
         ("pattern", ("格局", "pattern", "structure", "격국")),
     )
