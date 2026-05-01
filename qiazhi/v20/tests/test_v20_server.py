@@ -226,12 +226,17 @@ def test_v20_service_scripts_and_docs_are_wired() -> None:
 
     assert "v20.server:app" in macos.read_text(encoding="utf-8")
     assert "exec \"${PYTHON_BIN}\" -m uvicorn" in macos.read_text(encoding="utf-8")
+    assert "already listening" in macos.read_text(encoding="utf-8")
     assert "source \"${SCRIPT_DIR}/_python.sh\"" in macos.read_text(encoding="utf-8")
     assert "source \"${SCRIPT_DIR}/_python.sh\"" in linux.read_text(encoding="utf-8")
     assert "V20_ENV=\"${V20_ENV:-local_macos}\"" in macos.read_text(encoding="utf-8")
     assert "V20_ENV=\"${V20_ENV:-linux_0_13}\"" in linux.read_text(encoding="utf-8")
     assert "launchd-plist" in macos_service.read_text(encoding="utf-8")
     assert "systemd-unit" in linux_service.read_text(encoding="utf-8")
+    assert "Stopping unmanaged V20 macOS listener" in macos_service.read_text(encoding="utf-8")
+    assert "Stopping unmanaged V20 Linux listener" in linux_service.read_text(encoding="utf-8")
+    assert "screen -dmS" in macos_service.read_text(encoding="utf-8")
+    assert "screen -dmS" in linux_service.read_text(encoding="utf-8")
     assert macos_service.stat().st_mode & 0o111
     assert linux_service.stat().st_mode & 0o111
     assert "service_macos.sh start" in doc.read_text(encoding="utf-8")

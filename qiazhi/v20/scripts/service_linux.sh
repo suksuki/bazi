@@ -14,6 +14,7 @@ export V20_SERVICE_NAME="${V20_SERVICE_NAME:-qiazhi-v20}"
 PID_FILE="${V20_PID_FILE:-${V20_RUNTIME_DIR}/service_${V20_PORT}.pid}"
 LOG_FILE="${V20_LOG_FILE:-${V20_RUNTIME_DIR}/service_${V20_PORT}.log}"
 HEALTH_URL="${V20_HEALTH_URL:-http://127.0.0.1:${V20_PORT}/health}"
+SCREEN_NAME="${V20_SCREEN_NAME:-${V20_SERVICE_NAME}}"
 
 usage() {
   cat <<EOF
@@ -24,6 +25,7 @@ Environment:
   V20_RUNTIME_DIR=${V20_RUNTIME_DIR}
   V20_PID_FILE=${PID_FILE}
   V20_LOG_FILE=${LOG_FILE}
+  V20_SCREEN_NAME=${SCREEN_NAME}
 EOF
 }
 
@@ -61,9 +63,19 @@ start_service() {
   rm -f "${PID_FILE}"
   touch "${LOG_FILE}"
   echo "Starting V20 Linux service on ${V20_HOST}:${V20_PORT}"
-  nohup "${SCRIPT_DIR}/start_linux.sh" >>"${LOG_FILE}" 2>&1 &
-  echo "$!" >"${PID_FILE}"
-  sleep 1
+  if command -v screen >/dev/null 2>&1; then
+    screen -S "${SCREEN_NAME}" -X quit >/dev/null 2>&1 || true
+    screen -dmS "${SCREEN_NAME}" bash -lc "cd '${ROOT_DIR}' && exec '${SCRIPT_DIR}/start_linux.sh' >> '${LOG_FILE}' 2>&1"
+  else
+    nohup "${SCRIPT_DIR}/start_linux.sh" >>"${LOG_FILE}" 2>&1 &
+  fi
+  for _ in {1..40}; do
+    if pid="$(port_pid)" && [[ -n "${pid}" ]]; then
+      echo "${pid}" >"${PID_FILE}"
+      break
+    fi
+    sleep 0.25
+  done
   if pid="$(running_pid)"; then
     echo "V20 Linux service running pid=${pid}"
     echo "Log: ${LOG_FILE}"
@@ -78,7 +90,23 @@ stop_service() {
   local pid=""
   if ! pid="$(running_pid)"; then
     rm -f "${PID_FILE}"
-    echo "V20 Linux service is not managed by ${PID_FILE}"
+    if pid="$(port_pid)" && [[ -n "${pid}" ]]; then
+      echo "Stopping unmanaged V20 Linux listener on port ${V20_PORT} pid=${pid}"
+      kill "${pid}" 2>/dev/null || true
+      for _ in {1..20}; do
+        kill -0 "${pid}" 2>/dev/null || break
+        sleep 0.25
+      done
+      if kill -0 "${pid}" 2>/dev/null; then
+        echo "Force stopping unmanaged pid=${pid}"
+        kill -KILL "${pid}" 2>/dev/null || true
+      fi
+      echo "Stopped unmanaged V20 Linux listener"
+      screen -S "${SCREEN_NAME}" -X quit >/dev/null 2>&1 || true
+      return 0
+    fi
+    screen -S "${SCREEN_NAME}" -X quit >/dev/null 2>&1 || true
+    echo "V20 Linux service is not running"
     return 0
   fi
   echo "Stopping V20 Linux service pid=${pid}"
@@ -92,6 +120,7 @@ stop_service() {
     kill -KILL "${pid}" 2>/dev/null || true
   fi
   rm -f "${PID_FILE}"
+  screen -S "${SCREEN_NAME}" -X quit >/dev/null 2>&1 || true
   echo "Stopped V20 Linux service"
 }
 
