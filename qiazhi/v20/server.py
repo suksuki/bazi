@@ -67,6 +67,7 @@ from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
 from v20.learning.registries import registry_manifest
+from v20.measurement.domain_alignment import bazi_alignment_manifest
 from v20.ops.admin_status import database_admin_status, llm_admin_status
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
@@ -272,6 +273,10 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/questions/ranking-policy")
     def question_ranking_policy() -> dict[str, object]:
         return question_ranking_manifest()
+
+    @app.get("/api/v20/measurement/bazi-domain-alignment")
+    def measurement_bazi_domain_alignment() -> dict[str, object]:
+        return bazi_alignment_manifest()
 
     @app.get("/api/v20/knowledge/retrieval-policy")
     def knowledge_retrieval_policy() -> dict[str, object]:

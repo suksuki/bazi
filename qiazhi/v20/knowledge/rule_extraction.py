@@ -10,6 +10,7 @@ from v20.knowledge.rule_proposal import build_knowledge_rule_proposals
 from v20.knowledge.schema import KnowledgeUnit
 from v20.llm.provider import llm_provider_readiness_report
 from v20.llm.tasks import draft_rule_extraction_with_llm
+from v20.measurement.domain_alignment import align_rule_candidate
 
 
 @dataclass(frozen=True)
@@ -68,6 +69,14 @@ class ExtractedRuleCandidate:
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
         payload["condition_atoms"] = [row.to_dict() for row in self.condition_atoms]
+        payload["bazi_alignment"] = align_rule_candidate(
+            domain=self.domain,
+            emits_feature_hooks=self.emits_feature_hooks,
+            supports_question_hooks=self.supports_question_hooks,
+            title=self.title,
+            summary=self.summary,
+            boundary=self.boundary,
+        ).to_dict()
         return payload
 
 
@@ -156,6 +165,9 @@ def validate_rule_extraction_report(domain: str = "", *, limit: int = 12) -> dic
             failures.append(f"candidate_source_authority_mismatch:{rule_id}")
         if not candidate.get("boundary"):
             failures.append(f"missing_boundary:{rule_id}")
+        alignment = candidate.get("bazi_alignment", {})
+        if not isinstance(alignment, dict) or alignment.get("ok") is not True:
+            failures.append(f"bazi_alignment_failed:{rule_id}")
     return {
         "version": "v20.knowledge_rule_extraction_validation.v1",
         "status": "pass" if not failures else "fail",

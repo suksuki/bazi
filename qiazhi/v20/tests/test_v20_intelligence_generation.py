@@ -18,7 +18,11 @@ def test_v20_intelligence_generation_manifest_names_generation_boundaries() -> N
     assert manifest["rule_generation"]["synthetic_role"] == "primary_rule_collision_validation_and_training_gate"
     assert manifest["rule_generation"]["synthetic_rule_training_status"] == "ready"
     assert manifest["portrait_generation"]["source_policy"] == "feature_first_knowledge_supported"
+    assert manifest["portrait_generation"]["bazi_alignment_required"] is True
     assert manifest["feature_discovery_generation"]["runtime_role"] == "central_intelligence_router_for_features_questions_portraits_and_answers"
+    assert manifest["feature_discovery_generation"]["question_alignment_policy"] == "v20.bazi_domain_alignment_manifest.v1"
+    assert manifest["bazi_domain_alignment"]["core_domains"]
+    assert "career" in manifest["bazi_domain_alignment"]["applied_domains"]
     assert manifest["knowledge_semantic_modeling"]["runtime_role"] == "semantic_index_for_feature_discovery_portrait_and_interaction"
     assert "knowledge_extraction_draft" in manifest["llm_generation"]["allowed_roles"]
     assert "evidence_bounded_practitioner_answer" in manifest["llm_generation"]["allowed_roles"]
@@ -36,6 +40,7 @@ def test_v20_intelligence_generation_validation_allows_shadow_but_not_promotion(
     assert report["status"] == "pass"
     assert report["shadow_training"]["allowed"] is True
     assert report["rule_synthetic"]["ok"] is True
+    assert report["bazi_domain_alignment"]["status"] == "ready"
     assert report["shadow_training"]["rule_synthetic_training_status"] == "ready"
     assert report["promotion"]["user_visible_rule_promotion_ready"] is False
     assert report["runtime_mutation"] is False

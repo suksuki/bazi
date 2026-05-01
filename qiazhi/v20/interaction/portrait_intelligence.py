@@ -20,6 +20,8 @@ def build_portrait_intelligence(
     axes = []
     for axis in _portrait_axes(portrait_projection):
         domain = str(axis.get("domain", ""))
+        if str(axis.get("alignment_status", "")).startswith("blocked"):
+            continue
         semantic = semantic_index.get(domain, {})
         discovery = discovery_index.get(domain, {})
         feature_ids = tuple(str(item) for item in axis.get("feature_ids", ()) if str(item))
@@ -36,6 +38,9 @@ def build_portrait_intelligence(
                 "knowledge_ref_count": axis.get("knowledge_ref_count", 0),
                 "semantic_weight": semantic.get("semantic_weight", 0),
                 "discovery_score": discovery.get("discovery_score", 0),
+                "alignment_status": axis.get("alignment_status", ""),
+                "bazi_focus": axis.get("bazi_focus", ""),
+                "alignment_score": axis.get("alignment_score", 0),
                 "sub_axis_candidates": sub_axes,
                 "profile_tags": _profile_tags(domain, sub_axes, discovery),
                 "calibration_prompt": _calibration_prompt(domain, sub_axes),
@@ -89,6 +94,8 @@ def validate_portrait_intelligence(report: dict[str, object]) -> dict[str, objec
         for candidate in axis.get("sub_axis_candidates", ()):
             if isinstance(candidate, dict) and candidate.get("runtime_allowed") is True:
                 failures.append(f"sub_axis_runtime_allowed:{candidate.get('candidate_id', '')}")
+        if str(axis.get("alignment_status", "")).startswith("blocked"):
+            failures.append(f"portrait_axis_off_core:{axis.get('domain', '')}")
     return {
         "version": "v20.portrait_intelligence_validation.v1",
         "status": "pass" if not failures else "fail",

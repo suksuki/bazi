@@ -18,6 +18,7 @@ from v20.knowledge.rule_extraction import (
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight, build_first_wave_rule_proposals
 from v20.llm.contracts import LLM_CONTRACTS
 from v20.llm.provider import llm_provider_readiness_report
+from v20.measurement.domain_alignment import bazi_alignment_manifest
 from v20.validation.rule_synthetic import build_rule_synthetic_training_report, run_rule_synthetic_suite
 from v20.validation.suite import run_synthetic_suite
 
@@ -40,6 +41,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
     corpus_clusters = read_corpus_cluster_model()
     corpus_training = read_corpus_training_artifacts()
     llm = llm_provider_readiness_report()
+    bazi_alignment = bazi_alignment_manifest()
     return {
         "version": "v20.intelligence_generation_manifest.v1",
         "status": "ready",
@@ -119,6 +121,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "FeatureCalibrationSignal",
             ],
             "source_policy": portrait["source_policy"],
+            "bazi_alignment_required": True,
             "runtime_role": "feature_projection_and_calibration_surface",
             "shadow_learning_allowed": True,
             "user_visible_runtime_allowed": True,
@@ -143,6 +146,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "ranked_domain_hypotheses",
             ],
             "runtime_role": "central_intelligence_router_for_features_questions_portraits_and_answers",
+            "question_alignment_policy": bazi_alignment["version"],
             "training_role": "518k_corpus_priors_reorder_questions_and_surface_candidate_domains_only",
             "runtime_mutation": False,
             "user_visible_runtime_allowed": True,
@@ -150,8 +154,10 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "NO_CORE_FACT_MUTATION",
                 "NO_RUNTIME_RULE_ACTIVATION",
                 "NO_DESTINY_LABEL_TRAINING",
+                "BAZI_DOMAIN_ALIGNMENT_REQUIRED",
             ],
         },
+        "bazi_domain_alignment": bazi_alignment,
         "knowledge_semantic_modeling": {
             "source_layers": [
                 "reviewed_knowledge_units",

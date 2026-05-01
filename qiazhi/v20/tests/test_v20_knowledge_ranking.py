@@ -300,6 +300,8 @@ def test_v20_knowledge_to_rule_proposals_are_draft_only() -> None:
     assert "feature.strength" in proposal["emits_feature_hooks"]
     assert "synthetic_suite_pass" in proposal["validation_requirements"]
     assert "user_visible_runtime_activation_without_promotion" in proposal["forbidden_outputs"]
+    assert proposal["bazi_alignment"]["ok"] is True
+    assert proposal["bazi_alignment"]["status"] == "bazi_core_aligned"
     assert "SHADOW_TRAINING_ALLOWED_BY_DEFAULT" in proposal["guardrails"]
     assert first_wave["proposal_count"] >= 5
     assert first_wave["runtime_mutation"] is False
@@ -335,6 +337,7 @@ def test_v20_rule_extraction_is_knowledge_first_with_corpus_validation_only() ->
     assert candidate["runtime_allowed"] is False
     assert candidate["shadow_training_allowed"] is True
     assert candidate["corpus_validation_signal"]["role"] == "coverage_validation_not_rule_source"
+    assert candidate["bazi_alignment"]["ok"] is True
     assert "feature_hook_prefix" in atom_types
     assert "boundary_guard" in atom_types
     assert validation["status"] == "pass"

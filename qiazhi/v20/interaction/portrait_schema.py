@@ -38,6 +38,9 @@ class PortraitAxis:
     knowledge_links: tuple[PortraitKnowledgeLink, ...]
     evidence_boundaries: tuple[str, ...]
     calibration_prompt: str
+    alignment_status: str
+    bazi_focus: str
+    alignment_score: float
     source_policy: str = PORTRAIT_SOURCE_POLICY
     allowed_feedback_signals: tuple[str, ...] = (
         "confirm",
@@ -66,6 +69,9 @@ class PortraitAxis:
             "knowledge_links": [row.to_dict() for row in self.knowledge_links],
             "evidence_boundaries": list(self.evidence_boundaries),
             "calibration_prompt": self.calibration_prompt,
+            "alignment_status": self.alignment_status,
+            "bazi_focus": self.bazi_focus,
+            "alignment_score": self.alignment_score,
             "source_policy": self.source_policy,
             "allowed_feedback_signals": list(self.allowed_feedback_signals),
             "forbidden_usage": list(self.forbidden_usage),
@@ -88,6 +94,9 @@ class PortraitItem:
     confidence: float
     calibration_state: str
     knowledge_links: tuple[PortraitKnowledgeLink, ...]
+    alignment_status: str
+    bazi_focus: str
+    alignment_score: float
     source_policy: str = PORTRAIT_SOURCE_POLICY
 
     def to_dict(self) -> dict[str, Any]:
@@ -102,6 +111,9 @@ class PortraitItem:
             "calibration_state": self.calibration_state,
             "knowledge_ref_count": len(self.knowledge_links),
             "knowledge_links": [row.to_dict() for row in self.knowledge_links],
+            "alignment_status": self.alignment_status,
+            "bazi_focus": self.bazi_focus,
+            "alignment_score": self.alignment_score,
             "source_policy": self.source_policy,
             "guardrails": [
                 "PORTRAIT_ITEM_FROM_BAZI_FEATURE",

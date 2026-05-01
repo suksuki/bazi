@@ -5,6 +5,7 @@ from v20.features.schema import BaziFeature, FeatureLayer
 from v20.interaction.question_ranker import QuestionRankingPolicy
 from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.rule_proposal import build_knowledge_rule_proposals
+from v20.measurement.domain_alignment import align_rule_candidate, is_allowed_bazi_domain
 
 
 RULE_LABELS_ZH = {
@@ -39,7 +40,10 @@ def build_rule_candidate_support(
         for proposal in report.get("proposals", ()):
             if not isinstance(proposal, dict):
                 continue
-            candidates.append(_safe_candidate(proposal, feature_layer))
+            candidate = _safe_candidate(proposal, feature_layer)
+            alignment = candidate.get("bazi_alignment", {})
+            if isinstance(alignment, dict) and alignment.get("ok") is True:
+                candidates.append(candidate)
             if len(candidates) >= limit:
                 break
         if len(candidates) >= limit:
@@ -76,6 +80,8 @@ def build_rule_candidate_question_ranking(
     rows = []
     weights: dict[str, float] = {}
     for domain in domains:
+        if not is_allowed_bazi_domain(domain):
+            continue
         exact_count = _proposal_count(domain, limit=limit_per_domain)
         support_count = sum(
             _proposal_count(source_domain, limit=limit_per_domain)
@@ -114,6 +120,7 @@ def build_rule_candidate_question_ranking(
             "NO_NEW_QUESTION_GENERATION",
             "NO_RUNTIME_RULE_ACTIVATION",
             "BOUNDED_SHADOW_SIGNAL",
+            "BAZI_DOMAIN_ALIGNMENT_REQUIRED",
         ],
     }
 
@@ -135,7 +142,7 @@ def rule_candidate_section_body(report: dict[str, object]) -> str:
 def _candidate_domains(domain: str) -> tuple[str, ...]:
     domains = [domain]
     domains.extend(feature_domains_for_applied_domain(domain))
-    return tuple(dict.fromkeys(domains))
+    return tuple(row for row in dict.fromkeys(domains) if is_allowed_bazi_domain(row))
 
 
 def _proposal_count(domain: str, *, limit: int = 1) -> int:
@@ -145,6 +152,16 @@ def _proposal_count(domain: str, *, limit: int = 1) -> int:
 
 def _safe_candidate(proposal: dict[str, object], feature_layer: FeatureLayer | None = None) -> dict[str, object]:
     domain = str(proposal.get("domain", ""))
+    emits = tuple(str(item) for item in proposal.get("emits_feature_hooks", ()) if str(item))
+    questions = tuple(str(item) for item in proposal.get("supports_question_hooks", ()) if str(item))
+    alignment = align_rule_candidate(
+        domain=domain,
+        emits_feature_hooks=emits,
+        supports_question_hooks=questions,
+        title=str(proposal.get("title", "")),
+        summary=str(proposal.get("summary", "")),
+        boundary=str(proposal.get("boundary", "")),
+    )
     condition_model = proposal.get("condition_model", {})
     condition_type = ""
     condition_count = 0
@@ -163,6 +180,7 @@ def _safe_candidate(proposal: dict[str, object], feature_layer: FeatureLayer | N
         "matched_feature_ids": tuple(feature.feature_id for feature in matched[:8]),
         "matched_feature_labels": tuple(feature_label(feature) for feature in matched[:5]),
         "validation_summary": _validation_summary(proposal),
+        "bazi_alignment": alignment.to_dict(),
         "activation_scope": proposal.get("activation_scope", "shadow_training_and_candidate_rule_graph"),
         "status": proposal.get("status", "released_to_shadow_training"),
         "runtime_allowed": False,

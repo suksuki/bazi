@@ -21,6 +21,7 @@ ChartInput
 -> Shadow rule candidate support
 -> Synthetic rule collision validation/training gate
 -> Rule candidate validation and bounded question reranking
+-> Bazi-domain alignment gate for rules, portraits, and questions
 -> EvidencePack
 -> AnswerPlan
 -> bounded LLM assist contracts
@@ -43,6 +44,7 @@ Initial boundaries:
 - Knowledge Semantic Model turns reviewed knowledge into feature hooks, question hooks, portrait label candidates, interaction keywords, and rule-atom signals.
 - Portrait Intelligence turns raw portrait axes into knowledge-backed sub-axis candidates and calibration prompts.
 - Portraits, recommended questions, and answers are Bazi measurement projections over features.
+- Rules, portrait axes, and recommended questions must pass Bazi-domain alignment before ranking or display.
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
 - Shadow rule candidates report current-chart feature collisions, but still cannot activate as rule truth without validation and promotion.
@@ -63,6 +65,7 @@ Primary V20 modules:
 - `knowledge`: reviewed units, feature-aligned retrieval, audit, and coverage checks.
 - `graph`: chart graph and rule-path candidates.
 - `interaction`: Bazi measurement question ranking, portrait projection, and feedback capture.
+- `measurement`: runtime topic reports and the Bazi-domain alignment contract.
 - `answer`: evidence-backed answer planning, professional domain reading paths, and bounded answer composition.
 - `llm`: bounded contracts plus hard text enforcement for intent routing, question suggestion, feature-candidate proposals, answer-plan assistance, multilingual rendering, feedback summaries, and safety review.
 - `validation`: synthetic and golden-case gates.

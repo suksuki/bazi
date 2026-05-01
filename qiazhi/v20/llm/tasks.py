@@ -20,6 +20,7 @@ from v20.llm.structured_outputs import (
     LLMSafetyReview,
 )
 from v20.llm.validators import validate_llm_output, validate_llm_structured_output
+from v20.measurement.domain_alignment import ALLOWED_QUESTION_KEYS_BY_DOMAIN, is_allowed_bazi_domain
 
 DOMAIN_ROUTE_PRIORITY = {
     "useful_god": 0,
@@ -93,13 +94,13 @@ def rewrite_answer_plan_with_llm(
 
 
 def interpret_user_intent(user_text: str, feature_layer: FeatureLayer | None = None, *, locale: str = "zh") -> dict[str, object]:
-    domains = _domains_from_text(user_text)
+    domains = tuple(domain for domain in _domains_from_text(user_text) if is_allowed_bazi_domain(domain))
     if not domains and feature_layer is not None:
-        domains = tuple(feature.domain for feature in feature_layer.features[:2])
+        domains = tuple(feature.domain for feature in feature_layer.features[:2] if is_allowed_bazi_domain(feature.domain))
     intent = LLMIntentParse(
         intent_key="domain_focus" if domains else "open_structure_review",
         normalized_question=user_text.strip(),
-        candidate_question_keys=tuple(f"q_{domain}_review" for domain in domains[:3]),
+        candidate_question_keys=_question_keys_for_domains(domains[:3]),
         feature_domains=domains,
         confidence=0.56 if domains else 0.32,
         locale=locale,
@@ -120,9 +121,9 @@ def suggest_question_candidates(
     *,
     locale: str = "zh",
 ) -> dict[str, object]:
-    domains = set(_domains_from_text(user_text))
+    domains = set(domain for domain in _domains_from_text(user_text) if is_allowed_bazi_domain(domain))
     if not domains:
-        domains = {feature.domain for feature in feature_layer.features[:2]}
+        domains = {feature.domain for feature in feature_layer.features[:2] if is_allowed_bazi_domain(feature.domain)}
     ranked: list[tuple[int, int, str, LLMQuestionSuggestion]] = []
     for question in questions:
         source_domains = {
@@ -157,7 +158,7 @@ def suggest_question_candidates(
 
 def propose_feature_candidates(user_text: str, feature_layer: FeatureLayer, *, locale: str = "zh") -> dict[str, object]:
     existing_domains = {feature.domain for feature in feature_layer.features}
-    requested_domains = _domains_from_text(user_text)
+    requested_domains = tuple(domain for domain in _domains_from_text(user_text) if is_allowed_bazi_domain(domain))
     candidates = [
         LLMFeatureCandidate(
             domain=domain,
@@ -301,3 +302,10 @@ def _domains_from_text(text: str) -> tuple[str, ...]:
     )
     found = [domain for domain, keywords in domain_keywords if any(keyword in lower for keyword in keywords)]
     return tuple(dict.fromkeys(found))
+
+
+def _question_keys_for_domains(domains: tuple[str, ...]) -> tuple[str, ...]:
+    keys: list[str] = []
+    for domain in domains:
+        keys.extend(ALLOWED_QUESTION_KEYS_BY_DOMAIN.get(domain, ())[:1])
+    return tuple(dict.fromkeys(keys))

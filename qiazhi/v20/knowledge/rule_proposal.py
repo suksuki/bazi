@@ -7,6 +7,7 @@ from typing import Any
 from v20.knowledge.loader import default_knowledge_units
 from v20.knowledge.review_queue import CORE_DOMAIN_PRIORITY
 from v20.knowledge.schema import KnowledgeUnit
+from v20.measurement.domain_alignment import align_rule_candidate
 
 
 @dataclass(frozen=True)
@@ -42,7 +43,16 @@ class KnowledgeRuleProposal:
     )
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["bazi_alignment"] = align_rule_candidate(
+            domain=self.domain,
+            emits_feature_hooks=self.emits_feature_hooks,
+            supports_question_hooks=self.supports_question_hooks,
+            title=self.title,
+            summary=self.summary,
+            boundary=self.boundary,
+        ).to_dict()
+        return payload
 
 
 def build_knowledge_rule_proposals(
@@ -109,6 +119,9 @@ def build_rule_proposal_preflight(domain: str = "", *, limit: int = 12) -> dict[
             failures.append(f"missing_feature_hooks:{proposal_id}")
         if not proposal.get("supports_question_hooks"):
             failures.append(f"missing_question_hooks:{proposal_id}")
+        alignment = proposal.get("bazi_alignment", {})
+        if not isinstance(alignment, dict) or alignment.get("ok") is not True:
+            failures.append(f"bazi_alignment_failed:{proposal_id}")
         promotion_requirements.append(f"synthetic_validation_before_user_visible_runtime:{proposal_id}")
         promotion_requirements.append(f"decision_record_before_user_visible_runtime:{proposal_id}")
     return {

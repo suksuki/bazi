@@ -53,6 +53,18 @@ def test_v20_measure_endpoint_returns_bazi_measurement_runtime() -> None:
     assert "core." not in data["answer_text"]
 
 
+def test_v20_bazi_domain_alignment_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v20/measurement/bazi-domain-alignment")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["version"] == "v20.bazi_domain_alignment_manifest.v1"
+    assert "strength" in data["core_domains"]
+    assert "career" in data["applied_domains"]
+    assert data["runtime_mutation"] is False
+
+
 def test_v20_measure_endpoint_rejects_invalid_pillar_without_mutation() -> None:
     client = TestClient(app)
     response = client.post(

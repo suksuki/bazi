@@ -61,6 +61,7 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["rule_candidate_support"]["runtime_mutation"] is False
     assert result["rule_candidate_support"]["candidate_count"] >= 1
     assert any(row["matched_feature_count"] >= 1 for row in result["rule_candidate_support"]["candidates"])
+    assert all(row["bazi_alignment"]["ok"] is True for row in result["rule_candidate_support"]["candidates"])
     assert result["rule_candidate_validation"]["ok"] is True
     assert result["rule_candidate_ranking_validation"]["ok"] is True
     assert result["rule_candidate_ranking"]["policy"]["status"] == "active_shadow"
@@ -115,11 +116,14 @@ def test_v20_feature_discovery_fuses_interaction_knowledge_portrait_and_training
     assert "KNOWLEDGE_SUPPORTS_LABELS_NOT_VERDICTS" in result["portrait_projection"]["guardrails"]
     assert any(row["knowledge_ref_count"] >= 1 for row in result["portrait_projection"]["axes"])
     assert all("question_bias" in row["forbidden_usage"] for row in result["portrait_projection"]["axes"])
+    assert all(row["alignment_status"] in {"bazi_core_aligned", "bazi_projection_aligned"} for row in result["portrait_projection"]["axes"])
     assert result["measurement_report"]["core_focus"] == "bazi_measurement"
     assert result["measurement_report"]["selected_question_key"] == result["selected_question"]["question_key"]
     assert {"career", "relationship"} <= set(result["measurement_report"]["applied_domain_keys"])
     assert all(row["role"] == "bazi_measurement_entry" for row in result["questions"])
     assert all(row["measurement_topic"] for row in result["questions"])
+    assert all(row["alignment_status"] in {"bazi_core_aligned", "bazi_projection_aligned"} for row in result["questions"])
+    assert all(row["bazi_focus"] for row in result["questions"])
     assert {"career", "relationship", "element"} <= {row["domain"] for row in result["questions"]}
 
 

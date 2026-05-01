@@ -19,6 +19,9 @@ def validate_rule_candidate_support(report: dict[str, object]) -> dict[str, obje
             failures.append(f"missing_condition_summary:{rule_id}")
         if "验证" not in str(candidate.get("validation_summary", "")):
             failures.append(f"missing_validation_summary:{rule_id}")
+        alignment = candidate.get("bazi_alignment", {})
+        if not isinstance(alignment, dict) or alignment.get("ok") is not True:
+            failures.append(f"bazi_alignment_failed:{rule_id}")
     return {
         "version": "v20.rule_candidate_support_validation.v1",
         "status": "pass" if not failures else "fail",
@@ -31,6 +34,7 @@ def validate_rule_candidate_support(report: dict[str, object]) -> dict[str, obje
             "RULE_CANDIDATE_VALIDATION_ONLY",
             "SHADOW_SCOPE_REQUIRED",
             "PROMOTION_REQUIRED_BEFORE_RUNTIME_ACTIVATION",
+            "BAZI_DOMAIN_ALIGNMENT_REQUIRED",
         ],
     }
 
@@ -63,5 +67,6 @@ def validate_rule_candidate_question_ranking(report: dict[str, object]) -> dict[
             "QUESTION_RANKING_VALIDATION_ONLY",
             "REORDER_ONLY",
             "NO_RULE_ACTIVATION",
+            "BAZI_DOMAIN_ALIGNMENT_REQUIRED",
         ],
     }

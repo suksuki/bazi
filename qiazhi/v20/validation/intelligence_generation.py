@@ -30,6 +30,8 @@ def validate_intelligence_generation() -> dict[str, object]:
         failures.append("no_rule_proposals")
     if manifest["portrait_generation"]["source_policy"] != "feature_first_knowledge_supported":
         failures.append("portrait_source_policy_mismatch")
+    if manifest.get("bazi_domain_alignment", {}).get("version") != "v20.bazi_domain_alignment_manifest.v1":
+        failures.append("bazi_domain_alignment_manifest_missing")
     if rule_preflight["status"] != "ready_for_shadow_training":
         failures.append("rule_proposals_not_ready_for_shadow_training")
     if rule_extraction["status"] != "pass":
@@ -52,6 +54,11 @@ def validate_intelligence_generation() -> dict[str, object]:
             "failure_count": len(rule_synthetic["failures"]),
             "training_status": rule_synthetic_training["status"],
         },
+        "bazi_domain_alignment": {
+            "status": "ready" if "bazi_domain_alignment_manifest_missing" not in failures else "missing",
+            "core_domain_count": len(manifest.get("bazi_domain_alignment", {}).get("core_domains", ())),
+            "applied_domain_count": len(manifest.get("bazi_domain_alignment", {}).get("applied_domains", ())),
+        },
         "shadow_training": {
             "allowed": rule_preflight["ok"] and rule_synthetic_training["status"] == "ready",
             "rule_preflight_status": rule_preflight["status"],
@@ -73,6 +80,7 @@ def validate_intelligence_generation() -> dict[str, object]:
             "VALIDATION_REPORT_ONLY",
             "RULE_SHADOW_TRAINING_REQUIRES_SYNTHETIC_GATE",
             "PROMOTION_REQUIRES_SYNTHETIC_AND_DECISION",
+            "BAZI_DOMAIN_ALIGNMENT_REQUIRED",
             "NO_RUNTIME_MUTATION",
         ],
     }

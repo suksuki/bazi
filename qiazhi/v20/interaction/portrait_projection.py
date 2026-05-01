@@ -11,6 +11,7 @@ from v20.interaction.portrait_schema import (
 )
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.knowledge.schema import KnowledgeRef, KnowledgeRetrievalReport
+from v20.measurement.domain_alignment import align_portrait_axis
 
 
 def portrait_projection(
@@ -33,40 +34,67 @@ def _profile_axes(feature_layer: FeatureLayer, knowledge_refs: tuple[KnowledgeRe
     rows: dict[str, list[BaziFeature]] = {}
     for feature in feature_layer.features:
         rows.setdefault(feature.domain, []).append(feature)
-    axes = [
-        PortraitAxis(
-            axis_id=f"portrait.axis.{domain}",
+    axes = []
+    for domain, features in rows.items():
+        feature_ids = tuple(feature.feature_id for feature in features)
+        calibration_prompt = f"校准“{domain_label(domain)}”画像轴是否符合当前命理特征证据。"
+        alignment = align_portrait_axis(
             domain=domain,
+            feature_ids=feature_ids,
             label=domain_label(domain),
-            measurement_stage=measurement_stage(domain),
-            feature_ids=tuple(feature.feature_id for feature in features),
-            feature_count=len(features),
-            peak_confidence=max(feature.confidence for feature in features),
-            calibration_state=_axis_calibration_state(features),
-            knowledge_links=_knowledge_links_for_domain(knowledge_refs, domain),
-            evidence_boundaries=_knowledge_boundaries_for_domain(knowledge_refs, domain),
-            calibration_prompt=f"校准“{domain_label(domain)}”画像轴是否符合当前命理特征证据。",
+            calibration_prompt=calibration_prompt,
         )
-        for domain, features in rows.items()
-    ]
+        if not alignment.ok:
+            continue
+        axes.append(
+            PortraitAxis(
+                axis_id=f"portrait.axis.{domain}",
+                domain=domain,
+                label=domain_label(domain),
+                measurement_stage=measurement_stage(domain),
+                feature_ids=feature_ids,
+                feature_count=len(features),
+                peak_confidence=max(feature.confidence for feature in features),
+                calibration_state=_axis_calibration_state(features),
+                knowledge_links=_knowledge_links_for_domain(knowledge_refs, domain),
+                evidence_boundaries=_knowledge_boundaries_for_domain(knowledge_refs, domain),
+                calibration_prompt=calibration_prompt,
+                alignment_status=alignment.status,
+                bazi_focus=alignment.focus,
+                alignment_score=alignment.score,
+            )
+        )
     return sorted(axes, key=lambda row: (row.measurement_stage, row.label))
 
 
 def _profile_items(feature_layer: FeatureLayer, knowledge_refs: tuple[KnowledgeRef, ...]) -> list[PortraitItem]:
-    return [
-        PortraitItem(
-            feature_id=feature.feature_id,
-            title=feature_label(feature),
+    rows = []
+    for feature in feature_layer.features[:8]:
+        alignment = align_portrait_axis(
             domain=feature.domain,
-            measurement_topic=domain_label(feature.domain),
-            measurement_stage=measurement_stage(feature.domain),
-            measurement_focus=measurement_focus(feature),
-            confidence=feature.confidence,
-            calibration_state=feature.calibration_state,
-            knowledge_links=_knowledge_links_for_domain(knowledge_refs, feature.domain),
+            feature_ids=(feature.feature_id,),
+            label=feature_label(feature),
+            calibration_prompt=measurement_focus(feature),
         )
-        for feature in feature_layer.features[:8]
-    ]
+        if not alignment.ok:
+            continue
+        rows.append(
+            PortraitItem(
+                feature_id=feature.feature_id,
+                title=feature_label(feature),
+                domain=feature.domain,
+                measurement_topic=domain_label(feature.domain),
+                measurement_stage=measurement_stage(feature.domain),
+                measurement_focus=measurement_focus(feature),
+                confidence=feature.confidence,
+                calibration_state=feature.calibration_state,
+                knowledge_links=_knowledge_links_for_domain(knowledge_refs, feature.domain),
+                alignment_status=alignment.status,
+                bazi_focus=alignment.focus,
+                alignment_score=alignment.score,
+            )
+        )
+    return rows
 
 
 def _axis_calibration_state(features: list[BaziFeature]) -> str:

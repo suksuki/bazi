@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict, dataclass
+from dataclasses import replace
 from typing import Any
 
 from v20.answer.measurement_policy import (
@@ -13,6 +14,7 @@ from v20.answer.measurement_policy import (
 )
 from v20.features.schema import FeatureLayer
 from v20.interaction.question_ranker import QuestionRankingPolicy, rank_question_rows
+from v20.measurement.domain_alignment import align_question_candidate
 
 
 @dataclass(frozen=True)
@@ -25,6 +27,9 @@ class QuestionCandidate:
     boundary: str
     measurement_topic: str
     measurement_stage: str
+    alignment_status: str = "pending_bazi_alignment"
+    bazi_focus: str = ""
+    alignment_score: float = 0.0
     role: str = "bazi_measurement_entry"
 
     def to_dict(self) -> dict[str, Any]:
@@ -45,11 +50,11 @@ QUESTION_LABELS = {
     "q_time_layer_context": "显式时间层会触发哪些结构互动？",
     "q_time_relation_triggers": "时间干支与原局的触发边界是什么？",
     "q_structure_overview": "这个八字的整体结构主线是什么？",
-    "q_income_stability": "财星与收入结构的测算边界是什么？",
-    "q_income_factors": "哪些因素会影响财星材料的可用性？",
-    "q_career_structure": "事业角色与工作结构应从哪条主线测算？",
-    "q_relationship_structure": "关系互动结构的测算入口是什么？",
-    "q_health_balance_boundary": "五行平衡与健康边界应如何测算？",
+    "q_income_stability": "财星结构与收入主题的测算边界是什么？",
+    "q_income_factors": "财星材料的来源和可用性如何复核？",
+    "q_career_structure": "事业主题应回到哪条命理结构主线？",
+    "q_relationship_structure": "关系主题应从十神与地支哪个入口测算？",
+    "q_health_balance_boundary": "健康相关只看哪些五行平衡边界？",
     "q_pattern_structure": "格局审查应从哪里开始？",
 }
 
@@ -109,7 +114,9 @@ def recommend_questions(
             )
             rows[hook] = candidate
     _add_applied_domain_questions(rows, feature_layer)
-    ordered = rank_question_rows(tuple(rows.values()), ranking_policy)
+    aligned_rows = tuple(_aligned_question(row) for row in rows.values())
+    aligned_rows = tuple(row for row in aligned_rows if row is not None)
+    ordered = rank_question_rows(aligned_rows, ranking_policy)
     return tuple(ordered[:limit])
 
 
@@ -194,11 +201,15 @@ def _personalized_question_title(hook: str, feature) -> str:  # noqa: ANN001
     if hook == "q_time_relation_triggers":
         return f"{_clip(material, 24)}，触发边界是什么？"
     if hook == "q_income_factors":
-        return f"{_clip(material, 24)}，财星材料如何使用？"
+        return f"{_clip(material, 24)}，财星材料如何复核？"
     if hook == "q_income_stability":
-        return f"{_clip(material, 24)}，财运结构边界是什么？"
+        return f"{_clip(material, 24)}，财星结构边界是什么？"
     if hook == "q_career_structure":
-        return f"{_clip(material, 24)}，事业结构从哪里进入？"
+        return f"{_clip(material, 24)}，事业主题从哪条命理结构进入？"
+    if hook == "q_relationship_structure":
+        return f"{_clip(material, 24)}，关系主题从十神或地支哪里进入？"
+    if hook == "q_health_balance_boundary":
+        return f"{_clip(material, 24)}，健康相关只看哪些五行边界？"
     return default
 
 
@@ -211,23 +222,44 @@ def _applied_question_title(hook: str, domain: str, sources: list) -> str:  # no
     if not material:
         material = domain_label(domain)
     if hook == "q_income_stability":
-        return f"{_clip(material, 24)}，财运结构边界是什么？"
+        return f"{_clip(material, 24)}，财星结构边界是什么？"
     if hook == "q_career_structure":
-        return f"{_clip(material, 24)}，事业角色从哪条线看？"
+        return f"{_clip(material, 24)}，事业主题从哪条命理结构进入？"
     if hook == "q_relationship_structure":
-        return f"{_clip(material, 24)}，关系互动入口是什么？"
+        return f"{_clip(material, 24)}，关系主题从十神或地支哪里进入？"
     if hook == "q_health_balance_boundary":
-        return f"{_clip(material, 24)}，健康边界只看哪些结构？"
+        return f"{_clip(material, 24)}，健康相关只看哪些五行边界？"
     return QUESTION_LABELS.get(hook, hook)
 
 
 def _question_material(feature) -> str:  # noqa: ANN001
+    label = feature_label(feature)
+    if feature.domain in {"strength", "element", "useful_god", "pattern"} and label:
+        return label
     summary = feature_public_summary(feature).strip().rstrip("。")
     for prefix in ("结构材料：", "结构摘要：", "十神焦点：", "地支结构材料：", "地支结构焦点：", "财星材料：", "候选摘要："):
         if summary.startswith(prefix):
             summary = summary[len(prefix):]
             break
-    return summary or feature_label(feature)
+    return summary or label
+
+
+def _aligned_question(candidate: QuestionCandidate) -> QuestionCandidate | None:
+    alignment = align_question_candidate(
+        question_key=candidate.question_key,
+        domain=candidate.domain,
+        title=candidate.title,
+        source_feature_ids=candidate.source_feature_ids,
+        boundary=candidate.boundary,
+    )
+    if not alignment.ok:
+        return None
+    return replace(
+        candidate,
+        alignment_status=alignment.status,
+        bazi_focus=alignment.focus,
+        alignment_score=alignment.score,
+    )
 
 
 def _clip(value: str, limit: int) -> str:
