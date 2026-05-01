@@ -15,6 +15,7 @@ from v20.interaction.questions import recommend_questions
 from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.llm.assist import attach_answer_safety_review, build_llm_routing_assist
+from v20.llm.context import build_llm_context_pack
 from v20.llm.contracts import LLM_CONTRACTS
 from v20.measurement.report import build_measurement_report
 
@@ -55,6 +56,15 @@ def run_runtime_from_pillars(
     measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
     answer_text = compose_answer(answer_plan, locale=locale)
     llm_assist = attach_answer_safety_review(llm_routing_assist, answer_text)
+    llm_assist["context_pack"] = build_llm_context_pack(
+        user_text,
+        feature_layer,
+        questions,
+        knowledge_report,
+        answer_plan,
+        answer_text,
+        locale=locale,
+    )
     return {
         "version": "v20.runtime_result.v1",
         "input_id": input_id,

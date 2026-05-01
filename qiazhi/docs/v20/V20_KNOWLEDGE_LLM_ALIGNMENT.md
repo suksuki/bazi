@@ -61,6 +61,10 @@ LLM output is always checked for forbidden claims and internal identifier leaks 
   `QuestionCandidate`, but cannot create unsupported questions.
 - LLM feature candidates remain `proposal_only`; the compiler owns runtime
   `BaziFeature` creation.
+- `llm_assist.context_pack` now packages bounded prompt inputs for intent
+  parsing, question suggestion, feature candidate proposal, answer-plan
+  rewriting, and safety review. It is internal assistive context, not
+  publishable output.
 - Answer text receives deterministic safety review before publication.
 - English and Korean answer rendering use deterministic V20 terminology maps
   before any future LLM rewrite is allowed.

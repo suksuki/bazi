@@ -46,6 +46,9 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]
     assert result["prediction_policy"]["core_focus"] == "bazi_measurement"
     assert result["llm_assist"]["status"] == "idle"
+    assert result["llm_assist"]["context_pack"]["publishable"] is False
+    assert result["llm_assist"]["context_pack"]["runtime_mutation"] is False
+    assert "answer_plan_rewrite" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert result["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
     assert "八字测算重点" in result["answer_text"]
     assert "确定事件" in result["answer_text"]
@@ -167,6 +170,8 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     assert all(row["status"] == "proposal_only" for row in proposals["candidates"])
     assert routed["llm_assist"]["status"] == "ready"
     assert routed["llm_assist"]["routed_question_key"] == "q_useful_god_candidates"
+    assert routed["llm_assist"]["context_pack"]["user_text_present"] is True
+    assert routed["llm_assist"]["context_pack"]["knowledge_ref_count"] >= 1
     assert routed["selected_question"]["question_key"] == "q_useful_god_candidates"
     assert routed["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
 
