@@ -150,7 +150,7 @@ const importProfiles = async () => {
 
 const measureUrl = (profile) => {
   const query = new URLSearchParams({
-    role: params.get("role") || document.body.dataset.role || "analyst",
+    role: measurementRole(params.get("role") || document.body.dataset.role),
     locale: localeSelect.value,
     profile_id: profile.profile_id || "",
     profile_name: profile.display_name || "",
@@ -160,7 +160,7 @@ const measureUrl = (profile) => {
 
 const updateLinks = () => {
   const query = new URLSearchParams({
-    role: params.get("role") || document.body.dataset.role || "analyst",
+    role: measurementRole(params.get("role") || document.body.dataset.role),
     locale: localeSelect.value,
   });
   instantMeasureLink.href = `/v20/ui/workbench.html?${query.toString()}`;
@@ -184,6 +184,7 @@ const tag = (text) => {
 };
 
 const currentText = () => PROFILE_TEXT[localeSelect.value] || PROFILE_TEXT.zh;
+const measurementRole = (role) => (role === "user" ? "user" : "analyst");
 
 localeSelect.value = params.get("locale") || localStorage.getItem("v20_locale") || "zh";
 applyLocale(localeSelect.value);

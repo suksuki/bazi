@@ -40,6 +40,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "role_key" in page.text
     assert '<option value="analyst" selected>命理师</option>' in page.text
     assert '<option value="user">游客</option>' in page.text
+    assert '<option value="admin">' not in page.text
+    assert '<option value="full">' not in page.text
     assert "selectedProfileCard" in page.text
     assert "profileImportButton" not in page.text
     assert "反馈校准" in page.text
@@ -52,7 +54,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/profiles/" in script.text
     assert "/api/v20/profiles/import-v19?apply=true" not in script.text
     assert "scheduleMeasure({ force: true })" in script.text
-    assert "if (!params.get(\"profile_id\")) scheduleMeasure({ force: true })" in script.text
+    assert "role: measurementRole(params.get(\"role\") || document.body.dataset.role)" in profiles_script.text
+    assert "const endpoint = `/api/v20/measure/view/${role}`" in script.text
     assert "确认四柱后会生成建议问题" in script.text
     assert "명리사" in script.text
     assert "full_runtime" not in script.text

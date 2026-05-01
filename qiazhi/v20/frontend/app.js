@@ -28,7 +28,7 @@ const UI_TEXT = {
     feedback_title: "反馈校准",
     run: "开始测算",
     running: "测算中",
-    roles: { user: "游客", analyst: "命理师", lab: "实验室", admin: "Admin", full: "开发全量" },
+    roles: { user: "游客", analyst: "命理师" },
   },
   en: {
     app_title: "Bazi Workbench",
@@ -43,7 +43,7 @@ const UI_TEXT = {
     feedback_title: "Feedback Calibration",
     run: "Run Reading",
     running: "Reading",
-    roles: { user: "Guest", analyst: "Practitioner", lab: "Lab", admin: "Admin", full: "Developer" },
+    roles: { user: "Guest", analyst: "Practitioner" },
   },
   ko: {
     app_title: "사주 분석 작업대",
@@ -58,7 +58,7 @@ const UI_TEXT = {
     feedback_title: "피드백 보정",
     run: "분석 시작",
     running: "분석 중",
-    roles: { user: "게스트", analyst: "명리사", lab: "실험실", admin: "Admin", full: "개발자" },
+    roles: { user: "게스트", analyst: "명리사" },
   },
 };
 
@@ -106,9 +106,9 @@ const measure = async ({ force = false } = {}) => {
   button.disabled = true;
   button.textContent = text.running;
   try {
-    const role = payload.role_key || "analyst";
+    const role = measurementRole(payload.role_key);
     delete payload.role_key;
-    const endpoint = role === "full" ? "/api/v20/measure" : `/api/v20/measure/view/${role}`;
+    const endpoint = `/api/v20/measure/view/${role}`;
     const result = await requestJson(endpoint, {
       method: "POST",
       body: JSON.stringify(payload),
@@ -138,7 +138,7 @@ const renderRuntime = (result) => {
   const selected = result.selected_question || {};
   const chart = result.chart_facts || {};
   const featureLayer = result.feature_layer || {};
-  const role = result.role?.role_key || roleSelect.value || "analyst";
+  const role = result.role?.role_key || measurementRole(roleSelect.value);
 
   document.body.dataset.role = role;
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
@@ -312,7 +312,7 @@ const loadActiveProfile = async () => {
   document.querySelector("#selectedProfileCard").hidden = false;
   document.querySelector("#inputId").value = `profile:${profileId}`;
   setText("#selectedProfileName", params.get("profile_name") || profileId);
-  const backParams = new URLSearchParams({ role: roleSelect.value, locale: localeSelect.value });
+  const backParams = new URLSearchParams({ role: measurementRole(roleSelect.value), locale: localeSelect.value });
   document.querySelector("#backToProfiles").href = `/v20/ui/profiles.html?${backParams.toString()}`;
   try {
     const result = await requestJson(`/api/v20/profiles/${encodeURIComponent(profileId)}`);
@@ -347,7 +347,7 @@ const submitFeedback = async () => {
       method: "POST",
       body: JSON.stringify({
         input_id: latest.input_id || "ui.feedback",
-        source_role: roleSelect.value === "full" ? "analyst" : roleSelect.value,
+        source_role: measurementRole(roleSelect.value),
         feedback_text: text,
         feature_ids: featureIds,
       }),
@@ -365,6 +365,7 @@ const submitFeedback = async () => {
 
 const unique = (items) => Array.from(new Set(items));
 const currentText = () => UI_TEXT[localeSelect.value] || UI_TEXT.zh;
+const measurementRole = (role) => (role === "user" ? "user" : "analyst");
 const profileMeta = (profile) => {
   const birth = profile.birth_input || {};
   const date = [birth.year, String(birth.month || "").padStart(2, "0"), String(birth.day || "").padStart(2, "0")]
@@ -391,10 +392,10 @@ form.querySelectorAll("input, textarea, select").forEach((node) => {
 });
 
 if (params.get("locale")) localeSelect.value = params.get("locale");
-if (params.get("role")) roleSelect.value = params.get("role");
+roleSelect.value = measurementRole(params.get("role") || roleSelect.value);
 applyLocale(localeSelect.value);
 renderInitialPanels();
 loadStatus();
 loadActiveProfile();
-if (!params.get("profile_id")) scheduleMeasure({ force: true });
+scheduleMeasure({ force: true });
 setInterval(loadStatus, 10000);
