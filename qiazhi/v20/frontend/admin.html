@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>V20 Admin · DB / LLM</title>
+    <link rel="stylesheet" href="/v20/ui/styles.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <div class="brand-mark">掐</div>
+          <div>
+            <p class="eyebrow">Qiazhi V20 Admin</p>
+            <h1>DB / LLM</h1>
+          </div>
+        </div>
+        <nav class="top-actions" aria-label="V20 admin navigation">
+          <a href="/v20/ui/">测算</a>
+          <a href="/v20/ui/admin.html" aria-current="page">Admin</a>
+          <span id="adminStatus" class="status-pill">checking</span>
+        </nav>
+      </header>
+
+      <main class="admin-layout">
+        <section class="panel admin-card">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Database</p>
+              <h2>Postgres</h2>
+            </div>
+            <button type="button" id="refreshDb" class="mini-action">刷新</button>
+          </div>
+          <div id="dbSummary" class="admin-summary"></div>
+          <div class="admin-subgrid">
+            <div>
+              <p class="section-kicker">Tables</p>
+              <div id="dbTables" class="kv-list"></div>
+            </div>
+            <div>
+              <p class="section-kicker">Indexes</p>
+              <div id="dbIndexes" class="tag-cloud"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel admin-card">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">LLM</p>
+              <h2>Bounded Assist</h2>
+            </div>
+            <div class="button-pair">
+              <button type="button" id="refreshLlm" class="mini-action">刷新</button>
+              <button type="button" id="probeModels" class="mini-action secondary">模型</button>
+            </div>
+          </div>
+          <div id="llmSummary" class="admin-summary"></div>
+          <div class="admin-subgrid">
+            <div>
+              <p class="section-kicker">Models</p>
+              <div id="llmModels" class="tag-cloud"></div>
+            </div>
+            <div>
+              <p class="section-kicker">Guardrails</p>
+              <div id="llmGuardrails" class="tag-cloud"></div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script src="/v20/ui/admin.js" defer></script>
+  </body>
+</html>

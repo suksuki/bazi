@@ -101,11 +101,43 @@ def test_v20_ops_and_testing_metadata_endpoints_hide_secrets() -> None:
     assert tiers["manifest"]["default_tier"] == "fast"
     assert tiers["runtime_mutation"] is False
     assert storage["schema"]["backend"] == "postgres"
-    assert storage["schema"]["table_count"] == 8
+    assert storage["schema"]["table_count"] == 9
     assert storage["runtime_mutation"] is False
     assert redis["validation"]["ok"] is True
     assert redis["contract"]["keyspace_count"] == 5
     assert redis["runtime_mutation"] is False
+
+
+def test_v20_admin_status_endpoints_are_db_llm_only_and_secret_free() -> None:
+    client = TestClient(app)
+    db = client.get("/api/v20/admin/db").json()
+    llm = client.get("/api/v20/admin/llm").json()
+
+    assert db["version"] == "v20.admin_database_status.v1"
+    assert db["runtime_mutation"] is False
+    assert db["postgres"]["password_env"] == "V20_POSTGRES_PASSWORD"
+    assert "NO_SECRET_VALUES_RENDERED" in db["guardrails"]
+    assert "v20_corpus_snapshots" in db["table_names"]
+    assert "v20_user_profiles" in db["table_names"]
+    assert llm["version"] == "v20.admin_llm_status.v1"
+    assert llm["runtime_mutation"] is False
+    assert llm["readiness"]["api_key_env"] == "V20_LLM_API_KEY"
+    assert "LLM_IS_ASSISTIVE_NOT_AUTHORITATIVE" in llm["guardrails"]
+
+
+def test_v20_v19_profile_migration_preview_is_read_only() -> None:
+    client = TestClient(app)
+    preview = client.get("/api/v20/profiles/v19-migration-preview").json()
+    dry_run = client.post("/api/v20/profiles/import-v19").json()
+
+    assert preview["version"] == "v20.v19_profile_migration_preview.v1"
+    assert preview["target_table"] == "v20_user_profiles"
+    assert preview["runtime_mutation"] is False
+    assert "V19_SOURCE_IS_READ_ONLY" in preview["guardrails"]
+    assert dry_run["version"] == "v20.v19_profile_postgres_import.v1"
+    assert dry_run["status"] == "dry_run"
+    assert dry_run["apply"] is False
+    assert dry_run["runtime_mutation"] is False
 
 
 def test_v20_service_scripts_and_docs_are_wired() -> None:

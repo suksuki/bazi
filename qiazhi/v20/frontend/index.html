@@ -9,191 +9,196 @@
   <body>
     <div class="app-shell">
       <header class="topbar">
-        <div>
-          <p class="eyebrow">Qiazhi V20</p>
-          <h1>命理测算台</h1>
+        <div class="brand">
+          <div class="brand-mark">掐</div>
+          <div>
+            <p class="eyebrow">Qiazhi V20</p>
+            <h1 data-ui="app_title">命理测算台</h1>
+          </div>
         </div>
-        <div class="status-strip" id="runtimeStatus">
-          <span>health</span>
-          <strong>checking</strong>
-        </div>
+        <nav class="top-actions" aria-label="V20 navigation">
+          <a href="/v20/ui/" aria-current="page" data-ui="nav_measure">测算</a>
+          <a href="/v20/ui/admin.html">Admin</a>
+          <span id="runtimeStatus" class="status-pill">checking</span>
+        </nav>
       </header>
 
-      <main class="workspace">
-        <aside class="input-panel" aria-label="测算输入">
-          <div class="panel-head">
-            <h2>四柱输入</h2>
-            <span id="profileBadge">local</span>
-          </div>
+      <main class="measure-layout">
+        <aside class="control-panel" aria-label="测算输入">
           <form id="measureForm">
-            <label>
-              年柱
-              <input name="year" maxlength="2" value="甲子" autocomplete="off" />
-            </label>
-            <label>
-              月柱
-              <input name="month" maxlength="2" value="戊辰" autocomplete="off" />
-            </label>
-            <label>
-              日柱
-              <input name="day" maxlength="2" value="甲午" autocomplete="off" />
-            </label>
-            <label>
-              时柱
-              <input name="hour" maxlength="2" value="辛酉" autocomplete="off" />
-            </label>
-            <label class="wide">
-              用户问题
-              <textarea name="user_text" rows="3">我想看财和用神</textarea>
-            </label>
-            <div class="form-row">
-              <label>
-                流年
-                <input name="flow_year_pillar" maxlength="2" placeholder="庚子" autocomplete="off" />
-              </label>
-              <label>
-                大运
-                <input name="luck_pillar" maxlength="2" placeholder="乙亥" autocomplete="off" />
-              </label>
-            </div>
-            <label class="wide">
-              流月
-              <input name="flow_month_pillar" maxlength="2" placeholder="辛丑" autocomplete="off" />
-            </label>
-            <div class="form-row">
-              <label>
-                角色视图
-                <select name="role_key" id="roleSelect">
-                  <option value="user">用户</option>
-                  <option value="analyst">分析师</option>
+            <section class="control-section">
+              <div class="section-head compact">
+                <div>
+                  <p class="section-kicker">Chart</p>
+                  <h2>四柱</h2>
+                </div>
+                <span id="profileBadge" class="small-pill">local</span>
+              </div>
+              <div class="pillar-input-grid">
+                <label>年柱<input name="year" maxlength="2" value="甲子" autocomplete="off" /></label>
+                <label>月柱<input name="month" maxlength="2" value="戊辰" autocomplete="off" /></label>
+                <label>日柱<input name="day" maxlength="2" value="甲午" autocomplete="off" /></label>
+                <label>时柱<input name="hour" maxlength="2" value="辛酉" autocomplete="off" /></label>
+              </div>
+            </section>
+
+            <section class="control-section">
+              <p class="section-kicker">Question</p>
+              <label>用户关心<textarea name="user_text" rows="4">我想看事业和财运</textarea></label>
+              <label>推荐问题<select name="question_key" id="questionSelect"><option value="">自动路由</option></select></label>
+            </section>
+
+            <section class="control-section">
+              <p class="section-kicker">Time</p>
+              <div class="pillar-input-grid">
+                <label>流年<input name="flow_year_pillar" maxlength="2" placeholder="庚子" autocomplete="off" /></label>
+                <label>大运<input name="luck_pillar" maxlength="2" placeholder="乙亥" autocomplete="off" /></label>
+              </div>
+              <label>流月<input name="flow_month_pillar" maxlength="2" placeholder="辛丑" autocomplete="off" /></label>
+            </section>
+
+            <section class="control-section">
+              <p class="section-kicker">View</p>
+              <div class="pillar-input-grid">
+                <label>视图
+                  <select name="role_key" id="roleSelect">
+                  <option value="analyst" selected>命理师</option>
+                  <option value="user">游客</option>
                   <option value="lab">实验室</option>
-                  <option value="admin">管理员</option>
+                  <option value="admin">Admin</option>
                   <option value="full">开发全量</option>
-                </select>
-              </label>
-              <label>
-                语言
-                <select name="locale">
-                  <option value="zh">中文</option>
-                  <option value="en">English</option>
-                  <option value="ko">한국어</option>
-                </select>
-              </label>
-              <label>
-                问题键
-                <select name="question_key" id="questionSelect">
-                  <option value="">自动路由</option>
-                </select>
-              </label>
-            </div>
+                  </select>
+                </label>
+                <label>语言
+                  <select name="locale" id="localeSelect">
+                    <option value="zh">中文</option>
+                    <option value="en">English</option>
+                    <option value="ko">한국어</option>
+                  </select>
+                </label>
+              </div>
+            </section>
+
+            <section class="control-section">
+              <div class="section-head compact">
+                <div>
+                  <p class="section-kicker">Profile</p>
+                  <h2 data-ui="profiles_title">用户档案</h2>
+                </div>
+                <span id="profileMigrationState" class="small-pill">V19</span>
+              </div>
+              <select id="profileSelect" aria-label="profile select">
+                <option value="">游客即时测算</option>
+              </select>
+              <button type="button" id="profileImportButton" class="mini-action secondary">迁移 V19 档案</button>
+            </section>
+
             <button type="submit" class="primary-action">开始测算</button>
           </form>
         </aside>
 
         <section class="result-stage" aria-live="polite">
-          <div class="summary-band">
+          <section class="run-summary">
             <div>
-              <p class="eyebrow">selected question</p>
+              <p class="section-kicker">Selected</p>
               <h2 id="selectedQuestion">等待测算</h2>
+              <p id="selectedBoundary" class="muted-line">V20 runtime ready.</p>
             </div>
             <div class="summary-metrics">
-              <span><strong id="featureCount">0</strong> features</span>
-              <span><strong id="topicCount">0</strong> topics</span>
-              <span><strong id="knowledgeCount">0</strong> refs</span>
+              <span><strong id="featureCount">0</strong>特征</span>
+              <span><strong id="questionCount">0</strong>问题</span>
+              <span><strong id="knowledgeCount">0</strong>证据</span>
             </div>
-          </div>
-
-          <div class="main-grid">
-            <section class="surface role-advanced" id="featureSurface">
-              <div class="surface-head">
-                <h3>命理特征主线</h3>
-                <span id="coreCapacity">core</span>
-              </div>
-              <div class="chip-grid" id="featureChips"></div>
-            </section>
-
-            <section class="surface">
-              <div class="surface-head">
-                <h3>测算主题</h3>
-                <span id="appliedDomains">domain</span>
-              </div>
-              <div class="topic-list" id="measurementTopics"></div>
-            </section>
-
-            <section class="surface">
-              <div class="surface-head">
-                <h3>推荐问题</h3>
-                <span>feature-backed</span>
-              </div>
-              <div class="question-list" id="questionList"></div>
-            </section>
-
-            <section class="surface role-advanced" id="portraitSurface">
-              <div class="surface-head">
-                <h3>画像投影</h3>
-                <span>calibration only</span>
-              </div>
-              <div class="axis-list" id="portraitAxes"></div>
-            </section>
-          </div>
-
-          <section class="answer-surface">
-            <div class="surface-head">
-              <h3>回答计划</h3>
-              <span id="llmStatus">llm idle</span>
-            </div>
-            <pre id="answerText">V20 runtime ready.</pre>
           </section>
 
-          <section class="answer-surface">
-            <div class="surface-head">
-              <h3>反馈学习</h3>
-              <span id="feedbackState">record only</span>
+          <section class="dashboard-grid">
+            <article class="panel chart-panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Pillars</p>
+                  <h2 data-ui="chart_title">命盘结构</h2>
+                </div>
+                <span id="dayMasterBadge" class="small-pill">日主</span>
+              </div>
+              <div id="pillarPanel" class="pillar-panel"></div>
+              <div id="tenGodLine" class="tag-line"></div>
+            </article>
+
+            <article class="panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Feature Spine</p>
+                  <h2 data-ui="features_title">命理特征主线</h2>
+                </div>
+                <span id="coreCapacity" class="small-pill">core</span>
+              </div>
+              <div id="featureChips" class="feature-grid"></div>
+            </article>
+
+            <article class="panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Portrait</p>
+                  <h2 data-ui="portrait_title">画像投影</h2>
+                </div>
+                <span class="small-pill">calibration</span>
+              </div>
+              <div id="portraitAxes" class="axis-list"></div>
+            </article>
+
+            <article class="panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Questions</p>
+                  <h2 data-ui="questions_title">推荐问题</h2>
+                </div>
+                <span class="small-pill">feature-backed</span>
+              </div>
+              <div id="questionList" class="question-list"></div>
+            </article>
+          </section>
+
+          <section class="answer-grid">
+            <article class="panel answer-panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Answer</p>
+                  <h2 data-ui="answer_title">八字专业回复</h2>
+                </div>
+                <span id="llmStatus" class="small-pill">llm idle</span>
+              </div>
+              <pre id="answerText">等待测算。</pre>
+            </article>
+
+            <aside class="panel side-panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Evidence</p>
+                  <h2 data-ui="evidence_title">证据与系统状态</h2>
+                </div>
+              </div>
+              <div id="evidenceList" class="evidence-list"></div>
+              <div class="system-strip">
+                <span id="corpusState">corpus</span>
+                <span id="ruleState">rules</span>
+                <span id="dbState">db</span>
+              </div>
+            </aside>
+          </section>
+
+          <section class="panel feedback-panel">
+            <div class="section-head">
+              <div>
+                <p class="section-kicker">Learning</p>
+                <h2 data-ui="feedback_title">反馈校准</h2>
+              </div>
+              <span id="feedbackState" class="small-pill">record only</span>
             </div>
             <div class="feedback-row">
               <textarea id="feedbackText" rows="3" placeholder="记录一次校准反馈"></textarea>
               <button type="button" id="feedbackButton">分析反馈</button>
             </div>
             <pre id="feedbackOutput">等待反馈。</pre>
-          </section>
-
-          <section class="ops-grid role-advanced" id="opsSurface">
-            <div class="surface compact">
-              <h3>合成验证</h3>
-              <p id="validationState">checking</p>
-            </div>
-            <div class="surface compact">
-              <h3>语料覆盖</h3>
-              <p id="corpusState">checking</p>
-              <div class="meter progress-meter" aria-label="518K 预计算进度">
-                <i id="corpusProgressBar" style="width:0%"></i>
-              </div>
-              <p id="corpusProgressMeta">job pending</p>
-            </div>
-            <div class="surface compact">
-              <h3>学习进化</h3>
-              <p id="learningState">checking</p>
-            </div>
-            <div class="surface compact">
-              <h3>知识库</h3>
-              <p id="knowledgeCatalogState">checking</p>
-            </div>
-            <div class="surface compact">
-              <h3>运行依赖</h3>
-              <p id="dependencyState">checking</p>
-            </div>
-            <div class="surface compact">
-              <h3>同步边界</h3>
-              <p id="syncState">checking</p>
-            </div>
-            <div class="surface compact">
-              <h3>策略审查</h3>
-              <p id="policyState">checking</p>
-            </div>
-            <div class="surface compact">
-              <h3>测试矩阵</h3>
-              <p id="testMatrixState">checking</p>
-            </div>
           </section>
         </section>
       </main>

@@ -11,7 +11,7 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
 
     assert report["status"] == "ok"
     assert report["runtime_mutation"] is False
-    assert report["storage_table_count"] == 8
+    assert report["storage_table_count"] == 9
     assert report["sync_readiness"]["status"] == "ready_for_manual_sync"
     assert report["redis_validation"]["ok"] is True
     assert report["knowledge_catalog_status"] == "ready"

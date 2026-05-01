@@ -54,12 +54,14 @@ from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
 from v20.learning.registries import registry_manifest
+from v20.ops.admin_status import database_admin_status, llm_admin_status
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
 from v20.ops.service_unit import service_unit_manifest
 from v20.ops.status import system_status_report
 from v20.ops.sync import sync_readiness_report
+from v20.profiles.migration import import_v19_profiles_to_postgres, v19_profile_migration_preview
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 from v20.storage.local_jsonl import local_jsonl_store_from_env
@@ -101,6 +103,14 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/system/status")
     def system_status() -> dict[str, object]:
         return system_status_report()
+
+    @app.get("/api/v20/admin/db")
+    def admin_database() -> dict[str, object]:
+        return database_admin_status()
+
+    @app.get("/api/v20/admin/llm")
+    def admin_llm(probe_models: bool = False) -> dict[str, object]:
+        return llm_admin_status(probe_models=probe_models)
 
     @app.get("/api/v20/ops/config")
     def ops_config() -> dict[str, object]:
@@ -180,6 +190,14 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/access/roles")
     def access_roles() -> dict[str, object]:
         return access_role_manifest()
+
+    @app.get("/api/v20/profiles/v19-migration-preview")
+    def profiles_v19_migration_preview() -> dict[str, object]:
+        return v19_profile_migration_preview()
+
+    @app.post("/api/v20/profiles/import-v19")
+    def profiles_import_v19(apply: bool = False) -> dict[str, object]:
+        return import_v19_profiles_to_postgres(apply=apply)
 
     @app.get("/api/v20/questions/ranking-policy")
     def question_ranking_policy() -> dict[str, object]:

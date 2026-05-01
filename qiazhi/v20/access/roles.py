@@ -6,7 +6,7 @@ from v20.access.schema import AccessRolePolicy
 ROLE_POLICIES = {
     "user": AccessRolePolicy(
         role_key="user",
-        label="用户",
+        label="游客",
         purpose="Receives bounded Bazi measurement answers and safe topic/question context.",
         allowed_runtime_fields=(
             "version",
@@ -32,7 +32,7 @@ ROLE_POLICIES = {
     ),
     "analyst": AccessRolePolicy(
         role_key="analyst",
-        label="分析师",
+        label="命理师",
         purpose="Reviews feature evidence, knowledge alignment, LLM assist, and answer boundaries.",
         allowed_runtime_fields=(
             "version",

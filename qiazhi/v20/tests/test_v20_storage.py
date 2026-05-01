@@ -17,6 +17,7 @@ def test_v20_postgres_schema_contract_covers_authoritative_tables() -> None:
         "v20_run_registry",
         "v20_decision_registry",
         "v20_feedback_ledger",
+        "v20_user_profiles",
         "v20_corpus_snapshots",
         "v20_rule_proposals",
         "v20_llm_artifacts",

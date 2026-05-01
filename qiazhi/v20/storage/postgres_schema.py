@@ -98,6 +98,20 @@ def _tables() -> tuple[TableSpec, ...]:
             pii_policy="anonymized_or_hashed_only",
         ),
         TableSpec(
+            name="v20_user_profiles",
+            owner_module="v20.profiles",
+            purpose="Imported and native user Bazi profiles for guest, practitioner, and admin workflows.",
+            columns=(
+                ColumnSpec("profile_id", "text", purpose="stable profile id"),
+                ColumnSpec("owner_id", "text", purpose="local user or account owner id"),
+                ColumnSpec("source_ref", "text", purpose="migration source reference or native source marker"),
+                ColumnSpec("status", "text", purpose="active, imported_from_v19, archived"),
+                *common,
+            ),
+            primary_key=("profile_id",),
+            pii_policy="local_private_profile_data",
+        ),
+        TableSpec(
             name="v20_corpus_snapshots",
             owner_module="v20.corpus",
             purpose="Canonical chart/corpus precompute snapshots.",

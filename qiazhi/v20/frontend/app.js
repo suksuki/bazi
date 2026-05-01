@@ -1,22 +1,70 @@
-const state = {
-  latest: null,
-};
+const state = { latest: null };
 
 const form = document.querySelector("#measureForm");
 const questionSelect = document.querySelector("#questionSelect");
 const roleSelect = document.querySelector("#roleSelect");
+const localeSelect = document.querySelector("#localeSelect");
+const profileSelect = document.querySelector("#profileSelect");
+const profileImportButton = document.querySelector("#profileImportButton");
 const feedbackButton = document.querySelector("#feedbackButton");
+
+const UI_TEXT = {
+  zh: {
+    app_title: "命理测算台",
+    nav_measure: "测算",
+    profiles_title: "用户档案",
+    chart_title: "命盘结构",
+    features_title: "命理特征主线",
+    portrait_title: "画像投影",
+    questions_title: "推荐问题",
+    answer_title: "八字专业回复",
+    evidence_title: "证据与系统状态",
+    feedback_title: "反馈校准",
+    run: "开始测算",
+    running: "测算中",
+    guest_profile: "游客即时测算",
+    import_profiles: "迁移 V19 档案",
+    roles: { user: "游客", analyst: "命理师", lab: "实验室", admin: "Admin", full: "开发全量" },
+  },
+  en: {
+    app_title: "Bazi Workbench",
+    nav_measure: "Reading",
+    profiles_title: "Profiles",
+    chart_title: "Chart Structure",
+    features_title: "Bazi Feature Spine",
+    portrait_title: "Portrait Projection",
+    questions_title: "Recommended Questions",
+    answer_title: "Professional Bazi Reply",
+    evidence_title: "Evidence and System",
+    feedback_title: "Feedback Calibration",
+    run: "Run Reading",
+    running: "Reading",
+    guest_profile: "Guest instant reading",
+    import_profiles: "Import V19 Profiles",
+    roles: { user: "Guest", analyst: "Practitioner", lab: "Lab", admin: "Admin", full: "Developer" },
+  },
+  ko: {
+    app_title: "사주 분석 작업대",
+    nav_measure: "분석",
+    profiles_title: "사용자 프로필",
+    chart_title: "명식 구조",
+    features_title: "명리 특징 축",
+    portrait_title: "프로필 투영",
+    questions_title: "추천 질문",
+    answer_title: "전문 사주 답변",
+    evidence_title: "근거와 시스템",
+    feedback_title: "피드백 보정",
+    run: "분석 시작",
+    running: "분석 중",
+    guest_profile: "게스트 즉시 분석",
+    import_profiles: "V19 프로필 가져오기",
+    roles: { user: "게스트", analyst: "명리사", lab: "실험실", admin: "Admin", full: "개발자" },
+  },
+};
 
 const setText = (selector, value) => {
   const node = document.querySelector(selector);
-  if (node) node.textContent = value;
-};
-
-const setProgress = (selector, ratio) => {
-  const node = document.querySelector(selector);
-  if (!node) return;
-  const percent = Math.max(0, Math.min(100, Math.round((Number(ratio) || 0) * 1000) / 10));
-  node.style.width = `${percent}%`;
+  if (node) node.textContent = value ?? "";
 };
 
 const requestJson = async (url, options = {}) => {
@@ -31,14 +79,26 @@ const requestJson = async (url, options = {}) => {
   return response.json();
 };
 
+const clear = (node) => {
+  while (node.firstChild) node.removeChild(node.firstChild);
+};
+
+const el = (tag, className = "", text = "") => {
+  const node = document.createElement(tag);
+  if (className) node.className = className;
+  if (text) node.textContent = text;
+  return node;
+};
+
 const measure = async () => {
+  const text = currentText();
   const data = new FormData(form);
   const payload = Object.fromEntries(data.entries());
-  const button = form.querySelector("button");
+  const button = form.querySelector("button[type='submit']");
   button.disabled = true;
-  button.textContent = "测算中";
+  button.textContent = text.running;
   try {
-    const role = payload.role_key || "full";
+    const role = payload.role_key || "analyst";
     delete payload.role_key;
     const endpoint = role === "full" ? "/api/v20/measure" : `/api/v20/measure/view/${role}`;
     const result = await requestJson(endpoint, {
@@ -51,34 +111,111 @@ const measure = async () => {
     setText("#answerText", `测算失败：${error.message}`);
   } finally {
     button.disabled = false;
-    button.textContent = "开始测算";
+    button.textContent = currentText().run;
   }
 };
 
 const renderRuntime = (result) => {
   const selected = result.selected_question || {};
-  const role = result.role?.role_key || "full";
-  setRoleMode(role);
+  const chart = result.chart_facts || {};
+  const featureLayer = result.feature_layer || {};
+  const role = result.role?.role_key || roleSelect.value || "analyst";
+
+  document.body.dataset.role = role;
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
-  setText("#featureCount", result.feature_layer?.feature_count ?? "hidden");
-  setText("#topicCount", result.measurement_report?.topic_count ?? 0);
-  setText("#knowledgeCount", result.knowledge_report?.count ?? "hidden");
-  setText("#coreCapacity", result.core_inference?.day_master_capacity || role || "core");
-  setText("#appliedDomains", (result.measurement_report?.applied_domain_keys || []).join(" / "));
-  setText("#llmStatus", `llm ${result.llm_assist?.status || "hidden"}`);
+  setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
+  setText("#featureCount", featureLayer.feature_count ?? 0);
+  setText("#questionCount", (result.questions || []).length);
+  setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
+  setText("#coreCapacity", result.core_inference?.day_master_capacity || "core");
+  setText("#dayMasterBadge", `日主 ${chart.day_master || "-"}`);
+  setText("#llmStatus", `llm ${result.llm_assist?.status || "idle"}`);
   setText("#answerText", result.answer_text || "");
-  renderQuestionSelect(result.questions || [], selected.question_key || "");
-  renderFeatures(result.feature_layer?.features || []);
-  renderTopics(result.measurement_report?.topics || []);
-  renderQuestions(result.questions || [], selected.question_key || "");
+
+  renderPillars(chart);
+  renderTenGods(chart);
+  renderFeatures(featureLayer.macro_features || featureLayer.features || []);
   renderPortrait(result.portrait_projection?.axes || []);
+  renderQuestions(result.questions || [], selected.question_key || "");
+  renderQuestionSelect(result.questions || [], selected.question_key || "");
+  renderEvidence(result.knowledge_refs || []);
 };
 
-const setRoleMode = (role) => {
-  document.body.dataset.role = role;
-  const showAdvanced = role !== "user" && role !== "admin";
-  document.querySelectorAll(".role-advanced").forEach((node) => {
-    node.hidden = !showAdvanced;
+const renderPillars = (chart) => {
+  const root = document.querySelector("#pillarPanel");
+  clear(root);
+  const pillars = chart.pillars || {};
+  [
+    ["year", "年"],
+    ["month", "月"],
+    ["day", "日"],
+    ["hour", "时"],
+  ].forEach(([key, label]) => {
+    const pillar = pillars[key] || {};
+    const card = el("div", `pillar-card ${key === "day" ? "active" : ""}`);
+    card.append(el("span", "", label));
+    card.append(el("strong", "", `${pillar.stem || "-"}${pillar.branch || ""}`));
+    card.append(el("em", "", key === "day" ? "day master" : key));
+    root.append(card);
+  });
+};
+
+const renderTenGods = (chart) => {
+  const visible = (chart.visible_ten_gods || []).map((row) => row.label).filter(Boolean);
+  const hidden = (chart.hidden_ten_gods || []).map((row) => row.label).filter(Boolean);
+  setText("#tenGodLine", `透出 ${unique(visible).join(" / ") || "-"} · 藏干 ${unique(hidden).slice(0, 6).join(" / ") || "-"}`);
+};
+
+const renderFeatures = (features) => {
+  const root = document.querySelector("#featureChips");
+  clear(root);
+  if (!features.length) {
+    root.append(el("div", "empty-note", "当前视图隐藏内部特征。"));
+    return;
+  }
+  features.slice(0, 10).forEach((feature) => {
+    const card = el("div", "feature-card");
+    card.dataset.domain = feature.domain || "general";
+    card.append(el("strong", "", feature.title || feature.feature_id || feature.macro_id || "feature"));
+    card.append(el("span", "", `${feature.domain || "domain"} · confidence ${feature.peak_confidence ?? feature.confidence ?? "-"}`));
+    if (feature.summary) card.append(el("p", "", feature.summary));
+    root.append(card);
+  });
+};
+
+const renderPortrait = (axes) => {
+  const root = document.querySelector("#portraitAxes");
+  clear(root);
+  if (!axes.length) {
+    root.append(el("div", "empty-note", "当前视图隐藏画像投影。"));
+    return;
+  }
+  axes.slice(0, 8).forEach((axis) => {
+    const row = el("div", "axis-row");
+    row.append(el("strong", "", axis.label || axis.axis_id));
+    row.append(el("span", "", `${axis.domain} · ${axis.feature_count} features · ${axis.knowledge_ref_count ?? 0} refs`));
+    const meter = el("i");
+    meter.style.width = `${Math.round(Number(axis.peak_confidence || 0) * 100)}%`;
+    const bar = el("div", "meter");
+    bar.append(meter);
+    row.append(bar);
+    root.append(row);
+  });
+};
+
+const renderQuestions = (questions, selectedKey) => {
+  const root = document.querySelector("#questionList");
+  clear(root);
+  questions.slice(0, 12).forEach((question) => {
+    const button = el("button", `question-row${question.question_key === selectedKey ? " active" : ""}`);
+    button.type = "button";
+    button.append(el("strong", "", question.title || question.question_key));
+    button.append(el("span", "", `${question.measurement_topic || question.domain} · score ${question.score ?? "-"}`));
+    button.addEventListener("click", () => {
+      questionSelect.value = question.question_key;
+      measure();
+    });
+    root.append(button);
   });
 };
 
@@ -88,168 +225,98 @@ const renderQuestionSelect = (questions, selectedKey) => {
   questions.forEach((question) => {
     const option = document.createElement("option");
     option.value = question.question_key;
-    option.textContent = question.title;
-    questionSelect.appendChild(option);
+    option.textContent = question.title || question.question_key;
+    questionSelect.append(option);
   });
   questionSelect.value = current;
 };
 
-const renderFeatures = (features) => {
-  const root = document.querySelector("#featureChips");
-  root.innerHTML = "";
-  if (!features.length) {
-    root.innerHTML = '<div class="empty-note">当前角色隐藏内部特征证据。</div>';
-    return;
-  }
-  features.slice(0, 8).forEach((feature) => {
-    const row = document.createElement("div");
-    row.className = "chip";
-    row.dataset.domain = feature.domain;
-    row.innerHTML = `<strong>${feature.title}</strong><span>${feature.domain} · confidence ${feature.confidence}</span>`;
-    root.appendChild(row);
+const renderEvidence = (refs) => {
+  const root = document.querySelector("#evidenceList");
+  clear(root);
+  refs.slice(0, 5).forEach((ref) => {
+    const row = el("div", "evidence-row");
+    row.append(el("strong", "", ref.title || ref.knowledge_id || "knowledge"));
+    row.append(el("span", "", `${ref.domain || "domain"} · ${ref.reviewed ? "reviewed" : "draft"}`));
+    root.append(row);
   });
+  if (!refs.length) root.append(el("div", "empty-note", "暂无可展示证据。"));
 };
 
-const renderTopics = (topics) => {
-  const root = document.querySelector("#measurementTopics");
-  root.innerHTML = "";
-  topics.forEach((topic) => {
-    const row = document.createElement("div");
-    row.className = "topic-row";
-    row.innerHTML = `<strong>${topic.label}</strong><span>${topic.stage} · ${topic.status}</span><div class="meter"><i style="width:${Math.round(topic.confidence * 100)}%"></i></div>`;
-    root.appendChild(row);
-  });
-};
-
-const renderQuestions = (questions, selectedKey) => {
-  const root = document.querySelector("#questionList");
-  root.innerHTML = "";
-  questions.forEach((question) => {
-    const button = document.createElement("button");
-    button.type = "button";
-    button.className = `question-row${question.question_key === selectedKey ? " active" : ""}`;
-    button.innerHTML = `<strong>${question.title}</strong><span>${question.measurement_topic} · score ${question.score}</span>`;
-    button.addEventListener("click", () => {
-      questionSelect.value = question.question_key;
-      measure();
-    });
-    root.appendChild(button);
-  });
-};
-
-const renderPortrait = (axes) => {
-  const root = document.querySelector("#portraitAxes");
-  root.innerHTML = "";
-  if (!axes.length) {
-    root.innerHTML = '<div class="empty-note">当前角色隐藏画像校准面。</div>';
-    return;
-  }
-  axes.forEach((axis) => {
-    const row = document.createElement("div");
-    row.className = "axis-row";
-    const knowledge = axis.knowledge_ref_count ?? 0;
-    row.innerHTML = `<strong>${axis.label}</strong><span>${axis.measurement_stage} · ${axis.feature_count} features · ${knowledge} knowledge refs</span><div class="meter"><i style="width:${Math.round(axis.peak_confidence * 100)}%"></i></div>`;
-    root.appendChild(row);
-  });
-};
-
-const loadOps = async () => {
+const loadStatus = async () => {
   try {
-    const [
-      health,
-      corpus,
-      validation,
-      learning,
-      learningRun,
-      knowledgeCatalog,
-      knowledgeCoverage,
-      knowledgeRelease,
-      v19KnowledgeAudit,
-      knowledgeDraftImport,
-      knowledgeReviewQueue,
-      firstWavePackets,
-      firstWaveApproval,
-      firstWaveAssist,
-      firstWaveRuleProposals,
-      firstWaveRulePreflight,
-      ruleExtraction,
-      ruleExtractionValidation,
-      llmRuleExtraction,
-      llmRuleExtractionValidation,
-      portraitOntology,
-      fullPrecompute,
-      fullPrecomputeStatus,
-      corpusArtifactStatus,
-      corpusCoverageSummary,
-      corpusClusterModel,
-      corpusTrainingArtifacts,
-      dependencies,
-      sync,
-      policyReview,
-      matrix,
-    ] = await Promise.all([
+    const [health, status, deps] = await Promise.all([
       requestJson("/health"),
-      requestJson("/api/v20/corpus/coverage"),
-      requestJson("/api/v20/validation/synthetic-suite"),
-      requestJson("/api/v20/learning/evolution-plan"),
-      requestJson("/api/v20/learning/run-plan"),
-      requestJson("/api/v20/knowledge/catalog"),
-      requestJson("/api/v20/knowledge/coverage-report"),
-      requestJson("/api/v20/knowledge/release-manifest"),
-      requestJson("/api/v20/knowledge/v19-migration-audit"),
-      requestJson("/api/v20/knowledge/draft-import-preview"),
-      requestJson("/api/v20/knowledge/review-queue"),
-      requestJson("/api/v20/knowledge/first-wave-review-packets"),
-      requestJson("/api/v20/knowledge/first-wave-approval-preflight"),
-      requestJson("/api/v20/knowledge/first-wave-review-assist"),
-      requestJson("/api/v20/knowledge/first-wave-rule-proposals"),
-      requestJson("/api/v20/knowledge/first-wave-rule-proposal-preflight"),
-      requestJson("/api/v20/knowledge/rule-extraction"),
-      requestJson("/api/v20/knowledge/rule-extraction-validation"),
-      requestJson("/api/v20/knowledge/llm-rule-extraction"),
-      requestJson("/api/v20/knowledge/llm-rule-extraction-validation"),
-      requestJson("/api/v20/portrait/ontology"),
-      requestJson("/api/v20/corpus/full-precompute/manifest"),
-      requestJson("/api/v20/corpus/full-precompute/status"),
-      requestJson("/api/v20/corpus/artifacts/status"),
-      requestJson("/api/v20/corpus/artifacts/coverage-summary"),
-      requestJson("/api/v20/corpus/artifacts/cluster-model"),
-      requestJson("/api/v20/corpus/artifacts/training"),
+      requestJson("/api/v20/system/status"),
       requestJson("/api/v20/runtime/dependencies"),
-      requestJson("/api/v20/ops/sync-readiness"),
-      requestJson("/api/v20/learning/policy-review"),
-      requestJson("/api/v20/testing/matrix"),
     ]);
-    document.querySelector("#runtimeStatus").innerHTML = `<span>${health.active_profile}</span><strong>${health.status}</strong>`;
+    setText("#runtimeStatus", `${health.status} · ${health.active_profile}`);
     setText("#profileBadge", health.active_profile);
-    const clusterText = corpusCoverageSummary.cluster_count ? ` · clusters ${corpusCoverageSummary.cluster_count}` : "";
-    const trainingText = corpusTrainingArtifacts.status ? ` · training ${corpusTrainingArtifacts.status}` : "";
-    setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards · precompute ${fullPrecompute.status} · job ${fullPrecomputeStatus.status} · artifacts ${corpusArtifactStatus.status}${clusterText} · model ${corpusClusterModel.status}${trainingText}`);
-    setProgress("#corpusProgressBar", fullPrecomputeStatus.progress_ratio || 0);
-    setText("#corpusProgressMeta", renderCorpusProgress(fullPrecomputeStatus, fullPrecompute));
-    setText("#validationState", `${validation.ok ? "pass" : "blocked"} · ${validation.case_count} cases`);
-    setText("#learningState", `${learning.status} · ${learningRun.estimated_batch_count} batches`);
-    setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · drafts ${knowledgeDraftImport.candidate_count} · queue ${knowledgeReviewQueue.domain_count} · packets ${firstWavePackets.domain_count} · assist ${firstWaveAssist.total_suggestion_count} · rule ${firstWaveRuleProposals.proposal_count}/${firstWaveRulePreflight.status} · extracted ${ruleExtraction.candidate_count}/${ruleExtractionValidation.status} · llm ${llmRuleExtraction.accepted_count}/${llmRuleExtraction.fallback_count}/${llmRuleExtractionValidation.status} · approval ${firstWaveApproval.status} · portrait ${portraitOntology.status}`);
-    setText("#dependencyState", `pg ${dependencies.postgres.ready_for_connection ? "ready" : "config"} · redis ${dependencies.redis.ready_for_connection ? "ready" : "config"} · llm ${dependencies.llm.ready_for_connection ? "ready" : "config"}`);
-    setText("#syncState", `${sync.status} · ${sync.direction_count} directions`);
-    setText("#policyState", `${policyReview.supported_policy_types.length} policy types · dry-run`);
-    setText("#testMatrixState", `${matrix.area_count} areas · ${matrix.default_tier}`);
+    setText("#corpusState", `corpus ${status.corpus_artifact_status} · ${status.corpus_cluster_count || 0} clusters`);
+    setText("#ruleState", `rules ${status.knowledge_rule_extraction_validation_status}/${status.knowledge_llm_rule_extraction_validation_status}`);
+    setText("#dbState", `db ${deps.postgres.ready_for_connection ? "ready" : "config"}`);
   } catch (error) {
-    document.querySelector("#runtimeStatus").innerHTML = `<span>health</span><strong>error</strong>`;
-    setText("#validationState", error.message);
+    setText("#runtimeStatus", "status error");
+    setText("#dbState", error.message);
   }
 };
 
-const renderCorpusProgress = (status, manifest) => {
-  if (!status || status.status === "not_started") {
-    return `not started · estimated ${manifest.cost_estimate.estimated_total_minutes}m`;
+const loadProfiles = async () => {
+  try {
+    const preview = await requestJson("/api/v20/profiles/v19-migration-preview");
+    renderProfiles(preview);
+  } catch (error) {
+    setText("#profileMigrationState", "profile error");
   }
-  const done = status.completed_from_start ?? 0;
-  const total = status.target_count ?? manifest.target_case_count;
-  const percent = Math.round((Number(status.progress_ratio || 0) * 100) * 10) / 10;
-  const rate = status.cases_per_second ?? 0;
-  const eta = status.eta_seconds == null ? "eta n/a" : `eta ${Math.ceil(status.eta_seconds / 60)}m`;
-  return `${done}/${total} · ${percent}% · ${rate}/s · ${eta}`;
+};
+
+const renderProfiles = (preview) => {
+  const text = currentText();
+  profileSelect.innerHTML = "";
+  const guest = document.createElement("option");
+  guest.value = "";
+  guest.textContent = text.guest_profile;
+  profileSelect.append(guest);
+  (preview.sample_profiles || []).forEach((profile) => {
+    const option = document.createElement("option");
+    option.value = profile.profile_id;
+    option.textContent = `${profile.name} · ${profile.birth_year || "-"} · ${profile.owner_id || "guest"}`;
+    profileSelect.append(option);
+  });
+  setText("#profileMigrationState", `V19 ${preview.profile_count || 0}`);
+};
+
+const importV19Profiles = async () => {
+  profileImportButton.disabled = true;
+  profileImportButton.textContent = "importing";
+  try {
+    const result = await requestJson("/api/v20/profiles/import-v19?apply=true", { method: "POST" });
+    setText("#profileMigrationState", `${result.status} ${result.imported_or_updated || 0}`);
+    await loadProfiles();
+  } catch (error) {
+    setText("#profileMigrationState", "import error");
+  } finally {
+    profileImportButton.disabled = false;
+    profileImportButton.textContent = currentText().import_profiles;
+  }
+};
+
+const applyLocale = (locale) => {
+  const text = UI_TEXT[locale] || UI_TEXT.zh;
+  document.documentElement.lang = locale === "ko" ? "ko" : locale === "en" ? "en" : "zh-CN";
+  document.querySelectorAll("[data-ui]").forEach((node) => {
+    const key = node.dataset.ui;
+    if (text[key]) node.textContent = text[key];
+  });
+  roleSelect.querySelectorAll("option").forEach((option) => {
+    option.textContent = text.roles[option.value] || option.textContent;
+  });
+  const submit = form.querySelector("button[type='submit']");
+  submit.textContent = text.run;
+  profileImportButton.textContent = text.import_profiles;
+  if (profileSelect.options.length) {
+    profileSelect.options[0].textContent = text.guest_profile;
+  }
 };
 
 const submitFeedback = async () => {
@@ -274,7 +341,7 @@ const submitFeedback = async () => {
     });
     const analysis = result.analysis || {};
     setText("#feedbackState", result.storage?.record_id || "recorded");
-    setText("#feedbackOutput", `hash ${analysis.source_hash}\n${analysis.redacted_summary}\nproposal ${analysis.learning_proposal?.proposal_type}\nledger ${result.storage?.relative_path}`);
+    setText("#feedbackOutput", `${analysis.redacted_summary || ""}\nproposal ${analysis.learning_proposal?.proposal_type || "-"}\nledger ${result.storage?.relative_path || "-"}`);
   } catch (error) {
     setText("#feedbackOutput", `反馈分析失败：${error.message}`);
   } finally {
@@ -283,12 +350,22 @@ const submitFeedback = async () => {
   }
 };
 
+const unique = (items) => Array.from(new Set(items));
+const currentText = () => UI_TEXT[localeSelect.value] || UI_TEXT.zh;
+
 form.addEventListener("submit", (event) => {
   event.preventDefault();
   measure();
 });
 feedbackButton.addEventListener("click", submitFeedback);
+profileImportButton.addEventListener("click", importV19Profiles);
+localeSelect.addEventListener("change", () => {
+  applyLocale(localeSelect.value);
+  loadProfiles();
+});
 
-loadOps();
+applyLocale(localeSelect.value);
+loadStatus();
+loadProfiles();
 measure();
-setInterval(loadOps, 5000);
+setInterval(loadStatus, 10000);
