@@ -3,8 +3,8 @@ from __future__ import annotations
 TEST_COVERAGE_AREAS = (
     {
         "area": "runtime_feature_spine",
-        "tests": ("v20/tests/test_v20_runtime.py",),
-        "contracts": ("ChartFacts", "CoreInference", "BaziFeature", "AnswerPlan"),
+        "tests": ("v20/tests/test_v20_runtime.py", "v20/tests/test_v20_element_features.py"),
+        "contracts": ("ChartFacts", "CoreInference", "BaziFeature", "ElementDistribution", "AnswerPlan"),
         "tier": "fast",
     },
     {

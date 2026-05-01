@@ -110,6 +110,18 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             retrieval_tags=("visible", "hidden", "relation_label"),
         ),
         KnowledgeUnit(
+            "v20.core.element_distribution_boundary",
+            "Five-element distribution boundary",
+            "element",
+            "Five-element distribution describes structural balance, concentration, and gaps before applied readings.",
+            "Use visible stems and hidden-stem weights to name distribution tendencies and evidence boundaries.",
+            "Do not convert element imbalance directly into health diagnosis, fixed fortune, or guaranteed events.",
+            source_refs=("docs/v20.prestart.element_distribution",),
+            feature_hooks=("feature.element",),
+            question_hooks=("q_element_balance", "q_element_support_pressure"),
+            retrieval_tags=("five_element", "balance", "foundation"),
+        ),
+        KnowledgeUnit(
             "v20.core.pattern_review_boundary",
             "Pattern review boundary",
             "pattern",

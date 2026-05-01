@@ -14,6 +14,16 @@ from v20.llm.structured_outputs import (
 )
 from v20.llm.validators import validate_llm_output
 
+DOMAIN_ROUTE_PRIORITY = {
+    "useful_god": 0,
+    "strength": 1,
+    "element": 2,
+    "time": 3,
+    "branch": 4,
+    "ten_god": 5,
+    "wealth": 6,
+}
+
 
 def accept_or_fallback_rewrite(plan: AnswerPlan, candidate_text: str, *, locale: str = "en") -> dict[str, object]:
     validation = validate_llm_output(ANSWER_PLAN_REWRITE, candidate_text)
@@ -53,7 +63,7 @@ def suggest_question_candidates(
     domains = set(_domains_from_text(user_text))
     if not domains:
         domains = {feature.domain for feature in feature_layer.features[:2]}
-    suggestions: list[LLMQuestionSuggestion] = []
+    ranked: list[tuple[int, int, str, LLMQuestionSuggestion]] = []
     for question in questions:
         source_domains = {
             feature.domain
@@ -61,13 +71,20 @@ def suggest_question_candidates(
             if feature.feature_id in question.source_feature_ids
         }
         if source_domains & domains:
-            suggestions.append(
-                LLMQuestionSuggestion(
-                    question_key=question.question_key,
-                    reason="Matched the user's requested domain to existing feature-backed questions.",
-                    source_feature_ids=question.source_feature_ids,
+            priority = 0 if question.domain in domains else 1
+            ranked.append(
+                (
+                    priority,
+                    DOMAIN_ROUTE_PRIORITY.get(question.domain, 20),
+                    question.question_key,
+                    LLMQuestionSuggestion(
+                        question_key=question.question_key,
+                        reason="Matched the user's requested domain to existing feature-backed questions.",
+                        source_feature_ids=question.source_feature_ids,
+                    ),
                 )
             )
+    suggestions = [row for _priority, _domain_priority, _question_key, row in sorted(ranked)]
     return {
         "version": "v20.llm_question_suggestion.v1",
         "contract": "question_suggestion",
@@ -141,6 +158,7 @@ def _domains_from_text(text: str) -> tuple[str, ...]:
         ("strength", ("身强", "身弱", "强弱", "strength", "capacity", "강약")),
         ("useful_god", ("用神", "喜忌", "useful", "favorable", "용신")),
         ("branch", ("冲", "合", "刑", "害", "地支", "branch", "clash", "합", "충")),
+        ("element", ("五行", "木", "火", "土", "金", "水", "element", "balance", "오행")),
         ("time", ("流年", "大运", "时间", "应期", "year", "luck", "timing", "세운", "대운")),
         ("ten_god", ("十神", "正官", "七杀", "食神", "ten god", "십성")),
         ("pattern", ("格局", "pattern", "structure", "격국")),

@@ -6,6 +6,7 @@ DOMAIN_LABELS = {
     "strength": "日主强弱",
     "useful_god": "用神候选",
     "ten_god": "十神结构",
+    "element": "五行分布",
     "branch": "地支关系",
     "time": "时间层与流年触发",
     "wealth": "财星与收入结构",
@@ -19,6 +20,7 @@ MEASUREMENT_FOCUS = {
     "strength": "判断日主承载力、扶抑压力与后续取用边界",
     "useful_god": "打开用神候选路径，等待证据门槛和规则路径裁决",
     "ten_god": "读取十神显隐、来源层级与可进入的测算主题",
+    "element": "读取五行分布、偏旺偏弱与结构平衡边界",
     "branch": "识别冲合刑害等结构互动，但不直接推出吉凶",
     "time": "读取显式时间干支与原局互动，只作为有证据的触发背景",
     "wealth": "评估财星材料、显隐来源与收入结构可讨论边界",
@@ -29,6 +31,7 @@ MEASUREMENT_STAGE = {
     "strength": "foundation",
     "useful_god": "arbitration",
     "ten_god": "structure",
+    "element": "foundation",
     "branch": "structure",
     "time": "time_context",
     "wealth": "domain_reading",
@@ -42,7 +45,7 @@ APPLIED_DOMAIN_FEATURE_MAP = {
     "wealth": ("wealth", "ten_god", "strength", "branch"),
     "career": ("ten_god", "pattern", "strength", "branch"),
     "relationship": ("ten_god", "branch", "strength"),
-    "health": ("strength", "branch", "pattern"),
+    "health": ("element", "strength", "branch", "pattern"),
 }
 
 FEATURE_LABELS = {
@@ -52,6 +55,7 @@ FEATURE_LABELS = {
     "feature.useful_god.evidence_gate": "用神候选需要证据门槛",
     "feature.ten_god.visible_relation": "明透十神关系可进入测算",
     "feature.ten_god.hidden_relation": "藏干十神关系可进入测算",
+    "feature.element.balance_distribution": "五行分布可进入结构测算",
     "feature.branch.visible_relation": "可见地支关系需要分层判断",
     "feature.branch.relation_quiet": "地支关系相对平静",
     "feature.time.explicit_context": "显式时间层可进入触发测算",

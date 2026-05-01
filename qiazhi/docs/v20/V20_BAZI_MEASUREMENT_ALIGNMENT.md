@@ -17,6 +17,7 @@ The initial topic map is:
 - `strength`: 日主强弱
 - `useful_god`: 用神候选
 - `ten_god`: 十神结构
+- `element`: 五行分布
 - `branch`: 地支关系
 - `time`: 时间层与流年触发
 - `wealth`: 财星与收入结构

@@ -34,6 +34,8 @@ QUESTION_LABELS = {
     "q_useful_god_candidates": "哪些用神路径可以作为候选？",
     "q_ten_god_focus": "十神显隐关系里先看哪一组？",
     "q_ten_god_metadata": "十神信息应如何进入测算？",
+    "q_element_balance": "五行分布的结构偏向是什么？",
+    "q_element_support_pressure": "五行分布如何影响扶抑压力？",
     "q_hidden_stem_role": "藏干在这个八字里承担什么结构作用？",
     "q_branch_relation_detail": "地支冲合刑害有哪些可见结构？",
     "q_time_vs_natal_relation": "原局与时间层应如何分开判断？",
@@ -58,7 +60,7 @@ APPLIED_DOMAIN_QUESTION_KEYS = {
 def recommend_questions(
     feature_layer: FeatureLayer,
     *,
-    limit: int = 12,
+    limit: int = 14,
     ranking_policy: QuestionRankingPolicy | None = None,
 ) -> tuple[QuestionCandidate, ...]:
     rows: dict[str, QuestionCandidate] = {}

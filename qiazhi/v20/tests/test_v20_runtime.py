@@ -33,7 +33,7 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert result["feature_layer"]["feature_count"] >= 5
     assert result["feature_layer"]["macro_feature_count"] >= 4
     assert {row["domain"] for row in result["feature_layer"]["macro_features"]} >= {"strength", "branch", "wealth"}
-    assert {row["domain"] for row in result["feature_layer"]["features"]} >= {"strength", "useful_god", "branch", "wealth"}
+    assert {row["domain"] for row in result["feature_layer"]["features"]} >= {"strength", "useful_god", "element", "branch", "wealth"}
     assert result["questions"]
     assert result["selected_question"]["question_key"]
     assert result["knowledge_alignment"]["status"] == "pass"
@@ -58,7 +58,7 @@ def test_v20_runtime_builds_feature_spine_answer_plan() -> None:
     assert {"career", "relationship", "health"} <= set(result["measurement_report"]["applied_domain_keys"])
     assert all(row["role"] == "bazi_measurement_entry" for row in result["questions"])
     assert all(row["measurement_topic"] for row in result["questions"])
-    assert {"career", "relationship", "health"} <= {row["domain"] for row in result["questions"]}
+    assert {"career", "relationship", "health", "element"} <= {row["domain"] for row in result["questions"]}
 
 
 def test_v20_validation_and_llm_fallback_are_guarded() -> None:

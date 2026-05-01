@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from v20.core.elements import element_distribution, strongest_elements, weakest_elements
 from v20.core.schemas import ChartFacts, CoreInference, TimeContext
 from v20.features.boundaries import boundary_for
 from v20.features.calibration import ConfidenceCalibrationPolicy, calibrate_features
@@ -24,6 +25,7 @@ def compile_features(
         _useful_god_gate_feature(inference),
     ]
     features.extend(_ten_god_features(facts))
+    features.append(_element_balance_feature(facts))
     features.extend(_branch_features(facts))
     features.extend(_time_features(time_context or TimeContext()))
     features.extend(_wealth_features(facts))
@@ -110,6 +112,35 @@ def _ten_god_features(facts: ChartFacts) -> list[BaziFeature]:
             )
         )
     return features
+
+
+def _element_balance_feature(facts: ChartFacts) -> BaziFeature:
+    distribution = element_distribution(facts)
+    strongest = strongest_elements(distribution)
+    weakest = weakest_elements(distribution)
+    refs = tuple(
+        EvidenceRef(
+            f"element.{element}",
+            "element_distribution",
+            f"{element}={distribution[element]}",
+            "core",
+        )
+        for element in distribution
+    )
+    spread = max(distribution.values()) - min(distribution.values()) if distribution else 0.0
+    return BaziFeature(
+        feature_id="feature.element.balance_distribution",
+        title="Five-element distribution is available",
+        domain="element",
+        source_layers=("core", "hidden"),
+        evidence_refs=refs,
+        confidence=bounded_confidence(0.32, min(0.22, spread * 0.04)),
+        readiness="boundary_ready",
+        boundary=boundary_for("element"),
+        question_hooks=("q_element_balance", "q_element_support_pressure"),
+        answer_hooks=("element_balance",),
+        calibration_state=f"strongest={','.join(strongest)};weakest={','.join(weakest)}",
+    )
 
 
 def _branch_features(facts: ChartFacts) -> list[BaziFeature]:

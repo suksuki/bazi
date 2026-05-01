@@ -6,6 +6,7 @@ MACRO_TITLES = {
     "strength": "日主强弱主轴",
     "useful_god": "用神候选主轴",
     "ten_god": "十神结构主轴",
+    "element": "五行分布主轴",
     "branch": "地支关系主轴",
     "time": "时间层触发主轴",
     "wealth": "财星与收入结构主轴",
