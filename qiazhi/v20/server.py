@@ -13,6 +13,7 @@ from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.feedback_analysis import analyze_feedback
+from v20.interaction.feedback_record import record_feedback_analysis
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.learning.evolution import build_evolution_dry_run_plan
@@ -25,6 +26,7 @@ from v20.ops.service_unit import service_unit_manifest
 from v20.ops.status import system_status_report
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
+from v20.storage.local_jsonl import local_jsonl_store_from_env
 from v20.testing.matrix import build_test_coverage_matrix
 from v20.testing.tiers import test_tier_manifest
 from v20.validation.suite import run_synthetic_suite
@@ -116,6 +118,10 @@ def create_app() -> FastAPI:
             "runtime_mutation": False,
         }
 
+    @app.get("/api/v20/storage/local-jsonl")
+    def storage_local_jsonl() -> dict[str, object]:
+        return local_jsonl_store_from_env().status()
+
     @app.get("/api/v20/redis/contract")
     def redis_contract() -> dict[str, object]:
         contract = redis_contract_manifest()
@@ -185,6 +191,16 @@ def create_app() -> FastAPI:
     @app.post("/api/v20/feedback/analyze")
     def feedback_analyze(payload: FeedbackRequest) -> dict[str, object]:
         return analyze_feedback(
+            input_id=payload.input_id,
+            source_role=payload.source_role,
+            feedback_text=payload.feedback_text,
+            feature_ids=tuple(payload.feature_ids),
+            locale=payload.locale,
+        )
+
+    @app.post("/api/v20/feedback/record")
+    def feedback_record(payload: FeedbackRequest) -> dict[str, object]:
+        return record_feedback_analysis(
             input_id=payload.input_id,
             source_role=payload.source_role,
             feedback_text=payload.feedback_text,

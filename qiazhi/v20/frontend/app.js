@@ -181,7 +181,7 @@ const submitFeedback = async () => {
   feedbackButton.disabled = true;
   feedbackButton.textContent = "分析中";
   try {
-    const result = await requestJson("/api/v20/feedback/analyze", {
+    const result = await requestJson("/api/v20/feedback/record", {
       method: "POST",
       body: JSON.stringify({
         input_id: latest.input_id || "ui.feedback",
@@ -190,8 +190,9 @@ const submitFeedback = async () => {
         feature_ids: featureIds,
       }),
     });
-    setText("#feedbackState", result.learning_proposal?.status || "recorded");
-setText("#feedbackOutput", `hash ${result.source_hash}\n${result.redacted_summary}\nproposal ${result.learning_proposal?.proposal_type}`);
+    const analysis = result.analysis || {};
+    setText("#feedbackState", result.storage?.record_id || "recorded");
+    setText("#feedbackOutput", `hash ${analysis.source_hash}\n${analysis.redacted_summary}\nproposal ${analysis.learning_proposal?.proposal_type}\nledger ${result.storage?.relative_path}`);
   } catch (error) {
     setText("#feedbackOutput", `反馈分析失败：${error.message}`);
   } finally {

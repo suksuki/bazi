@@ -22,6 +22,7 @@ The first screen is the actual Bazi measurement workspace. It renders:
 - deterministic answer text with LLM assist status
 - corpus, synthetic validation, and learning evolution status
 - dependency, policy review, testing matrix, and feedback-learning status
+- append-only feedback record submission through the local JSONL ledger
 
 The UI does not import V19, does not call portrait bias, and does not create
 fortune conclusions on the client. It is a runtime viewer and operator surface

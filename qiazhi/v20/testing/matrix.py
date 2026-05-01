@@ -61,10 +61,18 @@ TEST_COVERAGE_AREAS = (
         "tests": (
             "v20/tests/test_v20_learning_corpus.py",
             "v20/tests/test_v20_feedback_learning.py",
+            "v20/tests/test_v20_local_jsonl_store.py",
             "v20/tests/test_v20_policy_review.py",
             "v20/tests/test_v20_runtime.py",
         ),
-        "contracts": ("518400 coverage plan", "SyntheticSuite", "EvolutionDryRunPlan", "FeedbackLedger", "PolicyReviewGate"),
+        "contracts": (
+            "518400 coverage plan",
+            "SyntheticSuite",
+            "EvolutionDryRunPlan",
+            "FeedbackLedger",
+            "LocalJsonlStore",
+            "PolicyReviewGate",
+        ),
         "tier": "fast",
     },
     {
