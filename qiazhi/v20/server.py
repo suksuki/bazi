@@ -13,6 +13,7 @@ from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.question_ranker import question_ranking_manifest
+from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.registries import registry_manifest
 from v20.ops.config import load_runtime_config_from_env
@@ -121,6 +122,10 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/questions/ranking-policy")
     def question_ranking_policy() -> dict[str, object]:
         return question_ranking_manifest()
+
+    @app.get("/api/v20/knowledge/retrieval-policy")
+    def knowledge_retrieval_policy() -> dict[str, object]:
+        return knowledge_retrieval_manifest()
 
     @app.get("/api/v20/corpus/coverage")
     def corpus_coverage() -> dict[str, object]:

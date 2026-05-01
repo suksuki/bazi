@@ -15,8 +15,18 @@ TEST_COVERAGE_AREAS = (
     },
     {
         "area": "knowledge_llm_i18n",
-        "tests": ("v20/tests/test_v20_runtime.py", "v20/tests/test_v20_question_ranking.py"),
-        "contracts": ("KnowledgeRef", "llm_assist", "deterministic_i18n_terms", "QuestionRankingPolicy"),
+        "tests": (
+            "v20/tests/test_v20_runtime.py",
+            "v20/tests/test_v20_question_ranking.py",
+            "v20/tests/test_v20_knowledge_ranking.py",
+        ),
+        "contracts": (
+            "KnowledgeRef",
+            "KnowledgeRetrievalPolicy",
+            "llm_assist",
+            "deterministic_i18n_terms",
+            "QuestionRankingPolicy",
+        ),
         "tier": "fast",
     },
     {

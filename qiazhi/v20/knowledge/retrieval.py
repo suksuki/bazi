@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from v20.features.schema import FeatureLayer
 from v20.knowledge.loader import default_knowledge_units
+from v20.knowledge.ranking import KnowledgeRetrievalPolicy, rank_knowledge_units
 from v20.knowledge.schema import KnowledgeRef, KnowledgeRetrievalReport, KnowledgeUnit
 
 KNOWLEDGE_RETRIEVAL_VERSION = "v20.knowledge_retrieval.v1"
@@ -16,12 +17,13 @@ def retrieve_knowledge(
     *,
     units: tuple[KnowledgeUnit, ...] | None = None,
     requested_domains: tuple[str, ...] = (),
+    ranking_policy: KnowledgeRetrievalPolicy | None = None,
 ) -> KnowledgeRetrievalReport:
     domains = {feature.domain for feature in feature_layer.features}
     domains.update(requested_domains)
     feature_ids = {feature.feature_id for feature in feature_layer.features}
     selected: list[KnowledgeRef] = []
-    for unit in units or default_knowledge_units():
+    for unit in rank_knowledge_units(tuple(units or default_knowledge_units()), ranking_policy):
         if unit.status != "reviewed":
             continue
         if unit.domain not in domains and not _hook_matches(unit, feature_ids):

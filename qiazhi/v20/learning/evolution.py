@@ -46,6 +46,7 @@ def build_evolution_dry_run_plan(
             "question_ranking_policy",
             "knowledge_retrieval_weight",
             "confidence_calibration_weight",
+            "embedding_recall_shadow_policy",
         ],
         "runtime_mutation": False,
         "guardrails": [
