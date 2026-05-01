@@ -561,6 +561,10 @@ textarea:focus {
   border-left-color: var(--blue);
 }
 
+.evidence-row.rule-candidate {
+  border-left: 4px solid var(--gold);
+}
+
 .feature-card strong,
 .axis-row strong,
 .chat-question-chip strong,

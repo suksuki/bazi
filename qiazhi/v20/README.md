@@ -14,6 +14,7 @@ ChartInput
 -> Bazi measurement QuestionCandidate[]
 -> Professional domain reading path
 -> Reviewed knowledge evidence support
+-> Shadow rule candidate support
 -> EvidencePack
 -> AnswerPlan
 -> bounded LLM assist contracts
@@ -32,7 +33,7 @@ Initial boundaries:
 - Knowledge is reviewed evidence context, not rule truth.
 - Portraits, recommended questions, and answers are Bazi measurement projections over features.
 - Domain projections are the anti-corruption layer between features and applied topics.
-- Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence and reviewed knowledge boundaries.
+- Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from compiled feature evidence, reviewed knowledge boundaries, and shadow-only rule candidates.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
 - Learning, LLM, corpus, and ranking systems are assistive and governed.
 - Postgres is the persistent authority; Redis is ephemeral cache/queue/lock state.

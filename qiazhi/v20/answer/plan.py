@@ -68,6 +68,7 @@ def build_answer_plan(
     feature_layer: FeatureLayer,
     evidence_pack: EvidencePack,
     knowledge_report: KnowledgeRetrievalReport | None = None,
+    rule_candidate_report: dict[str, object] | None = None,
 ) -> AnswerPlan:
     selected = [feature for feature in feature_layer.features if feature.feature_id in question.source_feature_ids]
     if not selected:
@@ -87,7 +88,13 @@ def build_answer_plan(
         )
     ]
     knowledge_refs = tuple(knowledge_report.refs) if knowledge_report is not None else ()
-    for row in build_domain_reading_sections(question, tuple(selected), feature_layer, knowledge_refs):
+    for row in build_domain_reading_sections(
+        question,
+        tuple(selected),
+        feature_layer,
+        knowledge_refs,
+        rule_candidate_report or {},
+    ):
         sections.append(
             AnswerSection(
                 title=row.title,

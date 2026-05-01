@@ -16,6 +16,7 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert "answer_text" in roles["user"]["allowed_runtime_fields"]
     assert "knowledge_refs" in roles["user"]["blocked_runtime_fields"]
     assert "feature_layer" in roles["analyst"]["allowed_runtime_fields"]
+    assert "rule_candidate_support" in roles["analyst"]["allowed_runtime_fields"]
     assert "chart_graph" in roles["lab"]["allowed_runtime_fields"]
     assert manifest["runtime_mutation"] is False
 
@@ -36,6 +37,7 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "answer_text" in projected
     assert "feature_layer" not in projected
     assert "knowledge_refs" not in projected
+    assert "rule_candidate_support" not in projected
     assert "chart_graph" not in projected
     assert all("source_feature_ids" not in row for row in projected["questions"])
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])

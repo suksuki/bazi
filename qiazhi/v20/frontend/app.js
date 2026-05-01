@@ -168,7 +168,7 @@ const renderRuntime = (result) => {
   renderQuestions(result.questions || [], selected.question_key || "");
   renderChatQuestions(result.questions || [], selected.question_key || "");
   renderQuestionSelect(result.questions || [], selected.question_key || "");
-  renderEvidence(result.knowledge_refs || []);
+  renderEvidence(result.knowledge_refs || [], result.rule_candidate_support || {});
 };
 
 const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") => {
@@ -303,7 +303,7 @@ const renderQuestionSelect = (questions, selectedKey) => {
   questionSelect.value = current;
 };
 
-const renderEvidence = (refs) => {
+const renderEvidence = (refs, ruleCandidateSupport = {}) => {
   const root = document.querySelector("#evidenceList");
   clear(root);
   refs.slice(0, 5).forEach((ref) => {
@@ -312,7 +312,14 @@ const renderEvidence = (refs) => {
     row.append(el("span", "", `${ref.domain || "domain"} · ${ref.reviewed ? "reviewed" : "draft"}`));
     root.append(row);
   });
-  if (!refs.length) root.append(el("div", "empty-note", "暂无可展示证据。"));
+  const ruleCandidates = ruleCandidateSupport.candidates || [];
+  ruleCandidates.slice(0, 4).forEach((candidate) => {
+    const row = el("div", "evidence-row rule-candidate");
+    row.append(el("strong", "", candidate.label || "规则候选"));
+    row.append(el("span", "", `${candidate.domain || "domain"} · ${candidate.status || "shadow"}`));
+    root.append(row);
+  });
+  if (!refs.length && !ruleCandidates.length) root.append(el("div", "empty-note", "暂无可展示证据。"));
 };
 
 const appendChatTurn = (questionText, source) => {
@@ -414,7 +421,7 @@ const renderInitialPanels = () => {
   renderPortrait([]);
   renderQuestions([], "");
   renderChatQuestions([], "");
-  renderEvidence([]);
+  renderEvidence([], {});
 };
 
 const loadActiveProfile = async () => {

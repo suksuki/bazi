@@ -4,6 +4,7 @@ from v20.answer.composer import compose_answer
 from v20.answer.evidence import build_evidence_pack
 from v20.answer.measurement_policy import prediction_policy
 from v20.answer.plan import build_answer_plan
+from v20.answer.rule_candidate_support import build_rule_candidate_support
 from v20.core.chart import build_chart_facts, chart_input_from_displays
 from v20.core.strength import infer_core
 from v20.core.time_context import build_time_context
@@ -53,7 +54,8 @@ def run_runtime_from_pillars(
     selected_question = _select_question(questions, question_key or str(llm_routing_assist.get("routed_question_key", "")))
     knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
     evidence_pack = build_evidence_pack(feature_layer)
-    answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack, knowledge_report)
+    rule_candidate_report = build_rule_candidate_support(selected_question)
+    answer_plan = build_answer_plan(selected_question, feature_layer, evidence_pack, knowledge_report, rule_candidate_report)
     portrait = portrait_projection(feature_layer, knowledge_report)
     measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait)
     deterministic_answer_text = compose_answer(answer_plan, locale=locale)
@@ -97,6 +99,7 @@ def run_runtime_from_pillars(
         "knowledge_report": knowledge_report.to_dict(),
         "knowledge_refs": [row.to_dict() for row in knowledge_report.refs],
         "knowledge_alignment": knowledge_feature_alignment(feature_layer),
+        "rule_candidate_support": rule_candidate_report,
         "questions": [row.to_dict() for row in questions],
         "selected_question": selected_question.to_dict(),
         "portrait_projection": portrait,

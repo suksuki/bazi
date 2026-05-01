@@ -9,6 +9,7 @@ The user-facing answer path is now:
 QuestionCandidate
 -> DomainReadingSection[]
 -> KnowledgeEvidenceSupport
+-> RuleCandidateSupport
 -> Feature-backed AnswerSection[]
 -> EvidencePack
 -> deterministic answer
@@ -46,6 +47,7 @@ P85 adds runtime tests for:
 - applied-domain wealth answers using the professional reading path
 - time answers preserving explicit trigger material
 - reviewed knowledge evidence support inside answer plans
+- shadow-only rule candidates inside answer plans
 - no internal feature IDs leaking into user-facing answers
 
 ## P85-2 Knowledge Evidence
@@ -62,3 +64,26 @@ boundaries, such as:
 The original knowledge IDs, English templates, and rule hooks remain internal.
 Knowledge still cannot activate rules or create conclusions; it only supports
 the reading path and evidence boundary.
+
+## P85-3 Rule Candidates
+
+Professional reading paths now also receive a compact
+`RuleCandidateSupport` report. It is built from reviewed knowledge rule
+proposals and stays shadow-only.
+
+User-facing text may show safe labels such as:
+
+- 财星材料规则候选
+- 时间层触发规则候选
+- 事业投影规则候选
+
+Each candidate exposes only:
+
+- a readable label
+- a collision-condition summary
+- validation requirements
+- shadow status
+
+The condition model, feature hooks, and promotion details remain internal. A
+candidate rule cannot create a verdict or mutate runtime behavior until future
+synthetic validation, decision registry approval, and promotion gates pass.
