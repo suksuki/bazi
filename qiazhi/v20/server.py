@@ -24,6 +24,7 @@ from v20.knowledge.draft_import import build_knowledge_draft_import_preview
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.review_packet import build_first_wave_review_packets, build_knowledge_review_packet
+from v20.knowledge.review_assist import build_first_wave_review_assist, build_knowledge_review_assist
 from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
@@ -207,6 +208,14 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/knowledge/first-wave-approval-preflight")
     def knowledge_first_wave_approval_preflight() -> dict[str, object]:
         return build_first_wave_approval_preflight()
+
+    @app.get("/api/v20/knowledge/review-assist/{domain}")
+    def knowledge_review_assist(domain: str) -> dict[str, object]:
+        return build_knowledge_review_assist(domain)
+
+    @app.get("/api/v20/knowledge/first-wave-review-assist")
+    def knowledge_first_wave_review_assist() -> dict[str, object]:
+        return build_first_wave_review_assist()
 
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:

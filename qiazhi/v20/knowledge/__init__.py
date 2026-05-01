@@ -7,6 +7,7 @@ from v20.knowledge.draft_import import build_knowledge_draft_import_preview
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.review_packet import build_first_wave_review_packets, build_knowledge_review_packet
+from v20.knowledge.review_assist import build_first_wave_review_assist, build_knowledge_review_assist
 from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.retrieval import retrieve_knowledge, retrieve_knowledge_refs
 from v20.knowledge.schema import KnowledgeRef, KnowledgeRetrievalReport, KnowledgeSource, KnowledgeUnit
@@ -25,8 +26,10 @@ __all__ = [
     "build_knowledge_draft_import_preview",
     "build_knowledge_release_manifest",
     "build_knowledge_review_packet",
+    "build_knowledge_review_assist",
     "build_knowledge_review_queue",
     "build_first_wave_review_packets",
+    "build_first_wave_review_assist",
     "build_knowledge_source_catalog",
     "build_v19_knowledge_migration_audit",
     "knowledge_feature_alignment",

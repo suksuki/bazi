@@ -31,6 +31,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/knowledge/review-queue" in script.text
     assert "/api/v20/knowledge/first-wave-review-packets" in script.text
     assert "/api/v20/knowledge/first-wave-approval-preflight" in script.text
+    assert "/api/v20/knowledge/first-wave-review-assist" in script.text
     assert "/api/v20/learning/run-plan" in script.text
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" in script.text

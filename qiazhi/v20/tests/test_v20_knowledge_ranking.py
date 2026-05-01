@@ -13,6 +13,7 @@ from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import KnowledgeRetrievalPolicy, knowledge_retrieval_manifest, rank_knowledge_units
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.review_packet import build_first_wave_review_packets, build_knowledge_review_packet
+from v20.knowledge.review_assist import build_first_wave_review_assist, build_knowledge_review_assist
 from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
@@ -240,3 +241,32 @@ def test_v20_knowledge_approval_preflight_endpoints_are_read_only() -> None:
     assert report["status"] == "blocked"
     assert first_wave["runtime_mutation"] is False
     assert first_wave["status"] == "blocked"
+
+
+def test_v20_knowledge_review_assist_suggests_missing_fields_without_writes() -> None:
+    assist = build_knowledge_review_assist("strength", limit=3)
+    first_wave = build_first_wave_review_assist(limit_per_domain=2)
+
+    assert assist["status"] == "ready"
+    assert assist["runtime_mutation"] is False
+    assert assist["suggestion_count"] == 3
+    suggestion = assist["suggestions"][0]
+    assert suggestion["evidence_template_suggestion"]
+    assert suggestion["boundary_suggestion"]
+    assert suggestion["feature_hooks_suggestion"]
+    assert suggestion["question_hooks_suggestion"]
+    assert suggestion["status_after_suggestion"] == "draft_review_required"
+    assert first_wave["status"] == "ready"
+    assert first_wave["total_suggestion_count"] >= 6
+    assert "NO_AUTOMATIC_APPROVAL" in first_wave["guardrails"]
+
+
+def test_v20_knowledge_review_assist_endpoints_are_read_only() -> None:
+    client = TestClient(app)
+    assist = client.get("/api/v20/knowledge/review-assist/strength").json()
+    first_wave = client.get("/api/v20/knowledge/first-wave-review-assist").json()
+
+    assert assist["runtime_mutation"] is False
+    assert assist["status"] == "ready"
+    assert first_wave["runtime_mutation"] is False
+    assert first_wave["status"] == "ready"
