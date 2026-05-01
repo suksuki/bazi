@@ -22,6 +22,8 @@ class PostgresConfig:
         "decision_registry",
         "feedback_ledger",
         "corpus_snapshots",
+        "rule_proposals",
+        "llm_artifacts",
     )
 
     def to_dict(self, *, reveal_secrets: bool = False) -> dict[str, Any]:

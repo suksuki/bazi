@@ -29,6 +29,10 @@ Endpoints:
 - `GET /api/v20/knowledge/first-wave-approval-preflight`
 - `GET /api/v20/knowledge/review-assist/{domain}`
 - `GET /api/v20/knowledge/first-wave-review-assist`
+- `GET /api/v20/knowledge/rule-proposals/{domain}`
+- `GET /api/v20/knowledge/first-wave-rule-proposals`
+- `GET /api/v20/knowledge/rule-proposal-preflight/{domain}`
+- `GET /api/v20/knowledge/first-wave-rule-proposal-preflight`
 
 These endpoints do not activate rules, write database rows, or treat knowledge
 as truth. They make missing sources, duplicate ids, unreviewed sources, and
@@ -60,6 +64,12 @@ those fields.
 Review assist gives deterministic field suggestions for blocked drafts. The
 suggestions help reviewers fill evidence templates, boundaries, and hooks, but
 they do not write fields, approve drafts, or make units runtime-retrievable.
+
+Reviewed knowledge units can also produce `KnowledgeRuleProposal` rows. These
+are released to shadow training by default so the system can learn from them
+early. Static contract failures still block malformed proposals, but synthetic
+validation and DecisionRegistry approval are promotion gates for user-visible
+runtime, not blockers for shadow learning.
 
 ## Portrait Calibration
 

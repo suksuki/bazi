@@ -163,7 +163,10 @@ const loadOps = async () => {
       firstWavePackets,
       firstWaveApproval,
       firstWaveAssist,
+      firstWaveRuleProposals,
+      firstWaveRulePreflight,
       portraitOntology,
+      fullPrecompute,
       dependencies,
       sync,
       policyReview,
@@ -183,7 +186,10 @@ const loadOps = async () => {
       requestJson("/api/v20/knowledge/first-wave-review-packets"),
       requestJson("/api/v20/knowledge/first-wave-approval-preflight"),
       requestJson("/api/v20/knowledge/first-wave-review-assist"),
+      requestJson("/api/v20/knowledge/first-wave-rule-proposals"),
+      requestJson("/api/v20/knowledge/first-wave-rule-proposal-preflight"),
       requestJson("/api/v20/portrait/ontology"),
+      requestJson("/api/v20/corpus/full-precompute/manifest"),
       requestJson("/api/v20/runtime/dependencies"),
       requestJson("/api/v20/ops/sync-readiness"),
       requestJson("/api/v20/learning/policy-review"),
@@ -191,11 +197,11 @@ const loadOps = async () => {
     ]);
     document.querySelector("#runtimeStatus").innerHTML = `<span>${health.active_profile}</span><strong>${health.status}</strong>`;
     setText("#profileBadge", health.active_profile);
-    setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards`);
+    setText("#corpusState", `${corpus.plan.target_case_count} cases · ${corpus.plan.shard_count} shards · precompute ${fullPrecompute.status} · ~${fullPrecompute.cost_estimate.estimated_total_minutes}m`);
     setText("#validationState", `${validation.ok ? "pass" : "blocked"} · ${validation.case_count} cases`);
     setText("#learningState", `${learning.status} · ${learningRun.estimated_batch_count} batches`);
-    setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · drafts ${knowledgeDraftImport.candidate_count} · queue ${knowledgeReviewQueue.domain_count} · packets ${firstWavePackets.domain_count} · assist ${firstWaveAssist.total_suggestion_count} · preflight ${firstWaveApproval.status} · portrait ${portraitOntology.status}`);
-    setText("#dependencyState", `pg ${dependencies.postgres.ready_for_connection ? "ready" : "config"} · redis ${dependencies.redis.ready_for_connection ? "ready" : "config"}`);
+    setText("#knowledgeCatalogState", `${knowledgeCatalog.status} · ${knowledgeCatalog.unit_count} units · v19 ${v19KnowledgeAudit.candidate_count} · drafts ${knowledgeDraftImport.candidate_count} · queue ${knowledgeReviewQueue.domain_count} · packets ${firstWavePackets.domain_count} · assist ${firstWaveAssist.total_suggestion_count} · rule ${firstWaveRuleProposals.proposal_count}/${firstWaveRulePreflight.status} · approval ${firstWaveApproval.status} · portrait ${portraitOntology.status}`);
+    setText("#dependencyState", `pg ${dependencies.postgres.ready_for_connection ? "ready" : "config"} · redis ${dependencies.redis.ready_for_connection ? "ready" : "config"} · llm ${dependencies.llm.ready_for_connection ? "ready" : "config"}`);
     setText("#syncState", `${sync.status} · ${sync.direction_count} directions`);
     setText("#policyState", `${policyReview.supported_policy_types.length} policy types · dry-run`);
     setText("#testMatrixState", `${matrix.area_count} areas · ${matrix.default_tier}`);

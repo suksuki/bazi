@@ -16,6 +16,8 @@ def test_v20_postgres_schema_contract_covers_authoritative_tables() -> None:
         "v20_decision_registry",
         "v20_feedback_ledger",
         "v20_corpus_snapshots",
+        "v20_rule_proposals",
+        "v20_llm_artifacts",
     }
     assert all("NO_REDIS_AUTHORITY" in row.guardrails for row in contract.tables)
     assert all(row.primary_key for row in contract.tables)

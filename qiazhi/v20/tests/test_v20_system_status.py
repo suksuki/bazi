@@ -11,7 +11,7 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
 
     assert report["status"] == "ok"
     assert report["runtime_mutation"] is False
-    assert report["storage_table_count"] == 6
+    assert report["storage_table_count"] == 8
     assert report["sync_readiness"]["status"] == "ready_for_manual_sync"
     assert report["redis_validation"]["ok"] is True
     assert report["knowledge_catalog_status"] == "ready"
@@ -32,6 +32,11 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["knowledge_first_wave_blocked_domain_count"] >= 1
     assert report["knowledge_first_wave_assist_status"] == "ready"
     assert report["knowledge_first_wave_suggestion_count"] >= 1
+    assert report["knowledge_rule_proposal_status"] == "ready"
+    assert report["knowledge_rule_proposal_count"] >= 1
+    assert report["knowledge_rule_proposal_preflight_status"] == "ready_for_shadow_training"
+    assert report["full_precompute_status"] == "ready_for_dry_run"
+    assert report["full_precompute_estimated_minutes"] > 0
     assert report["access_role_count"] == 4
     assert report["test_area_count"] >= 7
     assert report["learning_status"] == "ready_for_dry_run"

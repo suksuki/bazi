@@ -109,6 +109,30 @@ def _tables() -> tuple[TableSpec, ...]:
             ),
             primary_key=("snapshot_id",),
         ),
+        TableSpec(
+            name="v20_rule_proposals",
+            owner_module="v20.knowledge",
+            purpose="Knowledge-to-rule proposals released to shadow training and later promotion review.",
+            columns=(
+                ColumnSpec("proposal_id", "text", purpose="stable rule proposal id"),
+                ColumnSpec("source_knowledge_id", "text", purpose="source reviewed or draft knowledge id"),
+                ColumnSpec("status", "text", purpose="released_to_shadow_training, promoted, rejected"),
+                *common,
+            ),
+            primary_key=("proposal_id",),
+        ),
+        TableSpec(
+            name="v20_llm_artifacts",
+            owner_module="v20.llm",
+            purpose="Bounded LLM extraction, rewrite, critique, and modeling artifacts.",
+            columns=(
+                ColumnSpec("artifact_id", "text", purpose="stable LLM artifact id"),
+                ColumnSpec("task_name", "text", purpose="bounded LLM task contract name"),
+                ColumnSpec("validation_status", "text", purpose="accepted, rejected, fallback, shadow_only"),
+                *common,
+            ),
+            primary_key=("artifact_id",),
+        ),
     )
 
 

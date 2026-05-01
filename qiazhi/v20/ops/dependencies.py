@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 
+from v20.llm.provider import llm_provider_readiness_report
 from v20.ops.config import load_runtime_config_from_env
 
 
@@ -15,6 +16,7 @@ def dependency_readiness_report() -> dict[str, object]:
         or (os.getenv(postgres.username_env) and os.getenv(postgres.password_env))
     )
     redis_url_present = bool(os.getenv(redis.url_env))
+    llm = llm_provider_readiness_report()
     return {
         "version": "v20.dependency_readiness.v1",
         "active_profile": profile.name,
@@ -40,6 +42,7 @@ def dependency_readiness_report() -> dict[str, object]:
             "ready_for_connection": bool(redis.enabled and (redis_url_present or redis.host)),
             "connection_policy": "ephemeral_cache_queue_lock_only",
         },
+        "llm": llm,
         "runtime_mutation": False,
         "guardrails": [
             "DEPENDENCY_READINESS_ONLY",

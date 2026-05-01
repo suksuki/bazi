@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
+from v20.llm.provider import llm_provider_readiness_report, resolve_llm_base_url
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import default_runtime_config, validate_runtime_config
@@ -54,9 +55,33 @@ def test_v20_dependency_readiness_hides_secret_values(monkeypatch) -> None:
 
     assert report["postgres"]["ready_for_connection"] is True
     assert report["redis"]["ready_for_connection"] is True
+    assert report["llm"]["runtime_mutation"] is False
     assert report["runtime_mutation"] is False
     assert "secret-pass" not in text
     assert "redis://:secret" not in text
+
+
+def test_v20_llm_provider_readiness_hides_secret_values(monkeypatch) -> None:
+    monkeypatch.setenv("V20_LLM_ENABLED", "1")
+    monkeypatch.setenv("V20_LLM_EXECUTE", "1")
+    monkeypatch.setenv("V20_LLM_PROVIDER", "openai_compatible")
+    monkeypatch.setenv("V20_LLM_BASE_URL", "https://llm.example.test/v1")
+    monkeypatch.setenv("V20_LLM_API_KEY", "secret-llm-key")
+    monkeypatch.setenv("V20_LLM_MODEL", "gpt-compatible")
+
+    report = llm_provider_readiness_report()
+    text = str(report)
+
+    assert report["ready_for_connection"] is True
+    assert report["execute_llm"] is True
+    assert report["resolved_base_url"] == "https://llm.example.test/v1"
+    assert report["api_key_env"] == "V20_LLM_API_KEY"
+    assert "secret-llm-key" not in text
+
+
+def test_v20_llm_base_url_resolution_matches_v19_shape() -> None:
+    assert resolve_llm_base_url("", "127.0.0.1", 11434) == "http://127.0.0.1:11434/v1"
+    assert resolve_llm_base_url("http://localhost:8000/v1", "ignored", 1) == "http://localhost:8000/v1"
 
 
 def test_v20_dependency_endpoint_is_read_only() -> None:
@@ -68,6 +93,7 @@ def test_v20_dependency_endpoint_is_read_only() -> None:
     assert data["runtime_mutation"] is False
     assert data["postgres"]["connection_policy"] == "explicit_repository_command_only"
     assert data["redis"]["connection_policy"] == "ephemeral_cache_queue_lock_only"
+    assert data["llm"]["connection_policy"] == "explicit_llm_task_only_no_healthcheck_network_call"
 
 
 def test_v20_sync_readiness_keeps_redis_ephemeral_and_postgres_reviewed() -> None:

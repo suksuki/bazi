@@ -1,5 +1,8 @@
 from __future__ import annotations
 
+import hashlib
+import json
+
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.canonical_case import CanonicalCase
 
@@ -18,8 +21,91 @@ def precompute_case(case: CanonicalCase) -> dict[str, object]:
         "feature_count": result["feature_layer"]["feature_count"],
         "measurement_topic_count": result["measurement_report"]["topic_count"],
         "question_count": len(result["questions"]),
+        "label_snapshot": build_label_snapshot(case, result),
         "answer_plan_version": result["answer_plan"]["version"],
         "llm_assist_status": result["llm_assist"]["status"],
         "runtime_mutation": False,
         "guardrails": ["PRECOMPUTE_DRY_RUN_ONLY", "NO_PROMOTION"],
     }
+
+
+def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object]) -> dict[str, object]:
+    chart = runtime_result["chart_facts"]
+    core = runtime_result["core_inference"]
+    feature_layer = runtime_result["feature_layer"]
+    measurement_report = runtime_result["measurement_report"]
+    questions = runtime_result["questions"]
+    knowledge_refs = runtime_result["knowledge_refs"]
+    portrait = runtime_result["portrait_projection"]
+    features = tuple(row for row in feature_layer["features"] if isinstance(row, dict))
+    relation_types = tuple(
+        sorted(
+            {
+                str(row.get("relation_type", ""))
+                for row in chart.get("relation_hits", ())
+                if isinstance(row, dict) and row.get("relation_type")
+            }
+        )
+    )
+    visible_ten_gods = tuple(
+        sorted(
+            {
+                str(row.get("label", ""))
+                for row in chart.get("visible_ten_gods", ())
+                if isinstance(row, dict) and row.get("label")
+            }
+        )
+    )
+    hidden_ten_gods = tuple(
+        sorted(
+            {
+                str(row.get("label", ""))
+                for row in chart.get("hidden_ten_gods", ())
+                if isinstance(row, dict) and row.get("label")
+            }
+        )
+    )
+    label_payload = {
+        "case_id": case.case_id,
+        "input_hash": case.input_hash,
+        "pillar_displays": case.pillar_displays,
+        "day_master": chart.get("day_master", ""),
+        "day_master_element": chart.get("day_master_element", ""),
+        "day_master_capacity": core.get("day_master_capacity", ""),
+        "feature_ids": tuple(str(row.get("feature_id", "")) for row in features),
+        "feature_domains": tuple(sorted({str(row.get("domain", "")) for row in features if row.get("domain")})),
+        "macro_feature_domains": tuple(
+            sorted(
+                {
+                    str(row.get("domain", ""))
+                    for row in feature_layer.get("macro_features", ())
+                    if isinstance(row, dict) and row.get("domain")
+                }
+            )
+        ),
+        "measurement_domains": tuple(measurement_report.get("applied_domain_keys", ())),
+        "question_keys": tuple(str(row.get("question_key", "")) for row in questions if isinstance(row, dict)),
+        "knowledge_ids": tuple(str(row.get("knowledge_id", "")) for row in knowledge_refs if isinstance(row, dict)),
+        "portrait_domains": tuple(str(row.get("domain", "")) for row in portrait.get("axes", ()) if isinstance(row, dict)),
+        "relation_types": relation_types,
+        "visible_ten_gods": visible_ten_gods,
+        "hidden_ten_gods": hidden_ten_gods,
+        "useful_god_candidate_count": sum(1 for row in features if str(row.get("domain", "")) == "useful_god"),
+        "wealth_feature_present": any(str(row.get("domain", "")) == "wealth" for row in features),
+        "evidence_density": {
+            "feature_count": feature_layer.get("feature_count", 0),
+            "knowledge_ref_count": runtime_result["knowledge_report"].get("count", 0),
+            "portrait_axis_count": portrait.get("axis_count", 0),
+        },
+        "label_policy": "structural_feature_and_portrait_tags_only",
+        "guardrails": [
+            "NO_DESTINY_TRUTH_LABEL",
+            "NO_EVENT_OUTCOME_LABEL",
+            "NO_PERSONALITY_VERDICT_LABEL",
+            "FEATURE_COMPILER_OWNS_LABELS",
+        ],
+    }
+    label_payload["snapshot_hash"] = hashlib.sha256(
+        json.dumps(label_payload, ensure_ascii=False, sort_keys=True).encode("utf-8")
+    ).hexdigest()[:16]
+    return label_payload

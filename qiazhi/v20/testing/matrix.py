@@ -37,8 +37,10 @@ TEST_COVERAGE_AREAS = (
             "KnowledgeCatalog",
             "KnowledgeReleaseManifest",
             "KnowledgeRetrievalPolicy",
+            "KnowledgeRuleProposal",
             "ConfidenceCalibrationPolicy",
             "llm_assist",
+            "llm_provider_readiness",
             "deterministic_i18n_terms",
             "QuestionRankingPolicy",
         ),
@@ -82,6 +84,7 @@ TEST_COVERAGE_AREAS = (
         ),
         "contracts": (
             "518400 coverage plan",
+            "FullCorpusPrecompute",
             "SyntheticSuite",
             "EvolutionDryRunPlan",
             "FeedbackLedger",

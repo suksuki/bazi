@@ -11,6 +11,7 @@ from v20.access.roles import access_role_manifest
 from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest, PortraitCalibrationRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
+from v20.corpus.full_precompute import build_full_precompute_manifest, preview_full_precompute_batch
 from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
@@ -27,6 +28,12 @@ from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.review_packet import build_first_wave_review_packets, build_knowledge_review_packet
 from v20.knowledge.review_assist import build_first_wave_review_assist, build_knowledge_review_assist
 from v20.knowledge.review_queue import build_knowledge_review_queue
+from v20.knowledge.rule_proposal import (
+    build_first_wave_rule_proposal_preflight,
+    build_first_wave_rule_proposals,
+    build_knowledge_rule_proposals,
+    build_rule_proposal_preflight,
+)
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.run_plan import build_learning_run_plan
@@ -218,6 +225,22 @@ def create_app() -> FastAPI:
     def knowledge_first_wave_review_assist() -> dict[str, object]:
         return build_first_wave_review_assist()
 
+    @app.get("/api/v20/knowledge/rule-proposals/{domain}")
+    def knowledge_rule_proposals(domain: str) -> dict[str, object]:
+        return build_knowledge_rule_proposals(domain)
+
+    @app.get("/api/v20/knowledge/first-wave-rule-proposals")
+    def knowledge_first_wave_rule_proposals() -> dict[str, object]:
+        return build_first_wave_rule_proposals()
+
+    @app.get("/api/v20/knowledge/rule-proposal-preflight/{domain}")
+    def knowledge_rule_proposal_preflight(domain: str) -> dict[str, object]:
+        return build_rule_proposal_preflight(domain)
+
+    @app.get("/api/v20/knowledge/first-wave-rule-proposal-preflight")
+    def knowledge_first_wave_rule_proposal_preflight() -> dict[str, object]:
+        return build_first_wave_rule_proposal_preflight()
+
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:
         return confidence_calibration_manifest()
@@ -233,6 +256,20 @@ def create_app() -> FastAPI:
             "plan": build_corpus_coverage_plan().to_dict(),
             "runtime_mutation": False,
         }
+
+    @app.get("/api/v20/corpus/full-precompute/manifest")
+    def corpus_full_precompute_manifest() -> dict[str, object]:
+        return build_full_precompute_manifest()
+
+    @app.get("/api/v20/corpus/full-precompute/preview")
+    def corpus_full_precompute_preview(start: int = 0, limit: int = 4) -> dict[str, object]:
+        try:
+            return preview_full_precompute_batch(start=start, limit=limit)
+        except (IndexError, ValueError) as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "V20_CORPUS_PRECOMPUTE_INPUT_INVALID", "message": str(exc)},
+            ) from exc
 
     @app.get("/api/v20/validation/synthetic-suite")
     def synthetic_suite() -> dict[str, object]:

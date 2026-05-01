@@ -101,7 +101,7 @@ def test_v20_ops_and_testing_metadata_endpoints_hide_secrets() -> None:
     assert tiers["manifest"]["default_tier"] == "fast"
     assert tiers["runtime_mutation"] is False
     assert storage["schema"]["backend"] == "postgres"
-    assert storage["schema"]["table_count"] == 6
+    assert storage["schema"]["table_count"] == 8
     assert storage["runtime_mutation"] is False
     assert redis["validation"]["ok"] is True
     assert redis["contract"]["keyspace_count"] == 5

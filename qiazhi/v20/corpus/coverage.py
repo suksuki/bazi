@@ -4,9 +4,9 @@ from dataclasses import asdict, dataclass
 from math import ceil
 from typing import Any
 
-from v20.corpus.enumerator import sample_corpus_cases
+from v20.corpus.enumerator import FULL_CORPUS_CASE_COUNT, sample_corpus_cases
 
-FULL_CORPUS_TARGET_COUNT = 518_400
+FULL_CORPUS_TARGET_COUNT = FULL_CORPUS_CASE_COUNT
 
 
 @dataclass(frozen=True)

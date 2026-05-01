@@ -16,6 +16,12 @@ from v20.knowledge.review_packet import build_first_wave_review_packets, build_k
 from v20.knowledge.review_assist import build_first_wave_review_assist, build_knowledge_review_assist
 from v20.knowledge.review_queue import build_knowledge_review_queue
 from v20.knowledge.retrieval import retrieve_knowledge
+from v20.knowledge.rule_proposal import (
+    build_first_wave_rule_proposal_preflight,
+    build_first_wave_rule_proposals,
+    build_knowledge_rule_proposals,
+    build_rule_proposal_preflight,
+)
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.server import app
 
@@ -270,3 +276,54 @@ def test_v20_knowledge_review_assist_endpoints_are_read_only() -> None:
     assert assist["status"] == "ready"
     assert first_wave["runtime_mutation"] is False
     assert first_wave["status"] == "ready"
+
+
+def test_v20_knowledge_to_rule_proposals_are_draft_only() -> None:
+    report = build_knowledge_rule_proposals("strength", limit=2)
+    first_wave = build_first_wave_rule_proposals(limit_per_domain=1)
+    proposal = report["proposals"][0]
+
+    assert report["status"] == "ready"
+    assert report["runtime_mutation"] is False
+    assert proposal["status"] == "released_to_shadow_training"
+    assert proposal["activation_scope"] == "shadow_training_and_candidate_rule_graph"
+    assert proposal["proposal_type"] == "knowledge_to_rule_path_candidate"
+    assert proposal["source_knowledge_id"] == "v20.core.strength_boundary"
+    assert "feature.strength" in proposal["emits_feature_hooks"]
+    assert "synthetic_suite_pass" in proposal["validation_requirements"]
+    assert "user_visible_runtime_activation_without_promotion" in proposal["forbidden_outputs"]
+    assert "SHADOW_TRAINING_ALLOWED_BY_DEFAULT" in proposal["guardrails"]
+    assert first_wave["proposal_count"] >= 5
+    assert first_wave["runtime_mutation"] is False
+
+
+def test_v20_rule_proposal_preflight_allows_shadow_training_before_promotion() -> None:
+    report = build_rule_proposal_preflight("strength", limit=1)
+    first_wave = build_first_wave_rule_proposal_preflight(limit_per_domain=1)
+
+    assert report["ok"] is True
+    assert report["status"] == "ready_for_shadow_training"
+    assert not report["failures"]
+    assert any(row.startswith("synthetic_validation_before_user_visible_runtime:") for row in report["promotion_requirements"])
+    assert any(row.startswith("decision_record_before_user_visible_runtime:") for row in report["promotion_requirements"])
+    assert first_wave["ok"] is True
+    assert first_wave["blocked_domain_count"] == 0
+    assert first_wave["promotion_requirement_count"] >= 1
+    assert first_wave["runtime_mutation"] is False
+
+
+def test_v20_rule_proposal_endpoints_are_read_only() -> None:
+    client = TestClient(app)
+    report = client.get("/api/v20/knowledge/rule-proposals/strength").json()
+    first_wave = client.get("/api/v20/knowledge/first-wave-rule-proposals").json()
+    preflight = client.get("/api/v20/knowledge/rule-proposal-preflight/strength").json()
+    first_preflight = client.get("/api/v20/knowledge/first-wave-rule-proposal-preflight").json()
+
+    assert report["runtime_mutation"] is False
+    assert report["status"] == "ready"
+    assert first_wave["runtime_mutation"] is False
+    assert first_wave["status"] == "ready"
+    assert preflight["runtime_mutation"] is False
+    assert preflight["status"] == "ready_for_shadow_training"
+    assert first_preflight["runtime_mutation"] is False
+    assert first_preflight["status"] == "ready_for_shadow_training"
