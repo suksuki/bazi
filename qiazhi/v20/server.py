@@ -13,6 +13,7 @@ from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.coverage import build_corpus_coverage_plan
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.ops.config import load_runtime_config_from_env
+from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
@@ -100,6 +101,10 @@ def create_app() -> FastAPI:
             "validation": validate_redis_contract(contract),
             "runtime_mutation": False,
         }
+
+    @app.get("/api/v20/runtime/dependencies")
+    def runtime_dependencies() -> dict[str, object]:
+        return dependency_readiness_report()
 
     @app.get("/api/v20/access/roles")
     def access_roles() -> dict[str, object]:

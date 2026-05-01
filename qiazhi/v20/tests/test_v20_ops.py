@@ -1,7 +1,11 @@
 from __future__ import annotations
 
+from fastapi.testclient import TestClient
+
 from v20.ops.config import load_runtime_config_from_env
+from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import default_runtime_config, validate_runtime_config
+from v20.server import app
 
 
 def test_v20_ops_profiles_cover_macos_linux_postgres_and_redis() -> None:
@@ -38,3 +42,28 @@ def test_v20_ops_env_overrides_do_not_render_secret_values(monkeypatch) -> None:
     assert profile.redis.db == 21
     assert payload["postgres"]["secret_policy"] == "env_names_only_no_secret_values"
     assert payload["redis"]["secret_policy"] == "env_names_only_no_secret_values"
+
+
+def test_v20_dependency_readiness_hides_secret_values(monkeypatch) -> None:
+    monkeypatch.setenv("V20_DATABASE_URL", "postgres://secret-user:secret-pass@localhost/db")
+    monkeypatch.setenv("V20_REDIS_URL", "redis://:secret@localhost:6379/0")
+
+    report = dependency_readiness_report()
+    text = str(report)
+
+    assert report["postgres"]["ready_for_connection"] is True
+    assert report["redis"]["ready_for_connection"] is True
+    assert report["runtime_mutation"] is False
+    assert "secret-pass" not in text
+    assert "redis://:secret" not in text
+
+
+def test_v20_dependency_endpoint_is_read_only() -> None:
+    client = TestClient(app)
+    response = client.get("/api/v20/runtime/dependencies")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["runtime_mutation"] is False
+    assert data["postgres"]["connection_policy"] == "explicit_repository_command_only"
+    assert data["redis"]["connection_policy"] == "ephemeral_cache_queue_lock_only"

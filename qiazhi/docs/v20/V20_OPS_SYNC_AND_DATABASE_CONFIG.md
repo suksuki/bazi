@@ -110,3 +110,19 @@ Initial keyspaces:
 - `v20:runtime:short:` for temporary interaction state.
 
 Every Redis keyspace must have a TTL and must be reconstructable from Postgres or deterministic runtime state. Redis remains non-authoritative.
+
+## Dependency Readiness
+
+The dependency readiness report is exposed at:
+
+```text
+GET /api/v20/runtime/dependencies
+```
+
+It checks whether the active profile has enough environment configuration to
+connect to Postgres or Redis without opening a network connection and without
+rendering secret values.
+
+- Postgres readiness checks `V20_DATABASE_URL` or user/password env presence.
+- Redis readiness checks `V20_REDIS_URL` or configured host metadata.
+- The report is read-only and keeps Redis explicitly ephemeral.
