@@ -12,6 +12,31 @@ from v20.features.schema import BaziFeature, EvidenceRef, FeatureLayer
 FEATURE_LAYER_VERSION = "v20.feature_layer.v1"
 
 WEALTH_LABELS = {"正财", "偏财"}
+ELEMENT_LABELS_ZH = {
+    "wood": "木",
+    "fire": "火",
+    "earth": "土",
+    "metal": "金",
+    "water": "水",
+}
+POSITION_LABELS_ZH = {
+    "year": "年柱",
+    "month": "月柱",
+    "day": "日柱",
+    "hour": "时柱",
+    "luck": "大运",
+    "flow_year": "流年",
+    "flow_month": "流月",
+}
+RELATION_LABELS_ZH = {
+    "clash": "冲",
+    "harmony": "合",
+    "harm": "害",
+    "break": "破",
+    "punishment": "刑",
+    "three_harmony": "三合",
+    "three_meeting": "三会",
+}
 
 
 def compile_features(
@@ -196,7 +221,7 @@ def _branch_features(facts: ChartFacts) -> list[BaziFeature]:
         EvidenceRef(
             f"branch.{row.relation_type}.{'.'.join(row.branches)}",
             "branch_relation",
-            row.relation_type,
+            _relation_title(row),
             row.layer,
         )
         for row in facts.relation_hits[:6]
@@ -225,7 +250,14 @@ def _time_features(time_context: TimeContext) -> list[BaziFeature]:
         refs.append(EvidenceRef(f"time.{layer.layer_key}.{layer.pillar.display}", "time_pillar", layer.pillar.display, "time"))
         refs.append(EvidenceRef(f"time.ten_god.{layer.layer_key}.{layer.ten_god.label}", "ten_god", layer.ten_god.label, "time"))
     for hit in time_context.relation_hits[:6]:
-        refs.append(EvidenceRef(f"time.relation.{hit.relation_type}.{'.'.join(hit.positions)}", "branch_relation", hit.relation_type, "time"))
+        refs.append(
+            EvidenceRef(
+                f"time.relation.{hit.relation_type}.{'.'.join(hit.positions)}",
+                "branch_relation",
+                _relation_title(hit),
+                "time",
+            )
+        )
     return [
         BaziFeature(
             feature_id="feature.time.explicit_context",
@@ -298,3 +330,18 @@ def _dedupe(features: list[BaziFeature]) -> list[BaziFeature]:
         if current is None or feature.confidence > current.confidence:
             out[feature.feature_id] = feature
     return list(out.values())
+
+
+def _relation_title(hit) -> str:
+    relation = RELATION_LABELS_ZH.get(hit.relation_type, hit.relation_type)
+    rows = [
+        f"{POSITION_LABELS_ZH.get(position, position)}{branch}"
+        for position, branch in zip(hit.positions, hit.branches)
+    ]
+    if hit.relation_type in {"three_harmony", "three_meeting"}:
+        element = ELEMENT_LABELS_ZH.get(hit.element, "")
+        suffix = f"{relation}{element}" if element else relation
+        return "、".join(rows) + suffix
+    if len(rows) >= 2:
+        return f"{rows[0]}与{rows[1]}{relation}"
+    return "".join(rows) + relation

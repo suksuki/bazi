@@ -30,8 +30,9 @@ def answer_rewrite_prompt(
         "context": context,
         "output_schema": {"text": "string"},
         "instruction": (
-            "Return only {\"text\":\"...\"}. Rewrite the verified answer into one concise, user-facing paragraph under 260 Chinese characters or locale equivalent. "
-            "Do not echo the context, do not include answer_plan, and do not add facts or conclusions."
+            "Return only {\"text\":\"...\"}. Rewrite the verified answer into a concise professional reply. "
+            "Preserve concrete stems/branches, ten-god names, relation names, and evidence counts already present in the verified answer. "
+            "Answer the selected question directly before stating boundaries. Do not echo the context, do not include answer_plan, and do not add facts or conclusions."
         ),
     }
 

@@ -110,10 +110,20 @@ def feature_label(feature: BaziFeature) -> str:
 
 
 def feature_public_summary(feature: BaziFeature) -> str:
+    if feature.domain == "strength":
+        return _strength_summary(feature)
     if feature.feature_id == "feature.useful_god.candidate_paths":
         return _useful_god_summary(feature.calibration_state)
+    if feature.domain == "ten_god":
+        return _ten_god_summary(feature)
     if feature.feature_id == "feature.element.balance_distribution":
         return _element_summary(feature.calibration_state)
+    if feature.domain == "branch":
+        return _branch_summary(feature)
+    if feature.domain == "time":
+        return _time_summary(feature)
+    if feature.domain == "wealth":
+        return _wealth_summary(feature)
     return ""
 
 
@@ -159,6 +169,63 @@ def _useful_god_summary(calibration_state: str) -> str:
     return "候选摘要：" + "、".join(rows[:4]) + "。"
 
 
+def _strength_summary(feature: BaziFeature) -> str:
+    values = {}
+    for ref in feature.evidence_refs:
+        key, _, value = ref.title.partition("=")
+        if key and value:
+            values[key] = value
+    support = values.get("support")
+    pressure = values.get("pressure")
+    if support and pressure:
+        return f"结构材料：扶助分 {support}，压力分 {pressure}，用于判断承载力边界。"
+    return ""
+
+
+def _ten_god_summary(feature: BaziFeature) -> str:
+    labels = _unique(ref.title for ref in feature.evidence_refs if ref.title)
+    if not labels:
+        return ""
+    prefix = "藏干十神材料" if "hidden" in feature.source_layers else "明透十神材料"
+    return f"{prefix}：" + "、".join(labels[:8]) + "。"
+
+
+def _branch_summary(feature: BaziFeature) -> str:
+    relations = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "branch_relation" and ref.title)
+    if not relations:
+        return ""
+    return "地支结构材料：" + "、".join(relations[:6]) + "。"
+
+
+def _time_summary(feature: BaziFeature) -> str:
+    pillars = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "time_pillar" and ref.title)
+    ten_gods = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "ten_god" and ref.title)
+    relations = _unique(ref.title for ref in feature.evidence_refs if ref.kind == "branch_relation" and ref.title)
+    rows = []
+    if pillars:
+        rows.append("时间干支：" + "、".join(pillars[:4]))
+    if ten_gods:
+        rows.append("对应十神：" + "、".join(ten_gods[:4]))
+    if relations:
+        rows.append("触发关系：" + "、".join(relations[:6]))
+    if not rows:
+        return ""
+    return "结构材料：" + "；".join(rows) + "。"
+
+
+def _wealth_summary(feature: BaziFeature) -> str:
+    labels = [
+        f"{ref.title}（{_source_layer_label(ref.source_layer)}）"
+        for ref in feature.evidence_refs
+        if ref.title and ref.title != "no wealth ten-god material found"
+    ]
+    if labels:
+        return "财星材料：" + "、".join(_unique(labels)[:6]) + "。"
+    if feature.feature_id == "feature.wealth.material_not_visible":
+        return "财星材料：原局明透与藏干未直接形成财星入口，需从结构路径复核。"
+    return ""
+
+
 def _element_summary(calibration_state: str) -> str:
     parsed: dict[str, str] = {}
     for item in calibration_state.split(";"):
@@ -179,3 +246,16 @@ def _element_summary(calibration_state: str) -> str:
 def _element_list(value: str) -> str:
     labels = [ELEMENT_LABELS_ZH.get(row, "") for row in value.split(",") if row]
     return "、".join(label for label in labels if label)
+
+
+def _source_layer_label(value: str) -> str:
+    return {
+        "visible": "明透",
+        "hidden": "藏干",
+        "time": "时间层",
+        "core": "核心",
+    }.get(value, value)
+
+
+def _unique(items) -> list[str]:
+    return list(dict.fromkeys(str(item) for item in items if str(item)))

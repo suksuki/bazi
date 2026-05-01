@@ -130,7 +130,27 @@ def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:
     }
     assert "time" in {row["domain"] for row in result["knowledge_refs"]}
     assert result["llm_assist"]["routed_question_key"] == "q_time_layer_context"
+    assert "结构材料：时间干支：庚子" in result["answer_text"]
+    assert "对应十神：七杀" in result["answer_text"]
+    assert "日柱午与流年子冲" in result["answer_text"]
     assert "发财" not in result["answer_text"]
+
+
+def test_v20_answers_include_verified_hidden_ten_god_material() -> None:
+    result = run_runtime_from_pillars(
+        "壬寅",
+        "甲辰",
+        "丙子",
+        "甲午",
+        input_id="v20.hidden-ten-god",
+        question_key="q_hidden_stem_role",
+    )
+
+    assert result["selected_question"]["question_key"] == "q_hidden_stem_role"
+    assert "藏干十神材料" in result["answer_text"]
+    assert "正官" in result["answer_text"]
+    assert "比肩" in result["answer_text"]
+    assert "feature." not in result["answer_text"]
 
 
 def test_v20_multilingual_answer_rendering_uses_deterministic_terms() -> None:
