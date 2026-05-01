@@ -50,6 +50,10 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "chatQuestionList" in page.text
     assert "chatTranscript" in page.text
     assert "portrait-summary" in page.text
+    assert "practitionerCalibration" in page.text
+    assert "calibrationControls" in page.text
+    assert "latentCalibration" in page.text
+    assert "latentCalibrationControls" in page.text
     assert "profileImportButton" not in page.text
     assert "反馈校准" not in page.text
     assert "动态裁决主线" in page.text
@@ -65,8 +69,13 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "questions.slice(0, 5)" in script.text
     assert "renderChatQuestions(result.questions || [], selected.question_key || \"\")" in script.text
     assert "const decisionReport = result.decision_report || {}" in script.text
-    assert "renderFeatures(decisionReport.decisions" in script.text
+    assert "renderFeatures(decisionReport.mainlines || decisionReport.decisions" in script.text
     assert "renderPortrait(dynamicPortrait.tags || [])" in script.text
+    assert "renderPractitionerCalibration(decisionReport.practitioner_controls || []" in script.text
+    assert "renderLatentCalibration(result.input_id || \"\", role)" in script.text
+    assert "/api/v20/learning/latent-event-calibration" in script.text
+    assert "/api/v20/latent-event/calibration/record" in script.text
+    assert "/api/v20/practitioner/calibration/record" in script.text
     assert "result.decision_validation || {}" in script.text
     assert "rule-candidate" not in script.text
     assert "规则候选验证" not in script.text
@@ -77,7 +86,13 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "assist.practitioner_answer" in script.text
     assert "appendChatTurn(interactionText" in script.text
     assert ".chat-transcript" in style.text
+    assert ".calibration-panel-card" in style.text
+    assert ".axis-temp" in style.text
+    assert "payload.practitioner_selections = state.practitionerSelections" in script.text
+    assert "payload.latent_event_answers = state.latentAnswers" in script.text
+    assert "已记录 · 刷新问题" in script.text
     assert ".evidence-row.validation" in style.text
+    assert ".latent-calibration-card" in style.text
     assert "applyProfileDefaults(profile)" in script.text
     assert "role: measurementRole(params.get(\"role\") || document.body.dataset.role)" in profiles_script.text
     assert "const endpoint = `/api/v20/measure/view/${role}`" in script.text

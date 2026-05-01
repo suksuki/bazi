@@ -8,6 +8,7 @@ from v20.corpus.canonical_case import CanonicalCase
 from v20.corpus.precompute_runner import precompute_case
 from v20.llm.contracts import ANSWER_PLAN_REWRITE
 from v20.llm.practitioner import accept_or_fallback_practitioner_answer
+from v20.llm.prompts import practitioner_answer_prompt
 from v20.llm.tasks import (
     accept_or_fallback_rewrite,
     draft_rule_extraction_from_knowledge,
@@ -45,9 +46,31 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert result["knowledge_semantic_validation"]["ok"] is True
     assert result["decision_report"]["version"] == "v20.decision_report.v1"
     assert result["decision_report"]["decision_count"] >= 5
+    assert result["decision_report"]["knowledge_rule_bridge"]["version"] == "v20.decision_knowledge_rule_bridge.v1"
+    assert result["decision_report"]["knowledge_rule_bridge"]["mapped_decision_count"] >= 1
+    assert result["decision_report"]["knowledge_rule_bridge"]["validation_status"] == "runtime_lightweight"
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"]
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_allowed"] is False
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["question_outputs"]
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["synthetic_state"] == "unknown"
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_promotion_candidate"] is False
     assert result["decision_validation"]["ok"] is True
+    assert result["decision_validation"]["knowledge_rule_bridge_status"] == "ready"
     assert result["dynamic_portrait"]["version"] == "v20.dynamic_portrait.v1"
     assert result["dynamic_portrait"]["tag_count"] >= 1
+    assert result["dynamic_portrait"]["tags"][0]["dimension_key"].startswith("dimension.")
+    assert result["dynamic_portrait"]["tags"][0]["knowledge_rule_labels"]
+    assert "复核重点" in result["dynamic_portrait"]["tags"][0]["summary"]
+    assert result["questions"][0]["dimension_layer"] in {"micro", "macro", "decision", "time"}
+    assert result["answer_plan"]["dimension_context"]["version"] == "v20.answer_dimension_context.v1"
+    assert result["latent_signal_report"]["version"] == "v20.latent_signal_report.v1"
+    assert result["latent_signal_report"]["personal_calibration_factor_manifest"]["latent_factor_count"] == 12
+    assert result["latent_event_session"]["version"] == "v20.latent_event_session_lens.v1"
+    assert result["latent_event_session"]["runtime_mutation"] is False
+    assert "baseline_amplifier" in {
+        row["factor_id"]
+        for row in result["latent_signal_report"]["personal_calibration_factor_manifest"]["latent_factors"]
+    }
     assert "feature_discovery" not in result
     assert "portrait_projection" not in result
     assert "portrait_intelligence" not in result
@@ -56,6 +79,11 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert all(row["reviewed"] and row["evidence_template"] for row in result["knowledge_refs"])
     assert len(result["llm_capabilities"]) >= 6
     assert result["answer_plan"]["sections"]
+    assert result["decision_report"]["mainline_count"] >= 1
+    assert result["decision_report"]["mainlines"][0]["source_decision_keys"]
+    assert result["answer_plan"]["sections"][1]["section_type"] == "mainline_decision"
+    assert "主线入口" in result["answer_plan"]["sections"][1]["body"]
+    assert any("复核重点" in row["body"] for row in result["answer_plan"]["sections"])
     assert result["answer_plan"]["measurement_focus"] == "bazi_measurement"
     assert result["answer_plan"]["domain_projection"]["guardrails"]
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]
@@ -90,17 +118,204 @@ def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> Non
     assert result["llm_assist"]["status"] == "ready"
     assert result["knowledge_semantic_validation"]["status"] == "pass"
     assert result["runtime_mutation"] is False
-    assert "八字测算重点" in result["answer_text"]
-    assert "确定事件" in result["answer_text"]
+    assert "当前命局可见" in result["answer_text"]
+    assert "八字测算重点" not in result["answer_text"]
+    assert "知识依据" not in result["answer_text"]
     assert "core." not in result["answer_text"]
     assert "feature." not in result["answer_text"]
     assert result["measurement_report"]["core_focus"] == "bazi_measurement"
     assert result["measurement_report"]["selected_question_key"] == result["selected_question"]["question_key"]
+    assert result["questions"][0]["question_key"] == result["selected_question"]["question_key"]
     assert all(row["role"] == "bazi_measurement_entry" for row in result["questions"])
     assert all(row["measurement_topic"] for row in result["questions"])
     assert all(row["alignment_status"] in {"bazi_core_aligned", "bazi_projection_aligned"} for row in result["questions"])
     assert all(row["bazi_focus"] for row in result["questions"])
     assert {"career", "wealth", "element"} & {row["domain"] for row in result["questions"]}
+
+
+def test_v20_dynamic_decisions_use_practitioner_ready_bazi_rule_language() -> None:
+    result = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.rule.language",
+        user_text="我想看事业和财运",
+    )
+    decisions = {row["rule_key"]: row for row in result["decision_report"]["decisions"]}
+    questions = [row["title"] for row in result["questions"]]
+
+    shang_guan = decisions["rule.ten_god.shang_guan_jian_guan"]
+    wealth_capacity = decisions["rule.wealth.capacity_gate"]
+    output_to_wealth = decisions["rule.ten_god.output_to_wealth"]
+
+    assert shang_guan["label"] == "伤官见官见印缓冲"
+    assert shang_guan["status"] == "weakened_by_resource"
+    assert "表达冲规则但见印星缓冲" in shang_guan["portrait_tags"]
+    assert wealth_capacity["label"] == "财星可见但日主承接需扶助"
+    assert "财运要先看扶身与承接" in wealth_capacity["portrait_tags"]
+    assert output_to_wealth["label"] == "食伤生财通道候选"
+    assert any("伤官@" in row for row in output_to_wealth["support"])
+    assert any("财@" in row for row in output_to_wealth["support"])
+    assert "事业上官星、伤官和印星谁是主导？" in questions
+    assert "食伤生财时，日主承接够不够？" in questions
+    assert "把官星规则、伤官表达和印星缓冲放在一起裁决主次" in result["answer_text"]
+
+
+def test_v20_useful_god_and_pattern_decisions_use_bazi_language() -> None:
+    support_case = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.useful.support",
+        user_text="我想看用神",
+    )
+    release_case = run_runtime_from_pillars(
+        "壬寅",
+        "甲辰",
+        "丙子",
+        "甲午",
+        input_id="v20.useful.release",
+        user_text="我想看用神",
+    )
+    support_decisions = {row["rule_key"]: row for row in support_case["decision_report"]["decisions"]}
+    release_decisions = {row["rule_key"]: row for row in release_case["decision_report"]["decisions"]}
+
+    assert support_decisions["rule.useful_god.candidate_gate"]["label"] == "用神候选先看扶身路径"
+    assert "用神方向先看扶身" in support_decisions["rule.useful_god.candidate_gate"]["portrait_tags"]
+    assert support_case["selected_question"]["title"] == "用神方向要先扶身，还是另有通关路径？"
+    assert release_decisions["rule.useful_god.candidate_gate"]["label"] == "用神候选先看泄秀路径"
+    assert release_case["selected_question"]["title"] == "用神方向适合先看泄秀还是财星通道？"
+    assert support_decisions["rule.pattern.review_gate"]["label"] == "格局需先看墓库藏气"
+    assert "月柱墓库藏气需要格局复核" in support_decisions["rule.pattern.review_gate"]["support"]
+    assert "support:" not in support_case["answer_text"]
+    assert "release:" not in release_case["answer_text"]
+
+
+def test_v20_strength_decision_exposes_support_and_pressure_materials() -> None:
+    weak_case = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.strength.weak",
+        user_text="我想看强弱",
+    )
+    border_case = run_runtime_from_pillars(
+        "乙亥",
+        "己丑",
+        "辛酉",
+        "丙申",
+        input_id="v20.strength.border",
+        user_text="我想看强弱",
+    )
+    weak_strength = next(
+        row for row in weak_case["decision_report"]["decisions"]
+        if row["rule_key"] == "rule.strength.capacity"
+    )
+    border_strength = next(
+        row for row in border_case["decision_report"]["decisions"]
+        if row["rule_key"] == "rule.strength.capacity"
+    )
+
+    assert weak_strength["label"] == "日主偏弱需扶身复核"
+    assert "日主需先看扶身" in weak_strength["portrait_tags"]
+    assert any(row.startswith("扶身材料：") for row in weak_strength["support"])
+    assert any(row.startswith("泄耗克制材料：") for row in weak_strength["support"])
+    assert weak_case["selected_question"]["title"] == "日主需要扶身时，先看印星、比劫还是通关？"
+    assert "先找印星、比劫和通关条件" in weak_case["answer_text"]
+    assert border_strength["label"] == "日主强弱接近分界需裁决"
+    assert border_case["selected_question"]["title"] == "日主强弱接近分界时，先裁决哪类证据？"
+    assert "不能急着定强弱" in border_case["answer_text"]
+
+
+def test_v20_combination_chain_decisions_drive_main_questions() -> None:
+    wealth_case = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="v20.chain.wealth",
+        user_text="我想看财运",
+    )
+    career_case = run_runtime_from_pillars(
+        "壬寅",
+        "甲辰",
+        "丙子",
+        "甲午",
+        input_id="v20.chain.career",
+        user_text="我想看事业",
+    )
+    wealth_decisions = {row["rule_key"]: row for row in wealth_case["decision_report"]["decisions"]}
+    career_decisions = {row["rule_key"]: row for row in career_case["decision_report"]["decisions"]}
+
+    assert wealth_decisions["rule.wealth.output_wealth_capacity_chain"]["label"] == "食伤生财需先过承载关"
+    assert "日主偏弱需扶身复核" in wealth_decisions["rule.wealth.output_wealth_capacity_chain"]["support"]
+    assert wealth_case["selected_question"]["title"] == "食伤生财时，日主承接够不够？"
+    assert "有食伤生财线索，但要先过日主承载关" in wealth_case["answer_text"]
+    assert career_decisions["rule.career.output_authority_resource_chain"]["label"] == "官伤印三方需要合参"
+    assert career_case["selected_question"]["title"] == "事业上官星、伤官和印星谁是主导？"
+    assert "官星规则、伤官表达和印星缓冲" in career_case["answer_text"]
+
+
+def test_v20_practitioner_selection_refreshes_question_ranking_without_rule_mutation() -> None:
+    result = run_runtime_from_pillars(
+        "壬寅",
+        "甲辰",
+        "丙子",
+        "甲午",
+        input_id="v20.practitioner.selection",
+        user_text="我想看事业和财运",
+        practitioner_selections=(
+            {
+                "control_key": "control.shang_guan_jian_guan",
+                "option": "成立",
+                "source_decision_keys": ("decision.ten_god.shang_guan_jian_guan",),
+            },
+        ),
+    )
+
+    assert result["practitioner_session"]["selection_count"] == 1
+    assert result["practitioner_session"]["questions_refreshed"] is True
+    assert result["practitioner_session"]["runtime_mutation"] is False
+    assert result["practitioner_session"]["selection_effects"][0]["effect"] == "question_ranking_refresh"
+    assert result["practitioner_session"]["selection_effects"][0]["runtime_rule_mutation"] is False
+    assert result["selected_question"]["question_key"] == "q_career_structure"
+    assert result["questions"][0]["title"] == "伤官见官已判成立，先看冲突来源还是化解路径？"
+    assert "PRACTITIONER_SELECTIONS_ARE_SESSION_LENS_ONLY" in result["practitioner_session"]["guardrails"]
+    assert "QUESTION_RANKING_REFRESHES_CURRENT_SESSION" in result["practitioner_session"]["guardrails"]
+    assert result["decision_report"]["runtime_mutation"] is False
+
+
+def test_v20_latent_event_answers_refresh_question_ranking_without_rule_mutation() -> None:
+    result = run_runtime_from_pillars(
+        "壬寅",
+        "甲辰",
+        "丙子",
+        "甲午",
+        input_id="v20.latent.event.selection",
+        user_text="我想看事业和财运",
+        latent_event_answers=(
+            {
+                "scenario_id": "latent.wealth_change",
+                "year_option": "25_to_30",
+                "result_option": "resource_pressure",
+                "intensity": "strong",
+                "confidence": "high",
+            },
+        ),
+    )
+
+    assert result["latent_event_session"]["answer_count"] == 1
+    assert result["latent_event_session"]["questions_refreshed"] is True
+    assert result["latent_event_session"]["runtime_mutation"] is False
+    assert result["latent_event_session"]["selection_effects"][0]["effect"] == "personal_factor_question_ranking_refresh"
+    assert result["latent_event_session"]["selection_effects"][0]["runtime_rule_mutation"] is False
+    assert result["selected_question"]["domain"] == "wealth"
+    assert result["questions"][0]["title"] == "财务压力出现时，命局里先看承载力还是外部牵动？"
+    assert "LATENT_EVENTS_ARE_PERSONAL_CALIBRATION_LENS_ONLY" in result["latent_event_session"]["guardrails"]
+    assert result["decision_report"]["runtime_mutation"] is False
 
 
 def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
@@ -204,7 +419,7 @@ def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:
     }
     assert "time" in {row["domain"] for row in result["knowledge_refs"]}
     assert result["llm_assist"]["routed_question_key"] == "q_time_layer_context"
-    assert "时间层触发候选" in result["answer_text"]
+    assert "大运流年正在参与判断" in result["answer_text"]
     assert "庚子=七杀" in result["answer_text"]
     assert "日柱午与流年子冲" in result["answer_text"]
     assert "发财" not in result["answer_text"]
@@ -221,7 +436,7 @@ def test_v20_answers_include_verified_hidden_ten_god_material() -> None:
     )
 
     assert result["selected_question"]["question_key"] == "q_hidden_stem_role"
-    assert "十神显隐要分层读取" in result["answer_text"]
+    assert "明透和藏干要分开看" in result["answer_text"]
     assert "正官" in result["answer_text"]
     assert "七杀" in result["answer_text"]
     assert "feature." not in result["answer_text"]
@@ -242,13 +457,13 @@ def test_v20_p85_applied_domain_answers_use_professional_reading_paths() -> None
     assert "q_income_stability" in {row["question_key"] for row in result["questions"]}
     assert result["selected_question"]["question_key"] == "q_income_stability"
     assert result["selected_question"]["domain"] == "wealth"
-    assert "动态裁决画像" in result["answer_text"]
+    assert "当前命局可见" in result["answer_text"]
     assert "财星" in result["answer_text"]
-    assert "知识依据" in result["answer_text"]
-    assert "财星材料边界" in result["answer_text"]
+    assert "知识依据" not in result["answer_text"]
+    assert "财运判断范围" not in result["answer_text"]
     assert "规则候选" not in result["answer_text"]
     assert "影子复核" not in result["answer_text"]
-    assert "下一步" in result["answer_text"]
+    assert "下一步" not in result["answer_text"]
     assert "收益结果" not in result["answer_text"]
     assert "feature." not in result["answer_text"]
     assert "decision_knowledge_support" in {
@@ -277,12 +492,12 @@ def test_v20_p85_time_answer_preserves_trigger_path_section() -> None:
         luck_pillar="庚戌",
     )
 
-    assert "时间层触发候选" in result["answer_text"]
+    assert "大运流年正在参与判断" in result["answer_text"]
     assert "庚戌=偏财" in result["answer_text"]
     assert "丙午=比肩" in result["answer_text"]
     assert "月柱辰与大运戌冲" in result["answer_text"]
-    assert "时间层触发边界" in result["answer_text"]
-    assert "下一步" in result["answer_text"]
+    assert "大运流年判断范围" not in result["answer_text"]
+    assert "下一步" not in result["answer_text"]
     assert "feature." not in result["answer_text"]
 
 
@@ -352,6 +567,19 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     assert routed["llm_assist"]["context_pack"]["knowledge_ref_count"] >= 1
     assert routed["selected_question"]["question_key"] == "q_useful_god_candidates"
     assert routed["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+    prompt = practitioner_answer_prompt(
+        chart_facts=routed["chart_facts"],
+        time_context=routed["time_context"],
+        selected_question=routed["selected_question"],
+        knowledge_semantic_model=routed["knowledge_semantic_model"],
+        answer_plan=_answer_plan_obj(routed),
+        verified_answer_text=routed["answer_text"],
+        decision_report=routed["decision_report"],
+        dynamic_portrait=routed["dynamic_portrait"],
+    )
+    prompt_decisions = prompt["context"]["rule_decisions"]
+    assert prompt_decisions[0]["knowledge_rules"]
+    assert prompt_decisions[0]["knowledge_rules"][0]["runtime_allowed"] is False
 
 
 def test_v20_corpus_precompute_is_dry_run_only() -> None:

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from v20.knowledge.schema import KnowledgeUnit
+from v20.knowledge.schema import (
+    KnowledgeAnswerGuidance,
+    KnowledgePortraitMapping,
+    KnowledgeQuestionMapping,
+    KnowledgeRuleAtom,
+    KnowledgeUnit,
+)
 
 
 def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
@@ -15,6 +21,45 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             source_refs=("docs/v20.prestart.strength",),
             feature_hooks=("feature.strength",),
             question_hooks=("q_strength_assessment",),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "strength.support_pressure.required",
+                    "strength_evidence_gate",
+                    "requires",
+                    "support_score+pressure_score+source_layers",
+                    "condition",
+                    0.82,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.day_master_capacity",
+                    "日主承载力",
+                    "strength",
+                    "围绕扶助、压力和来源层级判断日主承载状态。",
+                    "warm",
+                    from_rule_atoms=("strength.support_pressure.required",),
+                    question_seeds=("这个八字日主偏强还是偏弱，适合先看什么？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_strength_assessment",
+                    "这个八字日主偏强还是偏弱，适合先看什么？",
+                    "strength",
+                    trigger_rule_atoms=("strength.support_pressure.required",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.strength.boundary",
+                    "strength",
+                    "先解释扶助和压力来源，再说明是否需要命理师裁决。",
+                    allowed_phrases=("扶助", "压力", "承载力", "待复核"),
+                    forbidden_phrases=("一定身强", "一定身弱", "必然发财"),
+                    boundary="Do not hard-judge strong or weak in Phase 1.",
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.branch_relation_boundary",
@@ -26,6 +71,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             source_refs=("docs/v20.prestart.branch",),
             feature_hooks=("feature.branch",),
             question_hooks=("q_branch_relation_detail",),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "branch.visible_relation.layer",
+                    "branch_relation_gate",
+                    "requires",
+                    "relation_type+branches+source_layer",
+                    "condition",
+                    0.75,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.branch_interaction",
+                    "地支互动层",
+                    "branch",
+                    "先说明冲合刑害会牵动哪一层结构，不直接定吉凶。",
+                    "hot",
+                    from_rule_atoms=("branch.visible_relation.layer",),
+                    question_seeds=("地支互动会先影响哪一类事情？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_branch_relation_detail",
+                    "地支互动会先影响哪一类事情？",
+                    "branch",
+                    trigger_rule_atoms=("branch.visible_relation.layer",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.time_layer_boundary",
@@ -38,6 +112,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.time",),
             question_hooks=("q_time_layer_context", "q_time_relation_triggers"),
             retrieval_tags=("time_layer", "flow_year", "luck"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "time.explicit_layer.required",
+                    "time_layer_gate",
+                    "requires",
+                    "supplied_luck_or_flow_pillar+time_to_natal_relation",
+                    "condition",
+                    0.78,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.time_trigger",
+                    "大运流年牵动",
+                    "time",
+                    "只把大运流年作为触发背景，回到原局结构判断牵动位置。",
+                    "hot",
+                    from_rule_atoms=("time.explicit_layer.required",),
+                    question_seeds=("流年大运会先牵动原局哪一块？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_time_relation_triggers",
+                    "流年大运会先牵动原局哪一块？",
+                    "time",
+                    trigger_rule_atoms=("time.explicit_layer.required",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.wealth_material_boundary",
@@ -49,6 +152,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             source_refs=("docs/v20.prestart.wealth",),
             feature_hooks=("feature.wealth",),
             question_hooks=("q_income_stability",),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "wealth.material.source_layer",
+                    "wealth_material_gate",
+                    "requires",
+                    "visible_or_hidden_wealth+capacity+relation_context",
+                    "condition",
+                    0.74,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.wealth_structure",
+                    "财星与收入结构",
+                    "wealth",
+                    "先看财星材料在哪里、能不能承载、有没有通道或限制。",
+                    "hot",
+                    from_rule_atoms=("wealth.material.source_layer",),
+                    question_seeds=("财星能不能用，要先看日主承载还是结构通道？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_income_stability",
+                    "财星能不能用，要先看日主承载还是结构通道？",
+                    "wealth",
+                    trigger_rule_atoms=("wealth.material.source_layer",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.applied.career_projection_boundary",
@@ -61,6 +193,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.ten_god", "feature.pattern", "feature.strength", "feature.branch"),
             question_hooks=("q_career_structure",),
             retrieval_tags=("applied_domain", "career", "projection"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "career.authority_output.pressure",
+                    "career_domain_projection",
+                    "requires_any",
+                    "authority_star|output_star|pattern|branch_interaction",
+                    "domain_projection",
+                    0.72,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.career_structure",
+                    "事业角色与工作结构",
+                    "career",
+                    "用官杀、食伤、印星和格局材料判断事业表达、规则压力和缓冲。",
+                    "warm",
+                    from_rule_atoms=("career.authority_output.pressure",),
+                    question_seeds=("伤官见官是否被印星缓冲？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_career_structure",
+                    "伤官见官是否被印星缓冲？",
+                    "career",
+                    trigger_rule_atoms=("career.authority_output.pressure",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.applied.relationship_projection_boundary",
@@ -73,6 +234,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.ten_god", "feature.branch", "feature.strength"),
             question_hooks=("q_relationship_structure",),
             retrieval_tags=("applied_domain", "relationship", "projection"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "relationship.interaction.structure",
+                    "relationship_domain_projection",
+                    "requires_any",
+                    "branch_interaction|ten_god_relation|capacity_context",
+                    "domain_projection",
+                    0.68,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.relationship_structure",
+                    "关系互动结构",
+                    "relationship",
+                    "用互动、约束、承接和十神关系解释关系主题边界。",
+                    "cool",
+                    from_rule_atoms=("relationship.interaction.structure",),
+                    question_seeds=("关系结构里更明显的是互动、约束还是承接？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_relationship_structure",
+                    "关系结构里更明显的是互动、约束还是承接？",
+                    "relationship",
+                    trigger_rule_atoms=("relationship.interaction.structure",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.applied.health_projection_boundary",
@@ -85,6 +275,36 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.strength", "feature.branch", "feature.pattern"),
             question_hooks=("q_health_balance_boundary",),
             retrieval_tags=("applied_domain", "health", "projection"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "health.balance.boundary",
+                    "health_boundary_gate",
+                    "requires",
+                    "element_balance+stress_boundary+non_medical_language",
+                    "safety_boundary",
+                    0.86,
+                    boundary="Do not diagnose, predict disease, recommend treatment, or replace medical advice.",
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.health_balance_boundary",
+                    "身心平衡边界",
+                    "health",
+                    "只讨论五行平衡和压力边界，不做医疗判断。",
+                    "cool",
+                    from_rule_atoms=("health.balance.boundary",),
+                    question_seeds=("五行偏枯主要提示哪种平衡压力？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_health_balance_boundary",
+                    "五行偏枯主要提示哪种平衡压力？",
+                    "health",
+                    trigger_rule_atoms=("health.balance.boundary",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.useful_god_gate",
@@ -97,6 +317,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.useful_god",),
             question_hooks=("q_useful_god_candidates", "q_useful_god_evidence_gaps"),
             retrieval_tags=("candidate_path", "evidence_gate", "arbitration"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "useful_god.candidate_paths.required",
+                    "useful_god_evidence_gate",
+                    "requires",
+                    "capacity+element_distribution+structural_pressure",
+                    "candidate_gate",
+                    0.8,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.useful_god_candidates",
+                    "用神候选路径",
+                    "useful_god",
+                    "先列候选路径和证据缺口，不把候选直接定为喜忌。",
+                    "warm",
+                    from_rule_atoms=("useful_god.candidate_paths.required",),
+                    question_seeds=("哪些用神路径可以作为候选？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_useful_god_candidates",
+                    "哪些用神路径可以作为候选？",
+                    "useful_god",
+                    trigger_rule_atoms=("useful_god.candidate_paths.required",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.useful_god_candidate_paths",
@@ -109,6 +358,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.useful_god.candidate_paths",),
             question_hooks=("q_useful_god_candidates", "q_useful_god_evidence_gaps"),
             retrieval_tags=("candidate_path", "element_distribution", "strength_capacity"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "useful_god.paths.capacity_element_pressure",
+                    "useful_god_path_gate",
+                    "requires",
+                    "capacity+element_distribution+pressure_path",
+                    "candidate_gate",
+                    0.79,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.useful_god_path_review",
+                    "用神路径复核",
+                    "useful_god",
+                    "把扶助、泄秀、通关、制约等作为候选路径逐条复核。",
+                    "warm",
+                    from_rule_atoms=("useful_god.paths.capacity_element_pressure",),
+                    question_seeds=("用神判断现在还缺哪类证据？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_useful_god_evidence_gaps",
+                    "用神判断现在还缺哪类证据？",
+                    "useful_god",
+                    trigger_rule_atoms=("useful_god.paths.capacity_element_pressure",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.ten_god_boundary",
@@ -121,6 +399,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.ten_god",),
             question_hooks=("q_ten_god_focus", "q_hidden_stem_role", "q_ten_god_metadata"),
             retrieval_tags=("visible", "hidden", "relation_label"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "ten_god.visible_hidden.layer",
+                    "ten_god_layer_gate",
+                    "requires",
+                    "visible_or_hidden+relation_label+source_layer",
+                    "condition",
+                    0.76,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.ten_god_roles",
+                    "十神角色分布",
+                    "ten_god",
+                    "先区分明透和藏干，再判断十神在主题里的结构作用。",
+                    "warm",
+                    from_rule_atoms=("ten_god.visible_hidden.layer",),
+                    question_seeds=("藏干和明透分别承担什么结构作用？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_hidden_stem_role",
+                    "藏干和明透分别承担什么结构作用？",
+                    "ten_god",
+                    trigger_rule_atoms=("ten_god.visible_hidden.layer",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.element_distribution_boundary",
@@ -133,6 +440,35 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.element",),
             question_hooks=("q_element_balance", "q_element_support_pressure"),
             retrieval_tags=("five_element", "balance", "foundation"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "element.distribution.balance",
+                    "element_distribution_gate",
+                    "requires",
+                    "visible_stems+hidden_stem_weights+support_pressure",
+                    "condition",
+                    0.73,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.element_balance",
+                    "五行分布",
+                    "element",
+                    "先看五行集中、偏枯、支持和压力，再进入具体主题。",
+                    "warm",
+                    from_rule_atoms=("element.distribution.balance",),
+                    question_seeds=("五行偏向会让这个盘更需要哪种平衡？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_element_balance",
+                    "五行偏向会让这个盘更需要哪种平衡？",
+                    "element",
+                    trigger_rule_atoms=("element.distribution.balance",),
+                ),
+            ),
         ),
         KnowledgeUnit(
             "v20.core.pattern_review_boundary",
@@ -145,5 +481,413 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             feature_hooks=("feature.pattern",),
             question_hooks=("q_pattern_structure",),
             retrieval_tags=("review_index", "arbitration", "rule_path"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "pattern.review.evidence_path",
+                    "pattern_review_gate",
+                    "requires",
+                    "pattern_evidence+rule_path+arbitration",
+                    "review_gate",
+                    0.77,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.pattern_review",
+                    "格局复核",
+                    "pattern",
+                    "把格局当作复核路径，不提前定格局等级或成败。",
+                    "warm",
+                    from_rule_atoms=("pattern.review.evidence_path",),
+                    question_seeds=("格局和命格需要先复核哪条证据？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_pattern_structure",
+                    "格局和命格需要先复核哪条证据？",
+                    "pattern",
+                    trigger_rule_atoms=("pattern.review.evidence_path",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.core.strength_root_month_command",
+            "Strength root and month-command review",
+            "strength",
+            "Day-master capacity needs root, month-command seasonality, support, and pressure to be reviewed together.",
+            "Use root presence, month-command support, support score, and pressure score before changing the strength lane.",
+            "Do not decide strength from one visible stem or one ten-god label.",
+            source_refs=("docs/v20.knowledge.strength_root_month_command",),
+            feature_hooks=("feature.strength", "feature.element"),
+            question_hooks=("q_strength_assessment",),
+            retrieval_tags=("root", "month_command", "capacity", "strength"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "strength.root_month.capacity_review",
+                    "strength_arbitration_gate",
+                    "requires",
+                    "root_presence+month_command+support_pressure",
+                    "condition",
+                    0.81,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.strength_root_review",
+                    "日主根气与月令复核",
+                    "strength",
+                    "把根气、月令、扶助和压力放在一起复核日主承载力。",
+                    "warm",
+                    from_rule_atoms=("strength.root_month.capacity_review",),
+                    question_seeds=("日主强弱要先看根气、月令还是扶助压力？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_strength_assessment",
+                    "日主强弱要先看根气、月令还是扶助压力？",
+                    "strength",
+                    trigger_rule_atoms=("strength.root_month.capacity_review",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.strength.root_month",
+                    "strength",
+                    "先拆根气和月令，再合并扶助压力，最后给出待裁决状态。",
+                    allowed_phrases=("根气", "月令", "扶助", "压力", "承载"),
+                    forbidden_phrases=("单凭一个字就定身强", "单凭一个字就定身弱"),
+                    boundary="Strength review must combine multiple evidence layers.",
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.core.ten_god_source_priority",
+            "Ten-god source priority",
+            "ten_god",
+            "Visible ten-gods, hidden ten-gods, and repeated roles should be weighed by source layer before applied reading.",
+            "Separate visible stems, hidden stems, repeated roles, and relation to day-master before projecting meaning.",
+            "Do not turn a repeated ten-god into a personality or life-event verdict.",
+            source_refs=("docs/v20.knowledge.ten_god_source_priority",),
+            feature_hooks=("feature.ten_god",),
+            question_hooks=("q_ten_god_focus", "q_hidden_stem_role"),
+            retrieval_tags=("visible_hidden", "source_priority", "ten_god"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "ten_god.source_priority.review",
+                    "ten_god_source_priority_gate",
+                    "requires",
+                    "visible_hidden+repeat_count+day_master_relation",
+                    "condition",
+                    0.78,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.ten_god_source_priority",
+                    "十神来源优先级",
+                    "ten_god",
+                    "明透、藏干和重复十神需要按来源层级分开判断。",
+                    "warm",
+                    from_rule_atoms=("ten_god.source_priority.review",),
+                    question_seeds=("明透、藏干和重复十神，哪一层更该先看？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_hidden_stem_role",
+                    "明透、藏干和重复十神，哪一层更该先看？",
+                    "ten_god",
+                    trigger_rule_atoms=("ten_god.source_priority.review",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.core.wealth_output_channel",
+            "Output-to-wealth channel review",
+            "wealth",
+            "Wealth reading should distinguish visible wealth material from output-to-wealth channels and capacity to receive.",
+            "Use wealth ten-god, food/hurting output, capacity state, and relation context to discuss channel quality.",
+            "Do not convert channel visibility into guaranteed income or investment result.",
+            source_refs=("docs/v20.knowledge.wealth_output_channel",),
+            feature_hooks=("feature.wealth", "feature.ten_god", "feature.strength"),
+            question_hooks=("q_income_factors", "q_income_stability"),
+            retrieval_tags=("wealth", "output_to_wealth", "capacity"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "wealth.output_channel.capacity",
+                    "wealth_channel_gate",
+                    "requires",
+                    "wealth_material+output_star+capacity_state",
+                    "domain_projection",
+                    0.77,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.wealth_output_channel",
+                    "食伤转财通道",
+                    "wealth",
+                    "财运先分财星材料、食伤输出通道和日主承接力。",
+                    "hot",
+                    from_rule_atoms=("wealth.output_channel.capacity",),
+                    question_seeds=("财运机会来自财星本身，还是食伤转财通道？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_income_factors",
+                    "财运机会来自财星本身，还是食伤转财通道？",
+                    "wealth",
+                    trigger_rule_atoms=("wealth.output_channel.capacity",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.applied.career_authority_output_resource",
+            "Career authority-output-resource arbitration",
+            "career",
+            "Career structure should arbitrate authority stars, output stars, resource buffering, and day-master capacity.",
+            "Use official/killing, food/hurting, resource, pattern, and capacity evidence to decide the reading path.",
+            "Do not predict promotion, demotion, job loss, or workplace conflict as fixed events.",
+            source_refs=("docs/v20.knowledge.career_authority_output_resource",),
+            feature_hooks=("feature.ten_god", "feature.pattern", "feature.strength", "feature.branch"),
+            question_hooks=("q_career_structure",),
+            retrieval_tags=("career", "authority", "output", "resource_buffer"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "career.authority_output_resource.arbitration",
+                    "career_arbitration_gate",
+                    "requires_any",
+                    "authority_star+output_star+resource_star+capacity_state",
+                    "domain_projection",
+                    0.76,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.career_authority_output_resource",
+                    "事业官伤印裁决",
+                    "career",
+                    "事业先看官杀规则压力、食伤表达和印星缓冲是否形成主线。",
+                    "warm",
+                    from_rule_atoms=("career.authority_output_resource.arbitration",),
+                    question_seeds=("事业上先看规则压力、表达冲突，还是印星缓冲？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_career_structure",
+                    "事业上先看规则压力、表达冲突，还是印星缓冲？",
+                    "career",
+                    trigger_rule_atoms=("career.authority_output_resource.arbitration",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.applied.relationship_branch_tengod",
+            "Relationship branch and ten-god arbitration",
+            "relationship",
+            "Relationship projection should combine branch interaction, ten-god source layer, and capacity context.",
+            "Use branch relation, visible or hidden ten-god material, and support/pressure context before asking applied questions.",
+            "Do not infer marriage timing, partner facts, breakup, or private relationship events.",
+            source_refs=("docs/v20.knowledge.relationship_branch_tengod",),
+            feature_hooks=("feature.branch", "feature.ten_god", "feature.strength"),
+            question_hooks=("q_relationship_structure",),
+            retrieval_tags=("relationship", "branch_interaction", "ten_god"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "relationship.branch_tengod.arbitration",
+                    "relationship_arbitration_gate",
+                    "requires_any",
+                    "branch_relation+ten_god_source_layer+capacity_context",
+                    "domain_projection",
+                    0.71,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.relationship_branch_tengod",
+                    "关系地支与十神裁决",
+                    "relationship",
+                    "关系主题先看地支互动和十神来源，再判断互动、约束或承接。",
+                    "cool",
+                    from_rule_atoms=("relationship.branch_tengod.arbitration",),
+                    question_seeds=("关系里先看地支互动，还是十神来源？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_relationship_structure",
+                    "关系里先看地支互动，还是十神来源？",
+                    "relationship",
+                    trigger_rule_atoms=("relationship.branch_tengod.arbitration",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.core.element_extreme_boundary",
+            "Five-element extreme boundary",
+            "element",
+            "Element concentration and absence should be treated as balance pressure before applied-domain projection.",
+            "Use prominent, weak, missing, and support-pressure evidence to decide whether balance is a main topic.",
+            "Do not convert element pressure into medical diagnosis or fixed fortune.",
+            source_refs=("docs/v20.knowledge.element_extreme_boundary",),
+            feature_hooks=("feature.element", "feature.strength"),
+            question_hooks=("q_element_balance", "q_element_support_pressure"),
+            retrieval_tags=("five_element", "extreme", "balance_pressure"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "element.extreme.balance_pressure",
+                    "element_extreme_gate",
+                    "requires",
+                    "prominent_or_weak_element+support_pressure",
+                    "condition",
+                    0.75,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.element_extreme_pressure",
+                    "五行偏枯压力",
+                    "element",
+                    "五行偏显或偏弱只作为平衡压力和取用候选的依据。",
+                    "warm",
+                    from_rule_atoms=("element.extreme.balance_pressure",),
+                    question_seeds=("五行偏枯会让这个盘更需要哪种平衡？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_element_support_pressure",
+                    "五行偏枯会让这个盘更需要哪种平衡？",
+                    "element",
+                    trigger_rule_atoms=("element.extreme.balance_pressure",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.applied.wealth_peer_competition",
+            "Wealth peer-competition arbitration",
+            "wealth",
+            "When wealth material and peer stars appear together, wealth reading should review competition, sharing, and capacity before opportunity language.",
+            "Use wealth stars, peer stars, day-master capacity, and channel evidence to decide whether the wealth topic is opportunity, pressure, or shared-resource review.",
+            "Do not infer financial loss, debt, investment outcome, or specific income events from peer-wealth coexistence.",
+            source_refs=("docs/v20.knowledge.wealth_peer_competition",),
+            feature_hooks=("feature.wealth", "feature.ten_god", "feature.strength"),
+            question_hooks=("q_income_factors", "q_income_stability"),
+            retrieval_tags=("wealth", "peer_star", "competition", "capacity"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "wealth.peer_competition.capacity_review",
+                    "wealth_peer_competition_gate",
+                    "requires",
+                    "wealth_star+peer_star+capacity_state",
+                    "domain_projection",
+                    0.74,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.wealth_peer_competition",
+                    "财星与比劫竞争",
+                    "wealth",
+                    "财运主题要同时看财星材料、比劫竞争和日主承载力。",
+                    "warm",
+                    from_rule_atoms=("wealth.peer_competition.capacity_review",),
+                    question_seeds=("财运上先看机会，还是先看比劫竞争和承载力？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_income_stability",
+                    "财运上先看机会，还是先看比劫竞争和承载力？",
+                    "wealth",
+                    trigger_rule_atoms=("wealth.peer_competition.capacity_review",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.applied.career_resource_buffer",
+            "Career resource-buffer review",
+            "career",
+            "Resource stars can buffer output-authority tension, but only after source layer and capacity are checked.",
+            "Use authority star, output star, resource star, and source layer evidence to decide whether career pressure is conflict, learning, rule adaptation, or unresolved candidate.",
+            "Do not promise promotion, exam success, leadership role, or workplace conflict resolution.",
+            source_refs=("docs/v20.knowledge.career_resource_buffer",),
+            feature_hooks=("feature.ten_god", "feature.strength", "feature.pattern"),
+            question_hooks=("q_career_structure",),
+            retrieval_tags=("career", "resource_star", "authority", "output"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "career.resource_buffer.source_layer",
+                    "career_resource_buffer_gate",
+                    "requires_any",
+                    "authority_star+output_star+resource_star+source_layer",
+                    "domain_projection",
+                    0.75,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.career_resource_buffer",
+                    "事业印星缓冲",
+                    "career",
+                    "事业压力如果见印星，要先判断它是缓冲、学习路径还是证据不足。",
+                    "warm",
+                    from_rule_atoms=("career.resource_buffer.source_layer",),
+                    question_seeds=("事业压力中，印星能不能形成缓冲？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_career_structure",
+                    "事业压力中，印星能不能形成缓冲？",
+                    "career",
+                    trigger_rule_atoms=("career.resource_buffer.source_layer",),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.applied.relationship_spouse_star_context",
+            "Relationship spouse-star context boundary",
+            "relationship",
+            "Relationship questions should separate spouse-star material, branch interaction, and capacity context before any applied interpretation.",
+            "Use visible or hidden spouse-star material, branch relation, source layer, and support-pressure context as review material.",
+            "Do not infer marriage timing, partner identity, breakup, affair, or private relationship facts.",
+            source_refs=("docs/v20.knowledge.relationship_spouse_star_context",),
+            feature_hooks=("feature.ten_god", "feature.branch", "feature.strength"),
+            question_hooks=("q_relationship_structure",),
+            retrieval_tags=("relationship", "spouse_star", "branch_interaction", "source_layer"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "relationship.spouse_star.context_review",
+                    "relationship_spouse_star_gate",
+                    "requires_any",
+                    "spouse_star+branch_relation+source_layer+capacity_context",
+                    "domain_projection",
+                    0.72,
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.relationship_spouse_star_context",
+                    "关系星与互动层",
+                    "relationship",
+                    "关系主题先分关系星材料、地支互动和承接边界。",
+                    "cool",
+                    from_rule_atoms=("relationship.spouse_star.context_review",),
+                    question_seeds=("关系主题先看关系星，还是先看地支互动？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_relationship_structure",
+                    "关系主题先看关系星，还是先看地支互动？",
+                    "relationship",
+                    trigger_rule_atoms=("relationship.spouse_star.context_review",),
+                ),
+            ),
         ),
     )

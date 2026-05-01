@@ -20,6 +20,15 @@ def default_knowledge_sources() -> tuple[KnowledgeSource, ...]:
         KnowledgeSource("docs/v20.prestart.element_distribution", "V20 prestart element distribution boundary", "design_doc", "docs/v20/V20_PRESTART_V19_DEEP_REVIEW.md"),
         KnowledgeSource("docs/v20.prestart.pattern", "V20 prestart pattern review boundary", "design_doc", "docs/v20/V20_PRESTART_V19_DEEP_REVIEW.md"),
         KnowledgeSource("docs/v20.useful_god_candidates", "V20 useful-god candidate paths", "implementation_doc", "docs/v20/V20_USEFUL_GOD_CANDIDATES.md"),
+        KnowledgeSource("docs/v20.knowledge.strength_root_month_command", "V20 strength root and month-command review", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.ten_god_source_priority", "V20 ten-god source priority", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.wealth_output_channel", "V20 wealth output channel review", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.career_authority_output_resource", "V20 career authority-output-resource arbitration", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.relationship_branch_tengod", "V20 relationship branch and ten-god arbitration", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.element_extreme_boundary", "V20 five-element extreme boundary", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.wealth_peer_competition", "V20 wealth peer-competition arbitration", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.career_resource_buffer", "V20 career resource-buffer review", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.relationship_spouse_star_context", "V20 relationship spouse-star context boundary", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
     )
 
 

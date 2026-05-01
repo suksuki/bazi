@@ -23,13 +23,17 @@ from v20.llm.validators import validate_llm_output, validate_llm_structured_outp
 from v20.measurement.domain_alignment import ALLOWED_QUESTION_KEYS_BY_DOMAIN, is_allowed_bazi_domain
 
 DOMAIN_ROUTE_PRIORITY = {
-    "useful_god": 0,
-    "strength": 1,
-    "element": 2,
-    "time": 3,
-    "branch": 4,
-    "ten_god": 5,
-    "wealth": 6,
+    "career": 0,
+    "wealth": 1,
+    "relationship": 2,
+    "health": 3,
+    "time": 4,
+    "strength": 5,
+    "useful_god": 6,
+    "ten_god": 7,
+    "branch": 8,
+    "element": 9,
+    "pattern": 10,
 }
 
 
@@ -121,9 +125,13 @@ def suggest_question_candidates(
     *,
     locale: str = "zh",
 ) -> dict[str, object]:
-    domains = set(domain for domain in _domains_from_text(user_text) if is_allowed_bazi_domain(domain))
-    if not domains:
-        domains = {feature.domain for feature in feature_layer.features[:2] if is_allowed_bazi_domain(feature.domain)}
+    domain_tuple = tuple(domain for domain in _domains_from_text(user_text) if is_allowed_bazi_domain(domain))
+    if not domain_tuple:
+        domain_tuple = tuple(feature.domain for feature in feature_layer.features[:2] if is_allowed_bazi_domain(feature.domain))
+    domains = set(domain_tuple)
+    domain_order = {domain: index for index, domain in enumerate(domain_tuple)}
+    if "useful_god" in domain_order:
+        domain_order["useful_god"] = -1
     ranked: list[tuple[int, int, str, LLMQuestionSuggestion]] = []
     for question in questions:
         source_domains = {
@@ -131,12 +139,12 @@ def suggest_question_candidates(
             for feature in feature_layer.features
             if feature.feature_id in question.source_feature_ids
         }
-        if source_domains & domains:
+        if question.domain in domains or source_domains & domains:
             priority = 0 if question.domain in domains else 1
             ranked.append(
                 (
                     priority,
-                    DOMAIN_ROUTE_PRIORITY.get(question.domain, 20),
+                    domain_order.get(question.domain, DOMAIN_ROUTE_PRIORITY.get(question.domain, 20)),
                     question.question_key,
                     LLMQuestionSuggestion(
                         question_key=question.question_key,
@@ -291,7 +299,10 @@ def summarize_feedback(feedback_text: str, *, locale: str = "zh") -> dict[str, o
 def _domains_from_text(text: str) -> tuple[str, ...]:
     lower = text.lower()
     domain_keywords = (
+        ("career", ("事业", "工作", "职业", "职位", "上级", "职场", "career", "job", "work", "커리어", "직업")),
         ("wealth", ("财", "收入", "money", "wealth", "income", "재물", "수입")),
+        ("relationship", ("婚姻", "感情", "关系", "伴侣", "relationship", "marriage", "연애", "결혼")),
+        ("health", ("健康", "身体", "病", "health", "몸", "건강")),
         ("strength", ("身强", "身弱", "强弱", "strength", "capacity", "강약")),
         ("useful_god", ("用神", "喜忌", "useful", "favorable", "용신")),
         ("branch", ("冲", "合", "刑", "害", "地支", "branch", "clash", "합", "충")),
@@ -300,7 +311,12 @@ def _domains_from_text(text: str) -> tuple[str, ...]:
         ("ten_god", ("十神", "正官", "七杀", "食神", "ten god", "십성")),
         ("pattern", ("格局", "pattern", "structure", "격국")),
     )
-    found = [domain for domain, keywords in domain_keywords if any(keyword in lower for keyword in keywords)]
+    found = []
+    for fallback_index, (domain, keywords) in enumerate(domain_keywords):
+        positions = [lower.find(keyword) for keyword in keywords if keyword and lower.find(keyword) >= 0]
+        if positions:
+            found.append((min(positions), fallback_index, domain))
+    found = [domain for _position, _fallback_index, domain in sorted(found)]
     return tuple(dict.fromkeys(found))
 
 

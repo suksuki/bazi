@@ -9,7 +9,12 @@ def build_postgres_schema_contract() -> StorageSchemaContract:
         version="v20.postgres_schema_contract.v1",
         backend="postgres",
         tables=tables,
-        migrations=(_initial_migration(tables), _corpus_index_migration()),
+        migrations=(
+            _initial_migration(tables),
+            _corpus_index_migration(),
+            _feedback_ledger_index_migration(),
+            _decision_registry_index_migration(),
+        ),
     )
 
 
@@ -171,6 +176,29 @@ def _corpus_index_migration() -> MigrationSpec:
             "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_cluster_key ON v20_corpus_snapshots ((payload->>'cluster_key'));",
             "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_wealth ON v20_corpus_snapshots (((payload->>'wealth_feature_present')::boolean));",
             "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_gin ON v20_corpus_snapshots USING gin (payload);",
+        ),
+    )
+
+
+def _feedback_ledger_index_migration() -> MigrationSpec:
+    return MigrationSpec(
+        migration_id="v20_0003_feedback_ledger_indexes",
+        description="Create query indexes for feedback and structured calibration ledgers imported from local append-only records.",
+        sql=(
+            "CREATE INDEX IF NOT EXISTS idx_v20_feedback_ledger_source_hash ON v20_feedback_ledger(source_hash);",
+            "CREATE INDEX IF NOT EXISTS idx_v20_feedback_ledger_payload_gin ON v20_feedback_ledger USING gin (payload);",
+        ),
+    )
+
+
+def _decision_registry_index_migration() -> MigrationSpec:
+    return MigrationSpec(
+        migration_id="v20_0004_decision_registry_indexes",
+        description="Create query indexes for DecisionRegistry review records and approval workflows.",
+        sql=(
+            "CREATE INDEX IF NOT EXISTS idx_v20_decision_registry_subject_id ON v20_decision_registry(subject_id);",
+            "CREATE INDEX IF NOT EXISTS idx_v20_decision_registry_status ON v20_decision_registry(decision_status);",
+            "CREATE INDEX IF NOT EXISTS idx_v20_decision_registry_payload_gin ON v20_decision_registry USING gin (payload);",
         ),
     )
 

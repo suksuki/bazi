@@ -15,9 +15,17 @@ from v20.corpus.enumerator import canonical_case_at, hour_pillar_for, iter_canon
 from v20.corpus.full_precompute import build_full_precompute_manifest, preview_full_precompute_batch, shard_for_index
 from v20.corpus.job_runner import FullPrecomputeJobConfig, read_full_precompute_status, run_full_precompute_job
 from v20.learning.evolution import build_evolution_dry_run_plan
+from v20.learning.decision_registry_review import build_decision_registry_review_report
+from v20.decision.knowledge_bridge import build_knowledge_rule_review_overlay
+from v20.learning.rule_promotion_gate import (
+    build_rule_promotion_gate_report,
+    build_rule_promotion_packet_summary,
+)
+from v20.learning.rule_subcondition_split import build_rule_subcondition_split_report
 from v20.learning.run_plan import build_learning_run_plan
 from v20.validation.rule_synthetic import build_rule_synthetic_training_report, run_rule_synthetic_suite
 from v20.server import app
+from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 from v20.validation.suite import run_synthetic_suite
 
 
@@ -49,6 +57,58 @@ def test_v20_synthetic_suite_and_evolution_plan_are_dry_run_only() -> None:
     assert "learning_to_rank_question_order" in evolution["allowed_algorithm_tracks"]
     assert "neural_conclusion_generation" in evolution["deferred_algorithm_tracks"]
     assert evolution["runtime_mutation"] is False
+
+
+def test_v20_knowledge_rule_validation_marks_synthetic_and_corpus_gaps() -> None:
+    report = build_knowledge_rule_validation_report()
+    useful_god = build_knowledge_rule_validation_report("useful_god")
+
+    assert report["status"] == "ready_for_review"
+    assert report["ok"] is True
+    assert report["definition_count"] >= 12
+    assert report["synthetic_covered_count"] == report["definition_count"]
+    assert report["missing_synthetic_count"] == 0
+    assert report["corpus_signal_count"] >= 1
+    assert report["runtime_allowed_count"] == 0
+    assert "split_by_exact_feature_signature_and_counterexamples" in report["review_actions"]
+    assert useful_god["synthetic_covered_count"] == useful_god["definition_count"]
+    assert all(row["synthetic_state"] == "synthetic_passed" for row in useful_god["definitions"])
+    assert "CORPUS_SUPPORT_IS_PRIOR_NOT_RULE_TRUTH" in report["guardrails"]
+
+
+def test_v20_rule_promotion_gate_batches_shadow_rules_for_review() -> None:
+    gate = build_rule_promotion_gate_report()
+    summary = build_rule_promotion_packet_summary()
+    split = build_rule_subcondition_split_report(per_rule=3)
+    registry = build_decision_registry_review_report(per_rule=3)
+    overlay = build_knowledge_rule_review_overlay()
+
+    assert gate["status"] == "ready"
+    assert gate["packet_count"] >= 12
+    assert gate["runtime_promotion_candidate_count"] == 0
+    assert gate["blocked_count"] == 0
+    assert gate["needs_subcondition_count"] >= 1
+    assert "needs_subcondition_split" in gate["lane_counts"]
+    assert "DECISION_REGISTRY_REQUIRED_FOR_ANY_PROMOTION" in gate["guardrails"]
+    assert summary["packet_count"] == gate["packet_count"]
+    assert all("human_decision_options" in row for row in summary["packets"])
+    assert any("split_rule" in row["human_decision_options"] for row in summary["packets"])
+    assert split["status"] == "ready"
+    assert split["packet_count"] == gate["needs_subcondition_count"]
+    assert split["subcondition_count"] >= split["packet_count"]
+    assert split["quality_status"] == "ready_for_review"
+    assert all(row["runtime_allowed"] is False for row in split["packets"])
+    assert registry["status"] == "ready"
+    assert registry["decision_record_count"] >= split["subcondition_count"]
+    assert registry["runtime_activation_count"] == 0
+    assert registry["batch_review_candidate_count"] >= 1
+    assert "DECISION_REGISTRY_REVIEW_IS_OFFLINE_SIGNAL" in registry["guardrails"]
+    assert overlay["status"] == "ready"
+    assert overlay["validation_status"] == "ready_for_review"
+    assert overlay["runtime_promotion_candidate_count"] == 0
+    assert "RUNTIME_USES_LIGHTWEIGHT_BRIDGE" in overlay["guardrails"]
+    decision_ids = [row["decision_id"] for row in registry["records"]]
+    assert len(decision_ids) == len(set(decision_ids))
 
 
 def test_v20_learning_run_plan_maps_518k_to_structural_artifacts() -> None:
@@ -109,6 +169,10 @@ def test_v20_full_precompute_job_writes_resumable_progress(tmp_path) -> None:
     assert result["status"] == "completed"
     assert result["completed_from_start"] == 3
     assert status["next_index"] == 3
+    assert status["processed"] == 3
+    assert status["total"] == 3
+    assert status["progress_percent"] == 100.0
+    assert status["speed_per_second"] >= 0
     assert latest["run_id"] == "test_518k_job"
     assert snapshot_path.exists()
     assert len(snapshot_path.read_text(encoding="utf-8").splitlines()) == 3
@@ -121,6 +185,7 @@ def test_v20_corpus_artifacts_build_coverage_index_and_similarity(tmp_path) -> N
     run_full_precompute_job(config, runtime_dir=tmp_path)
     status = build_corpus_artifacts("test_artifacts", runtime_dir=tmp_path, status_every=2)
     artifact_status = read_corpus_artifact_status("test_artifacts", runtime_dir=tmp_path)
+    latest_artifact_status = read_corpus_artifact_status(runtime_dir=tmp_path)
     summary = read_corpus_coverage_summary("test_artifacts", runtime_dir=tmp_path)
     clusters = read_corpus_cluster_model("test_artifacts", runtime_dir=tmp_path)
     training = read_corpus_training_artifacts("test_artifacts", runtime_dir=tmp_path)
@@ -130,6 +195,8 @@ def test_v20_corpus_artifacts_build_coverage_index_and_similarity(tmp_path) -> N
     assert status["processed"] == 6
     assert artifact_status["status"] == "completed"
     assert artifact_status["runtime_mutation"] is False
+    assert latest_artifact_status["run_id"] == "test_artifacts"
+    assert latest_artifact_status["status"] == "completed"
     assert summary["case_count"] == 6
     assert summary["distributions"]["feature_domains"]["strength"] == 6
     assert summary["cluster_count"] >= 1
@@ -145,6 +212,26 @@ def test_v20_corpus_artifacts_build_coverage_index_and_similarity(tmp_path) -> N
     assert "NO_DESTINY_OUTCOME_INFERENCE" in similar["guardrails"]
 
 
+def test_v20_corpus_artifacts_can_skip_disposable_sqlite_cache(tmp_path) -> None:
+    config = FullPrecomputeJobConfig(run_id="test_artifacts_no_sqlite", start=0, limit=3, status_every=1)
+    run_full_precompute_job(config, runtime_dir=tmp_path)
+    status = build_corpus_artifacts(
+        "test_artifacts_no_sqlite",
+        runtime_dir=tmp_path,
+        status_every=1,
+        build_sqlite_cache=False,
+    )
+    artifact_status = read_corpus_artifact_status("test_artifacts_no_sqlite", runtime_dir=tmp_path)
+    sqlite_path = tmp_path / "corpus" / "full_precompute" / "test_artifacts_no_sqlite" / "artifacts" / "corpus_index.sqlite"
+
+    assert status["status"] == "completed"
+    assert status["local_sqlite_cache"]["enabled"] is False
+    assert status["local_sqlite_cache"]["authority"] == "postgres_or_versioned_jsonl_artifacts"
+    assert "sqlite_cache" not in status["artifact_outputs"]
+    assert not sqlite_path.exists()
+    assert artifact_status["local_sqlite_cache"]["enabled"] is False
+
+
 def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     client = TestClient(app)
     corpus = client.get("/api/v20/corpus/coverage").json()
@@ -157,6 +244,12 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     artifact_training = client.get("/api/v20/corpus/artifacts/training").json()
     suite = client.get("/api/v20/validation/synthetic-suite").json()
     rule_suite = client.get("/api/v20/validation/rule-synthetic-suite").json()
+    knowledge_rule_validation = client.get("/api/v20/validation/knowledge-rule-library").json()
+    knowledge_rule_overlay = client.get("/api/v20/knowledge/rule-review-overlay").json()
+    promotion_gate = client.get("/api/v20/learning/rule-promotion-gate").json()
+    promotion_packets = client.get("/api/v20/learning/rule-promotion-packets").json()
+    subcondition_split = client.get("/api/v20/learning/rule-subcondition-split?per_rule=3").json()
+    decision_registry_review = client.get("/api/v20/learning/decision-registry-review?per_rule=3").json()
     rule_training = client.get("/api/v20/learning/rule-synthetic-training").json()
     evolution = client.get("/api/v20/learning/evolution-plan").json()
     run_plan = client.get("/api/v20/learning/run-plan").json()
@@ -176,6 +269,21 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert suite["runtime_mutation"] is False
     assert rule_suite["ok"] is True
     assert rule_suite["runtime_mutation"] is False
+    assert knowledge_rule_validation["runtime_mutation"] is False
+    assert knowledge_rule_validation["status"] == "ready_for_review"
+    assert knowledge_rule_validation["missing_synthetic_count"] == 0
+    assert knowledge_rule_overlay["runtime_mutation"] is False
+    assert knowledge_rule_overlay["status"] == "ready"
+    assert promotion_gate["runtime_mutation"] is False
+    assert promotion_gate["status"] == "ready"
+    assert promotion_gate["runtime_promotion_candidate_count"] == 0
+    assert promotion_packets["runtime_mutation"] is False
+    assert promotion_packets["packet_count"] == promotion_gate["packet_count"]
+    assert subcondition_split["runtime_mutation"] is False
+    assert subcondition_split["packet_count"] == promotion_gate["needs_subcondition_count"]
+    assert decision_registry_review["runtime_mutation"] is False
+    assert decision_registry_review["decision_record_count"] >= subcondition_split["subcondition_count"]
+    assert decision_registry_review["runtime_activation_count"] == 0
     assert rule_training["status"] == "ready"
     assert rule_training["runtime_mutation"] is False
     assert evolution["status"] == "ready_for_dry_run"

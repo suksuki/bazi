@@ -34,7 +34,11 @@ def build_llm_routing_assist(
     intent = interpret_user_intent(text, feature_layer, locale=locale)
     suggestions = suggest_question_candidates(text, feature_layer, questions, locale=locale)
     proposals = propose_feature_candidates(text, feature_layer, locale=locale)
-    routed_question_key = _first_supported_question_key(suggestions, questions)
+    routed_question_key = (
+        _single_intent_question_key(intent)
+        or _first_supported_question_key(suggestions, questions)
+        or _first_supported_intent_question_key(intent, questions)
+    )
     return {
         "version": "v20.llm_assist.v1",
         "status": "ready",
@@ -66,3 +70,22 @@ def _first_supported_question_key(suggestions: dict[str, object], questions: tup
         if isinstance(row, dict) and row.get("question_key") in supported:
             return str(row["question_key"])
     return ""
+
+
+def _first_supported_intent_question_key(intent: dict[str, object], questions: tuple[QuestionCandidate, ...]) -> str:
+    supported = {question.question_key for question in questions}
+    result = intent.get("result", {})
+    if not isinstance(result, dict):
+        return ""
+    for key in result.get("candidate_question_keys", ()):
+        if str(key) in supported:
+            return str(key)
+    return ""
+
+
+def _single_intent_question_key(intent: dict[str, object]) -> str:
+    result = intent.get("result", {})
+    if not isinstance(result, dict):
+        return ""
+    keys = tuple(str(key) for key in result.get("candidate_question_keys", ()) if str(key))
+    return keys[0] if len(keys) == 1 else ""

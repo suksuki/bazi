@@ -11,7 +11,6 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from v20.corpus.artifacts import (  # noqa: E402
-    DEFAULT_ARTIFACT_RUN_ID,
     build_corpus_artifacts,
     find_similar_cases,
     read_corpus_artifact_status,
@@ -22,13 +21,15 @@ from v20.corpus.artifacts import (  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build V20 corpus coverage, index, and training artifacts.")
-    parser.add_argument("--run-id", default=DEFAULT_ARTIFACT_RUN_ID)
+    parser = argparse.ArgumentParser(description="Build V20 corpus coverage, indexes, and training artifacts.")
+    parser.add_argument("--run-id", default="", help="Defaults to the latest full precompute run when reading; required for building if you do not want the historical main id.")
+    parser.add_argument("--progress", action="store_true", help="Print progress lines to stderr while building.")
+    parser.add_argument("--no-sqlite", action="store_true", help="Skip the disposable local SQLite similarity cache.")
     parser.add_argument("--status", action="store_true", help="Read artifact build status.")
     parser.add_argument("--summary", action="store_true", help="Read coverage summary.")
     parser.add_argument("--clusters", action="store_true", help="Read the deterministic cluster model.")
     parser.add_argument("--training", action="store_true", help="Read portrait/rule training artifacts.")
-    parser.add_argument("--similar-case-id", default="", help="Find structurally similar cases from the SQLite index.")
+    parser.add_argument("--similar-case-id", default="", help="Find structurally similar cases from Postgres, falling back to local SQLite cache.")
     parser.add_argument("--limit", type=int, default=8, help="Similarity result limit.")
     args = parser.parse_args()
 
@@ -43,7 +44,14 @@ def main() -> int:
     elif args.similar_case_id:
         payload = find_similar_cases(args.similar_case_id, run_id=args.run_id, limit=args.limit)
     else:
-        payload = build_corpus_artifacts(args.run_id)
+        progress = (
+            lambda message: print(f"[v20-corpus-artifacts] {message}", file=sys.stderr, flush=True)
+        ) if args.progress else None
+        payload = build_corpus_artifacts(
+            args.run_id or "v20_full_518k_20260501_main",
+            progress=progress,
+            build_sqlite_cache=not args.no_sqlite,
+        )
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

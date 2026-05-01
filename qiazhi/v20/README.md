@@ -20,6 +20,7 @@ ChartInput
 -> Reviewed knowledge evidence support
 -> Synthetic rule collision validation/training gate
 -> Rule/portrait/question batch generation and validation
+-> Dynamic decision training batch for current-chart portrait/question quality
 -> Bazi-domain alignment gate for rules, portraits, and questions
 -> EvidencePack
 -> AnswerPlan
@@ -49,6 +50,7 @@ Initial boundaries:
 - Old feature-discovery and shadow-rule-candidate experiments are offline/lab-only. They must not drive the user measurement page, dynamic portrait, recommended questions, or LLM practitioner context.
 - Rule and decision learning are synthetic-case and practitioner-calibration driven. The 518K corpus supplies coverage, similarity, and offline priors, not runtime portrait truth.
 - Rule and portrait batches can be generated and validated by script before any promotion discussion.
+- Dynamic decision training batches validate whether a current chart can produce usable rule decisions, dynamic portrait tags, human-facing recommended questions, and practitioner controls before any parameter promotion.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
 - LLM can act as a practitioner-style answer composer only after RuleDecision, DynamicPortrait, KnowledgeSemanticModel, and AnswerPlan have prepared verified context.
 - Rule and question ranking proposals are trained offline by scripts/admin review, then promoted only through synthetic validation and a decision registry record.
@@ -79,7 +81,7 @@ Primary V20 modules:
 Storage boundary:
 
 - Postgres is the authoritative store for V20 corpus snapshots, registries, feedback, decisions, rule proposals, and LLM artifacts.
-- SQLite is allowed only as a disposable local cache/index for offline similarity probes and fast rebuilds. It is not synced between macOS and Linux, and it must be rebuildable from `v20_corpus_snapshots` or versioned corpus artifacts.
+- SQLite is optional and only allowed as a disposable local cache/index for offline similarity probes and fast rebuilds. Postgres remains the authority; the local SQLite cache is not synced between macOS and Linux, can be skipped with `--no-sqlite`, and must be rebuildable from `v20_corpus_snapshots` or versioned corpus artifacts.
 - The 518K structural corpus can be imported into `v20_corpus_snapshots`; query indexes cover case lookup, day-master filters, cluster search, wealth filters, and JSONB containment over feature/portrait tags.
 - V19 user profile data migrates into `v20_user_profiles`; location metadata is preserved as user context and does not alter chart facts unless a future deterministic calendar layer explicitly supports it.
 
@@ -90,10 +92,20 @@ UI boundary:
 - `/v20/ui/admin.html` is intentionally limited to DB and LLM status so operations stay readable.
 - Training, corpus precompute, rule extraction, portrait batch validation, and decision-parameter learning are script/admin surfaces only. They are not shown in the user measurement workspace.
 - `v20/scripts/run_decision_training_plan.py` lists the current offline training targets and the scripts that manage them.
+- `v20/scripts/run_dynamic_decision_training.py --progress` is the current background check for dynamic rule decisions, portraits, recommended questions, and decision-parameter training proposals.
+- `v20/scripts/run_practitioner_calibration_training.py --progress` aggregates structured practitioner choices into offline decision-parameter proposals without mutating runtime rules.
+- `v20/scripts/import_calibration_postgres.py --ledger practitioner_calibration_ledger` dry-runs local calibration ledger import; add `--apply` only after `V20_DATABASE_URL` is configured and backups are ready.
+- `v20/scripts/run_training_iteration.py --write --progress` runs the current script-only iteration loop and writes local artifacts.
+- `v20/scripts/run_knowledge_rule_library.py --summary` shows the current knowledge-authored shadow rule definitions, portrait outputs, question outputs, and validation state.
+- `v20/scripts/run_knowledge_rule_validation.py --summary` checks those shadow rules against synthetic coverage and 518K corpus priors, then lists the next review action per rule.
+- `v20/scripts/run_rule_promotion_gate.py --summary` turns shadow-rule validation into review packets so humans review packets, not raw rules.
+- Heavy corpus work stays manual: `v20/scripts/run_full_precompute.py --progress --limit N --status-every M`.
+- After corpus precompute, `v20/scripts/build_corpus_artifacts.py --run-id RUN --progress --no-sqlite` builds coverage/training artifacts without creating the disposable SQLite cache; omit `--no-sqlite` only when you want a local fallback similarity index before Postgres import.
 
 See also:
 
 - `docs/V20_DYNAMIC_DECISION_SPINE.md`
+- `docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md`
 
 Default local validation:
 

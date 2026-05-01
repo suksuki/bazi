@@ -141,6 +141,28 @@
               <div id="portraitAxes" class="axis-list"></div>
             </details>
 
+            <article id="practitionerCalibration" class="panel calibration-panel-card" hidden>
+              <div class="calibration-head">
+                <div>
+                  <p class="section-kicker">Practitioner</p>
+                  <h2>命理师校准</h2>
+                </div>
+                <span id="calibrationStatus" class="small-pill">signal only</span>
+              </div>
+              <div id="calibrationControls" class="calibration-controls"></div>
+            </article>
+
+            <article id="latentCalibration" class="panel latent-calibration-card" hidden>
+              <div class="calibration-head">
+                <div>
+                  <p class="section-kicker">Latent Factors</p>
+                  <h2>命主校准</h2>
+                </div>
+                <span id="latentCalibrationStatus" class="small-pill">choice only</span>
+              </div>
+              <div id="latentCalibrationControls" class="latent-calibration-controls"></div>
+            </article>
+
             <article class="panel questions-panel-card">
               <div class="section-head">
                 <div>
@@ -189,6 +211,6 @@
         </section>
       </main>
     </div>
-    <script src="/v20/ui/app.js?v=20260501-llm-chat" defer></script>
+    <script src="/v20/ui/app.js?v=20260501-latent-calibration" defer></script>
   </body>
 </html>

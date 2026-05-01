@@ -35,8 +35,19 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["knowledge_rule_proposal_status"] == "ready"
     assert report["knowledge_rule_proposal_count"] >= 1
     assert report["knowledge_rule_proposal_preflight_status"] == "ready_for_shadow_training"
+    assert report["knowledge_rule_library_status"] == "ready"
+    assert report["knowledge_rule_library_definition_count"] >= 12
+    assert report["knowledge_rule_library_full_definition_count"] >= report["knowledge_rule_library_definition_count"]
+    assert report["knowledge_rule_library_runtime_allowed_count"] == 0
+    assert report["knowledge_rule_validation_status"] == "ready_for_review"
+    assert report["knowledge_rule_validation_synthetic_covered_count"] >= report["knowledge_rule_library_definition_count"]
+    assert report["knowledge_rule_validation_full_synthetic_covered_count"] >= report["knowledge_rule_library_full_definition_count"]
+    assert report["knowledge_rule_validation_missing_synthetic_count"] == 0
+    assert report["knowledge_rule_validation_full_missing_synthetic_count"] == 0
     assert report["full_precompute_status"] == "ready_for_dry_run"
     assert report["full_precompute_estimated_minutes"] > 0
+    assert report["full_precompute_runtime_role"] == "offline_structure_coverage_baseline"
+    assert report["full_precompute_runtime_decision_authority"] == "none"
     assert report["corpus_artifact_status"] in {"not_built", "running", "completed"}
     assert report["corpus_cluster_count"] >= 0
     assert report["access_role_count"] == 4
@@ -44,6 +55,18 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["learning_status"] == "ready_for_dry_run"
     assert report["learning_run_plan_status"] == "ready_for_dry_run"
     assert report["learning_target_case_count"] == 518_400
+    assert report["rule_promotion_gate_status"] == "ready"
+    assert report["rule_promotion_packet_count"] >= 12
+    assert report["rule_promotion_runtime_candidate_count"] == 0
+    assert report["rule_promotion_blocked_count"] == 0
+    assert report["rule_promotion_needs_subcondition_count"] >= 1
+    assert report["rule_subcondition_split_status"] == "ready"
+    assert report["rule_subcondition_split_packet_count"] == report["rule_promotion_needs_subcondition_count"]
+    assert report["rule_subcondition_split_subcondition_count"] >= report["rule_subcondition_split_packet_count"]
+    assert report["decision_registry_review_status"] == "ready"
+    assert report["decision_registry_review_record_count"] >= report["rule_subcondition_split_subcondition_count"]
+    assert report["decision_registry_review_batch_count"] >= 1
+    assert report["decision_registry_review_runtime_activation_count"] == 0
     assert set(report["policy_surfaces"]) >= {
         "question_ranking",
         "knowledge_retrieval",

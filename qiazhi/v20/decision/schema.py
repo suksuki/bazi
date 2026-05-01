@@ -52,6 +52,9 @@ class RuleDecision:
     role: str
     score: float
     support: tuple[str, ...]
+    dimension_key: str = ""
+    dimension_layer: str = ""
+    dimension_label: str = ""
     weakening: tuple[str, ...] = ()
     feature_ids: tuple[str, ...] = ()
     portrait_tags: tuple[str, ...] = ()
@@ -79,6 +82,9 @@ class DynamicPortraitTag:
     tag_key: str
     label: str
     domain: str
+    dimension_key: str
+    dimension_layer: str
+    dimension_label: str
     summary: str
     score: float
     source_decision_keys: tuple[str, ...]
@@ -118,12 +124,36 @@ class DynamicPortrait:
 
 
 @dataclass(frozen=True)
+class MainlineDecision:
+    mainline_key: str
+    title: str
+    domain: str
+    status: str
+    score: float
+    priority: int
+    summary: str
+    source_decision_keys: tuple[str, ...]
+    support: tuple[str, ...]
+    question_seed: str
+    role: str = "primary_bazi_mainline"
+    guardrails: tuple[str, ...] = (
+        "MAINLINE_IS_AGGREGATED_FROM_RULE_DECISIONS",
+        "NO_NEW_FACTS_FROM_MAINLINE",
+        "MAINLINE_DRIVES_PORTRAIT_QUESTIONS_AND_ANSWER_ORDER",
+    )
+
+    def to_dict(self) -> dict[str, Any]:
+        return asdict(self)
+
+
+@dataclass(frozen=True)
 class DecisionReport:
     version: str
     status: str
     hits: tuple[RuleHit, ...]
     decisions: tuple[RuleDecision, ...]
     dynamic_portrait: DynamicPortrait
+    mainlines: tuple[MainlineDecision, ...] = field(default_factory=tuple)
     practitioner_controls: tuple[PractitionerControl, ...] = field(default_factory=tuple)
     training_boundary: str = (
         "Knowledge, portrait, rule, and decision parameters are trained offline by scripts/admin review; "
@@ -132,6 +162,7 @@ class DecisionReport:
     runtime_mutation: bool = False
     guardrails: tuple[str, ...] = (
         "RULE_HITS_FEED_DECISIONS",
+        "DECISIONS_FEED_MAINLINES",
         "DECISIONS_FEED_DYNAMIC_PORTRAIT",
         "DYNAMIC_PORTRAIT_FEEDS_QUESTIONS_AND_LLM_CONTEXT",
         "518K_CORPUS_NEVER_OVERRIDES_RUNTIME_DECISION",
@@ -143,8 +174,10 @@ class DecisionReport:
             "status": self.status,
             "hit_count": len(self.hits),
             "decision_count": len(self.decisions),
+            "mainline_count": len(self.mainlines),
             "hits": [row.to_dict() for row in self.hits],
             "decisions": [row.to_dict() for row in self.decisions],
+            "mainlines": [row.to_dict() for row in self.mainlines],
             "dynamic_portrait": self.dynamic_portrait.to_dict(),
             "practitioner_controls": [row.to_dict() for row in self.practitioner_controls],
             "training_boundary": self.training_boundary,

@@ -100,16 +100,16 @@ QUESTION_READING_OVERRIDES = {
 }
 
 KNOWLEDGE_LABELS_ZH = {
-    "v20.core.strength_boundary": "日主强弱证据边界",
-    "v20.core.branch_relation_boundary": "地支关系分层边界",
-    "v20.core.time_layer_boundary": "时间层触发边界",
-    "v20.core.wealth_material_boundary": "财星材料边界",
-    "v20.applied.career_projection_boundary": "事业投影边界",
-    "v20.applied.relationship_projection_boundary": "关系投影边界",
-    "v20.applied.health_projection_boundary": "健康边界投影",
-    "v20.core.useful_god_gate": "用神证据门槛",
-    "v20.core.useful_god_candidate_paths": "用神候选路径",
-    "v20.core.ten_god_boundary": "十神解释边界",
+    "v20.core.strength_boundary": "日主强弱判断范围",
+    "v20.core.branch_relation_boundary": "地支关系判断范围",
+    "v20.core.time_layer_boundary": "大运流年判断范围",
+    "v20.core.wealth_material_boundary": "财运判断范围",
+    "v20.applied.career_projection_boundary": "事业判断范围",
+    "v20.applied.relationship_projection_boundary": "关系判断范围",
+    "v20.applied.health_projection_boundary": "健康相关判断范围",
+    "v20.core.useful_god_gate": "用神依据要求",
+    "v20.core.useful_god_candidate_paths": "用神方向参考",
+    "v20.core.ten_god_boundary": "十神解释范围",
     "v20.core.element_distribution_boundary": "五行分布边界",
     "v20.core.pattern_review_boundary": "格局审查边界",
 }

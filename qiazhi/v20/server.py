@@ -17,7 +17,14 @@ from v20.access.auth import (
 )
 from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
-from v20.api.schemas import FeedbackRequest, MeasureRequest, PolicyReviewRequest, PortraitCalibrationRequest
+from v20.api.schemas import (
+    FeedbackRequest,
+    LatentEventCalibrationRequest,
+    MeasureRequest,
+    PolicyReviewRequest,
+    PortraitCalibrationRequest,
+    PractitionerCalibrationRequest,
+)
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.artifacts import (
     find_similar_cases,
@@ -37,8 +44,19 @@ from v20.intelligence.knowledge_semantic_model import (
 )
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.interaction.feedback_record import record_feedback_analysis
+from v20.interaction.latent_event_calibration import (
+    LatentCalibrationAnswer,
+    analyze_latent_event_calibration,
+    latent_event_calibration_manifest,
+    record_latent_event_calibration,
+)
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
 from v20.interaction.portrait_ontology import portrait_ontology_manifest
+from v20.interaction.practitioner_calibration import (
+    PractitionerControlSelection,
+    analyze_practitioner_calibration,
+    record_practitioner_calibration,
+)
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.approval import build_first_wave_approval_preflight, build_knowledge_approval_preflight
@@ -62,12 +80,28 @@ from v20.knowledge.rule_extraction import (
     validate_llm_rule_extraction_report,
     validate_rule_extraction_report,
 )
+from v20.knowledge.rule_library import build_knowledge_rule_library, validate_knowledge_rule_library
+from v20.decision.knowledge_bridge import build_knowledge_rule_review_overlay
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
+from v20.learning.decision_registry_review import (
+    build_decision_registry_review_report,
+    read_decision_registry_review_artifact,
+)
+from v20.learning.latent_factor_calibration import latent_factor_calibration_manifest
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
 from v20.learning.registries import registry_manifest
+from v20.learning.rule_promotion_gate import (
+    build_rule_promotion_gate_report,
+    build_rule_promotion_packet_summary,
+)
+from v20.learning.rule_subcondition_split import (
+    build_rule_subcondition_split_report,
+    read_rule_subcondition_split_artifact,
+)
 from v20.measurement.domain_alignment import bazi_alignment_manifest
+from v20.measurement.dimensions import bazi_dimension_manifest
 from v20.ops.admin_status import database_admin_status, llm_admin_status
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
@@ -83,6 +117,7 @@ from v20.storage.local_jsonl import local_jsonl_store_from_env
 from v20.testing.matrix import build_test_coverage_matrix
 from v20.testing.tiers import test_tier_manifest
 from v20.validation.intelligence_generation import validate_intelligence_generation
+from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 from v20.validation.rule_synthetic import (
     build_rule_synthetic_training_report,
     read_rule_synthetic_training_artifact,
@@ -282,6 +317,10 @@ def create_app() -> FastAPI:
     def measurement_bazi_domain_alignment() -> dict[str, object]:
         return bazi_alignment_manifest()
 
+    @app.get("/api/v20/measurement/dimensions")
+    def measurement_dimensions() -> dict[str, object]:
+        return bazi_dimension_manifest()
+
     @app.get("/api/v20/knowledge/retrieval-policy")
     def knowledge_retrieval_policy() -> dict[str, object]:
         return knowledge_retrieval_manifest()
@@ -386,9 +425,37 @@ def create_app() -> FastAPI:
     def knowledge_llm_rule_extraction_validation_domain(domain: str) -> dict[str, object]:
         return validate_llm_rule_extraction_report(domain)
 
+    @app.get("/api/v20/knowledge/rule-library")
+    def knowledge_rule_library(limit: int = 64) -> dict[str, object]:
+        return build_knowledge_rule_library(limit=limit)
+
+    @app.get("/api/v20/knowledge/rule-library/{domain}")
+    def knowledge_rule_library_domain(domain: str, limit: int = 64) -> dict[str, object]:
+        return build_knowledge_rule_library(domain, limit=limit)
+
+    @app.get("/api/v20/knowledge/rule-library-validation")
+    def knowledge_rule_library_validation(limit: int = 64) -> dict[str, object]:
+        return validate_knowledge_rule_library(limit=limit)
+
+    @app.get("/api/v20/knowledge/rule-library-validation/{domain}")
+    def knowledge_rule_library_validation_domain(domain: str, limit: int = 64) -> dict[str, object]:
+        return validate_knowledge_rule_library(domain, limit=limit)
+
+    @app.get("/api/v20/knowledge/rule-review-overlay")
+    def knowledge_rule_review_overlay() -> dict[str, object]:
+        return build_knowledge_rule_review_overlay()
+
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:
         return confidence_calibration_manifest()
+
+    @app.get("/api/v20/learning/latent-factor-calibration")
+    def learning_latent_factor_calibration() -> dict[str, object]:
+        return latent_factor_calibration_manifest()
+
+    @app.get("/api/v20/learning/latent-event-calibration")
+    def learning_latent_event_calibration() -> dict[str, object]:
+        return latent_event_calibration_manifest()
 
     @app.get("/api/v20/portrait/ontology")
     def portrait_ontology() -> dict[str, object]:
@@ -422,23 +489,23 @@ def create_app() -> FastAPI:
 
     @app.get("/api/v20/corpus/artifacts/status")
     def corpus_artifact_status(run_id: str = "") -> dict[str, object]:
-        return read_corpus_artifact_status(run_id or "v20_full_518k_20260501_main")
+        return read_corpus_artifact_status(run_id)
 
     @app.get("/api/v20/corpus/artifacts/coverage-summary")
     def corpus_artifact_coverage_summary(run_id: str = "") -> dict[str, object]:
-        return read_corpus_coverage_summary(run_id or "v20_full_518k_20260501_main")
+        return read_corpus_coverage_summary(run_id)
 
     @app.get("/api/v20/corpus/artifacts/cluster-model")
     def corpus_artifact_cluster_model(run_id: str = "") -> dict[str, object]:
-        return read_corpus_cluster_model(run_id or "v20_full_518k_20260501_main")
+        return read_corpus_cluster_model(run_id)
 
     @app.get("/api/v20/corpus/artifacts/training")
     def corpus_artifact_training(run_id: str = "") -> dict[str, object]:
-        return read_corpus_training_artifacts(run_id or "v20_full_518k_20260501_main")
+        return read_corpus_training_artifacts(run_id)
 
     @app.get("/api/v20/corpus/similar")
     def corpus_similar(case_id: str, run_id: str = "", limit: int = 8) -> dict[str, object]:
-        return find_similar_cases(case_id, run_id=run_id or "v20_full_518k_20260501_main", limit=limit)
+        return find_similar_cases(case_id, run_id=run_id, limit=limit)
 
     @app.get("/api/v20/validation/synthetic-suite")
     def synthetic_suite() -> dict[str, object]:
@@ -451,6 +518,14 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/validation/rule-portrait-batch")
     def rule_portrait_batch() -> dict[str, object]:
         return run_rule_portrait_batch()
+
+    @app.get("/api/v20/validation/knowledge-rule-library")
+    def knowledge_rule_library_validation_report(limit: int = 64) -> dict[str, object]:
+        return build_knowledge_rule_validation_report(limit=limit)
+
+    @app.get("/api/v20/validation/knowledge-rule-library/{domain}")
+    def knowledge_rule_library_validation_report_domain(domain: str, limit: int = 64) -> dict[str, object]:
+        return build_knowledge_rule_validation_report(domain, limit=limit)
 
     @app.get("/api/v20/learning/evolution-plan")
     def evolution_plan() -> dict[str, object]:
@@ -479,6 +554,42 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/learning/policy-review")
     def learning_policy_review_manifest() -> dict[str, object]:
         return policy_review_manifest()
+
+    @app.get("/api/v20/learning/rule-promotion-gate")
+    def learning_rule_promotion_gate(limit: int = 64) -> dict[str, object]:
+        return build_rule_promotion_gate_report(limit=limit)
+
+    @app.get("/api/v20/learning/rule-promotion-gate/{domain}")
+    def learning_rule_promotion_gate_domain(domain: str, limit: int = 64) -> dict[str, object]:
+        return build_rule_promotion_gate_report(domain, limit=limit)
+
+    @app.get("/api/v20/learning/rule-promotion-packets")
+    def learning_rule_promotion_packets(limit: int = 64) -> dict[str, object]:
+        return build_rule_promotion_packet_summary(limit=limit)
+
+    @app.get("/api/v20/learning/rule-promotion-packets/{domain}")
+    def learning_rule_promotion_packets_domain(domain: str, limit: int = 64) -> dict[str, object]:
+        return build_rule_promotion_packet_summary(domain, limit=limit)
+
+    @app.get("/api/v20/learning/rule-subcondition-split")
+    def learning_rule_subcondition_split(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
+        if status:
+            return read_rule_subcondition_split_artifact()
+        return build_rule_subcondition_split_report(limit=limit, per_rule=per_rule)
+
+    @app.get("/api/v20/learning/rule-subcondition-split/{domain}")
+    def learning_rule_subcondition_split_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
+        return build_rule_subcondition_split_report(domain, limit=limit, per_rule=per_rule)
+
+    @app.get("/api/v20/learning/decision-registry-review")
+    def learning_decision_registry_review(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
+        if status:
+            return read_decision_registry_review_artifact()
+        return build_decision_registry_review_report(limit=limit, per_rule=per_rule)
+
+    @app.get("/api/v20/learning/decision-registry-review/{domain}")
+    def learning_decision_registry_review_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
+        return build_decision_registry_review_report(domain, limit=limit, per_rule=per_rule)
 
     @app.get("/api/v20/intelligence/generation-manifest")
     def intelligence_generation_manifest() -> dict[str, object]:
@@ -556,6 +667,66 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=400, detail={"error": "V20_PORTRAIT_CALIBRATION_INVALID", "message": str(exc)}) from exc
 
+    @app.post("/api/v20/practitioner/calibration/analyze")
+    def practitioner_calibration_analyze(payload: PractitionerCalibrationRequest) -> dict[str, object]:
+        try:
+            return analyze_practitioner_calibration(
+                input_id=payload.input_id,
+                source_role=payload.source_role,
+                selections=_practitioner_selections_from_payload(payload),
+                locale=payload.locale,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "V20_PRACTITIONER_CALIBRATION_INVALID", "message": str(exc)},
+            ) from exc
+
+    @app.post("/api/v20/practitioner/calibration/record")
+    def practitioner_calibration_record(payload: PractitionerCalibrationRequest) -> dict[str, object]:
+        try:
+            return record_practitioner_calibration(
+                input_id=payload.input_id,
+                source_role=payload.source_role,
+                selections=_practitioner_selections_from_payload(payload),
+                locale=payload.locale,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "V20_PRACTITIONER_CALIBRATION_INVALID", "message": str(exc)},
+            ) from exc
+
+    @app.post("/api/v20/latent-event/calibration/analyze")
+    def latent_event_calibration_analyze(payload: LatentEventCalibrationRequest) -> dict[str, object]:
+        try:
+            return analyze_latent_event_calibration(
+                input_id=payload.input_id,
+                source_role=payload.source_role,
+                answers=_latent_event_answers_from_payload(payload),
+                locale=payload.locale,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "V20_LATENT_EVENT_CALIBRATION_INVALID", "message": str(exc)},
+            ) from exc
+
+    @app.post("/api/v20/latent-event/calibration/record")
+    def latent_event_calibration_record(payload: LatentEventCalibrationRequest) -> dict[str, object]:
+        try:
+            return record_latent_event_calibration(
+                input_id=payload.input_id,
+                source_role=payload.source_role,
+                answers=_latent_event_answers_from_payload(payload),
+                locale=payload.locale,
+            )
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "V20_LATENT_EVENT_CALIBRATION_INVALID", "message": str(exc)},
+            ) from exc
+
     @app.post("/api/v20/measure")
     @app.post("/api/v20/runtime/measure")
     def measure(payload: MeasureRequest) -> dict[str, object]:
@@ -573,6 +744,8 @@ def create_app() -> FastAPI:
                 flow_month_pillar=payload.flow_month_pillar,
                 locale=payload.locale,
                 llm_mode=payload.llm_mode,
+                practitioner_selections=tuple(selection.model_dump() for selection in payload.practitioner_selections),
+                latent_event_answers=tuple(answer.model_dump() for answer in payload.latent_event_answers),
             )
         except ValueError as exc:
             raise HTTPException(
@@ -596,6 +769,8 @@ def create_app() -> FastAPI:
                 flow_month_pillar=payload.flow_month_pillar,
                 locale=payload.locale,
                 llm_mode=payload.llm_mode,
+                practitioner_selections=tuple(selection.model_dump() for selection in payload.practitioner_selections),
+                latent_event_answers=tuple(answer.model_dump() for answer in payload.latent_event_answers),
             )
             return project_runtime_for_role(result, role_key)
         except ValueError as exc:
@@ -626,3 +801,31 @@ def _profile_owner_for_session(session: dict[str, object], owner_id: str) -> str
     if requested_owner and requested_owner != user_id:
         raise HTTPException(status_code=403, detail={"error": "V20_PROFILE_OWNER_FORBIDDEN"})
     return user_id
+
+
+def _practitioner_selections_from_payload(
+    payload: PractitionerCalibrationRequest,
+) -> tuple[PractitionerControlSelection, ...]:
+    return tuple(
+        PractitionerControlSelection(
+            control_key=selection.control_key,
+            option=selection.option,
+            source_decision_keys=tuple(selection.source_decision_keys),
+        )
+        for selection in payload.selections
+    )
+
+
+def _latent_event_answers_from_payload(
+    payload: LatentEventCalibrationRequest,
+) -> tuple[LatentCalibrationAnswer, ...]:
+    return tuple(
+        LatentCalibrationAnswer(
+            scenario_id=answer.scenario_id,
+            year_option=answer.year_option,
+            result_option=answer.result_option,
+            intensity=answer.intensity,
+            confidence=answer.confidence,
+        )
+        for answer in payload.answers
+    )

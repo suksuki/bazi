@@ -9,7 +9,7 @@ from v20.knowledge.review_queue import CORE_DOMAIN_PRIORITY
 from v20.knowledge.rule_proposal import build_knowledge_rule_proposals
 from v20.knowledge.schema import KnowledgeUnit
 from v20.llm.provider import llm_provider_readiness_report
-from v20.llm.tasks import draft_rule_extraction_with_llm
+from v20.llm.tasks import draft_rule_extraction_from_knowledge, draft_rule_extraction_with_llm
 from v20.measurement.domain_alignment import align_rule_candidate
 
 
@@ -191,6 +191,7 @@ def build_llm_rule_extraction_report(
     *,
     limit: int = 3,
     units: tuple[KnowledgeUnit, ...] | None = None,
+    execute_llm: bool = True,
 ) -> dict[str, object]:
     rows = _selected_reviewed_units(domain, limit=limit, units=units or default_knowledge_units())
     corpus_training = _read_corpus_training_artifacts()
@@ -203,9 +204,13 @@ def build_llm_rule_extraction_report(
                 "source_knowledge_id": unit.knowledge_id,
                 "domain": unit.domain,
                 "corpus_validation_signal": corpus_signal,
-                "draft_result": draft_rule_extraction_with_llm(
-                    unit,
-                    corpus_validation_signal=corpus_signal,
+                "draft_result": (
+                    draft_rule_extraction_with_llm(
+                        unit,
+                        corpus_validation_signal=corpus_signal,
+                    )
+                    if execute_llm
+                    else _deterministic_llm_rule_extraction_fallback(unit)
                 ),
             }
         )
@@ -228,12 +233,13 @@ def build_llm_rule_extraction_report(
             "REVIEWED_KNOWLEDGE_IS_SOURCE",
             "VALIDATOR_DECIDES_ACCEPTANCE",
             "NO_RUNTIME_RULE_ACTIVATION",
+            *(("LLM_EXECUTION_DISABLED_FOR_STATUS_VIEW",) if not execute_llm else ()),
         ],
     }
 
 
-def validate_llm_rule_extraction_report(domain: str = "", *, limit: int = 3) -> dict[str, object]:
-    report = build_llm_rule_extraction_report(domain, limit=limit)
+def validate_llm_rule_extraction_report(domain: str = "", *, limit: int = 3, execute_llm: bool = True) -> dict[str, object]:
+    report = build_llm_rule_extraction_report(domain, limit=limit, execute_llm=execute_llm)
     failures: list[str] = []
     for row in report["drafts"]:
         if not isinstance(row, dict):
@@ -262,6 +268,32 @@ def validate_llm_rule_extraction_report(domain: str = "", *, limit: int = 3) -> 
         "guardrails": [
             "VALIDATION_ONLY",
             "FALLBACK_IS_ALLOWED_WHEN_PROVIDER_DISABLED",
+            "NO_RUNTIME_RULE_ACTIVATION",
+        ],
+    }
+
+
+def _deterministic_llm_rule_extraction_fallback(unit: KnowledgeUnit) -> dict[str, object]:
+    fallback = draft_rule_extraction_from_knowledge(unit)
+    return {
+        "version": "v20.llm_rule_extraction_execution.v1",
+        "status": "fallback",
+        "source": "deterministic_fallback",
+        "contract": "rule_extraction_draft",
+        "locale": "zh",
+        "draft": fallback["draft"],
+        "llm_call": {
+            "status": "fallback",
+            "task_name": "rule_extraction_draft",
+            "fallback_reason": "llm_execution_disabled_for_status_view",
+            "executed": False,
+            "runtime_mutation": False,
+        },
+        "fallback": fallback["draft"],
+        "runtime_mutation": False,
+        "guardrails": [
+            "LLM_NOT_EXECUTED",
+            "DETERMINISTIC_FALLBACK_USED",
             "NO_RUNTIME_RULE_ACTIVATION",
         ],
     }

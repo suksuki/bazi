@@ -15,6 +15,7 @@ from v20.answer.measurement_policy import (
 from v20.features.schema import FeatureLayer
 from v20.interaction.question_ranker import QuestionRankingPolicy, rank_question_rows
 from v20.measurement.domain_alignment import align_question_candidate
+from v20.measurement.dimensions import dimension_payload
 
 
 @dataclass(frozen=True)
@@ -27,6 +28,9 @@ class QuestionCandidate:
     boundary: str
     measurement_topic: str
     measurement_stage: str
+    dimension_key: str = ""
+    dimension_layer: str = ""
+    dimension_label: str = ""
     alignment_status: str = "pending_bazi_alignment"
     bazi_focus: str = ""
     alignment_score: float = 0.0
@@ -37,24 +41,24 @@ class QuestionCandidate:
 
 
 QUESTION_LABELS = {
-    "q_strength_assessment": "先看日主强弱与承载力吗？",
-    "q_useful_god_candidates": "哪些用神路径可以作为候选？",
-    "q_useful_god_evidence_gaps": "用神候选还缺哪些证据复核？",
+    "q_strength_assessment": "这个八字日主偏强还是偏弱，适合先看什么？",
+    "q_useful_god_candidates": "这个盘下一步适合先找哪类用神方向？",
+    "q_useful_god_evidence_gaps": "用神方向还缺哪些关键依据？",
     "q_ten_god_focus": "十神显隐关系里先看哪一组？",
     "q_ten_god_metadata": "十神信息应如何进入测算？",
     "q_element_balance": "五行分布的结构偏向是什么？",
-    "q_element_support_pressure": "五行分布如何影响扶抑压力？",
-    "q_hidden_stem_role": "藏干在这个八字里承担什么结构作用？",
+    "q_element_support_pressure": "五行偏向会带来什么优势和压力？",
+    "q_hidden_stem_role": "藏干里有哪些容易被忽略的命理线索？",
     "q_branch_relation_detail": "地支冲合刑害有哪些可见结构？",
     "q_time_vs_natal_relation": "原局与时间层应如何分开判断？",
-    "q_time_layer_context": "显式时间层会触发哪些结构互动？",
-    "q_time_relation_triggers": "时间干支与原局的触发边界是什么？",
+    "q_time_layer_context": "流年大运会先牵动事业、财运还是关系？",
+    "q_time_relation_triggers": "这一步大运流年最容易牵动哪条主线？",
     "q_structure_overview": "这个八字的整体结构主线是什么？",
     "q_income_stability": "财星结构与收入主题的测算边界是什么？",
-    "q_income_factors": "财星材料的来源和可用性如何复核？",
+    "q_income_factors": "财运的机会和限制分别在哪里？",
     "q_career_structure": "事业主题应回到哪条命理结构主线？",
     "q_relationship_structure": "关系主题应从十神与地支哪个入口测算？",
-    "q_health_balance_boundary": "健康相关只看哪些五行平衡边界？",
+    "q_health_balance_boundary": "五行偏枯主要提示哪种平衡压力？",
     "q_pattern_structure": "格局审查应从哪里开始？",
 }
 
@@ -111,6 +115,7 @@ def recommend_questions(
                 boundary=current.boundary if keep_current else feature.boundary,
                 measurement_topic=current.measurement_topic if keep_current else domain_label(feature.domain),
                 measurement_stage=current.measurement_stage if keep_current else measurement_stage(feature.domain),
+                **(dimension_payload(current.domain) if keep_current else dimension_payload(feature.domain)),
             )
             rows[hook] = candidate
     _add_applied_domain_questions(rows, feature_layer)
@@ -144,6 +149,7 @@ def _add_applied_domain_questions(rows: dict[str, QuestionCandidate], feature_la
             boundary=current.boundary if keep_current else f"{domain_label(domain)}必须经由 feature spine 的受控领域投影进入回答。",
             measurement_topic=current.measurement_topic if keep_current else domain_label(domain),
             measurement_stage=current.measurement_stage if keep_current else measurement_stage(domain),
+            **(dimension_payload(current.domain) if keep_current else dimension_payload(domain)),
         )
 
 
@@ -177,17 +183,17 @@ def _personalized_question_title(hook: str, feature) -> str:  # noqa: ANN001
         return default
     material = summary or label
     if hook == "q_strength_assessment":
-        return f"{_clip(material, 24)}，先看日主承载力吗？"
+        return f"{_clip(material, 24)}，日主偏强还是偏弱？"
     if hook == "q_useful_god_candidates":
-        return f"{_clip(material, 24)}，哪些用神路径可复核？"
+        return f"{_clip(material, 24)}，适合先找哪类用神方向？"
     if hook == "q_useful_god_evidence_gaps":
-        return f"{_clip(material, 24)}，还缺哪些证据门槛？"
+        return f"{_clip(material, 24)}，还缺哪些关键依据？"
     if hook == "q_ten_god_focus":
         return f"{_clip(material, 24)}，先看哪条十神主线？"
     if hook == "q_ten_god_metadata":
         return f"{_clip(material, 24)}，十神如何进入测算？"
     if hook == "q_hidden_stem_role":
-        return f"{_clip(material, 24)}，藏干承担什么结构作用？"
+        return f"{_clip(material, 24)}，藏干里有什么容易忽略？"
     if hook == "q_element_balance":
         return f"{_clip(material, 24)}，五行偏向怎么读？"
     if hook == "q_element_support_pressure":
@@ -197,11 +203,11 @@ def _personalized_question_title(hook: str, feature) -> str:  # noqa: ANN001
     if hook == "q_structure_overview":
         return f"{_clip(material, 24)}，整体结构主线是什么？"
     if hook == "q_time_layer_context":
-        return f"{_clip(material, 24)}，时间层触发什么？"
+        return f"{_clip(material, 24)}，大运流年先牵动什么？"
     if hook == "q_time_relation_triggers":
-        return f"{_clip(material, 24)}，触发边界是什么？"
+        return f"{_clip(material, 24)}，会先牵动哪条主线？"
     if hook == "q_income_factors":
-        return f"{_clip(material, 24)}，财星材料如何复核？"
+        return f"{_clip(material, 24)}，机会和限制在哪里？"
     if hook == "q_income_stability":
         return f"{_clip(material, 24)}，财星结构边界是什么？"
     if hook == "q_career_structure":
@@ -209,7 +215,7 @@ def _personalized_question_title(hook: str, feature) -> str:  # noqa: ANN001
     if hook == "q_relationship_structure":
         return f"{_clip(material, 24)}，关系主题从十神或地支哪里进入？"
     if hook == "q_health_balance_boundary":
-        return f"{_clip(material, 24)}，健康相关只看哪些五行边界？"
+        return f"{_clip(material, 24)}，主要提示哪种平衡压力？"
     return default
 
 
@@ -228,7 +234,7 @@ def _applied_question_title(hook: str, domain: str, sources: list) -> str:  # no
     if hook == "q_relationship_structure":
         return f"{_clip(material, 24)}，关系主题从十神或地支哪里进入？"
     if hook == "q_health_balance_boundary":
-        return f"{_clip(material, 24)}，健康相关只看哪些五行边界？"
+        return f"{_clip(material, 24)}，主要提示哪种平衡压力？"
     return QUESTION_LABELS.get(hook, hook)
 
 

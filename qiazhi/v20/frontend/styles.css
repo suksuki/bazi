@@ -361,7 +361,8 @@ textarea:focus {
 .feedback-row button,
 .dialog-row button,
 .chat-question-chip,
-.question-row {
+.question-row,
+.calibration-options button {
   border: 1px solid transparent;
   border-radius: 8px;
   cursor: pointer;
@@ -381,7 +382,8 @@ textarea:focus {
 .feedback-row button:disabled,
 .dialog-row button:disabled,
 .chat-question-chip:disabled,
-.question-row:disabled {
+.question-row:disabled,
+.calibration-options button:disabled {
   cursor: wait;
   opacity: 0.68;
 }
@@ -578,6 +580,79 @@ textarea:focus {
   overflow-wrap: anywhere;
 }
 
+.axis-title-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.axis-title-line strong {
+  margin-bottom: 0;
+}
+
+.axis-tag,
+.axis-temp {
+  display: inline-flex;
+  align-items: center;
+  min-height: 22px;
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 850;
+  padding: 3px 7px;
+}
+
+.axis-tag {
+  background: rgba(71, 179, 125, 0.1);
+  color: #98dec0;
+}
+
+.axis-temp.hot {
+  border-color: rgba(199, 163, 87, 0.52);
+  background: rgba(199, 163, 87, 0.14);
+  color: #e3c987;
+}
+
+.axis-temp.warm {
+  border-color: rgba(71, 179, 125, 0.5);
+  background: rgba(71, 179, 125, 0.14);
+  color: #b6e9cd;
+}
+
+.axis-temp.mild {
+  border-color: rgba(100, 164, 200, 0.48);
+  background: rgba(100, 164, 200, 0.12);
+  color: #a8cce0;
+}
+
+.axis-temp.cool {
+  border-color: rgba(145, 166, 160, 0.32);
+  background: rgba(145, 166, 160, 0.08);
+  color: var(--muted);
+}
+
+.axis-row[data-domain="career"] strong,
+.axis-row[data-domain="ten_god"] strong {
+  color: #c5dcff;
+}
+
+.axis-row[data-domain="wealth"] strong,
+.axis-row[data-domain="time"] strong {
+  color: #ead29b;
+}
+
+.axis-row[data-domain="strength"] strong,
+.axis-row[data-domain="useful_god"] strong {
+  color: #b8f0d0;
+}
+
+.axis-row[data-domain="branch"] strong,
+.axis-row[data-domain="element"] strong {
+  color: #f0c1ad;
+}
+
 .feature-card p {
   line-height: 1.45;
   margin-top: 7px;
@@ -627,6 +702,124 @@ textarea:focus {
 
 .portrait-panel-card:not([open]) {
   align-self: start;
+}
+
+.calibration-panel-card {
+  display: grid;
+  gap: 12px;
+  border-color: rgba(71, 179, 125, 0.36);
+  background: #101a17;
+}
+
+.calibration-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.calibration-head h2,
+.calibration-head h3 {
+  font-size: 15px;
+  line-height: 1.35;
+}
+
+.calibration-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.calibration-control {
+  display: grid;
+  gap: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-2);
+  padding: 10px;
+}
+
+.calibration-control strong {
+  color: var(--text);
+  font-size: 13px;
+}
+
+.calibration-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.calibration-options button {
+  min-height: 32px;
+  border-color: var(--line-strong);
+  background: #0d1513;
+  color: var(--soft);
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+.calibration-options button.default {
+  border-style: dashed;
+}
+
+.calibration-options button.selected {
+  border-color: rgba(71, 179, 125, 0.82);
+  background: rgba(71, 179, 125, 0.2);
+  color: var(--text);
+}
+
+.latent-calibration-card {
+  display: grid;
+  gap: 12px;
+  border-color: rgba(216, 184, 92, 0.32);
+  background: #111916;
+}
+
+.latent-calibration-controls {
+  display: grid;
+  gap: 10px;
+}
+
+.latent-calibration-row {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(216, 184, 92, 0.24);
+  border-radius: 8px;
+  background: rgba(216, 184, 92, 0.04);
+  padding: 11px;
+}
+
+.latent-calibration-title {
+  display: grid;
+  gap: 4px;
+}
+
+.latent-calibration-title strong {
+  color: var(--text);
+  font-size: 14px;
+}
+
+.latent-calibration-title span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.latent-calibration-fields {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(120px, 1fr)) auto;
+  gap: 8px;
+  align-items: end;
+}
+
+.latent-field {
+  display: grid;
+  gap: 5px;
+}
+
+.latent-field span {
+  color: var(--muted);
+  font-size: 11px;
 }
 
 .chat-question-list {
@@ -915,6 +1108,14 @@ body.profile-reading .portrait-panel-card {
   grid-column: 1 / -1;
 }
 
+body.profile-reading .calibration-panel-card {
+  grid-column: 1 / -1;
+}
+
+body.profile-reading .latent-calibration-card {
+  grid-column: 1 / -1;
+}
+
 body.profile-reading .chat-question-list {
   display: flex;
 }
@@ -943,6 +1144,10 @@ body.profile-reading .answer-panel {
 
   body.profile-reading .pillar-panel {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .latent-calibration-fields {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 

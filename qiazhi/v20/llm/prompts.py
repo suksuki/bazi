@@ -73,9 +73,11 @@ def practitioner_answer_prompt(
         },
         "instruction": (
             "Return only one JSON object. Act as a professional Bazi practitioner, but use only the supplied verified context. "
-            "Write a useful answer for the selected question: start from the provided rule decisions and dynamic portrait, "
-            "then answer the question, then explain key evidence, useful follow-up questions, and boundaries. "
-            "Keep the whole response concise: text under 900 Chinese characters, 2-4 evidence notes, 2-4 next questions, and 1-3 boundary notes. "
+            "Write a useful answer for the selected question. Start directly with the reading, not with meta commentary. "
+            "Do not begin with phrases like 本次分析, 八字测算重点, 命理测算主线, 知识依据, 下一步, or 测算边界. "
+            "Do not use markdown headings or bold markers in the text field. "
+            "Use the provided rule decisions and dynamic portrait to answer the question, then briefly mention key evidence and boundaries. "
+            "Keep the text field under 650 Chinese characters; keep evidence_notes 1-3 items, next_questions 2-4 items, and boundary_notes 1-2 items. "
             "Do not wrap JSON in markdown fences. "
             "Do not create stems, branches, ten-gods, events, timing, private facts, or conclusions that are not present in the context. "
             "Do not mention internal ids. Do not output fixed good/bad verdicts or guarantee outcomes."
@@ -191,6 +193,36 @@ def _compact_decisions(report: dict[str, object]) -> list[dict[str, object]]:
                 "support": list(row.get("support", ())[:4]) if isinstance(row.get("support", ()), (list, tuple)) else [],
                 "weakening": list(row.get("weakening", ())[:3]) if isinstance(row.get("weakening", ()), (list, tuple)) else [],
                 "question_seeds": list(row.get("question_seeds", ())[:3]) if isinstance(row.get("question_seeds", ()), (list, tuple)) else [],
+                "knowledge_rules": _compact_decision_knowledge_rules(row),
+            }
+        )
+    return rows
+
+
+def _compact_decision_knowledge_rules(decision: dict[str, object]) -> list[dict[str, object]]:
+    rows = []
+    for ref in (decision.get("knowledge_rule_refs") or [])[:2]:
+        if not isinstance(ref, dict):
+            continue
+        atoms = []
+        for atom in (ref.get("condition_atoms") or [])[:3]:
+            if isinstance(atom, dict):
+                atoms.append(
+                    {
+                        "atom_type": atom.get("atom_type", ""),
+                        "operator": atom.get("operator", ""),
+                        "evidence_role": atom.get("evidence_role", ""),
+                    }
+                )
+        rows.append(
+            {
+                "title": ref.get("title", ""),
+                "domain": ref.get("domain", ""),
+                "portrait_labels": list(ref.get("portrait_labels", ())[:2]) if isinstance(ref.get("portrait_labels", ()), (list, tuple)) else [],
+                "question_titles": list(ref.get("question_titles", ())[:2]) if isinstance(ref.get("question_titles", ()), (list, tuple)) else [],
+                "condition_atoms": atoms,
+                "boundary": _clip(str(ref.get("boundary", "")), 180),
+                "runtime_allowed": False,
             }
         )
     return rows

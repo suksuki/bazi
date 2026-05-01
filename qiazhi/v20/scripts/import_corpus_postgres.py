@@ -5,27 +5,36 @@ import argparse
 import json
 import os
 import sys
+import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from v20.corpus.artifacts import DEFAULT_ARTIFACT_RUN_ID, corpus_artifact_paths  # noqa: E402
+from v20.corpus.artifacts import corpus_artifact_paths, resolve_corpus_artifact_run_id  # noqa: E402
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Import V20 flat corpus labels into Postgres.")
-    parser.add_argument("--run-id", default=DEFAULT_ARTIFACT_RUN_ID)
+    parser.add_argument("--run-id", default="", help="Defaults to the latest full precompute artifact run.")
+    parser.add_argument(
+        "--env-file",
+        default="v20/.runtime/local/service.env",
+        help="Load V20 local env before importing. Existing real shell values win; placeholder templates are replaced.",
+    )
     parser.add_argument("--apply", action="store_true", help="Actually write Postgres. Default is dry-run only.")
     parser.add_argument("--batch-size", type=int, default=1000)
+    parser.add_argument("--progress", action="store_true", help="Print a progress bar to stderr while importing.")
     args = parser.parse_args()
 
-    paths = corpus_artifact_paths(args.run_id)
+    _load_env_file(Path(args.env_file))
+    run_id = resolve_corpus_artifact_run_id(args.run_id)
+    paths = corpus_artifact_paths(run_id)
     url = os.getenv("V20_DATABASE_URL", "")
     payload = {
         "version": "v20.corpus_postgres_import_cli.v1",
-        "run_id": args.run_id,
+        "run_id": run_id,
         "source": str(paths.flat_labels_path),
         "target_table": "v20_corpus_snapshots",
         "apply": args.apply,
@@ -60,6 +69,10 @@ def main() -> int:
         return 2
 
     inserted = 0
+    total = _count_lines(paths.flat_labels_path) if args.progress else 0
+    started = time.monotonic()
+    if args.progress:
+        _emit_progress(inserted, total, started, "starting")
     with psycopg2.connect(url) as conn:
         with conn.cursor() as cur:
             cur.execute(
@@ -87,15 +100,46 @@ def main() -> int:
                 )
                 if len(batch) >= args.batch_size:
                     inserted += _insert_batch(cur, execute_values, batch)
+                    if args.progress:
+                        _emit_progress(inserted, total, started, "importing")
                     batch.clear()
             if batch:
                 inserted += _insert_batch(cur, execute_values, batch)
+                if args.progress:
+                    _emit_progress(inserted, total, started, "importing")
             _create_indexes(cur)
+            if args.progress:
+                _emit_progress(inserted, total, started, "indexing")
         conn.commit()
+    if args.progress:
+        _emit_progress(inserted, total, started, "completed")
     payload["status"] = "imported"
     payload["inserted_or_updated"] = inserted
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
+
+
+def _load_env_file(path: Path) -> None:
+    if not path.exists():
+        return
+    replace_placeholder = _is_placeholder(os.getenv("V20_DATABASE_URL", ""))
+    for line in path.read_text(encoding="utf-8").splitlines():
+        stripped = line.strip()
+        if not stripped or stripped.startswith("#") or "=" not in stripped:
+            continue
+        key, value = stripped.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'\"")
+        if not key:
+            continue
+        if key == "V20_DATABASE_URL" and replace_placeholder:
+            os.environ[key] = value
+        else:
+            os.environ.setdefault(key, value)
+
+
+def _is_placeholder(value: str) -> bool:
+    return any(token in value for token in ("USER", "PASSWORD", "HOST", "PORT", "DBNAME", "CHANGE_ME"))
 
 
 def _insert_batch(cur, execute_values, batch) -> int:
@@ -126,6 +170,29 @@ def _create_indexes(cur) -> None:
         "CREATE INDEX IF NOT EXISTS idx_v20_corpus_payload_gin ON v20_corpus_snapshots USING gin (payload)",
     ):
         cur.execute(statement)
+
+
+def _count_lines(path: Path) -> int:
+    with path.open(encoding="utf-8") as source:
+        return sum(1 for line in source if line.strip())
+
+
+def _emit_progress(done: int, total: int, started: float, status: str) -> None:
+    ratio = min(1.0, done / total) if total else 0.0
+    width = 24
+    filled = max(0, min(width, round(width * ratio)))
+    bar = "#" * filled + "-" * (width - filled)
+    elapsed = max(0.001, time.monotonic() - started)
+    rate = done / elapsed if done else 0.0
+    remaining = max(0, total - done)
+    eta = remaining / rate if rate > 0 else None
+    eta_text = "unknown" if eta is None else f"{eta:.1f}s"
+    print(
+        f"[v20-postgres-import] [{bar}] {ratio * 100:6.2f}% "
+        f"rows={done}/{total or '?'} status={status} rate={rate:.1f}/s eta={eta_text}",
+        file=sys.stderr,
+        flush=True,
+    )
 
 
 if __name__ == "__main__":

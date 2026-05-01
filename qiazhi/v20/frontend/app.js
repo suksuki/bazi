@@ -8,6 +8,9 @@ const state = {
   chatTurns: [],
   chatSeq: 0,
   activeLlmMode: "deterministic",
+  practitionerSelections: [],
+  latentManifest: null,
+  latentAnswers: [],
 };
 const params = new URLSearchParams(window.location.search);
 
@@ -99,6 +102,8 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
   const text = currentText();
   const payload = payloadFromForm();
   payload.llm_mode = llmMode;
+  payload.practitioner_selections = state.practitionerSelections;
+  payload.latent_event_answers = state.latentAnswers;
   const key = JSON.stringify(payload);
   if (!force && key === state.lastMeasureKey) return;
   if (!hasCompletePillars(payload)) return;
@@ -164,8 +169,10 @@ const renderRuntime = (result) => {
 
   renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
-  renderFeatures(decisionReport.decisions || featureLayer.macro_features || featureLayer.features || []);
+  renderFeatures(decisionReport.mainlines || decisionReport.decisions || featureLayer.macro_features || featureLayer.features || []);
   renderPortrait(dynamicPortrait.tags || []);
+  renderPractitionerCalibration(decisionReport.practitioner_controls || [], result.input_id || "", role);
+  renderLatentCalibration(result.input_id || "", role);
   renderQuestions(result.questions || [], selected.question_key || "");
   renderChatQuestions(result.questions || [], selected.question_key || "");
   renderQuestionSelect(result.questions || [], selected.question_key || "");
@@ -228,11 +235,12 @@ const renderFeatures = (features) => {
     card.append(el("strong", "", feature.label || feature.title || feature.feature_id || feature.macro_id || "feature"));
     const score = feature.score ?? feature.discovery_score ?? feature.peak_confidence ?? feature.confidence ?? "-";
     const label = feature.domain_label || feature.domain || "domain";
-    const role = feature.role ? ` · ${feature.role}` : "";
+    const role = feature.role ? ` · ${feature.role}` : feature.priority ? ` · priority ${feature.priority}` : "";
     card.append(el("span", "", `${label} · score ${score}${role}`));
     if (feature.support) card.append(el("p", "", feature.support.slice(0, 3).join(" / ")));
     else if (feature.reason) card.append(el("p", "", feature.reason));
     else if (feature.summary) card.append(el("p", "", feature.summary));
+    if (feature.question_seed) card.append(el("p", "feature-question-seed", feature.question_seed));
     root.append(card);
   });
 };
@@ -246,8 +254,15 @@ const renderPortrait = (axes) => {
   }
   axes.slice(0, 8).forEach((axis) => {
     const row = el("div", "axis-row");
-    row.append(el("strong", "", axis.label || axis.axis_id || "动态画像"));
+    row.dataset.domain = axis.domain || "general";
     const score = axis.score ?? axis.intelligence_score ?? axis.peak_confidence ?? 0;
+    const temperature = portraitTemperature(score);
+    row.dataset.temperature = temperature.key;
+    const title = el("div", "axis-title-line");
+    title.append(el("strong", "", axis.label || axis.axis_id || "动态画像"));
+    title.append(el("span", "axis-tag", portraitDomainLabel(axis.domain)));
+    title.append(el("span", `axis-temp ${temperature.key}`, temperature.label));
+    row.append(title);
     row.append(el("span", "", axis.summary || `${axis.domain || "命理"} · score ${score}`));
     const seeds = (axis.question_seeds || []).filter(Boolean).slice(0, 2);
     if (seeds.length) row.append(el("p", "", seeds.join(" / ")));
@@ -258,6 +273,189 @@ const renderPortrait = (axes) => {
     row.append(bar);
     root.append(row);
   });
+};
+
+const portraitDomainLabel = (domain) => ({
+  strength: "强弱",
+  career: "事业",
+  wealth: "财运",
+  ten_god: "十神",
+  useful_god: "用神",
+  time: "时间",
+  branch: "地支",
+  element: "五行",
+  pattern: "格局",
+  relationship: "关系",
+  health: "健康",
+}[domain] || "命理");
+
+const portraitTemperature = (score) => {
+  const value = Number(score || 0);
+  if (value >= 0.78) return { key: "hot", label: "高关注" };
+  if (value >= 0.58) return { key: "warm", label: "成形" };
+  if (value >= 0.38) return { key: "mild", label: "待复核" };
+  return { key: "cool", label: "线索" };
+};
+
+const renderPractitionerCalibration = (controls, inputId, role) => {
+  const root = document.querySelector("#practitionerCalibration");
+  const list = document.querySelector("#calibrationControls");
+  const status = document.querySelector("#calibrationStatus");
+  if (!root || !list || !status) return;
+  clear(list);
+  if (role !== "analyst" || !controls.length) {
+    root.hidden = true;
+    return;
+  }
+  root.hidden = false;
+  status.textContent = practitionerSessionStatus();
+  controls.slice(0, 4).forEach((control) => {
+    const row = el("div", "calibration-control");
+    row.append(el("strong", "", control.label || control.control_key || "命理师校准"));
+    const options = el("div", "calibration-options");
+    const selected = state.practitionerSelections.find((item) => item.control_key === control.control_key);
+    (control.options || []).forEach((option) => {
+      const button = el("button", "", option);
+      button.type = "button";
+      button.dataset.controlKey = control.control_key || "";
+      button.dataset.option = option;
+      if (option === control.default) button.classList.add("default");
+      if (selected?.option === option) button.classList.add("selected");
+      button.addEventListener("click", () => recordPractitionerCalibration(control, option, inputId, button));
+      options.append(button);
+    });
+    row.append(options);
+    list.append(row);
+  });
+};
+
+const recordPractitionerCalibration = async (control, option, inputId, activeButton) => {
+  const status = document.querySelector("#calibrationStatus");
+  const sourceDecisionKeys = control.source_decision_keys || [];
+  if (status) status.textContent = "记录中";
+  try {
+    const result = await requestJson("/api/v20/practitioner/calibration/record", {
+      method: "POST",
+      body: JSON.stringify({
+        input_id: inputId || state.latest?.input_id || "",
+        source_role: "analyst",
+        locale: localeSelect.value,
+        selections: [{
+          control_key: control.control_key,
+          option,
+          source_decision_keys: sourceDecisionKeys,
+        }],
+      }),
+    });
+    document.querySelectorAll(`.calibration-options button[data-control-key="${control.control_key}"]`).forEach((button) => {
+      button.classList.toggle("selected", button === activeButton);
+    });
+    upsertPractitionerSelection(control, option);
+    questionSelect.value = "";
+    if (status) status.textContent = result.storage?.status === "stored" ? "已记录 · 刷新问题" : "已接收 · 刷新问题";
+    measure({ force: true, llmMode: "deterministic" });
+  } catch (error) {
+    if (status) status.textContent = "记录失败";
+  }
+};
+
+const upsertPractitionerSelection = (control, option) => {
+  const selection = {
+    control_key: control.control_key,
+    option,
+    source_decision_keys: control.source_decision_keys || [],
+  };
+  state.practitionerSelections = [
+    ...state.practitionerSelections.filter((item) => item.control_key !== control.control_key),
+    selection,
+  ];
+};
+
+const renderLatentCalibration = (inputId, role) => {
+  const root = document.querySelector("#latentCalibration");
+  const list = document.querySelector("#latentCalibrationControls");
+  const status = document.querySelector("#latentCalibrationStatus");
+  if (!root || !list || !status) return;
+  clear(list);
+  const scenarios = state.latentManifest?.scenarios || [];
+  if (!document.body.classList.contains("profile-reading") || !scenarios.length) {
+    root.hidden = true;
+    return;
+  }
+  root.hidden = false;
+  status.textContent = state.latentAnswers.length ? `已校准 ${state.latentAnswers.length} 项` : "choice only";
+  scenarios.slice(0, 4).forEach((scenario) => {
+    const saved = state.latentAnswers.find((answer) => answer.scenario_id === scenario.scenario_id) || {};
+    const row = el("div", "latent-calibration-row");
+    const title = el("div", "latent-calibration-title");
+    title.append(el("strong", "", latentScenarioTitle(scenario)));
+    title.append(el("span", "", scenario.prompt || ""));
+    row.append(title);
+    const fields = el("div", "latent-calibration-fields");
+    fields.append(latentSelect(scenario, "year_option", saved.year_option || "unknown", scenario.year_options || [], latentYearLabel));
+    fields.append(latentSelect(scenario, "result_option", saved.result_option || (scenario.result_options || ["no_clear_change"])[0], scenario.result_options || [], latentResultLabel));
+    fields.append(latentSelect(scenario, "intensity", saved.intensity || "clear", scenario.intensity_options || [], latentIntensityLabel));
+    fields.append(latentSelect(scenario, "confidence", saved.confidence || "medium", scenario.confidence_options || [], latentConfidenceLabel));
+    const button = el("button", "mini-action", saved.scenario_id ? "已记录" : "记录");
+    button.type = "button";
+    button.addEventListener("click", () => recordLatentCalibration(scenario, inputId || state.latest?.input_id || "", role, row));
+    fields.append(button);
+    row.append(fields);
+    list.append(row);
+  });
+};
+
+const latentSelect = (scenario, key, selected, options, labeler) => {
+  const label = el("label", "latent-field");
+  label.append(el("span", "", latentFieldLabel(key)));
+  const select = document.createElement("select");
+  select.dataset.scenarioId = scenario.scenario_id || "";
+  select.dataset.field = key;
+  options.forEach((option) => {
+    const node = document.createElement("option");
+    node.value = option;
+    node.textContent = labeler(option);
+    select.append(node);
+  });
+  select.value = selected;
+  label.append(select);
+  return label;
+};
+
+const recordLatentCalibration = async (scenario, inputId, role, row) => {
+  const status = document.querySelector("#latentCalibrationStatus");
+  const answer = {
+    scenario_id: scenario.scenario_id,
+    year_option: row.querySelector('[data-field="year_option"]').value,
+    result_option: row.querySelector('[data-field="result_option"]').value,
+    intensity: row.querySelector('[data-field="intensity"]').value,
+    confidence: row.querySelector('[data-field="confidence"]').value,
+  };
+  if (status) status.textContent = "记录中";
+  try {
+    const result = await requestJson("/api/v20/latent-event/calibration/record", {
+      method: "POST",
+      body: JSON.stringify({
+        input_id: inputId,
+        source_role: role === "analyst" ? "analyst" : "user",
+        locale: localeSelect.value,
+        answers: [answer],
+      }),
+    });
+    upsertLatentAnswer(answer);
+    questionSelect.value = "";
+    if (status) status.textContent = result.storage?.status === "stored" ? "已记录 · 刷新问题" : "已接收 · 刷新问题";
+    measure({ force: true, llmMode: "deterministic" });
+  } catch (error) {
+    if (status) status.textContent = "记录失败";
+  }
+};
+
+const upsertLatentAnswer = (answer) => {
+  state.latentAnswers = [
+    ...state.latentAnswers.filter((item) => item.scenario_id !== answer.scenario_id),
+    answer,
+  ];
 };
 
 const renderQuestions = (questions, selectedKey) => {
@@ -396,6 +594,89 @@ const llmStatusLabel = (result) => {
   return `llm ${assist.status || "idle"}`;
 };
 
+const latentScenarioTitle = (scenario) => ({
+  wealth: "财务变化",
+  career: "事业节点",
+  relationship: "关系重心",
+  relocation: "环境迁移",
+  stress: "压力恢复",
+  global: "行动节奏",
+}[scenario.domain] || "命主校准");
+
+const latentFieldLabel = (key) => ({
+  year_option: "时间",
+  result_option: "结果",
+  intensity: "强度",
+  confidence: "把握",
+}[key] || key);
+
+const latentYearLabel = (value) => ({
+  unknown: "不确定",
+  birth_to_12: "0-12岁",
+  "13_to_18": "13-18岁",
+  "19_to_24": "19-24岁",
+  "25_to_30": "25-30岁",
+  "31_to_36": "31-36岁",
+  "37_to_42": "37-42岁",
+  "43_to_48": "43-48岁",
+  "49_to_54": "49-54岁",
+  "55_plus": "55岁以后",
+}[value] || value);
+
+const latentResultLabel = (value) => ({
+  no_clear_change: "没有明显变化",
+  income_up: "收入/资源上升",
+  income_down: "收入下降",
+  resource_gain: "获得资源支持",
+  resource_pressure: "资源或财务压力",
+  role_up: "角色上升",
+  role_down: "角色下降",
+  platform_change: "平台变化",
+  responsibility_change: "责任变化",
+  relationship_stabilized: "关系稳定",
+  relationship_changed: "关系变化",
+  relationship_pressure: "关系压力",
+  family_focus_shift: "家庭重心变化",
+  city_change: "城市变化",
+  work_environment_change: "工作环境变化",
+  home_environment_change: "居住环境变化",
+  travel_or_mobility_up: "流动增加",
+  stable: "基本稳定",
+  recovered_fast: "恢复较快",
+  recovered_slow: "恢复较慢",
+  repeated_pressure: "压力反复",
+  support_helped: "外部支持有效",
+  not_observed: "尚未观察",
+  result_fast: "见效快",
+  result_slow: "见效慢",
+  needs_repeated_attempts: "需要反复尝试",
+  external_help_decisive: "外部帮助关键",
+  mixed: "混合",
+}[value] || value);
+
+const latentIntensityLabel = (value) => ({
+  none: "无",
+  mild: "轻微",
+  clear: "明显",
+  strong: "强烈",
+}[value] || value);
+
+const latentConfidenceLabel = (value) => ({
+  low: "低",
+  medium: "中",
+  high: "高",
+}[value] || value);
+
+const loadLatentCalibrationManifest = async () => {
+  try {
+    state.latentManifest = await requestJson("/api/v20/learning/latent-event-calibration");
+    renderLatentCalibration(state.latest?.input_id || "", measurementRole(roleSelect.value));
+  } catch (error) {
+    const status = document.querySelector("#latentCalibrationStatus");
+    if (status) status.textContent = "manifest error";
+  }
+};
+
 const loadStatus = async () => {
   try {
     const [health, status, deps] = await Promise.all([
@@ -406,12 +687,19 @@ const loadStatus = async () => {
     setText("#runtimeStatus", `${health.status} · ${health.active_profile}`);
     setText("#profileBadge", health.active_profile);
     setText("#corpusState", `corpus ${status.corpus_artifact_status} · ${status.corpus_cluster_count || 0} clusters`);
-    setText("#ruleState", `rules ${status.knowledge_rule_extraction_validation_status}/${status.knowledge_llm_rule_extraction_validation_status}`);
+    setText("#ruleState", `rules ${status.knowledge_rule_library_full_definition_count || status.knowledge_rule_library_definition_count || 0} · ${status.knowledge_rule_validation_status}`);
     setText("#dbState", `db ${deps.postgres.ready_for_connection ? "ready" : "config"}`);
   } catch (error) {
     setText("#runtimeStatus", "status error");
     setText("#dbState", error.message);
   }
+};
+
+const practitionerSessionStatus = () => {
+  const session = state.latest?.practitioner_session || {};
+  if (!state.practitionerSelections.length) return "待裁决";
+  if (session.questions_refreshed) return `已刷新 ${session.selection_count || state.practitionerSelections.length} 项`;
+  return "已接收";
 };
 
 const applyLocale = (locale) => {
@@ -432,6 +720,8 @@ const renderInitialPanels = () => {
   renderPillars({});
   renderFeatures([]);
   renderPortrait([]);
+  renderPractitionerCalibration([], "", measurementRole(roleSelect.value));
+  renderLatentCalibration("", measurementRole(roleSelect.value));
   renderQuestions([], "");
   renderChatQuestions([], "");
   renderEvidence([], {});
@@ -595,5 +885,6 @@ hydrateFormFromParams();
 applyLocale(localeSelect.value);
 renderInitialPanels();
 loadStatus();
+loadLatentCalibrationManifest();
 loadActiveProfile().finally(() => scheduleMeasure({ force: true }));
 setInterval(loadStatus, 10000);

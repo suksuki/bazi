@@ -5,6 +5,11 @@ from fastapi.testclient import TestClient
 from v20.api.runtime import run_runtime_from_pillars
 from v20.interaction.portrait_ontology import portrait_ontology_manifest
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
+from v20.interaction.practitioner_calibration import (
+    PractitionerControlSelection,
+    analyze_practitioner_calibration,
+    record_practitioner_calibration,
+)
 from v20.server import app
 from v20.storage.local_jsonl import LocalJsonlStore
 
@@ -47,6 +52,51 @@ def test_v20_portrait_calibration_record_is_append_only(tmp_path) -> None:
     assert "NO_RUNTIME_FEATURE_MUTATION" in result["guardrails"]
 
 
+def test_v20_practitioner_calibration_is_structured_signal_only() -> None:
+    report = analyze_practitioner_calibration(
+        input_id="practitioner.case",
+        source_role="analyst",
+        selections=(
+            PractitionerControlSelection(
+                control_key="control.day_master_strength",
+                option="中和偏弱",
+                source_decision_keys=("decision.strength.day_master_capacity",),
+            ),
+        ),
+    )
+
+    assert report["runtime_mutation"] is False
+    assert report["selection_count"] == 1
+    assert report["training_signals"][0]["runtime_allowed"] is False
+    assert report["training_signals"][0]["target"] == "decision_parameters.strength_capacity"
+    assert "BUTTON_OR_SELECT_ONLY" in report["guardrails"]
+    assert "NO_FREE_TEXT_CORE_DECISION" in report["guardrails"]
+
+
+def test_v20_practitioner_calibration_record_is_append_only(tmp_path) -> None:
+    store = LocalJsonlStore(runtime_dir=tmp_path)
+    result = record_practitioner_calibration(
+        input_id="practitioner.record",
+        source_role="analyst",
+        selections=(
+            PractitionerControlSelection(
+                control_key="control.wealth_capacity",
+                option="需扶身",
+                source_decision_keys=("decision.wealth.capacity",),
+            ),
+        ),
+        store=store,
+    )
+    status = store.status()
+    text = (tmp_path / result["storage"]["relative_path"]).read_text(encoding="utf-8")
+
+    assert result["runtime_mutation"] is True
+    assert result["analysis"]["runtime_mutation"] is False
+    assert status["ledger_count"] == 1
+    assert "practitioner_calibration_ledger" in text
+    assert "NO_RUNTIME_RULE_MUTATION" in result["guardrails"]
+
+
 def test_v20_portrait_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
     client = TestClient(app)
@@ -74,6 +124,58 @@ def test_v20_portrait_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -
     assert analyzed["runtime_mutation"] is False
     assert recorded["runtime_mutation"] is True
     assert recorded["storage"]["ledger_name"] == "portrait_calibration_ledger"
+
+
+def test_v20_practitioner_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
+    client = TestClient(app)
+    analyzed = client.post(
+        "/api/v20/practitioner/calibration/analyze",
+        json={
+            "input_id": "practitioner.endpoint",
+            "source_role": "analyst",
+            "selections": [
+                {
+                    "control_key": "control.pattern_status",
+                    "option": "候选",
+                    "source_decision_keys": ["decision.pattern.status"],
+                }
+            ],
+        },
+    ).json()
+    recorded = client.post(
+        "/api/v20/practitioner/calibration/record",
+        json={
+            "input_id": "practitioner.endpoint",
+            "source_role": "analyst",
+            "selections": [
+                {
+                    "control_key": "control.pattern_status",
+                    "option": "候选",
+                    "source_decision_keys": ["decision.pattern.status"],
+                }
+            ],
+        },
+    ).json()
+    invalid = client.post(
+        "/api/v20/practitioner/calibration/analyze",
+        json={
+            "input_id": "practitioner.invalid",
+            "source_role": "analyst",
+            "selections": [
+                {
+                    "control_key": "control.pattern_status",
+                    "option": "自由输入",
+                    "source_decision_keys": ["decision.pattern.status"],
+                }
+            ],
+        },
+    )
+
+    assert analyzed["runtime_mutation"] is False
+    assert recorded["runtime_mutation"] is True
+    assert recorded["storage"]["ledger_name"] == "practitioner_calibration_ledger"
+    assert invalid.status_code == 400
 
 
 def test_v20_dynamic_portrait_uses_decisions_as_runtime_source() -> None:

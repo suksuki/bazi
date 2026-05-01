@@ -48,7 +48,8 @@ def test_v20_measure_endpoint_returns_bazi_measurement_runtime() -> None:
     assert data["selected_question"]["question_key"]
     assert data["llm_assist"]["status"] == "ready"
     assert data["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
-    assert "八字测算重点" in data["answer_text"]
+    assert "当前命局可见" in data["answer_text"]
+    assert "八字测算重点" not in data["answer_text"]
     assert "feature." not in data["answer_text"]
     assert "core." not in data["answer_text"]
 
@@ -62,7 +63,23 @@ def test_v20_bazi_domain_alignment_endpoint_is_read_only() -> None:
     assert data["version"] == "v20.bazi_domain_alignment_manifest.v1"
     assert "strength" in data["core_domains"]
     assert "career" in data["applied_domains"]
-    assert data["runtime_mutation"] is False
+
+
+def test_v20_dimensions_and_latent_factor_manifests_are_read_only() -> None:
+    client = TestClient(app)
+    dimensions = client.get("/api/v20/measurement/dimensions").json()
+    latent = client.get("/api/v20/learning/latent-factor-calibration").json()
+
+    assert dimensions["version"] == "v20.bazi_dimension_manifest.v1"
+    assert dimensions["domain_dimension_map"]["wealth"]["dimension_layer"] == "macro"
+    assert latent["version"] == "v20.latent_factor_calibration_manifest.v1"
+    assert latent["latent_factor_count"] == 12
+    assert {"baseline_amplifier", "wealth_amplifier", "career_amplifier"} <= {
+        row["factor_id"] for row in latent["latent_factors"]
+    }
+    assert latent["factor_kind_counts"]["hidden_setting"] >= 1
+    assert latent["factor_kind_counts"]["change_amplifier"] >= 1
+    assert latent["runtime_mutation"] is False
 
 
 def test_v20_measure_endpoint_rejects_invalid_pillar_without_mutation() -> None:

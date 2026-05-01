@@ -9,9 +9,9 @@ from collections import Counter, defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
-from v20.corpus.job_runner import full_precompute_root
+from v20.corpus.job_runner import full_precompute_root, read_full_precompute_status
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposals
 
 
@@ -81,11 +81,22 @@ def corpus_artifact_paths(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir:
     )
 
 
+def resolve_corpus_artifact_run_id(run_id: str = "", *, runtime_dir: Path | None = None) -> str:
+    normalized = run_id.strip()
+    if normalized:
+        return normalized
+    latest = read_full_precompute_status(runtime_dir=runtime_dir)
+    latest_run_id = str(latest.get("run_id", "")).strip()
+    return latest_run_id or DEFAULT_ARTIFACT_RUN_ID
+
+
 def build_corpus_artifacts(
     run_id: str = DEFAULT_ARTIFACT_RUN_ID,
     *,
     runtime_dir: Path | None = None,
     status_every: int = 25_000,
+    progress: Callable[[str], None] | None = None,
+    build_sqlite_cache: bool = True,
 ) -> dict[str, object]:
     paths = corpus_artifact_paths(run_id, runtime_dir=runtime_dir)
     if not paths.snapshots_path.exists():
@@ -119,15 +130,18 @@ def build_corpus_artifacts(
     cluster_portrait_counts: dict[str, Counter[str]] = defaultdict(Counter)
     rule_support = _rule_support_seed()
     total = 0
+    expected_total = _expected_snapshot_count(paths)
     feature_count_sum = 0
     knowledge_ref_count_sum = 0
     portrait_axis_count_sum = 0
 
-    if paths.sqlite_index_path.exists():
-        paths.sqlite_index_path.unlink()
-    conn = sqlite3.connect(paths.sqlite_index_path)
-    _configure_sqlite(conn)
-    _create_schema(conn)
+    conn: sqlite3.Connection | None = None
+    if build_sqlite_cache:
+        if paths.sqlite_index_path.exists():
+            paths.sqlite_index_path.unlink()
+        conn = sqlite3.connect(paths.sqlite_index_path)
+        _configure_sqlite(conn)
+        _create_schema(conn)
 
     with paths.snapshots_path.open(encoding="utf-8") as source, paths.flat_labels_path.open("w", encoding="utf-8") as flat:
         batch = []
@@ -138,7 +152,8 @@ def build_corpus_artifacts(
             label = snapshot["label_snapshot"]
             flat_row = _flat_label_row(line_no, label)
             flat.write(json.dumps(flat_row, ensure_ascii=False, sort_keys=True) + "\n")
-            batch.append(_sqlite_row(flat_row))
+            if conn is not None:
+                batch.append(_sqlite_row(flat_row))
             _update_counters(counters, label)
             _update_rule_support(rule_support, label)
             _update_portrait_cooccurrence(cooccurrence, label)
@@ -157,20 +172,24 @@ def build_corpus_artifacts(
             knowledge_ref_count_sum += int(density.get("knowledge_ref_count", 0))
             portrait_axis_count_sum += int(density.get("portrait_axis_count", 0))
             total += 1
-            if len(batch) >= 2_000:
+            if conn is not None and len(batch) >= 2_000:
                 conn.executemany(SQLITE_INSERT, batch)
                 conn.commit()
                 batch.clear()
             if total % status_every == 0:
-                _write_json(
-                    paths.status_path,
-                    _status_payload(paths, "running", total, started_at, time.monotonic() - started),
-                )
-        if batch:
+                status = _status_payload(paths, "running", total, started_at, time.monotonic() - started)
+                _write_json(paths.status_path, status)
+                _emit_artifact_progress(progress, status, expected_total)
+        if conn is not None and batch:
             conn.executemany(SQLITE_INSERT, batch)
             conn.commit()
-    _create_indexes(conn)
-    conn.close()
+    status = _status_payload(paths, "indexing", total, started_at, time.monotonic() - started)
+    status["sqlite_cache_enabled"] = build_sqlite_cache
+    _write_json(paths.status_path, status)
+    _emit_artifact_progress(progress, status, expected_total)
+    if conn is not None:
+        _create_indexes(conn)
+        conn.close()
 
     coverage = _coverage_summary(
         paths=paths,
@@ -219,7 +238,6 @@ def build_corpus_artifacts(
     status = _status_payload(paths, "completed", total, started_at, time.monotonic() - started)
     status["artifact_outputs"] = {
         "coverage_summary": str(paths.coverage_summary_path),
-        "sqlite_index": str(paths.sqlite_index_path),
         "flat_labels": str(paths.flat_labels_path),
         "cluster_model": str(paths.cluster_model_path),
         "similarity_manifest": str(paths.similarity_manifest_path),
@@ -230,11 +248,22 @@ def build_corpus_artifacts(
         "postgres_import_manifest": str(paths.postgres_manifest_path),
         "parquet_export_manifest": str(paths.parquet_manifest_path),
     }
+    status["local_sqlite_cache"] = {
+        "enabled": build_sqlite_cache,
+        "role": "disposable_local_similarity_cache",
+        "authority": "postgres_or_versioned_jsonl_artifacts",
+        "path": str(paths.sqlite_index_path) if build_sqlite_cache else "",
+        "rebuildable": True,
+    }
+    if build_sqlite_cache:
+        status["artifact_outputs"]["sqlite_cache"] = str(paths.sqlite_index_path)
     _write_json(paths.status_path, status)
+    _emit_artifact_progress(progress, status, total or expected_total)
     return status
 
 
-def read_corpus_artifact_status(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir: Path | None = None) -> dict[str, object]:
+def read_corpus_artifact_status(run_id: str = "", *, runtime_dir: Path | None = None) -> dict[str, object]:
+    run_id = resolve_corpus_artifact_run_id(run_id, runtime_dir=runtime_dir)
     paths = corpus_artifact_paths(run_id, runtime_dir=runtime_dir)
     if not paths.status_path.exists():
         return {
@@ -248,21 +277,34 @@ def read_corpus_artifact_status(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtim
     return json.loads(paths.status_path.read_text(encoding="utf-8")) | {"runtime_mutation": False}
 
 
-def read_corpus_coverage_summary(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir: Path | None = None) -> dict[str, object]:
+def read_corpus_coverage_summary(run_id: str = "", *, runtime_dir: Path | None = None) -> dict[str, object]:
+    run_id = resolve_corpus_artifact_run_id(run_id, runtime_dir=runtime_dir)
     path = corpus_artifact_paths(run_id, runtime_dir=runtime_dir).coverage_summary_path
     if not path.exists():
-        return {"version": "v20.corpus_coverage_summary.v1", "status": "not_built", "runtime_mutation": False}
+        return {
+            "version": "v20.corpus_coverage_summary.v1",
+            "run_id": run_id,
+            "status": "not_built",
+            "runtime_mutation": False,
+        }
     return json.loads(path.read_text(encoding="utf-8")) | {"runtime_mutation": False}
 
 
-def read_corpus_cluster_model(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir: Path | None = None) -> dict[str, object]:
+def read_corpus_cluster_model(run_id: str = "", *, runtime_dir: Path | None = None) -> dict[str, object]:
+    run_id = resolve_corpus_artifact_run_id(run_id, runtime_dir=runtime_dir)
     path = corpus_artifact_paths(run_id, runtime_dir=runtime_dir).cluster_model_path
     if not path.exists():
-        return {"version": "v20.corpus_cluster_model.v1", "status": "not_built", "runtime_mutation": False}
+        return {
+            "version": "v20.corpus_cluster_model.v1",
+            "run_id": run_id,
+            "status": "not_built",
+            "runtime_mutation": False,
+        }
     return json.loads(path.read_text(encoding="utf-8")) | {"runtime_mutation": False}
 
 
-def read_corpus_training_artifacts(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, runtime_dir: Path | None = None) -> dict[str, object]:
+def read_corpus_training_artifacts(run_id: str = "", *, runtime_dir: Path | None = None) -> dict[str, object]:
+    run_id = resolve_corpus_artifact_run_id(run_id, runtime_dir=runtime_dir)
     paths = corpus_artifact_paths(run_id, runtime_dir=runtime_dir)
     return {
         "version": "v20.corpus_training_artifacts.v1",
@@ -285,10 +327,11 @@ def read_corpus_training_artifacts(run_id: str = DEFAULT_ARTIFACT_RUN_ID, *, run
 def find_similar_cases(
     case_id: str,
     *,
-    run_id: str = DEFAULT_ARTIFACT_RUN_ID,
+    run_id: str = "",
     limit: int = 8,
     runtime_dir: Path | None = None,
 ) -> dict[str, object]:
+    run_id = resolve_corpus_artifact_run_id(run_id, runtime_dir=runtime_dir)
     postgres_result = _find_similar_cases_postgres(case_id, limit=limit)
     if postgres_result["status"] in {"ready", "case_not_found"}:
         return postgres_result
@@ -1243,6 +1286,52 @@ def _status_payload(
             "NO_RULE_ACTIVATION",
         ],
     }
+
+
+def _expected_snapshot_count(paths: CorpusArtifactPaths) -> int:
+    progress_path = paths.run_dir / "progress.json"
+    if progress_path.exists():
+        try:
+            progress = json.loads(progress_path.read_text(encoding="utf-8"))
+            target = int(progress.get("target_count", 0))
+            if target > 0:
+                return target
+        except Exception:
+            pass
+    return _count_lines(paths.snapshots_path) if paths.snapshots_path.exists() else 0
+
+
+def _count_lines(path: Path) -> int:
+    count = 0
+    with path.open("rb") as source:
+        for _line in source:
+            count += 1
+    return count
+
+
+def _emit_artifact_progress(
+    progress: Callable[[str], None] | None,
+    status: dict[str, object],
+    expected_total: int,
+) -> None:
+    if progress is None:
+        return
+    processed = int(status.get("processed", 0))
+    elapsed = float(status.get("elapsed_seconds", 0.0))
+    ratio = (processed / expected_total) if expected_total else 0.0
+    width = 24
+    filled = max(0, min(width, round(width * ratio)))
+    bar = "#" * filled + "-" * (width - filled)
+    remaining = max(0, expected_total - processed)
+    rate = processed / elapsed if elapsed > 0 else 0.0
+    eta = remaining / rate if rate > 0 else None
+    eta_text = "unknown" if eta is None else f"{round(eta, 1)}s"
+    progress(
+        f"[{bar}] {ratio * 100:6.2f}% "
+        f"processed={processed}/{expected_total or '?'} "
+        f"status={status.get('status', '')} "
+        f"rate={round(rate, 2)} rows/s eta={eta_text}"
+    )
 
 
 def _similarity_candidates(conn: sqlite3.Connection, query: sqlite3.Row) -> list[sqlite3.Row]:

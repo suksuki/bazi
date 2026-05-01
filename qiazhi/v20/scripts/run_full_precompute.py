@@ -27,6 +27,7 @@ def main() -> int:
     parser.add_argument("--status-every", type=int, default=500, help="Write progress every N processed cases.")
     parser.add_argument("--no-resume", action="store_true", help="Ignore existing progress for the same run id.")
     parser.add_argument("--status", action="store_true", help="Print latest or run-specific status instead of running.")
+    parser.add_argument("--progress", action="store_true", help="Print progress lines to stderr while running.")
     args = parser.parse_args()
 
     run_id = args.run_id or default_full_precompute_run_id()
@@ -41,7 +42,10 @@ def main() -> int:
         status_every=args.status_every,
         resume=not args.no_resume,
     )
-    result = run_full_precompute_job(config)
+    progress = (
+        lambda message: print(f"[v20-full-precompute] {message}", file=sys.stderr, flush=True)
+    ) if args.progress else None
+    result = run_full_precompute_job(config, progress=progress)
     print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
     return 0
 

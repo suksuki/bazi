@@ -26,12 +26,16 @@ from v20.knowledge.rule_extraction import (
     validate_llm_rule_extraction_report,
     validate_rule_extraction_report,
 )
+from v20.knowledge.rule_library import build_knowledge_rule_library
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight, build_first_wave_rule_proposals
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
+from v20.learning.decision_registry_review import build_decision_registry_review_report
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest
 from v20.learning.registries import registry_manifest
+from v20.learning.rule_promotion_gate import build_rule_promotion_gate_report
+from v20.learning.rule_subcondition_split import build_rule_subcondition_split_report
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
@@ -39,6 +43,7 @@ from v20.ops.sync import sync_readiness_report
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.storage.postgres_schema import build_postgres_schema_contract
 from v20.testing.matrix import build_test_coverage_matrix
+from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 
 
 def system_status_report() -> dict[str, object]:
@@ -60,13 +65,20 @@ def system_status_report() -> dict[str, object]:
     rule_proposal_preflight = build_first_wave_rule_proposal_preflight(limit_per_domain=1)
     rule_extraction = build_rule_extraction_report(limit=12)
     rule_extraction_validation = validate_rule_extraction_report(limit=12)
-    llm_rule_extraction = build_llm_rule_extraction_report(limit=2)
-    llm_rule_extraction_validation = validate_llm_rule_extraction_report(limit=2)
+    llm_rule_extraction = build_llm_rule_extraction_report(limit=2, execute_llm=False)
+    llm_rule_extraction_validation = validate_llm_rule_extraction_report(limit=2, execute_llm=False)
+    knowledge_rule_library = build_knowledge_rule_library(limit=12)
+    knowledge_rule_library_full = build_knowledge_rule_library()
+    knowledge_rule_validation = build_knowledge_rule_validation_report(limit=12)
+    knowledge_rule_validation_full = build_knowledge_rule_validation_report()
     dependencies = dependency_readiness_report()
     sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
     evolution = build_evolution_dry_run_plan()
     learning_run_plan = build_learning_run_plan()
+    rule_promotion_gate = build_rule_promotion_gate_report(limit=12)
+    rule_subcondition_split = build_rule_subcondition_split_report(limit=12, per_rule=3)
+    decision_registry_review = build_decision_registry_review_report(limit=12, per_rule=3)
     precompute_manifest = build_full_precompute_manifest()
     corpus_artifacts = read_corpus_artifact_status()
     corpus_summary = read_corpus_coverage_summary()
@@ -109,8 +121,19 @@ def system_status_report() -> dict[str, object]:
         "knowledge_llm_rule_extraction_accepted_count": llm_rule_extraction["accepted_count"],
         "knowledge_llm_rule_extraction_fallback_count": llm_rule_extraction["fallback_count"],
         "knowledge_llm_rule_extraction_validation_status": llm_rule_extraction_validation["status"],
+        "knowledge_rule_library_status": knowledge_rule_library["status"],
+        "knowledge_rule_library_definition_count": knowledge_rule_library["definition_count"],
+        "knowledge_rule_library_full_definition_count": knowledge_rule_library_full["definition_count"],
+        "knowledge_rule_library_runtime_allowed_count": knowledge_rule_library["runtime_allowed_count"],
+        "knowledge_rule_validation_status": knowledge_rule_validation["status"],
+        "knowledge_rule_validation_synthetic_covered_count": knowledge_rule_validation["synthetic_covered_count"],
+        "knowledge_rule_validation_full_synthetic_covered_count": knowledge_rule_validation_full["synthetic_covered_count"],
+        "knowledge_rule_validation_missing_synthetic_count": knowledge_rule_validation["missing_synthetic_count"],
+        "knowledge_rule_validation_full_missing_synthetic_count": knowledge_rule_validation_full["missing_synthetic_count"],
         "full_precompute_status": precompute_manifest["status"],
         "full_precompute_estimated_minutes": precompute_manifest["cost_estimate"]["estimated_total_minutes"],
+        "full_precompute_runtime_role": "offline_structure_coverage_baseline",
+        "full_precompute_runtime_decision_authority": "none",
         "corpus_artifact_status": corpus_artifacts["status"],
         "corpus_cluster_count": corpus_summary.get("cluster_count", 0),
         "corpus_cluster_model_status": corpus_clusters["status"],
@@ -120,6 +143,20 @@ def system_status_report() -> dict[str, object]:
         "learning_status": evolution["status"],
         "learning_run_plan_status": learning_run_plan["status"],
         "learning_target_case_count": learning_run_plan["target_case_count"],
+        "rule_promotion_gate_status": rule_promotion_gate["status"],
+        "rule_promotion_packet_count": rule_promotion_gate["packet_count"],
+        "rule_promotion_shadow_weight_candidate_count": rule_promotion_gate["shadow_weight_candidate_count"],
+        "rule_promotion_runtime_candidate_count": rule_promotion_gate["runtime_promotion_candidate_count"],
+        "rule_promotion_blocked_count": rule_promotion_gate["blocked_count"],
+        "rule_promotion_needs_subcondition_count": rule_promotion_gate["needs_subcondition_count"],
+        "rule_subcondition_split_status": rule_subcondition_split["status"],
+        "rule_subcondition_split_packet_count": rule_subcondition_split["packet_count"],
+        "rule_subcondition_split_subcondition_count": rule_subcondition_split["subcondition_count"],
+        "rule_subcondition_split_quality_status": rule_subcondition_split["quality_status"],
+        "decision_registry_review_status": decision_registry_review["status"],
+        "decision_registry_review_record_count": decision_registry_review["decision_record_count"],
+        "decision_registry_review_batch_count": decision_registry_review["batch_review_candidate_count"],
+        "decision_registry_review_runtime_activation_count": decision_registry_review["runtime_activation_count"],
         "policy_surfaces": {
             "question_ranking": question_ranking_manifest()["version"],
             "knowledge_retrieval": knowledge_retrieval_manifest()["version"],

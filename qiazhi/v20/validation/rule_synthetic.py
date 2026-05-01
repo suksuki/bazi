@@ -67,7 +67,7 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
             "feature.element.prominent.wood",
             "feature.element.weak.metal",
         ),
-        expected_question_keys=("q_element_balance", "q_element_support_pressure"),
+        expected_question_keys=("q_element_balance",),
         notes="木偏显、金偏弱，用来验证五行规则裁决是否命中特征而不落入健康断语。",
     ),
     SyntheticRuleCase(
@@ -84,6 +84,64 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
         flow_year_pillar="丙午",
         luck_pillar="甲申",
         notes="显式大运流年进入，只验证时间层触发规则，不生成应期断语。",
+    ),
+    SyntheticRuleCase(
+        case_id="v20.rule.synthetic.useful_god_candidate_gate",
+        pillar_displays=("壬寅", "甲辰", "丙子", "甲午"),
+        question_key="q_useful_god_candidates",
+        expected_rule_domains=("useful_god", "strength", "element"),
+        expected_feature_prefixes=(
+            "feature.useful_god.candidate_paths",
+            "feature.useful_god.evidence_gate",
+            "feature.element.",
+        ),
+        expected_question_keys=("q_useful_god_candidates",),
+        notes="用神只能作为候选路径，验证用神门槛不会直接定喜忌。",
+    ),
+    SyntheticRuleCase(
+        case_id="v20.rule.synthetic.pattern_review_gate",
+        pillar_displays=("庚午", "辛巳", "丁丑", "乙巳"),
+        question_key="q_pattern_structure",
+        expected_rule_domains=("pattern",),
+        expected_feature_prefixes=("feature.pattern.review_index",),
+        expected_question_keys=("q_pattern_structure",),
+        notes="格局只进入复核路径，验证不会直接定格局等级或成败。",
+    ),
+    SyntheticRuleCase(
+        case_id="v20.rule.synthetic.career_projection",
+        pillar_displays=("甲子", "戊辰", "甲午", "辛酉"),
+        question_key="q_career_structure",
+        expected_rule_domains=("career", "ten_god"),
+        expected_feature_prefixes=(
+            "feature.ten_god.focus.zheng_guan",
+            "feature.branch.visible_relation",
+        ),
+        expected_question_keys=("q_career_structure",),
+        notes="事业只能作为十神、格局、承载力和地支互动上的应用投影。",
+    ),
+    SyntheticRuleCase(
+        case_id="v20.rule.synthetic.relationship_projection",
+        pillar_displays=("甲子", "戊辰", "甲午", "辛酉"),
+        question_key="q_relationship_structure",
+        expected_rule_domains=("relationship", "branch"),
+        expected_feature_prefixes=(
+            "feature.branch.visible_relation",
+            "feature.ten_god.visible_relation",
+        ),
+        expected_question_keys=("q_relationship_structure",),
+        notes="关系主题必须回到地支互动、十神来源和承接边界，不能直接断关系事件。",
+    ),
+    SyntheticRuleCase(
+        case_id="v20.rule.synthetic.health_balance_boundary",
+        pillar_displays=("壬寅", "甲辰", "丙子", "甲午"),
+        question_key="q_health_balance_boundary",
+        expected_rule_domains=("health", "element"),
+        expected_feature_prefixes=(
+            "feature.element.prominent.wood",
+            "feature.element.weak.metal",
+        ),
+        expected_question_keys=("q_health_balance_boundary",),
+        notes="健康相关只能验证五行平衡和结构压力边界，不能生成疾病判断。",
     ),
 )
 

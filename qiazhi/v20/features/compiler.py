@@ -497,7 +497,15 @@ def _wealth_features(facts: ChartFacts) -> list[BaziFeature]:
 
 
 def _pattern_index_feature(facts: ChartFacts) -> BaziFeature:
-    refs = tuple(EvidenceRef(f"vault.{position}", "vault", position, "core") for position in facts.vault_branches)
+    refs = tuple(
+        EvidenceRef(
+            f"vault.{position}",
+            "vault",
+            f"{POSITION_LABELS_ZH.get(position, position)}墓库藏气需要格局复核",
+            "core",
+        )
+        for position in facts.vault_branches
+    )
     return BaziFeature(
         feature_id="feature.pattern.review_index",
         title="Pattern review index is available",

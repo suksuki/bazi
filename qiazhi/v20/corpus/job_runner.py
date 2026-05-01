@@ -5,7 +5,7 @@ import time
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from v20.corpus.enumerator import FULL_CORPUS_CASE_COUNT, canonical_case_at
 from v20.corpus.precompute_runner import precompute_case
@@ -42,6 +42,7 @@ def run_full_precompute_job(
     config: FullPrecomputeJobConfig,
     *,
     runtime_dir: Path | None = None,
+    progress: Callable[[str], None] | None = None,
 ) -> dict[str, object]:
     if config.start < 0 or config.start >= FULL_CORPUS_CASE_COUNT:
         raise ValueError(f"start out of range: {config.start}")
@@ -75,6 +76,7 @@ def run_full_precompute_job(
     )
     _write_json(progress_path, status)
     _write_json(latest_path, status)
+    _emit_progress(progress, status)
 
     with snapshot_path.open("a", encoding="utf-8") as snapshots, error_path.open("a", encoding="utf-8") as errors:
         for index in range(start_index, config.end):
@@ -108,6 +110,7 @@ def run_full_precompute_job(
                 )
                 _write_json(progress_path, status)
                 _write_json(latest_path, status)
+                _emit_progress(progress, status)
     return status
 
 
@@ -126,6 +129,10 @@ def read_full_precompute_status(
             "guardrails": ["STATUS_READ_ONLY", "NO_CORPUS_CONTENT_RENDERED"],
         }
     payload = json.loads(path.read_text(encoding="utf-8"))
+    payload["processed"] = payload.get("completed_from_start", payload.get("processed_this_session", 0))
+    payload["total"] = payload.get("target_count", 0)
+    payload["progress_percent"] = round(float(payload.get("progress_ratio", 0.0) or 0.0) * 100, 3)
+    payload["speed_per_second"] = payload.get("cases_per_second", 0)
     payload["job_runtime_mutation"] = payload.get("runtime_mutation", False)
     payload["runtime_mutation"] = False
     payload["guardrails"] = list(payload.get("guardrails", ())) + [
@@ -194,3 +201,22 @@ def _status_payload(
 def _write_json(path: Path, payload: dict[str, object]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
+
+
+def _emit_progress(progress: Callable[[str], None] | None, status: dict[str, object]) -> None:
+    if progress is None:
+        return
+    ratio = float(status.get("progress_ratio", 0.0))
+    width = 24
+    filled = max(0, min(width, round(width * ratio)))
+    bar = "#" * filled + "-" * (width - filled)
+    pct = round(ratio * 100, 2)
+    eta = status.get("eta_seconds", None)
+    eta_text = "unknown" if eta is None else f"{eta}s"
+    progress(
+        f"[{bar}] {pct:6.2f}% "
+        f"completed={status.get('completed_from_start', 0)}/"
+        f"{status.get('target_count', 0)} "
+        f"rate={status.get('cases_per_second', 0)} cps "
+        f"eta={eta_text}"
+    )

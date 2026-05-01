@@ -68,7 +68,7 @@ def test_v20_questions_surface_chart_specific_material_without_new_keys() -> Non
     assert {row["question_key"] for row in baseline["questions"]} >= {"q_strength_assessment", "q_branch_relation_detail"}
     assert {row["question_key"] for row in timed["questions"]} >= {"q_time_layer_context", "q_income_stability"}
     assert any("冲合刑害" in row["title"] for row in baseline["questions"])
-    assert any("财星" in row["title"] for row in timed["questions"])
+    assert any("财运" in row["title"] or "财星" in row["title"] for row in timed["questions"])
     assert all("五行差距" not in row["title"] and "扶助分" not in row["title"] for row in timed["questions"])
     assert timed["decision_report"]["decision_count"] >= 1
 

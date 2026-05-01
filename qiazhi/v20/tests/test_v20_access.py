@@ -21,6 +21,8 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert "knowledge_semantic_model" in roles["analyst"]["allowed_runtime_fields"]
     assert "decision_report" in roles["analyst"]["allowed_runtime_fields"]
     assert "decision_validation" in roles["analyst"]["allowed_runtime_fields"]
+    assert "practitioner_session" in roles["analyst"]["allowed_runtime_fields"]
+    assert "practitioner_session" not in roles["user"]["allowed_runtime_fields"]
     assert "rule_candidate_support" not in roles["analyst"]["allowed_runtime_fields"]
     assert "chart_graph" in roles["lab"]["allowed_runtime_fields"]
     assert manifest["runtime_mutation"] is False
@@ -47,7 +49,9 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "chart_graph" not in projected
     assert "decision_report" in projected
     assert "dynamic_portrait" in projected
+    assert "practitioner_session" not in projected
     assert "feature_ids" not in projected["decision_report"]["decisions"][0]
+    assert "knowledge_rule_refs" not in projected["decision_report"]["decisions"][0]
     assert "source_decision_keys" not in projected["dynamic_portrait"]["tags"][0]
     assert all("source_feature_ids" not in row for row in projected["questions"])
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])
@@ -76,4 +80,5 @@ def test_v20_role_measure_endpoint_projects_by_role() -> None:
     assert "knowledge_semantic_model" in analyst
     assert "decision_validation" in analyst
     assert "dynamic_portrait" in analyst
+    assert "practitioner_session" in analyst
     assert roles["runtime_mutation"] is False

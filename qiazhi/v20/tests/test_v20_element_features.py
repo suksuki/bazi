@@ -46,7 +46,7 @@ def test_v20_runtime_routes_element_questions_and_knowledge() -> None:
     assert "element" in {row["domain"] for row in result["knowledge_refs"]}
     assert result["selected_question"]["domain"] == "element"
     assert result["selected_question"]["question_key"] == "q_element_balance"
-    assert "动态裁决画像" in result["answer_text"]
+    assert "当前命局可见" in result["answer_text"]
     assert "五行分布参与扶抑判断" in result["answer_text"]
     assert "strongest=" not in result["answer_text"]
     assert "五行分布" in result["answer_text"]

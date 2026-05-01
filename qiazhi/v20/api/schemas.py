@@ -3,6 +3,20 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+class PractitionerControlSelectionRequest(BaseModel):
+    control_key: str = Field(..., min_length=1, max_length=160)
+    option: str = Field(..., min_length=1, max_length=40)
+    source_decision_keys: list[str] = Field(default_factory=list)
+
+
+class LatentEventCalibrationAnswerRequest(BaseModel):
+    scenario_id: str = Field(..., min_length=1, max_length=120)
+    year_option: str = Field(..., min_length=1, max_length=40)
+    result_option: str = Field(..., min_length=1, max_length=80)
+    intensity: str = Field(..., pattern="^(none|mild|clear|strong)$")
+    confidence: str = Field(..., pattern="^(low|medium|high)$")
+
+
 class MeasureRequest(BaseModel):
     year: str = Field(..., min_length=2, max_length=2)
     month: str = Field(..., min_length=2, max_length=2)
@@ -16,6 +30,8 @@ class MeasureRequest(BaseModel):
     user_text: str = ""
     locale: str = "zh"
     llm_mode: str = Field("deterministic", pattern="^(deterministic|rewrite|practitioner)$")
+    practitioner_selections: list[PractitionerControlSelectionRequest] = Field(default_factory=list)
+    latent_event_answers: list[LatentEventCalibrationAnswerRequest] = Field(default_factory=list)
 
 
 class MeasureResponse(BaseModel):
@@ -41,6 +57,20 @@ class PortraitCalibrationRequest(BaseModel):
     source_role: str = "user"
     signal: str = Field(..., pattern="^(confirm|reject|needs_review|evidence_gap)$")
     note: str = Field("", max_length=1000)
+    locale: str = "zh"
+
+
+class PractitionerCalibrationRequest(BaseModel):
+    input_id: str = ""
+    source_role: str = Field("analyst", pattern="^(analyst|admin|practitioner)$")
+    selections: list[PractitionerControlSelectionRequest] = Field(default_factory=list, min_length=1)
+    locale: str = "zh"
+
+
+class LatentEventCalibrationRequest(BaseModel):
+    input_id: str = ""
+    source_role: str = Field("user", pattern="^(user|analyst|admin|practitioner)$")
+    answers: list[LatentEventCalibrationAnswerRequest] = Field(default_factory=list, min_length=1)
     locale: str = "zh"
 
 

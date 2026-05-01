@@ -28,6 +28,7 @@ from v20.knowledge.rule_extraction import (
     validate_llm_rule_extraction_report,
     validate_rule_extraction_report,
 )
+from v20.knowledge.rule_library import build_knowledge_rule_library, validate_knowledge_rule_library
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.server import app
 
@@ -94,6 +95,25 @@ def test_v20_knowledge_catalog_reports_coverage_and_hooks() -> None:
     assert not catalog["duplicate_ids"]
     assert catalog["source_catalog_status"] == "ready"
     assert not catalog["missing_source_refs"]
+
+
+def test_v20_default_knowledge_units_carry_structured_runtime_mappings() -> None:
+    units = default_knowledge_units()
+    library = build_knowledge_rule_library()
+
+    assert len(units) >= 12
+    assert all(unit.rule_atoms for unit in units)
+    assert all(unit.portrait_mappings for unit in units)
+    assert all(unit.question_mappings for unit in units)
+    assert library["definition_count"] == len(units)
+    assert all(
+        definition["portrait_outputs"][0]["source"] == "knowledge_unit_structured_mapping"
+        for definition in library["definitions"]
+    )
+    assert all(
+        definition["question_outputs"][0]["source"] == "knowledge_unit_structured_mapping"
+        for definition in library["definitions"]
+    )
 
 
 def test_v20_knowledge_catalog_endpoint_is_read_only() -> None:
@@ -344,6 +364,29 @@ def test_v20_rule_extraction_is_knowledge_first_with_corpus_validation_only() ->
     assert validation["runtime_mutation"] is False
 
 
+def test_v20_knowledge_rule_library_is_review_layer_not_runtime_truth() -> None:
+    library = build_knowledge_rule_library("strength", limit=1)
+    validation = validate_knowledge_rule_library("strength", limit=1)
+    definition = library["definitions"][0]
+
+    assert library["status"] == "ready"
+    assert library["source_authority"] == "reviewed_bazi_knowledge_base"
+    assert library["definition_count"] == 1
+    assert library["runtime_allowed_count"] == 0
+    assert library["portrait_output_count"] >= 1
+    assert library["question_output_count"] >= 1
+    assert definition["source_knowledge_id"] == "v20.core.strength_boundary"
+    assert definition["runtime_allowed"] is False
+    assert definition["promotion_status"] == "shadow_review"
+    assert definition["validation_state"] == "synthetic_not_run"
+    assert any(row["source"] == "knowledge_unit_structured_atom" for row in definition["condition_atoms"])
+    assert definition["portrait_outputs"][0]["label"] == "日主承载力"
+    assert definition["question_outputs"][0]["title"] == "这个八字日主偏强还是偏弱，适合先看什么？"
+    assert definition["bazi_alignment"]["ok"] is True
+    assert validation["status"] == "pass"
+    assert validation["runtime_mutation"] is False
+
+
 def test_v20_llm_rule_extraction_uses_safe_fallback_when_provider_disabled() -> None:
     report = build_llm_rule_extraction_report("strength", limit=1)
     validation = validate_llm_rule_extraction_report("strength", limit=1)
@@ -371,6 +414,8 @@ def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     extraction_validation = client.get("/api/v20/knowledge/rule-extraction-validation/strength").json()
     llm_extraction = client.get("/api/v20/knowledge/llm-rule-extraction/strength").json()
     llm_validation = client.get("/api/v20/knowledge/llm-rule-extraction-validation/strength").json()
+    rule_library = client.get("/api/v20/knowledge/rule-library/strength?limit=1").json()
+    rule_library_validation = client.get("/api/v20/knowledge/rule-library-validation/strength?limit=1").json()
 
     assert report["runtime_mutation"] is False
     assert report["status"] == "ready"
@@ -389,3 +434,8 @@ def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     assert llm_extraction["status"] == "ready"
     assert llm_validation["runtime_mutation"] is False
     assert llm_validation["status"] == "pass"
+    assert rule_library["runtime_mutation"] is False
+    assert rule_library["status"] == "ready"
+    assert rule_library["runtime_allowed_count"] == 0
+    assert rule_library_validation["runtime_mutation"] is False
+    assert rule_library_validation["status"] == "pass"

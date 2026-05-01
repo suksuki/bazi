@@ -17,6 +17,7 @@ from v20.answer.measurement_policy import (
 from v20.features.schema import FeatureLayer
 from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.schema import KnowledgeRetrievalReport
+from v20.measurement.dimensions import dimension_payload
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,9 @@ class AnswerSection:
     section_type: str = "feature_measurement"
     measurement_topic: str = ""
     measurement_stage: str = ""
+    dimension_key: str = ""
+    dimension_layer: str = ""
+    dimension_label: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -42,6 +46,7 @@ class AnswerPlan:
     measurement_focus: str = "bazi_measurement"
     prediction_policy: dict[str, object] | None = None
     domain_projection: dict[str, object] | None = None
+    dimension_context: dict[str, object] | None = None
     guardrails: tuple[str, ...] = (
         "ANSWER_PLAN_VERIFIED_CONTEXT_ONLY",
         "LLM_MAY_REWRITE_ONLY",
@@ -59,6 +64,7 @@ class AnswerPlan:
             "measurement_focus": self.measurement_focus,
             "prediction_policy": self.prediction_policy or prediction_policy(),
             "domain_projection": self.domain_projection or {},
+            "dimension_context": self.dimension_context or {},
             "guardrails": list(self.guardrails),
         }
 
@@ -79,15 +85,21 @@ def build_answer_plan(
             title="命理测算主线",
             body=(
                 f"本次以「{question.title}」为入口，优先读取"
-                f"「{question.measurement_topic}」相关的结构、证据和边界。"
+                f"「{question.measurement_topic}」相关的命局线索、十神关系和可复核依据。"
             ),
             feature_ids=tuple(feature.feature_id for feature in selected[:4]),
             domain=question.domain,
             section_type="measurement_scope",
             measurement_topic=question.measurement_topic,
             measurement_stage=question.measurement_stage,
+            dimension_key=question.dimension_key,
+            dimension_layer=question.dimension_layer,
+            dimension_label=question.dimension_label,
         )
     ]
+    mainline_section = _mainline_section(decision_report or {}, question.domain)
+    if mainline_section:
+        sections.append(mainline_section)
     decision_section = _decision_section(decision_report or {}, question.domain)
     if decision_section:
         sections.append(decision_section)
@@ -112,6 +124,7 @@ def build_answer_plan(
                     section_type=row.section_type,
                     measurement_topic=domain_label(row.domain),
                     measurement_stage=measurement_stage(row.domain),
+                    **dimension_payload(row.domain),
                 )
             )
         for feature in selected[:4]:
@@ -132,17 +145,21 @@ def build_answer_plan(
                     section_type="feature_measurement",
                     measurement_topic=topic,
                     measurement_stage=measurement_stage(feature.domain),
+                    **dimension_payload(feature.domain),
                 )
             )
     sections.append(
         AnswerSection(
             title="测算边界",
-            body="当前回答给出命理结构判断和候选路径，不把候选特征写成确定事件、固定吉凶或具体时间点。",
+            body="当前回答只说明命局里已经看到的关系和下一步可复核方向，不把它写成确定事件、固定吉凶或具体时间点。",
             feature_ids=(),
             domain=question.domain,
             section_type="prediction_boundary",
             measurement_topic=question.measurement_topic,
             measurement_stage=question.measurement_stage,
+            dimension_key=question.dimension_key,
+            dimension_layer=question.dimension_layer,
+            dimension_label=question.dimension_label,
         )
     )
     return AnswerPlan(
@@ -152,6 +169,33 @@ def build_answer_plan(
         evidence_pack=evidence_pack,
         prediction_policy=prediction_policy(),
         domain_projection=build_domain_projection(feature_layer, question.domain).to_dict(),
+        dimension_context=_answer_dimension_context(question, decision_report or {}),
+    )
+
+
+def _mainline_section(report: dict[str, object], selected_domain: str) -> AnswerSection | None:
+    mainlines = [
+        row for row in report.get("mainlines", ())
+        if isinstance(row, dict) and _mainline_matches_domain(row, selected_domain)
+    ]
+    if not mainlines:
+        return None
+    rows = []
+    feature_ids = []
+    for row in mainlines[:3]:
+        title = str(row.get("title", "命理主线"))
+        summary = str(row.get("summary", ""))
+        rows.append(f"{title}：{summary}")
+        feature_ids.extend(str(item) for item in row.get("source_decision_keys", ()) if str(item))
+    return AnswerSection(
+        title="主线裁决",
+        body="；".join(rows) + "。",
+        feature_ids=tuple(dict.fromkeys(feature_ids)),
+        domain=selected_domain,
+        section_type="mainline_decision",
+        measurement_topic=domain_label(selected_domain),
+        measurement_stage=measurement_stage(selected_domain),
+        **dimension_payload(selected_domain),
     )
 
 
@@ -165,19 +209,21 @@ def _decision_section(report: dict[str, object], selected_domain: str) -> Answer
     rows = []
     feature_ids = []
     for row in decisions[:4]:
-        support = "、".join(str(item) for item in row.get("support", ())[:3] if str(item))
+        support = "、".join(_public_support_text(str(item)) for item in row.get("support", ())[:3] if str(item))
         label = str(row.get("label", "命理裁决"))
-        status = str(row.get("status", "candidate"))
-        rows.append(f"{label}（{status}）：{support}")
+        knowledge_hint = _knowledge_rule_public_hint(row)
+        suffix = f"，复核重点：{knowledge_hint}" if knowledge_hint else ""
+        rows.append(f"{label}：{support}{suffix}")
         feature_ids.extend(str(item) for item in row.get("feature_ids", ()) if str(item))
     return AnswerSection(
         title="动态裁决画像",
-        body="；".join(rows) + "。这些画像来自当前八字的规则命中与裁决，不使用离线语料静态标签作为结论。",
+        body="；".join(rows) + "。这些画像来自当前八字的实时排盘和规则判断，不使用离线语料静态标签作为结论。",
         feature_ids=tuple(dict.fromkeys(feature_ids)),
         domain=selected_domain,
         section_type="dynamic_decision_portrait",
         measurement_topic=domain_label(selected_domain),
         measurement_stage=measurement_stage(selected_domain),
+        **dimension_payload(selected_domain),
     )
 
 
@@ -187,8 +233,8 @@ def _decision_knowledge_section(domain: str, knowledge_refs: tuple[object, ...])
         knowledge_id = getattr(ref, "knowledge_id", "")
         title = KNOWLEDGE_LABELS_ZH.get(knowledge_id, getattr(ref, "title", ""))
         if title:
-            labels.append(f"{title}：只提供术语、证据范围和越界提醒")
-    body = "；".join(labels) + "。" if labels else "当前回答以动态裁决画像为主，知识库只提供边界和术语支持。"
+            labels.append(f"{title}：用于校对术语和判断范围")
+    body = "；".join(labels) + "。" if labels else "当前回答以实时命局判断为主，知识库用于校对术语和判断范围。"
     return AnswerSection(
         title="知识依据",
         body=body,
@@ -197,7 +243,34 @@ def _decision_knowledge_section(domain: str, knowledge_refs: tuple[object, ...])
         section_type="decision_knowledge_support",
         measurement_topic=domain_label(domain),
         measurement_stage=measurement_stage(domain),
+        **dimension_payload(domain),
     )
+
+
+def _knowledge_rule_public_hint(decision: dict[str, object]) -> str:
+    labels = []
+    for ref in decision.get("knowledge_rule_refs", ())[:2]:
+        if not isinstance(ref, dict):
+            continue
+        for label in ref.get("portrait_labels", ())[:2]:
+            if str(label):
+                labels.append(str(label))
+        if labels:
+            break
+    return "、".join(dict.fromkeys(labels[:2]))
+
+
+def _mainline_matches_domain(row: dict[str, object], selected_domain: str) -> bool:
+    domain = str(row.get("domain", ""))
+    if domain in {selected_domain, "strength"}:
+        return True
+    if selected_domain == "career" and domain in {"career", "strength", "useful_god", "branch", "time"}:
+        return True
+    if selected_domain == "wealth" and domain in {"wealth", "strength", "useful_god", "branch", "time"}:
+        return True
+    if selected_domain == "useful_god" and domain in {"useful_god", "strength", "pattern"}:
+        return True
+    return False
 
 
 def _decision_matches_domain(row: dict[str, object], selected_domain: str) -> bool:
@@ -214,12 +287,48 @@ def _decision_matches_domain(row: dict[str, object], selected_domain: str) -> bo
     return False
 
 
+def _public_support_text(value: str) -> str:
+    element = {
+        "wood": "木",
+        "fire": "火",
+        "earth": "土",
+        "metal": "金",
+        "water": "水",
+    }
+    if value.startswith("arbitration:"):
+        key = value.split(":", 1)[1]
+        return f"{element.get(key, key)}方向可作为用神参考"
+    if value.startswith("support:"):
+        key = value.split(":", 1)[1]
+        return f"{element.get(key, key)}方向可作为扶身候选"
+    if value.startswith("release:"):
+        key = value.split(":", 1)[1]
+        return f"{element.get(key, key)}方向可作为泄秀候选"
+    if value.startswith("channel:"):
+        key = value.split(":", 1)[1]
+        return f"{element.get(key, key)}方向可作为通道候选"
+    if value.startswith("constraint:"):
+        key = value.split(":", 1)[1]
+        return f"{element.get(key, key)}方向可作为约束候选"
+    if value.startswith("evidence_gap:"):
+        key = value.split(":", 1)[1]
+        return f"{element.get(key, key)}方向属于证据缺口复核"
+    return (
+        value.replace("日主承载状态 borderline_capacity", "日主强弱接近分界需裁决")
+        .replace("日主承载状态 capacity_needs_support", "日主偏弱需扶身复核")
+        .replace("日主承载状态 supported_capacity", "日主有根气与生扶支撑")
+        .replace("borderline_capacity", "日主强弱接近分界需裁决")
+        .replace("capacity_needs_support", "日主偏弱需扶身复核")
+        .replace("supported_capacity", "日主有根气与生扶支撑")
+    )
+
+
 def _decision_next_step_section(question: QuestionCandidate, report: dict[str, object]) -> AnswerSection:
     seeds = []
     for decision in report.get("decisions", ())[:5]:
         if isinstance(decision, dict):
             seeds.extend(str(row) for row in decision.get("question_seeds", ()) if str(row))
-    body = "下一步可以继续追问：" + "；".join(dict.fromkeys(seeds[:3])) + "。" if seeds else f"下一步继续围绕「{question.title}」复核主线、证据和边界。"
+    body = "下一步可以继续追问：" + "；".join(dict.fromkeys(seeds[:3])) + "。" if seeds else f"下一步继续围绕「{question.title}」看命局线索和可复核依据。"
     return AnswerSection(
         title="下一步",
         body=body,
@@ -228,4 +337,34 @@ def _decision_next_step_section(question: QuestionCandidate, report: dict[str, o
         section_type="decision_next_step",
         measurement_topic=question.measurement_topic,
         measurement_stage=question.measurement_stage,
+        dimension_key=question.dimension_key,
+        dimension_layer=question.dimension_layer,
+        dimension_label=question.dimension_label,
     )
+
+
+def _answer_dimension_context(question: QuestionCandidate, report: dict[str, object]) -> dict[str, object]:
+    related = []
+    for decision in report.get("decisions", ()):
+        if isinstance(decision, dict) and _decision_matches_domain(decision, question.domain):
+            related.append(
+                {
+                    "decision_key": str(decision.get("decision_key", "")),
+                    "domain": str(decision.get("domain", "")),
+                    "dimension_key": str(decision.get("dimension_key", "")),
+                    "dimension_layer": str(decision.get("dimension_layer", "")),
+                    "dimension_label": str(decision.get("dimension_label", "")),
+                }
+            )
+    return {
+        "version": "v20.answer_dimension_context.v1",
+        "selected_dimension_key": question.dimension_key,
+        "selected_dimension_layer": question.dimension_layer,
+        "selected_dimension_label": question.dimension_label,
+        "related_decision_dimensions": related[:8],
+        "runtime_mutation": False,
+        "guardrails": [
+            "ANSWER_DIMENSIONS_ARE_COORDINATES_NOT_VERDICTS",
+            "MACRO_DIMENSION_REQUIRES_MICRO_EVIDENCE",
+        ],
+    }
