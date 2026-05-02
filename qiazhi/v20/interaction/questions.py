@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 from dataclasses import asdict, dataclass
 from dataclasses import replace
 from typing import Any
@@ -28,6 +29,7 @@ class QuestionCandidate:
     boundary: str
     measurement_topic: str
     measurement_stage: str
+    question_id: str = ""
     dimension_key: str = ""
     dimension_layer: str = ""
     dimension_label: str = ""
@@ -117,6 +119,17 @@ def recommend_questions(
                 measurement_stage=current.measurement_stage if keep_current else measurement_stage(feature.domain),
                 **(dimension_payload(current.domain) if keep_current else dimension_payload(feature.domain)),
             )
+            candidate = replace(
+                candidate,
+                question_id=_question_id(
+                    candidate.question_key,
+                    candidate.title,
+                    candidate.domain,
+                    candidate.source_feature_ids,
+                    str(hook),
+                    str(score),
+                ),
+            )
             rows[hook] = candidate
     _add_applied_domain_questions(rows, feature_layer)
     aligned_rows = tuple(_aligned_question(row) for row in rows.values())
@@ -150,6 +163,17 @@ def _add_applied_domain_questions(rows: dict[str, QuestionCandidate], feature_la
             measurement_topic=current.measurement_topic if keep_current else domain_label(domain),
             measurement_stage=current.measurement_stage if keep_current else measurement_stage(domain),
             **(dimension_payload(current.domain) if keep_current else dimension_payload(domain)),
+        )
+        rows[hook] = replace(
+            rows[hook],
+            question_id=_question_id(
+                rows[hook].question_key,
+                rows[hook].title,
+                rows[hook].domain,
+                rows[hook].source_feature_ids,
+                domain,
+                "applied",
+            ),
         )
 
 
@@ -266,6 +290,19 @@ def _aligned_question(candidate: QuestionCandidate) -> QuestionCandidate | None:
         bazi_focus=alignment.focus,
         alignment_score=alignment.score,
     )
+
+
+def _question_id(
+    question_key: str,
+    title: str,
+    domain: str,
+    source_feature_ids: tuple[str, ...],
+    namespace: str,
+    marker: str,
+) -> str:
+    signature = f"{question_key}|{domain}|{title}|{';'.join(source_feature_ids)}|{namespace}|{marker}"
+    digest = hashlib.blake2s(signature.encode("utf-8"), digest_size=5).hexdigest()
+    return f"{question_key}:{digest}"
 
 
 def _clip(value: str, limit: int) -> str:

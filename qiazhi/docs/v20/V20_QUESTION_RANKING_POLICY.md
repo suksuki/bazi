@@ -21,4 +21,4 @@ GET /api/v20/questions/ranking-policy
 
 Future learning-to-rank work can propose domain or stage weights, but the
 proposal must pass synthetic validation, artifact registry review, and decision
-registry promotion before scoped runtime use.
+registry active iteration before scoped runtime use.

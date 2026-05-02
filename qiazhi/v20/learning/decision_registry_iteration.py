@@ -47,14 +47,14 @@ def build_decision_registry_iteration_report(
         "decision_record_count": len(records),
         "batch_iteration_signal_count": sum(1 for row in records if row["triage_lane"] == "batch_iteration_signal"),
         "system_iteration_count": sum(1 for row in records if row["triage_lane"] == "system_iteration"),
-        "runtime_activation_count": 0,
+        "runtime_activation_count": sum(1 for row in records if row.get("runtime_allowed") is True),
         "decision_status_counts": dict(sorted(status_counts.items())),
         "subject_type_counts": dict(sorted(subject_counts.items())),
         "triage_lane_counts": dict(sorted(triage_counts.items())),
         "records": tuple(records),
         "upstream": {
             "activation_status": gate.get("status", ""),
-            "promotion_packet_count": gate.get("packet_count", 0),
+            "activation_packet_count": gate.get("packet_count", 0),
             "subcondition_split_status": split.get("status", ""),
             "subcondition_packet_count": split.get("packet_count", 0),
             "subcondition_count": split.get("subcondition_count", 0),
@@ -134,7 +134,7 @@ def read_decision_registry_iteration_artifact(*, output_dir: Path | None = None)
 
 def _decision_records_for_packet(packet: dict[str, object], split_packet: dict[str, object]) -> tuple[dict[str, object], ...]:
     lane = str(packet.get("activation_lane", ""))
-    if lane in {"needs_subcondition_split", "subcondition_review_ready"}:
+    if lane in {"needs_subcondition_split", "subcondition_review_ready", "subcondition_active_ready"}:
         subconditions = [
             _subcondition_record(packet, row)
             for row in split_packet.get("subconditions", ())
@@ -277,4 +277,4 @@ def _safe(value: str) -> str:
 
 def _emit(progress: ProgressCallback | None, message: str) -> None:
     if progress is not None:
-        progress(f"[v20-decision-registry-review] {message}")
+        progress(f"[v20-decision-registry-iteration] {message}")

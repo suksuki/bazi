@@ -40,6 +40,7 @@ def run_runtime_from_pillars(
     *,
     input_id: str = "",
     question_key: str = "",
+    question_id: str = "",
     user_text: str = "",
     flow_year_pillar: str = "",
     luck_pillar: str = "",
@@ -70,6 +71,7 @@ def run_runtime_from_pillars(
     questions = recommend_decision_questions(
         decision_report,
         feature_layer,
+        time_context=time_context,
         practitioner_selections=practitioner_selections,
         latent_event_answers=latent_event_answers,
     )
@@ -78,6 +80,7 @@ def run_runtime_from_pillars(
     selected_question = resolve_requested_question(
         questions,
         question_key or routed_question_key,
+        question_id,
         feature_layer,
     )
     questions = _selected_first_questions(questions, selected_question, llm_routing_assist)
@@ -231,10 +234,18 @@ def _selected_first_questions(questions, selected_question, llm_routing_assist):
             candidate_keys.append(str(row["question_key"]))
     key_rank = {key: index for index, key in enumerate(dict.fromkeys(candidate_keys), start=1)}
     domain_rank = {domain: index for index, domain in enumerate(dict.fromkeys(domains), start=1)}
-    unique = (selected_question, *(question for question in questions if question.question_key != selected_question.question_key))
+    selected_id = selected_question.question_id or selected_question.question_key
+    unique = (
+        selected_question,
+        *(
+            question
+            for question in questions
+            if (question.question_id or question.question_key) != selected_id
+        ),
+    )
 
     def rank(item):
-        if item.question_key == selected_question.question_key:
+        if (item.question_id or item.question_key) == selected_id:
             return (0, 0)
         if item.question_key in key_rank:
             return (1, key_rank[item.question_key])
@@ -247,7 +258,8 @@ def _selected_first_questions(questions, selected_question, llm_routing_assist):
 
 def _practitioner_session_lens(practitioner_selections, questions, selected_question) -> dict[str, object]:
     effects = []
-    questions_by_key = {question.question_key: question for question in questions}
+    questions_by_key = {question.question_id or question.question_key: question for question in questions}
+    selected_id = selected_question.question_id or selected_question.question_key
     for selection in practitioner_selections:
         if not isinstance(selection, dict):
             continue
@@ -256,7 +268,7 @@ def _practitioner_session_lens(practitioner_selections, questions, selected_ques
         matched_questions = [
             question
             for question in questions
-            if question.question_key == selected_question.question_key
+            if (question.question_id or question.question_key) == selected_id
             or question.domain == _control_domain(control_key)
         ][:3]
         effects.append(
@@ -270,13 +282,14 @@ def _practitioner_session_lens(practitioner_selections, questions, selected_ques
                 "runtime_rule_mutation": False,
             }
         )
-    selected = questions_by_key.get(selected_question.question_key, selected_question)
+    selected = questions_by_key.get(selected_id, selected_question)
     return {
         "version": "v20.practitioner_session_lens.v1",
         "selection_count": len(practitioner_selections),
         "selections": list(practitioner_selections),
         "questions_refreshed": bool(practitioner_selections),
         "selected_question_key": selected.question_key,
+        "selected_question_id": selected.question_id or selected.question_key,
         "selected_question_title": selected.title,
         "selection_effects": effects,
         "runtime_mutation": False,
@@ -290,6 +303,7 @@ def _practitioner_session_lens(practitioner_selections, questions, selected_ques
 
 def _latent_event_session_lens(latent_event_answers, questions, selected_question) -> dict[str, object]:
     effects = []
+    selected_id = selected_question.question_id or selected_question.question_key
     for answer in latent_event_answers:
         if not isinstance(answer, dict):
             continue
@@ -298,7 +312,7 @@ def _latent_event_session_lens(latent_event_answers, questions, selected_questio
         matched_questions = [
             question
             for question in questions
-            if question.question_key == selected_question.question_key
+            if (question.question_id or question.question_key) == selected_id
             or question.domain == domain
         ][:3]
         effects.append(
@@ -318,6 +332,7 @@ def _latent_event_session_lens(latent_event_answers, questions, selected_questio
         "answers": list(latent_event_answers),
         "questions_refreshed": bool(latent_event_answers),
         "selected_question_key": selected_question.question_key,
+        "selected_question_id": selected_question.question_id or selected_question.question_key,
         "selected_question_title": selected_question.title,
         "selection_effects": effects,
         "runtime_mutation": False,

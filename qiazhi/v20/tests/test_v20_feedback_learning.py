@@ -17,7 +17,7 @@ def test_v20_registry_manifest_maps_learning_stores_without_connection() -> None
     assert "NO_DATABASE_CONNECTION_ATTEMPTED" in manifest["guardrails"]
 
 
-def test_v20_feedback_analysis_redacts_and_blocks_auto_promotion() -> None:
+def test_v20_feedback_analysis_redacts_and_blocks_auto_runtime_override() -> None:
     report = analyze_feedback(
         input_id="feedback.case",
         source_role="user",

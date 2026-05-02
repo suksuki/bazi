@@ -9,7 +9,7 @@ reviewed knowledge rules
 -> feature spine
 -> portrait projection
 -> recommended questions
--> shadow rule collisions
+-> active rule collisions
 -> Bazi-domain alignment validation
 ```
 

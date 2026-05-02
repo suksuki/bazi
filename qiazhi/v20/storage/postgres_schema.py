@@ -80,7 +80,7 @@ def _tables() -> tuple[TableSpec, ...]:
         TableSpec(
             name="v20_decision_registry",
             owner_module="v20.learning",
-            purpose="Human or validator decisions for proposals and promotions.",
+            purpose="Human or validator decisions for active runtime iteration.",
             columns=(
                 ColumnSpec("decision_id", "text", purpose="stable decision id"),
                 ColumnSpec("subject_id", "text", purpose="artifact, proposal, or run id"),
@@ -131,11 +131,11 @@ def _tables() -> tuple[TableSpec, ...]:
         TableSpec(
             name="v20_rule_proposals",
             owner_module="v20.knowledge",
-            purpose="Knowledge-to-rule proposals released to shadow training and later promotion review.",
+            purpose="Knowledge-to-rule proposals released to active runtime iteration.",
             columns=(
                 ColumnSpec("proposal_id", "text", purpose="stable rule proposal id"),
                 ColumnSpec("source_knowledge_id", "text", purpose="source reviewed or draft knowledge id"),
-                ColumnSpec("status", "text", purpose="released_to_shadow_training, promoted, rejected"),
+                ColumnSpec("status", "text", purpose="active_ready, active_iteration, rejected"),
                 *common,
             ),
             primary_key=("proposal_id",),
@@ -147,7 +147,7 @@ def _tables() -> tuple[TableSpec, ...]:
             columns=(
                 ColumnSpec("artifact_id", "text", purpose="stable LLM artifact id"),
                 ColumnSpec("task_name", "text", purpose="bounded LLM task contract name"),
-                ColumnSpec("validation_status", "text", purpose="accepted, rejected, fallback, shadow_only"),
+                ColumnSpec("validation_status", "text", purpose="accepted, rejected, fallback, active_trace_only"),
                 *common,
             ),
             primary_key=("artifact_id",),

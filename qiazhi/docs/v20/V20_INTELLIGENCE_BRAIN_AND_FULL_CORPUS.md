@@ -1,7 +1,7 @@
 # V20 Intelligence Brain And Full Corpus
 
 V20 treats the knowledge base as the source layer, the feature spine as the
-runtime language, and learning systems as a shadow brain that can improve
+runtime language, and learning systems as a active learning brain that can improve
 retrieval, ranking, calibration, clustering, and proposal generation.
 
 ## Runtime Feature Discovery
@@ -15,7 +15,7 @@ interaction system, question ranking, and answer planning. It gives V20 one
 shared answer to "which Bazi features matter first for this chart and this
 question?"
 
-The layer can reorder existing feature-backed questions through a capped shadow
+The layer can reorder existing feature-backed questions through a capped active
 policy. It can explain why a feature is being surfaced. It cannot create chart
 facts, activate a rule candidate, or turn corpus statistics into a deterministic
 fortune conclusion.
@@ -142,7 +142,7 @@ Artifact outputs:
   axis priors, feature-based sub-axis hints, and cluster lift diagnostics.
 - `artifacts/rule_proposal_support.json`: rule-proposal support counts across
   the full corpus.
-- `artifacts/rule_proposal_training.json`: shadow-training view for proposals,
+- `artifacts/rule_proposal_training.json`: active-training view for proposals,
   including selectivity, exact feature signatures, cluster priors, and next
   training actions.
 - `artifacts/postgres_import_manifest.json`: explicit Postgres import plan.
@@ -197,7 +197,7 @@ large-scale ranking experiments.
 
 Reviewed knowledge can now generate rule-path proposals:
 
-`KnowledgeUnit -> KnowledgeRuleProposal -> shadow training -> promotion review`.
+`KnowledgeUnit -> KnowledgeRuleProposal -> active training -> active iteration review`.
 
 Endpoints:
 
@@ -210,27 +210,27 @@ Endpoints:
 - `GET /api/v20/knowledge/llm-rule-extraction`
 - `GET /api/v20/knowledge/llm-rule-extraction-validation`
 
-Per the current product direction, proposals are not blocked from shadow
+Per the current product direction, proposals are not blocked from active runtime
 training. Static contract failures can still block malformed proposals, but
-synthetic validation and DecisionRegistry approval are promotion requirements
+synthetic validation and DecisionRegistry approval are iteration requirements
 for user-visible runtime, not prerequisites for learning.
 
 Rule extraction itself is driven by the reviewed knowledge base, not by the
 518K corpus. The corpus is only a validation and refinement layer that reports
 whether extracted conditions are too broad, too sparse, or good enough for
-shadow ranking. LLM assistance is similarly bounded: it may draft candidate
+active ranking. LLM assistance is similarly bounded: it may draft candidate
 atoms from reviewed knowledge text, but it cannot create chart facts, activate
 rules, or produce final Bazi conclusions.
 
 Runtime rule candidates now also report current-chart feature collisions. A
 candidate can say which compiled features matched its feature-hook conditions,
-making the rule layer more concrete while preserving the shadow-only boundary.
+making the rule layer more concrete while preserving the active-trace boundary.
 
 P90 makes synthetic rule validation the rule-training gate. The 518K corpus can
 show whether a proposal is broad, sparse, or useful as a ranking prior, but it
 cannot prove a rule. Rule atoms must be validated against curated synthetic
 charts with expected feature collisions, expected question routes, and forbidden
-output checks before they can affect shadow rule weighting.
+output checks before they can affect active rule weighting.
 
 The LLM draft endpoint is executable only under explicit env flags. If the LLM
 provider is not ready, V20 records `provider_not_ready` and uses the
@@ -238,4 +238,4 @@ deterministic extractor as fallback. This keeps rule extraction useful on local
 machines while making the real LLM lane ready for configured environments.
 
 This keeps V20 open to self-training while preserving a clear boundary between
-shadow intelligence and public-facing Bazi conclusions.
+active intelligence and public-facing Bazi conclusions.

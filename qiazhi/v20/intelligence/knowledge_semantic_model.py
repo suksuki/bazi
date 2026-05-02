@@ -110,7 +110,7 @@ def build_knowledge_semantic_model(
             "KNOWLEDGE_SEMANTIC_MODEL_IS_INDEX_ONLY",
             "REVIEWED_KNOWLEDGE_REMAINS_AUTHORITY",
             "LLM_DRAFTS_REQUIRE_VALIDATION",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
 
@@ -237,12 +237,12 @@ def _portrait_candidate(
         "domain": domain,
         "source_knowledge_id": source_knowledge_id,
         "feature_hooks": hooks,
-        "status": "shadow_label_candidate",
-        "runtime_allowed": False,
+        "status": "active_label_ready",
+        "runtime_allowed": True,
         "guardrails": [
-            "PORTRAIT_LABEL_CANDIDATE_ONLY",
+            "PORTRAIT_LABEL_FEEDS_ACTIVE_RUNTIME",
             "NO_PERSONALITY_VERDICT",
-            "CALIBRATION_REQUIRED_BEFORE_PROMOTION",
+            "CALIBRATION_REWEIGHTS_ACTIVE_LABEL",
         ],
     }
 

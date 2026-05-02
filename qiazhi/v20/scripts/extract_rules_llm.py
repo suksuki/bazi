@@ -68,7 +68,7 @@ def _persist_local(payload: dict[str, object], run_id: str) -> dict[str, object]
         "accepted_count": payload.get("accepted_count", 0),
         "fallback_count": payload.get("fallback_count", 0),
         "runtime_mutation": True,
-        "guardrails": ["LOCAL_ARTIFACT_ONLY", "NO_RUNTIME_RULE_ACTIVATION"],
+        "guardrails": ["LOCAL_ARTIFACT_ONLY", "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE"],
     }
     status_path.write_text(json.dumps(status, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     return status
@@ -84,7 +84,7 @@ def _persist_postgres(payload: dict[str, object], run_id: str) -> dict[str, obje
         "guardrails": [
             "EXPLICIT_APPLY_POSTGRES_REQUIRED",
             "NO_SECRET_VALUES_RENDERED",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
     if not url:

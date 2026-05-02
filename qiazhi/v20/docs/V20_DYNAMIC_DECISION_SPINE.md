@@ -258,12 +258,12 @@ Postgres 处理方式：
 
 - runtime 主链不再使用 `FeatureDiscovery`、旧画像投影、旧规则候选或 518K training prior 来生成推荐问题。
 - runtime 主链新增 `DecisionReport`、`DefeasibleDecisionModel`、`PortraitProjection`、`QuestionIntentModel` 和 `InteractionSession`。
-- 旧的 feature/portrait intelligence 和 shadow rule candidate 模块只允许作为实验、迁移或脚本参考，不再作为用户测算主驱动。
+- 旧的 feature/portrait intelligence 和保守规则候选模块已退出主链，不再作为用户测算主驱动。
 - 用户/命理师 role projection 只暴露主题投射画像、推荐问题、回答与必要证据；训练细节进入脚本或后续 Admin artifact dashboard。
 
 ## 知识规则桥
 
-V20 runtime 不直接把知识库规则当成生产规则运行，但每条动态裁决必须能回溯到 reviewed knowledge 生成的 shadow rule definition。
+V20 runtime 直接使用 reviewed knowledge 生成的 active rule definition；每条动态裁决必须能回溯到知识来源、规则路径和 EvidencePack。
 
 当前桥接方式：
 

@@ -149,12 +149,12 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert "PORTRAIT_IS_DECISION_STATE_PROJECTION" in portrait_projection["guardrails"]
     assert result["decision_report"]["knowledge_rule_bridge"]["version"] == "v20.decision_knowledge_rule_bridge.v1"
     assert result["decision_report"]["knowledge_rule_bridge"]["mapped_decision_count"] >= 1
-    assert result["decision_report"]["knowledge_rule_bridge"]["validation_status"] == "runtime_lightweight"
+    assert result["decision_report"]["knowledge_rule_bridge"]["validation_status"] == "active_ready"
     assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"]
     assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_allowed"] is True
     assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["question_outputs"]
     assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["synthetic_state"] == "unknown"
-    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_promotion_candidate"] is True
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_activation_candidate"] is True
     assert result["decision_validation"]["ok"] is True
     assert result["decision_validation"]["knowledge_rule_bridge_status"] == "ready"
     assert result["decision_validation"]["defeasible_argument_count"] == decision_model["argument_count"]

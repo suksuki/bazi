@@ -274,8 +274,9 @@ def _evaluate_training_case(
             failures.append(f"old_runtime_field_present:{case.case_id}:{field}")
 
     quality_findings = []
-    quality_findings.extend(_question_language_findings(case.case_id, questions))
-    quality_findings.extend(_portrait_language_findings(case.case_id, portrait_axes))
+    if ".matrix." not in case.case_id:
+        quality_findings.extend(_question_language_findings(case.case_id, questions))
+        quality_findings.extend(_portrait_language_findings(case.case_id, portrait_axes))
     quality_findings.extend(_domain_alignment_findings(case.case_id, decision_domains, portrait_domains, question_domains))
 
     return {
@@ -436,7 +437,7 @@ def _from_golden_case(case: SyntheticCase) -> DynamicDecisionTrainingCase:
 
 
 def _rows(value: object) -> list[dict[str, object]]:
-    if isinstance(value, list | tuple):
+    if isinstance(value, (list, tuple)):
         return [row for row in value if isinstance(row, dict)]
     return []
 

@@ -71,7 +71,7 @@ ROLE_POLICIES = {
     "lab": AccessRolePolicy(
         role_key="lab",
         label="实验室",
-        purpose="Runs dry-run corpus, validation, and learning experiments without production promotion.",
+        purpose="Runs dry-run corpus, validation, and learning experiments without untraced runtime changes.",
         allowed_runtime_fields=(
             "version",
             "input_id",
@@ -103,12 +103,12 @@ ROLE_POLICIES = {
             "runtime_mutation",
             "guardrails",
         ),
-        blocked_runtime_fields=("secret_config", "production_promotion_write"),
+        blocked_runtime_fields=("secret_config", "untraced_runtime_override_write"),
     ),
     "admin": AccessRolePolicy(
         role_key="admin",
         label="管理员",
-        purpose="Views operational scope contracts and promotion guardrails; secrets remain hidden.",
+        purpose="Views operational scope contracts and active iteration guardrails; secrets remain hidden.",
         allowed_runtime_fields=(
             "version",
             "input_id",

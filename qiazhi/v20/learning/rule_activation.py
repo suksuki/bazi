@@ -175,7 +175,7 @@ def _iteration_options(activation_lane: str) -> tuple[str, ...]:
         return ("generate_synthetic_case", "defer", "reject")
     if activation_lane.startswith("blocked"):
         return ("fix", "defer", "reject")
-    return ("system_iterate", "defer", "reject")
+    return ("system_iteration", "defer", "reject")
 
 
 def _required_evidence(activation_lane: str) -> tuple[str, ...]:

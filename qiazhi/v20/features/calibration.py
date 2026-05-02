@@ -48,7 +48,7 @@ def confidence_calibration_manifest() -> dict[str, object]:
             "synthetic_validation_stability",
             "coverage_gap_frequency",
             "anonymized_feedback_calibration_signal",
-            "shadow_run_delta",
+            "active_replay_delta",
         ],
         "blocked_learning_outputs": [
             "new_feature",

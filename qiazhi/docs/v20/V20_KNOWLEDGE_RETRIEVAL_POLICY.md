@@ -20,4 +20,4 @@ GET /api/v20/knowledge/retrieval-policy
 
 Future embedding recall and retrieval learning can propose weights, but every
 proposal must pass reviewed-status filtering, synthetic validation, artifact
-registry review, and decision registry promotion before scoped runtime use.
+registry review, and decision registry active iteration before scoped runtime use.

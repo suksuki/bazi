@@ -49,7 +49,7 @@ decision_training_plan          ready
 ```text
 offline script only
 local artifact only
-no runtime rule promotion
+no untraced runtime override
 no user-facing training surface
 ```
 
@@ -108,7 +108,7 @@ synthetic_suite_snapshot
 corpus_snapshot
 active_packages
 eval_reports
-shadow_reports
+active_replay_reports
 decision_registry_records
 promotion_recommendations
 blocked_reasons
@@ -331,10 +331,10 @@ out-of-scope case
 draft
 contract_validated
 synthetic_ready
-shadow_ready
+active_ready
 needs_human_review
 approved_for_active_package
-approved_for_shadow_runtime
+approved_for_runtime_replaytime
 approved_for_scoped_runtime
 rejected
 blocked
@@ -388,9 +388,9 @@ P1 再做：
 P2 最后做：
 
 1. 后台 admin artifact dashboard。
-2. shadow runtime A/B 对比。
+2. runtime replay A/B 对比。
 3. DecisionRegistry 审批写入。
-4. scoped runtime promotion。
+4. scoped runtime activation。
 
 ## 禁止事项
 

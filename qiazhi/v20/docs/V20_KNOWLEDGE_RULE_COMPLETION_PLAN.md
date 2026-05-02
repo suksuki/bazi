@@ -42,15 +42,15 @@ V20 的核心不是展示内部特征，而是完成一条可审查、可训练�
 P1 目标：
 
 - 每个知识单元必须逐步补齐规则原子、画像映射、推荐问题映射、回答边界、反例。
-- 新知识进入 reviewed 前必须经过 review packet 和 approval preflight。
-- 默认不激活为运行时规则。
+- 新知识进入 reviewed 前必须经过 review packet 和 trace preflight。
+- reviewed 知识默认进入 active runtime，后续用回放、合成盘和命理师反馈调权。
 
 ### 规则系统
 
-当前状态：shadow 候选已落地，正在进入子条件拆分阶段。
+当前状态：active 规则已落地，正在进入子条件拆分和回放调权阶段。
 
 - 已有知识到规则提案、规则抽取、LLM 辅助抽取、合成验证入口。
-- 已形成 `KnowledgeRuleLibrary`：18 条 reviewed seed 知识均可生成 shadow rule definition。
+- 已形成 `KnowledgeRuleLibrary`：reviewed seed 知识均可生成 active rule definition。
 - 9 个 synthetic case 已按领域覆盖 18 条知识规则，当前没有“缺合成案例”的红灯。
 - 当前主要缺口：17 条规则仍然过宽，需要基于 518K 覆盖统计拆子条件、找反例、再交给命理师/管理员审查。
 - 最新 DecisionRegistry review artifact 已形成 155 条待审记录，其中 69 条可进入批量审阅候选，86 条需要人工/管理员单独审查。
@@ -132,7 +132,7 @@ P6 目标：
 - 画像轴批量验证。
 - 命理师裁决学习聚合。
 - 518K 结构覆盖基线、相似盘索引、聚类、规则支持统计。
-- shadow 规则子条件拆分与反例候选生成。
+- active 规则子条件拆分与反例候选生成。
 - DecisionRegistry review 台账生成，把候选规则、子条件、反例和 active 权重候选变成可批量裁决对象。
 
 518K 结构覆盖基线的角色：
@@ -212,14 +212,14 @@ KnowledgeUnit
 - 知识规则引用包含 source knowledge、condition atoms、portrait labels、question outputs、answer guidance keys、boundary。
 - 推荐问题可以从知识规则 question outputs 衍生候选。
 - 回答计划可以把知识规则 portrait labels 转成用户可读的“复核重点”。
-- LLM 命理师提示词接收 compact knowledge rules，但不得激活规则。
+- LLM 命理师提示词接收 compact knowledge rules，但不得改写核心事实或绕过 EvidencePack。
 - Runtime 只使用 lightweight bridge，不实时调用 synthetic validation。
-- `GET /api/v20/knowledge/rule-review-overlay` 提供后台只读 overlay，汇总 synthetic、corpus、promotion gate 状态。
+- `GET /api/v20/knowledge/rule-review-overlay` 提供后台只读 overlay，汇总 synthetic、corpus、active iteration 状态。
 
 仍需继续：
 
 - 把 rule review overlay 写入 ArtifactRegistry/Postgres，并允许 runtime 读取锁定版本。
-- 把 DecisionRegistry review 结果用于 shadow weight，而不是只做报告。
+- 把 DecisionRegistry iteration 结果用于 active weight，而不是只做报告。
 - 建立知识规则版本锁定和 Postgres artifact registry 记录。
 
 ### P1：知识库结构补强
@@ -234,9 +234,9 @@ KnowledgeUnit
 
 验收标准：
 
-- 每条 reviewed 知识能生成一个 shadow KnowledgeRuleDefinition。
+- 每条 reviewed 知识能生成一个 active KnowledgeRuleDefinition。
 - 每条规则声明条件、画像输出、问题输出、边界、验证状态。
-- 所有规则默认 runtime_allowed=false。
+- 所有规则默认 runtime_allowed=true，并保留证据链与边界。
 
 ### P3：合成验证深化
 

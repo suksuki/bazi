@@ -245,6 +245,6 @@ def _match_status(rule: dict[str, Any], matched_count: int, condition_count: int
         return "matched"
     if matched_count:
         return "partial"
-    if runtime_status in {"review_required", "shadow_ready"}:
+    if runtime_status == "review_required":
         return "review_required"
     return "not_matched"

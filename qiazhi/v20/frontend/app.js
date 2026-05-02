@@ -16,6 +16,7 @@ const params = new URLSearchParams(window.location.search);
 
 const form = document.querySelector("#measureForm");
 const questionSelect = document.querySelector("#questionSelect");
+const questionIdInput = document.querySelector("#questionId");
 const roleSelect = document.querySelector("#roleSelect");
 const localeSelect = document.querySelector("#localeSelect");
 const chatText = document.querySelector("#chatText");
@@ -99,6 +100,7 @@ const el = (tag, className = "", text = "") => {
 };
 
 const measure = async ({ force = false, interactionText = "", interactionSource = "", llmMode = "deterministic" } = {}) => {
+  syncQuestionIdFromSelect();
   const text = currentText();
   const payload = payloadFromForm();
   payload.llm_mode = llmMode;
@@ -158,6 +160,8 @@ const renderRuntime = (result) => {
   const interactionSession = result.interaction_session || {};
   const portraitProjection = decisionReport.portrait_projection || {};
   const role = result.role?.role_key || measurementRole(roleSelect.value);
+  const selectedQuestionId = selected.question_id || "";
+  if (questionIdInput) questionIdInput.value = selectedQuestionId;
 
   document.body.dataset.role = role;
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
@@ -186,8 +190,8 @@ const renderRuntime = (result) => {
   renderPortrait(portraitProjection.axes || []);
   renderPractitionerCalibration(decisionReport.practitioner_controls || [], result.input_id || "", role);
   renderLatentCalibration(result.input_id || "", role);
-  renderQuestions(result.questions || [], selected.question_key || "", questionIntentModel);
-  renderQuestionSelect(result.questions || [], selected.question_key || "");
+  renderQuestions(result.questions || [], selectedQuestionId || selected.question_key || "", questionIntentModel);
+  renderQuestionSelect(result.questions || [], selectedQuestionId || selected.question_key || "");
   renderInteractionSignals(interactionSession);
   renderEvidence(
     result.knowledge_refs || [],
@@ -394,6 +398,7 @@ const recordPractitionerCalibration = async (control, option, inputId, activeBut
     });
     upsertPractitionerSelection(control, option);
     questionSelect.value = "";
+    if (questionIdInput) questionIdInput.value = "";
     if (status) status.textContent = result.storage?.status === "stored" ? "已记录 · 刷新问题" : "已接收 · 刷新问题";
     measure({ force: true, llmMode: "deterministic" });
   } catch (error) {
@@ -486,6 +491,7 @@ const recordLatentCalibration = async (scenario, inputId, role, row) => {
     });
     upsertLatentAnswer(answer);
     questionSelect.value = "";
+    if (questionIdInput) questionIdInput.value = "";
     if (status) status.textContent = result.storage?.status === "stored" ? "已记录 · 刷新问题" : "已接收 · 刷新问题";
     measure({ force: true, llmMode: "deterministic" });
   } catch (error) {
@@ -500,7 +506,7 @@ const upsertLatentAnswer = (answer) => {
   ];
 };
 
-const renderQuestions = (questions, selectedKey, questionIntentModel = {}) => {
+const renderQuestions = (questions, selectedId, questionIntentModel = {}) => {
   const root = document.querySelector("#questionList");
   clear(root);
   if (!questions.length) {
@@ -508,15 +514,20 @@ const renderQuestions = (questions, selectedKey, questionIntentModel = {}) => {
     return;
   }
   const bindingByKey = questionBindingByKey(questionIntentModel);
+  const activeId = String(selectedId || "");
   questions.slice(0, 5).forEach((question) => {
-    root.append(questionButton(question, selectedKey, "question-row", bindingByKey[question.question_key] || {}));
+    root.append(questionButton(question, activeId, "question-row", bindingByKey[question.question_key] || {}));
   });
 };
 
-const questionButton = (question, selectedKey, className, binding = {}) => {
-  const button = el("button", `${className}${question.question_key === selectedKey ? " active" : ""}`);
+const questionButton = (question, selectedId, className, binding = {}) => {
+  const questionId = question.question_id || question.question_key || "";
+  const isActive = String(selectedId) === String(questionId);
+  const button = el("button", `${className}${isActive ? " active" : ""}`);
   button.type = "button";
-  button.append(el("strong", "", question.title || question.question_key));
+  button.dataset.questionId = questionId;
+  button.dataset.questionKey = question.question_key || "";
+  button.append(el("strong", "", question.title || question.question_key || questionId || "问题"));
   if (className === "question-row") {
     const intent = intentTypeLabel(binding.primary_intent_type);
     const priority = binding.intent_priority ? ` · ${Number(binding.intent_priority).toFixed(2)}` : "";
@@ -551,7 +562,9 @@ const intentTypeLabel = (intentType) => ({
 
 const runQuestion = (question) => {
   const title = question.title || question.question_key || "";
-  questionSelect.value = question.question_key;
+  const questionId = question.question_id || "";
+  if (questionSelect) questionSelect.value = question.question_id || question.question_key || "";
+  if (questionIdInput) questionIdInput.value = questionId;
   setInquiryText(title, { syncOnly: true });
   measure({
     force: true,
@@ -561,16 +574,47 @@ const runQuestion = (question) => {
   });
 };
 
-const renderQuestionSelect = (questions, selectedKey) => {
-  const current = questionSelect.value || selectedKey;
+const renderQuestionSelect = (questions, selectedId, selectedKey = "") => {
+  const currentId = String(questionIdInput?.value || selectedId || "").trim();
+  const optionValues = new Set();
   questionSelect.innerHTML = '<option value="">自动路由</option>';
   questions.forEach((question) => {
+    const value = question.question_id || question.question_key || "";
+    if (!value || optionValues.has(value)) return;
+    optionValues.add(value);
     const option = document.createElement("option");
-    option.value = question.question_key;
+    option.value = value;
+    option.dataset.questionId = value;
+    option.dataset.questionKey = question.question_key || "";
     option.textContent = question.title || question.question_key;
     questionSelect.append(option);
   });
-  questionSelect.value = current;
+  const hasExactMatch = [...questionSelect.options].some((option) => option.value === currentId);
+  if (currentId && hasExactMatch) {
+    questionSelect.value = currentId;
+    if (questionIdInput) questionIdInput.value = currentId;
+    return;
+  }
+  if (selectedKey) {
+    const byKey = [...questionSelect.options].find((option) => option.dataset.questionKey === selectedKey);
+    if (byKey) {
+      questionSelect.value = byKey.value;
+      if (questionIdInput) questionIdInput.value = byKey.dataset.questionId || "";
+      return;
+    }
+  }
+  questionSelect.value = "";
+  if (questionIdInput) questionIdInput.value = "";
+};
+
+const syncQuestionIdFromSelect = () => {
+  if (!questionSelect || !questionIdInput) return;
+  if (!questionSelect.value) {
+    questionIdInput.value = "";
+    return;
+  }
+  const selectedOption = questionSelect.selectedOptions[0];
+  questionIdInput.value = selectedOption?.dataset?.questionId || questionSelect.value;
 };
 
 const renderInteractionSignals = (session = {}) => {
@@ -895,6 +939,7 @@ const hydrateFormFromParams = () => {
     "flow_month_pillar",
     "user_text",
     "question_key",
+    "question_id",
   ].forEach((key) => {
     const value = params.get(key);
     if (value !== null && form.elements[key]) form.elements[key].value = value;
@@ -964,6 +1009,7 @@ chatButton.addEventListener("click", () => {
     return;
   }
   questionSelect.value = "";
+  if (questionIdInput) questionIdInput.value = "";
   setInquiryText(value, { syncOnly: true });
   measure({
     force: true,
@@ -981,6 +1027,7 @@ chatText.addEventListener("keydown", (event) => {
       return;
     }
     questionSelect.value = "";
+    if (questionIdInput) questionIdInput.value = "";
     setInquiryText(value, { syncOnly: true });
     measure({
       force: true,

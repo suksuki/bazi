@@ -33,7 +33,7 @@ def main() -> int:
         "guardrails": [
             "PARQUET_IS_DERIVED_ARTIFACT",
             "FLAT_JSONL_REMAINS_EXPORT_SOURCE",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
     try:

@@ -46,7 +46,7 @@ def knowledge_retrieval_manifest() -> dict[str, object]:
         "allowed_learning_inputs": [
             "reviewed_knowledge_click_or_use_stats",
             "synthetic_validation_missing_domain",
-            "embedding_recall_shadow_report",
+            "embedding_recall_active_replay_report",
             "anonymized_feedback_domain_summary",
         ],
         "blocked_learning_outputs": [

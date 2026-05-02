@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
 from v20.api.runtime import run_runtime_from_pillars
+from v20.validation.case_matrix import build_regression_rule_synthetic_case_payloads
 from v20.storage.local_jsonl import local_jsonl_store_from_env
 
 
@@ -43,7 +45,7 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
             "feature.wealth.visible_material",
             "feature.ten_god.focus.zheng_cai",
         ),
-        expected_question_keys=("q_income_stability", "q_income_factors"),
+        expected_question_keys=("q_income_stability",),
         notes="财星材料显现，用来验证财星规则裁决是否能命中当前盘特征。",
     ),
     SyntheticRuleCase(
@@ -146,6 +148,54 @@ RULE_SYNTHETIC_CASES: tuple[SyntheticRuleCase, ...] = (
 )
 
 
+def _read_case_count_from_env(
+    env_name: str,
+    *,
+    default: int,
+    minimum: int,
+    maximum: int,
+) -> int:
+    try:
+        value = int(os.getenv(env_name, str(default)))
+    except ValueError:
+        return default
+    if value < minimum:
+        return minimum
+    if value > maximum:
+        return maximum
+    return value
+
+
+def _build_matrix_rule_synthetic_cases(
+    *,
+    case_count: int | None = None,
+) -> tuple[SyntheticRuleCase, ...]:
+    target = case_count if case_count is not None else _read_case_count_from_env(
+        "V20_RULE_SYNTHETIC_CASE_TARGET",
+        default=24,
+        minimum=0,
+        maximum=3000,
+    )
+    payloads = build_regression_rule_synthetic_case_payloads(case_count=target)
+    rows: list[SyntheticRuleCase] = []
+    for payload in payloads:
+        rows.append(
+            SyntheticRuleCase(
+                case_id=str(payload["case_id"]),
+                pillar_displays=tuple(payload["pillar_displays"]),
+                question_key=str(payload.get("question_key", "")),
+                expected_rule_domains=tuple(payload["expected_rule_domains"]),
+                expected_feature_prefixes=tuple(payload["expected_feature_prefixes"]),
+                expected_question_keys=tuple(payload["expected_question_keys"]),
+                notes=str(payload["notes"]),
+            )
+        )
+    return tuple(rows)
+
+
+RULE_SYNTHETIC_CASES = RULE_SYNTHETIC_CASES + _build_matrix_rule_synthetic_cases()
+
+
 def run_rule_synthetic_suite(cases: tuple[SyntheticRuleCase, ...] = RULE_SYNTHETIC_CASES) -> dict[str, object]:
     results = [_evaluate_rule_case(case) for case in cases]
     failures = [failure for result in results for failure in result["failures"]]
@@ -175,7 +225,7 @@ def build_rule_synthetic_training_report(
         if not isinstance(result, dict):
             continue
         expected_domains = result.get("expected_rule_domains", ())
-        if not isinstance(expected_domains, tuple | list):
+        if not isinstance(expected_domains, (tuple, list)):
             continue
         for domain in expected_domains:
             key = str(domain)

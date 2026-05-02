@@ -133,7 +133,7 @@ FEEDBACK_SUMMARY = LLMTaskContract(
     task_name="feedback_summary",
     allowed_inputs=("feedback_text", "feature_layer", "locale"),
     required_outputs=("summary", "candidate_domains", "calibration_notes"),
-    forbidden_outputs=("rule_mutation", "automatic_promotion", "private_data_exposure"),
+    forbidden_outputs=("rule_mutation", "automatic_runtime_override", "private_data_exposure"),
     fallback="store_raw_feedback_only",
 )
 

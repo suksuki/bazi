@@ -32,6 +32,7 @@ class MeasureRequest(BaseModel):
     llm_mode: str = Field("deterministic", pattern="^(deterministic|rewrite|practitioner)$")
     practitioner_selections: list[PractitionerControlSelectionRequest] = Field(default_factory=list)
     latent_event_answers: list[LatentEventCalibrationAnswerRequest] = Field(default_factory=list)
+    question_id: str = ""
 
 
 class MeasureResponse(BaseModel):

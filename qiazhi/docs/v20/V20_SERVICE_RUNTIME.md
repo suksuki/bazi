@@ -22,7 +22,7 @@ The storage schema endpoint returns the reviewed Postgres migration contract. It
 The Redis contract endpoint returns keyspace, TTL, and ownership rules. It does not connect to Redis.
 
 The sync-readiness endpoint reports the macOS <-> Linux 0.13 directions,
-preflight checks, Postgres promotion boundary, and Redis rebuild policy. It
+preflight checks, Postgres active iteration boundary, and Redis rebuild policy. It
 does not run git, rsync, database exports, or remote commands.
 
 `GET /api/v20/system/status` aggregates ops validation, dependency readiness,

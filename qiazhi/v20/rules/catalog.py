@@ -17,7 +17,7 @@ def build_bazi_rule_catalog() -> dict[str, Any]:
         "directory_node_count": len(node_counts),
         "covered_directory_nodes": tuple(sorted(node_counts, key=lambda row: int(row[1:]))),
         "runtime_ready_count": status_counts.get("runtime_ready", 0),
-        "shadow_ready_count": 0,
+        "active_ready_count": status_counts.get("runtime_ready", 0),
         "review_required_count": 0,
         "archive_only_count": status_counts.get("archive_only", 0),
         "blocked_count": status_counts.get("blocked", 0),
@@ -58,23 +58,23 @@ def _rule_specs() -> tuple[BaziRuleSpec, ...]:
 def _foundation_rules() -> tuple[BaziRuleSpec, ...]:
     return (
         _spec("rule.l0.chart_fact.integrity", "排盘事实完整性", "L0", "chart_fact", "foundation", "runtime_ready", "confirmed", ("pillar_display", "day_master", "calendar_assumption"), (), ("rule.strength.capacity",)),
-        _spec("rule.l0.time_uncertainty.boundary", "时辰与历法不确定边界", "L0", "chart_fact", "foundation", "shadow_ready", "requires_review", ("time_source", "calendar_metadata"), ("counter.l0.uncertain_time_blocks_hour_specific_claim",), ()),
+        _spec("rule.l0.time_uncertainty.boundary", "时辰与历法不确定边界", "L0", "chart_fact", "foundation", "runtime_ready", "requires_review", ("time_source", "calendar_metadata"), ("counter.l0.uncertain_time_blocks_hour_specific_claim",), ()),
     )
 
 
 def _element_rules() -> tuple[BaziRuleSpec, ...]:
     return (
         _spec("rule.l1.element.distribution", "五行分布规则", "L1", "element", "foundation", "runtime_ready", "candidate", ("element_distribution", "visible_hidden_weight"), (), ("rule.element.distribution",)),
-        _spec("rule.l1.climate.temperature_humidity", "寒暖燥湿规则", "L1", "element", "foundation", "shadow_ready", "candidate", ("month_command", "fire_water_balance", "dry_wet_context"), ("counter.l1.climate_not_health_diagnosis",), ()),
-        _spec("rule.l1.element.flow_transform", "五行生克制化通关规则", "L1", "element", "foundation", "shadow_ready", "candidate", ("generation", "control", "mediation"), (), ()),
+        _spec("rule.l1.climate.temperature_humidity", "寒暖燥湿规则", "L1", "element", "foundation", "runtime_ready", "candidate", ("month_command", "fire_water_balance", "dry_wet_context"), ("counter.l1.climate_not_health_diagnosis",), ()),
+        _spec("rule.l1.element.flow_transform", "五行生克制化通关规则", "L1", "element", "foundation", "runtime_ready", "candidate", ("generation", "control", "mediation"), (), ()),
     )
 
 
 def _strength_rules() -> tuple[BaziRuleSpec, ...]:
     return (
         _spec("rule.l2.strength.capacity", "日主承载规则", "L2", "strength", "core_mechanism", "runtime_ready", "candidate", ("support_score", "pressure_score", "capacity_state"), (), ("rule.strength.capacity",)),
-        _spec("rule.l2.root.month_command", "根气月令合参规则", "L2", "strength", "core_mechanism", "shadow_ready", "candidate", ("root_presence", "month_command", "support_pressure"), ("counter.l2.single_factor_strength_verdict",), ()),
-        _spec("rule.l2.support_pressure.path", "扶抑压力路径规则", "L2", "strength", "core_mechanism", "shadow_ready", "mixed", ("resource_peer_support", "output_wealth_authority_pressure"), (), ()),
+        _spec("rule.l2.root.month_command", "根气月令合参规则", "L2", "strength", "core_mechanism", "runtime_ready", "candidate", ("root_presence", "month_command", "support_pressure"), ("counter.l2.single_factor_strength_verdict",), ()),
+        _spec("rule.l2.support_pressure.path", "扶抑压力路径规则", "L2", "strength", "core_mechanism", "runtime_ready", "mixed", ("resource_peer_support", "output_wealth_authority_pressure"), (), ()),
     )
 
 
@@ -84,7 +84,7 @@ def _ten_god_rules() -> tuple[BaziRuleSpec, ...]:
         _spec("rule.l3.output_authority.conflict", "伤官见官规则", "L3", "career", "core_symbol", "runtime_ready", "candidate", ("output_star", "authority_star", "resource_buffer"), ("counter.l3.resource_buffer_weakens_conflict",), ("rule.ten_god.shang_guan_jian_guan",)),
         _spec("rule.l3.authority_mixed", "官杀混杂规则", "L3", "career", "core_symbol", "runtime_ready", "mixed", ("official_star", "killing_star", "clear_or_mixed"), (), ("rule.ten_god.guan_sha_mixed",)),
         _spec("rule.l3.output_to_wealth", "食伤生财规则", "L3", "wealth", "core_symbol", "runtime_ready", "candidate", ("output_star", "wealth_star", "capacity_state"), ("counter.l3.output_to_wealth_capacity_block",), ("rule.ten_god.output_to_wealth", "rule.wealth.output_wealth_capacity_chain")),
-        _spec("rule.l3.resource_authority", "官印杀印规则", "L3", "career", "core_symbol", "shadow_ready", "candidate", ("authority_star", "resource_star", "source_layer"), (), ("rule.career.resource_buffer",)),
+        _spec("rule.l3.resource_authority", "官印杀印规则", "L3", "career", "core_symbol", "runtime_ready", "candidate", ("authority_star", "resource_star", "source_layer"), (), ("rule.career.resource_buffer",)),
         _spec("rule.l3.peer_wealth", "比劫分财规则", "L3", "wealth", "core_symbol", "runtime_ready", "candidate", ("peer_star", "wealth_star", "capacity_state"), (), ("rule.wealth.peer_competition",)),
         _spec("rule.l3.owl_food", "枭神夺食规则", "L3", "ten_god", "core_symbol", "review_required", "requires_review", ("partial_resource", "food_star", "wealth_counter"), ("counter.l3.wealth_controls_owl",), ()),
         _spec("rule.l3.food_controls_killing", "食神制杀规则", "L3", "career", "core_symbol", "review_required", "candidate", ("food_star", "killing_star", "capacity_state"), (), ()),
@@ -94,16 +94,16 @@ def _ten_god_rules() -> tuple[BaziRuleSpec, ...]:
 def _branch_rules() -> tuple[BaziRuleSpec, ...]:
     return (
         _spec("rule.l4.branch.relation", "地支互动规则", "L4", "branch", "core_relation", "runtime_ready", "mixed", ("relation_type", "branch_pair", "palace_position"), (), ("rule.branch.relations",)),
-        _spec("rule.l4.combine.transform_bind", "合化合绊规则", "L4", "branch", "core_relation", "shadow_ready", "mixed", ("combination_pair", "season_support", "transform_element"), ("counter.l4.combine_not_always_transform",), ()),
-        _spec("rule.l4.clash.harm.break.punishment", "冲刑害破穿规则", "L4", "branch", "core_relation", "shadow_ready", "mixed", ("relation_type", "direction", "affected_palace"), ("counter.l4.relation_not_fortune_verdict",), ()),
-        _spec("rule.l4.tomb_storage", "墓库开闭规则", "L4", "branch", "core_relation", "shadow_ready", "requires_review", ("storage_branch", "hidden_stem", "opening_trigger"), (), ()),
+        _spec("rule.l4.combine.transform_bind", "合化合绊规则", "L4", "branch", "core_relation", "runtime_ready", "mixed", ("combination_pair", "season_support", "transform_element"), ("counter.l4.combine_not_always_transform",), ()),
+        _spec("rule.l4.clash.harm.break.punishment", "冲刑害破穿规则", "L4", "branch", "core_relation", "runtime_ready", "mixed", ("relation_type", "direction", "affected_palace"), ("counter.l4.relation_not_fortune_verdict",), ()),
+        _spec("rule.l4.tomb_storage", "墓库开闭规则", "L4", "branch", "core_relation", "runtime_ready", "requires_review", ("storage_branch", "hidden_stem", "opening_trigger"), (), ()),
     )
 
 
 def _pattern_rules() -> tuple[BaziRuleSpec, ...]:
     return (
         _spec("rule.l5.pattern.review_gate", "格局复核规则", "L5", "pattern", "core_mechanism", "runtime_ready", "requires_review", ("month_command", "ten_god_structure", "clear_mixed"), (), ("rule.pattern.review_gate",)),
-        _spec("rule.l5.regular_pattern.candidate", "正格候选规则", "L5", "pattern", "core_mechanism", "shadow_ready", "candidate", ("month_command", "revealed_god", "supporting_structure"), ("counter.l5.pattern_name_not_grade",), ()),
+        _spec("rule.l5.regular_pattern.candidate", "正格候选规则", "L5", "pattern", "core_mechanism", "runtime_ready", "candidate", ("month_command", "revealed_god", "supporting_structure"), ("counter.l5.pattern_name_not_grade",), ()),
         _spec("rule.l5.special_pattern.archive", "特殊格归档规则", "L5", "pattern", "core_mechanism", "review_required", "requires_review", ("dominant_qi", "follow_or_transform_conditions"), ("counter.l5.special_pattern_requires_master_review",), ()),
     )
 
@@ -111,16 +111,16 @@ def _pattern_rules() -> tuple[BaziRuleSpec, ...]:
 def _useful_god_rules() -> tuple[BaziRuleSpec, ...]:
     return (
         _spec("rule.l6.useful_god.candidate_gate", "用神候选规则", "L6", "useful_god", "core_arbitration", "runtime_ready", "requires_review", ("capacity_state", "element_distribution", "pressure_path"), (), ("rule.useful_god.candidate_gate",)),
-        _spec("rule.l6.support_suppression.path", "扶抑取用规则", "L6", "useful_god", "core_arbitration", "shadow_ready", "candidate", ("strength_state", "support_or_suppression_need"), (), ()),
-        _spec("rule.l6.tiaohou.path", "调候取用规则", "L6", "useful_god", "core_arbitration", "shadow_ready", "candidate", ("climate_bias", "season", "flow_obstruction"), ("counter.l6.tiaohou_not_final_useful_god",), ()),
+        _spec("rule.l6.support_suppression.path", "扶抑取用规则", "L6", "useful_god", "core_arbitration", "runtime_ready", "candidate", ("strength_state", "support_or_suppression_need"), (), ()),
+        _spec("rule.l6.tiaohou.path", "调候取用规则", "L6", "useful_god", "core_arbitration", "runtime_ready", "candidate", ("climate_bias", "season", "flow_obstruction"), ("counter.l6.tiaohou_not_final_useful_god",), ()),
         _spec("rule.l6.mediation.path", "通关病药规则", "L6", "useful_god", "core_arbitration", "review_required", "requires_review", ("conflicting_elements", "mediating_element", "disease_remedy"), (), ()),
     )
 
 
 def _palace_rules() -> tuple[BaziRuleSpec, ...]:
     return (
-        _spec("rule.l7.palace.position", "宫位位置规则", "L7", "palace", "core_projection", "shadow_ready", "candidate", ("pillar_position", "palace_role", "affected_relation"), ("counter.l7.palace_no_private_fact",), ()),
-        _spec("rule.l7.spouse_palace.boundary", "夫妻宫边界规则", "L7", "romance", "core_projection", "shadow_ready", "candidate", ("day_branch", "spouse_star", "branch_relation"), ("counter.l7.spouse_palace_no_marriage_verdict",), ()),
+        _spec("rule.l7.palace.position", "宫位位置规则", "L7", "palace", "core_projection", "runtime_ready", "candidate", ("pillar_position", "palace_role", "affected_relation"), ("counter.l7.palace_no_private_fact",), ()),
+        _spec("rule.l7.spouse_palace.boundary", "夫妻宫边界规则", "L7", "romance", "core_projection", "runtime_ready", "candidate", ("day_branch", "spouse_star", "branch_relation"), ("counter.l7.spouse_palace_no_marriage_verdict",), ()),
     )
 
 
@@ -136,8 +136,8 @@ def _blind_lifa_rules() -> tuple[BaziRuleSpec, ...]:
 def _time_rules() -> tuple[BaziRuleSpec, ...]:
     return (
         _spec("rule.l9.time.trigger", "岁运触发规则", "L9", "time", "time", "runtime_ready", "volatile", ("explicit_time_layer", "time_relation", "natal_target"), (), ("rule.time.trigger",)),
-        _spec("rule.l9.storage.open_by_time", "墓库岁运开闭规则", "L9", "time", "time", "shadow_ready", "volatile", ("storage_branch", "luck_or_flow_clash", "hidden_content"), (), ()),
-        _spec("rule.l9.natal_luck_flow.stack", "原局大运流年三层规则", "L9", "time", "time", "shadow_ready", "volatile", ("natal_structure", "luck_context", "flow_trigger"), ("counter.l9.no_exact_event_date",), ()),
+        _spec("rule.l9.storage.open_by_time", "墓库岁运开闭规则", "L9", "time", "time", "runtime_ready", "volatile", ("storage_branch", "luck_or_flow_clash", "hidden_content"), (), ()),
+        _spec("rule.l9.natal_luck_flow.stack", "原局大运流年三层规则", "L9", "time", "time", "runtime_ready", "volatile", ("natal_structure", "luck_context", "flow_trigger"), ("counter.l9.no_exact_event_date",), ()),
     )
 
 
@@ -146,7 +146,7 @@ def _application_rules() -> tuple[BaziRuleSpec, ...]:
         _spec("rule.l10.wealth.projection", "财富主题投射规则", "L10", "wealth", "application", "runtime_ready", "candidate", ("wealth_material", "capacity", "channel", "counterevidence"), (), ("rule.wealth.material", "rule.wealth.capacity_gate")),
         _spec("rule.l10.career.projection", "事业主题投射规则", "L10", "career", "application", "runtime_ready", "candidate", ("authority", "output", "resource", "pattern"), (), ("rule.career.output_authority_resource_chain",)),
         _spec("rule.l10.relationship.projection", "关系主题投射规则", "L10", "relationship", "application", "runtime_ready", "candidate", ("branch_relation", "ten_god_relation", "capacity"), (), ("rule.relationship.interaction_projection",)),
-        _spec("rule.l10.romance.projection", "感情主题投射规则", "L10", "romance", "application", "shadow_ready", "candidate", ("spouse_star", "spouse_palace", "time_trigger"), ("counter.l10.romance_no_private_fact",), ()),
+        _spec("rule.l10.romance.projection", "感情主题投射规则", "L10", "romance", "application", "runtime_ready", "candidate", ("spouse_star", "spouse_palace", "time_trigger"), ("counter.l10.romance_no_private_fact",), ()),
         _spec("rule.l10.health.boundary", "健康主题边界规则", "L10", "health", "application", "runtime_ready", "candidate", ("element_pressure", "capacity", "non_medical_boundary"), (), ("rule.health.balance_boundary",)),
     )
 

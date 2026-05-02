@@ -15,7 +15,7 @@ Reviewed KnowledgeUnit
 -> KnowledgeRuleProposal
 -> ExtractedRuleAtom
 -> SyntheticRuleCase collision
--> shadow rule weight gate
+-> active rule weight gate
 ```
 
 LLM may draft rule atoms from reviewed knowledge, but the knowledge base remains
@@ -34,7 +34,7 @@ rules, or produce final Bazi conclusions.
 - forbidden output text
 
 The suite validates that a rule candidate collides with the current chart's
-compiled features. This is rule training in the V20 sense: it trains the shadow
+compiled features. This is rule training in the V20 sense: it trains the active
 gate and exposes missing atoms/counterexamples. It is not outcome learning.
 
 ## Runtime And CLI
@@ -71,5 +71,5 @@ The full corpus can still carry chart-specific salience labels:
 - time-layer triggers
 
 Those labels help ranking and coverage analysis, but every rule still needs
-synthetic collision validation before it can influence a shadow rule weight, and
+synthetic collision validation before it can influence a active rule weight, and
 DecisionRegistry approval before any user-visible promotion.

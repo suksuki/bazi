@@ -44,7 +44,7 @@ def build_full_directory_seed_library() -> dict[str, Any]:
         "next_review_lanes": (
             "convert_p0_seed_to_KnowledgeUnit_batches",
             "split_large_topics_into_EvidenceAtom_and_RulePath",
-            "add_counterexamples_before_runtime_promotion",
+            "add_counterexamples_for_runtime_iteration",
             "bind_topic_projection_to_BaziFeature_outputs",
         ),
         "runtime_mutation": False,
@@ -163,7 +163,7 @@ def _evidence_requirements(node_id: str) -> tuple[str, ...]:
         "L8": ("actor", "target", "medium", "path_continuity"),
         "L9": ("natal_layer", "luck_layer", "flow_layer", "trigger_relation"),
         "L10": ("BaziFeature", "DecisionState", "TopicProjection"),
-        "L11": ("auxiliary_symbol", "source_school", "promotion_review"),
+        "L11": ("auxiliary_symbol", "source_school", "activation_review"),
         "L12": ("EvidencePack", "AnswerPlan", "Verifier"),
     }
     return mapping[node_id]

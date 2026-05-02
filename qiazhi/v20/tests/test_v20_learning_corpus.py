@@ -70,8 +70,8 @@ def test_v20_knowledge_rule_validation_marks_synthetic_and_corpus_gaps() -> None
     assert report["synthetic_covered_count"] == report["definition_count"]
     assert report["missing_synthetic_count"] == 0
     assert report["corpus_signal_count"] >= 1
-    assert report["runtime_allowed_count"] == 0
-    assert "split_by_exact_feature_signature_and_counterexamples" in report["review_actions"]
+    assert report["runtime_allowed_count"] == report["definition_count"]
+    assert "split_by_exact_feature_signature_and_counterexamples" in report["iteration_actions"]
     assert useful_god["synthetic_covered_count"] == useful_god["definition_count"]
     assert all(row["synthetic_state"] == "synthetic_passed" for row in useful_god["definitions"])
     assert "CORPUS_SUPPORT_IS_PRIOR_NOT_RULE_TRUTH" in report["guardrails"]
@@ -109,18 +109,18 @@ def test_v20_rule_activation_batches_active_rules_for_iteration() -> None:
     assert replay["subcondition_eval_count"] >= split["subcondition_count"]
     assert replay["portrait_mapping_ok_count"] <= replay["evaluated_packet_count"]
     assert replay["decision_domain_ok_count"] <= replay["evaluated_packet_count"]
-    assert replay["runtime_activation_count"] == 0
+    assert replay["runtime_activation_count"] == replay["evaluated_packet_count"]
     assert all(row["runtime_allowed"] is True for row in replay["evaluations"])
     assert all(row["next_action"] in {"continue_runtime_replay", "collect_more_runtime_replay"} for row in replay["evaluations"])
     assert "RULE_REPLAY_EVAL_IS_CONTINUOUS_ITERATION" in replay["guardrails"]
     assert registry["status"] == "ready"
-    assert registry["decision_record_count"] >= split["packet_count"]
-    assert registry["runtime_activation_count"] == 0
+    assert registry["decision_record_count"] >= split["subcondition_count"]
+    assert registry["runtime_activation_count"] == registry["decision_record_count"]
     assert registry["system_iteration_count"] >= 1
     assert "DECISION_REGISTRY_IS_ITERATION_LEDGER" in registry["guardrails"]
     assert overlay["status"] == "ready"
     assert overlay["validation_status"] == "active_ready"
-    assert overlay["runtime_activation_candidate_count"] == 0
+    assert overlay["runtime_activation_candidate_count"] >= 1
     assert "RUNTIME_USES_LIGHTWEIGHT_BRIDGE" in overlay["guardrails"]
     decision_ids = [row["decision_id"] for row in registry["records"]]
     assert len(decision_ids) == len(set(decision_ids))
@@ -305,7 +305,7 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert knowledge_rule_overlay["status"] == "ready"
     assert activation["runtime_mutation"] is False
     assert activation["status"] == "ready"
-    assert activation["runtime_activation_candidate_count"] == 0
+    assert activation["runtime_activation_candidate_count"] == activation["packet_count"]
     assert activation_packets["runtime_mutation"] is False
     assert activation_packets["packet_count"] == activation["packet_count"]
     assert subcondition_split["runtime_mutation"] is False
@@ -313,10 +313,10 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert replay_eval["runtime_mutation"] is False
     assert replay_eval["status"] == "ready"
     assert replay_eval["replay_eval_ready_count"] == replay_eval["evaluated_packet_count"]
-    assert replay_eval["runtime_activation_count"] == 0
+    assert replay_eval["runtime_activation_count"] == replay_eval["evaluated_packet_count"]
     assert decision_registry_iteration["runtime_mutation"] is False
     assert decision_registry_iteration["decision_record_count"] >= subcondition_split["subcondition_count"]
-    assert decision_registry_iteration["runtime_activation_count"] == 0
+    assert decision_registry_iteration["runtime_activation_count"] == decision_registry_iteration["decision_record_count"]
     assert rule_training["status"] == "ready"
     assert rule_training["runtime_mutation"] is False
     assert evolution["status"] == "ready_for_dry_run"

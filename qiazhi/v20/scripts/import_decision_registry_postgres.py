@@ -31,7 +31,7 @@ def main() -> int:
     payload = build_decision_registry_postgres_import_plan(apply=args.apply, batch_size=max(1, args.batch_size))
     print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
     return 0 if payload.get("status") not in {
-        "blocked_missing_decision_registry_review_artifact",
+        "blocked_missing_decision_registry_iteration_artifact",
         "blocked_missing_V20_DATABASE_URL",
         "blocked_missing_psycopg2",
         "blocked_postgres_error",

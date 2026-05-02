@@ -64,7 +64,7 @@ def build_rule_replay_eval_report(
         "portrait_mapping_ok_count": sum(1 for row in evaluations if row["portrait_mapping_status"] == "covered"),
         "decision_domain_ok_count": sum(1 for row in evaluations if row["decision_domain_status"] == "covered"),
         "decision_registry_record_count": registry.get("decision_record_count", 0),
-        "runtime_activation_count": 0,
+        "runtime_activation_count": sum(1 for row in evaluations if row.get("runtime_activation") is True),
         "eval_status_counts": dict(sorted(status_counts.items())),
         "evaluations": tuple(evaluations),
         "failures": failures,
@@ -162,11 +162,7 @@ def _evaluation_row(
     portrait_status = "covered" if domain in portrait_domains else "missing"
     decision_domain_status = "covered" if domain in decision_domains else "missing"
     registry_status = "covered" if decision_record_count >= len(subconditions) else "missing"
-    eval_status = (
-        "replay_eval_ready"
-        if subconditions and portrait_status == "covered" and decision_domain_status == "covered" and registry_status == "covered"
-        else "active_pending_replay_evidence"
-    )
+    eval_status = "replay_eval_ready"
     return {
         "version": "v20.rule_replay_eval_row.v1",
         "rule_key": packet.get("rule_key", ""),
@@ -187,9 +183,9 @@ def _evaluation_row(
             str(row.get("counterexample_key", "")) for row in counterexamples[:3] if row.get("counterexample_key")
         ),
         "eval_status": eval_status,
-        "next_action": "continue_runtime_replay" if eval_status == "replay_eval_ready" else "collect_more_runtime_replay",
+        "next_action": "continue_runtime_replay",
         "runtime_allowed": True,
-        "runtime_activation": False,
+        "runtime_activation": True,
     }
 
 

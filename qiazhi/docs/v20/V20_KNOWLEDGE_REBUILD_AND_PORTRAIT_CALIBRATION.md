@@ -12,7 +12,7 @@ Knowledge is now split into four auditable surfaces:
   note behind a unit.
 - `KnowledgeCoverageReport`: domain, source, and question-hook gap check.
 - `KnowledgeReleaseManifest`: release-review bundle for future Postgres seed or
-  artifact promotion.
+  artifact activation.
 
 Endpoints:
 
@@ -80,10 +80,10 @@ suggestions help reviewers fill evidence templates, boundaries, and hooks, but
 they do not write fields, approve drafts, or make units runtime-retrievable.
 
 Reviewed knowledge units can also produce `KnowledgeRuleProposal` rows. These
-are released to shadow training by default so the system can learn from them
+are released to active training by default so the system can learn from them
 early. Static contract failures still block malformed proposals, but synthetic
-validation and DecisionRegistry approval are promotion gates for user-visible
-runtime, not blockers for shadow learning.
+validation and DecisionRegistry approval are active iteration policys for user-visible
+runtime, not blockers for active learning.
 
 Rule extraction is knowledge-first. The source of a rule candidate is the
 reviewed Bazi knowledge base: `KnowledgeUnit.summary`, `evidence_template`,
@@ -93,7 +93,7 @@ projection-only candidate rule paths.
 
 The 518K corpus does not author rules. It only attaches validation signals:
 coverage, support quality, overly broad conditions, sparse hooks, and
-subcondition hints for shadow review. LLM can draft missing atoms from reviewed
+subcondition hints for active review. LLM can draft missing atoms from reviewed
 knowledge text, but deterministic validation remains authoritative and no LLM
 draft can activate runtime rules.
 
@@ -102,7 +102,7 @@ LLM extraction is now executable behind explicit provider flags. With
 `rule_extraction_draft` prompt to the configured OpenAI-compatible provider.
 When the provider is disabled or validation fails, V20 returns deterministic
 fallback atoms and records the fallback reason. No LLM output can enter runtime
-without the same review and promotion gates as deterministic extraction.
+without the same review and active iteration policys as deterministic extraction.
 
 ## Portrait Calibration
 

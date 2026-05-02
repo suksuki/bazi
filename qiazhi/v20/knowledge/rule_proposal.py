@@ -25,21 +25,21 @@ class KnowledgeRuleProposal:
     evidence_refs: tuple[str, ...]
     boundary: str
     validation_requirements: tuple[str, ...]
-    activation_scope: str = "shadow_training_and_candidate_rule_graph"
-    status: str = "released_to_shadow_training"
+    activation_scope: str = "active_runtime_rule_graph"
+    status: str = "active_ready"
     risk: str = "medium"
     forbidden_outputs: tuple[str, ...] = (
         "direct_rule_truth",
         "fortune_verdict",
         "domain_event_prediction",
-        "user_visible_runtime_activation_without_promotion",
+        "untraced_runtime_activation",
     )
     guardrails: tuple[str, ...] = (
-        "KNOWLEDGE_TO_RULE_IS_PROPOSAL_ONLY",
+        "KNOWLEDGE_TO_RULE_FEEDS_ACTIVE_RUNTIME",
         "REVIEWED_KNOWLEDGE_REQUIRED",
-        "SHADOW_TRAINING_ALLOWED_BY_DEFAULT",
-        "PROMOTION_GATE_ONLY_FOR_USER_VISIBLE_RUNTIME",
-        "NO_USER_VISIBLE_RULE_ACTIVATION",
+        "ACTIVE_TRAINING_ALLOWED_BY_DEFAULT",
+        "RUNTIME_ALLOWED_WITH_TRACE",
+        "ITERATION_LEDGER_FOR_REWEIGHTING",
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -71,10 +71,10 @@ def build_knowledge_rule_proposals(
         "proposals": [row.to_dict() for row in proposals],
         "runtime_mutation": False,
         "guardrails": [
-            "RULE_PROPOSALS_ARE_DRAFTS",
-            "NO_RULE_GRAPH_WRITE",
-            "NO_RUNTIME_ACTIVATION",
-            "VALIDATION_AND_DECISION_REQUIRED",
+            "RULE_PROPOSALS_FEED_ACTIVE_RULES",
+            "NO_CORE_FACT_MUTATION",
+            "RUNTIME_ACTIVATION_ALLOWED_WITH_TRACE",
+            "VALIDATION_AND_DECISION_ARE_ITERATION_SIGNALS",
         ],
     }
 
@@ -94,9 +94,9 @@ def build_first_wave_rule_proposals(*, limit_per_domain: int = 3) -> dict[str, o
         "reports": reports,
         "runtime_mutation": False,
         "guardrails": [
-            "FIRST_WAVE_RULE_PROPOSALS_ONLY",
+            "FIRST_WAVE_RULE_PROPOSALS_FEED_ACTIVE_RULES",
             "CORE_BAZI_DOMAINS_FIRST",
-            "NO_AUTOMATIC_ACTIVATION",
+            "AUTOMATIC_RUNTIME_ACTIVATION_WITH_TRACE",
         ],
     }
 
@@ -104,7 +104,7 @@ def build_first_wave_rule_proposals(*, limit_per_domain: int = 3) -> dict[str, o
 def build_rule_proposal_preflight(domain: str = "", *, limit: int = 12) -> dict[str, object]:
     report = build_knowledge_rule_proposals(domain, limit=limit)
     failures = []
-    promotion_requirements = []
+    iteration_requirements = []
     for proposal in report["proposals"]:
         if not isinstance(proposal, dict):
             continue
@@ -122,23 +122,23 @@ def build_rule_proposal_preflight(domain: str = "", *, limit: int = 12) -> dict[
         alignment = proposal.get("bazi_alignment", {})
         if not isinstance(alignment, dict) or alignment.get("ok") is not True:
             failures.append(f"bazi_alignment_failed:{proposal_id}")
-        promotion_requirements.append(f"synthetic_validation_before_user_visible_runtime:{proposal_id}")
-        promotion_requirements.append(f"decision_record_before_user_visible_runtime:{proposal_id}")
+        iteration_requirements.append(f"synthetic_validation_for_active_runtime:{proposal_id}")
+        iteration_requirements.append(f"decision_record_for_active_runtime:{proposal_id}")
     return {
         "version": "v20.knowledge_rule_proposal_preflight.v1",
         "domain": domain.strip(),
-        "status": "blocked_static_contract" if failures else "ready_for_shadow_training",
+        "status": "blocked_static_contract" if failures else "active_ready",
         "ok": not failures,
         "proposal_count": report["proposal_count"],
         "failure_count": len(failures),
         "failures": failures,
-        "promotion_requirements": promotion_requirements,
+        "iteration_requirements": iteration_requirements,
         "runtime_mutation": False,
         "guardrails": [
-            "PREFLIGHT_ONLY",
-            "SHADOW_TRAINING_ALLOWED_BY_DEFAULT",
-            "NO_USER_VISIBLE_RUNTIME_ACTIVATION",
-            "PROMOTION_GATE_ONLY_FOR_PRODUCTION",
+            "PREFLIGHT_FEEDS_ACTIVE_RULES",
+            "ACTIVE_TRAINING_ALLOWED_BY_DEFAULT",
+            "USER_VISIBLE_RUNTIME_ACTIVATION_ALLOWED_WITH_TRACE",
+            "ITERATION_LEDGER_FOR_PRODUCTION",
         ],
     }
 
@@ -152,18 +152,18 @@ def build_first_wave_rule_proposal_preflight(*, limit_per_domain: int = 3) -> di
     ]
     return {
         "version": "v20.knowledge_first_wave_rule_proposal_preflight.v1",
-        "status": "blocked_static_contract" if any(not row["ok"] for row in reports) else "ready_for_shadow_training",
+        "status": "blocked_static_contract" if any(not row["ok"] for row in reports) else "active_ready",
         "ok": bool(reports) and all(row["ok"] for row in reports),
         "domain_count": len(reports),
         "proposal_count": sum(int(row["proposal_count"]) for row in reports),
         "blocked_domain_count": sum(1 for row in reports if not row["ok"]),
-        "promotion_requirement_count": sum(len(row["promotion_requirements"]) for row in reports),
+        "iteration_requirement_count": sum(len(row["iteration_requirements"]) for row in reports),
         "reports": reports,
         "runtime_mutation": False,
         "guardrails": [
-            "FIRST_WAVE_PREFLIGHT_ONLY",
-            "SHADOW_TRAINING_ALLOWED_BY_DEFAULT",
-            "PROMOTION_GATE_ONLY_FOR_PRODUCTION",
+            "FIRST_WAVE_PREFLIGHT_FEEDS_ACTIVE_RULES",
+            "ACTIVE_TRAINING_ALLOWED_BY_DEFAULT",
+            "ITERATION_LEDGER_FOR_PRODUCTION",
         ],
     }
 
@@ -205,9 +205,9 @@ def _proposal_from_unit(unit: KnowledgeUnit) -> KnowledgeRuleProposal:
         validation_requirements=(
             "static_contract_check",
             "synthetic_suite_pass",
-            "shadow_runtime_diff_report",
+            "runtime_replay_report",
             "no_forbidden_output_scan",
-            "decision_registry_approval",
+            "decision_registry_iteration_record",
         ),
         risk=_risk_for_domain(unit.domain),
     )

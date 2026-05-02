@@ -47,14 +47,14 @@ come from the current chart.
 
 ## Rule Collision Upgrade
 
-Rule candidates are still shadow-only, but they now report the current chart
+Rule candidates are still active-trace, but they now report the current chart
 features they match:
 
 ```text
 KnowledgeRuleProposal
 -> feature_hook_prefix_match
 -> matched_feature_ids / matched_feature_labels
--> answer-visible shadow collision summary
+-> answer-visible active collision summary
 ```
 
 This makes the rule layer less weak without promoting it to runtime authority.

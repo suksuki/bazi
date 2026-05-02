@@ -18,7 +18,7 @@ this as a sharded coverage plan, not as automatic conclusions:
 The corpus is a structural map. It does not store destiny truth labels.
 
 `GET /api/v20/learning/run-plan` maps the 518K target into structural
-precompute, coverage-gap clustering, shadow policy learning, and validation /
+precompute, coverage-gap clustering, active policy learning, and validation /
 decision-gate stages. The plan returns shard previews, estimated batch count,
 expected artifact outputs, and blocked outputs; it does not run the corpus job.
 

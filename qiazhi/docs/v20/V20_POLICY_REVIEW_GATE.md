@@ -16,6 +16,6 @@ Supported policy types:
 ## Flow
 
 Policy review creates a draft `LearningProposal`, an `ArtifactRecord`, a
-synthetic validation summary, and a `promotion_gate` result. Artifacts are not
+synthetic validation summary, and a `active_iteration_policy` result. Artifacts are not
 production eligible by default. A decision record and rollback plan are required
 before any scoped runtime use.

@@ -59,12 +59,12 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "KnowledgeReviewAssistSuggestion",
             ],
             "reviewed_unit_count": knowledge["unit_count"],
-            "runtime_role": "reviewed_evidence_context_only",
-            "shadow_learning_allowed": True,
-            "user_visible_promotion_gate": [
-                "source_review",
+            "runtime_role": "reviewed_evidence_context_and_active_rule_seed",
+            "active_learning_allowed": True,
+            "runtime_iteration_checks": [
+                "source_trace",
                 "coverage_report",
-                "synthetic_validation",
+                "synthetic_validation_signal",
                 "decision_registry_record",
             ],
         },
@@ -78,13 +78,13 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             ],
             "source_authority": rule_extraction["source_authority"],
             "corpus_role": rule_extraction["corpus_role"],
-            "synthetic_role": "primary_rule_collision_validation_and_training_gate",
+            "synthetic_role": "primary_rule_collision_validation_and_iteration_signal",
             "generated_artifacts": [
                 "KnowledgeRuleProposal",
                 "ExtractedRuleAtom",
                 "ExtractedRuleCandidate",
-                "candidate_rule_path",
-                "shadow_training_signal",
+                "active_rule_path",
+                "runtime_iteration_signal",
                 "SyntheticRuleCase",
                 "rule_synthetic_training_report",
             ],
@@ -100,9 +100,9 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             "synthetic_rule_suite_status": rule_synthetic["status"],
             "synthetic_rule_case_count": rule_synthetic["case_count"],
             "synthetic_rule_training_status": rule_synthetic_training["status"],
-            "shadow_training_allowed": rule_synthetic_training["status"] == "ready",
-            "user_visible_runtime_allowed": False,
-            "promotion_requirement_count": rule_preflight["promotion_requirement_count"],
+            "active_training_allowed": rule_synthetic_training["status"] == "ready",
+            "user_visible_runtime_allowed": True,
+            "iteration_requirement_count": rule_preflight["iteration_requirement_count"],
         },
         "portrait_generation": {
             "source_layers": [
@@ -120,7 +120,7 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
             "source_policy": "dynamic_rule_decision_supported",
             "bazi_alignment_required": True,
             "runtime_role": "decision_state_to_portrait_projection",
-            "shadow_learning_allowed": True,
+            "active_learning_allowed": True,
             "user_visible_runtime_allowed": True,
         },
         "decision_generation": {
@@ -190,16 +190,15 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
                 "chart_fact_generation",
                 "core_rule_truth_override",
                 "direct_fortune_verdict",
-                "production_promotion",
+                "runtime_decision_override",
             ],
         },
         "validation_policy": {
-            "synthetic_required_for": [
-                "rule_shadow_training_gate",
-                "user_visible_rule_promotion",
-                "knowledge_release_promotion",
-                "answer_boundary_release",
-                "learned_ranking_policy_promotion",
+            "synthetic_required_for_iteration_signals": [
+                "rule_active_iteration",
+                "knowledge_release_iteration",
+                "answer_boundary_iteration",
+                "learned_ranking_policy_iteration",
             ],
             "synthetic_not_required_for": [
                 "full_corpus_coverage_priors",
@@ -223,8 +222,8 @@ def build_intelligence_generation_manifest() -> dict[str, object]:
         "runtime_mutation": False,
         "guardrails": [
             "INTELLIGENCE_GENERATION_CONTRACT_ONLY",
-            "SHADOW_LEARNING_ALLOWED_BY_DEFAULT",
-            "SYNTHETIC_VALIDATION_REQUIRED_FOR_USER_VISIBLE_PROMOTION",
+            "ACTIVE_LEARNING_ALLOWED_BY_DEFAULT",
+            "SYNTHETIC_VALIDATION_IS_ITERATION_SIGNAL",
             "NO_LLM_AUTHORITY_OVER_CORE_BAZI_TRUTH",
         ],
     }

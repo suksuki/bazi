@@ -61,7 +61,7 @@ def default_runtime_config(*, active_profile: str = "local_macos") -> RuntimeCon
                 source_profile="local_macos",
                 target_profile="linux_0_13",
                 code_sync="git_push_pull_or_rsync_worktree_after_tests",
-                postgres_sync="migrations_and_reviewed_seed_promotions_only",
+                postgres_sync="migrations_and_reviewed_seed_activation_records_only",
                 redis_sync="disabled_ephemeral_cache_must_be_rebuilt",
                 runtime_files_sync="disabled_except_explicit_backup_restore",
             ),

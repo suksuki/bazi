@@ -23,13 +23,13 @@ from v20.llm.validators import validate_llm_output, validate_llm_structured_outp
 from v20.measurement.domain_alignment import ALLOWED_QUESTION_KEYS_BY_DOMAIN, is_allowed_bazi_domain
 
 DOMAIN_ROUTE_PRIORITY = {
-    "career": 0,
-    "wealth": 1,
+    "useful_god": 0,
+    "career": 1,
     "relationship": 2,
-    "health": 3,
-    "time": 4,
-    "strength": 5,
-    "useful_god": 6,
+    "wealth": 3,
+    "health": 4,
+    "time": 5,
+    "strength": 6,
     "ten_god": 7,
     "branch": 8,
     "element": 9,
@@ -213,7 +213,7 @@ def draft_rule_extraction_from_knowledge(unit: KnowledgeUnit, *, locale: str = "
         "guardrails": [
             "DRAFT_ONLY",
             "KNOWLEDGE_UNIT_IS_SOURCE",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
 
@@ -241,7 +241,7 @@ def draft_rule_extraction_with_llm(
             "guardrails": [
                 "LLM_OUTPUT_VALIDATED",
                 "DRAFT_ONLY",
-                "NO_RUNTIME_RULE_ACTIVATION",
+                "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
             ],
         }
     return {
@@ -257,7 +257,7 @@ def draft_rule_extraction_with_llm(
         "guardrails": [
             "LLM_NOT_ACCEPTED_OR_NOT_EXECUTED",
             "DETERMINISTIC_FALLBACK_USED",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
 
@@ -284,7 +284,7 @@ def summarize_feedback(feedback_text: str, *, locale: str = "zh") -> dict[str, o
     summary = LLMFeedbackSummary(
         summary=feedback_text.strip()[:160],
         candidate_domains=domains,
-        calibration_notes=("feedback_requires_validation_before_promotion",),
+        calibration_notes=("feedback_requires_validation_before_runtime_reweight",),
     )
     return {
         "version": "v20.llm_feedback_summary.v1",

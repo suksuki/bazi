@@ -75,7 +75,7 @@ knowledge draft / reviewed unit
 -> controlled approval
 -> version record
 -> Rule DB candidate
--> synthetic gate / shadow scoring / canary
+-> synthetic gate / active replay scoring / canary
 -> runtime route-only or evidence-only use
 ```
 
@@ -84,7 +84,7 @@ Current self-evolution flow:
 ```text
 synthetic cases
 -> framework audit
--> dry-run shadow scoring
+-> dry-run active replay scoring
 -> canary trial
 -> scorecard
 -> silent training ledger
@@ -153,8 +153,8 @@ Problems:
 V20 recommendation:
 
 - Use a typed `RuleCandidate`, `RulePath`, `FeatureCandidate`, and `EvidenceRef`.
-- Separate retrieval, scoring, arbitration, answer audit, and promotion governance.
-- Introduce a `ranking/` layer that can support deterministic weights now and learning-to-rank shadow mode later.
+- Separate retrieval, scoring, arbitration, answer audit, and active iteration governance.
+- Introduce a `ranking/` layer that can support deterministic weights now and learning-to-rank active replay mode later.
 
 ### 3. Feature Spine
 
@@ -285,7 +285,7 @@ Key files:
 Strengths:
 
 - This is one of V19's most valuable assets.
-- Synthetic cases, shadow scoring, smart gate, canary, and silent eval queue form a real governed evolution workflow.
+- Synthetic cases, active replay scoring, smart gate, canary, and silent eval queue form a real governed evolution workflow.
 - The system consistently checks forbidden text, answer mutation, runtime mutation, rule activation, route coverage, and evidence binding.
 
 Problems:
@@ -317,7 +317,7 @@ V20 recommendation:
 4. Condition-model style synthetic evaluation.
 5. Feature spine scoring and question bias.
 6. Bayesian-style confidence formula in portrait compilation.
-7. Contract-based shadow scoring.
+7. Contract-based active replay scoring.
 8. Auto evaluator scorecard for silent evolution.
 9. Smart gate risk routing.
 
@@ -339,7 +339,7 @@ Allowed early:
 - embedding retrieval for knowledge/rule/synthetic case recall
 - deterministic graph algorithms for path coverage and conflict analysis
 - Bayesian-style internal calibration for feature confidence
-- bounded learning-to-rank in shadow mode for question and path rerank
+- bounded learning-to-rank in active replay mode for question and path rerank
 - clustering/active learning for synthetic coverage gaps and proposal grouping
 
 Delayed:
@@ -407,7 +407,7 @@ v20/
     arbitration.py
   ranking/
     deterministic.py
-    shadow_ltr.py
+    active_ltr.py
     calibration.py
   interaction/
     questions.py
@@ -428,7 +428,7 @@ v20/
     synthetic_schema.py
     cases.py
     evaluator.py
-    shadow.py
+    active_replay_delta.py
     golden.py
   corpus/
     enumerator.py
@@ -441,7 +441,7 @@ v20/
     ledger.py
     proposal.py
     active_learning.py
-    promotion_gate.py
+    activation_policy.py
     artifact_registry.py
   api/
     runtime.py
@@ -463,7 +463,7 @@ Boundary refinements from architecture review:
 - `answer/` must use `EvidencePack -> AnswerPlan -> deterministic composer -> optional LLM rewrite`.
 - `llm/` should become a bounded intelligence layer with typed tasks and validators, not a free-form answer authority.
 - `validation/` is a first-class kernel, not a lab appendage.
-- `learning/` owns ledger, proposal, artifact registry, and promotion gate; it may produce candidates, not production truth.
+- `learning/` owns ledger, proposal, artifact registry, and active iteration policy; it may produce candidates, not production truth.
 - `api/` must split runtime, analyst, admin, and lab routers from day one.
 
 ## Product Continuity Requirements
@@ -497,7 +497,7 @@ Role boundaries should affect API permissions and UI surfaces:
 - users can view their own chart, features, questions, answers, and calibration options
 - practitioners can review evidence, annotate features, and confirm/deny projections
 - analysts can label synthetic/golden cases and review proposals
-- admins can manage knowledge releases, artifact registries, model/ranking configs, and promotion gates
+- admins can manage knowledge releases, artifact registries, model/ranking configs, and active iteration policys
 
 No role should bypass evidence-pack and answer-boundary requirements.
 
@@ -536,7 +536,7 @@ Analyst/admin surfaces can expose:
 - evidence refs
 - synthetic case labels
 - corpus coverage reports
-- artifact registry and promotion gate status
+- artifact registry and active iteration policy status
 
 ### UI Alignment For V20
 
@@ -619,7 +619,7 @@ Allowed analyst and lab roles:
 - translation QA across locales
 - analyst review packet summarization
 
-All outputs remain proposals or drafts. Analyst/admin approval is still required for knowledge, rule, feature, ranking, and artifact promotion.
+All outputs remain proposals or drafts. Analyst/admin approval is still required for knowledge, rule, feature, ranking, and artifact activation.
 
 ### LLM Structured Contracts
 
@@ -714,8 +714,8 @@ full-corpus structural precompute
 -> feature snapshot corpus
 -> coverage map / diff map
 -> representation learning / embedding
--> shadow rerank / calibration / proposal generation
--> validation and promotion gate
+-> active rerank / calibration / proposal generation
+-> validation and active iteration policy
 ```
 
 It is not:
@@ -790,7 +790,7 @@ Allowed learning uses:
 - embedding retrieval for similar charts, knowledge units, rules, and synthetic cases
 - self-supervised representation learning from chart facts and feature co-occurrence
 - graph embedding or GNN for path similarity, coverage gaps, and rerank candidates
-- learning-to-rank shadow reports for questions and rule paths
+- learning-to-rank active replay reports for questions and rule paths
 - Bayesian-style calibration of feature confidence and uncertainty
 - clustering for failure attribution and proposal grouping
 - active learning to propose missing synthetic/golden cases
@@ -815,7 +815,7 @@ DatasetRegistry
 - synthetic_golden
 - synthetic_mechanism_matrix
 - practitioner_benchmark
-- user_feedback_shadow
+- user_feedback_active_replay
 - negative_boundary_cases
 
 ArtifactRegistry
@@ -826,7 +826,7 @@ ArtifactRegistry
 - bayesian_calibration_table
 - clustering_report
 - eval_report
-- promotion_candidate
+- activation_candidate
 
 RunRegistry
 - run_id
@@ -931,7 +931,7 @@ Analyst minimum coverage for Phase 1:
 ### Phase 7: Governed Advanced Algorithms
 
 - Add embedding retrieval for knowledge/rule recall.
-- Add bounded learning-to-rank shadow mode.
+- Add bounded learning-to-rank active replay mode.
 - Add evaluation deltas before any ranking change.
 - Add LLM-assisted rerank explanations and reviewer summaries, not LLM-driven ranking decisions.
 
@@ -941,7 +941,7 @@ Analyst minimum coverage for Phase 1:
 - Use for path rerank and similarity clustering.
 - Never for core fact or conclusion generation.
 
-### Phase 9: Promotion Gate For Learned Artifacts
+### Phase 9: Active iteration Gate For Learned Artifacts
 
 - Learned artifacts can enter runtime only through explicit approval, scoped activation, regression pass, and rollback manifest.
 - The first acceptable learning artifact should be a transparent `ltr_weight_config` or `bayesian_calibration_table`, not a neural conclusion model.
@@ -1027,7 +1027,7 @@ The architect agrees with the V19-to-V20 split and recommends tightening impleme
 5. Introduce advanced algorithms in this order:
    - embedding retrieval
    - Bayesian-style calibration
-   - LTR shadow mode
+   - LTR active replay mode
    - GNN / graph embedding research
    - RL dialog policy research
 
@@ -1067,7 +1067,7 @@ Design in from day one:
 - learning ledger
 - artifact registry
 - deterministic baseline diff reports
-- promotion gate
+- active iteration policy
 
 Defer:
 
@@ -1084,5 +1084,5 @@ deterministic core stays sober
 full corpus sees the whole structure space
 learning system discovers blind spots and ranking improvements
 validation decides what is safe
-human/governed promotion decides what can enter runtime
+human/governed active iteration decides what can enter runtime
 ```

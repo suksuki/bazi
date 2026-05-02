@@ -24,15 +24,15 @@ class KnowledgeRuleDefinition:
     evidence_refs: tuple[str, ...]
     boundary: str
     bazi_alignment: dict[str, object]
-    validation_state: str = "synthetic_not_run"
-    promotion_status: str = "shadow_review"
-    runtime_allowed: bool = False
+    validation_state: str = "active_ready"
+    activation_status: str = "active_iteration"
+    runtime_allowed: bool = True
     guardrails: tuple[str, ...] = field(
         default=(
-            "KNOWLEDGE_RULE_DEFINITION_IS_REVIEW_TARGET",
-            "SYNTHETIC_VALIDATION_REQUIRED_BEFORE_PROMOTION",
-            "PRACTITIONER_OR_DECISION_REVIEW_REQUIRED_BEFORE_RUNTIME",
-            "NO_USER_VISIBLE_RULE_ACTIVATION",
+            "KNOWLEDGE_RULE_DEFINITION_FEEDS_ACTIVE_RUNTIME",
+            "SYNTHETIC_VALIDATION_IS_ITERATION_SIGNAL",
+            "PRACTITIONER_OR_DECISION_REVIEW_REWEIGHTS_RUNTIME",
+            "TRACE_REQUIRED_FOR_USER_VISIBLE_RULE_USE",
         )
     )
 
@@ -69,8 +69,8 @@ def build_knowledge_rule_library(domain: str = "", *, limit: int = 64) -> dict[s
         },
         "runtime_mutation": False,
         "guardrails": [
-            "RULE_LIBRARY_IS_KNOWLEDGE_AUTHORED_REVIEW_LAYER",
-            "RULE_LIBRARY_DOES_NOT_ACTIVATE_RUNTIME_RULES",
+            "RULE_LIBRARY_IS_KNOWLEDGE_AUTHORED_ACTIVE_LAYER",
+            "RULE_LIBRARY_ACTIVATES_TRACEABLE_RUNTIME_RULES",
             "CORPUS_AND_LLM_CAN_REFINE_BUT_NOT_AUTHOR_TRUTH",
         ],
     }
@@ -83,8 +83,8 @@ def validate_knowledge_rule_library(domain: str = "", *, limit: int = 64) -> dic
         failures.append("source_authority_must_be_reviewed_knowledge_base")
     if library["status"] == "empty":
         failures.append("no_rule_definitions")
-    if library["runtime_allowed_count"] != 0:
-        failures.append("runtime_allowed_before_validation")
+    if library["runtime_allowed_count"] != library["definition_count"]:
+        failures.append("not_all_rules_runtime_allowed")
     for definition in library["definitions"]:
         if not isinstance(definition, dict):
             continue
@@ -97,9 +97,9 @@ def validate_knowledge_rule_library(domain: str = "", *, limit: int = 64) -> dic
             failures.append(f"missing_question_outputs:{rule_key}")
         if definition.get("source_authority") != "reviewed_bazi_knowledge_base":
             failures.append(f"source_authority_mismatch:{rule_key}")
-        if definition.get("runtime_allowed") is True:
-            failures.append(f"runtime_allowed:{rule_key}")
-        if definition.get("validation_state") != "synthetic_not_run":
+        if definition.get("runtime_allowed") is not True:
+            failures.append(f"runtime_blocked:{rule_key}")
+        if definition.get("validation_state") != "active_ready":
             failures.append(f"unexpected_validation_state:{rule_key}")
         alignment = definition.get("bazi_alignment", {})
         if not isinstance(alignment, dict) or alignment.get("ok") is not True:
@@ -117,7 +117,7 @@ def validate_knowledge_rule_library(domain: str = "", *, limit: int = 64) -> dic
         "runtime_mutation": False,
         "guardrails": [
             "VALIDATION_ONLY",
-            "RULE_LIBRARY_REMAINS_SHADOW_UNTIL_SYNTHETIC_GATE",
+            "RULE_LIBRARY_IS_ACTIVE_WITH_SYNTHETIC_ITERATION_SIGNAL",
             "NO_RUNTIME_MUTATION",
         ],
     }

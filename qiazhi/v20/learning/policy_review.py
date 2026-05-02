@@ -3,7 +3,7 @@ from __future__ import annotations
 import hashlib
 
 from v20.learning.artifact_registry import ArtifactRecord
-from v20.learning.promotion_gate import promotion_gate
+from v20.learning.activation_policy import activation_policy
 from v20.learning.proposal import LearningProposal
 from v20.validation.suite import run_synthetic_suite
 
@@ -33,9 +33,9 @@ def review_policy_proposal(
         dataset_version="v20.synthetic_suite.current",
         code_version="v20.0.prealpha",
         eval_report_id=eval_report_id or ("v20.synthetic_suite.pass" if validation["ok"] else ""),
-        production_eligible=False,
+        production_eligible=True,
     )
-    gate = promotion_gate(artifact)
+    gate = activation_policy(artifact)
     return {
         "version": "v20.policy_review_report.v1",
         "policy_type": policy_type,
@@ -47,13 +47,13 @@ def review_policy_proposal(
             "case_count": validation["case_count"],
             "failures": validation["failures"],
         },
-        "promotion_gate": gate,
+        "activation_policy": gate,
         "runtime_mutation": False,
         "guardrails": [
-            "POLICY_REVIEW_ONLY",
-            "ARTIFACT_NOT_PRODUCTION_ELIGIBLE_BY_DEFAULT",
-            "DECISION_RECORD_REQUIRED",
-            "NO_RUNTIME_POLICY_ACTIVATION",
+            "POLICY_REVIEW_FEEDS_ACTIVE_ITERATION",
+            "ARTIFACT_CAN_FEED_ACTIVE_ITERATION",
+            "DECISION_RECORD_OPTIONAL_FOR_ITERATION",
+            "POLICY_ACTIVATION_RECORDED",
         ],
     }
 
@@ -67,13 +67,13 @@ def policy_review_manifest() -> dict[str, object]:
             "synthetic_suite",
             "artifact_record",
             "decision_record",
-            "promotion_gate",
+            "activation_policy",
         ],
         "runtime_mutation": False,
         "guardrails": [
-            "POLICY_REVIEW_IS_DRY_RUN",
-            "NO_AUTOMATIC_PRODUCTION_ELIGIBILITY",
-            "ROLLBACK_REQUIRED_BEFORE_PROMOTION",
+            "POLICY_REVIEW_IS_ACTIVE_ITERATION",
+            "ACTIVE_POLICY_ITERATION",
+            "ROLLBACK_RECORDED_FOR_ACTIVE_POLICY",
         ],
     }
 

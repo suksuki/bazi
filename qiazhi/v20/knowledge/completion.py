@@ -68,6 +68,7 @@ def build_knowledge_completion_report() -> dict[str, object]:
         "domain_count": catalog.get("domain_count", 0),
         "source_count": source_catalog.get("source_count", 0),
         "coverage_gap_count": coverage.get("gap_count", 0),
+        "definition_count": definition_count,
         "rule_definition_count": definition_count,
         "rule_atom_count": rule_library.get("atom_count", 0),
         "portrait_output_count": rule_library.get("portrait_output_count", 0),
@@ -99,7 +100,7 @@ def build_knowledge_completion_report() -> dict[str, object]:
         "feature_graph_chain": feature_model.get("mainline_chain", ()),
         "knowledge_axes": _knowledge_axes(catalog),
         "recommended_review_script": "v20/scripts/run_knowledge_completion.py",
-        "next_mainline_step": "rule_subcondition_review_and_shadow_eval" if mainline_complete else "clear_knowledge_blockers",
+        "next_mainline_step": "rule_subcondition_iteration_and_replay_eval" if mainline_complete else "clear_knowledge_blockers",
         "expansion_backlog": {
             "status": "not_blocking_mainline",
             "draft_candidate_count": draft_preview.get("candidate_count", 0),
@@ -111,7 +112,7 @@ def build_knowledge_completion_report() -> dict[str, object]:
             "KNOWLEDGE_COMPLETION_REPORT_IS_READ_ONLY",
             "MAINLINE_COMPLETE_DOES_NOT_MEAN_FULL_BAZI_CANON_COMPLETE",
             "DRAFT_IMPORT_BACKLOG_DOES_NOT_BLOCK_REVIEWED_SEED_MAINLINE",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
 
@@ -169,14 +170,14 @@ def _mainline_blockers(
         blockers.append("rule_library_not_ready")
     if rule_contract.get("status") != "pass" or rule_contract.get("ok") is not True:
         blockers.append("rule_contract_validation_failed")
-    if rule_validation.get("status") != "ready_for_review" or rule_validation.get("ok") is not True:
+    if rule_validation.get("status") != "active_ready" or rule_validation.get("ok") is not True:
         blockers.append("rule_validation_not_ready")
     if int(rule_validation.get("missing_synthetic_count", 0) or 0) != 0:
         blockers.append("missing_synthetic_rule_coverage")
     if int(rule_validation.get("missing_synthetic_count", 0) or 0) != 0:
         blockers.append("synthetic_coverage_incomplete")
-    if int(rule_validation.get("runtime_allowed_count", 0) or 0) != 0:
-        blockers.append("runtime_activation_leaked_into_knowledge")
+    if int(rule_validation.get("runtime_allowed_count", 0) or 0) != int(rule_validation.get("definition_count", 0) or 0):
+        blockers.append("runtime_activation_not_complete")
     if feature_model.get("status") != "phase1_contract_ready":
         blockers.append("feature_graph_model_not_ready")
     if "TopicProjection" not in set(feature_model.get("phase1_objects", ())):

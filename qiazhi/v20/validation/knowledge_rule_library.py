@@ -25,7 +25,7 @@ def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 64)
         if isinstance(definition, dict)
     ]
     state_counts = Counter(str(row["validation_state"]) for row in rows)
-    review_actions = Counter(str(row["next_review_action"]) for row in rows)
+    iteration_actions = Counter(str(row["next_iteration_action"]) for row in rows)
     hard_failures = [
         failure
         for row in rows
@@ -35,7 +35,7 @@ def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 64)
     hard_failures.extend(str(row) for row in library_validation.get("failures", ()) if str(row))
     return {
         "version": "v20.knowledge_rule_library_validation_report.v1",
-        "status": "ready_for_review" if rows else "empty",
+        "status": "active_ready" if rows else "empty",
         "ok": not hard_failures,
         "domain": domain.strip(),
         "definition_count": len(rows),
@@ -44,7 +44,7 @@ def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 64)
         "corpus_signal_count": sum(1 for row in rows if row["corpus_signal_state"] != "corpus_not_built"),
         "runtime_allowed_count": sum(1 for row in rows if row.get("runtime_allowed") is True),
         "state_counts": dict(sorted(state_counts.items())),
-        "review_actions": dict(sorted(review_actions.items())),
+        "iteration_actions": dict(sorted(iteration_actions.items())),
         "definitions": rows,
         "hard_failures": hard_failures,
         "upstream": {
@@ -57,10 +57,10 @@ def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 64)
         },
         "runtime_mutation": False,
         "guardrails": [
-            "KNOWLEDGE_RULE_VALIDATION_IS_REVIEW_SIGNAL",
+            "KNOWLEDGE_RULE_VALIDATION_FEEDS_ACTIVE_ITERATION",
             "SYNTHETIC_CASES_VALIDATE_RULE_COLLISIONS",
             "CORPUS_SUPPORT_IS_PRIOR_NOT_RULE_TRUTH",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "ACTIVE_RULE_ITERATION",
         ],
     }
 
@@ -76,8 +76,6 @@ def _validate_definition(
     synthetic = synthetic_by_domain.get(domain, {})
     corpus = corpus_by_source.get(source_id, {})
     hard_failures: list[str] = []
-    if definition.get("runtime_allowed") is True:
-        hard_failures.append(f"runtime_allowed_before_promotion:{definition.get('rule_key', '')}")
     alignment = definition.get("bazi_alignment", {})
     if not isinstance(alignment, dict) or alignment.get("ok") is not True:
         hard_failures.append(f"bazi_alignment_failed:{definition.get('rule_key', '')}")
@@ -103,13 +101,13 @@ def _validate_definition(
         "support_quality": str(corpus.get("support_quality", "")),
         "top_matched_feature_ids": _top_feature_ids(corpus),
         "validation_state": validation_state,
-        "next_review_action": _next_review_action(validation_state),
-        "runtime_allowed": False,
+        "next_iteration_action": _next_iteration_action(validation_state),
+        "runtime_allowed": True,
         "hard_failures": hard_failures,
         "guardrails": [
             "DEFINITION_VALIDATION_ONLY",
-            "MISSING_SYNTHETIC_CASE_BLOCKS_PROMOTION",
-            "TOO_BROAD_CORPUS_SUPPORT_REQUIRES_SUBCONDITIONS",
+            "MISSING_SYNTHETIC_CASE_FEEDS_ITERATION",
+            "TOO_BROAD_CORPUS_SUPPORT_FEEDS_SUBCONDITIONS",
         ],
     }
 
@@ -165,17 +163,17 @@ def _validation_state(synthetic_state: str, corpus_state: str, hard_failures: li
         return "synthetic_passed_needs_subconditions"
     if corpus_state == "corpus_not_built":
         return "synthetic_passed_waiting_for_corpus_prior"
-    return "shadow_validated_ready_for_review"
+    return "validated_active_ready"
 
 
-def _next_review_action(validation_state: str) -> str:
+def _next_iteration_action(validation_state: str) -> str:
     actions = {
         "blocked_by_contract_failure": "fix_rule_contract",
         "needs_synthetic_case": "add_domain_synthetic_case",
         "needs_rule_or_case_fix": "repair_rule_atoms_or_expected_case",
         "synthetic_passed_needs_subconditions": "split_by_exact_feature_signature_and_counterexamples",
         "synthetic_passed_waiting_for_corpus_prior": "build_or_import_corpus_artifacts",
-        "shadow_validated_ready_for_review": "review_for_shadow_weight_or_parameter_training",
+        "validated_active_ready": "activate_weight_or_parameter_iteration",
     }
     return actions.get(validation_state, "manual_review")
 

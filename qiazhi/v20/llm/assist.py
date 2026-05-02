@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 from v20.features.schema import FeatureLayer
-from v20.interaction.questions import QuestionCandidate
+from v20.interaction.questions import HOOK_DOMAIN_PREFERENCE, QuestionCandidate
 from v20.llm.tasks import (
+    DOMAIN_ROUTE_PRIORITY,
     interpret_user_intent,
     propose_feature_candidates,
     review_output_safety,
@@ -66,10 +67,12 @@ def attach_answer_safety_review(llm_assist: dict[str, object], answer_text: str)
 
 def _first_supported_question_key(suggestions: dict[str, object], questions: tuple[QuestionCandidate, ...]) -> str:
     supported = {question.question_key for question in questions}
-    for row in suggestions.get("suggestions", ()):
-        if isinstance(row, dict) and row.get("question_key") in supported:
-            return str(row["question_key"])
-    return ""
+    candidates = tuple(
+        str(row["question_key"])
+        for row in suggestions.get("suggestions", ())
+        if isinstance(row, dict) and row.get("question_key") in supported
+    )
+    return _first_supported_by_route(candidates, questions, feature_domains=())
 
 
 def _first_supported_intent_question_key(intent: dict[str, object], questions: tuple[QuestionCandidate, ...]) -> str:
@@ -77,15 +80,41 @@ def _first_supported_intent_question_key(intent: dict[str, object], questions: t
     result = intent.get("result", {})
     if not isinstance(result, dict):
         return ""
-    for key in result.get("candidate_question_keys", ()):
-        if str(key) in supported:
-            return str(key)
-    return ""
+    feature_domains = tuple(str(domain) for domain in result.get("feature_domains", ()) if str(domain))
+    candidates = tuple(
+        str(key)
+        for key in result.get("candidate_question_keys", ())
+        if str(key) in supported
+    )
+    return _first_supported_by_route(candidates, questions, feature_domains=feature_domains)
 
 
 def _single_intent_question_key(intent: dict[str, object]) -> str:
     result = intent.get("result", {})
     if not isinstance(result, dict):
         return ""
+    feature_domains = tuple(str(domain) for domain in result.get("feature_domains", ()) if str(domain))
     keys = tuple(str(key) for key in result.get("candidate_question_keys", ()) if str(key))
-    return keys[0] if len(keys) == 1 else ""
+    return _first_supported_by_route(keys, (), feature_domains=feature_domains)
+
+
+def _first_supported_by_route(
+    candidates: tuple[str, ...],
+    questions: tuple[QuestionCandidate, ...],
+    *,
+    feature_domains: tuple[str, ...],
+) -> str:
+    question_domain: dict[str, str] = {question.question_key: question.domain for question in questions}
+    preference = {domain: index + 1 for index, domain in enumerate(dict.fromkeys(feature_domains))}
+    scored: list[tuple[int, int, int, str]] = []
+    for index, key in enumerate(dict.fromkeys(candidates), start=1):
+        domain = question_domain.get(key) or HOOK_DOMAIN_PREFERENCE.get(key, "")
+        scored.append((
+            DOMAIN_ROUTE_PRIORITY.get(domain, 99),
+            preference.get(domain, 99),
+            index,
+            key,
+        ))
+    if not scored:
+        return ""
+    return sorted(scored, key=lambda item: item[:3])[0][3]

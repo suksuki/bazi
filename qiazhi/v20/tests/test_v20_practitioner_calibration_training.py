@@ -39,9 +39,9 @@ def test_v20_practitioner_calibration_training_aggregates_structured_choices(tmp
     assert report["selection_count"] == 3
     assert summary["control_key"] == "control.day_master_strength"
     assert summary["top_option"] == "中和偏弱"
-    assert summary["promotion_candidate"] is False
+    assert summary["activation_candidate"] is False
     assert proposal["target"] == "decision_parameters.strength_capacity"
-    assert proposal["runtime_allowed"] is False
+    assert proposal["runtime_allowed"] is True
 
 
 def test_v20_practitioner_calibration_training_write_and_status(monkeypatch, tmp_path: Path) -> None:

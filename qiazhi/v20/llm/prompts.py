@@ -315,7 +315,7 @@ def _compact_decision_knowledge_rules(decision: dict[str, object]) -> list[dict[
                 "question_titles": list(ref.get("question_titles", ())[:2]) if isinstance(ref.get("question_titles", ()), (list, tuple)) else [],
                 "condition_atoms": atoms,
                 "boundary": _clip(str(ref.get("boundary", "")), 180),
-                "runtime_allowed": False,
+                "runtime_allowed": True,
             }
         )
     return rows

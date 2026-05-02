@@ -20,5 +20,5 @@ GET /api/v20/features/confidence-calibration
 ```
 
 Future Bayesian calibration can propose offsets from synthetic validation,
-coverage gaps, anonymized feedback, and shadow-run deltas. Promotion still
+coverage gaps, anonymized feedback, and runtime-replay deltas. Active iteration still
 requires artifact, evaluation, and decision records.

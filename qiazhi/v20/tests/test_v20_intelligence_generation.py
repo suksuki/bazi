@@ -12,10 +12,10 @@ def test_v20_intelligence_generation_manifest_names_generation_boundaries() -> N
     manifest = build_intelligence_generation_manifest()
 
     assert manifest["status"] == "ready"
-    assert manifest["knowledge_generation"]["shadow_learning_allowed"] is True
-    assert manifest["rule_generation"]["shadow_training_allowed"] is True
-    assert manifest["rule_generation"]["user_visible_runtime_allowed"] is False
-    assert manifest["rule_generation"]["synthetic_role"] == "primary_rule_collision_validation_and_training_gate"
+    assert manifest["knowledge_generation"]["active_learning_allowed"] is True
+    assert manifest["rule_generation"]["active_training_allowed"] is True
+    assert manifest["rule_generation"]["user_visible_runtime_allowed"] is True
+    assert manifest["rule_generation"]["synthetic_role"] == "primary_rule_collision_validation_and_iteration_signal"
     assert manifest["rule_generation"]["synthetic_rule_training_status"] == "ready"
     assert manifest["portrait_generation"]["source_policy"] == "dynamic_rule_decision_supported"
     assert manifest["portrait_generation"]["bazi_alignment_required"] is True
@@ -27,22 +27,21 @@ def test_v20_intelligence_generation_manifest_names_generation_boundaries() -> N
     assert "knowledge_extraction_draft" in manifest["llm_generation"]["allowed_roles"]
     assert "evidence_bounded_practitioner_answer" in manifest["llm_generation"]["allowed_roles"]
     assert "core_rule_truth_override" in manifest["llm_generation"]["forbidden_roles"]
-    assert "rule_shadow_training_gate" in manifest["validation_policy"]["synthetic_required_for"]
-    assert "user_visible_rule_promotion" in manifest["validation_policy"]["synthetic_required_for"]
+    assert "rule_active_iteration" in manifest["validation_policy"]["synthetic_required_for_iteration_signals"]
     assert "full_corpus_coverage_priors" in manifest["validation_policy"]["synthetic_not_required_for"]
     assert manifest["runtime_mutation"] is False
 
 
-def test_v20_intelligence_generation_validation_allows_shadow_but_not_promotion() -> None:
+def test_v20_intelligence_generation_validation_allows_active_iteration() -> None:
     report = validate_intelligence_generation()
 
     assert report["ok"] is True
     assert report["status"] == "pass"
-    assert report["shadow_training"]["allowed"] is True
+    assert report["active_training"]["allowed"] is True
     assert report["rule_synthetic"]["ok"] is True
     assert report["bazi_domain_alignment"]["status"] == "ready"
-    assert report["shadow_training"]["rule_synthetic_training_status"] == "ready"
-    assert report["promotion"]["user_visible_rule_promotion_ready"] is False
+    assert report["active_training"]["rule_synthetic_training_status"] == "ready"
+    assert report["runtime_iteration"]["user_visible_runtime_ready"] is True
     assert report["runtime_mutation"] is False
 
 

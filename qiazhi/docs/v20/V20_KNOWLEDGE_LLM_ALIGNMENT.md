@@ -17,7 +17,7 @@ Current V20 knowledge contracts:
 - `KnowledgeCoverageReport`: gap report for domains, source refs, and question
   hooks.
 - `KnowledgeReleaseManifest`: reviewed release candidate for future Postgres
-  seed or artifact promotion.
+  seed or artifact activation.
 - `knowledge_feature_alignment`: audit that every runtime feature domain has reviewed knowledge coverage.
 - `audit_default_knowledge_units`: baseline check for review status, evidence templates, and forbidden direct-rule usage.
 
@@ -43,7 +43,7 @@ rules or connecting to an external vector store.
 `GET /api/v20/knowledge/source-catalog`,
 `GET /api/v20/knowledge/coverage-report`, and
 `GET /api/v20/knowledge/release-manifest` expose the rebuilt knowledge release
-surface. They are read-only and require decision approval before any promotion.
+surface. They are read-only and require decision approval before any active reweighting.
 
 Rule extraction has two surfaces:
 

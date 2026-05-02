@@ -11,8 +11,8 @@ def test_v20_policy_review_manifest_defines_dry_run_flow() -> None:
 
     assert manifest["runtime_mutation"] is False
     assert {"question_ranking", "knowledge_retrieval", "confidence_calibration"} <= set(manifest["supported_policy_types"])
-    assert "promotion_gate" in manifest["required_flow"]
-    assert "NO_AUTOMATIC_PRODUCTION_ELIGIBILITY" in manifest["guardrails"]
+    assert "activation_policy" in manifest["required_flow"]
+    assert "ACTIVE_POLICY_ITERATION" in manifest["guardrails"]
 
 
 def test_v20_policy_review_blocks_production_by_default() -> None:
@@ -24,8 +24,8 @@ def test_v20_policy_review_blocks_production_by_default() -> None:
 
     assert report["runtime_mutation"] is False
     assert report["validation"]["ok"] is True
-    assert report["artifact"]["production_eligible"] is False
-    assert report["promotion_gate"]["ok"] is False
+    assert report["artifact"]["production_eligible"] is True
+    assert report["activation_policy"]["ok"] is True
     assert report["proposal"]["status"] == "draft"
 
 
@@ -43,5 +43,5 @@ def test_v20_policy_review_endpoint_is_guarded() -> None:
 
     assert manifest["runtime_mutation"] is False
     assert report["policy_type"] == "confidence_calibration"
-    assert report["promotion_gate"]["decision"] == "blocked"
-    assert "NO_RUNTIME_POLICY_ACTIVATION" in report["guardrails"]
+    assert report["activation_policy"]["decision"] == "active"
+    assert "POLICY_ACTIVATION_RECORDED" in report["guardrails"]

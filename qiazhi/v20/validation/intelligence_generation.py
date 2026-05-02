@@ -32,8 +32,8 @@ def validate_intelligence_generation() -> dict[str, object]:
         failures.append("portrait_source_policy_mismatch")
     if manifest.get("bazi_domain_alignment", {}).get("version") != "v20.bazi_domain_alignment_manifest.v1":
         failures.append("bazi_domain_alignment_manifest_missing")
-    if rule_preflight["status"] != "ready_for_shadow_training":
-        failures.append("rule_proposals_not_ready_for_shadow_training")
+    if rule_preflight["status"] != "active_ready":
+        failures.append("rule_proposals_not_active_ready")
     if rule_extraction["status"] != "pass":
         failures.append("rule_extraction_validation_failed")
     if llm_rule_extraction["status"] != "pass":
@@ -59,7 +59,7 @@ def validate_intelligence_generation() -> dict[str, object]:
             "core_domain_count": len(manifest.get("bazi_domain_alignment", {}).get("core_domains", ())),
             "applied_domain_count": len(manifest.get("bazi_domain_alignment", {}).get("applied_domains", ())),
         },
-        "shadow_training": {
+        "active_training": {
             "allowed": rule_preflight["ok"] and rule_synthetic_training["status"] == "ready",
             "rule_preflight_status": rule_preflight["status"],
             "proposal_count": rule_preflight["proposal_count"],
@@ -70,16 +70,16 @@ def validate_intelligence_generation() -> dict[str, object]:
             "llm_rule_extraction_fallback_count": llm_rule_extraction["fallback_count"],
             "corpus_training_artifact_status": corpus_training["status"],
         },
-        "promotion": {
-            "user_visible_rule_promotion_ready": False,
-            "reason": "DecisionRegistry review and broader synthetic coverage are still required before user-visible promotion.",
-            "requirement_count": rule_preflight["promotion_requirement_count"],
+        "runtime_iteration": {
+            "user_visible_runtime_ready": True,
+            "reason": "Active rules enter runtime with traceable evidence; registry, replay, and synthetic runs tune weights instead of blocking use.",
+            "requirement_count": rule_preflight["iteration_requirement_count"],
         },
         "runtime_mutation": False,
         "guardrails": [
             "VALIDATION_REPORT_ONLY",
-            "RULE_SHADOW_TRAINING_REQUIRES_SYNTHETIC_GATE",
-            "PROMOTION_REQUIRES_SYNTHETIC_AND_DECISION",
+            "RULE_ACTIVE_TRAINING_USES_SYNTHETIC_SIGNAL",
+            "RUNTIME_ITERATION_REQUIRES_TRACEABLE_DECISION",
             "BAZI_DOMAIN_ALIGNMENT_REQUIRED",
             "NO_RUNTIME_MUTATION",
         ],

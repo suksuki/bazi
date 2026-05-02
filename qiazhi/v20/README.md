@@ -51,10 +51,10 @@ Initial boundaries:
 - Rules, portrait axes, and recommended questions must pass Bazi-domain alignment before ranking or display.
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from current-chart rule decisions, compiled evidence, and reviewed knowledge boundaries.
-- Old feature-discovery and shadow-rule-candidate experiments are offline/lab-only. They must not drive the user measurement page, portrait projection, recommended questions, or LLM practitioner context.
+- Old feature-discovery and conservative rule-candidate experiments are removed from the main runtime chain. They must not drive the user measurement page, portrait projection, recommended questions, or LLM practitioner context.
 - Rule and decision learning are synthetic-case and practitioner-calibration driven. The 518K corpus supplies coverage, similarity, and offline priors, not runtime portrait truth.
-- Rule and portrait batches can be generated and validated by script before any promotion discussion.
-- Dynamic decision training batches validate whether a current chart can produce usable rule decisions, portrait projection axes, human-facing recommended questions, and practitioner controls before any parameter promotion.
+- Rule and portrait batches can be generated and validated by script for active runtime iteration.
+- Dynamic decision training batches validate whether a current chart can produce usable rule decisions, portrait projection axes, human-facing recommended questions, and practitioner controls before any parameter reweighting.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
 - LLM can act as a practitioner-style answer composer only after RuleDecision, PortraitProjection, KnowledgeSemanticModel, and AnswerPlan have prepared verified context.
 - Rule and question ranking proposals are trained offline by scripts/admin review, then promoted only through synthetic validation and a decision registry record.
@@ -77,7 +77,7 @@ Primary V20 modules:
 - `llm`: bounded contracts plus hard text enforcement for intent routing, question suggestion, feature-candidate proposals, answer-plan assistance, multilingual rendering, feedback summaries, and safety review.
 - `validation`: synthetic and golden-case gates.
 - `corpus`: dry-run full-corpus precompute scaffolding.
-- `learning`: proposal ledgers and promotion gates.
+- `learning`: proposal ledgers and active iteration records.
 - `ops`: macOS/Linux profiles, Postgres/Redis contracts, and sync guardrails.
 - `testing`: bounded test tiers, executable test manifest, and fast local scripts.
 - `profiles`: V19 profile migration preview/import and V20 user profile storage.
@@ -100,7 +100,7 @@ UI boundary:
 - `v20/scripts/run_practitioner_calibration_training.py --progress` aggregates structured practitioner choices into offline decision-parameter proposals without mutating runtime rules.
 - `v20/scripts/import_calibration_postgres.py --ledger practitioner_calibration_ledger` dry-runs local calibration ledger import; add `--apply` only after `V20_DATABASE_URL` is configured and backups are ready.
 - `v20/scripts/run_training_iteration.py --write --progress` runs the current script-only iteration loop and writes local artifacts.
-- `v20/scripts/run_knowledge_rule_library.py --summary` shows the current knowledge-authored shadow rule definitions, portrait outputs, question outputs, and validation state.
+- `v20/scripts/run_knowledge_rule_library.py --summary` shows the current knowledge-authored active rule definitions, portrait outputs, question outputs, and validation state.
 - `v20/scripts/run_knowledge_rule_validation.py --summary` checks those active rules against synthetic coverage and 518K corpus priors, then lists the next review action per rule.
 - `v20/scripts/run_rule_activation.py --summary` turns active-rule iteration into review packets so humans review packets, not raw rules.
 - Heavy corpus work stays manual: `v20/scripts/run_full_precompute.py --progress --limit N --status-every M`.

@@ -76,8 +76,8 @@ class LLMRuleExtractionDraft:
     status: str = "draft_only"
     guardrails: tuple[str, ...] = (
         "KNOWLEDGE_BASE_REMAINS_RULE_AUTHORITY",
-        "VALIDATOR_REQUIRED_BEFORE_SHADOW_USE",
-        "NO_RUNTIME_RULE_ACTIVATION",
+        "VALIDATOR_TRACE_REQUIRED_BEFORE_RUNTIME_USE",
+        "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
     )
 
     def to_dict(self) -> dict[str, Any]:

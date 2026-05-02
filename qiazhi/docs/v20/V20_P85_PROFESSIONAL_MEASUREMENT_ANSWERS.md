@@ -47,7 +47,7 @@ P85 adds runtime tests for:
 - applied-domain wealth answers using the professional reading path
 - time answers preserving explicit trigger material
 - reviewed knowledge evidence support inside answer plans
-- shadow-only rule candidates inside answer plans
+- active-trace rule candidates inside answer plans
 - no internal feature IDs leaking into user-facing answers
 
 ## P85-2 Knowledge Evidence
@@ -69,7 +69,7 @@ the reading path and evidence boundary.
 
 Professional reading paths now also receive a compact
 `RuleCandidateSupport` report. It is built from reviewed knowledge rule
-proposals and stays shadow-only.
+proposals and stays active-trace.
 
 User-facing text may show safe labels such as:
 
@@ -82,21 +82,21 @@ Each candidate exposes only:
 - a readable label
 - a collision-condition summary
 - validation requirements
-- shadow status
+- active status
 
-The condition model, feature hooks, and promotion details remain internal. A
+The condition model, feature hooks, and active iteration details remain internal. A
 candidate rule cannot create a verdict or mutate runtime behavior until future
-synthetic validation, decision registry approval, and promotion gates pass.
+synthetic validation, decision registry approval, and active iteration policys pass.
 
 ## P85-4 Validation And Ranking Loop
 
 Rule candidates now feed two bounded runtime surfaces:
 
 - `rule_candidate_validation`: checks that selected candidates remain
-  shadow-only, carry collision-condition summaries, and still require
+  active-trace, carry collision-condition summaries, and still require
   validation before promotion.
 - `rule_candidate_ranking`: gives existing `QuestionCandidate[]` rows a small
-  bounded reorder signal from available shadow rule candidates.
+  bounded reorder signal from available active rule candidates.
 
 The ranking signal is reorder-only:
 
@@ -107,4 +107,4 @@ The ranking signal is reorder-only:
 
 Synthetic runtime evaluation can now assert expected rule-candidate domains,
 which lets golden cases check feature coverage, question coverage, answer text,
-runtime mutation invariants, and shadow-rule availability together.
+runtime mutation invariants, and active-rule availability together.

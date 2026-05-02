@@ -41,6 +41,8 @@ def _persistable_payload(analysis: dict[str, object]) -> dict[str, object]:
         "raw_feedback_retained": analysis["raw_feedback_retained"],
         "redacted_summary": analysis["redacted_summary"],
         "candidate_domains": analysis["candidate_domains"],
+        "conflict_profile": analysis.get("conflict_profile", {}),
+        "follow_up_questions": analysis.get("follow_up_questions", ()),
         "calibration_signals": analysis["calibration_signals"],
         "learning_proposal": analysis["learning_proposal"],
         "ledger_entry": analysis["ledger_entry"],

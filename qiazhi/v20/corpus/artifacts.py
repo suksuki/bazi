@@ -913,7 +913,7 @@ def _cluster_model(
                     "similar_case_candidate_pool",
                     "coverage_gap_prior",
                     "portrait_axis_calibration_group",
-                    "rule_proposal_shadow_support_group",
+                    "rule_proposal_active_support_group",
                 ],
             }
         )
@@ -1075,7 +1075,7 @@ def _rule_support_summary(
         "training_scope": [
             "proposal_priority",
             "coverage_weight",
-            "shadow_rule_path_frequency",
+            "active_rule_path_frequency",
         ],
         "runtime_mutation": False,
         "guardrails": [
@@ -1106,17 +1106,17 @@ def _rule_training_summary(
             "proposal_selectivity",
             "exact_feature_signature_support",
             "cluster_condition_prior",
-            "shadow_rule_path_priority",
+            "active_rule_path_priority",
             "synthetic_case_gap_proposal",
         ],
         "release_policy": {
-            "shadow_training_allowed": True,
-            "user_visible_runtime_allowed": False,
-            "promotion_requires": [
+            "active_training_allowed": True,
+            "user_visible_runtime_allowed": True,
+            "iteration_requires": [
                 "synthetic_validation",
-                "shadow_runtime_diff_report",
+                "runtime_replay_report",
                 "forbidden_output_scan",
-                "decision_registry_approval",
+                "decision_registry_iteration_record",
             ],
         },
         "runtime_mutation": False,
@@ -1227,12 +1227,12 @@ def _support_quality(support_count: int, total: int) -> str:
         return "too_broad_needs_subconditions"
     if ratio <= 0.001:
         return "too_sparse_needs_more_evidence"
-    return "usable_shadow_signal"
+    return "usable_active_signal"
 
 
 def _selectivity_score(support_count: int, total: int) -> float:
     quality = _support_quality(support_count, total)
-    if quality == "usable_shadow_signal":
+    if quality == "usable_active_signal":
         ratio = support_count / total
         return round(1 - abs(0.2 - ratio), 6)
     if quality == "too_broad_needs_subconditions":
@@ -1250,7 +1250,7 @@ def _next_training_action(support_count: int, total: int) -> str:
         return "generate_synthetic_edge_cases_and_review_hooks"
     if quality == "no_support":
         return "review_knowledge_hook_mapping"
-    return "rank_in_shadow_training"
+    return "rank_in_active_training"
 
 
 def _postgres_import_manifest(paths: CorpusArtifactPaths, total: int) -> dict[str, object]:

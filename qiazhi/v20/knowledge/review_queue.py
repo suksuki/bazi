@@ -52,7 +52,7 @@ def build_knowledge_review_queue(*, limit_per_domain: int = 8) -> dict[str, obje
         "guardrails": [
             "REVIEW_QUEUE_ONLY",
             "DRAFTS_REQUIRE_SOURCE_BOUNDARY_AND_HOOK_REVIEW",
-            "NO_RUNTIME_ACTIVATION_FROM_QUEUE",
+            "QUEUE_FEEDS_ACTIVE_RUNTIME_AFTER_TRACE",
             "CORE_BAZI_DOMAINS_FIRST",
         ],
     }

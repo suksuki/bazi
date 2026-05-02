@@ -54,7 +54,7 @@ def _summary(library: dict[str, object]) -> dict[str, object]:
                 "portrait": _first_title(row.get("portrait_outputs", ()), "label"),
                 "question": _first_title(row.get("question_outputs", ()), "title"),
                 "validation_state": row.get("validation_state", ""),
-                "promotion_status": row.get("promotion_status", ""),
+                "activation_status": row.get("activation_status", ""),
             }
             for row in definitions
         ],

@@ -10,7 +10,7 @@ P86 moves V20 from "feature spine exists" to "runtime intelligence routes by dis
 - portrait emphasis
 - answer planning context
 - analyst review
-- shadow learning and training loops
+- active learning and training loops
 
 It is intentionally bounded: it reorders and explains; it does not create chart facts, activate rule truth, or output unsupported fortune verdicts.
 
@@ -43,7 +43,7 @@ ChartFacts
 
 ## Training Boundary
 
-The 518K corpus is now read as a shadow training prior during runtime. It can influence small, capped ranking weights and analyst-visible discovery explanations. It cannot:
+The 518K corpus is now read as a active training prior during runtime. It can influence small, capped ranking weights and analyst-visible discovery explanations. It cannot:
 
 - generate destiny labels
 - mutate core rules

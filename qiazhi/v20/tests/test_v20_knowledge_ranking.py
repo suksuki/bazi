@@ -127,7 +127,7 @@ def test_v20_knowledge_completion_report_marks_mainline_source_done() -> None:
     assert report["coverage_gap_count"] == 0
     assert report["rule_definition_count"] == report["synthetic_covered_count"]
     assert report["missing_synthetic_count"] == 0
-    assert report["runtime_allowed_count"] == 0
+    assert report["runtime_allowed_count"] == report["definition_count"]
     assert set(report["mainline_blockers"]) == {"macro_dimension_topic_units_not_complete"}
     assert report["macro_dimension_count"] == 5
     assert set(report["macro_dimensions"]) == {"wealth", "career", "relationship", "romance", "health"}
@@ -213,14 +213,14 @@ def test_v20_full_directory_seed_library_covers_all_bazi_content_once() -> None:
 def test_v20_bazi_rule_catalog_covers_full_directory_and_runs_as_rulespec_source() -> None:
     catalog = build_bazi_rule_catalog()
 
-    assert catalog["status"] == "complete_phase1_rule_catalog"
+    assert catalog["status"] == "complete_active_rule_catalog"
     assert catalog["rule_count"] >= 40
     assert catalog["directory_node_count"] == 13
     assert set(catalog["covered_directory_nodes"]) == {f"L{index}" for index in range(13)}
     assert catalog["runtime_ready_count"] >= 10
     assert catalog["runtime_allowed_count"] == catalog["runtime_ready_count"]
     assert catalog["blocked_count"] >= 2
-    assert catalog["archive_only_count"] >= 3
+    assert catalog["archive_only_count"] == 0
     assert catalog["coverage_by_node"]["L8"] >= 4
     assert catalog["coverage_by_node"]["L10"] >= 5
     assert "RULESPEC_ENGINE_IS_PRIMARY_RULE_RUNTIME" in catalog["guardrails"]
@@ -324,7 +324,7 @@ def test_v20_knowledge_catalog_endpoint_is_read_only() -> None:
     assert feature_model["runtime_mutation"] is False
     assert feature_model["status"] == "phase1_contract_ready"
     assert rule_catalog["runtime_mutation"] is False
-    assert rule_catalog["status"] == "complete_phase1_rule_catalog"
+    assert rule_catalog["status"] == "complete_active_rule_catalog"
     assert rule_catalog["directory_node_count"] == 13
 
 
@@ -417,7 +417,7 @@ def test_v20_knowledge_review_queue_endpoint_is_read_only() -> None:
 
     assert queue["runtime_mutation"] is False
     assert queue["status"] == "ready"
-    assert "NO_RUNTIME_ACTIVATION_FROM_QUEUE" in queue["guardrails"]
+    assert "QUEUE_FEEDS_ACTIVE_RUNTIME_AFTER_TRACE" in queue["guardrails"]
 
 
 def test_v20_knowledge_review_packet_builds_draft_unit_skeletons() -> None:
@@ -508,39 +508,39 @@ def test_v20_knowledge_review_assist_endpoints_are_read_only() -> None:
     assert first_wave["status"] == "ready"
 
 
-def test_v20_knowledge_to_rule_proposals_are_draft_only() -> None:
+def test_v20_knowledge_to_rule_proposals_feed_active_runtime() -> None:
     report = build_knowledge_rule_proposals("strength", limit=2)
     first_wave = build_first_wave_rule_proposals(limit_per_domain=1)
     proposal = report["proposals"][0]
 
     assert report["status"] == "ready"
     assert report["runtime_mutation"] is False
-    assert proposal["status"] == "released_to_shadow_training"
-    assert proposal["activation_scope"] == "shadow_training_and_candidate_rule_graph"
+    assert proposal["status"] == "active_ready"
+    assert proposal["activation_scope"] == "active_runtime_rule_graph"
     assert proposal["proposal_type"] == "knowledge_to_rule_path_candidate"
     assert proposal["source_knowledge_id"] == "v20.core.strength_boundary"
     assert "feature.strength" in proposal["emits_feature_hooks"]
     assert "synthetic_suite_pass" in proposal["validation_requirements"]
-    assert "user_visible_runtime_activation_without_promotion" in proposal["forbidden_outputs"]
+    assert "untraced_runtime_activation" in proposal["forbidden_outputs"]
     assert proposal["bazi_alignment"]["ok"] is True
     assert proposal["bazi_alignment"]["status"] == "bazi_core_aligned"
-    assert "SHADOW_TRAINING_ALLOWED_BY_DEFAULT" in proposal["guardrails"]
+    assert "ACTIVE_TRAINING_ALLOWED_BY_DEFAULT" in proposal["guardrails"]
     assert first_wave["proposal_count"] >= 5
     assert first_wave["runtime_mutation"] is False
 
 
-def test_v20_rule_proposal_preflight_allows_shadow_training_before_promotion() -> None:
+def test_v20_rule_proposal_preflight_allows_active_runtime_iteration() -> None:
     report = build_rule_proposal_preflight("strength", limit=1)
     first_wave = build_first_wave_rule_proposal_preflight(limit_per_domain=1)
 
     assert report["ok"] is True
-    assert report["status"] == "ready_for_shadow_training"
+    assert report["status"] == "active_ready"
     assert not report["failures"]
-    assert any(row.startswith("synthetic_validation_before_user_visible_runtime:") for row in report["promotion_requirements"])
-    assert any(row.startswith("decision_record_before_user_visible_runtime:") for row in report["promotion_requirements"])
+    assert any(row.startswith("synthetic_validation_for_active_runtime:") for row in report["iteration_requirements"])
+    assert any(row.startswith("decision_record_for_active_runtime:") for row in report["iteration_requirements"])
     assert first_wave["ok"] is True
     assert first_wave["blocked_domain_count"] == 0
-    assert first_wave["promotion_requirement_count"] >= 1
+    assert first_wave["iteration_requirement_count"] >= 1
     assert first_wave["runtime_mutation"] is False
 
 
@@ -556,8 +556,8 @@ def test_v20_rule_extraction_is_knowledge_first_with_corpus_validation_only() ->
     assert report["llm_role"] == "candidate_atom_drafting_only_validator_required"
     assert candidate["source_knowledge_id"] == "v20.core.strength_boundary"
     assert candidate["source_authority"] == "reviewed_bazi_knowledge_base"
-    assert candidate["runtime_allowed"] is False
-    assert candidate["shadow_training_allowed"] is True
+    assert candidate["runtime_allowed"] is True
+    assert candidate["active_training_allowed"] is True
     assert candidate["corpus_validation_signal"]["role"] == "coverage_validation_not_rule_source"
     assert candidate["bazi_alignment"]["ok"] is True
     assert "feature_hook_prefix" in atom_types
@@ -566,7 +566,7 @@ def test_v20_rule_extraction_is_knowledge_first_with_corpus_validation_only() ->
     assert validation["runtime_mutation"] is False
 
 
-def test_v20_knowledge_rule_library_is_review_layer_not_runtime_truth() -> None:
+def test_v20_knowledge_rule_library_is_active_traceable_runtime_layer() -> None:
     library = build_knowledge_rule_library("strength", limit=1)
     validation = validate_knowledge_rule_library("strength", limit=1)
     definition = library["definitions"][0]
@@ -574,13 +574,13 @@ def test_v20_knowledge_rule_library_is_review_layer_not_runtime_truth() -> None:
     assert library["status"] == "ready"
     assert library["source_authority"] == "reviewed_bazi_knowledge_base"
     assert library["definition_count"] == 1
-    assert library["runtime_allowed_count"] == 0
+    assert library["runtime_allowed_count"] == 1
     assert library["portrait_output_count"] >= 1
     assert library["question_output_count"] >= 1
     assert definition["source_knowledge_id"] == "v20.core.strength_boundary"
-    assert definition["runtime_allowed"] is False
-    assert definition["promotion_status"] == "shadow_review"
-    assert definition["validation_state"] == "synthetic_not_run"
+    assert definition["runtime_allowed"] is True
+    assert definition["activation_status"] == "active_iteration"
+    assert definition["validation_state"] == "active_ready"
     assert any(row["source"] == "knowledge_unit_structured_atom" for row in definition["condition_atoms"])
     assert definition["portrait_outputs"][0]["label"] == "日主承载力"
     assert definition["question_outputs"][0]["title"] == "这个八字日主偏强还是偏弱，适合先看什么？"
@@ -624,9 +624,9 @@ def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     assert first_wave["runtime_mutation"] is False
     assert first_wave["status"] == "ready"
     assert preflight["runtime_mutation"] is False
-    assert preflight["status"] == "ready_for_shadow_training"
+    assert preflight["status"] == "active_ready"
     assert first_preflight["runtime_mutation"] is False
-    assert first_preflight["status"] == "ready_for_shadow_training"
+    assert first_preflight["status"] == "active_ready"
     assert extraction["runtime_mutation"] is False
     assert extraction["source_authority"] == "reviewed_bazi_knowledge_base"
     assert extraction["corpus_role"] == "coverage_validation_and_refinement_only"
@@ -638,6 +638,6 @@ def test_v20_rule_proposal_endpoints_are_read_only() -> None:
     assert llm_validation["status"] == "pass"
     assert rule_library["runtime_mutation"] is False
     assert rule_library["status"] == "ready"
-    assert rule_library["runtime_allowed_count"] == 0
+    assert rule_library["runtime_allowed_count"] == rule_library["definition_count"]
     assert rule_library_validation["runtime_mutation"] is False
     assert rule_library_validation["status"] == "pass"

@@ -11,7 +11,7 @@ class RegistrySpec:
     owner_module: str
     purpose: str
     write_policy: str
-    promotion_policy: str = "requires_validation_and_decision_record"
+    activation_policy: str = "requires_trace_validation_and_decision_record"
 
     def to_dict(self) -> dict[str, Any]:
         payload = asdict(self)
@@ -49,7 +49,7 @@ REGISTRY_SPECS = (
         registry_key="DecisionRegistry",
         postgres_table="v20_decision_registry",
         owner_module="v20.learning",
-        purpose="Tracks human or validation decisions for proposals and promotion.",
+        purpose="Tracks human or validation decisions for active runtime iteration.",
         write_policy="decision_record_required_before_runtime_use",
     ),
     RegistrySpec(
@@ -70,6 +70,6 @@ def registry_manifest() -> dict[str, object]:
         "guardrails": [
             "REGISTRY_MANIFEST_ONLY",
             "NO_DATABASE_CONNECTION_ATTEMPTED",
-            "NO_PROMOTION_FROM_FEEDBACK_ALONE",
+            "NO_RUNTIME_OVERRIDE_FROM_FEEDBACK_ALONE",
         ],
     }

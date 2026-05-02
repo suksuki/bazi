@@ -11,8 +11,8 @@ from v20.storage.local_jsonl import LocalJsonlStore, local_jsonl_store_from_env
 ProgressCallback = Callable[[str], None]
 
 LEDGER_NAME = "practitioner_calibration_ledger"
-MIN_PROMOTION_SAMPLES = 3
-MIN_PROMOTION_RATIO = 0.67
+MIN_ACTIVATION_SAMPLES = 3
+MIN_ACTIVATION_RATIO = 0.67
 
 
 def build_practitioner_calibration_training_report(
@@ -36,9 +36,9 @@ def build_practitioner_calibration_training_report(
         "selection_count": len(selection_rows),
         "control_summaries": control_summaries,
         "training_proposals": training_proposals,
-        "promotion_thresholds": {
-            "min_samples": MIN_PROMOTION_SAMPLES,
-            "min_ratio": MIN_PROMOTION_RATIO,
+        "activation_thresholds": {
+            "min_samples": MIN_ACTIVATION_SAMPLES,
+            "min_ratio": MIN_ACTIVATION_RATIO,
         },
         "training_targets": (
             "decision_parameters",
@@ -49,8 +49,8 @@ def build_practitioner_calibration_training_report(
         "guardrails": [
             "PRACTITIONER_CALIBRATION_TRAINING_IS_OFFLINE_ONLY",
             "NO_RUNTIME_DECISION_MUTATION",
-            "NO_DIRECT_RULE_PROMOTION",
-            "PROMOTION_REQUIRES_SYNTHETIC_AND_BATCH_VALIDATION",
+            "NO_UNTRACED_RULE_REWEIGHT",
+            "ACTIVE_REWEIGHT_USES_SYNTHETIC_AND_BATCH_VALIDATION",
         ],
     }
 
@@ -173,7 +173,7 @@ def _control_summaries(selection_rows: list[dict[str, object]]) -> list[dict[str
             "top_option_count": top_count,
             "top_option_ratio": ratio,
             "source_decision_keys": decision_keys,
-            "promotion_candidate": total >= MIN_PROMOTION_SAMPLES and ratio >= MIN_PROMOTION_RATIO,
+            "activation_candidate": total >= MIN_ACTIVATION_SAMPLES and ratio >= MIN_ACTIVATION_RATIO,
             "runtime_allowed": True,
         })
     return summaries
@@ -182,7 +182,7 @@ def _control_summaries(selection_rows: list[dict[str, object]]) -> list[dict[str
 def _training_proposals(control_summaries: list[dict[str, object]]) -> list[dict[str, object]]:
     proposals = []
     for summary in control_summaries:
-        candidate = bool(summary.get("promotion_candidate"))
+        candidate = bool(summary.get("activation_candidate"))
         proposals.append({
             "proposal_type": "decision_parameter_calibration",
             "target": summary["target"],

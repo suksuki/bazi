@@ -55,15 +55,15 @@ class ExtractedRuleCandidate:
         "deterministic_hook_and_boundary_parser",
     )
     source_authority: str = "reviewed_bazi_knowledge_base"
-    runtime_allowed: bool = False
-    shadow_training_allowed: bool = True
+    runtime_allowed: bool = True
+    active_training_allowed: bool = True
     llm_draft_allowed: bool = True
-    status: str = "extracted_for_shadow_review"
+    status: str = "active_ready"
     guardrails: tuple[str, ...] = (
         "KNOWLEDGE_BASE_IS_RULE_SOURCE",
         "CORPUS_VALIDATES_DOES_NOT_AUTHOR_RULES",
-        "LLM_DRAFTS_DO_NOT_ACTIVATE_RULES",
-        "NO_USER_VISIBLE_RUNTIME_ACTIVATION",
+        "LLM_DRAFTS_REQUIRE_VALIDATOR_TRACE",
+        "USER_VISIBLE_RUNTIME_ALLOWED_WITH_EVIDENCE",
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -115,7 +115,7 @@ def build_rule_extraction_report(
             "active": [
                 "deterministic_knowledge_contract_extraction",
                 "corpus_support_quality_review",
-                "shadow_rule_graph_projection",
+                "active_rule_graph_projection",
             ],
             "llm_allowed": [
                 "draft_condition_atoms_from_reviewed_knowledge_text",
@@ -139,7 +139,7 @@ def build_rule_extraction_report(
             "RULE_EXTRACTION_IS_KNOWLEDGE_FIRST",
             "CORPUS_IS_VALIDATION_NOT_SOURCE",
             "LLM_IS_DRAFT_ASSISTANT_NOT_AUTHORITY",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
 
@@ -157,8 +157,8 @@ def validate_rule_extraction_report(domain: str = "", *, limit: int = 12) -> dic
         if not isinstance(candidate, dict):
             continue
         rule_id = str(candidate.get("rule_id", ""))
-        if candidate.get("runtime_allowed") is True:
-            failures.append(f"runtime_allowed_before_promotion:{rule_id}")
+        if candidate.get("runtime_allowed") is not True:
+            failures.append(f"runtime_blocked:{rule_id}")
         if not candidate.get("condition_atoms"):
             failures.append(f"missing_condition_atoms:{rule_id}")
         if candidate.get("source_authority") != "reviewed_bazi_knowledge_base":
@@ -232,7 +232,7 @@ def build_llm_rule_extraction_report(
             "LLM_RULE_EXTRACTION_IS_DRAFT_ONLY",
             "REVIEWED_KNOWLEDGE_IS_SOURCE",
             "VALIDATOR_DECIDES_ACCEPTANCE",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
             *(("LLM_EXECUTION_DISABLED_FOR_STATUS_VIEW",) if not execute_llm else ()),
         ],
     }
@@ -268,7 +268,7 @@ def validate_llm_rule_extraction_report(domain: str = "", *, limit: int = 3, exe
         "guardrails": [
             "VALIDATION_ONLY",
             "FALLBACK_IS_ALLOWED_WHEN_PROVIDER_DISABLED",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
 
@@ -294,7 +294,7 @@ def _deterministic_llm_rule_extraction_fallback(unit: KnowledgeUnit) -> dict[str
         "guardrails": [
             "LLM_NOT_EXECUTED",
             "DETERMINISTIC_FALLBACK_USED",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "RUNTIME_RULE_ACTIVATION_ALLOWED_WITH_TRACE",
         ],
     }
 
@@ -349,7 +349,7 @@ def _extract_candidate(
             "title": unit.title,
             "evidence_refs": list(unit.feature_hooks),
             "boundary": unit.boundary,
-            "runtime_allowed": False,
+            "runtime_allowed": True,
             "projection_only": True,
         },
         llm_draft_lane={
@@ -502,12 +502,12 @@ def _derived_subrules(unit: KnowledgeUnit, signal: dict[str, object], *, subrule
                 },
                 "support_count": signature.get("count", 0),
                 "support_weight": signature.get("weight", 0),
-                "status": "shadow_refinement_candidate",
-                "runtime_allowed": False,
+                "status": "active_refinement_ready",
+                "runtime_allowed": True,
                 "guardrails": [
                     "SUBRULE_REFINEMENT_FROM_CORPUS_SUPPORT",
                     "KNOWLEDGE_UNIT_REMAINS_AUTHORITY",
-                    "NO_RUNTIME_ACTIVATION",
+                    "RUNTIME_ACTIVATION_ALLOWED_WITH_TRACE",
                 ],
             }
         )

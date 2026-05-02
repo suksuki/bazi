@@ -102,11 +102,11 @@ def run_rule_portrait_batch(
         "runtime_mutation": False,
         "guardrails": [
             "BATCH_GENERATION_AND_VALIDATION_ONLY",
-            "RULE_EXTRACTION_REMAINS_OFFLINE_DRAFT",
+            "RULE_EXTRACTION_FEEDS_ACTIVE_RUNTIME",
             "PORTRAITS_COME_FROM_RUNTIME_RULE_DECISIONS",
             "QUESTIONS_REQUIRE_BAZI_DOMAIN_ALIGNMENT",
             "NO_POSTGRES_WRITE",
-            "NO_RUNTIME_RULE_PROMOTION",
+            "RUNTIME_RULES_ACTIVE_WITH_TRACE",
         ],
     }
 
@@ -173,8 +173,8 @@ def _rule_domain_generation(domain: str, *, domain_limit: int, progress: Progres
         alignment = candidate.get("bazi_alignment", {})
         if not isinstance(alignment, dict) or alignment.get("ok") is not True:
             failures.append(f"rule_candidate_alignment_failed:{rule_id}")
-        if candidate.get("runtime_allowed") is True:
-            failures.append(f"rule_candidate_runtime_allowed:{rule_id}")
+        if candidate.get("runtime_allowed") is not True:
+            failures.append(f"rule_candidate_runtime_blocked:{rule_id}")
     return {
         "version": "v20.rule_generation_batch_domain.v1",
         "domain": domain,
