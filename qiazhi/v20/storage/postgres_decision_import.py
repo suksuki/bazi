@@ -4,7 +4,7 @@ import os
 from pathlib import Path
 from typing import Any
 
-from v20.learning.decision_registry_review import read_decision_registry_review_artifact
+from v20.learning.decision_registry_iteration import read_decision_registry_iteration_artifact
 
 TARGET_TABLE = "v20_decision_registry"
 
@@ -16,7 +16,7 @@ def build_decision_registry_postgres_import_plan(
     database_url: str | None = None,
     artifact_dir: Path | None = None,
 ) -> dict[str, object]:
-    artifact = read_decision_registry_review_artifact(output_dir=artifact_dir)
+    artifact = read_decision_registry_iteration_artifact(output_dir=artifact_dir)
     records = [row for row in artifact.get("records", ()) if isinstance(row, dict)]
     url = database_url if database_url is not None else os.getenv("V20_DATABASE_URL", "")
     payload = {
@@ -32,12 +32,12 @@ def build_decision_registry_postgres_import_plan(
         "guardrails": [
             "EXPLICIT_APPLY_REQUIRED",
             "NO_SECRET_VALUES_RENDERED",
-            "REVIEW_RECORDS_ARE_NOT_RUNTIME_PROMOTIONS",
+            "ITERATION_RECORDS_FEED_ACTIVE_RUNTIME",
             "APPEND_OR_UPSERT_ONLY",
         ],
     }
     if artifact.get("status") == "not_built":
-        return payload | {"status": "blocked_missing_decision_registry_review_artifact", "imported_or_updated": 0}
+        return payload | {"status": "blocked_missing_decision_registry_iteration_artifact", "imported_or_updated": 0}
     if not apply:
         return payload | {"status": "dry_run", "imported_or_updated": 0}
     return _apply_decision_registry_import(payload, records, url, batch_size)
@@ -80,7 +80,7 @@ def _postgres_row(record: dict[str, Any], json_type) -> tuple[object, ...]:
     return (
         str(record.get("decision_id", "")),
         str(record.get("subject_id", "")),
-        str(record.get("decision_status", "needs_human_review")),
+        str(record.get("decision_status", "active_iteration")),
         json_type(record),
     )
 

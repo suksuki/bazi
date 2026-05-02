@@ -15,12 +15,13 @@ from v20.corpus.enumerator import canonical_case_at, hour_pillar_for, iter_canon
 from v20.corpus.full_precompute import build_full_precompute_manifest, preview_full_precompute_batch, shard_for_index
 from v20.corpus.job_runner import FullPrecomputeJobConfig, read_full_precompute_status, run_full_precompute_job
 from v20.learning.evolution import build_evolution_dry_run_plan
-from v20.learning.decision_registry_review import build_decision_registry_review_report
+from v20.learning.decision_registry_iteration import build_decision_registry_iteration_report
 from v20.decision.knowledge_bridge import build_knowledge_rule_review_overlay
-from v20.learning.rule_promotion_gate import (
-    build_rule_promotion_gate_report,
-    build_rule_promotion_packet_summary,
+from v20.learning.rule_activation import (
+    build_rule_activation_report,
+    build_rule_activation_packet_summary,
 )
+from v20.learning.rule_replay_eval import build_rule_replay_eval_report
 from v20.learning.rule_subcondition_split import build_rule_subcondition_split_report
 from v20.learning.run_plan import build_learning_run_plan
 from v20.validation.rule_synthetic import build_rule_synthetic_training_report, run_rule_synthetic_suite
@@ -52,7 +53,7 @@ def test_v20_synthetic_suite_and_evolution_plan_are_dry_run_only() -> None:
     assert rule_suite["case_count"] >= 4
     assert rule_training["status"] == "ready"
     assert "FULL_CORPUS_REMAINS_PRIOR_AND_COVERAGE_ONLY" in rule_training["guardrails"]
-    assert all(row["runtime_allowed"] is False for row in rule_training["rule_domain_training"])
+    assert all(row["runtime_allowed"] is True for row in rule_training["rule_domain_training"])
     assert evolution["status"] == "ready_for_dry_run"
     assert "learning_to_rank_question_order" in evolution["allowed_algorithm_tracks"]
     assert "neural_conclusion_generation" in evolution["deferred_algorithm_tracks"]
@@ -63,7 +64,7 @@ def test_v20_knowledge_rule_validation_marks_synthetic_and_corpus_gaps() -> None
     report = build_knowledge_rule_validation_report()
     useful_god = build_knowledge_rule_validation_report("useful_god")
 
-    assert report["status"] == "ready_for_review"
+    assert report["status"] == "active_ready"
     assert report["ok"] is True
     assert report["definition_count"] >= 12
     assert report["synthetic_covered_count"] == report["definition_count"]
@@ -76,37 +77,50 @@ def test_v20_knowledge_rule_validation_marks_synthetic_and_corpus_gaps() -> None
     assert "CORPUS_SUPPORT_IS_PRIOR_NOT_RULE_TRUTH" in report["guardrails"]
 
 
-def test_v20_rule_promotion_gate_batches_shadow_rules_for_review() -> None:
-    gate = build_rule_promotion_gate_report()
-    summary = build_rule_promotion_packet_summary()
+def test_v20_rule_activation_batches_active_rules_for_iteration() -> None:
+    gate = build_rule_activation_report()
+    summary = build_rule_activation_packet_summary()
     split = build_rule_subcondition_split_report(per_rule=3)
-    registry = build_decision_registry_review_report(per_rule=3)
+    replay = build_rule_replay_eval_report(per_rule=3)
+    registry = build_decision_registry_iteration_report(per_rule=3)
     overlay = build_knowledge_rule_review_overlay()
 
     assert gate["status"] == "ready"
     assert gate["packet_count"] >= 12
-    assert gate["runtime_promotion_candidate_count"] == 0
+    assert gate["runtime_activation_candidate_count"] >= 1
     assert gate["blocked_count"] == 0
     assert gate["needs_subcondition_count"] == 0
-    assert gate["subcondition_review_ready_count"] >= 1
-    assert "subcondition_review_ready" in gate["lane_counts"]
-    assert "DECISION_REGISTRY_REQUIRED_FOR_ANY_PROMOTION" in gate["guardrails"]
+    assert gate["subcondition_active_ready_count"] >= 1
+    assert "subcondition_active_ready" in gate["lane_counts"]
+    assert "DECISION_REGISTRY_RECORDS_ITERATION_HISTORY" in gate["guardrails"]
     assert summary["packet_count"] == gate["packet_count"]
-    assert all("human_decision_options" in row for row in summary["packets"])
-    assert any("approve_subconditions_for_shadow_eval" in row["human_decision_options"] for row in summary["packets"])
+    assert all("iteration_options" in row for row in summary["packets"])
+    assert any("activate_subconditions_for_replay_eval" in row["iteration_options"] for row in summary["packets"])
     assert split["status"] == "ready"
-    assert split["packet_count"] == gate["subcondition_review_ready_count"]
+    assert split["packet_count"] == gate["subcondition_active_ready_count"]
     assert split["subcondition_count"] >= split["packet_count"]
-    assert split["quality_status"] == "ready_for_review"
-    assert all(row["runtime_allowed"] is False for row in split["packets"])
+    assert split["quality_status"] == "active_ready"
+    assert all(row["runtime_allowed"] is True for row in split["packets"])
+    assert replay["status"] == "ready"
+    assert replay["subcondition_active_ready_count"] == gate["subcondition_active_ready_count"]
+    assert replay["evaluated_packet_count"] == replay["subcondition_active_ready_count"]
+    assert replay["replay_eval_ready_count"] <= replay["evaluated_packet_count"]
+    assert replay["eval_status_counts"]
+    assert replay["subcondition_eval_count"] >= split["subcondition_count"]
+    assert replay["portrait_mapping_ok_count"] <= replay["evaluated_packet_count"]
+    assert replay["decision_domain_ok_count"] <= replay["evaluated_packet_count"]
+    assert replay["runtime_activation_count"] == 0
+    assert all(row["runtime_allowed"] is True for row in replay["evaluations"])
+    assert all(row["next_action"] in {"continue_runtime_replay", "collect_more_runtime_replay"} for row in replay["evaluations"])
+    assert "RULE_REPLAY_EVAL_IS_CONTINUOUS_ITERATION" in replay["guardrails"]
     assert registry["status"] == "ready"
-    assert registry["decision_record_count"] >= split["subcondition_count"]
+    assert registry["decision_record_count"] >= split["packet_count"]
     assert registry["runtime_activation_count"] == 0
-    assert registry["batch_review_candidate_count"] >= 1
-    assert "DECISION_REGISTRY_REVIEW_IS_OFFLINE_SIGNAL" in registry["guardrails"]
+    assert registry["system_iteration_count"] >= 1
+    assert "DECISION_REGISTRY_IS_ITERATION_LEDGER" in registry["guardrails"]
     assert overlay["status"] == "ready"
-    assert overlay["validation_status"] == "ready_for_review"
-    assert overlay["runtime_promotion_candidate_count"] == 0
+    assert overlay["validation_status"] == "active_ready"
+    assert overlay["runtime_activation_candidate_count"] == 0
     assert "RUNTIME_USES_LIGHTWEIGHT_BRIDGE" in overlay["guardrails"]
     decision_ids = [row["decision_id"] for row in registry["records"]]
     assert len(decision_ids) == len(set(decision_ids))
@@ -153,7 +167,7 @@ def test_v20_full_precompute_preview_builds_structural_label_snapshots() -> None
     assert preview["runtime_mutation"] is False
     assert preview["returned_count"] == 2
     assert first_snapshot["snapshot_hash"]
-    assert first_snapshot["label_policy"] == "structural_features_and_dynamic_decision_portrait_tags_only"
+    assert first_snapshot["label_policy"] == "structural_features_and_decision_portrait_projection_axes_only"
     assert first_snapshot["feature_domains"]
     assert first_snapshot["portrait_domains"]
     assert first_snapshot["wealth_material_level"] in {"visible", "hidden_only", "not_visible"}
@@ -260,10 +274,11 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     rule_suite = client.get("/api/v20/validation/rule-synthetic-suite").json()
     knowledge_rule_validation = client.get("/api/v20/validation/knowledge-rule-library").json()
     knowledge_rule_overlay = client.get("/api/v20/knowledge/rule-review-overlay").json()
-    promotion_gate = client.get("/api/v20/learning/rule-promotion-gate").json()
-    promotion_packets = client.get("/api/v20/learning/rule-promotion-packets").json()
+    activation = client.get("/api/v20/learning/rule-activation").json()
+    activation_packets = client.get("/api/v20/learning/rule-activation-packets").json()
     subcondition_split = client.get("/api/v20/learning/rule-subcondition-split?per_rule=3").json()
-    decision_registry_review = client.get("/api/v20/learning/decision-registry-review?per_rule=3").json()
+    replay_eval = client.get("/api/v20/learning/rule-replay-eval?per_rule=3").json()
+    decision_registry_iteration = client.get("/api/v20/learning/decision-registry-iteration?per_rule=3").json()
     rule_training = client.get("/api/v20/learning/rule-synthetic-training").json()
     evolution = client.get("/api/v20/learning/evolution-plan").json()
     run_plan = client.get("/api/v20/learning/run-plan").json()
@@ -284,20 +299,24 @@ def test_v20_corpus_validation_learning_endpoints_are_wired() -> None:
     assert rule_suite["ok"] is True
     assert rule_suite["runtime_mutation"] is False
     assert knowledge_rule_validation["runtime_mutation"] is False
-    assert knowledge_rule_validation["status"] == "ready_for_review"
+    assert knowledge_rule_validation["status"] == "active_ready"
     assert knowledge_rule_validation["missing_synthetic_count"] == 0
     assert knowledge_rule_overlay["runtime_mutation"] is False
     assert knowledge_rule_overlay["status"] == "ready"
-    assert promotion_gate["runtime_mutation"] is False
-    assert promotion_gate["status"] == "ready"
-    assert promotion_gate["runtime_promotion_candidate_count"] == 0
-    assert promotion_packets["runtime_mutation"] is False
-    assert promotion_packets["packet_count"] == promotion_gate["packet_count"]
+    assert activation["runtime_mutation"] is False
+    assert activation["status"] == "ready"
+    assert activation["runtime_activation_candidate_count"] == 0
+    assert activation_packets["runtime_mutation"] is False
+    assert activation_packets["packet_count"] == activation["packet_count"]
     assert subcondition_split["runtime_mutation"] is False
-    assert subcondition_split["packet_count"] == promotion_gate["subcondition_review_ready_count"]
-    assert decision_registry_review["runtime_mutation"] is False
-    assert decision_registry_review["decision_record_count"] >= subcondition_split["subcondition_count"]
-    assert decision_registry_review["runtime_activation_count"] == 0
+    assert subcondition_split["packet_count"] == activation["subcondition_active_ready_count"]
+    assert replay_eval["runtime_mutation"] is False
+    assert replay_eval["status"] == "ready"
+    assert replay_eval["replay_eval_ready_count"] == replay_eval["evaluated_packet_count"]
+    assert replay_eval["runtime_activation_count"] == 0
+    assert decision_registry_iteration["runtime_mutation"] is False
+    assert decision_registry_iteration["decision_record_count"] >= subcondition_split["subcondition_count"]
+    assert decision_registry_iteration["runtime_activation_count"] == 0
     assert rule_training["status"] == "ready"
     assert rule_training["runtime_mutation"] is False
     assert evolution["status"] == "ready_for_dry_run"

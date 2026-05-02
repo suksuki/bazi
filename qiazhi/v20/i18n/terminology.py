@@ -49,7 +49,7 @@ SECTION_TITLES = {
         "measurement_scope": "Measurement Scope",
         "domain_measurement_path": "Professional Reading Path",
         "knowledge_evidence_support": "Knowledge Evidence",
-        "dynamic_decision_portrait": "Dynamic Decision Portrait",
+        "portrait_projection_reading": "Topic Projection Portrait",
         "decision_knowledge_support": "Knowledge Evidence",
         "decision_next_step": "Next Question",
         "measurement_next_step": "Next Review Step",
@@ -60,7 +60,7 @@ SECTION_TITLES = {
         "measurement_scope": "측산 범위",
         "domain_measurement_path": "전문 해석 경로",
         "knowledge_evidence_support": "지식 근거",
-        "dynamic_decision_portrait": "동적 판정 프로필",
+        "portrait_projection_reading": "주제 투사 프로필",
         "decision_knowledge_support": "지식 근거",
         "decision_next_step": "다음 질문",
         "measurement_next_step": "다음 검토 단계",
@@ -110,8 +110,8 @@ def _body_en(section: AnswerSection, topic: str, source_count: int) -> str:
         return f"The professional reading path stays within {topic}, using only compiled Bazi features and reviewed evidence."
     if section.section_type == "knowledge_evidence_support":
         return f"Reviewed knowledge is used only as evidence support for {topic}, not as rule truth."
-    if section.section_type == "dynamic_decision_portrait":
-        return f"The dynamic portrait for {topic} comes from current-chart rule decisions, not static corpus labels."
+    if section.section_type == "portrait_projection_reading":
+        return f"The topic projection for {topic} comes from current-chart decision states, not static corpus labels."
     if section.section_type == "decision_knowledge_support":
         return f"Reviewed knowledge supports terms and boundaries for {topic}; it does not override decisions."
     if section.section_type == "decision_next_step":
@@ -130,8 +130,8 @@ def _body_ko(section: AnswerSection, topic: str, source_count: int) -> str:
         return f"전문 해석 경로는 {topic} 안에서 유지되며, 컴파일된 사주 특징과 검토된 근거만 사용합니다."
     if section.section_type == "knowledge_evidence_support":
         return f"검토된 지식은 {topic}의 근거 보조로만 사용되며 규칙 진실로 쓰지 않습니다."
-    if section.section_type == "dynamic_decision_portrait":
-        return f"{topic}의 동적 프로필은 현재 명식의 규칙 판정에서 나오며 정적 말뭉치 라벨이 아닙니다."
+    if section.section_type == "portrait_projection_reading":
+        return f"{topic}의 주제 투사는 현재 명식의 판정 상태에서 나오며 정적 말뭉치 라벨이 아닙니다."
     if section.section_type == "decision_knowledge_support":
         return f"검토된 지식은 {topic}의 용어와 경계를 보조하며 판정을 대체하지 않습니다."
     if section.section_type == "decision_next_step":

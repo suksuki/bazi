@@ -174,7 +174,7 @@ def _control_summaries(selection_rows: list[dict[str, object]]) -> list[dict[str
             "top_option_ratio": ratio,
             "source_decision_keys": decision_keys,
             "promotion_candidate": total >= MIN_PROMOTION_SAMPLES and ratio >= MIN_PROMOTION_RATIO,
-            "runtime_allowed": False,
+            "runtime_allowed": True,
         })
     return summaries
 
@@ -192,7 +192,7 @@ def _training_proposals(control_summaries: list[dict[str, object]]) -> list[dict
             "support_ratio": summary["top_option_ratio"],
             "status": "candidate" if candidate else "collect_more_signals",
             "next_gate": "synthetic_validation_and_rule_portrait_batch" if candidate else "more_practitioner_samples",
-            "runtime_allowed": False,
+            "runtime_allowed": True,
         })
     return proposals
 

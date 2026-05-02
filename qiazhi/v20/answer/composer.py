@@ -45,7 +45,7 @@ def _compose_zh(plan: AnswerPlan) -> str:
         body = _clean_zh_body(section.body)
         if not body:
             continue
-        if section.section_type == "dynamic_decision_portrait":
+        if section.section_type == "portrait_projection_reading":
             lines.append(f"当前命局可见：{body}")
         else:
             lines.append(f"{section.title}：{body}")
@@ -103,7 +103,7 @@ def _opening_from_plan(plan: AnswerPlan, question: str) -> str:
 
 
 def _direct_answer_from_plan(plan: AnswerPlan, question: str) -> str:
-    portrait = _dynamic_portrait_body(plan)
+    portrait = _portrait_projection_body(plan)
     if not question or not portrait:
         return ""
     if "伤官见官" in question:
@@ -139,9 +139,9 @@ def _direct_answer_from_plan(plan: AnswerPlan, question: str) -> str:
     return ""
 
 
-def _dynamic_portrait_body(plan: AnswerPlan) -> str:
+def _portrait_projection_body(plan: AnswerPlan) -> str:
     for section in plan.sections:
-        if section.section_type == "dynamic_decision_portrait":
+        if section.section_type == "portrait_projection_reading":
             return section.body
     return ""
 

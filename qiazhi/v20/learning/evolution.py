@@ -34,7 +34,7 @@ def build_evolution_dry_run_plan(
             "feature_compiler_rewrite_from_model_output",
             "feature_creation_from_calibration_policy",
             "automatic_fortune_conclusion_generation",
-            "production_promotion_without_artifact_and_decision_records",
+            "production_activation_without_traceable_artifact",
         ],
         "required_registries": [
             "DatasetRegistry",
@@ -47,7 +47,7 @@ def build_evolution_dry_run_plan(
             "question_ranking_policy",
             "knowledge_retrieval_weight",
             "confidence_calibration_weight",
-            "embedding_recall_shadow_policy",
+            "embedding_recall_active_policy",
         ],
         "runtime_mutation": False,
         "guardrails": [

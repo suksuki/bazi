@@ -14,7 +14,11 @@ V20 的主线重新定义为八字测算系统，而不是特征展示系统。
 -> 知识库规则 / 程序化规则
 -> RuleHit
 -> RuleDecision
--> DynamicPortrait
+-> DefeasibleDecisionModel
+-> PortraitProjection / TopicProjection
+-> FeatureStateModel
+-> QuestionIntentModel
+-> InteractionSession
 -> QuestionCandidate
 -> LLM practitioner answer
 ```
@@ -23,10 +27,10 @@ V20 的主线重新定义为八字测算系统，而不是特征展示系统。
 
 - `knowledge`: 产生和维护结构化命理知识，不直接给用户画像结论。
 - `rule`: 从知识库、程序模板、LLM 草案中生成离线规则草案，进入合成验证和晋升门槛。
-- `decision`: 在当前八字上做规则命中、裁决、主次排序、画像标签生成。
-- `dynamic_portrait`: 只来自当前盘的 `RuleDecision`，不来自 518K 静态画像。
-- `questions`: 只从动态裁决画像生成用户可问的问题。
-- `llm`: 使用裁决画像和证据包，以命理师角色解释，不产生核心事实或规则真值。
+- `decision`: 在当前八字上做规则命中、可反证裁决、主次排序和主题投射。
+- `portrait_projection`: 只来自当前盘的 `DecisionState + MainlineDecision + TopicProjection`，不来自 518K 静态画像。
+- `questions`: 从问题意图模型和主题投射生成用户可问的问题。
+- `llm`: 使用裁决状态、主题投射画像和证据包，以命理师角色解释，不产生核心事实或规则真值。
 - `corpus/learning`: 离线训练和覆盖验证，只由脚本或 admin 管理，不进入用户测算主链。
 
 ## 当前主线修正原则
@@ -253,9 +257,9 @@ Postgres 处理方式：
 ## 当前清理方向
 
 - runtime 主链不再使用 `FeatureDiscovery`、旧画像投影、旧规则候选或 518K training prior 来生成推荐问题。
-- runtime 主链新增 `DecisionReport` 和 `DynamicPortrait`。
+- runtime 主链新增 `DecisionReport`、`DefeasibleDecisionModel`、`PortraitProjection`、`QuestionIntentModel` 和 `InteractionSession`。
 - 旧的 feature/portrait intelligence 和 shadow rule candidate 模块只允许作为实验、迁移或脚本参考，不再作为用户测算主驱动。
-- 用户/命理师 role projection 只暴露动态裁决画像、推荐问题、回答与必要证据；训练细节进入脚本或后续 Admin artifact dashboard。
+- 用户/命理师 role projection 只暴露主题投射画像、推荐问题、回答与必要证据；训练细节进入脚本或后续 Admin artifact dashboard。
 
 ## 知识规则桥
 

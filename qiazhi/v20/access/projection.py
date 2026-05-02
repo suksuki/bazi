@@ -90,21 +90,75 @@ def _sanitize_user_payload(payload: dict[str, object]) -> dict[str, object]:
             for row in report.get("practitioner_controls", [])
             if isinstance(row, dict)
         ]
-        report.pop("dynamic_portrait", None)
-        sanitized["decision_report"] = report
-    if isinstance(sanitized.get("dynamic_portrait"), dict):
-        portrait = dict(sanitized["dynamic_portrait"])
-        portrait["tags"] = [
-            {
-                "label": row.get("label", ""),
-                "domain": row.get("domain", ""),
-                "summary": row.get("summary", ""),
-                "score": row.get("score", 0),
-                "question_seeds": row.get("question_seeds", ())[:3],
-                "status": row.get("status", ""),
+        if isinstance(report.get("portrait_projection"), dict):
+            projection = dict(report["portrait_projection"])
+            projection["axes"] = [
+                {
+                    "axis_id": row.get("axis_id", ""),
+                    "domain": row.get("domain", ""),
+                    "label": row.get("label", ""),
+                    "measurement_stage": row.get("measurement_stage", ""),
+                    "peak_confidence": row.get("peak_confidence", 0),
+                    "calibration_state": row.get("calibration_state", ""),
+                    "evidence_boundaries": row.get("evidence_boundaries", ())[:3],
+                    "alignment_status": row.get("alignment_status", ""),
+                }
+                for row in projection.get("axes", [])
+                if isinstance(row, dict)
+            ]
+            sanitized_projection = {
+                "version": projection.get("version", ""),
+                "status": projection.get("status", ""),
+                "role": projection.get("role", ""),
+                "axis_count": projection.get("axis_count", 0),
+                "axes": projection["axes"],
+                "runtime_mutation": False,
             }
-            for row in portrait.get("tags", [])
+            report["portrait_projection"] = sanitized_projection
+        sanitized["decision_report"] = report
+    if isinstance(sanitized.get("feature_state_model"), dict):
+        model = dict(sanitized["feature_state_model"])
+        model["states"] = []
+        model["priority_features"] = [
+            {
+                "feature_id": row.get("feature_id", ""),
+                "title": row.get("title", ""),
+                "domain": row.get("domain", ""),
+                "state": row.get("state", ""),
+                "priority": row.get("priority", 0),
+                "boundary": row.get("boundary", ""),
+            }
+            for row in model.get("priority_features", [])
             if isinstance(row, dict)
         ]
-        sanitized["dynamic_portrait"] = portrait
+        sanitized["feature_state_model"] = model
+    if isinstance(sanitized.get("question_intent_model"), dict):
+        model = dict(sanitized["question_intent_model"])
+        model["intents"] = []
+        model["question_bindings"] = [
+            {
+                "question_key": row.get("question_key", ""),
+                "title": row.get("title", ""),
+                "domain": row.get("domain", ""),
+                "primary_intent_type": row.get("primary_intent_type", ""),
+                "intent_priority": row.get("intent_priority", 0),
+            }
+            for row in model.get("question_bindings", [])
+            if isinstance(row, dict)
+        ]
+        sanitized["question_intent_model"] = model
+    if isinstance(sanitized.get("interaction_session"), dict):
+        session = dict(sanitized["interaction_session"])
+        session["signals"] = [
+            {
+                "signal_type": row.get("signal_type", ""),
+                "domain": row.get("domain", ""),
+                "strength": row.get("strength", 0),
+                "effect": row.get("effect", ""),
+                "primary_intent_type": row.get("primary_intent_type", ""),
+            }
+            for row in session.get("signals", [])
+            if isinstance(row, dict)
+        ]
+        sanitized["interaction_session"] = session
     return sanitized

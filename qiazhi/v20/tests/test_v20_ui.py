@@ -47,17 +47,19 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "selectedProfileCard" in page.text
     assert "chatText" in page.text
     assert "chatButton" in page.text
-    assert "chatQuestionList" in page.text
+    assert "chatQuestionList" not in page.text
     assert "chatTranscript" in page.text
-    assert "portrait-summary" in page.text
+    assert "interactionSignals" in page.text
     assert "practitionerCalibration" in page.text
     assert "calibrationControls" in page.text
     assert "latentCalibration" in page.text
     assert "latentCalibrationControls" in page.text
     assert "profileImportButton" not in page.text
     assert "反馈校准" not in page.text
-    assert "动态裁决主线" in page.text
-    assert "动态命理画像" in page.text
+    assert "八字特征状态" in page.text
+    assert "主题投射画像" in page.text
+    assert "智能问题" in page.text
+    assert "交互信号" in page.text
     assert "八字专业回复" in page.text
     assert "/api/v20/measure/view/" in script.text
     assert "/api/v20/system/status" in script.text
@@ -67,10 +69,14 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "scheduleMeasure({ force: true })" in script.text
     assert "document.body.classList.toggle(\"profile-reading\", Boolean(params.get(\"profile_id\")))" in script.text
     assert "questions.slice(0, 5)" in script.text
-    assert "renderChatQuestions(result.questions || [], selected.question_key || \"\")" in script.text
     assert "const decisionReport = result.decision_report || {}" in script.text
-    assert "renderFeatures(decisionReport.mainlines || decisionReport.decisions" in script.text
-    assert "renderPortrait(dynamicPortrait.tags || [])" in script.text
+    assert "const featureStateModel = result.feature_state_model || {}" in script.text
+    assert "const questionIntentModel = result.question_intent_model || {}" in script.text
+    assert "const interactionSession = result.interaction_session || {}" in script.text
+    assert "renderInteractionSignals(interactionSession)" in script.text
+    assert "renderFeatures(" in script.text
+    assert "featureStateModel.priority_features" in script.text
+    assert "renderPortrait(portraitProjection.axes || [])" in script.text
     assert "renderPractitionerCalibration(decisionReport.practitioner_controls || []" in script.text
     assert "renderLatentCalibration(result.input_id || \"\", role)" in script.text
     assert "/api/v20/learning/latent-event-calibration" in script.text
@@ -88,6 +94,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert ".chat-transcript" in style.text
     assert ".calibration-panel-card" in style.text
     assert ".axis-temp" in style.text
+    assert ".signal-row" in style.text
     assert "payload.practitioner_selections = state.practitionerSelections" in script.text
     assert "payload.latent_event_answers = state.latentAnswers" in script.text
     assert "已记录 · 刷新问题" in script.text
@@ -109,8 +116,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert ".measure-layout" in style.text
     assert "body.profile-reading .control-panel" in style.text
     assert "body.profile-reading .feature-spine-panel" in style.text
-    assert "body.profile-reading .questions-panel-card" in style.text
-    assert "body.profile-reading .chat-question-list" in style.text
+    assert ".questions-panel-card" in style.text
+    assert "body.profile-reading .questions-panel-card" not in style.text
     assert "body.profile-reading .pillar-panel" in style.text
     assert ".profiles-layout" in style.text
     assert ".entry-page" in style.text

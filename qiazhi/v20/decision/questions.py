@@ -47,7 +47,7 @@ def recommend_decision_questions(
     *,
     practitioner_selections: tuple[dict[str, object], ...] = (),
     latent_event_answers: tuple[dict[str, object], ...] = (),
-    limit: int = 10,
+    limit: int = 12,
 ) -> tuple[QuestionCandidate, ...]:
     rows = []
     for decision in decision_report.get("decisions", ()):
@@ -63,7 +63,12 @@ def recommend_decision_questions(
             question_key=key,
             title=title,
             domain=domain,
-            score=round(float(decision.get("score", 0.0)) + _role_boost(str(decision.get("role", ""))), 3),
+            score=round(
+                float(decision.get("score", 0.0))
+                + _role_boost(str(decision.get("role", "")))
+                + _rulespec_question_adjustment(decision),
+                3,
+            ),
             source_feature_ids=feature_ids,
             boundary=_boundary(domain),
             measurement_topic=domain_label(domain),
@@ -141,7 +146,7 @@ def _question_title(decision: dict[str, object]) -> str:
         if status == "needs_support":
             return "日主需要扶身时，先看印星、比劫还是通关？"
         if status == "borderline":
-            return "日主强弱接近分界时，先裁决哪类证据？"
+            return "日主强弱接近分界时，先比较哪类证据？"
         if status == "supported":
             return "日主有支撑后，适合先看泄秀、财星还是官杀？"
         return "这个八字日主偏强还是偏弱，适合先看什么？"
@@ -245,6 +250,13 @@ def _role_boost(role: str) -> float:
     return 0.0
 
 
+def _rulespec_question_adjustment(decision: dict[str, object]) -> float:
+    decision_key = str(decision.get("decision_key", ""))
+    if decision_key.startswith("decision.rulespec."):
+        return -0.55
+    return 0.0
+
+
 def _fallback_question(feature_layer: FeatureLayer) -> QuestionCandidate:
     ids = tuple(feature.feature_id for feature in feature_layer.features[:4])
     return QuestionCandidate(
@@ -305,6 +317,8 @@ def _secondary_questions(decision: dict[str, object], feature_layer: FeatureLaye
 
 def _knowledge_rule_questions(decision: dict[str, object], feature_layer: FeatureLayer) -> list[QuestionCandidate]:
     rows: list[QuestionCandidate] = []
+    if str(decision.get("decision_key", "")).startswith("decision.rulespec."):
+        return rows
     domain = str(decision.get("domain", ""))
     for ref_index, ref in enumerate(decision.get("knowledge_rule_refs", ())[:2]):
         if not isinstance(ref, dict):
@@ -321,7 +335,7 @@ def _knowledge_rule_questions(decision: dict[str, object], feature_layer: Featur
                 question_key=question_key,
                 title=title,
                 domain=output_domain,
-                score=round(float(decision.get("score", 0.0)) + 0.04 - ref_index * 0.01, 3),
+                score=round(float(decision.get("score", 0.0)) - 0.08 - ref_index * 0.01, 3),
                 source_feature_ids=_feature_ids(decision, feature_layer, output_domain),
                 boundary=_boundary(output_domain),
                 measurement_topic=domain_label(output_domain),
@@ -518,7 +532,7 @@ def _explicit_question_title(question_key: str, feature_layer: FeatureLayer) -> 
         if "feature.strength.capacity_needs_support" in ids:
             return "日主需要扶身时，先看印星、比劫还是通关？"
         if "feature.strength.borderline_capacity" in ids:
-            return "日主强弱接近分界时，先裁决哪类证据？"
+            return "日主强弱接近分界时，先比较哪类证据？"
         if "feature.strength.supported_capacity" in ids:
             return "日主有支撑后，适合先看泄秀、财星还是官杀？"
     if question_key == "q_useful_god_candidates":

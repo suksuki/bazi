@@ -37,36 +37,142 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert result["feature_layer"]["status"] == "ready"
     assert result["feature_layer"]["feature_count"] >= 5
     assert result["feature_layer"]["macro_feature_count"] >= 4
+    feature_state_model = result["feature_state_model"]
+    assert feature_state_model["status"] == "ready"
+    assert feature_state_model["algorithm"] == "feature_state_fusion_phase1"
+    assert feature_state_model["feature_state_count"] == result["feature_layer"]["feature_count"]
+    assert feature_state_model["priority_features"]
+    assert "FEATURE_STATE_IS_FUSED_RUNTIME_VIEW" in feature_state_model["guardrails"]
+    trace = result["feature_layer"]["discovery_trace"]
+    assert trace["status"] == "ready"
+    assert trace["algorithm"] == "evidence_first_feature_discovery_phase1"
+    assert trace["source"] == "ChartFacts+CoreInference+TimeContext"
+    assert trace["feature_count"] == result["feature_layer"]["feature_count"]
+    assert trace["evidence_atom_count"] >= result["feature_layer"]["feature_count"]
+    assert trace["rule_path_count"] >= 5
+    assert trace["mechanism_path_count"] >= 4
+    assert trace["topic_projection_count"] >= 3
+    assert trace["feature_binding_count"] == result["feature_layer"]["feature_count"]
+    assert trace["counter_evidence_count"] >= 4
+    assert trace["trace_node_count"] >= 5
+    assert trace["model_layer_coverage_count"] == 12
+    assert set(trace["model_layer_coverage"]) >= {f"L{index}" for index in range(13)} - {"L9"}
+    assert trace["algorithm_completeness"]["status"] == "needs_layer_coverage"
+    assert trace["algorithm_completeness"]["missing_layers"] == ("L9",)
+    assert "EVIDENCE_FIRST_FEATURE_DISCOVERY" in trace["guardrails"]
+    assert "BaziFeature_REMAINS_PRODUCT_CONTRACT" in trace["guardrails"]
+    assert {row["state"] for row in trace["decision_states"]} & {"candidate", "weak_candidate", "requires_review"}
+    assert {row["topic_domain"] for row in trace["topic_projections"]} >= {"wealth", "career", "relationship"}
+    assert {row["domain"] for row in trace["evidence_atoms"]} >= {
+        "chart_fact",
+        "strength",
+        "ten_god",
+        "branch",
+        "element",
+        "pattern",
+        "useful_god",
+        "palace",
+        "blind_lifa",
+        "wealth",
+        "archive",
+        "governance",
+    }
+    assert any(str(row["atom_id"]).startswith("evidence.l0.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l3.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l4.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l5.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l6.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l7.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l8.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l11.") for row in trace["evidence_atoms"])
+    assert any(str(row["atom_id"]).startswith("evidence.l12.") for row in trace["evidence_atoms"])
+    assert any(row["rule_path_id"] for row in trace["feature_bindings"])
+    assert {"pattern", "useful_god", "palace", "blind_lifa", "archive", "governance"} <= {
+        row["domain"] for row in trace["rule_paths"]
+    }
+    assert {"trace.fact_to_evidence", "trace.decision_to_projection"} <= {
+        row["trace_id"] for row in trace["trace_nodes"]
+    }
+    assert "counter.l11.archive_not_runtime_authority" in {
+        row["counter_id"] for row in trace["counter_evidence"]
+    }
     assert {row["domain"] for row in result["feature_layer"]["macro_features"]} >= {"strength", "branch", "wealth"}
     assert {row["domain"] for row in result["feature_layer"]["features"]} >= {"strength", "useful_god", "element", "branch", "wealth"}
     assert result["questions"]
     assert result["selected_question"]["question_key"]
+    question_intent_model = result["question_intent_model"]
+    assert question_intent_model["status"] == "ready"
+    assert question_intent_model["algorithm"] == "utility_intent_ranking_phase1"
+    assert question_intent_model["intent_count"] >= 8
+    assert question_intent_model["question_binding_count"] == len(result["questions"])
+    assert question_intent_model["selected_question_intent"]["question_key"] == result["selected_question"]["question_key"]
+    assert "QUESTION_INTENTS_ARE_GENERATED_FROM_DECISION_AND_FEATURE_STATE" in question_intent_model["guardrails"]
     assert result["knowledge_alignment"]["status"] == "pass"
     assert result["knowledge_semantic_model"]["status"] == "ready"
     assert result["knowledge_semantic_validation"]["ok"] is True
     assert result["decision_report"]["version"] == "v20.decision_report.v1"
     assert result["decision_report"]["decision_count"] >= 5
+    rule_runtime = result["decision_report"]["rule_runtime_report"]
+    assert result["decision_report"]["rule_runtime_source"] == "bazi_rule_spec_engine"
+    assert result["decision_report"]["legacy_decision_bridge_status"] == "compatibility_only"
+    assert rule_runtime["status"] == "rulespec_engine_ready"
+    assert rule_runtime["source"] == "bazi_rule_spec_catalog"
+    assert rule_runtime["engine"] == "rulespec_evidence_atom_engine_phase1"
+    assert rule_runtime["rule_count"] >= 40
+    assert rule_runtime["executed_rule_count"] == rule_runtime["rule_count"]
+    assert rule_runtime["directory_node_count"] == 13
+    assert set(rule_runtime["covered_directory_nodes"]) == {f"L{index}" for index in range(13)}
+    assert rule_runtime["runtime_allowed_count"] >= 10
+    assert rule_runtime["blocked_rule_count"] >= 1
+    assert any(row["rule_id"] == "rule.l3.output_to_wealth" for row in rule_runtime["rules"])
+    assert any(row["match_status"] in {"matched", "partial"} for row in rule_runtime["rules"])
+    assert "RULESPEC_ENGINE_IS_PRIMARY_RULE_RUNTIME" in rule_runtime["guardrails"]
+    decision_model = result["decision_report"]["defeasible_decision_model"]
+    assert decision_model["status"] == "ready"
+    assert decision_model["algorithm"] == "defeasible_argumentation_certainty_phase1"
+    assert decision_model["argument_count"] == rule_runtime["rule_count"]
+    assert decision_model["decision_state_count"] == decision_model["argument_count"]
+    assert decision_model["rule_decision_candidate_count"] >= 30
+    assert decision_model["mainline_candidate_count"] >= 8
+    assert decision_model["topic_projection_count"] >= 20
+    assert {"confirmed", "mixed", "requires_review", "blocked"} <= set(decision_model["state_counts"])
+    assert "out_of_scope" not in decision_model["state_counts"]
+    assert any(row["rule_id"] == "rule.l3.output_to_wealth" for row in decision_model["argument_nodes"])
+    assert any(row["decision_key"] == "decision.rulespec.l3.output_to_wealth" for row in decision_model["rule_decision_candidates"])
+    assert "RULESPEC_RUNTIME_IS_DECISION_SOURCE" in decision_model["guardrails"]
+    portrait_projection = result["decision_report"]["portrait_projection"]
+    assert portrait_projection["status"] == "ready"
+    assert portrait_projection["version"] == "v20.portrait_projection.v1"
+    assert portrait_projection["axis_source"] == "DecisionState+MainlineDecision+TopicProjection"
+    assert portrait_projection["axis_count"] >= 6
+    assert portrait_projection["source_decision_model_version"] == "v20.defeasible_decision_model.v1"
+    assert "PORTRAIT_IS_DECISION_STATE_PROJECTION" in portrait_projection["guardrails"]
     assert result["decision_report"]["knowledge_rule_bridge"]["version"] == "v20.decision_knowledge_rule_bridge.v1"
     assert result["decision_report"]["knowledge_rule_bridge"]["mapped_decision_count"] >= 1
     assert result["decision_report"]["knowledge_rule_bridge"]["validation_status"] == "runtime_lightweight"
     assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"]
-    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_allowed"] is False
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_allowed"] is True
     assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["question_outputs"]
     assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["synthetic_state"] == "unknown"
-    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_promotion_candidate"] is False
+    assert result["decision_report"]["decisions"][0]["knowledge_rule_refs"][0]["runtime_promotion_candidate"] is True
     assert result["decision_validation"]["ok"] is True
     assert result["decision_validation"]["knowledge_rule_bridge_status"] == "ready"
-    assert result["dynamic_portrait"]["version"] == "v20.dynamic_portrait.v1"
-    assert result["dynamic_portrait"]["tag_count"] >= 1
-    assert result["dynamic_portrait"]["tags"][0]["dimension_key"].startswith("dimension.")
-    assert result["dynamic_portrait"]["tags"][0]["knowledge_rule_labels"]
-    assert "复核重点" in result["dynamic_portrait"]["tags"][0]["summary"]
+    assert result["decision_validation"]["defeasible_argument_count"] == decision_model["argument_count"]
+    assert result["decision_validation"]["portrait_projection_axis_count"] == portrait_projection["axis_count"]
+    assert "dynamic_portrait" not in result
+    assert portrait_projection["axes"][0]["axis_id"].startswith("portrait.axis.")
+    assert portrait_projection["axes"][0]["evidence_boundaries"]
     assert result["questions"][0]["dimension_layer"] in {"micro", "macro", "decision", "time"}
     assert result["answer_plan"]["dimension_context"]["version"] == "v20.answer_dimension_context.v1"
     assert result["latent_signal_report"]["version"] == "v20.latent_signal_report.v1"
     assert result["latent_signal_report"]["personal_calibration_factor_manifest"]["latent_factor_count"] == 12
     assert result["latent_event_session"]["version"] == "v20.latent_event_session_lens.v1"
     assert result["latent_event_session"]["runtime_mutation"] is False
+    assert result["interaction_session"]["version"] == "v20.interaction_session_model.v1"
+    assert result["interaction_session"]["status"] == "ready"
+    assert result["interaction_session"]["selected_question_key"] == result["selected_question"]["question_key"]
+    assert result["interaction_session"]["next_actions"]
+    assert "INTERACTION_SIGNALS_RERANK_AND_CALIBRATE_ONLY" in result["interaction_session"]["guardrails"]
     assert "baseline_amplifier" in {
         row["factor_id"]
         for row in result["latent_signal_report"]["personal_calibration_factor_manifest"]["latent_factors"]
@@ -112,7 +218,7 @@ def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> Non
 
     assert result["decision_report"]["status"] == "ready"
     assert result["decision_validation"]["status"] == "pass"
-    assert result["dynamic_portrait"]["status"] == "ready"
+    assert result["decision_report"]["portrait_projection"]["status"] == "ready"
     assert {"career", "wealth"} & decision_domains
     assert {"career", "wealth"} & question_domains
     assert result["llm_assist"]["status"] == "ready"
@@ -131,6 +237,14 @@ def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> Non
     assert all(row["alignment_status"] in {"bazi_core_aligned", "bazi_projection_aligned"} for row in result["questions"])
     assert all(row["bazi_focus"] for row in result["questions"])
     assert {"career", "wealth", "element"} & {row["domain"] for row in result["questions"]}
+    trace = result["feature_layer"]["discovery_trace"]
+    assert trace["algorithm"] == "evidence_first_feature_discovery_phase1"
+    assert "time" in {row["domain"] for row in trace["evidence_atoms"]}
+    assert any(str(row["atom_id"]).startswith("evidence.l9.") for row in trace["evidence_atoms"])
+    assert "volatile" in {row["state"] for row in trace["decision_states"]}
+    assert trace["algorithm_completeness"]["status"] == "complete_phase1_model"
+    assert trace["algorithm_completeness"]["missing_layers"] == ()
+    assert set(trace["model_layer_coverage"]) == {f"L{index}" for index in range(13)}
 
 
 def test_v20_hidden_wealth_stays_boundary_not_mainline() -> None:
@@ -248,7 +362,7 @@ def test_v20_strength_decision_exposes_support_and_pressure_materials() -> None:
     assert weak_case["selected_question"]["title"] == "日主需要扶身时，先看印星、比劫还是通关？"
     assert "先找印星、比劫和通关条件" in weak_case["answer_text"]
     assert border_strength["label"] == "日主强弱接近分界需裁决"
-    assert border_case["selected_question"]["title"] == "日主强弱接近分界时，先裁决哪类证据？"
+    assert border_case["selected_question"]["title"] == "日主强弱接近分界时，先比较哪类证据？"
     assert "不能急着定强弱" in border_case["answer_text"]
 
 
@@ -491,7 +605,7 @@ def test_v20_p85_applied_domain_answers_use_professional_reading_paths() -> None
     assert "decision_knowledge_support" in {
         row["section_type"] for row in result["answer_plan"]["sections"]
     }
-    assert "dynamic_decision_portrait" in {row["section_type"] for row in result["answer_plan"]["sections"]}
+    assert "portrait_projection_reading" in {row["section_type"] for row in result["answer_plan"]["sections"]}
     synthetic = SyntheticCase(
         "v20.synthetic.wealth-rule-candidate",
         ("壬寅", "甲辰", "丙子", "甲午"),
@@ -587,6 +701,15 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     assert routed["llm_assist"]["routed_question_key"] == "q_useful_god_candidates"
     assert routed["llm_assist"]["context_pack"]["user_text_present"] is True
     assert routed["llm_assist"]["context_pack"]["knowledge_ref_count"] >= 1
+    practitioner_context = routed["llm_assist"]["context_pack"]["task_contexts"]["practitioner_answer"]["prompt"]
+    assert practitioner_context["prompt_profile"]["role_key"] == "practitioner"
+    assert practitioner_context["prompt_profile"]["role"] == "professional_bazi_practitioner"
+    assert practitioner_context["prompt_profile"]["language_instruction"]
+    assert "bazi_metadata" in practitioner_context["context"]
+    assert "key_features" in practitioner_context["context"]
+    assert "question_intent" in practitioner_context["context"]
+    assert "interaction_session" in practitioner_context["context"]
+    assert "answer_plan" not in practitioner_context["context"]
     assert routed["selected_question"]["question_key"] == "q_useful_god_candidates"
     assert routed["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
     prompt = practitioner_answer_prompt(
@@ -597,11 +720,19 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
         answer_plan=_answer_plan_obj(routed),
         verified_answer_text=routed["answer_text"],
         decision_report=routed["decision_report"],
-        dynamic_portrait=routed["dynamic_portrait"],
+        portrait_projection=routed["decision_report"]["portrait_projection"],
+        feature_state_model=routed["feature_state_model"],
+        question_intent_model=routed["question_intent_model"],
+        interaction_session=routed["interaction_session"],
+        locale="en",
     )
+    assert prompt["prompt_profile"]["language_instruction"].startswith("Write the final user-facing text in English")
+    assert prompt["context"]["bazi_metadata"]["day_master"]
+    assert prompt["context"]["key_features"]
+    assert prompt["context"]["question_intent"]["question_key"] == routed["selected_question"]["question_key"]
     prompt_decisions = prompt["context"]["rule_decisions"]
     assert prompt_decisions[0]["knowledge_rules"]
-    assert prompt_decisions[0]["knowledge_rules"][0]["runtime_allowed"] is False
+    assert prompt_decisions[0]["knowledge_rules"][0]["runtime_allowed"] is True
 
 
 def test_v20_corpus_precompute_is_dry_run_only() -> None:

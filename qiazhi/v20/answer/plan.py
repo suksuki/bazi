@@ -216,11 +216,11 @@ def _decision_section(report: dict[str, object], selected_domain: str) -> Answer
         rows.append(f"{label}：{support}{suffix}")
         feature_ids.extend(str(item) for item in row.get("feature_ids", ()) if str(item))
     return AnswerSection(
-        title="动态裁决画像",
-        body="；".join(rows) + "。这些画像来自当前八字的实时排盘和规则判断，不使用离线语料静态标签作为结论。",
+        title="主题投射画像",
+        body="；".join(rows) + "。这些画像来自当前八字的实时排盘、规则判断和主题投射，不使用离线语料静态标签作为结论。",
         feature_ids=tuple(dict.fromkeys(feature_ids)),
         domain=selected_domain,
-        section_type="dynamic_decision_portrait",
+        section_type="portrait_projection_reading",
         measurement_topic=domain_label(selected_domain),
         measurement_stage=measurement_stage(selected_domain),
         **dimension_payload(selected_domain),

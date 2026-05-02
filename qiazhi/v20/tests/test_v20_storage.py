@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from v20.corpus.storage import corpus_postgres_index_plan, corpus_storage_policy
-from v20.learning.decision_registry_review import write_decision_registry_review_artifact
+from v20.learning.decision_registry_iteration import write_decision_registry_iteration_artifact
 from v20.storage.postgres_decision_import import build_decision_registry_postgres_import_plan
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 
@@ -73,7 +73,7 @@ def test_v20_corpus_storage_policy_makes_sqlite_disposable() -> None:
 
 
 def test_v20_decision_registry_import_is_explicit_and_postgres_authoritative(tmp_path) -> None:
-    write_decision_registry_review_artifact(output_dir=tmp_path, per_rule=2)
+    write_decision_registry_iteration_artifact(output_dir=tmp_path, per_rule=2)
     plan = build_decision_registry_postgres_import_plan(artifact_dir=tmp_path, database_url="", apply=False)
     blocked = build_decision_registry_postgres_import_plan(artifact_dir=tmp_path, database_url="", apply=True)
 
@@ -81,6 +81,6 @@ def test_v20_decision_registry_import_is_explicit_and_postgres_authoritative(tmp
     assert plan["target_table"] == "v20_decision_registry"
     assert plan["record_count"] >= 1
     assert plan["runtime_mutation"] is False
-    assert "REVIEW_RECORDS_ARE_NOT_RUNTIME_PROMOTIONS" in plan["guardrails"]
+    assert "ITERATION_RECORDS_FEED_ACTIVE_RUNTIME" in plan["guardrails"]
     assert blocked["status"] == "blocked_missing_V20_DATABASE_URL"
     assert blocked["runtime_mutation"] is True

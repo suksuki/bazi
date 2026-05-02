@@ -18,7 +18,7 @@ from v20.learning.rule_subcondition_split import (  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build V20 shadow rule subcondition split proposals.")
+    parser = argparse.ArgumentParser(description="Build V20 active rule subcondition split proposals.")
     parser.add_argument("--domain", default="", help="Optional domain filter.")
     parser.add_argument("--limit", type=int, default=64, help="Maximum knowledge rule definitions to inspect.")
     parser.add_argument("--per-rule", type=int, default=5, help="Maximum subconditions per rule.")

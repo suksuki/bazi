@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Callable
 
-from v20.learning.rule_promotion_gate import build_rule_promotion_gate_report
+from v20.learning.rule_activation import build_rule_activation_report
 from v20.learning.rule_subcondition_split import (
     build_rule_subcondition_split_report,
     read_rule_subcondition_split_artifact,
@@ -17,14 +17,14 @@ from v20.storage.local_jsonl import local_jsonl_store_from_env
 ProgressCallback = Callable[[str], None]
 
 
-def build_decision_registry_review_report(
+def build_decision_registry_iteration_report(
     domain: str = "",
     *,
     limit: int = 64,
     per_rule: int = 5,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
-    gate = build_rule_promotion_gate_report(domain, limit=limit)
+    gate = build_rule_activation_report(domain, limit=limit)
     split = build_rule_subcondition_split_report(domain, limit=limit, per_rule=per_rule, progress=progress)
     split_by_rule_key = {
         str(row.get("rule_key", "")): row
@@ -41,19 +41,19 @@ def build_decision_registry_review_report(
     subject_counts = Counter(str(row["subject_type"]) for row in records)
     triage_counts = Counter(str(row["triage_lane"]) for row in records)
     return {
-        "version": "v20.decision_registry_review_report.v1",
+        "version": "v20.decision_registry_iteration_report.v1",
         "status": "ready" if records else "empty",
         "domain": domain.strip(),
         "decision_record_count": len(records),
-        "batch_review_candidate_count": sum(1 for row in records if row["triage_lane"] == "batch_review_candidate"),
-        "manual_review_count": sum(1 for row in records if row["triage_lane"] == "manual_review"),
+        "batch_iteration_signal_count": sum(1 for row in records if row["triage_lane"] == "batch_iteration_signal"),
+        "system_iteration_count": sum(1 for row in records if row["triage_lane"] == "system_iteration"),
         "runtime_activation_count": 0,
         "decision_status_counts": dict(sorted(status_counts.items())),
         "subject_type_counts": dict(sorted(subject_counts.items())),
         "triage_lane_counts": dict(sorted(triage_counts.items())),
         "records": tuple(records),
         "upstream": {
-            "promotion_gate_status": gate.get("status", ""),
+            "activation_status": gate.get("status", ""),
             "promotion_packet_count": gate.get("packet_count", 0),
             "subcondition_split_status": split.get("status", ""),
             "subcondition_packet_count": split.get("packet_count", 0),
@@ -61,15 +61,15 @@ def build_decision_registry_review_report(
         },
         "runtime_mutation": False,
         "guardrails": [
-            "DECISION_REGISTRY_REVIEW_IS_OFFLINE_SIGNAL",
-            "NO_RUNTIME_ACTIVATION_FROM_REVIEW_RECORD",
-            "BATCH_REVIEW_IS_TRIAGE_NOT_APPROVAL",
-            "APPROVED_DECISION_RECORD_REQUIRED_BEFORE_PROMOTION",
+            "DECISION_REGISTRY_IS_ITERATION_LEDGER",
+            "ITERATION_RECORD_FEEDS_ACTIVE_RUNTIME",
+            "BATCH_ITERATION_IS_ACTIVE_SIGNAL",
+            "ITERATION_RECORDS_REFINE_ACTIVE_RULES",
         ],
     }
 
 
-def write_decision_registry_review_artifact(
+def write_decision_registry_iteration_artifact(
     *,
     domain: str = "",
     limit: int = 64,
@@ -77,19 +77,19 @@ def write_decision_registry_review_artifact(
     output_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
-    report = build_decision_registry_review_report(
+    report = build_decision_registry_iteration_report(
         domain,
         limit=limit,
         per_rule=per_rule,
         progress=progress,
     )
     runtime_dir = local_jsonl_store_from_env().runtime_dir
-    directory = output_dir or runtime_dir / "training" / "decision_registry_review"
+    directory = output_dir or runtime_dir / "training" / "decision_registry_iteration"
     directory.mkdir(parents=True, exist_ok=True)
     latest_path = directory / "latest.json"
     stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
     suffix = f"_{_safe(domain)}" if domain.strip() else ""
-    run_path = directory / f"decision_registry_review{suffix}_{stamp}.json"
+    run_path = directory / f"decision_registry_iteration{suffix}_{stamp}.json"
     payload = report | {
         "written_at": datetime.now(timezone.utc).isoformat(),
         "runtime_mutation": True,
@@ -97,30 +97,30 @@ def write_decision_registry_review_artifact(
     latest_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     run_path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
     return {
-        "version": "v20.decision_registry_review_artifact_write.v1",
+        "version": "v20.decision_registry_iteration_artifact_write.v1",
         "status": "written",
         "latest_path": str(latest_path),
         "run_path": str(run_path),
         "report_status": report["status"],
         "decision_record_count": report["decision_record_count"],
-        "batch_review_candidate_count": report["batch_review_candidate_count"],
-        "manual_review_count": report["manual_review_count"],
+        "batch_iteration_signal_count": report["batch_iteration_signal_count"],
+        "system_iteration_count": report["system_iteration_count"],
         "runtime_mutation": True,
         "guardrails": [
             "LOCAL_RUNTIME_ARTIFACT_ONLY",
             "NO_POSTGRES_WRITE",
-            "NO_RUNTIME_RULE_PROMOTION",
+            "ACTIVE_RULE_ITERATION",
         ],
     }
 
 
-def read_decision_registry_review_artifact(*, output_dir: Path | None = None) -> dict[str, object]:
+def read_decision_registry_iteration_artifact(*, output_dir: Path | None = None) -> dict[str, object]:
     latest_split = read_rule_subcondition_split_artifact()
     runtime_dir = local_jsonl_store_from_env().runtime_dir
-    latest_path = (output_dir or runtime_dir / "training" / "decision_registry_review") / "latest.json"
+    latest_path = (output_dir or runtime_dir / "training" / "decision_registry_iteration") / "latest.json"
     if not latest_path.exists():
         return {
-            "version": "v20.decision_registry_review_artifact_status.v1",
+            "version": "v20.decision_registry_iteration_artifact_status.v1",
             "status": "not_built",
             "latest_path": str(latest_path),
             "upstream_subcondition_status": latest_split.get("status", "not_built"),
@@ -133,7 +133,7 @@ def read_decision_registry_review_artifact(*, output_dir: Path | None = None) ->
 
 
 def _decision_records_for_packet(packet: dict[str, object], split_packet: dict[str, object]) -> tuple[dict[str, object], ...]:
-    lane = str(packet.get("review_lane", ""))
+    lane = str(packet.get("activation_lane", ""))
     if lane in {"needs_subcondition_split", "subcondition_review_ready"}:
         subconditions = [
             _subcondition_record(packet, row)
@@ -146,8 +146,8 @@ def _decision_records_for_packet(packet: dict[str, object], split_packet: dict[s
             if isinstance(row, dict)
         ]
         return tuple(subconditions + counterexamples)
-    if lane == "candidate_for_shadow_weight_review":
-        return (_shadow_weight_record(packet),)
+    if lane == "active_weight_ready":
+        return (_active_weight_record(packet),)
     return (_manual_packet_record(packet),)
 
 
@@ -165,9 +165,9 @@ def _base_record(
 ) -> dict[str, object]:
     decision_id = f"v20.decision_review.{_hash(str(packet.get('rule_key', '')), subject_id, proposed_decision)}"
     return {
-        "version": "v20.decision_registry_review_record.v1",
+        "version": "v20.decision_registry_iteration_record.v1",
         "decision_id": decision_id,
-        "decision_status": "needs_human_review",
+        "decision_status": "active_iteration",
         "subject_id": subject_id,
         "subject_type": subject_type,
         "source_rule_key": packet.get("rule_key", ""),
@@ -175,20 +175,20 @@ def _base_record(
         "domain": packet.get("domain", ""),
         "portrait": packet.get("portrait", ""),
         "question": packet.get("question", ""),
-        "review_lane": packet.get("review_lane", ""),
+        "activation_lane": packet.get("activation_lane", ""),
         "proposed_decision": proposed_decision,
         "triage_lane": triage_lane,
-        "reviewer_role": "admin_or_practitioner_architect",
+        "reviewer_role": "system_or_practitioner_architect",
         "support_count": support_count,
         "support_weight": support_weight,
         "rationale": rationale,
-        "runtime_effect": "none_until_approved_and_promoted",
-        "runtime_allowed": False,
+        "runtime_effect": "active_runtime_iteration",
+        "runtime_allowed": True,
         "payload": payload or {},
         "guardrails": [
-            "RECORD_IS_REVIEW_PROPOSAL",
-            "NO_DIRECT_RUNTIME_ACTIVATION",
-            "APPROVAL_REQUIRES_SEPARATE_DECISION_REGISTRY_WRITE",
+            "RECORD_IS_ACTIVE_ITERATION_SIGNAL",
+            "RUNTIME_ACTIVATION_ALLOWED_WITH_TRACE",
+            "ITERATION_LEDGER_RECORDS_RUNTIME_CHANGES",
         ],
     }
 
@@ -196,14 +196,14 @@ def _base_record(
 def _subcondition_record(packet: dict[str, object], subcondition: dict[str, object]) -> dict[str, object]:
     support_count = int(subcondition.get("support_count", 0) or 0)
     support_weight = float(subcondition.get("support_weight", 0.0) or 0.0)
-    triage_lane = "batch_review_candidate" if support_count >= 100 and support_weight >= 0.0002 else "manual_review"
+    triage_lane = "batch_iteration_signal" if support_count >= 100 and support_weight >= 0.0002 else "system_iteration"
     return _base_record(
         packet,
         subject_id=str(subcondition.get("subcondition_key", "")),
-        subject_type="rule_subcondition_candidate",
-        proposed_decision="approve_for_shadow_eval",
+        subject_type="rule_subcondition_signal",
+        proposed_decision="activate_for_replay_eval",
         triage_lane=triage_lane,
-        rationale=str(subcondition.get("review_prompt", "")),
+        rationale=str(subcondition.get("iteration_prompt", "")),
         support_count=support_count,
         support_weight=support_weight,
         payload={
@@ -219,10 +219,10 @@ def _counterexample_record(packet: dict[str, object], counterexample: dict[str, 
     return _base_record(
         packet,
         subject_id=str(counterexample.get("counterexample_key", "")),
-        subject_type="rule_counterexample_candidate",
-        proposed_decision="review_as_exclusion_or_split",
-        triage_lane="manual_review",
-        rationale=str(counterexample.get("review_question", "")),
+        subject_type="rule_counterexample_signal",
+        proposed_decision="iterate_as_exclusion_or_split",
+        triage_lane="system_iteration",
+        rationale=str(counterexample.get("iteration_question", "")),
         support_count=int(counterexample.get("support_count", 0) or 0),
         support_weight=float(counterexample.get("support_weight", 0.0) or 0.0),
         payload={
@@ -233,14 +233,14 @@ def _counterexample_record(packet: dict[str, object], counterexample: dict[str, 
     )
 
 
-def _shadow_weight_record(packet: dict[str, object]) -> dict[str, object]:
+def _active_weight_record(packet: dict[str, object]) -> dict[str, object]:
     return _base_record(
         packet,
         subject_id=str(packet.get("packet_id", "")),
-        subject_type="shadow_weight_candidate",
-        proposed_decision="approve_shadow_weight_for_offline_ab",
-        triage_lane="manual_review",
-        rationale="合成验证与语料先验均已通过，可进入离线 shadow 权重评估；仍不直接进运行结论。",
+        subject_type="active_weight_signal",
+        proposed_decision="activate_weight_for_runtime_replay",
+        triage_lane="system_iteration",
+        rationale="合成验证与语料先验均已通过，可进入运行回放权重迭代；并进入持续运行调优。",
         support_count=int(packet.get("synthetic_case_count", 0) or 0),
         support_weight=float(packet.get("support_ratio", 0.0) or 0.0),
         payload={
@@ -254,10 +254,10 @@ def _manual_packet_record(packet: dict[str, object]) -> dict[str, object]:
     return _base_record(
         packet,
         subject_id=str(packet.get("packet_id", "")),
-        subject_type="promotion_packet_review",
-        proposed_decision=str(packet.get("recommended_action", "manual_review")),
-        triage_lane="manual_review",
-        rationale=str(packet.get("risk", "manual review required")),
+        subject_type="activation_packet_iteration",
+        proposed_decision=str(packet.get("iteration_action", "system_iteration")),
+        triage_lane="system_iteration",
+        rationale=str(packet.get("risk", "system iteration required")),
         support_count=int(packet.get("synthetic_case_count", 0) or 0),
         support_weight=float(packet.get("support_ratio", 0.0) or 0.0),
         payload={

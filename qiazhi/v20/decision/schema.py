@@ -78,52 +78,6 @@ class RuleDecision:
 
 
 @dataclass(frozen=True)
-class DynamicPortraitTag:
-    tag_key: str
-    label: str
-    domain: str
-    dimension_key: str
-    dimension_layer: str
-    dimension_label: str
-    summary: str
-    score: float
-    source_decision_keys: tuple[str, ...]
-    question_seeds: tuple[str, ...] = ()
-    status: str = "runtime_dynamic"
-    guardrails: tuple[str, ...] = (
-        "PORTRAIT_FROM_RULE_DECISION_ONLY",
-        "NO_STATIC_518K_PORTRAIT_TRUTH",
-        "NO_PERSONALITY_VERDICT",
-    )
-
-    def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
-
-
-@dataclass(frozen=True)
-class DynamicPortrait:
-    version: str
-    status: str
-    tags: tuple[DynamicPortraitTag, ...]
-    source: str = "runtime_rule_decisions"
-    guardrails: tuple[str, ...] = (
-        "DYNAMIC_PORTRAIT_FROM_CURRENT_CHART_DECISIONS",
-        "TRAINING_CORPUS_IS_MATERIAL_ONLY",
-        "PRACTITIONER_CALIBRATION_CAN_UPDATE_DECISION_PARAMS",
-    )
-
-    def to_dict(self) -> dict[str, Any]:
-        return {
-            "version": self.version,
-            "status": self.status,
-            "tag_count": len(self.tags),
-            "tags": [row.to_dict() for row in self.tags],
-            "source": self.source,
-            "guardrails": list(self.guardrails),
-        }
-
-
-@dataclass(frozen=True)
 class MainlineDecision:
     mainline_key: str
     title: str
@@ -152,7 +106,6 @@ class DecisionReport:
     status: str
     hits: tuple[RuleHit, ...]
     decisions: tuple[RuleDecision, ...]
-    dynamic_portrait: DynamicPortrait
     mainlines: tuple[MainlineDecision, ...] = field(default_factory=tuple)
     practitioner_controls: tuple[PractitionerControl, ...] = field(default_factory=tuple)
     training_boundary: str = (
@@ -163,8 +116,8 @@ class DecisionReport:
     guardrails: tuple[str, ...] = (
         "RULE_HITS_FEED_DECISIONS",
         "DECISIONS_FEED_MAINLINES",
-        "DECISIONS_FEED_DYNAMIC_PORTRAIT",
-        "DYNAMIC_PORTRAIT_FEEDS_QUESTIONS_AND_LLM_CONTEXT",
+        "DECISIONS_FEED_PORTRAIT_PROJECTION",
+        "PORTRAIT_PROJECTION_FEEDS_QUESTIONS_AND_LLM_CONTEXT",
         "518K_CORPUS_NEVER_OVERRIDES_RUNTIME_DECISION",
     )
 
@@ -178,7 +131,6 @@ class DecisionReport:
             "hits": [row.to_dict() for row in self.hits],
             "decisions": [row.to_dict() for row in self.decisions],
             "mainlines": [row.to_dict() for row in self.mainlines],
-            "dynamic_portrait": self.dynamic_portrait.to_dict(),
             "practitioner_controls": [row.to_dict() for row in self.practitioner_controls],
             "training_boundary": self.training_boundary,
             "runtime_mutation": self.runtime_mutation,

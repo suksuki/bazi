@@ -19,13 +19,13 @@ def build_learning_run_plan(*, corpus_plan: CorpusCoveragePlan | None = None) ->
             "coverage_gap_report",
         ),
         _stage(
-            "shadow_policy_learning",
-            "Produce draft ranking, retrieval, or calibration policies in shadow mode only.",
+            "active_policy_learning",
+            "Produce draft ranking, retrieval, or calibration policies in active iteration mode.",
             "policy_proposal_artifact",
         ),
         _stage(
             "validation_and_decision_gate",
-            "Run synthetic validation and require DecisionRegistry approval before any scoped promotion.",
+            "Run synthetic validation and require runtime replay before continuous tuning.",
             "decision_record",
         ),
     )
@@ -43,7 +43,7 @@ def build_learning_run_plan(*, corpus_plan: CorpusCoveragePlan | None = None) ->
         "artifact_outputs": (
             "corpus_snapshot_manifest",
             "coverage_gap_report",
-            "shadow_policy_proposal",
+            "active_policy_artifact",
             "synthetic_validation_report",
             "decision_record",
         ),
@@ -53,7 +53,7 @@ def build_learning_run_plan(*, corpus_plan: CorpusCoveragePlan | None = None) ->
             "LEARNING_RUN_PLAN_ONLY",
             "FULL_CORPUS_PRECOMPUTE_IS_STRUCTURAL",
             "NO_DESTINY_TRUTH_LABELS",
-            "NO_AUTOMATIC_POLICY_PROMOTION",
+            "POLICY_ACTIVATES_WITH_CONTINUOUS_ITERATION",
         ],
     }
 

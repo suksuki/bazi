@@ -16,11 +16,18 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert "answer_text" in roles["user"]["allowed_runtime_fields"]
     assert "knowledge_refs" in roles["user"]["blocked_runtime_fields"]
     assert "decision_report" in roles["user"]["allowed_runtime_fields"]
-    assert "dynamic_portrait" in roles["user"]["allowed_runtime_fields"]
+    assert "dynamic_portrait" not in roles["user"]["allowed_runtime_fields"]
+    assert "feature_state_model" in roles["user"]["allowed_runtime_fields"]
+    assert "question_intent_model" in roles["user"]["allowed_runtime_fields"]
+    assert "interaction_session" in roles["user"]["allowed_runtime_fields"]
     assert "feature_layer" in roles["analyst"]["allowed_runtime_fields"]
     assert "knowledge_semantic_model" in roles["analyst"]["allowed_runtime_fields"]
     assert "decision_report" in roles["analyst"]["allowed_runtime_fields"]
     assert "decision_validation" in roles["analyst"]["allowed_runtime_fields"]
+    assert "feature_state_model" in roles["analyst"]["allowed_runtime_fields"]
+    assert "question_intent_model" in roles["analyst"]["allowed_runtime_fields"]
+    assert "interaction_session" in roles["analyst"]["allowed_runtime_fields"]
+    assert "knowledge_refs" in roles["analyst"]["allowed_runtime_fields"]
     assert "practitioner_session" in roles["analyst"]["allowed_runtime_fields"]
     assert "practitioner_session" not in roles["user"]["allowed_runtime_fields"]
     assert "rule_candidate_support" not in roles["analyst"]["allowed_runtime_fields"]
@@ -48,11 +55,15 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "rule_candidate_validation" not in projected
     assert "chart_graph" not in projected
     assert "decision_report" in projected
-    assert "dynamic_portrait" in projected
+    assert "dynamic_portrait" not in projected
+    assert "portrait_projection" in projected["decision_report"]
+    assert "feature_state_model" in projected
+    assert "question_intent_model" in projected
+    assert "interaction_session" in projected
     assert "practitioner_session" not in projected
     assert "feature_ids" not in projected["decision_report"]["decisions"][0]
     assert "knowledge_rule_refs" not in projected["decision_report"]["decisions"][0]
-    assert "source_decision_keys" not in projected["dynamic_portrait"]["tags"][0]
+    assert "source_decision_keys" not in projected["decision_report"]["portrait_projection"]["axes"][0]
     assert all("source_feature_ids" not in row for row in projected["questions"])
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])
 
@@ -79,6 +90,10 @@ def test_v20_role_measure_endpoint_projects_by_role() -> None:
     assert "feature_layer" in analyst
     assert "knowledge_semantic_model" in analyst
     assert "decision_validation" in analyst
-    assert "dynamic_portrait" in analyst
+    assert "feature_state_model" in analyst
+    assert "question_intent_model" in analyst
+    assert "interaction_session" in analyst
+    assert "knowledge_refs" in analyst
+    assert "dynamic_portrait" not in analyst
     assert "practitioner_session" in analyst
     assert roles["runtime_mutation"] is False

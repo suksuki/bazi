@@ -10,17 +10,17 @@ ROOT = Path(__file__).resolve().parents[2]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from v20.learning.decision_registry_review import (  # noqa: E402
-    build_decision_registry_review_report,
-    read_decision_registry_review_artifact,
-    write_decision_registry_review_artifact,
+from v20.learning.decision_registry_iteration import (  # noqa: E402
+    build_decision_registry_iteration_report,
+    read_decision_registry_iteration_artifact,
+    write_decision_registry_iteration_artifact,
 )
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Build V20 DecisionRegistry review records from rule packets.")
+    parser = argparse.ArgumentParser(description="Build V20 DecisionRegistry iteration records from rule packets.")
     parser.add_argument("--domain", default="", help="Optional domain filter.")
-    parser.add_argument("--limit", type=int, default=64, help="Maximum promotion packets to inspect.")
+    parser.add_argument("--limit", type=int, default=64, help="Maximum activation packets to inspect.")
     parser.add_argument("--per-rule", type=int, default=5, help="Maximum subconditions/counterexamples per rule.")
     parser.add_argument("--write", action="store_true", help="Write a local runtime artifact.")
     parser.add_argument("--status", action="store_true", help="Read latest written local artifact.")
@@ -29,16 +29,16 @@ def main() -> int:
 
     progress = (lambda message: print(message, file=sys.stderr, flush=True)) if args.progress else None
     if args.status:
-        payload = read_decision_registry_review_artifact()
+        payload = read_decision_registry_iteration_artifact()
     elif args.write:
-        payload = write_decision_registry_review_artifact(
+        payload = write_decision_registry_iteration_artifact(
             domain=args.domain,
             limit=max(1, args.limit),
             per_rule=max(1, args.per_rule),
             progress=progress,
         )
     else:
-        payload = build_decision_registry_review_report(
+        payload = build_decision_registry_iteration_report(
             args.domain,
             limit=max(1, args.limit),
             per_rule=max(1, args.per_rule),

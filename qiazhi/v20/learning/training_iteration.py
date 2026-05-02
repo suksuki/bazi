@@ -7,9 +7,9 @@ from typing import Callable
 
 from v20.corpus.full_precompute import preview_full_precompute_batch
 from v20.learning.decision_training import build_decision_training_plan
-from v20.learning.decision_registry_review import (
-    build_decision_registry_review_report,
-    write_decision_registry_review_artifact,
+from v20.learning.decision_registry_iteration import (
+    build_decision_registry_iteration_report,
+    write_decision_registry_iteration_artifact,
 )
 from v20.learning.dynamic_decision_training import (
     run_dynamic_decision_training_batch,
@@ -25,6 +25,7 @@ from v20.learning.rule_subcondition_split import (
     build_rule_subcondition_split_report,
     write_rule_subcondition_split_artifact,
 )
+from v20.learning.rule_replay_eval import build_rule_replay_eval_report, write_rule_replay_eval_artifact
 from v20.storage.local_jsonl import local_jsonl_store_from_env
 from v20.validation.rule_portrait_batch import run_rule_portrait_batch, write_rule_portrait_batch_artifact
 from v20.validation.rule_synthetic import build_rule_synthetic_training_report, write_rule_synthetic_training_artifact
@@ -46,7 +47,8 @@ def run_training_iteration(
         "rule_synthetic_training",
         "knowledge_rule_review_overlay",
         "rule_subcondition_split",
-        "decision_registry_review",
+        "rule_replay_eval",
+        "decision_registry_iteration",
         *(("rule_portrait_batch",) if include_rule_batch else ()),
         *(("corpus_preview",) if corpus_preview_limit > 0 else ()),
         "decision_training_plan",
@@ -97,11 +99,18 @@ def run_training_iteration(
         else build_rule_subcondition_split_report(progress=progress)
     )
 
-    emit_phase("decision_registry_review")
-    results["decision_registry_review"] = (
-        write_decision_registry_review_artifact(progress=progress)
+    emit_phase("rule_replay_eval")
+    results["rule_replay_eval"] = (
+        write_rule_replay_eval_artifact(progress=progress)
         if write
-        else build_decision_registry_review_report(progress=progress)
+        else build_rule_replay_eval_report(progress=progress)
+    )
+
+    emit_phase("decision_registry_iteration")
+    results["decision_registry_iteration"] = (
+        write_decision_registry_iteration_artifact(progress=progress)
+        if write
+        else build_decision_registry_iteration_report(progress=progress)
     )
 
     if include_rule_batch:
@@ -137,7 +146,7 @@ def run_training_iteration(
         "guardrails": [
             "TRAINING_ITERATION_IS_SCRIPT_ONLY",
             "NO_USER_UI_TRAINING_SURFACE",
-            "NO_RUNTIME_RULE_PROMOTION",
+            "ACTIVE_RULE_ITERATION",
             "HEAVY_CORPUS_WORK_REQUIRES_EXPLICIT_SCRIPT_FLAG",
         ],
     }
@@ -185,7 +194,7 @@ def _write_training_iteration_artifact(report: dict[str, object], *, output_dir:
         "guardrails": [
             "LOCAL_RUNTIME_ARTIFACT_ONLY",
             "NO_POSTGRES_WRITE",
-            "NO_RUNTIME_RULE_PROMOTION",
+            "ACTIVE_RULE_ITERATION",
         ],
     }
 

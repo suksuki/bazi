@@ -214,21 +214,27 @@ def _evaluate_batch_case(
     decisions = [
         row for row in runtime.get("decision_report", {}).get("decisions", ()) if isinstance(row, dict)
     ]
-    portrait_tags = [
-        row for row in runtime.get("dynamic_portrait", {}).get("tags", ()) if isinstance(row, dict)
+    portrait_axes = [
+        row
+        for row in runtime.get("decision_report", {}).get("portrait_projection", {}).get("axes", ())
+        if isinstance(row, dict)
     ]
     feature_domains = tuple(sorted({str(row.get("domain", "")) for row in features if row.get("domain")}))
     question_keys = tuple(str(row.get("question_key", "")) for row in questions if row.get("question_key"))
     rule_domains = _decision_domains(decisions)
-    portrait_domains = tuple(dict.fromkeys(str(row.get("domain", "")) for row in portrait_tags if row.get("domain")))
+    portrait_domains = tuple(dict.fromkeys(
+        str(row.get("domain", ""))
+        for row in portrait_axes
+        if row.get("domain")
+    ))
     failures = []
     failures.extend(_missing("feature_domain", case.case_id, case.expected_feature_domains, feature_domains))
     failures.extend(_missing("question_key", case.case_id, case.expected_question_keys, question_keys))
     failures.extend(_missing("rule_domain", case.case_id, case.expected_rule_domains, rule_domains))
     if not questions:
         failures.append(f"no_questions:{case.case_id}")
-    if not portrait_tags:
-        failures.append(f"no_dynamic_portrait_tags:{case.case_id}")
+    if not portrait_axes:
+        failures.append(f"no_portrait_projection_axes:{case.case_id}")
     if not decisions:
         failures.append(f"no_rule_decisions:{case.case_id}")
     failures.extend(_alignment_failures("question", case.case_id, questions, "alignment_status"))
@@ -253,7 +259,7 @@ def _evaluate_batch_case(
         "decision_statuses": tuple(dict.fromkeys(str(row.get("status", "")) for row in decisions if row.get("status"))),
         "feature_count": len(features),
         "question_count": len(questions),
-        "portrait_tag_count": len(portrait_tags),
+        "portrait_axis_count": len(portrait_axes),
         "decision_count": len(decisions),
         "runtime_mutation": False,
     }

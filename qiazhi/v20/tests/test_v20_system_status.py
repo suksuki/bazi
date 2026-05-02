@@ -15,7 +15,23 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["sync_readiness"]["status"] == "ready_for_manual_sync"
     assert report["redis_validation"]["ok"] is True
     assert report["knowledge_catalog_status"] == "ready"
-    assert report["knowledge_unit_count"] >= 12
+    assert report["knowledge_completion_status"] == "needs_work"
+    assert report["knowledge_completion_percent"] == 0
+    assert report["knowledge_mainline_complete"] is False
+    assert report["knowledge_mainline_blocker_count"] == 1
+    assert report["knowledge_directory_status"] == "directory_ready_full_seed_library_ready"
+    assert report["knowledge_directory_node_count"] == 13
+    assert report["knowledge_directory_p0_node_count"] >= 9
+    assert report["knowledge_full_directory_seed_status"] == "full_directory_seeded_for_review"
+    assert report["knowledge_full_directory_content_status"] == "full_content_draft_ready"
+    assert report["knowledge_full_directory_seed_count"] >= 200
+    assert report["knowledge_full_directory_seed_node_count"] == 13
+    assert report["knowledge_macro_dimension_count"] == 5
+    assert set(report["knowledge_macro_dimensions"]) == {"wealth", "career", "relationship", "romance", "health"}
+    assert report["knowledge_feature_graph_model_status"] == "phase1_contract_ready"
+    assert report["knowledge_feature_graph_topic_projection_count"] == 5
+    assert report["knowledge_feature_graph_decision_state_count"] == 9
+    assert report["knowledge_unit_count"] >= 21
     assert report["knowledge_source_catalog_status"] == "ready"
     assert report["knowledge_coverage_status"] == "pass"
     assert report["knowledge_gap_count"] == 0
@@ -39,11 +55,18 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["knowledge_rule_library_definition_count"] >= 12
     assert report["knowledge_rule_library_full_definition_count"] >= report["knowledge_rule_library_definition_count"]
     assert report["knowledge_rule_library_runtime_allowed_count"] == 0
-    assert report["knowledge_rule_validation_status"] == "ready_for_review"
+    assert report["knowledge_rule_validation_status"] == "active_ready"
     assert report["knowledge_rule_validation_synthetic_covered_count"] >= report["knowledge_rule_library_definition_count"]
     assert report["knowledge_rule_validation_full_synthetic_covered_count"] >= report["knowledge_rule_library_full_definition_count"]
     assert report["knowledge_rule_validation_missing_synthetic_count"] == 0
     assert report["knowledge_rule_validation_full_missing_synthetic_count"] == 0
+    assert report["bazi_rule_catalog_status"] == "complete_phase1_rule_catalog"
+    assert report["bazi_rule_catalog_rule_count"] >= 40
+    assert report["bazi_rule_catalog_node_count"] == 13
+    assert report["bazi_rule_catalog_runtime_ready_count"] >= 10
+    assert report["bazi_rule_catalog_runtime_allowed_count"] == report["bazi_rule_catalog_runtime_ready_count"]
+    assert report["bazi_rule_catalog_blocked_count"] >= 2
+    assert report["bazi_rule_catalog_archive_only_count"] >= 3
     assert report["full_precompute_status"] == "ready_for_dry_run"
     assert report["full_precompute_estimated_minutes"] > 0
     assert report["full_precompute_runtime_role"] == "offline_structure_coverage_baseline"
@@ -55,19 +78,25 @@ def test_v20_system_status_aggregates_core_contracts_read_only() -> None:
     assert report["learning_status"] == "ready_for_dry_run"
     assert report["learning_run_plan_status"] == "ready_for_dry_run"
     assert report["learning_target_case_count"] == 518_400
-    assert report["rule_promotion_gate_status"] == "ready"
-    assert report["rule_promotion_packet_count"] >= 12
-    assert report["rule_promotion_runtime_candidate_count"] == 0
-    assert report["rule_promotion_blocked_count"] == 0
-    assert report["rule_promotion_needs_subcondition_count"] == 0
-    assert report["rule_promotion_subcondition_review_ready_count"] >= 1
+    assert report["rule_activation_status"] == "ready"
+    assert report["rule_activation_packet_count"] >= 12
+    assert report["rule_activation_runtime_candidate_count"] == 0
+    assert report["rule_activation_blocked_count"] == 0
+    assert report["rule_activation_needs_subcondition_count"] == 0
+    assert report["rule_activation_subcondition_active_ready_count"] >= 1
     assert report["rule_subcondition_split_status"] == "ready"
-    assert report["rule_subcondition_split_packet_count"] == report["rule_promotion_subcondition_review_ready_count"]
+    assert report["rule_subcondition_split_packet_count"] == report["rule_activation_subcondition_active_ready_count"]
     assert report["rule_subcondition_split_subcondition_count"] >= report["rule_subcondition_split_packet_count"]
-    assert report["decision_registry_review_status"] == "ready"
-    assert report["decision_registry_review_record_count"] >= report["rule_subcondition_split_subcondition_count"]
-    assert report["decision_registry_review_batch_count"] >= 1
-    assert report["decision_registry_review_runtime_activation_count"] == 0
+    assert report["rule_replay_eval_status"] == "ready"
+    assert report["rule_replay_eval_evaluated_packet_count"] == report["rule_activation_subcondition_active_ready_count"]
+    assert report["rule_replay_eval_ready_count"] == report["rule_replay_eval_evaluated_packet_count"]
+    assert report["rule_replay_eval_portrait_mapping_ok_count"] == report["rule_replay_eval_evaluated_packet_count"]
+    assert report["rule_replay_eval_decision_domain_ok_count"] == report["rule_replay_eval_evaluated_packet_count"]
+    assert report["rule_replay_eval_runtime_activation_count"] == 0
+    assert report["decision_registry_iteration_status"] == "ready"
+    assert report["decision_registry_iteration_record_count"] >= report["rule_subcondition_split_subcondition_count"]
+    assert report["decision_registry_iteration_batch_count"] >= 1
+    assert report["decision_registry_iteration_runtime_activation_count"] == 0
     assert set(report["policy_surfaces"]) >= {
         "question_ranking",
         "knowledge_retrieval",

@@ -51,7 +51,7 @@ def build_rule_subcondition_split_report(
         "subcondition_count": sum(len(packet["subconditions"]) for packet in packets),
         "counterexample_candidate_count": sum(len(packet["counterexample_candidates"]) for packet in packets),
         "missing_corpus_count": len(missing_corpus),
-        "quality_status": "needs_corpus" if missing_corpus else "ready_for_review",
+        "quality_status": "needs_corpus" if missing_corpus else "active_ready",
         "packets": packets,
         "upstream": {
             "validation_status": validation.get("status", ""),
@@ -63,7 +63,7 @@ def build_rule_subcondition_split_report(
         "guardrails": [
             "SUBCONDITION_SPLIT_IS_OFFLINE_REVIEW_SIGNAL",
             "FULL_CORPUS_PROVIDES_PRIOR_AND_COVERAGE_NOT_TRUTH",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "ACTIVE_RULE_ITERATION",
             "DECISION_REGISTRY_REQUIRED_BEFORE_PROMOTION",
         ],
     }
@@ -104,7 +104,7 @@ def write_rule_subcondition_split_artifact(
         "guardrails": [
             "LOCAL_RUNTIME_ARTIFACT_ONLY",
             "NO_POSTGRES_WRITE",
-            "NO_RUNTIME_RULE_PROMOTION",
+            "ACTIVE_RULE_ITERATION",
         ],
     }
 
@@ -150,7 +150,7 @@ def _split_packet(definition: dict[str, object], corpus_row: dict[str, object], 
         "subconditions": subconditions,
         "counterexample_candidates": _counterexample_candidates(corpus_row, broad_features, per_rule=per_rule),
         "recommended_review_action": "review_subconditions_and_add_counterexamples",
-        "runtime_allowed": False,
+        "runtime_allowed": True,
         "guardrails": [
             "PACKET_IS_REVIEW_OBJECT",
             "SUBCONDITIONS_ARE_CANDIDATES_ONLY",
@@ -182,7 +182,7 @@ def _subcondition(
             "source": "full_corpus_exact_feature_signature",
         },
         "review_prompt": _review_prompt(domain, discriminator_ids),
-        "runtime_allowed": False,
+        "runtime_allowed": True,
     }
 
 
@@ -205,7 +205,7 @@ def _counterexample_candidates(
                 "support_weight": float(cluster.get("weight", 0.0) or 0.0),
                 "contrast_against_broad_features": broad_features[:6],
                 "review_question": "这类聚类是否应该排除、降权，或单独拆成另一条子规则？",
-                "runtime_allowed": False,
+                "runtime_allowed": True,
             }
         )
     return tuple(rows[:per_rule])

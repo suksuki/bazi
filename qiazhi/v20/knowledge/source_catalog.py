@@ -29,6 +29,7 @@ def default_knowledge_sources() -> tuple[KnowledgeSource, ...]:
         KnowledgeSource("docs/v20.knowledge.wealth_peer_competition", "V20 wealth peer-competition arbitration", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
         KnowledgeSource("docs/v20.knowledge.career_resource_buffer", "V20 career resource-buffer review", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
         KnowledgeSource("docs/v20.knowledge.relationship_spouse_star_context", "V20 relationship spouse-star context boundary", "implementation_doc", "v20/docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md"),
+        KnowledgeSource("docs/v20.knowledge.mainline_expansion", "V20 macro micro and applied Bazi knowledge expansion", "implementation_doc", "docs/v20/V20_MAINLINE_TRAINING_FINDINGS.md"),
     )
 
 

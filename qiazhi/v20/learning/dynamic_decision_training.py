@@ -230,13 +230,13 @@ def _evaluate_training_case(
     )
     decisions = _rows(runtime.get("decision_report", {}).get("decisions", ()))
     hits = _rows(runtime.get("decision_report", {}).get("hits", ()))
-    portrait_tags = _rows(runtime.get("dynamic_portrait", {}).get("tags", ()))
+    portrait_axes = _rows(runtime.get("decision_report", {}).get("portrait_projection", {}).get("axes", ()))
     questions = _rows(runtime.get("questions", ()))
     controls = _rows(runtime.get("decision_report", {}).get("practitioner_controls", ()))
     answer_text = str(runtime.get("answer_text", ""))
 
     decision_domains = _values(decisions, "domain")
-    portrait_domains = _values(portrait_tags, "domain")
+    portrait_domains = _values(portrait_axes, "domain")
     question_keys = _values(questions, "question_key")
     question_domains = _values(questions, "domain")
     rule_keys = _values(decisions, "rule_key")
@@ -255,8 +255,8 @@ def _evaluate_training_case(
         failures.append(f"selected_question_domain_mismatch:{case.case_id}:{selected_domain}")
     if not decisions:
         failures.append(f"no_rule_decisions:{case.case_id}")
-    if not portrait_tags:
-        failures.append(f"no_dynamic_portrait:{case.case_id}")
+    if not portrait_axes:
+        failures.append(f"no_portrait_projection:{case.case_id}")
     if not questions:
         failures.append(f"no_recommended_questions:{case.case_id}")
     if runtime.get("decision_validation", {}).get("ok") is not True:
@@ -275,7 +275,7 @@ def _evaluate_training_case(
 
     quality_findings = []
     quality_findings.extend(_question_language_findings(case.case_id, questions))
-    quality_findings.extend(_portrait_language_findings(case.case_id, portrait_tags))
+    quality_findings.extend(_portrait_language_findings(case.case_id, portrait_axes))
     quality_findings.extend(_domain_alignment_findings(case.case_id, decision_domains, portrait_domains, question_domains))
 
     return {
@@ -294,14 +294,14 @@ def _evaluate_training_case(
         "decision_keys": _values(decisions, "decision_key"),
         "rule_keys": tuple(dict.fromkeys((*rule_keys, *hit_rule_keys))),
         "portrait_domains": portrait_domains,
-        "portrait_labels": _values(portrait_tags, "label"),
+        "portrait_labels": _values(portrait_axes, "label"),
         "question_keys": question_keys,
         "question_titles": _values(questions, "title"),
         "question_domains": question_domains,
         "practitioner_control_keys": control_keys,
         "decision_count": len(decisions),
         "hit_count": len(hits),
-        "portrait_tag_count": len(portrait_tags),
+        "portrait_axis_count": len(portrait_axes),
         "question_count": len(questions),
         "runtime_mutation": False,
         "notes": case.notes,
@@ -333,7 +333,7 @@ def _training_proposals(case_results: list[dict[str, object]]) -> list[dict[str,
                 "target": _proposal_target(text),
                 "issue": text,
                 "action": _proposal_action(text),
-                "runtime_allowed": False,
+                "runtime_allowed": True,
             })
         for finding in row.get("quality_findings", ()):
             text = str(finding)
@@ -342,7 +342,7 @@ def _training_proposals(case_results: list[dict[str, object]]) -> list[dict[str,
                 "target": _proposal_target(text),
                 "issue": text,
                 "action": _proposal_action(text),
-                "runtime_allowed": False,
+                "runtime_allowed": True,
             })
     return proposals
 
@@ -365,7 +365,7 @@ def _proposal_action(issue: str) -> str:
     if "missing_expected_question" in issue:
         return "add_or_boost_question_seed_for_matching_decision"
     if "missing_expected_portrait_domain" in issue:
-        return "add_dynamic_portrait_mapping_for_decision_domain"
+        return "add_portrait_projection_mapping_for_decision_domain"
     if "missing_expected_rule_key" in issue:
         return "add_synthetic_counterexample_or_rule_atom_for_current_chart"
     if "missing_expected_decision_domain" in issue:

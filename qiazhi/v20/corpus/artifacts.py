@@ -173,7 +173,7 @@ def build_corpus_artifacts(
             density = label.get("evidence_density", {})
             feature_count_sum += int(density.get("feature_count", 0))
             knowledge_ref_count_sum += int(density.get("knowledge_ref_count", 0))
-            portrait_axis_count_sum += int(density.get("portrait_axis_count", density.get("portrait_tag_count", 0)))
+            portrait_axis_count_sum += int(density.get("portrait_axis_count", 0))
             total += 1
             if conn is not None and len(batch) >= 2_000:
                 conn.executemany(SQLITE_INSERT, batch)
@@ -625,7 +625,7 @@ def _flat_label_row(line_no: int, label: dict[str, object]) -> dict[str, object]
         "tag_signature": tuple(sorted(_label_tags(label))),
         "feature_count": density.get("feature_count", 0),
         "knowledge_ref_count": density.get("knowledge_ref_count", 0),
-        "portrait_axis_count": density.get("portrait_axis_count", density.get("portrait_tag_count", 0)),
+        "portrait_axis_count": density.get("portrait_axis_count", 0),
     }
 
 

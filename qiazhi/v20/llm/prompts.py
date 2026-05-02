@@ -7,6 +7,53 @@ from v20.interaction.questions import QuestionCandidate
 from v20.knowledge.schema import KnowledgeUnit
 
 
+ROLE_PROFILES = {
+    "intent_router": {
+        "role": "bazi_question_router",
+        "responsibility": "understand the user's topic and map it to existing question/domain candidates",
+        "style": "brief structured routing only",
+    },
+    "question_designer": {
+        "role": "bazi_followup_question_designer",
+        "responsibility": "suggest follow-up questions only from existing candidates",
+        "style": "short, practical, no new conclusions",
+    },
+    "feature_assistant": {
+        "role": "bazi_feature_gap_assistant",
+        "responsibility": "name possible evidence gaps without writing runtime features",
+        "style": "cautious candidate language",
+    },
+    "rule_drafter": {
+        "role": "bazi_knowledge_rule_drafter",
+        "responsibility": "extract draft rule atoms from reviewed knowledge only",
+        "style": "structured, auditable, no activation",
+    },
+    "answer_rewriter": {
+        "role": "plain_language_bazi_editor",
+        "responsibility": "rewrite verified answers clearly while preserving facts and boundaries",
+        "style": "plain language, concise, no extra claims",
+    },
+    "practitioner": {
+        "role": "professional_bazi_practitioner",
+        "responsibility": "answer the user's question in simple language from verified Bazi metadata, features, decisions, and evidence",
+        "style": "warm, direct, non-technical, practical",
+    },
+    "safety_reviewer": {
+        "role": "bazi_answer_safety_reviewer",
+        "responsibility": "check for unsupported claims, fixed fortune verdicts, private inferences, and missing boundaries",
+        "style": "strict structured review",
+    },
+}
+
+
+def prompt_profile(role_key: str, locale: str = "zh") -> dict[str, object]:
+    profile = dict(ROLE_PROFILES.get(role_key, ROLE_PROFILES["practitioner"]))
+    profile["role_key"] = role_key
+    profile["locale"] = locale
+    profile["language_instruction"] = _language_instruction(locale)
+    return profile
+
+
 def answer_rewrite_prompt(
     plan: AnswerPlan,
     *,
@@ -26,6 +73,7 @@ def answer_rewrite_prompt(
     return {
         "task": "answer_plan_rewrite",
         "locale": locale,
+        "prompt_profile": prompt_profile("answer_rewriter", locale),
         "tone": tone,
         "context": context,
         "output_schema": {"text": "string"},
@@ -46,22 +94,30 @@ def practitioner_answer_prompt(
     answer_plan: AnswerPlan,
     verified_answer_text: str,
     decision_report: dict[str, object] | None = None,
-    dynamic_portrait: dict[str, object] | None = None,
+    portrait_projection: dict[str, object] | None = None,
+    feature_state_model: dict[str, object] | None = None,
+    question_intent_model: dict[str, object] | None = None,
+    interaction_session: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
+    feature_state_model = feature_state_model or {}
+    question_intent_model = question_intent_model or {}
+    interaction_session = interaction_session or {}
     return {
         "task": "practitioner_answer",
         "locale": locale,
-        "role": "evidence_bounded_bazi_practitioner",
+        "prompt_profile": prompt_profile("practitioner", locale),
         "context": {
-            "chart": _compact_chart(chart_facts),
+            "bazi_metadata": _compact_bazi_metadata(chart_facts, time_context),
             "time_context": _compact_time_context(time_context),
             "selected_question": _compact_selected_question(selected_question),
+            "key_features": _compact_feature_states(feature_state_model),
             "rule_decisions": _compact_decisions(decision_report or {}),
-            "dynamic_portrait": _compact_dynamic_portrait(dynamic_portrait or {}),
+            "portrait_projection": _compact_portrait_projection(portrait_projection or {}),
+            "question_intent": _compact_selected_question_intent(question_intent_model),
+            "interaction_session": _compact_interaction_session(interaction_session),
             "knowledge_semantic_domains": _compact_knowledge_semantic_domains(knowledge_semantic_model),
-            "answer_plan": _compact_answer_plan(answer_plan),
-            "verified_answer_text": _clip(verified_answer_text, 2200),
+            "verified_fallback_answer": _clip(verified_answer_text, 1400),
         },
         "output_schema": {
             "text": "string",
@@ -72,15 +128,14 @@ def practitioner_answer_prompt(
             "boundary_notes": ["string"],
         },
         "instruction": (
-            "Return only one JSON object. Act as a professional Bazi practitioner, but use only the supplied verified context. "
-            "Write a useful answer for the selected question. Start directly with the reading, not with meta commentary. "
-            "Do not begin with phrases like 本次分析, 八字测算重点, 命理测算主线, 知识依据, 下一步, or 测算边界. "
-            "Do not use markdown headings or bold markers in the text field. "
-            "Use the provided rule decisions and dynamic portrait to answer the question, then briefly mention key evidence and boundaries. "
-            "Keep the text field under 650 Chinese characters; keep evidence_notes 1-3 items, next_questions 2-4 items, and boundary_notes 1-2 items. "
-            "Do not wrap JSON in markdown fences. "
-            "Do not create stems, branches, ten-gods, events, timing, private facts, or conclusions that are not present in the context. "
-            "Do not mention internal ids. Do not output fixed good/bad verdicts or guarantee outcomes."
+            "Return only one JSON object. Speak as a professional Bazi practitioner in plain everyday language. "
+            "Answer the user's selected question first, then briefly explain the Bazi evidence. "
+            "Use the supplied pillars, day master, visible/hidden ten-gods, key features, decisions, and portrait projection. "
+            "You may synthesize and prioritize the evidence like a practitioner, but you may not create new chart facts, activate rules, invent events, guarantee outcomes, or infer private life facts. "
+            "Keep text concise and natural; avoid internal ids, markdown headings, labels like 知识依据/下一步/测算边界, and heavy technical jargon. "
+            "Keep the text field under the locale-appropriate limit: zh/ko under 650 characters, en under 900 characters. "
+            "Keep evidence_notes 1-3 items, next_questions 2-4 items, boundary_notes 1-2 items. "
+            "Write in the requested locale exactly: zh=Chinese, en=English, ko=Korean."
         ),
     }
 
@@ -89,6 +144,7 @@ def intent_parse_prompt(user_text: str, *, locale: str = "zh") -> dict[str, obje
     return {
         "task": "intent_parse",
         "locale": locale,
+        "prompt_profile": prompt_profile("intent_router", locale),
         "user_text": user_text,
         "instruction": "Extract routing intent only. Do not create chart facts, rule activations, or conclusions.",
     }
@@ -104,6 +160,7 @@ def question_suggestion_prompt(
     return {
         "task": "question_suggestion",
         "locale": locale,
+        "prompt_profile": prompt_profile("question_designer", locale),
         "user_text": user_text,
         "feature_domains": sorted({feature.domain for feature in feature_layer.features}),
         "question_keys": [question.question_key for question in questions],
@@ -115,6 +172,7 @@ def feature_candidate_prompt(user_text: str, feature_layer: FeatureLayer, *, loc
     return {
         "task": "feature_candidate_proposal",
         "locale": locale,
+        "prompt_profile": prompt_profile("feature_assistant", locale),
         "user_text": user_text,
         "feature_domains": sorted({feature.domain for feature in feature_layer.features}),
         "instruction": "Propose candidate domains only. The feature compiler owns runtime features.",
@@ -130,6 +188,7 @@ def rule_extraction_prompt(
     return {
         "task": "rule_extraction_draft",
         "locale": locale,
+        "prompt_profile": prompt_profile("rule_drafter", locale),
         "reviewed_knowledge_unit": unit.to_dict(),
         "feature_hook_contracts": list(unit.feature_hooks),
         "question_hook_contracts": list(unit.question_hooks),
@@ -146,8 +205,24 @@ def safety_review_prompt(candidate_text: str, *, locale: str = "zh") -> dict[str
     return {
         "task": "safety_review",
         "locale": locale,
+        "prompt_profile": prompt_profile("safety_reviewer", locale),
         "candidate_text": candidate_text,
         "instruction": "Review for forbidden claims, internal identifiers, privacy leaks, and missing boundaries.",
+    }
+
+
+def _language_instruction(locale: str) -> str:
+    if str(locale).startswith("en"):
+        return "Write the final user-facing text in English. Keep Bazi terms readable and briefly explain specialized terms."
+    if str(locale).startswith("ko"):
+        return "사용자에게 보이는 답변은 한국어로 작성하고, 사주 용어는 쉽게 풀어 설명하세요."
+    return "用户可见回答必须使用中文白话文，命理术语要讲人话，不要堆内部标签。"
+
+
+def _compact_bazi_metadata(chart_facts: dict[str, object], time_context: dict[str, object]) -> dict[str, object]:
+    return {
+        **_compact_chart(chart_facts),
+        "time_layers": _compact_time_context(time_context).get("layers", []),
     }
 
 
@@ -176,6 +251,24 @@ def _compact_selected_question(selected_question: dict[str, object]) -> dict[str
         "measurement_topic": selected_question.get("measurement_topic", ""),
         "boundary": _clip(str(selected_question.get("boundary", "")), 220),
     }
+
+
+def _compact_feature_states(model: dict[str, object]) -> list[dict[str, object]]:
+    rows = []
+    source = model.get("priority_features") or model.get("states") or []
+    for row in source[:8]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "title": row.get("title", ""),
+                "domain": row.get("domain", ""),
+                "state": row.get("state", ""),
+                "priority": row.get("priority", 0),
+                "boundary": _clip(str(row.get("boundary", "")), 140),
+            }
+        )
+    return rows
 
 
 def _compact_decisions(report: dict[str, object]) -> list[dict[str, object]]:
@@ -228,20 +321,63 @@ def _compact_decision_knowledge_rules(decision: dict[str, object]) -> list[dict[
     return rows
 
 
-def _compact_dynamic_portrait(portrait: dict[str, object]) -> list[dict[str, object]]:
+def _compact_portrait_projection(projection: dict[str, object]) -> list[dict[str, object]]:
     rows = []
-    for row in (portrait.get("tags") or [])[:6]:
+    for row in (projection.get("axes") or [])[:6]:
         if not isinstance(row, dict):
             continue
         rows.append(
             {
                 "label": row.get("label", ""),
                 "domain": row.get("domain", ""),
-                "summary": _clip(str(row.get("summary", "")), 160),
-                "score": row.get("score", 0),
+                "calibration_state": _clip(str(row.get("calibration_state", "")), 160),
+                "evidence_boundaries": [
+                    _clip(str(item), 120)
+                    for item in (row.get("evidence_boundaries") or [])[:2]
+                    if item
+                ],
+                "score": row.get("peak_confidence", row.get("alignment_score", 0)),
             }
         )
     return rows
+
+
+def _compact_selected_question_intent(model: dict[str, object]) -> dict[str, object]:
+    binding = model.get("selected_question_intent", {})
+    if not isinstance(binding, dict):
+        return {}
+    return {
+        "question_key": binding.get("question_key", ""),
+        "title": binding.get("title", ""),
+        "domain": binding.get("domain", ""),
+        "primary_intent_type": binding.get("primary_intent_type", ""),
+        "intent_priority": binding.get("intent_priority", 0),
+    }
+
+
+def _compact_interaction_session(session: dict[str, object]) -> dict[str, object]:
+    return {
+        "selected_question_title": session.get("selected_question_title", ""),
+        "selected_domain": session.get("selected_domain", ""),
+        "signals": [
+            {
+                "signal_type": row.get("signal_type", ""),
+                "domain": row.get("domain", ""),
+                "effect": row.get("effect", row.get("primary_intent_type", "")),
+            }
+            for row in (session.get("signals") or [])[:4]
+            if isinstance(row, dict)
+        ],
+        "next_actions": [
+            {
+                "action_type": row.get("action_type", ""),
+                "domain": row.get("domain", ""),
+                "reason": row.get("reason", ""),
+            }
+            for row in (session.get("next_actions") or [])[:3]
+            if isinstance(row, dict)
+        ],
+    }
 
 
 def _compact_knowledge_semantic_domains(model: dict[str, object]) -> list[dict[str, object]]:

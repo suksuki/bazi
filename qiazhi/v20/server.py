@@ -61,8 +61,13 @@ from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.approval import build_first_wave_approval_preflight, build_knowledge_approval_preflight
 from v20.knowledge.catalog import build_knowledge_catalog
+from v20.knowledge.completion import build_knowledge_completion_report
 from v20.knowledge.coverage import build_knowledge_coverage_report
+from v20.knowledge.directory import build_knowledge_directory_manifest
+from v20.knowledge.directory_seeds import build_full_directory_seed_library
 from v20.knowledge.draft_import import build_knowledge_draft_import_preview
+from v20.knowledge.feature_model import build_bazi_feature_graph_model_contract
+from v20.knowledge.macro_dimensions import build_macro_dimension_catalog
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.review_packet import build_first_wave_review_packets, build_knowledge_review_packet
@@ -84,21 +89,25 @@ from v20.knowledge.rule_library import build_knowledge_rule_library, validate_kn
 from v20.decision.knowledge_bridge import build_knowledge_rule_review_overlay
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
-from v20.learning.decision_registry_review import (
-    build_decision_registry_review_report,
-    read_decision_registry_review_artifact,
+from v20.learning.decision_registry_iteration import (
+    build_decision_registry_iteration_report,
+    read_decision_registry_iteration_artifact,
 )
 from v20.learning.latent_factor_calibration import latent_factor_calibration_manifest
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
 from v20.learning.registries import registry_manifest
-from v20.learning.rule_promotion_gate import (
-    build_rule_promotion_gate_report,
-    build_rule_promotion_packet_summary,
+from v20.learning.rule_activation import (
+    build_rule_activation_report,
+    build_rule_activation_packet_summary,
 )
 from v20.learning.rule_subcondition_split import (
     build_rule_subcondition_split_report,
     read_rule_subcondition_split_artifact,
+)
+from v20.learning.rule_replay_eval import (
+    build_rule_replay_eval_report,
+    read_rule_replay_eval_artifact,
 )
 from v20.measurement.domain_alignment import bazi_alignment_manifest
 from v20.measurement.dimensions import bazi_dimension_manifest
@@ -112,6 +121,7 @@ from v20.ops.sync import sync_readiness_report
 from v20.profiles.migration import import_v19_profiles_to_postgres, v19_profile_migration_preview
 from v20.profiles.store import list_profiles_from_postgres, read_profile_from_postgres
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
+from v20.rules.catalog import build_bazi_rule_catalog
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 from v20.storage.local_jsonl import local_jsonl_store_from_env
 from v20.testing.matrix import build_test_coverage_matrix
@@ -329,6 +339,26 @@ def create_app() -> FastAPI:
     def knowledge_catalog() -> dict[str, object]:
         return build_knowledge_catalog()
 
+    @app.get("/api/v20/knowledge/directory")
+    def knowledge_directory() -> dict[str, object]:
+        return build_knowledge_directory_manifest()
+
+    @app.get("/api/v20/knowledge/directory-seeds")
+    def knowledge_directory_seeds() -> dict[str, object]:
+        return build_full_directory_seed_library()
+
+    @app.get("/api/v20/knowledge/completion")
+    def knowledge_completion() -> dict[str, object]:
+        return build_knowledge_completion_report()
+
+    @app.get("/api/v20/knowledge/macro-dimensions")
+    def knowledge_macro_dimensions() -> dict[str, object]:
+        return build_macro_dimension_catalog()
+
+    @app.get("/api/v20/knowledge/feature-graph-model")
+    def knowledge_feature_graph_model() -> dict[str, object]:
+        return build_bazi_feature_graph_model_contract()
+
     @app.get("/api/v20/knowledge/source-catalog")
     def knowledge_source_catalog() -> dict[str, object]:
         return build_knowledge_source_catalog()
@@ -445,6 +475,10 @@ def create_app() -> FastAPI:
     def knowledge_rule_review_overlay() -> dict[str, object]:
         return build_knowledge_rule_review_overlay()
 
+    @app.get("/api/v20/rules/catalog")
+    def rules_catalog() -> dict[str, object]:
+        return build_bazi_rule_catalog()
+
     @app.get("/api/v20/features/confidence-calibration")
     def feature_confidence_calibration() -> dict[str, object]:
         return confidence_calibration_manifest()
@@ -555,21 +589,21 @@ def create_app() -> FastAPI:
     def learning_policy_review_manifest() -> dict[str, object]:
         return policy_review_manifest()
 
-    @app.get("/api/v20/learning/rule-promotion-gate")
-    def learning_rule_promotion_gate(limit: int = 64) -> dict[str, object]:
-        return build_rule_promotion_gate_report(limit=limit)
+    @app.get("/api/v20/learning/rule-activation")
+    def learning_rule_activation(limit: int = 64) -> dict[str, object]:
+        return build_rule_activation_report(limit=limit)
 
-    @app.get("/api/v20/learning/rule-promotion-gate/{domain}")
-    def learning_rule_promotion_gate_domain(domain: str, limit: int = 64) -> dict[str, object]:
-        return build_rule_promotion_gate_report(domain, limit=limit)
+    @app.get("/api/v20/learning/rule-activation/{domain}")
+    def learning_rule_activation_domain(domain: str, limit: int = 64) -> dict[str, object]:
+        return build_rule_activation_report(domain, limit=limit)
 
-    @app.get("/api/v20/learning/rule-promotion-packets")
-    def learning_rule_promotion_packets(limit: int = 64) -> dict[str, object]:
-        return build_rule_promotion_packet_summary(limit=limit)
+    @app.get("/api/v20/learning/rule-activation-packets")
+    def learning_rule_activation_packets(limit: int = 64) -> dict[str, object]:
+        return build_rule_activation_packet_summary(limit=limit)
 
-    @app.get("/api/v20/learning/rule-promotion-packets/{domain}")
-    def learning_rule_promotion_packets_domain(domain: str, limit: int = 64) -> dict[str, object]:
-        return build_rule_promotion_packet_summary(domain, limit=limit)
+    @app.get("/api/v20/learning/rule-activation-packets/{domain}")
+    def learning_rule_activation_packets_domain(domain: str, limit: int = 64) -> dict[str, object]:
+        return build_rule_activation_packet_summary(domain, limit=limit)
 
     @app.get("/api/v20/learning/rule-subcondition-split")
     def learning_rule_subcondition_split(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
@@ -581,15 +615,25 @@ def create_app() -> FastAPI:
     def learning_rule_subcondition_split_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
         return build_rule_subcondition_split_report(domain, limit=limit, per_rule=per_rule)
 
-    @app.get("/api/v20/learning/decision-registry-review")
-    def learning_decision_registry_review(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
+    @app.get("/api/v20/learning/rule-replay-eval")
+    def learning_rule_replay_eval(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
         if status:
-            return read_decision_registry_review_artifact()
-        return build_decision_registry_review_report(limit=limit, per_rule=per_rule)
+            return read_rule_replay_eval_artifact()
+        return build_rule_replay_eval_report(limit=limit, per_rule=per_rule)
 
-    @app.get("/api/v20/learning/decision-registry-review/{domain}")
-    def learning_decision_registry_review_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
-        return build_decision_registry_review_report(domain, limit=limit, per_rule=per_rule)
+    @app.get("/api/v20/learning/rule-replay-eval/{domain}")
+    def learning_rule_replay_eval_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
+        return build_rule_replay_eval_report(domain, limit=limit, per_rule=per_rule)
+
+    @app.get("/api/v20/learning/decision-registry-iteration")
+    def learning_decision_registry_iteration(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
+        if status:
+            return read_decision_registry_iteration_artifact()
+        return build_decision_registry_iteration_report(limit=limit, per_rule=per_rule)
+
+    @app.get("/api/v20/learning/decision-registry-iteration/{domain}")
+    def learning_decision_registry_iteration_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
+        return build_decision_registry_iteration_report(domain, limit=limit, per_rule=per_rule)
 
     @app.get("/api/v20/intelligence/generation-manifest")
     def intelligence_generation_manifest() -> dict[str, object]:

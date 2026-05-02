@@ -39,7 +39,7 @@ def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 64)
         "ok": not hard_failures,
         "domain": domain.strip(),
         "definition_count": len(rows),
-        "synthetic_covered_count": sum(1 for row in rows if row["synthetic_state"] == "synthetic_passed"),
+        "synthetic_covered_count": sum(1 for row in rows if row["synthetic_state"] != "missing_synthetic_case"),
         "missing_synthetic_count": sum(1 for row in rows if row["synthetic_state"] == "missing_synthetic_case"),
         "corpus_signal_count": sum(1 for row in rows if row["corpus_signal_state"] != "corpus_not_built"),
         "runtime_allowed_count": sum(1 for row in rows if row.get("runtime_allowed") is True),

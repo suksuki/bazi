@@ -14,8 +14,12 @@ ChartInput
 -> KnowledgeSemanticModel
 -> RuleHit[]
 -> RuleDecision[]
--> DynamicPortrait
--> Bazi measurement QuestionCandidate[] from dynamic decisions
+-> DefeasibleDecisionModel
+-> PortraitProjection / TopicProjection
+-> FeatureStateModel
+-> QuestionIntentModel
+-> InteractionSession
+-> Bazi measurement QuestionCandidate[] from decision states
 -> Professional domain reading path
 -> Reviewed knowledge evidence support
 -> Synthetic rule collision validation/training gate
@@ -37,22 +41,22 @@ Initial boundaries:
 
 - Core facts are deterministic and typed.
 - Feature Spine is an intermediate evidence contract, not the user-facing intelligence layer.
-- Runtime user-facing intelligence is the Dynamic Decision Spine: RuleHit -> RuleDecision -> DynamicPortrait -> Questions -> LLM answer.
+- Runtime user-facing intelligence is the Bazi Feature Graph mainline: RuleHit -> RuleDecision -> DefeasibleDecisionModel -> PortraitProjection -> QuestionIntent -> InteractionSession -> LLM answer.
 - Macro features and 518K corpus labels can support offline training, but they must not become runtime portrait truth.
 - Knowledge is reviewed evidence context, not rule truth.
 - Feature Discovery is no longer the user measurement driver. It may remain as an offline/admin experiment for coverage and training signals.
 - Knowledge Semantic Model turns reviewed knowledge into feature hooks, question hooks, portrait label candidates, interaction keywords, and rule-atom signals.
-- Dynamic Portrait turns current-chart rule decisions into user-facing命理画像标签.
+- Portrait Projection turns current-chart decision states into user-facing命理主题画像轴.
 - Recommended questions and answers are driven by dynamic rule decisions, with features and knowledge as evidence.
 - Rules, portrait axes, and recommended questions must pass Bazi-domain alignment before ranking or display.
 - Domain projections are the anti-corruption layer between features and applied topics.
 - Professional answer paths explain wealth, career, relationship, health, time, ten-god, and useful-god questions from current-chart rule decisions, compiled evidence, and reviewed knowledge boundaries.
-- Old feature-discovery and shadow-rule-candidate experiments are offline/lab-only. They must not drive the user measurement page, dynamic portrait, recommended questions, or LLM practitioner context.
+- Old feature-discovery and shadow-rule-candidate experiments are offline/lab-only. They must not drive the user measurement page, portrait projection, recommended questions, or LLM practitioner context.
 - Rule and decision learning are synthetic-case and practitioner-calibration driven. The 518K corpus supplies coverage, similarity, and offline priors, not runtime portrait truth.
 - Rule and portrait batches can be generated and validated by script before any promotion discussion.
-- Dynamic decision training batches validate whether a current chart can produce usable rule decisions, dynamic portrait tags, human-facing recommended questions, and practitioner controls before any parameter promotion.
+- Dynamic decision training batches validate whether a current chart can produce usable rule decisions, portrait projection axes, human-facing recommended questions, and practitioner controls before any parameter promotion.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
-- LLM can act as a practitioner-style answer composer only after RuleDecision, DynamicPortrait, KnowledgeSemanticModel, and AnswerPlan have prepared verified context.
+- LLM can act as a practitioner-style answer composer only after RuleDecision, PortraitProjection, KnowledgeSemanticModel, and AnswerPlan have prepared verified context.
 - Rule and question ranking proposals are trained offline by scripts/admin review, then promoted only through synthetic validation and a decision registry record.
 - Learning, LLM, corpus, and ranking systems are assistive and governed.
 - Postgres is the persistent authority; Redis is ephemeral cache/queue/lock state.
@@ -63,7 +67,7 @@ Primary V20 modules:
 
 - `core`: typed chart facts, ten-god metadata, relations, and strength evidence.
 - `features`: the common feature spine used by questions, knowledge, answers, validation, and learning.
-- `decision`: runtime rule hits, rule decisions, dynamic portrait tags, practitioner controls, and decision validation.
+- `decision`: runtime rule hits, rule decisions, defeasible decision states, practitioner controls, portrait projection, and decision validation.
 - `intelligence`: offline/admin feature discovery, training-signal ingestion, and intelligence generation manifests.
 - `knowledge`: reviewed units, feature-aligned retrieval, audit, and coverage checks.
 - `graph`: chart graph and rule-path candidates.
@@ -97,8 +101,8 @@ UI boundary:
 - `v20/scripts/import_calibration_postgres.py --ledger practitioner_calibration_ledger` dry-runs local calibration ledger import; add `--apply` only after `V20_DATABASE_URL` is configured and backups are ready.
 - `v20/scripts/run_training_iteration.py --write --progress` runs the current script-only iteration loop and writes local artifacts.
 - `v20/scripts/run_knowledge_rule_library.py --summary` shows the current knowledge-authored shadow rule definitions, portrait outputs, question outputs, and validation state.
-- `v20/scripts/run_knowledge_rule_validation.py --summary` checks those shadow rules against synthetic coverage and 518K corpus priors, then lists the next review action per rule.
-- `v20/scripts/run_rule_promotion_gate.py --summary` turns shadow-rule validation into review packets so humans review packets, not raw rules.
+- `v20/scripts/run_knowledge_rule_validation.py --summary` checks those active rules against synthetic coverage and 518K corpus priors, then lists the next review action per rule.
+- `v20/scripts/run_rule_activation.py --summary` turns active-rule iteration into review packets so humans review packets, not raw rules.
 - Heavy corpus work stays manual: `v20/scripts/run_full_precompute.py --progress --limit N --status-every M`.
 - After corpus precompute, `v20/scripts/build_corpus_artifacts.py --run-id RUN --progress --no-sqlite` builds coverage/training artifacts without creating the disposable SQLite cache; omit `--no-sqlite` only when you want a local fallback similarity index before Postgres import.
 

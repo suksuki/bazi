@@ -28,11 +28,11 @@ const UI_TEXT = {
     nav_profiles: "档案",
     nav_measure: "测算",
     chart_title: "命盘结构",
-    features_title: "动态裁决主线",
-    portrait_title: "动态命理画像",
-    questions_title: "推荐问题",
+    features_title: "八字特征状态",
+    portrait_title: "主题投射画像",
+    questions_title: "智能问题",
     answer_title: "八字专业回复",
-    evidence_title: "证据与系统状态",
+    evidence_title: "证据锚点",
     feedback_title: "反馈校准",
     run: "开始测算",
     running: "测算中",
@@ -43,11 +43,11 @@ const UI_TEXT = {
     nav_profiles: "Profiles",
     nav_measure: "Reading",
     chart_title: "Chart Structure",
-    features_title: "Dynamic Decision Spine",
-    portrait_title: "Dynamic Bazi Portrait",
-    questions_title: "Recommended Questions",
+    features_title: "Bazi Feature States",
+    portrait_title: "Topic Projection",
+    questions_title: "Smart Questions",
     answer_title: "Professional Bazi Reply",
-    evidence_title: "Evidence and System",
+    evidence_title: "Evidence Anchors",
     feedback_title: "Feedback Calibration",
     run: "Run Reading",
     running: "Reading",
@@ -58,11 +58,11 @@ const UI_TEXT = {
     nav_profiles: "프로필",
     nav_measure: "분석",
     chart_title: "명식 구조",
-    features_title: "동적 판정 축",
-    portrait_title: "동적 명리 프로필",
-    questions_title: "추천 질문",
+    features_title: "사주 특징 상태",
+    portrait_title: "주제 투사",
+    questions_title: "지능형 질문",
     answer_title: "전문 사주 답변",
-    evidence_title: "근거와 시스템",
+    evidence_title: "근거 앵커",
     feedback_title: "피드백 보정",
     run: "분석 시작",
     running: "분석 중",
@@ -153,32 +153,51 @@ const renderRuntime = (result) => {
   const chart = result.chart_facts || {};
   const featureLayer = result.feature_layer || {};
   const decisionReport = result.decision_report || {};
-  const dynamicPortrait = result.dynamic_portrait || decisionReport.dynamic_portrait || {};
+  const featureStateModel = result.feature_state_model || {};
+  const questionIntentModel = result.question_intent_model || {};
+  const interactionSession = result.interaction_session || {};
+  const portraitProjection = decisionReport.portrait_projection || {};
   const role = result.role?.role_key || measurementRole(roleSelect.value);
 
   document.body.dataset.role = role;
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
   setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
-  setText("#featureCount", decisionReport.decision_count ?? featureLayer.feature_count ?? 0);
-  setText("#questionCount", (result.questions || []).length);
+  setText("#featureCount", featureStateModel.feature_state_count ?? decisionReport.decision_count ?? featureLayer.feature_count ?? 0);
+  setText("#questionCount", questionIntentModel.intent_count ?? (result.questions || []).length);
   setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
-  setText("#coreCapacity", result.core_inference?.day_master_capacity || "core");
+  setText("#coreCapacity", featureStateModel.algorithm || result.core_inference?.day_master_capacity || "fusion");
+  setText("#intentSummary", intentSummary(questionIntentModel));
+  setText("#interactionSummary", `${interactionSession.signal_count ?? 0} signals`);
   setText("#dayMasterBadge", `日主 ${chart.day_master || "-"}`);
   setText("#llmStatus", llmStatusLabel(result));
   setText("#answerText", result.answer_text || "");
 
   renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
-  renderFeatures(decisionReport.mainlines || decisionReport.decisions || featureLayer.macro_features || featureLayer.features || []);
-  renderPortrait(dynamicPortrait.tags || []);
+  renderFeatures(
+    featureStateModel.priority_features ||
+      featureStateModel.states ||
+      decisionReport.mainlines ||
+      decisionReport.decisions ||
+      featureLayer.macro_features ||
+      featureLayer.features ||
+      []
+  );
+  renderPortrait(portraitProjection.axes || []);
   renderPractitionerCalibration(decisionReport.practitioner_controls || [], result.input_id || "", role);
   renderLatentCalibration(result.input_id || "", role);
-  renderQuestions(result.questions || [], selected.question_key || "");
-  renderChatQuestions(result.questions || [], selected.question_key || "");
+  renderQuestions(result.questions || [], selected.question_key || "", questionIntentModel);
   renderQuestionSelect(result.questions || [], selected.question_key || "");
+  renderInteractionSignals(interactionSession);
   renderEvidence(
     result.knowledge_refs || [],
-    result.decision_validation || {}
+    result.decision_validation || {},
+    {
+      featureStateModel,
+      questionIntentModel,
+      interactionSession,
+      decisionModel: decisionReport.defeasible_decision_model || {},
+    }
   );
 };
 
@@ -188,7 +207,7 @@ const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") =
   button.textContent = busy ? text.running : text.run;
   chatButton.disabled = busy;
   chatButton.textContent = busy ? (llmMode === "practitioner" ? "生成中" : "测算中") : "发送";
-  document.querySelectorAll(".chat-question-chip, .question-row").forEach((node) => {
+  document.querySelectorAll(".question-row").forEach((node) => {
     node.disabled = busy;
   });
   if (busy) setText("#llmStatus", llmMode === "practitioner" ? "llm practitioner" : "测算中");
@@ -232,18 +251,39 @@ const renderFeatures = (features) => {
   features.slice(0, 10).forEach((feature) => {
     const card = el("div", "feature-card");
     card.dataset.domain = feature.domain || "general";
+    card.dataset.state = feature.state || feature.status || "available";
     card.append(el("strong", "", feature.label || feature.title || feature.feature_id || feature.macro_id || "feature"));
-    const score = feature.score ?? feature.discovery_score ?? feature.peak_confidence ?? feature.confidence ?? "-";
+    const score = feature.priority ?? feature.score ?? feature.discovery_score ?? feature.peak_confidence ?? feature.confidence ?? "-";
     const label = feature.domain_label || feature.domain || "domain";
-    const role = feature.role ? ` · ${feature.role}` : feature.priority ? ` · priority ${feature.priority}` : "";
-    card.append(el("span", "", `${label} · score ${score}${role}`));
-    if (feature.support) card.append(el("p", "", feature.support.slice(0, 3).join(" / ")));
+    const stateLabel = featureStateLabel(feature.state || feature.status || feature.readiness);
+    card.append(el("span", "", `${label} · ${stateLabel} · score ${score}`));
+    const links = [
+      ...(feature.decision_keys || []),
+      ...(feature.mainline_keys || []),
+      ...(feature.portrait_axis_ids || []),
+    ].filter(Boolean);
+    if (links.length) card.append(el("p", "", links.slice(0, 3).join(" / ")));
+    else if (feature.support) card.append(el("p", "", feature.support.slice(0, 3).join(" / ")));
     else if (feature.reason) card.append(el("p", "", feature.reason));
     else if (feature.summary) card.append(el("p", "", feature.summary));
-    if (feature.question_seed) card.append(el("p", "feature-question-seed", feature.question_seed));
+    const hook = (feature.question_hooks || [feature.question_seed]).filter(Boolean)[0];
+    if (hook) card.append(el("p", "feature-question-seed", hook));
     root.append(card);
   });
 };
+
+const featureStateLabel = (state) => ({
+  active: "已入主链",
+  available: "可用",
+  evidence_gap: "补证",
+  requires_review: "复核",
+  blocked_or_countered: "被反证",
+  confirmed: "成立",
+  candidate: "候选",
+  weak_candidate: "弱候选",
+  volatile: "岁运引动",
+  mixed: "成而不纯",
+}[state] || state || "状态");
 
 const renderPortrait = (axes) => {
   const root = document.querySelector("#portraitAxes");
@@ -255,7 +295,7 @@ const renderPortrait = (axes) => {
   axes.slice(0, 8).forEach((axis) => {
     const row = el("div", "axis-row");
     row.dataset.domain = axis.domain || "general";
-    const score = axis.score ?? axis.intelligence_score ?? axis.peak_confidence ?? 0;
+    const score = axis.score ?? axis.intelligence_score ?? axis.peak_confidence ?? axis.alignment_score ?? 0;
     const temperature = portraitTemperature(score);
     row.dataset.temperature = temperature.key;
     const title = el("div", "axis-title-line");
@@ -263,9 +303,11 @@ const renderPortrait = (axes) => {
     title.append(el("span", "axis-tag", portraitDomainLabel(axis.domain)));
     title.append(el("span", `axis-temp ${temperature.key}`, temperature.label));
     row.append(title);
-    row.append(el("span", "", axis.summary || `${axis.domain || "命理"} · score ${score}`));
+    row.append(el("span", "", axis.summary || axis.calibration_state || `${axis.domain || "命理"} · score ${score}`));
     const seeds = (axis.question_seeds || []).filter(Boolean).slice(0, 2);
-    if (seeds.length) row.append(el("p", "", seeds.join(" / ")));
+    const boundaries = (axis.evidence_boundaries || []).filter(Boolean).slice(0, 2);
+    if (boundaries.length) row.append(el("p", "", boundaries.join(" / ")));
+    else if (seeds.length) row.append(el("p", "", seeds.join(" / ")));
     const meter = el("i");
     meter.style.width = `${Math.round(Number(score || 0) * 100)}%`;
     const bar = el("div", "meter");
@@ -458,36 +500,54 @@ const upsertLatentAnswer = (answer) => {
   ];
 };
 
-const renderQuestions = (questions, selectedKey) => {
+const renderQuestions = (questions, selectedKey, questionIntentModel = {}) => {
   const root = document.querySelector("#questionList");
   clear(root);
   if (!questions.length) {
     root.append(el("div", "empty-note", "确认四柱后会生成建议问题。"));
     return;
   }
+  const bindingByKey = questionBindingByKey(questionIntentModel);
   questions.slice(0, 5).forEach((question) => {
-    root.append(questionButton(question, selectedKey, "question-row"));
+    root.append(questionButton(question, selectedKey, "question-row", bindingByKey[question.question_key] || {}));
   });
 };
 
-const renderChatQuestions = (questions, selectedKey) => {
-  const root = document.querySelector("#chatQuestionList");
-  clear(root);
-  questions.slice(0, 5).forEach((question) => {
-    root.append(questionButton(question, selectedKey, "chat-question-chip"));
-  });
-};
-
-const questionButton = (question, selectedKey, className) => {
+const questionButton = (question, selectedKey, className, binding = {}) => {
   const button = el("button", `${className}${question.question_key === selectedKey ? " active" : ""}`);
   button.type = "button";
   button.append(el("strong", "", question.title || question.question_key));
   if (className === "question-row") {
-    button.append(el("span", "", question.measurement_topic || question.domain || "命理测算"));
+    const intent = intentTypeLabel(binding.primary_intent_type);
+    const priority = binding.intent_priority ? ` · ${Number(binding.intent_priority).toFixed(2)}` : "";
+    button.append(el("span", "", `${question.measurement_topic || question.domain || "命理测算"} · ${intent}${priority}`));
   }
   button.addEventListener("click", () => runQuestion(question));
   return button;
 };
+
+const questionBindingByKey = (questionIntentModel = {}) => {
+  const rows = questionIntentModel.question_bindings || [];
+  return Object.fromEntries(rows.map((row) => [row.question_key, row]));
+};
+
+const intentSummary = (questionIntentModel = {}) => {
+  const counts = questionIntentModel.intent_type_counts || {};
+  const top = Object.entries(counts).sort((a, b) => Number(b[1]) - Number(a[1]))[0];
+  return top ? `${intentTypeLabel(top[0])} ${top[1]}` : "intent";
+};
+
+const intentTypeLabel = (intentType) => ({
+  confirm_structure: "确认结构",
+  explore_candidate: "展开候选",
+  collect_evidence: "补齐证据",
+  resolve_mixed_state: "裁决混合",
+  inspect_timing_trigger: "岁运引动",
+  ask_practitioner_review: "命理师复核",
+  explain_boundary: "边界说明",
+  explore_structure: "结构追问",
+  suppress_output: "不输出",
+}[intentType] || intentType || "智能意图");
 
 const runQuestion = (question) => {
   const title = question.title || question.question_key || "";
@@ -513,7 +573,44 @@ const renderQuestionSelect = (questions, selectedKey) => {
   questionSelect.value = current;
 };
 
-const renderEvidence = (refs, decisionValidation = {}) => {
+const renderInteractionSignals = (session = {}) => {
+  const root = document.querySelector("#interactionSignals");
+  if (!root) return;
+  clear(root);
+  const signals = session.signals || [];
+  const actions = session.next_actions || [];
+  if (!signals.length && !actions.length) {
+    root.append(el("div", "empty-note", "当前只有选中问题作为会话焦点。"));
+    return;
+  }
+  signals.slice(0, 4).forEach((signal) => {
+    const row = el("div", "signal-row");
+    row.dataset.type = signal.signal_type || "";
+    row.append(el("strong", "", signalTypeLabel(signal.signal_type)));
+    row.append(el("span", "", `${portraitDomainLabel(signal.domain)} · ${signal.effect || signal.primary_intent_type || "focus"} · ${signal.strength ?? "-"}`));
+    root.append(row);
+  });
+  actions.slice(0, 3).forEach((action) => {
+    const row = el("div", "signal-row action");
+    row.append(el("strong", "", actionTypeLabel(action.action_type)));
+    row.append(el("span", "", `${portraitDomainLabel(action.domain)} · ${action.reason || "next"}`));
+    root.append(row);
+  });
+};
+
+const signalTypeLabel = (type) => ({
+  selected_question: "当前问题",
+  practitioner_control: "命理师校准",
+  latent_event_answer: "命主反馈",
+}[type] || type || "会话信号");
+
+const actionTypeLabel = (type) => ({
+  answer_selected_question: "生成回答",
+  rerank_followup_questions: "重排追问",
+  refresh_evidence_pack: "刷新证据",
+}[type] || type || "下一步");
+
+const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
   const root = document.querySelector("#evidenceList");
   clear(root);
   refs.slice(0, 5).forEach((ref) => {
@@ -528,7 +625,23 @@ const renderEvidence = (refs, decisionValidation = {}) => {
     row.append(el("span", "", `${decisionValidation.status} · ${decisionValidation.decision_count ?? 0} decisions`));
     root.append(row);
   }
-  if (!refs.length && !decisionValidation.status) root.append(el("div", "empty-note", "暂无可展示证据。"));
+  const featureStateModel = runtimeModels.featureStateModel || {};
+  const questionIntentModel = runtimeModels.questionIntentModel || {};
+  const interactionSession = runtimeModels.interactionSession || {};
+  const decisionModel = runtimeModels.decisionModel || {};
+  [
+    ["特征状态模型", featureStateModel.status, `${featureStateModel.feature_state_count ?? 0} states`],
+    ["问题意图模型", questionIntentModel.status, `${questionIntentModel.intent_count ?? 0} intents`],
+    ["交互会话模型", interactionSession.status, `${interactionSession.signal_count ?? 0} signals`],
+    ["可反证裁决模型", decisionModel.status, `${decisionModel.argument_count ?? 0} arguments`],
+  ].forEach(([title, status, detail]) => {
+    if (!status) return;
+    const row = el("div", "evidence-row model");
+    row.append(el("strong", "", title));
+    row.append(el("span", "", `${status} · ${detail}`));
+    root.append(row);
+  });
+  if (!refs.length && !decisionValidation.status && !featureStateModel.status) root.append(el("div", "empty-note", "暂无可展示证据。"));
 };
 
 const appendChatTurn = (questionText, source) => {
@@ -722,9 +835,9 @@ const renderInitialPanels = () => {
   renderPortrait([]);
   renderPractitionerCalibration([], "", measurementRole(roleSelect.value));
   renderLatentCalibration("", measurementRole(roleSelect.value));
-  renderQuestions([], "");
-  renderChatQuestions([], "");
-  renderEvidence([], {});
+  renderQuestions([], "", {});
+  renderInteractionSignals({});
+  renderEvidence([], {}, {});
 };
 
 const loadActiveProfile = async () => {

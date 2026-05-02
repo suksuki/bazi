@@ -12,8 +12,13 @@ from v20.features.calibration import confidence_calibration_manifest
 from v20.interaction.question_ranker import question_ranking_manifest
 from v20.knowledge.approval import build_first_wave_approval_preflight
 from v20.knowledge.catalog import build_knowledge_catalog
+from v20.knowledge.completion import build_knowledge_completion_report
 from v20.knowledge.coverage import build_knowledge_coverage_report
+from v20.knowledge.directory import build_knowledge_directory_manifest
+from v20.knowledge.directory_seeds import build_full_directory_seed_library
 from v20.knowledge.draft_import import build_knowledge_draft_import_preview
+from v20.knowledge.feature_model import build_bazi_feature_graph_model_contract
+from v20.knowledge.macro_dimensions import build_macro_dimension_catalog
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.ranking import knowledge_retrieval_manifest
 from v20.knowledge.release import build_knowledge_release_manifest
@@ -30,17 +35,19 @@ from v20.knowledge.rule_library import build_knowledge_rule_library
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposal_preflight, build_first_wave_rule_proposals
 from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
-from v20.learning.decision_registry_review import build_decision_registry_review_report
+from v20.learning.decision_registry_iteration import build_decision_registry_iteration_report
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest
 from v20.learning.registries import registry_manifest
-from v20.learning.rule_promotion_gate import build_rule_promotion_gate_report
+from v20.learning.rule_activation import build_rule_activation_report
+from v20.learning.rule_replay_eval import build_rule_replay_eval_report
 from v20.learning.rule_subcondition_split import build_rule_subcondition_split_report
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
 from v20.ops.profiles import validate_runtime_config
 from v20.ops.sync import sync_readiness_report
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
+from v20.rules.catalog import build_bazi_rule_catalog
 from v20.storage.postgres_schema import build_postgres_schema_contract
 from v20.testing.matrix import build_test_coverage_matrix
 from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
@@ -52,6 +59,11 @@ def system_status_report() -> dict[str, object]:
     storage = build_postgres_schema_contract()
     redis = redis_contract_manifest()
     knowledge_catalog = build_knowledge_catalog()
+    knowledge_completion = build_knowledge_completion_report()
+    knowledge_directory = build_knowledge_directory_manifest()
+    knowledge_directory_seeds = build_full_directory_seed_library()
+    macro_dimensions = build_macro_dimension_catalog()
+    feature_graph_model = build_bazi_feature_graph_model_contract()
     knowledge_sources = build_knowledge_source_catalog()
     knowledge_coverage = build_knowledge_coverage_report()
     knowledge_release = build_knowledge_release_manifest()
@@ -71,14 +83,16 @@ def system_status_report() -> dict[str, object]:
     knowledge_rule_library_full = build_knowledge_rule_library()
     knowledge_rule_validation = build_knowledge_rule_validation_report(limit=12)
     knowledge_rule_validation_full = build_knowledge_rule_validation_report()
+    bazi_rule_catalog = build_bazi_rule_catalog()
     dependencies = dependency_readiness_report()
     sync = sync_readiness_report(config)
     matrix = build_test_coverage_matrix()
     evolution = build_evolution_dry_run_plan()
     learning_run_plan = build_learning_run_plan()
-    rule_promotion_gate = build_rule_promotion_gate_report(limit=12)
+    rule_activation = build_rule_activation_report(limit=12)
     rule_subcondition_split = build_rule_subcondition_split_report(limit=12, per_rule=3)
-    decision_registry_review = build_decision_registry_review_report(limit=12, per_rule=3)
+    rule_replay_eval = build_rule_replay_eval_report(limit=12, per_rule=3)
+    decision_registry_iteration = build_decision_registry_iteration_report(limit=12, per_rule=3)
     precompute_manifest = build_full_precompute_manifest()
     corpus_artifacts = read_corpus_artifact_status()
     corpus_summary = read_corpus_coverage_summary()
@@ -94,6 +108,22 @@ def system_status_report() -> dict[str, object]:
         "storage_table_count": storage.to_dict()["table_count"],
         "redis_validation": validate_redis_contract(redis),
         "knowledge_catalog_status": knowledge_catalog["status"],
+        "knowledge_completion_status": knowledge_completion["status"],
+        "knowledge_completion_percent": knowledge_completion["completion_percent"],
+        "knowledge_mainline_complete": knowledge_completion["mainline_complete"],
+        "knowledge_mainline_blocker_count": len(knowledge_completion["mainline_blockers"]),
+        "knowledge_directory_status": knowledge_directory["status"],
+        "knowledge_directory_node_count": knowledge_directory["node_count"],
+        "knowledge_directory_p0_node_count": knowledge_directory["p0_node_count"],
+        "knowledge_full_directory_seed_status": knowledge_directory_seeds["status"],
+        "knowledge_full_directory_content_status": knowledge_directory_seeds["full_content_status"],
+        "knowledge_full_directory_seed_count": knowledge_directory_seeds["seed_count"],
+        "knowledge_full_directory_seed_node_count": knowledge_directory_seeds["directory_node_count"],
+        "knowledge_macro_dimension_count": macro_dimensions["dimension_count"],
+        "knowledge_macro_dimensions": macro_dimensions["current_primary_dimensions"],
+        "knowledge_feature_graph_model_status": feature_graph_model["status"],
+        "knowledge_feature_graph_topic_projection_count": feature_graph_model["topic_projection_count"],
+        "knowledge_feature_graph_decision_state_count": len(feature_graph_model["decision_state_keys"]),
         "knowledge_unit_count": knowledge_catalog["unit_count"],
         "knowledge_source_catalog_status": knowledge_sources["status"],
         "knowledge_coverage_status": knowledge_coverage["status"],
@@ -130,6 +160,13 @@ def system_status_report() -> dict[str, object]:
         "knowledge_rule_validation_full_synthetic_covered_count": knowledge_rule_validation_full["synthetic_covered_count"],
         "knowledge_rule_validation_missing_synthetic_count": knowledge_rule_validation["missing_synthetic_count"],
         "knowledge_rule_validation_full_missing_synthetic_count": knowledge_rule_validation_full["missing_synthetic_count"],
+        "bazi_rule_catalog_status": bazi_rule_catalog["status"],
+        "bazi_rule_catalog_rule_count": bazi_rule_catalog["rule_count"],
+        "bazi_rule_catalog_node_count": bazi_rule_catalog["directory_node_count"],
+        "bazi_rule_catalog_runtime_ready_count": bazi_rule_catalog["runtime_ready_count"],
+        "bazi_rule_catalog_runtime_allowed_count": bazi_rule_catalog["runtime_allowed_count"],
+        "bazi_rule_catalog_blocked_count": bazi_rule_catalog["blocked_count"],
+        "bazi_rule_catalog_archive_only_count": bazi_rule_catalog["archive_only_count"],
         "full_precompute_status": precompute_manifest["status"],
         "full_precompute_estimated_minutes": precompute_manifest["cost_estimate"]["estimated_total_minutes"],
         "full_precompute_runtime_role": "offline_structure_coverage_baseline",
@@ -143,21 +180,27 @@ def system_status_report() -> dict[str, object]:
         "learning_status": evolution["status"],
         "learning_run_plan_status": learning_run_plan["status"],
         "learning_target_case_count": learning_run_plan["target_case_count"],
-        "rule_promotion_gate_status": rule_promotion_gate["status"],
-        "rule_promotion_packet_count": rule_promotion_gate["packet_count"],
-        "rule_promotion_shadow_weight_candidate_count": rule_promotion_gate["shadow_weight_candidate_count"],
-        "rule_promotion_runtime_candidate_count": rule_promotion_gate["runtime_promotion_candidate_count"],
-        "rule_promotion_blocked_count": rule_promotion_gate["blocked_count"],
-        "rule_promotion_needs_subcondition_count": rule_promotion_gate["needs_subcondition_count"],
-        "rule_promotion_subcondition_review_ready_count": rule_promotion_gate["subcondition_review_ready_count"],
+        "rule_activation_status": rule_activation["status"],
+        "rule_activation_packet_count": rule_activation["packet_count"],
+        "rule_activation_active_weight_candidate_count": rule_activation["active_weight_candidate_count"],
+        "rule_activation_runtime_candidate_count": rule_activation["runtime_activation_candidate_count"],
+        "rule_activation_blocked_count": rule_activation["blocked_count"],
+        "rule_activation_needs_subcondition_count": rule_activation["needs_subcondition_count"],
+        "rule_activation_subcondition_active_ready_count": rule_activation["subcondition_active_ready_count"],
         "rule_subcondition_split_status": rule_subcondition_split["status"],
         "rule_subcondition_split_packet_count": rule_subcondition_split["packet_count"],
         "rule_subcondition_split_subcondition_count": rule_subcondition_split["subcondition_count"],
         "rule_subcondition_split_quality_status": rule_subcondition_split["quality_status"],
-        "decision_registry_review_status": decision_registry_review["status"],
-        "decision_registry_review_record_count": decision_registry_review["decision_record_count"],
-        "decision_registry_review_batch_count": decision_registry_review["batch_review_candidate_count"],
-        "decision_registry_review_runtime_activation_count": decision_registry_review["runtime_activation_count"],
+        "rule_replay_eval_status": rule_replay_eval["status"],
+        "rule_replay_eval_ready_count": rule_replay_eval["replay_eval_ready_count"],
+        "rule_replay_eval_evaluated_packet_count": rule_replay_eval["evaluated_packet_count"],
+        "rule_replay_eval_portrait_mapping_ok_count": rule_replay_eval["portrait_mapping_ok_count"],
+        "rule_replay_eval_decision_domain_ok_count": rule_replay_eval["decision_domain_ok_count"],
+        "rule_replay_eval_runtime_activation_count": rule_replay_eval["runtime_activation_count"],
+        "decision_registry_iteration_status": decision_registry_iteration["status"],
+        "decision_registry_iteration_record_count": decision_registry_iteration["decision_record_count"],
+        "decision_registry_iteration_batch_count": decision_registry_iteration["batch_iteration_signal_count"],
+        "decision_registry_iteration_runtime_activation_count": decision_registry_iteration["runtime_activation_count"],
         "policy_surfaces": {
             "question_ranking": question_ranking_manifest()["version"],
             "knowledge_retrieval": knowledge_retrieval_manifest()["version"],

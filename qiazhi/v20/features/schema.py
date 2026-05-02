@@ -65,6 +65,7 @@ class FeatureLayer:
     version: str
     features: tuple[BaziFeature, ...]
     macro_features: tuple[MacroFeature, ...] = field(default_factory=tuple)
+    discovery_trace: dict[str, Any] = field(default_factory=dict)
     status: str = "ready"
     guardrails: tuple[str, ...] = (
         "BAZI_FEATURE_SPINE",
@@ -81,5 +82,6 @@ class FeatureLayer:
             "macro_feature_count": len(self.macro_features),
             "macro_features": [row.to_dict() for row in self.macro_features],
             "features": [row.to_dict() for row in self.features],
+            "discovery_trace": self.discovery_trace,
             "guardrails": list(self.guardrails),
         }

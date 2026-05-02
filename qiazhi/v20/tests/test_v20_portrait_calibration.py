@@ -178,16 +178,17 @@ def test_v20_practitioner_calibration_endpoints_are_guarded(monkeypatch, tmp_pat
     assert invalid.status_code == 400
 
 
-def test_v20_dynamic_portrait_uses_decisions_as_runtime_source() -> None:
+def test_v20_portrait_projection_uses_decision_states_as_runtime_source() -> None:
     result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="portrait.knowledge")
-    portrait = result["dynamic_portrait"]
-    strength_tag = next(row for row in portrait["tags"] if row["domain"] == "strength")
+    projection = result["decision_report"]["portrait_projection"]
+    strength_axis = next(row for row in projection["axes"] if row["domain"] == "strength")
 
-    assert portrait["source"] == "runtime_rule_decisions"
-    assert portrait["tag_count"] >= 1
-    assert strength_tag["source_decision_keys"]
-    assert "PORTRAIT_FROM_RULE_DECISION_ONLY" in strength_tag["guardrails"]
-    assert "NO_STATIC_518K_PORTRAIT_TRUTH" in strength_tag["guardrails"]
+    assert "dynamic_portrait" not in result
+    assert projection["axis_source"] == "DecisionState+MainlineDecision+TopicProjection"
+    assert projection["axis_count"] >= 1
+    assert strength_axis["feature_ids"]
+    assert "PORTRAIT_IS_DECISION_STATE_PROJECTION" in projection["guardrails"]
+    assert "NO_PORTRAIT_DRIVEN_FORTUNE_VERDICT" in projection["guardrails"]
 
 
 def test_v20_portrait_ontology_endpoint_is_contract_only() -> None:

@@ -17,7 +17,7 @@ from v20.knowledge.rule_library import (  # noqa: E402
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Inspect the V20 knowledge-authored shadow rule library.")
+    parser = argparse.ArgumentParser(description="Inspect the V20 knowledge-authored active rule library.")
     parser.add_argument("--domain", default="", help="Optional domain filter, such as strength, wealth, career.")
     parser.add_argument("--limit", type=int, default=64)
     parser.add_argument("--validate", action="store_true", help="Run validation instead of printing the library.")

@@ -16,7 +16,7 @@ def build_measurement_report(
     feature_layer: FeatureLayer,
     questions: tuple[QuestionCandidate, ...],
     answer_plan: AnswerPlan,
-    portrait: dict[str, object],
+    portrait_projection: dict[str, object],
 ) -> MeasurementReport:
     topic_keys = _topic_keys(feature_layer, questions)
     topics = tuple(_build_topic(topic_key, feature_layer.features, questions, answer_plan) for topic_key in topic_keys)
@@ -26,7 +26,7 @@ def build_measurement_report(
         selected_question_key=answer_plan.question_key,
         topics=topics,
         applied_domain_keys=tuple(topic.topic_key for topic in topics if topic.topic_key in applied_domains()),
-        portrait_role=str(portrait.get("role", "")),
+        portrait_role=str(portrait_projection.get("role", "")),
     )
 
 

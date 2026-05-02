@@ -1,20 +1,20 @@
 from __future__ import annotations
 
 from v20.core.schemas import ChartFacts, CoreInference, TimeContext
+from v20.decision.defeasible_model import build_defeasible_decision_model
 from v20.decision.schema import (
     DecisionReport,
-    DynamicPortrait,
-    DynamicPortraitTag,
     MainlineDecision,
     PractitionerControl,
     RuleDecision,
     RuleHit,
 )
 from v20.features.schema import FeatureLayer
+from v20.interaction.portrait_projection import build_portrait_projection
 from v20.measurement.dimensions import dimension_payload
+from v20.rules.engine import build_rule_runtime_report
 
 DECISION_REPORT_VERSION = "v20.decision_report.v1"
-DYNAMIC_PORTRAIT_VERSION = "v20.dynamic_portrait.v1"
 
 
 def build_decision_report(
@@ -24,20 +24,28 @@ def build_decision_report(
     time_context: TimeContext | None = None,
 ) -> dict[str, object]:
     hits = _build_hits(facts, core, feature_layer, time_context or TimeContext())
-    decisions = _build_decisions(hits, facts, core)
-    mainlines = _build_mainlines(decisions)
+    rule_runtime_report = build_rule_runtime_report(feature_layer)
+    defeasible_model = build_defeasible_decision_model(rule_runtime_report, feature_layer)
+    legacy_decisions = _build_decisions(hits, facts, core)
+    rulespec_decisions = _rulespec_decisions(defeasible_model)
+    decisions = _merge_decisions(legacy_decisions, rulespec_decisions)
+    mainlines = _merge_mainlines(_build_mainlines(legacy_decisions), _rulespec_mainlines(defeasible_model))
     controls = _practitioner_controls(decisions)
-    portrait = _dynamic_portrait(decisions)
     report = DecisionReport(
         version=DECISION_REPORT_VERSION,
         status="ready" if decisions else "empty",
         hits=tuple(hits),
         decisions=tuple(decisions),
-        dynamic_portrait=portrait,
         mainlines=tuple(mainlines),
         practitioner_controls=tuple(controls),
     )
-    return report.to_dict()
+    payload = report.to_dict()
+    payload["rule_runtime_source"] = "bazi_rule_spec_engine"
+    payload["legacy_decision_bridge_status"] = "compatibility_only"
+    payload["rule_runtime_report"] = rule_runtime_report
+    payload["defeasible_decision_model"] = defeasible_model
+    payload["portrait_projection"] = build_portrait_projection(feature_layer, defeasible_model, payload)
+    return payload
 
 
 def _build_hits(
@@ -548,6 +556,86 @@ def _decision_from_hit(
     )
 
 
+def _rulespec_decisions(defeasible_model: dict[str, object]) -> list[RuleDecision]:
+    rows: list[RuleDecision] = []
+    for candidate in defeasible_model.get("rule_decision_candidates", ()):
+        if not isinstance(candidate, dict):
+            continue
+        rows.append(
+            RuleDecision(
+                decision_key=str(candidate.get("decision_key", "")),
+                rule_key=str(candidate.get("rule_key", "")),
+                label=str(candidate.get("label", "")),
+                domain=str(candidate.get("domain", "")),
+                status=str(candidate.get("status", "")),
+                role=str(candidate.get("role", "")),
+                score=float(candidate.get("score", 0.0) or 0.0),
+                support=tuple(str(row) for row in candidate.get("support", ()) if str(row)),
+                dimension_key=str(candidate.get("dimension_key", "")),
+                dimension_layer=str(candidate.get("dimension_layer", "")),
+                dimension_label=str(candidate.get("dimension_label", "")),
+                weakening=tuple(str(row) for row in candidate.get("weakening", ()) if str(row)),
+                feature_ids=tuple(str(row) for row in candidate.get("feature_ids", ()) if str(row)),
+                portrait_tags=tuple(str(row) for row in candidate.get("portrait_tags", ()) if str(row)),
+                question_seeds=tuple(str(row) for row in candidate.get("question_seeds", ()) if str(row)),
+                practitioner_control_keys=tuple(
+                    str(row) for row in candidate.get("practitioner_control_keys", ()) if str(row)
+                ),
+                guardrails=(
+                    "DECISION_FROM_RULESPEC_DEFEASIBLE_MODEL",
+                    "DECISION_IS_EVIDENCE_BOUNDED",
+                    "LLM_MAY_EXPLAIN_NOT_DECIDE",
+                ),
+            )
+        )
+    return rows
+
+
+def _merge_decisions(legacy: list[RuleDecision], rulespec: list[RuleDecision]) -> list[RuleDecision]:
+    seen = {row.decision_key for row in legacy}
+    additions = [row for row in rulespec if row.decision_key not in seen]
+    additions.sort(key=lambda row: (row.role == "mainline_candidate", row.score), reverse=True)
+    return [*legacy, *additions[:28]]
+
+
+def _rulespec_mainlines(defeasible_model: dict[str, object]) -> list[MainlineDecision]:
+    rows: list[MainlineDecision] = []
+    for candidate in defeasible_model.get("mainline_candidates", ()):
+        if not isinstance(candidate, dict):
+            continue
+        domain = str(candidate.get("domain", ""))
+        rows.append(
+            MainlineDecision(
+                mainline_key=str(candidate.get("mainline_key", "")),
+                title=str(candidate.get("title", "")),
+                domain=domain,
+                status=str(candidate.get("status", "")),
+                score=float(candidate.get("score", 0.0) or 0.0),
+                priority=int(candidate.get("priority", 0) or 0),
+                summary=str(candidate.get("summary", "")),
+                source_decision_keys=tuple(
+                    str(rule_id).replace("rule.", "decision.rulespec.")
+                    for rule_id in candidate.get("source_rule_ids", ())
+                    if str(rule_id)
+                ),
+                support=tuple(str(row) for row in candidate.get("support", ()) if str(row)),
+                question_seed=str(candidate.get("question_seed", "")),
+                role="primary_rulespec_bazi_mainline",
+                guardrails=(
+                    "MAINLINE_IS_AGGREGATED_FROM_DEFEASIBLE_RULESPEC_DECISIONS",
+                    "NO_NEW_FACTS_FROM_MAINLINE",
+                    "MAINLINE_DRIVES_PORTRAIT_QUESTIONS_AND_ANSWER_ORDER",
+                ),
+            )
+        )
+    return rows
+
+
+def _merge_mainlines(legacy: list[MainlineDecision], rulespec: list[MainlineDecision]) -> list[MainlineDecision]:
+    by_key = {row.mainline_key: row for row in [*rulespec, *legacy]}
+    return sorted(by_key.values(), key=lambda row: (row.priority, row.score), reverse=True)[:8]
+
+
 def _build_mainlines(decisions: list[RuleDecision]) -> list[MainlineDecision]:
     by_key = {decision.decision_key: decision for decision in decisions}
     rows: list[MainlineDecision] = []
@@ -726,52 +814,6 @@ def _mainline_summary(primary: RuleDecision, related: tuple[RuleDecision | None,
     if related_labels:
         return f"当前主线入口，联动{'、'.join(related_labels[:3])}；证据：{support}。"
     return f"当前主线入口；证据：{support}。"
-
-
-def _dynamic_portrait(decisions: list[RuleDecision]) -> DynamicPortrait:
-    tags = []
-    for index, decision in enumerate(_portrait_decisions(decisions)):
-        if not decision.portrait_tags:
-            continue
-        label = decision.portrait_tags[0]
-        tags.append(
-            DynamicPortraitTag(
-                tag_key=f"portrait.dynamic.{index:02d}.{decision.decision_key.rsplit('.', 1)[-1]}",
-                label=label,
-                domain=decision.domain,
-                dimension_key=decision.dimension_key,
-                dimension_layer=decision.dimension_layer,
-                dimension_label=decision.dimension_label,
-                summary=_portrait_summary(decision),
-                score=decision.score,
-                source_decision_keys=(decision.decision_key,),
-                question_seeds=decision.question_seeds,
-            )
-        )
-    return DynamicPortrait(
-        version=DYNAMIC_PORTRAIT_VERSION,
-        status="ready" if tags else "empty",
-        tags=tuple(tags),
-    )
-
-
-def _portrait_decisions(decisions: list[RuleDecision], *, limit: int = 14) -> list[RuleDecision]:
-    def rank(decision: RuleDecision) -> tuple[int, float]:
-        role_rank = {
-            "foundation": 5,
-            "mainline_candidate": 4,
-            "domain_material": 3,
-            "time_context": 3,
-            "foundation_context": 2,
-            "structure_context": 2,
-            "applied_projection": 2,
-            "applied_boundary": 1,
-            "supporting_path": 1,
-            "domain_boundary": 1,
-        }.get(decision.role, 0)
-        return role_rank, decision.score
-
-    return sorted(decisions, key=rank, reverse=True)[:limit]
 
 
 def _practitioner_controls(decisions: list[RuleDecision]) -> list[PractitionerControl]:
@@ -964,7 +1006,7 @@ def _strength_question(capacity: str) -> str:
     return {
         "supported_capacity": "日主有支撑后，适合先看泄秀、财星还是官杀？",
         "capacity_needs_support": "日主需要扶身时，先看印星、比劫还是通关？",
-        "borderline_capacity": "日主强弱接近分界时，先裁决哪类证据？",
+        "borderline_capacity": "日主强弱接近分界时，先比较哪类证据？",
     }.get(capacity, "这个八字日主偏强还是偏弱，适合先看什么？")
 
 
@@ -1080,12 +1122,6 @@ def _pattern_question(evidence: tuple[str, ...]) -> str:
     if "墓库" in text or "藏气" in text:
         return "格局判断要先复核哪一处墓库藏气？"
     return "格局判断要先看月令、透干还是十神组合？"
-
-
-def _portrait_summary(decision: RuleDecision) -> str:
-    support = "、".join(_public_evidence_text(row) for row in decision.support[:3])
-    weakening = "；缓冲：" + "、".join(_public_evidence_text(row) for row in decision.weakening[:2]) if decision.weakening else ""
-    return f"{decision.label}：{support}{weakening}。"
 
 
 def _public_evidence_text(value: str) -> str:

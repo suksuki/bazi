@@ -13,6 +13,7 @@ from v20.decision.latent_signals import build_latent_signal_report
 from v20.decision.questions import recommend_decision_questions, resolve_requested_question
 from v20.decision.validation import validate_decision_report
 from v20.features.compiler import compile_features
+from v20.features.state_model import build_feature_state_model
 from v20.graph.chart_graph import build_chart_graph
 from v20.graph.rule_graph import select_rule_paths
 from v20.intelligence.knowledge_semantic_model import (
@@ -21,6 +22,8 @@ from v20.intelligence.knowledge_semantic_model import (
 )
 from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.retrieval import retrieve_knowledge
+from v20.interaction.question_intent import build_question_intent_model
+from v20.interaction.session_model import build_interaction_session_model
 from v20.llm.assist import attach_answer_safety_review, build_llm_routing_assist
 from v20.llm.context import build_llm_context_pack
 from v20.llm.contracts import LLM_CONTRACTS
@@ -62,7 +65,8 @@ def run_runtime_from_pillars(
     latent_signal_report = build_latent_signal_report(chart_facts, core, time_context, decision_report)
     decision_report["latent_signal_report"] = latent_signal_report
     decision_validation = validate_decision_report(decision_report)
-    dynamic_portrait = decision_report.get("dynamic_portrait", {})
+    portrait_projection = decision_report.get("portrait_projection", {})
+    feature_state_model = build_feature_state_model(feature_layer, decision_report)
     questions = recommend_decision_questions(
         decision_report,
         feature_layer,
@@ -77,6 +81,30 @@ def run_runtime_from_pillars(
         feature_layer,
     )
     questions = _selected_first_questions(questions, selected_question, llm_routing_assist)
+    question_intent_model = build_question_intent_model(
+        decision_report=decision_report,
+        feature_state_model=feature_state_model,
+        questions=questions,
+        selected_question=selected_question,
+    )
+    practitioner_session = _practitioner_session_lens(
+        practitioner_selections,
+        questions,
+        selected_question,
+    )
+    latent_event_session = _latent_event_session_lens(
+        latent_event_answers,
+        questions,
+        selected_question,
+    )
+    interaction_session = build_interaction_session_model(
+        selected_question=selected_question,
+        questions=questions,
+        question_intent_model=question_intent_model,
+        practitioner_session=practitioner_session,
+        latent_event_session=latent_event_session,
+        decision_report=decision_report,
+    )
     knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
     evidence_pack = build_evidence_pack(feature_layer)
     answer_plan = build_answer_plan(
@@ -92,7 +120,7 @@ def run_runtime_from_pillars(
         user_text=user_text,
     )
     knowledge_semantic_validation = validate_knowledge_semantic_model(knowledge_semantic_model)
-    measurement_report = build_measurement_report(feature_layer, questions, answer_plan, dynamic_portrait if isinstance(dynamic_portrait, dict) else {})
+    measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait_projection if isinstance(portrait_projection, dict) else {})
     deterministic_answer_text = compose_answer(answer_plan, locale=locale)
     answer_text = deterministic_answer_text
     answer_rewrite = {
@@ -126,7 +154,10 @@ def run_runtime_from_pillars(
             selected_question=selected_question.to_dict(),
             decision_report=decision_report,
             knowledge_semantic_model=knowledge_semantic_model,
-            dynamic_portrait=dynamic_portrait if isinstance(dynamic_portrait, dict) else {},
+            portrait_projection=portrait_projection if isinstance(portrait_projection, dict) else {},
+            feature_state_model=feature_state_model,
+            question_intent_model=question_intent_model,
+            interaction_session=interaction_session,
             answer_plan=answer_plan,
             deterministic_answer_text=deterministic_answer_text,
             locale=locale,
@@ -143,7 +174,14 @@ def run_runtime_from_pillars(
         answer_plan,
         answer_text,
         decision_report=decision_report,
-        dynamic_portrait=dynamic_portrait if isinstance(dynamic_portrait, dict) else {},
+        portrait_projection=portrait_projection if isinstance(portrait_projection, dict) else {},
+        chart_facts=chart_facts.to_dict(),
+        time_context=time_context.to_dict(),
+        selected_question=selected_question.to_dict(),
+        knowledge_semantic_model=knowledge_semantic_model,
+        feature_state_model=feature_state_model,
+        question_intent_model=question_intent_model,
+        interaction_session=interaction_session,
         locale=locale,
     )
     return {
@@ -156,6 +194,7 @@ def run_runtime_from_pillars(
         "chart_graph": chart_graph.to_dict(),
         "rule_paths": [row.to_dict() for row in rule_paths],
         "feature_layer": feature_layer.to_dict(),
+        "feature_state_model": feature_state_model,
         "knowledge_report": knowledge_report.to_dict(),
         "knowledge_refs": [row.to_dict() for row in knowledge_report.refs],
         "knowledge_alignment": knowledge_feature_alignment(feature_layer),
@@ -164,19 +203,12 @@ def run_runtime_from_pillars(
         "decision_report": decision_report,
         "decision_validation": decision_validation,
         "latent_signal_report": latent_signal_report,
-        "dynamic_portrait": dynamic_portrait,
         "questions": [row.to_dict() for row in questions],
+        "question_intent_model": question_intent_model,
         "selected_question": selected_question.to_dict(),
-        "practitioner_session": _practitioner_session_lens(
-            practitioner_selections,
-            questions,
-            selected_question,
-        ),
-        "latent_event_session": _latent_event_session_lens(
-            latent_event_answers,
-            questions,
-            selected_question,
-        ),
+        "practitioner_session": practitioner_session,
+        "latent_event_session": latent_event_session,
+        "interaction_session": interaction_session,
         "measurement_report": measurement_report.to_dict(),
         "answer_plan": answer_plan.to_dict(),
         "answer_text": answer_text,

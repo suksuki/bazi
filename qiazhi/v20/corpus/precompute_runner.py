@@ -36,7 +36,7 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
     measurement_report = runtime_result["measurement_report"]
     questions = runtime_result["questions"]
     knowledge_refs = runtime_result["knowledge_refs"]
-    portrait = runtime_result["dynamic_portrait"]
+    portrait_projection = runtime_result.get("decision_report", {}).get("portrait_projection", {})
     features = tuple(row for row in feature_layer["features"] if isinstance(row, dict))
     mainlines = tuple(row for row in runtime_result.get("decision_report", {}).get("mainlines", ()) if isinstance(row, dict))
     relation_types = tuple(
@@ -104,7 +104,7 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
         "measurement_domains": tuple(measurement_report.get("applied_domain_keys", ())),
         "question_keys": tuple(str(row.get("question_key", "")) for row in questions if isinstance(row, dict)),
         "knowledge_ids": tuple(str(row.get("knowledge_id", "")) for row in knowledge_refs if isinstance(row, dict)),
-        "portrait_domains": tuple(str(row.get("domain", "")) for row in portrait.get("tags", ()) if isinstance(row, dict)),
+        "portrait_domains": tuple(str(row.get("domain", "")) for row in portrait_projection.get("axes", ()) if isinstance(row, dict)),
         "relation_types": relation_types,
         "visible_ten_gods": visible_ten_gods,
         "hidden_ten_gods": hidden_ten_gods,
@@ -113,10 +113,10 @@ def build_label_snapshot(case: CanonicalCase, runtime_result: dict[str, object])
         "evidence_density": {
             "feature_count": feature_layer.get("feature_count", 0),
             "knowledge_ref_count": runtime_result["knowledge_report"].get("count", 0),
-            "portrait_tag_count": portrait.get("tag_count", 0),
+            "portrait_axis_count": portrait_projection.get("axis_count", 0),
             "mainline_count": len(mainlines),
         },
-        "label_policy": "structural_features_and_dynamic_decision_portrait_tags_only",
+        "label_policy": "structural_features_and_decision_portrait_projection_axes_only",
         "guardrails": [
             "NO_DESTINY_TRUTH_LABEL",
             "NO_EVENT_OUTCOME_LABEL",

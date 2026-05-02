@@ -161,7 +161,7 @@ def run_rule_synthetic_suite(cases: tuple[SyntheticRuleCase, ...] = RULE_SYNTHET
             "SYNTHETIC_RULE_SUITE_IS_RULE_COLLISION_VALIDATION",
             "KNOWLEDGE_RULES_ARE_TESTED_AGAINST_SYNTHETIC_CHARTS",
             "FULL_CORPUS_IS_NOT_RULE_TRUTH",
-            "NO_RUNTIME_RULE_ACTIVATION",
+            "ACTIVE_RULE_ITERATION",
         ],
     }
 
@@ -213,8 +213,8 @@ def build_rule_synthetic_training_report(
                 "synthetic_confidence": confidence,
                 "matched_feature_ids": sorted(row["matched_feature_ids"])[:16],
                 "case_ids": row["case_ids"],
-                "training_action": "eligible_for_shadow_weight" if confidence >= 1.0 else "add_counterexample_or_fix_atoms",
-                "runtime_allowed": False,
+                "training_action": "eligible_for_active_weight" if confidence >= 1.0 else "add_counterexample_or_fix_atoms",
+                "runtime_allowed": True,
             }
         )
     return {
@@ -227,7 +227,7 @@ def build_rule_synthetic_training_report(
         "training_scope": [
             "rule_atom_collision_validation",
             "synthetic_counterexample_gap_detection",
-            "shadow_rule_weight_gate",
+            "active_rule_weight_iteration",
         ],
         "not_training_scope": [
             "destiny_truth_learning",
@@ -353,7 +353,7 @@ def _evaluate_rule_case(case: SyntheticRuleCase) -> dict[str, object]:
         "selected_question_key": runtime["selected_question"]["question_key"],
         "answer_boundary_ok": not any(text and text in answer_text for text in case.forbidden_text),
         "runtime_mutation": False,
-        "guardrails": ["SYNTHETIC_CASE_RESULT_ONLY", "NO_RUNTIME_RULE_PROMOTION"],
+        "guardrails": ["SYNTHETIC_CASE_RESULT_ONLY", "ACTIVE_RULE_ITERATION"],
     }
 
 

@@ -14,7 +14,7 @@ from v20.validation.knowledge_rule_library import build_knowledge_rule_validatio
 
 
 def main() -> int:
-    parser = argparse.ArgumentParser(description="Validate V20 knowledge-authored shadow rules against synthetic coverage and corpus priors.")
+    parser = argparse.ArgumentParser(description="Validate V20 knowledge-authored active rules against synthetic coverage and corpus priors.")
     parser.add_argument("--domain", default="", help="Optional domain filter.")
     parser.add_argument("--limit", type=int, default=64)
     parser.add_argument("--summary", action="store_true", help="Print a compact review summary.")

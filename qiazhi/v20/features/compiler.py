@@ -6,6 +6,7 @@ from v20.core.useful_god import derive_useful_god_candidates
 from v20.features.boundaries import boundary_for
 from v20.features.calibration import ConfidenceCalibrationPolicy, calibrate_features
 from v20.features.confidence import bounded_confidence
+from v20.features.discovery_engine import build_feature_discovery_model
 from v20.features.hierarchy import cluster_features
 from v20.features.schema import BaziFeature, EvidenceRef, FeatureLayer
 
@@ -75,7 +76,13 @@ def compile_features(
     features = list(calibrate_features(features, calibration_policy))
     features.sort(key=lambda row: (row.confidence, row.feature_id), reverse=True)
     macro_features = cluster_features(features)
-    return FeatureLayer(version=FEATURE_LAYER_VERSION, features=tuple(features), macro_features=macro_features)
+    feature_tuple = tuple(features)
+    return FeatureLayer(
+        version=FEATURE_LAYER_VERSION,
+        features=feature_tuple,
+        macro_features=macro_features,
+        discovery_trace=build_feature_discovery_model(facts, inference, time_context or TimeContext(), feature_tuple),
+    )
 
 
 def _strength_feature(inference: CoreInference) -> BaziFeature:

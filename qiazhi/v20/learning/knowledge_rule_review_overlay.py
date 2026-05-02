@@ -40,13 +40,13 @@ def write_knowledge_rule_review_overlay_artifact(
         "artifact_id": payload["artifact_id"],
         "report_status": report["status"],
         "rule_count": report["rule_count"],
-        "shadow_weight_candidate_count": report["shadow_weight_candidate_count"],
-        "runtime_promotion_candidate_count": report["runtime_promotion_candidate_count"],
+        "active_weight_candidate_count": report["active_weight_candidate_count"],
+        "runtime_activation_candidate_count": report["runtime_activation_candidate_count"],
         "runtime_mutation": True,
         "guardrails": [
             "LOCAL_RUNTIME_ARTIFACT_ONLY",
             "NO_POSTGRES_WRITE",
-            "NO_RUNTIME_RULE_PROMOTION",
+            "ACTIVE_RULE_ITERATION",
             "RUNTIME_MAY_CONSUME_ONLY_LOCKED_ARTIFACT_VERSION",
         ],
     }

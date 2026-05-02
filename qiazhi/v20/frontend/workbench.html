@@ -17,10 +17,8 @@
           </div>
         </div>
         <nav class="top-actions" aria-label="V20 navigation">
-          <a href="/v20/ui/">入口</a>
           <a href="/v20/ui/profiles.html" data-ui="nav_profiles">档案</a>
           <a href="/v20/ui/workbench.html" aria-current="page" data-ui="nav_measure">测算</a>
-          <a href="/v20/ui/admin.html">Admin</a>
           <span id="runtimeStatus" class="status-pill">checking</span>
         </nav>
       </header>
@@ -47,7 +45,7 @@
 
             <section class="control-section">
               <p class="section-kicker">Question</p>
-              <label>用户关心<textarea name="user_text" rows="4">我想看事业和财运</textarea></label>
+              <label>用户关心<textarea name="user_text" rows="3">我想看事业和财运</textarea></label>
               <label>推荐问题<select name="question_key" id="questionSelect"><option value="">自动路由</option></select></label>
             </section>
 
@@ -100,8 +98,8 @@
               <p id="selectedBoundary" class="muted-line">V20 runtime ready.</p>
             </div>
             <div class="summary-metrics">
-              <span><strong id="featureCount">0</strong>特征</span>
-              <span><strong id="questionCount">0</strong>问题</span>
+              <span><strong id="featureCount">0</strong>特征态</span>
+              <span><strong id="questionCount">0</strong>意图</span>
               <span><strong id="knowledgeCount">0</strong>证据</span>
             </div>
           </section>
@@ -122,24 +120,24 @@
             <article class="panel feature-spine-panel">
               <div class="section-head">
                 <div>
-                  <p class="section-kicker">Feature Spine</p>
-                  <h2 data-ui="features_title">动态裁决主线</h2>
+                  <p class="section-kicker">Feature State</p>
+                  <h2 data-ui="features_title">八字特征状态</h2>
                 </div>
-                <span id="coreCapacity" class="small-pill">core</span>
+                <span id="coreCapacity" class="small-pill">fusion</span>
               </div>
               <div id="featureChips" class="feature-grid"></div>
             </article>
 
-            <details class="panel portrait-panel-card">
-              <summary class="section-head portrait-summary">
+            <article class="panel portrait-panel-card">
+              <div class="section-head">
                 <div>
-                  <p class="section-kicker">Portrait</p>
-                  <h2 data-ui="portrait_title">动态命理画像</h2>
+                  <p class="section-kicker">Topic Projection</p>
+                  <h2 data-ui="portrait_title">主题投射画像</h2>
                 </div>
-                <span class="small-pill">参考 · 展开</span>
-              </summary>
+                <span class="small-pill">decision-backed</span>
+              </div>
               <div id="portraitAxes" class="axis-list"></div>
-            </details>
+            </article>
 
             <article id="practitionerCalibration" class="panel calibration-panel-card" hidden>
               <div class="calibration-head">
@@ -166,12 +164,23 @@
             <article class="panel questions-panel-card">
               <div class="section-head">
                 <div>
-                  <p class="section-kicker">Questions</p>
-                  <h2 data-ui="questions_title">推荐问题</h2>
+                  <p class="section-kicker">Question Intent</p>
+                  <h2 data-ui="questions_title">智能问题</h2>
                 </div>
-                <span class="small-pill">feature-backed</span>
+                <span id="intentSummary" class="small-pill">intent</span>
               </div>
               <div id="questionList" class="question-list"></div>
+            </article>
+
+            <article class="panel interaction-panel-card">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Interaction</p>
+                  <h2>交互信号</h2>
+                </div>
+                <span id="interactionSummary" class="small-pill">session</span>
+              </div>
+              <div id="interactionSignals" class="signal-list"></div>
             </article>
           </section>
 
@@ -185,7 +194,6 @@
                 <span id="llmStatus" class="small-pill">llm idle</span>
               </div>
               <pre id="answerText">等待测算。</pre>
-              <div id="chatQuestionList" class="chat-question-list" aria-label="推荐问题"></div>
               <div id="chatTranscript" class="chat-transcript" aria-live="polite"></div>
               <div class="dialog-row" aria-label="八字对话">
                 <textarea id="chatText" rows="3" placeholder="输入想继续看的方向"></textarea>
@@ -197,7 +205,7 @@
               <div class="section-head">
                 <div>
                   <p class="section-kicker">Evidence</p>
-                  <h2 data-ui="evidence_title">证据与系统状态</h2>
+                  <h2 data-ui="evidence_title">证据锚点</h2>
                 </div>
               </div>
               <div id="evidenceList" class="evidence-list"></div>

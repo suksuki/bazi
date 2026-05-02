@@ -33,13 +33,13 @@ def attach_knowledge_rule_bridge(
 ) -> dict[str, object]:
     """Attach reviewed-knowledge rule definitions to runtime decisions.
 
-    This bridge is deliberately read-only: it explains which knowledge-authored
-    shadow definitions support a runtime decision, but it does not promote those
-    definitions into active runtime rules.
+    This bridge explains which knowledge-authored definitions support an active
+    runtime decision. V20 now treats reviewed knowledge rules as immediately
+    usable structural rules, with continuous iteration handling later tuning.
     """
     decisions = [dict(row) for row in decision_report.get("decisions", ()) if isinstance(row, dict)]
     library = build_knowledge_rule_library()
-    validation, promotion_gate = _runtime_lightweight_review_signals()
+    validation, activation = _runtime_lightweight_review_signals()
     definitions = [row for row in library.get("definitions", ()) if isinstance(row, dict)]
     validation_by_rule = {
         str(row.get("rule_key", "")): row
@@ -48,7 +48,7 @@ def attach_knowledge_rule_bridge(
     }
     gate_by_rule = {
         str(row.get("rule_key", "")): row
-        for row in promotion_gate.get("packets", ())
+        for row in activation.get("packets", ())
         if isinstance(row, dict) and row.get("rule_key")
     }
     mapped: list[dict[str, object]] = []
@@ -68,7 +68,7 @@ def attach_knowledge_rule_bridge(
                 "domain": decision.get("domain", ""),
                 "knowledge_rule_count": len(refs),
                 "source_knowledge_ids": tuple(str(row.get("source_knowledge_id", "")) for row in refs),
-                "runtime_allowed": False,
+                "runtime_allowed": True,
             }
         )
 
@@ -85,31 +85,27 @@ def attach_knowledge_rule_bridge(
         "library_definition_count": library.get("definition_count", 0),
         "validation_version": validation.get("version", ""),
         "validation_status": validation.get("status", ""),
-        "promotion_gate_version": promotion_gate.get("version", ""),
-        "promotion_gate_status": promotion_gate.get("status", ""),
+        "activation_version": activation.get("version", ""),
+        "activation_status": activation.get("status", ""),
         "decision_count": len(decisions),
         "mapped_decision_count": sum(1 for row in mapped if int(row.get("knowledge_rule_count", 0)) > 0),
         "mapping_coverage": _coverage(by_domain, bridged_by_domain),
         "mappings": mapped,
         "runtime_mutation": False,
         "guardrails": [
-            "KNOWLEDGE_RULE_BRIDGE_IS_READ_ONLY",
-            "SHADOW_RULE_DEFINITIONS_EXPLAIN_DECISIONS_ONLY",
-            "NO_RUNTIME_RULE_PROMOTION",
+            "KNOWLEDGE_RULE_BRIDGE_FEEDS_ACTIVE_RUNTIME_CONTEXT",
+            "KNOWLEDGE_RULE_DEFINITIONS_ARE_USABLE_STRUCTURAL_RULES",
+            "CONTINUOUS_ITERATION_REFINES_RULE_CONTEXT",
         ],
     }
     enriched = dict(decision_report)
     enriched["decisions"] = decisions
-    enriched["dynamic_portrait"] = _enrich_dynamic_portrait(
-        decision_report.get("dynamic_portrait", {}),
-        decisions,
-    )
     enriched["knowledge_rule_bridge"] = bridge
     return enriched
 
 
 def build_knowledge_rule_review_overlay() -> dict[str, object]:
-    validation, promotion_gate = _review_signal_reports()
+    validation, activation = _review_signal_reports()
     validation_by_rule = {
         str(row.get("rule_key", "")): row
         for row in validation.get("definitions", ())
@@ -117,7 +113,7 @@ def build_knowledge_rule_review_overlay() -> dict[str, object]:
     }
     gate_by_rule = {
         str(row.get("rule_key", "")): row
-        for row in promotion_gate.get("packets", ())
+        for row in activation.get("packets", ())
         if isinstance(row, dict) and row.get("rule_key")
     }
     rows = []
@@ -133,26 +129,26 @@ def build_knowledge_rule_review_overlay() -> dict[str, object]:
                 "synthetic_case_count": row.get("synthetic_case_count", 0),
                 "corpus_signal_state": row.get("corpus_signal_state", ""),
                 "support_quality": row.get("support_quality", ""),
-                "review_lane": gate.get("review_lane", "manual_review_required"),
-                "recommended_action": gate.get("recommended_action", "manual_review"),
-                "shadow_weight_candidate": bool(gate.get("shadow_weight_candidate", False)),
-                "runtime_promotion_candidate": False,
+                "activation_lane": gate.get("activation_lane", "system_iteration_required"),
+                "iteration_action": gate.get("iteration_action", "system_iteration"),
+                "active_weight_candidate": bool(gate.get("active_weight_candidate", False)),
+                "runtime_activation_candidate": True,
             }
         )
     return {
         "version": "v20.knowledge_rule_review_overlay.v1",
         "status": "ready" if rows else "empty",
         "validation_status": validation.get("status", ""),
-        "promotion_gate_status": promotion_gate.get("status", ""),
+        "activation_status": activation.get("status", ""),
         "rule_count": len(rows),
-        "shadow_weight_candidate_count": sum(1 for row in rows if row["shadow_weight_candidate"]),
-        "runtime_promotion_candidate_count": 0,
+        "active_weight_candidate_count": sum(1 for row in rows if row["active_weight_candidate"]),
+        "runtime_activation_candidate_count": sum(1 for row in rows if row["runtime_activation_candidate"]),
         "rules": tuple(rows),
         "runtime_mutation": False,
         "guardrails": [
-            "OFFLINE_REVIEW_OVERLAY_ONLY",
+            "ITERATION_OVERLAY_FEEDS_CONTINUOUS_ACTIVATION",
             "RUNTIME_USES_LIGHTWEIGHT_BRIDGE",
-            "NO_RULE_PROMOTION_FROM_OVERLAY",
+            "RULES_ARE_ACTIVE_AND_REFINED_BY_ITERATION",
         ],
     }
 
@@ -249,14 +245,14 @@ def _public_rule_ref(
         "support_quality": validation.get("support_quality", ""),
         "review_lane": gate_packet.get("review_lane", "manual_review_required"),
         "recommended_action": gate_packet.get("recommended_action", "manual_review"),
-        "shadow_weight_candidate": bool(gate_packet.get("shadow_weight_candidate", False)),
-        "runtime_promotion_candidate": False,
+        "active_weight_candidate": bool(gate_packet.get("active_weight_candidate", False)),
+        "runtime_activation_candidate": True,
         "promotion_status": definition.get("promotion_status", ""),
-        "runtime_allowed": False,
+        "runtime_allowed": True,
         "guardrails": [
-            "RULE_REF_IS_EXPLANATORY_EVIDENCE",
-            "CONDITION_ATOMS_NOT_PROMOTED_AT_RUNTIME",
-            "VALIDATION_AND_PROMOTION_SIGNALS_ARE_REVIEW_ONLY",
+            "RULE_REF_IS_ACTIVE_STRUCTURAL_EVIDENCE",
+            "CONDITION_ATOMS_FEED_RUNTIME_CONTEXT",
+            "VALIDATION_SIGNALS_REFINE_ACTIVE_RULES",
         ],
     }
 
@@ -270,56 +266,13 @@ def _atom_ref(atom: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _enrich_dynamic_portrait(portrait: object, decisions: list[dict[str, object]]) -> object:
-    if not isinstance(portrait, dict):
-        return portrait
-    decision_by_key = {str(row.get("decision_key", "")): row for row in decisions}
-    tags = []
-    for tag in portrait.get("tags", ()):
-        if not isinstance(tag, dict):
-            continue
-        enriched = dict(tag)
-        source_keys = tuple(str(row) for row in tag.get("source_decision_keys", ()) if str(row))
-        labels = []
-        question_seeds = list(enriched.get("question_seeds", ())[:3]) if isinstance(enriched.get("question_seeds", ()), (list, tuple)) else []
-        for source_key in source_keys:
-            decision = decision_by_key.get(source_key, {})
-            for ref in decision.get("knowledge_rule_refs", ())[:2]:
-                if not isinstance(ref, dict):
-                    continue
-                labels.extend(str(row) for row in ref.get("portrait_labels", ()) if str(row))
-                for question in ref.get("question_outputs", ())[:2]:
-                    if isinstance(question, dict) and question.get("title"):
-                        question_seeds.append(str(question["title"]))
-        labels = list(dict.fromkeys(labels))[:3]
-        if labels:
-            enriched["knowledge_rule_labels"] = tuple(labels)
-            enriched["summary"] = _portrait_summary_with_knowledge(str(enriched.get("summary", "")), labels)
-        if question_seeds:
-            enriched["question_seeds"] = tuple(dict.fromkeys(question_seeds))[:4]
-        tags.append(enriched)
-    output = dict(portrait)
-    output["tags"] = tags
-    return output
-
-
-def _portrait_summary_with_knowledge(summary: str, labels: list[str]) -> str:
-    base = summary.strip()
-    hint = "复核重点：" + "、".join(labels)
-    if not base:
-        return hint
-    if "复核重点" in base:
-        return base
-    return f"{base} {hint}。"
-
-
 def _review_signal_reports() -> tuple[dict[str, object], dict[str, object]]:
     # Offline/admin helper only. Runtime must use _runtime_lightweight_review_signals:
     # full validation runs synthetic cases, and synthetic cases call runtime.
-    from v20.learning.rule_promotion_gate import build_rule_promotion_gate_report
+    from v20.learning.rule_activation import build_rule_activation_report
     from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 
-    return build_knowledge_rule_validation_report(), build_rule_promotion_gate_report()
+    return build_knowledge_rule_validation_report(), build_rule_activation_report()
 
 
 def _runtime_lightweight_review_signals() -> tuple[dict[str, object], dict[str, object]]:

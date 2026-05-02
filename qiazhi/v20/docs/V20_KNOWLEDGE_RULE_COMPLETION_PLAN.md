@@ -61,9 +61,9 @@ P2 目标：
 - 每条规则包含条件原子、画像输出、问题输出、回答边界、反例和验证状态。
 - 合成八字用于验证规则碰撞、边界、反例，不由 518K 直接训练出规则真相。
 - `run_knowledge_rule_validation.py --summary` 是当前规则审查入口：它会把每条规则标记为已合成覆盖、缺合成案例、语料支持过宽、下一步需要拆子条件或补反例。
-- `run_rule_promotion_gate.py --summary` 是晋升门入口：机器先把 shadow rules 分流为补合成案例、拆子条件、候选 shadow 权重训练等晋升包；人工只处理晋升包，不逐条翻原始规则。
+- `run_rule_activation.py --summary` 是激活迭代入口入口：机器先把 active rules 分流为补合成案例、拆子条件、候选 active 权重训练等迭代包；人工只处理迭代包，不逐条翻原始规则。
 - `run_rule_subcondition_split.py --progress --write` 会读取 518K 训练产物，为过宽规则生成子条件候选和反例候选。它仍是离线审查材料，不会激活运行时规则。
-- `run_decision_registry_review.py --progress --write` 会把晋升包、子条件候选和反例候选整理成 DecisionRegistry review records。它做批量分流和建议动作，但不等同于人工批准，也不激活运行时规则。
+- `run_decision_registry_review.py --progress --write` 会把迭代包、子条件候选和反例候选整理成 DecisionRegistry review records。它做批量分流和建议动作，但不等同于人工批准，也不激活运行时规则。
 - `import_decision_registry_postgres.py --apply` 才会把本地 review records 导入 `v20_decision_registry`，用于后续管理员审查和回溯；导入仍不是运行时晋升。
 
 ### 画像系统
@@ -133,7 +133,7 @@ P6 目标：
 - 命理师裁决学习聚合。
 - 518K 结构覆盖基线、相似盘索引、聚类、规则支持统计。
 - shadow 规则子条件拆分与反例候选生成。
-- DecisionRegistry review 台账生成，把候选规则、子条件、反例和 shadow 权重候选变成可批量裁决对象。
+- DecisionRegistry review 台账生成，把候选规则、子条件、反例和 active 权重候选变成可批量裁决对象。
 
 518K 结构覆盖基线的角色：
 
@@ -203,7 +203,7 @@ KnowledgeUnit
 → KnowledgeRuleDefinition
 → DecisionKnowledgeRuleBridge
 → RuleDecision.knowledge_rule_refs
-→ DynamicPortrait / QuestionCandidate / AnswerPlan / LLM practitioner prompt
+→ PortraitProjection / QuestionIntent / QuestionCandidate / AnswerPlan / LLM practitioner prompt
 ```
 
 验收状态：
@@ -257,7 +257,7 @@ KnowledgeUnit
 
 验收标准：
 
-- 子条件、反例和 shadow 权重候选都有稳定 `decision_id` 和 `subject_id`。
+- 子条件、反例和 active 权重候选都有稳定 `decision_id` 和 `subject_id`。
 - 系统能区分可批量审阅候选和必须人工单独审查候选。
 - DecisionRegistry review 只生成审查台账，不直接写运行时规则、不直接晋升。
 

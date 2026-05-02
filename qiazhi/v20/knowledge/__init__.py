@@ -3,7 +3,10 @@ from v20.knowledge.approval import build_first_wave_approval_preflight, build_kn
 from v20.knowledge.audit import audit_default_knowledge_units
 from v20.knowledge.catalog import build_knowledge_catalog
 from v20.knowledge.coverage import build_knowledge_coverage_report
+from v20.knowledge.directory import build_knowledge_directory_manifest
+from v20.knowledge.directory_seeds import build_full_directory_seed_library
 from v20.knowledge.draft_import import build_knowledge_draft_import_preview
+from v20.knowledge.feature_model import build_bazi_feature_graph_model_contract
 from v20.knowledge.migration import build_v19_knowledge_migration_audit
 from v20.knowledge.release import build_knowledge_release_manifest
 from v20.knowledge.review_packet import build_first_wave_review_packets, build_knowledge_review_packet
@@ -29,7 +32,10 @@ __all__ = [
     "build_knowledge_catalog",
     "build_knowledge_approval_preflight",
     "build_knowledge_coverage_report",
+    "build_knowledge_directory_manifest",
+    "build_full_directory_seed_library",
     "build_knowledge_draft_import_preview",
+    "build_bazi_feature_graph_model_contract",
     "build_knowledge_release_manifest",
     "build_knowledge_review_packet",
     "build_knowledge_review_assist",

@@ -19,7 +19,10 @@ def build_practitioner_answer_with_llm(
     answer_plan: AnswerPlan,
     deterministic_answer_text: str,
     decision_report: dict[str, object] | None = None,
-    dynamic_portrait: dict[str, object] | None = None,
+    portrait_projection: dict[str, object] | None = None,
+    feature_state_model: dict[str, object] | None = None,
+    question_intent_model: dict[str, object] | None = None,
+    interaction_session: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
     prompt = practitioner_answer_prompt(
@@ -28,7 +31,10 @@ def build_practitioner_answer_with_llm(
         selected_question=selected_question,
         decision_report=decision_report or {},
         knowledge_semantic_model=knowledge_semantic_model,
-        dynamic_portrait=dynamic_portrait or {},
+        portrait_projection=portrait_projection or {},
+        feature_state_model=feature_state_model or {},
+        question_intent_model=question_intent_model or {},
+        interaction_session=interaction_session or {},
         answer_plan=answer_plan,
         verified_answer_text=deterministic_answer_text,
         locale=locale,
