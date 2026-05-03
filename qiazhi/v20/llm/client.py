@@ -113,6 +113,7 @@ def _post_ollama_native_completion(
         "options": {
             "temperature": cfg.temperature,
             "num_predict": cfg.max_tokens,
+            "num_ctx": 2048 if contract.task_name == "practitioner_answer" else 4096,
         },
     }
     request = urllib.request.Request(
@@ -134,20 +135,26 @@ def _post_ollama_native_completion(
 
 
 def _structured_messages(contract: LLMTaskContract, prompt: dict[str, object]) -> list[dict[str, str]]:
+    contract_brief = {
+        "task_name": contract.task_name,
+        "required_outputs": contract.required_outputs,
+        "forbidden_outputs": contract.forbidden_outputs,
+        "fallback": contract.fallback,
+    }
     return [
         {
             "role": "system",
             "content": (
                 "You are a bounded Bazi assistant. Return exactly one JSON object in message.content "
                 f"with these keys only: {', '.join(contract.required_outputs)}. "
-                "Do not echo the input. Do not add chart facts, activate rules, or write conclusions."
+                "Do not echo the input. Do not add chart facts, activate rules, or write unsupported conclusions."
             ),
         },
         {
             "role": "user",
             "content": json.dumps(
                 {
-                    "contract": contract.to_dict(),
+                    "contract": contract_brief,
                     "prompt": prompt,
                 },
                 ensure_ascii=False,
