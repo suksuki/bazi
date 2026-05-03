@@ -138,11 +138,16 @@ def test_v20_ops_and_testing_metadata_endpoints_hide_secrets() -> None:
     assert redis["runtime_mutation"] is False
 
 
-def test_v20_admin_status_endpoints_are_db_llm_only_and_secret_free() -> None:
+def test_v20_admin_status_endpoints_are_db_llm_only_and_secret_free(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
     client = TestClient(app)
+    blocked = client.get("/api/v20/admin/db")
+    client.post("/api/v20/auth/import-v19?apply=true", json={"admin_password": "adminpw"})
+    client.post("/api/v20/auth/login", json={"username": "admin", "password": "adminpw"})
     db = client.get("/api/v20/admin/db").json()
     llm = client.get("/api/v20/admin/llm").json()
 
+    assert blocked.status_code == 401
     assert db["version"] == "v20.admin_database_status.v1"
     assert db["runtime_mutation"] is False
     assert db["postgres"]["password_env"] == "V20_POSTGRES_PASSWORD"
@@ -222,6 +227,13 @@ def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatc
     assert registered["ok"] is True
     assert registered["session"]["role"] == "analyst"
     assert logged_in["session"]["role"] == "analyst"
+
+    admin_attempt = practitioner.post(
+        "/api/v20/auth/register",
+        json={"username": "another_admin", "password": "pass1234", "role": "admin", "locale": "zh"},
+    )
+    assert admin_attempt.status_code == 400
+    assert admin_attempt.json()["detail"]["code"] == "admin_registration_disabled"
 
 
 def test_v20_can_import_v19_auth_sessions_and_accept_legacy_cookie(tmp_path, monkeypatch) -> None:

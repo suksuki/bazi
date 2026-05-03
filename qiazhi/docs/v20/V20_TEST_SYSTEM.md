@@ -63,6 +63,15 @@ Dry run and JSON report:
 ./v20/scripts/test_fast.sh --dry-run --json
 ```
 
+Per-command timeout is also supported (global override for a run, in seconds):
+
+```bash
+./v20/scripts/test_fast.sh --command-timeout 30 --json
+```
+
+In JSON report each command row includes `command_timeout_seconds` (tier default) and
+`timeout_seconds` (effective value for this run), so you can quickly locate hangs.
+
 Before a phase commit:
 
 ```bash

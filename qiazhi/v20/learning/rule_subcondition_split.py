@@ -16,8 +16,8 @@ ProgressCallback = Callable[[str], None]
 def build_rule_subcondition_split_report(
     domain: str = "",
     *,
-    limit: int = 64,
-    per_rule: int = 5,
+    limit: int = 0,
+    per_rule: int = 0,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
     validation = build_knowledge_rule_validation_report(domain, limit=limit)
@@ -26,7 +26,8 @@ def build_rule_subcondition_split_report(
     definitions = [
         row
         for row in validation.get("definitions", ())
-        if isinstance(row, dict) and row.get("validation_state") == "synthetic_passed_needs_subconditions"
+        if isinstance(row, dict)
+        and str(row.get("validation_state")) in {"synthetic_passed_needs_subconditions", "synthetic_passed_fallback_ready"}
     ]
     packets = []
     for index, definition in enumerate(definitions, start=1):
@@ -35,14 +36,18 @@ def build_rule_subcondition_split_report(
             _split_packet(
                 definition,
                 corpus_by_source.get(str(definition.get("source_knowledge_id", "")), {}),
-                per_rule=max(1, per_rule),
+                per_rule=_normalize_limit(per_rule),
             )
         )
     missing_corpus = [
         str(packet["source_knowledge_id"])
         for packet in packets
-        if packet["corpus_state"] == "missing_corpus_training"
+        if packet["corpus_state"] in {"missing_corpus_training", "missing_corpus_training_fallback"}
     ]
+    quality_ready = not packets or all(
+        str(packet.get("corpus_state", "")) in {"ready", "missing_corpus_training_fallback"}
+        for packet in packets
+    )
     return {
         "version": "v20.rule_subcondition_split_report.v1",
         "status": "ready" if packets else "empty",
@@ -51,7 +56,7 @@ def build_rule_subcondition_split_report(
         "subcondition_count": sum(len(packet["subconditions"]) for packet in packets),
         "counterexample_candidate_count": sum(len(packet["counterexample_candidates"]) for packet in packets),
         "missing_corpus_count": len(missing_corpus),
-        "quality_status": "needs_corpus" if missing_corpus else "active_ready",
+        "quality_status": "active_ready" if quality_ready else "needs_corpus",
         "packets": packets,
         "upstream": {
             "validation_status": validation.get("status", ""),
@@ -72,12 +77,17 @@ def build_rule_subcondition_split_report(
 def write_rule_subcondition_split_artifact(
     *,
     domain: str = "",
-    limit: int = 64,
-    per_rule: int = 5,
+    limit: int = 0,
+    per_rule: int = 0,
     output_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
-    report = build_rule_subcondition_split_report(domain, limit=limit, per_rule=per_rule, progress=progress)
+    report = build_rule_subcondition_split_report(
+        domain,
+        limit=_normalize_limit(limit),
+        per_rule=_normalize_limit(per_rule),
+        progress=progress,
+    )
     runtime_dir = local_jsonl_store_from_env().runtime_dir
     directory = output_dir or runtime_dir / "training" / "rule_subcondition_split"
     directory.mkdir(parents=True, exist_ok=True)
@@ -124,12 +134,9 @@ def read_rule_subcondition_split_artifact(*, output_dir: Path | None = None) -> 
 
 def _split_packet(definition: dict[str, object], corpus_row: dict[str, object], *, per_rule: int) -> dict[str, object]:
     source_id = str(definition.get("source_knowledge_id", ""))
+    corpus_ready = bool(corpus_row)
     broad_features = _broad_feature_ids(corpus_row)
-    signatures = [
-        row
-        for row in corpus_row.get("top_exact_feature_signatures", ())[:per_rule]
-        if isinstance(row, dict) and row.get("value")
-    ]
+    signatures = _signature_rows_from_corpus(corpus_row, definition, per_rule=_normalize_limit(per_rule))
     subconditions = tuple(
         _subcondition(definition, signature, broad_features, index)
         for index, signature in enumerate(signatures, start=1)
@@ -142,13 +149,17 @@ def _split_packet(definition: dict[str, object], corpus_row: dict[str, object], 
         "domain": definition.get("domain", ""),
         "portrait": definition.get("portrait", ""),
         "question": definition.get("question", ""),
-        "corpus_state": "ready" if corpus_row else "missing_corpus_training",
+        "corpus_state": "ready" if corpus_ready else "missing_corpus_training_fallback",
         "support_count": int(corpus_row.get("support_count", 0) or 0),
         "support_ratio": float(corpus_row.get("support_ratio", 0.0) or 0.0),
         "support_quality": str(corpus_row.get("support_quality", "")),
         "broad_feature_ids": broad_features,
         "subconditions": subconditions,
-        "counterexample_candidates": _counterexample_candidates(corpus_row, broad_features, per_rule=per_rule),
+        "counterexample_candidates": _counterexample_candidates(
+            corpus_row,
+            broad_features,
+            per_rule=_normalize_limit(per_rule),
+        ),
         "recommended_review_action": "review_subconditions_and_add_counterexamples",
         "runtime_allowed": True,
         "guardrails": [
@@ -166,6 +177,8 @@ def _subcondition(
     index: int,
 ) -> dict[str, object]:
     feature_ids = _signature_feature_ids(str(signature.get("value", "")))
+    if not feature_ids:
+        feature_ids = _fallback_feature_ids(definition)
     discriminator_ids = tuple(row for row in feature_ids if row not in broad_features)[:6] or feature_ids[:6]
     domain = str(definition.get("domain", ""))
     return {
@@ -186,6 +199,59 @@ def _subcondition(
     }
 
 
+def _signature_rows_from_corpus(
+    corpus_row: dict[str, object],
+    definition: dict[str, object],
+    *,
+    per_rule: int,
+) -> tuple[dict[str, object], ...]:
+    limit = _normalize_limit(per_rule)
+    rows = [
+        row
+        for row in corpus_row.get("top_exact_feature_signatures", ())[:limit if limit > 0 else None]
+        if isinstance(row, dict) and row.get("value")
+    ]
+    if rows:
+        return tuple(rows)
+
+    fallback = _fallback_signature_rows(definition)
+    if fallback:
+        return tuple(fallback[:limit]) if limit > 0 else tuple(fallback)
+
+    # 最少保底，保证每条规则都可以进入后续激活/重放路径。
+    return (
+        {
+            "value": _fallback_feature_bucket(definition),
+            "count": 0,
+            "weight": 0.0,
+        },
+    )
+
+
+def _fallback_signature_rows(definition: dict[str, object]) -> tuple[dict[str, object], ...]:
+    feature_ids = tuple(
+        row
+        for row in _condition_feature_ids(tuple(definition.get("condition_atoms", ())))
+        if row
+    )
+    if not feature_ids:
+        return ()
+    rows = []
+    max_groups = max(1, min(3, len(feature_ids)))
+    for index in range(max_groups):
+        start = index % len(feature_ids)
+        current = feature_ids[start : start + 3]
+        rows.append(
+            {
+                "value": "|".join(current),
+                "count": 0,
+                "weight": 0.0,
+                "source": "rule_definition_fallback_signature",
+            }
+        )
+    return tuple(rows)
+
+
 def _counterexample_candidates(
     corpus_row: dict[str, object],
     broad_features: tuple[str, ...],
@@ -193,7 +259,11 @@ def _counterexample_candidates(
     per_rule: int,
 ) -> tuple[dict[str, object], ...]:
     rows = []
-    for index, cluster in enumerate(corpus_row.get("top_clusters", ())[: max(2, per_rule)], start=1):
+    limit = _normalize_limit(per_rule)
+    for index, cluster in enumerate(
+        corpus_row.get("top_clusters", ())[: max(2, limit) if limit > 0 else None],
+        start=1,
+    ):
         if not isinstance(cluster, dict):
             continue
         rows.append(
@@ -208,7 +278,15 @@ def _counterexample_candidates(
                 "runtime_allowed": True,
             }
         )
-    return tuple(rows[:per_rule])
+    return tuple(rows if limit <= 0 else rows[:limit])
+
+
+def _normalize_limit(value: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, parsed)
 
 
 def _corpus_proposals_by_source(corpus: dict[str, object]) -> dict[str, dict[str, object]]:
@@ -223,6 +301,8 @@ def _corpus_proposals_by_source(corpus: dict[str, object]) -> dict[str, dict[str
 
 
 def _broad_feature_ids(corpus_row: dict[str, object]) -> tuple[str, ...]:
+    if not corpus_row:
+        return ()
     case_count = int(corpus_row.get("support_count", 0) or 0)
     rows = []
     for item in corpus_row.get("top_matched_feature_ids", ()):
@@ -238,6 +318,25 @@ def _broad_feature_ids(corpus_row: dict[str, object]) -> tuple[str, ...]:
 
 def _signature_feature_ids(value: str) -> tuple[str, ...]:
     return tuple(row for row in value.split("|") if row.startswith("feature."))
+
+
+def _condition_feature_ids(condition_atoms: tuple[object, ...]) -> tuple[str, ...]:
+    feature_ids: list[str] = []
+    for atom in condition_atoms:
+        if not isinstance(atom, dict):
+            continue
+        value = str(atom.get("value", ""))
+        if value.startswith("feature."):
+            feature_ids.append(value)
+    return tuple(feature_ids)
+
+
+def _fallback_feature_bucket(definition: dict[str, object]) -> str:
+    feature_ids = _condition_feature_ids(tuple(definition.get("condition_atoms", ()))) or (
+        f"feature.fallback.{_safe(str(definition.get('domain', '')))}",
+        f"feature.fallback.{_safe(str(definition.get('source_knowledge_id', '')))}",
+    )
+    return "|".join(feature_ids[:4])
 
 
 def _review_prompt(domain: str, feature_ids: tuple[str, ...]) -> str:

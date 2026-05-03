@@ -6,6 +6,7 @@ import json
 import os
 import sys
 import time
+from typing import Any
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -13,6 +14,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from v20.corpus.artifacts import corpus_artifact_paths, resolve_corpus_artifact_run_id  # noqa: E402
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -28,50 +30,56 @@ def main() -> int:
     parser.add_argument("--progress", action="store_true", help="Print a progress bar to stderr while importing.")
     args = parser.parse_args()
 
-    _load_env_file(Path(args.env_file))
     run_id = resolve_corpus_artifact_run_id(args.run_id)
+    def _run() -> dict[str, object]:
+        _load_env_file(Path(args.env_file))
+        return _import_once(args.apply, args.batch_size, args.progress, run_id)
+
+    return run_and_print(
+        _run,
+        command="import_corpus_postgres.py",
+        args=args,
+        runtime_mutation=args.apply,
+    )
+
+
+def _import_once(apply: bool, batch_size: int, progress: bool, run_id: str) -> dict[str, object]:
     paths = corpus_artifact_paths(run_id)
     url = os.getenv("V20_DATABASE_URL", "")
-    payload = {
+    payload: dict[str, object] = {
         "version": "v20.corpus_postgres_import_cli.v1",
         "run_id": run_id,
         "source": str(paths.flat_labels_path),
         "target_table": "v20_corpus_snapshots",
-        "apply": args.apply,
+        "apply": apply,
         "database_url_present": bool(url),
-        "runtime_mutation": bool(args.apply),
+        "runtime_mutation": bool(apply),
         "guardrails": [
             "EXPLICIT_APPLY_REQUIRED",
             "BACKUP_REQUIRED_BEFORE_REMOTE_IMPORT",
             "NO_SECRET_VALUES_RENDERED",
         ],
     }
-    if not args.apply:
+    if not apply:
         payload["status"] = "dry_run"
-        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-        return 0
+        return payload
     if not url:
         payload["status"] = "blocked_missing_V20_DATABASE_URL"
-        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-        return 2
+        return payload
     if not paths.flat_labels_path.exists():
         payload["status"] = "blocked_missing_flat_labels"
-        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-        return 2
+        return payload
 
     try:
         import psycopg2
         from psycopg2.extras import execute_values
     except Exception as exc:
-        payload["status"] = "blocked_missing_psycopg2"
-        payload["error"] = str(exc)
-        print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-        return 2
+        return payload | {"status": "blocked_missing_psycopg2", "error": str(exc)}
 
     inserted = 0
-    total = _count_lines(paths.flat_labels_path) if args.progress else 0
+    total = _count_lines(paths.flat_labels_path) if progress else 0
     started = time.monotonic()
-    if args.progress:
+    if progress:
         _emit_progress(inserted, total, started, "starting")
     with psycopg2.connect(url) as conn:
         with conn.cursor() as cur:
@@ -98,25 +106,24 @@ def main() -> int:
                         json.dumps(row, ensure_ascii=False, sort_keys=True),
                     )
                 )
-                if len(batch) >= args.batch_size:
+                if len(batch) >= max(1, batch_size):
                     inserted += _insert_batch(cur, execute_values, batch)
-                    if args.progress:
+                    if progress:
                         _emit_progress(inserted, total, started, "importing")
                     batch.clear()
             if batch:
                 inserted += _insert_batch(cur, execute_values, batch)
-                if args.progress:
+                if progress:
                     _emit_progress(inserted, total, started, "importing")
             _create_indexes(cur)
-            if args.progress:
+            if progress:
                 _emit_progress(inserted, total, started, "indexing")
         conn.commit()
-    if args.progress:
+    if progress:
         _emit_progress(inserted, total, started, "completed")
     payload["status"] = "imported"
     payload["inserted_or_updated"] = inserted
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
+    return payload
 
 
 def _load_env_file(path: Path) -> None:

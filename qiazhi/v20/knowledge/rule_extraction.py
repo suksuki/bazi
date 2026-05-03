@@ -83,7 +83,7 @@ class ExtractedRuleCandidate:
 def build_rule_extraction_report(
     domain: str = "",
     *,
-    limit: int = 12,
+    limit: int = 0,
     subrule_limit: int = 4,
     units: tuple[KnowledgeUnit, ...] | None = None,
 ) -> dict[str, object]:
@@ -189,7 +189,7 @@ def validate_rule_extraction_report(domain: str = "", *, limit: int = 12) -> dic
 def build_llm_rule_extraction_report(
     domain: str = "",
     *,
-    limit: int = 3,
+    limit: int = 0,
     units: tuple[KnowledgeUnit, ...] | None = None,
     execute_llm: bool = True,
 ) -> dict[str, object]:
@@ -311,7 +311,21 @@ def _selected_reviewed_units(
         for unit in units
         if unit.status == "reviewed" and (not normalized or unit.domain == normalized)
     ]
-    return tuple(sorted(rows, key=lambda unit: (_domain_priority(unit.domain), unit.knowledge_id))[:limit])
+    sorted_rows = sorted(
+        rows,
+        key=lambda unit: (
+            _domain_priority(unit.domain),
+            _knowledge_unit_contract_preference(unit.knowledge_id),
+            unit.knowledge_id,
+        ),
+    )
+    return tuple(sorted_rows if limit <= 0 else sorted_rows[:limit])
+
+
+def _knowledge_unit_contract_preference(knowledge_id: str) -> int:
+    if str(knowledge_id).startswith("v20."):
+        return 0
+    return 1
 
 
 def _proposal_index(domain: str, *, limit: int, units: tuple[KnowledgeUnit, ...]) -> dict[str, dict[str, object]]:

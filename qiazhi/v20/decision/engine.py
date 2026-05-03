@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from v20.core.schemas import ChartFacts, CoreInference, TimeContext
+from v20.answer.measurement_policy import domain_label
 from v20.decision.defeasible_model import build_defeasible_decision_model
 from v20.decision.schema import (
     DecisionReport,
@@ -40,12 +41,60 @@ def build_decision_report(
         practitioner_controls=tuple(controls),
     )
     payload = report.to_dict()
+    payload["rule_runtime_hits"] = _build_rule_runtime_hits(rule_runtime_report)
     payload["rule_runtime_source"] = "bazi_rule_spec_engine"
     payload["legacy_decision_bridge_status"] = "compatibility_only"
     payload["rule_runtime_report"] = rule_runtime_report
     payload["defeasible_decision_model"] = defeasible_model
     payload["portrait_projection"] = build_portrait_projection(feature_layer, defeasible_model, payload)
     return payload
+
+
+def _build_rule_runtime_hits(rule_runtime_report: dict[str, object]) -> tuple[dict[str, object], ...]:
+    rows: list[dict[str, object]] = []
+    for row in tuple(rule_runtime_report.get("rules", ()) if isinstance(rule_runtime_report, dict) else ()):
+        if not isinstance(row, dict):
+            continue
+        status = str(row.get("match_status", "not_matched") or "not_matched")
+        rule_key = str(row.get("rule_id", "") or row.get("rule_key", ""))
+        rows.append(
+            {
+                "rule_key": rule_key,
+                "title": str(row.get("title", "")) or rule_key,
+                "label": str(row.get("title", "")) or rule_key,
+                "domain": str(row.get("domain", "")),
+                "status": status,
+                "match_status": status,
+                "match_score": float(row.get("match_score", 0.0) or 0.0),
+                "score": float(row.get("match_score", 0.0) or 0.0),
+                "condition_count": int(row.get("condition_count", 0) or 0),
+                "matched_condition_count": int(row.get("matched_condition_count", 0) or 0),
+                "runtime_status": str(row.get("runtime_status", "") or ""),
+                "decision_state": str(row.get("decision_state", "") or ""),
+                "source": "rulespec",
+                "evidence": tuple(row.get("condition_results", ()) if isinstance(row.get("condition_results", ()), tuple) else ()),
+            }
+        )
+    def sort_key(item: dict[str, object]) -> tuple[int, float, str]:
+        status = str(item.get("status", "")).lower()
+        status_rank = {
+            "matched": 100,
+            "partial": 80,
+            "review_required": 65,
+            "blocked": 50,
+            "archive_only": 40,
+            "not_matched": 10,
+        }.get(status, 0)
+        return (
+            status_rank,
+            float(item.get("match_score", 0.0) or 0.0),
+            str(item.get("rule_key", "")),
+        )
+
+    return tuple(
+        dict(row, domain_label=domain_label(str(row.get("domain", ""))))
+        for row in sorted(rows, key=sort_key, reverse=True)
+    )
 
 
 def _build_hits(

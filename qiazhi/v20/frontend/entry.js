@@ -1,65 +1,69 @@
 const ENTRY_TEXT = {
   zh: {
     title: "进入掐指一算",
-    subtitle: "选择游客、命理师或 Admin 入口，进入 V20 命理测算系统。",
+    subtitle: "选择游客或本地账号进入 V20 命理测算系统。",
     language: "语言",
     guest_title: "游客即时测算",
     guest_desc: "不需要账号，直接进入测算台。适合快速体验和临时问盘。",
     guest_button: "游客进入",
     login_title: "本地账号登录",
     login_desc: "用于保留多用户、命理师工作流和后续用户档案。",
+    register_title: "注册本地账号",
+    register_desc: "普通用户用于保存个人档案，命理师用于后续校准与工作流。",
     username: "用户名",
     password: "密码",
-    role: "角色",
-    role_guest: "游客",
+    register_role: "注册角色",
+    role_user: "普通用户",
     role_practitioner: "命理师",
     login_button: "登录",
     register_button: "注册",
-    admin_desc: "Admin 页面只保留数据库与 LLM 运行状态，复杂知识和规则治理不放在入口页。",
-    profiles_link: "档案管理",
+    logout_button: "登出",
   },
   en: {
     title: "Enter Qiazhi",
-    subtitle: "Choose Guest, Practitioner, or Admin to enter the V20 Bazi system.",
+    subtitle: "Choose Guest or a local account to enter the V20 Bazi system.",
     language: "Language",
     guest_title: "Guest Reading",
     guest_desc: "No account required. Open the workbench for a quick reading.",
     guest_button: "Continue as Guest",
     login_title: "Local Account",
     login_desc: "Keeps multi-user, practitioner workflow, and future profile continuity.",
+    register_title: "Register Local Account",
+    register_desc: "Regular users keep personal profiles; practitioners unlock calibration workflow.",
     username: "Username",
     password: "Password",
-    role: "Role",
-    role_guest: "Guest",
+    register_role: "Registration Role",
+    role_user: "Regular User",
     role_practitioner: "Practitioner",
     login_button: "Log In",
     register_button: "Register",
-    admin_desc: "Admin only shows database and LLM status; deeper rule governance stays out of the entry page.",
-    profiles_link: "Profiles",
+    logout_button: "Log Out",
   },
   ko: {
     title: "Qiazhi 시작",
-    subtitle: "게스트, 명리사, Admin 입구를 선택해 V20 사주 시스템으로 들어갑니다.",
+    subtitle: "게스트 또는 로컬 계정으로 V20 사주 시스템에 들어갑니다.",
     language: "언어",
     guest_title: "게스트 즉시 분석",
     guest_desc: "계정 없이 바로 분석 작업대로 들어갑니다.",
     guest_button: "게스트로 시작",
     login_title: "로컬 계정",
     login_desc: "다중 사용자, 명리사 작업 흐름, 향후 프로필 연속성을 보존합니다.",
+    register_title: "로컬 계정 등록",
+    register_desc: "일반 사용자는 개인 프로필을 저장하고, 명리사는 보정 작업 흐름을 사용합니다.",
     username: "사용자명",
     password: "비밀번호",
-    role: "역할",
-    role_guest: "게스트",
+    register_role: "등록 역할",
+    role_user: "일반 사용자",
     role_practitioner: "명리사",
     login_button: "로그인",
     register_button: "등록",
-    admin_desc: "Admin은 DB와 LLM 상태만 표시합니다. 복잡한 규칙 관리는 입구에 두지 않습니다.",
-    profiles_link: "프로필",
+    logout_button: "로그아웃",
   },
 };
 
 const localeSelect = document.querySelector("#entryLocale");
 const statusLine = document.querySelector("#entryStatus");
+const logoutButton = document.querySelector("#logoutButton");
 
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, {
@@ -89,14 +93,14 @@ const applyLocale = (locale) => {
 };
 
 const goWorkbench = (session) => {
-  const role = session?.role || document.querySelector("#loginRole").value || "user";
+  const role = session?.role || "user";
   const locale = localeSelect.value || "zh";
   const params = new URLSearchParams({ role, locale });
   window.location.href = `/v20/ui/workbench.html?${params.toString()}`;
 };
 
 const goProfiles = (session) => {
-  const role = session?.role || document.querySelector("#loginRole").value || "user";
+  const role = session?.role || "user";
   const locale = localeSelect.value || "zh";
   const params = new URLSearchParams({ role, locale });
   window.location.href = `/v20/ui/profiles.html?${params.toString()}`;
@@ -129,18 +133,29 @@ const register = async () => {
   const result = await requestJson("/api/v20/auth/register", {
     method: "POST",
     body: JSON.stringify({
-      username: document.querySelector("#loginName").value,
-      password: document.querySelector("#loginPassword").value,
-      role: document.querySelector("#loginRole").value,
+      username: document.querySelector("#registerName").value,
+      password: document.querySelector("#registerPassword").value,
+      role: document.querySelector("#registerRole").value,
       locale: localeSelect.value,
     }),
   });
   goProfiles(result.session);
 };
 
+const logout = async () => {
+  statusLine.textContent = "...";
+  await requestJson("/api/v20/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  if (logoutButton) logoutButton.hidden = true;
+  statusLine.textContent = "logged out";
+};
+
 const loadMe = async () => {
   const result = await requestJson("/api/v20/auth/me");
   const session = result.session || {};
+  if (logoutButton) logoutButton.hidden = !result.authenticated;
   statusLine.textContent = result.authenticated ? `${session.username} · ${session.role}` : "not authenticated";
 };
 
@@ -150,4 +165,5 @@ localeSelect.addEventListener("change", () => applyLocale(localeSelect.value));
 document.querySelector("#guestStart").addEventListener("click", () => guestStart().catch((error) => statusLine.textContent = error.message));
 document.querySelector("#loginButton").addEventListener("click", () => login().catch((error) => statusLine.textContent = error.message));
 document.querySelector("#registerButton").addEventListener("click", () => register().catch((error) => statusLine.textContent = error.message));
+logoutButton?.addEventListener("click", () => logout().catch((error) => statusLine.textContent = error.message));
 loadMe().catch(() => statusLine.textContent = "not authenticated");

@@ -10,6 +10,7 @@ class TestCommand:
     argv: tuple[str, ...]
     purpose: str
     opt_in_env: str = ""
+    command_timeout_seconds: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

@@ -7,6 +7,7 @@ from v20.learning.knowledge_rule_review_overlay import read_knowledge_rule_revie
 from v20.learning.practitioner_calibration_training import read_practitioner_calibration_training_artifact
 from v20.learning.rule_replay_eval import read_rule_replay_eval_artifact
 from v20.learning.rule_subcondition_split import read_rule_subcondition_split_artifact
+from v20.learning.question_ranking_learning import read_question_ranking_learning_artifact
 from v20.validation.rule_portrait_batch import read_rule_portrait_batch_artifact
 from v20.validation.rule_synthetic import read_rule_synthetic_training_artifact
 
@@ -21,6 +22,7 @@ def build_decision_training_plan() -> dict[str, object]:
     decision_registry = read_decision_registry_iteration_artifact()
     rule_overlay = read_knowledge_rule_review_overlay_artifact()
     corpus = read_corpus_artifact_status()
+    question_ranking = read_question_ranking_learning_artifact()
     return {
         "version": "v20.decision_training_plan.v1",
         "status": "ready",
@@ -69,6 +71,12 @@ def build_decision_training_plan() -> dict[str, object]:
                 "activation": "dynamic_decision_training_batch_practitioner_controls_and_offline_priors",
                 "current_artifact_status": _combined_status(synthetic, batch, dynamic, practitioner, corpus),
             },
+            {
+                "target": "question_ranking",
+                "learns": "问题排序偏好、领域优先级、规则前缀与状态倾斜",
+                "activation": "runtime_question_backfill + shadow_ranking_report + practitioner_feedback",
+                "current_artifact_status": question_ranking.get("status", "not_built"),
+            },
         ],
         "managed_scripts": [
             "v20/scripts/extract_rules_llm.py",
@@ -78,6 +86,7 @@ def build_decision_training_plan() -> dict[str, object]:
             "v20/scripts/run_rule_subcondition_split.py",
             "v20/scripts/run_rule_replay_eval.py",
             "v20/scripts/run_decision_registry_iteration.py",
+            "v20/scripts/run_question_ranking_training.py",
             "v20/scripts/run_rule_portrait_batch.py",
             "v20/scripts/run_dynamic_decision_training.py",
             "v20/scripts/run_practitioner_calibration_training.py",

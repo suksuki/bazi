@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -15,6 +14,7 @@ from v20.learning.active_generation import (  # noqa: E402
     read_active_package_artifact,
     write_active_package_artifact,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -25,16 +25,21 @@ def main() -> int:
     parser.add_argument("--corpus-preview", type=int, default=0, help="Optionally preview N full-corpus cases upstream.")
     args = parser.parse_args()
 
-    if args.status:
-        payload = read_active_package_artifact()
-    else:
+    def _run() -> dict[str, object]:
+        if args.status:
+            return read_active_package_artifact()
         package = build_active_package(
             include_rule_batch=args.include_rule_batch,
             corpus_preview_limit=max(0, args.corpus_preview),
         )
-        payload = write_active_package_artifact(package) if args.write else package
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} and payload.get("package_status") != "blocked" else 1
+        return write_active_package_artifact(package) if args.write else package
+
+    return run_and_print(
+        _run,
+        command="run_active_generation.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

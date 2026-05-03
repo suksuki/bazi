@@ -14,6 +14,7 @@ from v20.learning.training_iteration import (  # noqa: E402
     read_training_iteration_artifact,
     run_training_iteration,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -25,20 +26,25 @@ def main() -> int:
     parser.add_argument("--corpus-preview", type=int, default=0, help="Optionally preview N full-corpus cases.")
     args = parser.parse_args()
 
-    progress = (
-        lambda message: print(f"[v20-iteration] {message}", file=sys.stderr, flush=True)
-    ) if args.progress else None
-    if args.status:
-        payload = read_training_iteration_artifact()
-    else:
-        payload = run_training_iteration(
+    def _run() -> dict[str, object]:
+        progress = (
+            lambda message: print(f"[v20-iteration] {message}", file=sys.stderr, flush=True)
+        ) if args.progress else None
+        if args.status:
+            return read_training_iteration_artifact()
+        return run_training_iteration(
             write=args.write,
             include_rule_batch=not args.skip_rule_batch,
             corpus_preview_limit=max(0, args.corpus_preview),
             progress=progress,
         )
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} and payload.get("report_status") not in {"fail", "blocked"} else 1
+
+    return run_and_print(
+        _run,
+        command="run_training_iteration.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

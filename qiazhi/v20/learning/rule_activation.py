@@ -8,7 +8,7 @@ from v20.learning.rule_subcondition_split import build_rule_subcondition_split_r
 from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 
 
-def build_rule_activation_report(domain: str = "", *, limit: int = 64) -> dict[str, object]:
+def build_rule_activation_report(domain: str = "", *, limit: int = 0) -> dict[str, object]:
     validation = build_knowledge_rule_validation_report(domain, limit=limit)
     split = build_rule_subcondition_split_report(domain, limit=limit)
     split_by_rule_key = {
@@ -55,7 +55,7 @@ def build_rule_activation_report(domain: str = "", *, limit: int = 64) -> dict[s
     }
 
 
-def build_rule_activation_packet_summary(domain: str = "", *, limit: int = 64) -> dict[str, object]:
+def build_rule_activation_packet_summary(domain: str = "", *, limit: int = 0) -> dict[str, object]:
     gate = build_rule_activation_report(domain, limit=limit)
     packets = [row for row in gate.get("packets", ()) if isinstance(row, dict)]
     return {
@@ -114,7 +114,12 @@ def _packet_from_validation(row: dict[str, object], split_packet: dict[str, obje
         "subcondition_count": len(split_packet.get("subconditions", ())) if split_packet else 0,
         "counterexample_candidate_count": len(split_packet.get("counterexample_candidates", ())) if split_packet else 0,
         "subcondition_packet_id": split_packet.get("packet_id", "") if split_packet else "",
-        "subcondition_quality_status": "ready" if split_packet and split_packet.get("corpus_state") == "ready" else "missing",
+        "subcondition_quality_status": (
+            "ready"
+            if split_packet
+            and split_packet.get("corpus_state") in {"ready", "missing_corpus_training_fallback"}
+            else "missing"
+        ),
         "validation_state": validation_state,
         "activation_lane": activation_lane,
         "iteration_action": iteration_action,
@@ -140,7 +145,11 @@ def _activation_lane(validation_state: str, split_packet: dict[str, object]) -> 
     if validation_state == "needs_rule_or_case_fix":
         return "needs_rule_or_case_fix"
     if validation_state == "synthetic_passed_needs_subconditions":
-        if split_packet and split_packet.get("corpus_state") == "ready" and split_packet.get("subconditions"):
+        if split_packet and split_packet.get("subconditions"):
+            return "subcondition_active_ready"
+        return "needs_subcondition_split"
+    if validation_state == "synthetic_passed_fallback_ready":
+        if split_packet and split_packet.get("subconditions"):
             return "subcondition_active_ready"
         return "needs_subcondition_split"
     if validation_state == "synthetic_passed_waiting_for_corpus_prior":
@@ -158,6 +167,7 @@ def _iteration_action(activation_lane: str) -> str:
         "needs_subcondition_split": "split_rule_by_feature_signature_and_add_counterexamples",
         "subcondition_active_ready": "activate_subconditions_for_replay_eval",
         "waiting_for_corpus_prior": "build_or_import_corpus_prior",
+        "subcondition_fallback_ready": "activate_subconditions_for_replay_eval",
         "active_weight_ready": "activate_weight_and_record_iteration",
         "system_iteration_required": "system_iteration",
     }
@@ -170,6 +180,8 @@ def _iteration_options(activation_lane: str) -> tuple[str, ...]:
     if activation_lane == "needs_subcondition_split":
         return ("split_rule", "add_counterexample", "defer", "reject")
     if activation_lane == "subcondition_active_ready":
+        return ("activate_subconditions_for_replay_eval", "add_counterexample", "split_again", "defer", "reject")
+    if activation_lane == "subcondition_fallback_ready":
         return ("activate_subconditions_for_replay_eval", "add_counterexample", "split_again", "defer", "reject")
     if activation_lane == "needs_synthetic_case":
         return ("generate_synthetic_case", "defer", "reject")
@@ -186,6 +198,8 @@ def _required_evidence(activation_lane: str) -> tuple[str, ...]:
         return (*common, "subcondition candidates", "counterexample cases")
     if activation_lane == "subcondition_active_ready":
         return (*common, "active subcondition signals", "counterexample cases", "replay eval artifact")
+    if activation_lane == "subcondition_fallback_ready":
+        return (*common, "active subcondition signals", "fallback feature signature", "replay eval artifact")
     if activation_lane == "needs_synthetic_case":
         return (*common, "domain synthetic case")
     return common

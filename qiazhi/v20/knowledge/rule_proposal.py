@@ -58,7 +58,7 @@ class KnowledgeRuleProposal:
 def build_knowledge_rule_proposals(
     domain: str = "",
     *,
-    limit: int = 12,
+    limit: int = 0,
     units: tuple[KnowledgeUnit, ...] | None = None,
 ) -> dict[str, object]:
     selected = _selected_reviewed_units(domain, limit=limit, units=units or default_knowledge_units())
@@ -180,8 +180,15 @@ def _selected_reviewed_units(
         for unit in units
         if unit.status == "reviewed" and (not normalized or unit.domain == normalized)
     ]
-    rows = sorted(rows, key=lambda unit: (_domain_priority(unit.domain), unit.knowledge_id))
-    return tuple(rows[:limit])
+    rows = sorted(
+        rows,
+        key=lambda unit: (
+            _domain_priority(unit.domain),
+            _knowledge_unit_contract_preference(unit.knowledge_id),
+            unit.knowledge_id,
+        ),
+    )
+    return tuple(rows if limit <= 0 else rows[:limit])
 
 
 def _proposal_from_unit(unit: KnowledgeUnit) -> KnowledgeRuleProposal:
@@ -241,6 +248,10 @@ def _domain_priority(domain: str) -> tuple[int, str]:
         return (CORE_DOMAIN_PRIORITY.index(domain), domain)
     except ValueError:
         return (len(CORE_DOMAIN_PRIORITY), domain)
+
+
+def _knowledge_unit_contract_preference(knowledge_id: str) -> int:
+    return 0 if str(knowledge_id).startswith("v20.") else 1
 
 
 def _safe_id(value: str) -> str:

@@ -11,6 +11,9 @@ const state = {
   practitionerSelections: [],
   latentManifest: null,
   latentAnswers: [],
+  answeredQuestionIds: [],
+  answeredQuestionKeys: [],
+  chartMemoryKey: "",
 };
 const params = new URLSearchParams(window.location.search);
 
@@ -32,12 +35,13 @@ const UI_TEXT = {
     features_title: "八字特征状态",
     portrait_title: "主题投射画像",
     questions_title: "智能问题",
+    hits_title: "规则命中",
     answer_title: "八字专业回复",
     evidence_title: "证据锚点",
     feedback_title: "反馈校准",
     run: "开始测算",
     running: "测算中",
-    roles: { user: "游客", analyst: "命理师" },
+    roles: { user: "游客", analyst: "命理师", admin: "管理员" },
   },
   en: {
     app_title: "Bazi Workbench",
@@ -47,12 +51,13 @@ const UI_TEXT = {
     features_title: "Bazi Feature States",
     portrait_title: "Topic Projection",
     questions_title: "Smart Questions",
+    hits_title: "Rule Hits",
     answer_title: "Professional Bazi Reply",
     evidence_title: "Evidence Anchors",
     feedback_title: "Feedback Calibration",
     run: "Run Reading",
     running: "Reading",
-    roles: { user: "Guest", analyst: "Practitioner" },
+    roles: { user: "Guest", analyst: "Practitioner", admin: "Admin" },
   },
   ko: {
     app_title: "사주 분석 작업대",
@@ -62,12 +67,13 @@ const UI_TEXT = {
     features_title: "사주 특징 상태",
     portrait_title: "주제 투사",
     questions_title: "지능형 질문",
+    hits_title: "규칙 적중",
     answer_title: "전문 사주 답변",
     evidence_title: "근거 앵커",
     feedback_title: "피드백 보정",
     run: "분석 시작",
     running: "분석 중",
-    roles: { user: "게스트", analyst: "명리사" },
+    roles: { user: "게스트", analyst: "명리사", admin: "관리자" },
   },
 };
 
@@ -103,9 +109,12 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
   syncQuestionIdFromSelect();
   const text = currentText();
   const payload = payloadFromForm();
+  syncQuestionMemory(payload);
   payload.llm_mode = llmMode;
   payload.practitioner_selections = state.practitionerSelections;
   payload.latent_event_answers = state.latentAnswers;
+  payload.answered_question_ids = state.answeredQuestionIds;
+  payload.answered_question_keys = state.answeredQuestionKeys;
   const key = JSON.stringify(payload);
   if (!force && key === state.lastMeasureKey) return;
   if (!hasCompletePillars(payload)) return;
@@ -157,13 +166,13 @@ const renderRuntime = (result) => {
   const decisionReport = result.decision_report || {};
   const featureStateModel = result.feature_state_model || {};
   const questionIntentModel = result.question_intent_model || {};
-  const interactionSession = result.interaction_session || {};
   const portraitProjection = decisionReport.portrait_projection || {};
   const role = result.role?.role_key || measurementRole(roleSelect.value);
   const selectedQuestionId = selected.question_id || "";
   if (questionIdInput) questionIdInput.value = selectedQuestionId;
 
   document.body.dataset.role = role;
+  renderObservationAccess(role);
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
   setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
   setText("#featureCount", featureStateModel.feature_state_count ?? decisionReport.decision_count ?? featureLayer.feature_count ?? 0);
@@ -171,7 +180,6 @@ const renderRuntime = (result) => {
   setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
   setText("#coreCapacity", featureStateModel.algorithm || result.core_inference?.day_master_capacity || "fusion");
   setText("#intentSummary", intentSummary(questionIntentModel));
-  setText("#interactionSummary", `${interactionSession.signal_count ?? 0} signals`);
   setText("#dayMasterBadge", `日主 ${chart.day_master || "-"}`);
   setText("#llmStatus", llmStatusLabel(result));
   setText("#answerText", result.answer_text || "");
@@ -187,22 +195,46 @@ const renderRuntime = (result) => {
       featureLayer.features ||
       []
   );
+  renderPortraitGraph(result.portrait_graph_summary || {});
   renderPortrait(portraitProjection.axes || []);
   renderPractitionerCalibration(decisionReport.practitioner_controls || [], result.input_id || "", role);
   renderLatentCalibration(result.input_id || "", role);
   renderQuestions(result.questions || [], selectedQuestionId || selected.question_key || "", questionIntentModel);
+  const runtimeDecisionHits = Array.isArray(decisionReport.rule_runtime_hits) ? decisionReport.rule_runtime_hits : [];
+  renderDecisionHits(runtimeDecisionHits.length ? runtimeDecisionHits : (decisionReport.hits || []));
   renderQuestionSelect(result.questions || [], selectedQuestionId || selected.question_key || "");
-  renderInteractionSignals(interactionSession);
   renderEvidence(
     result.knowledge_refs || [],
     result.decision_validation || {},
     {
       featureStateModel,
       questionIntentModel,
-      interactionSession,
       decisionModel: decisionReport.defeasible_decision_model || {},
     }
   );
+};
+
+const renderObservationAccess = (role) => {
+  const page = document.querySelector("#observationPage");
+  const status = document.querySelector("#observationStatus");
+  if (!page) return;
+  const isAdmin = role === "admin";
+  page.hidden = !isAdmin;
+  if (status) status.textContent = isAdmin ? "admin visible" : "admin only";
+  setObservationCollapsed(page.classList.contains("collapsed"));
+};
+
+const setObservationCollapsed = (collapsed) => {
+  const page = document.querySelector("#observationPage");
+  const body = document.querySelector("#observationBody");
+  const toggle = document.querySelector("#observationToggle");
+  const label = document.querySelector("#observationCollapseLabel");
+  if (!page || !body || !toggle) return;
+  page.classList.toggle("collapsed", collapsed);
+  body.hidden = collapsed;
+  toggle.setAttribute("aria-expanded", String(!collapsed));
+  toggle.title = collapsed ? "展开观测页面" : "收起观测页面";
+  if (label) label.textContent = collapsed ? "展开" : "收起";
 };
 
 const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") => {
@@ -276,6 +308,46 @@ const renderFeatures = (features) => {
   });
 };
 
+const renderPortraitGraph = (summary) => {
+  const root = document.querySelector("#portraitGraphSummary");
+  const status = document.querySelector("#portraitGraphStatus");
+  if (!root) return;
+  clear(root);
+  if (status) status.textContent = summary.status || "profile";
+  if (!summary || summary.status !== "ready") {
+    root.append(el("div", "empty-note", "等待画像图谱。"));
+    return;
+  }
+  root.append(el("p", "portrait-graph-headline", summary.headline || "当前盘已形成图谱画像。"));
+  const tagLine = el("div", "portrait-tag-line");
+  (summary.profile_tags || []).slice(0, 8).forEach((tag) => tagLine.append(el("span", "portrait-tag-chip", tag)));
+  if (tagLine.childNodes.length) root.append(tagLine);
+
+  const columns = el("div", "portrait-graph-columns");
+  [
+    ["主线", summary.strength_lines || []],
+    ["压力", summary.pressure_lines || []],
+    ["时间", summary.timing_triggers || []],
+  ].forEach(([title, rows]) => {
+    const box = el("div", "portrait-graph-box");
+    box.append(el("strong", "", title));
+    const list = el("ul");
+    (rows.length ? rows : ["暂按主题画像展开"]).slice(0, 3).forEach((row) => {
+      const item = el("li", "", row);
+      list.append(item);
+    });
+    box.append(list);
+    columns.append(box);
+  });
+  root.append(columns);
+
+  const questionLine = el("div", "portrait-graph-questions");
+  (summary.suggested_questions || []).slice(0, 3).forEach((question) => {
+    questionLine.append(el("span", "portrait-question-chip", question.title || question.question_key || "问题"));
+  });
+  if (questionLine.childNodes.length) root.append(questionLine);
+};
+
 const featureStateLabel = (state) => ({
   active: "已入主链",
   available: "可用",
@@ -299,15 +371,31 @@ const renderPortrait = (axes) => {
   axes.slice(0, 8).forEach((axis) => {
     const row = el("div", "axis-row");
     row.dataset.domain = axis.domain || "general";
+    const axisTier = String(axis.axis_tier || "macro");
+    row.dataset.tier = axisTier;
     const score = axis.score ?? axis.intelligence_score ?? axis.peak_confidence ?? axis.alignment_score ?? 0;
     const temperature = portraitTemperature(score);
     row.dataset.temperature = temperature.key;
     const title = el("div", "axis-title-line");
     title.append(el("strong", "", axis.label || axis.axis_id || "动态画像"));
-    title.append(el("span", "axis-tag", portraitDomainLabel(axis.domain)));
-    title.append(el("span", `axis-temp ${temperature.key}`, temperature.label));
+    title.append(el("span", "axis-tag", axis.profile_tag || portraitDomainLabel(axis.domain)));
+    title.append(el("span", `axis-temp ${temperature.key}`, portraitAttentionLabel(axis.attention_level, temperature.label)));
+    const tierLabel = String(axis.axis_tier || "");
+    if (tierLabel) {
+      title.append(el("span", "axis-tier", axisTierLabel(tierLabel)));
+    }
+    const stateLabel = String(axis.axis_state || "");
+    if (stateLabel) {
+      title.append(el("span", "axis-state", axisStateLabel(stateLabel)));
+    }
     row.append(title);
-    row.append(el("span", "", axis.summary || axis.calibration_state || `${axis.domain || "命理"} · score ${score}`));
+    row.append(el("span", "", axis.profile_summary || axis.summary || `${portraitDomainLabel(axis.domain)} · score ${score}`));
+    const tags = (axis.profile_tags || []).filter(Boolean).slice(0, 5);
+    if (tags.length) {
+      const tagLine = el("div", "portrait-tag-line");
+      tags.forEach((tag) => tagLine.append(el("span", "portrait-tag-chip", tag)));
+      row.append(tagLine);
+    }
     const seeds = (axis.question_seeds || []).filter(Boolean).slice(0, 2);
     const boundaries = (axis.evidence_boundaries || []).filter(Boolean).slice(0, 2);
     if (boundaries.length) row.append(el("p", "", boundaries.join(" / ")));
@@ -317,6 +405,10 @@ const renderPortrait = (axes) => {
     const bar = el("div", "meter");
     bar.append(meter);
     row.append(bar);
+    const anchor = String(axis.structural_anchor || "").trim();
+    if (anchor) {
+      row.append(el("p", "axis-anchor-line", `结构锚点：${anchor}`));
+    }
     root.append(row);
   });
 };
@@ -343,18 +435,44 @@ const portraitTemperature = (score) => {
   return { key: "cool", label: "线索" };
 };
 
+const portraitAttentionLabel = (level, fallback) => ({
+  high: "高关注",
+  medium: "重点观察",
+  normal: "常规画像",
+}[level] || fallback || "画像");
+
+const axisTierLabel = (tier) => ({
+  micro: "微观骨架",
+  decision: "裁决路径",
+  macro: "应用场景",
+  time: "时序引动",
+}[tier] || "结构层");
+
+const axisStateLabel = (state) => ({
+  confirmed: "已成",
+  chain_review: "链式",
+  mixed: "成而不纯",
+  candidate: "候选",
+  weak_candidate: "偏弱",
+  volatile: "引动",
+  requires_review: "需复核",
+  countered: "反制",
+  blocked: "受阻",
+}[state] || "结构");
+
 const renderPractitionerCalibration = (controls, inputId, role) => {
   const root = document.querySelector("#practitionerCalibration");
   const list = document.querySelector("#calibrationControls");
   const status = document.querySelector("#calibrationStatus");
   if (!root || !list || !status) return;
   clear(list);
-  if (role !== "analyst" || !controls.length) {
+  if (!["analyst", "admin"].includes(role) || !controls.length) {
     root.hidden = true;
     return;
   }
   root.hidden = false;
   status.textContent = practitionerSessionStatus();
+  setPractitionerCollapsed(root.classList.contains("collapsed"));
   controls.slice(0, 4).forEach((control) => {
     const row = el("div", "calibration-control");
     row.append(el("strong", "", control.label || control.control_key || "命理师校准"));
@@ -373,6 +491,19 @@ const renderPractitionerCalibration = (controls, inputId, role) => {
     row.append(options);
     list.append(row);
   });
+};
+
+const setPractitionerCollapsed = (collapsed) => {
+  const root = document.querySelector("#practitionerCalibration");
+  const body = document.querySelector("#calibrationControls");
+  const toggle = document.querySelector("#practitionerToggle");
+  const label = document.querySelector("#practitionerCollapseLabel");
+  if (!root || !body || !toggle) return;
+  root.classList.toggle("collapsed", collapsed);
+  body.hidden = collapsed;
+  toggle.setAttribute("aria-expanded", String(!collapsed));
+  toggle.title = collapsed ? "展开命理师校准" : "收起命理师校准";
+  if (label) label.textContent = collapsed ? "展开" : "收起";
 };
 
 const recordPractitionerCalibration = async (control, option, inputId, activeButton) => {
@@ -425,7 +556,7 @@ const renderLatentCalibration = (inputId, role) => {
   if (!root || !list || !status) return;
   clear(list);
   const scenarios = state.latentManifest?.scenarios || [];
-  if (!document.body.classList.contains("profile-reading") || !scenarios.length) {
+  if (role !== "admin" || !document.body.classList.contains("profile-reading") || !scenarios.length) {
     root.hidden = true;
     return;
   }
@@ -484,7 +615,7 @@ const recordLatentCalibration = async (scenario, inputId, role, row) => {
       method: "POST",
       body: JSON.stringify({
         input_id: inputId,
-        source_role: role === "analyst" ? "analyst" : "user",
+        source_role: ["analyst", "admin"].includes(role) ? "analyst" : "user",
         locale: localeSelect.value,
         answers: [answer],
       }),
@@ -515,8 +646,83 @@ const renderQuestions = (questions, selectedId, questionIntentModel = {}) => {
   }
   const bindingByKey = questionBindingByKey(questionIntentModel);
   const activeId = String(selectedId || "");
-  questions.slice(0, 5).forEach((question) => {
+  questions.slice(0, 8).forEach((question) => {
     root.append(questionButton(question, activeId, "question-row", bindingByKey[question.question_key] || {}));
+  });
+};
+
+const renderDecisionHits = (hits = []) => {
+  const root = document.querySelector("#decisionHits");
+  const hitCount = document.querySelector("#decisionHitCount");
+  const summary = document.querySelector("#decisionHitSummary");
+  clear(root);
+  if (summary) {
+    clear(summary);
+  }
+  if (!hits.length) {
+    if (hitCount) hitCount.textContent = "0 命中";
+    if (summary) {
+      summary.append(el("span", "small-pill", "未触发规则"));
+    }
+    root.append(el("div", "empty-note", "当前暂无规则命中。"));
+    return;
+  }
+  const statusBuckets = {};
+  for (const hit of hits) {
+    const status = String(hit.status || hit.match_status || "candidate");
+    statusBuckets[status] = (statusBuckets[status] || 0) + 1;
+  }
+  const matched = hits.filter((hit) => hit.status === "matched" || hit.match_status === "matched");
+  const partial = hits.filter((hit) => hit.status === "partial" || hit.match_status === "partial");
+  const uncertain = hits.filter(
+    (hit) => !["matched", "partial"].includes(hit.status) && !["matched", "partial"].includes(hit.match_status)
+  );
+  const orderedHits = [...matched, ...partial, ...uncertain]
+    .sort((a, b) => {
+      const scoreA = Number(a.match_score ?? a.score ?? 0);
+      const scoreB = Number(b.match_score ?? b.score ?? 0);
+      if (scoreA !== scoreB) return scoreB - scoreA;
+      return String(a.rule_key || "").localeCompare(String(b.rule_key || ""));
+    });
+  if (hitCount) hitCount.textContent = `${orderedHits.length} 条规则命中轨迹`;
+  if (summary) {
+    const orderedStatus = Object.entries(statusBuckets).sort((a, b) => b[1] - a[1]);
+    orderedStatus.forEach(([label, count]) => {
+      summary.append(el("span", "small-pill", `${label}: ${count}`));
+    });
+  }
+  orderedHits.slice(0, 200).forEach((hit) => {
+    const row = el("div", "rule-hit-row");
+    const source = String(hit.source || "rulespec");
+    const rawStatus = hit.status || hit.match_status || "candidate";
+    const status = rawStatus === "candidate" ? (hit.match_status === "partial" ? "部分成立" : rawStatus) : rawStatus;
+    const score = Number(hit.match_score ?? hit.score ?? 0);
+    const matchText = `匹配率 ${(score * 100).toFixed(0)}%`;
+    const statusText = `${status} · ${source}`;
+    row.append(el("strong", "", hit.label || hit.rule_key || "规则"));
+    const detail = `${hit.domain || "domain"} · ${statusText} · ${matchText}`;
+    row.append(el("span", "", detail));
+    if (hit.decision_key) {
+      row.append(el("span", "rule-key", hit.decision_key));
+    }
+    if (hit.rule_key) {
+      row.append(el("span", "rule-key", hit.rule_key));
+    }
+    const conditionInfo = Number.isFinite(Number(hit.matched_condition_count)) && Number(hit.condition_count)
+      ? `${hit.matched_condition_count}/${hit.condition_count}`
+      : "";
+    if (conditionInfo) {
+      row.append(el("span", "", `条件命中 ${conditionInfo}`));
+    }
+    if (hit.missing_evidence && hit.missing_evidence.length) {
+      row.append(el("p", "", hit.missing_evidence.filter(Boolean).slice(0, 2).join(" · ")));
+    } else if (hit.evidence && hit.evidence.length) {
+      row.append(el("p", "", hit.evidence.filter(Boolean).slice(0, 2).join(" · ")));
+    }
+    if (hit.decision_state && hit.decision_state !== "confirmed" && hit.domain) {
+      row.append(el("p", "", `决策态：${hit.decision_state}`));
+    }
+    root.append(row);
   });
 };
 
@@ -531,7 +737,17 @@ const questionButton = (question, selectedId, className, binding = {}) => {
   if (className === "question-row") {
     const intent = intentTypeLabel(binding.primary_intent_type);
     const priority = binding.intent_priority ? ` · ${Number(binding.intent_priority).toFixed(2)}` : "";
-    button.append(el("span", "", `${question.measurement_topic || question.domain || "命理测算"} · ${intent}${priority}`));
+    const sourceParts = [
+      question.measurement_topic || question.domain || "命理测算",
+      question.question_strategy || "问题策略",
+      question.source_decision_status,
+      intent,
+    ]
+      .filter(Boolean)
+      .filter((item, index, values) => values.indexOf(item) === index)
+      .join(" · ");
+    const sourceLine = sourceParts ? `${sourceParts}${priority}` : "";
+    button.append(el("span", "", `${sourceLine}`));
   }
   button.addEventListener("click", () => runQuestion(question));
   return button;
@@ -563,6 +779,7 @@ const intentTypeLabel = (intentType) => ({
 const runQuestion = (question) => {
   const title = question.title || question.question_key || "";
   const questionId = question.question_id || "";
+  rememberAnsweredQuestion(question);
   if (questionSelect) questionSelect.value = question.question_id || question.question_key || "";
   if (questionIdInput) questionIdInput.value = questionId;
   setInquiryText(title, { syncOnly: true });
@@ -617,43 +834,6 @@ const syncQuestionIdFromSelect = () => {
   questionIdInput.value = selectedOption?.dataset?.questionId || questionSelect.value;
 };
 
-const renderInteractionSignals = (session = {}) => {
-  const root = document.querySelector("#interactionSignals");
-  if (!root) return;
-  clear(root);
-  const signals = session.signals || [];
-  const actions = session.next_actions || [];
-  if (!signals.length && !actions.length) {
-    root.append(el("div", "empty-note", "当前只有选中问题作为会话焦点。"));
-    return;
-  }
-  signals.slice(0, 4).forEach((signal) => {
-    const row = el("div", "signal-row");
-    row.dataset.type = signal.signal_type || "";
-    row.append(el("strong", "", signalTypeLabel(signal.signal_type)));
-    row.append(el("span", "", `${portraitDomainLabel(signal.domain)} · ${signal.effect || signal.primary_intent_type || "focus"} · ${signal.strength ?? "-"}`));
-    root.append(row);
-  });
-  actions.slice(0, 3).forEach((action) => {
-    const row = el("div", "signal-row action");
-    row.append(el("strong", "", actionTypeLabel(action.action_type)));
-    row.append(el("span", "", `${portraitDomainLabel(action.domain)} · ${action.reason || "next"}`));
-    root.append(row);
-  });
-};
-
-const signalTypeLabel = (type) => ({
-  selected_question: "当前问题",
-  practitioner_control: "命理师校准",
-  latent_event_answer: "命主反馈",
-}[type] || type || "会话信号");
-
-const actionTypeLabel = (type) => ({
-  answer_selected_question: "生成回答",
-  rerank_followup_questions: "重排追问",
-  refresh_evidence_pack: "刷新证据",
-}[type] || type || "下一步");
-
 const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
   const root = document.querySelector("#evidenceList");
   clear(root);
@@ -671,12 +851,10 @@ const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
   }
   const featureStateModel = runtimeModels.featureStateModel || {};
   const questionIntentModel = runtimeModels.questionIntentModel || {};
-  const interactionSession = runtimeModels.interactionSession || {};
   const decisionModel = runtimeModels.decisionModel || {};
   [
     ["特征状态模型", featureStateModel.status, `${featureStateModel.feature_state_count ?? 0} states`],
     ["问题意图模型", questionIntentModel.status, `${questionIntentModel.intent_count ?? 0} intents`],
-    ["交互会话模型", interactionSession.status, `${interactionSession.signal_count ?? 0} signals`],
     ["可反证裁决模型", decisionModel.status, `${decisionModel.argument_count ?? 0} arguments`],
   ].forEach(([title, status, detail]) => {
     if (!status) return;
@@ -852,6 +1030,20 @@ const loadStatus = async () => {
   }
 };
 
+const loadCurrentSession = async () => {
+  try {
+    const result = await requestJson("/api/v20/auth/me");
+    const session = result.session || {};
+    document.querySelectorAll(".admin-nav-link").forEach((node) => {
+      node.hidden = session.role !== "admin";
+    });
+  } catch (error) {
+    document.querySelectorAll(".admin-nav-link").forEach((node) => {
+      node.hidden = true;
+    });
+  }
+};
+
 const practitionerSessionStatus = () => {
   const session = state.latest?.practitioner_session || {};
   if (!state.practitionerSelections.length) return "待裁决";
@@ -874,13 +1066,13 @@ const applyLocale = (locale) => {
 };
 
 const renderInitialPanels = () => {
+  renderObservationAccess(measurementRole(roleSelect.value));
   renderPillars({});
   renderFeatures([]);
   renderPortrait([]);
   renderPractitionerCalibration([], "", measurementRole(roleSelect.value));
   renderLatentCalibration("", measurementRole(roleSelect.value));
   renderQuestions([], "", {});
-  renderInteractionSignals({});
   renderEvidence([], {}, {});
 };
 
@@ -907,6 +1099,33 @@ const loadActiveProfile = async () => {
 const payloadFromForm = () => {
   const data = new FormData(form);
   return Object.fromEntries(data.entries());
+};
+
+const syncQuestionMemory = (payload) => {
+  const key = [
+    payload.year,
+    payload.month,
+    payload.day,
+    payload.hour,
+    payload.flow_year_pillar || "",
+    payload.luck_pillar || "",
+    payload.flow_month_pillar || "",
+  ].join("|");
+  if (state.chartMemoryKey && state.chartMemoryKey !== key) {
+    state.answeredQuestionIds = [];
+    state.answeredQuestionKeys = [];
+    state.chatTurns = [];
+  }
+  state.chartMemoryKey = key;
+};
+
+const rememberAnsweredQuestion = (question) => {
+  const questionId = String(question.question_id || question.question_key || "").trim();
+  const questionKey = String(question.question_key || "").trim();
+  if (questionId) state.answeredQuestionIds = unique([...state.answeredQuestionIds, questionId]).slice(-32);
+  if (!question.question_id && questionKey) {
+    state.answeredQuestionKeys = unique([...state.answeredQuestionKeys, questionKey]).slice(-32);
+  }
 };
 
 const hasCompletePillars = (payload) => ["year", "month", "day", "hour"].every((key) => String(payload[key] || "").trim().length === 2);
@@ -968,7 +1187,7 @@ const applyProfileDefaults = (profile) => {
 
 const unique = (items) => Array.from(new Set(items));
 const currentText = () => UI_TEXT[localeSelect.value] || UI_TEXT.zh;
-const measurementRole = (role) => (role === "user" ? "user" : "analyst");
+const measurementRole = (role) => (role === "user" ? "user" : role === "admin" ? "admin" : "analyst");
 const profileMeta = (profile) => {
   const birth = profile.birth_input || {};
   const date = [birth.year, String(birth.month || "").padStart(2, "0"), String(birth.day || "").padStart(2, "0")]
@@ -1037,6 +1256,14 @@ chatText.addEventListener("keydown", (event) => {
     });
   }
 });
+document.querySelector("#practitionerToggle")?.addEventListener("click", () => {
+  const root = document.querySelector("#practitionerCalibration");
+  setPractitionerCollapsed(!root?.classList.contains("collapsed"));
+});
+document.querySelector("#observationToggle")?.addEventListener("click", () => {
+  const root = document.querySelector("#observationPage");
+  setObservationCollapsed(!root?.classList.contains("collapsed"));
+});
 
 if (params.get("locale")) localeSelect.value = params.get("locale");
 roleSelect.value = measurementRole(params.get("role") || roleSelect.value);
@@ -1044,6 +1271,7 @@ document.body.classList.toggle("profile-reading", Boolean(params.get("profile_id
 hydrateFormFromParams();
 applyLocale(localeSelect.value);
 renderInitialPanels();
+loadCurrentSession();
 loadStatus();
 loadLatentCalibrationManifest();
 loadActiveProfile().finally(() => scheduleMeasure({ force: true }));

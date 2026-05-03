@@ -93,6 +93,8 @@ from v20.learning.decision_registry_iteration import (
     build_decision_registry_iteration_report,
     read_decision_registry_iteration_artifact,
 )
+from v20.learning.question_ranking_learning import read_question_ranking_learning_artifact
+from v20.learning.question_ranking_learning import build_question_ranking_learning_report
 from v20.learning.latent_factor_calibration import latent_factor_calibration_manifest
 from v20.learning.run_plan import build_learning_run_plan
 from v20.learning.policy_review import policy_review_manifest, review_policy_proposal
@@ -208,11 +210,13 @@ def create_app() -> FastAPI:
         return system_status_report()
 
     @app.get("/api/v20/admin/db")
-    def admin_database() -> dict[str, object]:
+    def admin_database(request: Request) -> dict[str, object]:
+        _require_admin_session(request)
         return database_admin_status()
 
     @app.get("/api/v20/admin/llm")
-    def admin_llm(probe_models: bool = False) -> dict[str, object]:
+    def admin_llm(request: Request, probe_models: bool = False) -> dict[str, object]:
+        _require_admin_session(request)
         return llm_admin_status(probe_models=probe_models)
 
     @app.get("/api/v20/ops/config")
@@ -456,19 +460,19 @@ def create_app() -> FastAPI:
         return validate_llm_rule_extraction_report(domain)
 
     @app.get("/api/v20/knowledge/rule-library")
-    def knowledge_rule_library(limit: int = 64) -> dict[str, object]:
+    def knowledge_rule_library(limit: int = 0) -> dict[str, object]:
         return build_knowledge_rule_library(limit=limit)
 
     @app.get("/api/v20/knowledge/rule-library/{domain}")
-    def knowledge_rule_library_domain(domain: str, limit: int = 64) -> dict[str, object]:
+    def knowledge_rule_library_domain(domain: str, limit: int = 0) -> dict[str, object]:
         return build_knowledge_rule_library(domain, limit=limit)
 
     @app.get("/api/v20/knowledge/rule-library-validation")
-    def knowledge_rule_library_validation(limit: int = 64) -> dict[str, object]:
+    def knowledge_rule_library_validation(limit: int = 0) -> dict[str, object]:
         return validate_knowledge_rule_library(limit=limit)
 
     @app.get("/api/v20/knowledge/rule-library-validation/{domain}")
-    def knowledge_rule_library_validation_domain(domain: str, limit: int = 64) -> dict[str, object]:
+    def knowledge_rule_library_validation_domain(domain: str, limit: int = 0) -> dict[str, object]:
         return validate_knowledge_rule_library(domain, limit=limit)
 
     @app.get("/api/v20/knowledge/rule-review-overlay")
@@ -554,11 +558,11 @@ def create_app() -> FastAPI:
         return run_rule_portrait_batch()
 
     @app.get("/api/v20/validation/knowledge-rule-library")
-    def knowledge_rule_library_validation_report(limit: int = 64) -> dict[str, object]:
+    def knowledge_rule_library_validation_report(limit: int = 0) -> dict[str, object]:
         return build_knowledge_rule_validation_report(limit=limit)
 
     @app.get("/api/v20/validation/knowledge-rule-library/{domain}")
-    def knowledge_rule_library_validation_report_domain(domain: str, limit: int = 64) -> dict[str, object]:
+    def knowledge_rule_library_validation_report_domain(domain: str, limit: int = 0) -> dict[str, object]:
         return build_knowledge_rule_validation_report(domain, limit=limit)
 
     @app.get("/api/v20/learning/evolution-plan")
@@ -590,49 +594,55 @@ def create_app() -> FastAPI:
         return policy_review_manifest()
 
     @app.get("/api/v20/learning/rule-activation")
-    def learning_rule_activation(limit: int = 64) -> dict[str, object]:
+    def learning_rule_activation(limit: int = 0) -> dict[str, object]:
         return build_rule_activation_report(limit=limit)
 
     @app.get("/api/v20/learning/rule-activation/{domain}")
-    def learning_rule_activation_domain(domain: str, limit: int = 64) -> dict[str, object]:
+    def learning_rule_activation_domain(domain: str, limit: int = 0) -> dict[str, object]:
         return build_rule_activation_report(domain, limit=limit)
 
     @app.get("/api/v20/learning/rule-activation-packets")
-    def learning_rule_activation_packets(limit: int = 64) -> dict[str, object]:
+    def learning_rule_activation_packets(limit: int = 0) -> dict[str, object]:
         return build_rule_activation_packet_summary(limit=limit)
 
     @app.get("/api/v20/learning/rule-activation-packets/{domain}")
-    def learning_rule_activation_packets_domain(domain: str, limit: int = 64) -> dict[str, object]:
+    def learning_rule_activation_packets_domain(domain: str, limit: int = 0) -> dict[str, object]:
         return build_rule_activation_packet_summary(domain, limit=limit)
 
     @app.get("/api/v20/learning/rule-subcondition-split")
-    def learning_rule_subcondition_split(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
+    def learning_rule_subcondition_split(limit: int = 0, per_rule: int = 0, status: bool = False) -> dict[str, object]:
         if status:
             return read_rule_subcondition_split_artifact()
         return build_rule_subcondition_split_report(limit=limit, per_rule=per_rule)
 
     @app.get("/api/v20/learning/rule-subcondition-split/{domain}")
-    def learning_rule_subcondition_split_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
+    def learning_rule_subcondition_split_domain(domain: str, limit: int = 0, per_rule: int = 0) -> dict[str, object]:
         return build_rule_subcondition_split_report(domain, limit=limit, per_rule=per_rule)
 
     @app.get("/api/v20/learning/rule-replay-eval")
-    def learning_rule_replay_eval(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
+    def learning_rule_replay_eval(limit: int = 0, per_rule: int = 0, status: bool = False) -> dict[str, object]:
         if status:
             return read_rule_replay_eval_artifact()
         return build_rule_replay_eval_report(limit=limit, per_rule=per_rule)
 
     @app.get("/api/v20/learning/rule-replay-eval/{domain}")
-    def learning_rule_replay_eval_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
+    def learning_rule_replay_eval_domain(domain: str, limit: int = 0, per_rule: int = 0) -> dict[str, object]:
         return build_rule_replay_eval_report(domain, limit=limit, per_rule=per_rule)
 
+    @app.get("/api/v20/learning/question-ranking")
+    def learning_question_ranking(status: bool = False) -> dict[str, object]:
+        if status:
+            return read_question_ranking_learning_artifact()
+        return build_question_ranking_learning_report()
+
     @app.get("/api/v20/learning/decision-registry-iteration")
-    def learning_decision_registry_iteration(limit: int = 64, per_rule: int = 5, status: bool = False) -> dict[str, object]:
+    def learning_decision_registry_iteration(limit: int = 0, per_rule: int = 0, status: bool = False) -> dict[str, object]:
         if status:
             return read_decision_registry_iteration_artifact()
         return build_decision_registry_iteration_report(limit=limit, per_rule=per_rule)
 
     @app.get("/api/v20/learning/decision-registry-iteration/{domain}")
-    def learning_decision_registry_iteration_domain(domain: str, limit: int = 64, per_rule: int = 5) -> dict[str, object]:
+    def learning_decision_registry_iteration_domain(domain: str, limit: int = 0, per_rule: int = 0) -> dict[str, object]:
         return build_decision_registry_iteration_report(domain, limit=limit, per_rule=per_rule)
 
     @app.get("/api/v20/intelligence/generation-manifest")
@@ -791,6 +801,8 @@ def create_app() -> FastAPI:
                 llm_mode=payload.llm_mode,
                 practitioner_selections=tuple(selection.model_dump() for selection in payload.practitioner_selections),
                 latent_event_answers=tuple(answer.model_dump() for answer in payload.latent_event_answers),
+                answered_question_ids=tuple(payload.answered_question_ids),
+                answered_question_keys=tuple(payload.answered_question_keys),
             )
         except ValueError as exc:
             raise HTTPException(
@@ -799,7 +811,9 @@ def create_app() -> FastAPI:
             ) from exc
 
     @app.post("/api/v20/measure/view/{role_key}")
-    def measure_view(role_key: str, payload: MeasureRequest) -> dict[str, object]:
+    def measure_view(role_key: str, payload: MeasureRequest, request: Request) -> dict[str, object]:
+        if role_key == "admin":
+            _require_admin_session(request)
         try:
             result = run_runtime_from_pillars(
                 payload.year,
@@ -817,6 +831,8 @@ def create_app() -> FastAPI:
                 llm_mode=payload.llm_mode,
                 practitioner_selections=tuple(selection.model_dump() for selection in payload.practitioner_selections),
                 latent_event_answers=tuple(answer.model_dump() for answer in payload.latent_event_answers),
+                answered_question_ids=tuple(payload.answered_question_ids),
+                answered_question_keys=tuple(payload.answered_question_keys),
             )
             return project_runtime_for_role(result, role_key)
         except ValueError as exc:
@@ -836,6 +852,13 @@ def _require_profile_session(request: Request) -> dict[str, object]:
     if not auth.get("authenticated"):
         raise HTTPException(status_code=401, detail={"error": "V20_AUTH_REQUIRED"})
     return dict(auth.get("session") or {})
+
+
+def _require_admin_session(request: Request) -> dict[str, object]:
+    session = _require_profile_session(request)
+    if session.get("role") != "admin":
+        raise HTTPException(status_code=403, detail={"error": "V20_ADMIN_REQUIRED"})
+    return session
 
 
 def _profile_owner_for_session(session: dict[str, object], owner_id: str) -> str:

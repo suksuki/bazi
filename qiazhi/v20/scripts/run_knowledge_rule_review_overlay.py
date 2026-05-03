@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -15,6 +14,7 @@ from v20.learning.knowledge_rule_review_overlay import (  # noqa: E402
     read_knowledge_rule_review_overlay_artifact,
     write_knowledge_rule_review_overlay_artifact,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -24,15 +24,20 @@ def main() -> int:
     parser.add_argument("--progress", action="store_true", help="Print progress to stderr.")
     args = parser.parse_args()
 
-    progress = (lambda message: print(f"[v20-rule-overlay] {message}", file=sys.stderr, flush=True)) if args.progress else None
-    if args.status:
-        payload = read_knowledge_rule_review_overlay_artifact()
-    elif args.write:
-        payload = write_knowledge_rule_review_overlay_artifact(progress=progress)
-    else:
-        payload = build_knowledge_rule_review_overlay()
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} else 1
+    def _run() -> dict[str, object]:
+        progress = (lambda message: print(f"[v20-rule-overlay] {message}", file=sys.stderr, flush=True)) if args.progress else None
+        if args.status:
+            return read_knowledge_rule_review_overlay_artifact()
+        if args.write:
+            return write_knowledge_rule_review_overlay_artifact(progress=progress)
+        return build_knowledge_rule_review_overlay()
+
+    return run_and_print(
+        _run,
+        command="run_knowledge_rule_review_overlay.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

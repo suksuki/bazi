@@ -31,6 +31,10 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert "practitioner_session" in roles["analyst"]["allowed_runtime_fields"]
     assert "practitioner_session" not in roles["user"]["allowed_runtime_fields"]
     assert "rule_candidate_support" not in roles["analyst"]["allowed_runtime_fields"]
+    assert "decision_report" in roles["admin"]["allowed_runtime_fields"]
+    assert "portrait_graph_summary" in roles["admin"]["allowed_runtime_fields"]
+    assert "latent_signal_report" in roles["admin"]["allowed_runtime_fields"]
+    assert "practitioner_session" in roles["admin"]["allowed_runtime_fields"]
     assert "chart_graph" in roles["lab"]["allowed_runtime_fields"]
     assert manifest["runtime_mutation"] is False
 
@@ -65,10 +69,13 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "knowledge_rule_refs" not in projected["decision_report"]["decisions"][0]
     assert "source_decision_keys" not in projected["decision_report"]["portrait_projection"]["axes"][0]
     assert all("source_feature_ids" not in row for row in projected["questions"])
+    assert all("source_rule_key" not in row for row in projected["questions"])
+    assert all("question_strategy" in row for row in projected["questions"])
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])
 
 
-def test_v20_role_measure_endpoint_projects_by_role() -> None:
+def test_v20_role_measure_endpoint_projects_by_role(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
     client = TestClient(app)
     payload = {
         "year": "甲子",
@@ -81,6 +88,10 @@ def test_v20_role_measure_endpoint_projects_by_role() -> None:
 
     user = client.post("/api/v20/measure/view/user", json=payload).json()
     analyst = client.post("/api/v20/measure/view/analyst", json=payload).json()
+    blocked_admin = client.post("/api/v20/measure/view/admin", json=payload)
+    client.post("/api/v20/auth/import-v19?apply=true", json={"admin_password": "adminpw"})
+    client.post("/api/v20/auth/login", json={"username": "admin", "password": "adminpw", "locale": "zh"})
+    admin = client.post("/api/v20/measure/view/admin", json=payload).json()
     roles = client.get("/api/v20/access/roles").json()
 
     assert user["version"] == "v20.role_runtime_view.v1"
@@ -96,4 +107,12 @@ def test_v20_role_measure_endpoint_projects_by_role() -> None:
     assert "knowledge_refs" in analyst
     assert "dynamic_portrait" not in analyst
     assert "practitioner_session" in analyst
+    assert blocked_admin.status_code == 401
+    assert admin["role"]["role_key"] == "admin"
+    assert "decision_report" in admin
+    assert "portrait_graph_summary" in admin
+    assert "feature_state_model" in admin
+    assert "question_intent_model" in admin
+    assert "knowledge_refs" in admin
+    assert "practitioner_session" in admin
     assert roles["runtime_mutation"] is False

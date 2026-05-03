@@ -18,6 +18,7 @@ from v20.corpus.artifacts import (  # noqa: E402
     read_corpus_coverage_summary,
     read_corpus_training_artifacts,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -33,27 +34,33 @@ def main() -> int:
     parser.add_argument("--limit", type=int, default=8, help="Similarity result limit.")
     args = parser.parse_args()
 
-    if args.status:
-        payload = read_corpus_artifact_status(args.run_id)
-    elif args.summary:
-        payload = read_corpus_coverage_summary(args.run_id)
-    elif args.clusters:
-        payload = read_corpus_cluster_model(args.run_id)
-    elif args.training:
-        payload = read_corpus_training_artifacts(args.run_id)
-    elif args.similar_case_id:
-        payload = find_similar_cases(args.similar_case_id, run_id=args.run_id, limit=args.limit)
-    else:
+    def _run() -> dict[str, object]:
+        if args.status:
+            return read_corpus_artifact_status(args.run_id)
+        if args.summary:
+            return read_corpus_coverage_summary(args.run_id)
+        if args.clusters:
+            return read_corpus_cluster_model(args.run_id)
+        if args.training:
+            return read_corpus_training_artifacts(args.run_id)
+        if args.similar_case_id:
+            return find_similar_cases(args.similar_case_id, run_id=args.run_id, limit=args.limit)
+
         progress = (
             lambda message: print(f"[v20-corpus-artifacts] {message}", file=sys.stderr, flush=True)
         ) if args.progress else None
-        payload = build_corpus_artifacts(
+        return build_corpus_artifacts(
             args.run_id or "v20_full_518k_20260501_main",
             progress=progress,
             build_sqlite_cache=not args.no_sqlite,
         )
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
+
+    return run_and_print(
+        _run,
+        command="build_corpus_artifacts.py",
+        args=args,
+        runtime_mutation=not args.status and not args.summary and not args.clusters and not args.training and not args.similar_case_id,
+    )
 
 
 if __name__ == "__main__":

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -14,24 +13,30 @@ from v20.knowledge.rule_library import (  # noqa: E402
     build_knowledge_rule_library,
     validate_knowledge_rule_library,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Inspect the V20 knowledge-authored active rule library.")
     parser.add_argument("--domain", default="", help="Optional domain filter, such as strength, wealth, career.")
-    parser.add_argument("--limit", type=int, default=64)
+    parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--validate", action="store_true", help="Run validation instead of printing the library.")
     parser.add_argument("--summary", action="store_true", help="Print a compact summary for human review.")
     args = parser.parse_args()
 
-    if args.validate:
-        payload = validate_knowledge_rule_library(args.domain, limit=args.limit)
-    else:
+    def _run() -> dict[str, object]:
+        if args.validate:
+            payload = validate_knowledge_rule_library(args.domain, limit=args.limit)
+            return payload | {"status": payload.get("status", "pass")}
         payload = build_knowledge_rule_library(args.domain, limit=args.limit)
-    if args.summary and not args.validate:
-        payload = _summary(payload)
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
+        return _summary(payload) if args.summary else payload
+
+    return run_and_print(
+        _run,
+        command="run_knowledge_rule_library.py",
+        args=args,
+        runtime_mutation=False,
+    )
 
 
 def _summary(library: dict[str, object]) -> dict[str, object]:

@@ -59,11 +59,21 @@ V20 的主线重新定义为八字测算系统，而不是特征展示系统。
 ./v20/scripts/run_dynamic_decision_training.py --progress
 ./v20/scripts/run_dynamic_decision_training.py --write --progress
 ./v20/scripts/run_dynamic_decision_training.py --status
+./v20/scripts/run_question_ranking_training.py --progress
+./v20/scripts/run_question_ranking_training.py --write --progress
+./v20/scripts/run_question_ranking_training.py --status
 ./v20/scripts/run_practitioner_calibration_training.py --progress
 ./v20/scripts/run_practitioner_calibration_training.py --write --progress
 ./v20/scripts/import_calibration_postgres.py --ledger practitioner_calibration_ledger
 ./v20/scripts/run_training_iteration.py --write --progress
 ```
+
+`run_training_iteration.py` 在 P1~P3 中会串起：
+1) dynamic_decision_training（生成动态裁决和画像问题链路）
+2) practitioner_calibration_training（命理师结构化选择信号）
+3) question_ranking_training（基于决策-问题命中序列反推问题优先级）
+4) rule_synthetic_training（规则覆盖/反例/子条件候选）
+5) rule_portrait_batch（画像映射）
 
 这个脚本专门检查：一个当前八字是否能从 `RuleDecision` 动态生成可用画像、用户会问的推荐问题、命理师可校准的结构化选项，以及后续可训练的裁决参数提案。它不写 Postgres，不修改规则真值，默认只输出 dry-run 报告。
 

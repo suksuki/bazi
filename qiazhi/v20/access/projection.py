@@ -23,9 +23,14 @@ def _sanitize_user_payload(payload: dict[str, object]) -> dict[str, object]:
     sanitized["questions"] = [
         {
             "question_key": row.get("question_key", ""),
+            "question_id": row.get("question_id", ""),
             "title": row.get("title", ""),
             "domain": row.get("domain", ""),
             "score": row.get("score", 0),
+            "source_decision_key": row.get("source_decision_key", ""),
+            "source_decision_status": row.get("source_decision_status", ""),
+            "source_decision_label": row.get("source_decision_label", ""),
+            "question_strategy": row.get("question_strategy", ""),
             "measurement_topic": row.get("measurement_topic", ""),
             "measurement_stage": row.get("measurement_stage", ""),
             "role": row.get("role", ""),
@@ -56,9 +61,15 @@ def _sanitize_user_payload(payload: dict[str, object]) -> dict[str, object]:
             {
                 "label": row.get("label", ""),
                 "domain": row.get("domain", ""),
+                "rule_key": row.get("rule_key", ""),
                 "status": row.get("status", ""),
+                "decision_key": row.get("decision_key", ""),
+                "decision_status": row.get("decision_status", ""),
                 "score": row.get("score", 0),
+                "feature_ids": row.get("feature_ids", ())[:3],
                 "evidence": row.get("evidence", ())[:4],
+                "missing_evidence": row.get("missing_evidence", ())[:3],
+                "source": row.get("source", ""),
             }
             for row in report.get("hits", [])
             if isinstance(row, dict)
@@ -94,12 +105,20 @@ def _sanitize_user_payload(payload: dict[str, object]) -> dict[str, object]:
             projection = dict(report["portrait_projection"])
             projection["axes"] = [
                 {
-                    "axis_id": row.get("axis_id", ""),
-                    "domain": row.get("domain", ""),
-                    "label": row.get("label", ""),
+                "axis_id": row.get("axis_id", ""),
+                "domain": row.get("domain", ""),
+                "label": row.get("label", ""),
+                "profile_tag": row.get("profile_tag", ""),
+                "axis_tier": row.get("axis_tier", ""),
+                "axis_state": row.get("axis_state", ""),
+                "structural_anchor": row.get("structural_anchor", ""),
+                "profile_tags": row.get("profile_tags", ())[:6],
+                "profile_summary": row.get("profile_summary", ""),
+                "summary": row.get("summary", ""),
+                "attention_level": row.get("attention_level", ""),
+                "portrait_intent_type": row.get("portrait_intent_type", ""),
                     "measurement_stage": row.get("measurement_stage", ""),
                     "peak_confidence": row.get("peak_confidence", 0),
-                    "calibration_state": row.get("calibration_state", ""),
                     "evidence_boundaries": row.get("evidence_boundaries", ())[:3],
                     "alignment_status": row.get("alignment_status", ""),
                 }

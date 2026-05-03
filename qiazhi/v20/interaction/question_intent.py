@@ -30,8 +30,9 @@ def build_question_intent_model(
     feature_state_model: dict[str, Any],
     questions: tuple[object, ...],
     selected_question: object,
+    runtime_decision_fusion: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    intents = _intents(decision_report, feature_state_model)
+    intents = _intents(decision_report, feature_state_model, runtime_decision_fusion=runtime_decision_fusion)
     bindings = tuple(_question_binding(question, intents) for question in questions)
     selected_key = str(getattr(selected_question, "question_key", ""))
     selected_binding = next((row for row in bindings if row["question_key"] == selected_key), {})
@@ -40,7 +41,7 @@ def build_question_intent_model(
         "version": QUESTION_INTENT_MODEL_VERSION,
         "status": "ready" if intents else "empty",
         "algorithm": "utility_intent_ranking_phase1",
-        "source": "MainlineDecision+PortraitAxis+FeatureState+DecisionState",
+        "source": "DecisionFusion+MainlineDecision+PortraitAxis+FeatureState",
         "intent_count": len(intents),
         "question_binding_count": len(bindings),
         "intent_type_counts": dict(sorted(intent_counts.items())),
@@ -57,9 +58,16 @@ def build_question_intent_model(
     }
 
 
-def _intents(decision_report: dict[str, Any], feature_state_model: dict[str, Any]) -> tuple[dict[str, Any], ...]:
+def _intents(
+    decision_report: dict[str, Any],
+    feature_state_model: dict[str, Any],
+    runtime_decision_fusion: dict[str, Any] | None = None,
+) -> tuple[dict[str, Any], ...]:
     rows: list[dict[str, Any]] = []
     feature_by_domain = feature_state_by_domain(feature_state_model)
+    fusion_payload = runtime_decision_fusion or {}
+    for row in tuple(row for row in fusion_payload.get("decisions", ()) if isinstance(row, dict)):
+        rows.append(_intent_from_runtime_fusion(row))
     for mainline in decision_report.get("mainlines", ()):
         if not isinstance(mainline, dict):
             continue
@@ -103,21 +111,54 @@ def _intent_from_mainline(mainline: dict[str, Any], feature_by_domain: dict[str,
 
 def _intent_from_axis(axis: dict[str, Any]) -> dict[str, Any]:
     domain = str(axis.get("domain", ""))
-    state_text = str(axis.get("calibration_state", ""))
-    intent_type = "resolve_mixed_state" if "mixed" in state_text else "explore_structure"
+    intent_type = str(axis.get("portrait_intent_type", "")) or "explore_structure"
     return {
         "intent_id": f"intent.portrait_axis.{domain}",
         "intent_type": intent_type,
         "domain": domain,
-        "title": str(axis.get("label", "")) or f"{domain_label(domain)}画像轴",
+        "title": str(axis.get("profile_tag", "")) or str(axis.get("label", "")) or f"{domain_label(domain)}画像",
         "prompt_goal": _prompt_goal(domain, intent_type),
-        "priority": round(float(axis.get("peak_confidence", 0.0) or 0.0) + 0.06, 3),
+        "priority": round(max(0.05, float(axis.get("peak_confidence", 0.0) or 0.0) - 0.12), 3),
         "source": "portrait_axis",
         "source_id": str(axis.get("axis_id", "")),
         "source_decision_keys": (),
         "source_feature_ids": tuple(str(row) for row in axis.get("feature_ids", ()) if str(row)),
         "boundary": "画像轴只作为问题入口，不作为人格或命运结论。",
     }
+
+
+def _intent_from_runtime_fusion(decision: dict[str, Any]) -> dict[str, Any]:
+    domain = str(decision.get("domain", ""))
+    state = str(decision.get("structural_state", "candidate"))
+    intent_type = INTENT_BY_STATE.get(state, "resolve_mixed_state")
+    source_decision_keys = tuple(str(row) for row in decision.get("target_decision_keys", ()) if str(row))
+    if not source_decision_keys:
+        source_key = str(decision.get("source_decision_key", ""))
+        if source_key:
+            source_decision_keys = (source_key,)
+    feature_ids = tuple(str(row) for row in decision.get("feature_ids", ()) if str(row))
+    return {
+        "intent_id": f"intent.runtime_fusion.{decision.get('decision_key', decision.get('domain', 'unknown'))}",
+        "intent_type": intent_type,
+        "domain": domain,
+        "title": _compact_title_from_text(str(decision.get("user_facing_decision", ""))) or f"{domain_label(domain)}运行结构决策",
+        "prompt_goal": _prompt_goal(domain, intent_type),
+        "priority": round(float(decision.get("confidence", 0.0) or 0.0) + 0.15, 3),
+        "source": "runtime_decision_fusion",
+        "source_id": str(decision.get("decision_key", "")),
+        "source_decision_keys": source_decision_keys,
+        "source_feature_ids": feature_ids,
+        "boundary": str(decision.get("user_facing_boundary", "")) or "按结构先后提问，不做固定结论。",
+    }
+
+
+def _compact_title_from_text(value: str, limit: int = 42) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if len(text) <= limit:
+        return text
+    return f"{text[: limit - 1].rstrip()}…"
 
 
 def _intent_from_feature_gap(state: dict[str, Any]) -> dict[str, Any]:

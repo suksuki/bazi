@@ -11,6 +11,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from v20.storage.postgres_ledger_import import ALLOWED_LEDGER_NAMES, build_ledger_postgres_import_plan  # noqa: E402
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -22,13 +23,16 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=500)
     args = parser.parse_args()
 
-    payload = build_ledger_postgres_import_plan(
-        ledger_name=args.ledger,
-        apply=args.apply,
-        batch_size=args.batch_size,
+    return run_and_print(
+        lambda: build_ledger_postgres_import_plan(
+            ledger_name=args.ledger,
+            apply=args.apply,
+            batch_size=args.batch_size,
+        ),
+        command="import_calibration_postgres.py",
+        args=args,
+        runtime_mutation=args.apply,
     )
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"blocked_missing_V20_DATABASE_URL", "blocked_missing_psycopg2", "blocked_postgres_error"} else 2
 
 
 if __name__ == "__main__":

@@ -45,6 +45,8 @@ def register_user(payload: dict[str, Any], response: Response) -> dict[str, obje
     password = str(payload.get("password") or "")
     role = _clean_role(payload.get("role"))
     locale = _clean_locale(payload.get("locale"))
+    if role == "admin":
+        return _auth_error("admin_registration_disabled", "Admin is a singleton account and cannot be selected during registration.")
     if not username or len(password) < 4:
         return _auth_error("invalid_credentials", "Username and a password with at least 4 characters are required.")
     store = _read_store()

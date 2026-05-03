@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from v20.core.elements import element_distribution, strongest_elements, weakest_elements
 from v20.core.schemas import ChartFacts, CoreInference, TimeContext
 from v20.core.useful_god import derive_useful_god_candidates
@@ -8,7 +10,7 @@ from v20.features.calibration import ConfidenceCalibrationPolicy, calibrate_feat
 from v20.features.confidence import bounded_confidence
 from v20.features.discovery_engine import build_feature_discovery_model
 from v20.features.hierarchy import cluster_features
-from v20.features.schema import BaziFeature, EvidenceRef, FeatureLayer
+from v20.features.schema import BaziFeature, BaziFeatureContext, EvidenceRef, FeatureLayer
 
 FEATURE_LAYER_VERSION = "v20.feature_layer.v1"
 
@@ -74,12 +76,15 @@ def compile_features(
     features.append(_pattern_index_feature(facts))
     features = _dedupe(features)
     features = list(calibrate_features(features, calibration_policy))
+    features = _attach_feature_contexts(features, time_context or TimeContext())
     features.sort(key=lambda row: (row.confidence, row.feature_id), reverse=True)
     macro_features = cluster_features(features)
     feature_tuple = tuple(features)
+    feature_contexts = tuple(row.context for row in feature_tuple if row.context is not None)
     return FeatureLayer(
         version=FEATURE_LAYER_VERSION,
         features=feature_tuple,
+        feature_contexts=feature_contexts,
         macro_features=macro_features,
         discovery_trace=build_feature_discovery_model(facts, inference, time_context or TimeContext(), feature_tuple),
     )
@@ -560,6 +565,217 @@ def _dedupe(features: list[BaziFeature]) -> list[BaziFeature]:
         if current is None or feature.confidence > current.confidence:
             out[feature.feature_id] = feature
     return list(out.values())
+
+
+def _attach_feature_contexts(features: list[BaziFeature], time_context: TimeContext) -> list[BaziFeature]:
+    return [
+        replace(feature, context=_feature_context(feature, time_context))
+        for feature in features
+    ]
+
+
+def _feature_context(feature: BaziFeature, time_context: TimeContext) -> BaziFeatureContext:
+    decision_state = _context_decision_state(feature)
+    feature_type = _feature_type(feature)
+    source_rule_ids = _source_rules_for_feature(feature)
+    evidence_atoms = tuple(ref.ref_id for ref in feature.evidence_refs if ref.ref_id)
+    projection_hooks = _projection_hooks(feature)
+    question_hooks = tuple(dict.fromkeys((*feature.question_hooks, *_context_question_hooks(feature))))
+    boundary_flags = _boundary_flags(feature)
+    time_scope = "time_layer" if feature.domain == "time" or time_context.status == "ready" and feature.domain in {"wealth", "career", "relationship"} else "natal"
+    activation_sources = _activation_sources(feature, time_context)
+    return BaziFeatureContext(
+        context_id=f"context.{feature.feature_id}",
+        feature_id=feature.feature_id,
+        feature_type=feature_type,
+        domain=feature.domain,
+        mechanism=_context_mechanism(feature),
+        source_rule_ids=source_rule_ids,
+        evidence_atoms=evidence_atoms,
+        counter_evidence_atoms=_counter_evidence_atoms(feature),
+        strength_score=round(float(feature.confidence or 0.0), 3),
+        confidence_score=round(float(feature.confidence or 0.0), 3),
+        decision_state=decision_state,
+        readiness=feature.readiness,
+        blockers=_blockers(feature),
+        amplifiers=_amplifiers(feature, time_context),
+        affected_domains=_affected_domains(feature),
+        time_scope=time_scope,
+        activation_sources=activation_sources,
+        projection_hooks=projection_hooks,
+        question_hooks=question_hooks,
+        answer_hooks=feature.answer_hooks,
+        boundary_flags=boundary_flags,
+        trace_nodes=tuple(f"trace.feature_context.{feature.domain}.{index}" for index, _ref in enumerate(feature.evidence_refs[:3])),
+    )
+
+
+def _context_decision_state(feature: BaziFeature) -> str:
+    if feature.readiness == "ready":
+        return "confirmed"
+    if feature.readiness == "boundary_ready":
+        return "candidate"
+    if feature.feature_id.endswith("material_not_visible"):
+        return "countered"
+    if feature.domain in {"useful_god", "pattern", "time"}:
+        return "weak_candidate"
+    return "candidate"
+
+
+def _feature_type(feature: BaziFeature) -> str:
+    feature_id = feature.feature_id
+    if feature.domain == "time":
+        return "activation"
+    if "weak." in feature_id or feature_id.endswith("material_not_visible"):
+        return "constraint"
+    if "prominent." in feature_id or "visible" in feature_id or "hidden" in feature_id:
+        return "material"
+    if feature.domain in {"strength", "useful_god"}:
+        return "capacity"
+    if feature.domain in {"branch", "pattern"}:
+        return "mechanism"
+    if feature.domain == "wealth":
+        return "projection"
+    return "mechanism"
+
+
+def _context_mechanism(feature: BaziFeature) -> str:
+    if feature.domain == "strength":
+        return "day_master_capacity_and_load"
+    if feature.domain == "wealth":
+        if feature.feature_id.endswith("visible_material"):
+            return "wealth_material_visible_then_capacity_gate"
+        if feature.feature_id.endswith("hidden_material"):
+            return "wealth_material_hidden_then_activation_gate"
+        return "wealth_material_gap_then_alternative_path_review"
+    if feature.domain == "ten_god":
+        return "ten_god_visibility_and_role_distribution"
+    if feature.domain == "element":
+        return "element_distribution_pressure_and_balance"
+    if feature.domain == "branch":
+        return "branch_relation_trigger_and_interaction"
+    if feature.domain == "time":
+        return "luck_flow_activation_against_natal_chart"
+    if feature.domain == "useful_god":
+        return "useful_god_candidate_path_selection"
+    if feature.domain == "pattern":
+        return "pattern_axis_review_and_work_chain"
+    return f"{feature.domain}_structural_context"
+
+
+def _source_rules_for_feature(feature: BaziFeature) -> tuple[str, ...]:
+    feature_id = feature.feature_id
+    if feature_id.startswith("feature.strength."):
+        return ("rule.strength.capacity",)
+    if feature_id.startswith("feature.wealth."):
+        return ("rule.wealth.material", "rule.wealth.capacity_gate")
+    if feature_id.startswith("feature.ten_god."):
+        return ("rule.ten_god.source_layers",)
+    if feature_id.startswith("feature.element."):
+        return ("rule.element.distribution", "rule.health.balance_boundary")
+    if feature_id.startswith("feature.branch."):
+        return ("rule.branch.relations", "rule.relationship.interaction_projection")
+    if feature_id.startswith("feature.time."):
+        return ("rule.time.trigger",)
+    if feature_id.startswith("feature.useful_god."):
+        return ("rule.useful_god.candidate_gate",)
+    if feature_id.startswith("feature.pattern."):
+        return ("rule.pattern.review_gate",)
+    return (f"rule.{feature.domain}.structural_context",)
+
+
+def _projection_hooks(feature: BaziFeature) -> tuple[str, ...]:
+    hooks = {
+        "strength": ("capacity_profile", "useful_god_direction", "answer_load_order"),
+        "wealth": ("wealth_opportunity", "wealth_capacity", "wealth_volatility"),
+        "career": ("career_role", "career_pressure", "career_expression"),
+        "relationship": ("relationship_interaction", "relationship_boundary"),
+        "health": ("wellbeing_pressure", "balance_boundary"),
+        "ten_god": ("role_visibility", "role_interaction"),
+        "element": ("element_pressure", "element_balance"),
+        "branch": ("branch_trigger", "interaction_sequence"),
+        "time": ("timing_trigger", "luck_flow_sequence"),
+        "useful_god": ("support_release_choice", "adjustment_path"),
+        "pattern": ("pattern_order", "mechanism_continuity"),
+    }
+    return hooks.get(feature.domain, (f"{feature.domain}_projection",))
+
+
+def _context_question_hooks(feature: BaziFeature) -> tuple[str, ...]:
+    if feature.domain == "wealth":
+        return ("q_income_stability", "q_income_factors")
+    if feature.domain == "career":
+        return ("q_career_structure",)
+    if feature.domain == "relationship":
+        return ("q_relationship_structure",)
+    if feature.domain == "health":
+        return ("q_health_balance_boundary",)
+    return ()
+
+
+def _boundary_flags(feature: BaziFeature) -> tuple[str, ...]:
+    flags = ["structural_decision_only"]
+    if feature.domain in {"health", "time"}:
+        flags.append("high_risk_topic_boundary")
+    if feature.feature_id.endswith("material_not_visible"):
+        flags.append("alternative_path_required")
+    if "review" in feature.readiness:
+        flags.append("low_confidence_but_directional")
+    return tuple(flags)
+
+
+def _counter_evidence_atoms(feature: BaziFeature) -> tuple[str, ...]:
+    if feature.feature_id.endswith("material_not_visible"):
+        return ("counter.wealth.no_visible_or_hidden_material",)
+    if feature.feature_id.startswith("feature.element.weak."):
+        return ("counter.element.weak_side_pressure",)
+    if feature.readiness == "review_ready":
+        return (f"counter.{feature.domain}.requires_cross_check",)
+    return ()
+
+
+def _blockers(feature: BaziFeature) -> tuple[str, ...]:
+    if feature.feature_id.endswith("material_not_visible"):
+        return ("wealth_material_absent",)
+    if feature.feature_id == "feature.useful_god.evidence_gate":
+        return ("useful_god_requires_capacity_path",)
+    if feature.feature_id == "feature.pattern.review_index":
+        return ("pattern_requires_main_axis_review",)
+    return ()
+
+
+def _amplifiers(feature: BaziFeature, time_context: TimeContext) -> tuple[str, ...]:
+    rows: list[str] = []
+    if feature.confidence >= 0.55:
+        rows.append("high_feature_confidence")
+    if time_context.status == "ready" and feature.domain in {"time", "wealth", "career", "relationship", "branch"}:
+        rows.append("explicit_luck_flow_context")
+    if len(feature.evidence_refs) >= 4:
+        rows.append("multi_evidence_support")
+    return tuple(rows)
+
+
+def _affected_domains(feature: BaziFeature) -> tuple[str, ...]:
+    mapping = {
+        "strength": ("strength", "wealth", "career", "useful_god"),
+        "ten_god": ("ten_god", "wealth", "career", "relationship"),
+        "element": ("element", "health", "strength"),
+        "branch": ("branch", "relationship", "time", "wealth", "career"),
+        "time": ("time", "wealth", "career", "relationship"),
+        "wealth": ("wealth",),
+        "useful_god": ("useful_god", "strength", "wealth", "career"),
+        "pattern": ("pattern", "career", "wealth"),
+    }
+    return mapping.get(feature.domain, (feature.domain,))
+
+
+def _activation_sources(feature: BaziFeature, time_context: TimeContext) -> tuple[str, ...]:
+    sources: list[str] = []
+    if feature.domain == "time" and time_context.status == "ready":
+        sources.extend(f"time.{row.layer_key}.{row.pillar.display}" for row in time_context.layers[:3])
+    if time_context.status == "ready" and feature.domain in {"wealth", "career", "relationship", "branch"}:
+        sources.append("time.explicit_context")
+    return tuple(sources)
 
 
 def _relation_title(hit) -> str:

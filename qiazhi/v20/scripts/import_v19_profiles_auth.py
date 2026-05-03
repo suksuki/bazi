@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
 
 from v20.access.auth import import_v19_auth_sessions, v19_auth_migration_preview  # noqa: E402
 from v20.profiles.migration import import_v19_profiles_to_postgres, v19_profile_migration_preview  # noqa: E402
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -25,33 +26,41 @@ def main() -> int:
 
     include_profiles = not args.auth_only
     include_auth = not args.profiles_only
-    payload = {
-        "version": "v20.v19_profiles_auth_import_cli.v1",
-        "apply": args.apply,
-        "runtime_mutation": bool(args.apply),
-        "profiles": None,
-        "auth": None,
-        "guardrails": [
-            "EXPLICIT_APPLY_REQUIRED",
-            "NO_PASSWORD_VALUES_RENDERED",
-            "NO_SESSION_TOKENS_RENDERED",
-            "V19_SOURCE_IS_READ_ONLY",
-        ],
-    }
-    if include_profiles:
-        payload["profiles_preview"] = v19_profile_migration_preview()
-        payload["profiles"] = import_v19_profiles_to_postgres(apply=args.apply, owner_id=args.owner_id)
-    if include_auth:
-        payload["auth_preview"] = v19_auth_migration_preview()
-        import os
 
-        payload["auth"] = import_v19_auth_sessions(
-            apply=args.apply,
-            admin_password=os.getenv(args.admin_password_env, ""),
-        )
-    payload["status"] = _status(payload)
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload["status"] in {"dry_run", "imported"} else 2
+    def _run() -> dict[str, object]:
+        payload = {
+            "version": "v20.v19_profiles_auth_import_cli.v1",
+            "apply": args.apply,
+            "runtime_mutation": bool(args.apply),
+            "profiles": None,
+            "auth": None,
+            "guardrails": [
+                "EXPLICIT_APPLY_REQUIRED",
+                "NO_PASSWORD_VALUES_RENDERED",
+                "NO_SESSION_TOKENS_RENDERED",
+                "V19_SOURCE_IS_READ_ONLY",
+            ],
+        }
+        if include_profiles:
+            payload["profiles_preview"] = v19_profile_migration_preview()
+            payload["profiles"] = import_v19_profiles_to_postgres(apply=args.apply, owner_id=args.owner_id)
+        if include_auth:
+            payload["auth_preview"] = v19_auth_migration_preview()
+            import os
+
+            payload["auth"] = import_v19_auth_sessions(
+                apply=args.apply,
+                admin_password=os.getenv(args.admin_password_env, ""),
+            )
+        payload["status"] = _status(payload)
+        return payload
+
+    return run_and_print(
+        _run,
+        command="import_v19_profiles_auth.py",
+        args=args,
+        runtime_mutation=args.apply,
+    )
 
 
 def _status(payload: dict[str, object]) -> str:

@@ -33,6 +33,8 @@ class MeasureRequest(BaseModel):
     practitioner_selections: list[PractitionerControlSelectionRequest] = Field(default_factory=list)
     latent_event_answers: list[LatentEventCalibrationAnswerRequest] = Field(default_factory=list)
     question_id: str = ""
+    answered_question_ids: list[str] = Field(default_factory=list)
+    answered_question_keys: list[str] = Field(default_factory=list)
 
 
 class MeasureResponse(BaseModel):

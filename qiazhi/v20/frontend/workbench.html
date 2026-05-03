@@ -19,6 +19,8 @@
         <nav class="top-actions" aria-label="V20 navigation">
           <a href="/v20/ui/profiles.html" data-ui="nav_profiles">档案</a>
           <a href="/v20/ui/workbench.html" aria-current="page" data-ui="nav_measure">测算</a>
+          <a href="/v20/ui/admin.html" class="admin-nav-link" hidden>Admin</a>
+          <button type="button" id="logoutButton" class="logout-action" hidden>登出</button>
           <span id="runtimeStatus" class="status-pill">checking</span>
         </nav>
       </header>
@@ -66,6 +68,7 @@
                   <select name="role_key" id="roleSelect">
                     <option value="analyst" selected>命理师</option>
                     <option value="user">游客</option>
+                    <option value="admin">管理员</option>
                   </select>
                 </label>
                 <label>语言
@@ -129,64 +132,94 @@
               <div id="featureChips" class="feature-grid"></div>
             </article>
 
-            <article class="panel portrait-panel-card">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Topic Projection</p>
-                  <h2 data-ui="portrait_title">主题投射画像</h2>
-                </div>
-                <span class="small-pill">decision-backed</span>
-              </div>
-              <div id="portraitAxes" class="axis-list"></div>
-            </article>
-
             <article id="practitionerCalibration" class="panel calibration-panel-card" hidden>
-              <div class="calibration-head">
+              <button id="practitionerToggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="calibrationControls">
                 <div>
                   <p class="section-kicker">Practitioner</p>
                   <h2>命理师校准</h2>
                 </div>
-                <span id="calibrationStatus" class="small-pill">signal only</span>
-              </div>
-              <div id="calibrationControls" class="calibration-controls"></div>
+                <span class="collapse-meta">
+                  <span id="calibrationStatus" class="small-pill">signal only</span>
+                  <span id="practitionerCollapseLabel" class="collapse-label">展开</span>
+                </span>
+              </button>
+              <div id="calibrationControls" class="calibration-controls collapsible-body" hidden></div>
             </article>
 
-            <article id="latentCalibration" class="panel latent-calibration-card" hidden>
-              <div class="calibration-head">
-                <div>
-                  <p class="section-kicker">Latent Factors</p>
-                  <h2>命主校准</h2>
-                </div>
-                <span id="latentCalibrationStatus" class="small-pill">choice only</span>
-              </div>
-              <div id="latentCalibrationControls" class="latent-calibration-controls"></div>
-            </article>
+          </section>
 
-            <article class="panel questions-panel-card">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Question Intent</p>
-                  <h2 data-ui="questions_title">智能问题</h2>
-                </div>
-                <span id="intentSummary" class="small-pill">intent</span>
+          <section id="observationPage" class="observation-page" hidden>
+            <button id="observationToggle" class="observation-toggle" type="button" aria-expanded="true" aria-controls="observationBody">
+              <div>
+                <p class="section-kicker">Observation</p>
+                <h2>观测页面</h2>
+                <p class="muted-line">仅管理员可见，用于审计画像、校准和规则命中。</p>
               </div>
-              <div id="questionList" class="question-list"></div>
-            </article>
+              <span class="collapse-meta">
+                <span id="observationStatus" class="small-pill">admin only</span>
+                <span id="observationCollapseLabel" class="collapse-label">收起</span>
+              </span>
+            </button>
+            <div id="observationBody" class="observation-grid collapsible-body">
+              <article class="panel portrait-graph-card">
+                <div class="section-head">
+                  <div>
+                    <p class="section-kicker">Portrait Graph</p>
+                    <h2>图谱画像总览</h2>
+                  </div>
+                  <span id="portraitGraphStatus" class="small-pill">profile</span>
+                </div>
+                <div id="portraitGraphSummary" class="portrait-graph"></div>
+              </article>
 
-            <article class="panel interaction-panel-card">
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Interaction</p>
-                  <h2>交互信号</h2>
+              <article class="panel portrait-panel-card">
+                <div class="section-head">
+                  <div>
+                    <p class="section-kicker">Topic Projection</p>
+                    <h2 data-ui="portrait_title">主题投射画像</h2>
+                  </div>
+                  <span class="small-pill">decision-backed</span>
                 </div>
-                <span id="interactionSummary" class="small-pill">session</span>
-              </div>
-              <div id="interactionSignals" class="signal-list"></div>
-            </article>
+                <div id="portraitAxes" class="axis-list"></div>
+              </article>
+
+              <article id="latentCalibration" class="panel latent-calibration-card" hidden>
+                <div class="calibration-head">
+                  <div>
+                    <p class="section-kicker">Latent Factors</p>
+                    <h2>命主校准</h2>
+                  </div>
+                  <span id="latentCalibrationStatus" class="small-pill">choice only</span>
+                </div>
+                <div id="latentCalibrationControls" class="latent-calibration-controls"></div>
+              </article>
+
+              <article class="panel rule-hits-panel">
+                <div class="section-head">
+                  <div>
+                    <p class="section-kicker">Decision Hits</p>
+                    <h2 data-ui="hits_title">规则命中</h2>
+                  </div>
+                  <span id="decisionHitCount" class="small-pill">rules</span>
+                </div>
+                <div id="decisionHitSummary" class="rule-hit-summary"></div>
+                <div id="decisionHits" class="rule-hit-list"></div>
+              </article>
+            </div>
           </section>
 
           <section class="answer-grid">
             <article class="panel answer-panel">
+              <div class="answer-question-strip">
+                <div class="section-head">
+                  <div>
+                    <p class="section-kicker">Question Intent</p>
+                    <h2 data-ui="questions_title">智能问题</h2>
+                  </div>
+                  <span id="intentSummary" class="small-pill">intent</span>
+                </div>
+                <div id="questionList" class="question-list answer-question-list"></div>
+              </div>
               <div class="section-head">
                 <div>
                   <p class="section-kicker">Answer</p>
@@ -220,6 +253,6 @@
         </section>
       </main>
     </div>
-    <script src="/v20/ui/app.js?v=20260501-latent-calibration" defer></script>
+    <script src="/v20/ui/app.js?v=20260502-portrait-graph" defer></script>
   </body>
 </html>

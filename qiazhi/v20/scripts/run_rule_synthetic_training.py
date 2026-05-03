@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -16,6 +15,7 @@ from v20.validation.rule_synthetic import (  # noqa: E402
     run_rule_synthetic_suite,
     write_rule_synthetic_training_artifact,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -25,16 +25,21 @@ def main() -> int:
     parser.add_argument("--write", action="store_true", help="Write the training report into the local runtime dir.")
     args = parser.parse_args()
 
-    if args.status:
-        payload = read_rule_synthetic_training_artifact()
-    elif args.suite:
-        payload = run_rule_synthetic_suite()
-    elif args.write:
-        payload = write_rule_synthetic_training_artifact()
-    else:
-        payload = build_rule_synthetic_training_report()
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} else 1
+    def _run() -> dict[str, object]:
+        if args.status:
+            return read_rule_synthetic_training_artifact()
+        if args.suite:
+            return run_rule_synthetic_suite()
+        if args.write:
+            return write_rule_synthetic_training_artifact()
+        return build_rule_synthetic_training_report()
+
+    return run_and_print(
+        _run,
+        command="run_rule_synthetic_training.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

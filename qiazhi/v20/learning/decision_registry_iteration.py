@@ -20,12 +20,19 @@ ProgressCallback = Callable[[str], None]
 def build_decision_registry_iteration_report(
     domain: str = "",
     *,
-    limit: int = 64,
-    per_rule: int = 5,
+    limit: int = 0,
+    per_rule: int = 0,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
-    gate = build_rule_activation_report(domain, limit=limit)
-    split = build_rule_subcondition_split_report(domain, limit=limit, per_rule=per_rule, progress=progress)
+    limit_value = _normalize_limit(limit)
+    per_rule_value = _normalize_limit(per_rule)
+    gate = build_rule_activation_report(domain, limit=limit_value)
+    split = build_rule_subcondition_split_report(
+        domain,
+        limit=limit_value,
+        per_rule=per_rule_value,
+        progress=progress,
+    )
     split_by_rule_key = {
         str(row.get("rule_key", "")): row
         for row in split.get("packets", ())
@@ -72,15 +79,15 @@ def build_decision_registry_iteration_report(
 def write_decision_registry_iteration_artifact(
     *,
     domain: str = "",
-    limit: int = 64,
-    per_rule: int = 5,
+    limit: int = 0,
+    per_rule: int = 0,
     output_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
     report = build_decision_registry_iteration_report(
         domain,
-        limit=limit,
-        per_rule=per_rule,
+        limit=_normalize_limit(limit),
+        per_rule=_normalize_limit(per_rule),
         progress=progress,
     )
     runtime_dir = local_jsonl_store_from_env().runtime_dir
@@ -273,6 +280,14 @@ def _hash(*values: str) -> str:
 
 def _safe(value: str) -> str:
     return "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in value.strip())
+
+
+def _normalize_limit(value: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return 0
+    return max(0, parsed)
 
 
 def _emit(progress: ProgressCallback | None, message: str) -> None:

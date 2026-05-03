@@ -50,6 +50,8 @@ SECTION_TITLES = {
         "domain_measurement_path": "Professional Reading Path",
         "knowledge_evidence_support": "Knowledge Evidence",
         "portrait_projection_reading": "Topic Projection Portrait",
+        "mainline_decision": "Mainline Decision",
+        "portrait_profile_summary": "Portrait Snapshot",
         "decision_knowledge_support": "Knowledge Evidence",
         "decision_next_step": "Next Question",
         "measurement_next_step": "Next Review Step",
@@ -61,6 +63,8 @@ SECTION_TITLES = {
         "domain_measurement_path": "전문 해석 경로",
         "knowledge_evidence_support": "지식 근거",
         "portrait_projection_reading": "주제 투사 프로필",
+        "mainline_decision": "주요 판별",
+        "portrait_profile_summary": "팔각지 그림 요약",
         "decision_knowledge_support": "지식 근거",
         "decision_next_step": "다음 질문",
         "measurement_next_step": "다음 검토 단계",
@@ -112,6 +116,13 @@ def _body_en(section: AnswerSection, topic: str, source_count: int) -> str:
         return f"Reviewed knowledge is used only as evidence support for {topic}, not as rule truth."
     if section.section_type == "portrait_projection_reading":
         return f"The topic projection for {topic} comes from current-chart decision states, not static corpus labels."
+    if section.section_type == "portrait_profile_summary":
+        return (
+            f"{topic} snapshot: {section.body[:240]} "
+            "（compact confidence state with review pressure)."
+        )
+    if section.section_type == "mainline_decision":
+        return section.body
     if section.section_type == "decision_knowledge_support":
         return f"Reviewed knowledge supports terms and boundaries for {topic}; it does not override decisions."
     if section.section_type == "decision_next_step":
@@ -132,6 +143,13 @@ def _body_ko(section: AnswerSection, topic: str, source_count: int) -> str:
         return f"검토된 지식은 {topic}의 근거 보조로만 사용되며 규칙 진실로 쓰지 않습니다."
     if section.section_type == "portrait_projection_reading":
         return f"{topic}의 주제 투사는 현재 명식의 판정 상태에서 나오며 정적 말뭉치 라벨이 아닙니다."
+    if section.section_type == "portrait_profile_summary":
+        return (
+            f"{topic}의 현재 판정 상태와 투사로 구성한 단일 초안입니다. "
+            f"요지: {section.body[:240]}"
+        )
+    if section.section_type == "mainline_decision":
+        return section.body
     if section.section_type == "decision_knowledge_support":
         return f"검토된 지식은 {topic}의 용어와 경계를 보조하며 판정을 대체하지 않습니다."
     if section.section_type == "decision_next_step":

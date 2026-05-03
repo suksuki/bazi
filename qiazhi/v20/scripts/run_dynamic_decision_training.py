@@ -15,6 +15,7 @@ from v20.learning.dynamic_decision_training import (  # noqa: E402
     run_dynamic_decision_training_batch,
     write_dynamic_decision_training_artifact,
 )
+from v20.scripts.contract import build_payload, run_and_print
 
 
 def main() -> int:
@@ -26,17 +27,22 @@ def main() -> int:
     parser.add_argument("--progress", action="store_true", help="Print progress lines to stderr while running.")
     args = parser.parse_args()
 
-    progress = (
-        lambda message: print(f"[v20-dynamic-decision] {message}", file=sys.stderr, flush=True)
-    ) if args.progress else None
-    if args.status:
-        payload = read_dynamic_decision_training_artifact()
-    elif args.write:
-        payload = write_dynamic_decision_training_artifact(progress=progress)
-    else:
-        payload = run_dynamic_decision_training_batch(progress=progress)
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} else 1
+    def _run() -> dict[str, object]:
+        progress = (
+            lambda message: print(f"[v20-dynamic-decision] {message}", file=sys.stderr, flush=True)
+        ) if args.progress else None
+        if args.status:
+            return read_dynamic_decision_training_artifact()
+        if args.write:
+            return write_dynamic_decision_training_artifact(progress=progress)
+        return run_dynamic_decision_training_batch(progress=progress)
+
+    return run_and_print(
+        _run,
+        command="run_dynamic_decision_training.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

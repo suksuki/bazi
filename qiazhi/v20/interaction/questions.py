@@ -37,6 +37,11 @@ class QuestionCandidate:
     bazi_focus: str = ""
     alignment_score: float = 0.0
     role: str = "bazi_measurement_entry"
+    source_decision_key: str = ""
+    source_rule_key: str = ""
+    source_decision_status: str = ""
+    source_decision_label: str = ""
+    question_strategy: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -94,6 +99,12 @@ HOOK_DOMAIN_PREFERENCE = {
 }
 
 
+QUESTION_STRATEGY = {
+    "default": "feature_hook",
+    "applied_domain": "domain_projection",
+}
+
+
 def recommend_questions(
     feature_layer: FeatureLayer,
     *,
@@ -118,6 +129,7 @@ def recommend_questions(
                 measurement_topic=current.measurement_topic if keep_current else domain_label(feature.domain),
                 measurement_stage=current.measurement_stage if keep_current else measurement_stage(feature.domain),
                 **(dimension_payload(current.domain) if keep_current else dimension_payload(feature.domain)),
+                question_strategy=QUESTION_STRATEGY["default"],
             )
             candidate = replace(
                 candidate,
@@ -128,6 +140,7 @@ def recommend_questions(
                     candidate.source_feature_ids,
                     str(hook),
                     str(score),
+                    question_strategy=QUESTION_STRATEGY["default"],
                 ),
             )
             rows[hook] = candidate
@@ -163,6 +176,7 @@ def _add_applied_domain_questions(rows: dict[str, QuestionCandidate], feature_la
             measurement_topic=current.measurement_topic if keep_current else domain_label(domain),
             measurement_stage=current.measurement_stage if keep_current else measurement_stage(domain),
             **(dimension_payload(current.domain) if keep_current else dimension_payload(domain)),
+            question_strategy=QUESTION_STRATEGY["applied_domain"],
         )
         rows[hook] = replace(
             rows[hook],
@@ -173,6 +187,7 @@ def _add_applied_domain_questions(rows: dict[str, QuestionCandidate], feature_la
                 rows[hook].source_feature_ids,
                 domain,
                 "applied",
+                question_strategy=QUESTION_STRATEGY["applied_domain"],
             ),
         )
 
@@ -299,8 +314,9 @@ def _question_id(
     source_feature_ids: tuple[str, ...],
     namespace: str,
     marker: str,
+    question_strategy: str = "",
 ) -> str:
-    signature = f"{question_key}|{domain}|{title}|{';'.join(source_feature_ids)}|{namespace}|{marker}"
+    signature = f"{question_key}|{domain}|{title}|{';'.join(source_feature_ids)}|{namespace}|{marker}|{question_strategy}"
     digest = hashlib.blake2s(signature.encode("utf-8"), digest_size=5).hexdigest()
     return f"{question_key}:{digest}"
 

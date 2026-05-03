@@ -1,12 +1,19 @@
 from __future__ import annotations
 
 from pathlib import Path
+import json
+import sys
 
 from fastapi.testclient import TestClient
 
 from v20.server import app
 from v20.testing.matrix import build_test_coverage_matrix
-from v20.testing.runner import main as runner_main, run_tier
+from v20.testing.runner import (
+    _extract_contract_payload,
+    _run_command,
+    main as runner_main,
+    run_tier,
+)
 from v20.testing.tiers import get_tier, test_tier_manifest as build_test_tier_manifest
 
 
@@ -39,6 +46,17 @@ def test_v20_test_runner_cli_accepts_flags_after_tier(capsys) -> None:
     assert code == 0
     assert '"tier": "smoke"' in output
     assert '"status": "dry_run"' in output
+
+
+def test_v20_testing_runner_json_output_is_parseable_for_machine_consumers(capsys) -> None:
+    code = runner_main(["smoke", "--dry-run", "--json"])
+    output = capsys.readouterr().out
+
+    payload = json.loads(output)
+    assert code == 0
+    assert payload["ok"] is True
+    assert payload["tier"] == "smoke"
+    assert payload["commands"][0]["status"] == "dry_run"
 
 
 def test_v20_test_scripts_and_docs_are_wired() -> None:
@@ -85,3 +103,60 @@ def test_v20_testing_matrix_endpoint_is_read_only() -> None:
     data = response.json()
     assert data["runtime_mutation"] is False
     assert data["default_tier"] == "fast"
+
+
+def test_v20_testing_runner_command_timeout_fails_cleanly() -> None:
+    row = _run_command(
+        "sleep",
+        [sys.executable, "-c", "import time; time.sleep(0.2)"],
+        Path.cwd(),
+        timeout_seconds=0.05,
+        emit_command_output=False,
+    )
+
+    assert row["status"] == "timeout"
+    assert row["returncode"] == 1
+
+
+def test_v20_testing_runner_contract_payload_parse_extracts_status() -> None:
+    noisy_payload = "starting test...\n{\"status\": \"fail\", \"ok\": false}\n"
+    payload = _extract_contract_payload(noisy_payload)
+
+    assert payload is not None
+    assert payload["status"] == "fail"
+
+
+def test_v20_testing_runner_contract_payload_promotes_fail_when_script_reports_fail(tmp_path) -> None:
+    row = _run_command(
+        "script-fail",
+        [
+            sys.executable,
+            "-c",
+            "print('{\\\"status\\\": \\\"fail\\\", \\\"ok\\\": false}')",
+        ],
+        tmp_path,
+        timeout_seconds=5,
+        emit_command_output=False,
+    )
+
+    assert row["status"] == "fail"
+    assert row["contract_status"] == "fail"
+
+
+def test_v20_testing_runner_command_timeout_is_honored_for_tier_commands() -> None:
+    result = run_tier(
+        "smoke",
+        dry_run=True,
+    )
+    command = result["commands"][0]
+
+    assert command["status"] == "dry_run"
+    assert command["timeout_seconds"] is None
+
+    result_with_override = run_tier(
+        "smoke",
+        dry_run=True,
+        command_timeout_seconds=5,
+    )
+    command_with_override = result_with_override["commands"][0]
+    assert command_with_override["timeout_seconds"] == 5

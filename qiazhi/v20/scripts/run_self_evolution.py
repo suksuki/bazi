@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -14,6 +13,7 @@ from v20.learning.self_evolution import (  # noqa: E402
     read_self_evolution_artifact,
     run_self_evolution_cycle,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -28,17 +28,25 @@ def main() -> int:
     progress = (
         lambda message: print(f"[v20-self-evolution] {message}", file=sys.stderr, flush=True)
     ) if args.progress else None
-    if args.status:
-        payload = read_self_evolution_artifact()
-    else:
-        payload = run_self_evolution_cycle(
+    def _run() -> dict[str, object]:
+        progress = (
+            lambda message: print(f"[v20-self-evolution] {message}", file=sys.stderr, flush=True)
+        ) if args.progress else None
+        if args.status:
+            return read_self_evolution_artifact()
+        return run_self_evolution_cycle(
             write=args.write,
             include_rule_batch=not args.skip_rule_batch,
             corpus_preview_limit=max(0, args.corpus_preview),
             progress=progress,
         )
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} and payload.get("manifest_status") != "blocked" else 1
+
+    return run_and_print(
+        _run,
+        command="run_self_evolution.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

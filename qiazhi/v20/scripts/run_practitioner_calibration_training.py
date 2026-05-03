@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -15,6 +14,7 @@ from v20.learning.practitioner_calibration_training import (  # noqa: E402
     read_practitioner_calibration_training_artifact,
     write_practitioner_calibration_training_artifact,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -26,17 +26,22 @@ def main() -> int:
     parser.add_argument("--progress", action="store_true", help="Print progress lines to stderr while running.")
     args = parser.parse_args()
 
-    progress = (
-        lambda message: print(f"[v20-practitioner-calibration] {message}", file=sys.stderr, flush=True)
-    ) if args.progress else None
-    if args.status:
-        payload = read_practitioner_calibration_training_artifact()
-    elif args.write:
-        payload = write_practitioner_calibration_training_artifact(progress=progress)
-    else:
-        payload = build_practitioner_calibration_training_report(progress=progress)
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} else 1
+    def _run() -> dict[str, object]:
+        progress = (
+            lambda message: print(f"[v20-practitioner-calibration] {message}", file=sys.stderr, flush=True)
+        ) if args.progress else None
+        if args.status:
+            return read_practitioner_calibration_training_artifact()
+        if args.write:
+            return write_practitioner_calibration_training_artifact(progress=progress)
+        return build_practitioner_calibration_training_report(progress=progress)
+
+    return run_and_print(
+        _run,
+        command="run_practitioner_calibration_training.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

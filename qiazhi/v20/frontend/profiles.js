@@ -3,6 +3,7 @@ const localeSelect = document.querySelector("#profileLocale");
 const profileList = document.querySelector("#profileList");
 const importButton = document.querySelector("#importProfilesButton");
 const instantMeasureLink = document.querySelector("#instantMeasureLink");
+const logoutButton = document.querySelector("#logoutButton");
 const state = { profiles: [] };
 
 const PROFILE_TEXT = {
@@ -18,6 +19,7 @@ const PROFILE_TEXT = {
     owner: "归属",
     empty: "暂无档案",
     importing: "迁移中",
+    logout_button: "登出",
   },
   en: {
     app_title: "Bazi Profiles",
@@ -31,6 +33,7 @@ const PROFILE_TEXT = {
     owner: "Owner",
     empty: "No profiles",
     importing: "Importing",
+    logout_button: "Log Out",
   },
   ko: {
     app_title: "사주 프로필",
@@ -44,6 +47,7 @@ const PROFILE_TEXT = {
     owner: "소유자",
     empty: "프로필 없음",
     importing: "가져오는 중",
+    logout_button: "로그아웃",
   },
 };
 
@@ -80,7 +84,19 @@ const loadMe = async () => {
   const result = await requestJson("/api/v20/auth/me");
   const session = result.session || {};
   document.body.dataset.role = session.role || params.get("role") || "user";
+  document.querySelectorAll(".admin-nav-link").forEach((node) => {
+    node.hidden = session.role !== "admin";
+  });
+  if (logoutButton) logoutButton.hidden = !result.authenticated;
   setText("#profileRuntimeStatus", result.authenticated ? `${session.username || "local"} · ${session.role || "user"}` : "not authenticated");
+};
+
+const logout = async () => {
+  await requestJson("/api/v20/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  window.location.href = `/v20/ui/?locale=${encodeURIComponent(localeSelect.value || "zh")}`;
 };
 
 const loadProfiles = async () => {
@@ -201,7 +217,7 @@ const tag = (text) => {
 };
 
 const currentText = () => PROFILE_TEXT[localeSelect.value] || PROFILE_TEXT.zh;
-const measurementRole = (role) => (role === "user" ? "user" : "analyst");
+const measurementRole = (role) => (role === "user" ? "user" : role === "admin" ? "admin" : "analyst");
 
 localeSelect.value = params.get("locale") || localStorage.getItem("v20_locale") || "zh";
 applyLocale(localeSelect.value);
@@ -211,5 +227,6 @@ localeSelect.addEventListener("change", () => {
   loadProfiles().catch((error) => setText("#profileStatus", error.message));
 });
 importButton.addEventListener("click", importProfiles);
+logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#profileStatus", error.message)));
 loadMe().then(updateLinks).catch(() => updateLinks());
 loadProfiles().catch((error) => setText("#profileStatus", error.message));

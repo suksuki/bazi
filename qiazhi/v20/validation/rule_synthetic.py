@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+from collections import defaultdict
 from dataclasses import asdict, dataclass
 from datetime import datetime, timezone
 from pathlib import Path
@@ -221,14 +222,22 @@ def build_rule_synthetic_training_report(
 ) -> dict[str, object]:
     suite = run_rule_synthetic_suite(cases)
     domain_rows: dict[str, dict[str, object]] = {}
+    rule_rows: dict[str, dict[str, object]] = {}
+
     for result in suite["results"]:
         if not isinstance(result, dict):
             continue
-        expected_domains = result.get("expected_rule_domains", ())
-        if not isinstance(expected_domains, (tuple, list)):
-            continue
-        for domain in expected_domains:
-            key = str(domain)
+        case_id = str(result.get("case_id", ""))
+        expected_domains_tuple = _as_tuple_of_str(result.get("expected_rule_domains", ()))
+        candidate_rule_domains = _as_tuple_of_str(result.get("candidate_rule_domains", ()))
+        matched_by_domain = result.get("matched_feature_ids_by_domain", {})
+        matched_rules_by_domain = result.get("matched_rule_keys_by_domain", {})
+        matched_rules = _as_tuple_of_str(result.get("matched_rule_keys", ()))
+        case_passed = result.get("ok") is True
+        case_feature_ids = _as_tuple_of_str(result.get("feature_ids", ()))
+        domains_for_case = tuple(dict.fromkeys((*expected_domains_tuple, *candidate_rule_domains)))
+
+        for key in domains_for_case:
             row = domain_rows.setdefault(
                 key,
                 {
@@ -238,17 +247,47 @@ def build_rule_synthetic_training_report(
                     "fail_count": 0,
                     "matched_feature_ids": set(),
                     "case_ids": [],
+                    "matched_rule_keys": set(),
                 },
             )
             row["case_count"] = int(row["case_count"]) + 1
-            row["case_ids"].append(result.get("case_id", ""))
-            if result.get("ok") is True:
+            row["case_ids"].append(case_id)
+            if case_passed:
                 row["pass_count"] = int(row["pass_count"]) + 1
             else:
                 row["fail_count"] = int(row["fail_count"]) + 1
-            matched = result.get("matched_feature_ids_by_domain", {})
-            if isinstance(matched, dict):
-                row["matched_feature_ids"].update(str(item) for item in matched.get(key, ()) if str(item))
+            row["matched_feature_ids"].update(_as_tuple_of_str(matched_by_domain.get(key, ())))
+            row["matched_rule_keys"].update(_as_tuple_of_str(matched_rules_by_domain.get(key, ())))
+
+        for rule_key in matched_rules:
+            rule_row = rule_rows.setdefault(
+                rule_key,
+                {
+                    "rule_key": rule_key,
+                    "case_count": 0,
+                    "pass_count": 0,
+                    "fail_count": 0,
+                    "matched_feature_ids": set(),
+                    "case_ids": [],
+                    "domains": set(),
+                    "source_domain": set(),
+                },
+            )
+            rule_row["case_count"] = int(rule_row["case_count"]) + 1
+            if case_passed:
+                rule_row["pass_count"] = int(rule_row["pass_count"]) + 1
+            else:
+                rule_row["fail_count"] = int(rule_row["fail_count"]) + 1
+            rule_row["case_ids"].append(case_id)
+            rule_row["domains"].update(candidate_rule_domains or expected_domains_tuple)
+            rule_row["source_domain"].update(candidate_rule_domains or expected_domains_tuple)
+            for key in matched_rules_by_domain:
+                for domain_rule_key in _as_tuple_of_str(matched_rules_by_domain.get(key, ())):
+                    if domain_rule_key == rule_key:
+                        rule_row["matched_feature_ids"].update(_as_tuple_of_str(matched_by_domain.get(key, ())))
+            if not rule_row["matched_feature_ids"]:
+                rule_row["matched_feature_ids"].update(case_feature_ids)
+
     rule_domain_training = []
     for row in domain_rows.values():
         case_count = int(row["case_count"])
@@ -262,11 +301,34 @@ def build_rule_synthetic_training_report(
                 "fail_count": int(row["fail_count"]),
                 "synthetic_confidence": confidence,
                 "matched_feature_ids": sorted(row["matched_feature_ids"])[:16],
+                "matched_rule_keys": tuple(sorted(row.get("matched_rule_keys", set()))),
                 "case_ids": row["case_ids"],
                 "training_action": "eligible_for_active_weight" if confidence >= 1.0 else "add_counterexample_or_fix_atoms",
                 "runtime_allowed": True,
             }
         )
+
+    rule_training = []
+    for row in rule_rows.values():
+        case_count = int(row["case_count"])
+        pass_count = int(row["pass_count"])
+        confidence = round(pass_count / case_count, 4) if case_count else 0.0
+        rule_training.append(
+            {
+                "rule_key": row["rule_key"],
+                "case_count": case_count,
+                "pass_count": pass_count,
+                "fail_count": int(row["fail_count"]),
+                "synthetic_confidence": confidence,
+                "matched_feature_ids": sorted(row["matched_feature_ids"])[:16],
+                "case_ids": row["case_ids"],
+                "domains": tuple(sorted(row["domains"])),
+                "source_domains": tuple(sorted(row["source_domain"])),
+                "training_action": "eligible_for_active_weight" if confidence >= 1.0 else "add_counterexample_or_fix_atoms",
+                "runtime_allowed": True,
+            }
+        )
+
     return {
         "version": "v20.rule_synthetic_training_report.v1",
         "status": "ready" if suite["ok"] else "blocked",
@@ -274,6 +336,7 @@ def build_rule_synthetic_training_report(
         "case_count": suite["case_count"],
         "failure_count": len(suite["failures"]),
         "rule_domain_training": sorted(rule_domain_training, key=lambda row: str(row["domain"])),
+        "rule_training": sorted(rule_training, key=lambda row: str(row["rule_key"])),
         "training_scope": [
             "rule_atom_collision_validation",
             "synthetic_counterexample_gap_detection",
@@ -358,21 +421,35 @@ def _evaluate_rule_case(case: SyntheticRuleCase) -> dict[str, object]:
         for row in runtime.get("questions", ())
         if isinstance(row, dict) and row.get("question_key")
     )
-    decisions = [
-        row for row in runtime.get("decision_report", {}).get("decisions", ())
-        if isinstance(row, dict)
-    ]
-    hits = [
-        row for row in runtime.get("decision_report", {}).get("hits", ())
-        if isinstance(row, dict)
-    ]
-    candidate_domains = _decision_domains((*decisions, *hits))
+    decisions = tuple(
+        row for row in runtime.get("decision_report", {}).get("decisions", ()) if isinstance(row, dict)
+    )
+    hits = tuple(
+        row for row in runtime.get("decision_report", {}).get("hits", ()) if isinstance(row, dict)
+    )
+    matched_decision_rows = tuple(decisions + hits)
+    candidate_domains = _decision_domains(matched_decision_rows)
+
     matched_by_domain: dict[str, tuple[str, ...]] = {}
-    for row in decisions:
+    matched_rule_keys_by_domain: dict[str, tuple[str, ...]] = {}
+    matched_rule_keys: set[str] = set()
+    features_by_domain: dict[str, set[str]] = defaultdict(set)
+    rules_by_domain: dict[str, set[str]] = defaultdict(set)
+
+    for row in matched_decision_rows:
+        rule_key = str(row.get("rule_key", "")).strip()
+        feature_ids = _as_tuple_of_str(row.get("feature_ids", ()))
+        if rule_key:
+            matched_rule_keys.add(rule_key)
         for domain in _row_domains(row):
-            matched = tuple(str(item) for item in row.get("feature_ids", ()) if str(item))
-            if matched:
-                matched_by_domain[domain] = matched
+            if feature_ids:
+                features_by_domain[domain].update(feature_ids)
+            if rule_key:
+                rules_by_domain[domain].add(rule_key)
+
+    matched_by_domain = {key: tuple(values) for key, values in features_by_domain.items()}
+    matched_rule_keys_by_domain = {key: tuple(sorted(values)) for key, values in rules_by_domain.items()}
+
     failures = []
     for prefix in case.expected_feature_prefixes:
         if not any(feature_id.startswith(prefix) for feature_id in feature_ids):
@@ -399,8 +476,10 @@ def _evaluate_rule_case(case: SyntheticRuleCase) -> dict[str, object]:
         "expected_feature_prefixes": case.expected_feature_prefixes,
         "feature_ids": feature_ids,
         "matched_feature_ids_by_domain": matched_by_domain,
+        "matched_rule_keys_by_domain": matched_rule_keys_by_domain,
+        "matched_rule_keys": tuple(sorted(matched_rule_keys)),
         "question_keys": questions,
-        "selected_question_key": runtime["selected_question"]["question_key"],
+        "selected_question_key": _selected_question_key(runtime),
         "answer_boundary_ok": not any(text and text in answer_text for text in case.forbidden_text),
         "runtime_mutation": False,
         "guardrails": ["SYNTHETIC_CASE_RESULT_ONLY", "ACTIVE_RULE_ITERATION"],
@@ -430,3 +509,16 @@ def _row_domains(row: dict[str, object]) -> tuple[str, ...]:
         if marker in rule_key:
             domains.append(domain)
     return tuple(dict.fromkeys(domain for domain in domains if domain))
+
+
+def _selected_question_key(runtime: dict[str, object]) -> str:
+    selected_question = runtime.get("selected_question", {})
+    if isinstance(selected_question, dict):
+        return str(selected_question.get("question_key", ""))
+    return ""
+
+
+def _as_tuple_of_str(value: object) -> tuple[str, ...]:
+    if not isinstance(value, (tuple, list)):
+        return ()
+    return tuple(str(row) for row in value if str(row))

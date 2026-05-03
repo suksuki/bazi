@@ -1,5 +1,12 @@
 from __future__ import annotations
 
+import json
+from itertools import chain
+from pathlib import Path
+from collections import OrderedDict
+from collections.abc import Iterable
+
+from v20.interaction.questions import QUESTION_LABELS
 from v20.knowledge.schema import (
     KnowledgeAnswerGuidance,
     KnowledgePortraitMapping,
@@ -7,10 +14,14 @@ from v20.knowledge.schema import (
     KnowledgeRuleAtom,
     KnowledgeUnit,
 )
+from v20.knowledge.draft_import import _seed_paths
+
+
+_DEFAULT_KNOWLEDGE_DRAFT_ROOT = Path(__file__).resolve().parents[2] / "docs" / "bazi_knowledge"
 
 
 def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
-    return (
+    core_units = (
         KnowledgeUnit(
             "v20.core.strength_boundary",
             "Strength evidence boundary",
@@ -891,6 +902,478 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             ),
         ),
     )
+    return _merge_knowledge_units(
+        core_units,
+        _expanded_knowledge_units(),
+        _draft_knowledge_units(),
+    )
+
+
+def _merge_knowledge_units(*groups: Iterable[KnowledgeUnit]) -> tuple[KnowledgeUnit, ...]:
+    merged: OrderedDict[str, KnowledgeUnit] = OrderedDict()
+    for group in groups:
+        for unit in group:
+            knowledge_id = str(unit.knowledge_id)
+            if knowledge_id not in merged:
+                merged[knowledge_id] = unit
+    return tuple(merged.values())
+
+
+def _draft_knowledge_units(*, source_root: Path | None = None) -> tuple[KnowledgeUnit, ...]:
+    root = source_root or _DEFAULT_KNOWLEDGE_DRAFT_ROOT
+    return tuple(
+        chain.from_iterable(
+            _draft_units_from_file(path)
+            for path in _seed_paths(root)
+        )
+    )
+
+
+def _draft_units_from_file(path: Path) -> tuple[KnowledgeUnit, ...]:
+    try:
+        payload = json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return ()
+    rows = payload.get("knowledge_drafts", ()) if isinstance(payload, dict) else ()
+    units: list[KnowledgeUnit] = []
+    for index, row in enumerate(rows):
+        if not isinstance(row, dict):
+            continue
+        unit = _knowledge_unit_from_draft_row(row, path=path, row_index=index)
+        if unit is None:
+            continue
+        units.append(unit)
+    return tuple(units)
+
+
+def _knowledge_unit_from_draft_row(row: dict[str, object], *, path: Path, row_index: int) -> KnowledgeUnit | None:
+    statement = str(row.get("statement", "")).strip()
+    if not statement:
+        return None
+    knowledge_id = str(row.get("knowledge_id") or f"{path.stem}.draft.{row_index:03d}")
+    raw_domain = str(row.get("domain") or "core_structure").strip() or "core_structure"
+    domain = _normalize_runtime_domain(raw_domain)
+    category = str(row.get("category") or "").strip().lower()
+    title = str(row.get("title") or knowledge_id)
+    raw_source_refs = tuple(str(item) for item in row.get("source_refs", ()) if str(item).strip())
+    source_refs = raw_source_refs or (f"docs/{path.as_posix()}",)
+    structured_facts = row.get("structured_facts") if isinstance(row.get("structured_facts"), dict) else {}
+    conditions = row.get("conditions") if isinstance(row.get("conditions"), dict) else {}
+    forbidden_usage = tuple(str(item) for item in row.get("forbidden_usage", ()) if str(item).strip())
+    allowed_usage = tuple(str(item) for item in row.get("allowed_usage", ()) if str(item).strip())
+    risk_level = str(row.get("risk_level") or "")
+    feature_hooks = _derive_feature_hooks(domain=domain, category=category, structured_facts=structured_facts)
+    question_hooks = _derive_question_hooks(
+        domain=domain,
+        category=category,
+        statement=statement,
+        structured_facts=structured_facts,
+    )
+    retrieval_tags = _derive_retrieval_tags(domain, category, structured_facts)
+    atom_id = f"draft.{_slug_id(knowledge_id)}.gate"
+    atom_value = _flatten_seed_conditions(structured_facts=structured_facts, conditions=conditions)
+    atom_confidence = _seed_confidence(row.get("confidence_prior"))
+    boundary = _derive_boundary(category=category, forbidden_usage=forbidden_usage, risk_level=risk_level)
+    evidence_template = _derive_evidence_template(statement, structured_facts, category, allowed_usage, forbidden_usage)
+    question_title = _derive_question_title(domain, category, title, statement)
+    question_key = question_hooks[0]
+    return KnowledgeUnit(
+        knowledge_id,
+        title,
+        domain,
+        statement,
+        evidence_template,
+        boundary,
+        version="v20.knowledge_unit.draft_seed.v1",
+        status="reviewed",
+        source_refs=tuple(_ensure_non_empty(ref) for ref in source_refs),
+        feature_hooks=tuple(dict.fromkeys(feature_hooks)),
+        question_hooks=tuple(question_hooks),
+        retrieval_tags=tuple(dict.fromkeys(retrieval_tags)),
+        rule_atoms=(
+            KnowledgeRuleAtom(
+                atom_id,
+                _rule_atom_type(category),
+                "requires",
+                atom_value,
+                "condition",
+                atom_confidence,
+                boundary=boundary,
+            ),
+        ),
+        portrait_mappings=(
+            KnowledgePortraitMapping(
+                f"portrait.{_slug_id(knowledge_id)}",
+                _derive_portrait_label(domain, title),
+                _portrait_domain(domain),
+                evidence_template,
+                "warm",
+                from_rule_atoms=(atom_id,),
+                question_seeds=(question_title,),
+            ),
+        ),
+        question_mappings=(
+            KnowledgeQuestionMapping(
+                question_key,
+                question_title,
+                _portrait_domain(domain),
+                trigger_rule_atoms=(atom_id,),
+                role="draft_knowledge_entry",
+            ),
+        ),
+        answer_guidance=(
+            KnowledgeAnswerGuidance(
+                f"answer.{_slug_id(knowledge_id)}",
+                _portrait_domain(domain),
+                evidence_template,
+                allowed_phrases=_derive_allowed_phrases(statement),
+                forbidden_phrases=_derive_forbidden_phrases(forbidden_usage),
+                boundary=boundary,
+            ),
+        ),
+        counterexamples=(),
+        allowed_usage=allowed_usage or ("evidence_context", "feature_support", "question_support"),
+        forbidden_usage=tuple(dict.fromkeys((*forbidden_usage, "direct_rule_truth"))),
+    )
+
+
+def _slug_id(value: str) -> str:
+    safe = "".join(ch if (ch.isalnum() or ch == "_") else "_" for ch in value.lower())
+    while "__" in safe:
+        safe = safe.replace("__", "_")
+    return safe.strip("_") or "draft_seed"
+
+
+def _portrait_domain(domain: str) -> str:
+    mapping = {
+        "answer_expression": "pattern",
+        "answer_style": "pattern",
+        "relationship": "relationship",
+        "richness": "pattern",
+        "core_structure": "pattern",
+        "ten_god": "ten_god",
+        "strength": "strength",
+        "pattern": "pattern",
+        "wealth": "wealth",
+        "career": "career",
+        "health": "health",
+        "blind": "pattern",
+        "geo_context": "branch",
+        "branch_advanced": "branch",
+        "branch": "branch",
+        "palace": "branch",
+        "timing": "time",
+        "luck_flow": "time",
+        "calendar": "time",
+        "interaction": "branch",
+        "rule_db": "pattern",
+        "calendar": "time",
+        "luck_flow": "time",
+        "five_element": "element",
+        "lab": "pattern",
+        "auxiliary_pillars": "time",
+        "nayin": "element",
+        "auxiliary_symbols": "ten_god",
+        "branch_relation": "branch",
+        "children": "relationship",
+        "family": "relationship",
+        "shensha": "ten_god",
+    }
+    return mapping.get(domain, "pattern")
+
+
+def _normalize_runtime_domain(domain: str) -> str:
+    mapping = {
+        "core_structure": "pattern",
+        "answer_expression": "pattern",
+        "answer_style": "pattern",
+        "relationship": "relationship",
+        "interaction": "branch",
+        "geo_context": "branch",
+        "rule_db": "pattern",
+        "blind": "pattern",
+        "timing": "time",
+        "auxiliary_pillars": "time",
+        "branch_advanced": "branch",
+        "palace": "branch",
+        "luck_flow": "time",
+        "calendar": "time",
+        "auxiliary_symbols": "ten_god",
+        "growth_phase": "time",
+        "five_element": "element",
+        "auxiliary_archive": "pattern",
+        "special_pattern_boundary": "pattern",
+        "special_pattern_detail": "pattern",
+        "auxiliary_boundary": "pattern",
+        # Archive-domain seeds from first-wave packs:
+        # map to executable bazi projection domains so rule graph can reason without
+        # a separate auxiliary domain adapter.
+        "children": "relationship",
+        "family": "relationship",
+        "personality": "pattern",
+        "lab": "pattern",
+        "nayin": "element",
+        "shensha": "ten_god",
+    }
+    normalized = str(domain).strip().lower()
+    return mapping.get(normalized, normalized)
+
+
+def _derive_feature_hooks(*, domain: str, category: str, structured_facts: dict[str, object]) -> tuple[str, ...]:
+    hooks: list[str] = []
+    for key in structured_facts:
+        slug = _slug_id(str(key))
+        if slug.startswith("feature_"):
+            hooks.append(slug)
+            continue
+        if all(ch.isascii() and (ch.isalpha() or ch.isdigit() or ch == "_") for ch in slug) and slug:
+            hooks.append(f"feature.{slug}")
+    hooks.append(_domain_feature_hook(domain))
+    if category:
+        hooks.append(f"topic.{_slug_id(category)}")
+    if category in {"ten_god_interaction", "ten_god_pathway", "ten_god", "ten_god_interaction_mechanism", "ten_god_pathway_mechanism"}:
+        hooks.append("feature.ten_god")
+    if category.startswith("blind_"):
+        hooks.append("feature.pattern")
+    if category.startswith("branch_"):
+        hooks.append("feature.branch")
+    if category.startswith("wealth_"):
+        hooks.append("feature.wealth")
+    if "answer" in category:
+        hooks.append("feature.strength")
+    if domain in {"career", "relationship", "health"}:
+        hooks.extend(_applied_core_feature_anchors(domain))
+    return tuple(dict.fromkeys(hook for hook in hooks if hook))
+
+
+def _applied_core_feature_anchors(domain: str) -> tuple[str, ...]:
+    try:
+        from v20.answer.measurement_policy import feature_domains_for_applied_domain
+    except Exception:
+        return ()
+    return tuple(
+        f"feature.{source_domain}"
+        for source_domain in feature_domains_for_applied_domain(domain)
+        if source_domain
+    )
+
+
+def _derive_question_hooks(
+    *,
+    domain: str,
+    category: str,
+    statement: str,
+    structured_facts: dict[str, object],
+) -> tuple[str, ...]:
+    question_hooks = list[str]()
+    base = {
+        "core_structure": ("q_structure_overview",),
+        "strength": ("q_strength_assessment",),
+        "pattern": ("q_pattern_structure",),
+        "ten_god": ("q_ten_god_focus",),
+        "branch": ("q_branch_relation_detail",),
+        "time": ("q_time_layer_context",),
+        "wealth": ("q_income_stability",),
+        "career": ("q_career_structure",),
+        "relationship": ("q_relationship_structure",),
+        "health": ("q_health_balance_boundary",),
+        "blind": ("q_pattern_structure",),
+        "interaction": ("q_branch_relation_detail",),
+        "rule_db": ("q_structure_overview",),
+        "geo_context": ("q_structure_overview",),
+        "luck_flow": ("q_time_relation_triggers",),
+        "calendar": ("q_time_vs_natal_relation",),
+    }
+    question_hooks.extend(base.get(domain, ()))
+    if not question_hooks:
+        question_hooks.append("q_structure_overview")
+    for key in structured_facts:
+        if any(tok in str(key) for tok in ("wealth", "income", "财", "财星", "财运")):
+            if "q_income_stability" not in question_hooks:
+                question_hooks.append("q_income_stability")
+        if any(tok in str(key) for tok in ("career", "事业", "官", "官星", "事业")):
+            if "q_career_structure" not in question_hooks:
+                question_hooks.append("q_career_structure")
+        if any(tok in str(key) for tok in ("关系", "spouse", "婚", "伴")):
+            if "q_relationship_structure" not in question_hooks:
+                question_hooks.append("q_relationship_structure")
+        if any(tok in str(key) for tok in ("用神", "useful_god")):
+            if "q_useful_god_candidates" not in question_hooks:
+                question_hooks.append("q_useful_god_candidates")
+        if any(tok in str(key) for tok in ("时", "流", "运", "大运", "流年", "luck", "time", "timing")):
+            if "q_time_relation_triggers" not in question_hooks:
+                question_hooks.append("q_time_relation_triggers")
+    if "answer" in category and "q_structure_overview" not in question_hooks:
+        question_hooks.append("q_structure_overview")
+    allowed_map = {
+        "strength": ("q_strength_assessment",),
+        "ten_god": ("q_ten_god_focus", "q_ten_god_metadata", "q_hidden_stem_role"),
+        "useful_god": ("q_useful_god_candidates", "q_useful_god_evidence_gaps"),
+        "element": ("q_element_balance", "q_element_support_pressure"),
+        "branch": ("q_branch_relation_detail", "q_time_vs_natal_relation", "q_structure_overview"),
+        "wealth": ("q_income_stability", "q_income_factors"),
+        "pattern": ("q_pattern_structure",),
+        "time": ("q_time_layer_context", "q_time_relation_triggers"),
+        "career": ("q_career_structure",),
+        "relationship": ("q_relationship_structure",),
+        "health": ("q_health_balance_boundary",),
+    }
+    domain_allowed = set(allowed_map.get(domain, ("q_structure_overview",)))
+    filtered = [hook for hook in question_hooks if hook in domain_allowed]
+    if not filtered:
+        filtered = [sorted(domain_allowed)[0]]
+    return tuple(dict.fromkeys(filtered))
+
+
+def _derive_retrieval_tags(domain: str, category: str, structured_facts: dict[str, object]) -> tuple[str, ...]:
+    tags = ["seed", "draft_import"]
+    tags.append(domain)
+    if category:
+        tags.append(category)
+    if "blind" in category or domain == "blind":
+        tags.append("blind_school")
+    if "micro" in category or category.endswith("_mechanism"):
+        tags.append("micro")
+    if "macro" in category or category.startswith("qishi") or "climate" in category:
+        tags.append("macro")
+    if "interaction" in category:
+        tags.append("interaction")
+    for key in structured_facts:
+        normalized_key = _slug_id(str(key))
+        if normalized_key:
+            tags.append(normalized_key)
+    return tuple(dict.fromkeys(tag for tag in tags if tag))
+
+
+def _derive_boundary(category: str, forbidden_usage: tuple[str, ...], risk_level: str) -> str:
+    if forbidden_usage:
+        boundary = "，".join(forbidden_usage[:4])
+        if len(forbidden_usage) > 4:
+            boundary += "..."
+    else:
+        boundary = "不输出命理标签化判断，不直接给出确定事件。"
+    if risk_level in {"R1", "R2"}:
+        boundary = f"{boundary}；{_risk_boundary(risk_level)}"
+    if not boundary.strip():
+        boundary = "不输出确定性结论，先做结构化边界说明。"
+    if category:
+        boundary = f"{boundary} | 类目: {category}"
+    return boundary
+
+
+def _derive_evidence_template(
+    statement: str,
+    structured_facts: dict[str, object],
+    category: str,
+    allowed_usage: tuple[str, ...],
+    forbidden_usage: tuple[str, ...],
+) -> str:
+    if structured_facts:
+        facts = "；".join(f"{key}:{value}" for key, value in list(structured_facts.items())[:3])
+        if facts:
+            return f"{statement} | 结构证据线索: {facts}"
+    return f"{statement} | category={category or 'unspecified'}"
+
+
+def _derive_question_title(domain: str, category: str, title: str, statement: str) -> str:
+    hooks = _derive_question_hooks(
+        domain=domain,
+        category=category,
+        statement=statement,
+        structured_facts={},
+    )
+    base = (QUESTION_LABELS.get(hooks[0]) or "先看哪条结构线再回答？")
+    return f"{title or '规则线索'}（{base}）"
+
+
+def _derive_allowed_phrases(statement: str) -> tuple[str, ...]:
+    words = ("结构", "关系", "依据", "边界", "复核", "先看")
+    return tuple(word for word in words if word in str(statement))
+
+
+def _derive_forbidden_phrases(forbidden_usage: tuple[str, ...]) -> tuple[str, ...]:
+    base = {
+        "prediction": "预测",
+        "fortune": "财运结论",
+        "good_bad_judgement": "是非判定",
+        "rule_mutation": "改写规则",
+        "career_prediction": "职业预测",
+        "life_event_prediction": "人生事件判断",
+        "unsupported_question": "越界问题",
+    }
+    collected = [
+        word for key, word in base.items()
+        for usage in forbidden_usage
+        if key in usage
+    ]
+    collected.extend(("一定", "必然", "绝对", "注定"))
+    return tuple(dict.fromkeys(collected))
+
+
+def _domain_feature_hook(domain: str) -> str:
+    return f"feature.{_slug_id(domain)}"
+
+
+def _rule_atom_type(category: str) -> str:
+    if "mechanism" in category:
+        return "mechanism_gate"
+    if "boundary" in category:
+        return "boundary_gate"
+    if "anchor" in category:
+        return "anchor_gate"
+    return "condition_gate"
+
+
+def _seed_confidence(value: object) -> float:
+    try:
+        confidence = float(value)
+    except Exception:
+        return 0.7
+    if not (0.0 <= confidence <= 1.0):
+        confidence = max(0.0, min(1.0, confidence))
+    return confidence
+
+
+def _ensure_non_empty(ref: str) -> str:
+    return str(ref).strip() or "docs/v20/unknown"
+
+
+def _flatten_seed_conditions(structured_facts: dict[str, object], conditions: dict[str, object]) -> str:
+    lines: list[str] = []
+    if conditions:
+        lines.append("conditions=" + "|".join(f"{key}:{_compact_value(value)}" for key, value in conditions.items()))
+    if structured_facts:
+        lines.append("facts=" + "|".join(f"{key}:{_compact_value(value)}" for key, value in structured_facts.items()))
+    if not lines:
+        return "draft_seed_condition"
+    return "; ".join(lines)[:220]
+
+
+def _compact_value(value: object) -> str:
+    if isinstance(value, (str, int, float, bool)):
+        return str(value)
+    if isinstance(value, list):
+        return ",".join(str(item) for item in value[:4])
+    if isinstance(value, tuple):
+        return ",".join(str(item) for item in value[:4])
+    if isinstance(value, dict):
+        keys = list(value.keys())[:4]
+        return ",".join(str(key) for key in keys)
+    return "obj"
+
+
+def _risk_boundary(risk_level: str) -> str:
+    if risk_level == "R2":
+        return "高风险域，需严格禁止事件结论并保留观察边界。"
+    if risk_level == "R1":
+        return "中风险域，返回结构提示并保留可追溯证据边界。"
+    return "低风险域，仍需以结构证据约束，不做确定结果。"
+
+
+def _derive_portrait_label(domain: str, title: str) -> str:
+    if domain in {"wealth", "career", "relationship", "health", "strength", "ten_god", "branch", "pattern", "core_structure", "time"}:
+        return {"wealth": "财富结构画像", "career": "事业结构画像", "relationship": "关系结构画像", "health": "健康结构画像", "strength": "强弱结构画像", "ten_god": "十神结构画像", "branch": "地支互动结构画像", "pattern": "格局结构画像", "core_structure": "结构阅读画像", "time": "时间层结构画像"}.get(domain, title[:14])
+    return f"{title[:18]}结构画像"
 
 
 def _expanded_knowledge_units() -> tuple[KnowledgeUnit, ...]:
@@ -1297,6 +1780,7 @@ def _unit(
     question_key: str,
     question_title: str,
 ) -> KnowledgeUnit:
+    safe_question_hooks = _sanitize_question_hooks(domain, question_hooks)
     return KnowledgeUnit(
         knowledge_id,
         title,
@@ -1306,7 +1790,7 @@ def _unit(
         boundary,
         source_refs=("docs/v20.knowledge.mainline_expansion",),
         feature_hooks=feature_hooks,
-        question_hooks=question_hooks,
+        question_hooks=safe_question_hooks,
         retrieval_tags=retrieval_tags,
         rule_atoms=(
             KnowledgeRuleAtom(
@@ -1349,3 +1833,34 @@ def _unit(
             ),
         ),
     )
+
+
+def _sanitize_question_hooks(domain: str, question_hooks: tuple[str, ...]) -> tuple[str, ...]:
+    return _derive_question_hooks(
+        domain=domain,
+        category=domain,
+        statement="",
+        structured_facts={},
+    ) if not question_hooks else tuple(
+        dict.fromkeys(
+            hook
+            for hook in question_hooks
+            if hook in _allowed_question_hooks_for_domain(domain)
+        )
+    ) or _derive_question_hooks(domain=domain, category=domain, statement="", structured_facts={})
+
+
+def _allowed_question_hooks_for_domain(domain: str) -> tuple[str, ...]:
+    return {
+        "strength": ("q_strength_assessment",),
+        "ten_god": ("q_ten_god_focus", "q_ten_god_metadata", "q_hidden_stem_role"),
+        "useful_god": ("q_useful_god_candidates", "q_useful_god_evidence_gaps"),
+        "element": ("q_element_balance", "q_element_support_pressure"),
+        "branch": ("q_branch_relation_detail", "q_time_vs_natal_relation", "q_structure_overview"),
+        "wealth": ("q_income_stability", "q_income_factors"),
+        "pattern": ("q_pattern_structure",),
+        "time": ("q_time_layer_context", "q_time_relation_triggers"),
+        "career": ("q_career_structure",),
+        "relationship": ("q_relationship_structure",),
+        "health": ("q_health_balance_boundary",),
+    }.get(domain, ("q_structure_overview",))

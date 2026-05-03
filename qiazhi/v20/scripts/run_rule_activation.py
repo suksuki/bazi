@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -14,22 +13,29 @@ from v20.learning.rule_activation import (  # noqa: E402
     build_rule_activation_report,
     build_rule_activation_packet_summary,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build V20 rule activation gate packets from active rule validation.")
     parser.add_argument("--domain", default="", help="Optional domain filter.")
-    parser.add_argument("--limit", type=int, default=64)
+    parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--summary", action="store_true", help="Print compact packets for admin review.")
     args = parser.parse_args()
 
-    payload = (
-        build_rule_activation_packet_summary(args.domain, limit=args.limit)
-        if args.summary
-        else build_rule_activation_report(args.domain, limit=args.limit)
+    def _run() -> dict[str, object]:
+        return (
+            build_rule_activation_packet_summary(args.domain, limit=args.limit)
+            if args.summary
+            else build_rule_activation_report(args.domain, limit=args.limit)
+        )
+
+    return run_and_print(
+        _run,
+        command="run_rule_activation.py",
+        args=args,
+        runtime_mutation=False,
     )
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
 
 
 if __name__ == "__main__":

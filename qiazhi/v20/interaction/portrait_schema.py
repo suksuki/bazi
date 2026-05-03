@@ -30,11 +30,19 @@ class PortraitAxis:
     axis_id: str
     domain: str
     label: str
+    profile_tag: str
+    profile_tags: tuple[str, ...]
+    profile_summary: str
+    attention_level: str
+    portrait_intent_type: str
     measurement_stage: str
+    axis_tier: str
+    axis_state: str
     feature_ids: tuple[str, ...]
     feature_count: int
     peak_confidence: float
     calibration_state: str
+    structural_anchor: str
     knowledge_links: tuple[PortraitKnowledgeLink, ...]
     evidence_boundaries: tuple[str, ...]
     calibration_prompt: str
@@ -60,11 +68,20 @@ class PortraitAxis:
             "axis_id": self.axis_id,
             "domain": self.domain,
             "label": self.label,
+            "profile_tag": self.profile_tag,
+            "profile_tags": list(self.profile_tags),
+            "profile_summary": self.profile_summary,
+            "summary": self.profile_summary,
+            "attention_level": self.attention_level,
+            "portrait_intent_type": self.portrait_intent_type,
             "measurement_stage": self.measurement_stage,
+            "axis_tier": self.axis_tier,
+            "axis_state": self.axis_state,
             "feature_ids": list(self.feature_ids),
             "feature_count": self.feature_count,
             "peak_confidence": self.peak_confidence,
             "calibration_state": self.calibration_state,
+            "structural_anchor": self.structural_anchor,
             "knowledge_ref_count": len(self.knowledge_links),
             "knowledge_links": [row.to_dict() for row in self.knowledge_links],
             "evidence_boundaries": list(self.evidence_boundaries),
@@ -116,7 +133,7 @@ class PortraitItem:
             "alignment_score": self.alignment_score,
             "source_policy": self.source_policy,
             "guardrails": [
-                "PORTRAIT_ITEM_FROM_BAZI_FEATURE",
+                "PORTRAIT_ITEM_FROM_TOPIC_AXIS_OR_FEATURE_CONTEXT",
                 "KNOWLEDGE_CONTEXT_IS_BOUNDARY_ONLY",
                 "NO_DIRECT_PERSONALITY_LABEL",
             ],

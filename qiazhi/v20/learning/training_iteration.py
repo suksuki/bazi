@@ -21,6 +21,10 @@ from v20.learning.practitioner_calibration_training import (
     build_practitioner_calibration_training_report,
     write_practitioner_calibration_training_artifact,
 )
+from v20.learning.question_ranking_learning import (
+    build_question_ranking_learning_report,
+    write_question_ranking_learning_artifact,
+)
 from v20.learning.rule_subcondition_split import (
     build_rule_subcondition_split_report,
     write_rule_subcondition_split_artifact,
@@ -44,6 +48,7 @@ def run_training_iteration(
     phases = [
         "dynamic_decision_training",
         "practitioner_calibration_training",
+        "question_ranking_training",
         "rule_synthetic_training",
         "knowledge_rule_review_overlay",
         "rule_subcondition_split",
@@ -76,6 +81,13 @@ def run_training_iteration(
         write_practitioner_calibration_training_artifact(progress=progress)
         if write
         else build_practitioner_calibration_training_report(progress=progress)
+    )
+
+    emit_phase("question_ranking_training")
+    results["question_ranking_training"] = (
+        write_question_ranking_learning_artifact()
+        if write
+        else build_question_ranking_learning_report()
     )
 
     emit_phase("rule_synthetic_training")

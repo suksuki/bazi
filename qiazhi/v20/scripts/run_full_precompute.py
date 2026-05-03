@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -17,6 +16,7 @@ from v20.corpus.job_runner import (
     read_full_precompute_status,
     run_full_precompute_job,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -32,23 +32,25 @@ def main() -> int:
 
     run_id = args.run_id or default_full_precompute_run_id()
     if args.status:
-        print(json.dumps(read_full_precompute_status(args.run_id), ensure_ascii=False, indent=2, sort_keys=True))
-        return 0
-
-    config = FullPrecomputeJobConfig(
-        run_id=run_id,
-        start=args.start,
-        limit=args.limit,
-        status_every=args.status_every,
-        resume=not args.no_resume,
+        payload = read_full_precompute_status(run_id)
+    else:
+        config = FullPrecomputeJobConfig(
+            run_id=run_id,
+            start=args.start,
+            limit=args.limit,
+            status_every=args.status_every,
+            resume=not args.no_resume,
+        )
+        progress = (
+            lambda message: print(f"[v20-full-precompute] {message}", file=sys.stderr, flush=True)
+        ) if args.progress else None
+        payload = run_full_precompute_job(config, progress=progress)
+    return run_and_print(
+        lambda: payload,
+        command="run_full_precompute.py",
+        args=args,
+        runtime_mutation=not args.status,
     )
-    progress = (
-        lambda message: print(f"[v20-full-precompute] {message}", file=sys.stderr, flush=True)
-    ) if args.progress else None
-    result = run_full_precompute_job(config, progress=progress)
-    print(json.dumps(result, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
-
 
 if __name__ == "__main__":
     raise SystemExit(main())

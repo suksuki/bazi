@@ -17,6 +17,7 @@ from v20.knowledge.rule_extraction import (  # noqa: E402
     build_llm_rule_extraction_report,
     validate_llm_rule_extraction_report,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -29,16 +30,23 @@ def main() -> int:
     parser.add_argument("--apply-postgres", action="store_true", help="Upsert accepted/fallback LLM artifacts into Postgres.")
     args = parser.parse_args()
 
-    if args.validate:
-        payload = validate_llm_rule_extraction_report(args.domain, limit=args.limit)
-    else:
-        payload = build_llm_rule_extraction_report(args.domain, limit=args.limit)
-    if args.persist_local:
-        payload["local_persistence"] = _persist_local(payload, args.run_id or _default_run_id(args.domain))
-    if args.apply_postgres:
-        payload["postgres_persistence"] = _persist_postgres(payload, args.run_id or _default_run_id(args.domain))
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") in {"ready", "empty", "pass"} else 2
+    def _run() -> dict[str, object]:
+        if args.validate:
+            payload = validate_llm_rule_extraction_report(args.domain, limit=args.limit)
+        else:
+            payload = build_llm_rule_extraction_report(args.domain, limit=args.limit)
+        if args.persist_local:
+            payload["local_persistence"] = _persist_local(payload, args.run_id or _default_run_id(args.domain))
+        if args.apply_postgres:
+            payload["postgres_persistence"] = _persist_postgres(payload, args.run_id or _default_run_id(args.domain))
+        return payload
+
+    return run_and_print(
+        _run,
+        command="extract_rules_llm.py",
+        args=args,
+        runtime_mutation=args.persist_local or args.apply_postgres,
+    )
 
 
 def _default_run_id(domain: str) -> str:

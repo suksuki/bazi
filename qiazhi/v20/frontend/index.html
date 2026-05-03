@@ -14,17 +14,20 @@
           <div>
             <p class="eyebrow">Qiazhi V20</p>
             <h1 data-entry="title">进入掐指一算</h1>
-            <p data-entry="subtitle">选择游客、命理师或 Admin 入口，进入 V20 命理测算系统。</p>
+            <p data-entry="subtitle">选择游客或本地账号进入 V20 命理测算系统。</p>
           </div>
         </div>
-        <label class="locale-switch">
-          <span data-entry="language">语言</span>
-          <select id="entryLocale">
-            <option value="zh">中文</option>
-            <option value="en">English</option>
-            <option value="ko">한국어</option>
-          </select>
-        </label>
+        <div class="entry-actions">
+          <label class="locale-switch">
+            <span data-entry="language">语言</span>
+            <select id="entryLocale">
+              <option value="zh">中文</option>
+              <option value="en">English</option>
+              <option value="ko">한국어</option>
+            </select>
+          </label>
+          <button type="button" id="logoutButton" class="mini-action secondary logout-action" data-entry="logout_button" hidden>登出</button>
+        </div>
       </header>
 
       <section class="entry-grid">
@@ -42,26 +45,25 @@
           <div class="entry-form">
             <label><span data-entry="username">用户名</span><input id="loginName" autocomplete="username" placeholder="local_user" /></label>
             <label><span data-entry="password">密码</span><input id="loginPassword" type="password" autocomplete="current-password" /></label>
-            <label><span data-entry="role">角色</span>
-              <select id="loginRole">
-                <option value="user" data-entry-option="role_guest">游客</option>
-                <option value="analyst" data-entry-option="role_practitioner">命理师</option>
-                <option value="admin">Admin</option>
-              </select>
-            </label>
           </div>
-          <div class="button-row">
-            <button type="button" id="loginButton" data-entry="login_button">登录</button>
-            <button type="button" id="registerButton" class="secondary" data-entry="register_button">注册</button>
-          </div>
+          <button type="button" id="loginButton" data-entry="login_button">登录</button>
         </article>
 
         <article class="entry-card">
-          <p class="section-kicker">Admin</p>
-          <h2>DB / LLM</h2>
-          <p data-entry="admin_desc">Admin 页面只保留数据库与 LLM 运行状态，复杂知识和规则治理不放在入口页。</p>
-          <a class="entry-link" href="/v20/ui/admin.html">Admin</a>
-          <a class="entry-link subtle" href="/v20/ui/profiles.html" data-entry="profiles_link">档案管理</a>
+          <p class="section-kicker">Register</p>
+          <h2 data-entry="register_title">注册本地账号</h2>
+          <p data-entry="register_desc">普通用户用于保存个人档案，命理师用于后续校准与工作流。</p>
+          <div class="entry-form">
+            <label><span data-entry="username">用户名</span><input id="registerName" autocomplete="username" placeholder="new_user" /></label>
+            <label><span data-entry="password">密码</span><input id="registerPassword" type="password" autocomplete="new-password" /></label>
+            <label><span data-entry="register_role">注册角色</span>
+              <select id="registerRole">
+                <option value="user" data-entry-option="role_user">普通用户</option>
+                <option value="analyst" data-entry-option="role_practitioner">命理师</option>
+              </select>
+            </label>
+          </div>
+          <button type="button" id="registerButton" class="secondary" data-entry="register_button">注册</button>
         </article>
       </section>
 

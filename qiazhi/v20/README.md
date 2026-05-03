@@ -100,6 +100,7 @@ UI boundary:
 - `v20/scripts/run_practitioner_calibration_training.py --progress` aggregates structured practitioner choices into offline decision-parameter proposals without mutating runtime rules.
 - `v20/scripts/import_calibration_postgres.py --ledger practitioner_calibration_ledger` dry-runs local calibration ledger import; add `--apply` only after `V20_DATABASE_URL` is configured and backups are ready.
 - `v20/scripts/run_training_iteration.py --write --progress` runs the current script-only iteration loop and writes local artifacts.
+- `docs/v20/V20_SCRIPT_RUNBOOK.md` contains a complete step-by-step runbook for dev/test/corpus/self-evolution.
 - `v20/scripts/run_knowledge_rule_library.py --summary` shows the current knowledge-authored active rule definitions, portrait outputs, question outputs, and validation state.
 - `v20/scripts/run_knowledge_rule_validation.py --summary` checks those active rules against synthetic coverage and 518K corpus priors, then lists the next review action per rule.
 - `v20/scripts/run_rule_activation.py --summary` turns active-rule iteration into review packets so humans review packets, not raw rules.

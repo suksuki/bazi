@@ -8,17 +8,19 @@ from v20.knowledge.rule_library import build_knowledge_rule_library, validate_kn
 from v20.validation.rule_synthetic import build_rule_synthetic_training_report
 
 
-def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 64) -> dict[str, object]:
+def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 0) -> dict[str, object]:
     library = build_knowledge_rule_library(domain, limit=limit)
     library_validation = validate_knowledge_rule_library(domain, limit=limit)
     synthetic_training = build_rule_synthetic_training_report()
     corpus_training = read_corpus_training_artifacts()
     synthetic_by_domain = _synthetic_training_by_domain(synthetic_training)
+    synthetic_by_rule = _synthetic_training_by_rule(synthetic_training)
     corpus_by_source = _corpus_training_by_source(corpus_training)
     rows = [
         _validate_definition(
             definition,
             synthetic_by_domain=synthetic_by_domain,
+            synthetic_by_rule=synthetic_by_rule,
             corpus_by_source=corpus_by_source,
         )
         for definition in library.get("definitions", ())
@@ -69,11 +71,15 @@ def _validate_definition(
     definition: dict[str, object],
     *,
     synthetic_by_domain: dict[str, dict[str, object]],
+    synthetic_by_rule: dict[str, dict[str, object]],
     corpus_by_source: dict[str, dict[str, object]],
 ) -> dict[str, object]:
     domain = str(definition.get("domain", ""))
     source_id = str(definition.get("source_knowledge_id", ""))
     synthetic = synthetic_by_domain.get(domain, {})
+    rule_key = str(definition.get("rule_key", ""))
+    if rule_key:
+        synthetic = synthetic_by_rule.get(rule_key, synthetic)
     corpus = corpus_by_source.get(source_id, {})
     hard_failures: list[str] = []
     alignment = definition.get("bazi_alignment", {})
@@ -120,6 +126,17 @@ def _synthetic_training_by_domain(report: dict[str, object]) -> dict[str, dict[s
     return rows
 
 
+def _synthetic_training_by_rule(report: dict[str, object]) -> dict[str, dict[str, object]]:
+    rows = {}
+    for row in report.get("rule_training", ()):
+        if not isinstance(row, dict):
+            continue
+        rule_key = str(row.get("rule_key", ""))
+        if rule_key:
+            rows[rule_key] = row
+    return rows
+
+
 def _corpus_training_by_source(report: dict[str, object]) -> dict[str, dict[str, object]]:
     training = report.get("rule_proposal_training", {})
     if not isinstance(training, dict):
@@ -162,7 +179,9 @@ def _validation_state(synthetic_state: str, corpus_state: str, hard_failures: li
     if corpus_state == "corpus_too_broad":
         return "synthetic_passed_needs_subconditions"
     if corpus_state == "corpus_not_built":
-        return "synthetic_passed_waiting_for_corpus_prior"
+        # 无语料时仍推进可学习子条件，保持规则主线可继续迭代；
+        # 语料作为优化先验，不作为规则真值门槛。
+        return "synthetic_passed_fallback_ready"
     return "validated_active_ready"
 
 
@@ -172,7 +191,7 @@ def _next_iteration_action(validation_state: str) -> str:
         "needs_synthetic_case": "add_domain_synthetic_case",
         "needs_rule_or_case_fix": "repair_rule_atoms_or_expected_case",
         "synthetic_passed_needs_subconditions": "split_by_exact_feature_signature_and_counterexamples",
-        "synthetic_passed_waiting_for_corpus_prior": "build_or_import_corpus_artifacts",
+        "synthetic_passed_fallback_ready": "split_by_exact_feature_signature_and_activate_replay_eval",
         "validated_active_ready": "activate_weight_or_parameter_iteration",
     }
     return actions.get(validation_state, "manual_review")

@@ -12,6 +12,7 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from v20.storage.postgres_decision_import import build_decision_registry_postgres_import_plan  # noqa: E402
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
@@ -27,15 +28,16 @@ def main() -> int:
     parser.add_argument("--batch-size", type=int, default=500)
     args = parser.parse_args()
 
-    _load_env_file(Path(args.env_file))
-    payload = build_decision_registry_postgres_import_plan(apply=args.apply, batch_size=max(1, args.batch_size))
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {
-        "blocked_missing_decision_registry_iteration_artifact",
-        "blocked_missing_V20_DATABASE_URL",
-        "blocked_missing_psycopg2",
-        "blocked_postgres_error",
-    } else 2
+    def _run() -> dict[str, object]:
+        _load_env_file(Path(args.env_file))
+        return build_decision_registry_postgres_import_plan(apply=args.apply, batch_size=max(1, args.batch_size))
+
+    return run_and_print(
+        _run,
+        command="import_decision_registry_postgres.py",
+        args=args,
+        runtime_mutation=args.apply,
+    )
 
 
 def _load_env_file(path: Path) -> None:

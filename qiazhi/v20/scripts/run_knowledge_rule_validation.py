@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -11,20 +10,26 @@ if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
 from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report  # noqa: E402
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Validate V20 knowledge-authored active rules against synthetic coverage and corpus priors.")
     parser.add_argument("--domain", default="", help="Optional domain filter.")
-    parser.add_argument("--limit", type=int, default=64)
+    parser.add_argument("--limit", type=int, default=0)
     parser.add_argument("--summary", action="store_true", help="Print a compact review summary.")
     args = parser.parse_args()
 
-    payload = build_knowledge_rule_validation_report(args.domain, limit=args.limit)
-    if args.summary:
-        payload = _summary(payload)
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0
+    def _run() -> dict[str, object]:
+        payload = build_knowledge_rule_validation_report(args.domain, limit=args.limit)
+        return _summary(payload) if args.summary else payload
+
+    return run_and_print(
+        _run,
+        command="run_knowledge_rule_validation.py",
+        args=args,
+        runtime_mutation=False,
+    )
 
 
 def _summary(report: dict[str, object]) -> dict[str, object]:

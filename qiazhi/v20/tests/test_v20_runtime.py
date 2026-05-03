@@ -113,9 +113,15 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert result["decision_report"]["version"] == "v20.decision_report.v1"
     assert result["decision_report"]["decision_count"] >= 5
     rule_runtime = result["decision_report"]["rule_runtime_report"]
+    rule_runtime_hits = result["decision_report"]["rule_runtime_hits"]
     assert result["decision_report"]["rule_runtime_source"] == "bazi_rule_spec_engine"
     assert result["decision_report"]["legacy_decision_bridge_status"] == "compatibility_only"
     assert rule_runtime["status"] == "rulespec_engine_ready"
+    assert rule_runtime_hits
+    assert isinstance(rule_runtime_hits, (list, tuple))
+    assert len(rule_runtime_hits) == rule_runtime["executed_rule_count"]
+    assert all(row["rule_key"] for row in rule_runtime_hits)
+    assert any(row["match_status"] in {"matched", "partial", "review_required", "blocked", "not_matched"} for row in rule_runtime_hits)
     assert rule_runtime["source"] == "bazi_rule_spec_catalog"
     assert rule_runtime["engine"] == "rulespec_evidence_atom_engine_phase1"
     assert rule_runtime["rule_count"] >= 40
@@ -187,8 +193,12 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert result["answer_plan"]["sections"]
     assert result["decision_report"]["mainline_count"] >= 1
     assert result["decision_report"]["mainlines"][0]["source_decision_keys"]
-    assert result["answer_plan"]["sections"][1]["section_type"] == "mainline_decision"
-    assert "主线入口" in result["answer_plan"]["sections"][1]["body"]
+    sections = result["answer_plan"]["sections"]
+    section_types = [row["section_type"] for row in sections]
+    assert "mainline_decision" in section_types
+    assert "portrait_profile_summary" in section_types
+    mainline_sections = [row["body"] for row in sections if row["section_type"] == "mainline_decision"]
+    assert mainline_sections and "主线入口" in mainline_sections[0]
     assert any("复核重点" in row["body"] for row in result["answer_plan"]["sections"])
     assert result["answer_plan"]["measurement_focus"] == "bazi_measurement"
     assert result["answer_plan"]["domain_projection"]["guardrails"]
@@ -200,6 +210,18 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert "answer_plan_rewrite" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert "practitioner_answer" in result["llm_assist"]["context_pack"]["task_contexts"]
     assert result["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
+
+
+def test_v20_portrait_profile_summary_is_generated_for_runtime_answer_plan() -> None:
+    result = run_runtime_from_pillars("庚午", "辛巳", "丁丑", "乙巳", input_id="v20.portrait.profile")
+    sections = result["answer_plan"]["sections"]
+    profile_sections = [row for row in sections if row["section_type"] == "portrait_profile_summary"]
+
+    assert profile_sections, sections
+    assert profile_sections[0]["body"]
+    assert "本段为结构化合成" in profile_sections[0]["body"]
+    assert "一页图谱画像" in result["answer_text"]
+    assert any("复核重点" in row["body"] for row in result["answer_plan"]["sections"])
 
 
 def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> None:
@@ -219,6 +241,11 @@ def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> Non
     assert result["decision_report"]["status"] == "ready"
     assert result["decision_validation"]["status"] == "pass"
     assert result["decision_report"]["portrait_projection"]["status"] == "ready"
+    assert result["portrait_graph_summary"]["status"] == "ready"
+    assert result["portrait_graph_summary"]["headline"]
+    assert result["portrait_graph_summary"]["profile_tags"]
+    assert result["portrait_graph_summary"]["suggested_questions"]
+    assert "PORTRAIT_GRAPH_USES_TAGS_NOT_RULE_DEBUG" in result["portrait_graph_summary"]["guardrails"]
     assert {"career", "wealth"} & decision_domains
     assert {"career", "wealth"} & question_domains
     assert result["llm_assist"]["status"] == "ready"

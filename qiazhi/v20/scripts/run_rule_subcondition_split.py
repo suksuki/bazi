@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import argparse
-import json
 import sys
 from pathlib import Path
 
@@ -15,37 +14,43 @@ from v20.learning.rule_subcondition_split import (  # noqa: E402
     read_rule_subcondition_split_artifact,
     write_rule_subcondition_split_artifact,
 )
+from v20.scripts.contract import run_and_print
 
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Build V20 active rule subcondition split proposals.")
     parser.add_argument("--domain", default="", help="Optional domain filter.")
-    parser.add_argument("--limit", type=int, default=64, help="Maximum knowledge rule definitions to inspect.")
-    parser.add_argument("--per-rule", type=int, default=5, help="Maximum subconditions per rule.")
+    parser.add_argument("--limit", type=int, default=0, help="Maximum knowledge rule definitions to inspect.")
+    parser.add_argument("--per-rule", type=int, default=0, help="Maximum subconditions per rule (0=all).")
     parser.add_argument("--write", action="store_true", help="Write a local runtime artifact.")
     parser.add_argument("--status", action="store_true", help="Read latest written local artifact.")
     parser.add_argument("--progress", action="store_true", help="Print progress to stderr.")
     args = parser.parse_args()
 
-    progress = (lambda message: print(message, file=sys.stderr, flush=True)) if args.progress else None
-    if args.status:
-        payload = read_rule_subcondition_split_artifact()
-    elif args.write:
-        payload = write_rule_subcondition_split_artifact(
-            domain=args.domain,
-            limit=max(1, args.limit),
-            per_rule=max(1, args.per_rule),
-            progress=progress,
-        )
-    else:
-        payload = build_rule_subcondition_split_report(
+    def _run() -> dict[str, object]:
+        progress = (lambda message: print(message, file=sys.stderr, flush=True)) if args.progress else None
+        if args.status:
+            return read_rule_subcondition_split_artifact()
+        if args.write:
+            return write_rule_subcondition_split_artifact(
+                domain=args.domain,
+                limit=args.limit,
+                per_rule=args.per_rule,
+                progress=progress,
+            )
+        return build_rule_subcondition_split_report(
             args.domain,
-            limit=max(1, args.limit),
-            per_rule=max(1, args.per_rule),
+            limit=args.limit,
+            per_rule=args.per_rule,
             progress=progress,
         )
-    print(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True))
-    return 0 if payload.get("status") not in {"fail", "blocked"} else 1
+
+    return run_and_print(
+        _run,
+        command="run_rule_subcondition_split.py",
+        args=args,
+        runtime_mutation=args.write,
+    )
 
 
 if __name__ == "__main__":

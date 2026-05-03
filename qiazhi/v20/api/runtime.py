@@ -9,6 +9,7 @@ from v20.core.strength import infer_core
 from v20.core.time_context import build_time_context
 from v20.decision.engine import build_decision_report
 from v20.decision.knowledge_bridge import attach_knowledge_rule_bridge
+from v20.decision.fusion import build_runtime_decision_fusion
 from v20.decision.latent_signals import build_latent_signal_report
 from v20.decision.questions import recommend_decision_questions, resolve_requested_question
 from v20.decision.validation import validate_decision_report
@@ -23,6 +24,9 @@ from v20.intelligence.knowledge_semantic_model import (
 from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.interaction.question_intent import build_question_intent_model
+from v20.interaction.question_agent import apply_question_agent_state
+from v20.interaction.portrait_graph import build_portrait_graph_summary
+from v20.interaction.portrait_projection import build_portrait_projection
 from v20.interaction.session_model import build_interaction_session_model
 from v20.llm.assist import attach_answer_safety_review, build_llm_routing_assist
 from v20.llm.context import build_llm_context_pack
@@ -49,6 +53,8 @@ def run_runtime_from_pillars(
     llm_mode: str = "deterministic",
     practitioner_selections: tuple[dict[str, object], ...] = (),
     latent_event_answers: tuple[dict[str, object], ...] = (),
+    answered_question_ids: tuple[str, ...] = (),
+    answered_question_keys: tuple[str, ...] = (),
 ) -> dict[str, object]:
     chart_input = chart_input_from_displays(year, month, day, hour, input_id=input_id)
     chart_facts = build_chart_facts(chart_input)
@@ -65,12 +71,23 @@ def run_runtime_from_pillars(
     decision_report = attach_knowledge_rule_bridge(build_decision_report(chart_facts, core, feature_layer, time_context))
     latent_signal_report = build_latent_signal_report(chart_facts, core, time_context, decision_report)
     decision_report["latent_signal_report"] = latent_signal_report
+    decision_report["runtime_decision_fusion"] = build_runtime_decision_fusion(
+        decision_report,
+        practitioner_selections=practitioner_selections,
+    )
+    decision_report["portrait_projection"] = build_portrait_projection(
+        feature_layer,
+        decision_report.get("defeasible_decision_model", {}),
+        decision_report,
+        runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
+    )
     decision_validation = validate_decision_report(decision_report)
     portrait_projection = decision_report.get("portrait_projection", {})
     feature_state_model = build_feature_state_model(feature_layer, decision_report)
     questions = recommend_decision_questions(
         decision_report,
         feature_layer,
+        runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
         time_context=time_context,
         practitioner_selections=practitioner_selections,
         latent_event_answers=latent_event_answers,
@@ -84,11 +101,23 @@ def run_runtime_from_pillars(
         feature_layer,
     )
     questions = _selected_first_questions(questions, selected_question, llm_routing_assist)
+    questions, question_agent_state = apply_question_agent_state(
+        questions,
+        selected_question,
+        answered_question_ids=answered_question_ids,
+        answered_question_keys=answered_question_keys,
+    )
+    portrait_graph_summary = build_portrait_graph_summary(
+        portrait_projection if isinstance(portrait_projection, dict) else {},
+        decision_report,
+        tuple(questions),
+    )
     question_intent_model = build_question_intent_model(
         decision_report=decision_report,
         feature_state_model=feature_state_model,
         questions=questions,
         selected_question=selected_question,
+        runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
     )
     practitioner_session = _practitioner_session_lens(
         practitioner_selections,
@@ -205,9 +234,11 @@ def run_runtime_from_pillars(
         "knowledge_semantic_validation": knowledge_semantic_validation,
         "decision_report": decision_report,
         "decision_validation": decision_validation,
+        "portrait_graph_summary": portrait_graph_summary,
         "latent_signal_report": latent_signal_report,
         "questions": [row.to_dict() for row in questions],
         "question_intent_model": question_intent_model,
+        "question_agent_state": question_agent_state,
         "selected_question": selected_question.to_dict(),
         "practitioner_session": practitioner_session,
         "latent_event_session": latent_event_session,

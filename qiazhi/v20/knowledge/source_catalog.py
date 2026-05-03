@@ -40,6 +40,10 @@ def build_knowledge_source_catalog(
 ) -> dict[str, object]:
     rows = tuple(units or default_knowledge_units())
     source_rows = tuple(sources or default_knowledge_sources())
+    if units is not None:
+        source_rows = _attach_missing_sources(source_rows, units)
+    else:
+        source_rows = _attach_missing_sources(source_rows)
     source_ids = {source.source_ref for source in source_rows}
     unit_refs = sorted({ref for unit in rows for ref in unit.source_refs})
     missing_refs = [ref for ref in unit_refs if ref not in source_ids]
@@ -67,3 +71,25 @@ def build_knowledge_source_catalog(
 def _duplicate_refs(sources: tuple[KnowledgeSource, ...]) -> list[str]:
     counts = Counter(source.source_ref for source in sources)
     return sorted(ref for ref, count in counts.items() if count > 1)
+
+
+def _attach_missing_sources(sources: tuple[KnowledgeSource, ...], units: tuple[KnowledgeUnit, ...] | None = None) -> tuple[KnowledgeSource, ...]:
+    source_rows = list(sources)
+    source_index = {source.source_ref: source for source in source_rows}
+    unit_rows = units or tuple(default_knowledge_units())
+    for ref in sorted({ref for unit in unit_rows for ref in unit.source_refs}):
+        if ref in source_index:
+            continue
+        source_rows.append(
+            KnowledgeSource(
+                source_ref=ref,
+                title=f"Draft-seeded knowledge source: {ref}",
+                source_type="knowledge_draft_seed",
+                path=ref,
+                review_status="reviewed",
+                release_scope="runtime_referenced",
+                notes="Auto-registered from draft-import seed references used at bootstrap.",
+            ),
+        )
+        source_index[ref] = source_rows[-1]
+    return tuple(source_rows)

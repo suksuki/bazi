@@ -40,7 +40,7 @@ class KnowledgeRuleDefinition:
         return asdict(self)
 
 
-def build_knowledge_rule_library(domain: str = "", *, limit: int = 64) -> dict[str, object]:
+def build_knowledge_rule_library(domain: str = "", *, limit: int = 0) -> dict[str, object]:
     units = _unit_index()
     extraction = build_rule_extraction_report(domain, limit=limit)
     definitions = tuple(
@@ -76,7 +76,7 @@ def build_knowledge_rule_library(domain: str = "", *, limit: int = 64) -> dict[s
     }
 
 
-def validate_knowledge_rule_library(domain: str = "", *, limit: int = 64) -> dict[str, object]:
+def validate_knowledge_rule_library(domain: str = "", *, limit: int = 0) -> dict[str, object]:
     library = build_knowledge_rule_library(domain, limit=limit)
     failures: list[str] = []
     if library["source_authority"] != "reviewed_bazi_knowledge_base":
