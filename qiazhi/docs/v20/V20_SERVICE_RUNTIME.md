@@ -95,9 +95,16 @@ wrapper instead of the background script:
 
 ```bash
 ./v20/scripts/restart_linux_systemd.sh
+./v20/scripts/restart_linux_systemd.sh --hard
 ./v20/scripts/restart_linux_systemd.sh status
 ./v20/scripts/restart_linux_systemd.sh logs
 ```
+
+`restart_linux_systemd.sh` defaults to a hard restart on Linux. This is
+intentional: the V20 runtime may hold active LLM streaming or AnyIO worker tasks,
+and bare `systemctl restart qiazhi-v20` can wait in graceful shutdown while port
+9020 is already closed. Use `./v20/scripts/restart_linux_systemd.sh graceful`
+only when you explicitly want systemd's graceful stop/start behavior.
 
 Generate a systemd unit for review without installing it:
 

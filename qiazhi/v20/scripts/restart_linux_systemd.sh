@@ -29,9 +29,11 @@ sudo_cmd() {
 
 usage() {
   cat <<EOF
-Usage: $0 [restart|status|logs|health|dependencies]
+Usage: $0 [restart|graceful|hard|--hard|status|logs|health|dependencies]
 
 Linux systemd-only control for the V20 service.
+The default restart is a hard restart because uvicorn can wait on active LLM
+stream/background tasks during graceful shutdown.
 
 Defaults:
   service: ${SERVICE_NAME}
@@ -40,6 +42,7 @@ Defaults:
 
 Examples:
   ./v20/scripts/restart_linux_systemd.sh
+  ./v20/scripts/restart_linux_systemd.sh --hard
   ./v20/scripts/restart_linux_systemd.sh status
   ./v20/scripts/restart_linux_systemd.sh logs
 EOF
@@ -105,10 +108,27 @@ PY
 }
 
 restart_service() {
+  hard_restart_service
+}
+
+graceful_restart_service() {
   require_linux_systemd
-  echo "Restarting ${SERVICE_NAME}..."
+  echo "Gracefully restarting ${SERVICE_NAME}..."
   sudo_cmd systemctl daemon-reload
   sudo_cmd systemctl restart "${SERVICE_NAME}"
+  sudo_cmd systemctl --no-pager --lines=20 status "${SERVICE_NAME}" || true
+  wait_for_health
+  print_dependencies
+}
+
+hard_restart_service() {
+  require_linux_systemd
+  echo "Hard restarting ${SERVICE_NAME}..."
+  sudo_cmd systemctl daemon-reload
+  sudo_cmd systemctl kill --kill-who=all -s SIGKILL "${SERVICE_NAME}" 2>/dev/null || true
+  sudo_cmd systemctl reset-failed "${SERVICE_NAME}" || true
+  sleep "${V20_HARD_RESTART_DELAY_SECONDS:-2}"
+  sudo_cmd systemctl start "${SERVICE_NAME}"
   sudo_cmd systemctl --no-pager --lines=20 status "${SERVICE_NAME}" || true
   wait_for_health
   print_dependencies
@@ -117,6 +137,12 @@ restart_service() {
 case "${1:-restart}" in
   restart)
     restart_service
+    ;;
+  graceful|--graceful)
+    graceful_restart_service
+    ;;
+  hard|--hard|force|--force)
+    hard_restart_service
     ;;
   status)
     require_linux_systemd

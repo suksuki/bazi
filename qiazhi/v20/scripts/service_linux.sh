@@ -178,6 +178,9 @@ Environment=PYTHONPATH=${ROOT_DIR}
 ExecStart=${SCRIPT_DIR}/start_linux.sh
 Restart=on-failure
 RestartSec=3
+TimeoutStopSec=10
+KillMode=mixed
+SendSIGKILL=yes
 
 [Install]
 WantedBy=multi-user.target

@@ -208,9 +208,15 @@ curl -fsS http://127.0.0.1:9020/api/v20/runtime/dependencies
 
 ```bash
 ./v20/scripts/restart_linux_systemd.sh
+./v20/scripts/restart_linux_systemd.sh --hard
 ./v20/scripts/restart_linux_systemd.sh status
 ./v20/scripts/restart_linux_systemd.sh logs
 ```
+
+注意：不要直接裸跑 `sudo systemctl restart qiazhi-v20` 作为常规发布命令。V20
+可能正在处理 LLM 流式输出或 AnyIO 后台任务，systemd 的优雅停止会等待任务结束，
+期间 9020 已关闭，容易看到短暂或持续的 `Connection refused`。重启统一使用上面的
+wrapper；默认就是 hard restart。
 
 ## systemd 可选
 
@@ -226,7 +232,7 @@ curl -fsS http://127.0.0.1:9020/api/v20/runtime/dependencies
 ./v20/scripts/service_linux.sh systemd-unit > /etc/systemd/system/qiazhi-v20.service
 systemctl daemon-reload
 systemctl enable qiazhi-v20
-systemctl restart qiazhi-v20
+systemctl start qiazhi-v20
 systemctl status qiazhi-v20 --no-pager
 ```
 
