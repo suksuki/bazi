@@ -35,8 +35,8 @@ ROLE_PROFILES = {
     },
     "practitioner": {
         "role": "professional_bazi_practitioner",
-        "responsibility": "answer the user's question from a compact verified Bazi answer card",
-        "style": "warm, direct, plain-language, concise",
+        "responsibility": "act as the Bazi practitioner who interprets the verified chart evidence and gives the user a direct reading",
+        "style": "decisive practitioner reading, plain-language, practical",
     },
     "safety_reviewer": {
         "role": "bazi_answer_safety_reviewer",
@@ -121,12 +121,17 @@ def practitioner_answer_prompt(
             "text": "string",
         },
         "instruction": (
-            "Return only {\"text\":\"...\"}. You are a professional Bazi practitioner answering the selected question. "
+            "Return only {\"text\":\"...\"}. Your role is the user's Bazi practitioner. "
+            "The system has already prepared the chart facts, portrait tags, mainline decisions, and evidence card; now you must interpret them like a practitioner. "
             "Use only the compact answer card: question, chart, time, mainline, portrait_tags, evidence, next_questions, and answer_boundary. "
+            "Give a clear evidence-backed structural judgment in the voice of a practitioner; do not answer with vague balance language. "
+            "If the question asks who leads or which side is primary, choose the primary line and name the secondary/supporting line. "
+            "If the question asks what to review first, name the first review step. "
             "The first sentence must answer the selected question directly, then explain the strongest Bazi evidence in plain language. "
             "Do not mention internal ids, rule/debug labels, prompt/context names, or section headings. "
-            "Do not create chart facts, activate rules, invent events, guarantee outcomes, infer private facts, or make fixed fortune verdicts. "
-            "Keep the text under the locale-appropriate limit: zh/ko under 360 characters, en under 520 characters. "
+            "You may synthesize and prioritize verified chart evidence like a practitioner. "
+            "Do not invent events, guarantee outcomes, infer private facts, or make medical/disaster/death predictions. "
+            "Keep the text under the locale-appropriate limit: zh/ko under 480 characters, en under 680 characters. "
             "Write in the requested locale exactly: zh=Chinese, en=English, ko=Korean."
         ),
     }
@@ -275,7 +280,8 @@ def _compact_practitioner_answer_card(
     question_intent_model: dict[str, object],
     interaction_session: dict[str, object],
 ) -> dict[str, object]:
-    mainline = _compact_mainline_cards(decision_report)
+    selected_domain = str(selected_question.get("domain") or "")
+    mainline = _compact_mainline_cards(decision_report, selected_domain=selected_domain)
     evidence = _compact_evidence_lines(
         decisions=mainline,
         feature_state_model=feature_state_model,
@@ -356,9 +362,12 @@ def _compact_time_for_answer(time_context: dict[str, object]) -> dict[str, objec
     }
 
 
-def _compact_mainline_cards(report: dict[str, object]) -> list[dict[str, object]]:
+def _compact_mainline_cards(report: dict[str, object], *, selected_domain: str = "") -> list[dict[str, object]]:
     rows = []
-    for row in (report.get("decisions") or [])[:5]:
+    decisions = [row for row in (report.get("decisions") or []) if isinstance(row, dict)]
+    same_domain = [row for row in decisions if selected_domain and row.get("domain") == selected_domain]
+    ordered = [*same_domain, *[row for row in decisions if row not in same_domain]]
+    for row in ordered[:6]:
         if not isinstance(row, dict):
             continue
         rows.append(
