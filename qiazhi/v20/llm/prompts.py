@@ -35,8 +35,8 @@ ROLE_PROFILES = {
     },
     "practitioner": {
         "role": "professional_bazi_practitioner",
-        "responsibility": "answer the user's question in simple language from verified Bazi metadata, features, decisions, and evidence",
-        "style": "warm, direct, non-technical, practical",
+        "responsibility": "answer the user's question from a compact verified Bazi answer card",
+        "style": "warm, direct, plain-language, concise",
     },
     "safety_reviewer": {
         "role": "bazi_answer_safety_reviewer",
@@ -100,25 +100,23 @@ def practitioner_answer_prompt(
     interaction_session: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
-    feature_state_model = feature_state_model or {}
-    question_intent_model = question_intent_model or {}
-    interaction_session = interaction_session or {}
+    answer_card = _compact_practitioner_answer_card(
+        chart_facts=chart_facts,
+        time_context=time_context,
+        selected_question=selected_question,
+        verified_answer_text=verified_answer_text,
+        decision_report=decision_report or {},
+        portrait_projection=portrait_projection or {},
+        feature_state_model=feature_state_model or {},
+        question_intent_model=question_intent_model or {},
+        interaction_session=interaction_session or {},
+    )
     return {
         "task": "practitioner_answer",
         "locale": locale,
         "prompt_profile": prompt_profile("practitioner", locale),
-        "context": {
-            "bazi_metadata": _compact_bazi_metadata(chart_facts, time_context),
-            "time_context": _compact_time_context(time_context),
-            "selected_question": _compact_selected_question(selected_question),
-            "key_features": _compact_feature_states(feature_state_model),
-            "rule_decisions": _compact_decisions(decision_report or {}),
-            "portrait_projection": _compact_portrait_projection(portrait_projection or {}),
-            "question_intent": _compact_selected_question_intent(question_intent_model),
-            "interaction_session": _compact_interaction_session(interaction_session),
-            "knowledge_semantic_domains": _compact_knowledge_semantic_domains(knowledge_semantic_model),
-            "verified_fallback_answer": _clip(verified_answer_text, 1400),
-        },
+        "context_version": "v20.practitioner_answer_card.v1",
+        "context": answer_card,
         "output_schema": {
             "text": "string",
             "mainline": "string",
@@ -128,12 +126,12 @@ def practitioner_answer_prompt(
             "boundary_notes": ["string"],
         },
         "instruction": (
-            "Return only one JSON object. Speak as a professional Bazi practitioner in plain everyday language. "
-            "Answer the user's selected question first, then briefly explain the Bazi evidence. "
-            "Use the supplied pillars, day master, visible/hidden ten-gods, key features, decisions, and portrait projection. "
-            "You may synthesize and prioritize the evidence like a practitioner, but you may not create new chart facts, activate rules, invent events, guarantee outcomes, or infer private life facts. "
-            "Keep text concise and natural; avoid internal ids, markdown headings, labels like 知识依据/下一步/测算边界, and heavy technical jargon. "
-            "Keep the text field under the locale-appropriate limit: zh/ko under 650 characters, en under 900 characters. "
+            "Return only one JSON object. You are a professional Bazi practitioner answering the selected question. "
+            "Use only the compact answer card: question, chart, time, mainline, portrait_tags, evidence, next_questions, and answer_boundary. "
+            "The first sentence must answer the selected question directly, then explain the strongest Bazi evidence in plain language. "
+            "Do not mention internal ids, rule/debug labels, prompt/context names, or section headings. "
+            "Do not create chart facts, activate rules, invent events, guarantee outcomes, infer private facts, or make fixed fortune verdicts. "
+            "Keep the text field under the locale-appropriate limit: zh/ko under 460 characters, en under 650 characters. "
             "Keep evidence_notes 1-3 items, next_questions 2-4 items, boundary_notes 1-2 items. "
             "Write in the requested locale exactly: zh=Chinese, en=English, ko=Korean."
         ),
@@ -269,6 +267,221 @@ def _compact_feature_states(model: dict[str, object]) -> list[dict[str, object]]
             }
         )
     return rows
+
+
+def _compact_practitioner_answer_card(
+    *,
+    chart_facts: dict[str, object],
+    time_context: dict[str, object],
+    selected_question: dict[str, object],
+    verified_answer_text: str,
+    decision_report: dict[str, object],
+    portrait_projection: dict[str, object],
+    feature_state_model: dict[str, object],
+    question_intent_model: dict[str, object],
+    interaction_session: dict[str, object],
+) -> dict[str, object]:
+    mainline = _compact_mainline_cards(decision_report)
+    evidence = _compact_evidence_lines(
+        decisions=mainline,
+        feature_state_model=feature_state_model,
+        time_context=time_context,
+    )
+    return {
+        "question": _compact_selected_question(selected_question),
+        "chart": _compact_chart_for_answer(chart_facts),
+        "time": _compact_time_for_answer(time_context),
+        "mainline": mainline,
+        "portrait_tags": _compact_portrait_tags(portrait_projection, feature_state_model),
+        "evidence": evidence,
+        "intent": _compact_selected_question_intent(question_intent_model),
+        "next_questions": _compact_next_questions(interaction_session, mainline),
+        "answer_boundary": _compact_answer_boundary(selected_question, portrait_projection),
+        "deterministic_fallback": _clip(verified_answer_text, 520),
+    }
+
+
+def _compact_chart_for_answer(chart_facts: dict[str, object]) -> dict[str, object]:
+    return {
+        "day_master": chart_facts.get("day_master", ""),
+        "day_master_element": chart_facts.get("day_master_element", ""),
+        "pillars": _compact_pillars(chart_facts.get("pillars", {})),
+        "visible_ten_gods": _compact_ten_god_lines(chart_facts.get("visible_ten_gods", []), 5),
+        "hidden_ten_gods": _compact_ten_god_lines(chart_facts.get("hidden_ten_gods", []), 6),
+    }
+
+
+def _compact_pillars(pillars: object) -> dict[str, str]:
+    if not isinstance(pillars, dict):
+        return {}
+    rows: dict[str, str] = {}
+    for key in ("year", "month", "day", "hour"):
+        pillar = pillars.get(key, {})
+        if isinstance(pillar, dict):
+            rows[key] = f"{pillar.get('stem', '')}{pillar.get('branch', '')}"
+        else:
+            rows[key] = str(pillar or "")
+    return rows
+
+
+def _compact_ten_god_lines(items: object, limit: int) -> list[str]:
+    rows = []
+    for item in list(items or [])[:limit] if isinstance(items, (list, tuple)) else []:
+        if not isinstance(item, dict):
+            continue
+        label = item.get("label", "")
+        stem = item.get("stem", "")
+        pillar = item.get("pillar", "")
+        layer = item.get("layer", "")
+        rows.append("".join(part for part in (str(label), f"@{stem}" if stem else "", f"/{pillar}" if pillar else "", f"/{layer}" if layer else "") if part))
+    return rows
+
+
+def _compact_time_for_answer(time_context: dict[str, object]) -> dict[str, object]:
+    lines = []
+    for layer in (time_context.get("layers") or [])[:3]:
+        if not isinstance(layer, dict):
+            continue
+        pillar = layer.get("pillar", {})
+        ten_god = layer.get("ten_god", {})
+        pillar_text = ""
+        if isinstance(pillar, dict):
+            pillar_text = f"{pillar.get('stem', '')}{pillar.get('branch', '')}"
+        ten_god_text = ten_god.get("label", "") if isinstance(ten_god, dict) else ""
+        lines.append(" ".join(item for item in (str(layer.get("layer_key", "")), pillar_text, str(ten_god_text)) if item))
+    for hit in (time_context.get("relation_hits") or [])[:4]:
+        if not isinstance(hit, dict):
+            continue
+        branches = hit.get("branches", [])
+        relation = hit.get("relation_type", "")
+        if isinstance(branches, (list, tuple)) and relation:
+            lines.append(f"{''.join(str(item) for item in branches)} {relation}")
+    return {
+        "status": time_context.get("status", ""),
+        "signals": lines[:6],
+    }
+
+
+def _compact_mainline_cards(report: dict[str, object]) -> list[dict[str, object]]:
+    rows = []
+    for row in (report.get("decisions") or [])[:5]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "label": _clip(str(row.get("label", "")), 80),
+                "domain": row.get("domain", ""),
+                "status": row.get("status", ""),
+                "score": row.get("score", 0),
+                "support": [_clip(str(item), 56) for item in _list_items(row.get("support"), 4) if item],
+                "weakening": [_clip(str(item), 56) for item in _list_items(row.get("weakening"), 2) if item],
+                "question_seeds": [_clip(str(item), 64) for item in _list_items(row.get("question_seeds"), 2) if item],
+            }
+        )
+    return rows
+
+
+def _compact_evidence_lines(
+    *,
+    decisions: list[dict[str, object]],
+    feature_state_model: dict[str, object],
+    time_context: dict[str, object],
+) -> list[str]:
+    seen = set()
+    rows = []
+
+    def add(value: object) -> None:
+        text = _clip(str(value), 70)
+        if text and text not in seen:
+            seen.add(text)
+            rows.append(text)
+
+    for decision in decisions:
+        for item in decision.get("support", []) if isinstance(decision, dict) else []:
+            add(item)
+        for item in decision.get("weakening", []) if isinstance(decision, dict) else []:
+            add(item)
+    for feature in (feature_state_model.get("priority_features") or [])[:4]:
+        if isinstance(feature, dict):
+            add(f"{feature.get('title', '')}：{feature.get('state', '')}")
+    for item in _compact_time_for_answer(time_context).get("signals", [])[:3]:
+        add(item)
+    return rows[:10]
+
+
+def _compact_portrait_tags(
+    projection: dict[str, object],
+    feature_state_model: dict[str, object],
+) -> list[dict[str, object]]:
+    rows = []
+    for row in (projection.get("axes") or [])[:5]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "label": _clip(str(row.get("label", "")), 64),
+                "domain": row.get("domain", ""),
+                "state": _clip(str(row.get("calibration_state", row.get("state", ""))), 60),
+                "summary": _clip("；".join(str(item) for item in (row.get("evidence_boundaries") or [])[:1] if item), 120),
+            }
+        )
+    if rows:
+        return rows
+    for row in (feature_state_model.get("priority_features") or [])[:5]:
+        if isinstance(row, dict):
+            rows.append(
+                {
+                    "label": _clip(str(row.get("title", "")), 64),
+                    "domain": row.get("domain", ""),
+                    "state": row.get("state", ""),
+                    "summary": _clip(str(row.get("boundary", "")), 120),
+                }
+            )
+    return rows
+
+
+def _compact_next_questions(
+    interaction_session: dict[str, object],
+    decisions: list[dict[str, object]],
+) -> list[str]:
+    rows = []
+    for row in decisions:
+        if isinstance(row, dict):
+            rows.extend(str(item) for item in row.get("question_seeds", []) if item)
+    selected_title = interaction_session.get("selected_question_title", "")
+    if selected_title:
+        rows.insert(0, str(selected_title))
+    unique = []
+    seen = set()
+    for row in rows:
+        text = _clip(row, 90)
+        if text and text not in seen:
+            seen.add(text)
+            unique.append(text)
+    return unique[:4]
+
+
+def _compact_answer_boundary(
+    selected_question: dict[str, object],
+    portrait_projection: dict[str, object],
+) -> str:
+    boundary = str(selected_question.get("boundary") or "")
+    if not boundary:
+        for row in (portrait_projection.get("axes") or [])[:3]:
+            if isinstance(row, dict):
+                notes = row.get("evidence_boundaries") or []
+                if notes:
+                    boundary = str(notes[0])
+                    break
+    if not boundary:
+        boundary = "只根据当前八字结构和已验证证据回答，不作固定吉凶、具体事件或确定时间断语。"
+    return _clip(boundary, 220)
+
+
+def _list_items(value: object, limit: int) -> list[object]:
+    if isinstance(value, (list, tuple)):
+        return list(value[:limit])
+    return []
 
 
 def _compact_decisions(report: dict[str, object]) -> list[dict[str, object]]:

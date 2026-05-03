@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from dataclasses import replace
 
 from v20.answer.plan import AnswerPlan
@@ -41,15 +42,20 @@ def build_practitioner_answer_with_llm(
     )
     cfg = load_llm_provider_config_from_env()
     provider = "ollama_native" if cfg.provider == "ollama" else cfg.provider
+    prompt_metrics = {
+        "context_version": prompt.get("context_version", ""),
+        "prompt_char_count": len(json.dumps(prompt, ensure_ascii=False, sort_keys=True)),
+        "mode": "compact_answer_card",
+    }
     call = call_structured_llm(
         PRACTITIONER_ANSWER,
         prompt,
         config=replace(
             cfg,
             provider=provider,
-            max_tokens=min(max(cfg.max_tokens, 900), 1100),
+            max_tokens=min(max(cfg.max_tokens, 520), 640),
             temperature=min(cfg.temperature, 0.3),
-            http_timeout_sec=min(max(cfg.http_timeout_sec, 24.0), 45.0),
+            http_timeout_sec=max(4.0, min(cfg.http_timeout_sec, 12.0)),
         ),
     )
     if call["status"] == "accepted":
@@ -63,6 +69,7 @@ def build_practitioner_answer_with_llm(
                 "source": "llm_practitioner_answer",
                 "structured_output": output,
                 "llm_call": call,
+                "prompt_metrics": prompt_metrics,
                 "validation": accepted["validation"],
                 "runtime_mutation": False,
                 "guardrails": [
@@ -79,6 +86,7 @@ def build_practitioner_answer_with_llm(
         "source": "deterministic_fallback",
         "structured_output": {},
         "llm_call": call,
+        "prompt_metrics": prompt_metrics,
         "validation": call.get("validation", {}),
         "runtime_mutation": False,
         "guardrails": [

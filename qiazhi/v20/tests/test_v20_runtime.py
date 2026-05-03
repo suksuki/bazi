@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import json
 from pathlib import Path
 
 from v20.api.runtime import run_runtime_from_pillars
@@ -732,11 +733,15 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     assert practitioner_context["prompt_profile"]["role_key"] == "practitioner"
     assert practitioner_context["prompt_profile"]["role"] == "professional_bazi_practitioner"
     assert practitioner_context["prompt_profile"]["language_instruction"]
-    assert "bazi_metadata" in practitioner_context["context"]
-    assert "key_features" in practitioner_context["context"]
-    assert "question_intent" in practitioner_context["context"]
-    assert "interaction_session" in practitioner_context["context"]
+    assert practitioner_context["context_version"] == "v20.practitioner_answer_card.v1"
+    assert "question" in practitioner_context["context"]
+    assert "chart" in practitioner_context["context"]
+    assert "mainline" in practitioner_context["context"]
+    assert "portrait_tags" in practitioner_context["context"]
     assert "answer_plan" not in practitioner_context["context"]
+    assert "decision_report" not in practitioner_context["context"]
+    assert "knowledge_semantic_domains" not in practitioner_context["context"]
+    assert len(json.dumps(practitioner_context, ensure_ascii=False)) < 12000
     assert routed["selected_question"]["question_key"] == "q_useful_god_candidates"
     assert routed["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
     prompt = practitioner_answer_prompt(
@@ -754,12 +759,15 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
         locale="en",
     )
     assert prompt["prompt_profile"]["language_instruction"].startswith("Write the final user-facing text in English")
-    assert prompt["context"]["bazi_metadata"]["day_master"]
-    assert prompt["context"]["key_features"]
-    assert prompt["context"]["question_intent"]["question_key"] == routed["selected_question"]["question_key"]
-    prompt_decisions = prompt["context"]["rule_decisions"]
-    assert prompt_decisions[0]["knowledge_rules"]
-    assert prompt_decisions[0]["knowledge_rules"][0]["runtime_allowed"] is True
+    assert prompt["context_version"] == "v20.practitioner_answer_card.v1"
+    assert prompt["context"]["chart"]["day_master"]
+    assert prompt["context"]["question"]["title"] == routed["selected_question"]["title"]
+    assert prompt["context"]["intent"]["question_key"] == routed["selected_question"]["question_key"]
+    assert prompt["context"]["mainline"]
+    assert prompt["context"]["portrait_tags"]
+    assert prompt["context"]["evidence"]
+    assert "knowledge_rules" not in json.dumps(prompt["context"], ensure_ascii=False)
+    assert len(json.dumps(prompt, ensure_ascii=False)) < 12000
 
 
 def test_v20_corpus_precompute_is_dry_run_only() -> None:
