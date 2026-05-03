@@ -129,7 +129,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "特征发现验证" not in script.text
     assert "chatButton.textContent = busy ? text.wb.generating : text.wb.send" in script.text
     assert "payload.llm_mode = llmMode" in script.text
-    assert "llmMode: \"practitioner\"" in script.text
+    assert "interactiveLlmMode" in script.text
     assert "assist.practitioner_answer" in script.text
     assert "appendChatTurn(interactionText" in script.text
     assert ".chat-transcript" in style.text

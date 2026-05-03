@@ -202,6 +202,8 @@ const scheduleMeasure = ({ force = false } = {}) => {
   state.measureTimer = setTimeout(() => measure({ force }), 280);
 };
 
+const interactiveLlmMode = () => (params.get("llm") === "practitioner" ? "practitioner" : "deterministic");
+
 const renderRuntime = (result) => {
   const selected = result.selected_question || {};
   const chart = result.chart_facts || {};
@@ -804,7 +806,7 @@ const runQuestion = (question) => {
     force: true,
     interactionText: title,
     interactionSource: currentText().wb.q_source,
-    llmMode: "practitioner",
+    llmMode: interactiveLlmMode(),
   });
 };
 
@@ -1209,7 +1211,7 @@ form.addEventListener("submit", (event) => {
     force: true,
     interactionText: form.elements.user_text.value.trim(),
     interactionSource: currentText().wb.manual,
-    llmMode: "practitioner",
+    llmMode: interactiveLlmMode(),
   });
 });
 localeSelect.addEventListener("change", () => {
@@ -1240,7 +1242,7 @@ chatButton.addEventListener("click", () => {
     force: true,
     interactionText: value,
     interactionSource: currentText().wb.followup,
-    llmMode: "practitioner",
+    llmMode: interactiveLlmMode(),
   });
 });
 chatText.addEventListener("keydown", (event) => {
@@ -1258,7 +1260,7 @@ chatText.addEventListener("keydown", (event) => {
       force: true,
       interactionText: value,
       interactionSource: currentText().wb.followup,
-      llmMode: "practitioner",
+      llmMode: interactiveLlmMode(),
     });
   }
 });
