@@ -24,6 +24,7 @@ from v20.api.schemas import (
     PolicyReviewRequest,
     PortraitCalibrationRequest,
     PractitionerCalibrationRequest,
+    ProfileMutationRequest,
 )
 from v20.api.runtime import run_runtime_from_pillars
 from v20.corpus.artifacts import (
@@ -121,7 +122,13 @@ from v20.ops.service_unit import service_unit_manifest
 from v20.ops.status import system_status_report
 from v20.ops.sync import sync_readiness_report
 from v20.profiles.migration import import_v19_profiles_to_postgres, v19_profile_migration_preview
-from v20.profiles.store import list_profiles_from_postgres, read_profile_from_postgres
+from v20.profiles.store import (
+    create_profile_in_postgres,
+    delete_profile_from_postgres,
+    list_profiles_from_postgres,
+    read_profile_from_postgres,
+    update_profile_in_postgres,
+)
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.rules.catalog import build_bazi_rule_catalog
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
@@ -312,6 +319,12 @@ def create_app() -> FastAPI:
         target_owner = _profile_owner_for_session(session, owner_id)
         return list_profiles_from_postgres(owner_id=target_owner, limit=limit)
 
+    @app.post("/api/v20/profiles")
+    def profiles_create(payload: ProfileMutationRequest, request: Request) -> dict[str, object]:
+        session = _require_profile_session(request)
+        owner_id = _profile_owner_for_session(session, payload.owner_id)
+        return create_profile_in_postgres(owner_id=owner_id, payload=payload.model_dump())
+
     @app.get("/api/v20/profiles/{profile_id}")
     def profiles_detail(profile_id: str, request: Request) -> dict[str, object]:
         session = _require_profile_session(request)
@@ -322,6 +335,29 @@ def create_app() -> FastAPI:
         if session.get("role") != "admin" and profile.get("owner_id") != session.get("user_id"):
             raise HTTPException(status_code=403, detail={"error": "V20_PROFILE_FORBIDDEN"})
         return result
+
+    @app.patch("/api/v20/profiles/{profile_id}")
+    def profiles_update(profile_id: str, payload: ProfileMutationRequest, request: Request) -> dict[str, object]:
+        session = _require_profile_session(request)
+        result = read_profile_from_postgres(profile_id)
+        if result.get("status") == "not_found":
+            raise HTTPException(status_code=404, detail=result)
+        profile = result.get("profile") if isinstance(result.get("profile"), dict) else {}
+        if session.get("role") != "admin" and profile.get("owner_id") != session.get("user_id"):
+            raise HTTPException(status_code=403, detail={"error": "V20_PROFILE_FORBIDDEN"})
+        owner_id = str(profile.get("owner_id") or _profile_owner_for_session(session, payload.owner_id))
+        return update_profile_in_postgres(profile_id=profile_id, owner_id=owner_id, payload=payload.model_dump())
+
+    @app.delete("/api/v20/profiles/{profile_id}")
+    def profiles_delete(profile_id: str, request: Request) -> dict[str, object]:
+        session = _require_profile_session(request)
+        result = read_profile_from_postgres(profile_id)
+        if result.get("status") == "not_found":
+            raise HTTPException(status_code=404, detail=result)
+        profile = result.get("profile") if isinstance(result.get("profile"), dict) else {}
+        if session.get("role") != "admin" and profile.get("owner_id") != session.get("user_id"):
+            raise HTTPException(status_code=403, detail={"error": "V20_PROFILE_FORBIDDEN"})
+        return delete_profile_from_postgres(profile_id)
 
     @app.get("/api/v20/questions/ranking-policy")
     def question_ranking_policy() -> dict[str, object]:

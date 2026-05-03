@@ -6,7 +6,7 @@ from v20.access.schema import AccessRolePolicy
 ROLE_POLICIES = {
     "user": AccessRolePolicy(
         role_key="user",
-        label="游客",
+        label="普通用户",
         purpose="Receives bounded Bazi measurement answers and safe topic/question context.",
         allowed_runtime_fields=(
             "version",
@@ -16,7 +16,6 @@ ROLE_POLICIES = {
             "measurement_report",
             "questions",
             "decision_report",
-            "feature_state_model",
             "question_intent_model",
             "question_agent_state",
             "interaction_session",

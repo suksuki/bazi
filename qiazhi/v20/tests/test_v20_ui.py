@@ -24,7 +24,12 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "DB / LLM" not in entry.text
     assert "id=\"loginRole\"" not in entry.text
     assert "id=\"registerRole\"" in entry.text
+    assert "id=\"registerName\"" in entry.text
+    assert "id=\"registerPassword\"" in entry.text
+    assert '<option value="user" data-entry-option="role_user">普通用户</option>' in entry.text
+    assert "data-entry-option=\"role_guest\"" not in entry.text
     assert '<option value="admin">Admin</option>' not in entry.text
+    assert "logoutButton" in entry.text
     assert "guestStart" in entry.text
     assert "loginButton" in entry.text
     assert "registerButton" in entry.text
@@ -34,23 +39,38 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/v20/ui/profiles.html" not in entry.text
     assert "goProfiles" in entry_script.text
     assert "document.querySelector(\"#registerRole\").value" in entry_script.text
+    assert "document.querySelector(\"#registerName\").value" in entry_script.text
+    assert "document.querySelector(\"#registerPassword\").value" in entry_script.text
     assert "document.querySelector(\"#loginRole\")" not in entry_script.text
+    assert "/api/v20/auth/logout" in entry_script.text
     assert profiles.status_code == 200
     assert "V20 八字档案管理" in profiles.text
     assert "profileList" in profiles.text
-    assert "importProfilesButton" in profiles.text
+    assert "newProfileButton" in profiles.text
+    assert "profileEditor" in profiles.text
+    assert "saveProfileButton" in profiles.text
+    assert "importProfilesButton" not in profiles.text
+    assert "instantMeasureLink" not in profiles.text
+    assert "profileLocale" in profiles.text
+    assert "data-profile-ui=\"language\"" not in profiles.text
     assert "class=\"admin-nav-link\" hidden" in profiles.text
-    assert "/api/v20/profiles?owner_id=admin" in profiles_script.text
-    assert "/api/v20/profiles/import-v19?apply=true&owner_id=admin" in profiles_script.text
+    assert "logoutButton" in profiles.text
+    assert "/api/v20/profiles?limit=120" in profiles_script.text
+    assert "/api/v20/profiles/import-v19?apply=true" not in profiles_script.text
+    assert "method: profileId ? \"PATCH\" : \"POST\"" in profiles_script.text
+    assert "method: \"DELETE\"" in profiles_script.text
     assert "appendProfileDefaults(query, profile)" in profiles_script.text
     assert "flow_year_pillar" in profiles_script.text
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
     assert "flow_year_pillar" in page.text
     assert "role_key" in page.text
-    assert '<option value="analyst" selected>命理师</option>' in page.text
-    assert '<option value="user">游客</option>' in page.text
-    assert '<option value="admin">管理员</option>' in page.text
+    assert "<p class=\"section-kicker\">View</p>" not in page.text
+    assert "name=\"locale\" id=\"localeSelect\"" in page.text
+    assert "<option value=\"zh\">中文</option>" not in page.text
+    assert '<option value="analyst" selected>命理师</option>' not in page.text
+    assert '<option value="user">普通用户</option>' not in page.text
+    assert '<option value="admin">管理员</option>' not in page.text
     assert '<option value="full">' not in page.text
     assert "selectedProfileCard" in page.text
     assert "chatText" in page.text
@@ -65,6 +85,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "observationPage" in page.text
     assert "observationToggle" in page.text
     assert "observationBody" in page.text
+    assert 'id="featureStatePanel" class="panel feature-spine-panel" hidden' in page.text
     assert "图谱画像总览" in page.text
     assert "Decision Hits" in page.text
     assert "practitionerToggle" in page.text
@@ -95,6 +116,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "renderPractitionerCalibration(decisionReport.practitioner_controls || []" in script.text
     assert "renderLatentCalibration(result.input_id || \"\", role)" in script.text
     assert "renderObservationAccess(role)" in script.text
+    assert "renderFeatureStateAccess(role)" in script.text
+    assert "panel.hidden = role === \"user\"" in script.text
     assert "role === \"admin\"" in script.text
     assert "setPractitionerCollapsed" in script.text
     assert "/api/v20/learning/latent-event-calibration" in script.text
@@ -134,6 +157,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/v20/ui/profiles.html" in admin.text
     assert "/api/v20/admin/db" in admin_script.text
     assert "/api/v20/admin/llm" in admin_script.text
+    assert "/api/v20/auth/logout" in admin_script.text
     assert "Knowledge Evidence Store" not in admin.text
     assert "八字资料来源库" not in admin.text
     assert ".measure-layout" in style.text

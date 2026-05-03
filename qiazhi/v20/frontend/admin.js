@@ -3,13 +3,42 @@ const setText = (selector, value) => {
   if (node) node.textContent = value ?? "";
 };
 
-const requestJson = async (url) => {
-  const response = await fetch(url);
+const logoutButton = document.querySelector("#logoutButton");
+
+const requestJson = async (url, options = {}) => {
+  const response = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
   if (!response.ok) {
     const detail = await response.text();
     throw new Error(`${response.status} ${detail}`);
   }
   return response.json();
+};
+
+const loadCurrentSession = async () => {
+  try {
+    const result = await requestJson("/api/v20/auth/me");
+    const session = result.session || {};
+    if (logoutButton) logoutButton.hidden = !result.authenticated;
+    if (session.role !== "admin") {
+      setText("#adminStatus", "admin required");
+    }
+    return session;
+  } catch (error) {
+    if (logoutButton) logoutButton.hidden = true;
+    setText("#adminStatus", "admin required");
+    return {};
+  }
+};
+
+const logout = async () => {
+  await requestJson("/api/v20/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  window.location.href = "/v20/ui/";
 };
 
 const clear = (node) => {
@@ -101,5 +130,11 @@ const refreshAll = async () => {
 document.querySelector("#refreshDb").addEventListener("click", renderDb);
 document.querySelector("#refreshLlm").addEventListener("click", () => renderLlm(false));
 document.querySelector("#probeModels").addEventListener("click", () => renderLlm(true));
+logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#adminStatus", error.message)));
 
-refreshAll();
+loadCurrentSession()
+  .then((session) => {
+    if (session.role === "admin") return refreshAll();
+    return null;
+  })
+  .catch((error) => setText("#adminStatus", error.message));

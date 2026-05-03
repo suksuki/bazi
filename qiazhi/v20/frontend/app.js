@@ -25,6 +25,7 @@ const localeSelect = document.querySelector("#localeSelect");
 const chatText = document.querySelector("#chatText");
 const chatButton = document.querySelector("#chatButton");
 const chatTranscript = document.querySelector("#chatTranscript");
+const logoutButton = document.querySelector("#logoutButton");
 
 const UI_TEXT = {
   zh: {
@@ -41,7 +42,7 @@ const UI_TEXT = {
     feedback_title: "反馈校准",
     run: "开始测算",
     running: "测算中",
-    roles: { user: "游客", analyst: "命理师", admin: "管理员" },
+    roles: { user: "普通用户", analyst: "命理师", admin: "管理员" },
   },
   en: {
     app_title: "Bazi Workbench",
@@ -57,7 +58,7 @@ const UI_TEXT = {
     feedback_title: "Feedback Calibration",
     run: "Run Reading",
     running: "Reading",
-    roles: { user: "Guest", analyst: "Practitioner", admin: "Admin" },
+    roles: { user: "Regular User", analyst: "Practitioner", admin: "Admin" },
   },
   ko: {
     app_title: "사주 분석 작업대",
@@ -73,7 +74,7 @@ const UI_TEXT = {
     feedback_title: "피드백 보정",
     run: "분석 시작",
     running: "분석 중",
-    roles: { user: "게스트", analyst: "명리사", admin: "관리자" },
+    roles: { user: "일반 사용자", analyst: "명리사", admin: "관리자" },
   },
 };
 
@@ -173,6 +174,7 @@ const renderRuntime = (result) => {
 
   document.body.dataset.role = role;
   renderObservationAccess(role);
+  renderFeatureStateAccess(role);
   setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
   setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
   setText("#featureCount", featureStateModel.feature_state_count ?? decisionReport.decision_count ?? featureLayer.feature_count ?? 0);
@@ -222,6 +224,12 @@ const renderObservationAccess = (role) => {
   page.hidden = !isAdmin;
   if (status) status.textContent = isAdmin ? "admin visible" : "admin only";
   setObservationCollapsed(page.classList.contains("collapsed"));
+};
+
+const renderFeatureStateAccess = (role) => {
+  const panel = document.querySelector("#featureStatePanel");
+  if (!panel) return;
+  panel.hidden = role === "user";
 };
 
 const setObservationCollapsed = (collapsed) => {
@@ -1034,14 +1042,31 @@ const loadCurrentSession = async () => {
   try {
     const result = await requestJson("/api/v20/auth/me");
     const session = result.session || {};
+    if (result.authenticated && session.role) {
+      const role = measurementRole(session.role);
+      roleSelect.value = role;
+      document.body.dataset.role = role;
+      renderObservationAccess(role);
+      renderFeatureStateAccess(role);
+    }
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = session.role !== "admin";
     });
+    if (logoutButton) logoutButton.hidden = !result.authenticated;
   } catch (error) {
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = true;
     });
+    if (logoutButton) logoutButton.hidden = true;
   }
+};
+
+const logout = async () => {
+  await requestJson("/api/v20/auth/logout", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  window.location.href = `/v20/ui/?locale=${encodeURIComponent(localeSelect.value || "zh")}`;
 };
 
 const practitionerSessionStatus = () => {
@@ -1058,15 +1083,13 @@ const applyLocale = (locale) => {
     const key = node.dataset.ui;
     if (text[key]) node.textContent = text[key];
   });
-  roleSelect.querySelectorAll("option").forEach((option) => {
-    option.textContent = text.roles[option.value] || option.textContent;
-  });
   const submit = form.querySelector("button[type='submit']");
   submit.textContent = text.run;
 };
 
 const renderInitialPanels = () => {
   renderObservationAccess(measurementRole(roleSelect.value));
+  renderFeatureStateAccess(measurementRole(roleSelect.value));
   renderPillars({});
   renderFeatures([]);
   renderPortrait([]);
@@ -1264,6 +1287,7 @@ document.querySelector("#observationToggle")?.addEventListener("click", () => {
   const root = document.querySelector("#observationPage");
   setObservationCollapsed(!root?.classList.contains("collapsed"));
 });
+logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#runtimeStatus", error.message)));
 
 if (params.get("locale")) localeSelect.value = params.get("locale");
 roleSelect.value = measurementRole(params.get("role") || roleSelect.value);

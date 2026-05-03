@@ -1223,6 +1223,31 @@ textarea:focus {
   grid-column: 1 / -1;
 }
 
+.profile-editor-panel {
+  display: grid;
+  gap: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  padding: 15px;
+}
+
+.profile-editor-panel[hidden] {
+  display: none;
+}
+
+.profile-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.profile-editor-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
 .compact-select {
   min-width: 150px;
 }
@@ -1262,6 +1287,12 @@ textarea:focus {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.mini-action.danger {
+  border-color: rgba(208, 108, 108, 0.42);
+  background: rgba(208, 108, 108, 0.08);
+  color: #f0b8b8;
 }
 
 .admin-layout {
@@ -1433,6 +1464,7 @@ body.profile-reading .answer-panel {
   .feedback-row,
   .dialog-row,
   .answer-question-list,
+  .profile-editor-grid,
   body.profile-reading .question-list {
     grid-template-columns: 1fr;
   }

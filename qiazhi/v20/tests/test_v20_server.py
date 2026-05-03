@@ -213,6 +213,10 @@ def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatc
     assert guest["session"]["role"] == "user"
     assert me["authenticated"] is True
     assert me["session"]["role"] == "user"
+    logged_out = client.post("/api/v20/auth/logout").json()
+    after_logout = client.get("/api/v20/auth/me").json()
+    assert logged_out["ok"] is True
+    assert after_logout["authenticated"] is False
 
     practitioner = TestClient(app)
     registered = practitioner.post(
@@ -227,6 +231,13 @@ def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatc
     assert registered["ok"] is True
     assert registered["session"]["role"] == "analyst"
     assert logged_in["session"]["role"] == "analyst"
+
+    registered_user = practitioner.post(
+        "/api/v20/auth/register",
+        json={"username": "regular_user", "password": "pass1234", "role": "user", "locale": "zh"},
+    ).json()
+    assert registered_user["ok"] is True
+    assert registered_user["session"]["role"] == "user"
 
     admin_attempt = practitioner.post(
         "/api/v20/auth/register",

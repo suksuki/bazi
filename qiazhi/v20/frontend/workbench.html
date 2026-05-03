@@ -29,6 +29,8 @@
         <aside class="control-panel" aria-label="测算输入">
           <form id="measureForm">
             <input type="hidden" name="input_id" id="inputId" value="" />
+            <input type="hidden" name="role_key" id="roleSelect" value="user" />
+            <input type="hidden" name="locale" id="localeSelect" value="zh" />
             <section class="control-section">
               <div class="section-head compact">
                 <div>
@@ -59,26 +61,6 @@
                 <label>大运<input name="luck_pillar" maxlength="2" placeholder="乙亥" autocomplete="off" /></label>
               </div>
               <label>流月<input name="flow_month_pillar" maxlength="2" placeholder="辛丑" autocomplete="off" /></label>
-            </section>
-
-            <section class="control-section">
-              <p class="section-kicker">View</p>
-              <div class="pillar-input-grid">
-                <label>视图
-                  <select name="role_key" id="roleSelect">
-                    <option value="analyst" selected>命理师</option>
-                    <option value="user">游客</option>
-                    <option value="admin">管理员</option>
-                  </select>
-                </label>
-                <label>语言
-                  <select name="locale" id="localeSelect">
-                    <option value="zh">中文</option>
-                    <option value="en">English</option>
-                    <option value="ko">한국어</option>
-                  </select>
-                </label>
-              </div>
             </section>
 
             <button type="submit" class="primary-action">开始测算</button>
@@ -121,7 +103,7 @@
               <div id="tenGodLine" class="tag-line"></div>
             </article>
 
-            <article class="panel feature-spine-panel">
+            <article id="featureStatePanel" class="panel feature-spine-panel" hidden>
               <div class="section-head">
                 <div>
                   <p class="section-kicker">Feature State</p>

@@ -1,9 +1,23 @@
 from __future__ import annotations
 
 import os
+import uuid
 from typing import Any
 
 from v20.core.calendar import chart_defaults_from_birth_input
+
+
+_CREATE_PROFILE_TABLE_SQL = """
+CREATE TABLE IF NOT EXISTS v20_user_profiles (
+  profile_id text PRIMARY KEY,
+  owner_id text NOT NULL,
+  source_ref text NOT NULL,
+  status text NOT NULL,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now(),
+  payload jsonb NOT NULL
+)
+"""
 
 
 def list_profiles_from_postgres(*, owner_id: str = "", limit: int = 80) -> dict[str, object]:
@@ -89,6 +103,124 @@ def read_profile_from_postgres(profile_id: str) -> dict[str, object]:
     if not row:
         return payload
     return payload | {"status": "ready", "profile": _public_profile(dict(row))}
+
+
+def create_profile_in_postgres(*, owner_id: str, payload: dict[str, Any]) -> dict[str, object]:
+    profile_id = f"v20_profile_{uuid.uuid4().hex[:16]}"
+    clean_payload = _normalized_mutation_payload(payload, profile_id=profile_id, owner_id=owner_id)
+    return _upsert_profile(profile_id=profile_id, owner_id=owner_id, payload=clean_payload, created=True)
+
+
+def update_profile_in_postgres(*, profile_id: str, owner_id: str, payload: dict[str, Any]) -> dict[str, object]:
+    clean_id = str(profile_id or "").strip()
+    clean_payload = _normalized_mutation_payload(payload, profile_id=clean_id, owner_id=owner_id)
+    return _upsert_profile(profile_id=clean_id, owner_id=owner_id, payload=clean_payload, created=False)
+
+
+def delete_profile_from_postgres(profile_id: str) -> dict[str, object]:
+    clean_id = str(profile_id or "").strip()
+    payload = {
+        "version": "v20.profile_delete.v1",
+        "status": "not_found",
+        "profile_id": clean_id,
+        "deleted": False,
+        "runtime_mutation": True,
+        "guardrails": ["PROFILE_DELETE_EXPLICIT_REQUEST", "NO_RULE_MUTATION_FROM_PROFILE_MANAGEMENT"],
+    }
+    if not clean_id:
+        return payload
+    url = os.getenv("V20_DATABASE_URL", "")
+    if not url:
+        return payload | {"status": "blocked_missing_V20_DATABASE_URL"}
+    try:
+        import psycopg2
+    except Exception as exc:
+        return payload | {"status": "blocked_missing_psycopg2", "error": str(exc)}
+    try:
+        with psycopg2.connect(url) as conn:
+            with conn.cursor() as cur:
+                cur.execute("delete from v20_user_profiles where profile_id = %s", (clean_id,))
+                deleted = cur.rowcount > 0
+            conn.commit()
+    except Exception as exc:
+        return payload | {"status": "postgres_delete_failed", "error": str(exc)}
+    return payload | {"status": "deleted" if deleted else "not_found", "deleted": deleted}
+
+
+def _upsert_profile(*, profile_id: str, owner_id: str, payload: dict[str, Any], created: bool) -> dict[str, object]:
+    base = {
+        "version": "v20.profile_mutation.v1",
+        "status": "dry_config",
+        "profile_id": profile_id,
+        "profile": {},
+        "runtime_mutation": True,
+        "guardrails": ["PROFILE_MANAGEMENT_USER_REQUEST", "NO_RULE_MUTATION_FROM_PROFILE_MANAGEMENT"],
+    }
+    if not profile_id or not owner_id:
+        return base | {"status": "invalid_profile"}
+    url = os.getenv("V20_DATABASE_URL", "")
+    if not url:
+        return base | {"status": "blocked_missing_V20_DATABASE_URL"}
+    try:
+        import psycopg2
+        from psycopg2.extras import Json, RealDictCursor
+    except Exception as exc:
+        return base | {"status": "blocked_missing_psycopg2", "error": str(exc)}
+    try:
+        with psycopg2.connect(url) as conn:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute(_CREATE_PROFILE_TABLE_SQL)
+                cur.execute(
+                    """
+                    insert into v20_user_profiles (profile_id, owner_id, source_ref, status, payload)
+                    values (%s, %s, %s, %s, %s)
+                    on conflict (profile_id) do update set
+                      owner_id = excluded.owner_id,
+                      source_ref = excluded.source_ref,
+                      status = excluded.status,
+                      payload = excluded.payload,
+                      updated_at = now()
+                    returning profile_id, owner_id, source_ref, status, created_at, updated_at, payload
+                    """,
+                    (
+                        profile_id,
+                        owner_id,
+                        str(payload.get("source_ref") or f"v20:native:{profile_id}"),
+                        str(payload.get("status") or "active"),
+                        Json(payload),
+                    ),
+                )
+                row = cur.fetchone()
+            conn.commit()
+    except Exception as exc:
+        return base | {"status": "postgres_mutation_failed", "error": str(exc)}
+    return base | {
+        "status": "created" if created else "updated",
+        "profile": _public_profile(dict(row or {})),
+    }
+
+
+def _normalized_mutation_payload(payload: dict[str, Any], *, profile_id: str, owner_id: str) -> dict[str, object]:
+    birth = dict(payload.get("birth_input") or {})
+    metadata = dict(payload.get("metadata") or {})
+    return {
+        "version": "v20.user_profile.v1",
+        "profile_id": profile_id,
+        "owner_id": owner_id,
+        "display_name": str(payload.get("display_name") or "未命名档案").strip()[:120],
+        "birth_input": birth,
+        "metadata": {
+            **metadata,
+            "source_system": str(metadata.get("source_system") or "v20_native"),
+            "location_preserved": bool(metadata.get("location_preserved")),
+        },
+        "source_ref": str(payload.get("source_ref") or f"v20:native:{profile_id}"),
+        "status": str(payload.get("status") or "active"),
+        "guardrails": [
+            "PROFILE_DATA_IS_USER_CONTEXT",
+            "NO_RULE_MUTATION_FROM_PROFILE_MANAGEMENT",
+        ],
+    }
 
 
 def _public_profile(row: dict[str, Any]) -> dict[str, object]:

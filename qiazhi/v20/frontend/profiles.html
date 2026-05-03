@@ -36,18 +36,43 @@
             <span id="profileCount" class="small-pill">0</span>
           </div>
           <div class="profile-command-row">
-            <a id="instantMeasureLink" class="mini-action" href="/v20/ui/workbench.html" data-profile-ui="instant_measure">临时测算</a>
-            <button type="button" id="importProfilesButton" class="mini-action secondary" data-profile-ui="import_profiles">迁移 V19 档案</button>
-            <label class="compact-select">
-              <span data-profile-ui="language">语言</span>
-              <select id="profileLocale">
-                <option value="zh">中文</option>
-                <option value="en">English</option>
-                <option value="ko">한국어</option>
+            <button type="button" id="newProfileButton" class="mini-action" data-profile-ui="new_profile">新增档案</button>
+            <input type="hidden" id="profileLocale" value="zh" />
+          </div>
+          <div id="profileStatus" class="status-line">loading</div>
+        </section>
+
+        <section id="profileEditor" class="profile-editor-panel" hidden>
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Profile Manager</p>
+              <h2 id="profileEditorTitle" data-profile-ui="editor_new">新增档案</h2>
+            </div>
+            <button type="button" id="cancelProfileEdit" class="mini-action secondary" data-profile-ui="cancel">取消</button>
+          </div>
+          <div class="profile-editor-grid">
+            <label><span data-profile-ui="display_name">姓名/标题</span><input id="profileDisplayName" autocomplete="off" /></label>
+            <label><span data-profile-ui="calendar">历法</span>
+              <select id="profileCalendar">
+                <option value="solar">公历</option>
+                <option value="lunar">农历</option>
+              </select>
+            </label>
+            <label><span data-profile-ui="birth_year">出生年</span><input id="profileBirthYear" inputmode="numeric" /></label>
+            <label><span data-profile-ui="birth_month">出生月</span><input id="profileBirthMonth" inputmode="numeric" /></label>
+            <label><span data-profile-ui="birth_day">出生日</span><input id="profileBirthDay" inputmode="numeric" /></label>
+            <label><span data-profile-ui="birth_hour">出生时</span><input id="profileBirthHour" inputmode="numeric" /></label>
+            <label><span data-profile-ui="birth_minute">出生分</span><input id="profileBirthMinute" inputmode="numeric" /></label>
+            <label><span data-profile-ui="profile_status_label">状态</span>
+              <select id="profileRecordStatus">
+                <option value="active">active</option>
+                <option value="archived">archived</option>
               </select>
             </label>
           </div>
-          <div id="profileStatus" class="status-line">loading</div>
+          <div class="profile-editor-actions">
+            <button type="button" id="saveProfileButton" class="mini-action" data-profile-ui="save_profile">保存档案</button>
+          </div>
         </section>
 
         <section id="profileList" class="profile-grid" aria-live="polite"></section>

@@ -46,6 +46,14 @@ class MeasureResponse(BaseModel):
     guardrails: list[str]
 
 
+class ProfileMutationRequest(BaseModel):
+    display_name: str = Field(..., min_length=1, max_length=120)
+    owner_id: str = Field("", max_length=160)
+    status: str = Field("active", max_length=40)
+    birth_input: dict = Field(default_factory=dict)
+    metadata: dict = Field(default_factory=dict)
+
+
 class FeedbackRequest(BaseModel):
     input_id: str = ""
     source_role: str = "user"
