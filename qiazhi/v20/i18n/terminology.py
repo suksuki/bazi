@@ -59,12 +59,12 @@ SECTION_TITLES = {
         "prediction_boundary": "Prediction Boundary",
     },
     "ko": {
-        "measurement_scope": "측산 범위",
+        "measurement_scope": "분석 범위",
         "domain_measurement_path": "전문 해석 경로",
         "knowledge_evidence_support": "지식 근거",
         "portrait_projection_reading": "주제 투사 프로필",
-        "mainline_decision": "주요 판별",
-        "portrait_profile_summary": "팔각지 그림 요약",
+        "mainline_decision": "주요 판단",
+        "portrait_profile_summary": "프로필 요약",
         "decision_knowledge_support": "지식 근거",
         "decision_next_step": "다음 질문",
         "measurement_next_step": "다음 검토 단계",
@@ -117,12 +117,9 @@ def _body_en(section: AnswerSection, topic: str, source_count: int) -> str:
     if section.section_type == "portrait_projection_reading":
         return f"The topic projection for {topic} comes from current-chart decision states, not static corpus labels."
     if section.section_type == "portrait_profile_summary":
-        return (
-            f"{topic} snapshot: {section.body[:240]} "
-            "（compact confidence state with review pressure)."
-        )
+        return f"{topic} snapshot is compiled from current-chart portrait tags, decision states, and review pressure."
     if section.section_type == "mainline_decision":
-        return section.body
+        return f"The mainline decision for {topic} weighs supporting evidence, counter-evidence, and structural priority before answering."
     if section.section_type == "decision_knowledge_support":
         return f"Reviewed knowledge supports terms and boundaries for {topic}; it does not override decisions."
     if section.section_type == "decision_next_step":
@@ -136,7 +133,7 @@ def _body_en(section: AnswerSection, topic: str, source_count: int) -> str:
 
 def _body_ko(section: AnswerSection, topic: str, source_count: int) -> str:
     if section.section_type == "measurement_scope":
-        return f"선택된 질문을 {topic} 측산의 입구로 삼고, 구조와 근거와 경계를 함께 유지합니다."
+        return f"선택된 질문을 {topic} 분석의 입구로 삼고, 구조와 근거와 경계를 함께 유지합니다."
     if section.section_type == "domain_measurement_path":
         return f"전문 해석 경로는 {topic} 안에서 유지되며, 컴파일된 사주 특징과 검토된 근거만 사용합니다."
     if section.section_type == "knowledge_evidence_support":
@@ -144,12 +141,9 @@ def _body_ko(section: AnswerSection, topic: str, source_count: int) -> str:
     if section.section_type == "portrait_projection_reading":
         return f"{topic}의 주제 투사는 현재 명식의 판정 상태에서 나오며 정적 말뭉치 라벨이 아닙니다."
     if section.section_type == "portrait_profile_summary":
-        return (
-            f"{topic}의 현재 판정 상태와 투사로 구성한 단일 초안입니다. "
-            f"요지: {section.body[:240]}"
-        )
+        return f"{topic} 요약은 현재 명식의 프로필 태그, 판정 상태, 검토 압력을 함께 엮어 만든 것입니다."
     if section.section_type == "mainline_decision":
-        return section.body
+        return f"{topic}의 주요 판정은 지지 근거, 반대 근거, 구조 우선순위를 함께 비교한 뒤 답변합니다."
     if section.section_type == "decision_knowledge_support":
         return f"검토된 지식은 {topic}의 용어와 경계를 보조하며 판정을 대체하지 않습니다."
     if section.section_type == "decision_next_step":
@@ -158,4 +152,4 @@ def _body_ko(section: AnswerSection, topic: str, source_count: int) -> str:
         return f"다음 검토는 고정 판단이 아니라 출처 특징을 통해 {topic}을 더 깊게 읽는 것입니다."
     if section.section_type == "prediction_boundary":
         return "이 답변은 구조 해석과 후보 경로만 제시하며, 특징을 확정 사건이나 고정된 길흉 또는 근거 없는 시기로 바꾸지 않습니다."
-    return f"측산 초점은 {topic}에 머무릅니다. 이 단락은 컴파일된 출처 특징 {source_count}개로 뒷받침되며 근거 경계를 유지합니다."
+    return f"분석 초점은 {topic}에 머무릅니다. 이 단락은 컴파일된 출처 특징 {source_count}개로 뒷받침되며 근거 경계를 유지합니다."

@@ -25,6 +25,7 @@ from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.interaction.question_intent import build_question_intent_model
 from v20.interaction.question_agent import apply_question_agent_state
+from v20.interaction.question_i18n import localize_question_candidate, localize_question_candidates
 from v20.interaction.portrait_graph import build_portrait_graph_summary
 from v20.interaction.portrait_projection import build_portrait_projection
 from v20.interaction.session_model import build_interaction_session_model
@@ -107,6 +108,8 @@ def run_runtime_from_pillars(
         answered_question_ids=answered_question_ids,
         answered_question_keys=answered_question_keys,
     )
+    questions = localize_question_candidates(questions, locale=locale)
+    selected_question = _localized_selected_question(selected_question, questions, locale)
     portrait_graph_summary = build_portrait_graph_summary(
         portrait_projection if isinstance(portrait_projection, dict) else {},
         decision_report,
@@ -285,6 +288,14 @@ def _selected_first_questions(questions, selected_question, llm_routing_assist):
         return (3, 0)
 
     return tuple(sorted(unique, key=rank))
+
+
+def _localized_selected_question(selected_question, questions, locale: str):
+    selected_id = selected_question.question_id or selected_question.question_key
+    for row in questions:
+        if (row.question_id or row.question_key) == selected_id:
+            return row
+    return localize_question_candidate(selected_question, locale=locale)
 
 
 def _practitioner_session_lens(practitioner_selections, questions, selected_question) -> dict[str, object]:

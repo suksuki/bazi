@@ -17,7 +17,7 @@
           </div>
         </div>
         <nav class="top-actions" aria-label="V20 navigation">
-          <a href="/v20/ui/">入口</a>
+          <a href="/v20/ui/" data-profile-ui="nav_entry">入口</a>
           <a href="/v20/ui/profiles.html" aria-current="page" data-profile-ui="nav_profiles">档案</a>
           <a href="/v20/ui/workbench.html" data-profile-ui="nav_measure">测算</a>
           <a href="/v20/ui/admin.html" class="admin-nav-link" hidden>Admin</a>
@@ -54,8 +54,8 @@
             <label><span data-profile-ui="display_name">姓名/标题</span><input id="profileDisplayName" autocomplete="off" /></label>
             <label><span data-profile-ui="calendar">历法</span>
               <select id="profileCalendar">
-                <option value="solar">公历</option>
-                <option value="lunar">农历</option>
+                <option value="solar" data-profile-option="calendar_solar">公历</option>
+                <option value="lunar" data-profile-option="calendar_lunar">农历</option>
               </select>
             </label>
             <label><span data-profile-ui="birth_year">出生年</span><input id="profileBirthYear" inputmode="numeric" /></label>
@@ -65,8 +65,8 @@
             <label><span data-profile-ui="birth_minute">出生分</span><input id="profileBirthMinute" inputmode="numeric" /></label>
             <label><span data-profile-ui="profile_status_label">状态</span>
               <select id="profileRecordStatus">
-                <option value="active">active</option>
-                <option value="archived">archived</option>
+                <option value="active" data-profile-option="status_active">active</option>
+                <option value="archived" data-profile-option="status_archived">archived</option>
               </select>
             </label>
           </div>

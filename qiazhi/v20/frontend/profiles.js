@@ -12,6 +12,7 @@ const state = { profiles: [], editingProfileId: "" };
 const PROFILE_TEXT = {
   zh: {
     app_title: "八字档案管理",
+    nav_entry: "入口",
     nav_profiles: "档案",
     nav_measure: "测算",
     list_title: "档案列表",
@@ -37,9 +38,18 @@ const PROFILE_TEXT = {
     saved: "已保存",
     deleted: "已删除",
     delete_confirm: "确定删除这个档案？",
+    unnamed_profile: "未命名档案",
+    not_authenticated: "未登录",
+    local_user: "本地用户",
+    ready: "就绪",
+    calendar_solar: "公历",
+    calendar_lunar: "农历",
+    status_active: "启用",
+    status_archived: "归档",
   },
   en: {
     app_title: "Bazi Profiles",
+    nav_entry: "Entry",
     nav_profiles: "Profiles",
     nav_measure: "Reading",
     list_title: "Profile List",
@@ -65,9 +75,18 @@ const PROFILE_TEXT = {
     saved: "Saved",
     deleted: "Deleted",
     delete_confirm: "Delete this profile?",
+    unnamed_profile: "Untitled Profile",
+    not_authenticated: "Not authenticated",
+    local_user: "Local User",
+    ready: "Ready",
+    calendar_solar: "Solar",
+    calendar_lunar: "Lunar",
+    status_active: "Active",
+    status_archived: "Archived",
   },
   ko: {
     app_title: "사주 프로필",
+    nav_entry: "입구",
     nav_profiles: "프로필",
     nav_measure: "분석",
     list_title: "프로필 목록",
@@ -93,6 +112,14 @@ const PROFILE_TEXT = {
     saved: "저장됨",
     deleted: "삭제됨",
     delete_confirm: "이 프로필을 삭제할까요?",
+    unnamed_profile: "이름 없는 프로필",
+    not_authenticated: "로그인되지 않음",
+    local_user: "로컬 사용자",
+    ready: "준비됨",
+    calendar_solar: "양력",
+    calendar_lunar: "음력",
+    status_active: "사용",
+    status_archived: "보관",
   },
 };
 
@@ -121,6 +148,10 @@ const applyLocale = (locale) => {
     const value = text[node.dataset.profileUi];
     if (value) node.textContent = value;
   });
+  document.querySelectorAll("[data-profile-option]").forEach((node) => {
+    const value = text[node.dataset.profileOption];
+    if (value) node.textContent = value;
+  });
   localStorage.setItem("v20_locale", clean);
 };
 
@@ -133,7 +164,7 @@ const loadMe = async () => {
     node.hidden = session.role !== "admin";
   });
   if (logoutButton) logoutButton.hidden = !result.authenticated;
-  setText("#profileRuntimeStatus", result.authenticated ? `${session.username || "local"} · ${session.role || "user"}` : "not authenticated");
+  setText("#profileRuntimeStatus", result.authenticated ? `${session.username || currentText().local_user} · ${roleLabel(session.role || "user")}` : currentText().not_authenticated);
 };
 
 const logout = async () => {
@@ -149,7 +180,7 @@ const loadProfiles = async () => {
   state.profiles = result.profiles || [];
   renderProfiles(state.profiles);
   setText("#profileCount", String(result.profile_count || 0));
-  setText("#profileStatus", result.status || "ready");
+  setText("#profileStatus", result.status || currentText().ready);
 };
 
 const renderProfiles = (profiles) => {
@@ -167,7 +198,7 @@ const renderProfiles = (profiles) => {
     card.className = "profile-card";
 
     const title = document.createElement("h2");
-    title.textContent = profile.display_name || profile.profile_id || "V20 Profile";
+    title.textContent = profile.display_name || profile.profile_id || currentText().unnamed_profile;
     card.append(title);
 
     const meta = document.createElement("p");
@@ -245,7 +276,7 @@ const deleteProfile = async (profile) => {
 };
 
 const profilePayloadFromEditor = () => ({
-  display_name: value("#profileDisplayName") || "未命名档案",
+  display_name: value("#profileDisplayName") || currentText().unnamed_profile,
   status: value("#profileRecordStatus") || "active",
   birth_input: {
     calendar_type: value("#profileCalendar") || "solar",
@@ -316,6 +347,15 @@ const numberOrString = (selector) => {
 
 const currentText = () => PROFILE_TEXT[localeSelect.value] || PROFILE_TEXT.zh;
 const measurementRole = (role) => (role === "user" ? "user" : role === "admin" ? "admin" : "analyst");
+const roleLabel = (role) => {
+  const labels = {
+    zh: { user: "普通用户", analyst: "命理师", admin: "管理员" },
+    en: { user: "Regular User", analyst: "Practitioner", admin: "Admin" },
+    ko: { user: "일반 사용자", analyst: "명리사", admin: "관리자" },
+  };
+  const lang = PROFILE_TEXT[localeSelect.value] ? localeSelect.value : "zh";
+  return labels[lang][role] || role;
+};
 
 localeSelect.value = params.get("locale") || localStorage.getItem("v20_locale") || "zh";
 applyLocale(localeSelect.value);

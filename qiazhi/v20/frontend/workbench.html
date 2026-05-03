@@ -20,7 +20,7 @@
           <a href="/v20/ui/profiles.html" data-ui="nav_profiles">档案</a>
           <a href="/v20/ui/workbench.html" aria-current="page" data-ui="nav_measure">测算</a>
           <a href="/v20/ui/admin.html" class="admin-nav-link" hidden>Admin</a>
-          <button type="button" id="logoutButton" class="logout-action" hidden>登出</button>
+          <button type="button" id="logoutButton" class="logout-action" data-ui="logout_button" hidden>登出</button>
           <span id="runtimeStatus" class="status-pill">checking</span>
         </nav>
       </header>
@@ -35,32 +35,32 @@
               <div class="section-head compact">
                 <div>
                   <p class="section-kicker">Chart</p>
-                  <h2>四柱</h2>
+                  <h2 data-ui="pillars_form_title">四柱</h2>
                 </div>
                 <span id="profileBadge" class="small-pill">local</span>
               </div>
               <div class="pillar-input-grid">
-                <label>年柱<input name="year" maxlength="2" value="甲子" autocomplete="off" /></label>
-                <label>月柱<input name="month" maxlength="2" value="戊辰" autocomplete="off" /></label>
-                <label>日柱<input name="day" maxlength="2" value="甲午" autocomplete="off" /></label>
-                <label>时柱<input name="hour" maxlength="2" value="辛酉" autocomplete="off" /></label>
+                <label><span data-ui="year_pillar">年柱</span><input name="year" maxlength="2" value="甲子" autocomplete="off" /></label>
+                <label><span data-ui="month_pillar">月柱</span><input name="month" maxlength="2" value="戊辰" autocomplete="off" /></label>
+                <label><span data-ui="day_pillar">日柱</span><input name="day" maxlength="2" value="甲午" autocomplete="off" /></label>
+                <label><span data-ui="hour_pillar">时柱</span><input name="hour" maxlength="2" value="辛酉" autocomplete="off" /></label>
               </div>
             </section>
 
             <section class="control-section">
               <p class="section-kicker">Question</p>
               <input type="hidden" name="question_id" id="questionId" value="" />
-              <label>用户关心<textarea name="user_text" rows="3">我想看事业和财运</textarea></label>
-              <label>推荐问题<select name="question_key" id="questionSelect"><option value="">自动路由</option></select></label>
+              <label><span data-ui="user_focus">用户关心</span><textarea name="user_text" rows="3" data-ui-placeholder="default_user_text">我想看事业和财运</textarea></label>
+              <label><span data-ui="recommended_question">推荐问题</span><select name="question_key" id="questionSelect"><option value="">自动路由</option></select></label>
             </section>
 
             <section class="control-section">
               <p class="section-kicker">Time</p>
               <div class="pillar-input-grid">
-                <label>流年<input name="flow_year_pillar" maxlength="2" placeholder="庚子" autocomplete="off" /></label>
-                <label>大运<input name="luck_pillar" maxlength="2" placeholder="乙亥" autocomplete="off" /></label>
+                <label><span data-ui="flow_year">流年</span><input name="flow_year_pillar" maxlength="2" placeholder="庚子" autocomplete="off" /></label>
+                <label><span data-ui="luck_pillar">大运</span><input name="luck_pillar" maxlength="2" placeholder="乙亥" autocomplete="off" /></label>
               </div>
-              <label>流月<input name="flow_month_pillar" maxlength="2" placeholder="辛丑" autocomplete="off" /></label>
+              <label><span data-ui="flow_month">流月</span><input name="flow_month_pillar" maxlength="2" placeholder="辛丑" autocomplete="off" /></label>
             </section>
 
             <button type="submit" class="primary-action">开始测算</button>
@@ -71,22 +71,22 @@
           <section id="selectedProfileCard" class="context-strip" hidden>
             <div>
               <p class="section-kicker">Profile</p>
-              <h2 id="selectedProfileName">档案</h2>
+              <h2 id="selectedProfileName" data-ui="profile_title">档案</h2>
               <p id="selectedProfileMeta" class="muted-line"></p>
             </div>
-            <a id="backToProfiles" class="mini-action secondary" href="/v20/ui/profiles.html">档案管理</a>
+            <a id="backToProfiles" class="mini-action secondary" href="/v20/ui/profiles.html" data-ui="profile_manage">档案管理</a>
           </section>
 
           <section class="run-summary">
             <div>
               <p class="section-kicker">Selected</p>
-              <h2 id="selectedQuestion">等待测算</h2>
+              <h2 id="selectedQuestion" data-ui="selected_waiting">等待测算</h2>
               <p id="selectedBoundary" class="muted-line">V20 runtime ready.</p>
             </div>
             <div class="summary-metrics">
-              <span><strong id="featureCount">0</strong>特征态</span>
-              <span><strong id="questionCount">0</strong>意图</span>
-              <span><strong id="knowledgeCount">0</strong>证据</span>
+              <span><strong id="featureCount">0</strong><span data-ui="feature_metric">特征态</span></span>
+              <span><strong id="questionCount">0</strong><span data-ui="intent_metric">意图</span></span>
+              <span><strong id="knowledgeCount">0</strong><span data-ui="evidence_metric">证据</span></span>
             </div>
           </section>
 
@@ -118,11 +118,11 @@
               <button id="practitionerToggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="calibrationControls">
                 <div>
                   <p class="section-kicker">Practitioner</p>
-                  <h2>命理师校准</h2>
+                  <h2 data-ui="practitioner_title">命理师校准</h2>
                 </div>
                 <span class="collapse-meta">
                   <span id="calibrationStatus" class="small-pill">signal only</span>
-                  <span id="practitionerCollapseLabel" class="collapse-label">展开</span>
+                  <span id="practitionerCollapseLabel" class="collapse-label" data-ui="expand">展开</span>
                 </span>
               </button>
               <div id="calibrationControls" class="calibration-controls collapsible-body" hidden></div>
@@ -212,8 +212,8 @@
               <pre id="answerText">等待测算。</pre>
               <div id="chatTranscript" class="chat-transcript" aria-live="polite"></div>
               <div class="dialog-row" aria-label="八字对话">
-                <textarea id="chatText" rows="3" placeholder="输入想继续看的方向"></textarea>
-                <button type="button" id="chatButton">发送</button>
+                <textarea id="chatText" rows="3" placeholder="输入想继续看的方向" data-ui-placeholder="chat_ph"></textarea>
+                <button type="button" id="chatButton" data-ui="send">发送</button>
               </div>
             </article>
 

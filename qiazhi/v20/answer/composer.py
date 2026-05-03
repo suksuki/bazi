@@ -60,7 +60,7 @@ def _compose_zh(plan: AnswerPlan) -> str:
 
 
 def _compose_ko(plan: AnswerPlan) -> str:
-    lines = ["사주 측산의 초점은 구조, 근거, 경계가 있는 후보 경로입니다."]
+    lines = ["사주 분석의 초점은 구조, 근거, 경계가 있는 후보 경로입니다."]
     for section in plan.sections:
         if section.section_type in _NON_USER_VISIBLE_SECTION_TYPES:
             continue

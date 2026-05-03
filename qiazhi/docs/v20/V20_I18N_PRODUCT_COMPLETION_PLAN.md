@@ -353,19 +353,50 @@ questions refresh and answered question is excluded
 
 ## Acceptance Checklist
 
-- [ ] Entry page has no mixed-language labels.
-- [ ] Registration uses only user/practitioner roles in selected locale.
-- [ ] Login has no role selector and messages are localized.
-- [ ] Workbench buttons, tabs, placeholders, empty states are localized.
-- [ ] Profile list and profile actions are localized for non-admin users.
-- [ ] Smart questions are localized and natural.
-- [ ] Answer text uses selected locale.
-- [ ] LLM practitioner rewrite uses selected locale.
-- [ ] Admin observation page is Chinese only.
-- [ ] Raw rule/feature/decision ids are hidden from non-admin UI.
-- [ ] Answered questions do not reappear in the active question list.
-- [ ] Locale persists across page navigation.
+- [x] Entry page has no mixed-language labels.
+- [x] Registration uses only user/practitioner roles in selected locale.
+- [x] Login has no role selector and messages are localized.
+- [x] Workbench buttons, tabs, placeholders, empty states are localized.
+- [x] Profile list and profile actions are localized for non-admin users.
+- [x] Smart questions are localized and natural.
+- [x] Answer text uses selected locale.
+- [x] LLM practitioner rewrite uses selected locale.
+- [x] Admin observation page is Chinese only.
+- [x] Raw rule/feature/decision ids are hidden from non-admin UI.
+- [x] Answered questions do not reappear in the active question list.
+- [x] Locale persists across page navigation.
 - [ ] Server 0.13 and macOS produce consistent locale output for the same input.
+
+## 2026-05-03 Implementation Pass
+
+This pass completes the product-facing i18n loop on macOS and prepares the same
+code path for Linux 0.13 deployment.
+
+Completed:
+
+```text
+Backend:
+- QuestionCandidate is localized before leaving /api/v20/measure.
+- selected_question is localized by exact question_id, without resurrecting answered questions.
+- en/ko answer sections no longer reuse Chinese section bodies.
+- Korean answer copy uses natural "사주 분석 / 프로필 요약 / 주요 판단" wording.
+
+Frontend:
+- Workbench chart labels, question controls, buttons, placeholders, profile strip,
+  metrics, practitioner collapse controls, empty states, and question cards use
+  selected-locale text.
+- Profile page navigation, form options, status copy, delete/save messages, and
+  role labels use selected-locale text.
+- Admin observation and admin-only operation surfaces remain Chinese.
+
+Tests:
+- v20/tests/test_v20_i18n_runtime.py verifies en/ko questions and answer text.
+- question ranking tests verify answered questions are suppressed and follow-ups
+  refresh after each answer.
+```
+
+Linux 0.13 acceptance remains open until the pushed commit is pulled and the
+systemd V20 service is restarted on `dblife.com`.
 
 ## Product Standard
 

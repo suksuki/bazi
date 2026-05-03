@@ -29,7 +29,12 @@ const logoutButton = document.querySelector("#logoutButton");
 
 const UI_TEXT = {
   zh: {
-    app_title: "命理测算台", nav_profiles: "档案", nav_measure: "测算",
+    app_title: "命理测算台", nav_profiles: "档案", nav_measure: "测算", logout_button: "登出",
+    pillars_form_title: "四柱", year_pillar: "年柱", month_pillar: "月柱", day_pillar: "日柱", hour_pillar: "时柱",
+    user_focus: "用户关心", recommended_question: "推荐问题", flow_year: "流年", luck_pillar: "大运", flow_month: "流月",
+    profile_title: "档案", profile_manage: "档案管理", selected_waiting: "等待测算",
+    feature_metric: "特征态", intent_metric: "意图", evidence_metric: "证据", practitioner_title: "命理师校准",
+    default_user_text: "我想看事业和财运",
     chart_title: "命盘结构", features_title: "八字特征状态", portrait_title: "主题投射画像",
     questions_title: "智能问题", hits_title: "规则命中", answer_title: "八字专业回复",
     evidence_title: "证据锚点", feedback_title: "反馈校准",
@@ -51,10 +56,15 @@ const UI_TEXT = {
     latent_confidence: { low: "低", medium: "中", high: "高" },
     latent_years: { unknown: "不确定", birth_to_12: "0-12岁", "13_to_18": "13-18岁", "19_to_24": "19-24岁", "25_to_30": "25-30岁", "31_to_36": "31-36岁", "37_to_42": "37-42岁", "43_to_48": "43-48岁", "49_to_54": "49-54岁", "55_plus": "55岁以后" },
     latent_results: { no_clear_change: "没有明显变化", income_up: "收入/资源上升", income_down: "收入下降", resource_gain: "获得资源支持", resource_pressure: "资源或财务压力", role_up: "角色上升", role_down: "角色下降", platform_change: "平台变化", responsibility_change: "责任变化", relationship_stabilized: "关系稳定", relationship_changed: "关系变化", relationship_pressure: "关系压力", family_focus_shift: "家庭重心变化", city_change: "城市变化", work_environment_change: "工作环境变化", home_environment_change: "居住环境变化", travel_or_mobility_up: "流动增加", stable: "基本稳定", recovered_fast: "恢复较快", recovered_slow: "恢复较慢", repeated_pressure: "压力反复", support_helped: "外部支持有效", not_observed: "尚未观察", result_fast: "见效快", result_slow: "见效慢", needs_repeated_attempts: "需要反复尝试", external_help_decisive: "外部帮助关键", mixed: "混合" },
-    wb: { waiting: "等待测算。", measuring: "正在根据当前问题重新测算。", failed: "测算失败：", generating: "生成中", send: "发送", enter_dir: "请输入想继续看的方向。", chat_ph: "输入想继续看的方向", auto_route: "自动路由", no_features: "当前尚未发现可展示的命理特征。", no_portrait: "当前视图隐藏画像投影。", no_evidence: "暂无可展示证据。", no_questions: "确认四柱后会生成建议问题。", no_hits: "当前暂无规则命中。", no_rules: "未触发规则", await_graph: "等待画像图谱。", graph_ready: "当前盘已形成图谱画像。", mainline: "主线", pressure: "压力", timing: "时间", graph_default: "暂按主题画像展开", anchor: "结构锚点：", match_rate: "匹配率", cond_hit: "条件命中", dec_state: "决策态：", expand: "展开", collapse: "收起", prac_title: "命理师校准", prac_expand: "展开命理师校准", prac_collapse: "收起命理师校准", obs_expand: "展开观测页面", obs_collapse: "收起观测页面", pending: "待裁决", accepted: "已接收", recording: "记录中", rec_fail: "记录失败", rec_ok: "已记录 · 刷新问题", acc_ok: "已接收 · 刷新问题", q_source: "推荐问题", followup: "继续追问", manual: "手动测算", queuing: "排队中", chat_pending: "正在生成回复...", chat_empty: "本轮没有生成可展示回复。", calibrated: "已校准", dyn_val: "动态裁决验证", feat_model: "特征状态模型", q_model: "问题意图模型", def_model: "可反证裁决模型", hit_traces: "条规则命中轨迹", bazi: "命理测算" },
+    wb: { waiting: "等待测算。", measuring: "正在根据当前问题重新测算。", failed: "测算失败：", generating: "生成中", send: "发送", enter_dir: "请输入想继续看的方向。", chat_ph: "输入想继续看的方向", auto_route: "自动路由", no_features: "当前尚未发现可展示的命理特征。", no_portrait: "当前视图隐藏画像投影。", no_evidence: "暂无可展示证据。", no_questions: "确认四柱后会生成建议问题。", no_hits: "当前暂无规则命中。", no_rules: "未触发规则", await_graph: "等待画像图谱。", graph_ready: "当前盘已形成图谱画像。", mainline: "主线", pressure: "压力", timing: "时间", graph_default: "暂按主题画像展开", anchor: "结构锚点：", match_rate: "匹配率", cond_hit: "条件命中", dec_state: "决策态：", expand: "展开", collapse: "收起", prac_title: "命理师校准", prac_expand: "展开命理师校准", prac_collapse: "收起命理师校准", obs_expand: "展开观测页面", obs_collapse: "收起观测页面", pending: "待裁决", accepted: "已接收", recording: "记录中", rec_fail: "记录失败", rec_ok: "已记录 · 刷新问题", acc_ok: "已接收 · 刷新问题", q_source: "推荐问题", followup: "继续追问", manual: "手动测算", queuing: "排队中", chat_pending: "正在生成回复...", chat_empty: "本轮没有生成可展示回复。", calibrated: "已校准", dyn_val: "动态裁决验证", feat_model: "特征状态模型", q_model: "问题意图模型", def_model: "可反证裁决模型", hit_traces: "条规则命中轨迹", bazi: "命理测算", score: "分数", reviewed: "已审", draft: "草稿", states_count: "状态", intents_count: "意图", arguments_count: "论点", ready: "就绪", config: "配置", status_error: "状态错误", manifest_error: "清单错误", profile_unavailable: "档案不可用", profile_chart: "档案命盘", choice_only: "仅选择" },
   },
   en: {
-    app_title: "Bazi Workbench", nav_profiles: "Profiles", nav_measure: "Reading",
+    app_title: "Bazi Workbench", nav_profiles: "Profiles", nav_measure: "Reading", logout_button: "Log Out",
+    pillars_form_title: "Four Pillars", year_pillar: "Year", month_pillar: "Month", day_pillar: "Day", hour_pillar: "Hour",
+    user_focus: "Your Focus", recommended_question: "Suggested Question", flow_year: "Flow Year", luck_pillar: "Luck Cycle", flow_month: "Flow Month",
+    profile_title: "Profile", profile_manage: "Manage Profiles", selected_waiting: "Awaiting Reading",
+    feature_metric: "features", intent_metric: "intents", evidence_metric: "evidence", practitioner_title: "Practitioner Calibration",
+    default_user_text: "I want to read career and wealth",
     chart_title: "Chart Structure", features_title: "Bazi Feature States", portrait_title: "Topic Projection",
     questions_title: "Smart Questions", hits_title: "Rule Hits", answer_title: "Professional Bazi Reply",
     evidence_title: "Evidence Anchors", feedback_title: "Feedback Calibration",
@@ -76,10 +86,15 @@ const UI_TEXT = {
     latent_confidence: { low: "Low", medium: "Medium", high: "High" },
     latent_years: { unknown: "Uncertain", birth_to_12: "0–12", "13_to_18": "13–18", "19_to_24": "19–24", "25_to_30": "25–30", "31_to_36": "31–36", "37_to_42": "37–42", "43_to_48": "43–48", "49_to_54": "49–54", "55_plus": "55+" },
     latent_results: { no_clear_change: "No clear change", income_up: "Income up", income_down: "Income down", resource_gain: "Resource gained", resource_pressure: "Resource pressure", role_up: "Role up", role_down: "Role down", platform_change: "Platform change", responsibility_change: "Responsibility change", relationship_stabilized: "Relationship stable", relationship_changed: "Relationship changed", relationship_pressure: "Relationship pressure", family_focus_shift: "Family shift", city_change: "City change", work_environment_change: "Work env change", home_environment_change: "Home env change", travel_or_mobility_up: "Mobility up", stable: "Mostly stable", recovered_fast: "Fast recovery", recovered_slow: "Slow recovery", repeated_pressure: "Repeated pressure", support_helped: "Support helped", not_observed: "Not observed", result_fast: "Quick results", result_slow: "Slow results", needs_repeated_attempts: "Repeated attempts", external_help_decisive: "External help key", mixed: "Mixed" },
-    wb: { waiting: "Awaiting reading.", measuring: "Re-reading based on current question.", failed: "Reading failed: ", generating: "Generating", send: "Send", enter_dir: "Enter a direction to explore.", chat_ph: "Enter a direction to explore", auto_route: "Auto Route", no_features: "No displayable Bazi features found yet.", no_portrait: "Portrait projection hidden in this view.", no_evidence: "No evidence to display.", no_questions: "Suggested questions appear after confirming four pillars.", no_hits: "No rule hits yet.", no_rules: "No rules fired", await_graph: "Awaiting portrait graph.", graph_ready: "Portrait graph ready.", mainline: "Mainline", pressure: "Pressure", timing: "Timing", graph_default: "Expand by topic portrait", anchor: "Structural anchor: ", match_rate: "match", cond_hit: "Conditions met", dec_state: "Decision: ", expand: "Expand", collapse: "Collapse", prac_title: "Practitioner Calibration", prac_expand: "Expand practitioner calibration", prac_collapse: "Collapse practitioner calibration", obs_expand: "Expand observation page", obs_collapse: "Collapse observation page", pending: "pending", accepted: "accepted", recording: "recording", rec_fail: "record failed", rec_ok: "recorded · refreshing", acc_ok: "accepted · refreshing", q_source: "Suggested", followup: "Follow-up", manual: "Manual Reading", queuing: "queuing", chat_pending: "Generating reply…", chat_empty: "No displayable reply this turn.", calibrated: "calibrated", dyn_val: "Decision Validation", feat_model: "Feature State Model", q_model: "Question Intent Model", def_model: "Defeasible Decision Model", hit_traces: "rule hit traces", bazi: "Bazi Reading" },
+    wb: { waiting: "Awaiting reading.", measuring: "Re-reading based on current question.", failed: "Reading failed: ", generating: "Generating", send: "Send", enter_dir: "Enter a direction to explore.", chat_ph: "Enter a direction to explore", auto_route: "Auto Route", no_features: "No displayable Bazi features found yet.", no_portrait: "Portrait projection hidden in this view.", no_evidence: "No evidence to display.", no_questions: "Suggested questions appear after confirming four pillars.", no_hits: "No rule hits yet.", no_rules: "No rules fired", await_graph: "Awaiting portrait graph.", graph_ready: "Portrait graph ready.", mainline: "Mainline", pressure: "Pressure", timing: "Timing", graph_default: "Expand by topic portrait", anchor: "Structural anchor: ", match_rate: "match", cond_hit: "Conditions met", dec_state: "Decision: ", expand: "Expand", collapse: "Collapse", prac_title: "Practitioner Calibration", prac_expand: "Expand practitioner calibration", prac_collapse: "Collapse practitioner calibration", obs_expand: "Expand observation page", obs_collapse: "Collapse observation page", pending: "pending", accepted: "accepted", recording: "recording", rec_fail: "record failed", rec_ok: "recorded · refreshing", acc_ok: "accepted · refreshing", q_source: "Suggested", followup: "Follow-up", manual: "Manual Reading", queuing: "queuing", chat_pending: "Generating reply…", chat_empty: "No displayable reply this turn.", calibrated: "calibrated", dyn_val: "Decision Validation", feat_model: "Feature State Model", q_model: "Question Intent Model", def_model: "Defeasible Decision Model", hit_traces: "rule hit traces", bazi: "Bazi Reading", score: "score", reviewed: "reviewed", draft: "draft", states_count: "states", intents_count: "intents", arguments_count: "arguments", ready: "ready", config: "config", status_error: "status error", manifest_error: "manifest error", profile_unavailable: "profile unavailable", profile_chart: "profile chart", choice_only: "choice only" },
   },
   ko: {
-    app_title: "사주 분석 작업대", nav_profiles: "프로필", nav_measure: "분석",
+    app_title: "사주 분석 작업대", nav_profiles: "프로필", nav_measure: "분석", logout_button: "로그아웃",
+    pillars_form_title: "사주팔자", year_pillar: "연주", month_pillar: "월주", day_pillar: "일주", hour_pillar: "시주",
+    user_focus: "관심 주제", recommended_question: "추천 질문", flow_year: "세운", luck_pillar: "대운", flow_month: "월운",
+    profile_title: "프로필", profile_manage: "프로필 관리", selected_waiting: "분석 대기",
+    feature_metric: "특징", intent_metric: "의도", evidence_metric: "근거", practitioner_title: "명리사 보정",
+    default_user_text: "직업과 재운을 보고 싶어요",
     chart_title: "명식 구조", features_title: "사주 특징 상태", portrait_title: "주제 투사",
     questions_title: "지능형 질문", hits_title: "규칙 적중", answer_title: "전문 사주 답변",
     evidence_title: "근거 앵커", feedback_title: "피드백 보정",
@@ -101,7 +116,7 @@ const UI_TEXT = {
     latent_confidence: { low: "낮음", medium: "중간", high: "높음" },
     latent_years: { unknown: "불확실", birth_to_12: "0-12세", "13_to_18": "13-18세", "19_to_24": "19-24세", "25_to_30": "25-30세", "31_to_36": "31-36세", "37_to_42": "37-42세", "43_to_48": "43-48세", "49_to_54": "49-54세", "55_plus": "55세 이후" },
     latent_results: { no_clear_change: "변화 없음", income_up: "수입 상승", income_down: "수입 감소", resource_gain: "자원 확보", resource_pressure: "자원 압력", role_up: "역할 상승", role_down: "역할 하락", platform_change: "플랫폼 변화", responsibility_change: "책임 변화", relationship_stabilized: "관계 안정", relationship_changed: "관계 변화", relationship_pressure: "관계 압력", family_focus_shift: "가정 변화", city_change: "도시 변경", work_environment_change: "근무 환경 변화", home_environment_change: "주거 환경 변화", travel_or_mobility_up: "이동 증가", stable: "안정", recovered_fast: "빠른 회복", recovered_slow: "느린 회복", repeated_pressure: "반복 압력", support_helped: "외부 지원 효과", not_observed: "미관찰", result_fast: "빠른 성과", result_slow: "느린 성과", needs_repeated_attempts: "반복 시도", external_help_decisive: "외부 도움 결정적", mixed: "혼합" },
-    wb: { waiting: "분석 대기 중.", measuring: "현재 질문 기반으로 재분석 중.", failed: "분석 실패: ", generating: "생성 중", send: "보내기", enter_dir: "탐색 방향을 입력하세요.", chat_ph: "탐색 방향을 입력하세요", auto_route: "자동 라우팅", no_features: "표시 가능한 사주 특징이 없습니다.", no_portrait: "현재 뷰에서 투사가 숨겨져 있습니다.", no_evidence: "표시할 근거가 없습니다.", no_questions: "사주 확인 후 추천 질문이 생성됩니다.", no_hits: "규칙 적중 없음.", no_rules: "촉발된 규칙 없음", await_graph: "프로필 그래프 대기 중.", graph_ready: "그래프가 준비되었습니다.", mainline: "주요 축", pressure: "압력", timing: "시간", graph_default: "주제별로 전개", anchor: "구조 앵커: ", match_rate: "일치율", cond_hit: "조건 충족", dec_state: "판정: ", expand: "열기", collapse: "닫기", prac_title: "명리사 보정", prac_expand: "명리사 보정 열기", prac_collapse: "명리사 보정 닫기", obs_expand: "관측 열기", obs_collapse: "관측 닫기", pending: "대기 중", accepted: "접수됨", recording: "기록 중", rec_fail: "기록 실패", rec_ok: "기록됨 · 질문 갱신", acc_ok: "접수됨 · 질문 갱신", q_source: "추천 질문", followup: "추가 질문", manual: "수동 분석", queuing: "대기 중", chat_pending: "답변 생성 중…", chat_empty: "표시할 답변이 없습니다.", calibrated: "보정 완료", dyn_val: "동적 판정 검증", feat_model: "특징 상태 모델", q_model: "질문 의도 모델", def_model: "반증 판정 모델", hit_traces: "규칙 적중 이력", bazi: "사주 분석" },
+    wb: { waiting: "분석 대기 중.", measuring: "현재 질문 기반으로 재분석 중.", failed: "분석 실패: ", generating: "생성 중", send: "보내기", enter_dir: "탐색 방향을 입력하세요.", chat_ph: "탐색 방향을 입력하세요", auto_route: "자동 라우팅", no_features: "표시 가능한 사주 특징이 없습니다.", no_portrait: "현재 뷰에서 투사가 숨겨져 있습니다.", no_evidence: "표시할 근거가 없습니다.", no_questions: "사주 확인 후 추천 질문이 생성됩니다.", no_hits: "규칙 적중 없음.", no_rules: "촉발된 규칙 없음", await_graph: "프로필 그래프 대기 중.", graph_ready: "그래프가 준비되었습니다.", mainline: "주요 축", pressure: "압력", timing: "시간", graph_default: "주제별로 전개", anchor: "구조 앵커: ", match_rate: "일치율", cond_hit: "조건 충족", dec_state: "판정: ", expand: "열기", collapse: "닫기", prac_title: "명리사 보정", prac_expand: "명리사 보정 열기", prac_collapse: "명리사 보정 닫기", obs_expand: "관측 열기", obs_collapse: "관측 닫기", pending: "대기 중", accepted: "접수됨", recording: "기록 중", rec_fail: "기록 실패", rec_ok: "기록됨 · 질문 갱신", acc_ok: "접수됨 · 질문 갱신", q_source: "추천 질문", followup: "추가 질문", manual: "수동 분석", queuing: "대기 중", chat_pending: "답변 생성 중…", chat_empty: "표시할 답변이 없습니다.", calibrated: "보정 완료", dyn_val: "동적 판정 검증", feat_model: "특징 상태 모델", q_model: "질문 의도 모델", def_model: "반증 판정 모델", hit_traces: "규칙 적중 이력", bazi: "사주 분석", score: "점수", reviewed: "검토됨", draft: "초안", states_count: "상태", intents_count: "의도", arguments_count: "논점", ready: "준비됨", config: "설정", status_error: "상태 오류", manifest_error: "목록 오류", profile_unavailable: "프로필을 불러올 수 없음", profile_chart: "프로필 명식", choice_only: "선택만" },
   },
 };
 
@@ -250,7 +265,7 @@ const renderObservationAccess = (role) => {
   if (!page) return;
   const isAdmin = role === "admin";
   page.hidden = !isAdmin;
-  if (status) status.textContent = isAdmin ? "admin visible" : "admin only";
+  if (status) status.textContent = isAdmin ? "管理员可见" : "仅管理员";
   setObservationCollapsed(page.classList.contains("collapsed"));
 };
 
@@ -321,9 +336,9 @@ const renderFeatures = (features) => {
     card.dataset.state = feature.state || feature.status || "available";
     card.append(el("strong", "", feature.label || feature.title || feature.feature_id || feature.macro_id || "feature"));
     const score = feature.priority ?? feature.score ?? feature.discovery_score ?? feature.peak_confidence ?? feature.confidence ?? "-";
-    const label = feature.domain_label || feature.domain || "domain";
+    const label = feature.domain || "domain";
     const stateLabel = featureStateLabel(feature.state || feature.status || feature.readiness);
-    card.append(el("span", "", `${label} · ${stateLabel} · score ${score}`));
+    card.append(el("span", "", `${portraitDomainLabel(label)} · ${stateLabel} · ${currentText().wb.score} ${score}`));
     const links = [
       ...(feature.decision_keys || []),
       ...(feature.mainline_keys || []),
@@ -375,7 +390,7 @@ const renderPortraitGraph = (summary) => {
 
   const questionLine = el("div", "portrait-graph-questions");
   (summary.suggested_questions || []).slice(0, 3).forEach((question) => {
-    questionLine.append(el("span", "portrait-question-chip", question.title || question.question_key || "问题"));
+    questionLine.append(el("span", "portrait-question-chip", question.title || question.question_key || currentText().recommended_question));
   });
   if (questionLine.childNodes.length) root.append(questionLine);
 };
@@ -567,7 +582,7 @@ const renderLatentCalibration = (inputId, role) => {
     return;
   }
   root.hidden = false;
-  status.textContent = state.latentAnswers.length ? `${currentText().wb.calibrated} ${state.latentAnswers.length}` : "choice only";
+  status.textContent = state.latentAnswers.length ? `${currentText().wb.calibrated} ${state.latentAnswers.length}` : currentText().wb.choice_only;
   scenarios.slice(0, 4).forEach((scenario) => {
     const saved = state.latentAnswers.find((answer) => answer.scenario_id === scenario.scenario_id) || {};
     const row = el("div", "latent-calibration-row");
@@ -580,7 +595,7 @@ const renderLatentCalibration = (inputId, role) => {
     fields.append(latentSelect(scenario, "result_option", saved.result_option || (scenario.result_options || ["no_clear_change"])[0], scenario.result_options || [], latentResultLabel));
     fields.append(latentSelect(scenario, "intensity", saved.intensity || "clear", scenario.intensity_options || [], latentIntensityLabel));
     fields.append(latentSelect(scenario, "confidence", saved.confidence || "medium", scenario.confidence_options || [], latentConfidenceLabel));
-    const button = el("button", "mini-action", saved.scenario_id ? currentText().wb.accepted : currentText().wb.recording.replace(/中$/, ""));
+    const button = el("button", "mini-action", saved.scenario_id ? currentText().wb.accepted : currentText().wb.recording);
     button.type = "button";
     button.addEventListener("click", () => recordLatentCalibration(scenario, inputId || state.latest?.input_id || "", role, row));
     fields.append(button);
@@ -739,20 +754,23 @@ const questionButton = (question, selectedId, className, binding = {}) => {
   button.type = "button";
   button.dataset.questionId = questionId;
   button.dataset.questionKey = question.question_key || "";
-  button.append(el("strong", "", question.title || question.question_key || questionId || "问题"));
+  button.append(el("strong", "", question.title || question.question_key || questionId || currentText().recommended_question));
   if (className === "question-row") {
     const intent = intentTypeLabel(binding.primary_intent_type);
-    const priority = binding.intent_priority ? ` · ${Number(binding.intent_priority).toFixed(2)}` : "";
-    const sourceParts = [
-      question.measurement_topic || question.domain || currentText().wb.bazi,
-      question.question_strategy || "问题策略",
+    const isAdmin = measurementRole(roleSelect.value) === "admin";
+    const sourceParts = isAdmin ? [
+      question.measurement_topic || portraitDomainLabel(question.domain) || currentText().wb.bazi,
+      question.question_strategy,
       question.source_decision_status,
       intent,
-    ]
+    ] : [
+      question.measurement_topic || portraitDomainLabel(question.domain) || currentText().wb.bazi,
+      intent,
+    ];
+    const sourceLine = sourceParts
       .filter(Boolean)
       .filter((item, index, values) => values.indexOf(item) === index)
       .join(" · ");
-    const sourceLine = sourceParts ? `${sourceParts}${priority}` : "";
     button.append(el("span", "", `${sourceLine}`));
   }
   button.addEventListener("click", () => runQuestion(question));
@@ -839,22 +857,22 @@ const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
   refs.slice(0, 5).forEach((ref) => {
     const row = el("div", "evidence-row");
     row.append(el("strong", "", ref.title || ref.knowledge_id || "knowledge"));
-    row.append(el("span", "", `${ref.domain || "domain"} · ${ref.reviewed ? "reviewed" : "draft"}`));
+    row.append(el("span", "", `${portraitDomainLabel(ref.domain)} · ${ref.reviewed ? currentText().wb.reviewed : currentText().wb.draft}`));
     root.append(row);
   });
   if (decisionValidation.status) {
     const row = el("div", "evidence-row validation");
     row.append(el("strong", "", currentText().wb.dyn_val));
-    row.append(el("span", "", `${decisionValidation.status} · ${decisionValidation.decision_count ?? 0} decisions`));
+    row.append(el("span", "", `${decisionValidation.status} · ${decisionValidation.decision_count ?? 0}`));
     root.append(row);
   }
   const featureStateModel = runtimeModels.featureStateModel || {};
   const questionIntentModel = runtimeModels.questionIntentModel || {};
   const decisionModel = runtimeModels.decisionModel || {};
   [
-    [currentText().wb.feat_model, featureStateModel.status, `${featureStateModel.feature_state_count ?? 0} states`],
-    [currentText().wb.q_model, questionIntentModel.status, `${questionIntentModel.intent_count ?? 0} intents`],
-    [currentText().wb.def_model, decisionModel.status, `${decisionModel.argument_count ?? 0} arguments`],
+    [currentText().wb.feat_model, featureStateModel.status, `${featureStateModel.feature_state_count ?? 0} ${currentText().wb.states_count}`],
+    [currentText().wb.q_model, questionIntentModel.status, `${questionIntentModel.intent_count ?? 0} ${currentText().wb.intents_count}`],
+    [currentText().wb.def_model, decisionModel.status, `${decisionModel.argument_count ?? 0} ${currentText().wb.arguments_count}`],
   ].forEach(([title, status, detail]) => {
     if (!status) return;
     const row = el("div", "evidence-row model");
@@ -964,7 +982,7 @@ const loadLatentCalibrationManifest = async () => {
     renderLatentCalibration(state.latest?.input_id || "", measurementRole(roleSelect.value));
   } catch (error) {
     const status = document.querySelector("#latentCalibrationStatus");
-    if (status) status.textContent = "manifest error";
+    if (status) status.textContent = currentText().wb.manifest_error;
   }
 };
 
@@ -977,11 +995,11 @@ const loadStatus = async () => {
     ]);
     setText("#runtimeStatus", `${health.status} · ${health.active_profile}`);
     setText("#profileBadge", health.active_profile);
-    setText("#corpusState", `corpus ${status.corpus_artifact_status} · ${status.corpus_cluster_count || 0} clusters`);
+    setText("#corpusState", `corpus ${status.corpus_artifact_status} · ${status.corpus_cluster_count || 0}`);
     setText("#ruleState", `rules ${status.knowledge_rule_library_full_definition_count || status.knowledge_rule_library_definition_count || 0} · ${status.knowledge_rule_validation_status}`);
-    setText("#dbState", `db ${deps.postgres.ready_for_connection ? "ready" : "config"}`);
+    setText("#dbState", `db ${deps.postgres.ready_for_connection ? currentText().wb.ready : currentText().wb.config}`);
   } catch (error) {
-    setText("#runtimeStatus", "status error");
+    setText("#runtimeStatus", currentText().wb.status_error);
     setText("#dbState", error.message);
   }
 };
@@ -1032,8 +1050,24 @@ const applyLocale = (locale) => {
     const key = node.dataset.ui;
     if (text[key]) node.textContent = text[key];
   });
+  document.querySelectorAll("[data-ui-placeholder]").forEach((node) => {
+    const key = node.dataset.uiPlaceholder;
+    const value = text[key] || text.wb?.[key];
+    if (value) node.setAttribute("placeholder", value);
+  });
   const submit = form.querySelector("button[type='submit']");
   submit.textContent = text.run;
+  chatButton.textContent = text.wb.send;
+  if (chatText && !chatText.value.trim()) chatText.value = "";
+  const userText = form.elements.user_text;
+  if (userText && (!userText.value.trim() || Object.values(UI_TEXT).some((row) => row.default_user_text === userText.value.trim()))) {
+    userText.value = text.default_user_text;
+    if (chatText) chatText.value = text.default_user_text;
+  }
+  setText("#answerText", state.latest ? (state.latest.answer_text || text.wb.waiting) : text.wb.waiting);
+  if (!state.latest) {
+    setText("#selectedQuestion", text.selected_waiting);
+  }
 };
 
 const renderInitialPanels = () => {
@@ -1064,7 +1098,7 @@ const loadActiveProfile = async () => {
     setText("#selectedProfileName", profile.display_name || profile.profile_id || profileId);
     setText("#selectedProfileMeta", profileMeta(profile));
   } catch (error) {
-    setText("#selectedProfileMeta", "profile unavailable");
+    setText("#selectedProfileMeta", currentText().wb.profile_unavailable);
   }
 };
 
@@ -1153,7 +1187,7 @@ const applyProfileDefaults = (profile) => {
     if (value && form.elements[key]) form.elements[key].value = value;
   });
   if (defaults.status === "ready") {
-    setText("#profileBadge", "profile chart");
+    setText("#profileBadge", currentText().wb.profile_chart);
   }
 };
 
