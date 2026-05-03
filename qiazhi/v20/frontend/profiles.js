@@ -27,7 +27,9 @@ const PROFILE_TEXT = {
     editor_edit: "修改档案",
     cancel: "取消",
     display_name: "姓名/标题",
+    gender: "性别",
     calendar: "历法",
+    lunar_leap_month: "农历闰月",
     birth_year: "出生年",
     birth_month: "出生月",
     birth_day: "出生日",
@@ -42,6 +44,8 @@ const PROFILE_TEXT = {
     not_authenticated: "未登录",
     local_user: "本地用户",
     ready: "就绪",
+    gender_male: "男",
+    gender_female: "女",
     calendar_solar: "公历",
     calendar_lunar: "农历",
     status_active: "启用",
@@ -64,7 +68,9 @@ const PROFILE_TEXT = {
     editor_edit: "Edit Profile",
     cancel: "Cancel",
     display_name: "Name / Title",
+    gender: "Gender",
     calendar: "Calendar",
+    lunar_leap_month: "Lunar Leap Month",
     birth_year: "Birth Year",
     birth_month: "Birth Month",
     birth_day: "Birth Day",
@@ -79,6 +85,8 @@ const PROFILE_TEXT = {
     not_authenticated: "Not authenticated",
     local_user: "Local User",
     ready: "Ready",
+    gender_male: "Male",
+    gender_female: "Female",
     calendar_solar: "Solar",
     calendar_lunar: "Lunar",
     status_active: "Active",
@@ -101,7 +109,9 @@ const PROFILE_TEXT = {
     editor_edit: "프로필 수정",
     cancel: "취소",
     display_name: "이름 / 제목",
+    gender: "성별",
     calendar: "달력",
+    lunar_leap_month: "음력 윤달",
     birth_year: "출생 연도",
     birth_month: "출생 월",
     birth_day: "출생 일",
@@ -116,6 +126,8 @@ const PROFILE_TEXT = {
     not_authenticated: "로그인되지 않음",
     local_user: "로컬 사용자",
     ready: "준비됨",
+    gender_male: "남성",
+    gender_female: "여성",
     calendar_solar: "양력",
     calendar_lunar: "음력",
     status_active: "사용",
@@ -153,6 +165,68 @@ const applyLocale = (locale) => {
     if (value) node.textContent = value;
   });
   localStorage.setItem("v20_locale", clean);
+};
+
+const populateBirthSelects = (preset = {}) => {
+  const year = preset.year ?? value("#profileBirthYear");
+  const month = preset.month ?? value("#profileBirthMonth");
+  const day = preset.day ?? value("#profileBirthDay");
+  const hour = preset.hour ?? value("#profileBirthHour");
+  const minute = preset.minute ?? value("#profileBirthMinute") ?? "0";
+  const currentYear = Math.max(1900, new Date().getFullYear());
+  fillNumberSelect("#profileBirthYear", 1900, currentYear, year);
+  fillNumberSelect("#profileBirthMonth", 1, 12, month, { pad: true });
+  updateBirthDayOptions(day);
+  fillNumberSelect("#profileBirthHour", 0, 23, hour, { pad: true, includeEmpty: false });
+  fillNumberSelect("#profileBirthMinute", 0, 59, minute, { pad: true, includeEmpty: false });
+};
+
+const fillNumberSelect = (selector, start, end, selected, options = {}) => {
+  const node = document.querySelector(selector);
+  if (!node) return;
+  const selectedText = selected === undefined || selected === null ? "" : String(selected);
+  const selectedNumber = Number(selectedText);
+  const fragment = document.createDocumentFragment();
+  if (options.includeEmpty !== false) {
+    const empty = document.createElement("option");
+    empty.value = "";
+    empty.textContent = "--";
+    fragment.append(empty);
+  }
+  for (let next = start; next <= end; next += 1) {
+    const option = document.createElement("option");
+    option.value = String(next);
+    option.textContent = options.pad ? String(next).padStart(2, "0") : String(next);
+    fragment.append(option);
+  }
+  node.replaceChildren(fragment);
+  if (Number.isFinite(selectedNumber) && selectedNumber >= start && selectedNumber <= end) {
+    node.value = String(selectedNumber);
+  } else if (options.includeEmpty === false) {
+    node.value = String(start);
+  } else {
+    node.value = "";
+  }
+};
+
+const updateBirthDayOptions = (selectedDay = value("#profileBirthDay")) => {
+  const calendar = value("#profileCalendar") || "solar";
+  const year = Number(value("#profileBirthYear"));
+  const month = Number(value("#profileBirthMonth"));
+  const solarDayCount = Number.isFinite(year) && Number.isFinite(month) && month >= 1 ? new Date(year, month, 0).getDate() : 31;
+  const maxDay = calendar === "lunar" ? 30 : solarDayCount;
+  fillNumberSelect("#profileBirthDay", 1, maxDay, selectedDay, { pad: true });
+};
+
+const toggleLunarLeapMonth = () => {
+  const row = document.querySelector("#profileLunarLeapMonthRow");
+  const checkbox = document.querySelector("#profileLunarLeapMonth");
+  const isLunar = value("#profileCalendar") === "lunar";
+  if (row) row.hidden = !isLunar;
+  if (checkbox) {
+    checkbox.disabled = !isLunar;
+    if (!isLunar) checkbox.checked = false;
+  }
 };
 
 const loadMe = async () => {
@@ -241,12 +315,17 @@ const openProfileEditor = (profile = {}) => {
   editor.hidden = false;
   editorTitle.textContent = state.editingProfileId ? currentText().editor_edit : currentText().editor_new;
   setValue("#profileDisplayName", profile.display_name || "");
+  setValue("#profileGender", birth.gender === "female" ? "female" : "male");
   setValue("#profileCalendar", birth.calendar_type || birth.calendar || "solar");
-  setValue("#profileBirthYear", birth.year || "");
-  setValue("#profileBirthMonth", birth.month || "");
-  setValue("#profileBirthDay", birth.day || "");
-  setValue("#profileBirthHour", birth.hour ?? "");
-  setValue("#profileBirthMinute", birth.minute ?? "0");
+  populateBirthSelects({
+    year: birth.year || "",
+    month: birth.month || "",
+    day: birth.day || "",
+    hour: birth.hour ?? 0,
+    minute: birth.minute ?? 0,
+  });
+  setChecked("#profileLunarLeapMonth", Boolean(birth.lunar_is_leap_month || birth.is_lunar_leap_month));
+  toggleLunarLeapMonth();
   setValue("#profileRecordStatus", profile.status || "active");
   editor.scrollIntoView({ behavior: "smooth", block: "start" });
 };
@@ -279,12 +358,15 @@ const profilePayloadFromEditor = () => ({
   display_name: value("#profileDisplayName") || currentText().unnamed_profile,
   status: value("#profileRecordStatus") || "active",
   birth_input: {
+    calendar: value("#profileCalendar") || "solar",
     calendar_type: value("#profileCalendar") || "solar",
+    gender: value("#profileGender") === "female" ? "female" : "male",
     year: numberOrString("#profileBirthYear"),
     month: numberOrString("#profileBirthMonth"),
     day: numberOrString("#profileBirthDay"),
     hour: numberOrString("#profileBirthHour"),
     minute: numberOrString("#profileBirthMinute") || 0,
+    lunar_is_leap_month: value("#profileCalendar") === "lunar" && checked("#profileLunarLeapMonth"),
   },
   metadata: { source_system: "v20_native" },
 });
@@ -323,7 +405,10 @@ const profileMeta = (profile) => {
     .join("-");
   const time = birth.hour !== undefined ? `${String(birth.hour).padStart(2, "0")}:${String(birth.minute || 0).padStart(2, "0")}` : "";
   const calendar = birth.calendar_type || birth.calendar || "";
-  return [date, time, calendar].filter(Boolean).join(" · ");
+  const text = currentText();
+  const calendarLabel = calendar === "lunar" ? `${text.calendar_lunar}${birth.lunar_is_leap_month ? ` · ${text.lunar_leap_month}` : ""}` : calendar === "solar" ? text.calendar_solar : calendar;
+  const gender = birth.gender === "female" ? text.gender_female : birth.gender === "male" ? text.gender_male : "";
+  return [date, time, calendarLabel, gender].filter(Boolean).join(" · ");
 };
 
 const tag = (text) => {
@@ -334,9 +419,14 @@ const tag = (text) => {
 };
 
 const value = (selector) => String(document.querySelector(selector)?.value || "").trim();
+const checked = (selector) => Boolean(document.querySelector(selector)?.checked);
 const setValue = (selector, next) => {
   const node = document.querySelector(selector);
   if (node) node.value = next;
+};
+const setChecked = (selector, next) => {
+  const node = document.querySelector(selector);
+  if (node) node.checked = Boolean(next);
 };
 const numberOrString = (selector) => {
   const raw = value(selector);
@@ -359,6 +449,14 @@ const roleLabel = (role) => {
 
 localeSelect.value = params.get("locale") || localStorage.getItem("v20_locale") || "zh";
 applyLocale(localeSelect.value);
+populateBirthSelects();
+toggleLunarLeapMonth();
+document.querySelector("#profileCalendar")?.addEventListener("change", () => {
+  updateBirthDayOptions();
+  toggleLunarLeapMonth();
+});
+document.querySelector("#profileBirthYear")?.addEventListener("change", () => updateBirthDayOptions());
+document.querySelector("#profileBirthMonth")?.addEventListener("change", () => updateBirthDayOptions());
 newProfileButton.addEventListener("click", () => openProfileEditor());
 cancelProfileEdit.addEventListener("click", closeProfileEditor);
 saveProfileButton.addEventListener("click", () => saveProfile().catch((error) => setText("#profileStatus", error.message)));

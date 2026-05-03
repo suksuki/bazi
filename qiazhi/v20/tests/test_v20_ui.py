@@ -55,12 +55,27 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "data-profile-ui=\"language\"" not in profiles.text
     assert "class=\"admin-nav-link\" hidden" in profiles.text
     assert "logoutButton" in profiles.text
+    assert 'id="profileGender"' in profiles.text
+    assert '<option value="male" data-profile-option="gender_male">男</option>' in profiles.text
+    assert '<option value="female" data-profile-option="gender_female">女</option>' in profiles.text
+    assert 'id="profileLunarLeapMonth"' in profiles.text
+    assert '<select id="profileBirthYear">' in profiles.text
+    assert '<select id="profileBirthMonth">' in profiles.text
+    assert '<select id="profileBirthDay">' in profiles.text
+    assert '<select id="profileBirthHour">' in profiles.text
+    assert '<select id="profileBirthMinute">' in profiles.text
     assert "/api/v20/profiles?limit=120" in profiles_script.text
     assert "/api/v20/profiles/import-v19?apply=true" not in profiles_script.text
     assert "method: profileId ? \"PATCH\" : \"POST\"" in profiles_script.text
     assert "method: \"DELETE\"" in profiles_script.text
     assert "appendProfileDefaults(query, profile)" in profiles_script.text
     assert "flow_year_pillar" in profiles_script.text
+    assert "populateBirthSelects" in profiles_script.text
+    assert "for (let next = start; next <= end; next += 1)" in profiles_script.text
+    assert "fillNumberSelect(\"#profileBirthYear\", 1900" in profiles_script.text
+    assert "gender: value(\"#profileGender\") === \"female\" ? \"female\" : \"male\"" in profiles_script.text
+    assert "lunar_is_leap_month" in profiles_script.text
+    assert "toggleLunarLeapMonth" in profiles_script.text
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
     assert "flow_year_pillar" in page.text
@@ -172,6 +187,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert ".questions-panel-card" not in style.text
     assert "body.profile-reading .pillar-panel" in style.text
     assert ".profiles-layout" in style.text
+    assert ".check-row" in style.text
     assert ".entry-page" in style.text
     assert ".admin-layout" in style.text
     assert "@media (max-width: 1120px)" in style.text

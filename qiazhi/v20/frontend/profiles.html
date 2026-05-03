@@ -52,17 +52,24 @@
           </div>
           <div class="profile-editor-grid">
             <label><span data-profile-ui="display_name">姓名/标题</span><input id="profileDisplayName" autocomplete="off" /></label>
+            <label><span data-profile-ui="gender">性别</span>
+              <select id="profileGender">
+                <option value="male" data-profile-option="gender_male">男</option>
+                <option value="female" data-profile-option="gender_female">女</option>
+              </select>
+            </label>
             <label><span data-profile-ui="calendar">历法</span>
               <select id="profileCalendar">
                 <option value="solar" data-profile-option="calendar_solar">公历</option>
                 <option value="lunar" data-profile-option="calendar_lunar">农历</option>
               </select>
             </label>
-            <label><span data-profile-ui="birth_year">出生年</span><input id="profileBirthYear" inputmode="numeric" /></label>
-            <label><span data-profile-ui="birth_month">出生月</span><input id="profileBirthMonth" inputmode="numeric" /></label>
-            <label><span data-profile-ui="birth_day">出生日</span><input id="profileBirthDay" inputmode="numeric" /></label>
-            <label><span data-profile-ui="birth_hour">出生时</span><input id="profileBirthHour" inputmode="numeric" /></label>
-            <label><span data-profile-ui="birth_minute">出生分</span><input id="profileBirthMinute" inputmode="numeric" /></label>
+            <label id="profileLunarLeapMonthRow" class="check-row"><input id="profileLunarLeapMonth" type="checkbox" /><span data-profile-ui="lunar_leap_month">农历闰月</span></label>
+            <label><span data-profile-ui="birth_year">出生年</span><select id="profileBirthYear"></select></label>
+            <label><span data-profile-ui="birth_month">出生月</span><select id="profileBirthMonth"></select></label>
+            <label><span data-profile-ui="birth_day">出生日</span><select id="profileBirthDay"></select></label>
+            <label><span data-profile-ui="birth_hour">出生时</span><select id="profileBirthHour"></select></label>
+            <label><span data-profile-ui="birth_minute">出生分</span><select id="profileBirthMinute"></select></label>
             <label><span data-profile-ui="profile_status_label">状态</span>
               <select id="profileRecordStatus">
                 <option value="active" data-profile-option="status_active">active</option>
