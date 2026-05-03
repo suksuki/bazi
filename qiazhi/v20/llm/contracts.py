@@ -105,7 +105,7 @@ PRACTITIONER_ANSWER = LLMTaskContract(
         "deterministic_fallback",
         "locale",
     ),
-    required_outputs=("text", "mainline", "question_answer", "evidence_notes", "next_questions", "boundary_notes"),
+    required_outputs=("text",),
     forbidden_outputs=("new_chart_fact", "rule_activation", "unsupported_claim", "fortune_verdict", "private_data_inference"),
     fallback="deterministic_answer",
     runtime_scope="evidence_bounded_practitioner_answer",

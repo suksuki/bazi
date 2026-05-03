@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from v20 import V20_VERSION
@@ -121,6 +123,7 @@ from v20.ops.profiles import validate_runtime_config
 from v20.ops.service_unit import service_unit_manifest
 from v20.ops.status import system_status_report
 from v20.ops.sync import sync_readiness_report
+from v20.llm.practitioner import stream_practitioner_answer_with_llm
 from v20.profiles.store import (
     create_profile_in_postgres,
     delete_profile_from_postgres,
@@ -868,10 +871,76 @@ def create_app() -> FastAPI:
                 detail={"error": "V20_ROLE_MEASURE_INPUT_INVALID", "message": str(exc)},
             ) from exc
 
+    @app.post("/api/v20/measure/view/{role_key}/stream")
+    def measure_view_stream(role_key: str, payload: MeasureRequest, request: Request) -> StreamingResponse:
+        if role_key == "admin":
+            _require_admin_session(request)
+
+        def event_stream():
+            try:
+                result = run_runtime_from_pillars(
+                    payload.year,
+                    payload.month,
+                    payload.day,
+                    payload.hour,
+                    input_id=payload.input_id,
+                    question_key=payload.question_key,
+                    question_id=payload.question_id,
+                    user_text=payload.user_text,
+                    flow_year_pillar=payload.flow_year_pillar,
+                    luck_pillar=payload.luck_pillar,
+                    flow_month_pillar=payload.flow_month_pillar,
+                    locale=payload.locale,
+                    llm_mode="deterministic",
+                    practitioner_selections=tuple(selection.model_dump() for selection in payload.practitioner_selections),
+                    latent_event_answers=tuple(answer.model_dump() for answer in payload.latent_event_answers),
+                    answered_question_ids=tuple(payload.answered_question_ids),
+                    answered_question_keys=tuple(payload.answered_question_keys),
+                )
+                projected = project_runtime_for_role(result, role_key)
+                yield _sse("runtime", {"result": projected})
+
+                chunks: list[str] = []
+                decision_report = result.get("decision_report", {})
+                if not isinstance(decision_report, dict):
+                    decision_report = {}
+                for chunk in stream_practitioner_answer_with_llm(
+                    chart_facts=_dict_value(result, "chart_facts"),
+                    time_context=_dict_value(result, "time_context"),
+                    selected_question=_dict_value(result, "selected_question"),
+                    decision_report=decision_report,
+                    knowledge_semantic_model=_dict_value(result, "knowledge_semantic_model"),
+                    portrait_projection=_dict_value(decision_report, "portrait_projection"),
+                    feature_state_model=_dict_value(result, "feature_state_model"),
+                    question_intent_model=_dict_value(result, "question_intent_model"),
+                    interaction_session=_dict_value(result, "interaction_session"),
+                    answer_plan=result.get("answer_plan", {}),
+                    deterministic_answer_text=str(result.get("answer_text") or ""),
+                    locale=payload.locale,
+                ):
+                    text = str(chunk)
+                    chunks.append(text)
+                    yield _sse("delta", {"text": text})
+                answer_text = "".join(chunks).strip() or str(result.get("answer_text") or "")
+                yield _sse("done", {"answer_text": answer_text, "status": "ok"})
+            except Exception as exc:
+                yield _sse("error", {"message": str(exc), "status": "error"})
+
+        return StreamingResponse(event_stream(), media_type="text/event-stream")
+
     return app
 
 
 app = create_app()
+
+
+def _sse(event: str, payload: dict[str, object]) -> str:
+    return f"event: {event}\ndata: {json.dumps(payload, ensure_ascii=False)}\n\n"
+
+
+def _dict_value(payload: dict[str, object], key: str) -> dict[str, object]:
+    value = payload.get(key, {})
+    return value if isinstance(value, dict) else {}
 
 
 def _require_profile_session(request: Request) -> dict[str, object]:

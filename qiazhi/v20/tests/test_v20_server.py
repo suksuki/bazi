@@ -54,6 +54,32 @@ def test_v20_measure_endpoint_returns_bazi_measurement_runtime() -> None:
     assert "core." not in data["answer_text"]
 
 
+def test_v20_measure_stream_returns_runtime_then_answer_events() -> None:
+    client = TestClient(app)
+    with client.stream(
+        "POST",
+        "/api/v20/measure/view/user/stream",
+        json={
+            "year": "甲子",
+            "month": "戊辰",
+            "day": "甲午",
+            "hour": "辛酉",
+            "input_id": "server.stream.test",
+            "user_text": "我想看关系",
+            "locale": "zh",
+            "llm_mode": "practitioner",
+        },
+    ) as response:
+        assert response.status_code == 200
+        body = "".join(response.iter_text())
+
+    assert "event: runtime" in body
+    assert "event: delta" in body
+    assert "event: done" in body
+    assert "server.stream.test" in body
+    assert "一页图谱画像" not in body.split("event: done", 1)[-1]
+
+
 def test_v20_bazi_domain_alignment_endpoint_is_read_only() -> None:
     client = TestClient(app)
     response = client.get("/api/v20/measurement/bazi-domain-alignment")

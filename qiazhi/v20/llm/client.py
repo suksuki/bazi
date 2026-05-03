@@ -72,6 +72,21 @@ def call_structured_llm(
     ).to_dict()
 
 
+def stream_plain_llm_text(
+    contract: LLMTaskContract,
+    prompt: dict[str, object],
+    *,
+    config: LLMProviderConfig | None = None,
+):
+    cfg = config or load_llm_provider_config_from_env()
+    readiness = llm_provider_readiness_report(cfg)
+    if not readiness["ready_for_connection"] or not cfg.execute_llm:
+        return
+    if cfg.provider not in {"ollama", "ollama_native"}:
+        return
+    yield from _stream_ollama_native_text(contract, prompt, cfg)
+
+
 def _post_chat_completion(
     contract: LLMTaskContract,
     prompt: dict[str, object],
@@ -134,6 +149,42 @@ def _post_ollama_native_completion(
     return _parse_json_content(content)
 
 
+def _stream_ollama_native_text(
+    contract: LLMTaskContract,
+    prompt: dict[str, object],
+    cfg: LLMProviderConfig,
+):
+    body = {
+        "model": cfg.model,
+        "messages": _plain_text_messages(contract, prompt),
+        "stream": True,
+        "think": False,
+        "options": {
+            "temperature": cfg.temperature,
+            "num_predict": cfg.max_tokens,
+            "num_ctx": 2048 if contract.task_name == "practitioner_answer" else 4096,
+        },
+    }
+    request = urllib.request.Request(
+        f"{cfg.resolved_base_url().rstrip('/').removesuffix('/v1')}/api/chat",
+        data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+        headers=_headers(cfg),
+        method="POST",
+    )
+    with urllib.request.urlopen(request, timeout=cfg.http_timeout_sec) as response:
+        for raw_line in response:
+            line = raw_line.decode("utf-8").strip()
+            if not line:
+                continue
+            payload = json.loads(line)
+            message = payload.get("message") if isinstance(payload, dict) else {}
+            content = str(message.get("content") or "") if isinstance(message, dict) else ""
+            if content:
+                yield content
+            if payload.get("done"):
+                break
+
+
 def _structured_messages(contract: LLMTaskContract, prompt: dict[str, object]) -> list[dict[str, str]]:
     contract_brief = {
         "task_name": contract.task_name,
@@ -155,6 +206,31 @@ def _structured_messages(contract: LLMTaskContract, prompt: dict[str, object]) -
             "content": json.dumps(
                 {
                     "contract": contract_brief,
+                    "prompt": prompt,
+                },
+                ensure_ascii=False,
+                sort_keys=True,
+            ),
+        },
+    ]
+
+
+def _plain_text_messages(contract: LLMTaskContract, prompt: dict[str, object]) -> list[dict[str, str]]:
+    return [
+        {
+            "role": "system",
+            "content": (
+                "You are a professional Bazi practitioner. Answer in plain user-facing language only. "
+                "Do not output JSON, markdown headings, internal ids, rule/debug labels, or unsupported claims. "
+                "Do not add chart facts or guarantee outcomes."
+            ),
+        },
+        {
+            "role": "user",
+            "content": json.dumps(
+                {
+                    "task": contract.task_name,
+                    "required_output": "plain_text_only",
                     "prompt": prompt,
                 },
                 ensure_ascii=False,

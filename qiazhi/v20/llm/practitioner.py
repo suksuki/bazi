@@ -4,7 +4,7 @@ import json
 from dataclasses import replace
 
 from v20.answer.plan import AnswerPlan
-from v20.llm.client import call_structured_llm
+from v20.llm.client import call_structured_llm, stream_plain_llm_text
 from v20.llm.contracts import PRACTITIONER_ANSWER
 from v20.llm.prompts import practitioner_answer_prompt
 from v20.llm.provider import load_llm_provider_config_from_env
@@ -47,20 +47,21 @@ def build_practitioner_answer_with_llm(
         "prompt_char_count": len(json.dumps(prompt, ensure_ascii=False, sort_keys=True)),
         "mode": "compact_answer_card",
     }
+    fallback_text = compact_practitioner_fallback_text(prompt, deterministic_answer_text)
     call = call_structured_llm(
         PRACTITIONER_ANSWER,
         prompt,
         config=replace(
             cfg,
             provider=provider,
-            max_tokens=min(max(cfg.max_tokens, 520), 640),
+            max_tokens=min(max(cfg.max_tokens, 360), 480),
             temperature=min(cfg.temperature, 0.3),
-            http_timeout_sec=max(4.0, min(cfg.http_timeout_sec, 12.0)),
+            http_timeout_sec=min(max(cfg.http_timeout_sec, 24.0), 28.0),
         ),
     )
     if call["status"] == "accepted":
         output = call.get("output", {})
-        accepted = accept_or_fallback_practitioner_answer(output, deterministic_answer_text)
+        accepted = accept_or_fallback_practitioner_answer(output, fallback_text)
         if accepted["ok"]:
             return {
                 "version": "v20.llm_practitioner_answer.v1",
@@ -82,7 +83,7 @@ def build_practitioner_answer_with_llm(
     return {
         "version": "v20.llm_practitioner_answer.v1",
         "status": "fallback",
-        "text": deterministic_answer_text,
+        "text": fallback_text,
         "source": "deterministic_fallback",
         "structured_output": {},
         "llm_call": call,
@@ -95,6 +96,110 @@ def build_practitioner_answer_with_llm(
             "NO_FACT_OR_RULE_MUTATION",
         ],
     }
+
+
+def stream_practitioner_answer_with_llm(
+    *,
+    chart_facts: dict[str, object],
+    time_context: dict[str, object],
+    selected_question: dict[str, object],
+    knowledge_semantic_model: dict[str, object],
+    answer_plan: object,
+    deterministic_answer_text: str,
+    decision_report: dict[str, object] | None = None,
+    portrait_projection: dict[str, object] | None = None,
+    feature_state_model: dict[str, object] | None = None,
+    question_intent_model: dict[str, object] | None = None,
+    interaction_session: dict[str, object] | None = None,
+    locale: str = "zh",
+):
+    prompt = practitioner_answer_prompt(
+        chart_facts=chart_facts,
+        time_context=time_context,
+        selected_question=selected_question,
+        decision_report=decision_report or {},
+        knowledge_semantic_model=knowledge_semantic_model,
+        portrait_projection=portrait_projection or {},
+        feature_state_model=feature_state_model or {},
+        question_intent_model=question_intent_model or {},
+        interaction_session=interaction_session or {},
+        answer_plan=answer_plan,  # type: ignore[arg-type]
+        verified_answer_text=deterministic_answer_text,
+        locale=locale,
+    )
+    fallback_text = compact_practitioner_fallback_text(prompt, deterministic_answer_text)
+    cfg = load_llm_provider_config_from_env()
+    provider = "ollama_native" if cfg.provider == "ollama" else cfg.provider
+    emitted = False
+    try:
+        for chunk in stream_plain_llm_text(
+            PRACTITIONER_ANSWER,
+            prompt,
+            config=replace(
+                cfg,
+                provider=provider,
+                max_tokens=min(max(cfg.max_tokens, 360), 480),
+                temperature=min(cfg.temperature, 0.3),
+                http_timeout_sec=min(max(cfg.http_timeout_sec, 24.0), 30.0),
+            ),
+        ):
+            emitted = True
+            yield str(chunk)
+    except Exception:
+        if emitted:
+            return
+    if not emitted:
+        yield fallback_text
+
+
+def compact_practitioner_fallback_text(prompt: dict[str, object], deterministic_answer_text: str) -> str:
+    context = prompt.get("context", {})
+    if not isinstance(context, dict):
+        return deterministic_answer_text
+    question = context.get("question", {})
+    chart = context.get("chart", {})
+    mainline = context.get("mainline", [])
+    portrait_tags = context.get("portrait_tags", [])
+    evidence = context.get("evidence", [])
+    next_questions = context.get("next_questions", [])
+    boundary = str(context.get("answer_boundary") or "只按当前八字结构回答，不作固定吉凶或具体事件断语。")
+    locale = str(prompt.get("locale") or "zh")
+
+    if not isinstance(question, dict) or not isinstance(chart, dict):
+        return deterministic_answer_text
+    title = str(question.get("title") or question.get("measurement_topic") or "这个问题")
+    day_master = str(chart.get("day_master") or "")
+    main = _first_label(mainline, "label") or _first_label(portrait_tags, "label") or str(question.get("measurement_topic") or "当前主题")
+    support = "、".join(_string_items(evidence, 3))
+    follow = _string_items(next_questions, 1)
+
+    if locale.startswith("en"):
+        text = (
+            f"For {title}, the first reading is {main}. "
+            f"With day master {day_master or '-'}, the visible evidence is {support or 'the current verified chart structure'}. "
+            f"So this should be read as a structural tendency, not a fixed event."
+        )
+        if follow:
+            text += f" A useful next question is: {follow[0]}"
+        return _clip_local(text, 620)
+    if locale.startswith("ko"):
+        text = (
+            f"{title}은 먼저 {main}로 봅니다. "
+            f"일간 {day_master or '-'} 기준으로 확인된 근거는 {support or '현재 검증된 명식 구조'}입니다. "
+            f"따라서 확정 사건이 아니라 구조적 경향으로 해석하는 것이 좋습니다."
+        )
+        if follow:
+            text += f" 다음 질문은 {follow[0]}입니다."
+        return _clip_local(text, 420)
+
+    text = (
+        f"{title}先看「{main}」。"
+        f"这个盘日主{day_master or '已定'}，当前能抓到的关键证据是：{support or '四柱结构、十神关系和主题画像已经形成主线'}。"
+        f"所以这里先按结构倾向来断，不把它说成固定事件。{_clip_local(boundary, 90)}"
+    )
+    if follow:
+        text += f" 下一步适合追问：{follow[0]}"
+    return _clip_local(text, 420)
 
 
 def accept_or_fallback_practitioner_answer(
@@ -128,3 +233,25 @@ def accept_or_fallback_practitioner_answer(
         "validation": validation,
         "source": "deterministic_fallback",
     }
+
+
+def _first_label(rows: object, key: str) -> str:
+    if not isinstance(rows, (list, tuple)):
+        return ""
+    for row in rows:
+        if isinstance(row, dict) and row.get(key):
+            return str(row.get(key))
+    return ""
+
+
+def _string_items(rows: object, limit: int) -> list[str]:
+    if not isinstance(rows, (list, tuple)):
+        return []
+    return [str(item) for item in rows if item][:limit]
+
+
+def _clip_local(value: str, limit: int) -> str:
+    text = str(value or "").strip()
+    if len(text) <= limit:
+        return text
+    return text[: limit - 1].rstrip() + "…"

@@ -7,13 +7,14 @@ const state = {
   lastMeasureKey: "",
   chatTurns: [],
   chatSeq: 0,
-  activeLlmMode: "deterministic",
+  activeLlmMode: "practitioner",
   practitionerSelections: [],
   latentManifest: null,
   latentAnswers: [],
   answeredQuestionIds: [],
   answeredQuestionKeys: [],
   chartMemoryKey: "",
+  answerWriter: { timer: null, queue: "", displayed: "" },
 };
 const params = new URLSearchParams(window.location.search);
 
@@ -148,6 +149,91 @@ const el = (tag, className = "", text = "") => {
   return node;
 };
 
+const startAnswerTypewriter = () => {
+  stopAnswerTypewriter();
+  state.answerWriter = { timer: null, queue: "", displayed: "" };
+  setText("#answerText", "");
+  state.answerWriter.timer = window.setInterval(tickAnswerTypewriter, 14);
+};
+
+const queueAnswerText = (text) => {
+  if (!state.answerWriter.timer) startAnswerTypewriter();
+  state.answerWriter.queue += text || "";
+};
+
+const finishAnswerTypewriter = () => {
+  if (state.answerWriter.queue) {
+    window.setTimeout(finishAnswerTypewriter, 40);
+    return;
+  }
+  stopAnswerTypewriter();
+};
+
+const stopAnswerTypewriter = () => {
+  if (state.answerWriter?.timer) window.clearInterval(state.answerWriter.timer);
+  state.answerWriter = { timer: null, queue: state.answerWriter?.queue || "", displayed: state.answerWriter?.displayed || "" };
+};
+
+const tickAnswerTypewriter = () => {
+  const writer = state.answerWriter;
+  if (!writer.queue) return;
+  const take = Math.min(3, writer.queue.length);
+  writer.displayed += writer.queue.slice(0, take);
+  writer.queue = writer.queue.slice(take);
+  setText("#answerText", writer.displayed);
+};
+
+const requestMeasureStream = async (url, payload, handlers = {}) => {
+  const response = await fetch(url, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!response.ok || !response.body) {
+    const detail = await response.text();
+    throw new Error(`${response.status} ${detail}`);
+  }
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let latestResult = null;
+  let finalAnswer = "";
+  const handleBlock = (block) => {
+    const event = (block.match(/^event:\s*(.+)$/m) || [])[1] || "message";
+    const data = block
+      .split("\n")
+      .filter((line) => line.startsWith("data:"))
+      .map((line) => line.slice(5).trimStart())
+      .join("\n");
+    if (!data) return;
+    const payload = JSON.parse(data);
+    if (event === "runtime") {
+      latestResult = payload.result || null;
+      handlers.onRuntime?.(latestResult);
+    } else if (event === "delta") {
+      const text = payload.text || "";
+      finalAnswer += text;
+      handlers.onDelta?.(text);
+    } else if (event === "done") {
+      finalAnswer = payload.answer_text || finalAnswer;
+      handlers.onDone?.(payload);
+    } else if (event === "error") {
+      throw new Error(payload.message || "stream_error");
+    }
+  };
+  while (true) {
+    const { value, done } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const blocks = buffer.split("\n\n");
+    buffer = blocks.pop() || "";
+    blocks.forEach((block) => block.trim() && handleBlock(block));
+  }
+  if (buffer.trim()) handleBlock(buffer);
+  if (latestResult && finalAnswer) latestResult.answer_text = finalAnswer;
+  return latestResult;
+};
+
 const measure = async ({ force = false, interactionText = "", interactionSource = "", llmMode = "deterministic" } = {}) => {
   syncQuestionIdFromSelect();
   const text = currentText();
@@ -176,14 +262,29 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
     const role = measurementRole(payload.role_key);
     delete payload.role_key;
     const endpoint = `/api/v20/measure/view/${role}`;
-    const result = await requestJson(endpoint, {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
+    const isStreaming = llmMode === "practitioner";
+    const result = isStreaming
+      ? await requestMeasureStream(`${endpoint}/stream`, payload, {
+          onRuntime: (runtime) => {
+            state.latest = runtime;
+            renderRuntime(runtime);
+            startAnswerTypewriter();
+            setText("#llmStatus", "llm streaming");
+          },
+          onDelta: (text) => queueAnswerText(text),
+          onDone: () => finishAnswerTypewriter(),
+        })
+      : await requestJson(endpoint, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
+    if (!result) throw new Error("stream returned no runtime result");
+    finishAnswerTypewriter();
     state.latest = result;
-    renderRuntime(result);
+    if (!isStreaming) renderRuntime(result);
     if (turnId) completeChatTurn(turnId, result.answer_text || "", result);
   } catch (error) {
+    stopAnswerTypewriter();
     setText("#answerText", `${currentText().wb.failed}${error.message}`);
     if (turnId) failChatTurn(turnId, error.message);
     state.lastMeasureKey = "";
@@ -202,7 +303,7 @@ const scheduleMeasure = ({ force = false } = {}) => {
   state.measureTimer = setTimeout(() => measure({ force }), 280);
 };
 
-const interactiveLlmMode = () => (params.get("llm") === "practitioner" ? "practitioner" : "deterministic");
+const interactiveLlmMode = () => (params.get("llm") === "deterministic" ? "deterministic" : "practitioner");
 
 const renderRuntime = (result) => {
   const selected = result.selected_question || {};

@@ -119,20 +119,14 @@ def practitioner_answer_prompt(
         "context": answer_card,
         "output_schema": {
             "text": "string",
-            "mainline": "string",
-            "question_answer": "string",
-            "evidence_notes": ["string"],
-            "next_questions": ["string"],
-            "boundary_notes": ["string"],
         },
         "instruction": (
-            "Return only one JSON object. You are a professional Bazi practitioner answering the selected question. "
+            "Return only {\"text\":\"...\"}. You are a professional Bazi practitioner answering the selected question. "
             "Use only the compact answer card: question, chart, time, mainline, portrait_tags, evidence, next_questions, and answer_boundary. "
             "The first sentence must answer the selected question directly, then explain the strongest Bazi evidence in plain language. "
             "Do not mention internal ids, rule/debug labels, prompt/context names, or section headings. "
             "Do not create chart facts, activate rules, invent events, guarantee outcomes, infer private facts, or make fixed fortune verdicts. "
-            "Keep the text field under the locale-appropriate limit: zh/ko under 460 characters, en under 650 characters. "
-            "Keep evidence_notes 1-3 items, next_questions 2-4 items, boundary_notes 1-2 items. "
+            "Keep the text under the locale-appropriate limit: zh/ko under 360 characters, en under 520 characters. "
             "Write in the requested locale exactly: zh=Chinese, en=English, ko=Korean."
         ),
     }
