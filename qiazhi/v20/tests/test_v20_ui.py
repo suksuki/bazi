@@ -97,7 +97,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "交互信号" not in page.text
     assert "八字专业回复" in page.text
     assert "/api/v20/measure/view/" in script.text
-    assert "/api/v20/system/status" in script.text
+    assert "/api/v20/system/status" not in script.text
     assert "/api/v20/runtime/dependencies" in script.text
     assert "/api/v20/profiles/" in script.text
     assert "/api/v20/profiles/import-v19?apply=true" not in script.text

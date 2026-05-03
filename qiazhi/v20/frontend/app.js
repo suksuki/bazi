@@ -990,15 +990,14 @@ const loadLatentCalibrationManifest = async () => {
 
 const loadStatus = async () => {
   try {
-    const [health, status, deps] = await Promise.all([
+    const [health, deps] = await Promise.all([
       requestJson("/health"),
-      requestJson("/api/v20/system/status"),
       requestJson("/api/v20/runtime/dependencies"),
     ]);
     setText("#runtimeStatus", `${health.status} · ${health.active_profile}`);
     setText("#profileBadge", health.active_profile);
-    setText("#corpusState", `corpus ${status.corpus_artifact_status} · ${status.corpus_cluster_count || 0}`);
-    setText("#ruleState", `rules ${status.knowledge_rule_library_full_definition_count || status.knowledge_rule_library_definition_count || 0} · ${status.knowledge_rule_validation_status}`);
+    setText("#corpusState", `runtime ${health.package_version || "v20"}`);
+    setText("#ruleState", `llm ${deps.llm.ready_for_connection ? deps.llm.model : currentText().wb.config}`);
     setText("#dbState", `db ${deps.postgres.ready_for_connection ? currentText().wb.ready : currentText().wb.config}`);
   } catch (error) {
     setText("#runtimeStatus", currentText().wb.status_error);
