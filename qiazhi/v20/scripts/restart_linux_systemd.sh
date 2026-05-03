@@ -79,10 +79,11 @@ print_dependencies() {
   fi
   if curl -fsS "${DEPENDENCY_URL}" >/tmp/qiazhi_v20_dependencies.json 2>/dev/null; then
     if command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
-      "${PYTHON_BIN}" - <<'PY' </tmp/qiazhi_v20_dependencies.json
+      "${PYTHON_BIN}" - /tmp/qiazhi_v20_dependencies.json <<'PY'
 import json, sys
 
-p = json.load(sys.stdin)
+with open(sys.argv[1], encoding="utf-8") as fh:
+    p = json.load(fh)
 llm = p.get("llm", {})
 print(
     "dependencies",
