@@ -123,7 +123,7 @@ from v20.ops.profiles import validate_runtime_config
 from v20.ops.service_unit import service_unit_manifest
 from v20.ops.status import system_status_report
 from v20.ops.sync import sync_readiness_report
-from v20.llm.practitioner import stream_practitioner_answer_with_llm
+from v20.llm.practitioner import stream_practitioner_answer_with_llm, unwrap_practitioner_text
 from v20.profiles.store import (
     create_profile_in_postgres,
     delete_profile_from_postgres,
@@ -921,7 +921,7 @@ def create_app() -> FastAPI:
                     text = str(chunk)
                     chunks.append(text)
                     yield _sse("delta", {"text": text})
-                answer_text = "".join(chunks).strip() or str(result.get("answer_text") or "")
+                answer_text = unwrap_practitioner_text("".join(chunks)) or str(result.get("answer_text") or "")
                 yield _sse("done", {"answer_text": answer_text, "status": "ok"})
             except Exception as exc:
                 yield _sse("error", {"message": str(exc), "status": "error"})

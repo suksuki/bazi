@@ -5,6 +5,7 @@ import json
 
 from fastapi.testclient import TestClient
 
+from v20.llm.practitioner import unwrap_practitioner_text
 from v20.server import app
 
 
@@ -78,6 +79,11 @@ def test_v20_measure_stream_returns_runtime_then_answer_events() -> None:
     assert "event: done" in body
     assert "server.stream.test" in body
     assert "一页图谱画像" not in body.split("event: done", 1)[-1]
+
+
+def test_v20_practitioner_text_unwraps_json_shell() -> None:
+    assert unwrap_practitioner_text('{"text":"事业先看官杀和食伤。"}') == "事业先看官杀和食伤。"
+    assert unwrap_practitioner_text("事业先看官杀和食伤。") == "事业先看官杀和食伤。"
 
 
 def test_v20_bazi_domain_alignment_endpoint_is_read_only() -> None:

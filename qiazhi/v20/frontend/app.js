@@ -149,6 +149,21 @@ const el = (tag, className = "", text = "") => {
   return node;
 };
 
+const plainAnswerText = (value) => {
+  const text = String(value || "").trim();
+  if (!text) return "";
+  try {
+    const parsed = JSON.parse(text);
+    if (parsed && typeof parsed.text === "string") return parsed.text.trim();
+  } catch (_) {
+    // Keep streaming text if it is not a complete JSON object yet.
+  }
+  return text
+    .replace(/^\s*\{\s*"text"\s*:\s*"?/, "")
+    .replace(/"?\s*\}\s*$/, "")
+    .trim();
+};
+
 const startAnswerTypewriter = () => {
   stopAnswerTypewriter();
   state.answerWriter = { timer: null, queue: "", displayed: "" };
@@ -158,7 +173,9 @@ const startAnswerTypewriter = () => {
 
 const queueAnswerText = (text) => {
   if (!state.answerWriter.timer) startAnswerTypewriter();
-  state.answerWriter.queue += text || "";
+  const combined = `${state.answerWriter.displayed}${state.answerWriter.queue}${text || ""}`;
+  const cleaned = plainAnswerText(combined);
+  state.answerWriter.queue = cleaned.slice(state.answerWriter.displayed.length);
 };
 
 const finishAnswerTypewriter = () => {
@@ -215,8 +232,8 @@ const requestMeasureStream = async (url, payload, handlers = {}) => {
       finalAnswer += text;
       handlers.onDelta?.(text);
     } else if (event === "done") {
-      finalAnswer = payload.answer_text || finalAnswer;
-      handlers.onDone?.(payload);
+      finalAnswer = plainAnswerText(payload.answer_text || finalAnswer);
+      handlers.onDone?.({ ...payload, answer_text: finalAnswer });
     } else if (event === "error") {
       throw new Error(payload.message || "stream_error");
     }
@@ -231,6 +248,7 @@ const requestMeasureStream = async (url, payload, handlers = {}) => {
   }
   if (buffer.trim()) handleBlock(buffer);
   if (latestResult && finalAnswer) latestResult.answer_text = finalAnswer;
+  if (latestResult && finalAnswer) latestResult.answer_text = plainAnswerText(finalAnswer);
   return latestResult;
 };
 

@@ -221,8 +221,9 @@ def _plain_text_messages(contract: LLMTaskContract, prompt: dict[str, object]) -
             "role": "system",
             "content": (
                 "You are a professional Bazi practitioner. Answer in plain user-facing language only. "
-                "Do not output JSON, markdown headings, internal ids, rule/debug labels, or unsupported claims. "
-                "Do not add chart facts or guarantee outcomes."
+                "Never output JSON. Never wrap the answer in {\"text\":...}. "
+                "Do not output markdown headings, internal ids, rule/debug labels, or unsupported claims. "
+                "Do not add chart facts or guarantee outcomes. Start directly with the answer sentence."
             ),
         },
         {
@@ -230,7 +231,7 @@ def _plain_text_messages(contract: LLMTaskContract, prompt: dict[str, object]) -
             "content": json.dumps(
                 {
                     "task": contract.task_name,
-                    "required_output": "plain_text_only",
+                    "required_output": "plain_text_only_no_json_no_markdown",
                     "prompt": prompt,
                 },
                 ensure_ascii=False,

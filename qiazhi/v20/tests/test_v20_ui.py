@@ -134,6 +134,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "requestMeasureStream" in script.text
     assert "startAnswerTypewriter" in script.text
     assert "queueAnswerText" in script.text
+    assert "plainAnswerText" in script.text
+    assert "JSON.parse(text)" in script.text
     assert "assist.practitioner_answer" in script.text
     assert "appendChatTurn(interactionText" in script.text
     assert ".chat-transcript" in style.text

@@ -152,6 +152,26 @@ def stream_practitioner_answer_with_llm(
         yield fallback_text
 
 
+def unwrap_practitioner_text(value: str) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    try:
+        payload = json.loads(text)
+    except json.JSONDecodeError:
+        payload = None
+    if isinstance(payload, dict) and isinstance(payload.get("text"), str):
+        return payload["text"].strip()
+    if text.startswith('{"text"') or text.startswith("{'text'"):
+        start = text.find(":")
+        if start > -1:
+            candidate = text[start + 1 :].strip()
+            if candidate.endswith("}"):
+                candidate = candidate[:-1].strip()
+            return candidate.strip().strip('"').strip("'")
+    return text
+
+
 def compact_practitioner_fallback_text(prompt: dict[str, object], deterministic_answer_text: str) -> str:
     context = prompt.get("context", {})
     if not isinstance(context, dict):
@@ -208,6 +228,7 @@ def accept_or_fallback_practitioner_answer(
 ) -> dict[str, object]:
     structured_validation = validate_llm_structured_output(PRACTITIONER_ANSWER, candidate_payload)
     text = str(candidate_payload.get("text") or "")
+    text = unwrap_practitioner_text(text)
     text_validation = validate_llm_output(PRACTITIONER_ANSWER, text)
     failures = [
         *structured_validation.get("failures", ()),
