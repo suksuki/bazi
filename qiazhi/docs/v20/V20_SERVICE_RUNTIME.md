@@ -90,6 +90,15 @@ Background service control:
 The Linux background script loads `v20/.runtime/linux_0_13/service.env` when
 present. These env files are runtime-local and ignored by git.
 
+Once V20 is installed as a systemd service, use the Linux-only systemd restart
+wrapper instead of the background script:
+
+```bash
+./v20/scripts/restart_linux_systemd.sh
+./v20/scripts/restart_linux_systemd.sh status
+./v20/scripts/restart_linux_systemd.sh logs
+```
+
 Generate a systemd unit for review without installing it:
 
 ```bash

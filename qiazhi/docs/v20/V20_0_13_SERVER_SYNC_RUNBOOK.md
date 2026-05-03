@@ -204,6 +204,14 @@ curl -fsS http://127.0.0.1:9020/api/v20/runtime/dependencies
 ./v20/scripts/service_linux.sh restart
 ```
 
+如果已经安装为 systemd 服务，优先使用 Linux 专用重启脚本：
+
+```bash
+./v20/scripts/restart_linux_systemd.sh
+./v20/scripts/restart_linux_systemd.sh status
+./v20/scripts/restart_linux_systemd.sh logs
+```
+
 ## systemd 可选
 
 生成 unit：
@@ -220,6 +228,12 @@ systemctl daemon-reload
 systemctl enable qiazhi-v20
 systemctl restart qiazhi-v20
 systemctl status qiazhi-v20 --no-pager
+```
+
+安装 systemd 后，后续重启统一使用：
+
+```bash
+./v20/scripts/restart_linux_systemd.sh
 ```
 
 ## Nginx / 域名
