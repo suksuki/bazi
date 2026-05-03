@@ -127,7 +127,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "rule-candidate" not in script.text
     assert "规则候选验证" not in script.text
     assert "特征发现验证" not in script.text
-    assert "chatButton.textContent = busy ? (llmMode === \"practitioner\" ? \"生成中\" : \"测算中\") : \"发送\"" in script.text
+    assert "chatButton.textContent = busy ? text.wb.generating : text.wb.send" in script.text
     assert "payload.llm_mode = llmMode" in script.text
     assert "llmMode: \"practitioner\"" in script.text
     assert "assist.practitioner_answer" in script.text

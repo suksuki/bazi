@@ -64,6 +64,7 @@ RUN_V20_CORPUS_TESTS=1 ./v20/scripts/test_corpus.sh
 ```bash
 python3.12 v20/scripts/run_decision_training_plan.py
 python3.12 v20/scripts/run_knowledge_completion.py
+python3.12 v20/scripts/run_main_chain_review.py
 ```
 
 ### 知识库链路检查
@@ -80,6 +81,7 @@ python3.12 v20/scripts/run_knowledge_rule_review_overlay.py --progress
 ```bash
 python3.12 v20/scripts/run_dynamic_decision_training.py --progress
 python3.12 v20/scripts/run_practitioner_calibration_training.py --progress
+python3.12 v20/scripts/run_arbitration_loop.py --progress
 python3.12 v20/scripts/run_question_ranking_training.py --progress --top-k 8 --max-cases 48
 python3.12 v20/scripts/run_rule_synthetic_training.py
 python3.12 v20/scripts/run_rule_subcondition_split.py --domain wealth --limit 0 --per-rule 0 --progress
@@ -89,10 +91,14 @@ python3.12 v20/scripts/run_rule_portrait_batch.py --progress
 python3.12 v20/scripts/run_training_iteration.py --progress
 ```
 
+`run_training_iteration.py` 默认是轻量闭环：动态裁决只抽样 12 个 case，规则迭代只抽样 120 条，且不跑重型 replay eval 与 rule/portrait/question batch；需要全量动态样例加 `--dynamic-limit 0`，需要全量规则迭代加 `--rule-iteration-limit 0`，需要长跑复盘评估加 `--include-replay-eval`，需要长跑画像批处理加 `--include-rule-batch`。
+
 ### 一键运行完整训练迭代（本地）
 
 ```bash
 python3.12 v20/scripts/run_training_iteration.py --progress --write
+python3.12 v20/scripts/run_training_iteration.py --progress --write --dynamic-limit 0 --rule-iteration-limit 0 --include-replay-eval --include-rule-batch
+python3.12 v20/scripts/run_main_chain_review.py --include-training --progress
 ```
 
 不带 `--write` 是只读，不会产生日志/阶段变更文件；带 `--write` 会写入：
@@ -206,6 +212,7 @@ python3.12 v20/scripts/run_self_evolution.py --write --progress
 
 ```bash
 python3.12 v20/scripts/run_rule_portrait_batch.py --write --progress
+python3.12 v20/scripts/run_training_iteration.py --write --progress --dynamic-limit 0 --rule-iteration-limit 0 --include-replay-eval --include-rule-batch
 python3.12 v20/scripts/run_decision_registry_iteration.py --write --progress
 python3.12 v20/scripts/run_rule_replay_eval.py --write --progress
 python3.12 v20/scripts/run_rule_subcondition_split.py --write --progress

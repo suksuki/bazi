@@ -157,9 +157,9 @@ RuleSpec Runtime
 -> PortraitProjection
 ```
 
-保留旧决策链作为兼容桥：
+保留核心事实种子决策作为 RuleSpec 的输入补强：
 
 ```text
-legacy RuleHit / RuleDecision = compatibility bridge
+core-seed RuleHit / RuleDecision = deterministic seed layer
 RuleSpec Defeasible Model = primary decision model
 ```

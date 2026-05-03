@@ -121,7 +121,6 @@ from v20.ops.profiles import validate_runtime_config
 from v20.ops.service_unit import service_unit_manifest
 from v20.ops.status import system_status_report
 from v20.ops.sync import sync_readiness_report
-from v20.profiles.migration import import_v19_profiles_to_postgres, v19_profile_migration_preview
 from v20.profiles.store import (
     create_profile_in_postgres,
     delete_profile_from_postgres,
@@ -304,14 +303,6 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/access/roles")
     def access_roles() -> dict[str, object]:
         return access_role_manifest()
-
-    @app.get("/api/v20/profiles/v19-migration-preview")
-    def profiles_v19_migration_preview() -> dict[str, object]:
-        return v19_profile_migration_preview()
-
-    @app.post("/api/v20/profiles/import-v19")
-    def profiles_import_v19(apply: bool = False, owner_id: str = "admin") -> dict[str, object]:
-        return import_v19_profiles_to_postgres(apply=apply, owner_id=owner_id)
 
     @app.get("/api/v20/profiles")
     def profiles_list(request: Request, owner_id: str = "", limit: int = 80) -> dict[str, object]:

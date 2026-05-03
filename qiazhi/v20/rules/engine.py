@@ -192,7 +192,7 @@ def _execute_rule(rule: dict[str, Any], evidence_index: tuple[dict[str, str], ..
         "projections": tuple(rule.get("projections", ())),
         "bridges_to_runtime_rules": tuple(rule.get("bridges_to_runtime_rules", ())),
         "runtime_allowed": bool(rule.get("runtime_allowed")),
-        "legacy_bridge_required": False,
+        "core_seed_bridge_required": False,
         "structural_only": True,
         "runtime_mutation": False,
     }

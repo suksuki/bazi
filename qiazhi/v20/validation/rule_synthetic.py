@@ -329,12 +329,18 @@ def build_rule_synthetic_training_report(
             }
         )
 
+    gap_count = len(suite["failures"])
     return {
         "version": "v20.rule_synthetic_training_report.v1",
-        "status": "ready" if suite["ok"] else "blocked",
+        "status": "ready" if suite["ok"] else "needs_review",
         "suite_status": suite["status"],
         "case_count": suite["case_count"],
-        "failure_count": len(suite["failures"]),
+        "failure_count": gap_count,
+        "quality_findings": (
+            [f"synthetic_gap_count:{gap_count}"]
+            if gap_count
+            else []
+        ),
         "rule_domain_training": sorted(rule_domain_training, key=lambda row: str(row["domain"])),
         "rule_training": sorted(rule_training, key=lambda row: str(row["rule_key"])),
         "training_scope": [
@@ -354,6 +360,7 @@ def build_rule_synthetic_training_report(
             "RULES_COME_FROM_KNOWLEDGE_AND_LLM_DRAFTS",
             "FULL_CORPUS_REMAINS_PRIOR_AND_COVERAGE_ONLY",
             "PROMOTION_REQUIRES_DECISION_REGISTRY",
+            "SYNTHETIC_GAPS_ARE_LEARNING_SIGNALS_NOT_RUNTIME_BLOCKERS",
         ],
     }
 

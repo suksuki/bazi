@@ -4,6 +4,15 @@ const setText = (selector, value) => {
 };
 
 const logoutButton = document.querySelector("#logoutButton");
+const params = new URLSearchParams(window.location.search);
+const locale = params.get("locale") || localStorage.getItem("v20_locale") || "zh";
+
+const ADMIN_TEXT = {
+  zh: { status: "状态", refresh: "刷新", models: "模型", no_data: "暂无数据。", await_db: "等待 V20_DATABASE_URL。", logout: "登出", entry: "入口", profiles: "档案", measure: "测算" },
+  en: { status: "Status", refresh: "Refresh", models: "Models", no_data: "No data.", await_db: "Waiting for V20_DATABASE_URL.", logout: "Log Out", entry: "Entry", profiles: "Profiles", measure: "Reading" },
+  ko: { status: "상태", refresh: "새로고침", models: "모델", no_data: "데이터 없음.", await_db: "V20_DATABASE_URL 대기 중.", logout: "로그아웃", entry: "입구", profiles: "프로필", measure: "분석" },
+};
+const adminText = () => ADMIN_TEXT[locale] || ADMIN_TEXT.zh;
 
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, {
@@ -58,7 +67,7 @@ const renderDb = async () => {
   const summary = document.querySelector("#dbSummary");
   clear(summary);
   [
-    ["状态", db.status],
+    [adminText().status, db.status],
     ["Profile", db.active_profile],
     ["Host", `${db.postgres?.host || "-"}:${db.postgres?.port || "-"}`],
     ["Database", db.postgres?.database || "-"],
@@ -75,7 +84,7 @@ const renderDb = async () => {
     tableRoot.append(row);
   });
   if (!Object.keys(db.counts || {}).length) {
-    tableRoot.append(el("div", "empty-note", "等待 V20_DATABASE_URL。"));
+    tableRoot.append(el("div", "empty-note", adminText().await_db));
   }
 
   renderTags("#dbIndexes", db.corpus_indexes || []);
@@ -88,7 +97,7 @@ const renderLlm = async (probeModels = false) => {
   const summary = document.querySelector("#llmSummary");
   clear(summary);
   [
-    ["状态", llm.status],
+    [adminText().status, llm.status],
     ["Provider", ready.provider || "-"],
     ["Model", ready.model || "-"],
     ["Execute", ready.execute_llm ? "enabled" : "disabled"],
@@ -111,7 +120,7 @@ const renderTags = (selector, tags) => {
   const root = document.querySelector(selector);
   clear(root);
   if (!tags.length) {
-    root.append(el("div", "empty-note", "暂无数据。"));
+    root.append(el("div", "empty-note", adminText().no_data));
     return;
   }
   tags.slice(0, 24).forEach((tag) => root.append(el("span", "tag", tag)));
@@ -126,6 +135,16 @@ const refreshAll = async () => {
     setText("#dbSummary", error.message);
   }
 };
+
+const applyAdminLocale = () => {
+  const t = adminText();
+  document.documentElement.lang = locale === "zh" ? "zh-CN" : locale;
+  document.querySelectorAll("[data-admin-ui]").forEach((node) => {
+    const value = t[node.dataset.adminUi];
+    if (value) node.textContent = value;
+  });
+};
+applyAdminLocale();
 
 document.querySelector("#refreshDb").addEventListener("click", renderDb);
 document.querySelector("#refreshLlm").addEventListener("click", () => renderLlm(false));

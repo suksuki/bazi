@@ -80,14 +80,14 @@ Primary V20 modules:
 - `learning`: proposal ledgers and active iteration records.
 - `ops`: macOS/Linux profiles, Postgres/Redis contracts, and sync guardrails.
 - `testing`: bounded test tiers, executable test manifest, and fast local scripts.
-- `profiles`: V19 profile migration preview/import and V20 user profile storage.
+- `profiles`: V20 user profile storage and native profile management.
 
 Storage boundary:
 
 - Postgres is the authoritative store for V20 corpus snapshots, registries, feedback, decisions, rule proposals, and LLM artifacts.
 - SQLite is optional and only allowed as a disposable local cache/index for offline similarity probes and fast rebuilds. Postgres remains the authority; the local SQLite cache is not synced between macOS and Linux, can be skipped with `--no-sqlite`, and must be rebuildable from `v20_corpus_snapshots` or versioned corpus artifacts.
 - The 518K structural corpus can be imported into `v20_corpus_snapshots`; query indexes cover case lookup, day-master filters, cluster search, wealth filters, and JSONB containment over feature/portrait tags.
-- V19 user profile data migrates into `v20_user_profiles`; location metadata is preserved as user context and does not alter chart facts unless a future deterministic calendar layer explicitly supports it.
+- V20 user profiles are created and managed natively in `v20_user_profiles`; profile metadata remains user context and does not alter chart facts unless a deterministic calendar layer explicitly supports it.
 
 UI boundary:
 
@@ -99,8 +99,13 @@ UI boundary:
 - `v20/scripts/run_dynamic_decision_training.py --progress` is the current background check for dynamic rule decisions, portraits, recommended questions, and decision-parameter training proposals.
 - `v20/scripts/run_practitioner_calibration_training.py --progress` aggregates structured practitioner choices into offline decision-parameter proposals without mutating runtime rules.
 - `v20/scripts/import_calibration_postgres.py --ledger practitioner_calibration_ledger` dry-runs local calibration ledger import; add `--apply` only after `V20_DATABASE_URL` is configured and backups are ready.
-- `v20/scripts/run_training_iteration.py --write --progress` runs the current script-only iteration loop and writes local artifacts.
+- `v20/scripts/apply_postgres_schema.py --env-file v20/.runtime/linux_0_13/service.env` dry-runs the authoritative Postgres schema; add `--apply` only on the target server after backup.
+- `v20/scripts/run_training_iteration.py --write --progress` runs the lightweight script-only iteration loop and writes local artifacts; add `--dynamic-limit 0 --rule-iteration-limit 0 --include-replay-eval --include-rule-batch` for the full long run.
+- `v20/scripts/run_main_chain_review.py` reviews the Knowledge -> Rule -> FeatureContext -> Portrait -> Question -> Answer -> Training spine in one read-only command.
+- `v20/scripts/run_arbitration_loop.py --progress` turns mixed/countered/requires_review decisions into conflict snapshots for calibration and replay learning.
+- `docs/v20/V20_0_13_SERVER_SYNC_RUNBOOK.md` contains the Linux `0.13` / `dblife.com` deployment and sync steps.
 - `docs/v20/V20_SCRIPT_RUNBOOK.md` contains a complete step-by-step runbook for dev/test/corpus/self-evolution.
+- `docs/v20/V20_INTELLIGENT_MAIN_CHAIN_REVIEW.md` records the cleaned intelligent main-chain boundary and the current cleanup policy.
 - `v20/scripts/run_knowledge_rule_library.py --summary` shows the current knowledge-authored active rule definitions, portrait outputs, question outputs, and validation state.
 - `v20/scripts/run_knowledge_rule_validation.py --summary` checks those active rules against synthetic coverage and 518K corpus priors, then lists the next review action per rule.
 - `v20/scripts/run_rule_activation.py --summary` turns active-rule iteration into review packets so humans review packets, not raw rules.

@@ -122,9 +122,12 @@ def default_dynamic_decision_training_cases() -> tuple[DynamicDecisionTrainingCa
 def run_dynamic_decision_training_batch(
     *,
     cases: tuple[DynamicDecisionTrainingCase, ...] | None = None,
+    max_cases: int = 0,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
     selected_cases = cases or default_dynamic_decision_training_cases()
+    if max_cases > 0:
+        selected_cases = selected_cases[:max_cases]
     _emit(progress, f"dynamic decision cases: {len(selected_cases)}")
     case_results = [
         _evaluate_training_case(case, index=index + 1, total=len(selected_cases), progress=progress)
@@ -164,9 +167,10 @@ def run_dynamic_decision_training_batch(
 def write_dynamic_decision_training_artifact(
     *,
     output_dir: Path | None = None,
+    max_cases: int = 0,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
-    report = run_dynamic_decision_training_batch(progress=progress)
+    report = run_dynamic_decision_training_batch(max_cases=max_cases, progress=progress)
     runtime_dir = local_jsonl_store_from_env().runtime_dir
     directory = output_dir or runtime_dir / "training" / "dynamic_decision"
     directory.mkdir(parents=True, exist_ok=True)

@@ -297,7 +297,8 @@ def _limit_question_diversity(
         if signature in signature_seen:
             continue
         domain_strategy = domain_strategy_count.setdefault(row.domain, {})
-        if per_domain_strategy_limit and domain_strategy.get(strategy, 0) >= per_domain_strategy_limit:
+        strategy_limit = 2 if strategy == QUESTION_STRATEGY["time_context"] else per_domain_strategy_limit
+        if strategy_limit and domain_strategy.get(strategy, 0) >= strategy_limit:
             continue
         if per_domain_limit and domain_count.get(row.domain, 0) >= per_domain_limit:
             continue

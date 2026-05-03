@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from v20.corpus.artifacts import read_corpus_artifact_status
+from v20.learning.arbitration_loop import read_arbitration_loop_artifact
 from v20.learning.decision_registry_iteration import read_decision_registry_iteration_artifact
 from v20.learning.dynamic_decision_training import read_dynamic_decision_training_artifact
 from v20.learning.knowledge_rule_review_overlay import read_knowledge_rule_review_overlay_artifact
@@ -23,6 +24,7 @@ def build_decision_training_plan() -> dict[str, object]:
     rule_overlay = read_knowledge_rule_review_overlay_artifact()
     corpus = read_corpus_artifact_status()
     question_ranking = read_question_ranking_learning_artifact()
+    arbitration = read_arbitration_loop_artifact()
     return {
         "version": "v20.decision_training_plan.v1",
         "status": "ready",
@@ -68,8 +70,14 @@ def build_decision_training_plan() -> dict[str, object]:
             {
                 "target": "decision_parameters",
                 "learns": "裁决状态、权重、削弱条件、主线排序和推荐问题排序",
-                "activation": "dynamic_decision_training_batch_practitioner_controls_and_offline_priors",
-                "current_artifact_status": _combined_status(synthetic, batch, dynamic, practitioner, corpus),
+                "activation": "dynamic_decision_training_batch_practitioner_controls_arbitration_loop_and_offline_priors",
+                "current_artifact_status": _combined_status(synthetic, batch, dynamic, practitioner, arbitration, corpus),
+            },
+            {
+                "target": "arbitration_loop",
+                "learns": "mixed/countered/requires_review 冲突快照、反证权重和命理师复核队列",
+                "activation": "practitioner_calibration_rule_replay_eval_and_counterexample_weighting",
+                "current_artifact_status": arbitration.get("status", "not_built"),
             },
             {
                 "target": "question_ranking",
@@ -90,6 +98,7 @@ def build_decision_training_plan() -> dict[str, object]:
             "v20/scripts/run_rule_portrait_batch.py",
             "v20/scripts/run_dynamic_decision_training.py",
             "v20/scripts/run_practitioner_calibration_training.py",
+            "v20/scripts/run_arbitration_loop.py",
             "v20/scripts/run_training_iteration.py",
             "v20/scripts/run_self_evolution.py",
             "v20/scripts/run_active_generation.py",

@@ -115,7 +115,7 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     rule_runtime = result["decision_report"]["rule_runtime_report"]
     rule_runtime_hits = result["decision_report"]["rule_runtime_hits"]
     assert result["decision_report"]["rule_runtime_source"] == "bazi_rule_spec_engine"
-    assert result["decision_report"]["legacy_decision_bridge_status"] == "compatibility_only"
+    assert result["decision_report"]["core_seed_decision_status"] == "active_runtime_seed"
     assert rule_runtime["status"] == "rulespec_engine_ready"
     assert rule_runtime_hits
     assert isinstance(rule_runtime_hits, (list, tuple))

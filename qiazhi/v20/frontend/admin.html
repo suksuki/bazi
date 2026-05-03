@@ -17,11 +17,11 @@
           </div>
         </div>
         <nav class="top-actions" aria-label="V20 admin navigation">
-          <a href="/v20/ui/">入口</a>
-          <a href="/v20/ui/profiles.html">档案</a>
-          <a href="/v20/ui/workbench.html">测算</a>
+          <a href="/v20/ui/" data-admin-ui="entry">入口</a>
+          <a href="/v20/ui/profiles.html" data-admin-ui="profiles">档案</a>
+          <a href="/v20/ui/workbench.html" data-admin-ui="measure">测算</a>
           <a href="/v20/ui/admin.html" aria-current="page">Admin</a>
-          <button type="button" id="logoutButton" class="logout-action" hidden>登出</button>
+          <button type="button" id="logoutButton" class="logout-action" data-admin-ui="logout" hidden>登出</button>
           <span id="adminStatus" class="status-pill">checking</span>
         </nav>
       </header>
@@ -33,7 +33,7 @@
               <p class="section-kicker">Database</p>
               <h2>Postgres</h2>
             </div>
-            <button type="button" id="refreshDb" class="mini-action">刷新</button>
+            <button type="button" id="refreshDb" class="mini-action" data-admin-ui="refresh">刷新</button>
           </div>
           <div id="dbSummary" class="admin-summary"></div>
           <div class="admin-subgrid">
@@ -55,8 +55,8 @@
               <h2>Bounded Assist</h2>
             </div>
             <div class="button-pair">
-              <button type="button" id="refreshLlm" class="mini-action">刷新</button>
-              <button type="button" id="probeModels" class="mini-action secondary">模型</button>
+              <button type="button" id="refreshLlm" class="mini-action" data-admin-ui="refresh">刷新</button>
+              <button type="button" id="probeModels" class="mini-action secondary" data-admin-ui="models">模型</button>
             </div>
           </div>
           <div id="llmSummary" class="admin-summary"></div>

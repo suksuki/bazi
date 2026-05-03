@@ -91,7 +91,12 @@ It defines reviewed authoritative tables but does not apply migrations automatic
 - `v20_feedback_ledger`
 - `v20_corpus_snapshots`
 
-Applying migrations will require an explicit command, backup policy, and server profile in a later phase.
+Applying migrations uses an explicit dry-run/apply command and still requires a backup policy before remote apply:
+
+```bash
+python3.12 v20/scripts/apply_postgres_schema.py --env-file v20/.runtime/linux_0_13/service.env
+python3.12 v20/scripts/apply_postgres_schema.py --env-file v20/.runtime/linux_0_13/service.env --apply
+```
 
 ## Redis Keyspace Contract
 

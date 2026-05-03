@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Callable
 
 from v20.corpus.full_precompute import preview_full_precompute_batch
+from v20.learning.arbitration_loop import build_arbitration_loop_report, write_arbitration_loop_artifact
 from v20.learning.decision_training import build_decision_training_plan
 from v20.learning.decision_registry_iteration import (
     build_decision_registry_iteration_report,
@@ -40,7 +41,10 @@ ProgressCallback = Callable[[str], None]
 def run_training_iteration(
     *,
     write: bool = False,
-    include_rule_batch: bool = True,
+    include_rule_batch: bool = False,
+    include_replay_eval: bool = False,
+    dynamic_case_limit: int = 12,
+    rule_iteration_limit: int = 120,
     corpus_preview_limit: int = 0,
     output_dir: Path | None = None,
     progress: ProgressCallback | None = None,
@@ -48,11 +52,12 @@ def run_training_iteration(
     phases = [
         "dynamic_decision_training",
         "practitioner_calibration_training",
+        "arbitration_loop",
         "question_ranking_training",
         "rule_synthetic_training",
         "knowledge_rule_review_overlay",
         "rule_subcondition_split",
-        "rule_replay_eval",
+        *(("rule_replay_eval",) if include_replay_eval else ()),
         "decision_registry_iteration",
         *(("rule_portrait_batch",) if include_rule_batch else ()),
         *(("corpus_preview",) if corpus_preview_limit > 0 else ()),
@@ -68,12 +73,14 @@ def run_training_iteration(
         _emit(progress, _progress_line(phase_index, phase_count, f"{name}{suffix}"))
 
     results: dict[str, object] = {}
+    dynamic_kwargs = {"max_cases": max(0, dynamic_case_limit)}
+    rule_iteration_kwargs = {"limit": max(0, rule_iteration_limit)}
 
     emit_phase("dynamic_decision_training")
     results["dynamic_decision_training"] = (
-        write_dynamic_decision_training_artifact(progress=progress)
+        write_dynamic_decision_training_artifact(progress=progress, **dynamic_kwargs)
         if write
-        else run_dynamic_decision_training_batch(progress=progress)
+        else run_dynamic_decision_training_batch(progress=progress, **dynamic_kwargs)
     )
 
     emit_phase("practitioner_calibration_training")
@@ -81,6 +88,13 @@ def run_training_iteration(
         write_practitioner_calibration_training_artifact(progress=progress)
         if write
         else build_practitioner_calibration_training_report(progress=progress)
+    )
+
+    emit_phase("arbitration_loop")
+    results["arbitration_loop"] = (
+        write_arbitration_loop_artifact(progress=progress)
+        if write
+        else build_arbitration_loop_report(progress=progress)
     )
 
     emit_phase("question_ranking_training")
@@ -106,23 +120,24 @@ def run_training_iteration(
 
     emit_phase("rule_subcondition_split")
     results["rule_subcondition_split"] = (
-        write_rule_subcondition_split_artifact(progress=progress)
+        write_rule_subcondition_split_artifact(progress=progress, **rule_iteration_kwargs)
         if write
-        else build_rule_subcondition_split_report(progress=progress)
+        else build_rule_subcondition_split_report(progress=progress, **rule_iteration_kwargs)
     )
 
-    emit_phase("rule_replay_eval")
-    results["rule_replay_eval"] = (
-        write_rule_replay_eval_artifact(progress=progress)
-        if write
-        else build_rule_replay_eval_report(progress=progress)
-    )
+    if include_replay_eval:
+        emit_phase("rule_replay_eval")
+        results["rule_replay_eval"] = (
+            write_rule_replay_eval_artifact(progress=progress, **rule_iteration_kwargs)
+            if write
+            else build_rule_replay_eval_report(progress=progress, **rule_iteration_kwargs)
+        )
 
     emit_phase("decision_registry_iteration")
     results["decision_registry_iteration"] = (
-        write_decision_registry_iteration_artifact(progress=progress)
+        write_decision_registry_iteration_artifact(progress=progress, **rule_iteration_kwargs)
         if write
-        else build_decision_registry_iteration_report(progress=progress)
+        else build_decision_registry_iteration_report(progress=progress, **rule_iteration_kwargs)
     )
 
     if include_rule_batch:

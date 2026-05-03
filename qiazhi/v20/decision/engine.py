@@ -27,10 +27,10 @@ def build_decision_report(
     hits = _build_hits(facts, core, feature_layer, time_context or TimeContext())
     rule_runtime_report = build_rule_runtime_report(feature_layer)
     defeasible_model = build_defeasible_decision_model(rule_runtime_report, feature_layer)
-    legacy_decisions = _build_decisions(hits, facts, core)
+    core_seed_decisions = _build_decisions(hits, facts, core)
     rulespec_decisions = _rulespec_decisions(defeasible_model)
-    decisions = _merge_decisions(legacy_decisions, rulespec_decisions)
-    mainlines = _merge_mainlines(_build_mainlines(legacy_decisions), _rulespec_mainlines(defeasible_model))
+    decisions = _merge_decisions(core_seed_decisions, rulespec_decisions)
+    mainlines = _merge_mainlines(_build_mainlines(core_seed_decisions), _rulespec_mainlines(defeasible_model))
     controls = _practitioner_controls(decisions)
     report = DecisionReport(
         version=DECISION_REPORT_VERSION,
@@ -43,7 +43,7 @@ def build_decision_report(
     payload = report.to_dict()
     payload["rule_runtime_hits"] = _build_rule_runtime_hits(rule_runtime_report)
     payload["rule_runtime_source"] = "bazi_rule_spec_engine"
-    payload["legacy_decision_bridge_status"] = "compatibility_only"
+    payload["core_seed_decision_status"] = "active_runtime_seed"
     payload["rule_runtime_report"] = rule_runtime_report
     payload["defeasible_decision_model"] = defeasible_model
     payload["portrait_projection"] = build_portrait_projection(feature_layer, defeasible_model, payload)
@@ -640,11 +640,11 @@ def _rulespec_decisions(defeasible_model: dict[str, object]) -> list[RuleDecisio
     return rows
 
 
-def _merge_decisions(legacy: list[RuleDecision], rulespec: list[RuleDecision]) -> list[RuleDecision]:
-    seen = {row.decision_key for row in legacy}
+def _merge_decisions(core_seed: list[RuleDecision], rulespec: list[RuleDecision]) -> list[RuleDecision]:
+    seen = {row.decision_key for row in core_seed}
     additions = [row for row in rulespec if row.decision_key not in seen]
     additions.sort(key=lambda row: (row.role == "mainline_candidate", row.score), reverse=True)
-    return [*legacy, *additions[:28]]
+    return [*core_seed, *additions[:28]]
 
 
 def _rulespec_mainlines(defeasible_model: dict[str, object]) -> list[MainlineDecision]:
@@ -680,8 +680,8 @@ def _rulespec_mainlines(defeasible_model: dict[str, object]) -> list[MainlineDec
     return rows
 
 
-def _merge_mainlines(legacy: list[MainlineDecision], rulespec: list[MainlineDecision]) -> list[MainlineDecision]:
-    by_key = {row.mainline_key: row for row in [*rulespec, *legacy]}
+def _merge_mainlines(core_seed: list[MainlineDecision], rulespec: list[MainlineDecision]) -> list[MainlineDecision]:
+    by_key = {row.mainline_key: row for row in [*rulespec, *core_seed]}
     return sorted(by_key.values(), key=lambda row: (row.priority, row.score), reverse=True)[:8]
 
 

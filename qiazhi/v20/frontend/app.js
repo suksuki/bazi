@@ -29,52 +29,79 @@ const logoutButton = document.querySelector("#logoutButton");
 
 const UI_TEXT = {
   zh: {
-    app_title: "命理测算台",
-    nav_profiles: "档案",
-    nav_measure: "测算",
-    chart_title: "命盘结构",
-    features_title: "八字特征状态",
-    portrait_title: "主题投射画像",
-    questions_title: "智能问题",
-    hits_title: "规则命中",
-    answer_title: "八字专业回复",
-    evidence_title: "证据锚点",
-    feedback_title: "反馈校准",
-    run: "开始测算",
-    running: "测算中",
+    app_title: "命理测算台", nav_profiles: "档案", nav_measure: "测算",
+    chart_title: "命盘结构", features_title: "八字特征状态", portrait_title: "主题投射画像",
+    questions_title: "智能问题", hits_title: "规则命中", answer_title: "八字专业回复",
+    evidence_title: "证据锚点", feedback_title: "反馈校准",
+    run: "开始测算", running: "测算中",
     roles: { user: "普通用户", analyst: "命理师", admin: "管理员" },
+    dm: "日主", visible: "透出", hidden: "藏干",
+    pillars: { year: "年柱", month: "月柱", day: "日柱", hour: "时柱", luck: "大运", flow_year: "流年" },
+    pillar_hints: { year: "原局", month: "原局", day: "日主", hour: "原局", luck: "运势背景", flow_year: "当前触发" },
+    states: { active: "已入主链", available: "可用", evidence_gap: "补证", requires_review: "复核", blocked_or_countered: "被反证", confirmed: "成立", candidate: "候选", weak_candidate: "弱候选", volatile: "岁运引动", mixed: "成而不纯", _: "状态" },
+    domains: { strength: "强弱", career: "事业", wealth: "财运", ten_god: "十神", useful_god: "用神", time: "时间", branch: "地支", element: "五行", pattern: "格局", relationship: "关系", health: "健康", _: "命理" },
+    temps: { hot: "高关注", warm: "成形", mild: "待复核", cool: "线索" },
+    attn: { high: "高关注", medium: "重点观察", normal: "常规画像", _: "画像" },
+    tiers: { micro: "微观骨架", decision: "裁决路径", macro: "应用场景", time: "时序引动", _: "结构层" },
+    axis_states: { confirmed: "已成", chain_review: "链式", mixed: "成而不纯", candidate: "候选", weak_candidate: "偏弱", volatile: "引动", requires_review: "需复核", countered: "反制", blocked: "受阻", _: "结构" },
+    intents: { confirm_structure: "确认结构", explore_candidate: "展开候选", collect_evidence: "补齐证据", resolve_mixed_state: "裁决混合", inspect_timing_trigger: "岁运引动", ask_practitioner_review: "命理师复核", explain_boundary: "边界说明", explore_structure: "结构追问", suppress_output: "不输出", _: "智能意图" },
+    latent: { wealth: "财务变化", career: "事业节点", relationship: "关系重心", relocation: "环境迁移", stress: "压力恢复", global: "行动节奏", _: "命主校准" },
+    latent_fields: { year_option: "时间", result_option: "结果", intensity: "强度", confidence: "把握" },
+    latent_intensity: { none: "无", mild: "轻微", clear: "明显", strong: "强烈" },
+    latent_confidence: { low: "低", medium: "中", high: "高" },
+    latent_years: { unknown: "不确定", birth_to_12: "0-12岁", "13_to_18": "13-18岁", "19_to_24": "19-24岁", "25_to_30": "25-30岁", "31_to_36": "31-36岁", "37_to_42": "37-42岁", "43_to_48": "43-48岁", "49_to_54": "49-54岁", "55_plus": "55岁以后" },
+    latent_results: { no_clear_change: "没有明显变化", income_up: "收入/资源上升", income_down: "收入下降", resource_gain: "获得资源支持", resource_pressure: "资源或财务压力", role_up: "角色上升", role_down: "角色下降", platform_change: "平台变化", responsibility_change: "责任变化", relationship_stabilized: "关系稳定", relationship_changed: "关系变化", relationship_pressure: "关系压力", family_focus_shift: "家庭重心变化", city_change: "城市变化", work_environment_change: "工作环境变化", home_environment_change: "居住环境变化", travel_or_mobility_up: "流动增加", stable: "基本稳定", recovered_fast: "恢复较快", recovered_slow: "恢复较慢", repeated_pressure: "压力反复", support_helped: "外部支持有效", not_observed: "尚未观察", result_fast: "见效快", result_slow: "见效慢", needs_repeated_attempts: "需要反复尝试", external_help_decisive: "外部帮助关键", mixed: "混合" },
+    wb: { waiting: "等待测算。", measuring: "正在根据当前问题重新测算。", failed: "测算失败：", generating: "生成中", send: "发送", enter_dir: "请输入想继续看的方向。", chat_ph: "输入想继续看的方向", auto_route: "自动路由", no_features: "当前尚未发现可展示的命理特征。", no_portrait: "当前视图隐藏画像投影。", no_evidence: "暂无可展示证据。", no_questions: "确认四柱后会生成建议问题。", no_hits: "当前暂无规则命中。", no_rules: "未触发规则", await_graph: "等待画像图谱。", graph_ready: "当前盘已形成图谱画像。", mainline: "主线", pressure: "压力", timing: "时间", graph_default: "暂按主题画像展开", anchor: "结构锚点：", match_rate: "匹配率", cond_hit: "条件命中", dec_state: "决策态：", expand: "展开", collapse: "收起", prac_title: "命理师校准", prac_expand: "展开命理师校准", prac_collapse: "收起命理师校准", obs_expand: "展开观测页面", obs_collapse: "收起观测页面", pending: "待裁决", accepted: "已接收", recording: "记录中", rec_fail: "记录失败", rec_ok: "已记录 · 刷新问题", acc_ok: "已接收 · 刷新问题", q_source: "推荐问题", followup: "继续追问", manual: "手动测算", queuing: "排队中", chat_pending: "正在生成回复...", chat_empty: "本轮没有生成可展示回复。", calibrated: "已校准", dyn_val: "动态裁决验证", feat_model: "特征状态模型", q_model: "问题意图模型", def_model: "可反证裁决模型", hit_traces: "条规则命中轨迹", bazi: "命理测算" },
   },
   en: {
-    app_title: "Bazi Workbench",
-    nav_profiles: "Profiles",
-    nav_measure: "Reading",
-    chart_title: "Chart Structure",
-    features_title: "Bazi Feature States",
-    portrait_title: "Topic Projection",
-    questions_title: "Smart Questions",
-    hits_title: "Rule Hits",
-    answer_title: "Professional Bazi Reply",
-    evidence_title: "Evidence Anchors",
-    feedback_title: "Feedback Calibration",
-    run: "Run Reading",
-    running: "Reading",
+    app_title: "Bazi Workbench", nav_profiles: "Profiles", nav_measure: "Reading",
+    chart_title: "Chart Structure", features_title: "Bazi Feature States", portrait_title: "Topic Projection",
+    questions_title: "Smart Questions", hits_title: "Rule Hits", answer_title: "Professional Bazi Reply",
+    evidence_title: "Evidence Anchors", feedback_title: "Feedback Calibration",
+    run: "Run Reading", running: "Reading",
     roles: { user: "Regular User", analyst: "Practitioner", admin: "Admin" },
+    dm: "DM", visible: "Visible", hidden: "Hidden",
+    pillars: { year: "Year", month: "Month", day: "Day", hour: "Hour", luck: "Luck", flow_year: "Flow Year" },
+    pillar_hints: { year: "natal", month: "natal", day: "day master", hour: "natal", luck: "luck cycle", flow_year: "current trigger" },
+    states: { active: "mainline", available: "available", evidence_gap: "evidence gap", requires_review: "review", blocked_or_countered: "countered", confirmed: "confirmed", candidate: "candidate", weak_candidate: "weak", volatile: "volatile", mixed: "mixed", _: "state" },
+    domains: { strength: "Capacity", career: "Career", wealth: "Wealth", ten_god: "Ten Gods", useful_god: "Useful God", time: "Timing", branch: "Branches", element: "Elements", pattern: "Pattern", relationship: "Relationship", health: "Health", _: "Bazi" },
+    temps: { hot: "high focus", warm: "forming", mild: "review", cool: "signal" },
+    attn: { high: "High Focus", medium: "Key Watch", normal: "Standard", _: "Profile" },
+    tiers: { micro: "Micro Spine", decision: "Decision Path", macro: "Applied Scenario", time: "Timing Trigger", _: "Structure" },
+    axis_states: { confirmed: "Confirmed", chain_review: "Chain", mixed: "Mixed", candidate: "Candidate", weak_candidate: "Weak", volatile: "Volatile", requires_review: "Review", countered: "Countered", blocked: "Blocked", _: "Structure" },
+    intents: { confirm_structure: "Confirm Structure", explore_candidate: "Explore Candidate", collect_evidence: "Collect Evidence", resolve_mixed_state: "Resolve Mixed", inspect_timing_trigger: "Timing Trigger", ask_practitioner_review: "Practitioner Review", explain_boundary: "Boundary", explore_structure: "Explore Structure", suppress_output: "Suppress", _: "Intent" },
+    latent: { wealth: "Financial Change", career: "Career Node", relationship: "Relationship Focus", relocation: "Relocation", stress: "Stress Recovery", global: "Action Rhythm", _: "Subject Calibration" },
+    latent_fields: { year_option: "Period", result_option: "Result", intensity: "Intensity", confidence: "Confidence" },
+    latent_intensity: { none: "None", mild: "Mild", clear: "Clear", strong: "Strong" },
+    latent_confidence: { low: "Low", medium: "Medium", high: "High" },
+    latent_years: { unknown: "Uncertain", birth_to_12: "0–12", "13_to_18": "13–18", "19_to_24": "19–24", "25_to_30": "25–30", "31_to_36": "31–36", "37_to_42": "37–42", "43_to_48": "43–48", "49_to_54": "49–54", "55_plus": "55+" },
+    latent_results: { no_clear_change: "No clear change", income_up: "Income up", income_down: "Income down", resource_gain: "Resource gained", resource_pressure: "Resource pressure", role_up: "Role up", role_down: "Role down", platform_change: "Platform change", responsibility_change: "Responsibility change", relationship_stabilized: "Relationship stable", relationship_changed: "Relationship changed", relationship_pressure: "Relationship pressure", family_focus_shift: "Family shift", city_change: "City change", work_environment_change: "Work env change", home_environment_change: "Home env change", travel_or_mobility_up: "Mobility up", stable: "Mostly stable", recovered_fast: "Fast recovery", recovered_slow: "Slow recovery", repeated_pressure: "Repeated pressure", support_helped: "Support helped", not_observed: "Not observed", result_fast: "Quick results", result_slow: "Slow results", needs_repeated_attempts: "Repeated attempts", external_help_decisive: "External help key", mixed: "Mixed" },
+    wb: { waiting: "Awaiting reading.", measuring: "Re-reading based on current question.", failed: "Reading failed: ", generating: "Generating", send: "Send", enter_dir: "Enter a direction to explore.", chat_ph: "Enter a direction to explore", auto_route: "Auto Route", no_features: "No displayable Bazi features found yet.", no_portrait: "Portrait projection hidden in this view.", no_evidence: "No evidence to display.", no_questions: "Suggested questions appear after confirming four pillars.", no_hits: "No rule hits yet.", no_rules: "No rules fired", await_graph: "Awaiting portrait graph.", graph_ready: "Portrait graph ready.", mainline: "Mainline", pressure: "Pressure", timing: "Timing", graph_default: "Expand by topic portrait", anchor: "Structural anchor: ", match_rate: "match", cond_hit: "Conditions met", dec_state: "Decision: ", expand: "Expand", collapse: "Collapse", prac_title: "Practitioner Calibration", prac_expand: "Expand practitioner calibration", prac_collapse: "Collapse practitioner calibration", obs_expand: "Expand observation page", obs_collapse: "Collapse observation page", pending: "pending", accepted: "accepted", recording: "recording", rec_fail: "record failed", rec_ok: "recorded · refreshing", acc_ok: "accepted · refreshing", q_source: "Suggested", followup: "Follow-up", manual: "Manual Reading", queuing: "queuing", chat_pending: "Generating reply…", chat_empty: "No displayable reply this turn.", calibrated: "calibrated", dyn_val: "Decision Validation", feat_model: "Feature State Model", q_model: "Question Intent Model", def_model: "Defeasible Decision Model", hit_traces: "rule hit traces", bazi: "Bazi Reading" },
   },
   ko: {
-    app_title: "사주 분석 작업대",
-    nav_profiles: "프로필",
-    nav_measure: "분석",
-    chart_title: "명식 구조",
-    features_title: "사주 특징 상태",
-    portrait_title: "주제 투사",
-    questions_title: "지능형 질문",
-    hits_title: "규칙 적중",
-    answer_title: "전문 사주 답변",
-    evidence_title: "근거 앵커",
-    feedback_title: "피드백 보정",
-    run: "분석 시작",
-    running: "분석 중",
+    app_title: "사주 분석 작업대", nav_profiles: "프로필", nav_measure: "분석",
+    chart_title: "명식 구조", features_title: "사주 특징 상태", portrait_title: "주제 투사",
+    questions_title: "지능형 질문", hits_title: "규칙 적중", answer_title: "전문 사주 답변",
+    evidence_title: "근거 앵커", feedback_title: "피드백 보정",
+    run: "분석 시작", running: "분석 중",
     roles: { user: "일반 사용자", analyst: "명리사", admin: "관리자" },
+    dm: "일간", visible: "투출", hidden: "장간",
+    pillars: { year: "연주", month: "월주", day: "일주", hour: "시주", luck: "대운", flow_year: "유년" },
+    pillar_hints: { year: "원국", month: "원국", day: "일간", hour: "원국", luck: "운세 배경", flow_year: "현재 촉발" },
+    states: { active: "주요 연결", available: "가용", evidence_gap: "근거 부족", requires_review: "검토", blocked_or_countered: "반증", confirmed: "성립", candidate: "후보", weak_candidate: "약후보", volatile: "세운 변동", mixed: "혼합", _: "상태" },
+    domains: { strength: "강약", career: "직업", wealth: "재운", ten_god: "십성", useful_god: "용신", time: "시간", branch: "지지", element: "오행", pattern: "격국", relationship: "관계", health: "건강", _: "사주" },
+    temps: { hot: "높은 관심", warm: "형성", mild: "검토", cool: "단서" },
+    attn: { high: "높은 관심", medium: "주요 관찰", normal: "일반", _: "프로필" },
+    tiers: { micro: "미시 구조", decision: "판정 경로", macro: "응용 시나리오", time: "시간 촉발", _: "구조층" },
+    axis_states: { confirmed: "성립", chain_review: "연쇄", mixed: "혼합", candidate: "후보", weak_candidate: "약세", volatile: "변동", requires_review: "검토", countered: "반제", blocked: "차단", _: "구조" },
+    intents: { confirm_structure: "구조 확인", explore_candidate: "후보 탐색", collect_evidence: "근거 보완", resolve_mixed_state: "혼합 판정", inspect_timing_trigger: "세운 촉발", ask_practitioner_review: "명리사 검토", explain_boundary: "경계 설명", explore_structure: "구조 추적", suppress_output: "출력 안 함", _: "의도" },
+    latent: { wealth: "재무 변화", career: "직업 전환", relationship: "관계 중심", relocation: "환경 이동", stress: "스트레스 회복", global: "행동 리듬", _: "주체 보정" },
+    latent_fields: { year_option: "시기", result_option: "결과", intensity: "강도", confidence: "확신" },
+    latent_intensity: { none: "없음", mild: "경미", clear: "뚜렷", strong: "강함" },
+    latent_confidence: { low: "낮음", medium: "중간", high: "높음" },
+    latent_years: { unknown: "불확실", birth_to_12: "0-12세", "13_to_18": "13-18세", "19_to_24": "19-24세", "25_to_30": "25-30세", "31_to_36": "31-36세", "37_to_42": "37-42세", "43_to_48": "43-48세", "49_to_54": "49-54세", "55_plus": "55세 이후" },
+    latent_results: { no_clear_change: "변화 없음", income_up: "수입 상승", income_down: "수입 감소", resource_gain: "자원 확보", resource_pressure: "자원 압력", role_up: "역할 상승", role_down: "역할 하락", platform_change: "플랫폼 변화", responsibility_change: "책임 변화", relationship_stabilized: "관계 안정", relationship_changed: "관계 변화", relationship_pressure: "관계 압력", family_focus_shift: "가정 변화", city_change: "도시 변경", work_environment_change: "근무 환경 변화", home_environment_change: "주거 환경 변화", travel_or_mobility_up: "이동 증가", stable: "안정", recovered_fast: "빠른 회복", recovered_slow: "느린 회복", repeated_pressure: "반복 압력", support_helped: "외부 지원 효과", not_observed: "미관찰", result_fast: "빠른 성과", result_slow: "느린 성과", needs_repeated_attempts: "반복 시도", external_help_decisive: "외부 도움 결정적", mixed: "혼합" },
+    wb: { waiting: "분석 대기 중.", measuring: "현재 질문 기반으로 재분석 중.", failed: "분석 실패: ", generating: "생성 중", send: "보내기", enter_dir: "탐색 방향을 입력하세요.", chat_ph: "탐색 방향을 입력하세요", auto_route: "자동 라우팅", no_features: "표시 가능한 사주 특징이 없습니다.", no_portrait: "현재 뷰에서 투사가 숨겨져 있습니다.", no_evidence: "표시할 근거가 없습니다.", no_questions: "사주 확인 후 추천 질문이 생성됩니다.", no_hits: "규칙 적중 없음.", no_rules: "촉발된 규칙 없음", await_graph: "프로필 그래프 대기 중.", graph_ready: "그래프가 준비되었습니다.", mainline: "주요 축", pressure: "압력", timing: "시간", graph_default: "주제별로 전개", anchor: "구조 앵커: ", match_rate: "일치율", cond_hit: "조건 충족", dec_state: "판정: ", expand: "열기", collapse: "닫기", prac_title: "명리사 보정", prac_expand: "명리사 보정 열기", prac_collapse: "명리사 보정 닫기", obs_expand: "관측 열기", obs_collapse: "관측 닫기", pending: "대기 중", accepted: "접수됨", recording: "기록 중", rec_fail: "기록 실패", rec_ok: "기록됨 · 질문 갱신", acc_ok: "접수됨 · 질문 갱신", q_source: "추천 질문", followup: "추가 질문", manual: "수동 분석", queuing: "대기 중", chat_pending: "답변 생성 중…", chat_empty: "표시할 답변이 없습니다.", calibrated: "보정 완료", dyn_val: "동적 판정 검증", feat_model: "특징 상태 모델", q_model: "질문 의도 모델", def_model: "반증 판정 모델", hit_traces: "규칙 적중 이력", bazi: "사주 분석" },
   },
 };
 
@@ -121,15 +148,15 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
   if (!hasCompletePillars(payload)) return;
   if (state.isMeasuring) {
     state.pendingMeasure = true;
-    setText("#llmStatus", "排队中");
+    setText("#llmStatus", text.wb.queuing);
     return;
   }
   state.isMeasuring = true;
   state.lastMeasureKey = key;
   state.activeLlmMode = llmMode;
-  const turnId = interactionText ? appendChatTurn(interactionText, interactionSource || "提问") : "";
+  const turnId = interactionText ? appendChatTurn(interactionText, interactionSource || text.wb.q_source) : "";
   setMeasureBusy(true, text, llmMode);
-  setText("#answerText", "正在根据当前问题重新测算。");
+  setText("#answerText", text.wb.measuring);
   try {
     const role = measurementRole(payload.role_key);
     delete payload.role_key;
@@ -142,7 +169,7 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
     renderRuntime(result);
     if (turnId) completeChatTurn(turnId, result.answer_text || "", result);
   } catch (error) {
-    setText("#answerText", `测算失败：${error.message}`);
+    setText("#answerText", `${currentText().wb.failed}${error.message}`);
     if (turnId) failChatTurn(turnId, error.message);
     state.lastMeasureKey = "";
   } finally {
@@ -175,14 +202,15 @@ const renderRuntime = (result) => {
   document.body.dataset.role = role;
   renderObservationAccess(role);
   renderFeatureStateAccess(role);
-  setText("#selectedQuestion", selected.title || selected.question_key || "已完成测算");
+  setText("#selectedQuestion", selected.title || selected.question_key || currentText().running);
   setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
   setText("#featureCount", featureStateModel.feature_state_count ?? decisionReport.decision_count ?? featureLayer.feature_count ?? 0);
   setText("#questionCount", questionIntentModel.intent_count ?? (result.questions || []).length);
   setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
   setText("#coreCapacity", featureStateModel.algorithm || result.core_inference?.day_master_capacity || "fusion");
   setText("#intentSummary", intentSummary(questionIntentModel));
-  setText("#dayMasterBadge", `日主 ${chart.day_master || "-"}`);
+  const t = currentText();
+  setText("#dayMasterBadge", `${t.dm} ${chart.day_master || "-"}`);
   setText("#llmStatus", llmStatusLabel(result));
   setText("#answerText", result.answer_text || "");
 
@@ -241,8 +269,8 @@ const setObservationCollapsed = (collapsed) => {
   page.classList.toggle("collapsed", collapsed);
   body.hidden = collapsed;
   toggle.setAttribute("aria-expanded", String(!collapsed));
-  toggle.title = collapsed ? "展开观测页面" : "收起观测页面";
-  if (label) label.textContent = collapsed ? "展开" : "收起";
+  toggle.title = collapsed ? currentText().wb.obs_expand : currentText().wb.obs_collapse;
+  if (label) label.textContent = collapsed ? currentText().wb.expand : currentText().wb.collapse;
 };
 
 const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") => {
@@ -250,46 +278,41 @@ const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") =
   button.disabled = busy;
   button.textContent = busy ? text.running : text.run;
   chatButton.disabled = busy;
-  chatButton.textContent = busy ? (llmMode === "practitioner" ? "生成中" : "测算中") : "发送";
+  chatButton.textContent = busy ? text.wb.generating : text.wb.send;
   document.querySelectorAll(".question-row").forEach((node) => {
     node.disabled = busy;
   });
-  if (busy) setText("#llmStatus", llmMode === "practitioner" ? "llm practitioner" : "测算中");
+  if (busy) setText("#llmStatus", llmMode === "practitioner" ? "llm practitioner" : text.running);
 };
 
 const renderPillars = (chart, timeContext = {}) => {
   const root = document.querySelector("#pillarPanel");
   clear(root);
+  const text = currentText();
   const pillars = chart.pillars || {};
   const timePillars = Object.fromEntries((timeContext.layers || []).map((layer) => [layer.layer_key, layer.pillar || {}]));
-  [
-    ["year", "年柱", "原局"],
-    ["month", "月柱", "原局"],
-    ["day", "日柱", "日主"],
-    ["hour", "时柱", "原局"],
-    ["luck", "大运", "运势背景"],
-    ["flow_year", "流年", "当前触发"],
-  ].forEach(([key, label, hint]) => {
+  ["year", "month", "day", "hour", "luck", "flow_year"].forEach((key) => {
     const pillar = pillars[key] || timePillars[key] || fallbackPillar(key);
     const card = el("div", `pillar-card ${key === "day" ? "active" : ""}`);
-    card.append(el("span", "", label));
+    card.append(el("span", "", text.pillars[key] || key));
     card.append(el("strong", "", `${pillar.stem || "-"}${pillar.branch || ""}`));
-    card.append(el("em", "", hint));
+    card.append(el("em", "", text.pillar_hints[key] || ""));
     root.append(card);
   });
 };
 
 const renderTenGods = (chart) => {
+  const text = currentText();
   const visible = (chart.visible_ten_gods || []).map((row) => row.label).filter(Boolean);
   const hidden = (chart.hidden_ten_gods || []).map((row) => row.label).filter(Boolean);
-  setText("#tenGodLine", `透出 ${unique(visible).join(" / ") || "-"} · 藏干 ${unique(hidden).slice(0, 6).join(" / ") || "-"}`);
+  setText("#tenGodLine", `${text.visible} ${unique(visible).join(" / ") || "-"} · ${text.hidden} ${unique(hidden).slice(0, 6).join(" / ") || "-"}`);
 };
 
 const renderFeatures = (features) => {
   const root = document.querySelector("#featureChips");
   clear(root);
   if (!features.length) {
-    root.append(el("div", "empty-note", "当前尚未发现可展示的命理特征。"));
+    root.append(el("div", "empty-note", currentText().wb.no_features));
     return;
   }
   features.slice(0, 10).forEach((feature) => {
@@ -323,24 +346,25 @@ const renderPortraitGraph = (summary) => {
   clear(root);
   if (status) status.textContent = summary.status || "profile";
   if (!summary || summary.status !== "ready") {
-    root.append(el("div", "empty-note", "等待画像图谱。"));
+    root.append(el("div", "empty-note", currentText().wb.await_graph));
     return;
   }
-  root.append(el("p", "portrait-graph-headline", summary.headline || "当前盘已形成图谱画像。"));
+  const wb = currentText().wb;
+  root.append(el("p", "portrait-graph-headline", summary.headline || wb.graph_ready));
   const tagLine = el("div", "portrait-tag-line");
   (summary.profile_tags || []).slice(0, 8).forEach((tag) => tagLine.append(el("span", "portrait-tag-chip", tag)));
   if (tagLine.childNodes.length) root.append(tagLine);
 
   const columns = el("div", "portrait-graph-columns");
   [
-    ["主线", summary.strength_lines || []],
-    ["压力", summary.pressure_lines || []],
-    ["时间", summary.timing_triggers || []],
+    [wb.mainline, summary.strength_lines || []],
+    [wb.pressure, summary.pressure_lines || []],
+    [wb.timing, summary.timing_triggers || []],
   ].forEach(([title, rows]) => {
     const box = el("div", "portrait-graph-box");
     box.append(el("strong", "", title));
     const list = el("ul");
-    (rows.length ? rows : ["暂按主题画像展开"]).slice(0, 3).forEach((row) => {
+    (rows.length ? rows : [wb.graph_default]).slice(0, 3).forEach((row) => {
       const item = el("li", "", row);
       list.append(item);
     });
@@ -356,24 +380,16 @@ const renderPortraitGraph = (summary) => {
   if (questionLine.childNodes.length) root.append(questionLine);
 };
 
-const featureStateLabel = (state) => ({
-  active: "已入主链",
-  available: "可用",
-  evidence_gap: "补证",
-  requires_review: "复核",
-  blocked_or_countered: "被反证",
-  confirmed: "成立",
-  candidate: "候选",
-  weak_candidate: "弱候选",
-  volatile: "岁运引动",
-  mixed: "成而不纯",
-}[state] || state || "状态");
+const featureStateLabel = (state) => {
+  const t = currentText().states;
+  return t[state] || state || t._ || "state";
+};
 
 const renderPortrait = (axes) => {
   const root = document.querySelector("#portraitAxes");
   clear(root);
   if (!axes.length) {
-    root.append(el("div", "empty-note", "当前视图隐藏画像投影。"));
+    root.append(el("div", "empty-note", currentText().wb.no_portrait));
     return;
   }
   axes.slice(0, 8).forEach((axis) => {
@@ -385,7 +401,7 @@ const renderPortrait = (axes) => {
     const temperature = portraitTemperature(score);
     row.dataset.temperature = temperature.key;
     const title = el("div", "axis-title-line");
-    title.append(el("strong", "", axis.label || axis.axis_id || "动态画像"));
+    title.append(el("strong", "", axis.label || axis.axis_id || currentText().wb.bazi));
     title.append(el("span", "axis-tag", axis.profile_tag || portraitDomainLabel(axis.domain)));
     title.append(el("span", `axis-temp ${temperature.key}`, portraitAttentionLabel(axis.attention_level, temperature.label)));
     const tierLabel = String(axis.axis_tier || "");
@@ -415,58 +431,40 @@ const renderPortrait = (axes) => {
     row.append(bar);
     const anchor = String(axis.structural_anchor || "").trim();
     if (anchor) {
-      row.append(el("p", "axis-anchor-line", `结构锚点：${anchor}`));
+      row.append(el("p", "axis-anchor-line", `${currentText().wb.anchor}${anchor}`));
     }
     root.append(row);
   });
 };
 
-const portraitDomainLabel = (domain) => ({
-  strength: "强弱",
-  career: "事业",
-  wealth: "财运",
-  ten_god: "十神",
-  useful_god: "用神",
-  time: "时间",
-  branch: "地支",
-  element: "五行",
-  pattern: "格局",
-  relationship: "关系",
-  health: "健康",
-}[domain] || "命理");
-
-const portraitTemperature = (score) => {
-  const value = Number(score || 0);
-  if (value >= 0.78) return { key: "hot", label: "高关注" };
-  if (value >= 0.58) return { key: "warm", label: "成形" };
-  if (value >= 0.38) return { key: "mild", label: "待复核" };
-  return { key: "cool", label: "线索" };
+const portraitDomainLabel = (domain) => {
+  const t = currentText().domains;
+  return t[domain] || t._ || domain;
 };
 
-const portraitAttentionLabel = (level, fallback) => ({
-  high: "高关注",
-  medium: "重点观察",
-  normal: "常规画像",
-}[level] || fallback || "画像");
+const portraitTemperature = (score) => {
+  const t = currentText().temps;
+  const value = Number(score || 0);
+  if (value >= 0.78) return { key: "hot", label: t.hot };
+  if (value >= 0.58) return { key: "warm", label: t.warm };
+  if (value >= 0.38) return { key: "mild", label: t.mild };
+  return { key: "cool", label: t.cool };
+};
 
-const axisTierLabel = (tier) => ({
-  micro: "微观骨架",
-  decision: "裁决路径",
-  macro: "应用场景",
-  time: "时序引动",
-}[tier] || "结构层");
+const portraitAttentionLabel = (level, fallback) => {
+  const t = currentText().attn;
+  return t[level] || fallback || t._ || "profile";
+};
 
-const axisStateLabel = (state) => ({
-  confirmed: "已成",
-  chain_review: "链式",
-  mixed: "成而不纯",
-  candidate: "候选",
-  weak_candidate: "偏弱",
-  volatile: "引动",
-  requires_review: "需复核",
-  countered: "反制",
-  blocked: "受阻",
-}[state] || "结构");
+const axisTierLabel = (tier) => {
+  const t = currentText().tiers;
+  return t[tier] || t._ || tier;
+};
+
+const axisStateLabel = (state) => {
+  const t = currentText().axis_states;
+  return t[state] || t._ || state;
+};
 
 const renderPractitionerCalibration = (controls, inputId, role) => {
   const root = document.querySelector("#practitionerCalibration");
@@ -483,7 +481,7 @@ const renderPractitionerCalibration = (controls, inputId, role) => {
   setPractitionerCollapsed(root.classList.contains("collapsed"));
   controls.slice(0, 4).forEach((control) => {
     const row = el("div", "calibration-control");
-    row.append(el("strong", "", control.label || control.control_key || "命理师校准"));
+    row.append(el("strong", "", control.label || control.control_key || currentText().wb.prac_title));
     const options = el("div", "calibration-options");
     const selected = state.practitionerSelections.find((item) => item.control_key === control.control_key);
     (control.options || []).forEach((option) => {
@@ -510,14 +508,14 @@ const setPractitionerCollapsed = (collapsed) => {
   root.classList.toggle("collapsed", collapsed);
   body.hidden = collapsed;
   toggle.setAttribute("aria-expanded", String(!collapsed));
-  toggle.title = collapsed ? "展开命理师校准" : "收起命理师校准";
-  if (label) label.textContent = collapsed ? "展开" : "收起";
+  toggle.title = collapsed ? currentText().wb.prac_expand : currentText().wb.prac_collapse;
+  if (label) label.textContent = collapsed ? currentText().wb.expand : currentText().wb.collapse;
 };
 
 const recordPractitionerCalibration = async (control, option, inputId, activeButton) => {
   const status = document.querySelector("#calibrationStatus");
   const sourceDecisionKeys = control.source_decision_keys || [];
-  if (status) status.textContent = "记录中";
+  if (status) status.textContent = currentText().wb.recording;
   try {
     const result = await requestJson("/api/v20/practitioner/calibration/record", {
       method: "POST",
@@ -538,10 +536,10 @@ const recordPractitionerCalibration = async (control, option, inputId, activeBut
     upsertPractitionerSelection(control, option);
     questionSelect.value = "";
     if (questionIdInput) questionIdInput.value = "";
-    if (status) status.textContent = result.storage?.status === "stored" ? "已记录 · 刷新问题" : "已接收 · 刷新问题";
+    if (status) status.textContent = result.storage?.status === "stored" ? currentText().wb.rec_ok : currentText().wb.acc_ok;
     measure({ force: true, llmMode: "deterministic" });
   } catch (error) {
-    if (status) status.textContent = "记录失败";
+    if (status) status.textContent = currentText().wb.rec_fail;
   }
 };
 
@@ -569,7 +567,7 @@ const renderLatentCalibration = (inputId, role) => {
     return;
   }
   root.hidden = false;
-  status.textContent = state.latentAnswers.length ? `已校准 ${state.latentAnswers.length} 项` : "choice only";
+  status.textContent = state.latentAnswers.length ? `${currentText().wb.calibrated} ${state.latentAnswers.length}` : "choice only";
   scenarios.slice(0, 4).forEach((scenario) => {
     const saved = state.latentAnswers.find((answer) => answer.scenario_id === scenario.scenario_id) || {};
     const row = el("div", "latent-calibration-row");
@@ -582,7 +580,7 @@ const renderLatentCalibration = (inputId, role) => {
     fields.append(latentSelect(scenario, "result_option", saved.result_option || (scenario.result_options || ["no_clear_change"])[0], scenario.result_options || [], latentResultLabel));
     fields.append(latentSelect(scenario, "intensity", saved.intensity || "clear", scenario.intensity_options || [], latentIntensityLabel));
     fields.append(latentSelect(scenario, "confidence", saved.confidence || "medium", scenario.confidence_options || [], latentConfidenceLabel));
-    const button = el("button", "mini-action", saved.scenario_id ? "已记录" : "记录");
+    const button = el("button", "mini-action", saved.scenario_id ? currentText().wb.accepted : currentText().wb.recording.replace(/中$/, ""));
     button.type = "button";
     button.addEventListener("click", () => recordLatentCalibration(scenario, inputId || state.latest?.input_id || "", role, row));
     fields.append(button);
@@ -617,7 +615,7 @@ const recordLatentCalibration = async (scenario, inputId, role, row) => {
     intensity: row.querySelector('[data-field="intensity"]').value,
     confidence: row.querySelector('[data-field="confidence"]').value,
   };
-  if (status) status.textContent = "记录中";
+  if (status) status.textContent = currentText().wb.recording;
   try {
     const result = await requestJson("/api/v20/latent-event/calibration/record", {
       method: "POST",
@@ -631,10 +629,10 @@ const recordLatentCalibration = async (scenario, inputId, role, row) => {
     upsertLatentAnswer(answer);
     questionSelect.value = "";
     if (questionIdInput) questionIdInput.value = "";
-    if (status) status.textContent = result.storage?.status === "stored" ? "已记录 · 刷新问题" : "已接收 · 刷新问题";
+    if (status) status.textContent = result.storage?.status === "stored" ? currentText().wb.rec_ok : currentText().wb.acc_ok;
     measure({ force: true, llmMode: "deterministic" });
   } catch (error) {
-    if (status) status.textContent = "记录失败";
+    if (status) status.textContent = currentText().wb.rec_fail;
   }
 };
 
@@ -649,7 +647,7 @@ const renderQuestions = (questions, selectedId, questionIntentModel = {}) => {
   const root = document.querySelector("#questionList");
   clear(root);
   if (!questions.length) {
-    root.append(el("div", "empty-note", "确认四柱后会生成建议问题。"));
+    root.append(el("div", "empty-note", currentText().wb.no_questions));
     return;
   }
   const bindingByKey = questionBindingByKey(questionIntentModel);
@@ -668,11 +666,11 @@ const renderDecisionHits = (hits = []) => {
     clear(summary);
   }
   if (!hits.length) {
-    if (hitCount) hitCount.textContent = "0 命中";
+    if (hitCount) hitCount.textContent = `0 ${currentText().wb.hit_traces}`;
     if (summary) {
-      summary.append(el("span", "small-pill", "未触发规则"));
+      summary.append(el("span", "small-pill", currentText().wb.no_rules));
     }
-    root.append(el("div", "empty-note", "当前暂无规则命中。"));
+    root.append(el("div", "empty-note", currentText().wb.no_hits));
     return;
   }
   const statusBuckets = {};
@@ -692,7 +690,7 @@ const renderDecisionHits = (hits = []) => {
       if (scoreA !== scoreB) return scoreB - scoreA;
       return String(a.rule_key || "").localeCompare(String(b.rule_key || ""));
     });
-  if (hitCount) hitCount.textContent = `${orderedHits.length} 条规则命中轨迹`;
+  if (hitCount) hitCount.textContent = `${orderedHits.length} ${currentText().wb.hit_traces}`;
   if (summary) {
     const orderedStatus = Object.entries(statusBuckets).sort((a, b) => b[1] - a[1]);
     orderedStatus.forEach(([label, count]) => {
@@ -705,7 +703,7 @@ const renderDecisionHits = (hits = []) => {
     const rawStatus = hit.status || hit.match_status || "candidate";
     const status = rawStatus === "candidate" ? (hit.match_status === "partial" ? "部分成立" : rawStatus) : rawStatus;
     const score = Number(hit.match_score ?? hit.score ?? 0);
-    const matchText = `匹配率 ${(score * 100).toFixed(0)}%`;
+    const matchText = `${currentText().wb.match_rate} ${(score * 100).toFixed(0)}%`;
     const statusText = `${status} · ${source}`;
     row.append(el("strong", "", hit.label || hit.rule_key || "规则"));
     const detail = `${hit.domain || "domain"} · ${statusText} · ${matchText}`;
@@ -720,7 +718,7 @@ const renderDecisionHits = (hits = []) => {
       ? `${hit.matched_condition_count}/${hit.condition_count}`
       : "";
     if (conditionInfo) {
-      row.append(el("span", "", `条件命中 ${conditionInfo}`));
+      row.append(el("span", "", `${currentText().wb.cond_hit} ${conditionInfo}`));
     }
     if (hit.missing_evidence && hit.missing_evidence.length) {
       row.append(el("p", "", hit.missing_evidence.filter(Boolean).slice(0, 2).join(" · ")));
@@ -728,7 +726,7 @@ const renderDecisionHits = (hits = []) => {
       row.append(el("p", "", hit.evidence.filter(Boolean).slice(0, 2).join(" · ")));
     }
     if (hit.decision_state && hit.decision_state !== "confirmed" && hit.domain) {
-      row.append(el("p", "", `决策态：${hit.decision_state}`));
+      row.append(el("p", "", `${currentText().wb.dec_state}${hit.decision_state}`));
     }
     root.append(row);
   });
@@ -746,7 +744,7 @@ const questionButton = (question, selectedId, className, binding = {}) => {
     const intent = intentTypeLabel(binding.primary_intent_type);
     const priority = binding.intent_priority ? ` · ${Number(binding.intent_priority).toFixed(2)}` : "";
     const sourceParts = [
-      question.measurement_topic || question.domain || "命理测算",
+      question.measurement_topic || question.domain || currentText().wb.bazi,
       question.question_strategy || "问题策略",
       question.source_decision_status,
       intent,
@@ -772,17 +770,10 @@ const intentSummary = (questionIntentModel = {}) => {
   return top ? `${intentTypeLabel(top[0])} ${top[1]}` : "intent";
 };
 
-const intentTypeLabel = (intentType) => ({
-  confirm_structure: "确认结构",
-  explore_candidate: "展开候选",
-  collect_evidence: "补齐证据",
-  resolve_mixed_state: "裁决混合",
-  inspect_timing_trigger: "岁运引动",
-  ask_practitioner_review: "命理师复核",
-  explain_boundary: "边界说明",
-  explore_structure: "结构追问",
-  suppress_output: "不输出",
-}[intentType] || intentType || "智能意图");
+const intentTypeLabel = (intentType) => {
+  const t = currentText().intents;
+  return t[intentType] || intentType || t._ || "intent";
+};
 
 const runQuestion = (question) => {
   const title = question.title || question.question_key || "";
@@ -794,7 +785,7 @@ const runQuestion = (question) => {
   measure({
     force: true,
     interactionText: title,
-    interactionSource: "推荐问题",
+    interactionSource: currentText().wb.q_source,
     llmMode: "practitioner",
   });
 };
@@ -802,7 +793,7 @@ const runQuestion = (question) => {
 const renderQuestionSelect = (questions, selectedId, selectedKey = "") => {
   const currentId = String(questionIdInput?.value || selectedId || "").trim();
   const optionValues = new Set();
-  questionSelect.innerHTML = '<option value="">自动路由</option>';
+  questionSelect.innerHTML = `<option value="">${currentText().wb.auto_route}</option>`;
   questions.forEach((question) => {
     const value = question.question_id || question.question_key || "";
     if (!value || optionValues.has(value)) return;
@@ -853,7 +844,7 @@ const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
   });
   if (decisionValidation.status) {
     const row = el("div", "evidence-row validation");
-    row.append(el("strong", "", "动态裁决验证"));
+    row.append(el("strong", "", currentText().wb.dyn_val));
     row.append(el("span", "", `${decisionValidation.status} · ${decisionValidation.decision_count ?? 0} decisions`));
     root.append(row);
   }
@@ -861,9 +852,9 @@ const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
   const questionIntentModel = runtimeModels.questionIntentModel || {};
   const decisionModel = runtimeModels.decisionModel || {};
   [
-    ["特征状态模型", featureStateModel.status, `${featureStateModel.feature_state_count ?? 0} states`],
-    ["问题意图模型", questionIntentModel.status, `${questionIntentModel.intent_count ?? 0} intents`],
-    ["可反证裁决模型", decisionModel.status, `${decisionModel.argument_count ?? 0} arguments`],
+    [currentText().wb.feat_model, featureStateModel.status, `${featureStateModel.feature_state_count ?? 0} states`],
+    [currentText().wb.q_model, questionIntentModel.status, `${questionIntentModel.intent_count ?? 0} intents`],
+    [currentText().wb.def_model, decisionModel.status, `${decisionModel.argument_count ?? 0} arguments`],
   ].forEach(([title, status, detail]) => {
     if (!status) return;
     const row = el("div", "evidence-row model");
@@ -871,7 +862,7 @@ const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
     row.append(el("span", "", `${status} · ${detail}`));
     root.append(row);
   });
-  if (!refs.length && !decisionValidation.status && !featureStateModel.status) root.append(el("div", "empty-note", "暂无可展示证据。"));
+  if (!refs.length && !decisionValidation.status && !featureStateModel.status) root.append(el("div", "empty-note", currentText().wb.no_evidence));
 };
 
 const appendChatTurn = (questionText, source) => {
@@ -880,7 +871,7 @@ const appendChatTurn = (questionText, source) => {
     id,
     source,
     questionText,
-    answerText: "正在生成回复...",
+    answerText: currentText().wb.chat_pending,
     status: "pending",
     llmStatus: "llm generating",
   });
@@ -891,7 +882,7 @@ const appendChatTurn = (questionText, source) => {
 const completeChatTurn = (id, answerText, result) => {
   const turn = state.chatTurns.find((item) => item.id === id);
   if (!turn) return;
-  turn.answerText = answerText || "本轮没有生成可展示回复。";
+  turn.answerText = answerText || currentText().wb.chat_empty;
   turn.status = "ready";
   turn.llmStatus = llmStatusLabel(result);
   renderChatTranscript();
@@ -900,7 +891,7 @@ const completeChatTurn = (id, answerText, result) => {
 const failChatTurn = (id, message) => {
   const turn = state.chatTurns.find((item) => item.id === id);
   if (!turn) return;
-  turn.answerText = `测算失败：${message}`;
+  turn.answerText = `${currentText().wb.failed}${message}`;
   turn.status = "error";
   turn.llmStatus = "error";
   renderChatTranscript();
@@ -917,7 +908,7 @@ const renderChatTranscript = () => {
   state.chatTurns.slice(-4).forEach((turn) => {
     const row = el("article", `chat-turn ${turn.status}`);
     const question = el("div", "chat-bubble user");
-    question.append(el("span", "", turn.source || "提问"));
+    question.append(el("span", "", turn.source || currentText().wb.q_source));
     question.append(el("strong", "", turn.questionText));
     const answer = el("div", "chat-bubble assistant");
     answer.append(el("span", "", turn.llmStatus || turn.status));
@@ -937,78 +928,35 @@ const llmStatusLabel = (result) => {
   return `llm ${assist.status || "idle"}`;
 };
 
-const latentScenarioTitle = (scenario) => ({
-  wealth: "财务变化",
-  career: "事业节点",
-  relationship: "关系重心",
-  relocation: "环境迁移",
-  stress: "压力恢复",
-  global: "行动节奏",
-}[scenario.domain] || "命主校准");
+const latentScenarioTitle = (scenario) => {
+  const t = currentText().latent;
+  return t[scenario.domain] || t._ || scenario.domain;
+};
 
-const latentFieldLabel = (key) => ({
-  year_option: "时间",
-  result_option: "结果",
-  intensity: "强度",
-  confidence: "把握",
-}[key] || key);
+const latentFieldLabel = (key) => {
+  const t = currentText().latent_fields;
+  return t[key] || key;
+};
 
-const latentYearLabel = (value) => ({
-  unknown: "不确定",
-  birth_to_12: "0-12岁",
-  "13_to_18": "13-18岁",
-  "19_to_24": "19-24岁",
-  "25_to_30": "25-30岁",
-  "31_to_36": "31-36岁",
-  "37_to_42": "37-42岁",
-  "43_to_48": "43-48岁",
-  "49_to_54": "49-54岁",
-  "55_plus": "55岁以后",
-}[value] || value);
+const latentYearLabel = (value) => {
+  const t = currentText().latent_years;
+  return t[value] || value;
+};
 
-const latentResultLabel = (value) => ({
-  no_clear_change: "没有明显变化",
-  income_up: "收入/资源上升",
-  income_down: "收入下降",
-  resource_gain: "获得资源支持",
-  resource_pressure: "资源或财务压力",
-  role_up: "角色上升",
-  role_down: "角色下降",
-  platform_change: "平台变化",
-  responsibility_change: "责任变化",
-  relationship_stabilized: "关系稳定",
-  relationship_changed: "关系变化",
-  relationship_pressure: "关系压力",
-  family_focus_shift: "家庭重心变化",
-  city_change: "城市变化",
-  work_environment_change: "工作环境变化",
-  home_environment_change: "居住环境变化",
-  travel_or_mobility_up: "流动增加",
-  stable: "基本稳定",
-  recovered_fast: "恢复较快",
-  recovered_slow: "恢复较慢",
-  repeated_pressure: "压力反复",
-  support_helped: "外部支持有效",
-  not_observed: "尚未观察",
-  result_fast: "见效快",
-  result_slow: "见效慢",
-  needs_repeated_attempts: "需要反复尝试",
-  external_help_decisive: "外部帮助关键",
-  mixed: "混合",
-}[value] || value);
+const latentResultLabel = (value) => {
+  const t = currentText().latent_results;
+  return t[value] || value;
+};
 
-const latentIntensityLabel = (value) => ({
-  none: "无",
-  mild: "轻微",
-  clear: "明显",
-  strong: "强烈",
-}[value] || value);
+const latentIntensityLabel = (value) => {
+  const t = currentText().latent_intensity;
+  return t[value] || value;
+};
 
-const latentConfidenceLabel = (value) => ({
-  low: "低",
-  medium: "中",
-  high: "高",
-}[value] || value);
+const latentConfidenceLabel = (value) => {
+  const t = currentText().latent_confidence;
+  return t[value] || value;
+};
 
 const loadLatentCalibrationManifest = async () => {
   try {
@@ -1071,9 +1019,10 @@ const logout = async () => {
 
 const practitionerSessionStatus = () => {
   const session = state.latest?.practitioner_session || {};
-  if (!state.practitionerSelections.length) return "待裁决";
-  if (session.questions_refreshed) return `已刷新 ${session.selection_count || state.practitionerSelections.length} 项`;
-  return "已接收";
+  const wb = currentText().wb;
+  if (!state.practitionerSelections.length) return wb.pending;
+  if (session.questions_refreshed) return `${wb.accepted} ${session.selection_count || state.practitionerSelections.length}`;
+  return wb.accepted;
 };
 
 const applyLocale = (locale) => {
@@ -1225,7 +1174,7 @@ form.addEventListener("submit", (event) => {
   measure({
     force: true,
     interactionText: form.elements.user_text.value.trim(),
-    interactionSource: "手动测算",
+    interactionSource: currentText().wb.manual,
     llmMode: "practitioner",
   });
 });
@@ -1247,7 +1196,7 @@ form.querySelectorAll("input, textarea, select").forEach((node) => {
 chatButton.addEventListener("click", () => {
   const value = chatText.value.trim();
   if (!value) {
-    setText("#answerText", "请输入想继续看的方向。");
+    setText("#answerText", currentText().wb.enter_dir);
     return;
   }
   questionSelect.value = "";
@@ -1256,7 +1205,7 @@ chatButton.addEventListener("click", () => {
   measure({
     force: true,
     interactionText: value,
-    interactionSource: "继续追问",
+    interactionSource: currentText().wb.followup,
     llmMode: "practitioner",
   });
 });
@@ -1265,7 +1214,7 @@ chatText.addEventListener("keydown", (event) => {
     event.preventDefault();
     const value = chatText.value.trim();
     if (!value) {
-      setText("#answerText", "请输入想继续看的方向。");
+      setText("#answerText", currentText().wb.enter_dir);
       return;
     }
     questionSelect.value = "";
@@ -1274,7 +1223,7 @@ chatText.addEventListener("keydown", (event) => {
     measure({
       force: true,
       interactionText: value,
-      interactionSource: "继续追问",
+      interactionSource: currentText().wb.followup,
       llmMode: "practitioner",
     });
   }

@@ -160,22 +160,11 @@ def test_v20_admin_status_endpoints_are_db_llm_only_and_secret_free(tmp_path, mo
     assert "LLM_IS_ASSISTIVE_NOT_AUTHORITATIVE" in llm["guardrails"]
 
 
-def test_v20_v19_profile_migration_preview_is_read_only() -> None:
+def test_v20_v19_auth_migration_preview_is_read_only() -> None:
     client = TestClient(app)
-    preview = client.get("/api/v20/profiles/v19-migration-preview").json()
-    dry_run = client.post("/api/v20/profiles/import-v19").json()
     auth_preview = client.get("/api/v20/auth/v19-migration-preview").json()
     auth_dry_run = client.post("/api/v20/auth/import-v19").json()
 
-    assert preview["version"] == "v20.v19_profile_migration_preview.v1"
-    assert preview["target_table"] == "v20_user_profiles"
-    assert preview["runtime_mutation"] is False
-    assert "V19_SOURCE_IS_READ_ONLY" in preview["guardrails"]
-    assert dry_run["version"] == "v20.v19_profile_postgres_import.v1"
-    assert dry_run["status"] == "dry_run"
-    assert dry_run["target_owner_id"] == "admin"
-    assert dry_run["apply"] is False
-    assert dry_run["runtime_mutation"] is False
     assert auth_preview["version"] == "v20.v19_auth_migration_preview.v1"
     assert auth_preview["session_count"] >= 1
     assert auth_preview["runtime_mutation"] is False
