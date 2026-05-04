@@ -104,12 +104,16 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "chatTranscript" in page.text
     assert "interactionSignals" not in page.text
     assert "practitionerCalibration" in page.text
+    assert 'id="practitionerCalibration" class="panel calibration-panel-card collapsed" hidden' in page.text
     assert "calibrationControls" in page.text
     assert "latentCalibration" in page.text
     assert "latentCalibrationControls" in page.text
     assert "observationPage" in page.text
+    assert 'id="observationPage" class="observation-page collapsed" hidden' in page.text
     assert "observationToggle" in page.text
+    assert 'id="observationToggle" class="observation-toggle" type="button" aria-expanded="false"' in page.text
     assert "observationBody" in page.text
+    assert 'id="observationBody" class="observation-grid collapsible-body" hidden' in page.text
     assert 'id="featureStatePanel" class="panel feature-spine-panel" hidden' in page.text
     assert "图谱画像总览" in page.text
     assert "Decision Hits" in page.text
@@ -119,6 +123,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "八字特征状态" in page.text
     assert "主题投射画像" in page.text
     assert "智能问题" in page.text
+    assert page.text.index('id="chatTranscript"') < page.text.index('class="answer-question-strip"') < page.text.index('class="dialog-row"')
     assert "交互信号" not in page.text
     assert "八字专业回复" in page.text
     assert "/api/v20/measure/view/" in script.text
@@ -203,6 +208,10 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert ".brand-logo" in style.text
     assert "V20 visual polish" in style.text
     assert "backdrop-filter" in style.text
+    assert "env(safe-area-inset-bottom)" in style.text
+    assert "@media (max-width: 480px)" in style.text
+    assert "@media (hover: none)" in style.text
+    assert ".dialog-row textarea" in style.text
     assert ".entry-page" in style.text
     assert ".admin-layout" in style.text
     assert "@media (max-width: 1120px)" in style.text

@@ -115,7 +115,7 @@
               <div id="featureChips" class="feature-grid"></div>
             </article>
 
-            <article id="practitionerCalibration" class="panel calibration-panel-card" hidden>
+            <article id="practitionerCalibration" class="panel calibration-panel-card collapsed" hidden>
               <button id="practitionerToggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="calibrationControls">
                 <div>
                   <p class="section-kicker">Practitioner</p>
@@ -131,8 +131,8 @@
 
           </section>
 
-          <section id="observationPage" class="observation-page" hidden>
-            <button id="observationToggle" class="observation-toggle" type="button" aria-expanded="true" aria-controls="observationBody">
+          <section id="observationPage" class="observation-page collapsed" hidden>
+            <button id="observationToggle" class="observation-toggle" type="button" aria-expanded="false" aria-controls="observationBody">
               <div>
                 <p class="section-kicker">Observation</p>
                 <h2>观测页面</h2>
@@ -140,10 +140,10 @@
               </div>
               <span class="collapse-meta">
                 <span id="observationStatus" class="small-pill">admin only</span>
-                <span id="observationCollapseLabel" class="collapse-label">收起</span>
+                <span id="observationCollapseLabel" class="collapse-label">展开</span>
               </span>
             </button>
-            <div id="observationBody" class="observation-grid collapsible-body">
+            <div id="observationBody" class="observation-grid collapsible-body" hidden>
               <article class="panel portrait-graph-card">
                 <div class="section-head">
                   <div>
@@ -193,6 +193,15 @@
 
           <section class="answer-grid">
             <article class="panel answer-panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">Answer</p>
+                  <h2 data-ui="answer_title">八字专业回复</h2>
+                </div>
+                <span id="llmStatus" class="small-pill">llm idle</span>
+              </div>
+              <pre id="answerText">等待测算。</pre>
+              <div id="chatTranscript" class="chat-transcript" aria-live="polite"></div>
               <div class="answer-question-strip">
                 <div class="section-head">
                   <div>
@@ -203,15 +212,6 @@
                 </div>
                 <div id="questionList" class="question-list answer-question-list"></div>
               </div>
-              <div class="section-head">
-                <div>
-                  <p class="section-kicker">Answer</p>
-                  <h2 data-ui="answer_title">八字专业回复</h2>
-                </div>
-                <span id="llmStatus" class="small-pill">llm idle</span>
-              </div>
-              <pre id="answerText">等待测算。</pre>
-              <div id="chatTranscript" class="chat-transcript" aria-live="polite"></div>
               <div class="dialog-row" aria-label="八字对话">
                 <textarea id="chatText" rows="3" placeholder="输入想继续看的方向" data-ui-placeholder="chat_ph"></textarea>
                 <button type="button" id="chatButton" data-ui="send">发送</button>

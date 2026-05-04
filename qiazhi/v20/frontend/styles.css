@@ -934,8 +934,10 @@ textarea:focus {
 .answer-question-strip {
   display: grid;
   gap: 10px;
+  border-top: 1px solid var(--line);
   border-bottom: 1px solid var(--line);
-  padding-bottom: 14px;
+  margin-top: 14px;
+  padding: 14px 0;
 }
 
 .answer-question-list {
@@ -1199,7 +1201,7 @@ textarea:focus {
   display: grid;
   grid-template-columns: minmax(0, 1fr) 120px;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 0;
 }
 
 .dialog-row button,
@@ -1633,6 +1635,25 @@ textarea:hover,
 }
 
 @media (max-width: 760px) {
+  body {
+    overflow-x: hidden;
+  }
+
+  h1 {
+    font-size: 19px;
+  }
+
+  h2 {
+    font-size: 14px;
+  }
+
+  .entry-page,
+  .measure-layout,
+  .profiles-layout,
+  .admin-layout {
+    padding: 12px;
+  }
+
   .topbar,
   .run-summary,
   .entry-hero,
@@ -1643,6 +1664,38 @@ textarea:hover,
 
   .top-actions {
     justify-content: flex-start;
+    width: 100%;
+  }
+
+  .top-actions a,
+  .top-actions button,
+  .top-actions .status-pill {
+    justify-content: center;
+    flex: 1 1 calc(50% - 8px);
+  }
+
+  .brand {
+    align-items: flex-start;
+  }
+
+  .brand-logo {
+    width: 38px;
+    height: 38px;
+  }
+
+  .brand-logo.large {
+    width: 52px;
+    height: 52px;
+  }
+
+  .entry-card,
+  .panel,
+  .control-panel,
+  .profile-command-panel,
+  .profile-editor-panel,
+  .profile-card,
+  .run-summary {
+    padding: 12px;
   }
 
   .dashboard-grid,
@@ -1671,6 +1724,44 @@ textarea:hover,
     grid-template-columns: 1fr;
   }
 
+  .answer-panel pre {
+    max-height: 46vh;
+    overflow: auto;
+    font-size: 13px;
+    line-height: 1.65;
+  }
+
+  .answer-question-strip {
+    margin-top: 12px;
+    padding: 12px 0;
+  }
+
+  .question-row {
+    padding: 11px;
+  }
+
+  .dialog-row {
+    position: sticky;
+    bottom: 0;
+    z-index: 12;
+    border-top: 1px solid rgba(77, 185, 133, 0.24);
+    background: rgba(8, 13, 12, 0.94);
+    backdrop-filter: blur(12px);
+    margin: 0 -12px -12px;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+
+  .dialog-row textarea {
+    min-height: 92px;
+    font-size: 16px;
+  }
+
+  .dialog-row button {
+    min-height: 48px;
+    width: 100%;
+    font-size: 15px;
+  }
+
   body.profile-reading .pillar-panel,
   body.profile-reading .dashboard-grid {
     grid-template-columns: 1fr;
@@ -1682,5 +1773,54 @@ textarea:hover,
 
   .profile-command-panel {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .entry-page,
+  .measure-layout,
+  .profiles-layout,
+  .admin-layout {
+    padding: 10px;
+  }
+
+  .top-actions a,
+  .top-actions button,
+  .top-actions .status-pill {
+    flex-basis: 100%;
+  }
+
+  .summary-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .pillar-input-grid,
+  .profile-editor-grid,
+  .latent-calibration-fields {
+    grid-template-columns: 1fr;
+  }
+
+  .dialog-row {
+    margin-right: -10px;
+    margin-bottom: -10px;
+    margin-left: -10px;
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+}
+
+@media (hover: none) {
+  .entry-card:hover,
+  .profile-card:hover,
+  .panel:hover,
+  .top-actions a:hover,
+  .top-actions button:hover,
+  .mini-action:hover,
+  .entry-card button:hover,
+  .entry-link:hover,
+  .primary-action:hover,
+  .dialog-row button:hover,
+  .calibration-options button:hover {
+    transform: none;
   }
 }
