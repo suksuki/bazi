@@ -20,7 +20,6 @@ const PROFILE_TEXT = {
     enter_profile: "进入测算",
     edit_profile: "修改",
     delete_profile: "删除",
-    owner: "归属",
     empty: "暂无档案",
     logout_button: "登出",
     editor_new: "新增档案",
@@ -61,7 +60,6 @@ const PROFILE_TEXT = {
     enter_profile: "Open Reading",
     edit_profile: "Edit",
     delete_profile: "Delete",
-    owner: "Owner",
     empty: "No profiles",
     logout_button: "Log Out",
     editor_new: "New Profile",
@@ -102,7 +100,6 @@ const PROFILE_TEXT = {
     enter_profile: "분석 열기",
     edit_profile: "수정",
     delete_profile: "삭제",
-    owner: "소유자",
     empty: "프로필 없음",
     logout_button: "로그아웃",
     editor_new: "프로필 추가",
@@ -281,9 +278,7 @@ const renderProfiles = (profiles) => {
 
     const tags = document.createElement("div");
     tags.className = "profile-tag-row";
-    tags.append(tag(`${text.owner} ${profile.owner_id || "-"}`));
-    tags.append(tag(profile.status || "profile"));
-    if (profile.metadata?.source_system) tags.append(tag(profile.metadata.source_system));
+    tags.append(tag(profile.status === "archived" ? text.status_archived : text.status_active));
     card.append(tags);
 
     const actions = document.createElement("div");

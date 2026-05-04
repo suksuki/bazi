@@ -832,10 +832,9 @@ const renderQuestions = (questions, selectedId, questionIntentModel = {}) => {
     root.append(el("div", "empty-note", currentText().wb.no_questions));
     return;
   }
-  const bindingByKey = questionBindingByKey(questionIntentModel);
   const activeId = String(selectedId || "");
   questions.slice(0, 8).forEach((question) => {
-    root.append(questionButton(question, activeId, "question-row", bindingByKey[question.question_key] || {}));
+    root.append(questionButton(question, activeId, "question-row"));
   });
 };
 
@@ -914,7 +913,7 @@ const renderDecisionHits = (hits = []) => {
   });
 };
 
-const questionButton = (question, selectedId, className, binding = {}) => {
+const questionButton = (question, selectedId, className) => {
   const questionId = question.question_id || question.question_key || "";
   const isActive = String(selectedId) === String(questionId);
   const button = el("button", `${className}${isActive ? " active" : ""}`);
@@ -922,31 +921,8 @@ const questionButton = (question, selectedId, className, binding = {}) => {
   button.dataset.questionId = questionId;
   button.dataset.questionKey = question.question_key || "";
   button.append(el("strong", "", question.title || question.question_key || questionId || currentText().recommended_question));
-  if (className === "question-row") {
-    const intent = intentTypeLabel(binding.primary_intent_type);
-    const isAdmin = measurementRole(roleSelect.value) === "admin";
-    const sourceParts = isAdmin ? [
-      question.measurement_topic || portraitDomainLabel(question.domain) || currentText().wb.bazi,
-      question.question_strategy,
-      question.source_decision_status,
-      intent,
-    ] : [
-      question.measurement_topic || portraitDomainLabel(question.domain) || currentText().wb.bazi,
-      intent,
-    ];
-    const sourceLine = sourceParts
-      .filter(Boolean)
-      .filter((item, index, values) => values.indexOf(item) === index)
-      .join(" · ");
-    button.append(el("span", "", `${sourceLine}`));
-  }
   button.addEventListener("click", () => runQuestion(question));
   return button;
-};
-
-const questionBindingByKey = (questionIntentModel = {}) => {
-  const rows = questionIntentModel.question_bindings || [];
-  return Object.fromEntries(rows.map((row) => [row.question_key, row]));
 };
 
 const intentSummary = (questionIntentModel = {}) => {

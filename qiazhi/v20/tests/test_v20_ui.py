@@ -78,6 +78,9 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "method: \"DELETE\"" in profiles_script.text
     assert "appendProfileDefaults(query, profile)" in profiles_script.text
     assert "flow_year_pillar" in profiles_script.text
+    assert "text.owner" not in profiles_script.text
+    assert "profile.owner_id" not in profiles_script.text
+    assert "profile.metadata?.source_system" not in profiles_script.text
     assert "populateBirthSelects" in profiles_script.text
     assert "for (let next = start; next <= end; next += 1)" in profiles_script.text
     assert "fillNumberSelect(\"#profileBirthYear\", 1900" in profiles_script.text
@@ -169,6 +172,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "requestMeasureStream" in script.text
     assert "startAnswerTypewriter" in script.text
     assert "queueAnswerText" in script.text
+    assert "questionBindingByKey" not in script.text
+    assert "sourceLine" not in script.text
     assert "plainAnswerText" in script.text
     assert "JSON.parse(text)" in script.text
     assert "assist.practitioner_answer" in script.text
@@ -216,7 +221,11 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert ".pillar-symbol[data-element=\"water\"]" in style.text
     assert "flex-wrap: nowrap" in style.text
     assert "overscroll-behavior-x: contain" in style.text
+    assert "-webkit-line-clamp: 2" in style.text
+    assert "grid-template-columns: repeat(2, minmax(0, 1fr))" in style.text
     assert ".profiles-layout" in style.text
+    assert ".profile-card .tag" in style.text
+    assert ".profile-card-actions" in style.text
     assert ".check-row" in style.text
     assert ".brand-logo" in style.text
     assert "V20 visual polish" in style.text

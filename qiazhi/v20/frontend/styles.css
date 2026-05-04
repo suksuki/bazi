@@ -981,11 +981,13 @@ textarea:focus {
 .question-row {
   display: grid;
   width: 100%;
+  min-height: 46px;
+  align-content: center;
   text-align: left;
   border-color: var(--line);
   background: var(--surface-2);
   color: var(--text);
-  padding: 10px;
+  padding: 9px 10px;
 }
 
 .answer-question-strip {
@@ -1347,10 +1349,12 @@ textarea:focus {
   display: grid;
   align-content: start;
   gap: 10px;
-  min-height: 176px;
+  min-height: 162px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: var(--surface);
+  background:
+    linear-gradient(180deg, rgba(77, 185, 133, 0.055), rgba(255, 255, 255, 0)),
+    var(--surface);
   box-shadow: var(--shadow);
   padding: 15px;
 }
@@ -1372,6 +1376,21 @@ textarea:focus {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.profile-card .tag {
+  min-height: 26px;
+  border-color: rgba(77, 185, 133, 0.28);
+  background: rgba(77, 185, 133, 0.09);
+  color: #bcebd2;
+  padding: 5px 8px;
+}
+
+.profile-card-actions {
+  align-self: end;
+  border-top: 1px solid rgba(77, 185, 133, 0.14);
+  margin-top: 2px;
+  padding-top: 10px;
 }
 
 .mini-action.danger {
@@ -1828,8 +1847,23 @@ textarea:hover,
     padding: 12px 0;
   }
 
+  .answer-question-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
   .question-row {
-    padding: 11px;
+    min-height: 40px;
+    padding: 8px;
+  }
+
+  .question-row strong {
+    display: -webkit-box;
+    overflow: hidden;
+    font-size: 12px;
+    line-height: 1.35;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .dialog-row {
