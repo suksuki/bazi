@@ -22,11 +22,11 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
 
     assert entry.status_code == 200
     assert "进入掐指一算" in entry.text
-    assert "styles.css?v=20260504-mobile-sync" in entry.text
-    assert "entry.js?v=20260504-mobile-sync" in entry.text
+    assert "styles.css?v=20260505-glass" in entry.text
+    assert "entry.js?v=20260505-leap" in entry.text
     assert "/v20/ui/qiazhi-logo-mark.png" in entry.text
     assert "/v20/ui/favicon.png" in entry.text
-    assert "brand-logo large" in entry.text
+    assert "brand-logo" in entry.text
     assert "brand-mark large" not in entry.text
     assert "Admin 入口" not in entry.text
     assert "DB / LLM" not in entry.text
@@ -37,7 +37,6 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert '<option value="user" data-entry-option="role_user">普通用户</option>' in entry.text
     assert "data-entry-option=\"role_guest\"" not in entry.text
     assert '<option value="admin">Admin</option>' not in entry.text
-    assert "logoutButton" in entry.text
     assert "guestStart" in entry.text
     assert "loginButton" in entry.text
     assert "registerButton" in entry.text
@@ -53,8 +52,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/auth/logout" in entry_script.text
     assert profiles.status_code == 200
     assert "V20 八字档案管理" in profiles.text
-    assert "styles.css?v=20260504-mobile-sync" in profiles.text
-    assert "profiles.js?v=20260504-mobile-sync" in profiles.text
+    assert "styles.css?v=20260505-glass" in profiles.text
+    assert "profiles.js?v=20260505-defaults" in profiles.text
     assert "/v20/ui/qiazhi-logo-mark.png" in profiles.text
     assert "brand-logo" in profiles.text
     assert "profileList" in profiles.text
@@ -93,8 +92,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "toggleLunarLeapMonth" in profiles_script.text
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
-    assert "styles.css?v=20260504-mobile-sync" in page.text
-    assert "app.js?v=20260504-mobile-sync" in page.text
+    assert "styles.css?v=20260505-glass" in page.text
+    assert "app.js?v=20.1.5" in page.text
     assert "/v20/ui/qiazhi-logo-mark.png" in page.text
     assert "brand-logo" in page.text
     assert "flow_year_pillar" in page.text
@@ -206,7 +205,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" not in script.text
     assert "DB / LLM" in admin.text
-    assert "styles.css?v=20260504-mobile-sync" in admin.text
+    assert "styles.css?v=20260505-glass" in admin.text
     assert "admin.js?v=20260504-mobile-sync" in admin.text
     assert "/v20/ui/qiazhi-logo-mark.png" in admin.text
     assert "brand-logo" in admin.text

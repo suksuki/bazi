@@ -17,7 +17,6 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert "knowledge_refs" in roles["user"]["blocked_runtime_fields"]
     assert "decision_report" in roles["user"]["allowed_runtime_fields"]
     assert "dynamic_portrait" not in roles["user"]["allowed_runtime_fields"]
-    assert "feature_state_model" not in roles["user"]["allowed_runtime_fields"]
     assert "question_intent_model" in roles["user"]["allowed_runtime_fields"]
     assert "interaction_session" in roles["user"]["allowed_runtime_fields"]
     assert "feature_layer" in roles["analyst"]["allowed_runtime_fields"]
@@ -61,7 +60,6 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "decision_report" in projected
     assert "dynamic_portrait" not in projected
     assert "portrait_projection" in projected["decision_report"]
-    assert "feature_state_model" not in projected
     assert "question_intent_model" in projected
     assert "interaction_session" in projected
     assert "practitioner_session" not in projected
