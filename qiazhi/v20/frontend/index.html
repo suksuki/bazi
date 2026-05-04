@@ -2,73 +2,103 @@
 <html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>掐指一算 V20</title>
     <link rel="icon" href="/v20/ui/favicon.png" />
     <link rel="stylesheet" href="/v20/ui/styles.css?v=20260504-mobile-sync" />
   </head>
   <body>
-    <main class="entry-page">
-      <header class="entry-hero">
-        <div class="brand compact-brand">
-          <img class="brand-logo large" src="/v20/ui/qiazhi-logo-mark.png" alt="掐指一算" />
-          <div>
-            <p class="eyebrow">Qiazhi V20</p>
-            <h1 data-entry="title">进入掐指一算</h1>
-            <p data-entry="subtitle">选择游客或本地账号进入 V20 命理测算系统。</p>
+    <main class="auth-wrapper">
+      <div class="auth-container">
+        <header class="auth-header">
+          <img class="brand-logo" src="/v20/ui/qiazhi-logo-mark.png" alt="Qiazhi" />
+          <h1 data-entry="title">进入掐指一算</h1>
+          <p data-entry="subtitle">V20 命理测算系统</p>
+        </header>
+
+        <nav class="auth-tabs">
+          <button type="button" class="tab-btn active" data-tab="guest" data-entry="guest_button">游客进入</button>
+          <button type="button" class="tab-btn" data-tab="login" data-entry="login_button">登录</button>
+          <button type="button" class="tab-btn" data-tab="register" data-entry="register_button">注册</button>
+        </nav>
+
+        <div class="auth-body">
+          <!-- Guest Section -->
+          <div id="guestPane" class="auth-pane active">
+            <div class="pane-content guest-form">
+              <p data-entry="guest_desc">输入出生信息直接开启测算</p>
+              
+              <div class="input-row">
+                <select id="guestCalendar">
+                  <option value="solar">公历 (Solar)</option>
+                  <option value="lunar">农历 (Lunar)</option>
+                </select>
+                <select id="guestGender">
+                  <option value="male">男 (Male)</option>
+                  <option value="female">女 (Female)</option>
+                </select>
+              </div>
+
+              <div class="input-grid-date">
+                <input id="guestYear" type="number" placeholder="年" min="1900" max="2100" />
+                <input id="guestMonth" type="number" placeholder="月" min="1" max="12" />
+                <input id="guestDay" type="number" placeholder="日" min="1" max="31" />
+              </div>
+
+              <div class="input-grid-time">
+                <input id="guestHour" type="number" placeholder="时" min="0" max="23" />
+                <input id="guestMinute" type="number" placeholder="分" min="0" max="59" />
+                <select id="guestFlowYear">
+                  <!-- Will be populated by JS -->
+                </select>
+              </div>
+
+              <button type="button" id="guestStart" class="btn-primary">开始测算</button>
+            </div>
+          </div>
+
+          <!-- Login Section -->
+          <div id="loginPane" class="auth-pane">
+            <div class="pane-content">
+              <div class="input-field">
+                <input id="loginName" autocomplete="username" placeholder="用户名" />
+              </div>
+              <div class="input-field">
+                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="密码" />
+              </div>
+              <button type="button" id="loginButton" class="btn-primary">进入系统</button>
+            </div>
+          </div>
+
+          <!-- Register Section -->
+          <div id="registerPane" class="auth-pane">
+            <div class="pane-content">
+              <div class="input-field">
+                <input id="registerName" autocomplete="username" placeholder="新用户名" />
+              </div>
+              <div class="input-field">
+                <input id="registerPassword" type="password" autocomplete="new-password" placeholder="新密码" />
+              </div>
+              <div class="input-field">
+                <select id="registerRole">
+                  <option value="user" data-entry-option="role_user">普通用户</option>
+                  <option value="analyst" data-entry-option="role_practitioner">命理师</option>
+                </select>
+              </div>
+              <button type="button" id="registerButton" class="btn-primary">创建账号</button>
+            </div>
           </div>
         </div>
-        <div class="entry-actions">
-          <label class="locale-switch">
-            <span data-entry="language">语言</span>
-            <select id="entryLocale">
-              <option value="zh">中文</option>
-              <option value="en">English</option>
-              <option value="ko">한국어</option>
-            </select>
-          </label>
-          <button type="button" id="logoutButton" class="mini-action secondary logout-action" data-entry="logout_button" hidden>登出</button>
-        </div>
-      </header>
 
-      <section class="entry-grid">
-        <article class="entry-card primary-entry">
-          <p class="section-kicker">Fast start</p>
-          <h2 data-entry="guest_title">游客即时测算</h2>
-          <p data-entry="guest_desc">不需要账号，直接进入测算台。适合快速体验和临时问盘。</p>
-          <button type="button" id="guestStart" data-entry="guest_button">游客进入</button>
-        </article>
-
-        <article class="entry-card">
-          <p class="section-kicker">Account</p>
-          <h2 data-entry="login_title">本地账号登录</h2>
-          <p data-entry="login_desc">用于保留多用户、命理师工作流和后续用户档案。</p>
-          <div class="entry-form">
-            <label><span data-entry="username">用户名</span><input id="loginName" autocomplete="username" placeholder="local_user" /></label>
-            <label><span data-entry="password">密码</span><input id="loginPassword" type="password" autocomplete="current-password" /></label>
-          </div>
-          <button type="button" id="loginButton" data-entry="login_button">登录</button>
-        </article>
-
-        <article class="entry-card">
-          <p class="section-kicker">Register</p>
-          <h2 data-entry="register_title">注册本地账号</h2>
-          <p data-entry="register_desc">普通用户用于保存个人档案，命理师用于后续校准与工作流。</p>
-          <div class="entry-form">
-            <label><span data-entry="username">用户名</span><input id="registerName" autocomplete="username" placeholder="new_user" /></label>
-            <label><span data-entry="password">密码</span><input id="registerPassword" type="password" autocomplete="new-password" /></label>
-            <label><span data-entry="register_role">注册角色</span>
-              <select id="registerRole">
-                <option value="user" data-entry-option="role_user">普通用户</option>
-                <option value="analyst" data-entry-option="role_practitioner">命理师</option>
-              </select>
-            </label>
-          </div>
-          <button type="button" id="registerButton" class="secondary" data-entry="register_button">注册</button>
-        </article>
-      </section>
-
-      <div id="entryStatus" class="status-line">checking</div>
+        <footer class="auth-footer">
+          <div id="entryStatus" class="status-msg"></div>
+          <select id="entryLocale" class="minimal-select">
+            <option value="zh">中文</option>
+            <option value="en">English</option>
+            <option value="ko">한국어</option>
+          </select>
+        </footer>
+      </div>
     </main>
     <script src="/v20/ui/entry.js?v=20260504-mobile-sync" defer></script>
   </body>

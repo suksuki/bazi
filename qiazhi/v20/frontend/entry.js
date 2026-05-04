@@ -18,6 +18,9 @@ const ENTRY_TEXT = {
     login_button: "登录",
     register_button: "注册",
     logout_button: "登出",
+    logged_out: "已登出",
+    not_authenticated: "未登录",
+    or: "或者",
   },
   en: {
     title: "Enter Qiazhi",
@@ -38,6 +41,9 @@ const ENTRY_TEXT = {
     login_button: "Log In",
     register_button: "Register",
     logout_button: "Log Out",
+    logged_out: "Logged out",
+    not_authenticated: "Not authenticated",
+    or: "OR",
   },
   ko: {
     title: "Qiazhi 시작",
@@ -58,12 +64,16 @@ const ENTRY_TEXT = {
     login_button: "로그인",
     register_button: "등록",
     logout_button: "로그아웃",
+    logged_out: "로그아웃됨",
+    not_authenticated: "인증되지 않음",
+    or: "또는",
   },
 };
 
 const localeSelect = document.querySelector("#entryLocale");
 const statusLine = document.querySelector("#entryStatus");
-const logoutButton = document.querySelector("#logoutButton");
+// Removed redundant logout button from entry page for cleaner 3-in-1 look
+const currentEntryText = () => ENTRY_TEXT[localeSelect.value] || ENTRY_TEXT.zh;
 
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, {
@@ -90,6 +100,7 @@ const applyLocale = (locale) => {
     if (value) node.textContent = value;
   });
   localStorage.setItem("v20_locale", clean);
+  document.title = text.title + " · Qiazhi V20";
 };
 
 const goWorkbench = (session) => {
@@ -103,6 +114,7 @@ const goProfiles = (session) => {
   const role = session?.role || "user";
   const locale = localeSelect.value || "zh";
   const params = new URLSearchParams({ role, locale });
+  // Redirect back to the correct Profiles page
   window.location.href = `/v20/ui/profiles.html?${params.toString()}`;
 };
 
@@ -112,7 +124,22 @@ const guestStart = async () => {
     method: "POST",
     body: JSON.stringify({ locale: localeSelect.value }),
   });
-  goWorkbench(result.session);
+  
+  const params = new URLSearchParams({
+    role: "guest",
+    locale: localeSelect.value,
+    calendar: document.querySelector("#guestCalendar").value,
+    gender: document.querySelector("#guestGender").value,
+    year: document.querySelector("#guestYear").value,
+    month: document.querySelector("#guestMonth").value,
+    day: document.querySelector("#guestDay").value,
+    hour: document.querySelector("#guestHour").value,
+    minute: document.querySelector("#guestMinute").value,
+    flow_year: document.querySelector("#guestFlowYear").value,
+    // Add a flag to trigger auto-measure
+    auto_measure: "true"
+  });
+  window.location.href = `/v20/ui/workbench.html?${params.toString()}`;
 };
 
 const login = async () => {
@@ -149,21 +176,58 @@ const logout = async () => {
     body: JSON.stringify({}),
   });
   if (logoutButton) logoutButton.hidden = true;
-  statusLine.textContent = "logged out";
+  statusLine.textContent = currentEntryText().logged_out;
 };
 
 const loadMe = async () => {
   const result = await requestJson("/api/v20/auth/me");
   const session = result.session || {};
-  if (logoutButton) logoutButton.hidden = !result.authenticated;
-  statusLine.textContent = result.authenticated ? `${session.username} · ${session.role}` : "not authenticated";
+  statusLine.textContent = result.authenticated ? `${session.username} · ${session.role}` : "";
 };
 
-localeSelect.value = localStorage.getItem("v20_locale") || "zh";
-applyLocale(localeSelect.value);
-localeSelect.addEventListener("change", () => applyLocale(localeSelect.value));
+const initTabs = () => {
+  const tabs = document.querySelectorAll(".tab-btn");
+  const panes = document.querySelectorAll(".auth-pane");
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.tab;
+      tabs.forEach((t) => t.classList.toggle("active", t === tab));
+      panes.forEach((p) => p.classList.toggle("active", p.id === `${target}Pane`));
+      statusLine.textContent = "";
+    });
+  });
+};
+
+const setupGuestForm = () => {
+  const now = new Date();
+  document.querySelector("#guestYear").value = 1990; // Sensible default
+  document.querySelector("#guestMonth").value = now.getMonth() + 1;
+  document.querySelector("#guestDay").value = now.getDate();
+  document.querySelector("#guestHour").value = 12;
+  document.querySelector("#guestMinute").value = 0;
+
+  const flowYearSelect = document.querySelector("#guestFlowYear");
+  const currentYear = now.getFullYear();
+  for (let y = currentYear - 1; y <= currentYear + 10; y++) {
+    const opt = document.createElement("option");
+    opt.value = y;
+    opt.textContent = `${y}年`;
+    if (y === currentYear) opt.selected = true;
+    flowYearSelect.appendChild(opt);
+  }
+};
+
+hydrateLocale();
+initTabs();
+setupGuestForm();
 document.querySelector("#guestStart").addEventListener("click", () => guestStart().catch((error) => statusLine.textContent = error.message));
 document.querySelector("#loginButton").addEventListener("click", () => login().catch((error) => statusLine.textContent = error.message));
 document.querySelector("#registerButton").addEventListener("click", () => register().catch((error) => statusLine.textContent = error.message));
-logoutButton?.addEventListener("click", () => logout().catch((error) => statusLine.textContent = error.message));
-loadMe().catch(() => statusLine.textContent = "not authenticated");
+loadMe().catch(() => {});
+
+function hydrateLocale() {
+  localeSelect.value = localStorage.getItem("v20_locale") || "zh";
+  applyLocale(localeSelect.value);
+  localeSelect.addEventListener("change", () => applyLocale(localeSelect.value));
+}
