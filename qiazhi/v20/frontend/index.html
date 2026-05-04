@@ -45,20 +45,20 @@
               </label>
 
               <div class="input-grid-date">
-                <input id="guestYear" type="number" placeholder="年" min="1900" max="2100" />
-                <input id="guestMonth" type="number" placeholder="月" min="1" max="12" />
-                <input id="guestDay" type="number" placeholder="日" min="1" max="31" />
+                <input id="guestYear" type="number" placeholder="年" min="1900" max="2100" data-entry-placeholder="ph_year" />
+                <input id="guestMonth" type="number" placeholder="月" min="1" max="12" data-entry-placeholder="ph_month" />
+                <input id="guestDay" type="number" placeholder="日" min="1" max="31" data-entry-placeholder="ph_day" />
               </div>
 
               <div class="input-grid-time">
-                <input id="guestHour" type="number" placeholder="时" min="0" max="23" />
-                <input id="guestMinute" type="number" placeholder="分" min="0" max="59" />
+                <input id="guestHour" type="number" placeholder="时" min="0" max="23" data-entry-placeholder="ph_hour" />
+                <input id="guestMinute" type="number" placeholder="分" min="0" max="59" data-entry-placeholder="ph_minute" />
                 <select id="guestFlowYear">
                   <!-- Will be populated by JS -->
                 </select>
               </div>
 
-              <button type="button" id="guestStart" class="btn-primary">开始测算</button>
+              <button type="button" id="guestStart" class="btn-primary" data-entry="start_reading">开始测算</button>
             </div>
           </div>
 
@@ -66,12 +66,12 @@
           <div id="loginPane" class="auth-pane">
             <div class="pane-content">
               <div class="input-field">
-                <input id="loginName" autocomplete="username" placeholder="用户名" />
+                <input id="loginName" autocomplete="username" placeholder="用户名" data-entry-placeholder="username" />
               </div>
               <div class="input-field">
-                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="密码" />
+                <input id="loginPassword" type="password" autocomplete="current-password" placeholder="密码" data-entry-placeholder="password" />
               </div>
-              <button type="button" id="loginButton" class="btn-primary">进入系统</button>
+              <button type="button" id="loginButton" class="btn-primary" data-entry="enter_system">进入系统</button>
             </div>
           </div>
 
@@ -79,10 +79,10 @@
           <div id="registerPane" class="auth-pane">
             <div class="pane-content">
               <div class="input-field">
-                <input id="registerName" autocomplete="username" placeholder="新用户名" />
+                <input id="registerName" autocomplete="username" placeholder="新用户名" data-entry-placeholder="new_username" />
               </div>
               <div class="input-field">
-                <input id="registerPassword" type="password" autocomplete="new-password" placeholder="新密码" />
+                <input id="registerPassword" type="password" autocomplete="new-password" placeholder="新密码" data-entry-placeholder="new_password" />
               </div>
               <div class="input-field">
                 <select id="registerRole">
@@ -90,7 +90,7 @@
                   <option value="analyst" data-entry-option="role_practitioner">命理师</option>
                 </select>
               </div>
-              <button type="button" id="registerButton" class="btn-primary">创建账号</button>
+              <button type="button" id="registerButton" class="btn-primary" data-entry="create_account">创建账号</button>
             </div>
           </div>
         </div>

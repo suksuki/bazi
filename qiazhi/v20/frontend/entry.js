@@ -26,6 +26,16 @@ const ENTRY_TEXT = {
     male: "男",
     female: "女",
     leap_month: "闰月",
+    start_reading: "开始测算",
+    enter_system: "进入系统",
+    create_account: "创建账号",
+    ph_year: "年",
+    ph_month: "月",
+    ph_day: "日",
+    ph_hour: "时",
+    ph_minute: "分",
+    new_username: "新用户名",
+    new_password: "新密码",
   },
   en: {
     title: "Enter Qiazhi",
@@ -54,6 +64,16 @@ const ENTRY_TEXT = {
     male: "Male",
     female: "Female",
     leap_month: "Leap Month",
+    start_reading: "Start Reading",
+    enter_system: "Enter System",
+    create_account: "Create Account",
+    ph_year: "YYYY",
+    ph_month: "MM",
+    ph_day: "DD",
+    ph_hour: "HH",
+    ph_minute: "Min",
+    new_username: "New Username",
+    new_password: "New Password",
   },
   ko: {
     title: "Qiazhi 시작",
@@ -82,6 +102,16 @@ const ENTRY_TEXT = {
     male: "남",
     female: "여",
     leap_month: "윤달",
+    start_reading: "분석 시작",
+    enter_system: "시스템 입장",
+    create_account: "계정 생성",
+    ph_year: "년",
+    ph_month: "월",
+    ph_day: "일",
+    ph_hour: "시",
+    ph_minute: "분",
+    new_username: "새 사용자명",
+    new_password: "새 비밀번호",
   },
 };
 
@@ -113,6 +143,10 @@ const applyLocale = (locale) => {
   document.querySelectorAll("[data-entry-option]").forEach((node) => {
     const value = text[node.dataset.entryOption];
     if (value) node.textContent = value;
+  });
+  document.querySelectorAll("[data-entry-placeholder]").forEach((node) => {
+    const value = text[node.dataset.entryPlaceholder];
+    if (value) node.placeholder = value;
   });
   localStorage.setItem("v20_locale", clean);
   document.title = text.title + " · Qiazhi V20";
