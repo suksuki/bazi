@@ -313,9 +313,9 @@ const openProfileEditor = (profile = {}) => {
   setValue("#profileGender", birth.gender === "female" ? "female" : "male");
   setValue("#profileCalendar", birth.calendar_type || birth.calendar || "solar");
   populateBirthSelects({
-    year: birth.year || "",
-    month: birth.month || "",
-    day: birth.day || "",
+    year: birth.year || 1990,
+    month: birth.month || 1,
+    day: birth.day || 1,
     hour: birth.hour ?? 0,
     minute: birth.minute ?? 0,
   });
@@ -370,6 +370,9 @@ const measureUrl = (profile) => {
   const query = new URLSearchParams({
     role: measurementRole(params.get("role") || document.body.dataset.role),
     locale: localeSelect.value,
+    calendar: profile.birth_input?.calendar || profile.birth_input?.calendar_type || "solar",
+    lunar_is_leap: profile.birth_input?.lunar_is_leap_month || profile.birth_input?.is_lunar_leap_month || profile.birth_input?.lunar_is_leap || false,
+    gender: profile.birth_input?.gender || "male",
     profile_id: profile.profile_id || "",
     profile_name: profile.display_name || "",
   });

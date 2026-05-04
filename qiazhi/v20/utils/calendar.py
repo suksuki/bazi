@@ -1,0 +1,201 @@
+from __future__ import annotations
+
+from lunar_python import Lunar, Solar
+
+
+def resolve_pillars(
+    year_str: str,
+    month_str: str,
+    day_str: str,
+    hour_str: str,
+    calendar: str = "solar",
+    gender: str = "male",
+    lunar_is_leap: bool = False,
+) -> dict[str, str]:
+    """
+    Resolve birth date into four pillars (年柱, 月柱, 日柱, 时柱).
+    
+    If all inputs are already 2-character pillars, return as-is.
+    If any input is numeric, we assume the user is providing a date and resolve it.
+    """
+    y_val, m_val, d_val, h_val = str(year_str), str(month_str), str(day_str), str(hour_str)
+    
+    # Placeholder blacklist
+    placeholders = {"甲子", "戊辰", "甲午", "辛酉", "庚子", "乙亥", "辛丑"}
+    
+    # Check if we need resolution: if any field looks like a number (at least one digit)
+    # AND it's not a standard 2-character pillar
+    needs_resolution = any(any(c.isdigit() for c in s) for s in [y_val, m_val, d_val, h_val])
+    
+    if not needs_resolution:
+        # If it's already pillars (including placeholders), return as-is
+        return {"year": y_val, "month": m_val, "day": d_val, "hour": h_val}
+
+    # Perform resolution
+    try:
+        def to_int(s):
+            d = "".join(filter(str.isdigit, str(s)))
+            return int(d) if d else None
+
+        y = to_int(y_val)
+        m = to_int(m_val)
+        d = to_int(d_val)
+        h = to_int(h_val) or 0
+        
+        # If we have at least YMD, we can resolve
+        if y is not None and m is not None and d is not None:
+            if calendar == "lunar":
+                m_actual = -m if lunar_is_leap else m
+                lunar_obj = Lunar.fromYmdHms(y, m_actual, d, h, 0, 0)
+            else:
+                solar_obj = Solar.fromYmdHms(y, m, d, h, 0, 0)
+                lunar_obj = solar_obj.getLunar()
+            
+            bazi = lunar_obj.getBaZi()
+            print(f"Resolved {calendar} {y_val}-{m_val}-{d_val} {h_val} -> {bazi}")
+            return {
+                "year": bazi[0],
+                "month": bazi[1],
+                "day": bazi[2],
+                "hour": bazi[3],
+            }
+    except Exception as e:
+        print(f"Resolution failed for {calendar} {y_val}-{m_val}-{d_val}: {e}")
+
+    # Fallback: if resolution failed or was incomplete, return as-is
+    def clean(s):
+        # Allow standard pillars (2 chars, no digits)
+        if s and len(s) == 2 and not any(c.isdigit() for c in s):
+            return s
+        return ""
+
+    return {
+        "year": clean(y_val),
+        "month": clean(m_val),
+        "day": clean(d_val),
+        "hour": clean(h_val),
+    }
+
+
+def resolve_luck_pillar(
+    year_str: str,
+    month_str: str,
+    day_str: str,
+    hour_str: str,
+    calendar: str = "solar",
+    gender: str = "male",
+    lunar_is_leap: bool = False,
+    target_year: int = 2026,
+) -> str:
+    """
+    Calculate the current 大运 (luck pillar) for a given birth date and target year.
+
+    Supports both numeric dates (1990, 5, 4, 12) and GanZhi pillar strings (癸卯, 甲寅, ...).
+    For GanZhi inputs, we infer a plausible birth year from the year pillar.
+
+    gender: 'male' or 'female'
+    target_year: the year to check which luck pillar is active
+    Returns: the GanZhi string of the active luck pillar (e.g. '辛丑')
+    """
+    try:
+        y_s, m_s, d_s, h_s = str(year_str), str(month_str), str(day_str), str(hour_str)
+        y_is_digit = y_s.isdigit()
+        m_is_digit = m_s.isdigit()
+        d_is_digit = d_s.isdigit()
+
+        if y_is_digit and m_is_digit and d_is_digit:
+            # Numeric path: direct resolution
+            y, m, d, h = int(y_s), int(m_s), int(d_s), int(h_s) if h_s.isdigit() else 0
+            if not all([y, m, d]):
+                return ""
+        elif len(y_s) == 2 and not y_is_digit:
+            # GanZhi path: infer plausible birth year from year pillar
+            from v20.core.constants import STEMS, BRANCHES
+            if y_s[0] in STEMS and y_s[1] in BRANCHES:
+                # Find the birth year closest to (target_year - 45) matching this GanZhi
+                # We assume a mean user age of 45 to prefer 1964 over 2024 for 甲辰
+                ref_year = target_year - 45
+                best_y = None
+                for offset in range(0, 80):
+                    for candidate in [ref_year - offset, ref_year + offset]:
+                        if candidate < 1900 or candidate > target_year:
+                            continue
+                        try:
+                            if Lunar.fromYmdHms(candidate, 1, 1, 0, 0, 0).getYearInGanZhi() == y_s:
+                                best_y = candidate
+                                break
+                        except Exception:
+                            continue
+                    if best_y is not None:
+                        break
+                if best_y is None:
+                    return month_str if len(str(month_str)) == 2 else ""
+                # Use Jan 15 as a reasonable default date for GanZhi-only inputs
+                y, m, d, h = best_y, 1, 15, 0
+                calendar = "solar"  # treat inferred date as solar
+            else:
+                return month_str if len(str(month_str)) == 2 else ""
+        else:
+            return month_str if len(str(month_str)) == 2 else ""
+    except (ValueError, TypeError):
+        return month_str if len(str(month_str)) == 2 else ""
+
+    try:
+        if calendar == "lunar":
+            m_actual = -m if lunar_is_leap else m
+            lunar = Lunar.fromYmdHms(y, m_actual, d, h, 0, 0)
+        else:
+            solar = Solar.fromYmdHms(y, m, d, h, 0, 0)
+            lunar = solar.getLunar()
+
+        bazi = lunar.getEightChar()
+        # gender: 1=male, 0=female
+        gender_code = 1 if gender == "male" else 0
+        yun = bazi.getYun(gender_code)
+
+        # Find the active luck pillar for the target year
+        luck_pillars = yun.getDaYun()
+        matched = ""
+        for dy in luck_pillars:
+            gz = dy.getGanZhi()
+            if not gz:
+                continue
+            start = dy.getStartYear()
+            end = dy.getEndYear()
+            if start <= target_year <= end:
+                matched = gz
+
+        return matched or (month_str if len(str(month_str)) == 2 else "")
+    except Exception as exc:
+        print(f"resolve_luck_pillar error: {exc}")
+        return ""
+
+
+def resolve_target_year(flow_year_pillar: str, birth_year: int = 0) -> int:
+    """
+    Infers the target year number from a GanZhi flow year pillar.
+    If it's numeric, returns it.
+    If it's GanZhi, finds the year closest to 'now' that matches it.
+    """
+    val = str(flow_year_pillar).strip()
+    if not val:
+        return Solar.fromYmdHms(2026, 1, 1, 0, 0, 0).getYear() # Default for V20 for now
+    
+    if val.isdigit():
+        return int(val)
+    
+    # If it's GanZhi (2 chars)
+    if len(val) == 2:
+        from v20.core.constants import STEMS, BRANCHES
+        if val[0] in STEMS and val[1] in BRANCHES:
+            # Find year matching this GanZhi closest to 2026
+            current_y = 2026
+            for offset in range(0, 60):
+                # Check current_y + offset and current_y - offset
+                for y in [current_y + offset, current_y - offset]:
+                    if Lunar.fromYmdHms(y, 1, 1, 0, 0, 0).getYearInGanZhi() == val:
+                        return y
+    
+    # Extract digits as fallback
+    digits = "".join(filter(str.isdigit, val))
+    return int(digits) if digits else 2026

@@ -15,6 +15,7 @@ const state = {
   answeredQuestionKeys: [],
   chartMemoryKey: "",
   answerWriter: { timer: null, queue: "", displayed: "" },
+  isBatchUpdating: false,
 };
 
 const STEM_META = {
@@ -43,6 +44,16 @@ const BRANCH_META = {
   酉: { element: "metal", polarity: "yin" },
   戌: { element: "earth", polarity: "yang" },
   亥: { element: "water", polarity: "yin" },
+};
+
+const STEMS_LIST = ["甲","乙","丙","丁","戊","己","庚","辛","壬","癸"];
+const BRANCHES_LIST = ["子","丑","寅","卯","辰","巳","午","未","申","酉","戌","亥"];
+const yearToGanZhi = (year) => {
+  const y = Number(year);
+  if (!y || y < 1900) return "";
+  const stemIndex = (y - 4) % 10;
+  const branchIndex = (y - 4) % 12;
+  return STEMS_LIST[stemIndex < 0 ? stemIndex + 10 : stemIndex] + BRANCHES_LIST[branchIndex < 0 ? branchIndex + 12 : branchIndex];
 };
 
 const params = new URLSearchParams(window.location.search);
@@ -158,6 +169,7 @@ const setText = (selector, value) => {
 const requestJson = async (url, options = {}) => {
   const response = await fetch(url, {
     headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
     ...options,
   });
   if (!response.ok) {
@@ -331,6 +343,7 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
     if (!isStreaming) renderRuntime(result);
     if (turnId) completeChatTurn(turnId, result.answer_text || "", result);
   } catch (error) {
+    console.error("Measurement execution failed:", error);
     stopAnswerTypewriter();
     setText("#answerText", `${currentText().wb.failed}${error.message}`);
     if (turnId) failChatTurn(turnId, error.message);
@@ -346,6 +359,7 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
 };
 
 const scheduleMeasure = ({ force = false } = {}) => {
+  if (state.isBatchUpdating && !force) return;
   clearTimeout(state.measureTimer);
   state.measureTimer = setTimeout(() => measure({ force }), 280);
 };
@@ -364,7 +378,8 @@ const renderRuntime = (result) => {
   const selectedQuestionId = selected.question_id || "";
   if (questionIdInput) questionIdInput.value = selectedQuestionId;
 
-  document.body.dataset.role = role;
+  // Preserve guest role on body for CSS layout; use measurement role for access control
+  if (params.get("role") !== "guest") document.body.dataset.role = role;
   renderObservationAccess(role);
   renderFeatureStateAccess(role);
   setText("#selectedQuestion", selected.title || selected.question_key || currentText().running);
@@ -450,16 +465,25 @@ const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") =
   if (busy) setText("#llmStatus", llmMode === "practitioner" ? "llm practitioner" : text.running);
 };
 
-const renderPillars = (chart, timeContext = {}) => {
+const renderPillars = (chart = {}, timeContext = {}) => {
   const root = document.querySelector("#pillarPanel");
   clear(root);
+  const keys = ["year", "month", "day", "hour"];
+  const hasRealData = keys.some(k => chart.pillars?.[k]);
+  const hasFallbackData = keys.some(k => {
+    const v = String(form.elements[k]?.value || "").trim();
+    return v.length >= 2 && !/^\d+$/.test(v);
+  });
+  if (!hasRealData && !hasFallbackData) return;
+
   const text = currentText();
   const pillars = chart.pillars || {};
   const timePillars = Object.fromEntries((timeContext.layers || []).map((layer) => [layer.layer_key, layer.pillar || {}]));
   ["year", "month", "day", "hour", "luck", "flow_year"].forEach((key) => {
     const pillar = pillars[key] || timePillars[key] || fallbackPillar(key);
     const card = el("div", `pillar-card ${key === "day" ? "active" : ""}`);
-    card.append(el("span", "", text.pillars[key] || key));
+    const pillarLabel = (text.pillars && text.pillars[key]) ? text.pillars[key] : key;
+    card.append(el("span", "", pillarLabel));
     card.append(pillarGlyph(pillar));
     card.append(el("em", "", text.pillar_hints[key] || ""));
     root.append(card);
@@ -1129,22 +1153,7 @@ const loadLatentCalibrationManifest = async () => {
   }
 };
 
-const loadStatus = async () => {
-  try {
-    const [health, deps] = await Promise.all([
-      requestJson("/health"),
-      requestJson("/api/v20/runtime/dependencies"),
-    ]);
-    setText("#runtimeStatus", `${health.status} · ${health.active_profile}`);
-    setText("#profileBadge", health.active_profile);
-    setText("#corpusState", `runtime ${health.package_version || "v20"}`);
-    setText("#ruleState", `llm ${deps.llm.ready_for_connection ? deps.llm.model : currentText().wb.config}`);
-    setText("#dbState", `db ${deps.postgres.ready_for_connection ? currentText().wb.ready : currentText().wb.config}`);
-  } catch (error) {
-    setText("#runtimeStatus", currentText().wb.status_error);
-    setText("#dbState", error.message);
-  }
-};
+
 
 const loadCurrentSession = async () => {
   try {
@@ -1153,14 +1162,15 @@ const loadCurrentSession = async () => {
     if (result.authenticated && session.role) {
       const role = measurementRole(session.role);
       roleSelect.value = role;
-      document.body.dataset.role = role;
+      // Preserve guest role on body for CSS layout
+      if (params.get("role") !== "guest") document.body.dataset.role = role;
       renderObservationAccess(role);
       renderFeatureStateAccess(role);
     }
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = session.role !== "admin";
     });
-    if (logoutButton) logoutButton.hidden = !result.authenticated;
+    if (logoutButton) logoutButton.hidden = !result.authenticated || params.get("role") === "guest";
   } catch (error) {
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = true;
@@ -1244,6 +1254,75 @@ const loadActiveProfile = async () => {
   }
 };
 
+const applyProfileDefaults = (profile) => {
+  if (!profile) return;
+  const f = document.querySelector("#measureForm");
+  if (!f) {
+    console.error("applyProfileDefaults: #measureForm not found!");
+    return;
+  }
+  
+  state.isBatchUpdating = true;
+  try {
+    const birth = profile.birth_input || {};
+    const defaults = profile.chart_defaults || {};
+    const pillars = defaults.pillars || {};
+    const timePillars = defaults.time_pillars || {};
+
+    const blackList = ["甲子", "戊辰", "甲午", "辛酉", "庚子", "乙亥", "辛丑"];
+    const cleanPillar = (p) => (p && !blackList.includes(p)) ? p : "";
+
+    const fields = [
+      ["calendar", birth.calendar || birth.calendar_type || "solar"],
+      ["lunar_is_leap", String(Boolean(birth.lunar_is_leap_month || birth.is_lunar_leap_month || birth.lunar_is_leap))],
+      ["gender", birth.gender || "male"],
+      ["year", birth.year || cleanPillar(pillars.year)],
+      ["month", birth.month || cleanPillar(pillars.month)],
+      ["day", birth.day || cleanPillar(pillars.day)],
+      ["hour", birth.hour || cleanPillar(pillars.hour)],
+      ["flow_year_pillar", cleanPillar(timePillars.flow_year)],
+      ["luck_pillar", cleanPillar(timePillars.luck)],
+    ];
+
+    fields.forEach(([key, value]) => {
+      if (value !== undefined && value !== null) {
+        if (f.elements[key]) {
+          const el = f.elements[key];
+          // Only overwrite if profile provides a real value or current field is empty
+          const current = String(el.value || "").trim();
+          if (String(value).trim() || !current) {
+            el.value = String(value);
+          }
+          el.dispatchEvent(new Event("change"));
+        }
+        // Sync segment controls
+        if (key === "calendar") {
+          document.querySelectorAll("[data-calendar]").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.calendar === value);
+          });
+          const leapToggle = document.querySelector("#leapToggle");
+          if (leapToggle) leapToggle.style.display = value === "lunar" ? "flex" : "none";
+        } else if (key === "gender") {
+          document.querySelectorAll("[data-gender]").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.gender === value);
+          });
+        } else if (key === "lunar_is_leap") {
+          const cb = document.querySelector("#lunarIsLeapCheckbox");
+          if (cb) cb.checked = (value === "true" || value === true);
+        }
+      }
+    });
+
+    if (defaults.status === "ready") {
+      setText("#profileBadge", currentText().wb.profile_chart);
+    }
+  } catch (err) {
+    console.error("applyProfileDefaults error:", err);
+  } finally {
+    state.isBatchUpdating = false;
+  }
+};
+
 const payloadFromForm = () => {
   const data = new FormData(form);
   return Object.fromEntries(data.entries());
@@ -1276,15 +1355,35 @@ const rememberAnsweredQuestion = (question) => {
   }
 };
 
-const hasCompletePillars = (payload) => ["year", "month", "day", "hour"].every((key) => String(payload[key] || "").trim().length === 2);
+const hasCompletePillars = (payload) => {
+  const keys = ["year", "month", "day", "hour"];
+  return keys.every((key) => {
+    const val = String(payload[key] || "").trim();
+    // Simply ensure it's not empty. Let the backend handle the rest.
+    return val.length >= 1;
+  });
+};
 
 const fallbackPillar = (key) => {
   const fieldByKey = {
+    year: "year",
+    month: "month",
+    day: "day",
+    hour: "hour",
     luck: "luck_pillar",
     flow_year: "flow_year_pillar",
   };
   const value = String(form.elements[fieldByKey[key]]?.value || "").trim();
   if (value.length < 2) return {};
+  // Blacklist only applies to natal pillars (year/month/day/hour) from profile defaults,
+  // NOT to time pillars (luck/flow_year) which are always explicit user selections.
+  const isTimePillar = key === "luck" || key === "flow_year";
+  if (!isTimePillar) {
+    const blackList = ["甲子", "戊辰", "甲午", "辛酉", "庚子", "乙亥", "辛丑"];
+    if (blackList.includes(value)) return {};
+  }
+  // If it's a numeric value (like 1982), don't treat it as a GanZhi pillar for glyph rendering
+  if (/^\d+$/.test(value)) return {};
   return { stem: value.slice(0, 1), branch: value.slice(1, 2) };
 };
 
@@ -1307,35 +1406,25 @@ const hydrateFormFromParams = () => {
     "user_text",
     "question_key",
     "question_id",
+    "calendar",
+    "gender",
+    "lunar_is_leap",
   ].forEach((key) => {
     const value = params.get(key);
     if (value !== null && form.elements[key]) form.elements[key].value = value;
   });
-  if (chatText) chatText.value = form.elements.user_text.value || "";
-};
-
-const applyProfileDefaults = (profile) => {
-  const defaults = profile.chart_defaults || {};
-  const pillars = defaults.pillars || {};
-  const timePillars = defaults.time_pillars || {};
-  [
-    ["year", pillars.year],
-    ["month", pillars.month],
-    ["day", pillars.day],
-    ["hour", pillars.hour],
-    ["flow_year_pillar", timePillars.flow_year],
-    ["luck_pillar", timePillars.luck],
-  ].forEach(([key, value]) => {
-    if (value && form.elements[key]) form.elements[key].value = value;
-  });
-  if (defaults.status === "ready") {
-    setText("#profileBadge", currentText().wb.profile_chart);
+  // Guest mode: convert numeric flow_year (e.g. "2026") to GanZhi pillar (e.g. "丙午")
+  const flowYearRaw = params.get("flow_year");
+  if (flowYearRaw && /^\d{4}$/.test(flowYearRaw) && form.elements.flow_year_pillar) {
+    const gz = yearToGanZhi(flowYearRaw);
+    if (gz) form.elements.flow_year_pillar.value = gz;
   }
+  if (chatText) chatText.value = form.elements.user_text.value || "";
 };
 
 const unique = (items) => Array.from(new Set(items));
 const currentText = () => UI_TEXT[localeSelect.value] || UI_TEXT.zh;
-const measurementRole = (role) => (role === "user" ? "user" : role === "admin" ? "admin" : "analyst");
+const measurementRole = (role) => (role === "user" || role === "guest" ? "user" : role === "admin" ? "admin" : "analyst");
 const profileMeta = (profile) => {
   const birth = profile.birth_input || {};
   const date = [birth.year, String(birth.month || "").padStart(2, "0"), String(birth.day || "").padStart(2, "0")]
@@ -1368,6 +1457,30 @@ form.querySelectorAll("input, textarea, select").forEach((node) => {
       if (chatText && chatText.value !== node.value) chatText.value = node.value;
     });
   }
+});
+document.querySelectorAll(".segment-control button").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const parent = btn.parentElement;
+    parent.querySelectorAll("button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    if (btn.dataset.calendar) {
+      document.querySelector("#calendarHidden").value = btn.dataset.calendar;
+      const leapToggle = document.querySelector("#leapToggle");
+      if (leapToggle) leapToggle.style.display = btn.dataset.calendar === "lunar" ? "flex" : "none";
+    } else if (btn.dataset.gender) {
+      document.querySelector("#genderHidden").value = btn.dataset.gender;
+    }
+    scheduleMeasure({ force: true });
+  });
+});
+document.querySelector("#lunarIsLeapCheckbox")?.addEventListener("change", (e) => {
+  document.querySelector("#lunarIsLeapHidden").value = e.target.checked;
+  scheduleMeasure({ force: true });
+});
+// Initialization sequence
+state.isBatchUpdating = true;
+["year", "month", "day", "hour", "flow_year_pillar", "luck_pillar", "flow_month_pillar"].forEach(k => {
+  if (form.elements[k]) form.elements[k].value = "";
 });
 chatButton.addEventListener("click", () => {
   const value = chatText.value.trim();
@@ -1417,11 +1530,36 @@ logoutButton?.addEventListener("click", () => logout().catch((error) => setText(
 if (params.get("locale")) localeSelect.value = params.get("locale");
 roleSelect.value = measurementRole(params.get("role") || roleSelect.value);
 document.body.classList.toggle("profile-reading", Boolean(params.get("profile_id")));
+if (params.get("role") === "guest") {
+  document.body.dataset.role = "guest";
+  if (logoutButton) logoutButton.hidden = true;
+}
 hydrateFormFromParams();
 applyLocale(localeSelect.value);
+// Guest nav: replace "档案" with "入口" AFTER applyLocale to avoid overwrite
+if (params.get("role") === "guest") {
+  const entryText = { zh: "入口", en: "Entry", ko: "입구" }[localeSelect.value] || "入口";
+  const profilesLink = document.querySelector('[data-ui="nav_profiles"]');
+  if (profilesLink) {
+    profilesLink.textContent = entryText;
+    profilesLink.href = `/v20/ui/?locale=${encodeURIComponent(localeSelect.value || "zh")}`;
+  }
+}
 renderInitialPanels();
 loadCurrentSession();
-loadStatus();
+
 loadLatentCalibrationManifest();
-loadActiveProfile().finally(() => scheduleMeasure({ force: true }));
-setInterval(loadStatus, 10000);
+state.isBatchUpdating = false;
+if (params.get("role") === "guest" || params.get("auto_measure") === "true") {
+  scheduleMeasure({ force: true });
+} else if (params.get("profile_id")) {
+  // If loading a profile, DON'T measure until applyProfileDefaults is DONE
+  loadActiveProfile().then(() => {
+    console.log("Profile loaded, triggering initial measure.");
+    scheduleMeasure({ force: true });
+  });
+} else {
+  // Static state, just render
+  renderInitialPanels();
+}
+

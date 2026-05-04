@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <title>掐指一算 V20</title>
     <link rel="icon" href="/v20/ui/favicon.png" />
-    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260504-mobile-sync" />
+    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260505-glass" />
   </head>
   <body>
     <main class="auth-wrapper">
@@ -38,6 +38,11 @@
                   <option value="female">女 (Female)</option>
                 </select>
               </div>
+
+              <label id="guestLeapRow" class="checkbox-label" style="display: none;">
+                <input type="checkbox" id="guestLeapMonth" />
+                <span>闰月 (Leap Month)</span>
+              </label>
 
               <div class="input-grid-date">
                 <input id="guestYear" type="number" placeholder="年" min="1900" max="2100" />
@@ -100,6 +105,6 @@
         </footer>
       </div>
     </main>
-    <script src="/v20/ui/entry.js?v=20260504-mobile-sync" defer></script>
+    <script src="/v20/ui/entry.js?v=20260505-leap" defer></script>
   </body>
 </html>

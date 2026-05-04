@@ -29,6 +29,7 @@ from v20.api.schemas import (
     ProfileMutationRequest,
 )
 from v20.api.runtime import run_runtime_from_pillars
+from v20.utils.calendar import resolve_pillars, resolve_luck_pillar, resolve_target_year
 from v20.corpus.artifacts import (
     find_similar_cases,
     read_corpus_artifact_status,
@@ -815,17 +816,37 @@ def create_app() -> FastAPI:
     @app.post("/api/v20/runtime/measure")
     def measure(payload: MeasureRequest) -> dict[str, object]:
         try:
+            pillars = resolve_pillars(
+                payload.year, payload.month, payload.day, payload.hour,
+                calendar=payload.calendar, gender=payload.gender,
+                lunar_is_leap=payload.lunar_is_leap,
+            )
+            luck_pillar = payload.luck_pillar
+            if not luck_pillar and payload.flow_year_pillar:
+                # If flow_year is provided but luck isn't, attempt to resolve luck pillar for that flow year
+                # For simplified UI flow, we assume the flow_year_pillar roughly corresponds to the year number
+                # We extract the year from the payload if it's numeric
+                try:
+                    # Very simple fallback: just use the numeric year from the flow year if we can map it,
+                    # but here we'll just check if flow_year starts with "20" (e.g. 2026 passed by guest)
+                    target_y = int("".join(filter(str.isdigit, payload.flow_year_pillar)) or 2026)
+                except ValueError:
+                    target_y = 2026
+                luck_pillar = resolve_luck_pillar(
+                    payload.year, payload.month, payload.day, payload.hour,
+                    calendar=payload.calendar, gender=payload.gender,
+                    lunar_is_leap=payload.lunar_is_leap,
+                    target_year=target_y
+                )
+
             return run_runtime_from_pillars(
-                payload.year,
-                payload.month,
-                payload.day,
-                payload.hour,
+                pillars["year"], pillars["month"], pillars["day"], pillars["hour"],
                 input_id=payload.input_id,
                 question_key=payload.question_key,
                 question_id=payload.question_id,
                 user_text=payload.user_text,
                 flow_year_pillar=payload.flow_year_pillar,
-                luck_pillar=payload.luck_pillar,
+                luck_pillar=luck_pillar,
                 flow_month_pillar=payload.flow_month_pillar,
                 locale=payload.locale,
                 llm_mode=payload.llm_mode,
@@ -845,17 +866,29 @@ def create_app() -> FastAPI:
         if role_key == "admin":
             _require_admin_session(request)
         try:
+            pillars = resolve_pillars(
+                payload.year, payload.month, payload.day, payload.hour,
+                calendar=payload.calendar, gender=payload.gender,
+                lunar_is_leap=payload.lunar_is_leap,
+            )
+            luck_pillar = payload.luck_pillar
+            if not luck_pillar and payload.flow_year_pillar:
+                target_y = resolve_target_year(payload.flow_year_pillar)
+                luck_pillar = resolve_luck_pillar(
+                    payload.year, payload.month, payload.day, payload.hour,
+                    calendar=payload.calendar, gender=payload.gender,
+                    lunar_is_leap=payload.lunar_is_leap,
+                    target_year=target_y
+                )
+
             result = run_runtime_from_pillars(
-                payload.year,
-                payload.month,
-                payload.day,
-                payload.hour,
+                pillars["year"], pillars["month"], pillars["day"], pillars["hour"],
                 input_id=payload.input_id,
                 question_key=payload.question_key,
                 question_id=payload.question_id,
                 user_text=payload.user_text,
                 flow_year_pillar=payload.flow_year_pillar,
-                luck_pillar=payload.luck_pillar,
+                luck_pillar=luck_pillar,
                 flow_month_pillar=payload.flow_month_pillar,
                 locale=payload.locale,
                 llm_mode=payload.llm_mode,
@@ -878,17 +911,29 @@ def create_app() -> FastAPI:
 
         def event_stream():
             try:
+                pillars = resolve_pillars(
+                    payload.year, payload.month, payload.day, payload.hour,
+                    calendar=payload.calendar, gender=payload.gender,
+                    lunar_is_leap=payload.lunar_is_leap,
+                )
+                luck_pillar = payload.luck_pillar
+                if not luck_pillar and payload.flow_year_pillar:
+                    target_y = resolve_target_year(payload.flow_year_pillar)
+                    luck_pillar = resolve_luck_pillar(
+                        payload.year, payload.month, payload.day, payload.hour,
+                        calendar=payload.calendar, gender=payload.gender,
+                        lunar_is_leap=payload.lunar_is_leap,
+                        target_year=target_y
+                    )
+
                 result = run_runtime_from_pillars(
-                    payload.year,
-                    payload.month,
-                    payload.day,
-                    payload.hour,
+                    pillars["year"], pillars["month"], pillars["day"], pillars["hour"],
                     input_id=payload.input_id,
                     question_key=payload.question_key,
                     question_id=payload.question_id,
                     user_text=payload.user_text,
                     flow_year_pillar=payload.flow_year_pillar,
-                    luck_pillar=payload.luck_pillar,
+                    luck_pillar=luck_pillar,
                     flow_month_pillar=payload.flow_month_pillar,
                     locale=payload.locale,
                     llm_mode="deterministic",

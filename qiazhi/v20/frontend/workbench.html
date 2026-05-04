@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>V20 命理测算台</title>
     <link rel="icon" href="/v20/ui/favicon.png" />
-    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260504-mobile-sync" />
+    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260505-glass" />
   </head>
   <body>
     <div class="app-shell">
@@ -22,7 +22,6 @@
           <a href="/v20/ui/workbench.html" aria-current="page" data-ui="nav_measure">测算</a>
           <a href="/v20/ui/admin.html" class="admin-nav-link" hidden>Admin</a>
           <button type="button" id="logoutButton" class="logout-action" data-ui="logout_button" hidden>登出</button>
-          <span id="runtimeStatus" class="status-pill">checking</span>
         </nav>
       </header>
 
@@ -32,19 +31,36 @@
             <input type="hidden" name="input_id" id="inputId" value="" />
             <input type="hidden" name="role_key" id="roleSelect" value="user" />
             <input type="hidden" name="locale" id="localeSelect" value="zh" />
+            <input type="hidden" name="calendar" id="calendarHidden" value="solar" />
+            <input type="hidden" name="gender" id="genderHidden" value="male" />
+            <input type="hidden" name="lunar_is_leap" id="lunarIsLeapHidden" value="false" />
             <section class="control-section">
               <div class="section-head compact">
                 <div>
                   <p class="section-kicker">Chart</p>
                   <h2 data-ui="pillars_form_title">四柱</h2>
                 </div>
-                <span id="profileBadge" class="small-pill">local</span>
+                <div class="segment-control">
+                  <button type="button" data-calendar="solar" class="active" data-ui="solar">公历</button>
+                  <button type="button" data-calendar="lunar" data-ui="lunar">阴历</button>
+                </div>
+                <label id="leapToggle" class="checkbox-label" style="display: none; margin-left: 8px;">
+                  <input type="checkbox" id="lunarIsLeapCheckbox" />
+                  <span data-ui="leap_month">闰月</span>
+                </label>
+                <div class="segment-control">
+                  <button type="button" data-gender="male" class="active" data-ui="male">男</button>
+                  <button type="button" data-gender="female" data-ui="female">女</button>
+                </div>
+                <div class="runtime-meta">
+                <!-- Status badges removed -->
+              </div>
               </div>
               <div class="pillar-input-grid">
-                <label><span data-ui="year_pillar">年柱</span><input name="year" maxlength="2" value="甲子" autocomplete="off" /></label>
-                <label><span data-ui="month_pillar">月柱</span><input name="month" maxlength="2" value="戊辰" autocomplete="off" /></label>
-                <label><span data-ui="day_pillar">日柱</span><input name="day" maxlength="2" value="甲午" autocomplete="off" /></label>
-                <label><span data-ui="hour_pillar">时柱</span><input name="hour" maxlength="2" value="辛酉" autocomplete="off" /></label>
+                <label><span data-ui="year_pillar">年柱</span><input name="year" maxlength="4" value="" autocomplete="off" /></label>
+                <label><span data-ui="month_pillar">月柱</span><input name="month" maxlength="2" value="" autocomplete="off" /></label>
+                <label><span data-ui="day_pillar">日柱</span><input name="day" maxlength="2" value="" autocomplete="off" /></label>
+                <label><span data-ui="hour_pillar">时柱</span><input name="hour" maxlength="2" value="" autocomplete="off" /></label>
               </div>
             </section>
 
@@ -58,10 +74,10 @@
             <section class="control-section">
               <p class="section-kicker">Time</p>
               <div class="pillar-input-grid">
-                <label><span data-ui="flow_year">流年</span><input name="flow_year_pillar" maxlength="2" placeholder="庚子" autocomplete="off" /></label>
-                <label><span data-ui="luck_pillar">大运</span><input name="luck_pillar" maxlength="2" placeholder="乙亥" autocomplete="off" /></label>
+                <label><span data-ui="flow_year">流年</span><input name="flow_year_pillar" maxlength="2" placeholder="" autocomplete="off" /></label>
+                <label><span data-ui="luck_pillar">大运</span><input name="luck_pillar" maxlength="2" placeholder="" autocomplete="off" /></label>
               </div>
-              <label><span data-ui="flow_month">流月</span><input name="flow_month_pillar" maxlength="2" placeholder="辛丑" autocomplete="off" /></label>
+              <label><span data-ui="flow_month">流月</span><input name="flow_month_pillar" maxlength="2" placeholder="" autocomplete="off" /></label>
             </section>
 
             <button type="submit" class="primary-action">开始测算</button>
@@ -226,16 +242,14 @@
                 </div>
               </div>
               <div id="evidenceList" class="evidence-list"></div>
-              <div class="system-strip">
-                <span id="corpusState">corpus</span>
-                <span id="ruleState">rules</span>
-                <span id="dbState">db</span>
+              <div class="status-row">
+                <!-- Status spans removed -->
               </div>
             </aside>
           </section>
         </section>
       </main>
     </div>
-    <script src="/v20/ui/app.js?v=20260504-mobile-sync" defer></script>
+    <script src="app.js?v=20.1.5"></script>
   </body>
 </html>

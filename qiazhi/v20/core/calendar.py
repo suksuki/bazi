@@ -164,7 +164,7 @@ def _approximate_active_luck_pillar(pillars: dict[str, str], birth_input: dict[s
     month_index = _pillar_cycle_index(month_pillar)
     birth_year = _int(birth_input.get("year"), selected_year)
     age = selected_year - birth_year
-    for index in range(8):
+    for index in range(15):
         start_age = 8 + index * 10
         end_age = start_age + 9
         if start_age <= age <= end_age:

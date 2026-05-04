@@ -18,10 +18,13 @@ class LatentEventCalibrationAnswerRequest(BaseModel):
 
 
 class MeasureRequest(BaseModel):
-    year: str = Field(..., min_length=2, max_length=2)
-    month: str = Field(..., min_length=2, max_length=2)
-    day: str = Field(..., min_length=2, max_length=2)
-    hour: str = Field(..., min_length=2, max_length=2)
+    year: str = Field(..., min_length=2, max_length=4)
+    month: str = Field(..., min_length=1, max_length=2)
+    day: str = Field(..., min_length=1, max_length=2)
+    hour: str = Field(..., min_length=1, max_length=2)
+    calendar: str = "solar"
+    gender: str = "male"
+    lunar_is_leap: bool = False
     flow_year_pillar: str = Field("", min_length=0, max_length=2)
     luck_pillar: str = Field("", min_length=0, max_length=2)
     flow_month_pillar: str = Field("", min_length=0, max_length=2)
