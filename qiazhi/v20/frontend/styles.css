@@ -561,7 +561,7 @@ textarea:focus {
 
 .pillar-panel {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(6, minmax(72px, 1fr));
   gap: 9px;
   margin-top: 14px;
 }
@@ -576,6 +576,13 @@ textarea:focus {
   border-radius: 8px;
   background: var(--surface-2);
   padding: 10px;
+}
+
+.pillar-card {
+  display: grid;
+  justify-items: center;
+  text-align: center;
+  gap: 6px;
 }
 
 .pillar-card.active {
@@ -598,11 +605,61 @@ textarea:focus {
   font-size: 12px;
 }
 
-.pillar-card strong {
-  display: block;
-  color: var(--text);
-  font-size: 25px;
-  margin: 6px 0 4px;
+.pillar-card strong,
+.pillar-glyph {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  margin: 3px 0;
+  line-height: 1;
+}
+
+.pillar-symbol {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+  font-size: 24px;
+  font-weight: 900;
+}
+
+.pillar-symbol[data-layer="branch"] {
+  width: 30px;
+  height: 30px;
+  font-size: 21px;
+  opacity: 0.94;
+}
+
+.pillar-symbol[data-polarity="yin"] {
+  border-style: dashed;
+}
+
+.pillar-symbol[data-element="wood"] {
+  color: #68d391;
+  text-shadow: 0 0 14px rgba(104, 211, 145, 0.26);
+}
+
+.pillar-symbol[data-element="fire"] {
+  color: #ff9f6e;
+  text-shadow: 0 0 14px rgba(255, 159, 110, 0.25);
+}
+
+.pillar-symbol[data-element="earth"] {
+  color: #e2c36a;
+  text-shadow: 0 0 14px rgba(226, 195, 106, 0.24);
+}
+
+.pillar-symbol[data-element="metal"] {
+  color: #d9e5ee;
+  text-shadow: 0 0 14px rgba(217, 229, 238, 0.2);
+}
+
+.pillar-symbol[data-element="water"] {
+  color: #7cc7ff;
+  text-shadow: 0 0 14px rgba(124, 199, 255, 0.25);
 }
 
 .pillar-card em {
@@ -1665,13 +1722,22 @@ textarea:hover,
   .top-actions {
     justify-content: flex-start;
     width: 100%;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: none;
+  }
+
+  .top-actions::-webkit-scrollbar {
+    display: none;
   }
 
   .top-actions a,
   .top-actions button,
   .top-actions .status-pill {
     justify-content: center;
-    flex: 1 1 calc(50% - 8px);
+    flex: 0 0 auto;
+    white-space: nowrap;
   }
 
   .brand {
@@ -1708,7 +1774,33 @@ textarea:hover,
   }
 
   .pillar-panel {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(6, minmax(54px, 1fr));
+    gap: 6px;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+  }
+
+  .pillar-panel::-webkit-scrollbar {
+    display: none;
+  }
+
+  .pillar-card {
+    min-width: 54px;
+    padding: 8px 6px;
+  }
+
+  .pillar-symbol {
+    width: 30px;
+    height: 30px;
+    font-size: 21px;
+  }
+
+  .pillar-symbol[data-layer="branch"] {
+    width: 27px;
+    height: 27px;
+    font-size: 19px;
   }
 
   .summary-metrics {
@@ -1767,6 +1859,10 @@ textarea:hover,
     grid-template-columns: 1fr;
   }
 
+  body.profile-reading .pillar-panel {
+    grid-template-columns: repeat(6, minmax(54px, 1fr));
+  }
+
   .profile-command-row {
     justify-content: flex-start;
   }
@@ -1787,7 +1883,7 @@ textarea:hover,
   .top-actions a,
   .top-actions button,
   .top-actions .status-pill {
-    flex-basis: 100%;
+    flex-basis: auto;
   }
 
   .summary-metrics {

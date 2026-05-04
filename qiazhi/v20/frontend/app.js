@@ -16,6 +16,35 @@ const state = {
   chartMemoryKey: "",
   answerWriter: { timer: null, queue: "", displayed: "" },
 };
+
+const STEM_META = {
+  甲: { element: "wood", polarity: "yang" },
+  乙: { element: "wood", polarity: "yin" },
+  丙: { element: "fire", polarity: "yang" },
+  丁: { element: "fire", polarity: "yin" },
+  戊: { element: "earth", polarity: "yang" },
+  己: { element: "earth", polarity: "yin" },
+  庚: { element: "metal", polarity: "yang" },
+  辛: { element: "metal", polarity: "yin" },
+  壬: { element: "water", polarity: "yang" },
+  癸: { element: "water", polarity: "yin" },
+};
+
+const BRANCH_META = {
+  子: { element: "water", polarity: "yang" },
+  丑: { element: "earth", polarity: "yin" },
+  寅: { element: "wood", polarity: "yang" },
+  卯: { element: "wood", polarity: "yin" },
+  辰: { element: "earth", polarity: "yang" },
+  巳: { element: "fire", polarity: "yin" },
+  午: { element: "fire", polarity: "yang" },
+  未: { element: "earth", polarity: "yin" },
+  申: { element: "metal", polarity: "yang" },
+  酉: { element: "metal", polarity: "yin" },
+  戌: { element: "earth", polarity: "yang" },
+  亥: { element: "water", polarity: "yin" },
+};
+
 const params = new URLSearchParams(window.location.search);
 
 const form = document.querySelector("#measureForm");
@@ -431,10 +460,27 @@ const renderPillars = (chart, timeContext = {}) => {
     const pillar = pillars[key] || timePillars[key] || fallbackPillar(key);
     const card = el("div", `pillar-card ${key === "day" ? "active" : ""}`);
     card.append(el("span", "", text.pillars[key] || key));
-    card.append(el("strong", "", `${pillar.stem || "-"}${pillar.branch || ""}`));
+    card.append(pillarGlyph(pillar));
     card.append(el("em", "", text.pillar_hints[key] || ""));
     root.append(card);
   });
+};
+
+const pillarGlyph = (pillar) => {
+  const stem = String(pillar.stem || "-").slice(0, 1);
+  const branch = String(pillar.branch || "-").slice(0, 1);
+  const glyph = el("strong", "pillar-glyph");
+  glyph.append(pillarSymbol(stem, STEM_META[stem], "stem"));
+  glyph.append(pillarSymbol(branch, BRANCH_META[branch], "branch"));
+  return glyph;
+};
+
+const pillarSymbol = (value, meta = {}, layer) => {
+  const node = el("b", "pillar-symbol", value || "-");
+  node.dataset.layer = layer;
+  node.dataset.element = meta.element || "unknown";
+  node.dataset.polarity = meta.polarity || "neutral";
+  return node;
 };
 
 const renderTenGods = (chart) => {

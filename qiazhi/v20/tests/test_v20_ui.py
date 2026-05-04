@@ -141,6 +141,11 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "交互会话模型" not in script.text
     assert "renderInteractionSignals" not in script.text
     assert "renderFeatures(" in script.text
+    assert "STEM_META" in script.text
+    assert "BRANCH_META" in script.text
+    assert "pillarGlyph(pillar)" in script.text
+    assert "dataset.element" in script.text
+    assert "dataset.polarity" in script.text
     assert "featureStateModel.priority_features" in script.text
     assert "renderPortrait(portraitProjection.axes || [])" in script.text
     assert "renderPractitionerCalibration(decisionReport.practitioner_controls || []" in script.text
@@ -203,6 +208,14 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "body.profile-reading .feature-spine-panel" in style.text
     assert ".questions-panel-card" not in style.text
     assert "body.profile-reading .pillar-panel" in style.text
+    assert "grid-template-columns: repeat(6, minmax(72px, 1fr))" in style.text
+    assert ".pillar-symbol[data-element=\"wood\"]" in style.text
+    assert ".pillar-symbol[data-element=\"fire\"]" in style.text
+    assert ".pillar-symbol[data-element=\"earth\"]" in style.text
+    assert ".pillar-symbol[data-element=\"metal\"]" in style.text
+    assert ".pillar-symbol[data-element=\"water\"]" in style.text
+    assert "flex-wrap: nowrap" in style.text
+    assert "overscroll-behavior-x: contain" in style.text
     assert ".profiles-layout" in style.text
     assert ".check-row" in style.text
     assert ".brand-logo" in style.text
