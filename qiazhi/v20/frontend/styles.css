@@ -1954,3 +1954,70 @@ textarea:hover,
     transform: none;
   }
 }
+
+/* Mobile Chrome final sync guard */
+@media (max-width: 760px) {
+  .top-actions {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    width: 100%;
+    gap: 6px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .top-actions a,
+  .top-actions button,
+  .top-actions .status-pill {
+    flex: 0 0 auto;
+    min-height: 34px;
+    white-space: nowrap;
+    padding: 7px 9px;
+  }
+
+  .pillar-panel,
+  body.profile-reading .pillar-panel {
+    display: grid;
+    grid-template-columns: repeat(6, minmax(54px, 1fr));
+    grid-auto-flow: column;
+    overflow-x: auto;
+    gap: 6px;
+    width: 100%;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pillar-card {
+    min-width: 54px;
+    gap: 4px;
+    padding: 7px 5px;
+  }
+
+  .pillar-card span,
+  .pillar-card em {
+    font-size: 10px;
+  }
+
+  .pillar-symbol {
+    width: 29px;
+    height: 29px;
+    font-size: 20px;
+  }
+
+  .pillar-symbol[data-layer="branch"] {
+    width: 26px;
+    height: 26px;
+    font-size: 18px;
+  }
+
+  .answer-question-list,
+  body.profile-reading .question-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .question-row {
+    min-height: 38px;
+    padding: 7px 8px;
+  }
+}
