@@ -17,9 +17,15 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     admin = client.get("/v20/ui/admin.html")
     admin_script = client.get("/v20/ui/admin.js")
     style = client.get("/v20/ui/styles.css")
+    logo = client.get("/v20/ui/qiazhi-logo-mark.png")
+    favicon = client.get("/v20/ui/favicon.png")
 
     assert entry.status_code == 200
     assert "进入掐指一算" in entry.text
+    assert "/v20/ui/qiazhi-logo-mark.png" in entry.text
+    assert "/v20/ui/favicon.png" in entry.text
+    assert "brand-logo large" in entry.text
+    assert "brand-mark large" not in entry.text
     assert "Admin 入口" not in entry.text
     assert "DB / LLM" not in entry.text
     assert "id=\"loginRole\"" not in entry.text
@@ -45,6 +51,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/auth/logout" in entry_script.text
     assert profiles.status_code == 200
     assert "V20 八字档案管理" in profiles.text
+    assert "/v20/ui/qiazhi-logo-mark.png" in profiles.text
+    assert "brand-logo" in profiles.text
     assert "profileList" in profiles.text
     assert "newProfileButton" in profiles.text
     assert "profileEditor" in profiles.text
@@ -78,6 +86,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "toggleLunarLeapMonth" in profiles_script.text
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
+    assert "/v20/ui/qiazhi-logo-mark.png" in page.text
+    assert "brand-logo" in page.text
     assert "flow_year_pillar" in page.text
     assert "role_key" in page.text
     assert "<p class=\"section-kicker\">View</p>" not in page.text
@@ -175,6 +185,8 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "full_runtime" not in script.text
     assert "/api/v20/feedback/record" not in script.text
     assert "DB / LLM" in admin.text
+    assert "/v20/ui/qiazhi-logo-mark.png" in admin.text
+    assert "brand-logo" in admin.text
     assert "/v20/ui/profiles.html" in admin.text
     assert "/api/v20/admin/db" in admin_script.text
     assert "/api/v20/admin/llm" in admin_script.text
@@ -188,6 +200,9 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "body.profile-reading .pillar-panel" in style.text
     assert ".profiles-layout" in style.text
     assert ".check-row" in style.text
+    assert ".brand-logo" in style.text
+    assert "V20 visual polish" in style.text
+    assert "backdrop-filter" in style.text
     assert ".entry-page" in style.text
     assert ".admin-layout" in style.text
     assert "@media (max-width: 1120px)" in style.text
@@ -198,3 +213,6 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert style.status_code == 200
     assert entry_script.status_code == 200
     assert profiles_script.status_code == 200
+    assert logo.status_code == 200
+    assert favicon.status_code == 200
+    assert logo.headers["content-type"] == "image/png"
