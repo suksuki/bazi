@@ -164,6 +164,38 @@ def resolve_luck_pillar(
             end = dy.getEndYear()
             if start <= target_year <= end:
                 matched = gz
+                break
+
+        if not matched and luck_pillars:
+            # If target_year is beyond the last luck pillar (e.g., age > 100)
+            last_dy = luck_pillars[-1]
+            last_gz = last_dy.getGanZhi()
+            last_end = last_dy.getEndYear()
+            
+            if target_year > last_end and last_gz:
+                from v20.core.constants import STEMS, BRANCHES
+                
+                # Determine direction: 1 if forward, -1 if backward
+                # We can infer direction by comparing the first and second pillars
+                direction = 1
+                if len(luck_pillars) > 1:
+                    first_gz = luck_pillars[0].getGanZhi()
+                    second_gz = luck_pillars[1].getGanZhi()
+                    if first_gz and second_gz:
+                        idx1 = STEMS.index(first_gz[0])
+                        idx2 = STEMS.index(second_gz[0])
+                        if (idx2 - idx1) % 10 != 1:
+                            direction = -1
+                
+                # Calculate how many decades past the last end year
+                decades_diff = (target_year - last_end - 1) // 10 + 1
+                
+                s_idx = STEMS.index(last_gz[0])
+                b_idx = BRANCHES.index(last_gz[1])
+                
+                new_s = STEMS[(s_idx + direction * decades_diff) % 10]
+                new_b = BRANCHES[(b_idx + direction * decades_diff) % 12]
+                matched = f"{new_s}{new_b}"
 
         return matched or (month_str if len(str(month_str)) == 2 else "")
     except Exception as exc:
