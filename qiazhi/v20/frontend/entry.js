@@ -21,6 +21,11 @@ const ENTRY_TEXT = {
     logged_out: "已登出",
     not_authenticated: "未登录",
     or: "或者",
+    solar: "公历",
+    lunar: "农历",
+    male: "男",
+    female: "女",
+    leap_month: "闰月",
   },
   en: {
     title: "Enter Qiazhi",
@@ -44,6 +49,11 @@ const ENTRY_TEXT = {
     logged_out: "Logged out",
     not_authenticated: "Not authenticated",
     or: "OR",
+    solar: "Solar",
+    lunar: "Lunar",
+    male: "Male",
+    female: "Female",
+    leap_month: "Leap Month",
   },
   ko: {
     title: "Qiazhi 시작",
@@ -67,6 +77,11 @@ const ENTRY_TEXT = {
     logged_out: "로그아웃됨",
     not_authenticated: "인증되지 않음",
     or: "또는",
+    solar: "양력",
+    lunar: "음력",
+    male: "남",
+    female: "여",
+    leap_month: "윤달",
   },
 };
 

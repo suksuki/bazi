@@ -73,14 +73,15 @@ const UI_TEXT = {
     app_title: "命理测算台", nav_profiles: "档案", nav_measure: "测算", logout_button: "登出",
     pillars_form_title: "四柱", year_pillar: "年柱", month_pillar: "月柱", day_pillar: "日柱", hour_pillar: "时柱",
     user_focus: "用户关心", recommended_question: "推荐问题", flow_year: "流年", luck_pillar: "大运", flow_month: "流月",
-    profile_title: "档案", profile_manage: "档案管理", selected_waiting: "等待测算",
-    feature_metric: "特征态", intent_metric: "意图", evidence_metric: "证据", practitioner_title: "命理师校准",
+    profile_title: "档案", profile_manage: "档案管理",
+    practitioner_title: "命理师校准",
     default_user_text: "我想看事业和财运",
     chart_title: "命盘结构", features_title: "八字特征状态", portrait_title: "主题投射画像",
     questions_title: "智能问题", hits_title: "规则命中", answer_title: "八字专业回复",
     evidence_title: "证据锚点", feedback_title: "反馈校准",
     run: "开始测算", running: "测算中",
     roles: { user: "普通用户", analyst: "命理师", admin: "管理员" },
+    solar: "公历", lunar: "阴历", male: "男", female: "女", leap_month: "闰月",
     dm: "日主", visible: "透出", hidden: "藏干",
     pillars: { year: "年柱", month: "月柱", day: "日柱", hour: "时柱", luck: "大运", flow_year: "流年" },
     pillar_hints: { year: "原局", month: "原局", day: "日主", hour: "原局", luck: "运势背景", flow_year: "当前触发" },
@@ -103,14 +104,15 @@ const UI_TEXT = {
     app_title: "Bazi Workbench", nav_profiles: "Profiles", nav_measure: "Reading", logout_button: "Log Out",
     pillars_form_title: "Four Pillars", year_pillar: "Year", month_pillar: "Month", day_pillar: "Day", hour_pillar: "Hour",
     user_focus: "Your Focus", recommended_question: "Suggested Question", flow_year: "Flow Year", luck_pillar: "Luck Cycle", flow_month: "Flow Month",
-    profile_title: "Profile", profile_manage: "Manage Profiles", selected_waiting: "Awaiting Reading",
-    feature_metric: "features", intent_metric: "intents", evidence_metric: "evidence", practitioner_title: "Practitioner Calibration",
+    profile_title: "Profile", profile_manage: "Manage Profiles",
+    practitioner_title: "Practitioner Calibration",
     default_user_text: "I want to read career and wealth",
     chart_title: "Chart Structure", features_title: "Bazi Feature States", portrait_title: "Topic Projection",
     questions_title: "Smart Questions", hits_title: "Rule Hits", answer_title: "Professional Bazi Reply",
     evidence_title: "Evidence Anchors", feedback_title: "Feedback Calibration",
     run: "Run Reading", running: "Reading",
     roles: { user: "Regular User", analyst: "Practitioner", admin: "Admin" },
+    solar: "Solar", lunar: "Lunar", male: "Male", female: "Female", leap_month: "Leap Month",
     dm: "DM", visible: "Visible", hidden: "Hidden",
     pillars: { year: "Year", month: "Month", day: "Day", hour: "Hour", luck: "Luck", flow_year: "Flow Year" },
     pillar_hints: { year: "natal", month: "natal", day: "day master", hour: "natal", luck: "luck cycle", flow_year: "current trigger" },
@@ -133,14 +135,15 @@ const UI_TEXT = {
     app_title: "사주 분석 작업대", nav_profiles: "프로필", nav_measure: "분석", logout_button: "로그아웃",
     pillars_form_title: "사주팔자", year_pillar: "연주", month_pillar: "월주", day_pillar: "일주", hour_pillar: "시주",
     user_focus: "관심 주제", recommended_question: "추천 질문", flow_year: "세운", luck_pillar: "대운", flow_month: "월운",
-    profile_title: "프로필", profile_manage: "프로필 관리", selected_waiting: "분석 대기",
-    feature_metric: "특징", intent_metric: "의도", evidence_metric: "근거", practitioner_title: "명리사 보정",
+    profile_title: "프로필", profile_manage: "프로필 관리",
+    practitioner_title: "명리사 보정",
     default_user_text: "직업과 재운을 보고 싶어요",
     chart_title: "명식 구조", features_title: "사주 특징 상태", portrait_title: "주제 투사",
     questions_title: "지능형 질문", hits_title: "규칙 적중", answer_title: "전문 사주 답변",
     evidence_title: "근거 앵커", feedback_title: "피드백 보정",
     run: "분석 시작", running: "분석 중",
     roles: { user: "일반 사용자", analyst: "명리사", admin: "관리자" },
+    solar: "양력", lunar: "음력", male: "남", female: "여", leap_month: "윤달",
     dm: "일간", visible: "투출", hidden: "장간",
     pillars: { year: "연주", month: "월주", day: "일주", hour: "시주", luck: "대운", flow_year: "유년" },
     pillar_hints: { year: "원국", month: "원국", day: "일간", hour: "원국", luck: "운세 배경", flow_year: "현재 촉발" },
@@ -382,11 +385,7 @@ const renderRuntime = (result) => {
   if (params.get("role") !== "guest") document.body.dataset.role = role;
   renderObservationAccess(role);
   renderFeatureStateAccess(role);
-  setText("#selectedQuestion", selected.title || selected.question_key || currentText().running);
-  setText("#selectedBoundary", selected.boundary || result.prediction_policy?.core_focus || "");
-  setText("#featureCount", featureStateModel.feature_state_count ?? decisionReport.decision_count ?? featureLayer.feature_count ?? 0);
-  setText("#questionCount", questionIntentModel.intent_count ?? (result.questions || []).length);
-  setText("#knowledgeCount", result.knowledge_report?.count ?? 0);
+
   setText("#coreCapacity", featureStateModel.algorithm || result.core_inference?.day_master_capacity || "fusion");
   setText("#intentSummary", intentSummary(questionIntentModel));
   const t = currentText();
@@ -1217,9 +1216,7 @@ const applyLocale = (locale) => {
     if (chatText) chatText.value = text.default_user_text;
   }
   setText("#answerText", state.latest ? (state.latest.answer_text || text.wb.waiting) : text.wb.waiting);
-  if (!state.latest) {
-    setText("#selectedQuestion", text.selected_waiting);
-  }
+
 };
 
 const renderInitialPanels = () => {

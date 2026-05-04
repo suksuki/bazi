@@ -30,18 +30,18 @@
               
               <div class="input-row">
                 <select id="guestCalendar">
-                  <option value="solar">公历 (Solar)</option>
-                  <option value="lunar">农历 (Lunar)</option>
+                  <option value="solar" data-entry-option="solar">公历</option>
+                  <option value="lunar" data-entry-option="lunar">农历</option>
                 </select>
                 <select id="guestGender">
-                  <option value="male">男 (Male)</option>
-                  <option value="female">女 (Female)</option>
+                  <option value="male" data-entry-option="male">男</option>
+                  <option value="female" data-entry-option="female">女</option>
                 </select>
               </div>
 
               <label id="guestLeapRow" class="checkbox-label" style="display: none;">
                 <input type="checkbox" id="guestLeapMonth" />
-                <span>闰月 (Leap Month)</span>
+                <span data-entry="leap_month">闰月</span>
               </label>
 
               <div class="input-grid-date">
