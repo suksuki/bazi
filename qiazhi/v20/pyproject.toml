@@ -1,0 +1,62 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qiazhi-v20"
+version = "20.0.0a0"
+description = "Independent Qiazhi V20 Bazi measurement runtime."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+  "bcrypt==5.0.0",
+  "fastapi==0.136.1",
+  "httpx==0.28.1",
+  "psycopg2-binary==2.9.12",
+  "pydantic==2.13.3",
+  "redis==7.1.0",
+  "uvicorn==0.46.0",
+]
+
+[project.optional-dependencies]
+test = [
+  "pytest==9.0.3",
+]
+
+[tool.setuptools]
+packages = [
+  "v20",
+  "v20.access",
+  "v20.answer",
+  "v20.api",
+  "v20.core",
+  "v20.corpus",
+  "v20.decision",
+  "v20.dynamics",
+  "v20.features",
+  "v20.graph",
+  "v20.i18n",
+  "v20.intelligence",
+  "v20.interaction",
+  "v20.knowledge",
+  "v20.learning",
+  "v20.llm",
+  "v20.measurement",
+  "v20.ops",
+  "v20.orchestrator",
+  "v20.profiles",
+  "v20.redis",
+  "v20.rules",
+  "v20.storage",
+  "v20.testing",
+  "v20.utils",
+  "v20.validation",
+]
+
+[tool.setuptools.package-dir]
+v20 = "."
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = [".."]
+addopts = "-ra"
