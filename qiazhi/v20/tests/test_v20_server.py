@@ -23,6 +23,43 @@ def test_v20_service_health_is_read_only_and_profile_aware() -> None:
     assert "NO_SECRET_VALUES_RENDERED" in data["guardrails"]
 
 
+def test_v20_liveness_and_readiness_health_endpoints_are_secret_free(monkeypatch) -> None:
+    monkeypatch.setenv("V20_DATABASE_URL", "postgres://secret-user:secret-pass@localhost/db")
+    monkeypatch.setenv("V20_REDIS_URL", "redis://:secret@localhost:6379/0")
+    monkeypatch.setattr(
+        "v20.server.readiness_report",
+        lambda: {
+            "version": "v20.service_readiness.v1",
+            "status": "degraded",
+            "ready": False,
+            "active_profile": "local_macos",
+            "postgres": {"ready": False, "status": "unavailable", "failure": "OperationalError"},
+            "redis": {"ready": False, "status": "unavailable", "failure": "ConnectionError"},
+            "runtime_mutation": False,
+            "connection_policy": "dependency_ping_without_secret_rendering",
+            "guardrails": ["READINESS_CHECK_MAY_CONNECT_TO_DEPENDENCIES", "NO_SECRET_VALUES_RENDERED"],
+        },
+    )
+    client = TestClient(app)
+
+    live = client.get("/health/live")
+    ready = client.get("/health/ready")
+
+    assert live.status_code == 200
+    assert ready.status_code == 200
+    live_data = live.json()
+    ready_data = ready.json()
+    assert live_data["version"] == "v20.service_liveness.v1"
+    assert live_data["connection_policy"] == "no_external_dependency_connection_on_liveness_check"
+    assert "NO_NETWORK_CONNECTION_ATTEMPTED" in live_data["guardrails"]
+    assert ready_data["version"] == "v20.service_readiness.v1"
+    assert ready_data["connection_policy"] == "dependency_ping_without_secret_rendering"
+    assert "READINESS_CHECK_MAY_CONNECT_TO_DEPENDENCIES" in ready_data["guardrails"]
+    rendered = json.dumps(ready_data, ensure_ascii=False)
+    assert "secret-pass" not in rendered
+    assert "redis://:secret" not in rendered
+
+
 def test_v20_measure_endpoint_returns_bazi_measurement_runtime() -> None:
     client = TestClient(app)
     response = client.post(

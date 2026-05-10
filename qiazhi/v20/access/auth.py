@@ -57,7 +57,6 @@ def register_user(payload: dict[str, Any], response: Response) -> dict[str, obje
     if username in store["users"]:
         return _auth_error("user_exists", "User already exists.")
     user_id = f"user_{secrets.token_hex(8)}"
-    salt = secrets.token_hex(16)
     store["users"][username] = {
         "user_id": user_id,
         "username": username,

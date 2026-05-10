@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.request
 from dataclasses import asdict, dataclass
 from typing import Any
@@ -9,6 +10,13 @@ from typing import Any
 from v20.llm.contracts import LLMTaskContract
 from v20.llm.provider import LLMProviderConfig, llm_provider_readiness_report, load_llm_provider_config_from_env
 from v20.llm.validators import validate_llm_structured_output
+
+
+class LLMRetryExhausted(Exception):
+    def __init__(self, cause: Exception, attempts: int) -> None:
+        super().__init__(str(cause))
+        self.cause = cause
+        self.attempts = attempts
 
 
 @dataclass(frozen=True)
@@ -20,12 +28,14 @@ class LLMStructuredCallResult:
     output: dict[str, object]
     validation: dict[str, object]
     fallback_reason: str
+    retry_attempts: int = 0
     executed: bool = False
     runtime_mutation: bool = False
     guardrails: tuple[str, ...] = (
         "LLM_CALL_RESULT_IS_DRAFT_ONLY",
         "NO_SECRET_VALUES_RENDERED",
         "DETERMINISTIC_VALIDATOR_REQUIRED",
+        "LLM_TRANSPORT_RETRY_BOUNDED",
     )
 
     def to_dict(self) -> dict[str, Any]:
@@ -45,20 +55,29 @@ def call_structured_llm(
     if not cfg.execute_llm:
         return _fallback_result(contract, cfg, "execute_flag_disabled")
     call_error = ""
+    retry_attempts = 0
     try:
         if cfg.provider == "ollama_native":
-            payload = _post_ollama_native_completion(contract, prompt, cfg)
+            payload, retry_attempts = _call_with_retries(lambda: _post_ollama_native_completion(contract, prompt, cfg))
         else:
-            payload = _post_chat_completion(contract, prompt, cfg)
+            payload, retry_attempts = _call_with_retries(lambda: _post_chat_completion(contract, prompt, cfg))
     except Exception as exc:
-        call_error = f"openai_compatible_failed:{type(exc).__name__}"
+        retry_attempts += _exception_attempts(exc)
+        call_error = f"openai_compatible_failed:{_exception_type_name(exc)}"
         if cfg.provider == "ollama":
             try:
-                payload = _post_ollama_native_completion(contract, prompt, cfg)
+                payload, native_attempts = _call_with_retries(lambda: _post_ollama_native_completion(contract, prompt, cfg))
+                retry_attempts += native_attempts
             except Exception as native_exc:
-                return _fallback_result(contract, cfg, f"{call_error};ollama_native_failed:{type(native_exc).__name__}")
+                retry_attempts += _exception_attempts(native_exc)
+                return _fallback_result(
+                    contract,
+                    cfg,
+                    f"{call_error};ollama_native_failed:{_exception_type_name(native_exc)}",
+                    retry_attempts=retry_attempts,
+                )
         else:
-            return _fallback_result(contract, cfg, f"call_failed:{type(exc).__name__}")
+            return _fallback_result(contract, cfg, f"call_failed:{_exception_type_name(exc)}", retry_attempts=retry_attempts)
     validation = validate_llm_structured_output(contract, payload)
     return LLMStructuredCallResult(
         status="accepted" if validation["ok"] else "rejected",
@@ -68,6 +87,7 @@ def call_structured_llm(
         output=payload if validation["ok"] else {},
         validation=validation,
         fallback_reason=call_error if validation["ok"] else "validation_failed",
+        retry_attempts=retry_attempts,
         executed=True,
     ).to_dict()
 
@@ -260,6 +280,48 @@ def _compatible_timeout(cfg: LLMProviderConfig) -> float:
     return cfg.http_timeout_sec
 
 
+def _call_with_retries(call):
+    attempts = _retry_attempts()
+    last_exc: Exception | None = None
+    for index in range(attempts):
+        try:
+            return call(), index + 1
+        except Exception as exc:
+            last_exc = exc
+            if index + 1 >= attempts:
+                break
+            time.sleep(_retry_backoff_seconds() * (index + 1))
+    if last_exc is not None:
+        raise LLMRetryExhausted(last_exc, attempts) from last_exc
+    raise RuntimeError("llm_retry_exhausted_without_exception")
+
+
+def _exception_attempts(exc: Exception) -> int:
+    if isinstance(exc, LLMRetryExhausted):
+        return exc.attempts
+    return 0
+
+
+def _exception_type_name(exc: Exception) -> str:
+    if isinstance(exc, LLMRetryExhausted):
+        return type(exc.cause).__name__
+    return type(exc).__name__
+
+
+def _retry_attempts() -> int:
+    try:
+        return max(1, min(4, int(os.getenv("V20_LLM_RETRY_ATTEMPTS", "2"))))
+    except ValueError:
+        return 2
+
+
+def _retry_backoff_seconds() -> float:
+    try:
+        return max(0.0, min(2.0, float(os.getenv("V20_LLM_RETRY_BACKOFF_SEC", "0.15"))))
+    except ValueError:
+        return 0.15
+
+
 def _parse_json_content(content: str) -> dict[str, object]:
     try:
         payload = json.loads(content)
@@ -306,7 +368,13 @@ def _json_object_candidates(content: str) -> list[str]:
     return candidates
 
 
-def _fallback_result(contract: LLMTaskContract, cfg: LLMProviderConfig, reason: str) -> dict[str, object]:
+def _fallback_result(
+    contract: LLMTaskContract,
+    cfg: LLMProviderConfig,
+    reason: str,
+    *,
+    retry_attempts: int = 0,
+) -> dict[str, object]:
     validation = {
         "ok": False,
         "task_name": contract.task_name,
@@ -322,4 +390,5 @@ def _fallback_result(contract: LLMTaskContract, cfg: LLMProviderConfig, reason: 
         output={},
         validation=validation,
         fallback_reason=reason,
+        retry_attempts=retry_attempts,
     ).to_dict()

@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
+import time
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -121,7 +123,9 @@ from v20.measurement.dimensions import bazi_dimension_manifest
 from v20.ops.admin_status import database_admin_status, llm_admin_status
 from v20.ops.config import load_runtime_config_from_env
 from v20.ops.dependencies import dependency_readiness_report
+from v20.ops.logging import get_logger, log_event
 from v20.ops.profiles import validate_runtime_config
+from v20.ops.readiness import liveness_report, readiness_report
 from v20.ops.service_unit import service_unit_manifest
 from v20.ops.status import system_status_report
 from v20.ops.sync import sync_readiness_report
@@ -164,6 +168,9 @@ from v20.validation.rule_portrait_batch import (
 from v20.validation.suite import run_synthetic_suite
 
 
+LOGGER = get_logger("v20.server")
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title="Qiazhi V20",
@@ -173,6 +180,41 @@ def create_app() -> FastAPI:
     frontend_dir = Path(__file__).resolve().parent / "frontend"
     if frontend_dir.exists():
         app.mount("/v20/ui", StaticFiles(directory=frontend_dir, html=True), name="v20_ui")
+
+    @app.middleware("http")
+    async def structured_request_logging(request: Request, call_next):
+        start = time.perf_counter()
+        status_code = 500
+        try:
+            response = await call_next(request)
+            status_code = response.status_code
+            return response
+        except Exception as exc:
+            log_event(
+                LOGGER,
+                logging.ERROR,
+                "request_failed",
+                event="request_failed",
+                method=request.method,
+                path=request.url.path,
+                status_code=status_code,
+                error_type=type(exc).__name__,
+                duration_ms=round((time.perf_counter() - start) * 1000, 2),
+            )
+            raise
+        finally:
+            level = logging.WARNING if status_code >= 400 else logging.INFO
+            log_event(
+                LOGGER,
+                level,
+                "request_completed",
+                event="request_completed",
+                method=request.method,
+                path=request.url.path,
+                status_code=status_code,
+                duration_ms=round((time.perf_counter() - start) * 1000, 2),
+                client_host=_client_host(request),
+            )
 
     @app.get("/health")
     def health() -> dict[str, object]:
@@ -192,6 +234,14 @@ def create_app() -> FastAPI:
                 "NO_SECRET_VALUES_RENDERED",
             ],
         }
+
+    @app.get("/health/live")
+    def health_live() -> dict[str, object]:
+        return liveness_report()
+
+    @app.get("/health/ready")
+    def health_ready() -> dict[str, object]:
+        return readiness_report()
 
     @app.get("/api/v20/auth/me")
     def auth_me(request: Request) -> dict[str, object]:
@@ -859,8 +909,8 @@ def create_app() -> FastAPI:
 
     @app.post("/api/v20/measure")
     @app.post("/api/v20/runtime/measure")
-    def measure(payload: MeasureRequest) -> dict[str, object]:
-        _enforce_rate_limit("runtime.measure", None)
+    def measure(payload: MeasureRequest, request: Request) -> dict[str, object]:
+        _enforce_rate_limit("runtime.measure", request)
         try:
             pillars, luck_pillar = _resolved_measure_inputs(payload)
             if should_cache_measure(payload):
@@ -1009,6 +1059,12 @@ def _dict_value(payload: dict[str, object], key: str) -> dict[str, object]:
     return value if isinstance(value, dict) else {}
 
 
+def _client_host(request: Request) -> str:
+    if request.client is None:
+        return ""
+    return str(request.client.host or "")
+
+
 def _require_profile_session(request: Request) -> dict[str, object]:
     auth = auth_status(request)
     if not auth.get("authenticated"):
@@ -1047,8 +1103,16 @@ def _enforce_rate_limit(route_key: str, request: Request | None) -> None:
 
 def _rate_limit_for_route(route_key: str) -> int:
     if ".stream." in route_key:
-        return int(os.getenv("V20_STREAM_RATE_LIMIT_PER_MINUTE", "12"))
-    return int(os.getenv("V20_RATE_LIMIT_PER_MINUTE", "60"))
+        return _int_env("V20_STREAM_RATE_LIMIT_PER_MINUTE", 12)
+    return _int_env("V20_RATE_LIMIT_PER_MINUTE", 60)
+
+
+def _int_env(name: str, default: int) -> int:
+    try:
+        value = int(os.getenv(name, str(default)))
+    except ValueError:
+        return default
+    return max(1, value)
 
 
 def _profile_owner_for_session(session: dict[str, object], owner_id: str) -> str:
