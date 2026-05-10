@@ -30,6 +30,25 @@ def test_v20_local_jsonl_store_appends_redacted_feedback_only(tmp_path) -> None:
     assert "ONLY_REDACTED_ANALYSIS_IS_PERSISTED" in result["guardrails"]
 
 
+def test_v20_local_jsonl_store_rotates_oversized_ledger(tmp_path) -> None:
+    store = LocalJsonlStore(runtime_dir=tmp_path, max_ledger_bytes=240)
+    first = store.append_record("feedback_ledger", {"text": "x" * 220})
+    second = store.append_record("feedback_ledger", {"text": "y" * 220})
+    status = store.status()
+    active_path = tmp_path / second["relative_path"]
+    rotated_path = tmp_path / second["rotated_relative_path"]
+
+    assert first["rotated"] is False
+    assert second["rotated"] is True
+    assert active_path.exists()
+    assert rotated_path.exists()
+    assert active_path.name == "feedback_ledger.jsonl"
+    assert rotated_path.name.startswith("feedback_ledger.")
+    assert status["ledger_count"] == 2
+    assert status["max_ledger_bytes"] == 240
+    assert "LOCAL_JSONL_SIZE_BOUNDED" in second["guardrails"]
+
+
 def test_v20_local_jsonl_status_endpoint_does_not_render_file_content(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
     client = TestClient(app)
