@@ -491,19 +491,6 @@ body[data-workbench-mode="observe"] .structure-dynamics-panel {
   padding: 15px;
 }
 
-.run-summary {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 16px;
-  min-height: 96px;
-  border: 1px solid rgba(71, 179, 125, 0.38);
-  border-radius: 8px;
-  background: #101a17;
-  box-shadow: var(--shadow);
-  padding: 16px;
-}
-
 .muted-line {
   color: var(--muted);
   font-size: 13px;
@@ -511,14 +498,6 @@ body[data-workbench-mode="observe"] .structure-dynamics-panel {
   margin-top: 7px;
 }
 
-.summary-metrics {
-  display: grid;
-  grid-template-columns: repeat(3, 86px);
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.summary-metrics span,
 .metric-tile {
   display: grid;
   gap: 4px;
@@ -531,7 +510,6 @@ body[data-workbench-mode="observe"] .structure-dynamics-panel {
   padding: 9px;
 }
 
-.summary-metrics strong,
 .metric-tile strong {
   color: var(--text);
   font-size: 18px;
@@ -1704,7 +1682,6 @@ body.profile-reading .measure-layout {
 }
 
 body.profile-reading .control-panel,
-body.profile-reading .run-summary,
 body.profile-reading .feature-spine-panel,
 body.profile-reading .side-panel,
 body.profile-reading .tag-line {
@@ -1795,7 +1772,6 @@ body.profile-reading .answer-panel {
 }
 
 .entry-card.primary-entry h2,
-.run-summary h2,
 .answer-panel h2 {
   color: #f5fbf8;
 }
@@ -1862,13 +1838,6 @@ textarea:hover,
   border-color: rgba(77, 185, 133, 0.45);
 }
 
-.run-summary {
-  background:
-    linear-gradient(90deg, rgba(77, 185, 133, 0.14), rgba(114, 174, 210, 0.08)),
-    #101a17;
-}
-
-.summary-metrics span,
 .metric-tile,
 .pillar-card,
 .feature-card,
@@ -1967,7 +1936,6 @@ textarea:hover,
   }
 
   .topbar,
-  .run-summary,
   .entry-hero,
   .context-strip {
     align-items: stretch;
@@ -2014,8 +1982,7 @@ textarea:hover,
   .control-panel,
   .profile-command-panel,
   .profile-editor-panel,
-  .profile-card,
-  .run-summary {
+  .profile-card {
     padding: 12px;
   }
 
@@ -2058,11 +2025,6 @@ textarea:hover,
     width: 27px;
     height: 27px;
     font-size: 19px;
-  }
-
-  .summary-metrics {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    width: 100%;
   }
 
   .feedback-row,
@@ -2156,10 +2118,6 @@ textarea:hover,
   .top-actions button,
   .top-actions .status-pill {
     flex-basis: auto;
-  }
-
-  .summary-metrics {
-    grid-template-columns: 1fr;
   }
 
   .pillar-input-grid,

@@ -1664,10 +1664,6 @@ const applyProfileDefaults = (profile) => {
         }
       }
     });
-
-    if (defaults.status === "ready") {
-      setText("#profileBadge", currentText().wb.profile_chart);
-    }
   } catch (err) {
     console.error("applyProfileDefaults error:", err);
   } finally {
@@ -1883,7 +1879,7 @@ document.querySelectorAll("[data-workbench-mode-target]").forEach((button) => {
     applyWorkbenchMode(measurementRole(roleSelect.value), button.dataset.workbenchModeTarget || "reading");
   });
 });
-logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#runtimeStatus", error.message)));
+logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#answerText", error.message)));
 
 localeSelect.value = localStorage.getItem("v20_locale") || localeSelect.value || "zh";
 roleSelect.value = measurementRole(roleSelect.value);
