@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pathlib import Path
 import json
+from pathlib import Path
 
 from fastapi.testclient import TestClient
 
@@ -225,6 +225,7 @@ def test_v20_profile_list_endpoint_is_read_only_without_database_url(tmp_path, m
 
 def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
+    monkeypatch.setenv("V20_BCRYPT_ROUNDS", "4")
     client = TestClient(app)
 
     guest = client.post("/api/v20/auth/guest", json={"locale": "zh"}).json()
@@ -270,6 +271,7 @@ def test_v20_local_auth_supports_guest_and_registered_roles(tmp_path, monkeypatc
 
 def test_v20_can_import_v19_auth_sessions_and_accept_legacy_cookie(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
+    monkeypatch.setenv("V20_BCRYPT_ROUNDS", "4")
     client = TestClient(app)
 
     result = client.post("/api/v20/auth/import-v19?apply=true", json={"admin_password": "abcd1235"}).json()

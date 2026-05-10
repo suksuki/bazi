@@ -4,6 +4,7 @@ import copy
 import hashlib
 import json
 import os
+import time
 from typing import Any
 
 from v20.redis.contracts import redis_contract_manifest
@@ -16,6 +17,7 @@ CACHE_DISABLED_META = {
     "cache_ttl_seconds": 0,
     "cache_runtime_mutation": False,
 }
+RATE_LIMIT_VERSION = "v20.redis_rate_limit.v1"
 
 
 def runtime_cache_key(payload: dict[str, Any], *, role_key: str = "") -> str:
@@ -99,6 +101,97 @@ def runtime_cache_status() -> dict[str, Any]:
         }
     except Exception as exc:
         return status | {
+            "status": "degraded",
+            "failure": f"{type(exc).__name__}: {exc}",
+        }
+
+
+def clear_runtime_request_cache(*, batch_size: int = 100) -> dict[str, Any]:
+    prefix = _request_cache_prefix()
+    client = _redis_client()
+    result = {
+        "version": "v20.redis_runtime_cache_clear.v1",
+        "status": "unavailable",
+        "keyspace": "request_cache",
+        "prefix": prefix,
+        "deleted_count": 0,
+        "runtime_mutation": True,
+        "guardrails": [
+            "REQUEST_CACHE_ONLY",
+            "NO_CACHE_VALUES_RENDERED",
+            "REDIS_REMAINS_EPHEMERAL",
+        ],
+    }
+    if client is None:
+        return result | {"failure": "client_unavailable"}
+    try:
+        keys = list(client.scan_iter(match=f"{prefix}*", count=batch_size))
+        deleted = 0
+        for index in range(0, len(keys), batch_size):
+            chunk = keys[index : index + batch_size]
+            if chunk:
+                deleted += int(client.delete(*chunk) or 0)
+        return result | {
+            "status": "cleared",
+            "deleted_count": deleted,
+        }
+    except Exception as exc:
+        return result | {
+            "status": "degraded",
+            "failure": f"{type(exc).__name__}: {exc}",
+        }
+
+
+def check_rate_limit(
+    identity: str,
+    *,
+    route_key: str,
+    limit: int | None = None,
+    window_seconds: int | None = None,
+) -> dict[str, Any]:
+    limit = int(limit or os.getenv("V20_RATE_LIMIT_PER_MINUTE", "30"))
+    window_seconds = int(window_seconds or os.getenv("V20_RATE_LIMIT_WINDOW_SECONDS", "60"))
+    limit = max(1, limit)
+    window_seconds = max(1, window_seconds)
+    prefix = _rate_limit_prefix()
+    client = _redis_client()
+    safe_identity = hashlib.sha256(str(identity or "anonymous").encode("utf-8")).hexdigest()[:16]
+    safe_route = hashlib.sha256(str(route_key or "route").encode("utf-8")).hexdigest()[:10]
+    window = int(time.time() // window_seconds)
+    key = f"{prefix}{safe_route}:{safe_identity}:{window}"
+    result = {
+        "version": RATE_LIMIT_VERSION,
+        "status": "unavailable",
+        "allowed": True,
+        "route_key": route_key,
+        "limit": limit,
+        "window_seconds": window_seconds,
+        "remaining": limit,
+        "retry_after_seconds": 0,
+        "runtime_mutation": False,
+        "guardrails": [
+            "RATE_LIMIT_IS_EPHEMERAL",
+            "NO_RAW_IDENTITY_RENDERED",
+            "FAIL_OPEN_WHEN_REDIS_UNAVAILABLE",
+        ],
+    }
+    if client is None:
+        return result | {"failure": "client_unavailable"}
+    try:
+        count = int(client.incr(key))
+        if count == 1:
+            client.expire(key, window_seconds)
+        remaining = max(0, limit - count)
+        allowed = count <= limit
+        return result | {
+            "status": "allowed" if allowed else "blocked",
+            "allowed": allowed,
+            "remaining": remaining,
+            "retry_after_seconds": 0 if allowed else window_seconds,
+            "runtime_mutation": True,
+        }
+    except Exception as exc:
+        return result | {
             "status": "degraded",
             "failure": f"{type(exc).__name__}: {exc}",
         }
@@ -202,6 +295,14 @@ def _request_cache_prefix() -> str:
         if row.name == "request_cache":
             return row.prefix
     return "v20:cache:request:"
+
+
+def _rate_limit_prefix() -> str:
+    contract = redis_contract_manifest()
+    for row in contract.keyspaces:
+        if row.name == "rate_limit":
+            return row.prefix
+    return "v20:rate:"
 
 
 def _request_cache_ttl() -> int:

@@ -263,13 +263,17 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "/api/v20/feedback/record" not in script.text
     assert "DB / LLM" in admin.text
     assert "styles.css?v=20260505-glass" in admin.text
-    assert "admin.js?v=20260509-route-state" in admin.text
+    assert "admin.js?v=20260510-redis-cache" in admin.text
     assert "new URLSearchParams(window.location.search)" not in admin_script.text
     assert "/v20/ui/qiazhi-logo-mark.png" in admin.text
     assert "brand-logo" in admin.text
     assert "/v20/ui/profiles.html" in admin.text
     assert "/api/v20/admin/db" in admin_script.text
     assert "/api/v20/admin/llm" in admin_script.text
+    assert "/api/v20/redis/cache-status" in admin_script.text
+    assert "/api/v20/redis/cache-clear" in admin_script.text
+    assert "clearRedisCache" in admin_script.text
+    assert "Runtime Cache" in admin.text
     assert "/api/v20/auth/logout" in admin_script.text
     assert "Knowledge Evidence Store" not in admin.text
     assert "八字资料来源库" not in admin.text

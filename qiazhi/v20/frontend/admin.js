@@ -7,9 +7,9 @@ const logoutButton = document.querySelector("#logoutButton");
 const locale = localStorage.getItem("v20_locale") || "zh";
 
 const ADMIN_TEXT = {
-  zh: { status: "状态", refresh: "刷新", models: "模型", no_data: "暂无数据。", await_db: "等待 V20_DATABASE_URL。", logout: "登出", entry: "入口", profiles: "档案", measure: "测算" },
-  en: { status: "Status", refresh: "Refresh", models: "Models", no_data: "No data.", await_db: "Waiting for V20_DATABASE_URL.", logout: "Log Out", entry: "Entry", profiles: "Profiles", measure: "Reading" },
-  ko: { status: "상태", refresh: "새로고침", models: "모델", no_data: "데이터 없음.", await_db: "V20_DATABASE_URL 대기 중.", logout: "로그아웃", entry: "입구", profiles: "프로필", measure: "분석" },
+  zh: { status: "状态", refresh: "刷新", models: "模型", clear_cache: "清理缓存", no_data: "暂无数据。", await_db: "等待 V20_DATABASE_URL。", logout: "登出", entry: "入口", profiles: "档案", measure: "测算" },
+  en: { status: "Status", refresh: "Refresh", models: "Models", clear_cache: "Clear Cache", no_data: "No data.", await_db: "Waiting for V20_DATABASE_URL.", logout: "Log Out", entry: "Entry", profiles: "Profiles", measure: "Reading" },
+  ko: { status: "상태", refresh: "새로고침", models: "모델", clear_cache: "캐시 정리", no_data: "데이터 없음.", await_db: "V20_DATABASE_URL 대기 중.", logout: "로그아웃", entry: "입구", profiles: "프로필", measure: "분석" },
 };
 const adminText = () => ADMIN_TEXT[locale] || ADMIN_TEXT.zh;
 
@@ -108,6 +108,31 @@ const renderLlm = async (probeModels = false) => {
   renderTags("#llmGuardrails", ready.guardrails || llm.guardrails || []);
 };
 
+const renderRedis = async () => {
+  const redis = await requestJson("/api/v20/redis/cache-status");
+  setText("#adminStatus", `redis ${redis.status}`);
+  const summary = document.querySelector("#redisSummary");
+  clear(summary);
+  [
+    [adminText().status, redis.status],
+    ["Keyspace", redis.keyspace || "-"],
+    ["Keys", String(redis.key_count ?? 0)],
+    ["TTL", `${redis.ttl_seconds || 0}s`],
+    ["DB", String(redis.db ?? "-")],
+    ["Ping", redis.ping ? "ok" : "-"],
+  ].forEach(([label, value]) => summary.append(metric(label, value)));
+  renderTags("#redisGuardrails", redis.guardrails || []);
+};
+
+const clearRedisCache = async () => {
+  const result = await requestJson("/api/v20/redis/cache-clear", {
+    method: "POST",
+    body: JSON.stringify({}),
+  });
+  setText("#adminStatus", `redis cleared ${result.deleted_count || 0}`);
+  await renderRedis();
+};
+
 const metric = (label, value) => {
   const node = el("div", "metric-tile");
   node.append(el("span", "", label));
@@ -127,7 +152,7 @@ const renderTags = (selector, tags) => {
 
 const refreshAll = async () => {
   try {
-    await Promise.all([renderDb(), renderLlm(false)]);
+    await Promise.all([renderDb(), renderLlm(false), renderRedis()]);
     setText("#adminStatus", "ready");
   } catch (error) {
     setText("#adminStatus", "error");
@@ -148,6 +173,8 @@ applyAdminLocale();
 document.querySelector("#refreshDb").addEventListener("click", renderDb);
 document.querySelector("#refreshLlm").addEventListener("click", () => renderLlm(false));
 document.querySelector("#probeModels").addEventListener("click", () => renderLlm(true));
+document.querySelector("#refreshRedis").addEventListener("click", renderRedis);
+document.querySelector("#clearRedisCache").addEventListener("click", () => clearRedisCache().catch((error) => setText("#adminStatus", error.message)));
 logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#adminStatus", error.message)));
 
 loadCurrentSession()

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request, Response
@@ -136,6 +137,8 @@ from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.redis.runtime_cache import (
     attach_cache_miss_meta,
     cacheable_measure_payload,
+    check_rate_limit,
+    clear_runtime_request_cache,
     get_runtime_cache,
     runtime_cache_status,
     runtime_cache_key,
@@ -312,6 +315,11 @@ def create_app() -> FastAPI:
     @app.get("/api/v20/redis/cache-status")
     def redis_cache_status() -> dict[str, object]:
         return runtime_cache_status()
+
+    @app.post("/api/v20/redis/cache-clear")
+    def redis_cache_clear(request: Request) -> dict[str, object]:
+        _require_admin_session(request)
+        return clear_runtime_request_cache()
 
     @app.get("/api/v20/runtime/dependencies")
     def runtime_dependencies() -> dict[str, object]:
@@ -852,6 +860,7 @@ def create_app() -> FastAPI:
     @app.post("/api/v20/measure")
     @app.post("/api/v20/runtime/measure")
     def measure(payload: MeasureRequest) -> dict[str, object]:
+        _enforce_rate_limit("runtime.measure", None)
         try:
             pillars, luck_pillar = _resolved_measure_inputs(payload)
             if should_cache_measure(payload):
@@ -891,6 +900,7 @@ def create_app() -> FastAPI:
     def measure_view(role_key: str, payload: MeasureRequest, request: Request) -> dict[str, object]:
         if role_key == "admin":
             _require_admin_session(request)
+        _enforce_rate_limit(f"measure.view.{role_key}", request)
         try:
             pillars, luck_pillar = _resolved_measure_inputs(payload)
             if should_cache_measure(payload):
@@ -930,6 +940,7 @@ def create_app() -> FastAPI:
     def measure_view_stream(role_key: str, payload: MeasureRequest, request: Request) -> StreamingResponse:
         if role_key == "admin":
             _require_admin_session(request)
+        _enforce_rate_limit(f"measure.stream.{role_key}", request)
 
         def event_stream():
             try:
@@ -1010,6 +1021,34 @@ def _require_admin_session(request: Request) -> dict[str, object]:
     if session.get("role") != "admin":
         raise HTTPException(status_code=403, detail={"error": "V20_ADMIN_REQUIRED"})
     return session
+
+
+def _enforce_rate_limit(route_key: str, request: Request | None) -> None:
+    identity = "anonymous"
+    if request is not None:
+        auth = auth_status(request)
+        session = auth.get("session", {}) if auth.get("authenticated") else {}
+        if isinstance(session, dict):
+            identity = str(session.get("user_id") or session.get("username") or "anonymous")
+        if identity == "anonymous" and request.client is not None:
+            identity = str(request.client.host or "anonymous")
+    result = check_rate_limit(identity, route_key=route_key, limit=_rate_limit_for_route(route_key))
+    if not result.get("allowed", True):
+        raise HTTPException(
+            status_code=429,
+            detail={
+                "error": "V20_RATE_LIMITED",
+                "route_key": route_key,
+                "retry_after_seconds": result.get("retry_after_seconds", 60),
+                "guardrails": result.get("guardrails", []),
+            },
+        )
+
+
+def _rate_limit_for_route(route_key: str) -> int:
+    if ".stream." in route_key:
+        return int(os.getenv("V20_STREAM_RATE_LIMIT_PER_MINUTE", "12"))
+    return int(os.getenv("V20_RATE_LIMIT_PER_MINUTE", "60"))
 
 
 def _profile_owner_for_session(session: dict[str, object], owner_id: str) -> str:

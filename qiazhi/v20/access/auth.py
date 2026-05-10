@@ -5,10 +5,11 @@ import hmac
 import json
 import os
 import secrets
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
+import bcrypt
 from fastapi import Request, Response
 
 
@@ -17,6 +18,9 @@ DEFAULT_AUTH_PATH = QIAZHI_ROOT / "v20" / ".runtime" / "local" / "auth.json"
 SESSION_COOKIE = "v20_session"
 LEGACY_V19_SESSION_COOKIE = "v19_auth_session"
 DEFAULT_V19_AUTH_PATH = QIAZHI_ROOT / "v19" / ".runtime" / "auth_sessions.json"
+PASSWORD_HASH_ALGORITHM = "bcrypt.v20"
+LEGACY_PASSWORD_HASH_ALGORITHM = "sha256_salt_legacy"
+DEFAULT_SESSION_TTL_SECONDS = 60 * 60 * 24 * 7
 
 
 def auth_status(request: Request) -> dict[str, object]:
@@ -26,7 +30,7 @@ def auth_status(request: Request) -> dict[str, object]:
         "authenticated": bool(session),
         "session": _public_session(session),
         "runtime_mutation": False,
-        "guardrails": ["LOCAL_AUTH_STATUS_ONLY", "NO_PASSWORD_VALUES_RENDERED"],
+        "guardrails": ["LOCAL_AUTH_STATUS_ONLY", "NO_PASSWORD_VALUES_RENDERED", "SESSION_EXPIRY_ENFORCED"],
     }
 
 
@@ -58,8 +62,9 @@ def register_user(payload: dict[str, Any], response: Response) -> dict[str, obje
         "user_id": user_id,
         "username": username,
         "role": role,
-        "password_hash": _password_hash(password, salt),
-        "salt": salt,
+        "password_hash": _password_hash(password),
+        "password_hash_algorithm": PASSWORD_HASH_ALGORITHM,
+        "salt": "",
         "created_at": _now(),
     }
     _write_store(store)
@@ -76,10 +81,15 @@ def password_login(payload: dict[str, Any], response: Response) -> dict[str, obj
         return _auth_error("login_failed", "User not found.")
     if user.get("login_policy") == "imported_v19_session_only_password_reset_required":
         return _auth_error("password_reset_required", "This V19 user was imported from session metadata and needs a V20 password reset.")
-    expected = str(user.get("password_hash") or "")
-    actual = _password_hash(password, str(user.get("salt") or ""))
-    if not hmac.compare_digest(expected, actual):
+    verified, needs_upgrade = _verify_password(password, user)
+    if not verified:
         return _auth_error("login_failed", "Password is incorrect.")
+    if needs_upgrade:
+        user["password_hash"] = _password_hash(password)
+        user["password_hash_algorithm"] = PASSWORD_HASH_ALGORITHM
+        user["salt"] = ""
+        user["updated_at"] = _now()
+        _write_store(store)
     return _create_session_response(
         response,
         user_id=str(user.get("user_id") or username),
@@ -184,13 +194,13 @@ def import_v19_auth_sessions(
             "legacy_token_source": "v19_auth_session",
             "created_at": session.get("created_at") or _now(),
             "updated_at": session.get("updated_at") or session.get("created_at") or _now(),
+            "expires_at": _session_expires_at(),
         }
         if token not in store["sessions"]:
             imported_sessions += 1
         store["sessions"][token] = normalized
     admin_password_configured = False
     if admin_password:
-        salt = secrets.token_hex(16)
         prior = dict(store["users"].get("admin") or {})
         store["users"]["admin"] = {
             **prior,
@@ -198,8 +208,9 @@ def import_v19_auth_sessions(
             "user_id": "admin",
             "username": "admin",
             "role": "admin",
-            "password_hash": _password_hash(admin_password, salt),
-            "salt": salt,
+            "password_hash": _password_hash(admin_password),
+            "password_hash_algorithm": PASSWORD_HASH_ALGORITHM,
+            "salt": "",
             "login_policy": "local_password_enabled",
             "imported_from": "v19.admin_fixed_password",
             "updated_at": _now(),
@@ -230,6 +241,7 @@ def _create_session_response(
         "role": role,
         "locale": locale,
         "created_at": _now(),
+        "expires_at": _session_expires_at(),
     }
     store = _read_store()
     store["sessions"][token] = session
@@ -248,7 +260,12 @@ def _session_from_request(request: Request) -> dict[str, object] | None:
     token = request.cookies.get(SESSION_COOKIE, "") or request.cookies.get(LEGACY_V19_SESSION_COOKIE, "")
     if not token:
         return None
-    session = _read_store()["sessions"].get(token)
+    store = _read_store()
+    session = store["sessions"].get(token)
+    if isinstance(session, dict) and _session_is_expired(session):
+        store["sessions"].pop(token, None)
+        _write_store(store)
+        return None
     return dict(session) if isinstance(session, dict) else None
 
 
@@ -260,6 +277,7 @@ def _public_session(session: dict[str, object] | None) -> dict[str, object]:
         "username": session.get("username", ""),
         "role": session.get("role", "user"),
         "locale": session.get("locale", "zh"),
+        "expires_at": session.get("expires_at", ""),
     }
 
 
@@ -370,8 +388,69 @@ def _write_store(payload: dict[str, object]) -> None:
     path.write_text(json.dumps(payload, ensure_ascii=False, indent=2, sort_keys=True), encoding="utf-8")
 
 
-def _password_hash(password: str, salt: str) -> str:
+def _session_expires_at() -> str:
+    return (datetime.now(timezone.utc) + timedelta(seconds=_session_ttl_seconds())).isoformat()
+
+
+def _session_ttl_seconds() -> int:
+    try:
+        ttl = int(os.getenv("V20_SESSION_TTL_SECONDS", str(DEFAULT_SESSION_TTL_SECONDS)))
+    except ValueError:
+        ttl = DEFAULT_SESSION_TTL_SECONDS
+    return max(60, ttl)
+
+
+def _session_is_expired(session: dict[str, object]) -> bool:
+    expires_at = str(session.get("expires_at") or "")
+    if not expires_at:
+        created_at = str(session.get("created_at") or "")
+        if not created_at:
+            return True
+        try:
+            created = datetime.fromisoformat(created_at)
+        except ValueError:
+            return True
+        if created.tzinfo is None:
+            created = created.replace(tzinfo=timezone.utc)
+        return datetime.now(timezone.utc) >= created + timedelta(seconds=_session_ttl_seconds())
+    try:
+        expires = datetime.fromisoformat(expires_at)
+    except ValueError:
+        return True
+    if expires.tzinfo is None:
+        expires = expires.replace(tzinfo=timezone.utc)
+    return datetime.now(timezone.utc) >= expires
+
+
+def _password_hash(password: str) -> str:
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=_bcrypt_rounds())).decode("utf-8")
+
+
+def _bcrypt_rounds() -> int:
+    try:
+        rounds = int(os.getenv("V20_BCRYPT_ROUNDS", "12"))
+    except ValueError:
+        rounds = 12
+    return min(16, max(4, rounds))
+
+
+def _legacy_password_hash(password: str, salt: str) -> str:
     return hashlib.sha256(f"{salt}:{password}".encode("utf-8")).hexdigest()
+
+
+def _verify_password(password: str, user: dict[str, object]) -> tuple[bool, bool]:
+    expected = str(user.get("password_hash") or "")
+    if not expected:
+        return False, False
+    algorithm = str(user.get("password_hash_algorithm") or "")
+    if algorithm == PASSWORD_HASH_ALGORITHM or expected.startswith("$2"):
+        try:
+            return bcrypt.checkpw(password.encode("utf-8"), expected.encode("utf-8")), False
+        except ValueError:
+            return False, False
+    actual = _legacy_password_hash(password, str(user.get("salt") or ""))
+    verified = hmac.compare_digest(expected, actual)
+    return verified, verified
 
 
 def _clean_username(value: object) -> str:

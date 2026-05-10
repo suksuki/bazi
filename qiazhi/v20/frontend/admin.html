@@ -72,8 +72,26 @@
             </div>
           </div>
         </section>
+
+        <section class="panel admin-card">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">Redis</p>
+              <h2>Runtime Cache</h2>
+            </div>
+            <div class="button-pair">
+              <button type="button" id="refreshRedis" class="mini-action" data-admin-ui="refresh">刷新</button>
+              <button type="button" id="clearRedisCache" class="mini-action secondary" data-admin-ui="clear_cache">清理缓存</button>
+            </div>
+          </div>
+          <div id="redisSummary" class="admin-summary"></div>
+          <div>
+            <p class="section-kicker">Guardrails</p>
+            <div id="redisGuardrails" class="tag-cloud"></div>
+          </div>
+        </section>
       </main>
     </div>
-    <script src="/v20/ui/admin.js?v=20260509-route-state" defer></script>
+    <script src="/v20/ui/admin.js?v=20260510-redis-cache" defer></script>
   </body>
 </html>
