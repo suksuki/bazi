@@ -8,6 +8,22 @@ from v20.core.elements import element_distribution
 from v20.core.schemas import ChartFacts, CoreInference
 
 USEFUL_GOD_CANDIDATE_VERSION = "v20.useful_god_candidates.v1"
+BASE_CONFIDENCE = {
+    "resource_support": 0.42,
+    "peer_stabilizer": 0.38,
+    "output_release": 0.4,
+    "wealth_channel": 0.37,
+    "authority_constraint_review": 0.34,
+    "support_vs_release_review": 0.39,
+    "output_pressure_review": 0.35,
+    "weak_element_gap_review": 0.31,
+}
+ELEMENT_AMOUNT_CONFIDENCE_WEIGHT = 0.025
+ELEMENT_AMOUNT_CONFIDENCE_CAP = 0.1
+SUPPORT_PRESSURE_DELTA_CONFIDENCE_WEIGHT = 0.28
+SUPPORT_PRESSURE_DELTA_CONFIDENCE_CAP = 0.12
+MIN_CANDIDATE_CONFIDENCE = 0.2
+MAX_CANDIDATE_CONFIDENCE = 0.78
 
 
 @dataclass(frozen=True)
@@ -51,7 +67,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.42,
+                BASE_CONFIDENCE["resource_support"],
             )
         )
         rows.append(
@@ -63,7 +79,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.38,
+                BASE_CONFIDENCE["peer_stabilizer"],
             )
         )
     elif inference.day_master_capacity == "supported_capacity":
@@ -76,7 +92,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.4,
+                BASE_CONFIDENCE["output_release"],
             )
         )
         rows.append(
@@ -88,7 +104,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.37,
+                BASE_CONFIDENCE["wealth_channel"],
             )
         )
         rows.append(
@@ -100,7 +116,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.34,
+                BASE_CONFIDENCE["authority_constraint_review"],
             )
         )
     else:
@@ -113,7 +129,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.39,
+                BASE_CONFIDENCE["support_vs_release_review"],
             )
         )
         rows.append(
@@ -125,7 +141,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.35,
+                BASE_CONFIDENCE["output_pressure_review"],
             )
         )
 
@@ -140,7 +156,7 @@ def derive_useful_god_candidates(facts: ChartFacts, inference: CoreInference) ->
                 facts,
                 inference,
                 distribution,
-                0.31,
+                BASE_CONFIDENCE["weak_element_gap_review"],
             )
         )
     deduped = _dedupe(rows)
@@ -176,8 +192,11 @@ def _candidate(
 
 def _candidate_confidence(base: float, element_amount: float, inference: CoreInference) -> float:
     delta = abs(inference.support_score - inference.pressure_score)
-    evidence_bonus = min(0.1, element_amount * 0.025) + min(0.12, delta * 0.28)
-    return round(max(0.2, min(0.78, base + evidence_bonus)), 3)
+    evidence_bonus = min(ELEMENT_AMOUNT_CONFIDENCE_CAP, element_amount * ELEMENT_AMOUNT_CONFIDENCE_WEIGHT) + min(
+        SUPPORT_PRESSURE_DELTA_CONFIDENCE_CAP,
+        delta * SUPPORT_PRESSURE_DELTA_CONFIDENCE_WEIGHT,
+    )
+    return round(max(MIN_CANDIDATE_CONFIDENCE, min(MAX_CANDIDATE_CONFIDENCE, base + evidence_bonus)), 3)
 
 
 def _generating_element(target: str) -> str:
