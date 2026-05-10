@@ -6,6 +6,7 @@ import urllib.request
 
 from v20.llm.provider import load_llm_provider_config_from_env, llm_provider_readiness_report
 from v20.ops.dependencies import dependency_readiness_report
+from v20.storage.postgres_pool import pooled_postgres_connection, postgres_pool_status
 from v20.storage.postgres_schema import build_postgres_schema_contract
 
 
@@ -19,6 +20,7 @@ def database_admin_status() -> dict[str, object]:
         "status": "config_only",
         "active_profile": deps["active_profile"],
         "postgres": deps["postgres"],
+        "postgres_pool": postgres_pool_status(),
         "database_url_present": bool(url),
         "table_names": table_names,
         "counts": {},
@@ -33,13 +35,12 @@ def database_admin_status() -> dict[str, object]:
     if not url:
         return payload
     try:
-        import psycopg2
         from psycopg2 import sql
     except Exception as exc:
         return payload | {"status": "driver_missing", "error": str(exc)}
     try:
         counts: dict[str, int | None] = {}
-        with psycopg2.connect(url) as conn:
+        with pooled_postgres_connection(url) as conn:
             with conn.cursor() as cur:
                 for table_name in table_names:
                     cur.execute("SELECT to_regclass(%s)", (table_name,))

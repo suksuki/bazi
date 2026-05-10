@@ -5,6 +5,7 @@ import uuid
 from typing import Any
 
 from v20.core.calendar import chart_defaults_from_birth_input
+from v20.storage.postgres_pool import pooled_postgres_connection
 
 
 _CREATE_PROFILE_TABLE_SQL = """
@@ -35,12 +36,11 @@ def list_profiles_from_postgres(*, owner_id: str = "", limit: int = 80) -> dict[
     if not url:
         return payload | {"status": "blocked_missing_V20_DATABASE_URL"}
     try:
-        import psycopg2
         from psycopg2.extras import RealDictCursor
     except Exception as exc:
         return payload | {"status": "blocked_missing_psycopg2", "error": str(exc)}
     try:
-        with psycopg2.connect(url) as conn:
+        with pooled_postgres_connection(url) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 where = "where owner_id = %s" if owner_id else ""
                 params: list[object] = [owner_id] if owner_id else []
@@ -82,12 +82,11 @@ def read_profile_from_postgres(profile_id: str) -> dict[str, object]:
     if not url:
         return payload | {"status": "blocked_missing_V20_DATABASE_URL"}
     try:
-        import psycopg2
         from psycopg2.extras import RealDictCursor
     except Exception as exc:
         return payload | {"status": "blocked_missing_psycopg2", "error": str(exc)}
     try:
-        with psycopg2.connect(url) as conn:
+        with pooled_postgres_connection(url) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(
                     """
@@ -133,11 +132,7 @@ def delete_profile_from_postgres(profile_id: str) -> dict[str, object]:
     if not url:
         return payload | {"status": "blocked_missing_V20_DATABASE_URL"}
     try:
-        import psycopg2
-    except Exception as exc:
-        return payload | {"status": "blocked_missing_psycopg2", "error": str(exc)}
-    try:
-        with psycopg2.connect(url) as conn:
+        with pooled_postgres_connection(url) as conn:
             with conn.cursor() as cur:
                 cur.execute("delete from v20_user_profiles where profile_id = %s", (clean_id,))
                 deleted = cur.rowcount > 0
@@ -162,12 +157,11 @@ def _upsert_profile(*, profile_id: str, owner_id: str, payload: dict[str, Any], 
     if not url:
         return base | {"status": "blocked_missing_V20_DATABASE_URL"}
     try:
-        import psycopg2
         from psycopg2.extras import Json, RealDictCursor
     except Exception as exc:
         return base | {"status": "blocked_missing_psycopg2", "error": str(exc)}
     try:
-        with psycopg2.connect(url) as conn:
+        with pooled_postgres_connection(url) as conn:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute(_CREATE_PROFILE_TABLE_SQL)
                 cur.execute(
