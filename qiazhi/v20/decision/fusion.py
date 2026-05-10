@@ -13,6 +13,7 @@ _CONTROL_DOMAIN_BY_KEY = {
     "control.shang_guan_jian_guan": "career",
     "control.wealth_capacity": "wealth",
     "control.pattern_status": "pattern",
+    "control.mainline_arbitration": "mainline",
 }
 
 _CONTROL_STATE_MAP = {
@@ -46,6 +47,12 @@ _CONTROL_STATE_MAP = {
         "候选": "candidate",
         "不取格": "blocked",
         "待复核": "requires_review",
+    },
+    "control.mainline_arbitration": {
+        "采用第一主线": "confirmed",
+        "切换到次级主线": "mixed",
+        "暂缓主线": "requires_review",
+        "证据不足": "evidence_gap",
     },
 }
 

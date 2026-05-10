@@ -1,4 +1,3 @@
-const params = new URLSearchParams(window.location.search);
 const localeSelect = document.querySelector("#profileLocale");
 const profileList = document.querySelector("#profileList");
 const newProfileButton = document.querySelector("#newProfileButton");
@@ -229,7 +228,7 @@ const toggleLunarLeapMonth = () => {
 const loadMe = async () => {
   const result = await requestJson("/api/v20/auth/me");
   const session = result.session || {};
-  document.body.dataset.role = session.role || params.get("role") || "user";
+  document.body.dataset.role = session.role || "user";
   document.body.dataset.ownerId = session.user_id || "";
   document.querySelectorAll(".admin-nav-link").forEach((node) => {
     node.hidden = session.role !== "admin";
@@ -243,7 +242,7 @@ const logout = async () => {
     method: "POST",
     body: JSON.stringify({}),
   });
-  window.location.href = `/v20/ui/?locale=${encodeURIComponent(localeSelect.value || "zh")}`;
+  window.location.href = "/v20/ui/";
 };
 
 const loadProfiles = async () => {
@@ -367,33 +366,8 @@ const profilePayloadFromEditor = () => ({
 });
 
 const measureUrl = (profile) => {
-  const query = new URLSearchParams({
-    role: measurementRole(params.get("role") || document.body.dataset.role),
-    locale: localeSelect.value,
-    calendar: profile.birth_input?.calendar || profile.birth_input?.calendar_type || "solar",
-    lunar_is_leap: profile.birth_input?.lunar_is_leap_month || profile.birth_input?.is_lunar_leap_month || profile.birth_input?.lunar_is_leap || false,
-    gender: profile.birth_input?.gender || "male",
-    profile_id: profile.profile_id || "",
-    profile_name: profile.display_name || "",
-  });
-  appendProfileDefaults(query, profile);
+  const query = new URLSearchParams({ profile_id: profile.profile_id || "" });
   return `/v20/ui/workbench.html?${query.toString()}`;
-};
-
-const appendProfileDefaults = (query, profile) => {
-  const defaults = profile.chart_defaults || {};
-  const pillars = defaults.pillars || {};
-  const timePillars = defaults.time_pillars || {};
-  [
-    ["year", pillars.year],
-    ["month", pillars.month],
-    ["day", pillars.day],
-    ["hour", pillars.hour],
-    ["flow_year_pillar", timePillars.flow_year],
-    ["luck_pillar", timePillars.luck],
-  ].forEach(([key, value]) => {
-    if (value) query.set(key, value);
-  });
 };
 
 const profileMeta = (profile) => {
@@ -434,7 +408,6 @@ const numberOrString = (selector) => {
 };
 
 const currentText = () => PROFILE_TEXT[localeSelect.value] || PROFILE_TEXT.zh;
-const measurementRole = (role) => (role === "user" ? "user" : role === "admin" ? "admin" : "analyst");
 const roleLabel = (role) => {
   const labels = {
     zh: { user: "普通用户", analyst: "命理师", admin: "管理员" },
@@ -445,7 +418,7 @@ const roleLabel = (role) => {
   return labels[lang][role] || role;
 };
 
-localeSelect.value = params.get("locale") || localStorage.getItem("v20_locale") || "zh";
+localeSelect.value = localStorage.getItem("v20_locale") || "zh";
 applyLocale(localeSelect.value);
 populateBirthSelects();
 toggleLunarLeapMonth();

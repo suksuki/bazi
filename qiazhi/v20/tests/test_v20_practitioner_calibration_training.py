@@ -44,6 +44,29 @@ def test_v20_practitioner_calibration_training_aggregates_structured_choices(tmp
     assert proposal["runtime_allowed"] is True
 
 
+def test_v20_practitioner_calibration_accepts_mainline_arbitration_review(tmp_path: Path) -> None:
+    store = LocalJsonlStore(runtime_dir=tmp_path)
+    result = record_practitioner_calibration(
+        input_id="mainline.review.case",
+        source_role="analyst",
+        selections=(
+            PractitionerControlSelection(
+                control_key="control.mainline_arbitration",
+                option="切换到次级主线",
+                source_decision_keys=(),
+            ),
+        ),
+        store=store,
+    )
+
+    analysis = result["analysis"]
+    signal = analysis["training_signals"][0]
+    assert analysis["selection_count"] == 1
+    assert signal["control_key"] == "control.mainline_arbitration"
+    assert signal["target"] == "decision_parameters.mainline_arbitration"
+    assert result["runtime_mutation"] is True
+
+
 def test_v20_practitioner_calibration_training_write_and_status(monkeypatch, tmp_path: Path) -> None:
     monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
     store = LocalJsonlStore(runtime_dir=tmp_path)

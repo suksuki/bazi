@@ -90,8 +90,8 @@ def resolve_luck_pillar(
     """
     Calculate the current 大运 (luck pillar) for a given birth date and target year.
 
-    Supports both numeric dates (1990, 5, 4, 12) and GanZhi pillar strings (癸卯, 甲寅, ...).
-    For GanZhi inputs, we infer a plausible birth year from the year pillar.
+    Supports numeric birth dates (1990, 5, 4, 12). Explicit GanZhi pillars
+    do not contain enough birth-date information to derive 起运 and return empty.
 
     gender: 'male' or 'female'
     target_year: the year to check which luck pillar is active
@@ -109,36 +109,13 @@ def resolve_luck_pillar(
             if not all([y, m, d]):
                 return ""
         elif len(y_s) == 2 and not y_is_digit:
-            # GanZhi path: infer plausible birth year from year pillar
-            from v20.core.constants import STEMS, BRANCHES
-            if y_s[0] in STEMS and y_s[1] in BRANCHES:
-                # Find the birth year closest to (target_year - 45) matching this GanZhi
-                # We assume a mean user age of 45 to prefer 1964 over 2024 for 甲辰
-                ref_year = target_year - 45
-                best_y = None
-                for offset in range(0, 80):
-                    for candidate in [ref_year - offset, ref_year + offset]:
-                        if candidate < 1900 or candidate > target_year:
-                            continue
-                        try:
-                            if Lunar.fromYmdHms(candidate, 1, 1, 0, 0, 0).getYearInGanZhi() == y_s:
-                                best_y = candidate
-                                break
-                        except Exception:
-                            continue
-                    if best_y is not None:
-                        break
-                if best_y is None:
-                    return month_str if len(str(month_str)) == 2 else ""
-                # Use Jan 15 as a reasonable default date for GanZhi-only inputs
-                y, m, d, h = best_y, 1, 15, 0
-                calendar = "solar"  # treat inferred date as solar
-            else:
-                return month_str if len(str(month_str)) == 2 else ""
+            # Explicit pillars do not carry enough birth-date information to derive 起运.
+            # Keep luck empty unless the caller supplied it explicitly.
+            return ""
         else:
-            return month_str if len(str(month_str)) == 2 else ""
+            return ""
     except (ValueError, TypeError):
-        return month_str if len(str(month_str)) == 2 else ""
+        return ""
 
     try:
         if calendar == "lunar":
@@ -197,7 +174,7 @@ def resolve_luck_pillar(
                 new_b = BRANCHES[(b_idx + direction * decades_diff) % 12]
                 matched = f"{new_s}{new_b}"
 
-        return matched or (month_str if len(str(month_str)) == 2 else "")
+        return matched
     except Exception as exc:
         print(f"resolve_luck_pillar error: {exc}")
         return ""

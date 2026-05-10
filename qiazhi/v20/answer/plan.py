@@ -76,6 +76,7 @@ def build_answer_plan(
     knowledge_report: KnowledgeRetrievalReport | None = None,
     rule_candidate_report: dict[str, object] | None = None,
     decision_report: dict[str, object] | None = None,
+    mainline_arbitration: dict[str, object] | None = None,
 ) -> AnswerPlan:
     selected = [feature for feature in feature_layer.features if feature.feature_id in question.source_feature_ids]
     if not selected:
@@ -100,6 +101,12 @@ def build_answer_plan(
     profile_section = _portrait_profile_section(question, feature_layer, decision_report or {})
     if profile_section:
         sections.append(profile_section)
+    orchestrator_mainline = _orchestrator_mainline_section(mainline_arbitration or {}, question.domain)
+    if orchestrator_mainline:
+        sections.append(orchestrator_mainline)
+    answer_strategy_section = _answer_strategy_section(mainline_arbitration or {}, question.domain)
+    if answer_strategy_section:
+        sections.append(answer_strategy_section)
     mainline_section = _mainline_section(decision_report or {}, question.domain)
     if mainline_section:
         sections.append(mainline_section)
@@ -172,7 +179,7 @@ def build_answer_plan(
         evidence_pack=evidence_pack,
         prediction_policy=prediction_policy(),
         domain_projection=build_domain_projection(feature_layer, question.domain).to_dict(),
-        dimension_context=_answer_dimension_context(question, decision_report or {}),
+        dimension_context=_answer_dimension_context(question, decision_report or {}, mainline_arbitration or {}),
     )
 
 
@@ -418,6 +425,159 @@ def _mainline_section(report: dict[str, object], selected_domain: str) -> Answer
     )
 
 
+def _orchestrator_mainline_section(arbitration: dict[str, object], selected_domain: str) -> AnswerSection | None:
+    primary = arbitration.get("primary_mainline", {})
+    if not isinstance(primary, dict):
+        return None
+    nodes = primary.get("nodes", ())
+    node_text = " → ".join(_mainline_node_label(str(row)) for row in nodes if str(row)) if isinstance(nodes, (list, tuple)) else ""
+    title = str(primary.get("title", "")) or node_text
+    if not title and not node_text:
+        return None
+    why = [str(row) for row in arbitration.get("why_selected", ()) if str(row)] if isinstance(arbitration.get("why_selected", ()), (list, tuple)) else []
+    evidence = [str(row) for row in primary.get("evidence", ()) if str(row)] if isinstance(primary.get("evidence", ()), (list, tuple)) else []
+    quality_gate = arbitration.get("quality_gate", {}) if isinstance(arbitration.get("quality_gate", {}), dict) else {}
+    practitioner_review = arbitration.get("practitioner_review", {}) if isinstance(arbitration.get("practitioner_review", {}), dict) else {}
+    risk_flags = [str(row) for row in quality_gate.get("risk_flags", ()) if str(row)] if isinstance(quality_gate.get("risk_flags", ()), (list, tuple)) else []
+    review_targets = [str(row) for row in quality_gate.get("review_targets", ()) if str(row)] if isinstance(quality_gate.get("review_targets", ()), (list, tuple)) else []
+    source = str(primary.get("source", ""))
+    score = float(primary.get("score", 0.0) or 0.0)
+    body_parts = [
+        f"智能中枢本轮先取「{title}」作为第一主线",
+        f"链条：{node_text}" if node_text else "",
+        f"综合分 {score:.2f}" if score else "",
+        f"来源：{_readable_source(source)}" if source else "",
+        *why[:2],
+        f"证据：{'；'.join(evidence[:3])}" if evidence else "",
+        f"质量门：{quality_gate.get('status', '')}，覆盖度 {float(quality_gate.get('evidence_coverage', 0.0) or 0.0):.2f}" if quality_gate else "",
+        _practitioner_review_sentence(practitioner_review),
+        f"复核标记：{'、'.join(risk_flags[:3])}" if risk_flags else "",
+        f"复核目标：{'；'.join(review_targets[:2])}" if review_targets else "",
+        "本段只决定解读顺序，不把主线写成固定吉凶。",
+    ]
+    return AnswerSection(
+        title="智能中枢主线",
+        body="；".join(part for part in body_parts if part) + "。",
+        feature_ids=(),
+        domain=str(primary.get("domain", "")) or selected_domain,
+        section_type="orchestrator_mainline",
+        measurement_topic=domain_label(selected_domain),
+        measurement_stage=measurement_stage(selected_domain),
+        **dimension_payload(selected_domain),
+    )
+
+
+def _answer_strategy_section(arbitration: dict[str, object], selected_domain: str) -> AnswerSection | None:
+    strategy = _answer_strategy(arbitration)
+    if not strategy.get("mode"):
+        return None
+    return AnswerSection(
+        title="回答策略",
+        body=strategy["public_line"],
+        feature_ids=(),
+        domain=selected_domain,
+        section_type="orchestrator_answer_strategy",
+        measurement_topic=domain_label(selected_domain),
+        measurement_stage=measurement_stage(selected_domain),
+        **dimension_payload(selected_domain),
+    )
+
+
+def _practitioner_review_sentence(review: dict[str, object]) -> str:
+    if review.get("status") != "applied":
+        return ""
+    action = str(review.get("action", ""))
+    option = str(review.get("option", ""))
+    action_text = {
+        "accepted_primary": "命理师已确认采用第一主线",
+        "promoted_supporting": "命理师已切换到次级主线",
+        "deferred_primary": "命理师暂缓当前主线",
+        "evidence_gap": "命理师标记当前主线证据不足",
+        "no_supporting_candidate": "命理师要求切换，但暂无可提升的次级主线",
+    }.get(action, "命理师已介入复核")
+    return f"人工复核：{action_text}{f'（{option}）' if option else ''}"
+
+
+def _readable_source(source: str) -> str:
+    labels = {
+        "decision_mainline": "规则主线",
+        "decision_candidate": "规则候选",
+        "portrait_axis": "画像轴",
+        "feature_state": "特征状态",
+        "structure_dynamics": "结构动态",
+        "practitioner_review": "人工复核",
+        "practitioner_review_demoted": "人工降级",
+        "practitioner_review_deferred": "人工暂缓",
+        "practitioner_review_evidence_gap": "人工标记证据不足",
+    }
+    parts = [labels.get(part, part.replace("_", "、")) for part in source.split("+") if part]
+    return "、".join(dict.fromkeys(parts))
+
+
+def _answer_strategy(arbitration: dict[str, object]) -> dict[str, object]:
+    if not isinstance(arbitration, dict) or not arbitration.get("primary_mainline"):
+        return {
+            "mode": "baseline",
+            "public_line": "本轮先按已验证结构解释，不扩展到无证事件。",
+            "llm_instruction": "Use verified structure only and avoid event claims.",
+            "requires_review": False,
+        }
+    gate = arbitration.get("quality_gate", {})
+    review = arbitration.get("practitioner_review", {})
+    gate = gate if isinstance(gate, dict) else {}
+    review = review if isinstance(review, dict) else {}
+    action = str(review.get("action", ""))
+    gate_status = str(gate.get("status", ""))
+    requires_review = bool(gate.get("requires_review"))
+    if action == "accepted_primary":
+        return {
+            "mode": "confirmed_by_practitioner",
+            "public_line": "本轮主线已由命理师确认，回答可以直接围绕该主线解释证据、承接和边界。",
+            "llm_instruction": "Treat the primary mainline as practitioner-confirmed for this session; explain evidence and boundaries without adding unsupported events.",
+            "requires_review": False,
+            "quality_gate_status": gate_status,
+        }
+    if action == "promoted_supporting":
+        return {
+            "mode": "practitioner_switched_needs_review",
+            "public_line": "本轮已按命理师选择切换到次级主线，但仍需说明原主线为何降级，并保留复核边界。",
+            "llm_instruction": "Use the promoted supporting mainline first, mention that it is a session-level practitioner switch, and keep review boundaries visible.",
+            "requires_review": True,
+            "quality_gate_status": gate_status,
+        }
+    if action in {"deferred_primary", "no_supporting_candidate"}:
+        return {
+            "mode": "deferred_review",
+            "public_line": "本轮主线暂缓定论，回答只列候选结构和下一步复核点。",
+            "llm_instruction": "Do not present the mainline as settled; provide candidate structure and review targets.",
+            "requires_review": True,
+            "quality_gate_status": gate_status,
+        }
+    if action == "evidence_gap":
+        return {
+            "mode": "evidence_gap_review",
+            "public_line": "本轮主线被标记为证据不足，回答应先说明缺口，再给可验证方向。",
+            "llm_instruction": "Lead with evidence gaps, then list verifiable next checks; avoid firm conclusions.",
+            "requires_review": True,
+            "quality_gate_status": gate_status,
+        }
+    if requires_review:
+        return {
+            "mode": "quality_gate_review",
+            "public_line": "本轮主线仍处于质量门复核状态，回答只按候选主线展开，并明确证据缺口。",
+            "llm_instruction": "Present the primary mainline as provisional and name evidence gaps or review targets.",
+            "requires_review": True,
+            "quality_gate_status": gate_status,
+        }
+    return {
+        "mode": "quality_gate_passed",
+        "public_line": "本轮主线已通过质量门，回答可以按第一主线展开，同时保留测算边界。",
+        "llm_instruction": "Use the primary mainline as the reading spine while preserving measurement boundaries.",
+        "requires_review": False,
+        "quality_gate_status": gate_status,
+    }
+
+
 def _decision_section(report: dict[str, object], selected_domain: str) -> AnswerSection | None:
     decisions = [
         row for row in report.get("decisions", ())
@@ -562,7 +722,21 @@ def _decision_next_step_section(question: QuestionCandidate, report: dict[str, o
     )
 
 
-def _answer_dimension_context(question: QuestionCandidate, report: dict[str, object]) -> dict[str, object]:
+def _mainline_node_label(node: str) -> str:
+    return {
+        "output": "食伤",
+        "wealth": "财星",
+        "authority": "官杀",
+        "resource": "印星",
+        "self": "比劫/承载",
+    }.get(node, node)
+
+
+def _answer_dimension_context(
+    question: QuestionCandidate,
+    report: dict[str, object],
+    mainline_arbitration: dict[str, object],
+) -> dict[str, object]:
     related = []
     for decision in report.get("decisions", ()):
         if isinstance(decision, dict) and _decision_matches_domain(decision, question.domain):
@@ -580,6 +754,10 @@ def _answer_dimension_context(question: QuestionCandidate, report: dict[str, obj
         "selected_dimension_key": question.dimension_key,
         "selected_dimension_layer": question.dimension_layer,
         "selected_dimension_label": question.dimension_label,
+        "primary_mainline": mainline_arbitration.get("primary_mainline", {}) if isinstance(mainline_arbitration, dict) else {},
+        "mainline_quality_gate": mainline_arbitration.get("quality_gate", {}) if isinstance(mainline_arbitration, dict) else {},
+        "mainline_practitioner_review": mainline_arbitration.get("practitioner_review", {}) if isinstance(mainline_arbitration, dict) else {},
+        "answer_strategy": _answer_strategy(mainline_arbitration if isinstance(mainline_arbitration, dict) else {}),
         "related_decision_dimensions": related[:8],
         "runtime_mutation": False,
         "guardrails": [

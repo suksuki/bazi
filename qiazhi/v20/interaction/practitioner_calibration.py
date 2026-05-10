@@ -13,6 +13,7 @@ CONTROL_OPTIONS: dict[str, tuple[str, ...]] = {
     "control.shang_guan_jian_guan": ("成立", "候选", "被印化", "被财通关", "不成立", "待复核"),
     "control.wealth_capacity": ("可承接", "需扶身", "走通关", "看大运", "证据不足"),
     "control.pattern_status": ("成格", "破格", "候选", "不取格", "待复核"),
+    "control.mainline_arbitration": ("采用第一主线", "切换到次级主线", "暂缓主线", "证据不足"),
 }
 
 
@@ -161,6 +162,7 @@ def _target_for_control(control_key: str) -> str:
         "control.shang_guan_jian_guan": "decision_parameters.ten_god_collision",
         "control.wealth_capacity": "decision_parameters.wealth_capacity",
         "control.pattern_status": "decision_parameters.pattern_status",
+        "control.mainline_arbitration": "decision_parameters.mainline_arbitration",
     }.get(control_key, "decision_parameters")
 
 

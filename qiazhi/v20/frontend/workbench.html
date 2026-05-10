@@ -106,6 +106,20 @@
               <div id="tenGodLine" class="tag-line"></div>
             </article>
 
+            <article id="structureDynamicsPanel" class="panel structure-dynamics-panel">
+              <div class="section-head">
+                <div>
+                  <p class="section-kicker">动态</p>
+                  <h2>结构动态</h2>
+                </div>
+                <span id="structureDynamicsStatus" class="small-pill">待测算</span>
+              </div>
+              <div id="structureDynamicsState" class="dynamic-metric-grid"></div>
+              <div id="structureDynamicsInterpretation" class="dynamic-interpretation"></div>
+              <div id="structureDynamicsChain" class="dynamic-chain-line"></div>
+              <div id="structureDynamicsStructures" class="dynamic-structure-list"></div>
+            </article>
+
             <article id="featureStatePanel" class="panel feature-spine-panel" hidden>
               <div class="section-head">
                 <div>
@@ -146,6 +160,18 @@
               </span>
             </button>
             <div id="observationBody" class="observation-grid collapsible-body" hidden>
+              <article class="panel orchestrator-trace-card">
+                <div class="section-head">
+                  <div>
+                    <p class="section-kicker">Reasoning Orchestrator</p>
+                    <h2>智能中枢轨迹</h2>
+                  </div>
+                  <span id="orchestratorTraceStatus" class="small-pill">orchestrator</span>
+                </div>
+                <div id="orchestratorTraceSummary" class="orchestrator-trace-summary"></div>
+                <div id="orchestratorTraceSteps" class="orchestrator-trace-steps"></div>
+              </article>
+
               <article class="panel portrait-graph-card">
                 <div class="section-head">
                   <div>
@@ -233,6 +259,6 @@
         </section>
       </main>
     </div>
-    <script src="app.js?v=20.1.5"></script>
+    <script src="app.js?v=20.3.5"></script>
   </body>
 </html>

@@ -7,7 +7,7 @@ const state = {
   lastMeasureKey: "",
   chatTurns: [],
   chatSeq: 0,
-  activeLlmMode: "practitioner",
+  activeLlmMode: "deterministic",
   practitionerSelections: [],
   latentManifest: null,
   latentAnswers: [],
@@ -367,7 +367,7 @@ const scheduleMeasure = ({ force = false } = {}) => {
   state.measureTimer = setTimeout(() => measure({ force }), 280);
 };
 
-const interactiveLlmMode = () => (params.get("llm") === "deterministic" ? "deterministic" : "practitioner");
+const interactiveLlmMode = () => (params.get("llm") === "practitioner" ? "practitioner" : "deterministic");
 
 const renderRuntime = (result) => {
   const selected = result.selected_question || {};
@@ -375,14 +375,16 @@ const renderRuntime = (result) => {
   const featureLayer = result.feature_layer || {};
   const decisionReport = result.decision_report || {};
   const featureStateModel = result.feature_state_model || {};
+  const structureDynamics = result.structure_dynamics || {};
+  const mainlineArbitration = result.mainline_arbitration || {};
+  const answerStrategy = result.answer_plan?.dimension_context?.answer_strategy || {};
   const questionIntentModel = result.question_intent_model || {};
   const portraitProjection = decisionReport.portrait_projection || {};
   const role = result.role?.role_key || measurementRole(roleSelect.value);
   const selectedQuestionId = selected.question_id || "";
   if (questionIdInput) questionIdInput.value = selectedQuestionId;
 
-  // Preserve guest role on body for CSS layout; use measurement role for access control
-  if (params.get("role") !== "guest") document.body.dataset.role = role;
+  document.body.dataset.role = role;
   renderObservationAccess(role);
   renderFeatureStateAccess(role);
 
@@ -395,6 +397,8 @@ const renderRuntime = (result) => {
 
   renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
+  renderStructureDynamics(structureDynamics, mainlineArbitration);
+  renderOrchestratorTrace(result.reasoning_orchestrator || {}, mainlineArbitration, result.redis_cache || {}, answerStrategy);
   renderFeatures(
     featureStateModel.priority_features ||
       featureStateModel.states ||
@@ -437,6 +441,219 @@ const renderFeatureStateAccess = (role) => {
   const panel = document.querySelector("#featureStatePanel");
   if (!panel) return;
   panel.hidden = role === "user";
+};
+
+const renderStructureDynamics = (dynamics, arbitration = {}) => {
+  const panel = document.querySelector("#structureDynamicsPanel");
+  const status = document.querySelector("#structureDynamicsStatus");
+  const stateRoot = document.querySelector("#structureDynamicsState");
+  const interpretationRoot = document.querySelector("#structureDynamicsInterpretation");
+  const chainRoot = document.querySelector("#structureDynamicsChain");
+  const structuresRoot = document.querySelector("#structureDynamicsStructures");
+  if (!panel || !stateRoot || !interpretationRoot || !chainRoot || !structuresRoot) return;
+  clear(stateRoot);
+  clear(interpretationRoot);
+  clear(chainRoot);
+  clear(structuresRoot);
+  if (!dynamics || dynamics.status !== "ready") {
+    if (status) status.textContent = "待测算";
+    stateRoot.append(el("div", "empty-note", currentText().wb.no_dynamics || "等待结构动态。"));
+    return;
+  }
+  const wb = currentText().wb;
+  const dynamicState = dynamics.dynamic_state || {};
+  if (status) status.textContent = dynamicsStatusLabel(dynamics);
+  [
+    ["energy", wb.energy || "结构力度", dynamicState.energy_strength],
+    ["stability", wb.stability || "稳定程度", dynamicState.stability_score],
+    ["visibility", wb.visibility || "显化程度", dynamicState.visibility_score],
+    ["volatility", wb.volatility || "波动程度", dynamics.volatility_score ?? dynamicState.volatility_score],
+  ].forEach(([key, label, value]) => {
+    const tile = el("div", "dynamic-metric-tile");
+    tile.dataset.metric = key;
+    tile.append(el("span", "", label));
+    tile.append(el("strong", "", scoreLabel(value)));
+    tile.append(el("em", "", scoreBandLabel(value, key)));
+    const meter = el("div", "meter");
+    const bar = el("i");
+    bar.style.width = `${Math.max(0, Math.min(100, Math.round(Number(value || 0) * 100)))}%`;
+    meter.append(bar);
+    tile.append(meter);
+    stateRoot.append(tile);
+  });
+
+  const primaryMainline = arbitration.primary_mainline || {};
+  const chain = dynamics.dominant_chain || {};
+  const arbitrationNodes = Array.isArray(primaryMainline.nodes) ? primaryMainline.nodes : [];
+  const rawChainNodes = arbitrationNodes.length ? arbitrationNodes : (Array.isArray(chain.nodes) ? chain.nodes : []);
+  const chainNodes = focusedChainNodes(rawChainNodes);
+  const chainText = chainNodes.length ? chainNodes.map(chainNodeLabel).join(" → ") : "暂未形成清晰主线";
+  interpretationRoot.append(el("strong", "", "命理解释"));
+  interpretationRoot.append(el("p", "", dynamicInterpretation(dynamics, chainNodes, rawChainNodes, arbitration)));
+  chainRoot.append(el("strong", "", `${wb.dominant_chain || "当前主线"}：${chainText}`));
+  chainRoot.append(el("span", "", arbitrationSummaryLine(arbitration) || dynamicSummaryLine(dynamics)));
+
+  const active = (dynamics.activated_structures || []).slice(0, 4);
+  const suppressed = (dynamics.suppressed_structures || []).slice(0, 3);
+  [
+    [wb.activated || "激活", active, "activated"],
+    [wb.suppressed || "受压", suppressed, "suppressed"],
+  ].forEach(([title, rows, kind]) => {
+    const group = el("div", `dynamic-structure-group ${kind}`);
+    group.append(el("span", "dynamic-group-title", title));
+    if (!rows.length) {
+      group.append(el("em", "", wb.none || "无"));
+    } else {
+      rows.forEach((row) => group.append(el("span", "dynamic-structure-chip", dynamicStructureLabel(row, kind))));
+    }
+    structuresRoot.append(group);
+  });
+};
+
+const scoreLabel = (value) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "-";
+  return `${Math.round(number * 100)}%`;
+};
+
+const scoreBandLabel = (value, key) => {
+  const number = Number(value);
+  if (!Number.isFinite(number)) return "";
+  if (key === "stability") {
+    if (number >= 0.72) return "结构较稳";
+    if (number >= 0.42) return "稳定性一般";
+    return "稳定性偏低";
+  }
+  if (key === "volatility") {
+    if (number >= 0.72) return "波动很高";
+    if (number >= 0.42) return "有明显波动";
+    return "波动较低";
+  }
+  if (number >= 0.72) return "高";
+  if (number >= 0.42) return "中";
+  return "低";
+};
+
+const chainNodeLabel = (node) => ({
+  output: "食伤",
+  wealth: "财星",
+  authority: "官杀",
+  resource: "印星",
+  self: "比劫",
+  empty: "未成链",
+}[node] || node);
+
+const focusedChainNodes = (nodes) => {
+  const present = new Set(nodes);
+  const segments = [
+    ["output", "wealth", "authority"],
+    ["wealth", "authority", "resource"],
+    ["authority", "resource", "self"],
+    ["output", "wealth"],
+    ["wealth", "authority"],
+    ["authority", "resource"],
+    ["resource", "self"],
+  ];
+  return segments.find((segment) => segment.every((node) => present.has(node))) || nodes.slice(0, 3);
+};
+
+const dynamicsStatusLabel = (dynamics) => {
+  if (dynamics.stability_shift === "destabilized") return "稳定受冲";
+  if (dynamics.chain_state === "volatile") return "岁运引动";
+  if (dynamics.chain_state === "closed") return "结构闭环";
+  if (dynamics.chain_state === "blocked") return "结构受阻";
+  if (dynamics.stability_shift === "stabilized") return "趋于稳定";
+  return "动态已生成";
+};
+
+const dynamicSummaryLine = (dynamics) => {
+  const chain = {
+    volatile: "岁运正在引动主线，波动会放大。",
+    closed: "主线较完整，结构有收束感。",
+    partial: "主线只形成一部分，仍需看承接。",
+    blocked: "主线有阻滞，先看压力来源。",
+    empty: "暂未形成清晰主线。",
+  }[dynamics.chain_state] || "结构已进入动态观察。";
+  const energy = {
+    amplified: "力度增强",
+    activated: "被激活",
+    muted: "力度偏弱",
+    baseline: "保持原局基线",
+  }[dynamics.energy_shift] || dynamics.energy_shift || "力度待判";
+  const stability = {
+    destabilized: "稳定性下降",
+    stabilized: "稳定性增强",
+    activated: "稳定性被触发",
+    natal_baseline: "按原局基线观察",
+  }[dynamics.stability_shift] || dynamics.stability_shift || "稳定性待判";
+  return `${chain} ${energy}，${stability}。`;
+};
+
+const arbitrationSummaryLine = (arbitration) => {
+  const primary = arbitration.primary_mainline || {};
+  if (!primary.nodes?.length) return "";
+  const source = String(primary.source || "").replaceAll("_", "、");
+  const score = Number(primary.score);
+  const confidence = Number.isFinite(score) ? ` · 综合分 ${Math.round(score * 100)}%` : "";
+  return `由智能中枢综合规则、画像、结构动态和问题意图后确定。${source ? ` 来源：${source}` : ""}${confidence}`;
+};
+
+const dynamicInterpretation = (dynamics, chainNodes, rawChainNodes = chainNodes, arbitration = {}) => {
+  const labels = chainNodes.map(chainNodeLabel);
+  const chainText = labels.length ? labels.join("、") : "当前结构";
+  const selectedReasons = Array.isArray(arbitration.why_selected) ? arbitration.why_selected : [];
+  const hasOutputWealth = chainNodes.includes("output") && chainNodes.includes("wealth");
+  const hasAuthorityResource = chainNodes.includes("authority") && chainNodes.includes("resource");
+  const parts = [];
+
+  if (selectedReasons.length) {
+    parts.push(selectedReasons.slice(0, 2).join(""));
+  }
+  if (labels.length >= 3) {
+    parts.push(`${chainText}形成连续主线，说明本轮不是单点判断，而是多层结构一起推动。`);
+  } else if (labels.length) {
+    parts.push(`${chainText}已经被带出来，但链条还不完整，需要继续看承接关系。`);
+  } else {
+    parts.push("当前还没有形成清晰主线，适合先看基础格局和证据缺口。");
+  }
+
+  if (hasOutputWealth) {
+    parts.push("食伤接到财星时，重点先看输出能否稳定转成资源或机会。");
+  }
+  if (hasAuthorityResource) {
+    parts.push("官杀与印星相连时，压力并非只看好坏，还要看是否能被印星承接和化解。");
+  }
+  if (rawChainNodes.includes("self") && !chainNodes.includes("self")) {
+    parts.push("比劫在这里作为承载和竞争背景观察，不作为本轮主线终点。");
+  }
+  if (dynamics.chain_state === "volatile" || dynamics.stability_shift === "destabilized") {
+    parts.push("岁运引动下能量会放大，但稳定性下降，因此不宜直接下吉凶结论，要先看承载、冲突点和节奏。");
+  } else if (dynamics.chain_state === "closed") {
+    parts.push("主线较完整，解读时可以顺着链条看形成、承接和收束。");
+  } else if (dynamics.chain_state === "blocked") {
+    parts.push("主线有阻滞，解读时应先找被冲、被制或证据不足的位置。");
+  }
+
+  return parts.join("");
+};
+
+const dynamicStructureLabel = (row, kind) => {
+  const raw = String(row.label || row.structure_key || "").trim();
+  const domain = portraitDomainLabel(row.domain);
+  const mapped = {
+    "Day-master capacity needs support review": "日主承载需要复核",
+    "Explicit time layer is available": "大运流年已参与判断",
+    "Useful-god candidate paths are compiled": "用神候选路径已形成",
+    "Time-layer punishment trigger is available": "岁运刑冲触发明显",
+    "Visible branch relation requires layer review": "地支关系需要分层复核",
+    "Hidden-stem ten-god relations are available": "藏干十神关系需要复核",
+    "Five-element distribution is available": "五行分布已进入判断",
+  }[raw];
+  if (mapped) return mapped;
+  if (/ element is structurally prominent$/.test(raw)) return `${raw.replace(" element is structurally prominent", "")}五行偏显`;
+  if (row.domain === "time" && row.activation) return `${raw || "时间层"}引动${row.activation}`;
+  if (raw && !/[A-Za-z_]/.test(raw)) return raw;
+  return kind === "suppressed" ? `${domain}结构受压` : `${domain}结构被激活`;
 };
 
 const setObservationCollapsed = (collapsed) => {
@@ -585,6 +802,94 @@ const renderPortraitGraph = (summary) => {
   if (questionLine.childNodes.length) root.append(questionLine);
 };
 
+const renderOrchestratorTrace = (orchestrator = {}, arbitration = {}, redisCache = {}, answerStrategy = {}) => {
+  const status = document.querySelector("#orchestratorTraceStatus");
+  const summaryRoot = document.querySelector("#orchestratorTraceSummary");
+  const stepsRoot = document.querySelector("#orchestratorTraceSteps");
+  if (!summaryRoot || !stepsRoot) return;
+  clear(summaryRoot);
+  clear(stepsRoot);
+  if (status) status.textContent = orchestrator.status || "orchestrator";
+  if (!orchestrator || orchestrator.status !== "ready") {
+    summaryRoot.append(el("div", "empty-note", "等待中枢轨迹。"));
+    return;
+  }
+  const primary = arbitration.primary_mainline || {};
+  const qualityGate = arbitration.quality_gate || {};
+  const practitionerReview = arbitration.practitioner_review || {};
+  const nodes = Array.isArray(primary.nodes) ? primary.nodes.map(chainNodeLabel).join(" → ") : "";
+  const summaryItems = [
+    ["主线", primary.title || nodes || "未形成"],
+    ["状态", `${orchestrator.mode || "deterministic"} · ${orchestrator.step_count || 0} steps`],
+    ["来源", primary.source || "runtime"],
+    ["质量门", qualityGateLabel(qualityGate)],
+    ["人工复核", practitionerReviewLabel(practitionerReview)],
+    ["回答策略", answerStrategyLabel(answerStrategy)],
+    ["缓存", redisCacheLabel(redisCache)],
+    ["输出", Object.entries(orchestrator.primary_outputs || {}).map(([key, value]) => `${key}: ${value}`).join(" · ")],
+  ];
+  summaryItems.forEach(([label, value]) => {
+    const chip = el("div", "orchestrator-summary-chip");
+    chip.append(el("span", "", label));
+    chip.append(el("strong", "", value || "-"));
+    summaryRoot.append(chip);
+  });
+
+  const steps = Array.isArray(orchestrator.steps) ? orchestrator.steps : [];
+  steps.slice(0, 12).forEach((step, index) => {
+    const row = el("div", "orchestrator-step-row");
+    row.append(el("span", "step-index", String(index + 1).padStart(2, "0")));
+    const body = el("div", "");
+    body.append(el("strong", "", step.label || step.step_key || "step"));
+    body.append(el("span", "", `${step.source || "source"} → ${step.output_ref || "output"}`));
+    const meta = el("em", "", `${step.status || "ready"} · ${Number(step.elapsed_ms || 0).toFixed(1)}ms`);
+    body.append(meta);
+    row.append(body);
+    stepsRoot.append(row);
+  });
+};
+
+const qualityGateLabel = (gate = {}) => {
+  if (!gate || !gate.status) return "未评估";
+  const coverage = Number(gate.evidence_coverage);
+  const score = Number.isFinite(coverage) ? ` · 覆盖 ${Math.round(coverage * 100)}%` : "";
+  const review = gate.requires_review ? " · 需复核" : "";
+  return `${gate.status}${score}${review}`;
+};
+
+const practitionerReviewLabel = (review = {}) => {
+  if (!review || review.status !== "applied") return "未介入";
+  const action = {
+    accepted_primary: "确认第一主线",
+    promoted_supporting: "切换到次级主线",
+    deferred_primary: "暂缓主线",
+    evidence_gap: "证据不足",
+    no_supporting_candidate: "无可切换候选",
+  }[review.action] || review.action || "已复核";
+  return `${action}${review.option ? ` · ${review.option}` : ""}`;
+};
+
+const answerStrategyLabel = (strategy = {}) => {
+  if (!strategy || !strategy.mode) return "未生成";
+  const mode = {
+    confirmed_by_practitioner: "确认主线",
+    practitioner_switched_needs_review: "切换后复核",
+    deferred_review: "暂缓复核",
+    evidence_gap_review: "证据缺口",
+    quality_gate_review: "质量门复核",
+    quality_gate_passed: "质量门通过",
+    baseline: "基础结构",
+  }[strategy.mode] || strategy.mode;
+  const review = strategy.requires_review ? " · 需复核" : "";
+  return `${mode}${review}`;
+};
+
+const redisCacheLabel = (cache = {}) => {
+  if (!cache || !cache.cache_status) return "未记录";
+  const ttl = cache.ttl_seconds ? ` · ${cache.ttl_seconds}s` : "";
+  return `${cache.cache_status}${ttl}`;
+};
+
 const featureStateLabel = (state) => {
   const t = currentText().states;
   return t[state] || state || t._ || "state";
@@ -684,7 +989,12 @@ const renderPractitionerCalibration = (controls, inputId, role) => {
   root.hidden = false;
   status.textContent = practitionerSessionStatus();
   setPractitionerCollapsed(root.classList.contains("collapsed"));
-  controls.slice(0, 4).forEach((control) => {
+  const visibleControls = [...controls].sort((left, right) => {
+    if (left.control_key === "control.mainline_arbitration") return -1;
+    if (right.control_key === "control.mainline_arbitration") return 1;
+    return 0;
+  });
+  visibleControls.slice(0, 6).forEach((control) => {
     const row = el("div", "calibration-control");
     row.append(el("strong", "", control.label || control.control_key || currentText().wb.prac_title));
     const options = el("div", "calibration-options");
@@ -1161,15 +1471,17 @@ const loadCurrentSession = async () => {
     if (result.authenticated && session.role) {
       const role = measurementRole(session.role);
       roleSelect.value = role;
-      // Preserve guest role on body for CSS layout
-      if (params.get("role") !== "guest") document.body.dataset.role = role;
+      const isGuest = session.username === "guest" || String(session.user_id || "").startsWith("guest_");
+      document.body.dataset.role = isGuest ? "guest" : role;
+      renderGuestNavigation(isGuest);
       renderObservationAccess(role);
       renderFeatureStateAccess(role);
     }
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = session.role !== "admin";
     });
-    if (logoutButton) logoutButton.hidden = !result.authenticated || params.get("role") === "guest";
+    const isGuest = session.username === "guest" || String(session.user_id || "").startsWith("guest_");
+    if (logoutButton) logoutButton.hidden = !result.authenticated || isGuest;
   } catch (error) {
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = true;
@@ -1178,12 +1490,24 @@ const loadCurrentSession = async () => {
   }
 };
 
+const renderGuestNavigation = (isGuest) => {
+  const profilesLink = document.querySelector('[data-ui="nav_profiles"]');
+  if (!profilesLink) return;
+  if (isGuest) {
+    const entryText = { zh: "入口", en: "Entry", ko: "입구" }[localeSelect.value] || "入口";
+    profilesLink.textContent = entryText;
+    profilesLink.href = "/v20/ui/";
+  } else {
+    profilesLink.href = "/v20/ui/profiles.html";
+  }
+};
+
 const logout = async () => {
   await requestJson("/api/v20/auth/logout", {
     method: "POST",
     body: JSON.stringify({}),
   });
-  window.location.href = `/v20/ui/?locale=${encodeURIComponent(localeSelect.value || "zh")}`;
+  window.location.href = "/v20/ui/";
 };
 
 const practitionerSessionStatus = () => {
@@ -1195,8 +1519,11 @@ const practitionerSessionStatus = () => {
 };
 
 const applyLocale = (locale) => {
-  const text = UI_TEXT[locale] || UI_TEXT.zh;
-  document.documentElement.lang = locale === "ko" ? "ko" : locale === "en" ? "en" : "zh-CN";
+  const clean = UI_TEXT[locale] ? locale : "zh";
+  const text = UI_TEXT[clean];
+  localeSelect.value = clean;
+  localStorage.setItem("v20_locale", clean);
+  document.documentElement.lang = clean === "ko" ? "ko" : clean === "en" ? "en" : "zh-CN";
   document.querySelectorAll("[data-ui]").forEach((node) => {
     const key = node.dataset.ui;
     if (text[key]) node.textContent = text[key];
@@ -1223,6 +1550,8 @@ const renderInitialPanels = () => {
   renderObservationAccess(measurementRole(roleSelect.value));
   renderFeatureStateAccess(measurementRole(roleSelect.value));
   renderPillars({});
+  renderStructureDynamics({});
+  renderOrchestratorTrace({}, {});
   renderFeatures([]);
   renderPortrait([]);
   renderPractitionerCalibration([], "", measurementRole(roleSelect.value));
@@ -1236,9 +1565,8 @@ const loadActiveProfile = async () => {
   if (!profileId) return;
   document.querySelector("#selectedProfileCard").hidden = false;
   document.querySelector("#inputId").value = `profile:${profileId}`;
-  setText("#selectedProfileName", params.get("profile_name") || profileId);
-  const backParams = new URLSearchParams({ role: measurementRole(roleSelect.value), locale: localeSelect.value });
-  document.querySelector("#backToProfiles").href = `/v20/ui/profiles.html?${backParams.toString()}`;
+  setText("#selectedProfileName", profileId);
+  document.querySelector("#backToProfiles").href = "/v20/ui/profiles.html";
   try {
     const result = await requestJson(`/api/v20/profiles/${encodeURIComponent(profileId)}`);
     const profile = result.profile || {};
@@ -1442,6 +1770,7 @@ form.addEventListener("submit", (event) => {
 });
 localeSelect.addEventListener("change", () => {
   applyLocale(localeSelect.value);
+  renderGuestNavigation(document.body.dataset.role === "guest");
   scheduleMeasure({ force: true });
 });
 form.querySelectorAll("input, textarea, select").forEach((node) => {
@@ -1524,30 +1853,17 @@ document.querySelector("#observationToggle")?.addEventListener("click", () => {
 });
 logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#runtimeStatus", error.message)));
 
-if (params.get("locale")) localeSelect.value = params.get("locale");
-roleSelect.value = measurementRole(params.get("role") || roleSelect.value);
+localeSelect.value = localStorage.getItem("v20_locale") || localeSelect.value || "zh";
+roleSelect.value = measurementRole(roleSelect.value);
 document.body.classList.toggle("profile-reading", Boolean(params.get("profile_id")));
-if (params.get("role") === "guest") {
-  document.body.dataset.role = "guest";
-  if (logoutButton) logoutButton.hidden = true;
-}
 hydrateFormFromParams();
 applyLocale(localeSelect.value);
-// Guest nav: replace "档案" with "入口" AFTER applyLocale to avoid overwrite
-if (params.get("role") === "guest") {
-  const entryText = { zh: "入口", en: "Entry", ko: "입구" }[localeSelect.value] || "入口";
-  const profilesLink = document.querySelector('[data-ui="nav_profiles"]');
-  if (profilesLink) {
-    profilesLink.textContent = entryText;
-    profilesLink.href = `/v20/ui/?locale=${encodeURIComponent(localeSelect.value || "zh")}`;
-  }
-}
 renderInitialPanels();
 loadCurrentSession();
 
 loadLatentCalibrationManifest();
 state.isBatchUpdating = false;
-if (params.get("role") === "guest" || params.get("auto_measure") === "true") {
+if (hasCompletePillars(payloadFromForm()) && !params.get("profile_id")) {
   scheduleMeasure({ force: true });
 } else if (params.get("profile_id")) {
   // If loading a profile, DON'T measure until applyProfileDefaults is DONE
@@ -1559,4 +1875,3 @@ if (params.get("role") === "guest" || params.get("auto_measure") === "true") {
   // Static state, just render
   renderInitialPanels();
 }
-

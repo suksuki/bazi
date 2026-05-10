@@ -13,6 +13,7 @@ from v20.decision.fusion import build_runtime_decision_fusion
 from v20.decision.latent_signals import build_latent_signal_report
 from v20.decision.questions import recommend_decision_questions, resolve_requested_question
 from v20.decision.validation import validate_decision_report
+from v20.dynamics.engine import build_structure_dynamics
 from v20.features.compiler import compile_features
 from v20.features.state_model import build_feature_state_model
 from v20.graph.chart_graph import build_chart_graph
@@ -35,6 +36,8 @@ from v20.llm.contracts import LLM_CONTRACTS
 from v20.llm.practitioner import build_practitioner_answer_with_llm
 from v20.llm.tasks import rewrite_answer_plan_with_llm
 from v20.measurement.report import build_measurement_report
+from v20.orchestrator.engine import ReasoningRecorder
+from v20.orchestrator.mainline import arbitrate_mainline
 
 
 def run_runtime_from_pillars(
@@ -57,41 +60,115 @@ def run_runtime_from_pillars(
     answered_question_ids: tuple[str, ...] = (),
     answered_question_keys: tuple[str, ...] = (),
 ) -> dict[str, object]:
-    chart_input = chart_input_from_displays(year, month, day, hour, input_id=input_id)
-    chart_facts = build_chart_facts(chart_input)
-    time_context = build_time_context(
-        chart_facts,
-        flow_year_pillar=flow_year_pillar,
-        luck_pillar=luck_pillar,
-        flow_month_pillar=flow_month_pillar,
+    recorder = ReasoningRecorder()
+    chart_input = recorder.run(
+        "chart_input",
+        "四柱输入标准化",
+        "request_payload",
+        "chart_input",
+        lambda: chart_input_from_displays(year, month, day, hour, input_id=input_id),
     )
-    core = infer_core(chart_facts)
-    chart_graph = build_chart_graph(chart_facts)
-    rule_paths = select_rule_paths(chart_graph)
-    feature_layer = compile_features(chart_facts, core, rule_paths, time_context)
-    decision_report = attach_knowledge_rule_bridge(build_decision_report(chart_facts, core, feature_layer, time_context))
-    latent_signal_report = build_latent_signal_report(chart_facts, core, time_context, decision_report)
+    chart_facts = recorder.run(
+        "chart_facts",
+        "命盘事实抽取",
+        "ChartInput",
+        "chart_facts",
+        lambda: build_chart_facts(chart_input),
+    )
+    time_context = recorder.run(
+        "time_context",
+        "岁运时间层解析",
+        "ChartFacts+time_payload",
+        "time_context",
+        lambda: build_time_context(
+            chart_facts,
+            flow_year_pillar=flow_year_pillar,
+            luck_pillar=luck_pillar,
+            flow_month_pillar=flow_month_pillar,
+        ),
+    )
+    core = recorder.run("core_inference", "日主承载推断", "ChartFacts", "core_inference", lambda: infer_core(chart_facts))
+    chart_graph = recorder.run("chart_graph", "命盘图谱构建", "ChartFacts", "chart_graph", lambda: build_chart_graph(chart_facts))
+    rule_paths = recorder.run("rule_paths", "规则路径选择", "ChartGraph", "rule_paths", lambda: select_rule_paths(chart_graph))
+    feature_layer = recorder.run(
+        "feature_layer",
+        "特征层编译",
+        "ChartFacts+CoreInference+RulePaths+TimeContext",
+        "feature_layer",
+        lambda: compile_features(chart_facts, core, rule_paths, time_context),
+    )
+    decision_report = recorder.run(
+        "decision_report",
+        "规则裁决报告",
+        "ChartFacts+CoreInference+FeatureLayer+TimeContext+KnowledgeBridge",
+        "decision_report",
+        lambda: attach_knowledge_rule_bridge(build_decision_report(chart_facts, core, feature_layer, time_context)),
+    )
+    latent_signal_report = recorder.run(
+        "latent_signal_report",
+        "潜在校准信号",
+        "ChartFacts+CoreInference+TimeContext+DecisionReport",
+        "latent_signal_report",
+        lambda: build_latent_signal_report(chart_facts, core, time_context, decision_report),
+    )
     decision_report["latent_signal_report"] = latent_signal_report
-    decision_report["runtime_decision_fusion"] = build_runtime_decision_fusion(
-        decision_report,
-        practitioner_selections=practitioner_selections,
+    decision_report["runtime_decision_fusion"] = recorder.run(
+        "runtime_decision_fusion",
+        "命理师校准融合",
+        "DecisionReport+PractitionerSelections",
+        "decision_report.runtime_decision_fusion",
+        lambda: build_runtime_decision_fusion(
+            decision_report,
+            practitioner_selections=practitioner_selections,
+        ),
     )
-    decision_report["portrait_projection"] = build_portrait_projection(
-        feature_layer,
-        decision_report.get("defeasible_decision_model", {}),
-        decision_report,
-        runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
+    decision_report["portrait_projection"] = recorder.run(
+        "portrait_projection",
+        "画像轴投射",
+        "FeatureLayer+DecisionReport+RuntimeDecisionFusion",
+        "decision_report.portrait_projection",
+        lambda: build_portrait_projection(
+            feature_layer,
+            decision_report.get("defeasible_decision_model", {}),
+            decision_report,
+            runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
+        ),
     )
-    decision_validation = validate_decision_report(decision_report)
+    decision_validation = recorder.run(
+        "decision_validation",
+        "裁决报告校验",
+        "DecisionReport",
+        "decision_validation",
+        lambda: validate_decision_report(decision_report),
+    )
     portrait_projection = decision_report.get("portrait_projection", {})
-    feature_state_model = build_feature_state_model(feature_layer, decision_report)
-    questions = recommend_decision_questions(
-        decision_report,
-        feature_layer,
-        runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
-        time_context=time_context,
-        practitioner_selections=practitioner_selections,
-        latent_event_answers=latent_event_answers,
+    feature_state_model = recorder.run(
+        "feature_state_model",
+        "特征状态融合",
+        "FeatureLayer+DecisionReport",
+        "feature_state_model",
+        lambda: build_feature_state_model(feature_layer, decision_report),
+    )
+    structure_dynamics = recorder.run(
+        "structure_dynamics",
+        "结构动态生成",
+        "ChartFacts+FeatureLayer+FeatureStateModel+DecisionReport+TimeContext",
+        "structure_dynamics",
+        lambda: build_structure_dynamics(chart_facts, feature_layer, feature_state_model, time_context, decision_report),
+    )
+    questions = recorder.run(
+        "question_candidates",
+        "智能问题生成",
+        "DecisionReport+FeatureLayer+TimeContext+CalibrationSignals",
+        "questions",
+        lambda: recommend_decision_questions(
+            decision_report,
+            feature_layer,
+            runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
+            time_context=time_context,
+            practitioner_selections=practitioner_selections,
+            latent_event_answers=latent_event_answers,
+        ),
     )
     llm_routing_assist = build_llm_routing_assist(user_text, feature_layer, questions, locale=locale)
     routed_question_key = "" if (practitioner_selections or latent_event_answers) and not question_key else str(llm_routing_assist.get("routed_question_key", ""))
@@ -115,12 +192,38 @@ def run_runtime_from_pillars(
         decision_report,
         tuple(questions),
     )
-    question_intent_model = build_question_intent_model(
-        decision_report=decision_report,
-        feature_state_model=feature_state_model,
-        questions=questions,
-        selected_question=selected_question,
-        runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
+    question_intent_model = recorder.run(
+        "question_intent_model",
+        "问题意图排序",
+        "DecisionReport+FeatureStateModel+Questions+SelectedQuestion",
+        "question_intent_model",
+        lambda: build_question_intent_model(
+            decision_report=decision_report,
+            feature_state_model=feature_state_model,
+            questions=questions,
+            selected_question=selected_question,
+            runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
+        ),
+    )
+    mainline_arbitration = recorder.run(
+        "mainline_arbitration",
+        "智能中枢主线仲裁",
+        "DecisionReport+FeatureStateModel+StructureDynamics+QuestionIntent+TimeContext",
+        "mainline_arbitration",
+        lambda: arbitrate_mainline(
+            decision_report=decision_report,
+            feature_state_model=feature_state_model,
+            structure_dynamics=structure_dynamics,
+            question_intent_model=question_intent_model,
+            time_context=time_context.to_dict(),
+            practitioner_selections=practitioner_selections,
+        ),
+    )
+    decision_report["practitioner_controls"] = tuple(
+        [
+            *tuple(decision_report.get("practitioner_controls", ())),
+            *_mainline_arbitration_controls(mainline_arbitration),
+        ]
     )
     practitioner_session = _practitioner_session_lens(
         practitioner_selections,
@@ -140,14 +243,27 @@ def run_runtime_from_pillars(
         latent_event_session=latent_event_session,
         decision_report=decision_report,
     )
-    knowledge_report = retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,))
-    evidence_pack = build_evidence_pack(feature_layer)
-    answer_plan = build_answer_plan(
-        selected_question,
-        feature_layer,
-        evidence_pack,
-        knowledge_report,
-        decision_report=decision_report,
+    knowledge_report = recorder.run(
+        "knowledge_retrieval",
+        "知识库检索",
+        "FeatureLayer+SelectedQuestion",
+        "knowledge_report",
+        lambda: retrieve_knowledge(feature_layer, requested_domains=(selected_question.domain,)),
+    )
+    evidence_pack = recorder.run("evidence_pack", "证据包构建", "FeatureLayer", "answer_plan.evidence_pack", lambda: build_evidence_pack(feature_layer))
+    answer_plan = recorder.run(
+        "answer_plan",
+        "回答计划生成",
+        "SelectedQuestion+FeatureLayer+EvidencePack+KnowledgeReport+DecisionReport",
+        "answer_plan",
+        lambda: build_answer_plan(
+            selected_question,
+            feature_layer,
+            evidence_pack,
+            knowledge_report,
+            decision_report=decision_report,
+            mainline_arbitration=mainline_arbitration,
+        ),
     )
     knowledge_semantic_model = build_knowledge_semantic_model(
         feature_layer,
@@ -155,8 +271,20 @@ def run_runtime_from_pillars(
         user_text=user_text,
     )
     knowledge_semantic_validation = validate_knowledge_semantic_model(knowledge_semantic_model)
-    measurement_report = build_measurement_report(feature_layer, questions, answer_plan, portrait_projection if isinstance(portrait_projection, dict) else {})
-    deterministic_answer_text = compose_answer(answer_plan, locale=locale)
+    measurement_report = recorder.run(
+        "measurement_report",
+        "测算报告聚合",
+        "FeatureLayer+Questions+AnswerPlan+PortraitProjection",
+        "measurement_report",
+        lambda: build_measurement_report(feature_layer, questions, answer_plan, portrait_projection if isinstance(portrait_projection, dict) else {}),
+    )
+    deterministic_answer_text = recorder.run(
+        "deterministic_answer",
+        "确定性回答生成",
+        "AnswerPlan",
+        "answer_text",
+        lambda: compose_answer(answer_plan, locale=locale),
+    )
     answer_text = deterministic_answer_text
     answer_rewrite = {
         "version": "v20.llm_answer_rewrite.v1",
@@ -193,6 +321,7 @@ def run_runtime_from_pillars(
             feature_state_model=feature_state_model,
             question_intent_model=question_intent_model,
             interaction_session=interaction_session,
+            mainline_arbitration=mainline_arbitration,
             answer_plan=answer_plan,
             deterministic_answer_text=deterministic_answer_text,
             locale=locale,
@@ -217,7 +346,16 @@ def run_runtime_from_pillars(
         feature_state_model=feature_state_model,
         question_intent_model=question_intent_model,
         interaction_session=interaction_session,
+        mainline_arbitration=mainline_arbitration,
         locale=locale,
+    )
+    reasoning_orchestrator = recorder.to_orchestrator(
+        {
+            "primary_mainline": "mainline_arbitration.primary_mainline",
+            "structure_dynamics": "structure_dynamics.dominant_chain",
+            "selected_question": "selected_question",
+            "answer": "answer_text",
+        }
     )
     return {
         "version": "v20.runtime_result.v1",
@@ -230,6 +368,9 @@ def run_runtime_from_pillars(
         "rule_paths": [row.to_dict() for row in rule_paths],
         "feature_layer": feature_layer.to_dict(),
         "feature_state_model": feature_state_model,
+        "structure_dynamics": structure_dynamics,
+        "mainline_arbitration": mainline_arbitration,
+        "reasoning_orchestrator": reasoning_orchestrator,
         "knowledge_report": knowledge_report.to_dict(),
         "knowledge_refs": [row.to_dict() for row in knowledge_report.refs],
         "knowledge_alignment": knowledge_feature_alignment(feature_layer),
@@ -392,7 +533,34 @@ def _control_domain(control_key: str) -> str:
         "control.shang_guan_jian_guan": "career",
         "control.wealth_capacity": "wealth",
         "control.pattern_status": "pattern",
+        "control.mainline_arbitration": "mainline",
     }.get(control_key, "")
+
+
+def _mainline_arbitration_controls(mainline_arbitration: dict[str, object]) -> tuple[dict[str, object], ...]:
+    quality_gate = mainline_arbitration.get("quality_gate", {})
+    primary = mainline_arbitration.get("primary_mainline", {})
+    if not isinstance(quality_gate, dict) or not isinstance(primary, dict):
+        return ()
+    if not quality_gate.get("requires_review"):
+        return ()
+    candidate_key = str(primary.get("candidate_key", ""))
+    title = str(primary.get("title", "")) or "智能中枢主线"
+    return (
+        {
+            "control_key": "control.mainline_arbitration",
+            "label": f"中枢主线复核：{title}",
+            "options": ("采用第一主线", "切换到次级主线", "暂缓主线", "证据不足"),
+            "default": "采用第一主线",
+            "source_decision_keys": (candidate_key,) if candidate_key.startswith("decision.") else (),
+            "ui_surface": "analyst_admin_only",
+            "guardrails": (
+                "MAINLINE_REVIEW_IS_SESSION_SIGNAL",
+                "NO_RULE_TRUTH_MUTATION",
+                "PROMOTION_REQUIRES_BATCH_VALIDATION",
+            ),
+        },
+    )
 
 
 def _latent_scenario_domain(scenario_id: str) -> str:

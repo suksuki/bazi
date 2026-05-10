@@ -98,6 +98,7 @@ def practitioner_answer_prompt(
     feature_state_model: dict[str, object] | None = None,
     question_intent_model: dict[str, object] | None = None,
     interaction_session: dict[str, object] | None = None,
+    mainline_arbitration: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
     answer_card = _compact_practitioner_answer_card(
@@ -110,6 +111,7 @@ def practitioner_answer_prompt(
         feature_state_model=feature_state_model or {},
         question_intent_model=question_intent_model or {},
         interaction_session=interaction_session or {},
+        mainline_arbitration=mainline_arbitration or {},
     )
     return {
         "task": "practitioner_answer",
@@ -279,9 +281,10 @@ def _compact_practitioner_answer_card(
     feature_state_model: dict[str, object],
     question_intent_model: dict[str, object],
     interaction_session: dict[str, object],
+    mainline_arbitration: dict[str, object],
 ) -> dict[str, object]:
     selected_domain = str(selected_question.get("domain") or "")
-    mainline = _compact_mainline_cards(decision_report, selected_domain=selected_domain)
+    mainline = _compact_arbitrated_mainline_cards(mainline_arbitration) or _compact_mainline_cards(decision_report, selected_domain=selected_domain)
     evidence = _compact_evidence_lines(
         decisions=mainline,
         feature_state_model=feature_state_model,
@@ -292,6 +295,7 @@ def _compact_practitioner_answer_card(
         "chart": _compact_chart_for_answer(chart_facts),
         "time": _compact_time_for_answer(time_context),
         "mainline": mainline,
+        "answer_strategy": _compact_answer_strategy(mainline_arbitration),
         "portrait_tags": _compact_portrait_tags(portrait_projection, feature_state_model),
         "evidence": evidence,
         "intent": _compact_selected_question_intent(question_intent_model),
@@ -382,6 +386,108 @@ def _compact_mainline_cards(report: dict[str, object], *, selected_domain: str =
             }
         )
     return rows
+
+
+def _compact_arbitrated_mainline_cards(arbitration: dict[str, object]) -> list[dict[str, object]]:
+    primary = arbitration.get("primary_mainline", {})
+    if not isinstance(primary, dict):
+        return []
+    title = str(primary.get("title", "")).strip()
+    nodes = _list_items(primary.get("nodes"), 4)
+    if not title and not nodes:
+        return []
+    evidence = _list_items(primary.get("evidence"), 4)
+    why = _list_items(arbitration.get("why_selected"), 3)
+    quality_gate = arbitration.get("quality_gate", {})
+    practitioner_review = arbitration.get("practitioner_review", {})
+    rows = [
+        {
+            "label": _clip(title or " → ".join(str(row) for row in nodes), 90),
+            "domain": primary.get("domain", ""),
+            "status": primary.get("status", ""),
+            "score": primary.get("score", 0),
+            "source": primary.get("source", ""),
+            "nodes": [str(row) for row in nodes],
+            "support": [_clip(str(item), 72) for item in evidence if item],
+            "why_selected": [_clip(str(item), 96) for item in why if item],
+            "quality_gate": _compact_quality_gate(quality_gate if isinstance(quality_gate, dict) else {}),
+            "practitioner_review": _compact_practitioner_review(practitioner_review if isinstance(practitioner_review, dict) else {}),
+            "question_seeds": [],
+        }
+    ]
+    for row in _list_items(arbitration.get("supporting_mainlines"), 2):
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "label": _clip(str(row.get("title", "")), 80),
+                "domain": row.get("domain", ""),
+                "status": row.get("status", ""),
+                "score": row.get("score", 0),
+                "source": row.get("source", ""),
+                "nodes": [str(item) for item in _list_items(row.get("nodes"), 4)],
+                "support": [_clip(str(item), 64) for item in _list_items(row.get("evidence"), 3) if item],
+                "why_selected": [],
+                "question_seeds": [],
+            }
+        )
+    return rows
+
+
+def _compact_answer_strategy(arbitration: dict[str, object]) -> dict[str, object]:
+    if not isinstance(arbitration, dict):
+        return {}
+    gate = arbitration.get("quality_gate", {})
+    review = arbitration.get("practitioner_review", {})
+    gate = gate if isinstance(gate, dict) else {}
+    review = review if isinstance(review, dict) else {}
+    action = str(review.get("action", ""))
+    requires_review = bool(gate.get("requires_review"))
+    if action == "accepted_primary":
+        mode = "confirmed_by_practitioner"
+        instruction = "Use the confirmed primary mainline as the answer spine; keep event claims bounded."
+    elif action == "promoted_supporting":
+        mode = "practitioner_switched_needs_review"
+        instruction = "Use the promoted supporting mainline first and note the session-level switch."
+    elif action == "evidence_gap":
+        mode = "evidence_gap_review"
+        instruction = "Lead with evidence gaps and avoid firm conclusions."
+    elif action in {"deferred_primary", "no_supporting_candidate"}:
+        mode = "deferred_review"
+        instruction = "Keep the mainline provisional and list review targets."
+    elif requires_review:
+        mode = "quality_gate_review"
+        instruction = "Present the mainline as provisional and explain review targets."
+    else:
+        mode = "quality_gate_passed"
+        instruction = "Use the primary mainline as the answer spine while preserving boundaries."
+    return {
+        "mode": mode,
+        "requires_review": requires_review,
+        "quality_gate_status": gate.get("status", ""),
+        "practitioner_action": action,
+        "instruction": instruction,
+    }
+
+
+def _compact_quality_gate(gate: dict[str, object]) -> dict[str, object]:
+    if not gate:
+        return {}
+    return {
+        "status": gate.get("status", ""),
+        "requires_review": bool(gate.get("requires_review")),
+        "risk_flags": [str(row) for row in _list_items(gate.get("risk_flags"), 4)],
+    }
+
+
+def _compact_practitioner_review(review: dict[str, object]) -> dict[str, object]:
+    if review.get("status") != "applied":
+        return {}
+    return {
+        "status": review.get("status", ""),
+        "option": review.get("option", ""),
+        "action": review.get("action", ""),
+    }
 
 
 def _compact_evidence_lines(

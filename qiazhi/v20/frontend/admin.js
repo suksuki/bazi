@@ -4,11 +4,12 @@ const setText = (selector, value) => {
 };
 
 const logoutButton = document.querySelector("#logoutButton");
-const params = new URLSearchParams(window.location.search);
-const locale = params.get("locale") || localStorage.getItem("v20_locale") || "zh";
+const locale = localStorage.getItem("v20_locale") || "zh";
 
 const ADMIN_TEXT = {
   zh: { status: "状态", refresh: "刷新", models: "模型", no_data: "暂无数据。", await_db: "等待 V20_DATABASE_URL。", logout: "登出", entry: "入口", profiles: "档案", measure: "测算" },
+  en: { status: "Status", refresh: "Refresh", models: "Models", no_data: "No data.", await_db: "Waiting for V20_DATABASE_URL.", logout: "Log Out", entry: "Entry", profiles: "Profiles", measure: "Reading" },
+  ko: { status: "상태", refresh: "새로고침", models: "모델", no_data: "데이터 없음.", await_db: "V20_DATABASE_URL 대기 중.", logout: "로그아웃", entry: "입구", profiles: "프로필", measure: "분석" },
 };
 const adminText = () => ADMIN_TEXT[locale] || ADMIN_TEXT.zh;
 

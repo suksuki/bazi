@@ -133,6 +133,15 @@ from v20.profiles.store import (
     update_profile_in_postgres,
 )
 from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
+from v20.redis.runtime_cache import (
+    attach_cache_miss_meta,
+    cacheable_measure_payload,
+    get_runtime_cache,
+    runtime_cache_status,
+    runtime_cache_key,
+    set_runtime_cache,
+    should_cache_measure,
+)
 from v20.rules.catalog import build_bazi_rule_catalog
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 from v20.storage.local_jsonl import local_jsonl_store_from_env
@@ -299,6 +308,10 @@ def create_app() -> FastAPI:
             "validation": validate_redis_contract(contract),
             "runtime_mutation": False,
         }
+
+    @app.get("/api/v20/redis/cache-status")
+    def redis_cache_status() -> dict[str, object]:
+        return runtime_cache_status()
 
     @app.get("/api/v20/runtime/dependencies")
     def runtime_dependencies() -> dict[str, object]:
@@ -812,74 +825,42 @@ def create_app() -> FastAPI:
                 detail={"error": "V20_LATENT_EVENT_CALIBRATION_INVALID", "message": str(exc)},
             ) from exc
 
+    def _resolved_measure_inputs(payload: MeasureRequest) -> tuple[dict[str, str], str]:
+        pillars = resolve_pillars(
+            payload.year,
+            payload.month,
+            payload.day,
+            payload.hour,
+            calendar=payload.calendar,
+            gender=payload.gender,
+            lunar_is_leap=payload.lunar_is_leap,
+        )
+        luck_pillar = payload.luck_pillar
+        if not luck_pillar and payload.flow_year_pillar:
+            luck_pillar = resolve_luck_pillar(
+                payload.year,
+                payload.month,
+                payload.day,
+                payload.hour,
+                calendar=payload.calendar,
+                gender=payload.gender,
+                lunar_is_leap=payload.lunar_is_leap,
+                target_year=resolve_target_year(payload.flow_year_pillar),
+            )
+        return pillars, luck_pillar
+
     @app.post("/api/v20/measure")
     @app.post("/api/v20/runtime/measure")
     def measure(payload: MeasureRequest) -> dict[str, object]:
         try:
-            pillars = resolve_pillars(
-                payload.year, payload.month, payload.day, payload.hour,
-                calendar=payload.calendar, gender=payload.gender,
-                lunar_is_leap=payload.lunar_is_leap,
-            )
-            luck_pillar = payload.luck_pillar
-            if not luck_pillar and payload.flow_year_pillar:
-                # If flow_year is provided but luck isn't, attempt to resolve luck pillar for that flow year
-                # For simplified UI flow, we assume the flow_year_pillar roughly corresponds to the year number
-                # We extract the year from the payload if it's numeric
-                try:
-                    # Very simple fallback: just use the numeric year from the flow year if we can map it,
-                    # but here we'll just check if flow_year starts with "20" (e.g. 2026 passed by guest)
-                    target_y = int("".join(filter(str.isdigit, payload.flow_year_pillar)) or 2026)
-                except ValueError:
-                    target_y = 2026
-                luck_pillar = resolve_luck_pillar(
-                    payload.year, payload.month, payload.day, payload.hour,
-                    calendar=payload.calendar, gender=payload.gender,
-                    lunar_is_leap=payload.lunar_is_leap,
-                    target_year=target_y
-                )
-
-            return run_runtime_from_pillars(
-                pillars["year"], pillars["month"], pillars["day"], pillars["hour"],
-                input_id=payload.input_id,
-                question_key=payload.question_key,
-                question_id=payload.question_id,
-                user_text=payload.user_text,
-                flow_year_pillar=payload.flow_year_pillar,
-                luck_pillar=luck_pillar,
-                flow_month_pillar=payload.flow_month_pillar,
-                locale=payload.locale,
-                llm_mode=payload.llm_mode,
-                practitioner_selections=tuple(selection.model_dump() for selection in payload.practitioner_selections),
-                latent_event_answers=tuple(answer.model_dump() for answer in payload.latent_event_answers),
-                answered_question_ids=tuple(payload.answered_question_ids),
-                answered_question_keys=tuple(payload.answered_question_keys),
-            )
-        except ValueError as exc:
-            raise HTTPException(
-                status_code=400,
-                detail={"error": "V20_MEASURE_INPUT_INVALID", "message": str(exc)},
-            ) from exc
-
-    @app.post("/api/v20/measure/view/{role_key}")
-    def measure_view(role_key: str, payload: MeasureRequest, request: Request) -> dict[str, object]:
-        if role_key == "admin":
-            _require_admin_session(request)
-        try:
-            pillars = resolve_pillars(
-                payload.year, payload.month, payload.day, payload.hour,
-                calendar=payload.calendar, gender=payload.gender,
-                lunar_is_leap=payload.lunar_is_leap,
-            )
-            luck_pillar = payload.luck_pillar
-            if not luck_pillar and payload.flow_year_pillar:
-                target_y = resolve_target_year(payload.flow_year_pillar)
-                luck_pillar = resolve_luck_pillar(
-                    payload.year, payload.month, payload.day, payload.hour,
-                    calendar=payload.calendar, gender=payload.gender,
-                    lunar_is_leap=payload.lunar_is_leap,
-                    target_year=target_y
-                )
+            pillars, luck_pillar = _resolved_measure_inputs(payload)
+            if should_cache_measure(payload):
+                cache_key = runtime_cache_key(cacheable_measure_payload(payload, pillars=pillars, luck_pillar=luck_pillar), role_key="raw")
+                cached = get_runtime_cache(cache_key)
+                if cached is not None:
+                    return cached
+            else:
+                cache_key = ""
 
             result = run_runtime_from_pillars(
                 pillars["year"], pillars["month"], pillars["day"], pillars["hour"],
@@ -897,6 +878,47 @@ def create_app() -> FastAPI:
                 answered_question_ids=tuple(payload.answered_question_ids),
                 answered_question_keys=tuple(payload.answered_question_keys),
             )
+            if should_cache_measure(payload):
+                attach_cache_miss_meta(result, cache_key, stored=set_runtime_cache(cache_key, result))
+            return result
+        except ValueError as exc:
+            raise HTTPException(
+                status_code=400,
+                detail={"error": "V20_MEASURE_INPUT_INVALID", "message": str(exc)},
+            ) from exc
+
+    @app.post("/api/v20/measure/view/{role_key}")
+    def measure_view(role_key: str, payload: MeasureRequest, request: Request) -> dict[str, object]:
+        if role_key == "admin":
+            _require_admin_session(request)
+        try:
+            pillars, luck_pillar = _resolved_measure_inputs(payload)
+            if should_cache_measure(payload):
+                cache_key = runtime_cache_key(cacheable_measure_payload(payload, pillars=pillars, luck_pillar=luck_pillar), role_key=role_key)
+                cached = get_runtime_cache(cache_key)
+                if cached is not None:
+                    return project_runtime_for_role(cached, role_key)
+            else:
+                cache_key = ""
+
+            result = run_runtime_from_pillars(
+                pillars["year"], pillars["month"], pillars["day"], pillars["hour"],
+                input_id=payload.input_id,
+                question_key=payload.question_key,
+                question_id=payload.question_id,
+                user_text=payload.user_text,
+                flow_year_pillar=payload.flow_year_pillar,
+                luck_pillar=luck_pillar,
+                flow_month_pillar=payload.flow_month_pillar,
+                locale=payload.locale,
+                llm_mode=payload.llm_mode,
+                practitioner_selections=tuple(selection.model_dump() for selection in payload.practitioner_selections),
+                latent_event_answers=tuple(answer.model_dump() for answer in payload.latent_event_answers),
+                answered_question_ids=tuple(payload.answered_question_ids),
+                answered_question_keys=tuple(payload.answered_question_keys),
+            )
+            if should_cache_measure(payload):
+                attach_cache_miss_meta(result, cache_key, stored=set_runtime_cache(cache_key, result))
             return project_runtime_for_role(result, role_key)
         except ValueError as exc:
             raise HTTPException(
@@ -911,20 +933,7 @@ def create_app() -> FastAPI:
 
         def event_stream():
             try:
-                pillars = resolve_pillars(
-                    payload.year, payload.month, payload.day, payload.hour,
-                    calendar=payload.calendar, gender=payload.gender,
-                    lunar_is_leap=payload.lunar_is_leap,
-                )
-                luck_pillar = payload.luck_pillar
-                if not luck_pillar and payload.flow_year_pillar:
-                    target_y = resolve_target_year(payload.flow_year_pillar)
-                    luck_pillar = resolve_luck_pillar(
-                        payload.year, payload.month, payload.day, payload.hour,
-                        calendar=payload.calendar, gender=payload.gender,
-                        lunar_is_leap=payload.lunar_is_leap,
-                        target_year=target_y
-                    )
+                pillars, luck_pillar = _resolved_measure_inputs(payload)
 
                 result = run_runtime_from_pillars(
                     pillars["year"], pillars["month"], pillars["day"], pillars["hour"],
@@ -959,6 +968,7 @@ def create_app() -> FastAPI:
                     feature_state_model=_dict_value(result, "feature_state_model"),
                     question_intent_model=_dict_value(result, "question_intent_model"),
                     interaction_session=_dict_value(result, "interaction_session"),
+                    mainline_arbitration=_dict_value(result, "mainline_arbitration"),
                     answer_plan=result.get("answer_plan", {}),
                     deterministic_answer_text=str(result.get("answer_text") or ""),
                     locale=payload.locale,

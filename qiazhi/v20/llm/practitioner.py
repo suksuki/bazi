@@ -24,6 +24,7 @@ def build_practitioner_answer_with_llm(
     feature_state_model: dict[str, object] | None = None,
     question_intent_model: dict[str, object] | None = None,
     interaction_session: dict[str, object] | None = None,
+    mainline_arbitration: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
     prompt = practitioner_answer_prompt(
@@ -36,6 +37,7 @@ def build_practitioner_answer_with_llm(
         feature_state_model=feature_state_model or {},
         question_intent_model=question_intent_model or {},
         interaction_session=interaction_session or {},
+        mainline_arbitration=mainline_arbitration or {},
         answer_plan=answer_plan,
         verified_answer_text=deterministic_answer_text,
         locale=locale,
@@ -111,6 +113,7 @@ def stream_practitioner_answer_with_llm(
     feature_state_model: dict[str, object] | None = None,
     question_intent_model: dict[str, object] | None = None,
     interaction_session: dict[str, object] | None = None,
+    mainline_arbitration: dict[str, object] | None = None,
     locale: str = "zh",
 ):
     prompt = practitioner_answer_prompt(
@@ -123,6 +126,7 @@ def stream_practitioner_answer_with_llm(
         feature_state_model=feature_state_model or {},
         question_intent_model=question_intent_model or {},
         interaction_session=interaction_session or {},
+        mainline_arbitration=mainline_arbitration or {},
         answer_plan=answer_plan,  # type: ignore[arg-type]
         verified_answer_text=deterministic_answer_text,
         locale=locale,
@@ -190,6 +194,8 @@ def compact_practitioner_fallback_text(prompt: dict[str, object], deterministic_
     title = str(question.get("title") or question.get("measurement_topic") or "这个问题")
     day_master = str(chart.get("day_master") or "")
     main = _first_label(mainline, "label") or _first_label(portrait_tags, "label") or str(question.get("measurement_topic") or "当前主题")
+    strategy = context.get("answer_strategy", {})
+    strategy_line = _strategy_line(strategy if isinstance(strategy, dict) else {}, locale=locale)
     support = "、".join(_string_items(evidence, 3))
     follow = _string_items(next_questions, 1)
 
@@ -197,7 +203,7 @@ def compact_practitioner_fallback_text(prompt: dict[str, object], deterministic_
         text = (
             f"For {title}, the first reading is {main}. "
             f"With day master {day_master or '-'}, the visible evidence is {support or 'the current verified chart structure'}. "
-            f"So this should be read as a structural tendency, not a fixed event."
+            f"So this should be read as a structural tendency, not a fixed event. {strategy_line}"
         )
         if follow:
             text += f" A useful next question is: {follow[0]}"
@@ -206,7 +212,7 @@ def compact_practitioner_fallback_text(prompt: dict[str, object], deterministic_
         text = (
             f"{title}은 먼저 {main}로 봅니다. "
             f"일간 {day_master or '-'} 기준으로 확인된 근거는 {support or '현재 검증된 명식 구조'}입니다. "
-            f"따라서 확정 사건이 아니라 구조적 경향으로 해석하는 것이 좋습니다."
+            f"따라서 확정 사건이 아니라 구조적 경향으로 해석하는 것이 좋습니다. {strategy_line}"
         )
         if follow:
             text += f" 다음 질문은 {follow[0]}입니다."
@@ -215,11 +221,38 @@ def compact_practitioner_fallback_text(prompt: dict[str, object], deterministic_
     text = (
         f"{title}先看「{main}」。"
         f"这个盘日主{day_master or '已定'}，当前能抓到的关键证据是：{support or '四柱结构、十神关系和主题画像已经形成主线'}。"
-        f"所以这里先按结构倾向来断，不把它说成固定事件。{_clip_local(boundary, 90)}"
+        f"所以这里先按结构倾向来断，不把它说成固定事件。{strategy_line}{_clip_local(boundary, 90)}"
     )
     if follow:
         text += f" 下一步适合追问：{follow[0]}"
     return _clip_local(text, 420)
+
+
+def _strategy_line(strategy: dict[str, object], *, locale: str) -> str:
+    mode = str(strategy.get("mode", ""))
+    if not mode:
+        return ""
+    if locale.startswith("en"):
+        if mode == "confirmed_by_practitioner":
+            return "The mainline is practitioner-confirmed for this session. "
+        if bool(strategy.get("requires_review")):
+            return "The mainline remains provisional and needs review. "
+        return ""
+    if locale.startswith("ko"):
+        if mode == "confirmed_by_practitioner":
+            return "이번 세션에서는 명리사가 이 주선을 확인했습니다. "
+        if bool(strategy.get("requires_review")):
+            return "이 주선은 아직 후보이며 검토가 필요합니다. "
+        return ""
+    if mode == "confirmed_by_practitioner":
+        return "本轮主线已经命理师确认。"
+    if mode == "practitioner_switched_needs_review":
+        return "本轮已按命理师选择切换主线，但仍保留复核边界。"
+    if mode == "evidence_gap_review":
+        return "本轮主线证据不足，先看缺口和可验证方向。"
+    if bool(strategy.get("requires_review")):
+        return "本轮主线仍是候选，需要保留复核边界。"
+    return ""
 
 
 def accept_or_fallback_practitioner_answer(

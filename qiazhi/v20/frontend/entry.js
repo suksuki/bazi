@@ -153,18 +153,11 @@ const applyLocale = (locale) => {
 };
 
 const goWorkbench = (session) => {
-  const role = session?.role || "user";
-  const locale = localeSelect.value || "zh";
-  const params = new URLSearchParams({ role, locale });
-  window.location.href = `/v20/ui/workbench.html?${params.toString()}`;
+  window.location.href = "/v20/ui/workbench.html";
 };
 
 const goProfiles = (session) => {
-  const role = session?.role || "user";
-  const locale = localeSelect.value || "zh";
-  const params = new URLSearchParams({ role, locale });
-  // Redirect back to the correct Profiles page
-  window.location.href = `/v20/ui/profiles.html?${params.toString()}`;
+  window.location.href = "/v20/ui/profiles.html";
 };
 
 const guestStart = async () => {
@@ -174,16 +167,9 @@ const guestStart = async () => {
     body: JSON.stringify({ locale: localeSelect.value }),
   });
   
-  // CRITICAL: Save guest session so measurement API can be called!
-  if (result.session) {
-    localStorage.setItem("v20_session", result.session);
-  }
-  
   const calendarVal = document.querySelector("#guestCalendar").value;
   const leapChecked = document.querySelector("#guestLeapMonth")?.checked || false;
   const params = new URLSearchParams({
-    role: "guest",
-    locale: localeSelect.value,
     calendar: calendarVal,
     gender: document.querySelector("#guestGender").value,
     year: document.querySelector("#guestYear").value.substring(0, 4),
@@ -191,8 +177,7 @@ const guestStart = async () => {
     day: document.querySelector("#guestDay").value,
     hour: document.querySelector("#guestHour").value,
     minute: document.querySelector("#guestMinute").value,
-    flow_year: document.querySelector("#guestFlowYear").value,
-    auto_measure: "true"
+    flow_year: document.querySelector("#guestFlowYear").value
   });
   if (calendarVal === "lunar") params.set("lunar_is_leap", leapChecked ? "true" : "false");
   window.location.href = `/v20/ui/workbench.html?${params.toString()}`;
@@ -290,7 +275,7 @@ document.querySelector("#registerButton").addEventListener("click", () => regist
 loadMe().catch(() => {});
 
 function hydrateLocale() {
-  localeSelect.value = localStorage.getItem("v20_locale") || "zh";
+localeSelect.value = localStorage.getItem("v20_locale") || "zh";
   applyLocale(localeSelect.value);
   localeSelect.addEventListener("change", () => applyLocale(localeSelect.value));
 }

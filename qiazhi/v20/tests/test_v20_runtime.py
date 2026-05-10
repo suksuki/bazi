@@ -108,6 +108,12 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert question_intent_model["question_binding_count"] == len(result["questions"])
     assert question_intent_model["selected_question_intent"]["question_key"] == result["selected_question"]["question_key"]
     assert "QUESTION_INTENTS_ARE_GENERATED_FROM_DECISION_AND_FEATURE_STATE" in question_intent_model["guardrails"]
+    assert result["mainline_arbitration"]["version"] == "v20.mainline_arbitration.v1"
+    assert result["mainline_arbitration"]["primary_mainline"]["nodes"]
+    assert "NO_LLM_CAN_OVERRIDE_PRIMARY_MAINLINE" in result["mainline_arbitration"]["guardrails"]
+    assert result["reasoning_orchestrator"]["version"] == "v20.reasoning_orchestrator.v1"
+    assert result["reasoning_orchestrator"]["step_count"] >= 15
+    assert any(row["step_key"] == "mainline_arbitration" for row in result["reasoning_orchestrator"]["steps"])
     assert result["knowledge_alignment"]["status"] == "pass"
     assert result["knowledge_semantic_model"]["status"] == "ready"
     assert result["knowledge_semantic_validation"]["ok"] is True
@@ -171,6 +177,7 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert portrait_projection["axes"][0]["evidence_boundaries"]
     assert result["questions"][0]["dimension_layer"] in {"micro", "macro", "decision", "time"}
     assert result["answer_plan"]["dimension_context"]["version"] == "v20.answer_dimension_context.v1"
+    assert result["answer_plan"]["dimension_context"]["primary_mainline"]["nodes"]
     assert result["latent_signal_report"]["version"] == "v20.latent_signal_report.v1"
     assert result["latent_signal_report"]["personal_calibration_factor_manifest"]["latent_factor_count"] == 12
     assert result["latent_event_session"]["version"] == "v20.latent_event_session_lens.v1"
@@ -196,11 +203,13 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     assert result["decision_report"]["mainlines"][0]["source_decision_keys"]
     sections = result["answer_plan"]["sections"]
     section_types = [row["section_type"] for row in sections]
+    assert "orchestrator_mainline" in section_types
     assert "mainline_decision" in section_types
     assert "portrait_profile_summary" in section_types
     mainline_sections = [row["body"] for row in sections if row["section_type"] == "mainline_decision"]
     assert mainline_sections and "主线入口" in mainline_sections[0]
     assert any("复核重点" in row["body"] for row in result["answer_plan"]["sections"])
+    assert any("质量门" in row["body"] for row in result["answer_plan"]["sections"])
     assert result["answer_plan"]["measurement_focus"] == "bazi_measurement"
     assert result["answer_plan"]["domain_projection"]["guardrails"]
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]

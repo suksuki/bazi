@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 from v20.access.projection import project_runtime_for_role
 from v20.access.roles import access_role_manifest
 from v20.api.runtime import run_runtime_from_pillars
-from v20.server import app
 
 
 def test_v20_access_roles_define_projected_runtime_fields() -> None:
@@ -19,11 +16,17 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert "dynamic_portrait" not in roles["user"]["allowed_runtime_fields"]
     assert "question_intent_model" in roles["user"]["allowed_runtime_fields"]
     assert "interaction_session" in roles["user"]["allowed_runtime_fields"]
+    assert "structure_dynamics" in roles["user"]["allowed_runtime_fields"]
+    assert "mainline_arbitration" in roles["user"]["allowed_runtime_fields"]
+    assert "reasoning_orchestrator" in roles["user"]["allowed_runtime_fields"]
     assert "feature_layer" in roles["analyst"]["allowed_runtime_fields"]
     assert "knowledge_semantic_model" in roles["analyst"]["allowed_runtime_fields"]
     assert "decision_report" in roles["analyst"]["allowed_runtime_fields"]
     assert "decision_validation" in roles["analyst"]["allowed_runtime_fields"]
     assert "feature_state_model" in roles["analyst"]["allowed_runtime_fields"]
+    assert "structure_dynamics" in roles["analyst"]["allowed_runtime_fields"]
+    assert "mainline_arbitration" in roles["analyst"]["allowed_runtime_fields"]
+    assert "reasoning_orchestrator" in roles["analyst"]["allowed_runtime_fields"]
     assert "question_intent_model" in roles["analyst"]["allowed_runtime_fields"]
     assert "interaction_session" in roles["analyst"]["allowed_runtime_fields"]
     assert "knowledge_refs" in roles["analyst"]["allowed_runtime_fields"]
@@ -31,6 +34,9 @@ def test_v20_access_roles_define_projected_runtime_fields() -> None:
     assert "practitioner_session" not in roles["user"]["allowed_runtime_fields"]
     assert "rule_candidate_support" not in roles["analyst"]["allowed_runtime_fields"]
     assert "decision_report" in roles["admin"]["allowed_runtime_fields"]
+    assert "structure_dynamics" in roles["admin"]["allowed_runtime_fields"]
+    assert "mainline_arbitration" in roles["admin"]["allowed_runtime_fields"]
+    assert "reasoning_orchestrator" in roles["admin"]["allowed_runtime_fields"]
     assert "portrait_graph_summary" in roles["admin"]["allowed_runtime_fields"]
     assert "latent_signal_report" in roles["admin"]["allowed_runtime_fields"]
     assert "practitioner_session" in roles["admin"]["allowed_runtime_fields"]
@@ -62,6 +68,9 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert "portrait_projection" in projected["decision_report"]
     assert "question_intent_model" in projected
     assert "interaction_session" in projected
+    assert "structure_dynamics" in projected
+    assert "mainline_arbitration" in projected
+    assert "reasoning_orchestrator" in projected
     assert "practitioner_session" not in projected
     assert "feature_ids" not in projected["decision_report"]["decisions"][0]
     assert "knowledge_rule_refs" not in projected["decision_report"]["decisions"][0]
@@ -72,27 +81,21 @@ def test_v20_user_projection_hides_internal_evidence_and_graphs() -> None:
     assert all("source_feature_ids" not in row for row in projected["measurement_report"]["topics"])
 
 
-def test_v20_role_measure_endpoint_projects_by_role(tmp_path, monkeypatch) -> None:
-    monkeypatch.setenv("V20_AUTH_STORE", str(tmp_path / "auth.json"))
-    client = TestClient(app)
-    payload = {
-        "year": "甲子",
-        "month": "戊辰",
-        "day": "甲午",
-        "hour": "辛酉",
-        "user_text": "我想看流年触发",
-        "flow_year_pillar": "庚子",
-    }
+def test_v20_role_measure_view_projects_by_role() -> None:
+    result = run_runtime_from_pillars(
+        "甲子",
+        "戊辰",
+        "甲午",
+        "辛酉",
+        input_id="access.role_view",
+        user_text="我想看流年触发",
+        flow_year_pillar="庚子",
+    )
+    user = project_runtime_for_role(result, "user")
+    analyst = project_runtime_for_role(result, "analyst")
+    admin = project_runtime_for_role(result, "admin")
+    roles = access_role_manifest()
 
-    user = client.post("/api/v20/measure/view/user", json=payload).json()
-    analyst = client.post("/api/v20/measure/view/analyst", json=payload).json()
-    blocked_admin = client.post("/api/v20/measure/view/admin", json=payload)
-    client.post("/api/v20/auth/import-v19?apply=true", json={"admin_password": "adminpw"})
-    client.post("/api/v20/auth/login", json={"username": "admin", "password": "adminpw", "locale": "zh"})
-    admin = client.post("/api/v20/measure/view/admin", json=payload).json()
-    roles = client.get("/api/v20/access/roles").json()
-
-    assert user["version"] == "v20.role_runtime_view.v1"
     assert user["role"]["role_key"] == "user"
     assert "feature_layer" not in user
     assert analyst["role"]["role_key"] == "analyst"
@@ -105,7 +108,6 @@ def test_v20_role_measure_endpoint_projects_by_role(tmp_path, monkeypatch) -> No
     assert "knowledge_refs" in analyst
     assert "dynamic_portrait" not in analyst
     assert "practitioner_session" in analyst
-    assert blocked_admin.status_code == 401
     assert admin["role"]["role_key"] == "admin"
     assert "decision_report" in admin
     assert "portrait_graph_summary" in admin

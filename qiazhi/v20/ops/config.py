@@ -34,7 +34,7 @@ def _override_profile(profile: ServerProfile, overrides: dict[str, object | None
     if os.getenv("V20_POSTGRES_HOST"):
         postgres = replace(postgres, host=os.environ["V20_POSTGRES_HOST"])
     if _int_env("V20_POSTGRES_PORT") is not None:
-        postgres = replace(postgres, port=_int_env("V20_POSTGRES_PORT") or postgres.port)
+        postgres = replace(postgres, port=_int_env("V20_POSTGRES_PORT"))
     if os.getenv("V20_POSTGRES_DB"):
         postgres = replace(postgres, database=os.environ["V20_POSTGRES_DB"])
     if os.getenv("V20_POSTGRES_ENABLED") is not None:
@@ -42,9 +42,9 @@ def _override_profile(profile: ServerProfile, overrides: dict[str, object | None
     if os.getenv("V20_REDIS_HOST"):
         redis = replace(redis, host=os.environ["V20_REDIS_HOST"])
     if _int_env("V20_REDIS_PORT") is not None:
-        redis = replace(redis, port=_int_env("V20_REDIS_PORT") or redis.port)
+        redis = replace(redis, port=_int_env("V20_REDIS_PORT"))
     if _int_env("V20_REDIS_DB") is not None:
-        redis = replace(redis, db=_int_env("V20_REDIS_DB") or redis.db)
+        redis = replace(redis, db=_int_env("V20_REDIS_DB"))
     if os.getenv("V20_REDIS_ENABLED") is not None:
         redis = replace(redis, enabled=_bool_env("V20_REDIS_ENABLED"))
     return replace(profile, **values, postgres=postgres, redis=redis)
