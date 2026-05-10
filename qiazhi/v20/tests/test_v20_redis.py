@@ -4,8 +4,10 @@ from v20.redis.contracts import redis_contract_manifest, validate_redis_contract
 from v20.redis.runtime_cache import (
     attach_cache_miss_meta,
     cacheable_measure_payload,
+    get_runtime_cache,
     runtime_cache_status,
     runtime_cache_key,
+    set_runtime_cache,
     should_cache_measure,
 )
 from v20.api.schemas import MeasureRequest
@@ -68,6 +70,40 @@ def test_v20_runtime_cache_key_is_stable_and_ephemeral_metadata_only() -> None:
     assert "REDIS_CACHE_IS_EPHEMERAL" in result["redis_cache"]["guardrails"]
 
 
+def test_v20_runtime_cache_key_changes_for_practitioner_mainline_review() -> None:
+    base_request = MeasureRequest(
+        year="庚午",
+        month="辛巳",
+        day="丁丑",
+        hour="乙巳",
+        flow_year_pillar="丙午",
+        luck_pillar="甲申",
+        user_text="我想看事业",
+    )
+    reviewed_request = MeasureRequest(
+        year="庚午",
+        month="辛巳",
+        day="丁丑",
+        hour="乙巳",
+        flow_year_pillar="丙午",
+        luck_pillar="甲申",
+        user_text="我想看事业",
+        practitioner_selections=(
+            {
+                "control_key": "control.mainline_arbitration",
+                "option": "采用第一主线",
+                "source_decision_keys": (),
+            },
+        ),
+    )
+
+    pillars = {"year": "庚午", "month": "辛巳", "day": "丁丑", "hour": "乙巳"}
+    base_key = runtime_cache_key(cacheable_measure_payload(base_request, pillars=pillars, luck_pillar="甲申"), role_key="user")
+    reviewed_key = runtime_cache_key(cacheable_measure_payload(reviewed_request, pillars=pillars, luck_pillar="甲申"), role_key="user")
+
+    assert base_key != reviewed_key
+
+
 def test_v20_runtime_cache_skips_non_deterministic_llm_modes() -> None:
     assert should_cache_measure(MeasureRequest(year="甲子", month="戊辰", day="甲午", hour="辛酉", llm_mode="rewrite")) is False
     assert should_cache_measure(MeasureRequest(year="甲子", month="戊辰", day="甲午", hour="辛酉", llm_mode="practitioner")) is False
@@ -84,3 +120,35 @@ def test_v20_runtime_cache_status_does_not_render_values(monkeypatch) -> None:
     assert status["db"] == 0
     assert status["runtime_mutation"] is False
     assert "NO_CACHE_VALUES_RENDERED" in status["guardrails"]
+
+
+def test_v20_runtime_cache_set_and_get_roundtrip_without_persisting_cache_meta(monkeypatch) -> None:
+    class FakeRedis:
+        def __init__(self) -> None:
+            self.rows: dict[str, str] = {}
+            self.ttls: dict[str, int] = {}
+
+        def setex(self, key: str, ttl: int, value: str) -> None:
+            self.rows[key] = value
+            self.ttls[key] = ttl
+
+        def get(self, key: str) -> str:
+            return self.rows.get(key, "")
+
+    client = FakeRedis()
+    monkeypatch.setattr("v20.redis.runtime_cache._redis_client", lambda: client)
+    key = "v20:cache:request:test"
+    result = {
+        "version": "v20.runtime_result.v1",
+        "answer_text": "cached",
+        "redis_cache": {"cache_status": "miss_stored"},
+    }
+
+    assert set_runtime_cache(key, result, ttl_seconds=12) is True
+    cached = get_runtime_cache(key)
+
+    assert client.ttls[key] == 12
+    assert cached is not None
+    assert cached["answer_text"] == "cached"
+    assert cached["redis_cache"]["cache_status"] == "hit"
+    assert cached["redis_cache"]["ttl_seconds"] == 12

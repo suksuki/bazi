@@ -55,6 +55,18 @@ def set_runtime_cache(key: str, result: dict[str, Any], *, ttl_seconds: int | No
     client = _redis_client()
     if client is None:
         return False
+    ttl = int(ttl_seconds or _request_cache_ttl())
+    payload = {
+        "version": CACHE_VERSION,
+        "result": _without_cache_meta(result),
+        "ttl_seconds": ttl,
+        "runtime_mutation": False,
+    }
+    try:
+        client.setex(key, ttl, json.dumps(payload, ensure_ascii=False, sort_keys=True))
+        return True
+    except Exception:
+        return False
 
 
 def runtime_cache_status() -> dict[str, Any]:
@@ -90,18 +102,6 @@ def runtime_cache_status() -> dict[str, Any]:
             "status": "degraded",
             "failure": f"{type(exc).__name__}: {exc}",
         }
-    ttl = int(ttl_seconds or _request_cache_ttl())
-    payload = {
-        "version": CACHE_VERSION,
-        "result": _without_cache_meta(result),
-        "ttl_seconds": ttl,
-        "runtime_mutation": False,
-    }
-    try:
-        client.setex(key, ttl, json.dumps(payload, ensure_ascii=False, sort_keys=True))
-        return True
-    except Exception:
-        return False
 
 
 def cacheable_measure_payload(payload: object, *, pillars: dict[str, str], luck_pillar: str) -> dict[str, Any]:
