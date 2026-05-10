@@ -1,6 +1,13 @@
 from __future__ import annotations
 
+import logging
+
 from lunar_python import Lunar, Solar
+
+from v20.ops.logging import get_logger, log_event
+
+
+LOGGER = get_logger("v20.calendar")
 
 
 def resolve_pillars(
@@ -52,15 +59,32 @@ def resolve_pillars(
                 lunar_obj = solar_obj.getLunar()
             
             bazi = lunar_obj.getBaZi()
-            print(f"Resolved {calendar} {y_val}-{m_val}-{d_val} {h_val} -> {bazi}")
+            log_event(
+                LOGGER,
+                logging.INFO,
+                "calendar_resolved",
+                event="calendar_resolved",
+                calendar=calendar,
+                year=y,
+                month=m,
+                day=d,
+                hour=h,
+            )
             return {
                 "year": bazi[0],
                 "month": bazi[1],
                 "day": bazi[2],
                 "hour": bazi[3],
             }
-    except Exception as e:
-        print(f"Resolution failed for {calendar} {y_val}-{m_val}-{d_val}: {e}")
+    except Exception as exc:
+        log_event(
+            LOGGER,
+            logging.WARNING,
+            "calendar_resolution_failed",
+            event="calendar_resolution_failed",
+            calendar=calendar,
+            error_type=type(exc).__name__,
+        )
 
     # Fallback: if resolution failed or was incomplete, return as-is
     def clean(s):
@@ -176,7 +200,14 @@ def resolve_luck_pillar(
 
         return matched
     except Exception as exc:
-        print(f"resolve_luck_pillar error: {exc}")
+        log_event(
+            LOGGER,
+            logging.WARNING,
+            "luck_pillar_resolution_failed",
+            event="luck_pillar_resolution_failed",
+            calendar=calendar,
+            error_type=type(exc).__name__,
+        )
         return ""
 
 
