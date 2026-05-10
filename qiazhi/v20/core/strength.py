@@ -4,6 +4,14 @@ from v20.core.constants import GENERATES
 from v20.core.schemas import ChartFacts, CoreInference
 
 CORE_INFERENCE_VERSION = "v20.core_inference.v1"
+VISIBLE_SUPPORT_WEIGHT = 0.18
+VISIBLE_PRESSURE_WEIGHT = 0.12
+HIDDEN_SUPPORT_WEIGHT = 0.08
+HIDDEN_PRESSURE_WEIGHT = 0.05
+RELATION_PRESSURE_WEIGHT = 0.03
+RELATION_PRESSURE_CAP = 0.2
+SUPPORTED_CAPACITY_DELTA = 0.22
+NEEDS_SUPPORT_DELTA = -0.12
 
 
 def infer_core(facts: ChartFacts) -> CoreInference:
@@ -15,19 +23,19 @@ def infer_core(facts: ChartFacts) -> CoreInference:
 
     for row in facts.visible_ten_gods:
         if row.element == day_element or row.element == supporting_element:
-            support_score += 0.18
+            support_score += VISIBLE_SUPPORT_WEIGHT
         else:
-            pressure_score += 0.12
+            pressure_score += VISIBLE_PRESSURE_WEIGHT
     for row in facts.hidden_ten_gods:
         if row.element == day_element or row.element == supporting_element:
-            support_score += 0.08 * row.weight
+            support_score += HIDDEN_SUPPORT_WEIGHT * row.weight
         else:
-            pressure_score += 0.05 * row.weight
+            pressure_score += HIDDEN_PRESSURE_WEIGHT * row.weight
 
     relation_count = len(facts.relation_hits)
     if relation_count:
         uncertainty.append("branch_relations_require_layer_review")
-        pressure_score += min(0.2, relation_count * 0.03)
+        pressure_score += min(RELATION_PRESSURE_CAP, relation_count * RELATION_PRESSURE_WEIGHT)
     if facts.vault_branches:
         uncertainty.append("vault_branches_require_storage_boundary")
 
@@ -55,9 +63,9 @@ def _supporting_element(day_element: str) -> str:
 
 def _capacity(support_score: float, pressure_score: float) -> str:
     delta = support_score - pressure_score
-    if delta >= 0.22:
+    if delta >= SUPPORTED_CAPACITY_DELTA:
         return "supported_capacity"
-    if delta <= -0.12:
+    if delta <= NEEDS_SUPPORT_DELTA:
         return "capacity_needs_support"
     return "borderline_capacity"
 
