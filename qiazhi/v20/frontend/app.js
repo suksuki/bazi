@@ -16,6 +16,7 @@ const state = {
   chartMemoryKey: "",
   answerWriter: { timer: null, queue: "", displayed: "" },
   isBatchUpdating: false,
+  workbenchMode: "reading",
 };
 
 const STEM_META = {
@@ -71,6 +72,7 @@ const logoutButton = document.querySelector("#logoutButton");
 const UI_TEXT = {
   zh: {
     app_title: "命理测算台", nav_profiles: "档案", nav_measure: "测算", logout_button: "登出",
+    mode_reading: "测算阅读", mode_practitioner: "命理师校准", mode_observe: "管理员观测",
     pillars_form_title: "四柱", year_pillar: "年柱", month_pillar: "月柱", day_pillar: "日柱", hour_pillar: "时柱",
     user_focus: "用户关心", recommended_question: "推荐问题", flow_year: "流年", luck_pillar: "大运", flow_month: "流月",
     profile_title: "档案", profile_manage: "档案管理",
@@ -102,6 +104,7 @@ const UI_TEXT = {
   },
   en: {
     app_title: "Bazi Workbench", nav_profiles: "Profiles", nav_measure: "Reading", logout_button: "Log Out",
+    mode_reading: "Reading", mode_practitioner: "Practitioner", mode_observe: "Admin Observe",
     pillars_form_title: "Four Pillars", year_pillar: "Year", month_pillar: "Month", day_pillar: "Day", hour_pillar: "Hour",
     user_focus: "Your Focus", recommended_question: "Suggested Question", flow_year: "Flow Year", luck_pillar: "Luck Cycle", flow_month: "Flow Month",
     profile_title: "Profile", profile_manage: "Manage Profiles",
@@ -133,6 +136,7 @@ const UI_TEXT = {
   },
   ko: {
     app_title: "사주 분석 작업대", nav_profiles: "프로필", nav_measure: "분석", logout_button: "로그아웃",
+    mode_reading: "분석", mode_practitioner: "명리사 보정", mode_observe: "관리자 관측",
     pillars_form_title: "사주팔자", year_pillar: "연주", month_pillar: "월주", day_pillar: "일주", hour_pillar: "시주",
     user_focus: "관심 주제", recommended_question: "추천 질문", flow_year: "세운", luck_pillar: "대운", flow_month: "월운",
     profile_title: "프로필", profile_manage: "프로필 관리",
@@ -385,6 +389,7 @@ const renderRuntime = (result) => {
   if (questionIdInput) questionIdInput.value = selectedQuestionId;
 
   document.body.dataset.role = role;
+  applyWorkbenchMode(role);
   renderObservationAccess(role);
   renderFeatureStateAccess(role);
 
@@ -435,6 +440,25 @@ const renderObservationAccess = (role) => {
   page.hidden = !isAdmin;
   if (status) status.textContent = isAdmin ? "管理员可见" : "仅管理员";
   setObservationCollapsed(page.classList.contains("collapsed"));
+};
+
+const allowedWorkbenchModes = (role) => {
+  if (role === "admin") return ["reading", "practitioner", "observe"];
+  if (role === "analyst") return ["reading", "practitioner"];
+  return ["reading"];
+};
+
+const applyWorkbenchMode = (role = measurementRole(roleSelect.value), requested = state.workbenchMode) => {
+  const allowed = allowedWorkbenchModes(role);
+  const mode = allowed.includes(requested) ? requested : "reading";
+  state.workbenchMode = mode;
+  document.body.dataset.workbenchMode = mode;
+  document.querySelectorAll("[data-workbench-mode-target]").forEach((button) => {
+    const target = button.dataset.workbenchModeTarget;
+    button.hidden = !allowed.includes(target);
+    button.classList.toggle("active", target === mode);
+    button.setAttribute("aria-pressed", target === mode ? "true" : "false");
+  });
 };
 
 const renderFeatureStateAccess = (role) => {
@@ -1474,6 +1498,7 @@ const loadCurrentSession = async () => {
       const isGuest = session.username === "guest" || String(session.user_id || "").startsWith("guest_");
       document.body.dataset.role = isGuest ? "guest" : role;
       renderGuestNavigation(isGuest);
+      applyWorkbenchMode(isGuest ? "guest" : role);
       renderObservationAccess(role);
       renderFeatureStateAccess(role);
     }
@@ -1483,6 +1508,7 @@ const loadCurrentSession = async () => {
     const isGuest = session.username === "guest" || String(session.user_id || "").startsWith("guest_");
     if (logoutButton) logoutButton.hidden = !result.authenticated || isGuest;
   } catch (error) {
+    applyWorkbenchMode("user");
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = true;
     });
@@ -1547,6 +1573,7 @@ const applyLocale = (locale) => {
 };
 
 const renderInitialPanels = () => {
+  applyWorkbenchMode(measurementRole(roleSelect.value));
   renderObservationAccess(measurementRole(roleSelect.value));
   renderFeatureStateAccess(measurementRole(roleSelect.value));
   renderPillars({});
@@ -1851,10 +1878,16 @@ document.querySelector("#observationToggle")?.addEventListener("click", () => {
   const root = document.querySelector("#observationPage");
   setObservationCollapsed(!root?.classList.contains("collapsed"));
 });
+document.querySelectorAll("[data-workbench-mode-target]").forEach((button) => {
+  button.addEventListener("click", () => {
+    applyWorkbenchMode(measurementRole(roleSelect.value), button.dataset.workbenchModeTarget || "reading");
+  });
+});
 logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#runtimeStatus", error.message)));
 
 localeSelect.value = localStorage.getItem("v20_locale") || localeSelect.value || "zh";
 roleSelect.value = measurementRole(roleSelect.value);
+applyWorkbenchMode(measurementRole(roleSelect.value));
 document.body.classList.toggle("profile-reading", Boolean(params.get("profile_id")));
 hydrateFormFromParams();
 applyLocale(localeSelect.value);

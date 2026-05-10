@@ -26,7 +26,7 @@
       </header>
 
       <main class="measure-layout">
-        <aside class="control-panel" aria-label="测算输入">
+        <aside class="control-panel" data-workbench-section="input" aria-label="测算输入">
           <form id="measureForm">
             <input type="hidden" name="input_id" id="inputId" value="" />
             <input type="hidden" name="role_key" id="roleSelect" value="user" />
@@ -82,6 +82,12 @@
         </aside>
 
         <section class="result-stage" aria-live="polite">
+          <nav class="workbench-mode-bar" aria-label="工作台视图">
+            <button type="button" class="active" data-workbench-mode-target="reading" data-ui="mode_reading">测算阅读</button>
+            <button type="button" data-workbench-mode-target="practitioner" data-ui="mode_practitioner" hidden>命理师校准</button>
+            <button type="button" data-workbench-mode-target="observe" data-ui="mode_observe" hidden>管理员观测</button>
+          </nav>
+
           <section id="selectedProfileCard" class="context-strip" hidden>
             <div>
               <p class="section-kicker">Profile</p>
@@ -93,7 +99,7 @@
 
 
 
-          <section class="dashboard-grid">
+          <section class="dashboard-grid" data-workbench-section="structure">
             <article class="panel chart-panel">
               <div class="section-head">
                 <div>
@@ -131,7 +137,7 @@
               <div id="featureChips" class="feature-grid"></div>
             </article>
 
-            <article id="practitionerCalibration" class="panel calibration-panel-card collapsed" hidden>
+            <article id="practitionerCalibration" class="panel calibration-panel-card collapsed" data-workbench-section="practitioner" hidden>
               <button id="practitionerToggle" class="collapse-toggle" type="button" aria-expanded="false" aria-controls="calibrationControls">
                 <div>
                   <p class="section-kicker">Practitioner</p>
@@ -147,7 +153,7 @@
 
           </section>
 
-          <section id="observationPage" class="observation-page collapsed" hidden>
+          <section id="observationPage" class="observation-page collapsed" data-workbench-section="observe" hidden>
             <button id="observationToggle" class="observation-toggle" type="button" aria-expanded="false" aria-controls="observationBody">
               <div>
                 <p class="section-kicker">Observation</p>
@@ -219,7 +225,7 @@
             </div>
           </section>
 
-          <section class="answer-grid">
+          <section class="answer-grid" data-workbench-section="answer">
             <article class="panel answer-panel">
               <div class="section-head">
                 <div>
@@ -259,6 +265,6 @@
         </section>
       </main>
     </div>
-    <script src="app.js?v=20.3.5"></script>
+    <script src="app.js?v=20.3.6-workbench-modes"></script>
   </body>
 </html>

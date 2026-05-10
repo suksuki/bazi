@@ -429,6 +429,59 @@ textarea:focus {
   min-width: 0;
 }
 
+.workbench-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  overflow-x: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0c1312;
+  padding: 8px;
+}
+
+.workbench-mode-bar button {
+  flex: 0 0 auto;
+  min-height: 34px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #101817;
+  color: var(--soft);
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  padding: 7px 11px;
+}
+
+.workbench-mode-bar button.active {
+  border-color: rgba(71, 179, 125, 0.56);
+  background: var(--green-soft);
+  color: #dff7e8;
+}
+
+body[data-workbench-mode="reading"] [data-workbench-section="practitioner"],
+body[data-workbench-mode="reading"] [data-workbench-section="observe"],
+body[data-workbench-mode="practitioner"] [data-workbench-section="answer"],
+body[data-workbench-mode="practitioner"] [data-workbench-section="observe"],
+body[data-workbench-mode="observe"] [data-workbench-section="answer"],
+body[data-workbench-mode="observe"] [data-workbench-section="practitioner"] {
+  display: none !important;
+}
+
+body[data-workbench-mode="practitioner"] .dashboard-grid,
+body[data-workbench-mode="observe"] .dashboard-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+body[data-workbench-mode="practitioner"] .chart-panel,
+body[data-workbench-mode="practitioner"] .feature-spine-panel,
+body[data-workbench-mode="practitioner"] .calibration-panel-card,
+body[data-workbench-mode="observe"] .chart-panel,
+body[data-workbench-mode="observe"] .feature-spine-panel,
+body[data-workbench-mode="observe"] .structure-dynamics-panel {
+  grid-column: 1 / -1;
+}
+
 .context-strip,
 .profile-command-panel {
   display: flex;

@@ -112,7 +112,7 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert page.status_code == 200
     assert "V20 命理测算台" in page.text
     assert "styles.css?v=20260505-glass" in page.text
-    assert "app.js?v=20.3.5" in page.text
+    assert "app.js?v=20.3.6-workbench-modes" in page.text
     assert "/v20/ui/qiazhi-logo-mark.png" in page.text
     assert "brand-logo" in page.text
     assert "flow_year_pillar" in page.text
@@ -134,12 +134,12 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert "chatTranscript" in page.text
     assert "interactionSignals" not in page.text
     assert "practitionerCalibration" in page.text
-    assert 'id="practitionerCalibration" class="panel calibration-panel-card collapsed" hidden' in page.text
+    assert 'id="practitionerCalibration" class="panel calibration-panel-card collapsed" data-workbench-section="practitioner" hidden' in page.text
     assert "calibrationControls" in page.text
     assert "latentCalibration" in page.text
     assert "latentCalibrationControls" in page.text
     assert "observationPage" in page.text
-    assert 'id="observationPage" class="observation-page collapsed" hidden' in page.text
+    assert 'id="observationPage" class="observation-page collapsed" data-workbench-section="observe" hidden' in page.text
     assert "observationToggle" in page.text
     assert 'id="observationToggle" class="observation-toggle" type="button" aria-expanded="false"' in page.text
     assert "observationBody" in page.text
@@ -249,6 +249,16 @@ def test_v20_ui_static_shell_is_served_from_v20_directory() -> None:
     assert ".observation-page" in style.text
     assert ".observation-grid" in style.text
     assert ".observation-toggle" in style.text
+    assert ".workbench-mode-bar" in style.text
+    assert 'data-workbench-mode-target="reading"' in page.text
+    assert 'data-workbench-mode-target="practitioner"' in page.text
+    assert 'data-workbench-mode-target="observe"' in page.text
+    assert 'data-workbench-section="answer"' in page.text
+    assert 'data-workbench-section="practitioner"' in page.text
+    assert 'data-workbench-section="observe"' in page.text
+    assert "const allowedWorkbenchModes" in script.text
+    assert "applyWorkbenchMode" in script.text
+    assert "params.get(\"role\")" not in script.text
     assert ".orchestrator-trace-card" in style.text
     assert ".orchestrator-step-row" in style.text
     assert ".collapse-toggle" in style.text
