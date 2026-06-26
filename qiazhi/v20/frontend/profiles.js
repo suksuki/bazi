@@ -6,7 +6,7 @@ const editor = document.querySelector("#profileEditor");
 const editorTitle = document.querySelector("#profileEditorTitle");
 const cancelProfileEdit = document.querySelector("#cancelProfileEdit");
 const saveProfileButton = document.querySelector("#saveProfileButton");
-const state = { profiles: [], editingProfileId: "" };
+const state = { profiles: [], editingProfileId: "", sessionRole: "user" };
 
 const PROFILE_TEXT = {
   zh: {
@@ -228,8 +228,11 @@ const toggleLunarLeapMonth = () => {
 const loadMe = async () => {
   const result = await requestJson("/api/v20/auth/me");
   const session = result.session || {};
-  document.body.dataset.role = session.role || "user";
+  state.sessionRole = session.role || "user";
+  document.body.dataset.role = state.sessionRole;
   document.body.dataset.ownerId = session.user_id || "";
+  const measureLink = document.querySelector('[data-profile-ui="nav_measure"]');
+  if (measureLink) measureLink.href = workbenchPageForRole(state.sessionRole);
   document.querySelectorAll(".admin-nav-link").forEach((node) => {
     node.hidden = session.role !== "admin";
   });
@@ -367,8 +370,10 @@ const profilePayloadFromEditor = () => ({
 
 const measureUrl = (profile) => {
   const query = new URLSearchParams({ profile_id: profile.profile_id || "" });
-  return `/v20/ui/workbench.html?${query.toString()}`;
+  return `${workbenchPageForRole(state.sessionRole)}?${query.toString()}`;
 };
+
+const workbenchPageForRole = (role) => window.QiazhiWorkbenchRoutes.pageForRole(role);
 
 const profileMeta = (profile) => {
   const birth = profile.birth_input || {};

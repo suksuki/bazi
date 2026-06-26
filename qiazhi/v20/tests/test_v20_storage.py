@@ -1,7 +1,8 @@
 from __future__ import annotations
 
+import json
+
 from v20.corpus.storage import corpus_postgres_index_plan, corpus_storage_policy
-from v20.learning.decision_registry_iteration import write_decision_registry_iteration_artifact
 from v20.storage.postgres_decision_import import build_decision_registry_postgres_import_plan
 from v20.storage.postgres_schema import build_postgres_schema_contract, migration_manifest
 
@@ -73,7 +74,24 @@ def test_v20_corpus_storage_policy_makes_sqlite_disposable() -> None:
 
 
 def test_v20_decision_registry_import_is_explicit_and_postgres_authoritative(tmp_path) -> None:
-    write_decision_registry_iteration_artifact(output_dir=tmp_path, per_rule=2)
+    latest = tmp_path / "latest.json"
+    latest.write_text(
+        json.dumps(
+            {
+                "status": "ready",
+                "records": [
+                    {
+                        "decision_id": "decision.test.1",
+                        "subject_id": "rule.test",
+                        "decision_status": "active",
+                        "runtime_allowed": True,
+                    }
+                ],
+            },
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
     plan = build_decision_registry_postgres_import_plan(artifact_dir=tmp_path, database_url="", apply=False)
     blocked = build_decision_registry_postgres_import_plan(artifact_dir=tmp_path, database_url="", apply=True)
 

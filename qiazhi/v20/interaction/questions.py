@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import hashlib
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from dataclasses import replace
 from typing import Any
 
@@ -42,6 +42,13 @@ class QuestionCandidate:
     source_decision_status: str = ""
     source_decision_label: str = ""
     question_strategy: str = ""
+    next_question_atom_id: str = ""
+    next_question_topic: str = ""
+    next_question_stage: str = ""
+    next_question_score: float = 0.0
+    next_question_score_reasons: tuple[str, ...] = ()
+    display_title: str = ""
+    question_anchor: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)

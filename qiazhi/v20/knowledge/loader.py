@@ -9,12 +9,14 @@ from collections.abc import Iterable
 from v20.interaction.questions import QUESTION_LABELS
 from v20.knowledge.schema import (
     KnowledgeAnswerGuidance,
+    KnowledgeCounterexample,
     KnowledgePortraitMapping,
     KnowledgeQuestionMapping,
     KnowledgeRuleAtom,
     KnowledgeUnit,
 )
 from v20.knowledge.draft_import import _seed_paths
+from v20.knowledge.structure_mechanisms import structure_mechanism_units
 
 
 _DEFAULT_KNOWLEDGE_DRAFT_ROOT = Path(__file__).resolve().parents[2] / "docs" / "bazi_knowledge"
@@ -901,9 +903,346 @@ def default_knowledge_units() -> tuple[KnowledgeUnit, ...]:
                 ),
             ),
         ),
+        KnowledgeUnit(
+            "v20.calendar.birth_time_boundary",
+            "Birth-time and solar-time boundary",
+            "time",
+            "排盘前必须标记出生地、时区、真太阳时、节气切换和早晚子时等时间层边界。",
+            "Use supplied birth location, timezone, solar-time correction, jieqi boundary, and zi-hour policy before treating a pillar as stable.",
+            "缺少出生地、时区或节气边界信息时，只能标记排盘不确定性，不能把时柱或月柱当作完全稳定事实。",
+            source_refs=("docs/v20.knowledge.calendar_boundary",),
+            feature_hooks=("feature.time.calendar_boundary",),
+            question_hooks=("q_time_layer_context",),
+            retrieval_tags=("calendar_boundary", "true_solar_time", "zi_hour", "jieqi", "birth_location"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "calendar.birth_time.boundary_check",
+                    "calendar_boundary_gate",
+                    "requires_any",
+                    "birth_location|timezone|true_solar_time|jieqi_boundary|early_late_zi_hour",
+                    "condition",
+                    0.78,
+                    boundary="排盘边界只影响事实稳定性，不直接生成命理结论。",
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.calendar_boundary",
+                    "排盘时间边界",
+                    "time",
+                    "先确认时区、真太阳时和节气边界，避免时柱或月柱误差污染后续判断。",
+                    "cool",
+                    from_rule_atoms=("calendar.birth_time.boundary_check",),
+                    question_seeds=("出生时间边界会不会影响时柱或月令？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_time_layer_context",
+                    "出生时间边界会不会影响时柱或月令？",
+                    "time",
+                    trigger_rule_atoms=("calendar.birth_time.boundary_check",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.calendar.boundary",
+                    "time",
+                    "先说明排盘边界，再说明哪些判断需要保留不确定性。",
+                    allowed_phrases=("出生地", "时区", "真太阳时", "节气", "排盘边界", "不确定性"),
+                    forbidden_phrases=("已经确定", "无需校正", "一定不影响"),
+                    boundary="Do not treat unstable calendar metadata as confirmed chart facts.",
+                ),
+            ),
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "calendar.boundary.missing_birth_location",
+                    "缺少出生地或时区时，真太阳时和时柱边界不能被视为稳定。",
+                    blocks_rule_atoms=("calendar.birth_time.boundary_check",),
+                    required_evidence=("birth_location", "timezone", "solar_time_policy"),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.calendar.hidden_stem_weight_boundary",
+            "Hidden-stem weight boundary",
+            "element",
+            "藏干和通根只能作为基础材料的权重来源，必须和透干、月令、根气一起看。",
+            "Use hidden stems, root strength, visible stems, and month command before changing element balance or capacity judgment.",
+            "不能只凭一个藏干、一个通根或一个余气就直接改强弱、用神或领域结论。",
+            source_refs=("docs/v20.knowledge.hidden_stem_weight_boundary",),
+            feature_hooks=("feature.element", "feature.strength"),
+            question_hooks=("q_element_balance",),
+            retrieval_tags=("hidden_stem", "root_weight", "month_command", "foundation"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "calendar.hidden_stem.weight_boundary",
+                    "hidden_stem_weight_gate",
+                    "requires",
+                    "hidden_stem+root_strength+visible_stem+month_command",
+                    "condition",
+                    0.77,
+                    boundary="Hidden stems change evidence weight, not direct outcome.",
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.hidden_stem_weight_boundary",
+                    "藏干通根权重",
+                    "element",
+                    "藏干、通根和月令一起决定基础材料权重，不能单独抢结论。",
+                    "cool",
+                    from_rule_atoms=("calendar.hidden_stem.weight_boundary",),
+                    question_seeds=("藏干和通根会怎样影响五行权重？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_element_balance",
+                    "藏干和通根会怎样影响五行权重？",
+                    "element",
+                    trigger_rule_atoms=("calendar.hidden_stem.weight_boundary",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.hidden_stem.weight_boundary",
+                    "element",
+                    "先说明藏干、通根、透干和月令的权重关系，再进入强弱或用神候选。",
+                    allowed_phrases=("藏干", "通根", "透干", "月令", "权重", "候选"),
+                    forbidden_phrases=("一个藏干决定", "一个通根就定", "必然成格"),
+                    boundary="Do not let a single hidden stem override multi-layer evidence.",
+                ),
+            ),
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "hidden_stem.single_evidence_overreach",
+                    "只有一个藏干或余气而没有透干、根气、月令配合时，不能直接改强弱或用神。",
+                    blocks_rule_atoms=("calendar.hidden_stem.weight_boundary",),
+                    required_evidence=("hidden_stem", "root_strength", "month_command", "visible_stem"),
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.climate.month_command_adjustment",
+            "Month-command climate adjustment",
+            "element",
+            "调候必须从日主、月令和寒暖燥湿入手，再和扶抑、通关、病药路径一起仲裁。",
+            "Use day master element, month command, season climate, and dry-wet/cold-warm pressure before ranking climate needs.",
+            "调候不足不能直接断健康、吉凶或具体事件，只能影响用神候选和回答边界。",
+            source_refs=("docs/v20.knowledge.climate_month_command_adjustment",),
+            feature_hooks=("feature.element", "feature.useful_god"),
+            question_hooks=("q_element_balance",),
+            retrieval_tags=("climate", "month_command", "useful_god", "cold_warm_dry_wet"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "climate.month_command.adjustment_gate",
+                    "climate_adjustment_gate",
+                    "requires",
+                    "day_master_element+month_command+season_climate+cold_warm_dry_wet",
+                    "condition",
+                    0.79,
+                    boundary="Climate adjustment ranks candidate needs, not final fortune.",
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.climate_adjustment",
+                    "调候候选",
+                    "element",
+                    "按日主、月令、寒暖燥湿生成调候候选，再交给用神路径仲裁。",
+                    "warm",
+                    from_rule_atoms=("climate.month_command.adjustment_gate",),
+                    question_seeds=("这个盘的调候先看月令还是五行偏枯？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_element_balance",
+                    "这个盘的调候先看月令还是五行偏枯？",
+                    "element",
+                    trigger_rule_atoms=("climate.month_command.adjustment_gate",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.climate.adjustment_boundary",
+                    "element",
+                    "先讲日主和月令的气候压力，再说明调候只是候选路径。",
+                    allowed_phrases=("日主", "月令", "寒暖", "燥湿", "调候候选"),
+                    forbidden_phrases=("调候必然", "一定有病", "一定发财"),
+                    boundary="Climate evidence must stay inside candidate and boundary language.",
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.useful_god_arbitration.conflict_path",
+            "Useful-god conflict arbitration",
+            "useful_god",
+            "用神冲突要把扶抑、调候、通关、病药分成候选路径，并记录反证和降权原因。",
+            "Use capacity state, climate need, element flow, structural block, and counter-evidence before ranking useful-god candidates.",
+            "不能把多个候选路径直接压成一个固定喜忌，也不能跳过反证。",
+            source_refs=("docs/v20.knowledge.useful_god_conflict_arbitration",),
+            feature_hooks=("feature.useful_god", "feature.element", "feature.strength"),
+            question_hooks=("q_useful_god_candidates", "q_useful_god_evidence_gaps"),
+            retrieval_tags=("useful_god", "arbitration", "support", "climate", "channel", "counterevidence"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "useful_god.conflict.arbitration_path",
+                    "useful_god_arbitration_gate",
+                    "requires",
+                    "capacity_state+climate_need+element_flow+counterevidence",
+                    "candidate_gate",
+                    0.82,
+                    boundary="Useful-god arbitration preserves competing candidates until evidence ranks them.",
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.useful_god_arbitration",
+                    "用神路径仲裁",
+                    "useful_god",
+                    "把扶抑、调候、通关、病药分开排序，保留证据不足和反证。",
+                    "warm",
+                    from_rule_atoms=("useful_god.conflict.arbitration_path",),
+                    question_seeds=("多个用神候选冲突时，应该先仲裁哪条路径？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_useful_god_candidates",
+                    "多个用神候选冲突时，应该先仲裁哪条路径？",
+                    "useful_god",
+                    trigger_rule_atoms=("useful_god.conflict.arbitration_path",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.useful_god.arbitration_boundary",
+                    "useful_god",
+                    "列出候选路径、支持证据和反证，不把候选直接说成固定喜忌。",
+                    allowed_phrases=("候选路径", "扶抑", "调候", "通关", "反证", "降权"),
+                    forbidden_phrases=("唯一用神", "必定喜", "必定忌"),
+                    boundary="Do not collapse useful-god candidates into fixed favorable/unfavorable labels.",
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.time.trigger_stack_boundary",
+            "Time-trigger stack boundary",
+            "time",
+            "时间层必须按原局、大运、流年、流月分层进入，只能描述触发候选和牵动位置。",
+            "Use natal layer, luck pillar, flow year, flow month, and relation trigger before naming a time-layer signal.",
+            "不能从一个流年或一个冲合直接断具体日期、事件成败或必然发生。",
+            source_refs=("docs/v20.knowledge.time_trigger_stack_boundary",),
+            feature_hooks=("feature.time",),
+            question_hooks=("q_time_layer_context", "q_time_relation_triggers"),
+            retrieval_tags=("time_stack", "luck_pillar", "flow_year", "flow_month", "trigger_relation"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "time.trigger_stack.layered_gate",
+                    "time_trigger_stack_gate",
+                    "requires",
+                    "natal_layer+luck_pillar+flow_year+flow_month+trigger_relation",
+                    "condition",
+                    0.8,
+                    boundary="Time triggers explain layered activation, not exact events.",
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.time_trigger_stack",
+                    "岁运触发栈",
+                    "time",
+                    "把原局、大运、流年、流月分层看，只输出牵动候选和证据边界。",
+                    "hot",
+                    from_rule_atoms=("time.trigger_stack.layered_gate",),
+                    question_seeds=("大运流年流月分别牵动了原局哪一层？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_time_relation_triggers",
+                    "大运流年流月分别牵动了原局哪一层？",
+                    "time",
+                    trigger_rule_atoms=("time.trigger_stack.layered_gate",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.time.trigger_stack_boundary",
+                    "time",
+                    "按原局、大运、流年、流月说明牵动位置，不给确定事件和日期。",
+                    allowed_phrases=("原局", "大运", "流年", "流月", "牵动", "候选"),
+                    forbidden_phrases=("必然发生", "具体日期", "一定成败"),
+                    boundary="Do not predict exact event timing from a single time-layer trigger.",
+                ),
+            ),
+        ),
+        KnowledgeUnit(
+            "v20.auxiliary.common_symbol_low_weight",
+            "Auxiliary-symbol low-weight boundary",
+            "pattern",
+            "神煞、空亡、十二长生和纳音只能作为格局与时间层之外的低权重辅助提示。",
+            "Use auxiliary symbols only after core pattern, ten-god, strength, branch, and time evidence are already present.",
+            "辅助符号不能抢占主线，不能单独判断吉凶、婚恋、疾病、财富或具体事件。",
+            source_refs=("docs/v20.knowledge.auxiliary_symbol_boundary",),
+            feature_hooks=("feature.pattern.auxiliary_archive",),
+            question_hooks=("q_pattern_structure",),
+            retrieval_tags=("shensha", "empty_branch", "twelve_growth_stage", "nayin", "auxiliary_archive"),
+            rule_atoms=(
+                KnowledgeRuleAtom(
+                    "auxiliary.symbol.low_weight_gate",
+                    "auxiliary_symbol_boundary",
+                    "requires",
+                    "core_pattern_or_time_evidence+auxiliary_symbol",
+                    "boundary",
+                    0.62,
+                    boundary="辅助符号只做低权重补充，不作为第一主线。",
+                ),
+            ),
+            portrait_mappings=(
+                KnowledgePortraitMapping(
+                    "portrait.auxiliary_symbol_boundary",
+                    "辅助符号边界",
+                    "pattern",
+                    "神煞、空亡、十二长生、纳音只作为补充提示，必须回到格局和结构证据。",
+                    "cool",
+                    from_rule_atoms=("auxiliary.symbol.low_weight_gate",),
+                    question_seeds=("这些辅助符号只是提示，还是会影响主线？",),
+                ),
+            ),
+            question_mappings=(
+                KnowledgeQuestionMapping(
+                    "q_pattern_structure",
+                    "这些辅助符号只是提示，还是会影响主线？",
+                    "pattern",
+                    trigger_rule_atoms=("auxiliary.symbol.low_weight_gate",),
+                ),
+            ),
+            answer_guidance=(
+                KnowledgeAnswerGuidance(
+                    "answer.auxiliary_symbol.boundary",
+                    "pattern",
+                    "先说明辅助符号低权重，再回到格局、十神、强弱和时间层证据。",
+                    allowed_phrases=("辅助提示", "低权重", "需要回到格局", "不能单独判断"),
+                    forbidden_phrases=("神煞决定", "空亡必然", "纳音直接断", "一定发生"),
+                    boundary="Auxiliary symbols must not override core bazi structure.",
+                ),
+            ),
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "auxiliary.symbol.no_core_evidence",
+                    "只有神煞或空亡而没有格局、十神、强弱、时间层证据时，不能生成主线结论。",
+                    blocks_rule_atoms=("auxiliary.symbol.low_weight_gate",),
+                    required_evidence=("pattern_evidence", "ten_god_evidence", "time_evidence"),
+                ),
+            ),
+        ),
     )
     return _merge_knowledge_units(
         core_units,
+        _structure_mechanism_knowledge_units(),
         _expanded_knowledge_units(),
         _draft_knowledge_units(),
     )
@@ -917,6 +1256,135 @@ def _merge_knowledge_units(*groups: Iterable[KnowledgeUnit]) -> tuple[KnowledgeU
             if knowledge_id not in merged:
                 merged[knowledge_id] = unit
     return tuple(merged.values())
+
+
+def _structure_mechanism_knowledge_units() -> tuple[KnowledgeUnit, ...]:
+    rows: list[KnowledgeUnit] = []
+    for unit in structure_mechanism_units():
+        slug = _slug_id(unit.label)
+        atom_id = f"structure.mechanism.{slug}.gate"
+        question_hooks = _structure_mechanism_question_hooks(unit.domain)
+        rows.append(
+            KnowledgeUnit(
+                knowledge_id=f"v20.structure.mechanism.{slug}",
+                title=f"结构动态机制：{unit.label}",
+                domain=unit.domain,
+                summary=f"{unit.label}用于解释当前八字做功链的结构性质，必须回到原局、大运、流年和日主承载。",
+                evidence_template=(
+                    "Use primary_dynamic_chain family_chain, node_labels, edge_labels, current chart facts, "
+                    "luck/flow-year context, and counterexample mechanisms before naming this structure."
+                ),
+                boundary=unit.boundary,
+                source_refs=("knowledge.structure_mechanisms", "docs/V20_STRUCTURE_DYNAMICS_V2_REDESIGN.md"),
+                feature_hooks=_structure_mechanism_feature_hooks(unit.domain),
+                question_hooks=question_hooks,
+                retrieval_tags=("structure_dynamics", "dynamic_work_path", unit.label, unit.semantic_key),
+                rule_atoms=(
+                    KnowledgeRuleAtom(
+                        atom_id,
+                        "structure_dynamic_mechanism_gate",
+                        "requires",
+                        "+".join(unit.exact_family_chain or tuple(f"{left}->{right}" for left, right in unit.required_pairs) or (unit.label,)),
+                        "condition",
+                        0.78,
+                        boundary=unit.boundary,
+                    ),
+                ),
+                portrait_mappings=(
+                    KnowledgePortraitMapping(
+                        f"portrait.structure_mechanism.{slug}",
+                        unit.label,
+                        unit.domain,
+                        f"围绕当前八字的{unit.label}做功链，看哪里承接、哪里受阻、是否被岁运改写。",
+                        "warm",
+                        from_rule_atoms=(atom_id,),
+                        question_seeds=(_structure_mechanism_question_title(unit.label, unit.domain),),
+                    ),
+                ),
+                question_mappings=(
+                    KnowledgeQuestionMapping(
+                        question_hooks[0],
+                        _structure_mechanism_question_title(unit.label, unit.domain),
+                        unit.domain,
+                        trigger_rule_atoms=(atom_id,),
+                    ),
+                ),
+                answer_guidance=(
+                    KnowledgeAnswerGuidance(
+                        f"answer.structure_mechanism.{slug}",
+                        unit.domain,
+                        f"先说明{unit.label}的路径、承接和反向约束，再说明边界。",
+                        allowed_phrases=("做功链", "承接", "受阻", "岁运", "边界"),
+                        forbidden_phrases=("必然", "一定", "注定", "保证"),
+                        boundary=unit.boundary,
+                    ),
+                ),
+                counterexamples=_structure_mechanism_counterexamples(unit.label, atom_id),
+            )
+        )
+    return tuple(rows)
+
+
+def _structure_mechanism_feature_hooks(domain: str) -> tuple[str, ...]:
+    hooks = {
+        "career": ("feature.ten_god", "feature.pattern", "feature.time"),
+        "wealth": ("feature.wealth", "feature.ten_god", "feature.time"),
+        "strength": ("feature.strength", "feature.ten_god", "feature.time"),
+        "ten_god": ("feature.ten_god", "feature.pattern", "feature.time"),
+    }.get(domain, ("feature.pattern", "feature.ten_god", "feature.time"))
+    return hooks
+
+
+def _structure_mechanism_question_hooks(domain: str) -> tuple[str, ...]:
+    allowed = _allowed_question_hooks_for_domain(domain)
+    if domain == "career" and "q_career_structure" in allowed:
+        return ("q_career_structure",)
+    if domain == "wealth" and "q_income_stability" in allowed:
+        return ("q_income_stability",)
+    if domain == "strength" and "q_strength_assessment" in allowed:
+        return ("q_strength_assessment",)
+    if domain == "ten_god" and "q_ten_god_focus" in allowed:
+        return ("q_ten_god_focus",)
+    return (allowed[0],)
+
+
+def _structure_mechanism_question_title(label: str, domain: str) -> str:
+    if domain == "career":
+        return f"{label}这条做功链，在事业结构里先看压力、承接还是发挥？"
+    if domain == "wealth":
+        return f"{label}这条做功链，对财星承接和限制分别说明什么？"
+    if domain == "strength":
+        return f"{label}这条做功链，对日主承载说明什么？"
+    return f"{label}这条做功链，先看哪一个承接和边界？"
+
+
+def _structure_mechanism_counterexamples(label: str, atom_id: str) -> tuple[KnowledgeCounterexample, ...]:
+    if label in {"食伤生财", "财生官/财滋杀"}:
+        return (
+            KnowledgeCounterexample(
+                f"counter.structure.{_slug_id(label)}.peer_or_resource_blocker",
+                "如果比劫分夺、财破印或岁运阻断成为更强路径，不能把财星链直接说成结果。",
+                blocks_rule_atoms=(atom_id,),
+                required_evidence=("primary_dynamic_chain", "counterexample_semantic_candidates", "time_relation_blockers"),
+            ),
+        )
+    if label in {"食神制杀", "伤官制杀", "输出制官杀"}:
+        return (
+            KnowledgeCounterexample(
+                f"counter.structure.{_slug_id(label)}.authority_output_boundary",
+                "如果输出星无力、官杀混杂或印星承接不足，只能保留制化候选，不能直接定事业结果。",
+                blocks_rule_atoms=(atom_id,),
+                required_evidence=("primary_dynamic_chain", "day_master_capacity", "resource_or_time_support"),
+            ),
+        )
+    return (
+        KnowledgeCounterexample(
+            f"counter.structure.{_slug_id(label)}.context_boundary",
+            "如果当前八字、大运或流年不支持该路径承接，只能作为候选机制，不升级为主线判断。",
+            blocks_rule_atoms=(atom_id,),
+            required_evidence=("bazi_context_frame", "primary_dynamic_chain", "time_context"),
+        ),
+    )
 
 
 def _draft_knowledge_units(*, source_root: Path | None = None) -> tuple[KnowledgeUnit, ...]:
@@ -1662,6 +2130,14 @@ def _expanded_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             "学业考试看印星吸收、食伤表达、规则压力和承载力。",
             "q_career_structure",
             "学业考试先看印星、食伤，还是官杀规则？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "study_exam.result_overreach",
+                    "只有印星、食伤或官杀材料时，不能承诺考试成绩、录取、排名或证书结果。",
+                    blocks_rule_atoms=("career.study_exam.learning_path",),
+                    required_evidence=("resource_star", "output_star", "authority_star", "capacity", "time_context"),
+                ),
+            ),
         ),
         _unit(
             "v20.applied.family_parent_resource",
@@ -1683,6 +2159,33 @@ def _expanded_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             "家庭主题先看印星来源，还是宫位互动？",
         ),
         _unit(
+            "v20.applied.children_family_context",
+            "Children and family context",
+            "relationship",
+            "子女家庭主题先看食伤、时柱位置、承接压力和时间层牵动，只讨论结构关系。",
+            "Use output star, hour-pillar position, branch interaction, capacity, and explicit time context as evidence.",
+            "Do not infer pregnancy, child outcome, family privacy, birth timing, or guaranteed family events.",
+            ("feature.ten_god", "feature.branch", "feature.strength", "feature.time"),
+            ("q_relationship_structure", "q_time_layer_context"),
+            ("application", "children", "family", "hour_pillar", "output_star"),
+            "relationship.children_family.context",
+            "children_family_gate",
+            "output_star+hour_pillar+branch_interaction+capacity+time_context",
+            "portrait.children_family_context",
+            "子女家庭结构",
+            "子女家庭主题看食伤、时柱、互动和承接边界，不推断隐私或确定事件。",
+            "q_relationship_structure",
+            "子女家庭主题先看食伤、时柱，还是时间层牵动？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "children_family.privacy_event_overreach",
+                    "只有食伤、时柱或互动材料时，不能推断怀孕、生育结果、家庭隐私或具体发生时间。",
+                    blocks_rule_atoms=("relationship.children_family.context",),
+                    required_evidence=("output_star", "hour_pillar", "branch_interaction", "capacity", "time_context"),
+                ),
+            ),
+        ),
+        _unit(
             "v20.applied.social_peer_network",
             "Social peer and network context",
             "relationship",
@@ -1700,6 +2203,14 @@ def _expanded_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             "人际主题看比劫合作竞争、表达方式和资源分配边界。",
             "q_relationship_structure",
             "人际合作里先看比劫、食伤，还是地支互动？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "social_peer.third_party_event_overreach",
+                    "只有比劫、食伤或地支互动时，不能推断背叛、诉讼、合作成败或第三方隐私。",
+                    blocks_rule_atoms=("relationship.social_peer.network",),
+                    required_evidence=("peer_star", "output_star", "branch_interaction", "wealth_authority_link"),
+                ),
+            ),
         ),
         _unit(
             "v20.applied.mobility_migration_branch_time",
@@ -1719,6 +2230,14 @@ def _expanded_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             "迁移变动只看结构牵动和承接，不断具体地点和结果。",
             "q_time_layer_context",
             "迁移变动是原局动象，还是大运流年触发？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "mobility_migration.date_result_overreach",
+                    "只有驿动象、冲动宫位或时间触发时，不能预测搬迁日期、出行事故、移民结果或必然迁移。",
+                    blocks_rule_atoms=("time.mobility.migration_context",),
+                    required_evidence=("movement_sign", "palace_position", "time_trigger", "receiving_structure"),
+                ),
+            ),
         ),
         _unit(
             "v20.applied.asset_cashflow_structure",
@@ -1738,6 +2257,284 @@ def _expanded_knowledge_units() -> tuple[KnowledgeUnit, ...]:
             "资产现金流要分材料、库藏、通道、约束和承接。",
             "q_income_stability",
             "财务结构先看现金流通道，还是库藏承接？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "asset_cashflow.amount_timing_overreach",
+                    "只有财星、库藏或通道材料时，不能预测资产价格、债务金额、投资收益或财务事件时间。",
+                    blocks_rule_atoms=("wealth.asset_cashflow.structure",),
+                    required_evidence=("wealth_material", "storage_branch", "output_channel", "constraint", "capacity"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.applied.housing_property_context",
+            "Housing and property context",
+            "wealth",
+            "房产居住主题要分财星材料、库藏承接、宫位动象、家庭约束和时间层触发。",
+            "Use wealth material, storage branch, branch movement, family relation context, capacity, and explicit time trigger as evidence.",
+            "Do not predict property price, purchase result, mortgage outcome, moving date, or guaranteed housing event.",
+            ("feature.wealth", "feature.branch", "feature.relationship", "feature.strength", "feature.time"),
+            ("q_income_stability", "q_time_layer_context"),
+            ("application", "housing", "property", "residence", "storage_branch"),
+            "wealth.housing_property.context",
+            "housing_property_gate",
+            "wealth_material+storage_branch+branch_movement+family_context+capacity+time_trigger",
+            "portrait.housing_property_context",
+            "房产居住结构",
+            "房产居住先看财库、动象、家庭约束和承接边界，不断价格、贷款或搬迁结果。",
+            "q_income_stability",
+            "房产居住主题先看财库承接，还是时间层动象？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "housing_property.transaction_overreach",
+                    "只有财库、动象或时间触发时，不能预测房价、购房结果、贷款成败、搬迁日期或确定房产事件。",
+                    blocks_rule_atoms=("wealth.housing_property.context",),
+                    required_evidence=("wealth_material", "storage_branch", "branch_movement", "family_context", "capacity", "time_trigger"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.applied.startup_management_context",
+            "Startup and management context",
+            "career",
+            "创业管理主题先看食伤输出、财星通道、官杀规则、比劫协作和日主承载。",
+            "Use output star, wealth channel, authority constraint, peer collaboration, capacity, and branch interaction as evidence.",
+            "Do not promise startup success, fundraising result, team stability, legal outcome, or profit timing.",
+            ("feature.ten_god", "feature.wealth", "feature.branch", "feature.strength", "feature.pattern"),
+            ("q_career_structure", "q_income_factors"),
+            ("application", "startup", "management", "team", "business_path"),
+            "career.startup_management.context",
+            "startup_management_gate",
+            "output_star+wealth_channel+authority_constraint+peer_collaboration+capacity",
+            "portrait.startup_management_context",
+            "创业管理结构",
+            "创业管理看输出、财路、规则压力、协作和承载力，不承诺成败或收益时间。",
+            "q_career_structure",
+            "创业管理先看输出财路，还是规则压力和团队协作？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "startup_management.success_profit_overreach",
+                    "只有输出、财路、官杀或比劫协作材料时，不能承诺创业成败、融资结果、团队稳定或收益时间。",
+                    blocks_rule_atoms=("career.startup_management.context",),
+                    required_evidence=("output_star", "wealth_channel", "authority_constraint", "peer_collaboration", "capacity"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.palace.topic_projection_boundary",
+            "Palace topic projection boundary",
+            "relationship",
+            "宫位象法只负责定位主题落点，必须和十神材料、地支互动、承载力和时间层合参。",
+            "Use palace position, ten-god material, branch interaction, capacity state, and explicit time trigger as evidence.",
+            "Do not infer spouse facts, family privacy, career outcome, child event, or exact timing from palace position alone.",
+            ("feature.branch", "feature.ten_god", "feature.strength", "feature.time"),
+            ("q_relationship_structure", "q_branch_relation_detail"),
+            ("palace", "topic_projection", "pillar_position", "boundary"),
+            "palace.topic_projection.boundary",
+            "palace_projection_gate",
+            "palace_position+ten_god_material+branch_interaction+capacity+time_trigger",
+            "portrait.palace_topic_projection",
+            "宫位主题投射",
+            "宫位先定位主题层，再用十神、地支、承载和时间证据复核。",
+            "q_relationship_structure",
+            "这个主题先看哪个宫位层，再由哪些证据复核？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "palace_projection.single_position_overreach",
+                    "只有年/月/日/时宫位或夫妻宫落点时，不能推断亲属隐私、伴侣事件、职业结果、子女事件或精确时间。",
+                    blocks_rule_atoms=("palace.topic_projection.boundary",),
+                    required_evidence=("palace_position", "ten_god_material", "branch_interaction", "capacity", "time_trigger"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.blind_lifa.auxiliary_boundary",
+            "Blind-lifa auxiliary boundary",
+            "pattern",
+            "盲派象法、做功和位置象只能作为辅助观察，必须回到十神、强弱、格局、地支和时间层证据。",
+            "Use action chain, actor-target-medium relation, structural confirmation, counterevidence, and time context as evidence.",
+            "Do not let blind-image clues override structure evidence or produce deterministic private event claims.",
+            ("feature.pattern", "feature.branch", "feature.ten_god", "feature.strength"),
+            ("q_pattern_structure",),
+            ("blind_lifa", "xiangfa", "zuogong", "auxiliary_boundary"),
+            "blind_lifa.auxiliary.boundary",
+            "blind_lifa_auxiliary_gate",
+            "action_chain+structural_confirmation+counterevidence+time_context",
+            "portrait.blind_lifa_auxiliary",
+            "盲派辅助边界",
+            "盲派取象只作线索入口，必须由结构证据和反证确认后再进入回答。",
+            "q_pattern_structure",
+            "这个象法线索有没有结构证据和反证支撑？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "blind_lifa.symbol_overrides_structure",
+                    "只有一个象、一个做功线索或一个位置象时，不能绕过强弱、十神、格局、地支和时间层证据直接断事件。",
+                    blocks_rule_atoms=("blind_lifa.auxiliary.boundary",),
+                    required_evidence=("action_chain", "structural_confirmation", "counterevidence", "time_context"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.ten_god.position_layer_boundary",
+            "Ten-god position layer boundary",
+            "ten_god",
+            "十神落年、月、日、时的主题层不同，必须同时看明透、暗藏、重复和混杂。",
+            "Use pillar position, visible-or-hidden source, repeated ten-god count, and mixed ten-god context as evidence.",
+            "Do not turn one visible ten-god position into a fixed personality, career, wealth, or relationship verdict.",
+            ("feature.ten_god", "feature.branch", "feature.strength"),
+            ("q_ten_god_focus", "q_hidden_stem_role"),
+            ("ten_god", "position_layer", "visible_hidden", "mixed"),
+            "ten_god.position.layer_boundary",
+            "ten_god_position_gate",
+            "pillar_position+visible_hidden_source+repeat_count+mixed_context",
+            "portrait.ten_god_position_layer",
+            "十神位置层",
+            "十神先分年/月/日/时位置和明暗来源，再进入主题投射。",
+            "q_ten_god_focus",
+            "这个十神先看落在哪一柱，还是先看明透暗藏？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "ten_god_position.single_visible_overreach",
+                    "只有一个明透十神或一个藏干十神时，不能直接断性格、职业、财富或关系结果。",
+                    blocks_rule_atoms=("ten_god.position.layer_boundary",),
+                    required_evidence=("pillar_position", "visible_hidden_source", "repeat_count", "mixed_context"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.branch.arbitration.clash_combine_seen_together",
+            "Branch clash-combine arbitration boundary",
+            "branch",
+            "地支冲合并见时不能只取一个关系名，要分参与地支、方向、是否化、是否被刑害破干扰。",
+            "Use relation type, involved branches, transform evidence, interfering relation, and source layer as evidence.",
+            "Do not declare a clash or combine as good/bad, successful/failed, or event-triggering by relation name alone.",
+            ("feature.branch", "feature.element", "feature.time"),
+            ("q_branch_relation_detail", "q_time_vs_natal_relation"),
+            ("branch", "arbitration", "clash_combine", "transform_boundary"),
+            "branch.arbitration.clash_combine",
+            "branch_relation_arbitration_gate",
+            "relation_type+involved_branches+transform_evidence+interference+source_layer",
+            "portrait.branch_relation_arbitration",
+            "地支关系仲裁",
+            "冲合并见时先拆关系证据，再判断哪个关系只是背景、哪个进入主线。",
+            "q_branch_relation_detail",
+            "这个地支关系是冲合并见，还是单一关系主导？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "branch_arbitration.relation_name_overreach",
+                    "只有冲、合、刑、害、破、三合或三会名称时，不能直接判断吉凶、成败或确定事件。",
+                    blocks_rule_atoms=("branch.arbitration.clash_combine",),
+                    required_evidence=("relation_type", "involved_branches", "transform_evidence", "interference", "source_layer"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.pattern.false_following_counterexample",
+            "False following-pattern counterexample boundary",
+            "pattern",
+            "从格、假从和破格必须先看根气、透干、月令、逆势材料和岁运是否修复。",
+            "Use root evidence, month command, exposed counter-force, mixed purity, and time repair context as evidence.",
+            "Do not name following pattern or pattern success when counter-force or mixed impurity has not been ruled out.",
+            ("feature.pattern", "feature.strength", "feature.element", "feature.time"),
+            ("q_pattern_structure",),
+            ("pattern", "false_following", "counterexample", "purity"),
+            "pattern.false_following.counterexample",
+            "pattern_counterexample_gate",
+            "root_evidence+month_command+counter_force+mixed_purity+time_repair",
+            "portrait.pattern_false_following_boundary",
+            "假从与破格反例",
+            "格局先看反证和清浊，再决定是否只是候选格局。",
+            "q_pattern_structure",
+            "这个格局有没有假从、破格或清浊混杂的反证？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "pattern_false_following.counter_force_present",
+                    "有根气、逆势透干、月令不从或清浊混杂时，不能按真从格或成格直接输出。",
+                    blocks_rule_atoms=("pattern.false_following.counterexample",),
+                    required_evidence=("root_evidence", "month_command", "counter_force", "mixed_purity", "time_repair"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.time.fuyin_fanyin_storage_boundary",
+            "Fuyin-fanyin and storage timing boundary",
+            "time",
+            "伏吟、反吟、墓库开闭只能作为时间层牵动信号，必须回到原局结构和大运流年层级。",
+            "Use natal target, luck-flow layer, repeated pillar, opposition pillar, storage branch, and opening-closing evidence.",
+            "Do not predict exact timing, fixed event, accident, illness, transaction, or relationship outcome from timing symbols alone.",
+            ("feature.time", "feature.branch", "feature.pattern"),
+            ("q_time_layer_context", "q_time_relation_triggers"),
+            ("time", "fuyin", "fanyin", "storage_open_close"),
+            "time.fuyin_fanyin.storage_boundary",
+            "time_trigger_boundary_gate",
+            "natal_target+luck_flow_layer+repeat_or_opposition+storage_open_close",
+            "portrait.time_fuyin_fanyin_storage",
+            "伏吟反吟与墓库开闭",
+            "时间符号只提示牵动层，必须回到原局承接和结构证据。",
+            "q_time_layer_context",
+            "这个时间触发是伏吟反吟，还是墓库开闭牵动？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "time_symbol.exact_event_overreach",
+                    "只有伏吟、反吟或墓库开闭符号时，不能断具体日期、事故、疾病、交易或关系结果。",
+                    blocks_rule_atoms=("time.fuyin_fanyin.storage_boundary",),
+                    required_evidence=("natal_target", "luck_flow_layer", "repeat_or_opposition", "storage_open_close"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.palace.application.spouse_career_hour_boundary",
+            "Palace application detail boundary",
+            "relationship",
+            "夫妻宫、事业环境和时柱家庭晚景属于宫位主题细分，必须和十神、地支、承载、时间层合参。",
+            "Use palace target, pillar position, ten-god material, branch interaction, capacity, and explicit time trigger as evidence.",
+            "Do not infer spouse facts, workplace result, child event, family privacy, late-life event, or exact timing from palace detail alone.",
+            ("feature.branch", "feature.ten_god", "feature.strength", "feature.time"),
+            ("q_relationship_structure", "q_career_structure", "q_time_layer_context"),
+            ("palace", "spouse_palace", "career_environment", "hour_family"),
+            "palace.application.detail_boundary",
+            "palace_application_gate",
+            "palace_target+pillar_position+ten_god_material+branch_interaction+capacity+time_trigger",
+            "portrait.palace_application_detail",
+            "宫位应用细分",
+            "夫妻宫、事业环境和时柱主题只定位问题层，不能单独断事。",
+            "q_relationship_structure",
+            "这个主题先看夫妻宫、事业环境，还是时柱承接？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "palace_application.detail_overreach",
+                    "只有夫妻宫、事业宫位或时柱信息时，不能推断伴侣事实、职业结果、子女事件、晚年事件或准确时间。",
+                    blocks_rule_atoms=("palace.application.detail_boundary",),
+                    required_evidence=("palace_target", "pillar_position", "ten_god_material", "branch_interaction", "capacity", "time_trigger"),
+                ),
+            ),
+        ),
+        _unit(
+            "v20.answer_governance.boundary",
+            "Answer governance evidence boundary",
+            "pattern",
+            "回答治理必须把结构判断、证据来源、边界条件、反证缺口和下一步问题分开输出。",
+            "Use evidence scope, allowed claim type, blocked claim type, counterevidence gap, and next question as answer-control evidence.",
+            "Do not output fixed fortune, exact timing, medical/legal/financial advice, or private facts from incomplete evidence.",
+            ("feature.pattern", "feature.strength", "feature.time"),
+            ("q_pattern_structure",),
+            ("answer_governance", "evidence_pack", "answer_plan", "boundary"),
+            "answer.governance.boundary",
+            "answer_governance_gate",
+            "evidence_scope+allowed_claim_type+blocked_claim_type+next_question",
+            "portrait.answer_governance_boundary",
+            "回答证据边界",
+            "回答必须先说明证据能支持什么、不能支持什么，以及下一步要补哪类信息。",
+            "q_pattern_structure",
+            "当前证据只能支持结构判断，还是可以进入具体主题建议？",
+            counterexamples=(
+                KnowledgeCounterexample(
+                    "answer_governance.incomplete_evidence_overclaim",
+                    "证据只到候选结构或单点特征时，不能输出固定运势、精确时间、医疗法律财务建议或隐私事实。",
+                    blocks_rule_atoms=("answer.governance.boundary",),
+                    required_evidence=("evidence_scope", "allowed_claim_type", "blocked_claim_type", "counterevidence_gap", "next_question"),
+                ),
+            ),
         ),
         _unit(
             "v20.applied.health.rhythm_recovery_boundary",
@@ -1779,6 +2576,7 @@ def _unit(
     portrait_description: str,
     question_key: str,
     question_title: str,
+    counterexamples: tuple[KnowledgeCounterexample, ...] = (),
 ) -> KnowledgeUnit:
     safe_question_hooks = _sanitize_question_hooks(domain, question_hooks)
     return KnowledgeUnit(
@@ -1832,6 +2630,7 @@ def _unit(
                 boundary=boundary,
             ),
         ),
+        counterexamples=counterexamples,
     )
 
 

@@ -120,7 +120,9 @@ def _suggested_questions(questions: tuple[QuestionCandidate, ...]) -> tuple[dict
         rows.append(
             {
                 "question_key": question.question_key,
-                "title": question.title,
+                "title": question.display_title or question.title,
+                "display_title": question.display_title or question.title,
+                "anchor_status": question.question_anchor.get("anchor_status", "") if isinstance(question.question_anchor, dict) else "",
                 "domain": question.domain,
                 "domain_label": domain_label(question.domain),
                 "score": round(float(question.score or 0.0), 3),
@@ -156,7 +158,7 @@ def _graph_nodes(
             {
                 "node_id": f"portrait.question.{question.get('question_key', '')}",
                 "node_type": "question",
-                "label": str(question.get("title", "")),
+                "label": str(question.get("display_title", "") or question.get("title", "")),
                 "domain": str(question.get("domain", "")),
             }
         )

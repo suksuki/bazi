@@ -13,6 +13,8 @@ from v20.redis.runtime_cache import (
     should_cache_measure,
 )
 from v20.api.schemas import MeasureRequest
+from v20.storage.local_jsonl import local_jsonl_store_from_env
+import json
 
 
 def test_v20_redis_contract_is_ephemeral_and_ttl_bound() -> None:
@@ -104,6 +106,36 @@ def test_v20_runtime_cache_key_changes_for_practitioner_mainline_review() -> Non
     reviewed_key = runtime_cache_key(cacheable_measure_payload(reviewed_request, pillars=pillars, luck_pillar="甲申"), role_key="user")
 
     assert base_key != reviewed_key
+
+
+def test_v20_runtime_cache_key_changes_when_question_pointer_changes(tmp_path, monkeypatch) -> None:
+    monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
+    request = MeasureRequest(
+        year="庚午",
+        month="辛巳",
+        day="丁丑",
+        hour="乙巳",
+        flow_year_pillar="丙午",
+        luck_pillar="甲申",
+        user_text="我想看事业",
+    )
+    pillars = {"year": "庚午", "month": "辛巳", "day": "丁丑", "hour": "乙巳"}
+    before = runtime_cache_key(cacheable_measure_payload(request, pillars=pillars, luck_pillar="甲申"), role_key="user")
+    pointer_path = local_jsonl_store_from_env().runtime_dir / "training" / "question_policy_versions" / "active_pointer.json"
+    pointer_path.parent.mkdir(parents=True, exist_ok=True)
+    pointer_path.write_text(
+        json.dumps(
+            {
+                "version": "v20.question_runtime_active_pointer.v1",
+                "status": "candidate_active",
+                "active_policy_version": "v20.question_policy.candidate.test",
+            }
+        ),
+        encoding="utf-8",
+    )
+    after = runtime_cache_key(cacheable_measure_payload(request, pillars=pillars, luck_pillar="甲申"), role_key="user")
+
+    assert before != after
 
 
 def test_v20_runtime_cache_skips_non_deterministic_llm_modes() -> None:

@@ -12,6 +12,9 @@ ALLOWED_LEDGER_NAMES = (
     "portrait_calibration_ledger",
     "practitioner_calibration_ledger",
     "latent_event_calibration_ledger",
+    "orchestrator_memory_ledger",
+    "orchestrator_policy_observability_ledger",
+    "orchestrator_policy_rollback_audit",
 )
 TARGET_TABLE = "v20_feedback_ledger"
 

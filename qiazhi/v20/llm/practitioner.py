@@ -25,6 +25,7 @@ def build_practitioner_answer_with_llm(
     question_intent_model: dict[str, object] | None = None,
     interaction_session: dict[str, object] | None = None,
     mainline_arbitration: dict[str, object] | None = None,
+    brain_state: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
     prompt = practitioner_answer_prompt(
@@ -38,6 +39,7 @@ def build_practitioner_answer_with_llm(
         question_intent_model=question_intent_model or {},
         interaction_session=interaction_session or {},
         mainline_arbitration=mainline_arbitration or {},
+        brain_state=brain_state or {},
         answer_plan=answer_plan,
         verified_answer_text=deterministic_answer_text,
         locale=locale,
@@ -63,7 +65,11 @@ def build_practitioner_answer_with_llm(
     )
     if call["status"] == "accepted":
         output = call.get("output", {})
-        accepted = accept_or_fallback_practitioner_answer(output, fallback_text)
+        accepted = accept_or_fallback_practitioner_answer(
+            output,
+            fallback_text,
+            expected_day_master=str(chart_facts.get("day_master", "")),
+        )
         if accepted["ok"]:
             return {
                 "version": "v20.llm_practitioner_answer.v1",
@@ -114,6 +120,7 @@ def stream_practitioner_answer_with_llm(
     question_intent_model: dict[str, object] | None = None,
     interaction_session: dict[str, object] | None = None,
     mainline_arbitration: dict[str, object] | None = None,
+    brain_state: dict[str, object] | None = None,
     locale: str = "zh",
 ):
     prompt = practitioner_answer_prompt(
@@ -127,6 +134,7 @@ def stream_practitioner_answer_with_llm(
         question_intent_model=question_intent_model or {},
         interaction_session=interaction_session or {},
         mainline_arbitration=mainline_arbitration or {},
+        brain_state=brain_state or {},
         answer_plan=answer_plan,  # type: ignore[arg-type]
         verified_answer_text=deterministic_answer_text,
         locale=locale,
@@ -258,6 +266,8 @@ def _strategy_line(strategy: dict[str, object], *, locale: str) -> str:
 def accept_or_fallback_practitioner_answer(
     candidate_payload: dict[str, object],
     deterministic_answer_text: str,
+    *,
+    expected_day_master: str = "",
 ) -> dict[str, object]:
     structured_validation = validate_llm_structured_output(PRACTITIONER_ANSWER, candidate_payload)
     text = str(candidate_payload.get("text") or "")
@@ -266,6 +276,7 @@ def accept_or_fallback_practitioner_answer(
     failures = [
         *structured_validation.get("failures", ()),
         *text_validation.get("failures", ()),
+        *_day_master_fact_failures(text, expected_day_master),
     ]
     validation = {
         "ok": not failures,
@@ -276,6 +287,7 @@ def accept_or_fallback_practitioner_answer(
         "fallback": PRACTITIONER_ANSWER.fallback if failures else "",
         "guardrails": [
             "PRACTITIONER_ANSWER_STRUCTURED_AND_TEXT_VALIDATED",
+            "DAY_MASTER_FACT_VALIDATED_AGAINST_CHART_FACTS",
             "DETERMINISTIC_FALLBACK_ON_FAILURE",
         ],
     }
@@ -287,6 +299,46 @@ def accept_or_fallback_practitioner_answer(
         "validation": validation,
         "source": "deterministic_fallback",
     }
+
+
+def validate_practitioner_answer_day_master(text: str, expected_day_master: str) -> dict[str, object]:
+    failures = _day_master_fact_failures(text, expected_day_master)
+    return {
+        "version": "v20.practitioner_answer_day_master_validation.v1",
+        "ok": not failures,
+        "expected_day_master": expected_day_master,
+        "failures": failures,
+        "runtime_mutation": False,
+        "guardrails": [
+            "DAY_MASTER_IS_IMMUTABLE_CHART_FACT",
+            "WRONG_DAY_MASTER_FORCES_DETERMINISTIC_FALLBACK",
+        ],
+    }
+
+
+def _day_master_fact_failures(text: str, expected_day_master: str) -> list[str]:
+    expected = str(expected_day_master or "").strip()
+    if not expected:
+        return []
+    stems = ("甲", "乙", "丙", "丁", "戊", "己", "庚", "辛", "壬", "癸")
+    wrong = [stem for stem in stems if stem != expected]
+    value = str(text or "")
+    failures: list[str] = []
+    for stem in wrong:
+        patterns = (
+            f"{stem}木日主",
+            f"{stem}火日主",
+            f"{stem}土日主",
+            f"{stem}金日主",
+            f"{stem}水日主",
+            f"日主{stem}",
+            f"日主为{stem}",
+            f"日主是{stem}",
+            f"{stem}日主",
+        )
+        if any(pattern in value for pattern in patterns):
+            failures.append(f"day_master_mismatch:{stem}_mentioned_expected_{expected}")
+    return failures
 
 
 def _first_label(rows: object, key: str) -> str:

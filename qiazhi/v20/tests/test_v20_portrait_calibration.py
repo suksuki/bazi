@@ -1,7 +1,8 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
+from v20.api.schemas import PortraitCalibrationRequest, PractitionerCalibrationRequest
 from v20.api.runtime import run_runtime_from_pillars
 from v20.interaction.portrait_ontology import portrait_ontology_manifest
 from v20.interaction.portrait_calibration import analyze_portrait_calibration, record_portrait_calibration
@@ -12,6 +13,14 @@ from v20.interaction.practitioner_calibration import (
 )
 from v20.server import app
 from v20.storage.local_jsonl import LocalJsonlStore
+
+
+def _endpoint(path: str, method: str = "GET"):
+    method = method.upper()
+    for route in app.routes:
+        if getattr(route, "path", "") == path and method in getattr(route, "methods", set()):
+            return route.endpoint
+    raise AssertionError(f"route not found: {method} {path}")
 
 
 def test_v20_portrait_calibration_is_signal_only() -> None:
@@ -99,27 +108,15 @@ def test_v20_practitioner_calibration_record_is_append_only(tmp_path) -> None:
 
 def test_v20_portrait_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
-    client = TestClient(app)
-    analyzed = client.post(
-        "/api/v20/portrait/calibration/analyze",
-        json={
-            "input_id": "portrait.endpoint",
-            "feature_id": "feature.useful_god.candidate_paths",
-            "source_role": "analyst",
-            "signal": "evidence_gap",
-            "note": "候选路径需要更多证据",
-        },
-    ).json()
-    recorded = client.post(
-        "/api/v20/portrait/calibration/record",
-        json={
-            "input_id": "portrait.endpoint",
-            "feature_id": "feature.useful_god.candidate_paths",
-            "source_role": "analyst",
-            "signal": "evidence_gap",
-            "note": "候选路径需要更多证据",
-        },
-    ).json()
+    payload = PortraitCalibrationRequest(
+        input_id="portrait.endpoint",
+        feature_id="feature.useful_god.candidate_paths",
+        source_role="analyst",
+        signal="evidence_gap",
+        note="候选路径需要更多证据",
+    )
+    analyzed = _endpoint("/api/v20/portrait/calibration/analyze", "POST")(payload)
+    recorded = _endpoint("/api/v20/portrait/calibration/record", "POST")(payload)
 
     assert analyzed["runtime_mutation"] is False
     assert recorded["runtime_mutation"] is True
@@ -128,54 +125,41 @@ def test_v20_portrait_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -
 
 def test_v20_practitioner_calibration_endpoints_are_guarded(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
-    client = TestClient(app)
-    analyzed = client.post(
-        "/api/v20/practitioner/calibration/analyze",
-        json={
-            "input_id": "practitioner.endpoint",
-            "source_role": "analyst",
-            "selections": [
+    payload = PractitionerCalibrationRequest(
+        input_id="practitioner.endpoint",
+        source_role="analyst",
+        selections=[
                 {
                     "control_key": "control.pattern_status",
                     "option": "候选",
                     "source_decision_keys": ["decision.pattern.status"],
                 }
             ],
-        },
-    ).json()
-    recorded = client.post(
-        "/api/v20/practitioner/calibration/record",
-        json={
-            "input_id": "practitioner.endpoint",
-            "source_role": "analyst",
-            "selections": [
-                {
-                    "control_key": "control.pattern_status",
-                    "option": "候选",
-                    "source_decision_keys": ["decision.pattern.status"],
-                }
-            ],
-        },
-    ).json()
-    invalid = client.post(
-        "/api/v20/practitioner/calibration/analyze",
-        json={
-            "input_id": "practitioner.invalid",
-            "source_role": "analyst",
-            "selections": [
-                {
-                    "control_key": "control.pattern_status",
-                    "option": "自由输入",
-                    "source_decision_keys": ["decision.pattern.status"],
-                }
-            ],
-        },
     )
+    analyzed = _endpoint("/api/v20/practitioner/calibration/analyze", "POST")(payload)
+    recorded = _endpoint("/api/v20/practitioner/calibration/record", "POST")(payload)
+    try:
+        _endpoint("/api/v20/practitioner/calibration/analyze", "POST")(
+            PractitionerCalibrationRequest(
+                input_id="practitioner.invalid",
+                source_role="analyst",
+                selections=[
+                    {
+                        "control_key": "control.pattern_status",
+                        "option": "自由输入",
+                        "source_decision_keys": ["decision.pattern.status"],
+                    }
+                ],
+            )
+        )
+        raise AssertionError("invalid practitioner option should fail")
+    except HTTPException as exc:
+        invalid_status = exc.status_code
 
     assert analyzed["runtime_mutation"] is False
     assert recorded["runtime_mutation"] is True
     assert recorded["storage"]["ledger_name"] == "practitioner_calibration_ledger"
-    assert invalid.status_code == 400
+    assert invalid_status == 400
 
 
 def test_v20_portrait_projection_uses_decision_states_as_runtime_source() -> None:
@@ -192,9 +176,8 @@ def test_v20_portrait_projection_uses_decision_states_as_runtime_source() -> Non
 
 
 def test_v20_portrait_ontology_endpoint_is_contract_only() -> None:
-    client = TestClient(app)
     manifest = portrait_ontology_manifest()
-    endpoint = client.get("/api/v20/portrait/ontology").json()
+    endpoint = _endpoint("/api/v20/portrait/ontology")()
 
     assert endpoint == manifest
     assert endpoint["runtime_mutation"] is False

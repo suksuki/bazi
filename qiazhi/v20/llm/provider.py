@@ -5,6 +5,8 @@ from dataclasses import asdict, dataclass
 from typing import Any
 from urllib.parse import urlsplit, urlunsplit
 
+from v20.ops.admin_config import apply_saved_admin_env_overrides
+
 
 @dataclass(frozen=True)
 class LLMProviderConfig:
@@ -43,6 +45,7 @@ class LLMProviderConfig:
 
 
 def load_llm_provider_config_from_env() -> LLMProviderConfig:
+    apply_saved_admin_env_overrides()
     return LLMProviderConfig(
         enabled=_bool_env("V20_LLM_ENABLED", False),
         execute_llm=_bool_env("V20_LLM_EXECUTE", False),

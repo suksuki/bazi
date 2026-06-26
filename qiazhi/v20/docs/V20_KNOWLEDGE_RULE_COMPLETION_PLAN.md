@@ -134,6 +134,8 @@ P6 目标：
 - 518K 结构覆盖基线、相似盘索引、聚类、规则支持统计。
 - active 规则子条件拆分与反例候选生成。
 - DecisionRegistry review 台账生成，把候选规则、子条件、反例和 active 权重候选变成可批量裁决对象。
+- 角色问题链 DAG 训练，验证不同角色的下一步问题是否聚焦。
+- 用户交互经验聚合，只生成问题排序、表达方式和候选策略，不直接改规则真值。
 
 518K 结构覆盖基线的角色：
 
@@ -141,6 +143,80 @@ P6 目标：
 - 建相似盘检索：给单盘分析提供参考样本。
 - 建训练素材：为画像排序、问题排序、规则参数提供离线校准材料。
 - 不直接生成单盘最终画像真相。
+
+## 合成数据训练批次
+
+V20 的训练方式继续以后台脚本为主，但训练对象需要从“规则是否触发”扩展到“画像、问题、问题链和角色互动是否正确”。
+
+推荐批次：
+
+| 批次 | 训练对象 | 输入 | 输出 | 验证门槛 |
+| --- | --- | --- | --- | --- |
+| B1 | 八字规则 | 合成盘、反例盘、知识规则。 | 规则子条件候选、权重候选。 | precision/recall、反例不误触发。 |
+| B2 | 八字特征 | 合成盘、518K 覆盖统计。 | 特征识别覆盖报告。 | 强弱、五行、十神、地支互动不漏关键结构。 |
+| B3 | 八字画像 | 规则命中、主题投射、知识映射。 | 画像轴映射候选。 | 画像必须来自当前盘，不套语料标签。 |
+| B4 | 推荐问题 | 画像轴、问题种子、角色策略。 | 问题排序和模板候选。 | 问题像用户会问，且贴合当前主线。 |
+| B5 | 问题链 DAG | 用户选择、角色、当前会话状态。 | next question policy 候选。 | 下一步问题不发散、不重复、不跨角色泄露。 |
+| B6 | 角色互动 | guest/user/analyst/admin 投影。 | 角色视图策略候选。 | guest 简洁、user 可行动、analyst 可复核、admin 可观测。 |
+| B7 | 回答上下文 | 答案计划、LLM prompt context。 | 回答表达策略候选。 | LLM 只解释已验证上下文，不生成事实。 |
+
+训练产物只能进入候选层：
+
+```text
+training artifact
+-> candidate policy
+-> synthetic validation
+-> replay comparison
+-> active pointer
+```
+
+禁止路径：
+
+```text
+raw user click
+-> runtime rule mutation
+```
+
+## 验证方式
+
+每次训练必须给出三类报告：
+
+1. `coverage_report`：覆盖了哪些结构、规则、画像、问题和角色。
+2. `failure_report`：哪些合成盘错配、哪些问题发散、哪些角色泄露内部术语。
+3. `candidate_report`：只列候选调整，不直接写 runtime 真值。
+
+最小验证集：
+
+- 强弱边界：偏强、中和、偏弱、从势候选。
+- 十神链条：食伤生财、财生官杀、官印相生、比劫夺财。
+- 格局与破格：成格、候选、破格、不取格。
+- 用神方向：扶身、泄秀、制杀、通关、调候。
+- 地支互动：冲、合、刑、害、墓库、暗合。
+- 时间触发：大运、流年、流月与原局互动。
+- 主题投射：事业、财富、关系、健康边界。
+- 角色投影：guest/user/analyst/admin 的问题和画像分离。
+- 问题链：entry、focus、structure、timing、review、observe、advice、closure。
+
+后台脚本可以继续采用现有方式：
+
+```bash
+./v20/scripts/run_training_iteration.py --write --progress
+./v20/scripts/run_training_iteration.py --write --progress --include-replay-eval --include-rule-iteration
+./v20/scripts/run_question_ranking_training.py --write --progress
+./v20/scripts/run_practitioner_calibration_training.py --write --progress
+```
+
+新主线已新增：
+
+```bash
+./v20/scripts/run_question_dag_training.py --write --progress
+./v20/scripts/run_role_interaction_training.py --write --progress
+./v20/scripts/run_synthetic_case_suite.py --summary
+```
+
+`run_training_iteration.py` 已汇总 synthetic replay、DAG training、role interaction training；默认 `--synthetic-replay-limit 1`，需要全量时显式传 `--synthetic-replay-limit 0`。
+
+这些脚本默认 dry-run；只有显式 `--write` 才写训练产物，且写入的是候选 artifact，不是 runtime 规则。
 
 ## 近期批次
 

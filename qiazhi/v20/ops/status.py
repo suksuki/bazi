@@ -37,7 +37,6 @@ from v20.knowledge.source_catalog import build_knowledge_source_catalog
 from v20.learning.evolution import build_evolution_dry_run_plan
 from v20.learning.decision_registry_iteration import build_decision_registry_iteration_report
 from v20.learning.run_plan import build_learning_run_plan
-from v20.learning.policy_review import policy_review_manifest
 from v20.learning.registries import registry_manifest
 from v20.learning.rule_activation import build_rule_activation_report
 from v20.learning.rule_replay_eval import build_rule_replay_eval_report
@@ -205,7 +204,6 @@ def system_status_report() -> dict[str, object]:
             "question_ranking": question_ranking_manifest()["version"],
             "knowledge_retrieval": knowledge_retrieval_manifest()["version"],
             "confidence_calibration": confidence_calibration_manifest()["version"],
-            "policy_review": policy_review_manifest()["version"],
             "registries": registry_manifest()["version"],
         },
         "runtime_mutation": False,

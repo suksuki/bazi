@@ -109,12 +109,20 @@ CONDITION_ALIASES: dict[str, tuple[str, ...]] = {
 }
 
 
-def build_rule_runtime_report(feature_layer: FeatureLayer, *, catalog: dict[str, Any] | None = None) -> dict[str, Any]:
+def build_rule_runtime_report(
+    feature_layer: FeatureLayer,
+    *,
+    catalog: dict[str, Any] | None = None,
+    runtime_policy_pointer: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     catalog_payload = catalog or build_bazi_rule_catalog()
     trace = feature_layer.discovery_trace if isinstance(feature_layer.discovery_trace, dict) else {}
     evidence_atoms = tuple(row for row in trace.get("evidence_atoms", ()) if isinstance(row, dict))
     evidence_index = _evidence_index(evidence_atoms, feature_layer)
-    rules = tuple(_execute_rule(row, evidence_index) for row in catalog_payload.get("rules", ()))
+    pointer, pointer_error = _load_rule_runtime_pointer(runtime_policy_pointer)
+    policy_index = _rule_policy_index(pointer)
+    rules = tuple(_execute_rule(row, evidence_index, policy_index.get(str(row.get("rule_id", "")))) for row in catalog_payload.get("rules", ()))
+    rule_policy_effect = _rule_policy_effect(pointer, pointer_error, policy_index, rules)
     status_counts = Counter(str(row["match_status"]) for row in rules)
     node_counts = Counter(str(row["directory_node"]) for row in rules)
     matched_nodes = Counter(str(row["directory_node"]) for row in rules if row["match_status"] in {"matched", "partial"})
@@ -140,12 +148,17 @@ def build_rule_runtime_report(feature_layer: FeatureLayer, *, catalog: dict[str,
         "coverage_by_node": dict(sorted(node_counts.items(), key=lambda item: int(item[0][1:]))),
         "match_coverage_by_node": dict(sorted(matched_nodes.items(), key=lambda item: int(item[0][1:]))),
         "rules": rules,
+        "policy_effect": {
+            "rule_policy": rule_policy_effect,
+        },
+        "runtime_policy_effect": rule_policy_effect,
         "catalog_guardrails": tuple(catalog_payload.get("guardrails", ())),
         "runtime_mutation": False,
         "guardrails": (
             "RULESPEC_ENGINE_IS_PRIMARY_RULE_RUNTIME",
             "LEGACY_DECISION_ENGINE_IS_COMPATIBILITY_BRIDGE",
             "RULE_RUNTIME_CONSUMES_EVIDENCE_ATOMS",
+            "RULE_RUNTIME_CONSUMES_ACTIVE_RULE_POINTER",
             "RULE_RUNTIME_DOES_NOT_OUTPUT_FORTUNE_VERDICT",
             "ACTIVE_RULES_ITERATE_WITH_RUNTIME_FEEDBACK",
             "BLOCKED_GOVERNANCE_RULES_REMAIN_BOUNDARY_GUARDS",
@@ -153,7 +166,11 @@ def build_rule_runtime_report(feature_layer: FeatureLayer, *, catalog: dict[str,
     }
 
 
-def _execute_rule(rule: dict[str, Any], evidence_index: tuple[dict[str, str], ...]) -> dict[str, Any]:
+def _execute_rule(
+    rule: dict[str, Any],
+    evidence_index: tuple[dict[str, str], ...],
+    policy_row: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     conditions = tuple(row for row in rule.get("conditions", ()) if isinstance(row, dict))
     matched_condition_ids: list[str] = []
     matched_atom_ids: list[str] = []
@@ -173,6 +190,13 @@ def _execute_rule(rule: dict[str, Any], evidence_index: tuple[dict[str, str], ..
             }
         )
     match_status = _match_status(rule, len(matched_condition_ids), len(conditions))
+    base_match_score = round(len(matched_condition_ids) / len(conditions), 3) if conditions else 0.0
+    adjusted_match_score, applied_delta = _apply_rule_policy_weight(
+        base_match_score=base_match_score,
+        match_status=match_status,
+        runtime_allowed=bool(rule.get("runtime_allowed")),
+        policy_row=policy_row,
+    )
     return {
         "rule_id": rule.get("rule_id", ""),
         "title": rule.get("title", ""),
@@ -182,7 +206,10 @@ def _execute_rule(rule: dict[str, Any], evidence_index: tuple[dict[str, str], ..
         "runtime_status": rule.get("runtime_status", ""),
         "decision_state": rule.get("decision_state", ""),
         "match_status": match_status,
-        "match_score": round(len(matched_condition_ids) / len(conditions), 3) if conditions else 0.0,
+        "match_score": adjusted_match_score,
+        "base_match_score": base_match_score,
+        "policy_weight_delta": applied_delta,
+        "policy_applied": bool(applied_delta),
         "condition_count": len(conditions),
         "matched_condition_count": len(matched_condition_ids),
         "matched_condition_ids": tuple(matched_condition_ids),
@@ -195,6 +222,97 @@ def _execute_rule(rule: dict[str, Any], evidence_index: tuple[dict[str, str], ..
         "core_seed_bridge_required": False,
         "structural_only": True,
         "runtime_mutation": False,
+    }
+
+
+def _load_rule_runtime_pointer(pointer: dict[str, Any] | None) -> tuple[dict[str, Any], str]:
+    if pointer is not None:
+        return pointer, ""
+    try:
+        from v20.learning.rule_runtime_pointer import build_rule_runtime_pointer
+
+        return build_rule_runtime_pointer(), ""
+    except Exception as exc:
+        return (
+            {
+                "version": "v20.rule_runtime_pointer_unavailable.v1",
+                "status": "error",
+                "runtime_applied": False,
+                "runtime_allowed": False,
+                "blocking_gate": f"rule_runtime_pointer_failed:{exc}",
+                "policy_payload": {},
+                "runtime_mutation": False,
+            },
+            str(exc),
+        )
+
+
+def _rule_policy_index(pointer: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    if pointer.get("runtime_applied") is not True:
+        return {}
+    payload = pointer.get("policy_payload", {})
+    if not isinstance(payload, dict):
+        return {}
+    rows = payload.get("rule_weight_policy", ())
+    index: dict[str, dict[str, Any]] = {}
+    for row in rows if isinstance(rows, list | tuple) else ():
+        if not isinstance(row, dict):
+            continue
+        rule_key = str(row.get("rule_key", ""))
+        if rule_key:
+            index[rule_key] = row
+    return index
+
+
+def _apply_rule_policy_weight(
+    *,
+    base_match_score: float,
+    match_status: str,
+    runtime_allowed: bool,
+    policy_row: dict[str, Any] | None,
+) -> tuple[float, float]:
+    if not policy_row or not runtime_allowed or match_status not in {"matched", "partial", "review_required"}:
+        return base_match_score, 0.0
+    try:
+        weight_delta = float(policy_row.get("weight_delta", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        weight_delta = 0.0
+    if not weight_delta:
+        return base_match_score, 0.0
+    bounded_delta = max(-0.08, min(0.08, weight_delta))
+    return round(max(0.0, min(1.0, base_match_score + bounded_delta)), 3), round(bounded_delta, 4)
+
+
+def _rule_policy_effect(
+    pointer: dict[str, Any],
+    pointer_error: str,
+    policy_index: dict[str, dict[str, Any]],
+    rules: tuple[dict[str, Any], ...],
+) -> dict[str, Any]:
+    applied_rule_count = sum(1 for row in rules if row.get("policy_applied"))
+    if pointer_error:
+        status = "pointer_error"
+    elif pointer.get("runtime_applied") is not True:
+        status = "not_applied"
+    elif policy_index and not applied_rule_count:
+        status = "active_no_matching_rule"
+    else:
+        status = "applied" if applied_rule_count else "empty_payload"
+    return {
+        "version": "v20.rule_runtime_policy_effect.v1",
+        "status": status,
+        "active_policy_version": pointer.get("active_policy_version", ""),
+        "candidate_policy_version": pointer.get("candidate_policy_version", ""),
+        "policy_count": len(policy_index),
+        "applied_rule_count": applied_rule_count,
+        "target": "rule_weight_policy",
+        "blocking_gate": str(pointer.get("blocking_gate", "")),
+        "runtime_mutation": False,
+        "guardrails": (
+            "RULE_POLICY_IS_POINTER_DRIVEN",
+            "RULE_POLICY_ADJUSTS_RUNTIME_SCORE_ONLY",
+            "RULE_POLICY_DOES_NOT_MUTATE_CHART_FACTS",
+        ),
     }
 
 

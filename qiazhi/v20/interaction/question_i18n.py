@@ -30,7 +30,7 @@ DOMAIN_LABELS = {
 QUESTION_TEMPLATES = {
     "zh": {
         "q_strength_assessment": "{domain}上，先判断承载力还是压力来源？",
-        "q_useful_god_candidates": "{domain}上，扶身、通关还是调候更像主线？",
+        "q_useful_god_candidates": "{domain}上，这个盘的调节方向是什么？",
         "q_useful_god_evidence_gaps": "{domain}还缺哪类关键证据？",
         "q_ten_god_focus": "{domain}里，哪组十神关系最值得先看？",
         "q_ten_god_metadata": "{domain}信息应该怎么进入测算主线？",
@@ -52,7 +52,7 @@ QUESTION_TEMPLATES = {
     },
     "en": {
         "q_strength_assessment": "For {domain}, should we first read capacity or pressure?",
-        "q_useful_god_candidates": "For {domain}, is support, mediation, or climate adjustment the clearer path?",
+        "q_useful_god_candidates": "For {domain}, what is the chart's adjustment direction?",
         "q_useful_god_evidence_gaps": "What evidence is still missing for {domain}?",
         "q_ten_god_focus": "Which Ten-God relationship should we read first?",
         "q_ten_god_metadata": "How should the Ten-God signals enter the reading?",
@@ -74,7 +74,7 @@ QUESTION_TEMPLATES = {
     },
     "ko": {
         "q_strength_assessment": "{domain}에서는 먼저 감당력과 압력 중 무엇을 봐야 할까요?",
-        "q_useful_god_candidates": "{domain}에서는 부조, 통관, 조후 중 어느 길이 더 분명할까요?",
+        "q_useful_god_candidates": "{domain}에서 이 명식의 조정 방향은 무엇일까요?",
         "q_useful_god_evidence_gaps": "{domain} 판단에는 어떤 근거가 더 필요할까요?",
         "q_ten_god_focus": "{domain}에서 어떤 십성 관계를 먼저 봐야 할까요?",
         "q_ten_god_metadata": "십성 정보는 이 분석에 어떻게 들어가야 할까요?",
@@ -144,33 +144,7 @@ def _localized_title(question: QuestionCandidate, lang: str, index: int) -> str:
     templates = QUESTION_TEMPLATES[lang]
     template = templates.get(question.question_key, templates["_"])
     title = template.format(domain=domain)
-    if question.question_strategy == "agent_followup":
-        return _followup_title(question.domain, lang, index)
     return title
-
-
-def _followup_title(domain: str, lang: str, index: int) -> str:
-    labels = DOMAIN_LABELS[lang]
-    domain_label = labels.get(domain, labels["_"])
-    if lang == "en":
-        rows = (
-            f"For {domain_label}, what should we confirm next?",
-            f"Which evidence would make the {domain_label} reading clearer?",
-            f"Should the next step focus on structure or timing for {domain_label}?",
-        )
-    elif lang == "ko":
-        rows = (
-            f"{domain_label}에서 다음으로 무엇을 확인할까요?",
-            f"{domain_label} 판단을 더 분명하게 할 근거는 무엇일까요?",
-            f"{domain_label}는 구조와 시기 중 무엇을 먼저 볼까요?",
-        )
-    else:
-        rows = (
-            f"{domain_label}这条线，下一步先确认什么？",
-            f"{domain_label}还需要哪类证据来定重点？",
-            f"{domain_label}继续看结构主轴还是时间触发？",
-        )
-    return rows[index % len(rows)]
 
 
 def _domain_label(domain: str, lang: str) -> str:

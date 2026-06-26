@@ -13,6 +13,7 @@ from typing import Any, Callable
 
 from v20.corpus.job_runner import full_precompute_root, read_full_precompute_status
 from v20.knowledge.rule_proposal import build_first_wave_rule_proposals
+from v20.storage.local_jsonl import local_jsonl_store_from_env
 
 
 DEFAULT_ARTIFACT_RUN_ID = "v20_full_518k_20260501_main"
@@ -1446,11 +1447,53 @@ def _similarity_score(query_tags: set[str], candidate_tags: set[str]) -> float:
         "question_keys": 1.25,
         "knowledge_ids": 1.25,
     }
+    weights.update(_active_similarity_weight_overrides())
     union = query_tags | candidate_tags
     intersection = query_tags & candidate_tags
     numerator = sum(_tag_weight(tag, weights) for tag in intersection)
     denominator = sum(_tag_weight(tag, weights) for tag in union)
     return numerator / denominator if denominator else 0
+
+
+def _active_similarity_weight_overrides() -> dict[str, float]:
+    path = local_jsonl_store_from_env().runtime_dir / "training" / "corpus_policy_versions" / "active_pointer.json"
+    if not path.exists():
+        return {}
+    try:
+        pointer = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return {}
+    if pointer.get("version") != "v20.corpus_runtime_active_pointer.v1" or pointer.get("status") != "candidate_active":
+        return {}
+    payload = pointer.get("policy_payload", {})
+    if not isinstance(payload, dict):
+        return {}
+    rows = payload.get("similarity_tag_weight_policy", ())
+    if not isinstance(rows, list):
+        return {}
+    mapping = {
+        "feature_ids": "feature_id",
+        "salience_feature_ids": "salience_feature_id",
+        "relation_types": "relation_types",
+        "visible_ten_gods": "visible_ten_gods",
+        "hidden_ten_gods": "hidden_ten_gods",
+        "question_keys": "question_keys",
+        "knowledge_ids": "knowledge_ids",
+        "mainline_domains": "mainline_domains",
+        "portrait_domains": "portrait_domains",
+    }
+    overrides: dict[str, float] = {}
+    for row in rows:
+        if not isinstance(row, dict):
+            continue
+        prefix = mapping.get(str(row.get("tag_prefix", "")))
+        if not prefix:
+            continue
+        try:
+            overrides[prefix] = max(0.1, 1.0 + float(row.get("weight_delta", 0.0) or 0.0))
+        except (TypeError, ValueError):
+            continue
+    return overrides
 
 
 def _tag_weight(tag: str, weights: dict[str, float]) -> float:

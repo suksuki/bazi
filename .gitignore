@@ -17,3 +17,9 @@ qiazhi/v20/.runtime/server_*.pid
 
 # OS/editor noise
 .DS_Store
+
+# V30 local runtime/secrets
+qiazhi/v30/.runtime/
+qiazhi/v30/.env*
+!qiazhi/v30/.env*.example
+qiazhi/v30/.pytest_cache/

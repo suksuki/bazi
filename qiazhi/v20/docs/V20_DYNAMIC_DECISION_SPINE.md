@@ -52,13 +52,130 @@ V20 的主线重新定义为八字测算系统，而不是特征展示系统。
 2. 规则库训练：规则条件权重、支持因子、削弱因子、冲突因子、触发因子。
 3. 画像库训练：画像标签与规则裁决的映射、误导标签降权、推荐问题模板排序。
 4. 裁决逻辑训练：规则是否成立、成立程度、主线/辅助、化解、是否需要时间层触发。
+5. 问题链训练：不同角色在 entry、focus、structure、timing、review、observe、advice 阶段应看到什么问题。
+6. 交互策略训练：用户点击、选择、跳过、追问如何影响会话重点、问题排序和回答表达。
+
+训练边界：
+
+```text
+用户交互信号
+-> 经验层和候选策略
+-> 合成数据/回放验证
+-> 版本化 runtime pointer
+
+不允许：
+用户交互信号 -> 直接改核心规则或命盘事实
+```
+
+## 合成数据训练设计
+
+合成数据是 V20 模型升级的主验证场，不是为了训练 LLM，而是训练和验证八字系统自己的规则、画像、问题和互动策略。
+
+### 合成样本类型
+
+| 样本类型 | 目标 | 例子 |
+| --- | --- | --- |
+| `rule_case` | 验证规则是否该触发、是否过宽。 | 伤官见官、财星承载、印星缓冲、地支冲合。 |
+| `portrait_case` | 验证画像标签是否贴合当前盘。 | 事业压力、资源承接、输出变现、关系牵动。 |
+| `feature_case` | 验证结构特征是否被正确识别。 | 五行偏显、十神链条、强弱边界、藏干互动。 |
+| `question_case` | 验证推荐问题是否像用户会问且贴合本盘。 | 事业稳定/变化、财运节奏、近年触发。 |
+| `interaction_case` | 验证问题链下一步是否聚焦。 | 用户选事业后是否进入事业 focus，而不是跳到无关复核。 |
+| `role_case` | 验证不同角色视图是否不同。 | guest 不看复核，analyst 看证据，admin 看策略来源。 |
+
+### 合成样本结构
+
+每个合成样本必须是可回放、可比较、可失败的结构化对象：
+
+```text
+case_id
+case_type
+chart_input
+time_context
+expected_facts
+expected_rules
+expected_portrait_axes
+expected_question_nodes
+expected_role_views
+negative_expectations
+quality_gates
+```
+
+`negative_expectations` 很重要，用来防止规则过宽。例如：财星可见但日主承接不足时，不能直接生成“财运很好”的画像；伤官见官但有印星缓冲时，不能只输出冲突结论。
+
+### 训练方式
+
+训练仍以后台脚本为主，不放普通用户 UI：
+
+```text
+1. synthetic case generation
+   生成覆盖强弱、十神、五行、地支、格局、用神、岁运、主题领域的合成样本。
+
+2. deterministic replay
+   对每个合成盘跑完整 runtime，收集规则、画像、问题、角色视图、回答上下文。
+
+3. evaluator scoring
+   对比 expected 与 actual，输出通过、缺失、过宽、错配、发散、角色泄露。
+
+4. candidate proposal
+   只生成候选策略：规则子条件、画像映射、问题排序、DAG next rule、角色表达调整。
+
+5. batch validation
+   候选策略必须通过合成集、黄金案例、历史回放和 518K 覆盖先验。
+
+6. version activation
+   通过后写入候选版本，runtime 只读取 active pointer。
+```
+
+### 验证指标
+
+| 指标 | 说明 |
+| --- | --- |
+| `rule_precision` | 规则触发不能过宽，反例中不能误触发。 |
+| `rule_recall` | 明确应触发的合成盘不能漏掉。 |
+| `portrait_alignment` | 画像必须来自当前盘规则和主题，不从语料直接套用。 |
+| `question_focus` | 推荐问题必须贴合角色、主题和当前主线。 |
+| `dag_coherence` | 用户选择后的下一步问题必须有前后逻辑。 |
+| `role_separation` | guest/user/analyst/admin 的问题和画像深度不能混淆。 |
+| `fallback_rate` | 候选策略不能明显提高 fallback。 |
+| `latency_budget` | 互动链和 LLM 调用不能让页面进入不可接受延迟。 |
+
+### 用户交互如何进入训练
+
+用户交互只生成经验信号：
+
+```text
+click
+skip
+choice
+followup
+answer_preference
+session_completion
+```
+
+这些信号可以训练：
+
+- 问题排序。
+- 问题链下一步选择。
+- 用户偏好的表达长度。
+- 主题优先级。
+- 角色画像展示顺序。
+
+这些信号不能直接训练：
+
+- 四柱事实。
+- 强弱事实。
+- 十神关系。
+- 规则真值。
+- 用神结论。
+- 单盘主线裁决。
+
+只有当交互聚合结果在合成案例和回放中通过验证，才可以成为候选策略。
 
 当前后台脚本入口：
 
 ```bash
-./v20/scripts/run_dynamic_decision_training.py --progress
-./v20/scripts/run_dynamic_decision_training.py --write --progress
-./v20/scripts/run_dynamic_decision_training.py --status
+./v20/scripts/run_training_iteration.py --write --progress
+./v20/scripts/run_training_iteration.py --write --progress --include-replay-eval --include-rule-iteration
 ./v20/scripts/run_question_ranking_training.py --progress
 ./v20/scripts/run_question_ranking_training.py --write --progress
 ./v20/scripts/run_question_ranking_training.py --status

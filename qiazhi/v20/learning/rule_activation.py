@@ -8,8 +8,17 @@ from v20.learning.rule_subcondition_split import build_rule_subcondition_split_r
 from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 
 
-def build_rule_activation_report(domain: str = "", *, limit: int = 0) -> dict[str, object]:
-    validation = build_knowledge_rule_validation_report(domain, limit=limit)
+def build_rule_activation_report(
+    domain: str = "",
+    *,
+    limit: int = 0,
+    synthetic_case_limit: int = 0,
+) -> dict[str, object]:
+    validation = build_knowledge_rule_validation_report(
+        domain,
+        limit=limit,
+        synthetic_case_limit=synthetic_case_limit,
+    )
     split = build_rule_subcondition_split_report(domain, limit=limit)
     split_by_rule_key = {
         str(row.get("rule_key", "")): row
@@ -55,8 +64,13 @@ def build_rule_activation_report(domain: str = "", *, limit: int = 0) -> dict[st
     }
 
 
-def build_rule_activation_packet_summary(domain: str = "", *, limit: int = 0) -> dict[str, object]:
-    gate = build_rule_activation_report(domain, limit=limit)
+def build_rule_activation_packet_summary(
+    domain: str = "",
+    *,
+    limit: int = 0,
+    synthetic_case_limit: int = 0,
+) -> dict[str, object]:
+    gate = build_rule_activation_report(domain, limit=limit, synthetic_case_limit=synthetic_case_limit)
     packets = [row for row in gate.get("packets", ()) if isinstance(row, dict)]
     return {
         "version": "v20.rule_activation_packet_summary.v1",

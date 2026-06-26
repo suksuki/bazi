@@ -1125,9 +1125,9 @@ def _useful_god_label(evidence: tuple[str, ...]) -> str:
 def _useful_god_portrait_tag(evidence: tuple[str, ...]) -> str:
     text = " ".join(evidence)
     if "support:" in text or "扶身候选" in text:
-        return "用神方向先看扶身"
+        return "用神候选偏向扶助日主"
     if "release:" in text or "泄秀候选" in text:
-        return "用神方向先看泄秀"
+        return "用神候选偏向疏导泄秀"
     if "channel:" in text or "通道候选" in text:
         return "用神方向包含财星通道"
     if "constraint:" in text or "约束候选" in text:
@@ -1140,16 +1140,16 @@ def _useful_god_portrait_tag(evidence: tuple[str, ...]) -> str:
 def _useful_god_question(evidence: tuple[str, ...]) -> str:
     text = " ".join(evidence)
     if "support:" in text or "扶身候选" in text:
-        return "这个盘用神方向要先扶身，还是另有通关路径？"
+        return "这个盘的用神为什么偏向扶助日主？"
     if "release:" in text or "泄秀候选" in text:
-        return "这个盘用神方向适合先看泄秀还是财星通道？"
+        return "这个盘的用神为什么偏向疏导泄秀？"
     if "channel:" in text or "通道候选" in text:
         return "这个盘用神方向能不能走财星通道？"
     if "constraint:" in text or "约束候选" in text:
         return "这个盘用神方向要不要先看官杀约束？"
     if "arbitration:" in text or "用神参考" in text:
-        return "这个盘用神方向先扶身还是先泄秀？"
-    return "这个盘下一步适合先找哪类用神方向？"
+        return "这个盘的用神和调节方向到底是什么？"
+    return "这个盘的用神和调节方向是什么？"
 
 
 def _pattern_label(evidence: tuple[str, ...]) -> str:

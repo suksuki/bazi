@@ -8,6 +8,8 @@ from typing import Any
 from v20.storage.local_jsonl import local_jsonl_store_from_env
 
 SHADOW_POLICY_PATH_SUFFIX = "training/question_ranking/latest.json"
+ACTIVE_POINTER_PATH_SUFFIX = "training/question_policy_versions/active_pointer.json"
+ACTIVE_POINTER_VERSION = "v20.question_runtime_active_pointer.v1"
 
 
 @dataclass(frozen=True)
@@ -40,7 +42,26 @@ def default_question_ranking_policy() -> QuestionRankingPolicy:
 
 
 def question_ranking_policy_runtime() -> QuestionRankingPolicy:
-    return load_shadow_question_ranking_policy()
+    return load_active_question_ranking_policy() or load_shadow_question_ranking_policy()
+
+
+def load_active_question_ranking_policy() -> QuestionRankingPolicy | None:
+    latest = local_jsonl_store_from_env().runtime_dir / ACTIVE_POINTER_PATH_SUFFIX
+    if not latest.exists():
+        return None
+    try:
+        pointer = json.loads(latest.read_text(encoding="utf-8"))
+    except (OSError, ValueError, TypeError):
+        return None
+    if pointer.get("version") != ACTIVE_POINTER_VERSION or pointer.get("status") != "candidate_active":
+        return None
+    payload = pointer.get("policy_payload", {})
+    if not isinstance(payload, dict):
+        return None
+    policy_payload = payload.get("question_rank_policy")
+    if not isinstance(policy_payload, dict):
+        return None
+    return _policy_from_payload(policy_payload, source="active_question_pointer")
 
 
 def load_shadow_question_ranking_policy() -> QuestionRankingPolicy:
@@ -56,6 +77,11 @@ def load_shadow_question_ranking_policy() -> QuestionRankingPolicy:
     policy_payload = payload.get("shadow_policy") or payload.get("policy")
     if not isinstance(policy_payload, dict):
         return default_question_ranking_policy()
+    policy = _policy_from_payload(policy_payload, source="shadow_learning")
+    return policy or default_question_ranking_policy()
+
+
+def _policy_from_payload(policy_payload: dict[str, Any], *, source: str) -> QuestionRankingPolicy | None:
     normalized: dict[str, Any] = {
         field_name: value
         for field_name, value in policy_payload.items()
@@ -73,12 +99,12 @@ def load_shadow_question_ranking_policy() -> QuestionRankingPolicy:
             max_feature_count=normalized.get("max_feature_count", default_question_ranking_policy().max_feature_count),
             alignment_weight=normalized.get("alignment_weight", default_question_ranking_policy().alignment_weight),
             max_adjustment=normalized.get("max_adjustment", default_question_ranking_policy().max_adjustment),
-            source="shadow_learning",
+            source=source,
             status=policy_payload.get("status", "active"),
             guardrails=tuple(policy_payload.get("guardrails", ())),
         )
     except TypeError:
-        return default_question_ranking_policy()
+        return None
 
 
 def _shadow_policy_file_path() -> Path:

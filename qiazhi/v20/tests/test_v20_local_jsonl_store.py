@@ -1,10 +1,17 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
+from v20.api.schemas import FeedbackRequest
 from v20.interaction.feedback_record import record_feedback_analysis
 from v20.server import app
 from v20.storage.local_jsonl import LocalJsonlStore
+
+
+def _endpoint(path: str, method: str = "GET"):
+    method = method.upper()
+    for route in app.routes:
+        if getattr(route, "path", "") == path and method in getattr(route, "methods", set()):
+            return route.endpoint
+    raise AssertionError(f"route not found: {method} {path}")
 
 
 def test_v20_local_jsonl_store_appends_redacted_feedback_only(tmp_path) -> None:
@@ -51,17 +58,15 @@ def test_v20_local_jsonl_store_rotates_oversized_ledger(tmp_path) -> None:
 
 def test_v20_local_jsonl_status_endpoint_does_not_render_file_content(monkeypatch, tmp_path) -> None:
     monkeypatch.setenv("V20_RUNTIME_DIR", str(tmp_path))
-    client = TestClient(app)
-    record = client.post(
-        "/api/v20/feedback/record",
-        json={
-            "input_id": "endpoint.record",
-            "source_role": "analyst",
-            "feedback_text": "名字: 李四，用神边界要清楚",
-            "feature_ids": ["feature.useful_god.evidence_gate"],
-        },
-    ).json()
-    status = client.get("/api/v20/storage/local-jsonl").json()
+    record = _endpoint("/api/v20/feedback/record", "POST")(
+        FeedbackRequest(
+            input_id="endpoint.record",
+            source_role="analyst",
+            feedback_text="名字: 李四，用神边界要清楚",
+            feature_ids=["feature.useful_god.evidence_gate"],
+        )
+    )
+    status = _endpoint("/api/v20/storage/local-jsonl")()
     text = str(status)
 
     assert record["runtime_mutation"] is True

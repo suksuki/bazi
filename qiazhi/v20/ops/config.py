@@ -3,11 +3,13 @@ from __future__ import annotations
 import os
 from dataclasses import replace
 
+from v20.ops.admin_config import apply_saved_admin_env_overrides
 from v20.ops.profiles import default_runtime_config
 from v20.ops.schema import RuntimeConfig, ServerProfile
 
 
 def load_runtime_config_from_env() -> RuntimeConfig:
+    apply_saved_admin_env_overrides()
     active = os.getenv("V20_ENV", "local_macos")
     config = default_runtime_config(active_profile=active)
     overrides = {
@@ -37,6 +39,8 @@ def _override_profile(profile: ServerProfile, overrides: dict[str, object | None
         postgres = replace(postgres, port=_int_env("V20_POSTGRES_PORT"))
     if os.getenv("V20_POSTGRES_DB"):
         postgres = replace(postgres, database=os.environ["V20_POSTGRES_DB"])
+    if os.getenv("V20_POSTGRES_SSLMODE"):
+        postgres = replace(postgres, sslmode=os.environ["V20_POSTGRES_SSLMODE"])
     if os.getenv("V20_POSTGRES_ENABLED") is not None:
         postgres = replace(postgres, enabled=_bool_env("V20_POSTGRES_ENABLED"))
     if os.getenv("V20_REDIS_HOST"):

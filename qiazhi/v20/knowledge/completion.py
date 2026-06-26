@@ -99,7 +99,7 @@ def build_knowledge_completion_report() -> dict[str, object]:
         "feature_graph_decision_states": feature_model.get("decision_state_keys", ()),
         "feature_graph_chain": feature_model.get("mainline_chain", ()),
         "knowledge_axes": _knowledge_axes(catalog),
-        "recommended_review_script": "v20/scripts/run_knowledge_completion.py",
+        "recommended_status_surface": "/api/v20/admin/mainline-status",
         "next_mainline_step": "rule_subcondition_iteration_and_replay_eval" if mainline_complete else "clear_knowledge_blockers",
         "expansion_backlog": {
             "status": "not_blocking_mainline",

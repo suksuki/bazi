@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import asdict, dataclass, field
+from functools import lru_cache
 from typing import Any
 
 from v20.knowledge.loader import default_knowledge_units
@@ -41,6 +42,11 @@ class KnowledgeRuleDefinition:
 
 
 def build_knowledge_rule_library(domain: str = "", *, limit: int = 0) -> dict[str, object]:
+    return _build_knowledge_rule_library_cached(domain.strip(), int(limit or 0))
+
+
+@lru_cache(maxsize=32)
+def _build_knowledge_rule_library_cached(domain: str = "", limit: int = 0) -> dict[str, object]:
     units = _unit_index()
     extraction = build_rule_extraction_report(domain, limit=limit)
     definitions = tuple(

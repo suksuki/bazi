@@ -50,8 +50,13 @@ def arbitrate_mainline(
     question_intent_model: dict[str, Any],
     time_context: dict[str, Any],
     practitioner_selections: tuple[dict[str, Any], ...] = (),
+    evidence_items: tuple[dict[str, Any], ...] = (),
+    runtime_policy_pointer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     candidates = _candidates(decision_report, feature_state_model, structure_dynamics, question_intent_model, time_context)
+    candidates = _attach_unified_evidence(candidates, evidence_items, question_intent_model, time_context)
+    candidates = _rerank_for_question_domain(candidates, question_intent_model)
+    candidates, policy_effect = _apply_runtime_policy(candidates, runtime_policy_pointer or {})
     selected = candidates[0] if candidates else _fallback_candidate(structure_dynamics)
     supporting = tuple(row for row in candidates[1:4] if row.candidate_key != selected.candidate_key)
     rejected = tuple(row for row in candidates[4:8])
@@ -76,7 +81,10 @@ def arbitrate_mainline(
         "quality_gate": quality_gate,
         "requires_review": quality_gate["requires_review"],
         "practitioner_review": practitioner_review,
+        "runtime_policy_effect": policy_effect,
         "candidate_count": len(candidates),
+        "evidence_count": len(evidence_items),
+        "evidence_items": _visible_evidence_items(evidence_items),
         "time_layer_status": str(time_context.get("status", "")),
         "runtime_mutation": False,
         "guardrails": [
@@ -86,8 +94,206 @@ def arbitrate_mainline(
             "OUTPUT_IS_REVIEWABLE_NOT_FINAL_VERDICT",
             "QUALITY_GATE_CAN_REQUIRE_PRACTITIONER_REVIEW",
             "PRACTITIONER_REVIEW_RERANKS_SESSION_ONLY",
+            "MAINLINE_CANDIDATES_REFERENCE_UNIFIED_EVIDENCE",
+            "QUESTION_DOMAIN_CAN_BREAK_CLOSE_MAINLINE_TIES",
+            "FAST_TRACK_POLICY_CAN_RERANK_MAINLINE_CANDIDATES",
         ],
     }
+
+
+def _apply_runtime_policy(
+    candidates: tuple[MainlineCandidate, ...],
+    runtime_policy_pointer: dict[str, Any],
+) -> tuple[tuple[MainlineCandidate, ...], dict[str, object]]:
+    if not candidates or not runtime_policy_pointer.get("runtime_applied"):
+        return candidates, _policy_effect("not_applied", runtime_policy_pointer, 0)
+    payload = runtime_policy_pointer.get("policy_payload", {})
+    if not isinstance(payload, dict):
+        return candidates, _policy_effect("empty_payload", runtime_policy_pointer, 0)
+    policies = [row for row in payload.get("mainline_arbitration_weight_policy", ()) if isinstance(row, dict)]
+    applied = 0
+    adjusted = []
+    for candidate in candidates:
+        delta, notes = _mainline_policy_delta(candidate, policies)
+        if delta:
+            applied += 1
+            adjusted.append(
+                replace(
+                    candidate,
+                    score=round(max(0.0, min(1.55, candidate.score + delta)), 3),
+                    source=_append_source(candidate.source, "runtime_policy"),
+                    evidence=tuple(dict.fromkeys((*candidate.evidence, *notes)))[:8],
+                    base_score=candidate.base_score or candidate.score,
+                    requires_review=candidate.requires_review or delta < 0,
+                )
+            )
+        else:
+            adjusted.append(candidate)
+    return (
+        tuple(sorted(adjusted, key=_candidate_sort_key, reverse=True)),
+        _policy_effect("applied" if applied else "no_matching_candidate", runtime_policy_pointer, applied),
+    )
+
+
+def _mainline_policy_delta(candidate: MainlineCandidate, policies: list[dict[str, object]]) -> tuple[float, tuple[str, ...]]:
+    delta = 0.0
+    notes: list[str] = []
+    for policy in policies:
+        if not policy.get("runtime_allowed"):
+            continue
+        target = str(policy.get("primary_mainline_key", ""))
+        if target and target != candidate.candidate_key:
+            continue
+        action = str(policy.get("suggested_action", ""))
+        if action == "increase_primary_stability_weight":
+            delta += 0.08
+            notes.append("中枢记忆策略：提高该主线稳定权重")
+        elif action == "increase_supporting_review_weight":
+            delta += 0.05
+            notes.append("中枢记忆策略：提高次级主线复核权重")
+        elif action in {"increase_evidence_gap_penalty", "increase_review_boundary_weight"}:
+            delta -= 0.06
+            notes.append("中枢记忆策略：提高证据缺口复核权重")
+    return delta, tuple(notes)
+
+
+def _policy_effect(status: str, pointer: dict[str, Any], applied: int) -> dict[str, object]:
+    return {
+        "version": "v20.mainline_runtime_policy_effect.v1",
+        "status": status,
+        "active_policy_version": str(pointer.get("active_policy_version", "")),
+        "candidate_policy_version": str(pointer.get("candidate_policy_version", "")),
+        "applied_adjustment_count": applied,
+        "runtime_mutation": False,
+        "guardrails": [
+            "POLICY_EFFECT_RERANKS_ONLY",
+            "NO_CHART_FACT_MUTATION",
+            "BASELINE_ROLLBACK_POINTER_AVAILABLE",
+        ],
+    }
+
+
+def _rerank_for_question_domain(
+    candidates: tuple[MainlineCandidate, ...],
+    question_intent_model: dict[str, Any],
+) -> tuple[MainlineCandidate, ...]:
+    intent_domain = _selected_intent_domain(question_intent_model)
+    if not candidates or not intent_domain or candidates[0].domain == intent_domain:
+        return candidates
+    aligned = [row for row in candidates if row.domain == intent_domain]
+    if not aligned:
+        return candidates
+    top = candidates[0]
+    best = aligned[0]
+    if best.score < top.score - 0.12:
+        return candidates
+    promoted = replace(
+        best,
+        source=_append_source(best.source, "question_domain_focus"),
+        evidence=tuple(dict.fromkeys((*best.evidence, f"用户当前问题聚焦：{_domain_label(intent_domain)}"))),
+        requires_review=best.requires_review or best.score < top.score,
+    )
+    return (promoted, *tuple(row for row in candidates if row.candidate_key != best.candidate_key))
+
+
+def _attach_unified_evidence(
+    candidates: tuple[MainlineCandidate, ...],
+    evidence_items: tuple[dict[str, Any], ...],
+    question_intent_model: dict[str, Any],
+    time_context: dict[str, Any],
+) -> tuple[MainlineCandidate, ...]:
+    if not evidence_items:
+        return candidates
+    by_domain: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    by_source_key: dict[str, dict[str, Any]] = {}
+    for item in evidence_items:
+        if not isinstance(item, dict):
+            continue
+        by_domain[str(item.get("domain", ""))].append(item)
+        by_source_key[str(item.get("source_key", ""))] = item
+    intent_domain = _selected_intent_domain(question_intent_model)
+    time_ready = str(time_context.get("status", "")) == "ready"
+    enriched = []
+    for candidate in candidates:
+        matched = []
+        source_match = by_source_key.get(candidate.candidate_key)
+        if source_match:
+            matched.append(source_match)
+        matched.extend(by_domain.get(candidate.domain, ())[:4])
+        if candidate.domain != "time":
+            matched.extend(by_domain.get("structure", ())[:1])
+        evidence_ids = tuple(dict.fromkeys(str(row.get("evidence_id", "")) for row in matched if row.get("evidence_id")))[:8]
+        source_types = tuple(dict.fromkeys(str(row.get("source_type", "")) for row in matched if row.get("source_type")))[:6]
+        question_relevance = 0.16 if intent_domain and candidate.domain == intent_domain else 0.0
+        time_relevance = 0.08 if time_ready and (candidate.domain == "time" or candidate.source in {"decision_mainline", "structure_dynamics"}) else 0.0
+        knowledge_relevance = _knowledge_relevance(matched)
+        conflict_risk = _candidate_conflict_risk(candidate)
+        evidence_notes = tuple(
+            dict.fromkeys(
+                str(row.get("label", ""))
+                for row in matched
+                if str(row.get("source_type", "")) == "knowledge_basis" and str(row.get("label", ""))
+            )
+        )[:2]
+        enriched.append(
+            replace(
+                candidate,
+                candidate_id=candidate.candidate_key,
+                source_types=source_types,
+                evidence_ids=evidence_ids,
+                base_score=candidate.score,
+                question_relevance=round(question_relevance, 3),
+                time_relevance=round(time_relevance, 3),
+                conflict_risk=round(conflict_risk, 3),
+                requires_review=candidate.status in {"requires_review", "mixed", "weak_candidate"} or conflict_risk >= 0.32,
+                evidence=tuple(dict.fromkeys((*candidate.evidence, *evidence_notes)))[:8],
+                score=round(max(0.0, min(1.45, candidate.score + question_relevance + time_relevance + knowledge_relevance - conflict_risk)), 3),
+            )
+        )
+    return tuple(sorted(enriched, key=_candidate_sort_key, reverse=True))
+
+
+def _knowledge_relevance(matched: list[dict[str, Any]]) -> float:
+    weights = [
+        float(row.get("weight", 0.0) or 0.0)
+        for row in matched
+        if isinstance(row, dict) and str(row.get("source_type", "")) == "knowledge_basis"
+    ]
+    if not weights:
+        return 0.0
+    return round(min(0.07, max(weights) * 0.06), 3)
+
+
+def _candidate_conflict_risk(candidate: MainlineCandidate) -> float:
+    if candidate.status in {"requires_review", "mixed"}:
+        return 0.18
+    if candidate.status in {"weak_candidate", "candidate"}:
+        return 0.08
+    if candidate.status in {"volatile", "chain_review"}:
+        return 0.12
+    return 0.0
+
+
+def _visible_evidence_items(evidence_items: tuple[dict[str, Any], ...]) -> list[dict[str, Any]]:
+    rows = []
+    for item in evidence_items[:24]:
+        if not isinstance(item, dict):
+            continue
+        rows.append(
+            {
+                "evidence_id": item.get("evidence_id", ""),
+                "source_type": item.get("source_type", ""),
+                "source_key": item.get("source_key", ""),
+                "domain": item.get("domain", ""),
+                "label": item.get("label", ""),
+                "summary": item.get("summary", ""),
+                "confidence": item.get("confidence", 0),
+                "weight": item.get("weight", 0),
+                "boundary": item.get("boundary", ""),
+                "role_visibility": item.get("role_visibility", []),
+            }
+        )
+    return rows
 
 
 def _candidates(
@@ -107,7 +313,27 @@ def _candidates(
     intent_domain = _selected_intent_domain(question_intent_model)
     time_ready = str(time_context.get("status", "")) == "ready"
     merged = _merge_candidates(rows, intent_domain=intent_domain, time_ready=time_ready)
-    return tuple(sorted(merged, key=lambda row: (row.score, row.source), reverse=True))
+    merged = _align_candidates_to_structure_dynamics(merged, structure_dynamics, intent_domain=intent_domain)
+    return tuple(sorted(merged, key=_candidate_sort_key, reverse=True))
+
+
+def _candidate_sort_key(row: MainlineCandidate) -> tuple[float, int, str]:
+    return (row.score, _candidate_sort_priority(row), row.source)
+
+
+def _candidate_sort_priority(row: MainlineCandidate) -> int:
+    node_set = set(row.nodes)
+    if "structure_dynamics" in row.source and {"output", "authority"}.issubset(node_set):
+        return 50
+    if {"output", "authority", "resource"}.issubset(node_set):
+        return 42
+    if {"output", "authority"}.issubset(node_set):
+        return 36
+    if row.domain == "career":
+        return 24
+    if row.domain == "wealth":
+        return 18
+    return 10
 
 
 def _mainline_candidates(decision_report: dict[str, Any]) -> list[MainlineCandidate]:
@@ -212,18 +438,89 @@ def _feature_state_candidates(feature_state_model: dict[str, Any]) -> list[Mainl
 
 
 def _structure_candidate(structure_dynamics: dict[str, Any]) -> MainlineCandidate:
-    chain = structure_dynamics.get("dominant_chain", {})
+    chain = structure_dynamics.get("primary_dynamic_chain", {})
+    if not isinstance(chain, dict) or not chain.get("nodes"):
+        chain = structure_dynamics.get("dominant_chain_v2", {})
+    if not isinstance(chain, dict) or not chain.get("nodes"):
+        chain = structure_dynamics.get("legacy_dynamic_chain", {})
     nodes = _tuple(chain.get("nodes", ())) if isinstance(chain, dict) else ()
+    domain = _structure_domain(chain, nodes) if isinstance(chain, dict) else "structure"
     return MainlineCandidate(
         candidate_key=str(chain.get("chain_key", "")) if isinstance(chain, dict) else "structure.empty",
-        title=_title("", nodes),
-        domain="structure",
+        title=str(chain.get("pattern_label") or chain.get("label") or _title("", nodes)) if isinstance(chain, dict) else _title("", nodes),
+        domain=domain,
         nodes=nodes,
-        score=round(float(structure_dynamics.get("volatility_score", 0.0) or 0.0) + 0.34, 3),
-        status=str(structure_dynamics.get("chain_state", "candidate")),
+        score=round(float(chain.get("confidence", structure_dynamics.get("volatility_score", 0.0)) or 0.0) + 0.34, 3) if isinstance(chain, dict) else 0.34,
+        status=str(chain.get("state") or structure_dynamics.get("chain_state", "candidate")) if isinstance(chain, dict) else "candidate",
         source="structure_dynamics",
         evidence=_tuple(chain.get("evidence", ()))[:6] if isinstance(chain, dict) else (),
     )
+
+
+def _structure_domain(chain: dict[str, Any], nodes: tuple[str, ...]) -> str:
+    label = str(chain.get("pattern_label", "") or chain.get("label", ""))
+    key = str(chain.get("pattern_key", ""))
+    node_set = set(nodes)
+    if "官杀" in label or "制杀" in label or "authority" in key or "authority" in node_set:
+        return "career"
+    if "财" in label or "wealth" in key or "wealth" in node_set:
+        return "wealth"
+    if "印" in label or "resource" in key:
+        return "strength"
+    return "structure"
+
+
+def _align_candidates_to_structure_dynamics(
+    rows: list[MainlineCandidate],
+    structure_dynamics: dict[str, Any],
+    *,
+    intent_domain: str,
+) -> list[MainlineCandidate]:
+    chain = structure_dynamics.get("primary_dynamic_chain", {})
+    if not isinstance(chain, dict) or not chain.get("nodes"):
+        chain = structure_dynamics.get("dominant_chain_v2", {})
+    if not isinstance(chain, dict):
+        return rows
+    structure_nodes = _tuple(chain.get("nodes", ()))
+    structure_set = set(structure_nodes)
+    pattern_label = str(chain.get("pattern_label", "") or chain.get("label", ""))
+    if not structure_set:
+        return rows
+    has_output_authority = {"output", "authority"}.issubset(structure_set) or any(term in pattern_label for term in ("制官杀", "制杀", "伤官见官"))
+    has_output_wealth = {"output", "wealth"}.issubset(structure_set) or "食伤生财" in pattern_label
+    if not (has_output_authority or has_output_wealth):
+        return rows
+
+    aligned: list[MainlineCandidate] = []
+    for row in rows:
+        node_set = set(row.nodes)
+        delta = 0.0
+        notes: list[str] = []
+        requires_review = row.requires_review
+        if has_output_authority:
+            if {"output", "authority"}.issubset(node_set) or row.domain == "career":
+                delta += 0.14
+                notes.append("结构动态主链指向食伤与官杀，优先按官杀压力与制化链路组织。")
+            if {"output", "wealth"}.issubset(node_set) and "authority" not in node_set:
+                delta -= 0.22
+                requires_review = True
+                notes.append("结构动态未把财星作为主链，不默认升为食伤生财。")
+        if has_output_wealth and {"output", "wealth"}.issubset(node_set):
+            delta += 0.08
+            notes.append("结构动态主链支持食伤接财。")
+        if delta:
+            aligned.append(
+                replace(
+                    row,
+                    score=round(max(0.0, min(1.45, row.score + delta)), 3),
+                    source=_append_source(row.source, "structure_dynamic_alignment"),
+                    evidence=tuple(dict.fromkeys((*row.evidence, *notes)))[:8],
+                    requires_review=requires_review,
+                )
+            )
+        else:
+            aligned.append(row)
+    return aligned
 
 
 def _fallback_candidate(structure_dynamics: dict[str, Any]) -> MainlineCandidate:
@@ -252,17 +549,33 @@ def _merge_candidates(
         if previous:
             evidence = tuple(dict.fromkeys((*previous.evidence, *row.evidence)))[:8]
             score = max(previous.score, score) + min(0.22, row.score * 0.08)
+        title_source = row if _should_structure_candidate_name_merged_mainline(previous, row) else previous
         merged[key] = MainlineCandidate(
-            candidate_key=previous.candidate_key if previous else row.candidate_key,
-            title=previous.title if previous and previous.score >= row.score else row.title,
+            candidate_key=title_source.candidate_key if title_source else row.candidate_key,
+            title=title_source.title if title_source else row.title,
             domain=row.domain,
             nodes=row.nodes,
             score=round(min(1.45, score), 3),
-            status=row.status,
+            status=title_source.status if title_source else row.status,
             source=f"{previous.source}+{row.source}" if previous and row.source not in previous.source else row.source,
             evidence=evidence,
         )
     return list(merged.values())
+
+
+def _should_structure_candidate_name_merged_mainline(
+    previous: MainlineCandidate | None,
+    row: MainlineCandidate,
+) -> bool:
+    if previous is None:
+        return True
+    if row.source != "structure_dynamics":
+        return previous.score < row.score
+    if row.status not in {"closed", "active", "confirmed"}:
+        return previous.score < row.score
+    if row.title in {"结构主线", "食伤 → 官杀 → 印星", "食伤 → 财星 → 比劫/承载"}:
+        return previous.score < row.score
+    return True
 
 
 def _selected_intent_domain(question_intent_model: dict[str, Any]) -> str:
@@ -443,21 +756,28 @@ def _tuple(value: object) -> tuple[str, ...]:
 
 
 def _why_selected(selected: MainlineCandidate, supporting: tuple[MainlineCandidate, ...]) -> list[str]:
-    rows = [
-        f"{selected.title} 在当前规则、画像和结构动态中综合权重最高。",
-        f"来源：{selected.source}，置信分 {selected.score:.2f}。",
-    ]
-    if selected.evidence:
-        rows.append(f"关键证据：{'；'.join(selected.evidence[:3])}。")
+    title = _public_title(selected.title)
+    rows = [f"中枢本轮先以「{title}」组织解读。"]
+    if "question_domain_focus" in selected.source or selected.question_relevance > 0:
+        rows.append(f"当前问题落在「{_domain_label(selected.domain)}」，所以优先让这条主线进入回答。")
+    else:
+        rows.append(f"这条主线同时得到{_source_label(selected.source)}支持。")
+    evidence = _public_evidence_lines(selected.evidence, 3)
+    if evidence:
+        rows.append(f"关键依据：{'；'.join(evidence)}。")
     if supporting:
-        rows.append(f"次级主线保留观察：{'、'.join(row.title for row in supporting[:2])}。")
+        rows.append(f"次级主线保留复核：{'、'.join(_public_title(row.title) for row in supporting[:2])}。")
     return rows
 
 
 def _why_not_selected(selected: MainlineCandidate, rejected: tuple[MainlineCandidate, ...]) -> list[str]:
     rows = []
+    selected_title = _public_title(selected.title)
     for row in rejected[:3]:
-        rows.append(f"{row.title} 暂不作为第一主线，因为综合分 {row.score:.2f} 低于 {selected.title}。")
+        title = _public_title(row.title)
+        if title == selected_title:
+            continue
+        rows.append(f"{title} 暂列次级观察，先让「{selected_title}」回答当前问题。")
     return rows
 
 
@@ -520,13 +840,74 @@ def _review_targets(
 ) -> list[str]:
     targets = []
     if "evidence_thin" in risks:
-        targets.append(f"补充「{selected.title}」的明透、藏干、规则或画像证据。")
+        targets.append(f"补充「{_public_title(selected.title)}」的明透、藏干或画像依据。")
     if "single_source_bias" in risks:
         targets.append("至少需要规则、画像、结构动态中的两类来源共同支持。")
     if "close_competing_mainline" in risks and supporting:
-        targets.append(f"复核「{selected.title}」与「{supporting[0].title}」谁先进入回答。")
+        targets.append(f"复核「{_public_title(selected.title)}」与「{_public_title(supporting[0].title)}」谁先进入回答。")
     if any(risk.startswith("selected_status:") for risk in risks):
         targets.append(f"主线状态为 {selected.status}，需要命理师确认是否可作为第一主线。")
     if "time_layer_not_ready" in risks:
-        targets.append("缺少可用岁运层时，主线只按原局和规则候选观察。")
+        targets.append("缺少可用岁运层时，主线只按原局、画像和结构依据观察。")
     return targets[:5]
+
+
+def _source_label(source: str) -> str:
+    labels = {
+        "decision_mainline": "规则主线",
+        "decision_candidate": "规则候选",
+        "portrait_axis": "画像轴",
+        "feature_state": "特征状态",
+        "structure_dynamics": "结构动态",
+        "question_domain_focus": "当前问题",
+        "practitioner_review": "命理师复核",
+    }
+    parts = [labels.get(part, part) for part in source.split("+") if part]
+    return "、".join(dict.fromkeys(parts)) or "结构证据"
+
+
+def _public_evidence_lines(evidence: tuple[str, ...], limit: int) -> list[str]:
+    rows = []
+    for item in evidence:
+        text = _public_text(item)
+        if not text:
+            continue
+        rows.append(text)
+        if len(rows) >= limit:
+            break
+    return rows
+
+
+def _public_title(value: object) -> str:
+    return _public_text(value) or "结构主线"
+
+
+def _public_text(value: object) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if "evidence." in text or text.startswith("证据 "):
+        return ""
+    text = text.replace("规则：明确成立", "")
+    text = text.replace("：明确成立", "")
+    text = text.replace("规则", "")
+    text = text.replace("3/3 条件成立", "条件已形成")
+    text = text.replace("2/2 条件成立", "条件已形成")
+    text = text.replace("decision_candidate", "规则候选")
+    return " ".join(text.split()).strip(" 。；")
+
+
+def _domain_label(domain: object) -> str:
+    labels = {
+        "career": "事业结构",
+        "wealth": "财运结构",
+        "strength": "日主承载",
+        "useful_god": "用神候选",
+        "pattern": "格局结构",
+        "relationship": "关系结构",
+        "time": "岁运时间",
+        "branch": "地支互动",
+        "element": "五行分布",
+        "ten_god": "十神结构",
+    }
+    return labels.get(str(domain or ""), str(domain or ""))

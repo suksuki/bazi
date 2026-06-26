@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import time
 import urllib.request
 
 from v20.llm.provider import load_llm_provider_config_from_env, llm_provider_readiness_report
@@ -101,7 +102,57 @@ def llm_admin_status(*, probe_models: bool = False) -> dict[str, object]:
     }
 
 
+def llm_admin_test(payload: dict[str, object] | None = None) -> dict[str, object]:
+    cfg = load_llm_provider_config_from_env()
+    readiness = llm_provider_readiness_report(cfg)
+    base = {
+        "version": "v20.admin_llm_test.v1",
+        "status": "not_ready",
+        "provider": cfg.provider,
+        "model": cfg.model,
+        "ready_for_connection": readiness["ready_for_connection"],
+        "executed": False,
+        "runtime_mutation": False,
+        "guardrails": [
+            "ADMIN_ONLY_LLM_CONNECTIVITY_TEST",
+            "NO_SECRET_VALUES_RENDERED",
+            "TEST_PROMPT_ONLY_NO_RUNTIME_TRUTH_MUTATION",
+        ],
+    }
+    if not readiness["ready_for_connection"]:
+        return base | {"failure": "provider_not_ready"}
+    prompt = str((payload or {}).get("prompt") or "Reply with one short sentence: Qiazhi admin LLM test ok.").strip()
+    started = time.monotonic()
+    try:
+        text = _test_completion(cfg, prompt[:500])
+    except Exception as exc:
+        return base | {
+            "status": "failed",
+            "executed": True,
+            "duration_ms": round((time.monotonic() - started) * 1000, 2),
+            "failure": type(exc).__name__,
+            "failure_detail": _failure_detail(exc),
+            "timeout_sec": _completion_timeout(cfg),
+        }
+    return base | {
+        "status": "ok",
+        "executed": True,
+        "duration_ms": round((time.monotonic() - started) * 1000, 2),
+        "timeout_sec": _completion_timeout(cfg),
+        "sample": text[:500],
+    }
+
+
 def _load_models(cfg) -> list[dict[str, object]]:
+    if cfg.provider in {"ollama", "ollama_native"}:
+        try:
+            return _load_openai_compatible_models(cfg)
+        except Exception:
+            return _load_ollama_native_models(cfg)
+    return _load_openai_compatible_models(cfg)
+
+
+def _load_openai_compatible_models(cfg) -> list[dict[str, object]]:
     request = urllib.request.Request(
         f"{cfg.resolved_base_url().rstrip('/')}/models",
         headers=_headers(cfg),
@@ -118,6 +169,73 @@ def _load_models(cfg) -> list[dict[str, object]]:
             model_id = row.get("id") or row.get("name") or ""
             models.append({"id": str(model_id), "owned_by": str(row.get("owned_by", ""))})
     return models
+
+
+def _load_ollama_native_models(cfg) -> list[dict[str, object]]:
+    request = urllib.request.Request(
+        f"{cfg.resolved_base_url().rstrip('/').removesuffix('/v1')}/api/tags",
+        headers={"Content-Type": "application/json"},
+        method="GET",
+    )
+    with urllib.request.urlopen(request, timeout=cfg.http_timeout_sec) as response:
+        body = json.loads(response.read().decode("utf-8"))
+    rows = body.get("models", [])
+    if not isinstance(rows, list):
+        return []
+    models = []
+    for row in rows[:48]:
+        if isinstance(row, dict):
+            model_id = row.get("name") or row.get("model") or row.get("id") or ""
+            models.append({"id": str(model_id), "owned_by": "ollama"})
+    return models
+
+
+def _test_completion(cfg, prompt: str) -> str:
+    if cfg.provider in {"ollama", "ollama_native"}:
+        body = {
+            "model": cfg.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "stream": False,
+            "think": False,
+            "options": {"temperature": 0, "num_predict": 80},
+        }
+        request = urllib.request.Request(
+            f"{cfg.resolved_base_url().rstrip('/').removesuffix('/v1')}/api/chat",
+            data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+    else:
+        body = {
+            "model": cfg.model,
+            "temperature": 0,
+            "max_tokens": 80,
+            "messages": [{"role": "user", "content": prompt}],
+        }
+        request = urllib.request.Request(
+            f"{cfg.resolved_base_url().rstrip('/')}/chat/completions",
+            data=json.dumps(body, ensure_ascii=False).encode("utf-8"),
+            headers=_headers(cfg),
+            method="POST",
+        )
+    with urllib.request.urlopen(request, timeout=_completion_timeout(cfg)) as response:
+        response_payload = json.loads(response.read().decode("utf-8"))
+    if cfg.provider in {"ollama", "ollama_native"}:
+        message = response_payload.get("message") if isinstance(response_payload, dict) else {}
+        return str(message.get("content") or response_payload.get("response") or "").strip() if isinstance(message, dict) else ""
+    return str(response_payload["choices"][0]["message"]["content"]).strip()
+
+
+def _completion_timeout(cfg) -> float:
+    timeout = float(getattr(cfg, "http_timeout_sec", 15.0) or 15.0)
+    if cfg.provider in {"ollama", "ollama_native"}:
+        return max(timeout, 30.0)
+    return max(timeout, 1.0)
+
+
+def _failure_detail(exc: Exception) -> str:
+    detail = str(exc).strip()
+    return detail[:300] if detail else type(exc).__name__
 
 
 def _headers(cfg) -> dict[str, str]:

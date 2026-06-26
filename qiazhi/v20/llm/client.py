@@ -240,30 +240,45 @@ def _plain_text_messages(contract: LLMTaskContract, prompt: dict[str, object]) -
         {
             "role": "system",
             "content": (
-                "You are the user's professional Bazi practitioner, not a customer-support assistant. "
-                "The software has already calculated the chart facts and evidence card; your job is to interpret them and answer directly. "
-                "Make a clear structural judgment from the verified chart evidence. "
-                "If asked who leads, choose one primary line and one secondary/supporting line. "
-                "If asked what to review first, name the first review step. "
-                "Do not say you cannot decide when the answer card contains evidence. "
-                "Never output JSON. Never wrap the answer in {\"text\":...}. "
-                "Do not output markdown headings, internal ids, rule/debug labels, or unsupported claims. "
-                "Do not invent events or guarantee outcomes. Start directly with the answer sentence."
+                "You are the user's Bazi practitioner. Use only the verified answer card. "
+                "Start with a direct conclusion, then evidence, boundary, and next step. "
+                "Plain text only; no JSON, markdown headings, internal ids, or unsupported claims."
             ),
         },
         {
             "role": "user",
-            "content": json.dumps(
-                {
-                    "task": contract.task_name,
-                    "required_output": "plain_text_only_no_json_no_markdown",
-                    "prompt": prompt,
-                },
-                ensure_ascii=False,
-                sort_keys=True,
-            ),
+            "content": json.dumps(_plain_text_prompt_payload(contract, prompt), ensure_ascii=False, sort_keys=True),
         },
     ]
+
+
+def _plain_text_prompt_payload(contract: LLMTaskContract, prompt: dict[str, object]) -> dict[str, object]:
+    if contract.task_name == "practitioner_answer":
+        return {
+            "task": contract.task_name,
+            "locale": prompt.get("locale", "zh"),
+            "required_output": "plain_text_only_no_json_no_markdown",
+            "answer_contract": _compact_plain_answer_contract(prompt.get("answer_contract", {})),
+            "context": prompt.get("context", {}),
+            "instruction": prompt.get("instruction", ""),
+        }
+    return {
+        "task": contract.task_name,
+        "required_output": "plain_text_only_no_json_no_markdown",
+        "prompt": prompt,
+    }
+
+
+def _compact_plain_answer_contract(contract: object) -> dict[str, object]:
+    if not isinstance(contract, dict):
+        return {}
+    return {
+        "voice_profile": contract.get("voice_profile", ""),
+        "structure": contract.get("structure", ()),
+        "required": contract.get("required", ()),
+        "forbidden": contract.get("forbidden", ()),
+        "length_limit": contract.get("length_limit", ""),
+    }
 
 
 def _headers(cfg: LLMProviderConfig) -> dict[str, str]:

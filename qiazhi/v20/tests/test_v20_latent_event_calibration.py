@@ -3,8 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from fastapi.testclient import TestClient
+from fastapi import HTTPException
 
+from v20.api.schemas import LatentEventCalibrationRequest
 from v20.interaction.latent_event_calibration import (
     LatentCalibrationAnswer,
     analyze_latent_event_calibration,
@@ -13,6 +14,14 @@ from v20.interaction.latent_event_calibration import (
 )
 from v20.server import app
 from v20.storage.local_jsonl import LocalJsonlStore
+
+
+def _endpoint(path: str, method: str = "GET"):
+    method = method.upper()
+    for route in app.routes:
+        if getattr(route, "path", "") == path and method in getattr(route, "methods", set()):
+            return route.endpoint
+    raise AssertionError(f"route not found: {method} {path}")
 
 
 def test_v20_latent_event_calibration_manifest_is_choice_based() -> None:
@@ -88,14 +97,12 @@ def test_v20_latent_event_calibration_record_is_append_only(tmp_path: Path) -> N
 
 
 def test_v20_latent_event_calibration_endpoints_are_guarded() -> None:
-    client = TestClient(app)
-    manifest = client.get("/api/v20/learning/latent-event-calibration").json()
-    analyzed = client.post(
-        "/api/v20/latent-event/calibration/analyze",
-        json={
-            "input_id": "profile:test",
-            "source_role": "user",
-            "answers": [
+    manifest = _endpoint("/api/v20/learning/latent-event-calibration")()
+    analyzed = _endpoint("/api/v20/latent-event/calibration/analyze", "POST")(
+        LatentEventCalibrationRequest(
+            input_id="profile:test",
+            source_role="user",
+            answers=[
                 {
                     "scenario_id": "latent.career_transition",
                     "year_option": "31_to_36",
@@ -104,26 +111,28 @@ def test_v20_latent_event_calibration_endpoints_are_guarded() -> None:
                     "confidence": "medium",
                 }
             ],
-        },
+        )
     )
-    rejected = client.post(
-        "/api/v20/latent-event/calibration/analyze",
-        json={
-            "input_id": "profile:test",
-            "source_role": "user",
-            "answers": [
-                {
-                    "scenario_id": "latent.career_transition",
-                    "year_option": "2019",
-                    "result_option": "platform_change",
-                    "intensity": "clear",
-                    "confidence": "medium",
-                }
-            ],
-        },
-    )
+    try:
+        _endpoint("/api/v20/latent-event/calibration/analyze", "POST")(
+            LatentEventCalibrationRequest(
+                input_id="profile:test",
+                source_role="user",
+                answers=[
+                    {
+                        "scenario_id": "latent.career_transition",
+                        "year_option": "2019",
+                        "result_option": "platform_change",
+                        "intensity": "clear",
+                        "confidence": "medium",
+                    }
+                ],
+            )
+        )
+        raise AssertionError("invalid latent event option should fail")
+    except HTTPException as exc:
+        rejected_status = exc.status_code
 
     assert manifest["scenario_count"] >= 6
-    assert analyzed.status_code == 200
-    assert analyzed.json()["factor_update_signals"]
-    assert rejected.status_code == 400
+    assert analyzed["factor_update_signals"]
+    assert rejected_status == 400

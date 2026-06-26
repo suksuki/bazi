@@ -5,6 +5,7 @@ from typing import Any
 
 from v20.core.constants import CONTROLS, GENERATES, element_of_stem
 from v20.core.schemas import ChartFacts, RelationHit, TimeContext
+from v20.dynamics.graph_engine import build_structure_dynamic_graph_report
 from v20.dynamics.schema import DynamicChain, DynamicEdge, DynamicNode, StructureDynamics
 from v20.features.schema import FeatureLayer
 
@@ -27,6 +28,7 @@ CHAIN_SEGMENT_PRIORITY = (
     ("wealth", "authority", "resource"),
     ("authority", "resource", "self"),
     ("output", "wealth"),
+    ("output", "authority"),
     ("wealth", "authority"),
     ("authority", "resource"),
     ("resource", "self"),
@@ -56,6 +58,8 @@ CHAIN_NODE_BY_DOMAIN = {
 }
 
 CHAIN_NODES_BY_RULE_KEY = {
+    "l3.food_controls_killing": ("output", "authority"),
+    "food_controls_killing": ("output", "authority"),
     "wealth.output_capacity": ("output", "wealth", "self"),
     "wealth.output_wealth_capacity_chain": ("output", "wealth", "self"),
     "career.guan_shang_yin": ("output", "authority", "resource"),
@@ -86,12 +90,15 @@ def build_structure_dynamics(
     edges = _valid_edges(_edges(chart_facts, time_context), {node.node_id for node in nodes})
     dimensions = _dimensions(chart_facts, feature_layer, feature_state_model, time_context)
     chain = _dominant_chain(chart_facts, feature_state_model, time_context, decision_report)
+    graph_report = build_structure_dynamic_graph_report(chart_facts, time_context)
     activated = _activated_structures(feature_state_model, time_context)
     suppressed = _suppressed_structures(feature_state_model, time_context)
     volatility_score = _volatility_score(chart_facts, time_context)
     stability_shift = _stability_shift(dimensions["stability_score"], volatility_score, time_context)
     energy_shift = _energy_shift(dimensions["energy_strength"], time_context)
     status = "ready" if nodes else "empty"
+    legacy_dynamic_chain = chain.to_dict()
+    legacy_dynamic_chain.update(_chain_pattern_payload(chain.nodes, chain.evidence, chart_facts))
     payload = StructureDynamics(
         version=STRUCTURE_DYNAMICS_VERSION,
         status=status,
@@ -108,7 +115,7 @@ def build_structure_dynamics(
             "relation_pressure_count": dimensions["relation_pressure_count"],
             "relation_stabilizer_count": dimensions["relation_stabilizer_count"],
         },
-        dominant_chain=chain.to_dict(),
+        legacy_dynamic_chain=legacy_dynamic_chain,
         chain_state=chain.state,
         activated_structures=activated,
         suppressed_structures=suppressed,
@@ -117,7 +124,55 @@ def build_structure_dynamics(
         terminal_node=chain.terminal_node,
         volatility_score=volatility_score,
     )
-    return payload.to_dict()
+    result = payload.to_dict()
+    result["sde_v2"] = graph_report
+    result["dominant_path"] = graph_report.get("dominant_path", {})
+    result["dominant_chain_v2"] = graph_report.get("dominant_chain_candidate", {})
+    result["primary_dynamic_chain"] = _primary_dynamic_chain(
+        legacy_chain=legacy_dynamic_chain,
+        v2_chain=result["dominant_chain_v2"],
+    )
+    result["primary_dynamic_chain_source"] = "dominant_chain_v2" if result["primary_dynamic_chain"].get("source_field") == "dominant_chain_v2" else "legacy_dynamic_chain"
+    result["candidate_paths"] = graph_report.get("candidate_paths", [])
+    result["semantic_candidates"] = graph_report.get("semantic_candidates", [])
+    result["sde_algorithm"] = graph_report.get("algorithm", "")
+    return result
+
+
+def _primary_dynamic_chain(*, legacy_chain: dict[str, Any], v2_chain: object) -> dict[str, Any]:
+    if isinstance(v2_chain, dict) and v2_chain.get("chain_key") and v2_chain.get("nodes"):
+        return {
+            "version": "v20.structure_dynamics_primary_chain.v1",
+            "source_field": "dominant_chain_v2",
+            "chain_key": str(v2_chain.get("chain_key", "")),
+            "nodes": tuple(str(node) for node in v2_chain.get("nodes", ()) if str(node)),
+            "state": str(v2_chain.get("state", "")),
+            "label": str(v2_chain.get("pattern_label", "")),
+            "pattern_key": str(v2_chain.get("pattern_key", "")),
+            "pattern_label": str(v2_chain.get("pattern_label", "")),
+            "summary": str(v2_chain.get("pattern_summary", "")),
+            "node_labels": tuple(str(node) for node in v2_chain.get("node_labels", ()) if str(node)),
+            "edge_labels": tuple(str(edge) for edge in v2_chain.get("edge_labels", ()) if str(edge)),
+            "confidence": float(v2_chain.get("confidence", v2_chain.get("path_score", 0.0)) or 0.0),
+            "evidence": tuple(str(item) for item in v2_chain.get("evidence", ()) if str(item))[:8],
+            "runtime_mutation": False,
+        }
+    return {
+        "version": "v20.structure_dynamics_primary_chain.v1",
+        "source_field": "legacy_dynamic_chain",
+        "chain_key": str(legacy_chain.get("chain_key", "")),
+        "nodes": tuple(str(node) for node in legacy_chain.get("nodes", ()) if str(node)),
+        "state": str(legacy_chain.get("state", "")),
+        "label": str(legacy_chain.get("pattern_label", legacy_chain.get("label", ""))),
+        "pattern_key": str(legacy_chain.get("pattern_key", "")),
+        "pattern_label": str(legacy_chain.get("pattern_label", "")),
+        "summary": str(legacy_chain.get("summary", "")),
+        "node_labels": (),
+        "edge_labels": (),
+        "confidence": 0.0,
+        "evidence": tuple(str(item) for item in legacy_chain.get("evidence", ()) if str(item))[:8],
+        "runtime_mutation": False,
+    }
 
 
 def _nodes(chart_facts: ChartFacts, feature_layer: FeatureLayer, time_context: TimeContext) -> tuple[DynamicNode, ...]:
@@ -328,10 +383,10 @@ def _chain_signal_scores(
         for node in _nodes_for_domain(str(state.get("domain", ""))):
             add(node, amount, reason)
 
-    _score_decision_rows(decision_report.get("hits", ()), 0.2, scores, evidence, segment_boosts)
-    _score_decision_rows(decision_report.get("decisions", ()), 0.34, scores, evidence, segment_boosts)
-    _score_decision_rows(decision_report.get("mainlines", ()), 0.52, scores, evidence, segment_boosts)
-    _score_decision_rows(decision_report.get("rule_runtime_hits", ()), 0.12, scores, evidence, segment_boosts)
+    _score_decision_rows(decision_report.get("hits", ()), 0.2, scores, evidence, segment_boosts, chart_facts)
+    _score_decision_rows(decision_report.get("decisions", ()), 0.34, scores, evidence, segment_boosts, chart_facts)
+    _score_decision_rows(decision_report.get("mainlines", ()), 0.52, scores, evidence, segment_boosts, chart_facts)
+    _score_decision_rows(decision_report.get("rule_runtime_hits", ()), 0.12, scores, evidence, segment_boosts, chart_facts)
 
     portrait = decision_report.get("portrait_projection", {})
     axes = portrait.get("axes", ()) if isinstance(portrait, dict) else ()
@@ -352,6 +407,7 @@ def _score_decision_rows(
     scores: dict[str, float],
     evidence: dict[str, list[str]],
     segment_boosts: dict[tuple[str, ...], float],
+    chart_facts: ChartFacts,
 ) -> None:
     def add(node: str, amount: float, reason: str = "") -> None:
         if node not in scores:
@@ -369,6 +425,8 @@ def _score_decision_rows(
         score = float(row.get("score", row.get("match_score", 0.0)) or 0.0)
         amount = factor * score
         key = _normalize_rule_key(str(row.get("rule_key", "") or row.get("decision_key", "") or row.get("mainline_key", "")))
+        if key.endswith("food_controls_killing") and not _has_food_controls_killing_signal(chart_facts):
+            continue
         reason = f"系统裁决:{str(row.get('title', '') or row.get('label', '') or key)}"
         nodes = _nodes_for_rule_key(key) or _nodes_for_text(reason, tuple(str(item) for item in row.get("support", ()) if str(item)))
         if not nodes:
@@ -401,6 +459,8 @@ def _nodes_for_rule_key(key: str) -> tuple[str, ...]:
 
 def _nodes_for_text(label: str, support: tuple[str, ...] = ()) -> tuple[str, ...]:
     text = " ".join((label, *support))
+    if "食神制杀" in text or "食神制煞" in text or "制杀" in text or "制煞" in text:
+        return ("output", "authority")
     nodes = []
     for ten_god, node in CHAIN_NODE_BY_TEN_GOD.items():
         if ten_god in text and node not in nodes:
@@ -429,6 +489,54 @@ def _chain_evidence(
         rows.extend(node_evidence.get(node, ())[:2])
     rows.extend(labels)
     return tuple(dict.fromkeys(row for row in rows if row))[:10]
+
+
+def _chain_pattern_payload(nodes: tuple[str, ...], evidence: tuple[str, ...], chart_facts: ChartFacts) -> dict[str, str]:
+    node_set = set(nodes)
+    evidence_text = " ".join(evidence)
+    if {"output", "authority"}.issubset(node_set) and (
+        "食神制杀" in evidence_text
+        or "食神制煞" in evidence_text
+        or "制杀" in evidence_text
+        or "制煞" in evidence_text
+    ) and _has_food_controls_killing_signal(chart_facts):
+        return {
+            "pattern_key": "food_controls_killing",
+            "pattern_label": "食神制杀",
+            "pattern_summary": "食神与七杀同现时，优先看输出能否约束压力，而不是默认转成财星。",
+        }
+    if {"output", "authority"}.issubset(node_set):
+        return {
+            "pattern_key": "output_authority",
+            "pattern_label": "食伤制官杀",
+            "pattern_summary": "食伤与官杀同场时，重点看表达、规则压力和约束关系。",
+        }
+    if {"output", "wealth"}.issubset(node_set):
+        return {
+            "pattern_key": "output_to_wealth",
+            "pattern_label": "食伤生财",
+            "pattern_summary": "食伤与财星相接时，重点看输出能否稳定转成资源或机会。",
+        }
+    if {"authority", "resource"}.issubset(node_set):
+        return {
+            "pattern_key": "authority_resource",
+            "pattern_label": "官印/杀印相生",
+            "pattern_summary": "官杀与印星相连时，重点看压力是否被承接和转化。",
+        }
+    return {
+        "pattern_key": "generic",
+        "pattern_label": "结构主线",
+        "pattern_summary": "当前按八字、大运和流年中的主导十神链观察。",
+    }
+
+
+def _has_food_controls_killing_signal(chart_facts: ChartFacts) -> bool:
+    visible_labels = {row.label for row in chart_facts.visible_ten_gods}
+    hidden_food = any(row.label == "食神" and float(row.weight or 0.0) >= 0.5 for row in chart_facts.hidden_ten_gods)
+    hidden_killing = any(row.label == "七杀" and float(row.weight or 0.0) >= 0.5 for row in chart_facts.hidden_ten_gods)
+    has_food = "食神" in visible_labels
+    has_killing = "七杀" in visible_labels
+    return (has_food and has_killing) or (has_food and hidden_killing) or (has_killing and hidden_food)
 
 
 def _activated_structures(feature_state_model: dict[str, Any], time_context: TimeContext) -> tuple[dict[str, Any], ...]:

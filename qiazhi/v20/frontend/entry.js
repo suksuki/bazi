@@ -152,10 +152,6 @@ const applyLocale = (locale) => {
   document.title = text.title + " · Qiazhi V20";
 };
 
-const goWorkbench = (session) => {
-  window.location.href = "/v20/ui/workbench.html";
-};
-
 const goProfiles = (session) => {
   window.location.href = "/v20/ui/profiles.html";
 };
@@ -180,7 +176,7 @@ const guestStart = async () => {
     flow_year: document.querySelector("#guestFlowYear").value
   });
   if (calendarVal === "lunar") params.set("lunar_is_leap", leapChecked ? "true" : "false");
-  window.location.href = `/v20/ui/workbench.html?${params.toString()}`;
+  window.location.href = `${window.QiazhiWorkbenchRoutes.pageForRole("guest")}?${params.toString()}`;
 };
 
 const login = async () => {

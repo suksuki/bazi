@@ -32,6 +32,7 @@ class MeasureRequest(BaseModel):
     question_key: str = ""
     user_text: str = ""
     locale: str = "zh"
+    source_role: str = Field("user", pattern="^(guest|user|analyst|admin|lab|practitioner)$")
     llm_mode: str = Field("deterministic", pattern="^(deterministic|rewrite|practitioner)$")
     practitioner_selections: list[PractitionerControlSelectionRequest] = Field(default_factory=list)
     latent_event_answers: list[LatentEventCalibrationAnswerRequest] = Field(default_factory=list)
@@ -65,6 +66,29 @@ class FeedbackRequest(BaseModel):
     locale: str = "zh"
 
 
+class QuestionSourceRankingRecordRequest(BaseModel):
+    input_id: str = ""
+    source_role: str = Field("user", pattern="^(guest|user|analyst|admin|lab|practitioner)$")
+    question_source_ranking_report: dict[str, object] = Field(default_factory=dict)
+    locale: str = "zh"
+
+
+class RoleQuestionClickRequest(BaseModel):
+    input_id: str = ""
+    source_role: str = Field("user", pattern="^(guest|user|analyst|admin|lab|practitioner)$")
+    question: dict[str, object] = Field(default_factory=dict)
+    locale: str = "zh"
+
+
+class QuestionReviewRequest(BaseModel):
+    input_id: str = ""
+    source_role: str = Field("analyst", pattern="^(analyst|admin|lab|practitioner)$")
+    question: dict[str, object] = Field(default_factory=dict)
+    action: str = Field(..., pattern="^(approve|rewrite|downrank|merge|delete)$")
+    reason: str = Field("", pattern="^(|role_mismatch|mainline_mismatch|too_technical|duplicate|unfocused)$")
+    locale: str = "zh"
+
+
 class PortraitCalibrationRequest(BaseModel):
     input_id: str = ""
     feature_id: str = Field(..., min_length=1, max_length=160)
@@ -88,8 +112,8 @@ class LatentEventCalibrationRequest(BaseModel):
     locale: str = "zh"
 
 
-class PolicyReviewRequest(BaseModel):
-    policy_type: str = Field(..., pattern="^(question_ranking|knowledge_retrieval|confidence_calibration)$")
-    policy_payload: dict[str, object] = Field(default_factory=dict)
-    source: str = "manual_review"
-    eval_report_id: str = ""
+class OrchestratorMemoryRecordRequest(BaseModel):
+    input_id: str = ""
+    source_role: str = Field("analyst", pattern="^(analyst|admin|lab|practitioner)$")
+    brain_memory_signal: dict[str, object] = Field(default_factory=dict)
+    locale: str = "zh"

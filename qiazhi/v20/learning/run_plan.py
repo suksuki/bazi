@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from v20.corpus.coverage import CorpusCoveragePlan, build_corpus_coverage_plan
 from v20.learning.evolution import build_evolution_dry_run_plan
+from v20.learning_orchestrator.run_plan import build_learning_orchestrator_run_plan
 
 
 def build_learning_run_plan(*, corpus_plan: CorpusCoveragePlan | None = None) -> dict[str, object]:
     plan = corpus_plan or build_corpus_coverage_plan()
     evolution = build_evolution_dry_run_plan(corpus_plan=plan)
+    orchestrator = build_learning_orchestrator_run_plan("nightly", corpus_plan=plan)
     stages = (
         _stage(
             "structural_precompute",
@@ -47,6 +49,15 @@ def build_learning_run_plan(*, corpus_plan: CorpusCoveragePlan | None = None) ->
             "synthetic_validation_report",
             "decision_record",
         ),
+        "learning_orchestrator": {
+            "version": orchestrator["version"],
+            "status": orchestrator["status"],
+            "default_job": orchestrator["job"],
+            "dataset": orchestrator["dataset"],
+            "sharding": orchestrator["sharding"],
+            "candidate_policy_targets": orchestrator["candidate_policy_targets"],
+            "completion": orchestrator["completion"],
+        },
         "blocked_outputs": evolution["blocked_actions"],
         "runtime_mutation": False,
         "guardrails": [

@@ -93,9 +93,19 @@ def build_portrait_projection(
     decision_report: dict[str, Any],
     *,
     runtime_decision_fusion: dict[str, Any] | None = None,
+    runtime_policy_pointer: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
-    axes = _axes(feature_layer, decision_model, decision_report, runtime_decision_fusion=runtime_decision_fusion)
+    pointer, pointer_error = _load_portrait_runtime_pointer(runtime_policy_pointer)
+    policy_index = _portrait_policy_index(pointer)
+    axes = _axes(
+        feature_layer,
+        decision_model,
+        decision_report,
+        runtime_decision_fusion=runtime_decision_fusion,
+        policy_index=policy_index,
+    )
     items = _items(feature_layer, axes)
+    portrait_policy_effect = _portrait_policy_effect(pointer, pointer_error, policy_index, axes)
     projection = PortraitProjection(
         version=PORTRAIT_PROJECTION_VERSION,
         status="ready" if axes else "empty",
@@ -110,13 +120,19 @@ def build_portrait_projection(
             "KNOWLEDGE_SUPPORTS_LABELS_NOT_VERDICTS",
             "NO_PORTRAIT_DRIVEN_FORTUNE_VERDICT",
             "PORTRAIT_IS_DECISION_STATE_PROJECTION",
+            "PORTRAIT_RUNTIME_CONSUMES_ACTIVE_PORTRAIT_POINTER",
         ),
     )
     payload = projection.to_dict()
+    _annotate_axis_policy_effect(payload, policy_index)
     payload["source_decision_model_version"] = decision_model.get("version", "")
     payload["source_decision_report_version"] = decision_report.get("version", "")
     payload["axis_source"] = "DecisionState+MainlineDecision+TopicProjection"
     payload["portrait_model_source"] = "DecisionReport+TopicProjection+PortraitTagModel"
+    payload["policy_effect"] = {
+        "portrait_policy": portrait_policy_effect,
+    }
+    payload["runtime_policy_effect"] = portrait_policy_effect
     payload["runtime_decision_fusion_applied"] = bool(
         runtime_decision_fusion and bool(runtime_decision_fusion.get("decisions", ()))
     )
@@ -129,6 +145,7 @@ def _axes(
     decision_model: dict[str, Any],
     decision_report: dict[str, Any],
     runtime_decision_fusion: dict[str, Any] | None = None,
+    policy_index: dict[str, dict[str, Any]] | None = None,
 ) -> tuple[PortraitAxis, ...]:
     arguments = tuple(row for row in decision_model.get("argument_nodes", ()) if isinstance(row, dict))
     mainlines = tuple(row for row in decision_report.get("mainlines", ()) if isinstance(row, dict))
@@ -145,7 +162,8 @@ def _axes(
         if not domain:
             continue
         feature_ids = _feature_ids(feature_layer, domain, source_rows)
-        score = round(max(float(row.get("score", 0.0) or 0.0) for row in source_rows), 3)
+        base_score = round(max(float(row.get("score", 0.0) or 0.0) for row in source_rows), 3)
+        score = _apply_portrait_policy_score(base_score, policy_index.get(domain) if policy_index else None)
         axis_tier = _axis_tier(domain, source_rows)
         axis_state = _axis_state(source_rows)
         structural_anchor = _structural_anchor(domain, axis_tier, axis_state, source_rows)
@@ -190,6 +208,115 @@ def _axes(
             )
         )
     return tuple(sorted(rows, key=lambda row: (row.peak_confidence, row.feature_count), reverse=True)[:12])
+
+
+def _load_portrait_runtime_pointer(pointer: dict[str, Any] | None) -> tuple[dict[str, Any], str]:
+    if pointer is not None:
+        return pointer, ""
+    try:
+        from v20.learning.portrait_runtime_pointer import build_portrait_runtime_pointer
+
+        return build_portrait_runtime_pointer(), ""
+    except Exception as exc:
+        return (
+            {
+                "version": "v20.portrait_runtime_pointer_unavailable.v1",
+                "status": "error",
+                "runtime_applied": False,
+                "runtime_allowed": False,
+                "blocking_gate": f"portrait_runtime_pointer_failed:{exc}",
+                "policy_payload": {},
+                "runtime_mutation": False,
+            },
+            str(exc),
+        )
+
+
+def _portrait_policy_index(pointer: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    if pointer.get("runtime_applied") is not True:
+        return {}
+    payload = pointer.get("policy_payload", {})
+    if not isinstance(payload, dict):
+        return {}
+    rows = payload.get("portrait_axis_weight_policy", ())
+    index: dict[str, dict[str, Any]] = {}
+    for row in rows if isinstance(rows, list | tuple) else ():
+        if not isinstance(row, dict):
+            continue
+        domain = str(row.get("domain", ""))
+        if domain:
+            index[domain] = row
+    return index
+
+
+def _apply_portrait_policy_score(base_score: float, policy_row: dict[str, Any] | None) -> float:
+    if not policy_row:
+        return base_score
+    try:
+        axis_delta = float(policy_row.get("axis_weight_delta", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        axis_delta = 0.0
+    try:
+        floor_delta = float(policy_row.get("confidence_floor_delta", 0.0) or 0.0)
+    except (TypeError, ValueError):
+        floor_delta = 0.0
+    bounded_delta = max(-0.08, min(0.08, axis_delta))
+    adjusted = max(base_score + bounded_delta, base_score + max(0.0, min(0.04, floor_delta)))
+    return round(max(0.0, min(0.98, adjusted)), 3)
+
+
+def _portrait_policy_effect(
+    pointer: dict[str, Any],
+    pointer_error: str,
+    policy_index: dict[str, dict[str, Any]],
+    axes: tuple[PortraitAxis, ...],
+) -> dict[str, Any]:
+    axis_domains = {axis.domain for axis in axes}
+    applied_domains = tuple(domain for domain in sorted(policy_index) if domain in axis_domains)
+    if pointer_error:
+        status = "pointer_error"
+    elif pointer.get("runtime_applied") is not True:
+        status = "not_applied"
+    elif policy_index and not applied_domains:
+        status = "active_no_matching_axis"
+    else:
+        status = "applied" if applied_domains else "empty_payload"
+    return {
+        "version": "v20.portrait_runtime_policy_effect.v1",
+        "status": status,
+        "active_policy_version": pointer.get("active_policy_version", ""),
+        "candidate_policy_version": pointer.get("candidate_policy_version", ""),
+        "policy_count": len(policy_index),
+        "applied_axis_count": len(applied_domains),
+        "applied_domains": applied_domains,
+        "target": "portrait_axis_weight_policy",
+        "blocking_gate": str(pointer.get("blocking_gate", "")),
+        "runtime_mutation": False,
+        "guardrails": (
+            "PORTRAIT_POLICY_IS_POINTER_DRIVEN",
+            "PORTRAIT_POLICY_ADJUSTS_AXIS_SCORE_ONLY",
+            "PORTRAIT_POLICY_DOES_NOT_ESCALATE_ROLE_VISIBILITY",
+        ),
+    }
+
+
+def _annotate_axis_policy_effect(payload: dict[str, Any], policy_index: dict[str, dict[str, Any]]) -> None:
+    axes = payload.get("axes", ())
+    if not isinstance(axes, list):
+        return
+    for axis in axes:
+        if not isinstance(axis, dict):
+            continue
+        policy = policy_index.get(str(axis.get("domain", "")))
+        if not policy:
+            axis["policy_applied"] = False
+            axis["policy_axis_weight_delta"] = 0.0
+            axis["policy_role_depth_hint"] = ""
+            continue
+        axis["policy_applied"] = True
+        axis["policy_axis_weight_delta"] = float(policy.get("axis_weight_delta", 0.0) or 0.0)
+        axis["policy_confidence_floor_delta"] = float(policy.get("confidence_floor_delta", 0.0) or 0.0)
+        axis["policy_role_depth_hint"] = str(policy.get("role_depth_hint", ""))
 
 
 def _axis_tier(domain: str, rows: list[dict[str, Any]]) -> str:

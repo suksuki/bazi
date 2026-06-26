@@ -40,6 +40,7 @@ def build_llm_context_pack(
     question_intent_model: dict[str, object] | None = None,
     interaction_session: dict[str, object] | None = None,
     mainline_arbitration: dict[str, object] | None = None,
+    brain_state: dict[str, object] | None = None,
     locale: str = "zh",
 ) -> dict[str, object]:
     decision_report = decision_report or {}
@@ -69,7 +70,12 @@ def build_llm_context_pack(
             },
             "answer_plan_rewrite": {
                 "contract": ANSWER_PLAN_REWRITE.to_dict(),
-                "prompt": answer_rewrite_prompt(answer_plan, locale=locale),
+                "prompt": answer_rewrite_prompt(
+                    answer_plan,
+                    locale=locale,
+                    verified_answer_text=answer_text,
+                    brain_state=brain_state or {},
+                ),
             },
             "practitioner_answer": {
                 "contract": PRACTITIONER_ANSWER.to_dict(),
@@ -86,6 +92,7 @@ def build_llm_context_pack(
                     question_intent_model=question_intent_model,
                     interaction_session=interaction_session,
                     mainline_arbitration=mainline_arbitration or {},
+                    brain_state=brain_state or {},
                     locale=locale,
                 ),
             },

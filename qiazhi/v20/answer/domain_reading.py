@@ -112,6 +112,10 @@ KNOWLEDGE_LABELS_ZH = {
     "v20.core.ten_god_boundary": "十神解释范围",
     "v20.core.element_distribution_boundary": "五行分布边界",
     "v20.core.pattern_review_boundary": "格局审查边界",
+    "v20.useful_god_arbitration.conflict_path": "用神候选仲裁边界",
+    "v20.time.trigger_stack_boundary": "岁运分层触发边界",
+    "v20.time.fuyin_fanyin_storage_boundary": "伏吟反吟与墓库岁运边界",
+    "v20.ten_god.position_layer_boundary": "十神位置层边界",
 }
 
 

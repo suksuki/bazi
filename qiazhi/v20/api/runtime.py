@@ -1,10 +1,18 @@
 from __future__ import annotations
 
+from dataclasses import replace
+
 from v20.answer.composer import compose_answer
 from v20.answer.evidence import build_evidence_pack
 from v20.answer.measurement_policy import prediction_policy
 from v20.answer.plan import build_answer_plan
 from v20.core.chart import build_chart_facts, chart_input_from_displays
+from v20.core.context_frame import (
+    attach_context_binding,
+    build_bazi_context_frame,
+    build_context_alignment_report,
+    build_context_binding,
+)
 from v20.core.strength import infer_core
 from v20.core.time_context import build_time_context
 from v20.decision.engine import build_decision_report
@@ -12,6 +20,7 @@ from v20.decision.knowledge_bridge import attach_knowledge_rule_bridge
 from v20.decision.fusion import build_runtime_decision_fusion
 from v20.decision.latent_signals import build_latent_signal_report
 from v20.decision.questions import recommend_decision_questions, resolve_requested_question
+from v20.decision.question_source_runtime import build_question_source_ranking_report
 from v20.decision.validation import validate_decision_report
 from v20.dynamics.engine import build_structure_dynamics
 from v20.features.compiler import compile_features
@@ -26,18 +35,27 @@ from v20.knowledge.alignment import knowledge_feature_alignment
 from v20.knowledge.retrieval import retrieve_knowledge
 from v20.interaction.question_intent import build_question_intent_model
 from v20.interaction.question_agent import apply_question_agent_state
+from v20.interaction.question_anchor import bind_questions_to_bazi_context
+from v20.interaction.question_atoms import QuestionSessionState, build_next_question_plan
 from v20.interaction.question_i18n import localize_question_candidate, localize_question_candidates
 from v20.interaction.portrait_graph import build_portrait_graph_summary
 from v20.interaction.portrait_projection import build_portrait_projection
+from v20.interaction.question_source_record import record_question_source_ranking_report
 from v20.interaction.session_model import build_interaction_session_model
 from v20.llm.assist import attach_answer_safety_review, build_llm_routing_assist
 from v20.llm.context import build_llm_context_pack
 from v20.llm.contracts import LLM_CONTRACTS
-from v20.llm.practitioner import build_practitioner_answer_with_llm
+from v20.llm.practitioner import build_practitioner_answer_with_llm, validate_practitioner_answer_day_master
 from v20.llm.tasks import rewrite_answer_plan_with_llm
 from v20.measurement.report import build_measurement_report
 from v20.orchestrator.engine import ReasoningRecorder
+from v20.orchestrator.brain_state import build_orchestrator_brain_state
+from v20.orchestrator.evidence import compile_orchestrator_evidence
 from v20.orchestrator.mainline import arbitrate_mainline
+from v20.orchestrator.memory import build_brain_memory_signal
+from v20.orchestrator.policy_observability import build_policy_observability_summary
+from v20.orchestrator.question_focus import align_questions_to_mainline
+from v20.orchestrator.runtime_policy import build_runtime_policy_pointer
 
 
 def run_runtime_from_pillars(
@@ -59,6 +77,8 @@ def run_runtime_from_pillars(
     latent_event_answers: tuple[dict[str, object], ...] = (),
     answered_question_ids: tuple[str, ...] = (),
     answered_question_keys: tuple[str, ...] = (),
+    source_role: str = "user",
+    record_question_source_report: bool = False,
 ) -> dict[str, object]:
     recorder = ReasoningRecorder()
     chart_input = recorder.run(
@@ -85,6 +105,17 @@ def run_runtime_from_pillars(
             flow_year_pillar=flow_year_pillar,
             luck_pillar=luck_pillar,
             flow_month_pillar=flow_month_pillar,
+        ),
+    )
+    bazi_context_frame = recorder.run(
+        "bazi_context_frame",
+        "八字上下文绑定",
+        "ChartFacts+TimeContext",
+        "bazi_context_frame",
+        lambda: build_bazi_context_frame(
+            chart_facts=chart_facts,
+            time_context=time_context,
+            input_id=input_id,
         ),
     )
     core = recorder.run("core_inference", "日主承载推断", "ChartFacts", "core_inference", lambda: infer_core(chart_facts))
@@ -156,6 +187,13 @@ def run_runtime_from_pillars(
         "structure_dynamics",
         lambda: build_structure_dynamics(chart_facts, feature_layer, feature_state_model, time_context, decision_report),
     )
+    attach_context_binding(
+        structure_dynamics,
+        bazi_context_frame,
+        module_key="structure_dynamics",
+        evidence_domains=tuple(str(row.get("domain", "")) for row in structure_dynamics.get("activated_structures", ()) if isinstance(row, dict)),
+        time_sensitive=time_context.status == "ready",
+    )
     questions = recorder.run(
         "question_candidates",
         "智能问题生成",
@@ -187,11 +225,6 @@ def run_runtime_from_pillars(
     )
     questions = localize_question_candidates(questions, locale=locale)
     selected_question = _localized_selected_question(selected_question, questions, locale)
-    portrait_graph_summary = build_portrait_graph_summary(
-        portrait_projection if isinstance(portrait_projection, dict) else {},
-        decision_report,
-        tuple(questions),
-    )
     question_intent_model = recorder.run(
         "question_intent_model",
         "问题意图排序",
@@ -205,10 +238,38 @@ def run_runtime_from_pillars(
             runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
         ),
     )
+    attach_context_binding(
+        question_intent_model,
+        bazi_context_frame,
+        module_key="question_intent_model",
+        evidence_domains=tuple(str(row.domain) for row in questions),
+        feature_ids=tuple(feature_id for row in questions for feature_id in row.source_feature_ids),
+        time_sensitive=any(row.domain == "time" for row in questions),
+    )
+    orchestrator_evidence = recorder.run(
+        "orchestrator_evidence",
+        "中枢统一证据编译",
+        "DecisionReport+FeatureStateModel+StructureDynamics+QuestionIntent+TimeContext",
+        "orchestrator_evidence",
+        lambda: compile_orchestrator_evidence(
+            decision_report=decision_report,
+            feature_state_model=feature_state_model,
+            structure_dynamics=structure_dynamics,
+            question_intent_model=question_intent_model,
+            time_context=time_context.to_dict(),
+        ),
+    )
+    orchestrator_policy_preflight = recorder.run(
+        "orchestrator_policy_preflight",
+        "中枢策略版本预检",
+        "PolicyVersionRegistry",
+        "orchestrator_policy_pointer.preflight",
+        lambda: build_runtime_policy_pointer(brain_memory_signal={}),
+    )
     mainline_arbitration = recorder.run(
         "mainline_arbitration",
         "智能中枢主线仲裁",
-        "DecisionReport+FeatureStateModel+StructureDynamics+QuestionIntent+TimeContext",
+        "UnifiedEvidence+CandidateMainlines+QuestionIntent+TimeContext+RuntimePolicyPointer",
         "mainline_arbitration",
         lambda: arbitrate_mainline(
             decision_report=decision_report,
@@ -217,6 +278,139 @@ def run_runtime_from_pillars(
             question_intent_model=question_intent_model,
             time_context=time_context.to_dict(),
             practitioner_selections=practitioner_selections,
+            evidence_items=tuple(orchestrator_evidence.get("items", ())),
+            runtime_policy_pointer=orchestrator_policy_preflight,
+        ),
+    )
+    explicit_question_focus = bool(question_key or question_id or routed_question_key or practitioner_selections or latent_event_answers)
+    questions, selected_question, question_mainline_focus = recorder.run(
+        "question_mainline_focus",
+        "智能问题贴合主线",
+        "Questions+MainlineArbitration",
+        "question_mainline_focus",
+        lambda: align_questions_to_mainline(
+            tuple(questions),
+            selected_question,
+            mainline_arbitration,
+            explicit_question_requested=explicit_question_focus,
+            runtime_policy_pointer=orchestrator_policy_preflight,
+        ),
+    )
+    questions = _suppress_answered_questions(
+        questions,
+        answered_question_ids=answered_question_ids,
+        answered_question_keys=answered_question_keys,
+    )
+    next_question_plan = recorder.run(
+        "next_question_plan",
+        "下一问策略计划",
+        "MainlineArbitration+QuestionSessionState+TimeContext",
+        "next_question_plan",
+        lambda: build_next_question_plan(
+            role_key=source_role,
+            session_state=QuestionSessionState(
+                answered_question_ids=answered_question_ids,
+                answered_question_keys=answered_question_keys,
+                answered_topics=tuple(_question_topic_depth(answered_question_keys).keys()),
+                last_question_id=selected_question.question_id or selected_question.question_key,
+                last_question_key=selected_question.question_key,
+                last_domain=selected_question.domain,
+                last_stage=selected_question.measurement_stage,
+                topic_depth=_question_topic_depth(answered_question_keys),
+            ),
+            primary_domain=str(mainline_arbitration.get("primary_mainline", {}).get("domain", "")),
+            primary_stage=selected_question.measurement_stage,
+            has_time_context=_has_runtime_time_context(time_context),
+        ),
+    )
+    questions = recorder.run(
+        "next_question_rank_merge",
+        "下一问策略合流",
+        "Questions+NextQuestionPlan",
+        "questions",
+        lambda: _merge_next_question_plan_into_questions(questions, next_question_plan),
+    )
+    questions = recorder.run(
+        "question_bazi_anchor",
+        "智能问题八字锚定",
+        "Questions+BaziContextFrame+StructureDynamics+MainlineArbitration",
+        "questions",
+        lambda: bind_questions_to_bazi_context(
+            tuple(questions),
+            bazi_context_frame=bazi_context_frame,
+            structure_dynamics=structure_dynamics,
+            mainline_arbitration=mainline_arbitration,
+            role_key=source_role,
+        ),
+    )
+    questions = tuple(_promote_display_title(question) for question in questions)
+    next_question_plan = _attach_bound_questions_to_next_question_plan(next_question_plan, questions)
+    selected_question = _sync_selected_question(selected_question, questions)
+    if not getattr(selected_question, "question_anchor", {}):
+        selected_bound = bind_questions_to_bazi_context(
+            (selected_question,),
+            bazi_context_frame=bazi_context_frame,
+            structure_dynamics=structure_dynamics,
+            mainline_arbitration=mainline_arbitration,
+            role_key=source_role,
+        )
+        if selected_bound:
+            selected_question = _promote_display_title(selected_bound[0])
+    question_source_ranking_report = recorder.run(
+        "question_source_ranking_report",
+        "问题来源图解释",
+        "Questions+QuestionSourceGraph",
+        "question_source_ranking_report",
+        lambda: build_question_source_ranking_report(tuple(questions)),
+    )
+    if record_question_source_report:
+        try:
+            _ = record_question_source_ranking_report(
+                input_id=input_id,
+                source_role=source_role,
+                question_source_ranking_report=question_source_ranking_report,
+            )
+        except Exception:
+            # Question-source telemetry must never make the measurement runtime fail.
+            pass
+    question_intent_model = recorder.run(
+        "question_intent_model_focus",
+        "问题意图贴合最终主线",
+        "FocusedQuestions+SelectedQuestion+MainlineArbitration",
+        "question_intent_model",
+        lambda: build_question_intent_model(
+            decision_report=decision_report,
+            feature_state_model=feature_state_model,
+            questions=questions,
+            selected_question=selected_question,
+            runtime_decision_fusion=decision_report.get("runtime_decision_fusion", {}),
+        ),
+    )
+    attach_context_binding(
+        question_intent_model,
+        bazi_context_frame,
+        module_key="question_intent_model",
+        evidence_domains=tuple(str(row.domain) for row in questions),
+        feature_ids=tuple(feature_id for row in questions for feature_id in row.source_feature_ids),
+        time_sensitive=any(row.domain == "time" for row in questions),
+    )
+    portrait_graph_summary = build_portrait_graph_summary(
+        portrait_projection if isinstance(portrait_projection, dict) else {},
+        decision_report,
+        tuple(questions),
+    )
+    brain_state = recorder.run(
+        "brain_state",
+        "智能中枢状态摘要",
+        "MainlineArbitration+UnifiedEvidence+QuestionFocus+StructureDynamics",
+        "brain_state",
+        lambda: build_orchestrator_brain_state(
+            mainline_arbitration=mainline_arbitration,
+            orchestrator_evidence=orchestrator_evidence,
+            question_mainline_focus=question_mainline_focus,
+            structure_dynamics=structure_dynamics,
+            selected_question=selected_question,
+            time_context=time_context.to_dict(),
         ),
     )
     decision_report["practitioner_controls"] = tuple(
@@ -242,6 +436,39 @@ def run_runtime_from_pillars(
         practitioner_session=practitioner_session,
         latent_event_session=latent_event_session,
         decision_report=decision_report,
+    )
+    brain_memory_signal = recorder.run(
+        "brain_memory_signal",
+        "智能中枢记忆信号",
+        "BrainState+MainlineArbitration+QuestionFocus+SessionCalibration",
+        "brain_memory_signal",
+        lambda: build_brain_memory_signal(
+            input_id=input_id,
+            brain_state=brain_state,
+            mainline_arbitration=mainline_arbitration,
+            question_mainline_focus=question_mainline_focus,
+            selected_question=selected_question,
+            practitioner_session=practitioner_session,
+            latent_event_session=latent_event_session,
+        ),
+    )
+    orchestrator_policy_pointer = recorder.run(
+        "orchestrator_policy_pointer",
+        "中枢策略版本指针",
+        "BrainMemorySignal+PolicyVersionRegistry",
+        "orchestrator_policy_pointer",
+        lambda: build_runtime_policy_pointer(brain_memory_signal=brain_memory_signal),
+    )
+    orchestrator_policy_observability = recorder.run(
+        "orchestrator_policy_observability",
+        "中枢策略在线观测",
+        "PolicyPointer+RuntimePolicyEffects",
+        "orchestrator_policy_observability",
+        lambda: build_policy_observability_summary(
+            policy_pointer=orchestrator_policy_pointer,
+            mainline_arbitration=mainline_arbitration,
+            question_mainline_focus=question_mainline_focus,
+        ),
     )
     knowledge_report = recorder.run(
         "knowledge_retrieval",
@@ -283,7 +510,7 @@ def run_runtime_from_pillars(
         "确定性回答生成",
         "AnswerPlan",
         "answer_text",
-        lambda: compose_answer(answer_plan, locale=locale),
+        lambda: compose_answer(answer_plan, locale=locale, brain_state=brain_state),
     )
     answer_text = deterministic_answer_text
     answer_rewrite = {
@@ -308,6 +535,7 @@ def run_runtime_from_pillars(
             answer_plan,
             deterministic_answer_text,
             locale=locale,
+            brain_state=brain_state,
         )
         answer_text = str(answer_rewrite.get("text") or deterministic_answer_text)
     if llm_mode == "practitioner":
@@ -322,14 +550,26 @@ def run_runtime_from_pillars(
             question_intent_model=question_intent_model,
             interaction_session=interaction_session,
             mainline_arbitration=mainline_arbitration,
+            brain_state=brain_state,
             answer_plan=answer_plan,
             deterministic_answer_text=deterministic_answer_text,
             locale=locale,
         )
         answer_text = str(practitioner_answer.get("text") or deterministic_answer_text)
+    day_master_answer_validation = validate_practitioner_answer_day_master(answer_text, chart_facts.day_master)
+    if not day_master_answer_validation.get("ok"):
+        answer_text = deterministic_answer_text
+        practitioner_answer = practitioner_answer | {
+            "status": "fallback",
+            "text": deterministic_answer_text,
+            "source": "deterministic_fallback",
+            "day_master_validation": day_master_answer_validation,
+            "guardrails": list(practitioner_answer.get("guardrails", ())) + ["DAY_MASTER_MISMATCH_FORCED_DETERMINISTIC_FALLBACK"],
+        }
     llm_assist = attach_answer_safety_review(llm_routing_assist, answer_text)
     llm_assist["answer_rewrite"] = answer_rewrite
     llm_assist["practitioner_answer"] = practitioner_answer
+    llm_assist["day_master_answer_validation"] = day_master_answer_validation
     llm_assist["context_pack"] = build_llm_context_pack(
         user_text,
         feature_layer,
@@ -347,12 +587,58 @@ def run_runtime_from_pillars(
         question_intent_model=question_intent_model,
         interaction_session=interaction_session,
         mainline_arbitration=mainline_arbitration,
+        brain_state=brain_state,
         locale=locale,
+    )
+    attach_context_binding(
+        decision_report.get("portrait_projection", {}),
+        bazi_context_frame,
+        module_key="portrait_projection",
+        evidence_domains=tuple(str(row.get("domain", "")) for row in portrait_projection.get("axes", ()) if isinstance(row, dict)),
+        feature_ids=tuple(feature_id for row in portrait_projection.get("axes", ()) if isinstance(row, dict) for feature_id in row.get("feature_ids", ())),
+        time_sensitive=any(str(row.get("domain", "")) == "time" for row in portrait_projection.get("axes", ()) if isinstance(row, dict)),
+    )
+    attach_context_binding(
+        llm_assist["context_pack"],
+        bazi_context_frame,
+        module_key="llm_context_pack",
+        evidence_domains=tuple(str(row.domain) for row in questions),
+        time_sensitive=time_context.status == "ready",
+    )
+    question_context_binding = build_context_binding(
+        bazi_context_frame,
+        module_key="question_candidates",
+        evidence_domains=tuple(str(row.domain) for row in questions),
+        feature_ids=tuple(feature_id for row in questions for feature_id in row.source_feature_ids),
+        time_sensitive=any(row.domain == "time" for row in questions),
+    )
+    context_alignment_report = build_context_alignment_report(
+        bazi_context_frame,
+        bindings={
+            "structure_dynamics": structure_dynamics.get("context_binding", {}),
+            "portrait_projection": decision_report.get("portrait_projection", {}).get("context_binding", {}),
+            "question_intent_model": question_intent_model.get("context_binding", {}),
+            "mainline_arbitration": build_context_binding(
+                bazi_context_frame,
+                module_key="mainline_arbitration",
+                evidence_domains=tuple(
+                    str(row.get("domain", ""))
+                    for row in (mainline_arbitration.get("primary_mainline", {}).get("nodes", ()) or ())
+                    if isinstance(row, dict)
+                ),
+                time_sensitive=time_context.status == "ready",
+            ),
+            "llm_context_pack": llm_assist["context_pack"].get("context_binding", {}),
+        },
     )
     reasoning_orchestrator = recorder.to_orchestrator(
         {
             "primary_mainline": "mainline_arbitration.primary_mainline",
-            "structure_dynamics": "structure_dynamics.dominant_chain",
+            "brain_state": "brain_state.public_summary",
+            "brain_memory_signal": "brain_memory_signal.memory_key",
+            "orchestrator_policy_pointer": "orchestrator_policy_pointer.active_policy_version",
+            "orchestrator_policy_observability": "orchestrator_policy_observability.status",
+            "structure_dynamics": "structure_dynamics.primary_dynamic_chain",
             "selected_question": "selected_question",
             "answer": "answer_text",
         }
@@ -361,6 +647,8 @@ def run_runtime_from_pillars(
         "version": "v20.runtime_result.v1",
         "input_id": input_id,
         "locale": locale,
+        "bazi_context_frame": bazi_context_frame,
+        "context_alignment_report": context_alignment_report,
         "chart_facts": chart_facts.to_dict(),
         "time_context": time_context.to_dict(),
         "core_inference": core.to_dict(),
@@ -370,6 +658,14 @@ def run_runtime_from_pillars(
         "feature_state_model": feature_state_model,
         "structure_dynamics": structure_dynamics,
         "mainline_arbitration": mainline_arbitration,
+        "orchestrator_evidence": orchestrator_evidence,
+        "question_mainline_focus": question_mainline_focus,
+        "next_question_plan": next_question_plan,
+        "question_source_ranking_report": question_source_ranking_report,
+        "brain_state": brain_state,
+        "brain_memory_signal": brain_memory_signal,
+        "orchestrator_policy_pointer": orchestrator_policy_pointer,
+        "orchestrator_policy_observability": orchestrator_policy_observability,
         "reasoning_orchestrator": reasoning_orchestrator,
         "knowledge_report": knowledge_report.to_dict(),
         "knowledge_refs": [row.to_dict() for row in knowledge_report.refs],
@@ -381,6 +677,7 @@ def run_runtime_from_pillars(
         "portrait_graph_summary": portrait_graph_summary,
         "latent_signal_report": latent_signal_report,
         "questions": [row.to_dict() for row in questions],
+        "question_context_binding": question_context_binding,
         "question_intent_model": question_intent_model,
         "question_agent_state": question_agent_state,
         "selected_question": selected_question.to_dict(),
@@ -431,6 +728,176 @@ def _selected_first_questions(questions, selected_question, llm_routing_assist):
     return tuple(sorted(unique, key=rank))
 
 
+def _sync_selected_question(selected_question, questions):  # noqa: ANN001
+    selected_id = selected_question.question_id or selected_question.question_key
+    for question in questions:
+        if selected_id and (question.question_id or question.question_key) == selected_id:
+            return question
+    return selected_question
+
+
+def _promote_display_title(question):  # noqa: ANN001
+    display_title = str(getattr(question, "display_title", "") or "")
+    if display_title and getattr(question, "title", "") != display_title:
+        return replace(question, title=display_title)
+    return question
+
+
+def _attach_bound_questions_to_next_question_plan(next_question_plan: dict[str, object], questions) -> dict[str, object]:  # noqa: ANN001
+    if not isinstance(next_question_plan, dict):
+        return {}
+    recommended = []
+    atoms = next_question_plan.get("recommended_atoms", ())
+    if not isinstance(atoms, list):
+        atoms = []
+    seen: set[str] = set()
+    for atom in atoms:
+        if not isinstance(atom, dict):
+            continue
+        key = str(atom.get("question_key", ""))
+        matched = next((question for question in questions if str(question.question_key) == key), None)
+        if matched is None:
+            continue
+        identity = str(matched.question_id or matched.question_key)
+        if identity in seen:
+            continue
+        seen.add(identity)
+        anchor = getattr(matched, "question_anchor", {}) or {}
+        recommended.append(
+            {
+                "question_id": matched.question_id or matched.question_key,
+                "question_key": matched.question_key,
+                "display_title": _question_display_title(matched),
+                "domain": matched.domain,
+                "topic": matched.next_question_topic or matched.measurement_topic,
+                "stage": matched.next_question_stage or matched.measurement_stage,
+                "atom_id": matched.next_question_atom_id or str(atom.get("atom_id", "")),
+                "anchor_status": anchor.get("anchor_status", "") if isinstance(anchor, dict) else "",
+                "day_master": anchor.get("day_master", "") if isinstance(anchor, dict) else "",
+                "primary_dynamic_chain_label": anchor.get("primary_dynamic_chain_label", "") if isinstance(anchor, dict) else "",
+                "why_this_question": anchor.get("why_this_question", "") if isinstance(anchor, dict) else "",
+                "score_reasons": list(matched.next_question_score_reasons),
+            }
+        )
+    guardrails = list(next_question_plan.get("guardrails", ()) or ())
+    if "RECOMMENDED_QUESTIONS_USE_BAZI_ANCHORED_DISPLAY_TITLE" not in guardrails:
+        guardrails.append("RECOMMENDED_QUESTIONS_USE_BAZI_ANCHORED_DISPLAY_TITLE")
+    return {
+        **next_question_plan,
+        "recommended_questions": recommended,
+        "anchored_recommended_question_count": len(recommended),
+        "guardrails": guardrails,
+    }
+
+
+def _suppress_answered_questions(
+    questions,
+    *,
+    answered_question_ids: tuple[str, ...],
+    answered_question_keys: tuple[str, ...],
+):
+    answered_ids = {str(row).strip() for row in answered_question_ids if str(row).strip()}
+    answered_keys = {str(row).strip() for row in answered_question_keys if str(row).strip()}
+    if not answered_ids and not answered_keys:
+        return questions
+    return tuple(
+        question
+        for question in questions
+        if (question.question_id or question.question_key) not in answered_ids
+        and question.question_key not in answered_keys
+    )
+
+
+def _question_topic_depth(answered_question_keys: tuple[str, ...]) -> dict[str, int]:
+    depths: dict[str, int] = {}
+    for key in answered_question_keys:
+        topic = _question_key_topic(str(key))
+        if not topic:
+            continue
+        depths[topic] = depths.get(topic, 0) + 1
+    return depths
+
+
+def _question_key_topic(question_key: str) -> str:
+    if "career" in question_key:
+        return "career_structure"
+    if "income" in question_key or "wealth" in question_key:
+        return "wealth_channel"
+    if "relationship" in question_key:
+        return "relationship_pattern"
+    if "time" in question_key:
+        return "timing_trigger"
+    if "structure" in question_key or "pattern" in question_key:
+        return "structure_dynamics"
+    if "useful_god" in question_key:
+        return "useful_god"
+    if "health" in question_key:
+        return "health_balance"
+    return ""
+
+
+def _has_runtime_time_context(time_context) -> bool:  # noqa: ANN001
+    return bool(
+        getattr(time_context, "status", "") == "ready"
+        or getattr(time_context, "layers", ())
+        or getattr(time_context, "relation_hits", ())
+    )
+
+
+def _question_display_title(question) -> str:  # noqa: ANN001
+    return str(getattr(question, "display_title", "") or getattr(question, "title", "") or getattr(question, "question_key", ""))
+
+
+def _merge_next_question_plan_into_questions(questions, next_question_plan: dict[str, object]):  # noqa: ANN001
+    atoms = next_question_plan.get("recommended_atoms", ()) if isinstance(next_question_plan, dict) else ()
+    if not isinstance(atoms, list) or not atoms:
+        return questions
+    atom_by_key = {}
+    for atom in atoms:
+        if not isinstance(atom, dict):
+            continue
+        key = str(atom.get("question_key", ""))
+        if key and key not in atom_by_key:
+            atom_by_key[key] = atom
+    scored = []
+    for index, question in enumerate(questions):
+        atom = atom_by_key.get(str(question.question_key))
+        if not atom:
+            scored.append((float(question.score or 0.0), -index, question))
+            continue
+        atom_score = float(atom.get("score", 0.0) or 0.0)
+        merged_score = round(float(question.score or 0.0) + min(0.22, atom_score * 0.18), 3)
+        enriched = _with_next_question_atom_metadata(question, atom, merged_score)
+        scored.append((merged_score, 100 - index, enriched))
+    return tuple(row for _score, _order, row in sorted(scored, key=lambda item: (item[0], item[1]), reverse=True))
+
+
+def _with_next_question_atom_metadata(question, atom: dict[str, object], score: float):  # noqa: ANN001
+    payload = question.to_dict()
+    payload.update(
+        {
+            "score": score,
+            "next_question_atom_id": str(atom.get("atom_id", "")),
+            "next_question_topic": str(atom.get("topic", "")),
+            "next_question_stage": str(atom.get("stage", "")),
+            "next_question_score": float(atom.get("score", 0.0) or 0.0),
+            "next_question_score_reasons": tuple(str(row) for row in atom.get("score_reasons", ()) if str(row))
+            if isinstance(atom.get("score_reasons", ()), list | tuple)
+            else (),
+            "question_strategy": _append_strategy(str(payload.get("question_strategy", "")), "next_question_plan"),
+        }
+    )
+    return replace(question, **{key: value for key, value in payload.items() if hasattr(question, key)})
+
+
+def _append_strategy(strategy: str, suffix: str) -> str:
+    if not strategy:
+        return suffix
+    if suffix in strategy:
+        return strategy
+    return f"{strategy}+{suffix}"
+
+
 def _localized_selected_question(selected_question, questions, locale: str):
     selected_id = selected_question.question_id or selected_question.question_key
     for row in questions:
@@ -460,7 +927,7 @@ def _practitioner_session_lens(practitioner_selections, questions, selected_ques
                 "option": option,
                 "effect": "question_ranking_refresh",
                 "matched_question_keys": [question.question_key for question in matched_questions],
-                "matched_question_titles": [question.title for question in matched_questions],
+                "matched_question_titles": [_question_display_title(question) for question in matched_questions],
                 "selected_question_key": selected_question.question_key,
                 "runtime_rule_mutation": False,
             }
@@ -473,7 +940,7 @@ def _practitioner_session_lens(practitioner_selections, questions, selected_ques
         "questions_refreshed": bool(practitioner_selections),
         "selected_question_key": selected.question_key,
         "selected_question_id": selected.question_id or selected.question_key,
-        "selected_question_title": selected.title,
+        "selected_question_title": _question_display_title(selected),
         "selection_effects": effects,
         "runtime_mutation": False,
         "guardrails": [
@@ -505,7 +972,7 @@ def _latent_event_session_lens(latent_event_answers, questions, selected_questio
                 "result_option": str(answer.get("result_option", "")),
                 "effect": "personal_factor_question_ranking_refresh",
                 "matched_question_keys": [question.question_key for question in matched_questions],
-                "matched_question_titles": [question.title for question in matched_questions],
+                "matched_question_titles": [_question_display_title(question) for question in matched_questions],
                 "runtime_rule_mutation": False,
             }
         )
@@ -516,7 +983,7 @@ def _latent_event_session_lens(latent_event_answers, questions, selected_questio
         "questions_refreshed": bool(latent_event_answers),
         "selected_question_key": selected_question.question_key,
         "selected_question_id": selected_question.question_id or selected_question.question_key,
-        "selected_question_title": selected_question.title,
+        "selected_question_title": _question_display_title(selected_question),
         "selection_effects": effects,
         "runtime_mutation": False,
         "guardrails": [

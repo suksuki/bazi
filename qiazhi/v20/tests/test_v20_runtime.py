@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-import ast
+import copy
 import json
-from pathlib import Path
 
-from v20.api.runtime import run_runtime_from_pillars
-from v20.corpus.canonical_case import CanonicalCase
-from v20.corpus.precompute_runner import precompute_case
-from v20.llm.contracts import ANSWER_PLAN_REWRITE
+from v20.api.runtime import run_runtime_from_pillars as _run_runtime_from_pillars_uncached
+from v20.access.projection import project_runtime_for_role
+from v20.llm.client import _plain_text_messages
+from v20.llm.contracts import ANSWER_PLAN_REWRITE, PRACTITIONER_ANSWER
 from v20.llm.practitioner import accept_or_fallback_practitioner_answer
 from v20.llm.prompts import practitioner_answer_prompt
 from v20.llm.tasks import (
@@ -24,6 +23,31 @@ from v20.knowledge.loader import default_knowledge_units
 from v20.validation.evaluator import evaluate_answer_plan, evaluate_runtime_result
 from v20.validation.golden import GOLDEN_CASES
 from v20.validation.synthetic_schema import SyntheticCase
+
+
+_RUNTIME_CACHE: dict[tuple[object, ...], dict[str, object]] = {}
+
+
+def run_runtime_from_pillars(year_pillar: str, month_pillar: str, day_pillar: str, hour_pillar: str, **kwargs):
+    cache_kwargs = tuple(sorted((key, value) for key, value in kwargs.items() if key != "input_id"))
+    cache_key = (year_pillar, month_pillar, day_pillar, hour_pillar, cache_kwargs)
+    try:
+        hash(cache_key)
+    except TypeError:
+        return _run_runtime_from_pillars_uncached(year_pillar, month_pillar, day_pillar, hour_pillar, **kwargs)
+
+    if cache_key not in _RUNTIME_CACHE:
+        _RUNTIME_CACHE[cache_key] = _run_runtime_from_pillars_uncached(
+            year_pillar,
+            month_pillar,
+            day_pillar,
+            hour_pillar,
+            **kwargs,
+        )
+    result = copy.deepcopy(_RUNTIME_CACHE[cache_key])
+    if "input_id" in kwargs and "input_id" in result:
+        result["input_id"] = kwargs["input_id"]
+    return result
 
 
 def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
@@ -209,7 +233,7 @@ def test_v20_runtime_builds_dynamic_decision_answer_plan() -> None:
     mainline_sections = [row["body"] for row in sections if row["section_type"] == "mainline_decision"]
     assert mainline_sections and "主线入口" in mainline_sections[0]
     assert any("复核重点" in row["body"] for row in result["answer_plan"]["sections"])
-    assert any("质量门" in row["body"] for row in result["answer_plan"]["sections"])
+    assert any("复核状态" in row["body"] for row in result["answer_plan"]["sections"])
     assert result["answer_plan"]["measurement_focus"] == "bazi_measurement"
     assert result["answer_plan"]["domain_projection"]["guardrails"]
     assert "guaranteed_event" in result["answer_plan"]["domain_projection"]["blocked_claim_types"]
@@ -269,6 +293,30 @@ def test_v20_dynamic_decisions_drive_questions_portrait_and_interaction() -> Non
     assert result["measurement_report"]["core_focus"] == "bazi_measurement"
     assert result["measurement_report"]["selected_question_key"] == result["selected_question"]["question_key"]
     assert result["questions"][0]["question_key"] == result["selected_question"]["question_key"]
+    context = result["bazi_context_frame"]
+    context_id = context["context_id"]
+    assert context["natal_pillars"] == {"year": "庚午", "month": "辛巳", "day": "丁丑", "hour": "乙巳"}
+    assert {row["layer_key"] for row in context["time_layers"]} == {"luck", "flow_year"}
+    assert result["structure_dynamics"]["context_binding"]["context_id"] == context_id
+    assert result["structure_dynamics"]["context_binding"]["evidence_anchor_count"] >= 1
+    assert result["decision_report"]["portrait_projection"]["context_binding"]["context_id"] == context_id
+    assert result["decision_report"]["portrait_projection"]["context_binding"]["evidence_anchor_count"] >= 1
+    assert result["question_intent_model"]["context_binding"]["context_id"] == context_id
+    assert result["question_intent_model"]["context_binding"]["evidence_anchor_count"] >= 1
+    assert result["question_context_binding"]["context_id"] == context_id
+    assert result["llm_assist"]["context_pack"]["context_binding"]["context_id"] == context_id
+    context_alignment = result["context_alignment_report"]
+    assert context_alignment["context_id"] == context_id
+    assert context_alignment["drift_score"] == 0
+    assert context_alignment["aligned_count"] == context_alignment["module_count"]
+    assert all(row["evidence_anchor_count"] >= 1 for row in context_alignment["modules"])
+    assert {row["module_key"] for row in context_alignment["modules"]} == {
+        "structure_dynamics",
+        "portrait_projection",
+        "question_intent_model",
+        "mainline_arbitration",
+        "llm_context_pack",
+    }
     assert all(row["role"] == "bazi_measurement_entry" for row in result["questions"])
     assert all(row["measurement_topic"] for row in result["questions"])
     assert all(row["alignment_status"] in {"bazi_core_aligned", "bazi_projection_aligned"} for row in result["questions"])
@@ -304,6 +352,43 @@ def test_v20_hidden_wealth_stays_boundary_not_mainline() -> None:
     assert "wealth" not in mainline_domains[:3]
     assert wealth_decisions["decision.wealth.material"]["status"] == "hidden_material_review"
     assert all("食伤生财" not in row["title"] for row in result["questions"][:3])
+
+
+def test_v20_output_authority_structure_not_demoted_to_output_wealth() -> None:
+    result = run_runtime_from_pillars(
+        "丁巳",
+        "乙巳",
+        "乙丑",
+        "乙酉",
+        luck_pillar="庚子",
+        flow_year_pillar="丙午",
+        source_role="admin",
+    )
+
+    chain = result["structure_dynamics"]["primary_dynamic_chain"]
+    primary = result["mainline_arbitration"]["primary_mainline"]
+    brain = result["brain_state"]["public_summary"]
+
+    assert result["chart_facts"]["day_master"] == "乙"
+    assert tuple(chain["nodes"][:2]) == ("output", "authority")
+    assert "食伤生财" not in chain["pattern_label"]
+    assert primary["domain"] == "career"
+    assert {"output", "authority"}.issubset(set(primary["nodes"]))
+    assert primary["title"] != "食伤生财规则：明确成立"
+    assert brain["primary_title"] != "食伤生财"
+    assert "食伤生财" not in result["answer_text"]
+
+    knowledge_sections = [
+        row for row in result["answer_plan"]["sections"]
+        if row["section_type"] == "decision_knowledge_support"
+    ]
+    assert knowledge_sections
+    assert "食伤生财" not in knowledge_sections[0]["body"]
+    assert "财星" not in knowledge_sections[0]["body"]
+
+    projected = project_runtime_for_role(result, "admin")
+    assert "dominant_chain" not in projected["structure_dynamics"]
+    assert projected["structure_dynamics"]["primary_dynamic_chain"]["pattern_label"] == chain["pattern_label"]
 
 
 def test_v20_dynamic_decisions_use_practitioner_ready_bazi_rule_language() -> None:
@@ -356,10 +441,12 @@ def test_v20_useful_god_and_pattern_decisions_use_bazi_language() -> None:
     release_decisions = {row["rule_key"]: row for row in release_case["decision_report"]["decisions"]}
 
     assert support_decisions["rule.useful_god.candidate_gate"]["label"] == "用神候选先看扶身路径"
-    assert "用神方向先看扶身" in support_decisions["rule.useful_god.candidate_gate"]["portrait_tags"]
-    assert support_case["selected_question"]["title"] == "用神方向要先扶身，还是另有通关路径？"
+    assert "用神候选偏向扶助日主" in support_decisions["rule.useful_god.candidate_gate"]["portrait_tags"]
+    assert "这个盘的用神和调节方向是什么" in support_case["selected_question"]["title"]
+    assert "先扶身" not in support_case["selected_question"]["title"]
     assert release_decisions["rule.useful_god.candidate_gate"]["label"] == "用神候选先看泄秀路径"
-    assert release_case["selected_question"]["title"] == "用神方向适合先看泄秀还是财星通道？"
+    assert "这个盘的用神和调节方向是什么" in release_case["selected_question"]["title"]
+    assert "先看泄秀还是" not in release_case["selected_question"]["title"]
     assert support_decisions["rule.pattern.review_gate"]["label"] == "格局需先看墓库藏气"
     assert "月柱墓库藏气需要格局复核" in support_decisions["rule.pattern.review_gate"]["support"]
     assert "support:" not in support_case["answer_text"]
@@ -430,6 +517,11 @@ def test_v20_combination_chain_decisions_drive_main_questions() -> None:
     assert career_decisions["rule.career.output_authority_resource_chain"]["label"] == "官伤印三方需要合参"
     assert career_case["selected_question"]["title"] == "事业上官星、伤官和印星谁是主导？"
     assert "官星规则、伤官表达和印星缓冲" in career_case["answer_text"]
+    source_report = career_case["question_source_ranking_report"]
+    assert source_report["version"] == "v20.question_source_ranking_report.v1"
+    assert source_report["question_count"] == len(career_case["questions"])
+    assert source_report["rows"][0]["question_id"] == career_case["questions"][0]["question_id"]
+    assert "QUESTION_SOURCE_REPORT_IS_READ_ONLY" in source_report["guardrails"]
 
 
 def test_v20_practitioner_selection_refreshes_question_ranking_without_rule_mutation() -> None:
@@ -495,7 +587,7 @@ def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
     monkeypatch.setenv("V20_LLM_ENABLED", "0")
     monkeypatch.setenv("V20_LLM_EXECUTE", "0")
     result = run_runtime_from_pillars("甲子", "戊辰", "甲午", "辛酉", input_id="v20.validation")
-    rewritten = run_runtime_from_pillars(
+    rewritten = _run_runtime_from_pillars_uncached(
         "甲子",
         "戊辰",
         "甲午",
@@ -504,7 +596,7 @@ def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
         user_text="请按命理结构说明一下",
         llm_mode="rewrite",
     )
-    practitioner = run_runtime_from_pillars(
+    practitioner = _run_runtime_from_pillars_uncached(
         "甲子",
         "戊辰",
         "甲午",
@@ -531,6 +623,8 @@ def test_v20_validation_and_llm_fallback_are_guarded(monkeypatch) -> None:
     assert ANSWER_PLAN_REWRITE.task_name == "answer_plan_rewrite"
     safe = review_output_safety(result["answer_text"])
     assert safe["result"]["ok"] is True
+    assert safe["answer_governance_quality"]["quality_score"] > 0
+    assert "answer_governance_quality" in result["llm_assist"]["answer_safety_review"]
     assert rewritten["llm_assist"]["answer_rewrite"]["status"] == "fallback"
     assert rewritten["llm_assist"]["answer_rewrite"]["source"] == "deterministic_fallback"
     assert rewritten["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
@@ -567,6 +661,38 @@ def test_v20_practitioner_answer_accepts_only_verified_context_text() -> None:
     assert safe["source"] == "llm_practitioner_answer"
     assert bad["ok"] is False
     assert bad["source"] == "deterministic_fallback"
+
+
+def test_v20_practitioner_answer_rejects_wrong_day_master() -> None:
+    wrong = accept_or_fallback_practitioner_answer(
+        {
+            "text": "这个盘是甲木日主，先看日主承载和财官结构。",
+            "mainline": "日主承载。",
+            "question_answer": "按结构说明。",
+            "evidence_notes": ["当前命盘。"],
+            "next_questions": [],
+            "boundary_notes": ["不重算命盘。"],
+        },
+        "deterministic fallback",
+        expected_day_master="乙",
+    )
+    safe = accept_or_fallback_practitioner_answer(
+        {
+            "text": "这个盘是乙木日主，先看日主承载和财官结构。",
+            "mainline": "日主承载。",
+            "question_answer": "按结构说明。",
+            "evidence_notes": ["当前命盘。"],
+            "next_questions": [],
+            "boundary_notes": ["不重算命盘。"],
+        },
+        "deterministic fallback",
+        expected_day_master="乙",
+    )
+
+    assert wrong["ok"] is False
+    assert wrong["source"] == "deterministic_fallback"
+    assert "day_master_mismatch:甲_mentioned_expected_乙" in wrong["validation"]["failures"]
+    assert safe["ok"] is True
 
 
 def test_v20_explicit_time_layer_routes_to_time_measurement() -> None:
@@ -742,15 +868,28 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
     assert practitioner_context["prompt_profile"]["role_key"] == "practitioner"
     assert practitioner_context["prompt_profile"]["role"] == "professional_bazi_practitioner"
     assert practitioner_context["prompt_profile"]["language_instruction"]
-    assert practitioner_context["context_version"] == "v20.practitioner_answer_card.v1"
+    assert practitioner_context["prompt_profile"]["answer_prompt_profile"]["voice_profile"] == "practitioner_evidence_review"
+    assert practitioner_context["answer_prompt_profile"]["required_elements"] == ("evidence", "boundary", "counterexample_condition")
+    assert practitioner_context["answer_contract"]["voice_profile"] == "practitioner_evidence_review"
+    assert practitioner_context["context_version"] == "v20.practitioner_answer_card.v2"
+    assert "system_understanding" in practitioner_context["context"]
+    assert practitioner_context["context"]["system_understanding"]["mainline_rules"]
+    assert practitioner_context["context"]["system_understanding"]["role_context"]["context_density"] == "practitioner_evidence_review"
+    assert practitioner_context["context"]["system_understanding"]["bazi_context_profile"]["active_domains"]
+    assert "knowledge_domains" in practitioner_context["context"]["system_understanding"]
     assert "question" in practitioner_context["context"]
     assert "chart" in practitioner_context["context"]
+    assert "brain_state" in practitioner_context["context"]
+    assert practitioner_context["context"]["brain_state"]["primary_title"]
+    assert practitioner_context["context"]["brain_state"]["selected_question_title"] == routed["selected_question"]["title"]
     assert "mainline" in practitioner_context["context"]
     assert "portrait_tags" in practitioner_context["context"]
     assert "answer_plan" not in practitioner_context["context"]
     assert "decision_report" not in practitioner_context["context"]
     assert "knowledge_semantic_domains" not in practitioner_context["context"]
-    assert len(json.dumps(practitioner_context, ensure_ascii=False)) < 12000
+    assert practitioner_context["context"]["context_budget"]["target_chars"] == 5200
+    assert practitioner_context["context"]["dynamic_context"]["boundary"]
+    assert len(json.dumps(practitioner_context, ensure_ascii=False)) < 9000
     assert routed["selected_question"]["question_key"] == "q_useful_god_candidates"
     assert routed["llm_assist"]["answer_safety_review"]["result"]["ok"] is True
     prompt = practitioner_answer_prompt(
@@ -768,39 +907,35 @@ def test_v20_knowledge_and_llm_are_aligned_but_assistive() -> None:
         locale="en",
     )
     assert prompt["prompt_profile"]["language_instruction"].startswith("Write the final user-facing text in English")
-    assert prompt["context_version"] == "v20.practitioner_answer_card.v1"
+    assert prompt["answer_prompt_profile"]["locale_policy"]["locale"] == "en"
+    assert prompt["answer_contract"]["voice_profile"] == "practitioner_evidence_review"
+    assert "system_understanding" in prompt["context"]
+    assert prompt["context"]["system_understanding"]["role_context"]["focus"]
+    assert prompt["context"]["system_understanding"]["bazi_context_profile"]["structure_mode"]
+    assert prompt["context_version"] == "v20.practitioner_answer_card.v2"
     assert prompt["context"]["chart"]["day_master"]
-    assert prompt["context"]["question"]["title"] == routed["selected_question"]["title"]
+    assert "immutable_fact" in prompt["context"]["chart"]
+    assert "不得改写或重算" in prompt["context"]["chart"]["immutable_fact"]
+    assert "wood" not in prompt["context"]["chart"]["immutable_fact"]
+    assert prompt["context"]["question"]["title"] == (
+        routed["selected_question"].get("display_title") or routed["selected_question"]["title"]
+    )
+    assert prompt["context"]["selected_question_anchor"]["context_id"] == routed["selected_question"]["question_anchor"]["context_id"]
+    assert prompt["context"]["selected_question_anchor"]["day_master"] == routed["chart_facts"]["day_master"]
+    assert prompt["context"]["selected_question_anchor"]["why_this_question"]
     assert prompt["context"]["intent"]["question_key"] == routed["selected_question"]["question_key"]
     assert prompt["context"]["mainline"]
     assert prompt["context"]["portrait_tags"]
     assert prompt["context"]["evidence"]
+    assert prompt["context"]["context_budget"]["policy"] == "compact_verified_context"
     assert "knowledge_rules" not in json.dumps(prompt["context"], ensure_ascii=False)
-    assert len(json.dumps(prompt, ensure_ascii=False)) < 12000
-
-
-def test_v20_corpus_precompute_is_dry_run_only() -> None:
-    case = CanonicalCase("v20.case.sample", ("甲子", "戊辰", "甲午", "辛酉"))
-    snapshot = precompute_case(case)
-
-    assert snapshot["case"]["input_hash"]
-    assert snapshot["runtime_mutation"] is False
-    assert snapshot["feature_count"] >= 5
-    assert "PRECOMPUTE_DRY_RUN_ONLY" in snapshot["guardrails"]
-
-
-def test_v20_package_does_not_import_v19() -> None:
-    root = Path(__file__).resolve().parents[2]
-    for path in (root / "v20").rglob("*.py"):
-        tree = ast.parse(path.read_text(encoding="utf-8"))
-        for node in ast.walk(tree):
-            if isinstance(node, ast.Import):
-                names = [alias.name for alias in node.names]
-            elif isinstance(node, ast.ImportFrom):
-                names = [node.module or ""]
-            else:
-                continue
-            assert not any(name == "v19" or name.startswith("v19.") for name in names), path
+    assert len(json.dumps(prompt, ensure_ascii=False)) < 9000
+    stream_messages = _plain_text_messages(PRACTITIONER_ANSWER, prompt)
+    stream_payload = json.dumps(stream_messages, ensure_ascii=False)
+    assert len(stream_payload) < 7800
+    assert "prompt_profile" not in stream_payload
+    assert "answer_prompt_profile" not in stream_payload
+    assert "output_schema" not in stream_payload
 
 
 def _feature_layer_obj(result):

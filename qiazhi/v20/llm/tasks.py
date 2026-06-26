@@ -21,6 +21,7 @@ from v20.llm.structured_outputs import (
 )
 from v20.llm.validators import validate_llm_output, validate_llm_structured_output
 from v20.measurement.domain_alignment import ALLOWED_QUESTION_KEYS_BY_DOMAIN, is_allowed_bazi_domain
+from v20.validation.answer_safety_evaluator import evaluate_answer_governance_quality
 
 DOMAIN_ROUTE_PRIORITY = {
     "useful_god": 0,
@@ -50,12 +51,14 @@ def rewrite_answer_plan_with_llm(
     *,
     locale: str = "zh",
     tone: str = "clear",
+    brain_state: dict[str, object] | None = None,
 ) -> dict[str, object]:
     prompt = answer_rewrite_prompt(
         plan,
         locale=locale,
         tone=tone,
         verified_answer_text=deterministic_text,
+        brain_state=brain_state or {},
     )
     cfg = load_llm_provider_config_from_env()
     call = call_structured_llm(
@@ -264,6 +267,10 @@ def draft_rule_extraction_with_llm(
 
 def review_output_safety(candidate_text: str) -> dict[str, object]:
     validation = validate_llm_output(SAFETY_REVIEW, candidate_text)
+    governance_quality = evaluate_answer_governance_quality(
+        candidate_text,
+        failures=tuple(str(item) for item in validation.get("failures", ()) if str(item)),
+    )
     review = LLMSafetyReview(
         ok=bool(validation["ok"]),
         failures=tuple(validation["failures"]),
@@ -274,8 +281,13 @@ def review_output_safety(candidate_text: str) -> dict[str, object]:
         "contract": "safety_review",
         "result": review.to_dict(),
         "deterministic_validation": validation,
+        "answer_governance_quality": governance_quality,
         "runtime_mutation": False,
-        "guardrails": ["DETERMINISTIC_VALIDATOR_FINAL", "LLM_REVIEW_ADVISORY_ONLY"],
+        "guardrails": [
+            "DETERMINISTIC_VALIDATOR_FINAL",
+            "LLM_REVIEW_ADVISORY_ONLY",
+            "ANSWER_GOVERNANCE_QUALITY_IS_TRAINING_SIGNAL_ONLY",
+        ],
     }
 
 

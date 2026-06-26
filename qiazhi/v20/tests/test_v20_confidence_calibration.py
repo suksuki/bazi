@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 from v20.core.chart import build_chart_facts, chart_input_from_displays
 from v20.core.strength import infer_core
 from v20.features.calibration import (
@@ -11,6 +9,13 @@ from v20.features.calibration import (
 )
 from v20.features.compiler import compile_features
 from v20.server import app
+
+
+def _endpoint(path: str):
+    for route in app.routes:
+        if getattr(route, "path", "") == path:
+            return route.endpoint
+    raise AssertionError(f"route not found: {path}")
 
 
 def test_v20_confidence_calibration_adjusts_numeric_confidence_only() -> None:
@@ -48,8 +53,7 @@ def test_v20_compile_features_accepts_calibration_policy_without_new_features() 
 
 
 def test_v20_confidence_calibration_manifest_endpoint_is_guarded() -> None:
-    client = TestClient(app)
-    endpoint = client.get("/api/v20/features/confidence-calibration").json()
+    endpoint = _endpoint("/api/v20/features/confidence-calibration")()
     manifest = confidence_calibration_manifest()
 
     assert endpoint["runtime_mutation"] is False

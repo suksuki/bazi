@@ -49,7 +49,7 @@ class StructureDynamics:
     nodes: tuple[DynamicNode, ...]
     edges: tuple[DynamicEdge, ...]
     dynamic_state: dict[str, Any]
-    dominant_chain: dict[str, Any]
+    legacy_dynamic_chain: dict[str, Any]
     chain_state: str
     activated_structures: tuple[dict[str, Any], ...]
     suppressed_structures: tuple[dict[str, Any], ...]
@@ -75,7 +75,7 @@ class StructureDynamics:
             "nodes": [row.to_dict() for row in self.nodes],
             "edges": [row.to_dict() for row in self.edges],
             "dynamic_state": self.dynamic_state,
-            "dominant_chain": self.dominant_chain,
+            "legacy_dynamic_chain": self.legacy_dynamic_chain,
             "chain_state": self.chain_state,
             "activated_structures": list(self.activated_structures),
             "suppressed_structures": list(self.suppressed_structures),

@@ -8,6 +8,7 @@ import time
 from typing import Any
 
 from v20.redis.contracts import redis_contract_manifest
+from v20.storage.local_jsonl import local_jsonl_store_from_env
 
 
 CACHE_VERSION = "v20.redis_runtime_cache.v1"
@@ -221,6 +222,7 @@ def cacheable_measure_payload(payload: object, *, pillars: dict[str, str], luck_
         ],
         "answered_question_ids": list(getattr(payload, "answered_question_ids", ())),
         "answered_question_keys": list(getattr(payload, "answered_question_keys", ())),
+        "active_runtime_pointers": _active_runtime_pointer_versions(),
     }
 
 
@@ -253,6 +255,29 @@ def _without_cache_meta(result: dict[str, Any]) -> dict[str, Any]:
     cloned = copy.deepcopy(result)
     cloned.pop("redis_cache", None)
     return cloned
+
+
+def _active_runtime_pointer_versions() -> dict[str, str]:
+    runtime_dir = local_jsonl_store_from_env().runtime_dir
+    pointers = {
+        "question": runtime_dir / "training" / "question_policy_versions" / "active_pointer.json",
+        "orchestrator": runtime_dir / "training" / "orchestrator_policy_versions" / "active_pointer.json",
+        "rule": runtime_dir / "training" / "rule_policy_versions" / "active_pointer.json",
+        "portrait": runtime_dir / "training" / "portrait_policy_versions" / "active_pointer.json",
+        "structure_dynamics": runtime_dir / "training" / "structure_dynamics_policy_versions" / "active_pointer.json",
+    }
+    versions: dict[str, str] = {}
+    for key, path in pointers.items():
+        if not path.exists():
+            continue
+        try:
+            payload = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, ValueError, TypeError):
+            continue
+        active = str(payload.get("active_policy_version", ""))
+        if active:
+            versions[key] = active
+    return versions
 
 
 def _redis_client() -> Any | None:

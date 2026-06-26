@@ -1,9 +1,13 @@
+const WorkbenchPage = window.QiazhiWorkbenchPageController;
+
 const state = {
   latest: null,
   activeProfile: null,
   measureTimer: null,
   isMeasuring: false,
   pendingMeasure: false,
+  measureSeq: 0,
+  runtimeRenderedSeq: 0,
   lastMeasureKey: "",
   chatTurns: [],
   chatSeq: 0,
@@ -16,7 +20,8 @@ const state = {
   chartMemoryKey: "",
   answerWriter: { timer: null, queue: "", displayed: "" },
   isBatchUpdating: false,
-  workbenchMode: "reading",
+  observationRefreshAt: 0,
+  workbenchMode: WorkbenchPage.initialMode,
 };
 
 const STEM_META = {
@@ -80,27 +85,28 @@ const UI_TEXT = {
     default_user_text: "我想看事业和财运",
     chart_title: "命盘结构", features_title: "八字特征状态", portrait_title: "主题投射画像",
     questions_title: "智能问题", hits_title: "规则命中", answer_title: "八字专业回复",
-    evidence_title: "证据锚点", feedback_title: "反馈校准",
+    brain_title: "中枢", brain_waiting: "等待中枢判断。", brain_next: "下一步", brain_basis: "依据",
+    feedback_title: "反馈校准",
     run: "开始测算", running: "测算中",
     roles: { user: "普通用户", analyst: "命理师", admin: "管理员" },
     solar: "公历", lunar: "阴历", male: "男", female: "女", leap_month: "闰月",
     dm: "日主", visible: "透出", hidden: "藏干",
     pillars: { year: "年柱", month: "月柱", day: "日柱", hour: "时柱", luck: "大运", flow_year: "流年" },
     pillar_hints: { year: "原局", month: "原局", day: "日主", hour: "原局", luck: "运势背景", flow_year: "当前触发" },
-    states: { active: "已入主链", available: "可用", evidence_gap: "补证", requires_review: "复核", blocked_or_countered: "被反证", confirmed: "成立", candidate: "候选", weak_candidate: "弱候选", volatile: "岁运引动", mixed: "成而不纯", _: "状态" },
+    states: { active: "已入主链", available: "可用", evidence_gap: "补证", requires_review: "待校准", blocked_or_countered: "被反证", confirmed: "成立", candidate: "候选", weak_candidate: "弱候选", volatile: "岁运引动", mixed: "成而不纯", _: "状态" },
     domains: { strength: "强弱", career: "事业", wealth: "财运", ten_god: "十神", useful_god: "用神", time: "时间", branch: "地支", element: "五行", pattern: "格局", relationship: "关系", health: "健康", _: "命理" },
-    temps: { hot: "高关注", warm: "成形", mild: "待复核", cool: "线索" },
+    temps: { hot: "高关注", warm: "成形", mild: "待校准", cool: "线索" },
     attn: { high: "高关注", medium: "重点观察", normal: "常规画像", _: "画像" },
     tiers: { micro: "微观骨架", decision: "裁决路径", macro: "应用场景", time: "时序引动", _: "结构层" },
-    axis_states: { confirmed: "已成", chain_review: "链式", mixed: "成而不纯", candidate: "候选", weak_candidate: "偏弱", volatile: "引动", requires_review: "需复核", countered: "反制", blocked: "受阻", _: "结构" },
-    intents: { confirm_structure: "确认结构", explore_candidate: "展开候选", collect_evidence: "补齐证据", resolve_mixed_state: "裁决混合", inspect_timing_trigger: "岁运引动", ask_practitioner_review: "命理师复核", explain_boundary: "边界说明", explore_structure: "结构追问", suppress_output: "不输出", _: "智能意图" },
+    axis_states: { confirmed: "已成", chain_review: "链式", mixed: "成而不纯", candidate: "候选", weak_candidate: "偏弱", volatile: "引动", requires_review: "待校准", countered: "反制", blocked: "受阻", _: "结构" },
+    intents: { confirm_structure: "确认结构", explore_candidate: "展开候选", collect_evidence: "补齐证据", resolve_mixed_state: "裁决混合", inspect_timing_trigger: "岁运引动", ask_practitioner_review: "命理师校准", explain_boundary: "边界说明", explore_structure: "结构追问", suppress_output: "不输出", _: "智能意图" },
     latent: { wealth: "财务变化", career: "事业节点", relationship: "关系重心", relocation: "环境迁移", stress: "压力恢复", global: "行动节奏", _: "命主校准" },
     latent_fields: { year_option: "时间", result_option: "结果", intensity: "强度", confidence: "把握" },
     latent_intensity: { none: "无", mild: "轻微", clear: "明显", strong: "强烈" },
     latent_confidence: { low: "低", medium: "中", high: "高" },
     latent_years: { unknown: "不确定", birth_to_12: "0-12岁", "13_to_18": "13-18岁", "19_to_24": "19-24岁", "25_to_30": "25-30岁", "31_to_36": "31-36岁", "37_to_42": "37-42岁", "43_to_48": "43-48岁", "49_to_54": "49-54岁", "55_plus": "55岁以后" },
     latent_results: { no_clear_change: "没有明显变化", income_up: "收入/资源上升", income_down: "收入下降", resource_gain: "获得资源支持", resource_pressure: "资源或财务压力", role_up: "角色上升", role_down: "角色下降", platform_change: "平台变化", responsibility_change: "责任变化", relationship_stabilized: "关系稳定", relationship_changed: "关系变化", relationship_pressure: "关系压力", family_focus_shift: "家庭重心变化", city_change: "城市变化", work_environment_change: "工作环境变化", home_environment_change: "居住环境变化", travel_or_mobility_up: "流动增加", stable: "基本稳定", recovered_fast: "恢复较快", recovered_slow: "恢复较慢", repeated_pressure: "压力反复", support_helped: "外部支持有效", not_observed: "尚未观察", result_fast: "见效快", result_slow: "见效慢", needs_repeated_attempts: "需要反复尝试", external_help_decisive: "外部帮助关键", mixed: "混合" },
-    wb: { waiting: "等待测算。", measuring: "正在根据当前问题重新测算。", failed: "测算失败：", generating: "生成中", send: "发送", enter_dir: "请输入想继续看的方向。", chat_ph: "输入想继续看的方向", auto_route: "自动路由", no_features: "当前尚未发现可展示的命理特征。", no_portrait: "当前视图隐藏画像投影。", no_evidence: "暂无可展示证据。", no_questions: "确认四柱后会生成建议问题。", no_hits: "当前暂无规则命中。", no_rules: "未触发规则", await_graph: "等待画像图谱。", graph_ready: "当前盘已形成图谱画像。", mainline: "主线", pressure: "压力", timing: "时间", graph_default: "暂按主题画像展开", anchor: "结构锚点：", match_rate: "匹配率", cond_hit: "条件命中", dec_state: "决策态：", expand: "展开", collapse: "收起", prac_title: "命理师校准", prac_expand: "展开命理师校准", prac_collapse: "收起命理师校准", obs_expand: "展开观测页面", obs_collapse: "收起观测页面", pending: "待裁决", accepted: "已接收", recording: "记录中", rec_fail: "记录失败", rec_ok: "已记录 · 刷新问题", acc_ok: "已接收 · 刷新问题", q_source: "推荐问题", followup: "继续追问", manual: "手动测算", queuing: "排队中", chat_pending: "正在生成回复...", chat_empty: "本轮没有生成可展示回复。", calibrated: "已校准", dyn_val: "动态裁决验证", feat_model: "特征状态模型", q_model: "问题意图模型", def_model: "可反证裁决模型", hit_traces: "条规则命中轨迹", bazi: "命理测算", score: "分数", reviewed: "已审", draft: "草稿", states_count: "状态", intents_count: "意图", arguments_count: "论点", ready: "就绪", config: "配置", status_error: "状态错误", manifest_error: "清单错误", profile_unavailable: "档案不可用", profile_chart: "档案命盘", choice_only: "仅选择" },
+    wb: { waiting: "等待测算。", measuring: "正在根据当前问题重新测算。", failed: "测算失败：", generating: "生成中", send: "发送", enter_dir: "请输入想继续看的方向。", chat_ph: "输入想继续看的方向", auto_route: "自动路由", no_features: "当前尚未发现可展示的命理特征。", no_portrait: "当前视图隐藏画像投影。", no_evidence: "暂无可展示证据。", no_questions: "确认四柱后会生成建议问题。", no_hits: "当前暂无规则命中。", no_rules: "未触发规则", await_graph: "等待画像图谱。", graph_ready: "当前盘已形成图谱画像。", mainline: "主线", dominant_chain: "结构主链", pressure: "压力", timing: "时间", graph_default: "暂按主题画像展开", anchor: "结构锚点：", match_rate: "匹配率", cond_hit: "条件命中", dec_state: "决策态：", expand: "展开", collapse: "收起", prac_title: "命理师校准", prac_expand: "展开命理师校准", prac_collapse: "收起命理师校准", obs_expand: "展开观测页面", obs_collapse: "收起观测页面", pending: "待裁决", accepted: "已接收", recording: "记录中", rec_fail: "记录失败", rec_ok: "已记录 · 刷新问题", acc_ok: "已接收 · 刷新问题", q_source: "推荐问题", followup: "继续追问", manual: "手动测算", queuing: "排队中", chat_pending: "正在生成回复...", chat_empty: "本轮没有生成可展示回复。", calibrated: "已校准", dyn_val: "动态裁决验证", feat_model: "特征状态模型", q_model: "问题意图模型", def_model: "可反证裁决模型", hit_traces: "条规则命中轨迹", bazi: "命理测算", score: "分数", reviewed: "已记录", draft: "草稿", states_count: "状态", intents_count: "意图", arguments_count: "论点", ready: "就绪", config: "配置", status_error: "状态错误", manifest_error: "清单错误", profile_unavailable: "档案不可用", profile_chart: "档案命盘", choice_only: "仅选择", answer_review_title: "回答反馈", answer_review_hint: "先看本次回答，再反馈这个问题是否值得保留。" },
   },
   en: {
     app_title: "Bazi Workbench", nav_profiles: "Profiles", nav_measure: "Reading", logout_button: "Log Out",
@@ -112,27 +118,28 @@ const UI_TEXT = {
     default_user_text: "I want to read career and wealth",
     chart_title: "Chart Structure", features_title: "Bazi Feature States", portrait_title: "Topic Projection",
     questions_title: "Smart Questions", hits_title: "Rule Hits", answer_title: "Professional Bazi Reply",
-    evidence_title: "Evidence Anchors", feedback_title: "Feedback Calibration",
+    brain_title: "Brain", brain_waiting: "Awaiting orchestrator judgment.", brain_next: "Next", brain_basis: "Basis",
+    feedback_title: "Feedback Calibration",
     run: "Run Reading", running: "Reading",
     roles: { user: "Regular User", analyst: "Practitioner", admin: "Admin" },
     solar: "Solar", lunar: "Lunar", male: "Male", female: "Female", leap_month: "Leap Month",
     dm: "DM", visible: "Visible", hidden: "Hidden",
     pillars: { year: "Year", month: "Month", day: "Day", hour: "Hour", luck: "Luck", flow_year: "Flow Year" },
     pillar_hints: { year: "natal", month: "natal", day: "day master", hour: "natal", luck: "luck cycle", flow_year: "current trigger" },
-    states: { active: "mainline", available: "available", evidence_gap: "evidence gap", requires_review: "review", blocked_or_countered: "countered", confirmed: "confirmed", candidate: "candidate", weak_candidate: "weak", volatile: "volatile", mixed: "mixed", _: "state" },
+    states: { active: "mainline", available: "available", evidence_gap: "evidence gap", requires_review: "calibrate", blocked_or_countered: "countered", confirmed: "confirmed", candidate: "candidate", weak_candidate: "weak", volatile: "volatile", mixed: "mixed", _: "state" },
     domains: { strength: "Capacity", career: "Career", wealth: "Wealth", ten_god: "Ten Gods", useful_god: "Useful God", time: "Timing", branch: "Branches", element: "Elements", pattern: "Pattern", relationship: "Relationship", health: "Health", _: "Bazi" },
-    temps: { hot: "high focus", warm: "forming", mild: "review", cool: "signal" },
+    temps: { hot: "high focus", warm: "forming", mild: "calibrate", cool: "signal" },
     attn: { high: "High Focus", medium: "Key Watch", normal: "Standard", _: "Profile" },
     tiers: { micro: "Micro Spine", decision: "Decision Path", macro: "Applied Scenario", time: "Timing Trigger", _: "Structure" },
-    axis_states: { confirmed: "Confirmed", chain_review: "Chain", mixed: "Mixed", candidate: "Candidate", weak_candidate: "Weak", volatile: "Volatile", requires_review: "Review", countered: "Countered", blocked: "Blocked", _: "Structure" },
-    intents: { confirm_structure: "Confirm Structure", explore_candidate: "Explore Candidate", collect_evidence: "Collect Evidence", resolve_mixed_state: "Resolve Mixed", inspect_timing_trigger: "Timing Trigger", ask_practitioner_review: "Practitioner Review", explain_boundary: "Boundary", explore_structure: "Explore Structure", suppress_output: "Suppress", _: "Intent" },
+    axis_states: { confirmed: "Confirmed", chain_review: "Chain", mixed: "Mixed", candidate: "Candidate", weak_candidate: "Weak", volatile: "Volatile", requires_review: "Calibrate", countered: "Countered", blocked: "Blocked", _: "Structure" },
+    intents: { confirm_structure: "Confirm Structure", explore_candidate: "Explore Candidate", collect_evidence: "Collect Evidence", resolve_mixed_state: "Resolve Mixed", inspect_timing_trigger: "Timing Trigger", ask_practitioner_review: "Practitioner Calibration", explain_boundary: "Boundary", explore_structure: "Explore Structure", suppress_output: "Suppress", _: "Intent" },
     latent: { wealth: "Financial Change", career: "Career Node", relationship: "Relationship Focus", relocation: "Relocation", stress: "Stress Recovery", global: "Action Rhythm", _: "Subject Calibration" },
     latent_fields: { year_option: "Period", result_option: "Result", intensity: "Intensity", confidence: "Confidence" },
     latent_intensity: { none: "None", mild: "Mild", clear: "Clear", strong: "Strong" },
     latent_confidence: { low: "Low", medium: "Medium", high: "High" },
     latent_years: { unknown: "Uncertain", birth_to_12: "0–12", "13_to_18": "13–18", "19_to_24": "19–24", "25_to_30": "25–30", "31_to_36": "31–36", "37_to_42": "37–42", "43_to_48": "43–48", "49_to_54": "49–54", "55_plus": "55+" },
     latent_results: { no_clear_change: "No clear change", income_up: "Income up", income_down: "Income down", resource_gain: "Resource gained", resource_pressure: "Resource pressure", role_up: "Role up", role_down: "Role down", platform_change: "Platform change", responsibility_change: "Responsibility change", relationship_stabilized: "Relationship stable", relationship_changed: "Relationship changed", relationship_pressure: "Relationship pressure", family_focus_shift: "Family shift", city_change: "City change", work_environment_change: "Work env change", home_environment_change: "Home env change", travel_or_mobility_up: "Mobility up", stable: "Mostly stable", recovered_fast: "Fast recovery", recovered_slow: "Slow recovery", repeated_pressure: "Repeated pressure", support_helped: "Support helped", not_observed: "Not observed", result_fast: "Quick results", result_slow: "Slow results", needs_repeated_attempts: "Repeated attempts", external_help_decisive: "External help key", mixed: "Mixed" },
-    wb: { waiting: "Awaiting reading.", measuring: "Re-reading based on current question.", failed: "Reading failed: ", generating: "Generating", send: "Send", enter_dir: "Enter a direction to explore.", chat_ph: "Enter a direction to explore", auto_route: "Auto Route", no_features: "No displayable Bazi features found yet.", no_portrait: "Portrait projection hidden in this view.", no_evidence: "No evidence to display.", no_questions: "Suggested questions appear after confirming four pillars.", no_hits: "No rule hits yet.", no_rules: "No rules fired", await_graph: "Awaiting portrait graph.", graph_ready: "Portrait graph ready.", mainline: "Mainline", pressure: "Pressure", timing: "Timing", graph_default: "Expand by topic portrait", anchor: "Structural anchor: ", match_rate: "match", cond_hit: "Conditions met", dec_state: "Decision: ", expand: "Expand", collapse: "Collapse", prac_title: "Practitioner Calibration", prac_expand: "Expand practitioner calibration", prac_collapse: "Collapse practitioner calibration", obs_expand: "Expand observation page", obs_collapse: "Collapse observation page", pending: "pending", accepted: "accepted", recording: "recording", rec_fail: "record failed", rec_ok: "recorded · refreshing", acc_ok: "accepted · refreshing", q_source: "Suggested", followup: "Follow-up", manual: "Manual Reading", queuing: "queuing", chat_pending: "Generating reply…", chat_empty: "No displayable reply this turn.", calibrated: "calibrated", dyn_val: "Decision Validation", feat_model: "Feature State Model", q_model: "Question Intent Model", def_model: "Defeasible Decision Model", hit_traces: "rule hit traces", bazi: "Bazi Reading", score: "score", reviewed: "reviewed", draft: "draft", states_count: "states", intents_count: "intents", arguments_count: "arguments", ready: "ready", config: "config", status_error: "status error", manifest_error: "manifest error", profile_unavailable: "profile unavailable", profile_chart: "profile chart", choice_only: "choice only" },
+    wb: { waiting: "Awaiting reading.", measuring: "Re-reading based on current question.", failed: "Reading failed: ", generating: "Generating", send: "Send", enter_dir: "Enter a direction to explore.", chat_ph: "Enter a direction to explore", auto_route: "Auto Route", no_features: "No displayable Bazi features found yet.", no_portrait: "Portrait projection hidden in this view.", no_evidence: "No evidence to display.", no_questions: "Suggested questions appear after confirming four pillars.", no_hits: "No rule hits yet.", no_rules: "No rules fired", await_graph: "Awaiting portrait graph.", graph_ready: "Portrait graph ready.", mainline: "Mainline", dominant_chain: "Structure Path", pressure: "Pressure", timing: "Timing", graph_default: "Expand by topic portrait", anchor: "Structural anchor: ", match_rate: "match", cond_hit: "Conditions met", dec_state: "Decision: ", expand: "Expand", collapse: "Collapse", prac_title: "Practitioner Calibration", prac_expand: "Expand practitioner calibration", prac_collapse: "Collapse practitioner calibration", obs_expand: "Expand observation page", obs_collapse: "Collapse observation page", pending: "pending", accepted: "accepted", recording: "recording", rec_fail: "record failed", rec_ok: "recorded · refreshing", acc_ok: "accepted · refreshing", q_source: "Suggested", followup: "Follow-up", manual: "Manual Reading", queuing: "queuing", chat_pending: "Generating reply...", chat_empty: "No displayable reply this turn.", calibrated: "calibrated", dyn_val: "Decision Validation", feat_model: "Feature State Model", q_model: "Question Intent Model", def_model: "Defeasible Decision Model", hit_traces: "rule hit traces", bazi: "Bazi Reading", score: "score", reviewed: "recorded", draft: "draft", states_count: "states", intents_count: "intents", arguments_count: "arguments", ready: "ready", config: "config", status_error: "status error", manifest_error: "manifest error", profile_unavailable: "profile unavailable", profile_chart: "profile chart", choice_only: "choice only", answer_review_title: "Answer Feedback", answer_review_hint: "Read the answer first, then mark whether this question should stay, be rewritten, or be removed." },
   },
   ko: {
     app_title: "사주 분석 작업대", nav_profiles: "프로필", nav_measure: "분석", logout_button: "로그아웃",
@@ -144,27 +151,28 @@ const UI_TEXT = {
     default_user_text: "직업과 재운을 보고 싶어요",
     chart_title: "명식 구조", features_title: "사주 특징 상태", portrait_title: "주제 투사",
     questions_title: "지능형 질문", hits_title: "규칙 적중", answer_title: "전문 사주 답변",
-    evidence_title: "근거 앵커", feedback_title: "피드백 보정",
+    brain_title: "중추", brain_waiting: "중추 판단 대기 중.", brain_next: "다음", brain_basis: "근거",
+    feedback_title: "피드백 보정",
     run: "분석 시작", running: "분석 중",
     roles: { user: "일반 사용자", analyst: "명리사", admin: "관리자" },
     solar: "양력", lunar: "음력", male: "남", female: "여", leap_month: "윤달",
     dm: "일간", visible: "투출", hidden: "장간",
     pillars: { year: "연주", month: "월주", day: "일주", hour: "시주", luck: "대운", flow_year: "유년" },
     pillar_hints: { year: "원국", month: "원국", day: "일간", hour: "원국", luck: "운세 배경", flow_year: "현재 촉발" },
-    states: { active: "주요 연결", available: "가용", evidence_gap: "근거 부족", requires_review: "검토", blocked_or_countered: "반증", confirmed: "성립", candidate: "후보", weak_candidate: "약후보", volatile: "세운 변동", mixed: "혼합", _: "상태" },
+    states: { active: "주요 연결", available: "가용", evidence_gap: "근거 부족", requires_review: "보정", blocked_or_countered: "반증", confirmed: "성립", candidate: "후보", weak_candidate: "약후보", volatile: "세운 변동", mixed: "혼합", _: "상태" },
     domains: { strength: "강약", career: "직업", wealth: "재운", ten_god: "십성", useful_god: "용신", time: "시간", branch: "지지", element: "오행", pattern: "격국", relationship: "관계", health: "건강", _: "사주" },
-    temps: { hot: "높은 관심", warm: "형성", mild: "검토", cool: "단서" },
+    temps: { hot: "높은 관심", warm: "형성", mild: "보정", cool: "단서" },
     attn: { high: "높은 관심", medium: "주요 관찰", normal: "일반", _: "프로필" },
     tiers: { micro: "미시 구조", decision: "판정 경로", macro: "응용 시나리오", time: "시간 촉발", _: "구조층" },
-    axis_states: { confirmed: "성립", chain_review: "연쇄", mixed: "혼합", candidate: "후보", weak_candidate: "약세", volatile: "변동", requires_review: "검토", countered: "반제", blocked: "차단", _: "구조" },
-    intents: { confirm_structure: "구조 확인", explore_candidate: "후보 탐색", collect_evidence: "근거 보완", resolve_mixed_state: "혼합 판정", inspect_timing_trigger: "세운 촉발", ask_practitioner_review: "명리사 검토", explain_boundary: "경계 설명", explore_structure: "구조 추적", suppress_output: "출력 안 함", _: "의도" },
+    axis_states: { confirmed: "성립", chain_review: "연쇄", mixed: "혼합", candidate: "후보", weak_candidate: "약세", volatile: "변동", requires_review: "보정", countered: "반제", blocked: "차단", _: "구조" },
+    intents: { confirm_structure: "구조 확인", explore_candidate: "후보 탐색", collect_evidence: "근거 보완", resolve_mixed_state: "혼합 판정", inspect_timing_trigger: "세운 촉발", ask_practitioner_review: "명리사 보정", explain_boundary: "경계 설명", explore_structure: "구조 추적", suppress_output: "출력 안 함", _: "의도" },
     latent: { wealth: "재무 변화", career: "직업 전환", relationship: "관계 중심", relocation: "환경 이동", stress: "스트레스 회복", global: "행동 리듬", _: "주체 보정" },
     latent_fields: { year_option: "시기", result_option: "결과", intensity: "강도", confidence: "확신" },
     latent_intensity: { none: "없음", mild: "경미", clear: "뚜렷", strong: "강함" },
     latent_confidence: { low: "낮음", medium: "중간", high: "높음" },
     latent_years: { unknown: "불확실", birth_to_12: "0-12세", "13_to_18": "13-18세", "19_to_24": "19-24세", "25_to_30": "25-30세", "31_to_36": "31-36세", "37_to_42": "37-42세", "43_to_48": "43-48세", "49_to_54": "49-54세", "55_plus": "55세 이후" },
     latent_results: { no_clear_change: "변화 없음", income_up: "수입 상승", income_down: "수입 감소", resource_gain: "자원 확보", resource_pressure: "자원 압력", role_up: "역할 상승", role_down: "역할 하락", platform_change: "플랫폼 변화", responsibility_change: "책임 변화", relationship_stabilized: "관계 안정", relationship_changed: "관계 변화", relationship_pressure: "관계 압력", family_focus_shift: "가정 변화", city_change: "도시 변경", work_environment_change: "근무 환경 변화", home_environment_change: "주거 환경 변화", travel_or_mobility_up: "이동 증가", stable: "안정", recovered_fast: "빠른 회복", recovered_slow: "느린 회복", repeated_pressure: "반복 압력", support_helped: "외부 지원 효과", not_observed: "미관찰", result_fast: "빠른 성과", result_slow: "느린 성과", needs_repeated_attempts: "반복 시도", external_help_decisive: "외부 도움 결정적", mixed: "혼합" },
-    wb: { waiting: "분석 대기 중.", measuring: "현재 질문 기반으로 재분석 중.", failed: "분석 실패: ", generating: "생성 중", send: "보내기", enter_dir: "탐색 방향을 입력하세요.", chat_ph: "탐색 방향을 입력하세요", auto_route: "자동 라우팅", no_features: "표시 가능한 사주 특징이 없습니다.", no_portrait: "현재 뷰에서 투사가 숨겨져 있습니다.", no_evidence: "표시할 근거가 없습니다.", no_questions: "사주 확인 후 추천 질문이 생성됩니다.", no_hits: "규칙 적중 없음.", no_rules: "촉발된 규칙 없음", await_graph: "프로필 그래프 대기 중.", graph_ready: "그래프가 준비되었습니다.", mainline: "주요 축", pressure: "압력", timing: "시간", graph_default: "주제별로 전개", anchor: "구조 앵커: ", match_rate: "일치율", cond_hit: "조건 충족", dec_state: "판정: ", expand: "열기", collapse: "닫기", prac_title: "명리사 보정", prac_expand: "명리사 보정 열기", prac_collapse: "명리사 보정 닫기", obs_expand: "관측 열기", obs_collapse: "관측 닫기", pending: "대기 중", accepted: "접수됨", recording: "기록 중", rec_fail: "기록 실패", rec_ok: "기록됨 · 질문 갱신", acc_ok: "접수됨 · 질문 갱신", q_source: "추천 질문", followup: "추가 질문", manual: "수동 분석", queuing: "대기 중", chat_pending: "답변 생성 중…", chat_empty: "표시할 답변이 없습니다.", calibrated: "보정 완료", dyn_val: "동적 판정 검증", feat_model: "특징 상태 모델", q_model: "질문 의도 모델", def_model: "반증 판정 모델", hit_traces: "규칙 적중 이력", bazi: "사주 분석", score: "점수", reviewed: "검토됨", draft: "초안", states_count: "상태", intents_count: "의도", arguments_count: "논점", ready: "준비됨", config: "설정", status_error: "상태 오류", manifest_error: "목록 오류", profile_unavailable: "프로필을 불러올 수 없음", profile_chart: "프로필 명식", choice_only: "선택만" },
+    wb: { waiting: "분석 대기 중.", measuring: "현재 질문 기반으로 재분석 중.", failed: "분석 실패: ", generating: "생성 중", send: "보내기", enter_dir: "탐색 방향을 입력하세요.", chat_ph: "탐색 방향을 입력하세요", auto_route: "자동 라우팅", no_features: "표시 가능한 사주 특징이 없습니다.", no_portrait: "현재 뷰에서 투사가 숨겨져 있습니다.", no_evidence: "표시할 근거가 없습니다.", no_questions: "사주 확인 후 추천 질문이 생성됩니다.", no_hits: "규칙 적중 없음.", no_rules: "촉발된 규칙 없음", await_graph: "프로필 그래프 대기 중.", graph_ready: "그래프가 준비되었습니다.", mainline: "주요 축", dominant_chain: "구조 주경로", pressure: "압력", timing: "시간", graph_default: "주제별로 전개", anchor: "구조 앵커: ", match_rate: "일치율", cond_hit: "조건 충족", dec_state: "판정: ", expand: "열기", collapse: "닫기", prac_title: "명리사 보정", prac_expand: "명리사 보정 열기", prac_collapse: "명리사 보정 닫기", obs_expand: "관측 열기", obs_collapse: "관측 닫기", pending: "대기 중", accepted: "접수됨", recording: "기록 중", rec_fail: "기록 실패", rec_ok: "기록됨 · 질문 갱신", acc_ok: "접수됨 · 질문 갱신", q_source: "추천 질문", followup: "추가 질문", manual: "수동 분석", queuing: "대기 중", chat_pending: "답변 생성 중...", chat_empty: "표시할 답변이 없습니다.", calibrated: "보정 완료", dyn_val: "동적 판정 검증", feat_model: "특징 상태 모델", q_model: "질문 의도 모델", def_model: "반증 판정 모델", hit_traces: "규칙 적중 이력", bazi: "사주 분석", score: "점수", reviewed: "기록됨", draft: "초안", states_count: "상태", intents_count: "의도", arguments_count: "논점", ready: "준비됨", config: "설정", status_error: "상태 오류", manifest_error: "목록 오류", profile_unavailable: "프로필을 불러올 수 없음", profile_chart: "프로필 명식", choice_only: "선택만", answer_review_title: "답변 피드백", answer_review_hint: "답변을 먼저 읽고 이 질문을 유지, 수정 또는 제거할지 표시합니다." },
   },
 };
 
@@ -263,6 +271,7 @@ const requestMeasureStream = async (url, payload, handlers = {}) => {
   let buffer = "";
   let latestResult = null;
   let finalAnswer = "";
+  let doneSeen = false;
   const handleBlock = (block) => {
     const event = (block.match(/^event:\s*(.+)$/m) || [])[1] || "message";
     const data = block
@@ -280,6 +289,7 @@ const requestMeasureStream = async (url, payload, handlers = {}) => {
       finalAnswer += text;
       handlers.onDelta?.(text);
     } else if (event === "done") {
+      doneSeen = true;
       finalAnswer = plainAnswerText(payload.answer_text || finalAnswer);
       handlers.onDone?.({ ...payload, answer_text: finalAnswer });
     } else if (event === "error") {
@@ -297,6 +307,9 @@ const requestMeasureStream = async (url, payload, handlers = {}) => {
   if (buffer.trim()) handleBlock(buffer);
   if (latestResult && finalAnswer) latestResult.answer_text = finalAnswer;
   if (latestResult && finalAnswer) latestResult.answer_text = plainAnswerText(finalAnswer);
+  if (latestResult && finalAnswer && !doneSeen) {
+    handlers.onDone?.({ result: latestResult, answer_text: latestResult.answer_text, status: "stream_eof" });
+  }
   return latestResult;
 };
 
@@ -319,12 +332,16 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
     return;
   }
   state.isMeasuring = true;
+  state.measureSeq += 1;
+  const measureSeq = state.measureSeq;
   state.lastMeasureKey = key;
   state.activeLlmMode = llmMode;
   const turnId = interactionText ? appendChatTurn(interactionText, interactionSource || text.wb.q_source) : "";
   setMeasureBusy(true, text, llmMode);
   setText("#answerText", text.wb.measuring);
+  renderAnswerFeedback({}, measurementRole(payload.role_key));
   try {
+    renderMeasurePreview(payload, measureSeq);
     const role = measurementRole(payload.role_key);
     delete payload.role_key;
     const endpoint = `/api/v20/measure/view/${role}`;
@@ -333,12 +350,17 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
       ? await requestMeasureStream(`${endpoint}/stream`, payload, {
           onRuntime: (runtime) => {
             state.latest = runtime;
+            state.runtimeRenderedSeq = measureSeq;
             renderRuntime(runtime);
             startAnswerTypewriter();
-            setText("#llmStatus", "llm streaming");
+            setText("#llmStatus", "LLM 正在生成");
           },
           onDelta: (text) => queueAnswerText(text),
-          onDone: () => finishAnswerTypewriter(),
+          onDone: (payload) => {
+            stopAnswerTypewriter();
+            setText("#answerText", payload.answer_text || "");
+            setText("#llmStatus", "LLM 完成");
+          },
         })
       : await requestJson(endpoint, {
           method: "POST",
@@ -347,12 +369,17 @@ const measure = async ({ force = false, interactionText = "", interactionSource 
     if (!result) throw new Error("stream returned no runtime result");
     finishAnswerTypewriter();
     state.latest = result;
-    if (!isStreaming) renderRuntime(result);
+    if (!isStreaming) {
+      state.runtimeRenderedSeq = measureSeq;
+      renderRuntime(result);
+    }
+    renderAnswerFeedback(selectedQuestionForFeedback(result.selected_question || {}, result.questions || []), role);
     if (turnId) completeChatTurn(turnId, result.answer_text || "", result);
   } catch (error) {
     console.error("Measurement execution failed:", error);
     stopAnswerTypewriter();
     setText("#answerText", `${currentText().wb.failed}${error.message}`);
+    renderAnswerFeedback({}, displayRole());
     if (turnId) failChatTurn(turnId, error.message);
     state.lastMeasureKey = "";
   } finally {
@@ -371,7 +398,27 @@ const scheduleMeasure = ({ force = false } = {}) => {
   state.measureTimer = setTimeout(() => measure({ force }), 280);
 };
 
-const interactiveLlmMode = () => (params.get("llm") === "practitioner" ? "practitioner" : "deterministic");
+const renderMeasurePreview = async (payload, measureSeq = state.measureSeq) => {
+  const previewPayload = { ...payload };
+  delete previewPayload.role_key;
+  try {
+    const preview = await requestJson("/api/v20/measure/preview", {
+      method: "POST",
+      body: JSON.stringify(previewPayload),
+    });
+    if (measureSeq !== state.measureSeq || state.runtimeRenderedSeq === measureSeq) return;
+    const chart = preview.chart_facts || {};
+    renderPillars(chart, preview.time_context || {});
+    setText("#dayMasterBadge", `${currentText().dm} ${chart.day_master || "-"}`);
+    if (state.isMeasuring && measureSeq === state.measureSeq && state.runtimeRenderedSeq !== measureSeq) {
+      setText("#llmStatus", "排盘就绪 · 测算中");
+    }
+  } catch (_error) {
+    renderPillars({});
+  }
+};
+
+const interactiveLlmMode = () => (params.get("llm") === "deterministic" ? "deterministic" : "practitioner");
 
 const renderRuntime = (result) => {
   const selected = result.selected_question || {};
@@ -381,10 +428,11 @@ const renderRuntime = (result) => {
   const featureStateModel = result.feature_state_model || {};
   const structureDynamics = result.structure_dynamics || {};
   const mainlineArbitration = result.mainline_arbitration || {};
+  const brainState = result.brain_state || {};
   const answerStrategy = result.answer_plan?.dimension_context?.answer_strategy || {};
   const questionIntentModel = result.question_intent_model || {};
   const portraitProjection = decisionReport.portrait_projection || {};
-  const role = result.role?.role_key || measurementRole(roleSelect.value);
+  const role = displayRole(result.role?.role_key || roleSelect.value);
   const selectedQuestionId = selected.question_id || "";
   if (questionIdInput) questionIdInput.value = selectedQuestionId;
 
@@ -403,54 +451,102 @@ const renderRuntime = (result) => {
   renderPillars(chart, result.time_context || {});
   renderTenGods(chart);
   renderStructureDynamics(structureDynamics, mainlineArbitration);
-  renderOrchestratorTrace(result.reasoning_orchestrator || {}, mainlineArbitration, result.redis_cache || {}, answerStrategy);
-  renderFeatures(
-    featureStateModel.priority_features ||
-      featureStateModel.states ||
-      decisionReport.mainlines ||
-      decisionReport.decisions ||
-      featureLayer.macro_features ||
-      featureLayer.features ||
-      []
+  renderBrainState(brainState);
+  renderRoleViewModel(result.role_view_model || {}, role);
+  renderReadingProgress(result, role);
+  renderContextBinding(result, role);
+  renderQuestions(
+    result.questions || [],
+    selectedQuestionId || selected.question_key || "",
+    questionIntentModel,
+    result.role_view_model?.question_profile || {},
+    role,
+    result.next_question_plan || {}
   );
-  renderPortraitGraph(result.portrait_graph_summary || {});
-  renderPortrait(portraitProjection.axes || []);
-  renderPractitionerCalibration(decisionReport.practitioner_controls || [], result.input_id || "", role);
-  renderLatentCalibration(result.input_id || "", role);
-  renderQuestions(result.questions || [], selectedQuestionId || selected.question_key || "", questionIntentModel);
-  const runtimeDecisionHits = Array.isArray(decisionReport.rule_runtime_hits) ? decisionReport.rule_runtime_hits : [];
-  renderDecisionHits(runtimeDecisionHits.length ? runtimeDecisionHits : (decisionReport.hits || []));
+  renderAnswerFeedback(selectedQuestionForFeedback(selected, result.questions || []), role);
   renderQuestionSelect(result.questions || [], selectedQuestionId || selected.question_key || "");
-  renderEvidence(
-    result.knowledge_refs || [],
-    result.decision_validation || {},
-    {
-      featureStateModel,
-      questionIntentModel,
-      decisionModel: decisionReport.defeasible_decision_model || {},
-    }
-  );
+
+  if (role !== "user" && role !== "guest") {
+    renderFeatures(
+      featureStateModel.priority_features ||
+        featureStateModel.states ||
+        decisionReport.mainlines ||
+        decisionReport.decisions ||
+        featureLayer.macro_features ||
+        featureLayer.features ||
+        []
+    );
+    renderPractitionerCalibration(decisionReport.practitioner_controls || [], result.input_id || "", role);
+    renderLatentCalibration(result.input_id || "", role);
+  }
+
+  if (role === "admin") {
+    renderOrchestratorTrace(result.reasoning_orchestrator || {}, mainlineArbitration, result.redis_cache || {}, answerStrategy);
+    renderPolicyObservability(result.orchestrator_policy_observability || {});
+    renderQuestionSourceRuntimeReport(result.question_source_ranking_report || {});
+    refreshObservationPanels(role);
+    renderPortraitGraph(result.portrait_graph_summary || {});
+    renderPortrait(portraitProjection.axes || []);
+    const runtimeDecisionHits = Array.isArray(decisionReport.rule_runtime_hits) ? decisionReport.rule_runtime_hits : [];
+    renderDecisionHits(runtimeDecisionHits.length ? runtimeDecisionHits : (decisionReport.hits || []));
+  } else if (role === "lab") {
+    renderOrchestratorTrace(result.reasoning_orchestrator || {}, mainlineArbitration, result.redis_cache || {}, answerStrategy);
+    renderPolicyObservability(result.orchestrator_policy_observability || {});
+    renderQuestionSourceRuntimeReport(result.question_source_ranking_report || {});
+    refreshObservationPanels(role);
+  }
+};
+
+const renderQuestionSourceRuntimeReport = (report) => {
+  const summaryRoot = document.querySelector("#questionSourceRuntimeSummary");
+  const rowsRoot = document.querySelector("#questionSourceRuntimeRows");
+  if (!summaryRoot || !rowsRoot) return;
+  clear(summaryRoot);
+  clear(rowsRoot);
+  if (!report || report.version !== "v20.question_source_ranking_report.v1") {
+    rowsRoot.append(el("div", "empty-note", "等待问题来源报告。"));
+    return;
+  }
+  [
+    ["runtime source", report.status || "-"],
+    ["questions", String(report.question_count ?? 0)],
+    ["paths", String(report.source_path_count ?? 0)],
+    ["missing", String((report.missing_source_keys || []).length)],
+  ].forEach(([label, value]) => {
+    const chip = el("div", "orchestrator-summary-chip");
+    chip.append(el("span", "", label));
+    chip.append(el("strong", "", value));
+    summaryRoot.append(chip);
+  });
+  (report.rows || []).slice(0, 8).forEach((row) => {
+    const item = el("div", "kv-row");
+    item.append(el("span", "", `${row.rank || "-"} · ${row.source_key || "-"} · ${row.question_key || "-"}`));
+    item.append(el("strong", "", `g ${Number(row.source_graph_score || 0).toFixed(3)} / q ${Number(row.question_score || 0).toFixed(3)}`));
+    rowsRoot.append(item);
+  });
+  if (!(report.rows || []).length) {
+    rowsRoot.append(el("div", "empty-note", "暂无问题来源行。"));
+  }
 };
 
 const renderObservationAccess = (role) => {
   const page = document.querySelector("#observationPage");
   const status = document.querySelector("#observationStatus");
   if (!page) return;
-  const isAdmin = role === "admin";
-  page.hidden = !isAdmin;
-  if (status) status.textContent = isAdmin ? "管理员可见" : "仅管理员";
+  const canObserve = role === "admin" || role === "lab";
+  page.hidden = !canObserve;
+  if (status) status.textContent = role === "admin" ? "管理员可见" : (role === "lab" ? "lab 只读" : "仅管理员");
   setObservationCollapsed(page.classList.contains("collapsed"));
 };
 
 const allowedWorkbenchModes = (role) => {
-  if (role === "admin") return ["reading", "practitioner", "observe"];
-  if (role === "analyst") return ["reading", "practitioner"];
-  return ["reading"];
+  return WorkbenchPage.allowedModes(role);
 };
 
-const applyWorkbenchMode = (role = measurementRole(roleSelect.value), requested = state.workbenchMode) => {
+const applyWorkbenchMode = (role = displayRole(), requested = state.workbenchMode) => {
   const allowed = allowedWorkbenchModes(role);
-  const mode = allowed.includes(requested) ? requested : "reading";
+  const fallback = allowed[0] || "reading";
+  const mode = allowed.includes(requested) ? requested : fallback;
   state.workbenchMode = mode;
   document.body.dataset.workbenchMode = mode;
   document.querySelectorAll("[data-workbench-mode-target]").forEach((button) => {
@@ -507,15 +603,31 @@ const renderStructureDynamics = (dynamics, arbitration = {}) => {
   });
 
   const primaryMainline = arbitration.primary_mainline || {};
-  const chain = dynamics.dominant_chain || {};
+  const chain = dynamics.primary_dynamic_chain || {};
+  const workPath = dynamics.primary_dynamic_chain || {};
   const arbitrationNodes = Array.isArray(primaryMainline.nodes) ? primaryMainline.nodes : [];
-  const rawChainNodes = arbitrationNodes.length ? arbitrationNodes : (Array.isArray(chain.nodes) ? chain.nodes : []);
-  const chainNodes = focusedChainNodes(rawChainNodes);
+  const runtimeChainNodes = Array.isArray(chain.nodes) ? chain.nodes : [];
+  const rawChainNodes = runtimeChainNodes.length ? runtimeChainNodes : arbitrationNodes;
+  const chainNodes = focusedChainNodes(rawChainNodes, chain.pattern_key || "");
   const chainText = chainNodes.length ? chainNodes.map(chainNodeLabel).join(" → ") : "暂未形成清晰主线";
   interpretationRoot.append(el("strong", "", "命理解释"));
   interpretationRoot.append(el("p", "", dynamicInterpretation(dynamics, chainNodes, rawChainNodes, arbitration)));
-  chainRoot.append(el("strong", "", `${wb.dominant_chain || "当前主线"}：${chainText}`));
+  chainRoot.append(el("strong", "", `${wb.dominant_chain || "结构主链"}：${chainText}`));
   chainRoot.append(el("span", "", arbitrationSummaryLine(arbitration) || dynamicSummaryLine(dynamics)));
+  if (workPath && Array.isArray(workPath.node_labels) && workPath.node_labels.length) {
+    const workCard = el("div", "dynamic-work-path");
+    workCard.append(el("span", "dynamic-work-path-kicker", "核心做功链"));
+    workCard.append(el("strong", "", `${workPath.pattern_label || "结构通路"}：${workPath.node_labels.join(" → ")}`));
+    if (Array.isArray(workPath.edge_labels) && workPath.edge_labels.length) {
+      workCard.append(el("em", "", `作用关系：${workPath.edge_labels.join("、")}`));
+    }
+    const pathState = [
+      workPath.state ? `状态：${dynamicPathStateLabel(workPath.state)}` : "",
+      Number.isFinite(Number(workPath.confidence)) ? `可信度：${Math.round(Number(workPath.confidence) * 100)}%` : "",
+    ].filter(Boolean).join(" · ");
+    if (pathState) workCard.append(el("small", "", pathState));
+    chainRoot.append(workCard);
+  }
 
   const active = (dynamics.activated_structures || []).slice(0, 4);
   const suppressed = (dynamics.suppressed_structures || []).slice(0, 3);
@@ -531,6 +643,89 @@ const renderStructureDynamics = (dynamics, arbitration = {}) => {
       rows.forEach((row) => group.append(el("span", "dynamic-structure-chip", dynamicStructureLabel(row, kind))));
     }
     structuresRoot.append(group);
+  });
+};
+
+const dynamicPathStateLabel = (state) => ({
+  closed: "已成链",
+  partial: "部分成链",
+  blocked: "有阻断",
+  leaking: "未收束",
+  volatile: "岁运引动",
+  overdriven: "过载",
+  collapsed: "主链切换",
+  empty: "未成链",
+}[state] || state || "-");
+
+const renderBrainState = (brainState = {}) => {
+  const panel = document.querySelector("#brainStatePanel");
+  const headline = document.querySelector("#brainStateHeadline");
+  const metaRoot = document.querySelector("#brainStateMeta");
+  const basisRoot = document.querySelector("#brainStateBasis");
+  if (!panel || !headline || !metaRoot || !basisRoot) return;
+
+  const text = currentText();
+  const wb = text.wb || {};
+  const summary = brainState.public_summary || {};
+  headline.textContent = summary.headline || text.brain_waiting || "等待中枢判断。";
+  clear(metaRoot);
+  clear(basisRoot);
+
+  const metaRows = [
+    [wb.mainline || "主线", summary.primary_title || summary.primary_domain],
+    [text.questions_title || "智能问题", summary.selected_question_title],
+    ["统筹状态", summary.coordination_status],
+    [text.brain_next || "下一步", summary.next_action],
+  ].filter((row) => row[1]);
+  metaRows.forEach(([label, value]) => {
+    const chip = el("div", "brain-state-chip");
+    chip.append(el("span", "", label));
+    chip.append(el("strong", "", value));
+    metaRoot.append(chip);
+  });
+
+  const dynamicsLine = [
+    summary.dynamic_chain,
+    summary.chain_state,
+    summary.energy_state,
+    summary.stability_state,
+    summary.time_layer_status,
+  ].filter(Boolean).join(" · ");
+  if (dynamicsLine) {
+    const chip = el("div", "brain-state-chip wide");
+    chip.append(el("span", "", wb.dyn_val || "动态裁决验证"));
+    chip.append(el("strong", "", dynamicsLine));
+    metaRoot.append(chip);
+  }
+
+  const reasonRows = Array.isArray(summary.selection_reasons) ? summary.selection_reasons.slice(0, 2) : [];
+  if (summary.coordination_note) {
+    const item = el("div", "brain-state-basis-row");
+    item.append(el("span", "", "统筹提示"));
+    item.append(el("p", "", summary.coordination_note));
+    basisRoot.append(item);
+  }
+  reasonRows.forEach((reason) => {
+    const item = el("div", "brain-state-basis-row");
+    item.append(el("span", "", "选择理由"));
+    item.append(el("p", "", reason));
+    basisRoot.append(item);
+  });
+
+  const basisUsed = reasonRows.length + (summary.coordination_note ? 1 : 0);
+  const evidenceRows = Array.isArray(summary.supporting_evidence) ? summary.supporting_evidence.slice(0, Math.max(1, 3 - basisUsed)) : [];
+  if (!evidenceRows.length && !reasonRows.length && !summary.coordination_note) {
+    basisRoot.append(el("div", "empty-note", wb.no_evidence || "暂无可展示证据。"));
+    return;
+  }
+  evidenceRows.forEach((row) => {
+    const item = el("div", "brain-state-basis-row");
+    const title = row.label || row.kind || text.brain_basis || "依据";
+    item.append(el("span", "", title));
+    item.append(el("p", "", row.summary || row.value || ""));
+    const confidence = Number(row.confidence);
+    if (Number.isFinite(confidence)) item.append(el("em", "", `${Math.round(confidence * 100)}%`));
+    basisRoot.append(item);
   });
 };
 
@@ -567,9 +762,24 @@ const chainNodeLabel = (node) => ({
   empty: "未成链",
 }[node] || node);
 
-const focusedChainNodes = (nodes) => {
+const focusedChainNodes = (nodes, patternKey = "") => {
   const present = new Set(nodes);
+  const patternSegments = {
+    food_controls_killing: [
+      ["output", "authority", "resource"],
+      ["output", "authority"],
+    ],
+    output_to_wealth: [
+      ["output", "wealth", "self"],
+      ["output", "wealth", "authority"],
+      ["output", "wealth"],
+    ],
+  }[patternKey] || [];
+  const patternMatch = patternSegments.find((segment) => segment.every((node) => present.has(node)));
+  if (patternMatch) return patternMatch;
   const segments = [
+    ["output", "authority", "resource"],
+    ["output", "authority"],
     ["output", "wealth", "authority"],
     ["wealth", "authority", "resource"],
     ["authority", "resource", "self"],
@@ -623,11 +833,14 @@ const arbitrationSummaryLine = (arbitration) => {
 };
 
 const dynamicInterpretation = (dynamics, chainNodes, rawChainNodes = chainNodes, arbitration = {}) => {
+  const chain = dynamics.primary_dynamic_chain || {};
   const labels = chainNodes.map(chainNodeLabel);
   const chainText = labels.length ? labels.join("、") : "当前结构";
   const selectedReasons = Array.isArray(arbitration.why_selected) ? arbitration.why_selected : [];
   const hasOutputWealth = chainNodes.includes("output") && chainNodes.includes("wealth");
+  const hasOutputAuthority = chainNodes.includes("output") && chainNodes.includes("authority");
   const hasAuthorityResource = chainNodes.includes("authority") && chainNodes.includes("resource");
+  const patternLabel = String(chain.pattern_label || "");
   const parts = [];
 
   if (selectedReasons.length) {
@@ -641,7 +854,12 @@ const dynamicInterpretation = (dynamics, chainNodes, rawChainNodes = chainNodes,
     parts.push("当前还没有形成清晰主线，适合先看基础格局和证据缺口。");
   }
 
-  if (hasOutputWealth) {
+  if (hasOutputAuthority && patternLabel.includes("食神制杀")) {
+    parts.push("食神制杀时，重点不是直接看发财，而是看食神能不能把七杀压力约束住，再看印星和日主能不能承接。");
+  } else if (hasOutputAuthority) {
+    parts.push("食伤与官杀同场时，重点看表达、规则压力和约束关系，不能自动归到食伤生财。");
+  }
+  if (hasOutputWealth && !hasOutputAuthority) {
     parts.push("食伤接到财星时，重点先看输出能否稳定转成资源或机会。");
   }
   if (hasAuthorityResource) {
@@ -665,12 +883,12 @@ const dynamicStructureLabel = (row, kind) => {
   const raw = String(row.label || row.structure_key || "").trim();
   const domain = portraitDomainLabel(row.domain);
   const mapped = {
-    "Day-master capacity needs support review": "日主承载需要复核",
+    "Day-master capacity needs support review": "日主承载需要继续校准",
     "Explicit time layer is available": "大运流年已参与判断",
     "Useful-god candidate paths are compiled": "用神候选路径已形成",
     "Time-layer punishment trigger is available": "岁运刑冲触发明显",
-    "Visible branch relation requires layer review": "地支关系需要分层复核",
-    "Hidden-stem ten-god relations are available": "藏干十神关系需要复核",
+    "Visible branch relation requires layer review": "地支关系需要分层校准",
+    "Hidden-stem ten-god relations are available": "藏干十神关系需要校准",
     "Five-element distribution is available": "五行分布已进入判断",
   }[raw];
   if (mapped) return mapped;
@@ -695,10 +913,14 @@ const setObservationCollapsed = (collapsed) => {
 
 const setMeasureBusy = (busy, text = currentText(), llmMode = "deterministic") => {
   const button = form.querySelector("button[type='submit']");
-  button.disabled = busy;
-  button.textContent = busy ? text.running : text.run;
-  chatButton.disabled = busy;
-  chatButton.textContent = busy ? text.wb.generating : text.wb.send;
+  if (button) {
+    button.disabled = busy;
+    button.textContent = busy ? text.running : text.run;
+  }
+  if (chatButton) {
+    chatButton.disabled = busy;
+    chatButton.textContent = busy ? text.wb.generating : text.wb.send;
+  }
   document.querySelectorAll(".question-row").forEach((node) => {
     node.disabled = busy;
   });
@@ -756,6 +978,7 @@ const renderTenGods = (chart) => {
 
 const renderFeatures = (features) => {
   const root = document.querySelector("#featureChips");
+  if (!root) return;
   clear(root);
   if (!features.length) {
     root.append(el("div", "empty-note", currentText().wb.no_features));
@@ -821,7 +1044,7 @@ const renderPortraitGraph = (summary) => {
 
   const questionLine = el("div", "portrait-graph-questions");
   (summary.suggested_questions || []).slice(0, 3).forEach((question) => {
-    questionLine.append(el("span", "portrait-question-chip", question.title || question.question_key || currentText().recommended_question));
+    questionLine.append(el("span", "portrait-question-chip", question.display_title || question.title || question.question_key || currentText().recommended_question));
   });
   if (questionLine.childNodes.length) root.append(questionLine);
 };
@@ -847,7 +1070,7 @@ const renderOrchestratorTrace = (orchestrator = {}, arbitration = {}, redisCache
     ["状态", `${orchestrator.mode || "deterministic"} · ${orchestrator.step_count || 0} steps`],
     ["来源", primary.source || "runtime"],
     ["质量门", qualityGateLabel(qualityGate)],
-    ["人工复核", practitionerReviewLabel(practitionerReview)],
+    ["命理师校准", practitionerReviewLabel(practitionerReview)],
     ["回答策略", answerStrategyLabel(answerStrategy)],
     ["缓存", redisCacheLabel(redisCache)],
     ["输出", Object.entries(orchestrator.primary_outputs || {}).map(([key, value]) => `${key}: ${value}`).join(" · ")],
@@ -873,11 +1096,197 @@ const renderOrchestratorTrace = (orchestrator = {}, arbitration = {}, redisCache
   });
 };
 
+const renderPolicyObservability = (policy = {}) => {
+  const status = document.querySelector("#policyObservabilityStatus");
+  const summaryRoot = document.querySelector("#policyObservabilitySummary");
+  const consumerRoot = document.querySelector("#policyObservabilityConsumers");
+  if (!summaryRoot || !consumerRoot) return;
+  clear(summaryRoot);
+  clear(consumerRoot);
+  if (status) status.textContent = policy.status || "policy";
+  if (!policy || policy.version !== "v20.orchestrator_policy_observability.v1") {
+    summaryRoot.append(el("div", "empty-note", "等待策略观测。"));
+    return;
+  }
+  [
+    ["active", policy.active_policy_version || "-"],
+    ["candidate", policy.candidate_policy_version || "-"],
+    ["rollback", policy.rollback_policy_version || "-"],
+    ["fallback", policy.fallback_active ? "yes" : "no"],
+    ["consumed", `${policy.applied_consumer_count || 0}/${policy.consumer_count || 0}`],
+  ].forEach(([label, value]) => {
+    const chip = el("div", "orchestrator-summary-chip");
+    chip.append(el("span", "", label));
+    chip.append(el("strong", "", value));
+    summaryRoot.append(chip);
+  });
+  (policy.consumers || []).forEach((row) => {
+    const item = el("div", "kv-row");
+    item.append(el("span", "", row.module_key || "-"));
+    item.append(el("strong", "", `${row.status || "-"} · ${row.applied_adjustment_count || 0}`));
+    consumerRoot.append(item);
+  });
+  if (!(policy.consumers || []).length) {
+    consumerRoot.append(el("div", "empty-note", "暂无策略消费记录。"));
+  }
+};
+
+const refreshObservationPanels = (role, { force = false } = {}) => {
+  if (!["admin", "lab"].includes(role)) return;
+  const now = Date.now();
+  if (!force && state.observationRefreshAt && now - state.observationRefreshAt < 30000) return;
+  state.observationRefreshAt = now;
+  renderPolicyTrainingObservability(role);
+  renderRoleViewLearningObservability(role);
+};
+
+const renderPolicyTrainingObservability = async (role) => {
+  const trendRoot = document.querySelector("#policyTrainingTrend");
+  const timelineRoot = document.querySelector("#policyTrainingTimeline");
+  const sourceGraphTrendRoot = document.querySelector("#questionSourceGraphTrend");
+  const sourceGraphPathsRoot = document.querySelector("#questionSourceGraphPaths");
+  if (!trendRoot || !timelineRoot || !["admin", "lab"].includes(role)) return;
+  clear(trendRoot);
+  clear(timelineRoot);
+  if (sourceGraphTrendRoot) clear(sourceGraphTrendRoot);
+  if (sourceGraphPathsRoot) clear(sourceGraphPathsRoot);
+  try {
+    const payload = await requestJson("/api/v20/policy-observability");
+    const report = payload.training_report || {};
+    const trend = report.trend_summary || {};
+    const sourceGraph = payload.question_source_graph || {};
+    [
+      ["trend", trend.status || report.status || "-"],
+      ["observations", String(report.observation_count ?? 0)],
+      ["consumed", `${Math.round(Number(report.candidate_consumed_ratio || 0) * 100)}%`],
+      ["fallback", `${Math.round(Number(report.fallback_ratio || 0) * 100)}%`],
+    ].forEach(([label, value]) => {
+      const chip = el("div", "orchestrator-summary-chip");
+      chip.append(el("span", "", label));
+      chip.append(el("strong", "", value));
+      trendRoot.append(chip);
+    });
+    (report.version_switch_timeline || []).slice(0, 6).forEach((row) => {
+      const item = el("div", "kv-row");
+      item.append(el("span", "", `${row.event_type || "-"} · ${row.active_policy_version || "-"}`));
+      item.append(el("strong", "", row.created_at ? String(row.created_at).slice(0, 16) : row.source_role || "-"));
+      timelineRoot.append(item);
+    });
+    if (!(report.version_switch_timeline || []).length) {
+      timelineRoot.append(el("div", "empty-note", "暂无版本切换记录。"));
+    }
+    if (sourceGraphTrendRoot && sourceGraphPathsRoot) {
+      [
+        ["source graph", sourceGraph.status || "-"],
+        ["paths", String(sourceGraph.path_count ?? 0)],
+        ["quality", sourceGraph.source_quality_artifact_status || "-"],
+      ].forEach(([label, value]) => {
+        const chip = el("div", "orchestrator-summary-chip");
+        chip.append(el("span", "", label));
+        chip.append(el("strong", "", value));
+        sourceGraphTrendRoot.append(chip);
+      });
+      (sourceGraph.selected_paths || []).slice(0, 6).forEach((row) => {
+        const item = el("div", "kv-row");
+        item.append(el("span", "", `${row.source_key || "-"} · ${row.phase || "-"}`));
+        item.append(el("strong", "", `score ${Number(row.score || 0).toFixed(3)}`));
+        sourceGraphPathsRoot.append(item);
+      });
+      if (!(sourceGraph.selected_paths || []).length) {
+        sourceGraphPathsRoot.append(el("div", "empty-note", "暂无来源图路径。"));
+      }
+    }
+  } catch (_error) {
+    trendRoot.append(el("div", "empty-note", "策略趋势只读入口暂不可用。"));
+  }
+};
+
+const renderRoleViewLearningObservability = async (role) => {
+  const status = document.querySelector("#roleViewLearningStatus");
+  const summaryRoot = document.querySelector("#roleViewLearningSummary");
+  const detailRoot = document.querySelector("#roleViewLearningDetails");
+  if (!summaryRoot || !detailRoot || !["admin", "lab"].includes(role)) return;
+  clear(summaryRoot);
+  clear(detailRoot);
+  if (status) status.textContent = "learning";
+  try {
+    const [clicks, candidates, replay, pointer] = await Promise.all([
+      requestJson("/api/v20/learning/role-question-click"),
+      requestJson("/api/v20/learning/role-view-policy-candidates"),
+      requestJson("/api/v20/learning/role-view-policy-replay"),
+      requestJson("/api/v20/role-view/runtime-pointer"),
+    ]);
+    const replayResult = replay.replay_result || {};
+    [
+      ["clicks", String(clicks.click_count ?? 0)],
+      ["candidates", String(candidates.candidate_count ?? 0)],
+      ["seed-fit", String((candidates.policy_payload?.seed_fit_policy || []).length)],
+      ["pointer", pointer.status || "-"],
+      ["replay", replay.status || "-"],
+      ["runtime", pointer.runtime_applied ? "applied" : (replayResult.eligible_for_runtime ? "eligible" : "baseline")],
+    ].forEach(([label, value]) => {
+      const chip = el("div", "orchestrator-summary-chip");
+      chip.append(el("span", "", label));
+      chip.append(el("strong", "", value));
+      summaryRoot.append(chip);
+    });
+
+    roleViewLearningRows(clicks, candidates, replay, pointer).forEach(([label, value]) => {
+      const item = el("div", "kv-row");
+      item.append(el("span", "", label));
+      item.append(el("strong", "", value));
+      detailRoot.append(item);
+    });
+    if (!detailRoot.children.length) {
+      detailRoot.append(el("div", "empty-note", "暂无足够选择习惯样本。"));
+    }
+    if (status) status.textContent = candidates.status || clicks.status || "learning";
+  } catch (_error) {
+    summaryRoot.append(el("div", "empty-note", "角色策略学习入口暂不可用。"));
+  }
+};
+
+const roleViewLearningRows = (clicks = {}, candidates = {}, replay = {}, pointer = {}) => {
+  const rows = [];
+  const topRole = topLearningSummary(clicks.role_summaries || [], "role_key");
+  const topGroup = topLearningSummary(clicks.group_summaries || [], "group_key");
+  const topDomain = topLearningSummary(clicks.domain_summaries || [], "domain_key");
+  const topStrategy = topLearningSummary(clicks.strategy_summaries || [], "strategy_key");
+  const topSeed = topLearningSummary(clicks.seed_summaries || [], "seed_key");
+  const seedFitPolicies = candidates.policy_payload?.seed_fit_policy || [];
+  const seedReplayCount = (replay.comparisons || []).filter((row) => row.policy_key === "seed_fit_policy").length;
+  if (topRole) rows.push(["top role", `${topRole.role_key || "-"} · ${topRole.click_count || 0}`]);
+  if (topGroup) rows.push(["top group", `${topGroup.source_role || "-"} / ${topGroup.group_key || "-"} · ${topGroup.click_count || 0}`]);
+  if (topDomain) rows.push(["top domain", `${topDomain.source_role || "-"} / ${topDomain.domain_key || "-"} · ${topDomain.click_count || 0}`]);
+  if (topStrategy) rows.push(["top strategy", `${topStrategy.source_role || "-"} / ${topStrategy.strategy_key || "-"} · ${topStrategy.click_count || 0}`]);
+  if (topSeed) rows.push(["top seed", `${topSeed.source_role || "-"} / ${topSeed.seed_key || "-"} · ${topSeed.click_count || 0}`]);
+  rows.push(["seed-fit policies", String(seedFitPolicies.length)]);
+  rows.push(["seed replay", String(seedReplayCount)]);
+  rows.push(["active role policy", pointer.active_policy_version || "-"]);
+  rows.push(["candidate role policy", pointer.candidate_policy_version || "-"]);
+  rows.push(["pointer gate", pointer.blocking_gate || "-"]);
+  if (candidates.candidate_policy_version) rows.push(["candidate", candidates.candidate_policy_version]);
+  const replayResult = replay.replay_result || {};
+  if (replayResult.blocking_gate) rows.push(["gate", replayResult.blocking_gate]);
+  return rows;
+};
+
+const topLearningSummary = (rows = [], key) => {
+  if (!Array.isArray(rows) || !rows.length) return null;
+  return rows.reduce((best, row) => {
+    const nextCount = Number(row.click_count || 0);
+    const bestCount = Number(best?.click_count || 0);
+    if (nextCount > bestCount) return row;
+    if (nextCount === bestCount && String(row[key] || "") < String(best?.[key] || "")) return row;
+    return best;
+  }, rows[0]);
+};
+
 const qualityGateLabel = (gate = {}) => {
   if (!gate || !gate.status) return "未评估";
   const coverage = Number(gate.evidence_coverage);
   const score = Number.isFinite(coverage) ? ` · 覆盖 ${Math.round(coverage * 100)}%` : "";
-  const review = gate.requires_review ? " · 需复核" : "";
+  const review = gate.requires_review ? " · 待校准" : "";
   return `${gate.status}${score}${review}`;
 };
 
@@ -889,7 +1298,7 @@ const practitionerReviewLabel = (review = {}) => {
     deferred_primary: "暂缓主线",
     evidence_gap: "证据不足",
     no_supporting_candidate: "无可切换候选",
-  }[review.action] || review.action || "已复核";
+  }[review.action] || review.action || "已校准";
   return `${action}${review.option ? ` · ${review.option}` : ""}`;
 };
 
@@ -897,14 +1306,14 @@ const answerStrategyLabel = (strategy = {}) => {
   if (!strategy || !strategy.mode) return "未生成";
   const mode = {
     confirmed_by_practitioner: "确认主线",
-    practitioner_switched_needs_review: "切换后复核",
-    deferred_review: "暂缓复核",
+    practitioner_switched_needs_review: "切换后校准",
+    deferred_review: "暂缓校准",
     evidence_gap_review: "证据缺口",
-    quality_gate_review: "质量门复核",
+    quality_gate_review: "质量门校准",
     quality_gate_passed: "质量门通过",
     baseline: "基础结构",
   }[strategy.mode] || strategy.mode;
-  const review = strategy.requires_review ? " · 需复核" : "";
+  const review = strategy.requires_review ? " · 待校准" : "";
   return `${mode}${review}`;
 };
 
@@ -921,6 +1330,7 @@ const featureStateLabel = (state) => {
 
 const renderPortrait = (axes) => {
   const root = document.querySelector("#portraitAxes");
+  if (!root) return;
   clear(root);
   if (!axes.length) {
     root.append(el("div", "empty-note", currentText().wb.no_portrait));
@@ -954,10 +1364,8 @@ const renderPortrait = (axes) => {
       tags.forEach((tag) => tagLine.append(el("span", "portrait-tag-chip", tag)));
       row.append(tagLine);
     }
-    const seeds = (axis.question_seeds || []).filter(Boolean).slice(0, 2);
     const boundaries = (axis.evidence_boundaries || []).filter(Boolean).slice(0, 2);
     if (boundaries.length) row.append(el("p", "", boundaries.join(" / ")));
-    else if (seeds.length) row.append(el("p", "", seeds.join(" / ")));
     const meter = el("i");
     meter.style.width = `${Math.round(Number(score || 0) * 100)}%`;
     const bar = el("div", "meter");
@@ -1182,23 +1590,363 @@ const upsertLatentAnswer = (answer) => {
   ];
 };
 
-const renderQuestions = (questions, selectedId, questionIntentModel = {}) => {
+const renderRoleViewModel = (roleView = {}, role = "user") => {
+  const panel = document.querySelector("#roleViewPanel");
+  const title = document.querySelector("#roleViewTitle");
+  const root = document.querySelector("#roleViewPortrait");
+  if (!panel || !root) return;
+  clear(root);
+  const portrait = roleView.portrait_profile || {};
+  const axes = Array.isArray(portrait.axes) ? portrait.axes : [];
+  const depth = portrait.depth || role;
+  if (title) title.textContent = `${roleViewLabel(role)} · ${depth}`;
+  if (!axes.length) {
+    root.append(el("div", "empty-note", currentText().wb.no_portrait));
+    return;
+  }
+  axes.slice(0, 4).forEach((axis) => {
+    const row = el("div", "brain-state-basis-row");
+    row.append(el("strong", "", axis.label || axis.axis_id || portraitDomainLabel(axis.domain)));
+    row.append(el("span", "", axis.summary || axis.profile_summary || portraitDomainLabel(axis.domain)));
+    root.append(row);
+  });
+};
+
+const renderReadingProgress = (result = {}, role = "user") => {
+  const panel = document.querySelector("#readingProgressPanel");
+  const headline = document.querySelector("#readingProgressHeadline");
+  const grid = document.querySelector("#readingProgressGrid");
+  const narrative = document.querySelector("#readingProgressNarrative");
+  if (!panel || !headline || !grid || !narrative) return;
+  const progress = readingProgressModel(result, role);
+  headline.textContent = progress.headline;
+  narrative.textContent = progress.narrative;
+  clear(grid);
+  progress.items.forEach((item) => {
+    const row = el("div", "reading-progress-item");
+    row.append(el("span", "", item.label));
+    row.append(el("strong", "", `${item.percent}%`));
+    row.append(el("p", "", item.copy));
+    const meter = el("div", "reading-progress-meter");
+    const bar = el("div", "reading-progress-meter-bar");
+    bar.style.width = `${item.percent}%`;
+    meter.append(bar);
+    row.append(meter);
+    grid.append(row);
+  });
+};
+
+const renderContextBinding = (result = {}, role = "user") => {
+  const panel = document.querySelector("#contextBindingPanel");
+  const headline = document.querySelector("#contextBindingHeadline");
+  const summaryRoot = document.querySelector("#contextBindingSummary");
+  const modulesRoot = document.querySelector("#contextBindingModules");
+  if (!panel || !headline || !summaryRoot || !modulesRoot) return;
+  clear(summaryRoot);
+  clear(modulesRoot);
+  const frame = result.bazi_context_frame || {};
+  const report = result.context_alignment_report || {};
+  if (!frame.context_id) {
+    headline.textContent = "等待当前八字上下文。";
+    summaryRoot.append(el("div", "empty-note", "确认四柱、大运和流年后，系统会把画像、规则、结构动态、智能问题锁到同一个命盘上下文。"));
+    return;
+  }
+  const pillars = frame.natal_pillars || {};
+  const timeLayers = Array.isArray(frame.time_layers) ? frame.time_layers : [];
+  const driftScore = Number(report.drift_score ?? 1);
+  const alignedCount = Number(report.aligned_count || 0);
+  const moduleCount = Number(report.module_count || 0);
+  headline.textContent = driftScore === 0
+    ? "当前链路已锁定这一个八字。"
+    : "有模块需要重新贴回当前八字。";
+  [
+    ["命盘", ["year", "month", "day", "hour"].map((key) => pillars[key]).filter(Boolean).join(" · ") || "-"],
+    ["岁运", timeLayers.map((row) => `${timeLayerLabel(row.layer_key)} ${row.pillar || "-"}`).join(" · ") || "未输入"],
+    ["绑定", `${alignedCount}/${moduleCount || 0}`],
+    ["偏离", `${Math.round(driftScore * 100)}%`],
+  ].forEach(([label, value]) => {
+    const chip = el("div", "context-binding-chip");
+    chip.append(el("span", "", label));
+    chip.append(el("strong", "", value));
+    summaryRoot.append(chip);
+  });
+  if (role !== "admin" && role !== "lab") {
+    modulesRoot.append(el("div", "context-binding-note", "画像、结构动态和智能问题都按当前命盘展开；角色只改变表达方式，不改八字事实。"));
+    return;
+  }
+  (report.modules || []).forEach((row) => {
+    const item = el("div", `context-binding-module ${row.alignment || "unknown"}`);
+    item.append(el("span", "", contextModuleLabel(row.module_key)));
+    item.append(el("strong", "", contextAlignmentLabel(row.alignment)));
+    item.append(el("em", "", Array.isArray(row.evidence_domains) && row.evidence_domains.length ? row.evidence_domains.map(portraitDomainLabel).join(" · ") : "当前八字"));
+    modulesRoot.append(item);
+  });
+};
+
+const timeLayerLabel = (layerKey) => ({
+  luck: "大运",
+  flow_year: "流年",
+  flow_month: "流月",
+}[layerKey] || layerKey || "时间");
+
+const contextModuleLabel = (moduleKey) => ({
+  structure_dynamics: "结构动态",
+  portrait_projection: "八字画像",
+  question_intent_model: "智能问题",
+  mainline_arbitration: "中枢主线",
+  llm_context_pack: "LLM 上下文",
+}[moduleKey] || moduleKey || "模块");
+
+const contextAlignmentLabel = (alignment) => ({
+  aligned: "已贴合",
+  missing: "缺绑定",
+  drifted: "已偏离",
+  needs_attention: "需关注",
+}[alignment] || alignment || "未知");
+
+const readingProgressModel = (result = {}, role = "user") => {
+  const decisionReport = result.decision_report || {};
+  const featureStateModel = result.feature_state_model || {};
+  const portraitProjection = decisionReport.portrait_projection || {};
+  const roleView = result.role_view_model || {};
+  const questionProfile = roleView.question_profile || {};
+  const questions = Array.isArray(result.questions) ? result.questions : [];
+  const brainState = result.brain_state || {};
+  const summary = brainState.public_summary || {};
+  const featurePercent = featureStateModel.status === "ready" && Number(featureStateModel.feature_state_count || 0) > 0 ? 100 : (featureStateModel.status === "ready" ? 85 : 40);
+  const portraitPercent = portraitProjection.status === "ready" && Number(portraitProjection.axis_count || 0) > 0 ? 100 : (portraitProjection.status === "ready" ? 80 : 35);
+  const rolePercent = roleView.version ? 100 : 35;
+  const questionPercent = questions.length && questionProfile.version ? 100 : (questions.length ? 82 : 35);
+  const roleTone = readingProgressTone(role);
+  const primary = summary.primary_title || summary.primary_domain || "当前八字主线";
+  return {
+    headline: roleTone.headline(primary),
+    narrative: roleTone.narrative({ primary, questionCount: questions.length, style: questionProfile.style || "" }),
+    items: [
+      {
+        label: "八字特征",
+        percent: featurePercent,
+        copy: roleTone.feature(featureStateModel),
+      },
+      {
+        label: "八字画像",
+        percent: portraitPercent,
+        copy: roleTone.portrait(portraitProjection),
+      },
+      {
+        label: "角色阅读",
+        percent: rolePercent,
+        copy: roleTone.role(roleView),
+      },
+      {
+        label: "智能问答",
+        percent: questionPercent,
+        copy: roleTone.questions(questions, questionProfile),
+      },
+    ],
+  };
+};
+
+const readingProgressTone = (role = "user") => {
+  if (role === "guest") {
+    return {
+      headline: (primary) => `先给你抓住重点：${primary}`,
+      narrative: ({ questionCount }) => `系统已经把复杂判断收成一条能读懂的路线，并准备了 ${questionCount || 0} 个可继续追问的入口。`,
+      feature: () => "先看盘里最明显的结构，不急着下结论。",
+      portrait: () => "画像只保留当前最有帮助的方向，避免一上来信息过载。",
+      role: () => "游客视图会少讲术语，多讲你接下来该看哪里。",
+      questions: (questions) => `问题会从浅处开始，当前可继续问 ${questions.length || 0} 个方向。`,
+    };
+  }
+  if (role === "analyst" || role === "practitioner") {
+    return {
+      headline: (primary) => `命理师链路已收束到：${primary}`,
+      narrative: ({ questionCount, style }) => `画像、特征和追问已经按命理师视角展开，当前问题风格是 ${roleQuestionHint(style)}，共 ${questionCount || 0} 个校准入口。`,
+      feature: (model) => `已抽出 ${Number(model.feature_state_count || 0)} 个特征状态，优先看能改变主线判断的证据。`,
+      portrait: (portrait) => `画像轴 ${Number(portrait.axis_count || 0)} 条，用来核对主题投射是否过度或不足。`,
+      role: () => "命理师视图保留边界、证据和可反证位置，方便继续校准。",
+      questions: (questions) => `追问按结构校准、证据边界、主题候选分组，当前 ${questions.length || 0} 个问题可用。`,
+    };
+  }
+  if (role === "admin" || role === "lab") {
+    return {
+      headline: (primary) => `观测链路已对齐：${primary}`,
+      narrative: ({ questionCount }) => `这里展示的是本次测算从特征、画像、角色到问题的运行闭环，当前输出 ${questionCount || 0} 个问题节点。`,
+      feature: (model) => `特征状态 ${Number(model.feature_state_count || 0)} 个，可用于观察中枢排序是否稳定。`,
+      portrait: (portrait) => `画像轴 ${Number(portrait.axis_count || 0)} 条，可观察 runtime pointer 是否影响排序。`,
+      role: () => "角色层只改变展示和问题顺序，不改八字事实。",
+      questions: (questions) => `问题链已生成 ${questions.length || 0} 个节点，可继续看来源、排序和点击反馈。`,
+    };
+  }
+  return {
+    headline: (primary) => `本次阅读主线：${primary}`,
+    narrative: ({ questionCount }) => `系统已经把八字特征、画像和问题串到一起，当前准备了 ${questionCount || 0} 个下一步问题。`,
+    feature: (model) => `已整理 ${Number(model.feature_state_count || 0)} 个关键特征，先看影响最大的部分。`,
+    portrait: (portrait) => `画像轴 ${Number(portrait.axis_count || 0)} 条，用来把结构转成可读的生活主题。`,
+    role: () => "用户视图会保留重点解释，不把内部判断细节全部摊开。",
+    questions: (questions) => `问题围绕当前主线排序，当前 ${questions.length || 0} 个方向可继续问。`,
+  };
+};
+
+const roleViewLabel = (role) => ({
+  guest: "游客画像",
+  user: "用户画像",
+  analyst: "命理师画像",
+  lab: "观测画像",
+  admin: "管理员画像",
+}[role] || "角色画像");
+
+const renderQuestions = (questions, selectedId, questionIntentModel = {}, questionProfile = {}, role = "user", nextQuestionPlan = {}) => {
   const root = document.querySelector("#questionList");
+  renderRoleQuestionProfile(questionProfile, role, questions.length, nextQuestionPlan);
   clear(root);
   if (!questions.length) {
     root.append(el("div", "empty-note", currentText().wb.no_questions));
     return;
   }
   const activeId = String(selectedId || "");
-  questions.slice(0, 8).forEach((question) => {
-    root.append(questionButton(question, activeId, "question-row"));
+  const limit = Number(questionProfile.question_limit || 8);
+  const visibleQuestions = questions.slice(0, Number.isFinite(limit) && limit > 0 ? limit : 8);
+  if (usesGroupedQuestions(role, questionProfile)) {
+    renderQuestionGroups(root, visibleQuestions, activeId, role);
+    return;
+  }
+  visibleQuestions.forEach((question) => {
+    root.append(questionButton(question, activeId, "question-row", roleQuestionGroupKey(question, role)));
   });
 };
+
+const usesGroupedQuestions = (role, questionProfile = {}) => (
+  ["analyst", "lab", "admin"].includes(role) ||
+  ["review_questions", "observation_questions", "full_observation_questions"].includes(questionProfile.style)
+);
+
+const renderQuestionGroups = (root, questions, activeId, role) => {
+  const groups = groupedRoleQuestions(questions, role);
+  root.classList.add("grouped-question-list");
+  groups.forEach((group) => {
+    const section = el("section", "role-question-group");
+    const head = el("div", "role-question-group-head");
+    head.append(el("strong", "", group.label));
+    head.append(el("span", "small-pill", String(group.items.length)));
+    section.append(head);
+    group.items.forEach((question) => {
+      section.append(questionButton(question, activeId, "question-row", group.key));
+    });
+    root.append(section);
+  });
+};
+
+const groupedRoleQuestions = (questions, role) => {
+  const rows = [];
+  const used = new Set();
+  const pushGroup = (key, label, matcher) => {
+    const items = questions.filter((question) => !used.has(question) && matcher(question));
+    items.forEach((question) => used.add(question));
+    if (items.length) rows.push({ key, label, items });
+  };
+  if (role === "admin" || role === "lab") {
+    pushGroup("time", "时间与触发", (question) => question.domain === "time");
+    pushGroup("system", "系统观测", (question) => question.role_view_level === "full_observation");
+    pushGroup("domain", "主题观测", () => true);
+    return rows.length ? rows : [{ key: "all", label: "观测问题", items: questions }];
+  }
+    pushGroup("structure", "结构校准", (question) => ["strength", "ten_god", "pattern", "element"].includes(question.domain));
+  pushGroup("evidence", "证据边界", (question) => ["branch", "time", "useful_god"].includes(question.domain));
+  pushGroup("domain", "主题候选", (question) => ["career", "wealth", "relationship", "health"].includes(question.domain));
+  pushGroup("other", "其他问题", () => true);
+  return rows.length ? rows : [{ key: "all", label: "校准问题", items: questions }];
+};
+
+const renderRoleQuestionProfile = (questionProfile = {}, role = "user", count = 0, nextQuestionPlan = {}) => {
+  const root = document.querySelector("#roleQuestionProfile");
+  if (!root) return;
+  const list = document.querySelector("#questionList");
+  if (list) list.classList.remove("grouped-question-list");
+  clear(root);
+  const style = questionProfile.style || roleQuestionStyle(role);
+  const limit = questionProfile.question_limit || "";
+  root.append(el("span", "small-pill", roleQuestionLabel(role)));
+  root.append(el("span", "", roleQuestionHint(style)));
+  if (questionProfile.voice_profile) {
+    root.append(el("span", "small-pill", roleVoiceProfileLabel(questionProfile.voice_profile)));
+  }
+  if (limit) root.append(el("span", "small-pill", `${Math.min(Number(count || 0), Number(limit || count || 0))}/${limit}`));
+  renderNextQuestionPlanSummary(root, nextQuestionPlan, role);
+};
+
+const renderNextQuestionPlanSummary = (root, nextQuestionPlan = {}, role = "user") => {
+  const anchored = Array.isArray(nextQuestionPlan.recommended_questions) ? nextQuestionPlan.recommended_questions : [];
+  const atoms = Array.isArray(nextQuestionPlan.recommended_atoms) ? nextQuestionPlan.recommended_atoms : [];
+  const rows = anchored.length ? anchored : atoms;
+  if (!rows.length) return;
+  root.append(el("span", "small-pill", `下一问 ${rows.length}`));
+  const first = rows[0] || {};
+  const summary = el("span", "next-question-plan-summary", `下一步：${first.display_title || first.question_title || first.question_key || "继续围绕当前主线追问"}`);
+  root.append(summary);
+  if (["admin", "lab", "analyst"].includes(role)) {
+    const edges = Array.isArray(nextQuestionPlan.followup_edges) ? nextQuestionPlan.followup_edges : [];
+    if (edges.length) {
+      const edge = edges[0] || {};
+      const targets = Array.isArray(edge.to_atom_ids) ? edge.to_atom_ids : [];
+      root.append(el("span", "next-question-chain", `链路：${edge.from_question_key || edge.from_atom_id || "当前问题"} -> ${targets[0] || "下一问"}`));
+    }
+    if (first.atom_id) root.append(el("span", "small-pill", `atom ${first.atom_id}`));
+    const reasons = Array.isArray(first.score_reasons) ? first.score_reasons.slice(0, 2).join(" · ") : "";
+    if (reasons) root.append(el("span", "small-pill", reasons));
+    const journey = nextQuestionPlan.role_journey || {};
+    const targetStages = Array.isArray(journey.target_stages) ? journey.target_stages.join(" -> ") : "";
+    if (targetStages) root.append(el("span", "small-pill", `旅程 ${targetStages}`));
+    const memory = nextQuestionPlan.session_memory || {};
+    const topicDepth = memory.topic_depth || {};
+    const depthCount = Object.keys(topicDepth).length;
+    const answeredCount = Number(memory.answered_question_key_count || 0) + Number(memory.answered_question_id_count || 0);
+    if (answeredCount || depthCount) root.append(el("span", "small-pill", `记忆 已问${answeredCount} · 专题${depthCount}`));
+    const policyTrace = nextQuestionPlan.policy_trace || {};
+    const policySource = policyTrace.source || policyTrace.status || "";
+    if (policySource) root.append(el("span", "small-pill", `策略 ${policySource}`));
+    if (policyTrace.active_policy_version) root.append(el("span", "small-pill", `pointer ${policyTrace.active_policy_version}`));
+    const suppressed = Number(nextQuestionPlan.suppressed_count || 0);
+    if (suppressed) root.append(el("span", "small-pill warn", `已隐藏 ${suppressed}`));
+  }
+};
+
+const roleQuestionStyle = (role) => ({
+  guest: "starter_questions",
+  user: "guided_questions",
+  analyst: "review_questions",
+  lab: "observation_questions",
+  admin: "full_observation_questions",
+}[role] || "guided_questions");
+
+const roleQuestionLabel = (role) => ({
+  guest: "入口问题",
+  user: "引导问题",
+  analyst: "校准问题",
+  lab: "观测问题",
+  admin: "系统问题",
+}[role] || "智能问题");
+
+const roleQuestionHint = (style) => ({
+  starter_questions: "先给少量容易进入的方向，不展示技术链条。",
+  guided_questions: "围绕当前主线给出可继续追问的方向。",
+  review_questions: "用于校准结构主线、证据边界和候选判断。",
+  observation_questions: "用于观察策略、候选和运行质量。",
+  full_observation_questions: "用于管理员检查系统状态和完整投影。",
+}[style] || "围绕当前主线生成问题。");
+
+const roleVoiceProfileLabel = (profile) => ({
+  guest_soft_entry: "轻入口语气",
+  user_guided_reading: "引导阅读语气",
+  practitioner_evidence_review: "证据校准语气",
+  admin_runtime_observe: "运行观测语气",
+}[profile] || "角色语气");
 
 const renderDecisionHits = (hits = []) => {
   const root = document.querySelector("#decisionHits");
   const hitCount = document.querySelector("#decisionHitCount");
   const summary = document.querySelector("#decisionHitSummary");
+  if (!root) return;
   clear(root);
   if (summary) {
     clear(summary);
@@ -1270,17 +2018,147 @@ const renderDecisionHits = (hits = []) => {
   });
 };
 
-const questionButton = (question, selectedId, className) => {
+const questionButton = (question, selectedId, className, questionGroup = "") => {
   const questionId = question.question_id || question.question_key || "";
   const isActive = String(selectedId) === String(questionId);
   const button = el("button", `${className}${isActive ? " active" : ""}`);
   button.type = "button";
   button.dataset.questionId = questionId;
   button.dataset.questionKey = question.question_key || "";
-  button.append(el("strong", "", question.title || question.question_key || questionId || currentText().recommended_question));
-  button.addEventListener("click", () => runQuestion(question));
+  button.dataset.questionGroup = questionGroup;
+  const displayTitle = question.display_title || question.question_narrative?.title || question.title || question.question_key || questionId || currentText().recommended_question;
+  button.append(el("strong", "", displayTitle));
+  const narrative = question.question_narrative || {};
+  if (narrative.why_now || narrative.next_step) {
+    const body = el("p", "question-narrative", [narrative.why_now, narrative.next_step].filter(Boolean).join(" "));
+    button.append(body);
+  }
+  if (["admin", "lab", "analyst"].includes(displayRole()) && question.next_question_atom_id) {
+    const reasons = Array.isArray(question.next_question_score_reasons)
+      ? question.next_question_score_reasons.slice(0, 2).join(" · ")
+      : "";
+    const planLine = [
+      question.next_question_stage ? `阶段：${question.next_question_stage}` : "",
+      question.next_question_topic ? `专题：${question.next_question_topic}` : "",
+      reasons,
+    ].filter(Boolean).join(" · ");
+    if (planLine) button.append(el("p", "question-narrative next-question-reason", planLine));
+  }
+  if (["admin", "lab", "analyst"].includes(displayRole())) {
+    const anchorLine = questionAnchorLine(question.question_anchor || {});
+    if (anchorLine) button.append(el("p", "question-narrative question-anchor-line", anchorLine));
+  }
+  const meta = [roleViewLevelLabel(question.role_view_level), question.question_strategy]
+    .filter(Boolean)
+    .join(" · ");
+  if (meta) button.append(el("span", "", meta));
+  button.addEventListener("click", () => runQuestion(question, questionGroup));
   return button;
 };
+
+const questionAnchorLine = (anchor = {}) => {
+  if (!anchor || typeof anchor !== "object") return "";
+  const missing = Array.isArray(anchor.missing_requirements)
+    ? anchor.missing_requirements.filter(Boolean).slice(0, 3).join("、")
+    : "";
+  const time = [anchor.luck_pillar ? `${anchor.luck_pillar}大运` : "", anchor.flow_year_pillar ? `${anchor.flow_year_pillar}流年` : ""]
+    .filter(Boolean)
+    .join(" / ");
+  return [
+    anchor.anchor_status ? `锚点：${anchor.anchor_status}` : "",
+    anchor.day_master ? `${anchor.day_master}日主` : "",
+    anchor.primary_dynamic_chain_label || "",
+    time,
+    missing ? `缺：${missing}` : "",
+  ].filter(Boolean).join(" · ");
+};
+
+const canReviewQuestions = (role) => ["analyst", "admin", "lab", "practitioner"].includes(role);
+const canFeedbackQuestions = (role) => ["guest", "user", "analyst", "admin", "lab", "practitioner"].includes(role);
+
+const selectedQuestionForFeedback = (selected = {}, questions = []) => {
+  const selectedId = selected.question_id || selected.question_key || "";
+  if (!selectedId) return selected || {};
+  const matched = questions.find((question) => (
+    String(question.question_id || "") === String(selectedId) ||
+    String(question.question_key || "") === String(selectedId)
+  ));
+  return { ...(matched || {}), ...selected };
+};
+
+const renderAnswerFeedback = (question = {}, role = "user") => {
+  const root = document.querySelector("#answerFeedbackPanel");
+  if (!root) return;
+  clear(root);
+  const questionId = question.question_id || question.question_key || "";
+  if (!canFeedbackQuestions(role) || !questionId || !state.latest?.answer_text) {
+    root.hidden = true;
+    return;
+  }
+  root.hidden = false;
+  root.dataset.questionId = questionId;
+  root.dataset.questionKey = question.question_key || "";
+  const text = currentText().wb;
+  const head = el("div", "answer-feedback-head");
+  const copy = el("div", "");
+  copy.append(el("strong", "", text.answer_review_title));
+  copy.append(el("span", "", text.answer_review_hint));
+  head.append(copy);
+  head.append(el("span", "small-pill", roleQuestionLabel(role)));
+  root.append(head);
+  const title = question.display_title || question.question_narrative?.title || question.title || question.question_key || questionId;
+  root.append(el("div", "answer-feedback-meta", title));
+  root.append(questionFeedbackActions(question, question.question_group || roleQuestionGroupKey(question, role), role));
+};
+
+const questionFeedbackActions = (question, questionGroup, role) => {
+  const actions = el("div", "question-feedback-actions");
+  const rows = canReviewQuestions(role) ? [
+    ["approve", "", "通过"],
+    ["downrank", "too_technical", "降权"],
+    ["rewrite", "role_mismatch", "改写"],
+    ["delete", "unfocused", "删除"],
+  ] : [
+    ["answer_helpful", "", "有帮助"],
+    ["followup", "", "继续追问"],
+    ["skip", "", "不感兴趣"],
+  ];
+  rows.forEach(([action, reason, label]) => {
+    const button = el("button", "feedback-action", label);
+    button.type = "button";
+    button.dataset.feedbackAction = action;
+    button.dataset.feedbackReason = reason;
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      if (canReviewQuestions(role)) {
+        recordQuestionFeedback(question, questionGroup, role, action, reason, button);
+      } else {
+        recordQuestionRewardFeedback(question, questionGroup, role, action, button);
+      }
+    });
+    actions.append(button);
+  });
+  return actions;
+};
+
+const roleQuestionGroupKey = (question, role) => {
+  if (role === "admin" || role === "lab") {
+    if (question.domain === "time") return "time";
+    if (question.role_view_level === "full_observation") return "system";
+    return "domain";
+  }
+  if (["strength", "ten_god", "pattern", "element"].includes(question.domain)) return "structure";
+  if (["branch", "time", "useful_god"].includes(question.domain)) return "evidence";
+  if (["career", "wealth", "relationship", "health"].includes(question.domain)) return "domain";
+  return role === "guest" ? "entry" : "guided";
+};
+
+const roleViewLevelLabel = (level) => ({
+  entry: "入口",
+  guided: "引导",
+  technical_review: "校准",
+  full_observation: "观测",
+}[level] || "");
 
 const intentSummary = (questionIntentModel = {}) => {
   const counts = questionIntentModel.intent_type_counts || {};
@@ -1293,10 +2171,11 @@ const intentTypeLabel = (intentType) => {
   return t[intentType] || intentType || t._ || "intent";
 };
 
-const runQuestion = (question) => {
-  const title = question.title || question.question_key || "";
+const runQuestion = (question, questionGroup = "") => {
+  const title = question.display_title || question.question_narrative?.title || question.title || question.question_key || "";
   const questionId = question.question_id || "";
   rememberAnsweredQuestion(question);
+  recordRoleQuestionClick(question, questionGroup);
   if (questionSelect) questionSelect.value = question.question_id || question.question_key || "";
   if (questionIdInput) questionIdInput.value = questionId;
   setInquiryText(title, { syncOnly: true });
@@ -1306,6 +2185,138 @@ const runQuestion = (question) => {
     interactionSource: currentText().wb.q_source,
     llmMode: interactiveLlmMode(),
   });
+};
+
+const recordRoleQuestionClick = (question, questionGroup = "") => {
+  const questionKey = question.question_key || "";
+  const questionId = question.question_id || "";
+  if (!questionKey && !questionId) return;
+  const role = displayRole();
+  const payload = {
+    input_id: state.latest?.input_id || form.elements.input_id?.value || "",
+    source_role: role,
+    locale: localeSelect.value,
+    question: {
+      question_key: questionKey,
+      question_id: questionId,
+      domain: question.domain || "",
+      role_view_level: question.role_view_level || "",
+      question_strategy: question.question_strategy || "",
+      question_group: questionGroup || roleQuestionGroupKey(question, role),
+      measurement_topic: question.measurement_topic || "",
+      measurement_stage: question.measurement_stage || "",
+      role_view_source: question.role_view_source || "",
+      seed_source_key: question.seed_source_key || "",
+      next_question_atom_id: question.next_question_atom_id || "",
+      next_question_topic: question.next_question_topic || "",
+      next_question_stage: question.next_question_stage || "",
+    },
+  };
+  fetch("/api/v20/role-view/question-click/record", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  }).catch(() => {});
+};
+
+const recordQuestionRewardFeedback = (question, questionGroup, role, actionType, activeButton) => {
+  const questionKey = question.question_key || "";
+  const questionId = question.question_id || "";
+  if (!canFeedbackQuestions(role) || (!questionKey && !questionId)) return;
+  const previous = activeButton?.textContent || "";
+  if (activeButton) {
+    activeButton.disabled = true;
+    activeButton.textContent = "记录中";
+  }
+  const payload = {
+    input_id: state.latest?.input_id || form.elements.input_id?.value || "",
+    source_role: role,
+    locale: localeSelect.value,
+    question: {
+      question_key: questionKey,
+      question_id: questionId,
+      domain: question.domain || "",
+      role_view_level: question.role_view_level || "",
+      question_strategy: question.question_strategy || "",
+      question_group: questionGroup || roleQuestionGroupKey(question, role),
+      measurement_topic: question.measurement_topic || "",
+      measurement_stage: question.measurement_stage || "",
+      role_view_source: question.role_view_source || "",
+      seed_source_key: question.seed_source_key || "",
+      next_question_atom_id: question.next_question_atom_id || "",
+      next_question_topic: question.next_question_topic || "",
+      next_question_stage: question.next_question_stage || "",
+      action_type: actionType || "answer_helpful",
+    },
+  };
+  fetch("/api/v20/role-view/question-click/record", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error("question reward record failed");
+      if (activeButton) activeButton.textContent = "已记录";
+    })
+    .catch(() => {
+      if (activeButton) activeButton.textContent = "失败";
+    })
+    .finally(() => {
+      if (!activeButton) return;
+      window.setTimeout(() => {
+        activeButton.disabled = false;
+        activeButton.textContent = previous;
+      }, 1200);
+    });
+};
+
+const recordQuestionFeedback = (question, questionGroup, role, action, reason, activeButton) => {
+  const questionKey = question.question_key || "";
+  const questionId = question.question_id || "";
+  if (!canFeedbackQuestions(role) || (!questionKey && !questionId)) return;
+  const previous = activeButton?.textContent || "";
+  if (activeButton) {
+    activeButton.disabled = true;
+    activeButton.textContent = "记录中";
+  }
+  const payload = {
+    input_id: state.latest?.input_id || form.elements.input_id?.value || "",
+    source_role: role,
+    action,
+    reason,
+    locale: localeSelect.value,
+    question: {
+      question_key: questionKey,
+      question_id: questionId,
+      domain: question.domain || "",
+      stage: question.measurement_stage || question.role_view_level || question.stage || "",
+      role_target: role,
+      question_strategy: question.question_strategy || "",
+      source: question.role_view_source || question.source || "",
+    },
+  };
+  fetch("/api/v20/question-review/record", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+    keepalive: true,
+  })
+    .then((response) => {
+      if (!response.ok) throw new Error("review record failed");
+      if (activeButton) activeButton.textContent = "已记录";
+    })
+    .catch(() => {
+      if (activeButton) activeButton.textContent = "失败";
+    })
+    .finally(() => {
+      if (!activeButton) return;
+      window.setTimeout(() => {
+        activeButton.disabled = false;
+        activeButton.textContent = previous;
+      }, 1200);
+    });
 };
 
 const renderQuestionSelect = (questions, selectedId, selectedKey = "") => {
@@ -1320,7 +2331,7 @@ const renderQuestionSelect = (questions, selectedId, selectedKey = "") => {
     option.value = value;
     option.dataset.questionId = value;
     option.dataset.questionKey = question.question_key || "";
-    option.textContent = question.title || question.question_key;
+    option.textContent = question.display_title || question.question_narrative?.title || question.title || question.question_key;
     questionSelect.append(option);
   });
   const hasExactMatch = [...questionSelect.options].some((option) => option.value === currentId);
@@ -1349,38 +2360,6 @@ const syncQuestionIdFromSelect = () => {
   }
   const selectedOption = questionSelect.selectedOptions[0];
   questionIdInput.value = selectedOption?.dataset?.questionId || questionSelect.value;
-};
-
-const renderEvidence = (refs, decisionValidation = {}, runtimeModels = {}) => {
-  const root = document.querySelector("#evidenceList");
-  clear(root);
-  refs.slice(0, 5).forEach((ref) => {
-    const row = el("div", "evidence-row");
-    row.append(el("strong", "", ref.title || ref.knowledge_id || "knowledge"));
-    row.append(el("span", "", `${portraitDomainLabel(ref.domain)} · ${ref.reviewed ? currentText().wb.reviewed : currentText().wb.draft}`));
-    root.append(row);
-  });
-  if (decisionValidation.status) {
-    const row = el("div", "evidence-row validation");
-    row.append(el("strong", "", currentText().wb.dyn_val));
-    row.append(el("span", "", `${decisionValidation.status} · ${decisionValidation.decision_count ?? 0}`));
-    root.append(row);
-  }
-  const featureStateModel = runtimeModels.featureStateModel || {};
-  const questionIntentModel = runtimeModels.questionIntentModel || {};
-  const decisionModel = runtimeModels.decisionModel || {};
-  [
-    [currentText().wb.feat_model, featureStateModel.status, `${featureStateModel.feature_state_count ?? 0} ${currentText().wb.states_count}`],
-    [currentText().wb.q_model, questionIntentModel.status, `${questionIntentModel.intent_count ?? 0} ${currentText().wb.intents_count}`],
-    [currentText().wb.def_model, decisionModel.status, `${decisionModel.argument_count ?? 0} ${currentText().wb.arguments_count}`],
-  ].forEach(([title, status, detail]) => {
-    if (!status) return;
-    const row = el("div", "evidence-row model");
-    row.append(el("strong", "", title));
-    row.append(el("span", "", `${status} · ${detail}`));
-    root.append(row);
-  });
-  if (!refs.length && !decisionValidation.status && !featureStateModel.status) root.append(el("div", "empty-note", currentText().wb.no_evidence));
 };
 
 const appendChatTurn = (questionText, source) => {
@@ -1479,7 +2458,7 @@ const latentConfidenceLabel = (value) => {
 const loadLatentCalibrationManifest = async () => {
   try {
     state.latentManifest = await requestJson("/api/v20/learning/latent-event-calibration");
-    renderLatentCalibration(state.latest?.input_id || "", measurementRole(roleSelect.value));
+    renderLatentCalibration(state.latest?.input_id || "", displayRole());
   } catch (error) {
     const status = document.querySelector("#latentCalibrationStatus");
     if (status) status.textContent = currentText().wb.manifest_error;
@@ -1492,15 +2471,18 @@ const loadCurrentSession = async () => {
   try {
     const result = await requestJson("/api/v20/auth/me");
     const session = result.session || {};
+    if (!result.authenticated && WorkbenchPage.routeAnonymousIfNeeded()) return;
     if (result.authenticated && session.role) {
       const role = measurementRole(session.role);
-      roleSelect.value = role;
+      roleSelect.value = runtimeRole(role);
       const isGuest = session.username === "guest" || String(session.user_id || "").startsWith("guest_");
+      if (routeToRolePageIfNeeded(isGuest ? "guest" : role)) return;
       document.body.dataset.role = isGuest ? "guest" : role;
+      renderWorkbenchNavigation(isGuest ? "guest" : role);
       renderGuestNavigation(isGuest);
       applyWorkbenchMode(isGuest ? "guest" : role);
-      renderObservationAccess(role);
-      renderFeatureStateAccess(role);
+      renderObservationAccess(isGuest ? "guest" : role);
+      renderFeatureStateAccess(isGuest ? "guest" : role);
     }
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = session.role !== "admin";
@@ -1508,7 +2490,12 @@ const loadCurrentSession = async () => {
     const isGuest = session.username === "guest" || String(session.user_id || "").startsWith("guest_");
     if (logoutButton) logoutButton.hidden = !result.authenticated || isGuest;
   } catch (error) {
-    applyWorkbenchMode("user");
+    const role = fallbackWorkbenchRole();
+    renderWorkbenchNavigation(role);
+    applyWorkbenchMode(role);
+    renderGuestNavigation(role === "guest");
+    renderObservationAccess(role);
+    renderFeatureStateAccess(role);
     document.querySelectorAll(".admin-nav-link").forEach((node) => {
       node.hidden = true;
     });
@@ -1524,6 +2511,7 @@ const renderGuestNavigation = (isGuest) => {
     profilesLink.textContent = entryText;
     profilesLink.href = "/v20/ui/";
   } else {
+    profilesLink.textContent = currentText().nav_profiles;
     profilesLink.href = "/v20/ui/profiles.html";
   }
 };
@@ -1560,8 +2548,8 @@ const applyLocale = (locale) => {
     if (value) node.setAttribute("placeholder", value);
   });
   const submit = form.querySelector("button[type='submit']");
-  submit.textContent = text.run;
-  chatButton.textContent = text.wb.send;
+  if (submit) submit.textContent = text.run;
+  if (chatButton) chatButton.textContent = text.wb.send;
   if (chatText && !chatText.value.trim()) chatText.value = "";
   const userText = form.elements.user_text;
   if (userText && (!userText.value.trim() || Object.values(UI_TEXT).some((row) => row.default_user_text === userText.value.trim()))) {
@@ -1569,31 +2557,41 @@ const applyLocale = (locale) => {
     if (chatText) chatText.value = text.default_user_text;
   }
   setText("#answerText", state.latest ? (state.latest.answer_text || text.wb.waiting) : text.wb.waiting);
+  renderAnswerFeedback(
+    state.latest ? selectedQuestionForFeedback(state.latest.selected_question || {}, state.latest.questions || []) : {},
+    displayRole()
+  );
 
 };
 
 const renderInitialPanels = () => {
-  applyWorkbenchMode(measurementRole(roleSelect.value));
-  renderObservationAccess(measurementRole(roleSelect.value));
-  renderFeatureStateAccess(measurementRole(roleSelect.value));
+  applyWorkbenchMode(displayRole());
+  renderObservationAccess(displayRole());
+  renderFeatureStateAccess(displayRole());
   renderPillars({});
   renderStructureDynamics({});
+  renderBrainState({});
+  renderReadingProgress({}, displayRole());
+  renderContextBinding({}, displayRole());
   renderOrchestratorTrace({}, {});
   renderFeatures([]);
   renderPortrait([]);
-  renderPractitionerCalibration([], "", measurementRole(roleSelect.value));
-  renderLatentCalibration("", measurementRole(roleSelect.value));
-  renderQuestions([], "", {});
-  renderEvidence([], {}, {});
+  renderPractitionerCalibration([], "", displayRole());
+  renderLatentCalibration("", displayRole());
+  renderQuestions([], "", {}, {}, displayRole());
+  renderAnswerFeedback({}, displayRole());
 };
 
 const loadActiveProfile = async () => {
   const profileId = params.get("profile_id") || "";
   if (!profileId) return;
-  document.querySelector("#selectedProfileCard").hidden = false;
-  document.querySelector("#inputId").value = `profile:${profileId}`;
+  const selectedProfileCard = document.querySelector("#selectedProfileCard");
+  const inputId = document.querySelector("#inputId");
+  const backToProfiles = document.querySelector("#backToProfiles");
+  if (selectedProfileCard) selectedProfileCard.hidden = false;
+  if (inputId) inputId.value = `profile:${profileId}`;
   setText("#selectedProfileName", profileId);
-  document.querySelector("#backToProfiles").href = "/v20/ui/profiles.html";
+  if (backToProfiles) backToProfiles.href = "/v20/ui/profiles.html";
   try {
     const result = await requestJson(`/api/v20/profiles/${encodeURIComponent(profileId)}`);
     const profile = result.profile || {};
@@ -1645,7 +2643,6 @@ const applyProfileDefaults = (profile) => {
           if (String(value).trim() || !current) {
             el.value = String(value);
           }
-          el.dispatchEvent(new Event("change"));
         }
         // Sync segment controls
         if (key === "calendar") {
@@ -1698,9 +2695,7 @@ const rememberAnsweredQuestion = (question) => {
   const questionId = String(question.question_id || question.question_key || "").trim();
   const questionKey = String(question.question_key || "").trim();
   if (questionId) state.answeredQuestionIds = unique([...state.answeredQuestionIds, questionId]).slice(-32);
-  if (!question.question_id && questionKey) {
-    state.answeredQuestionKeys = unique([...state.answeredQuestionKeys, questionKey]).slice(-32);
-  }
+  if (questionKey) state.answeredQuestionKeys = unique([...state.answeredQuestionKeys, questionKey]).slice(-32);
 };
 
 const hasCompletePillars = (payload) => {
@@ -1772,7 +2767,17 @@ const hydrateFormFromParams = () => {
 
 const unique = (items) => Array.from(new Set(items));
 const currentText = () => UI_TEXT[localeSelect.value] || UI_TEXT.zh;
-const measurementRole = (role) => (role === "user" || role === "guest" ? "user" : role === "admin" ? "admin" : "analyst");
+const measurementRole = (role) => WorkbenchPage.normalizeRole(role);
+const displayRole = (role = roleSelect.value) => WorkbenchPage.config.page === "guest" ? "guest" : measurementRole(role);
+const runtimeRole = (role = roleSelect.value) => displayRole(role) === "guest" ? "guest" : measurementRole(role);
+const routeToRolePageIfNeeded = (role) => WorkbenchPage.routeToRolePageIfNeeded(role);
+const renderWorkbenchNavigation = (role) => WorkbenchPage.renderNavigation(role);
+const fallbackWorkbenchRole = () => {
+  if (WorkbenchPage.config.page === "guest") return "guest";
+  if (WorkbenchPage.config.page === "practitioner") return "analyst";
+  if (WorkbenchPage.config.page === "observe") return "admin";
+  return "user";
+};
 const profileMeta = (profile) => {
   const birth = profile.birth_input || {};
   const date = [birth.year, String(birth.month || "").padStart(2, "0"), String(birth.day || "").padStart(2, "0")]
@@ -1882,11 +2887,15 @@ document.querySelectorAll("[data-workbench-mode-target]").forEach((button) => {
 logoutButton?.addEventListener("click", () => logout().catch((error) => setText("#answerText", error.message)));
 
 localeSelect.value = localStorage.getItem("v20_locale") || localeSelect.value || "zh";
-roleSelect.value = measurementRole(roleSelect.value);
-applyWorkbenchMode(measurementRole(roleSelect.value));
+const initRole = fallbackWorkbenchRole();
+roleSelect.value = runtimeRole(initRole);
+applyWorkbenchMode(initRole);
 document.body.classList.toggle("profile-reading", Boolean(params.get("profile_id")));
 hydrateFormFromParams();
 applyLocale(localeSelect.value);
+renderObservationAccess(initRole);
+renderFeatureStateAccess(initRole);
+renderGuestNavigation(WorkbenchPage.config.page === "guest" || document.body.dataset.role === "guest");
 renderInitialPanels();
 loadCurrentSession();
 

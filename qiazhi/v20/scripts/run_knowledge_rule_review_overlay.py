@@ -22,6 +22,8 @@ def main() -> int:
     parser.add_argument("--write", action="store_true", help="Write a local runtime artifact.")
     parser.add_argument("--status", action="store_true", help="Read latest written local artifact.")
     parser.add_argument("--progress", action="store_true", help="Print progress to stderr.")
+    parser.add_argument("--limit", type=int, default=0, help="Maximum knowledge rule definitions to inspect.")
+    parser.add_argument("--synthetic-case-limit", type=int, default=0, help="Limit synthetic rule cases; use 0 for all cases.")
     args = parser.parse_args()
 
     def _run() -> dict[str, object]:
@@ -29,8 +31,15 @@ def main() -> int:
         if args.status:
             return read_knowledge_rule_review_overlay_artifact()
         if args.write:
-            return write_knowledge_rule_review_overlay_artifact(progress=progress)
-        return build_knowledge_rule_review_overlay()
+            return write_knowledge_rule_review_overlay_artifact(
+                limit=max(0, args.limit),
+                synthetic_case_limit=max(0, args.synthetic_case_limit),
+                progress=progress,
+            )
+        return build_knowledge_rule_review_overlay(
+            limit=max(0, args.limit),
+            synthetic_case_limit=max(0, args.synthetic_case_limit),
+        )
 
     return run_and_print(
         _run,

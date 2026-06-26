@@ -70,7 +70,7 @@ def test_v20_mainline_arbitration_prefers_decision_mainline_over_plain_structure
         },
         feature_state_model={"priority_features": ()},
         structure_dynamics={
-            "dominant_chain": {
+            "legacy_dynamic_chain": {
                 "chain_key": "wealth->authority->resource",
                 "nodes": ("wealth", "authority", "resource"),
                 "evidence": ("正财", "正官", "正印"),
@@ -88,6 +88,105 @@ def test_v20_mainline_arbitration_prefers_decision_mainline_over_plain_structure
     assert "decision_mainline" in primary["source"]
     assert arbitration["quality_gate"]["requires_review"] is True
     assert "single_source_bias" in arbitration["quality_gate"]["risk_flags"]
+
+
+def test_v20_mainline_arbitration_consumes_fast_track_runtime_policy() -> None:
+    arbitration = arbitrate_mainline(
+        decision_report={
+            "mainlines": (
+                {
+                    "mainline_key": "mainline.strength.capacity",
+                    "title": "日主承载链",
+                    "domain": "strength",
+                    "status": "confirmed",
+                    "score": 0.7,
+                    "support": ("承载证据", "扶助证据"),
+                },
+            ),
+            "decisions": (),
+            "portrait_projection": {"axes": ()},
+            "rule_runtime_hits": (),
+        },
+        feature_state_model={"priority_features": ()},
+        structure_dynamics={
+            "legacy_dynamic_chain": {"chain_key": "output->wealth", "nodes": ("output", "wealth")},
+            "chain_state": "partial",
+            "volatility_score": 0.2,
+        },
+        question_intent_model={"selected_question_intent": {"domain": "strength"}},
+        time_context={"status": "not_provided"},
+        runtime_policy_pointer={
+            "runtime_applied": True,
+            "active_policy_version": "v20.orchestrator_policy.candidate.test",
+            "candidate_policy_version": "v20.orchestrator_policy.candidate.test",
+            "policy_payload": {
+                "mainline_arbitration_weight_policy": (
+                    {
+                        "runtime_allowed": True,
+                        "primary_mainline_key": "mainline.strength.capacity",
+                        "suggested_action": "increase_primary_stability_weight",
+                    },
+                )
+            },
+        },
+    )
+
+    primary = arbitration["primary_mainline"]
+    effect = arbitration["runtime_policy_effect"]
+
+    assert primary["candidate_key"] == "mainline.strength.capacity"
+    assert "runtime_policy" in primary["source"]
+    assert primary["score"] > primary["base_score"]
+    assert effect["status"] == "applied"
+    assert effect["applied_adjustment_count"] == 1
+    assert effect["active_policy_version"] == "v20.orchestrator_policy.candidate.test"
+    assert "FAST_TRACK_POLICY_CAN_RERANK_MAINLINE_CANDIDATES" in arbitration["guardrails"]
+
+
+def test_v20_mainline_arbitration_uses_question_domain_to_break_close_ties() -> None:
+    arbitration = arbitrate_mainline(
+        decision_report={
+            "mainlines": (),
+            "decisions": (
+                {
+                    "decision_key": "decision.strength.capacity",
+                    "label": "日主承载规则：明确成立",
+                    "domain": "strength",
+                    "role": "mainline_candidate",
+                    "status": "confirmed",
+                    "score": 1.08,
+                    "support": ("扶助分 0.26", "压力分 0.42"),
+                },
+                {
+                    "decision_key": "decision.career.output_authority_resource_chain",
+                    "label": "官伤印三方需要合参",
+                    "domain": "career",
+                    "role": "mainline_candidate",
+                    "status": "confirmed",
+                    "score": 0.9,
+                    "support": ("伤官@月柱藏干", "正官@年柱明透", "正印@时柱明透"),
+                },
+            ),
+            "portrait_projection": {"axes": ()},
+            "rule_runtime_hits": (),
+        },
+        feature_state_model={"priority_features": ()},
+        structure_dynamics={
+            "legacy_dynamic_chain": {"chain_key": "authority->resource", "nodes": ("authority", "resource")},
+            "chain_state": "partial",
+            "volatility_score": 0.1,
+        },
+        question_intent_model={"selected_question_intent": {"domain": "career"}},
+        time_context={"status": "not_provided"},
+    )
+
+    primary = arbitration["primary_mainline"]
+    supporting = arbitration["supporting_mainlines"]
+
+    assert primary["domain"] == "career"
+    assert "question_domain_focus" in primary["source"]
+    assert supporting[0]["domain"] == "strength"
+    assert "QUESTION_DOMAIN_CAN_BREAK_CLOSE_MAINLINE_TIES" in arbitration["guardrails"]
 
 
 def test_v20_mainline_quality_gate_flags_thin_or_competing_evidence() -> None:
@@ -117,7 +216,7 @@ def test_v20_mainline_quality_gate_flags_thin_or_competing_evidence() -> None:
         },
         feature_state_model={"priority_features": ()},
         structure_dynamics={
-            "dominant_chain": {
+            "legacy_dynamic_chain": {
                 "chain_key": "output->authority->resource",
                 "nodes": ("output", "authority", "resource"),
                 "evidence": ("伤官",),
@@ -213,7 +312,7 @@ def test_v20_mainline_arbitration_applies_practitioner_review_switch_to_supporti
         },
         feature_state_model={"priority_features": ()},
         structure_dynamics={
-            "dominant_chain": {
+            "legacy_dynamic_chain": {
                 "chain_key": "wealth->authority->resource",
                 "nodes": ("wealth", "authority", "resource"),
                 "evidence": ("财星", "官星"),
@@ -250,7 +349,7 @@ def test_v20_mainline_arbitration_applies_practitioner_review_switch_to_supporti
         },
         feature_state_model={"priority_features": ()},
         structure_dynamics={
-            "dominant_chain": {
+            "legacy_dynamic_chain": {
                 "chain_key": "wealth->authority->resource",
                 "nodes": ("wealth", "authority", "resource"),
                 "evidence": ("财星", "官星"),

@@ -114,7 +114,13 @@ def _expand_argv(argv: tuple[str, ...], root: Path, extra_args: tuple[str, ...])
 
 
 def _python_bin() -> str:
-    return os.getenv("PYTHON_BIN") or shutil.which("python3.12") or sys.executable or "python3.12"
+    if os.getenv("PYTHON_BIN"):
+        return str(os.environ["PYTHON_BIN"])
+    root = Path(__file__).resolve().parents[2]
+    venv_python = root / ".venv312" / "bin" / "python"
+    if venv_python.exists():
+        return str(venv_python)
+    return shutil.which("python3.12") or sys.executable or "python3.12"
 
 
 def _v20_py_files(root: Path) -> list[str]:

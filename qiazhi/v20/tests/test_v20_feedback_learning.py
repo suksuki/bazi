@@ -1,10 +1,17 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
+from v20.api.schemas import FeedbackRequest
 from v20.interaction.feedback_analysis import analyze_feedback
 from v20.learning.registries import registry_manifest
 from v20.server import app
+
+
+def _endpoint(path: str, method: str = "GET"):
+    method = method.upper()
+    for route in app.routes:
+        if getattr(route, "path", "") == path and method in getattr(route, "methods", set()):
+            return route.endpoint
+    raise AssertionError(f"route not found: {method} {path}")
 
 
 def test_v20_registry_manifest_maps_learning_stores_without_connection() -> None:
@@ -38,17 +45,15 @@ def test_v20_feedback_analysis_redacts_and_blocks_auto_runtime_override() -> Non
 
 
 def test_v20_feedback_and_registry_endpoints_are_read_only() -> None:
-    client = TestClient(app)
-    registry = client.get("/api/v20/learning/registries").json()
-    feedback = client.post(
-        "/api/v20/feedback/analyze",
-        json={
-            "input_id": "feedback.endpoint",
-            "source_role": "analyst",
-            "feedback_text": "这个回答的用神边界需要更清楚",
-            "feature_ids": ["feature.useful_god.evidence_gate"],
-        },
-    ).json()
+    registry = _endpoint("/api/v20/learning/registries")()
+    feedback = _endpoint("/api/v20/feedback/analyze", "POST")(
+        FeedbackRequest(
+            input_id="feedback.endpoint",
+            source_role="analyst",
+            feedback_text="这个回答的用神边界需要更清楚",
+            feature_ids=["feature.useful_god.evidence_gate"],
+        )
+    )
 
     assert registry["runtime_mutation"] is False
     assert feedback["runtime_mutation"] is False

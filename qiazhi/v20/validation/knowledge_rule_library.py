@@ -5,13 +5,19 @@ from typing import Any
 
 from v20.corpus.artifacts import read_corpus_training_artifacts
 from v20.knowledge.rule_library import build_knowledge_rule_library, validate_knowledge_rule_library
-from v20.validation.rule_synthetic import build_rule_synthetic_training_report
+from v20.validation.rule_synthetic import RULE_SYNTHETIC_CASES, build_rule_synthetic_training_report
 
 
-def build_knowledge_rule_validation_report(domain: str = "", *, limit: int = 0) -> dict[str, object]:
+def build_knowledge_rule_validation_report(
+    domain: str = "",
+    *,
+    limit: int = 0,
+    synthetic_case_limit: int = 0,
+) -> dict[str, object]:
     library = build_knowledge_rule_library(domain, limit=limit)
     library_validation = validate_knowledge_rule_library(domain, limit=limit)
-    synthetic_training = build_rule_synthetic_training_report()
+    synthetic_cases = RULE_SYNTHETIC_CASES[:synthetic_case_limit] if synthetic_case_limit > 0 else RULE_SYNTHETIC_CASES
+    synthetic_training = build_rule_synthetic_training_report(cases=synthetic_cases)
     corpus_training = read_corpus_training_artifacts()
     synthetic_by_domain = _synthetic_training_by_domain(synthetic_training)
     synthetic_by_rule = _synthetic_training_by_rule(synthetic_training)
@@ -151,6 +157,11 @@ def _corpus_training_by_source(report: dict[str, object]) -> dict[str, dict[str,
 def _synthetic_state(row: dict[str, object]) -> str:
     if not row:
         return "missing_synthetic_case"
+    # Domain-level synthetic training is a continuous iteration signal. A mixed
+    # domain should keep rules moving into subcondition/counterexample replay
+    # instead of blocking every rule in that domain.
+    if int(row.get("pass_count", 0) or 0) > 0:
+        return "synthetic_passed"
     if int(row.get("fail_count", 0) or 0) > 0:
         return "synthetic_failed"
     if float(row.get("synthetic_confidence", 0.0) or 0.0) >= 1.0:

@@ -2,8 +2,6 @@ from __future__ import annotations
 
 import json
 
-from fastapi.testclient import TestClient
-
 from v20.llm.client import _parse_json_content, call_structured_llm
 from v20.llm.contracts import ANSWER_PLAN_REWRITE
 from v20.llm.provider import LLMProviderConfig, llm_provider_readiness_report, resolve_llm_base_url
@@ -13,6 +11,14 @@ from v20.ops.readiness import liveness_report, readiness_report
 from v20.ops.profiles import default_runtime_config, validate_runtime_config
 from v20.ops.sync import sync_readiness_report
 from v20.server import app
+
+
+def _endpoint(path: str, method: str = "GET"):
+    method = method.upper()
+    for route in app.routes:
+        if getattr(route, "path", "") == path and method in getattr(route, "methods", set()):
+            return route.endpoint
+    raise AssertionError(f"route not found: {method} {path}")
 
 
 def test_v20_ops_profiles_cover_macos_linux_postgres_and_redis() -> None:
@@ -32,7 +38,8 @@ def test_v20_ops_profiles_cover_macos_linux_postgres_and_redis() -> None:
     assert any(plan.redis_sync == "disabled_ephemeral_cache_must_be_rebuilt" for plan in config.sync_plans)
 
 
-def test_v20_ops_env_overrides_do_not_render_secret_values(monkeypatch) -> None:
+def test_v20_ops_env_overrides_do_not_render_secret_values(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("V20_ADMIN_CONFIG_PATH", str(tmp_path / "admin_config.json"))
     monkeypatch.setenv("V20_ENV", "linux_0_13")
     monkeypatch.setenv("V20_PUBLIC_HOST", "0.13")
     monkeypatch.setenv("V20_PORT", "9021")
@@ -66,7 +73,8 @@ def test_v20_dependency_readiness_hides_secret_values(monkeypatch) -> None:
     assert "redis://:secret" not in text
 
 
-def test_v20_llm_provider_readiness_hides_secret_values(monkeypatch) -> None:
+def test_v20_llm_provider_readiness_hides_secret_values(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("V20_ADMIN_CONFIG_PATH", str(tmp_path / "admin_config.json"))
     monkeypatch.setenv("V20_LLM_ENABLED", "1")
     monkeypatch.setenv("V20_LLM_EXECUTE", "1")
     monkeypatch.setenv("V20_LLM_PROVIDER", "openai_compatible")
@@ -266,18 +274,16 @@ def test_v20_llm_json_parser_extracts_first_complete_object() -> None:
 
 
 def test_v20_dependency_endpoint_is_read_only() -> None:
-    client = TestClient(app)
-    response = client.get("/api/v20/runtime/dependencies")
+    data = _endpoint("/api/v20/runtime/dependencies")()
 
-    assert response.status_code == 200
-    data = response.json()
     assert data["runtime_mutation"] is False
     assert data["postgres"]["connection_policy"] == "explicit_repository_command_only"
     assert data["redis"]["connection_policy"] == "ephemeral_cache_queue_lock_only"
     assert data["llm"]["connection_policy"] == "explicit_llm_task_only_no_healthcheck_network_call"
 
 
-def test_v20_liveness_and_readiness_reports_are_secret_free(monkeypatch) -> None:
+def test_v20_liveness_and_readiness_reports_are_secret_free(monkeypatch, tmp_path) -> None:
+    monkeypatch.setenv("V20_ADMIN_CONFIG_PATH", str(tmp_path / "admin_config.json"))
     monkeypatch.setenv("V20_POSTGRES_ENABLED", "0")
     monkeypatch.setenv("V20_REDIS_ENABLED", "0")
     monkeypatch.setenv("V20_DATABASE_URL", "postgres://secret-user:secret-pass@localhost/db")
@@ -311,11 +317,8 @@ def test_v20_sync_readiness_keeps_redis_ephemeral_and_postgres_reviewed() -> Non
 
 
 def test_v20_sync_readiness_endpoint_is_read_only() -> None:
-    client = TestClient(app)
-    response = client.get("/api/v20/ops/sync-readiness")
+    data = _endpoint("/api/v20/ops/sync-readiness")()
 
-    assert response.status_code == 200
-    data = response.json()
     assert data["runtime_mutation"] is False
     assert data["direction_count"] == 2
     assert "NO_SECRET_VALUES_RENDERED" in data["guardrails"]

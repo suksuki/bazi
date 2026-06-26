@@ -56,6 +56,44 @@ class MainlineCandidate:
     status: str
     source: str
     evidence: tuple[str, ...] = field(default_factory=tuple)
+    candidate_id: str = ""
+    source_types: tuple[str, ...] = field(default_factory=tuple)
+    evidence_ids: tuple[str, ...] = field(default_factory=tuple)
+    base_score: float = 0.0
+    question_relevance: float = 0.0
+    time_relevance: float = 0.0
+    conflict_risk: float = 0.0
+    requires_review: bool = False
 
     def to_dict(self) -> dict[str, Any]:
-        return asdict(self)
+        payload = asdict(self)
+        payload["candidate_id"] = self.candidate_id or self.candidate_key
+        payload["source_types"] = list(self.source_types or tuple(filter(None, self.source.split("+"))))
+        payload["evidence_ids"] = list(self.evidence_ids)
+        payload["base_score"] = self.base_score or self.score
+        return payload
+
+
+@dataclass(frozen=True)
+class EvidenceItem:
+    evidence_id: str
+    source_type: str
+    source_key: str
+    domain: str
+    label: str
+    summary: str
+    confidence: float
+    weight: float
+    supports: tuple[str, ...] = field(default_factory=tuple)
+    weakens: tuple[str, ...] = field(default_factory=tuple)
+    boundary: str = ""
+    answer_guidance: tuple[dict[str, object], ...] = field(default_factory=tuple)
+    role_visibility: tuple[str, ...] = ("analyst", "admin")
+
+    def to_dict(self) -> dict[str, Any]:
+        payload = asdict(self)
+        payload["supports"] = list(self.supports)
+        payload["weakens"] = list(self.weakens)
+        payload["answer_guidance"] = [dict(row) for row in self.answer_guidance]
+        payload["role_visibility"] = list(self.role_visibility)
+        return payload

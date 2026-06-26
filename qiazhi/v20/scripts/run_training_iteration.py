@@ -24,9 +24,14 @@ def main() -> int:
     parser.add_argument("--progress", action="store_true", help="Print progress lines to stderr while running.")
     parser.add_argument("--include-rule-batch", action="store_true", help="Include the heavier rule/portrait/question batch phase.")
     parser.add_argument("--include-replay-eval", action="store_true", help="Include the heavier rule replay evaluation phase.")
+    parser.add_argument("--include-knowledge-overlay", action="store_true", help="Include the heavier knowledge-rule review overlay phase.")
+    parser.add_argument("--include-rule-iteration", action="store_true", help="Include heavier rule subcondition and decision registry iteration phases.")
     parser.add_argument("--skip-rule-batch", action="store_true", help="Deprecated no-op; the rule batch is skipped unless --include-rule-batch is set.")
     parser.add_argument("--dynamic-limit", type=int, default=12, help="Limit dynamic decision cases for the daily iteration; use 0 for all cases.")
     parser.add_argument("--rule-iteration-limit", type=int, default=120, help="Limit rule iteration packets for the daily iteration; use 0 for all rules.")
+    parser.add_argument("--rule-synthetic-limit", type=int, default=12, help="Limit synthetic rule cases inside the daily iteration; use 0 for all cases.")
+    parser.add_argument("--knowledge-overlay-limit", type=int, default=24, help="Limit knowledge overlay rule definitions inside the daily iteration; use 0 for all definitions.")
+    parser.add_argument("--synthetic-replay-limit", type=int, default=1, help="Limit synthetic bazi replay cases inside the daily iteration; use 0 for all cases.")
     parser.add_argument("--corpus-preview", type=int, default=0, help="Optionally preview N full-corpus cases.")
     args = parser.parse_args()
 
@@ -40,8 +45,13 @@ def main() -> int:
             write=args.write,
             include_rule_batch=args.include_rule_batch and not args.skip_rule_batch,
             include_replay_eval=args.include_replay_eval,
+            include_knowledge_overlay=args.include_knowledge_overlay,
+            include_rule_iteration=args.include_rule_iteration,
             dynamic_case_limit=max(0, args.dynamic_limit),
             rule_iteration_limit=max(0, args.rule_iteration_limit),
+            rule_synthetic_limit=max(0, args.rule_synthetic_limit),
+            knowledge_overlay_limit=max(0, args.knowledge_overlay_limit),
+            synthetic_replay_limit=max(0, args.synthetic_replay_limit),
             corpus_preview_limit=max(0, args.corpus_preview),
             progress=progress,
         )

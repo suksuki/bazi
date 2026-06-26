@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>V20 八字档案管理</title>
     <link rel="icon" href="/v20/ui/favicon.png" />
-    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260505-glass" />
+    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260510-ui-clean" />
   </head>
   <body>
     <div class="app-shell">
@@ -20,10 +20,10 @@
         <nav class="top-actions" aria-label="V20 navigation">
           <a href="/v20/ui/" data-profile-ui="nav_entry">入口</a>
           <a href="/v20/ui/profiles.html" aria-current="page" data-profile-ui="nav_profiles">档案</a>
-          <a href="/v20/ui/workbench.html" data-profile-ui="nav_measure">测算</a>
-          <a href="/v20/ui/admin.html" class="admin-nav-link" hidden>Admin</a>
+          <a href="/v20/ui/workbench-user.html" data-profile-ui="nav_measure">测算</a>
+          <a href="/v20/ui/admin.html" class="admin-nav-link" hidden>管理后台</a>
           <button type="button" id="logoutButton" class="logout-action" data-profile-ui="logout_button" hidden>登出</button>
-          <span id="profileRuntimeStatus" class="status-pill">checking</span>
+          <span id="profileRuntimeStatus" class="status-pill">检查中</span>
         </nav>
       </header>
 
@@ -31,7 +31,7 @@
         <section class="profile-command-panel">
           <div class="section-head">
             <div>
-              <p class="section-kicker">Profiles</p>
+              <p class="section-kicker">档案</p>
               <h2 data-profile-ui="list_title">档案列表</h2>
             </div>
             <span id="profileCount" class="small-pill">0</span>
@@ -40,13 +40,13 @@
             <button type="button" id="newProfileButton" class="mini-action" data-profile-ui="new_profile">新增档案</button>
             <input type="hidden" id="profileLocale" value="zh" />
           </div>
-          <div id="profileStatus" class="status-line">loading</div>
+          <div id="profileStatus" class="status-line">加载中</div>
         </section>
 
         <section id="profileEditor" class="profile-editor-panel" hidden>
           <div class="section-head">
             <div>
-              <p class="section-kicker">Profile Manager</p>
+              <p class="section-kicker">档案管理</p>
               <h2 id="profileEditorTitle" data-profile-ui="editor_new">新增档案</h2>
             </div>
             <button type="button" id="cancelProfileEdit" class="mini-action secondary" data-profile-ui="cancel">取消</button>
@@ -73,8 +73,8 @@
             <label><span data-profile-ui="birth_minute">出生分</span><select id="profileBirthMinute"></select></label>
             <label><span data-profile-ui="profile_status_label">状态</span>
               <select id="profileRecordStatus">
-                <option value="active" data-profile-option="status_active">active</option>
-                <option value="archived" data-profile-option="status_archived">archived</option>
+                <option value="active" data-profile-option="status_active">启用</option>
+                <option value="archived" data-profile-option="status_archived">归档</option>
               </select>
             </label>
           </div>
@@ -86,6 +86,7 @@
         <section id="profileList" class="profile-grid" aria-live="polite"></section>
       </main>
     </div>
-    <script src="/v20/ui/profiles.js?v=20260509-route-state" defer></script>
+    <script src="/v20/ui/workbench_routes.js?v=20260510-mvc-routes" defer></script>
+    <script src="/v20/ui/profiles.js?v=20260510-role-pages" defer></script>
   </body>
 </html>

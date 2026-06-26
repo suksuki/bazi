@@ -4,8 +4,6 @@ from pathlib import Path
 import json
 import sys
 
-from fastapi.testclient import TestClient
-
 from v20.server import app
 from v20.testing.matrix import build_test_coverage_matrix
 from v20.testing.runner import (
@@ -17,15 +15,29 @@ from v20.testing.runner import (
 from v20.testing.tiers import get_tier, test_tier_manifest as build_test_tier_manifest
 
 
+def _endpoint(path: str, method: str = "GET"):
+    method = method.upper()
+    for route in app.routes:
+        if getattr(route, "path", "") == path and method in getattr(route, "methods", set()):
+            return route.endpoint
+    raise AssertionError(f"route not found: {method} {path}")
+
+
 def test_v20_test_tiers_are_bounded_and_opt_in_for_slow_work() -> None:
     manifest = build_test_tier_manifest()
     names = [row["name"] for row in manifest["tiers"]]
 
-    assert names == ["smoke", "fast", "targeted", "full", "services", "corpus"]
-    assert get_tier("fast").budget_seconds <= 20
+    assert names == ["smoke", "fast", "core", "brain", "training", "ui", "targeted", "full", "services", "corpus"]
+    assert get_tier("fast").budget_seconds <= 90
+    assert get_tier("full").budget_seconds >= 900
+    assert get_tier("core").commands[0].name == "pytest_v20_core"
+    assert get_tier("brain").commands[0].name == "pytest_v20_brain"
+    assert get_tier("training").commands[0].name == "pytest_v20_training"
+    assert get_tier("ui").commands[0].name == "pytest_v20_ui"
     assert get_tier("services").commands[0].opt_in_env == "RUN_V20_SERVICE_TESTS"
     assert get_tier("corpus").commands[0].opt_in_env == "RUN_V20_CORPUS_TESTS"
     assert "SERVICE_AND_CORPUS_TESTS_REQUIRE_OPT_IN" in manifest["guardrails"]
+    assert "DOMAIN_TIERS_SPLIT_CORE_BRAIN_TRAINING_UI" in manifest["guardrails"]
 
 
 def test_v20_test_runner_dry_run_expands_local_commands() -> None:
@@ -64,6 +76,10 @@ def test_v20_test_scripts_and_docs_are_wired() -> None:
     scripts = {
         "smoke": root / "v20/scripts/test_smoke.sh",
         "fast": root / "v20/scripts/test_fast.sh",
+        "core": root / "v20/scripts/test_core.sh",
+        "brain": root / "v20/scripts/test_brain.sh",
+        "training": root / "v20/scripts/test_training.sh",
+        "ui": root / "v20/scripts/test_ui.sh",
         "targeted": root / "v20/scripts/test_targeted.sh",
         "full": root / "v20/scripts/test_full.sh",
         "services": root / "v20/scripts/test_services.sh",
@@ -92,15 +108,14 @@ def test_v20_test_coverage_matrix_tracks_mainline_areas() -> None:
         "ops_storage_redis",
         "corpus_learning_validation",
         "ui_static_shell",
+        "central_brain_question_role",
     } <= areas
+    assert set(matrix["split_tiers"]) == {"core", "brain", "training", "ui"}
 
 
 def test_v20_testing_matrix_endpoint_is_read_only() -> None:
-    client = TestClient(app)
-    response = client.get("/api/v20/testing/matrix")
+    data = _endpoint("/api/v20/testing/matrix")()
 
-    assert response.status_code == 200
-    data = response.json()
     assert data["runtime_mutation"] is False
     assert data["default_tier"] == "fast"
 

@@ -104,15 +104,15 @@ _RISK_BY_STATE = {
 _INTENT_BOUNDARY_BY_STATE = {
     "confirmed": "已形成可复核结构路径，不做确定事件断言。",
     "candidate": "当前偏结构候选，需要补齐强弱与时序先后。",
-    "weak_candidate": "材料可见但承接/抗压有边界，先做承接权重复核。",
+    "weak_candidate": "线索可见但承接和抗压仍偏弱，先看现实支撑是否足够。",
     "mixed": "结构主次并存，建议先比对主次与反向约束。",
     "chain_review": "链条成立并非一体推演，建议按关键环节顺序复核。",
     "volatile": "结构会被时运和流年牵动，先看触发窗口。",
-    "countered": "存在明显反制路径，需要先处理反制边界。",
+    "countered": "存在明显反向路径，需要先处理相互牵制的部分。",
     "requires_review": "证据不足，需要补齐复核动作后再下结论。",
     "candidate_review": "处于命理师复核优先位，默认不输出硬结论。",
     "evidence_gap": "当前证据不足，先观察可观察线索。",
-    "out_of_scope": "当前证据不足且外推不稳，先输出观察边界。",
+    "out_of_scope": "当前依据不足且外推不稳，先说明可观察范围。",
     "blocked": "当前结构受阻，建议先复核反制与优先级。",
 }
 
@@ -409,7 +409,7 @@ def _build_user_facing_decision(domain: str, state: str, source: dict[str, objec
     if state == "candidate":
         return f"{topic}方向是候选结构：{label}，先观察支持链是否成形。"
     if state == "weak_candidate":
-        return f"{topic}方向有候选结构，但承接、时序和先后仍偏弱。"
+        return f"{topic}方向有线索，但承接、时序和先后仍偏弱。"
     if state == "chain_review":
         return f"{topic}方向更像链式结构：{label}，先复核各环节的先后。"
     if state == "mixed":
@@ -423,7 +423,7 @@ def _build_user_facing_decision(domain: str, state: str, source: dict[str, objec
     if state == "blocked":
         return f"{topic}方向出现拦截线索：{label}，先处理阻断项。"
     if state == "countered":
-        return f"{topic}方向有反制证据：{label}，先处理反制边界。"
+        return f"{topic}方向有反向证据：{label}，先看相互牵制的部分。"
     _ = priority_state
     return f"{topic}方向处于{state}状态，{label}。"
 

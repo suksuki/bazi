@@ -3,9 +3,9 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>V20 Admin · DB / LLM</title>
+    <title>V20 管理后台 · 系统与训练</title>
     <link rel="icon" href="/v20/ui/favicon.png" />
-    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260505-glass" />
+    <link rel="stylesheet" href="/v20/ui/styles.css?v=20260515-admin-polish" />
   </head>
   <body>
     <div class="app-shell">
@@ -13,71 +13,116 @@
         <div class="brand">
           <img class="brand-logo" src="/v20/ui/qiazhi-logo-mark.png" alt="掐指一算" />
           <div>
-            <p class="eyebrow">Qiazhi V20 Admin</p>
-            <h1>DB / LLM</h1>
+            <p class="eyebrow">Qiazhi V20 管理后台</p>
+            <h1>系统与训练</h1>
           </div>
         </div>
         <nav class="top-actions" aria-label="V20 admin navigation">
           <a href="/v20/ui/" data-admin-ui="entry">入口</a>
           <a href="/v20/ui/profiles.html" data-admin-ui="profiles">档案</a>
-          <a href="/v20/ui/workbench.html" data-admin-ui="measure">测算</a>
-          <a href="/v20/ui/admin.html" aria-current="page">Admin</a>
+          <a href="/v20/ui/workbench-observe.html" data-admin-ui="measure">测算</a>
+          <a href="/v20/ui/admin.html" aria-current="page">管理后台</a>
           <button type="button" id="logoutButton" class="logout-action" data-admin-ui="logout" hidden>登出</button>
-          <span id="adminStatus" class="status-pill">checking</span>
+          <span id="adminStatus" class="status-pill">检查中</span>
         </nav>
       </header>
 
+      <nav class="admin-tabbar" aria-label="Admin sections">
+        <button type="button" class="active" data-admin-tab-target="config">系统配置</button>
+        <button type="button" data-admin-tab-target="training">训练任务</button>
+      </nav>
+
       <main class="admin-layout">
-        <section class="panel admin-card">
+        <section class="panel admin-card" data-admin-tab-section="config">
           <div class="section-head">
             <div>
-              <p class="section-kicker">Database</p>
-              <h2>Postgres</h2>
+              <p class="section-kicker">数据库</p>
+              <h2>Postgres 连接</h2>
             </div>
-            <button type="button" id="refreshDb" class="mini-action" data-admin-ui="refresh">刷新</button>
+            <div class="button-pair">
+              <button type="button" id="saveDbConfig" class="mini-action" data-admin-ui="save">保存</button>
+              <button type="button" id="refreshDb" class="mini-action secondary" data-admin-ui="refresh">刷新</button>
+            </div>
           </div>
+          <form id="dbConfigForm" class="admin-config-form">
+            <label class="check-row"><input type="checkbox" name="enabled" /><span>启用 Postgres</span></label>
+            <label><span>主机</span><input name="host" autocomplete="off" /></label>
+            <label><span>端口</span><input name="port" type="number" min="1" max="65535" autocomplete="off" /></label>
+            <label><span>库名</span><input name="database" autocomplete="off" /></label>
+            <label><span>用户</span><input name="username" autocomplete="off" /></label>
+            <label><span>密码</span><input name="password" type="password" autocomplete="new-password" placeholder="留空则不修改" /></label>
+            <label class="wide"><span>连接串</span><input name="database_url" type="password" autocomplete="new-password" placeholder="可选，留空则不修改" /></label>
+            <label><span>SSL 模式</span><input name="sslmode" autocomplete="off" placeholder="prefer" /></label>
+          </form>
           <div id="dbSummary" class="admin-summary"></div>
           <div class="admin-subgrid">
             <div>
-              <p class="section-kicker">Tables</p>
+              <p class="section-kicker">数据表</p>
               <div id="dbTables" class="kv-list"></div>
             </div>
             <div>
-              <p class="section-kicker">Indexes</p>
+              <p class="section-kicker">索引</p>
               <div id="dbIndexes" class="tag-cloud"></div>
             </div>
           </div>
         </section>
 
-        <section class="panel admin-card">
+        <section class="panel admin-card" data-admin-tab-section="config">
           <div class="section-head">
             <div>
-              <p class="section-kicker">LLM</p>
-              <h2>Bounded Assist</h2>
+              <p class="section-kicker">大模型</p>
+              <h2>LLM 辅助</h2>
             </div>
             <div class="button-pair">
-              <button type="button" id="refreshLlm" class="mini-action" data-admin-ui="refresh">刷新</button>
+              <button type="button" id="saveLlmConfig" class="mini-action" data-admin-ui="save">保存</button>
+              <button type="button" id="refreshLlm" class="mini-action secondary" data-admin-ui="refresh">刷新</button>
               <button type="button" id="probeModels" class="mini-action secondary" data-admin-ui="models">模型</button>
             </div>
+          </div>
+          <form id="llmConfigForm" class="admin-config-form">
+            <label class="check-row"><input type="checkbox" name="enabled" /><span>启用 LLM</span></label>
+            <label class="check-row"><input type="checkbox" name="execute_llm" /><span>执行 LLM</span></label>
+            <label><span>服务商</span><input name="provider" autocomplete="off" /></label>
+            <label><span>主机</span><input name="host" autocomplete="off" /></label>
+            <label><span>端口</span><input name="port" type="number" min="1" max="65535" autocomplete="off" /></label>
+            <label class="wide"><span>接口地址</span><input name="base_url" autocomplete="off" /></label>
+            <label><span>模型</span><input name="model" autocomplete="off" /></label>
+            <label><span>已探测模型</span><select id="llmModelSelect"><option value="">先点击“模型”探测</option></select></label>
+            <label><span>向量模型</span><input name="embedding_model" autocomplete="off" /></label>
+            <label><span>密钥</span><input name="api_key" type="password" autocomplete="new-password" placeholder="留空则不修改" /></label>
+            <label><span>超时秒数</span><input name="http_timeout_sec" type="number" min="0" step="0.5" autocomplete="off" /></label>
+            <label><span>随机度</span><input name="temperature" type="number" min="0" max="2" step="0.1" autocomplete="off" /></label>
+            <label><span>最大长度</span><input name="max_tokens" type="number" min="1" autocomplete="off" /></label>
+          </form>
+          <div class="admin-test-box">
+            <div class="section-head compact">
+              <div>
+                <p class="section-kicker">测试</p>
+                <h2>连接测试</h2>
+              </div>
+              <button type="button" id="testLlm" class="mini-action secondary">测试连接</button>
+            </div>
+            <label><span>测试提示词</span><textarea id="llmTestPrompt" rows="2">请用一句中文回复：掐指一算 LLM 测试通过。</textarea></label>
+            <pre id="llmTestResult" class="admin-test-result">等待测试。</pre>
           </div>
           <div id="llmSummary" class="admin-summary"></div>
           <div class="admin-subgrid">
             <div>
-              <p class="section-kicker">Models</p>
+              <p class="section-kicker">可用模型</p>
               <div id="llmModels" class="tag-cloud"></div>
             </div>
             <div>
-              <p class="section-kicker">Guardrails</p>
+              <p class="section-kicker">保护规则</p>
               <div id="llmGuardrails" class="tag-cloud"></div>
             </div>
           </div>
         </section>
 
-        <section class="panel admin-card">
+        <section class="panel admin-card" data-admin-tab-section="config">
           <div class="section-head">
             <div>
-              <p class="section-kicker">Redis</p>
-              <h2>Runtime Cache</h2>
+              <p class="section-kicker">缓存</p>
+              <h2>运行缓存</h2>
             </div>
             <div class="button-pair">
               <button type="button" id="refreshRedis" class="mini-action" data-admin-ui="refresh">刷新</button>
@@ -86,12 +131,52 @@
           </div>
           <div id="redisSummary" class="admin-summary"></div>
           <div>
-            <p class="section-kicker">Guardrails</p>
+            <p class="section-kicker">保护规则</p>
             <div id="redisGuardrails" class="tag-cloud"></div>
+          </div>
+        </section>
+
+        <section class="panel admin-card admin-training-card" data-admin-tab-section="training">
+          <div class="section-head">
+            <div>
+              <p class="section-kicker">训练任务</p>
+              <h2>自我训练</h2>
+            </div>
+            <div class="button-pair">
+              <button type="button" id="pauseTrainingTask" class="mini-action secondary" disabled>暂停</button>
+              <button type="button" id="refreshTrainingTasks" class="mini-action" data-admin-ui="refresh">刷新</button>
+            </div>
+          </div>
+          <div id="trainingTaskSummary" class="admin-summary"></div>
+          <div id="trainingTaskRegistry" class="training-task-grid"></div>
+          <div class="admin-training-workbench">
+          <div class="admin-test-box admin-current-task">
+            <div class="section-head compact">
+              <div>
+                <p class="section-kicker">当前后台任务</p>
+                <h2 id="trainingTaskTitle">等待任务。</h2>
+              </div>
+              <span id="trainingTaskStatus" class="small-pill">空闲</span>
+            </div>
+            <div class="training-progress" aria-label="训练进度">
+              <div id="trainingProgressBar" class="training-progress-bar" style="width: 0%"></div>
+            </div>
+            <div id="trainingTaskMeta" class="kv-list"></div>
+            <div id="trainingResultSummary" class="training-result-summary"></div>
+            <pre id="trainingTaskLog" class="admin-test-result">暂无后台训练日志。</pre>
+          </div>
+          <div class="admin-test-box admin-history-box">
+            <p class="section-kicker">运行记录</p>
+            <div id="trainingTaskHistory" class="kv-list"></div>
+          </div>
+          <div class="admin-test-box admin-history-box">
+            <p class="section-kicker">调参记录</p>
+            <div id="trainingActivationHistory" class="kv-list"></div>
+          </div>
           </div>
         </section>
       </main>
     </div>
-    <script src="/v20/ui/admin.js?v=20260510-redis-cache" defer></script>
+    <script src="/v20/ui/admin.js?v=20260517-llm-quality-loop" defer></script>
   </body>
 </html>

@@ -13,11 +13,16 @@ ProgressCallback = Callable[[str], None]
 
 def write_knowledge_rule_review_overlay_artifact(
     *,
+    limit: int = 0,
+    synthetic_case_limit: int = 0,
     output_dir: Path | None = None,
     progress: ProgressCallback | None = None,
 ) -> dict[str, object]:
     _emit(progress, "building knowledge rule review overlay")
-    report = build_knowledge_rule_review_overlay()
+    report = build_knowledge_rule_review_overlay(
+        limit=limit,
+        synthetic_case_limit=synthetic_case_limit,
+    )
     runtime_dir = local_jsonl_store_from_env().runtime_dir
     directory = output_dir or runtime_dir / "training" / "knowledge_rule_review_overlay"
     directory.mkdir(parents=True, exist_ok=True)

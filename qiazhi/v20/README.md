@@ -19,12 +19,15 @@ ChartInput
 -> FeatureStateModel
 -> QuestionIntentModel
 -> InteractionSession
+-> OrchestratorEvidence / MainlineArbitration / BrainState
 -> Bazi measurement QuestionCandidate[] from decision states
 -> Professional domain reading path
 -> Reviewed knowledge evidence support
 -> Synthetic rule collision validation/training gate
 -> Rule/portrait/question batch generation and validation
 -> Dynamic decision training batch for current-chart portrait/question quality
+-> Role-aware question DAG and interaction training
+-> SyntheticBaziCase replay/evaluator suite for rules, portraits, questions, roles, and LLM answer context
 -> Bazi-domain alignment gate for rules, portraits, and questions
 -> EvidencePack
 -> AnswerPlan
@@ -57,7 +60,10 @@ Initial boundaries:
 - Dynamic decision training batches validate whether a current chart can produce usable rule decisions, portrait projection axes, human-facing recommended questions, and practitioner controls before any parameter reweighting.
 - LLM outputs are hard-enforced by deterministic text guards before user-facing use.
 - LLM can act as a practitioner-style answer composer only after RuleDecision, PortraitProjection, KnowledgeSemanticModel, and AnswerPlan have prepared verified context.
+- BrainState is the shared intelligent-orchestrator summary consumed by UI, deterministic answers, and LLM assist contexts; it summarizes existing runtime outputs and must not create facts or expose internal evidence ids.
 - Rule and question ranking proposals are trained offline by scripts/admin review, then promoted only through synthetic validation and a decision registry record.
+- User interaction signals can tune question ordering, role views, and answer expression only through candidate policies, synthetic validation, replay, and runtime pointers. They must not directly mutate core chart facts, rule truth, or useful-god conclusions.
+- Role-aware interaction is modeled as question DAGs. Guest/user flows favor entry, focus, advice, and closure; analyst flows favor structure, review, and timing; admin/lab flows favor observe, replay, and policy inspection.
 - Learning, LLM, corpus, and ranking systems are assistive and governed.
 - Postgres is the persistent authority; Redis is ephemeral cache/queue/lock state.
 - macOS and Linux `0.13` runtime profiles are explicit and host-local runtime files are not synced by default.
@@ -93,29 +99,30 @@ UI boundary:
 
 - `/v20/ui/` is the multi-role, multi-language entry/login surface for guest, practitioner, and admin access.
 - `/v20/ui/workbench.html` is the measurement workspace for six-pillar chart context, dynamic decision portrait, recommendation questions, and the practitioner-style dialog.
-- `/v20/ui/admin.html` is intentionally limited to DB and LLM status so operations stay readable.
-- Training, corpus precompute, rule extraction, portrait batch validation, and decision-parameter learning are script/admin surfaces only. They are not shown in the user measurement workspace.
-- `v20/scripts/run_decision_training_plan.py` lists the current offline training targets and the scripts that manage them.
-- `v20/scripts/run_dynamic_decision_training.py --progress` is the current background check for dynamic rule decisions, portraits, recommended questions, and decision-parameter training proposals.
+- `/v20/ui/admin.html` is the admin console for DB/LLM configuration, central brain status, curated training topics, background task progress, and direct runtime parameter application.
+- Training, corpus precompute, rule extraction, portrait batch validation, and decision-parameter learning are admin/script surfaces only. They are not shown in the user measurement workspace.
+- `v20/scripts/run_training_iteration.py --write --progress` is the current fast iteration entry for dynamic decisions, portraits, recommended questions, answer governance, and parameter proposals.
 - `v20/scripts/run_practitioner_calibration_training.py --progress` aggregates structured practitioner choices into offline decision-parameter proposals without mutating runtime rules.
 - `v20/scripts/import_calibration_postgres.py --ledger practitioner_calibration_ledger` dry-runs local calibration ledger import; add `--apply` only after `V20_DATABASE_URL` is configured and backups are ready.
 - `v20/scripts/apply_postgres_schema.py --env-file v20/.runtime/linux_0_13/service.env` dry-runs the authoritative Postgres schema; add `--apply` only on the target server after backup.
-- `v20/scripts/run_training_iteration.py --write --progress` runs the lightweight script-only iteration loop and writes local artifacts; add `--dynamic-limit 0 --rule-iteration-limit 0 --include-replay-eval --include-rule-batch` for the full long run.
-- `v20/scripts/run_main_chain_review.py` reviews the Knowledge -> Rule -> FeatureContext -> Portrait -> Question -> Answer -> Training spine in one read-only command.
-- `v20/scripts/run_arbitration_loop.py --progress` turns mixed/countered/requires_review decisions into conflict snapshots for calibration and replay learning.
+- `v20/scripts/run_training_iteration.py --write --progress --include-replay-eval --include-rule-iteration` runs the broader low-traffic iteration loop.
+- Current training surfaces are curated around central brain, knowledge/rule, portrait/question/role, LLM context, synthetic replay, and 518K shard replay. Old read-only review/smoke entries are no longer part of the training registry.
 - `docs/v20/V20_0_13_SERVER_SYNC_RUNBOOK.md` contains the Linux `0.13` / `dblife.com` deployment and sync steps.
 - `docs/v20/V20_SCRIPT_RUNBOOK.md` contains a complete step-by-step runbook for dev/test/corpus/self-evolution.
 - `docs/v20/V20_INTELLIGENT_MAIN_CHAIN_REVIEW.md` records the cleaned intelligent main-chain boundary and the current cleanup policy.
-- `v20/scripts/run_knowledge_rule_library.py --summary` shows the current knowledge-authored active rule definitions, portrait outputs, question outputs, and validation state.
-- `v20/scripts/run_knowledge_rule_validation.py --summary` checks those active rules against synthetic coverage and 518K corpus priors, then lists the next review action per rule.
-- `v20/scripts/run_rule_activation.py --summary` turns active-rule iteration into review packets so humans review packets, not raw rules.
 - Heavy corpus work stays manual: `v20/scripts/run_full_precompute.py --progress --limit N --status-every M`.
 - After corpus precompute, `v20/scripts/build_corpus_artifacts.py --run-id RUN --progress --no-sqlite` builds coverage/training artifacts without creating the disposable SQLite cache; omit `--no-sqlite` only when you want a local fallback similarity index before Postgres import.
 
 See also:
 
 - `docs/V20_DYNAMIC_DECISION_SPINE.md`
+- `docs/V20_BAZI_CONTEXT_BINDING_PLAN.md`
 - `docs/V20_KNOWLEDGE_RULE_COMPLETION_PLAN.md`
+- `docs/V20_MAINLINE_NEXT_PHASE_PLAN.md`
+- `docs/V20_ORCHESTRATOR_BRAIN_CONTRACT.md`
+- `docs/V20_ORCHESTRATOR_BRAIN_PROGRESS.md`
+- `docs/V20_ROLE_AWARE_BRAIN_DESIGN.md`
+- `docs/V20_SYNTHETIC_TRAINING_FRAMEWORK.md`
 
 Default local validation:
 

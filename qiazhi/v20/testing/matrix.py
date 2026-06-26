@@ -16,13 +16,13 @@ TEST_COVERAGE_AREAS = (
             "UsefulGodCandidate",
             "AnswerPlan",
         ),
-        "tier": "fast",
+        "tier": "core",
     },
     {
         "area": "explicit_time_layer",
         "tests": ("v20/tests/test_v20_runtime.py", "v20/tests/test_v20_server.py"),
         "contracts": ("TimeContext", "feature.time.explicit_context", "q_time_layer_context"),
-        "tier": "fast",
+        "tier": "core",
     },
     {
         "area": "knowledge_llm_i18n",
@@ -44,13 +44,13 @@ TEST_COVERAGE_AREAS = (
             "deterministic_i18n_terms",
             "QuestionRankingPolicy",
         ),
-        "tier": "fast",
+        "tier": "training",
     },
     {
         "area": "access_roles",
         "tests": ("v20/tests/test_v20_access.py",),
         "contracts": ("AccessRolePolicy", "role_runtime_view"),
-        "tier": "fast",
+        "tier": "core",
     },
     {
         "area": "ops_storage_redis",
@@ -70,7 +70,7 @@ TEST_COVERAGE_AREAS = (
             "service_unit_manifest",
             "system_status",
         ),
-        "tier": "fast",
+        "tier": "core",
     },
     {
         "area": "corpus_learning_validation",
@@ -79,7 +79,6 @@ TEST_COVERAGE_AREAS = (
             "v20/tests/test_v20_feedback_learning.py",
             "v20/tests/test_v20_local_jsonl_store.py",
             "v20/tests/test_v20_portrait_calibration.py",
-            "v20/tests/test_v20_policy_review.py",
             "v20/tests/test_v20_runtime.py",
         ),
         "contracts": (
@@ -92,15 +91,31 @@ TEST_COVERAGE_AREAS = (
             "FeedbackLedger",
             "PortraitCalibrationSignal",
             "LocalJsonlStore",
-            "PolicyReviewGate",
         ),
-        "tier": "fast",
+        "tier": "training",
     },
     {
         "area": "ui_static_shell",
         "tests": ("v20/tests/test_v20_ui.py",),
         "contracts": ("v20/frontend", "/v20/ui/"),
-        "tier": "fast",
+        "tier": "ui",
+    },
+    {
+        "area": "central_brain_question_role",
+        "tests": (
+            "v20/tests/test_v20_central_brain_architecture.py",
+            "v20/tests/test_v20_orchestrator.py",
+            "v20/tests/test_v20_question_ranking.py",
+            "v20/tests/test_v20_role_question_narrative_prompt_framework.py",
+        ),
+        "contracts": (
+            "CentralBrainArchitecture",
+            "MainlineArbitration",
+            "QuestionFocus",
+            "RoleAwareNarrative",
+            "PromptContextPack",
+        ),
+        "tier": "brain",
     },
 )
 
@@ -111,6 +126,7 @@ def build_test_coverage_matrix() -> dict[str, object]:
         "area_count": len(TEST_COVERAGE_AREAS),
         "areas": list(TEST_COVERAGE_AREAS),
         "default_tier": "fast",
+        "split_tiers": ("core", "brain", "training", "ui"),
         "runtime_mutation": False,
         "guardrails": [
             "COVERAGE_MATRIX_IS_DOCUMENTATION_AND_AUDIT",

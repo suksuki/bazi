@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from collections import Counter
+import os
+from time import monotonic
 from typing import Any
 
 from v20.knowledge.rule_library import build_knowledge_rule_library
@@ -24,12 +26,14 @@ RULE_SOURCE_HINTS = {
     "rule.health.balance_boundary": ("v20.applied.health_projection_boundary", "v20.core.element_distribution_boundary"),
     "rule.time.trigger": ("v20.core.time_layer_boundary",),
 }
+_POINTER_CACHE: dict[str, object] = {"expires_at": 0.0, "pointer": None, "error": ""}
 
 
 def attach_knowledge_rule_bridge(
     decision_report: dict[str, object],
     *,
     limit_per_decision: int = 3,
+    runtime_policy_pointer: dict[str, object] | None = None,
 ) -> dict[str, object]:
     """Attach reviewed-knowledge rule definitions to runtime decisions.
 
@@ -40,6 +44,8 @@ def attach_knowledge_rule_bridge(
     decisions = [dict(row) for row in decision_report.get("decisions", ()) if isinstance(row, dict)]
     library = build_knowledge_rule_library()
     validation, activation = _runtime_lightweight_review_signals()
+    pointer, pointer_error = _load_knowledge_runtime_pointer(runtime_policy_pointer)
+    policy_index = _knowledge_policy_index(pointer)
     definitions = [row for row in library.get("definitions", ()) if isinstance(row, dict)]
     validation_by_rule = {
         str(row.get("rule_key", "")): row
@@ -58,6 +64,7 @@ def attach_knowledge_rule_bridge(
             definitions,
             validation_by_rule=validation_by_rule,
             gate_by_rule=gate_by_rule,
+            policy_index=policy_index,
             limit=limit_per_decision,
         )
         decision["knowledge_rule_refs"] = refs
@@ -91,11 +98,15 @@ def attach_knowledge_rule_bridge(
         "mapped_decision_count": sum(1 for row in mapped if int(row.get("knowledge_rule_count", 0)) > 0),
         "mapping_coverage": _coverage(by_domain, bridged_by_domain),
         "mappings": mapped,
+        "policy_effect": {
+            "knowledge_policy": _knowledge_policy_effect(pointer, pointer_error, policy_index, decisions),
+        },
         "runtime_mutation": False,
         "guardrails": [
             "KNOWLEDGE_RULE_BRIDGE_FEEDS_ACTIVE_RUNTIME_CONTEXT",
             "KNOWLEDGE_RULE_DEFINITIONS_ARE_USABLE_STRUCTURAL_RULES",
             "CONTINUOUS_ITERATION_REFINES_RULE_CONTEXT",
+            "KNOWLEDGE_BRIDGE_CONSUMES_ACTIVE_KNOWLEDGE_POINTER",
         ],
     }
     enriched = dict(decision_report)
@@ -104,8 +115,12 @@ def attach_knowledge_rule_bridge(
     return enriched
 
 
-def build_knowledge_rule_review_overlay() -> dict[str, object]:
-    validation, activation = _review_signal_reports()
+def build_knowledge_rule_review_overlay(
+    *,
+    limit: int = 0,
+    synthetic_case_limit: int = 0,
+) -> dict[str, object]:
+    validation, activation = _review_signal_reports(limit=limit, synthetic_case_limit=synthetic_case_limit)
     validation_by_rule = {
         str(row.get("rule_key", "")): row
         for row in validation.get("definitions", ())
@@ -159,6 +174,7 @@ def _match_definitions(
     *,
     validation_by_rule: dict[str, dict[str, object]],
     gate_by_rule: dict[str, dict[str, object]],
+    policy_index: dict[tuple[str, str], dict[str, object]],
     limit: int,
 ) -> list[dict[str, object]]:
     rule_key = str(decision.get("rule_key", ""))
@@ -176,6 +192,10 @@ def _match_definitions(
             score += 10
         if _shares_question_seed(decision, definition):
             score += 5
+        policy = _policy_for_definition(rule_key=rule_key, definition=definition, policy_index=policy_index)
+        if policy:
+            score += int(float(policy.get("mapping_weight_delta", 0.0) or 0.0) * 1000)
+            score += int(float(policy.get("source_trust_delta", 0.0) or 0.0) * 500)
         scored.append((score, source_id, definition))
     scored.sort(key=lambda row: (row[0], row[1]), reverse=True)
     return [
@@ -183,6 +203,7 @@ def _match_definitions(
             row[2],
             validation_by_rule.get(str(row[2].get("rule_key", "")), {}),
             gate_by_rule.get(str(row[2].get("rule_key", "")), {}),
+            _policy_for_definition(rule_key=rule_key, definition=row[2], policy_index=policy_index),
         )
         for row in scored[:limit]
         if row[0] > 0
@@ -204,6 +225,7 @@ def _public_rule_ref(
     definition: dict[str, object],
     validation: dict[str, object],
     gate_packet: dict[str, object],
+    policy: dict[str, object] | None = None,
 ) -> dict[str, object]:
     return {
         "rule_key": definition.get("rule_key", ""),
@@ -246,6 +268,10 @@ def _public_rule_ref(
         "review_lane": gate_packet.get("review_lane", "manual_review_required"),
         "recommended_action": gate_packet.get("recommended_action", "manual_review"),
         "active_weight_candidate": bool(gate_packet.get("active_weight_candidate", False)),
+        "policy_applied": bool(policy),
+        "policy_mapping_weight_delta": float(policy.get("mapping_weight_delta", 0.0) or 0.0) if policy else 0.0,
+        "policy_answer_guidance_delta": float(policy.get("answer_guidance_delta", 0.0) or 0.0) if policy else 0.0,
+        "policy_source_trust_delta": float(policy.get("source_trust_delta", 0.0) or 0.0) if policy else 0.0,
         "runtime_activation_candidate": True,
         "activation_status": definition.get("activation_status", ""),
         "runtime_allowed": True,
@@ -253,7 +279,153 @@ def _public_rule_ref(
             "RULE_REF_IS_ACTIVE_STRUCTURAL_EVIDENCE",
             "CONDITION_ATOMS_FEED_RUNTIME_CONTEXT",
             "VALIDATION_SIGNALS_REFINE_ACTIVE_RULES",
+            "KNOWLEDGE_POLICY_REFINES_MAPPING_PRIORITY",
         ],
+    }
+
+
+def _load_knowledge_runtime_pointer(pointer: dict[str, object] | None) -> tuple[dict[str, object], str]:
+    if pointer is not None:
+        return pointer, ""
+    baseline = _baseline_knowledge_pointer_if_no_active_policy()
+    if baseline is not None:
+        return baseline, ""
+    now = monotonic()
+    cached = _POINTER_CACHE.get("pointer")
+    if isinstance(cached, dict) and now < float(_POINTER_CACHE.get("expires_at", 0.0) or 0.0):
+        return cached, str(_POINTER_CACHE.get("error", ""))
+    try:
+        from v20.learning.knowledge_runtime_pointer import build_knowledge_runtime_pointer
+
+        result = build_knowledge_runtime_pointer()
+        _POINTER_CACHE.update({"pointer": result, "error": "", "expires_at": now + _runtime_pointer_cache_ttl()})
+        return result, ""
+    except Exception as exc:
+        fallback = {
+            "version": "v20.knowledge_runtime_pointer_unavailable.v1",
+            "status": "error",
+            "runtime_applied": False,
+            "runtime_allowed": False,
+            "blocking_gate": f"knowledge_runtime_pointer_failed:{exc}",
+            "policy_payload": {},
+            "runtime_mutation": False,
+        }
+        _POINTER_CACHE.update({"pointer": fallback, "error": str(exc), "expires_at": now + min(_runtime_pointer_cache_ttl(), 5.0)})
+        return fallback, str(exc)
+
+
+def _baseline_knowledge_pointer_if_no_active_policy() -> dict[str, object] | None:
+    try:
+        from v20.learning.knowledge_runtime_pointer import (
+            KNOWLEDGE_BASELINE_VERSION,
+            KNOWLEDGE_POINTER_RELATIVE_PATH,
+        )
+        from v20.storage.local_jsonl import local_jsonl_store_from_env
+
+        path = local_jsonl_store_from_env().runtime_dir / KNOWLEDGE_POINTER_RELATIVE_PATH
+        if not path.exists():
+            active_version = KNOWLEDGE_BASELINE_VERSION
+        else:
+            import json
+
+            payload = json.loads(path.read_text(encoding="utf-8"))
+            active_version = str(payload.get("active_policy_version", "")) if isinstance(payload, dict) else ""
+        if active_version and active_version != KNOWLEDGE_BASELINE_VERSION:
+            return None
+        return {
+            "version": "v20.knowledge_runtime_pointer.v1",
+            "status": "baseline",
+            "policy_family": "knowledge_review",
+            "active_policy_version": KNOWLEDGE_BASELINE_VERSION,
+            "candidate_policy_version": "",
+            "rollback_policy_version": KNOWLEDGE_BASELINE_VERSION,
+            "active_pointer_source": "baseline",
+            "candidate": {},
+            "policy_payload": {},
+            "runtime_applied": False,
+            "runtime_allowed": False,
+            "blocking_gate": "",
+            "runtime_mutation": False,
+            "guardrails": [
+                "KNOWLEDGE_RUNTIME_POINTER_READ_ONLY",
+                "BASELINE_POINTER_FAST_PATH",
+                "NO_KNOWLEDGE_TRUTH_MUTATION",
+            ],
+        }
+    except Exception:
+        return None
+
+
+def _runtime_pointer_cache_ttl() -> float:
+    try:
+        return max(0.0, float(os.getenv("V20_RUNTIME_POINTER_CACHE_TTL_SECONDS", "300")))
+    except ValueError:
+        return 300.0
+
+
+def _knowledge_policy_index(pointer: dict[str, object]) -> dict[tuple[str, str], dict[str, object]]:
+    if pointer.get("runtime_applied") is not True:
+        return {}
+    payload = pointer.get("policy_payload", {})
+    if not isinstance(payload, dict):
+        return {}
+    rows = payload.get("knowledge_rule_mapping_policy", ())
+    index: dict[tuple[str, str], dict[str, object]] = {}
+    for row in rows if isinstance(rows, list | tuple) else ():
+        if not isinstance(row, dict):
+            continue
+        rule_key = str(row.get("rule_key", ""))
+        source_knowledge_id = str(row.get("source_knowledge_id", ""))
+        if rule_key and source_knowledge_id:
+            index[(rule_key, source_knowledge_id)] = row
+    return index
+
+
+def _policy_for_definition(
+    *,
+    rule_key: str,
+    definition: dict[str, object],
+    policy_index: dict[tuple[str, str], dict[str, object]],
+) -> dict[str, object] | None:
+    source_id = str(definition.get("source_knowledge_id", ""))
+    return policy_index.get((rule_key, source_id)) or policy_index.get((str(definition.get("rule_key", "")), source_id))
+
+
+def _knowledge_policy_effect(
+    pointer: dict[str, object],
+    pointer_error: str,
+    policy_index: dict[tuple[str, str], dict[str, object]],
+    decisions: list[dict[str, object]],
+) -> dict[str, object]:
+    applied_ref_count = sum(
+        1
+        for decision in decisions
+        for ref in decision.get("knowledge_rule_refs", ())
+        if isinstance(ref, dict) and ref.get("policy_applied") is True
+    )
+    if pointer_error:
+        status = "pointer_error"
+    elif pointer.get("runtime_applied") is not True:
+        status = "not_applied"
+    elif policy_index and not applied_ref_count:
+        status = "active_no_matching_knowledge_ref"
+    else:
+        status = "applied" if applied_ref_count else "empty_payload"
+    return {
+        "version": "v20.knowledge_runtime_policy_effect.v1",
+        "status": status,
+        "active_policy_version": pointer.get("active_policy_version", ""),
+        "candidate_policy_version": pointer.get("candidate_policy_version", ""),
+        "policy_count": len(policy_index),
+        "applied_ref_count": applied_ref_count,
+        "target": "knowledge_rule_mapping_policy",
+        "blocking_gate": str(pointer.get("blocking_gate", "")),
+        "runtime_mutation": False,
+        "guardrails": (
+            "KNOWLEDGE_POLICY_IS_POINTER_DRIVEN",
+            "KNOWLEDGE_POLICY_ADJUSTS_MAPPING_PRIORITY_ONLY",
+            "KNOWLEDGE_POLICY_DOES_NOT_MUTATE_KNOWLEDGE_TRUTH",
+        ),
     }
 
 
@@ -266,13 +438,20 @@ def _atom_ref(atom: dict[str, object]) -> dict[str, object]:
     }
 
 
-def _review_signal_reports() -> tuple[dict[str, object], dict[str, object]]:
+def _review_signal_reports(
+    *,
+    limit: int = 0,
+    synthetic_case_limit: int = 0,
+) -> tuple[dict[str, object], dict[str, object]]:
     # Offline/admin helper only. Runtime must use _runtime_lightweight_review_signals:
     # full validation runs synthetic cases, and synthetic cases call runtime.
     from v20.learning.rule_activation import build_rule_activation_report
     from v20.validation.knowledge_rule_library import build_knowledge_rule_validation_report
 
-    return build_knowledge_rule_validation_report(), build_rule_activation_report()
+    return (
+        build_knowledge_rule_validation_report(limit=limit, synthetic_case_limit=synthetic_case_limit),
+        build_rule_activation_report(limit=limit, synthetic_case_limit=synthetic_case_limit),
+    )
 
 
 def _runtime_lightweight_review_signals() -> tuple[dict[str, object], dict[str, object]]:

@@ -1,9 +1,15 @@
 from __future__ import annotations
 
-from fastapi.testclient import TestClient
-
 from v20.ops.service_unit import service_unit_manifest
 from v20.server import app
+
+
+def _endpoint(path: str, method: str = "GET"):
+    method = method.upper()
+    for route in app.routes:
+        if getattr(route, "path", "") == path and method in getattr(route, "methods", set()):
+            return route.endpoint
+    raise AssertionError(f"route not found: {method} {path}")
 
 
 def test_v20_linux_service_unit_manifest_is_systemd_without_secrets(monkeypatch) -> None:
@@ -33,9 +39,8 @@ def test_v20_macos_service_unit_manifest_is_launchd_and_background_script() -> N
 
 
 def test_v20_service_unit_endpoint_is_read_only() -> None:
-    client = TestClient(app)
-    linux = client.get("/api/v20/ops/service-unit/linux_0_13").json()
-    local = client.get("/api/v20/ops/service-unit/local_macos").json()
+    linux = _endpoint("/api/v20/ops/service-unit/{profile_name}")("linux_0_13")
+    local = _endpoint("/api/v20/ops/service-unit/{profile_name}")("local_macos")
 
     assert linux["runtime_mutation"] is False
     assert linux["unit_type"] == "systemd"

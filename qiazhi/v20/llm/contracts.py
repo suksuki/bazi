@@ -84,7 +84,7 @@ ANSWER_PLAN_ASSIST = LLMTaskContract(
 
 ANSWER_PLAN_REWRITE = LLMTaskContract(
     task_name="answer_plan_rewrite",
-    allowed_inputs=("answer_plan", "locale", "tone"),
+    allowed_inputs=("verified_answer_text", "brain_state", "answer_sections", "domain_boundary", "evidence_summary", "locale", "tone"),
     required_outputs=("text",),
     forbidden_outputs=("new_chart_fact", "rule_activation", "unsupported_claim"),
     fallback="deterministic_answer",
@@ -103,6 +103,8 @@ PRACTITIONER_ANSWER = LLMTaskContract(
         "next_questions",
         "answer_boundary",
         "deterministic_fallback",
+        "system_understanding",
+        "context_budget",
         "locale",
     ),
     required_outputs=("text",),

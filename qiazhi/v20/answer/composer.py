@@ -12,9 +12,9 @@ _NON_USER_VISIBLE_SECTION_TYPES = {
 }
 
 
-def compose_answer(plan: AnswerPlan, *, locale: str = "zh") -> str:
+def compose_answer(plan: AnswerPlan, *, locale: str = "zh", brain_state: dict[str, object] | None = None) -> str:
     if locale.startswith("zh"):
-        return _compose_zh(plan)
+        return _compose_zh(plan, brain_state=brain_state)
     if locale.startswith("ko"):
         return _compose_ko(plan)
     return _compose_en(plan)
@@ -32,7 +32,7 @@ def _compose_en(plan: AnswerPlan) -> str:
     return "\n\n".join(lines)
 
 
-def _compose_zh(plan: AnswerPlan) -> str:
+def _compose_zh(plan: AnswerPlan, *, brain_state: dict[str, object] | None = None) -> str:
     lines = []
     question = _question_title_from_plan(plan)
     opening = _opening_from_plan(plan, question)
@@ -41,6 +41,12 @@ def _compose_zh(plan: AnswerPlan) -> str:
     direct_answer = _direct_answer_from_plan(plan, question)
     if direct_answer:
         lines.append(direct_answer)
+    brain_line = _brain_summary_line(brain_state)
+    if brain_line:
+        lines.append(brain_line)
+    guidance_line = _knowledge_guidance_line(brain_state)
+    if guidance_line:
+        lines.append(guidance_line)
     for section in plan.sections:
         if section.section_type in _NON_USER_VISIBLE_SECTION_TYPES:
             continue
@@ -174,15 +180,123 @@ def _clean_zh_body(body: str) -> str:
     clauses = [clause.strip(" ；。") for clause in text.split("；") if clause.strip(" ；。")]
     if not clauses:
         return text
-    compact = [_compact_clause(clause) for clause in clauses[:4]]
+    public_clauses = []
+    for clause in clauses:
+        cleaned = _compact_clause(clause)
+        if cleaned and not _is_internal_clause(cleaned):
+            public_clauses.append(cleaned)
+        if len(public_clauses) >= 4:
+            break
+    compact = public_clauses
     return "；".join(row for row in compact if row).rstrip("。") + "。"
 
 
 def _compact_clause(clause: str) -> str:
+    clause = _clean_public_terms(clause)
     if "：" not in clause:
         return clause
     label, support = clause.split("：", 1)
+    label = _clean_public_terms(label)
+    support = _clean_public_terms(support)
+    if _is_internal_clause(label) or _is_internal_clause(support):
+        return ""
     pieces = [piece.strip() for piece in support.split("、") if piece.strip()]
     if len(pieces) > 3:
         support = "、".join(pieces[:3]) + "等"
     return f"{label.strip()}：{support.strip()}"
+
+
+def _brain_summary_line(brain_state: dict[str, object] | None) -> str:
+    if not isinstance(brain_state, dict):
+        return ""
+    summary = brain_state.get("public_summary")
+    if not isinstance(summary, dict):
+        return ""
+    title = _clean_public_terms(str(summary.get("primary_title", "") or summary.get("primary_domain", ""))).strip("。； ")
+    question = str(summary.get("selected_question_title", "") or "").strip()
+    if not title and not question:
+        return ""
+    if title and question:
+        return f"中枢判断：本轮先以「{title}」组织解读，并把「{question}」作为当前问题入口。"
+    if title:
+        return f"中枢判断：本轮先以「{title}」组织解读。"
+    return f"中枢判断：本轮先围绕「{question}」聚焦。"
+
+
+def _knowledge_guidance_line(brain_state: dict[str, object] | None) -> str:
+    if not isinstance(brain_state, dict):
+        return ""
+    summary = brain_state.get("public_summary")
+    if not isinstance(summary, dict):
+        return ""
+    rows = summary.get("answer_guidance", ())
+    if not isinstance(rows, list) or not rows:
+        return ""
+    allowed: list[str] = []
+    forbidden: list[str] = []
+    boundaries: list[str] = []
+    for row in rows[:3]:
+        if not isinstance(row, dict):
+            continue
+        allowed.extend(phrase for value in row.get("allowed_phrases", ()) if (phrase := _public_phrase(value)))
+        forbidden.extend(phrase for value in row.get("forbidden_phrases", ()) if (phrase := _public_phrase(value)))
+        boundary = _clean_public_terms(str(row.get("boundary", ""))).strip("。； ")
+        if boundary:
+            boundaries.append(boundary)
+    allowed = list(dict.fromkeys(allowed))[:4]
+    forbidden = list(dict.fromkeys(forbidden))[:4]
+    boundaries = list(dict.fromkeys(boundaries))[:1]
+    if allowed and forbidden:
+        return f"知识边界：本轮优先使用「{'、'.join(allowed)}」这类表达，避免确定性断语。"
+    if boundaries:
+        return f"知识边界：{boundaries[0]}。"
+    if allowed:
+        return f"知识边界：本轮优先使用「{'、'.join(allowed)}」这类有依据的表达。"
+    return ""
+
+
+def _public_phrase(value: object) -> str:
+    text = _clean_public_terms(str(value or "")).strip(" ，；。")
+    if not text or text.startswith("answer.") or "." in text[:16]:
+        return ""
+    return text
+
+
+def _clean_public_terms(text: str) -> str:
+    cleaned = str(text or "")
+    cleaned = cleaned.replace("RuleSpec 裁决主线，", "")
+    cleaned = cleaned.replace("当前主线入口，RuleSpec 裁决主线，主规则为", "")
+    cleaned = cleaned.replace("当前主线入口，", "")
+    cleaned = cleaned.replace("主规则为", "")
+    cleaned = cleaned.replace("主规则：", "")
+    cleaned = cleaned.replace("：明确成立", "")
+    cleaned = cleaned.replace("规则：明确成立", "")
+    cleaned = cleaned.replace("规则", "")
+    cleaned = cleaned.replace("来源：规则候选、画像轴、特征状态", "")
+    cleaned = cleaned.replace("来源：规则候选", "")
+    cleaned = cleaned.replace("质量门复核状态", "复核状态")
+    cleaned = cleaned.replace("质量门", "复核")
+    cleaned = cleaned.replace("联动", "同时牵动")
+    cleaned = re.sub(r"证据\s*evidence\.[\w.:-]+", "", cleaned)
+    cleaned = re.sub(r"evidence\.[\w.:-]+", "", cleaned)
+    cleaned = re.sub(r"\s+", " ", cleaned)
+    cleaned = cleaned.replace("；；", "；").replace("，，", "，")
+    return cleaned.strip(" ，；。")
+
+
+def _is_internal_clause(text: str) -> bool:
+    value = str(text or "")
+    internal_markers = (
+        "RuleSpec",
+        "evidence.",
+        "规则候选",
+        "质量门：",
+        "综合分",
+        "综合权重",
+        "来源：",
+        "复核标记：",
+        "复核目标：",
+        "条件成立",
+        "覆盖度",
+    )
+    return any(marker in value for marker in internal_markers)

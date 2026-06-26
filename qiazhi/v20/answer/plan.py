@@ -107,12 +107,15 @@ def build_answer_plan(
     answer_strategy_section = _answer_strategy_section(mainline_arbitration or {}, question.domain)
     if answer_strategy_section:
         sections.append(answer_strategy_section)
-    mainline_section = _mainline_section(decision_report or {}, question.domain)
+    mainline_section = _mainline_section(decision_report or {}, question.domain, mainline_arbitration or {})
     if mainline_section:
         sections.append(mainline_section)
     decision_section = _decision_section(decision_report or {}, question.domain)
     if decision_section:
         sections.append(decision_section)
+    selected_material_section = _selected_question_material_section(question, tuple(selected))
+    if selected_material_section:
+        sections.append(selected_material_section)
     knowledge_refs = tuple(knowledge_report.refs) if knowledge_report is not None else ()
     if decision_report:
         sections.append(_decision_knowledge_section(question.domain, knowledge_refs))
@@ -183,6 +186,32 @@ def build_answer_plan(
     )
 
 
+def _selected_question_material_section(
+    question: QuestionCandidate,
+    selected_features: tuple[object, ...],
+) -> AnswerSection | None:
+    if question.question_key != "q_hidden_stem_role" or not selected_features:
+        return None
+    summaries = tuple(
+        summary
+        for feature in selected_features[:4]
+        for summary in (feature_public_summary(feature),)
+        if summary
+    )
+    if not summaries:
+        return None
+    return AnswerSection(
+        title="当前问题证据",
+        body="；".join(dict.fromkeys(summaries)) + "。",
+        feature_ids=tuple(str(getattr(feature, "feature_id", "")) for feature in selected_features if getattr(feature, "feature_id", "")),
+        domain=question.domain,
+        section_type="selected_question_material",
+        measurement_topic=domain_label(question.domain),
+        measurement_stage=measurement_stage(question.domain),
+        **dimension_payload(question.domain),
+    )
+
+
 def _portrait_profile_section(
     question: QuestionCandidate,
     feature_layer: FeatureLayer,
@@ -198,7 +227,6 @@ def _portrait_profile_section(
     rows: list[str] = []
     rows.extend(runtime_decisions)
     rows.extend(mainlines)
-    rows.extend(decisions)
     if axes:
         rows.append(f"画像轴：{_join_short_rows(axes, 2)}")
 
@@ -399,10 +427,18 @@ def _join_short_rows(rows: list[str], limit: int) -> str:
     return "；".join(str(row) for row in rows[:limit])
 
 
-def _mainline_section(report: dict[str, object], selected_domain: str) -> AnswerSection | None:
+def _mainline_section(
+    report: dict[str, object],
+    selected_domain: str,
+    mainline_arbitration: dict[str, object] | None = None,
+) -> AnswerSection | None:
+    primary = mainline_arbitration.get("primary_mainline", {}) if isinstance(mainline_arbitration, dict) else {}
+    primary_nodes = tuple(str(row) for row in primary.get("nodes", ()) if str(row)) if isinstance(primary, dict) else ()
     mainlines = [
         row for row in report.get("mainlines", ())
-        if isinstance(row, dict) and _mainline_matches_domain(row, selected_domain)
+        if isinstance(row, dict)
+        and _mainline_matches_domain(row, selected_domain)
+        and (not primary_nodes or tuple(str(node) for node in row.get("nodes", ()) if str(node)) == primary_nodes or str(row.get("domain", "")) == str(primary.get("domain", "")))
     ]
     if not mainlines:
         return None
@@ -414,7 +450,7 @@ def _mainline_section(report: dict[str, object], selected_domain: str) -> Answer
         rows.append(f"{title}：{summary}")
         feature_ids.extend(str(item) for item in row.get("source_decision_keys", ()) if str(item))
     return AnswerSection(
-        title="主线裁决",
+        title="主线依据",
         body="；".join(rows) + "。",
         feature_ids=tuple(dict.fromkeys(feature_ids)),
         domain=selected_domain,
@@ -431,7 +467,7 @@ def _orchestrator_mainline_section(arbitration: dict[str, object], selected_doma
         return None
     nodes = primary.get("nodes", ())
     node_text = " → ".join(_mainline_node_label(str(row)) for row in nodes if str(row)) if isinstance(nodes, (list, tuple)) else ""
-    title = str(primary.get("title", "")) or node_text
+    title = _public_mainline_title(str(primary.get("title", "")) or node_text)
     if not title and not node_text:
         return None
     why = [str(row) for row in arbitration.get("why_selected", ()) if str(row)] if isinstance(arbitration.get("why_selected", ()), (list, tuple)) else []
@@ -445,13 +481,13 @@ def _orchestrator_mainline_section(arbitration: dict[str, object], selected_doma
     body_parts = [
         f"智能中枢本轮先取「{title}」作为第一主线",
         f"链条：{node_text}" if node_text else "",
-        f"综合分 {score:.2f}" if score else "",
+        f"置信度 {score:.2f}" if score else "",
         f"来源：{_readable_source(source)}" if source else "",
         *why[:2],
         f"证据：{'；'.join(evidence[:3])}" if evidence else "",
-        f"质量门：{quality_gate.get('status', '')}，覆盖度 {float(quality_gate.get('evidence_coverage', 0.0) or 0.0):.2f}" if quality_gate else "",
+        f"复核状态：{_readable_gate_status(str(quality_gate.get('status', '')))}，依据覆盖 {float(quality_gate.get('evidence_coverage', 0.0) or 0.0):.2f}" if quality_gate else "",
         _practitioner_review_sentence(practitioner_review),
-        f"复核标记：{'、'.join(risk_flags[:3])}" if risk_flags else "",
+        f"复核提示：{'、'.join(_readable_risk_flag(row) for row in risk_flags[:3])}" if risk_flags else "",
         f"复核目标：{'；'.join(review_targets[:2])}" if review_targets else "",
         "本段只决定解读顺序，不把主线写成固定吉凶。",
     ]
@@ -505,6 +541,7 @@ def _readable_source(source: str) -> str:
         "portrait_axis": "画像轴",
         "feature_state": "特征状态",
         "structure_dynamics": "结构动态",
+        "question_domain_focus": "当前问题",
         "practitioner_review": "人工复核",
         "practitioner_review_demoted": "人工降级",
         "practitioner_review_deferred": "人工暂缓",
@@ -512,6 +549,42 @@ def _readable_source(source: str) -> str:
     }
     parts = [labels.get(part, part.replace("_", "、")) for part in source.split("+") if part]
     return "、".join(dict.fromkeys(parts))
+
+
+def _public_mainline_title(value: str) -> str:
+    text = str(value or "").strip()
+    text = text.replace("：明确成立", "")
+    text = text.replace("：弱候选", "（弱候选）")
+    text = text.replace("：需复核", "（需复核）")
+    text = text.replace("：成而不纯", "（成而不纯）")
+    text = text.replace("规则", "")
+    return text.strip("。； ")
+
+
+def _readable_gate_status(status: str) -> str:
+    return {
+        "pass": "已通过",
+        "pass_with_review_notes": "可用但需保留复核",
+        "review_recommended": "建议复核",
+        "review_required": "需要复核",
+        "pass_with_practitioner_review": "命理师已确认",
+        "review_recommended_after_practitioner_switch": "命理师切换后建议复核",
+        "review_required_by_practitioner": "命理师要求复核",
+    }.get(status, status or "待复核")
+
+
+def _readable_risk_flag(flag: str) -> str:
+    if flag.startswith("selected_status:"):
+        return "主线状态需确认"
+    return {
+        "evidence_thin": "依据偏少",
+        "single_source_bias": "来源单一",
+        "close_competing_mainline": "存在接近主线",
+        "time_layer_not_ready": "岁运层未接入",
+        "high_score_rejected_candidate": "有高分次级主线",
+        "practitioner_confirmed_primary": "命理师已确认",
+        "practitioner_switched_mainline": "命理师已切换主线",
+    }.get(flag, flag.replace("_", "、"))
 
 
 def _answer_strategy(arbitration: dict[str, object]) -> dict[str, object]:
@@ -564,14 +637,14 @@ def _answer_strategy(arbitration: dict[str, object]) -> dict[str, object]:
     if requires_review:
         return {
             "mode": "quality_gate_review",
-            "public_line": "本轮主线仍处于质量门复核状态，回答只按候选主线展开，并明确证据缺口。",
+            "public_line": "本轮主线仍处于复核状态，回答只按候选主线展开，并明确证据缺口。",
             "llm_instruction": "Present the primary mainline as provisional and name evidence gaps or review targets.",
             "requires_review": True,
             "quality_gate_status": gate_status,
         }
     return {
         "mode": "quality_gate_passed",
-        "public_line": "本轮主线已通过质量门，回答可以按第一主线展开，同时保留测算边界。",
+        "public_line": "本轮主线依据覆盖较完整，回答可以按第一主线展开，同时保留测算边界。",
         "llm_instruction": "Use the primary mainline as the reading spine while preserving measurement boundaries.",
         "requires_review": False,
         "quality_gate_status": gate_status,
@@ -608,11 +681,16 @@ def _decision_section(report: dict[str, object], selected_domain: str) -> Answer
 
 def _decision_knowledge_section(domain: str, knowledge_refs: tuple[object, ...]) -> AnswerSection:
     labels = []
-    for ref in knowledge_refs[:4]:
+    for ref in knowledge_refs:
+        ref_domain = str(getattr(ref, "domain", ""))
+        if ref_domain and not _knowledge_ref_matches_domain(ref_domain, domain):
+            continue
         knowledge_id = getattr(ref, "knowledge_id", "")
         title = KNOWLEDGE_LABELS_ZH.get(knowledge_id, getattr(ref, "title", ""))
         if title:
             labels.append(f"{title}：用于校对术语和判断范围")
+        if len(labels) >= 4:
+            break
     body = "；".join(labels) + "。" if labels else "当前回答以实时命局判断为主，知识库用于校对术语和判断范围。"
     return AnswerSection(
         title="知识依据",
@@ -624,6 +702,20 @@ def _decision_knowledge_section(domain: str, knowledge_refs: tuple[object, ...])
         measurement_stage=measurement_stage(domain),
         **dimension_payload(domain),
     )
+
+
+def _knowledge_ref_matches_domain(ref_domain: str, selected_domain: str) -> bool:
+    if ref_domain == selected_domain:
+        return True
+    if selected_domain == "career":
+        return ref_domain in {"career", "ten_god", "time", "useful_god", "strength", "pattern"}
+    if selected_domain == "wealth":
+        return ref_domain in {"wealth", "ten_god", "time", "strength"}
+    if selected_domain == "relationship":
+        return ref_domain in {"relationship", "ten_god", "branch", "time"}
+    if selected_domain == "health":
+        return ref_domain in {"health", "element", "strength", "time"}
+    return ref_domain in {selected_domain, "ten_god", "time"}
 
 
 def _knowledge_rule_public_hint(decision: dict[str, object]) -> str:
