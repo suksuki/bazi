@@ -1,6 +1,9 @@
 # V20 Test System
 
 V20 uses bounded test tiers so the default developer loop stays fast as the system grows.
+After the central-brain and direct-training work, local full test runtime is no
+longer a fast loop; `fast` is now a representative sentinel tier, and domain
+tiers split the rest of the local suite.
 
 V20's runtime Python is `3.12`. The shell scripts resolve Python in this order:
 explicit `PYTHON_BIN`, `.venv312/bin/python`, then `python3.12`; any older
@@ -22,15 +25,20 @@ Tests are split by risk and runtime:
 | Tier | Script | Budget | Default Use |
 | --- | --- | ---: | --- |
 | `smoke` | `v20/scripts/test_smoke.sh` | 8s | tiny edits, first sanity check |
-| `fast` | `v20/scripts/test_fast.sh` | 20s | normal local loop |
+| `fast` | `v20/scripts/test_fast.sh` | 90s | normal local loop, representative sentinels |
+| `core` | `v20/scripts/test_core.sh` | 180s | runtime, API, ops, auth, storage |
+| `brain` | `v20/scripts/test_brain.sh` | 240s | central brain, question flow, role view |
+| `training` | `v20/scripts/test_training.sh` | 360s | direct-apply training, runtime pointers, synthetic data |
+| `ui` | `v20/scripts/test_ui.sh` | 45s | Admin and workbench static UI contracts |
 | `targeted` | `v20/scripts/test_targeted.sh` | 45s | module or bug-specific selectors |
-| `full` | `v20/scripts/test_full.sh` | 90s | phase closeout before commit |
+| `full` | `v20/scripts/test_full.sh` | 900s | phase closeout before commit |
 | `services` | `v20/scripts/test_services.sh` | 180s | Postgres, Redis, server, sync checks |
 | `corpus` | `v20/scripts/test_corpus.sh` | 3600s | synthetic corpus and 518K coverage jobs |
 
 ## Guardrails
 
-- `fast` must remain local, deterministic, and service-free.
+- `fast` must remain local, deterministic, service-free, and representative rather than exhaustive.
+- `core`, `brain`, `training`, and `ui` are the normal split tiers for larger changes.
 - Postgres and Redis tests require `RUN_V20_SERVICE_TESTS=1`.
 - 518K corpus or learning jobs require `RUN_V20_CORPUS_TESTS=1`.
 - Redis is never treated as an authoritative test fixture.
@@ -49,6 +57,15 @@ Normal V20 work:
 
 ```bash
 ./v20/scripts/test_fast.sh
+```
+
+Split checks:
+
+```bash
+./v20/scripts/test_core.sh
+./v20/scripts/test_brain.sh
+./v20/scripts/test_training.sh
+./v20/scripts/test_ui.sh
 ```
 
 Focused check:
@@ -84,7 +101,7 @@ Coverage matrix:
 GET /api/v20/testing/matrix
 ```
 
-The matrix records which fast-tier files cover runtime feature spine, explicit
+The matrix records which split-tier files cover runtime feature spine, explicit
 time layer, knowledge/LLM/i18n, access roles, ops/storage/Redis,
 corpus/learning/feedback/validation, and UI shell contracts.
 

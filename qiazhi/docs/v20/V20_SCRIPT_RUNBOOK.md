@@ -42,12 +42,16 @@ export V20_PORT=9020
 
 ```bash
 ./v20/scripts/test_smoke.sh      # 最小变更核验
-./v20/scripts/test_fast.sh       # 默认开发循环（默认 20s）
+./v20/scripts/test_fast.sh       # 默认开发循环（主线哨兵，默认 90s）
 ```
 
 重点测试命令：
 
 ```bash
+./v20/scripts/test_core.sh       # Runtime / API / ops / storage
+./v20/scripts/test_brain.sh      # 中枢大脑 / 问题链 / 角色链
+./v20/scripts/test_training.sh   # 训练 / 知识 / 规则 / 画像 / 合成数据
+./v20/scripts/test_ui.sh         # Admin / Workbench 静态 UI
 ./v20/scripts/test_targeted.sh "knowledge"
 ./v20/scripts/test_services.sh    # 需要显式打开 RUN_V20_SERVICE_TESTS
 RUN_V20_SERVICE_TESTS=1 ./v20/scripts/test_services.sh
@@ -195,7 +199,7 @@ python3.12 v20/scripts/run_full_precompute.py --status --run-id v20_full_518k_ma
 
 ```bash
 ./v20/scripts/test_fast.sh
-./v20/scripts/test_targeted.sh "training or knowledge or rule"
+./v20/scripts/test_training.sh
 python3.12 v20/scripts/run_training_iteration.py --progress --write
 ```
 
@@ -223,7 +227,7 @@ python3.12 v20/scripts/run_rule_subcondition_split.py --write --progress
 ## 9. 遇到问题的排错顺序（建议）
 
 1. `--status` 看上一次 artifact 是否成功。
-2. `./v20/scripts/test_fast.sh` 再跑一次锁定回归。
+2. `./v20/scripts/test_fast.sh` 再跑一次锁定回归；如果是模块问题，再跑 `test_core.sh`、`test_brain.sh`、`test_training.sh` 或 `test_ui.sh`。
 3. 读取日志：
    - `./v20/scripts/service_macos.sh logs`
    - `tail -n 120 v20/.runtime/local/server_9020.log`
