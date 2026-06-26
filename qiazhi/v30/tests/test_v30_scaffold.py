@@ -2072,6 +2072,7 @@ def test_smoke_runtime_and_view_contract() -> None:
 def test_api_local_json_repository_persists_reading(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("V30_REPOSITORY", "local_json")
     monkeypatch.setenv("V30_RUNTIME_DIR", str(tmp_path / ".runtime"))
+    monkeypatch.delenv("V30_DATABASE_URL", raising=False)
     monkeypatch.delenv("V30_REDIS_URL", raising=False)
     local_app = create_app()
     route_paths = {getattr(route, "path", "") for route in local_app.routes}
