@@ -84,7 +84,7 @@ def test_v40_evaluation_training_and_release_gate_api_persist_assets() -> None:
 
 
 def test_v40_phase5_repository_sql_is_v40_only() -> None:
-    source = Path("v40/storage/postgres.py").read_text(encoding="utf-8")
+    source = (Path(__file__).resolve().parents[1] / "v40" / "storage" / "postgres.py").read_text(encoding="utf-8")
     assert "v40_evaluation_cases" in source
     assert "v40_training_label_events" in source
     assert "v40_release_gates" in source

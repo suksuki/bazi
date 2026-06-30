@@ -134,6 +134,8 @@ class ConversationTurnRequest(V40Model):
     provider: str = "local_conversation_adapter"
     model: str = "v40.conversation.contract.v1"
     raw_thinking: str = ""
+    persist: bool = False
+    persist_training_label: bool = False
     boundary: str = "conversation_turn_request_answers_without_rerunning_reading_or_mutating_verdict"
 
     @model_validator(mode="after")

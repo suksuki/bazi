@@ -27,7 +27,7 @@ from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.manifest import contract_manifest
 from v40.contracts.output import LLMExpressionResult
 from v40.contracts.training import LabelSource, TrainingLabelEvent
-from v40.conversation import build_conversation_seeds, build_conversation_turn
+from v40.conversation import build_conversation_seeds, build_conversation_turn, build_training_label_from_conversation_turn
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
@@ -267,22 +267,60 @@ def create_app() -> FastAPI:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        training_label = build_training_label_from_conversation_turn(
+            event_id=f"label:{turn.turn_id}",
+            turn=turn,
+            seed_id=payload.seed_id,
+        )
+        persisted = False
+        training_label_persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_conversation_turn(turn)
+                persisted = True
+                if payload.persist_training_label:
+                    repository.save_training_label_event(training_label)
+                    training_label_persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.conversation_turn_response.v1",
             "turn": turn.model_dump(mode="json"),
             "answer_text": turn.answer_text,
             "accepted": turn.accepted,
             "next_seeds": [seed.model_dump(mode="json") for seed in turn.next_seeds],
+            "training_label": training_label.model_dump(mode="json"),
             "expression": {
                 "task": task.model_dump(mode="json"),
                 "result": result.model_dump(mode="json"),
                 "acceptance": acceptance.model_dump(mode="json"),
                 "telemetry": telemetry.model_dump(mode="json"),
             },
+            "persisted": persisted,
+            "training_label_persisted": training_label_persisted,
             "writes_v30_state": False,
             "writes_v40_production": False,
             "reruns_reading": False,
             "boundary": "conversation_turn_is_independent_dialogue_runtime_after_report",
+        }
+
+    @app.get(f"{API_PREFIX}/conversation/turns")
+    def list_conversation_turns(
+        limit: int = Query(default=20, ge=1, le=100),
+        reading_id: str = "",
+    ) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            turns = repository.list_conversation_turns(limit=limit, reading_id=reading_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.conversation_turns_response.v1",
+            "turns": turns,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "conversation_turns_read_v40_repository_only",
         }
 
     @app.post(f"{API_PREFIX}/synthetic/cases/from-seeds")

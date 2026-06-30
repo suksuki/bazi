@@ -57,6 +57,20 @@ CREATE TABLE IF NOT EXISTS v40_training_label_events (
 CREATE INDEX IF NOT EXISTS idx_v40_training_label_events_reading
 ON v40_training_label_events (reading_id);
 
+CREATE TABLE IF NOT EXISTS v40_conversation_turns (
+    turn_id TEXT PRIMARY KEY,
+    reading_id TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.conversation_turn.v1',
+    topic TEXT NOT NULL,
+    accepted BOOLEAN NOT NULL DEFAULT false,
+    turn_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_conversation_turns_reading
+ON v40_conversation_turns (reading_id);
+
 CREATE TABLE IF NOT EXISTS v40_training_impact_diffs (
     training_run_id TEXT PRIMARY KEY,
     base_version TEXT NOT NULL,

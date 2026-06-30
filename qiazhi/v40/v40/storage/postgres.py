@@ -15,6 +15,7 @@ from v40.contracts.evaluation import (
     ReleaseReadinessSummary,
     ShadowCompareResult,
 )
+from v40.contracts.output import ConversationTurn
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import (
     GlobalWeightVersion,
@@ -324,6 +325,68 @@ class V40PostgresRepository:
                         SELECT event_id, reading_id, version, label_json, local_only, created_at
                         FROM v40_training_label_events
                         ORDER BY created_at DESC
+                        LIMIT %s
+                        """,
+                        (bounded_limit,),
+                    )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def save_conversation_turn(self, turn: ConversationTurn) -> None:
+        payload = turn.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_conversation_turns (
+                        turn_id,
+                        reading_id,
+                        version,
+                        topic,
+                        accepted,
+                        turn_json,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, now())
+                    ON CONFLICT (turn_id)
+                    DO UPDATE SET
+                        reading_id = EXCLUDED.reading_id,
+                        version = EXCLUDED.version,
+                        topic = EXCLUDED.topic,
+                        accepted = EXCLUDED.accepted,
+                        turn_json = EXCLUDED.turn_json,
+                        updated_at = now()
+                    """,
+                    (
+                        turn.turn_id,
+                        turn.reading_id,
+                        turn.version,
+                        turn.topic.value,
+                        turn.accepted,
+                        json.dumps(payload, ensure_ascii=False),
+                    ),
+                )
+
+    def list_conversation_turns(self, *, limit: int = 20, reading_id: str = "") -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                if reading_id:
+                    cur.execute(
+                        """
+                        SELECT turn_id, reading_id, version, topic, accepted, turn_json, created_at, updated_at
+                        FROM v40_conversation_turns
+                        WHERE reading_id = %s
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (reading_id, bounded_limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT turn_id, reading_id, version, topic, accepted, turn_json, created_at, updated_at
+                        FROM v40_conversation_turns
+                        ORDER BY updated_at DESC, created_at DESC
                         LIMIT %s
                         """,
                         (bounded_limit,),
@@ -760,6 +823,7 @@ class V40PostgresRepository:
             "evaluation_cases": "v40_evaluation_cases",
             "evaluation_runs": "v40_evaluation_runs",
             "training_label_events": "v40_training_label_events",
+            "conversation_turns": "v40_conversation_turns",
             "training_impact_diffs": "v40_training_impact_diffs",
             "shadow_compare_runs": "v40_shadow_compare_runs",
             "release_gates": "v40_release_gates",
@@ -779,6 +843,7 @@ class V40PostgresRepository:
                 latest_runs = self._latest_rows(cur, "v40_evaluation_runs", "updated_at", limit=5)
                 latest_batches = self._latest_rows(cur, "v40_evaluation_batches", "updated_at", limit=5)
                 latest_impacts = self._latest_rows(cur, "v40_training_impact_diffs", "created_at", limit=5)
+                latest_conversation_turns = self._latest_rows(cur, "v40_conversation_turns", "updated_at", limit=5)
                 latest_gates = self._latest_rows(cur, "v40_release_gates", "created_at", limit=5)
                 latest_weights = self._latest_rows(cur, "v40_global_weight_versions", "updated_at", limit=5)
                 latest_readiness = self._latest_rows(cur, "v40_release_readiness", "updated_at", limit=5)
@@ -799,6 +864,7 @@ class V40PostgresRepository:
             "latest_evaluation_runs": latest_runs,
             "latest_evaluation_batches": latest_batches,
             "latest_training_impacts": latest_impacts,
+            "latest_conversation_turns": latest_conversation_turns,
             "latest_release_gates": latest_gates,
             "latest_global_weight_versions": latest_weights,
             "latest_release_readiness": latest_readiness,

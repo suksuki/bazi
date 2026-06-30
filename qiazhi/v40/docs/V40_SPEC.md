@@ -392,6 +392,14 @@ docs/V40_PHASE22_CONVERSATION_TURN_RUNTIME.md
 
 本阶段新增 `ConversationTurn`、`v40/conversation/turns.py` 和 `POST /api/v40/conversation/turn`。用户点击种子问题或直接输入追问后，会以当前 accepted report 和 runtime 中的 verdict/advice/probe 为上下文生成一轮独立对话回答，并返回下一组 seeds。该对话 runtime 不重跑测算、不刷新 report、不写 V30、不写 V40 production，LLM 仍只负责表达和 dialogue，不拥有 verdict authority，也不能创建 chart facts。
 
+2026-06-30 Phase 23 已启动：
+
+```text
+docs/V40_PHASE23_CONVERSATION_FEEDBACK_PERSISTENCE.md
+```
+
+本阶段新增 `v40_conversation_turns`、`save_conversation_turn / list_conversation_turns` 和 `v40/conversation/feedback.py`。每轮 `ConversationTurn` 可以转成 `TrainingLabelEvent(local_only=true)`，记录用户点击推荐追问或直接追问的反馈价值。`POST /api/v40/conversation/turn` 返回 `training_label`，并可通过 `persist=true` 保存对话，通过 `persist_training_label=true` 保存训练标签；默认仍不依赖数据库，且不写 V30、不写 V40 production weight、不改 chart facts。
+
 ## V40 不做的事
 
 本阶段不做：

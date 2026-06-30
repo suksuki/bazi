@@ -182,7 +182,7 @@ UI exposes independent conversation endpoint and area
 
 ## Next Phase
 
-Phase 23 should add conversation persistence and trainable feedback:
+Phase 23 adds conversation persistence and trainable feedback:
 
 ```text
 save ConversationTurn as V40 artifact
