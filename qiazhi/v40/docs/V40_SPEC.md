@@ -555,6 +555,14 @@ docs/V40_PHASE42_RELEASE_CANDIDATE_AUDIT.md
 
 本阶段新增 `build_release_candidate_audit` 与 `GET /api/v40/project/release-candidate-audit`，聚合 project status、surface beta readiness、V30 replacement readiness 和 production cutover checklist。自动审计全通过时返回 `automatic_audit_passed_human_signoff_required`，仍不切流量、不激活权重。
 
+2026-06-30 Phase 43 已启动：
+
+```text
+docs/V40_PHASE43_PRODUCTION_SMOKE_HANDOFF.md
+```
+
+本阶段新增 `build_production_smoke` 与 `GET /api/v40/project/production-smoke`，聚合 project status、surface beta readiness、V30 replacement readiness、production cutover checklist 和 release candidate audit。通过时返回 `passed_handoff_ready`，含义是可以进入人工验收和交接，不表示已上线。
+
 ## V40 不做的事
 
 本阶段不做：

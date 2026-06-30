@@ -61,6 +61,7 @@ docs/V40_PHASE39_USER_SURFACE_BETA_READINESS.md
 docs/V40_PHASE40_V30_REPLACEMENT_READINESS.md
 docs/V40_PHASE41_PRODUCTION_CUTOVER_CHECKLIST.md
 docs/V40_PHASE42_RELEASE_CANDIDATE_AUDIT.md
+docs/V40_PHASE43_PRODUCTION_SMOKE_HANDOFF.md
 ```
 
 Initial principle:
@@ -82,5 +83,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 42: Release Candidate Audit
+Phase 43: Production Smoke And Handoff
 ```

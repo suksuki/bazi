@@ -52,6 +52,7 @@ from v40.project import (
     build_production_cutover_checklist,
     build_project_status,
     build_release_candidate_audit,
+    build_production_smoke,
     build_v30_replacement_readiness,
 )
 from v40.storage import V40PostgresRepository
@@ -1408,6 +1409,48 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "release_candidate_audit_reads_v40_readiness_without_releasing_traffic",
+        }
+
+    @app.get(f"{API_PREFIX}/project/production-smoke")
+    def production_smoke() -> dict[str, object]:
+        lab_snapshot: dict[str, object] | None = None
+        weights: list[dict[str, object]] = []
+        try:
+            repository = V40PostgresRepository.from_env()
+            lab_snapshot = repository.lab_summary()
+            weights = repository.list_global_weight_versions(limit=20)
+        except Exception:
+            lab_snapshot = None
+            weights = []
+        project = build_project_status(lab_summary=lab_snapshot)
+        surface = _build_surface_beta_readiness()
+        replacement = build_v30_replacement_readiness(lab_summary=lab_snapshot, surface_readiness=surface)
+        llm_config = resolve_ollama_expression_config()
+        cutover = build_production_cutover_checklist(
+            replacement_readiness=replacement,
+            weights=weights,
+            llm_ready=llm_config.enabled and llm_config.execute,
+            repository_configured=v40_repository_configured(),
+        )
+        audit = build_release_candidate_audit(
+            project_status=project,
+            surface_readiness=surface,
+            replacement_readiness=replacement,
+            cutover_checklist=cutover,
+        )
+        smoke = build_production_smoke(
+            project_status=project,
+            surface_readiness=surface,
+            replacement_readiness=replacement,
+            cutover_checklist=cutover,
+            release_candidate_audit=audit,
+        )
+        return {
+            "version": "v40.production_smoke_response.v1",
+            "smoke": smoke,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "production_smoke_reads_v40_readiness_without_switching_traffic",
         }
 
     return app
