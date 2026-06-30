@@ -81,13 +81,20 @@ page references Ollama provider status
 page exposes execution_mode
 ```
 
-## Next Phase
+## Phase 21 Handoff
 
-Phase 21 should make the report interactive:
+Phase 21 added:
 
 ```text
 conversation seed generation after accepted report
 question suggestions bound to verdict/advice/probes
+invited follow-up buttons in /v40/ui
+no auto-start dialogue
+```
+
+Still open after Phase 21:
+
+```text
 separate conversation runtime endpoint
 telemetry history for UI sessions
 safe public-thinking streaming

@@ -373,6 +373,14 @@ docs/V40_PHASE20_USER_REPORT_UI.md
 
 本阶段新增第一个 V40 用户侧页面：`GET /v40/ui`。页面只保留最小 report-first 流程：输入四柱/大运/流年/问题，选择 `local` 或 `Gemma4`，调用 `POST /api/v40/readings/native-report`，优先展示 accepted report text，并显示 provider/model、thinking trace 字符数和 acceptance status。如果 Gemma4 不可用，页面展示模型错误，不做本地 fallback。
 
+2026-06-30 Phase 21 已启动：
+
+```text
+docs/V40_PHASE21_CONVERSATION_SEEDS.md
+```
+
+本阶段新增 `ConversationSeed` 与 `v40/conversation/seeds.py`。native report 在 accepted report text 形成后，会基于 probes、verdicts 和 advice plans 生成最多三个下一问种子，并返回 `conversation_seeds` 与 `runtime.conversation_seeds`。`/v40/ui` 会把这些种子显示为“继续追问”按钮；点击只把问题放回输入框，不自动提交，保持 report first、dialogue invited、conversation separate。
+
 ## V40 不做的事
 
 本阶段不做：

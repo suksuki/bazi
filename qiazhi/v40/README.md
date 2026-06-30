@@ -39,6 +39,7 @@ docs/V40_PHASE17_OLLAMA_EXPRESSION_PROVIDER.md
 docs/V40_PHASE18_LLM_OBSERVABILITY_AND_EVALUATION.md
 docs/V40_PHASE19_NATIVE_REPORT_RUNTIME.md
 docs/V40_PHASE20_USER_REPORT_UI.md
+docs/V40_PHASE21_CONVERSATION_SEEDS.md
 ```
 
 Initial principle:
@@ -60,5 +61,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 20: User Report UI
+Phase 21: Conversation Seeds
 ```

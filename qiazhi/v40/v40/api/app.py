@@ -26,6 +26,7 @@ from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.manifest import contract_manifest
 from v40.contracts.output import LLMExpressionResult
 from v40.contracts.training import LabelSource, TrainingLabelEvent
+from v40.conversation import build_conversation_seeds
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
@@ -203,12 +204,18 @@ def create_app() -> FastAPI:
             )
         except OllamaExpressionError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
+        conversation_seeds = build_conversation_seeds(
+            runtime=runtime,
+            accepted_text=acceptance.accepted_text,
+            role_key=payload.role_key,
+        )
         enriched_runtime = runtime.model_copy(
             update={
                 "expression_task": task,
                 "expression_result": result,
                 "acceptance_result": acceptance,
                 "expression_telemetry": telemetry,
+                "conversation_seeds": conversation_seeds,
             }
         )
         persisted = False
@@ -225,6 +232,7 @@ def create_app() -> FastAPI:
             "surface_bundle": enriched_runtime.surface_bundle.model_dump(mode="json") if enriched_runtime.surface_bundle else {},
             "accepted_text": acceptance.accepted_text,
             "accepted": acceptance.status.value == "accepted",
+            "conversation_seeds": [seed.model_dump(mode="json") for seed in conversation_seeds],
             "expression": {
                 "task": task.model_dump(mode="json"),
                 "result": result.model_dump(mode="json"),
@@ -942,6 +950,7 @@ def _user_ui_html() -> str:
     .report ul { margin: 0 0 16px; padding-left: 18px; }
     .report li { margin: 4px 0; }
     .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+    .seeds { display: flex; flex-wrap: wrap; gap: 8px; }
     .tag {
       border-radius: 999px;
       background: rgba(255,255,255,.07);
@@ -951,6 +960,13 @@ def _user_ui_html() -> str:
     }
     .tag.ok { color: var(--accent-strong); background: rgba(102,217,185,.12); }
     .tag.bad { color: var(--bad); background: rgba(255,146,139,.12); }
+    .seed-button {
+      background: rgba(255,255,255,.065);
+      color: var(--accent-strong);
+      padding: 8px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+    }
     @media (max-width: 900px) {
       .layout { grid-template-columns: 1fr; }
       header { align-items: start; flex-direction: column; }
@@ -994,6 +1010,7 @@ def _user_ui_html() -> str:
           <div class="status" id="status"><span class="dot"></span><span>等待测算</span></div>
           <div class="meta" id="meta"></div>
           <div class="report" id="report">填写命盘后开始。</div>
+          <div class="seeds" id="seeds"></div>
         </div>
       </section>
     </div>
@@ -1072,6 +1089,7 @@ def _user_ui_html() -> str:
       setStatus("推演中", true);
       $("report").textContent = "";
       $("meta").innerHTML = "";
+      $("seeds").innerHTML = "";
       try {
         const res = await fetch("/api/v40/readings/native-report", {
           method: "POST",
@@ -1088,11 +1106,20 @@ def _user_ui_html() -> str:
           tag(`thinking ${telemetry.thinking_trace_chars || 0}`),
           tag(telemetry.acceptance_status, body.accepted ? "ok" : "bad")
         ].join("");
+        $("seeds").innerHTML = (body.conversation_seeds || []).map((seed) => (
+          `<button class="seed-button" type="button" data-question="${escapeHtml(seed.question)}">${escapeHtml(seed.question)}</button>`
+        )).join("");
       } catch (error) {
         setStatus("模型不可用", false);
         $("report").textContent = error.message;
         $("meta").innerHTML = tag("no fallback", "bad");
       }
+    });
+    $("seeds").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-question]");
+      if (!button) return;
+      $("question").value = button.dataset.question || "";
+      $("question").focus();
     });
     loadProvider();
   </script>

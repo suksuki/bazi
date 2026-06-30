@@ -7,6 +7,7 @@ from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionInputBun
 from v40.contracts.engine import MultiEngineRunResult
 from v40.contracts.output import (
     AcceptanceResult,
+    ConversationSeed,
     ExpressionTelemetry,
     LLMExpressionResult,
     LLMExpressionTask,
@@ -46,6 +47,7 @@ class RuntimeResult(V40Model):
     expression_result: LLMExpressionResult | None = None
     acceptance_result: AcceptanceResult | None = None
     expression_telemetry: ExpressionTelemetry | None = None
+    conversation_seeds: list[ConversationSeed] = Field(default_factory=list)
     surface_bundle: SurfaceBundle | None = None
     chart_fact_mutation_allowed: bool = False
     v30_runtime_imported: bool = False

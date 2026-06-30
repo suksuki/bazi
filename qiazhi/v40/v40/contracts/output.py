@@ -167,6 +167,35 @@ class ExpressionTelemetry(V40Model):
         return self
 
 
+class ConversationSeed(V40Model):
+    version: str = "v40.conversation_seed.v1"
+    seed_id: str
+    reading_id: str
+    topic: Topic = Topic.UNKNOWN
+    question: str
+    intent: str = ""
+    answer_mode: str = "choice_or_short_text"
+    options: list[str] = Field(default_factory=list)
+    source_probe_ids: list[str] = Field(default_factory=list)
+    source_verdict_ids: list[str] = Field(default_factory=list)
+    source_advice_ids: list[str] = Field(default_factory=list)
+    relevance_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    generated_after_report: bool = True
+    auto_start: bool = False
+    role_visibility: list[RoleKey] = Field(default_factory=lambda: ["user", "practitioner"])
+    boundary: str = "conversation_seed_invites_user_dialogue_without_auto_start_or_verdict_authority"
+
+    @model_validator(mode="after")
+    def _seed_boundary(self) -> "ConversationSeed":
+        if not self.seed_id.strip():
+            raise ValueError("ConversationSeed requires seed_id")
+        if not self.question.strip():
+            raise ValueError("ConversationSeed requires question")
+        if self.auto_start:
+            raise ValueError("ConversationSeed cannot auto-start dialogue")
+        return self
+
+
 class ProductProjectionBundle(V40Model):
     version: str = "v40.product_projection_bundle.v1"
     reading_id: str
