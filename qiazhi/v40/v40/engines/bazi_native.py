@@ -139,6 +139,8 @@ def build_native_bazi_runtime(
             probes=decision_output.probes,
             signal_count=len(registry.signals),
             branch_count=len(decision_output.branch_candidates),
+            signal_registry=registry,
+            engine_result=multi_engine,
         ),
     )
 

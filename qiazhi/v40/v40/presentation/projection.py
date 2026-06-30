@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from v40.contracts.base import RoleKey, SurfaceKey, Topic
+from v40.contracts.base import EngineKey, RoleKey, SurfaceKey, Topic
 from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionVerdict, ProbeCandidate
+from v40.contracts.engine import MultiEngineRunResult
 from v40.contracts.output import BranchCard, ProductAdviceCard, ProductProjectionBundle, ProductVerdictCard, SurfaceBundle
+from v40.contracts.signal import SignalRegistrySnapshot, SignalSource
 
 
 def build_product_projection(
@@ -59,7 +61,16 @@ def build_surface_bundle(
     probes: list[ProbeCandidate],
     signal_count: int,
     branch_count: int,
+    signal_registry: SignalRegistrySnapshot | None = None,
+    engine_result: MultiEngineRunResult | None = None,
 ) -> SurfaceBundle:
+    practitioner_lens = build_practitioner_lens(
+        role_key=role_key,
+        signal_registry=signal_registry,
+        engine_result=engine_result,
+        branches=projection.branch_cards,
+        probes=probes,
+    )
     surfaces = {
         SurfaceKey.READING: {
             "title": "命理测算结果",
@@ -72,6 +83,7 @@ def build_surface_bundle(
             "available": role_key == "practitioner",
             "branch_card_ids": [card.card_id for card in projection.branch_cards],
             "branch_count": branch_count,
+            "practitioner_lens": practitioner_lens,
             "selection_endpoint": "/api/v40/calibration/practitioner-selection",
             "auto_open": False,
         },
@@ -96,6 +108,75 @@ def build_surface_bundle(
         conversation_invited_only=True,
         thinking_requested_only=True,
     )
+
+
+def build_practitioner_lens(
+    *,
+    role_key: RoleKey,
+    signal_registry: SignalRegistrySnapshot | None,
+    engine_result: MultiEngineRunResult | None,
+    branches: list[BranchCard],
+    probes: list[ProbeCandidate],
+) -> dict[str, object]:
+    if role_key != "practitioner":
+        return {
+            "available": False,
+            "reason": "专业视角仅命理师可见，普通用户只看融合后的报告和追问。",
+        }
+    signals = signal_registry.signals if signal_registry else []
+    bazi_signals = [signal for signal in signals if signal.source == SignalSource.BAZI_ENGINE]
+    ziwei_signals = [signal for signal in signals if signal.source == SignalSource.ZIWEI_ENGINE]
+    bazi_topics = {signal.topic for signal in bazi_signals}
+    ziwei_topics = {signal.topic for signal in ziwei_signals}
+    sidecar_probes = _ziwei_probe_triggers(engine_result)
+    return {
+        "available": True,
+        "mode": "practitioner_lens",
+        "summary": {
+            "bazi_signal_count": len(bazi_signals),
+            "ziwei_signal_count": len(ziwei_signals),
+            "branch_count": len(branches),
+            "probe_count": len(probes),
+            "ziwei_probe_trigger_count": len(sidecar_probes),
+        },
+        "agreement_topics": [_topic_label(topic) for topic in sorted(bazi_topics.intersection(ziwei_topics), key=lambda row: row.value)],
+        "ziwei_sidecar_topics": [_topic_label(topic) for topic in sorted(ziwei_topics, key=lambda row: row.value)],
+        "ziwei_signals": [
+            {
+                "signal_id": signal.signal_id,
+                "topic": _topic_label(signal.topic),
+                "claim": signal.claim,
+                "confidence_label": _confidence_label(signal.confidence),
+                "evidence_refs": signal.evidence_refs,
+            }
+            for signal in ziwei_signals[:8]
+        ],
+        "probe_triggers": sidecar_probes[:6],
+        "calibration_actions": [
+            {"key": "more_like_this", "label": "更像这个表现", "training_label": "supports"},
+            {"key": "supporting_context", "label": "作为辅助参考", "training_label": "probe_helpful"},
+            {"key": "do_not_use_now", "label": "暂不采用", "training_label": "weakens"},
+            {"key": "ask_to_confirm", "label": "需要追问确认", "training_label": "needs_probe"},
+            {"key": "user_mismatch", "label": "用户反馈不符合", "training_label": "mismatch"},
+        ],
+        "boundaries": {
+            "changes_verdict": False,
+            "changes_chart_facts": False,
+            "writes_global_weight": False,
+            "ordinary_user_visible": False,
+        },
+    }
+
+
+def _ziwei_probe_triggers(engine_result: MultiEngineRunResult | None) -> list[dict[str, object]]:
+    if engine_result is None:
+        return []
+    triggers: list[dict[str, object]] = []
+    for result in engine_result.results:
+        if result.engine != EngineKey.ZIWEI:
+            continue
+        triggers.extend(result.probe_candidates)
+    return triggers
 
 
 def _build_branch_cards(*, role_key: RoleKey, branches: list[BranchCandidate]) -> list[BranchCard]:

@@ -427,6 +427,14 @@ docs/V40_PHASE26_ZIWEI_VALIDATION_SPINE.md
 
 本阶段把紫微三阶段路线写入主线：V0 固定排盘事实，V1 进入 `SignalRegistry` 但 `decision_weight=0`，V2 才在验证后以 0.05-0.15 轻量参与 DecisionEngine。新增 `BirthInputCanonical`，明确 `can_run_ziwei` 与 `ziwei_input_quality`，避免系统只凭四柱硬跑紫微。`ZiweiChartFacts` 增加十二宫、四化、大限、流年字段；`ZiweiEngine` 增加专题宫位映射和 ProbeTrigger；Evaluation 新增 `ziwei_sidecar_signal_rate` 与 `cross_engine_topic_agreement_rate`，只做观测，不进入 release gate。
 
+2026-06-30 Phase 27 已启动：
+
+```text
+docs/V40_PHASE27_PRACTITIONER_LENS.md
+```
+
+本阶段新增命理师专业视角 `practitioner_lens`，挂在 `SurfaceBundle.surfaces[calibration]`。普通用户只得到 `available=false`，命理师可以看到八字信号数量、紫微信号数量、同向主题、紫微旁路信号、紫微触发的 Probe、分支数量和人话校准动作。该视角不是 Admin，也不是第二份报告，不改 verdict、不改 chart facts、不写全局权重；后续校准动作会通过训练事件进入闭环。
+
 ## V40 不做的事
 
 本阶段不做：

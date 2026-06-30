@@ -45,6 +45,7 @@ docs/V40_PHASE23_CONVERSATION_FEEDBACK_PERSISTENCE.md
 docs/V40_PHASE24_USER_SURFACE_PRODUCTIZATION.md
 docs/V40_PHASE25_ZIWEI_DOMAIN_LENS_V1.md
 docs/V40_PHASE26_ZIWEI_VALIDATION_SPINE.md
+docs/V40_PHASE27_PRACTITIONER_LENS.md
 ```
 
 Initial principle:
@@ -66,5 +67,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 26: Ziwei Validation Spine
+Phase 27: Practitioner Lens
 ```
