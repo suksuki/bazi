@@ -52,6 +52,27 @@ class BaziChartFacts(V40Model):
         return " ".join(pillars)
 
 
+class ZiweiChartFacts(V40Model):
+    version: str = "v40.ziwei_chart_facts.v1"
+    chart_id: str
+    life_palace: str = ""
+    body_palace: str = ""
+    major_stars: dict[str, list[str]] = Field(default_factory=dict)
+    palace_notes: dict[str, str] = Field(default_factory=dict)
+    domain_lenses: dict[str, str] = Field(default_factory=dict)
+    source: str = "user_supplied_or_imported_ziwei_facts"
+    immutable: bool = True
+    boundary: str = "ziwei_chart_facts_are_sidecar_facts_not_trainable_policy"
+
+    @model_validator(mode="after")
+    def _ziwei_fact_boundary(self) -> "ZiweiChartFacts":
+        if not self.chart_id.strip():
+            raise ValueError("ZiweiChartFacts requires chart_id")
+        if not self.immutable:
+            raise ValueError("ZiweiChartFacts must be immutable in V40 runtime")
+        return self
+
+
 class SyntheticCaseSeed(V40Model):
     version: str = "v40.synthetic_case_seed.v1"
     seed_id: str

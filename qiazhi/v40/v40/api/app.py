@@ -161,6 +161,7 @@ def create_app() -> FastAPI:
             user_question=payload.user_question,
             topic=payload.topic,
             role_key=payload.role_key,
+            ziwei_chart=payload.ziwei_chart_facts,
         )
         persisted = False
         if payload.persist:
@@ -188,6 +189,7 @@ def create_app() -> FastAPI:
             user_question=payload.user_question,
             topic=payload.topic,
             role_key=payload.role_key,
+            ziwei_chart=payload.ziwei_chart_facts,
         )
         try:
             task, result, acceptance, telemetry = _build_expression_bundle(
@@ -1029,6 +1031,23 @@ def _user_ui_html() -> str:
     .report li { margin: 4px 0; }
     .meta { display: flex; flex-wrap: wrap; gap: 8px; }
     .seeds { display: flex; flex-wrap: wrap; gap: 8px; }
+    .feedback {
+      display: none;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .feedback.active { display: flex; }
+    .feedback button {
+      background: rgba(255,255,255,.065);
+      color: var(--accent-strong);
+      padding: 7px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 680;
+    }
     .conversation { display: grid; gap: 10px; }
     .message {
       border-left: 2px solid rgba(102,217,185,.44);
@@ -1069,15 +1088,26 @@ def _user_ui_html() -> str:
         <div class="brand-mark">V40</div>
         <h1>掐指一算</h1>
       </div>
-      <div class="status" id="provider"><span class="dot"></span><span>Gemma4</span></div>
+      <div class="status" id="provider"><span class="dot"></span><span>智能测算服务</span></div>
     </header>
     <div class="layout">
       <section class="panel">
         <div class="panel-head"><h2>命盘</h2></div>
         <form id="form">
+          <label>你想测什么
+            <select id="topic">
+              <option value="overview">综合命盘</option>
+              <option value="wealth">今年财运</option>
+              <option value="career" selected>事业方向</option>
+              <option value="relationship">感情关系</option>
+              <option value="health">健康压力</option>
+              <option value="timing">大运流年</option>
+              <option value="useful_god">用神喜忌</option>
+            </select>
+          </label>
           <div class="row">
             <label>性别<select id="gender"><option value="乾">乾</option><option value="坤">坤</option></select></label>
-            <label>模式<select id="execution"><option value="ollama">Gemma4</option><option value="local">Local</option></select></label>
+            <label>表达方式<select id="execution"><option value="ollama">智能表达</option><option value="local">快速预览</option></select></label>
           </div>
           <div class="pillars">
             <div class="pillar"><strong>年</strong><div class="pair"><input id="yearStem" value="甲" maxlength="1" /><input id="yearBranch" value="子" maxlength="1" /></div></div>
@@ -1099,6 +1129,13 @@ def _user_ui_html() -> str:
           <div class="status" id="status"><span class="dot"></span><span>等待测算</span></div>
           <div class="meta" id="meta"></div>
           <div class="report" id="report">填写命盘后开始。</div>
+          <div class="feedback" id="reportFeedback">
+            <span>这个判断像你吗？</span>
+            <button type="button" data-feedback-scope="report" data-feedback-value="match">很像</button>
+            <button type="button" data-feedback-scope="report" data-feedback-value="partial">部分像</button>
+            <button type="button" data-feedback-scope="report" data-feedback-value="mismatch">不太像</button>
+            <span id="feedbackStatus"></span>
+          </div>
           <div class="conversation" id="conversation"></div>
           <div class="seeds" id="seeds"></div>
           <div class="followup" id="followupBox">
@@ -1113,6 +1150,7 @@ def _user_ui_html() -> str:
     const $ = (id) => document.getElementById(id);
     let currentRuntime = null;
     let currentExecutionMode = "ollama";
+    let lastConversationTurn = null;
     const value = (id) => $(id).value.trim();
     function setStatus(text, busy = false) {
       $("status").className = busy ? "status thinking" : "status";
@@ -1124,7 +1162,7 @@ def _user_ui_html() -> str:
     }
     function displayProvider(provider, model) {
       const raw = String(model || provider || "");
-      if (raw.includes("gemma") || raw.includes("ollama")) return raw;
+      if (raw.includes("gemma") || raw.includes("ollama")) return "智能表达";
       if (raw.includes("conversation.contract") || raw.includes("expression.contract")) return "Local";
       return raw || "Local";
     }
@@ -1162,11 +1200,50 @@ def _user_ui_html() -> str:
       $("followupBox").classList.toggle("active", Boolean(currentRuntime));
     }
     function appendConversation(question, answer, telemetry) {
-      const meta = telemetry ? ` · ${escapeHtml(displayProvider(telemetry.provider, telemetry.model))}` : "";
       const node = document.createElement("div");
       node.className = "message";
-      node.innerHTML = `<div class="q">${escapeHtml(question)}${meta}</div><div class="a report">${renderReport(answer)}</div>`;
+      node.innerHTML = `<div class="q">${escapeHtml(question)}</div><div class="a report">${renderReport(answer)}</div><div class="feedback active"><span>这个回答有帮助吗？</span><button type="button" data-feedback-scope="conversation" data-feedback-value="helpful">有帮助</button><button type="button" data-feedback-scope="conversation" data-feedback-value="neutral">一般</button><button type="button" data-feedback-scope="conversation" data-feedback-value="bad">不准确</button></div>`;
       $("conversation").appendChild(node);
+    }
+    async function submitFeedback(scope, value) {
+      if (!currentRuntime) return;
+      const isConversation = scope === "conversation" && lastConversationTurn;
+      const targetIds = isConversation
+        ? [lastConversationTurn.turn_id]
+        : (currentRuntime.verdicts || []).map((row) => row.verdict_id);
+      if (!targetIds.length) return;
+      const labelMap = {
+        match: "matches_reality",
+        partial: "supports",
+        mismatch: "mismatch",
+        helpful: "expression_good",
+        neutral: "probe_helpful",
+        bad: "expression_bad"
+      };
+      const payload = {
+        event_id: `ui-feedback-${Date.now()}`,
+        reading_id: currentRuntime.reading_id,
+        source: "user_feedback",
+        target_type: isConversation ? "llm_output" : "verdict",
+        target_ids: targetIds,
+        label: labelMap[value] || "supports",
+        strength: value === "mismatch" || value === "bad" ? 0.72 : 0.64,
+        confidence: 0.58,
+        reason: isConversation ? "用户反馈本轮对话是否有帮助" : "用户反馈主报告是否贴合现实",
+        created_by_role: "user",
+        local_only: true
+      };
+      $("feedbackStatus").textContent = "正在记录";
+      try {
+        await fetch("/api/v40/training/labels", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        $("feedbackStatus").textContent = "已记录";
+      } catch (_) {
+        $("feedbackStatus").textContent = "已收到";
+      }
     }
     async function askConversation(question, seedId = "") {
       if (!currentRuntime || !question.trim()) return;
@@ -1190,6 +1267,7 @@ def _user_ui_html() -> str:
         if (!res.ok) throw new Error(body.detail || "对话失败");
         const telemetry = body.expression.telemetry;
         if (!body.accepted) throw new Error("本轮对话未通过验收。");
+        lastConversationTurn = body.turn;
         appendConversation(question, body.answer_text, telemetry);
         renderSeedButtons(body.next_seeds || []);
         $("followupQuestion").value = "";
@@ -1205,8 +1283,10 @@ def _user_ui_html() -> str:
       try {
         const res = await fetch("/api/v40/expression/provider/ollama");
         const body = await res.json();
-        $("provider").lastElementChild.textContent = `${body.model} · ${body.base_url}`;
-      } catch (_) {}
+        $("provider").lastElementChild.textContent = body.enabled ? "智能测算服务已连接" : "智能测算服务未启用";
+      } catch (_) {
+        $("provider").lastElementChild.textContent = "智能测算服务未连接";
+      }
     }
     $("form").addEventListener("submit", async (event) => {
       event.preventDefault();
@@ -1215,7 +1295,7 @@ def _user_ui_html() -> str:
         request_id: `request-${readingId}`,
         reading_id: readingId,
         execution_mode: value("execution"),
-        topic: "career",
+            topic: value("topic"),
         role_key: "user",
         user_question: value("question"),
         chart_facts: {
@@ -1235,6 +1315,7 @@ def _user_ui_html() -> str:
         persist: false
       };
       currentRuntime = null;
+      lastConversationTurn = null;
       currentExecutionMode = payload.execution_mode;
       setStatus("推演中", true);
       $("report").textContent = "";
@@ -1242,6 +1323,7 @@ def _user_ui_html() -> str:
       $("seeds").innerHTML = "";
       $("conversation").innerHTML = "";
       $("followupBox").classList.remove("active");
+      $("reportFeedback").classList.remove("active");
       try {
         const res = await fetch("/api/v40/readings/native-report", {
           method: "POST",
@@ -1255,10 +1337,11 @@ def _user_ui_html() -> str:
         setStatus(body.accepted ? "已形成" : "未采用", false);
         $("report").innerHTML = renderReport(body.accepted_text || "本次表达未通过验收。");
         $("meta").innerHTML = [
-          tag(displayProvider(telemetry.provider, telemetry.model), body.accepted ? "ok" : "bad"),
-          tag(`thinking ${telemetry.thinking_trace_chars || 0}`),
-          tag(telemetry.acceptance_status, body.accepted ? "ok" : "bad")
+          tag("结构分析完成", body.accepted ? "ok" : "bad"),
+          tag("表达已生成", body.accepted ? "ok" : "bad"),
+          tag("可以继续追问")
         ].join("");
+        $("reportFeedback").classList.toggle("active", Boolean(body.accepted));
         renderSeedButtons(body.conversation_seeds || []);
       } catch (error) {
         setStatus("模型不可用", false);
@@ -1273,6 +1356,11 @@ def _user_ui_html() -> str:
     });
     $("askFollowup").addEventListener("click", () => {
       askConversation(value("followupQuestion"), "");
+    });
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-feedback-scope]");
+      if (!button) return;
+      submitFeedback(button.dataset.feedbackScope || "", button.dataset.feedbackValue || "");
     });
     loadProvider();
   </script>

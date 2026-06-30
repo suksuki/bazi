@@ -11,7 +11,7 @@ from v40.contracts.decision import (
     DecisionVerdict,
     ProbeCandidate,
 )
-from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot
+from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
 
 
 POLICY_VERSION = "v40.decision.native_product.v1"
@@ -63,8 +63,9 @@ def build_decision_output(
     user_question: str = "",
     policy_version: str = POLICY_VERSION,
 ) -> DecisionEngineOutput:
-    decision_topics = _select_decision_topics(signals=registry.signals, topic=topic, user_question=user_question)
-    decision_signals = _select_decision_signals(registry.signals, decision_topics)
+    eligible_signals = _decision_eligible_signals(registry.signals)
+    decision_topics = _select_decision_topics(signals=eligible_signals, topic=topic, user_question=user_question)
+    decision_signals = _select_decision_signals(eligible_signals, decision_topics)
     input_bundle = DecisionInputBundle(
         bundle_id=f"decision-input:{reading_id}",
         reading_id=reading_id,
@@ -104,6 +105,10 @@ def _select_decision_topics(*, signals: list[RuntimeSignal], topic: Topic, user_
         if not selected:
             selected = [Topic.STRUCTURE]
     return selected[:3]
+
+
+def _decision_eligible_signals(signals: list[RuntimeSignal]) -> list[RuntimeSignal]:
+    return [signal for signal in signals if signal.source != SignalSource.ZIWEI_ENGINE]
 
 
 def _infer_topic(user_question: str) -> Topic:

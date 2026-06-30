@@ -5,7 +5,7 @@ from pydantic import Field, model_validator
 from v40.contracts.base import V40Model
 from v40.contracts.base import RoleKey
 from v40.contracts.base import Topic
-from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed
+from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed, ZiweiChartFacts
 from v40.contracts.evaluation import EvaluationBatchSummary, EvaluationCaseSpec, EvaluationRunResult, ReleaseReadinessSummary
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.runtime import RuntimeResult
@@ -88,6 +88,7 @@ class NativeBaziRuntimeRequest(V40Model):
     request_id: str
     reading_id: str
     chart_facts: BaziChartFacts
+    ziwei_chart_facts: ZiweiChartFacts | None = None
     user_question: str = ""
     topic: Topic = Topic.OVERVIEW
     role_key: RoleKey = "user"
@@ -100,6 +101,7 @@ class NativeReadingReportRequest(V40Model):
     request_id: str
     reading_id: str
     chart_facts: BaziChartFacts
+    ziwei_chart_facts: ZiweiChartFacts | None = None
     user_question: str = ""
     topic: Topic = Topic.OVERVIEW
     role_key: RoleKey = "user"

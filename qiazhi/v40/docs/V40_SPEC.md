@@ -133,6 +133,8 @@ V40 第一阶段只定义 contract，不写完整业务逻辑：
 ```text
 RuntimeRequest
 RuntimeResult
+BaziChartFacts
+ZiweiChartFacts
 EngineRunRequest
 EngineRunResult
 RuntimeSignal
@@ -399,6 +401,22 @@ docs/V40_PHASE23_CONVERSATION_FEEDBACK_PERSISTENCE.md
 ```
 
 本阶段新增 `v40_conversation_turns`、`save_conversation_turn / list_conversation_turns` 和 `v40/conversation/feedback.py`。每轮 `ConversationTurn` 可以转成 `TrainingLabelEvent(local_only=true)`，记录用户点击推荐追问或直接追问的反馈价值。`POST /api/v40/conversation/turn` 返回 `training_label`，并可通过 `persist=true` 保存对话，通过 `persist_training_label=true` 保存训练标签；默认仍不依赖数据库，且不写 V30、不写 V40 production weight、不改 chart facts。
+
+2026-06-30 Phase 24 已启动：
+
+```text
+docs/V40_PHASE24_USER_SURFACE_PRODUCTIZATION.md
+```
+
+本阶段把用户侧定位收敛为 `report-first / conversation-after / feedback-to-training`。`/v40/ui` 增加主题选择，隐藏普通用户不需要看到的 provider/model/base URL/acceptance status/thinking 字符数，把状态翻译为“结构分析完成、表达已生成、可以继续追问”。报告和对话区新增轻反馈按钮，内部映射为 `TrainingLabelEvent(local_only=true)`，但用户不需要看到训练事件名。
+
+2026-06-30 Phase 25 已启动：
+
+```text
+docs/V40_PHASE25_ZIWEI_DOMAIN_LENS_V1.md
+```
+
+本阶段新增 `ZiweiChartFacts` 和 `v40/engines/ziwei_native.py`。紫微在 V40 V1 中定位为 Domain Lens：可选传入 `ziwei_chart_facts` 后，runtime 会生成 `EngineRunResult(engine=ziwei)` 和 `RuntimeSignal(source=ziwei_engine)`，并进入 `MultiEngineRunResult / SignalRegistry`；但 `decision_weight=0`，DecisionEngine 在 Phase 25 会过滤紫微信号，不让它进入最终 verdict 输入。也就是说，紫微已经进入 V40 框架，但只作为旁路事实/信号和未来命理师视角，不与八字主引擎平权。
 
 ## V40 不做的事
 

@@ -42,6 +42,8 @@ docs/V40_PHASE20_USER_REPORT_UI.md
 docs/V40_PHASE21_CONVERSATION_SEEDS.md
 docs/V40_PHASE22_CONVERSATION_TURN_RUNTIME.md
 docs/V40_PHASE23_CONVERSATION_FEEDBACK_PERSISTENCE.md
+docs/V40_PHASE24_USER_SURFACE_PRODUCTIZATION.md
+docs/V40_PHASE25_ZIWEI_DOMAIN_LENS_V1.md
 ```
 
 Initial principle:
@@ -63,5 +65,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 23: Conversation Feedback Persistence
+Phase 25: Ziwei Domain Lens V1
 ```

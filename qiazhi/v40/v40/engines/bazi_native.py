@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from v40.contracts.base import AssertionLevel, EngineKey, EngineMode, Polarity, RoleKey, Topic
-from v40.contracts.chart import BaziChartFacts
+from v40.contracts.chart import BaziChartFacts, ZiweiChartFacts
 from v40.contracts.engine import EnginePlan, EnginePlanItem, EngineRunRequest, EngineRunResult, MultiEngineRunResult
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
@@ -16,6 +16,7 @@ from v40.engines.bazi_adapters import (
     build_useful_god_profile,
 )
 from v40.presentation import build_product_projection, build_surface_bundle
+from v40.engines.ziwei_native import run_native_ziwei_engine
 
 
 def build_native_bazi_runtime(
@@ -26,6 +27,7 @@ def build_native_bazi_runtime(
     user_question: str = "",
     topic: Topic = Topic.OVERVIEW,
     role_key: RoleKey = "user",
+    ziwei_chart: ZiweiChartFacts | None = None,
 ) -> RuntimeResult:
     request = RuntimeRequest(
         request_id=request_id,
@@ -47,10 +49,49 @@ def build_native_bazi_runtime(
         engine_context={"chart_facts": chart.model_dump(mode="json")},
     )
     engine_result = run_native_bazi_engine(engine_request=engine_request, chart=chart)
+    engine_results = [engine_result]
+    plan_items = [
+        EnginePlanItem(
+            engine=EngineKey.BAZI,
+            mode=EngineMode.SIGNAL_SIDECAR,
+            required=True,
+            reason="V40 原生八字引擎提供事实、特征和信号素材",
+            topics=[topic],
+            decision_weight=1.0,
+            output_weight=1.0,
+        )
+    ]
+    registry_signals = [*engine_result.signals]
+    if ziwei_chart is not None:
+        ziwei_request = EngineRunRequest(
+            request_id=f"engine:ziwei:{request_id}",
+            reading_id=reading_id,
+            engine=EngineKey.ZIWEI,
+            mode=EngineMode.SIGNAL_SIDECAR,
+            topic=topic,
+            role_key=role_key,
+            user_question=user_question,
+            input_refs=[ziwei_chart.chart_id],
+            engine_context={"ziwei_chart_facts": ziwei_chart.model_dump(mode="json")},
+        )
+        ziwei_result = run_native_ziwei_engine(engine_request=ziwei_request, chart=ziwei_chart)
+        engine_results.append(ziwei_result)
+        registry_signals.extend(ziwei_result.signals)
+        plan_items.append(
+            EnginePlanItem(
+                engine=EngineKey.ZIWEI,
+                mode=EngineMode.SIGNAL_SIDECAR,
+                required=False,
+                reason="紫微 V1 只做 Domain Lens 旁路观察，不参与最终裁决",
+                topics=[topic],
+                decision_weight=0.0,
+                output_weight=0.25,
+            )
+        )
     registry = SignalRegistrySnapshot(
         registry_id=f"registry:{reading_id}",
         reading_id=reading_id,
-        signals=engine_result.signals,
+        signals=registry_signals,
     )
     plan = EnginePlan(
         plan_id=f"plan:{reading_id}",
@@ -58,22 +99,12 @@ def build_native_bazi_runtime(
         role_key=role_key,
         user_question=user_question,
         topic=topic,
-        items=[
-            EnginePlanItem(
-                engine=EngineKey.BAZI,
-                mode=EngineMode.SIGNAL_SIDECAR,
-                required=True,
-                reason="V40 原生八字引擎提供事实、特征和信号素材",
-                topics=[topic],
-                decision_weight=1.0,
-                output_weight=1.0,
-            )
-        ],
+        items=plan_items,
     )
     multi_engine = MultiEngineRunResult(
         reading_id=reading_id,
         plan=plan,
-        results=[engine_result],
+        results=engine_results,
         signal_registry=registry,
     )
     decision_output = build_decision_output(

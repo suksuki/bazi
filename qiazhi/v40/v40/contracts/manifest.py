@@ -5,7 +5,7 @@ def contract_manifest() -> dict[str, object]:
     return {
         "version": "v40.contract_manifest.v1",
         "runtime": ["RuntimeRequest", "RuntimeResult"],
-        "chart": ["BaziChartFacts", "SyntheticCaseSeed"],
+        "chart": ["BaziChartFacts", "ZiweiChartFacts", "SyntheticCaseSeed"],
         "engine": ["EnginePlan", "EngineRunRequest", "EngineRunResult", "MultiEngineRunResult"],
         "signal": ["RuntimeSignal", "SignalRegistrySnapshot"],
         "decision": [

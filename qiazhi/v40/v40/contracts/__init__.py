@@ -13,7 +13,7 @@ from v40.contracts.base import (
     Topic,
     V40Model,
 )
-from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed
+from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed, ZiweiChartFacts
 from v40.contracts.decision import (
     AdvicePlan,
     BranchCandidate,
@@ -113,4 +113,5 @@ __all__ = [
     "V40Model",
     "WeightActivationExecution",
     "WeightActivationReview",
+    "ZiweiChartFacts",
 ]
