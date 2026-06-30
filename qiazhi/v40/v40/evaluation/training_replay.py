@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections import Counter
+
 from v40.contracts.base import ReleaseRecommendation
-from v40.contracts.evaluation import EvaluationStatus, TrainingExampleReplayResult
+from v40.contracts.evaluation import EvaluationStatus, TrainingExampleReplayResult, TrainingReplayBatchSummary
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import LabelValue, TrainingExampleV2
 
@@ -83,6 +85,46 @@ def replay_training_example(
         production_write_allowed=False,
         chart_fact_mutation_allowed=False,
         source_example=training_example if include_source_example else None,
+    )
+
+
+def build_training_replay_batch_summary(
+    *,
+    batch_id: str,
+    candidate_version: str,
+    replays: list[TrainingExampleReplayResult],
+) -> TrainingReplayBatchSummary:
+    statuses = [replay.status for replay in replays]
+    failed_reason_counts: Counter[str] = Counter()
+    for replay in replays:
+        failed_reason_counts.update(replay.failed_reasons)
+    replay_count = len(replays)
+    average_alignment = 0.0
+    average_coverage = 0.0
+    if replays:
+        average_alignment = round(sum(replay.feedback_alignment_score for replay in replays) / replay_count, 4)
+        average_coverage = round(sum(replay.target_coverage_rate for replay in replays) / replay_count, 4)
+    blocked_count = statuses.count(EvaluationStatus.BLOCKED)
+    review_count = statuses.count(EvaluationStatus.REVIEW)
+    passed_count = statuses.count(EvaluationStatus.PASSED)
+    recommendation = ReleaseRecommendation.NEEDS_REVIEW
+    if blocked_count:
+        recommendation = ReleaseRecommendation.REJECT
+    elif replay_count and passed_count == replay_count:
+        recommendation = ReleaseRecommendation.APPROVE
+    return TrainingReplayBatchSummary(
+        batch_id=batch_id,
+        candidate_version=candidate_version,
+        replay_count=replay_count,
+        replay_ids=[replay.replay_id for replay in replays],
+        passed_count=passed_count,
+        review_count=review_count,
+        blocked_count=blocked_count,
+        average_feedback_alignment_score=average_alignment,
+        average_target_coverage_rate=average_coverage,
+        failed_reason_counts=dict(sorted(failed_reason_counts.items())),
+        recommendation=recommendation,
+        production_write_allowed=False,
     )
 
 

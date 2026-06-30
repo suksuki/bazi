@@ -475,6 +475,14 @@ docs/V40_PHASE32_TRAINING_EXAMPLE_REPLAY.md
 
 本阶段新增 `TrainingExampleReplayResult` 与 replay 运行时。`POST /api/v40/training/replay-example` 会把 `TrainingExampleV2` 与当前 `RuntimeResult` 对齐，检查反馈目标是否仍能在 signal / branch / verdict / advice / probe / projection / conversation seed / evidence refs 中找回，并计算 `target_coverage_rate`、`feedback_alignment_score`、正负反馈数量和 `needs_probe` 数量。新增 `v40_training_example_replays` 与 `GET /api/v40/training/example-replays`。Replay 是确定性评估，不让 LLM 当 judge，不改 verdict，不写 production weight，不写 V30。
 
+2026-06-30 Phase 33 已启动：
+
+```text
+docs/V40_PHASE33_TRAINING_REPLAY_BATCH.md
+```
+
+本阶段新增 `TrainingReplayBatchSummary`。`POST /api/v40/training/replay-batches` 会聚合多条 `TrainingExampleReplayResult`，统计 replay 通过/复核/阻断数量、平均反馈对齐分、平均目标覆盖率和失败原因分布。新增 `v40_training_replay_batches` 与 `GET /api/v40/training/replay-batches`。推荐规则为：存在 blocked 则 reject，全部 passed 则 approve，其余 needs_review。该 approve 只表示反馈 replay 具备进入候选训练的资格，不发布生产权重。
+
 ## V40 不做的事
 
 本阶段不做：

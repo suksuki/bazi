@@ -39,6 +39,7 @@ def contract_manifest() -> dict[str, object]:
             "ReleaseReadinessSummary",
             "ShadowCompareResult",
             "TrainingExampleReplayResult",
+            "TrainingReplayBatchSummary",
         ],
         "training": [
             "TrainingLabelEvent",

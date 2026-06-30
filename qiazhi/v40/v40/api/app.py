@@ -22,6 +22,7 @@ from v40.api.models import (
     SyntheticCasesFromSeedsRequest,
     TrainingExampleFromReadingRequest,
     TrainingExampleReplayRequest,
+    TrainingReplayBatchRequest,
     TrainingImpactFromEvaluationRequest,
     WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
@@ -35,6 +36,7 @@ from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
     build_shadow_compare_result,
+    build_training_replay_batch_summary,
     evaluate_cases_against_runtime,
     evaluate_native_seeds,
     evaluate_runtime_against_case,
@@ -844,6 +846,45 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "training_example_replays_read_feedback_validation_material_only",
+        }
+
+    @app.post(f"{API_PREFIX}/training/replay-batches")
+    def build_training_replay_batch(payload: TrainingReplayBatchRequest) -> dict[str, object]:
+        summary = build_training_replay_batch_summary(
+            batch_id=payload.batch_id,
+            candidate_version=payload.candidate_version,
+            replays=payload.replays,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_training_replay_batch_summary(summary)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_replay_batch_response.v1",
+            "summary": summary.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_replay_batch_summary_generated_without_weight_write",
+        }
+
+    @app.get(f"{API_PREFIX}/training/replay-batches")
+    def list_training_replay_batches(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            batches = repository.list_training_replay_batches(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_replay_batches_response.v1",
+            "batches": batches,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_replay_batches_read_feedback_validation_batches_only",
         }
 
     @app.post(f"{API_PREFIX}/training/impact-from-evaluation")

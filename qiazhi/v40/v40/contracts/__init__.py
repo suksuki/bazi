@@ -32,6 +32,7 @@ from v40.contracts.evaluation import (
     ReleaseReadinessSummary,
     ShadowCompareResult,
     TrainingExampleReplayResult,
+    TrainingReplayBatchSummary,
 )
 from v40.contracts.output import (
     AcceptanceResult,
@@ -111,6 +112,7 @@ __all__ = [
     "Topic",
     "TrainingExampleV2",
     "TrainingExampleReplayResult",
+    "TrainingReplayBatchSummary",
     "TrainingImpactDiff",
     "TrainingLabelEvent",
     "V40Model",

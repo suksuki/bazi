@@ -100,6 +100,17 @@ CREATE TABLE IF NOT EXISTS v40_training_example_replays (
 CREATE INDEX IF NOT EXISTS idx_v40_training_example_replays_reading
 ON v40_training_example_replays (reading_id);
 
+CREATE TABLE IF NOT EXISTS v40_training_replay_batches (
+    batch_id TEXT PRIMARY KEY,
+    candidate_version TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.training_replay_batch_summary.v1',
+    summary_json JSONB NOT NULL,
+    recommendation TEXT NOT NULL,
+    production_write_allowed BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS v40_conversation_turns (
     turn_id TEXT PRIMARY KEY,
     reading_id TEXT NOT NULL,

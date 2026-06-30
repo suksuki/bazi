@@ -6,7 +6,13 @@ from v40.contracts.base import V40Model
 from v40.contracts.base import RoleKey
 from v40.contracts.base import Topic
 from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed, ZiweiChartFacts
-from v40.contracts.evaluation import EvaluationBatchSummary, EvaluationCaseSpec, EvaluationRunResult, ReleaseReadinessSummary
+from v40.contracts.evaluation import (
+    EvaluationBatchSummary,
+    EvaluationCaseSpec,
+    EvaluationRunResult,
+    ReleaseReadinessSummary,
+    TrainingExampleReplayResult,
+)
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import GlobalWeightVersion, LabelTargetType, LabelValue, TrainingExampleV2, WeightActivationReview
@@ -69,6 +75,23 @@ class TrainingExampleReplayRequest(V40Model):
             raise ValueError("Training example replay request requires replay_id")
         if self.training_example.reading_id != self.runtime.reading_id:
             raise ValueError("Training example replay requires matching reading_id")
+        return self
+
+
+class TrainingReplayBatchRequest(V40Model):
+    version: str = "v40.training_replay_batch_request.v1"
+    batch_id: str
+    candidate_version: str = "v40-alpha"
+    replays: list[TrainingExampleReplayResult]
+    persist: bool = True
+    boundary: str = "training_replay_batch_request_aggregates_replay_results_without_production_write"
+
+    @model_validator(mode="after")
+    def _replay_batch_boundary(self) -> "TrainingReplayBatchRequest":
+        if not self.batch_id.strip():
+            raise ValueError("Training replay batch request requires batch_id")
+        if not self.replays:
+            raise ValueError("Training replay batch request requires replays")
         return self
 
 

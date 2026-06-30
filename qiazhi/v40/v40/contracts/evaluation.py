@@ -253,6 +253,39 @@ class TrainingExampleReplayResult(V40Model):
         return self
 
 
+class TrainingReplayBatchSummary(V40Model):
+    version: str = "v40.training_replay_batch_summary.v1"
+    batch_id: str
+    candidate_version: str
+    replay_count: int = Field(default=0, ge=0)
+    replay_ids: list[str] = Field(default_factory=list)
+    passed_count: int = Field(default=0, ge=0)
+    review_count: int = Field(default=0, ge=0)
+    blocked_count: int = Field(default=0, ge=0)
+    average_feedback_alignment_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_target_coverage_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    failed_reason_counts: dict[str, int] = Field(default_factory=dict)
+    recommendation: ReleaseRecommendation = ReleaseRecommendation.NEEDS_REVIEW
+    production_write_allowed: bool = False
+    boundary: str = "training_replay_batch_summary_aggregates_feedback_replay_without_weight_write"
+
+    @model_validator(mode="after")
+    def _training_replay_batch_boundary(self) -> "TrainingReplayBatchSummary":
+        if not self.batch_id.strip():
+            raise ValueError("TrainingReplayBatchSummary requires batch_id")
+        if self.replay_count != len(self.replay_ids):
+            raise ValueError("TrainingReplayBatchSummary replay_count must match replay_ids")
+        if self.passed_count + self.review_count + self.blocked_count != self.replay_count:
+            raise ValueError("TrainingReplayBatchSummary status counts must match replay_count")
+        if self.production_write_allowed:
+            raise ValueError("TrainingReplayBatchSummary cannot write production policy")
+        if self.recommendation == ReleaseRecommendation.APPROVE and (
+            self.blocked_count or self.review_count or not self.replay_count
+        ):
+            raise ValueError("TrainingReplayBatchSummary can approve only when all replays passed")
+        return self
+
+
 class ReleaseReadinessSummary(V40Model):
     version: str = "v40.release_readiness_summary.v1"
     readiness_id: str

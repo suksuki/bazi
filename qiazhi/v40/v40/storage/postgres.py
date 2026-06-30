@@ -15,6 +15,7 @@ from v40.contracts.evaluation import (
     ReleaseReadinessSummary,
     ShadowCompareResult,
     TrainingExampleReplayResult,
+    TrainingReplayBatchSummary,
 )
 from v40.contracts.output import ConversationTurn
 from v40.contracts.runtime import RuntimeResult
@@ -576,6 +577,64 @@ class V40PostgresRepository:
                     )
                 return [_serialize_row(row) for row in cur.fetchall()]
 
+    def save_training_replay_batch_summary(self, summary: TrainingReplayBatchSummary) -> None:
+        payload = summary.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_training_replay_batches (
+                        batch_id,
+                        candidate_version,
+                        version,
+                        summary_json,
+                        recommendation,
+                        production_write_allowed,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, now())
+                    ON CONFLICT (batch_id)
+                    DO UPDATE SET
+                        candidate_version = EXCLUDED.candidate_version,
+                        version = EXCLUDED.version,
+                        summary_json = EXCLUDED.summary_json,
+                        recommendation = EXCLUDED.recommendation,
+                        production_write_allowed = EXCLUDED.production_write_allowed,
+                        updated_at = now()
+                    """,
+                    (
+                        summary.batch_id,
+                        summary.candidate_version,
+                        summary.version,
+                        json.dumps(payload, ensure_ascii=False),
+                        summary.recommendation.value,
+                        summary.production_write_allowed,
+                    ),
+                )
+
+    def list_training_replay_batches(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        batch_id,
+                        candidate_version,
+                        version,
+                        summary_json,
+                        recommendation,
+                        production_write_allowed,
+                        created_at,
+                        updated_at
+                    FROM v40_training_replay_batches
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT %s
+                    """,
+                    (bounded_limit,),
+                )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
     def save_conversation_turn(self, turn: ConversationTurn) -> None:
         payload = turn.model_dump(mode="json")
         with self._connect() as conn:
@@ -1071,6 +1130,7 @@ class V40PostgresRepository:
             "local_overlays": "v40_local_overlays",
             "training_examples": "v40_training_examples",
             "training_example_replays": "v40_training_example_replays",
+            "training_replay_batches": "v40_training_replay_batches",
             "conversation_turns": "v40_conversation_turns",
             "training_impact_diffs": "v40_training_impact_diffs",
             "shadow_compare_runs": "v40_shadow_compare_runs",
@@ -1099,6 +1159,12 @@ class V40PostgresRepository:
                     "created_at",
                     limit=5,
                 )
+                latest_training_replay_batches = self._latest_rows(
+                    cur,
+                    "v40_training_replay_batches",
+                    "updated_at",
+                    limit=5,
+                )
                 latest_conversation_turns = self._latest_rows(cur, "v40_conversation_turns", "updated_at", limit=5)
                 latest_gates = self._latest_rows(cur, "v40_release_gates", "created_at", limit=5)
                 latest_weights = self._latest_rows(cur, "v40_global_weight_versions", "updated_at", limit=5)
@@ -1123,6 +1189,7 @@ class V40PostgresRepository:
             "latest_local_overlays": latest_local_overlays,
             "latest_training_examples": latest_training_examples,
             "latest_training_example_replays": latest_training_example_replays,
+            "latest_training_replay_batches": latest_training_replay_batches,
             "latest_conversation_turns": latest_conversation_turns,
             "latest_release_gates": latest_gates,
             "latest_global_weight_versions": latest_weights,

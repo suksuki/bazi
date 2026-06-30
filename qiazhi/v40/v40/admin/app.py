@@ -186,14 +186,16 @@ def _console_html() -> str:
         get("/admin/v40/api/llm-models"),
       ]);
       const counts = summary.summary?.counts || {};
-      $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "training_example_replays", "evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
+      $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
         .map((key) => `<div class="metric"><span>${key}</span><strong>${counts[key] ?? 0}</strong></div>`).join("");
       $("batches").innerHTML = (batches.batches || []).map((item) => row(item.batch_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");
       $("readiness").innerHTML = (readiness.readiness || []).map((item) => row(item.readiness_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");
       const latestExamples = summary.summary?.latest_training_examples || [];
       const latestOverlays = summary.summary?.latest_local_overlays || [];
       const latestReplays = summary.summary?.latest_training_example_replays || [];
+      const latestReplayBatches = summary.summary?.latest_training_replay_batches || [];
       const latestTraining = [
+        ...latestReplayBatches.map((item) => row(item.batch_id, `${item.candidate_version || ""}`, item.recommendation || "batch")),
         ...latestReplays.map((item) => row(item.replay_id, `${item.status || ""} · ${item.recommendation || ""}`, "replay")),
         ...latestExamples.map((item) => row(item.example_id, `${item.topic || ""} · ${item.reading_id || ""}`, "example")),
         ...latestOverlays.map((item) => row(item.overlay_id, item.reading_id || "", "overlay")),

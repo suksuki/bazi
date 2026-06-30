@@ -12,6 +12,7 @@ Admin 页面现在突出：
 - `local_overlays`
 - `training_examples`
 - `training_example_replays`
+- `training_replay_batches`
 
 并展示最近的训练样本和本地 overlay。
 
@@ -29,9 +30,11 @@ Training Feedback
 - `counts.local_overlays`
 - `counts.training_examples`
 - `counts.training_example_replays`
+- `counts.training_replay_batches`
 - `latest_training_examples`
 - `latest_local_overlays`
 - `latest_training_example_replays`
+- `latest_training_replay_batches`
 
 ## 边界
 
