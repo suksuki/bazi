@@ -132,3 +132,18 @@ class PractitionerCalibrationRequest(V40Model):
         if not self.target_ids:
             raise ValueError("Practitioner calibration requires target_ids")
         return self
+
+
+class ExpressionFromRuntimeRequest(V40Model):
+    version: str = "v40.expression_from_runtime_request.v1"
+    task_id: str
+    result_id: str
+    acceptance_id: str
+    runtime: RuntimeResult
+    role_key: RoleKey | None = None
+    topic: Topic | None = None
+    provider_text: str = ""
+    provider: str = "local_expression_adapter"
+    model: str = "v40.expression.contract.v1"
+    raw_thinking: str = ""
+    boundary: str = "expression_from_runtime_rewrites_language_without_verdict_or_chart_fact_mutation"

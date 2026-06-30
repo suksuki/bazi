@@ -34,6 +34,7 @@ from v40.contracts.evaluation import (
 )
 from v40.contracts.output import (
     AcceptanceResult,
+    AcceptanceStatus,
     BranchCard,
     LLMExpressionResult,
     LLMExpressionTask,
@@ -56,6 +57,8 @@ from v40.contracts.training import (
 
 __all__ = [
     "AdvicePlan",
+    "AcceptanceResult",
+    "AcceptanceStatus",
     "AssertionLevel",
     "BranchCandidate",
     "BranchCard",

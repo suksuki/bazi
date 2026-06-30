@@ -13,6 +13,7 @@ if str(ROOT) not in sys.path:
 from v40.artifacts import load_evaluation_cases
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import evaluate_cases_against_runtime, evaluate_native_seeds
+from v40.expression import accept_expression_result, build_expression_task_from_runtime, render_local_expression_result
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.storage import V40PostgresRepository
 from v40.synthetic import build_evaluation_cases_from_seeds, load_synthetic_seeds
@@ -50,6 +51,14 @@ def main() -> None:
     native_batch.add_argument("--batch-id", required=True)
     native_batch.add_argument("--candidate-version", required=True)
     native_batch.add_argument("--no-persist", action="store_true")
+
+    expression_seed = subparsers.add_parser(
+        "render-native-expression",
+        help="Run V40 native seed and render expression-only output with acceptance scan",
+    )
+    expression_seed.add_argument("--path", required=True)
+    expression_seed.add_argument("--seed-id", required=True)
+    expression_seed.add_argument("--reading-id", required=True)
 
     subparsers.add_parser("lab-summary", help="Print V40 lab summary")
 
@@ -142,6 +151,47 @@ def main() -> None:
                     repository.save_release_gate(run.release_gate)
             repository.save_evaluation_batch_summary(summary)
         print(json.dumps(summary.model_dump(mode="json"), ensure_ascii=False, indent=2))
+        return
+
+    if args.command == "render-native-expression":
+        seeds = load_synthetic_seeds(args.path)
+        seed = next((row for row in seeds if row.seed_id == args.seed_id), None)
+        if seed is None:
+            raise ValueError(f"seed_id not found: {args.seed_id}")
+        runtime = build_native_bazi_runtime(
+            request_id=f"native-expression:{seed.seed_id}",
+            reading_id=args.reading_id,
+            chart=seed.chart_facts,
+            user_question=seed.question,
+        )
+        task = build_expression_task_from_runtime(
+            task_id=f"expression-task:{args.reading_id}",
+            runtime=runtime,
+        )
+        result = render_local_expression_result(
+            result_id=f"expression-result:{args.reading_id}",
+            task=task,
+            runtime=runtime,
+        )
+        acceptance = accept_expression_result(
+            result_id=f"acceptance:{args.reading_id}",
+            task=task,
+            result=result,
+            runtime=runtime,
+        )
+        print(
+            json.dumps(
+                {
+                    "reading_id": runtime.reading_id,
+                    "task_id": task.task_id,
+                    "status": acceptance.status.value,
+                    "accepted_text": acceptance.accepted_text,
+                    "repair_reasons": acceptance.repair_reasons,
+                },
+                ensure_ascii=False,
+                indent=2,
+            )
+        )
         return
 
     if args.command == "lab-summary":

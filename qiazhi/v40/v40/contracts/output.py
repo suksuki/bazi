@@ -126,10 +126,10 @@ class AcceptanceResult(V40Model):
             raise ValueError("Accepted output requires accepted_text")
         if self.status == AcceptanceStatus.ACCEPTED and (self.leakage_hits or self.overclaim_hits):
             raise ValueError("Accepted output cannot contain leakage or overclaim hits")
-        if self.verdict_mutation_detected:
-            raise ValueError("AcceptanceResult cannot allow verdict mutation")
-        if self.chart_fact_mutation_detected:
-            raise ValueError("AcceptanceResult cannot allow chart fact mutation")
+        if self.status == AcceptanceStatus.ACCEPTED and self.verdict_mutation_detected:
+            raise ValueError("Accepted output cannot contain verdict mutation")
+        if self.status == AcceptanceStatus.ACCEPTED and self.chart_fact_mutation_detected:
+            raise ValueError("Accepted output cannot contain chart fact mutation")
         return self
 
 

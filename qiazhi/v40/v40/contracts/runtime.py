@@ -5,7 +5,7 @@ from pydantic import Field, model_validator
 from v40.contracts.base import ClientKey, LocaleKey, RoleKey, Topic, V40Model
 from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionInputBundle, DecisionVerdict, ProbeCandidate
 from v40.contracts.engine import MultiEngineRunResult
-from v40.contracts.output import ProductProjectionBundle, SurfaceBundle
+from v40.contracts.output import AcceptanceResult, LLMExpressionResult, LLMExpressionTask, ProductProjectionBundle, SurfaceBundle
 from v40.contracts.signal import SignalRegistrySnapshot
 
 
@@ -35,6 +35,9 @@ class RuntimeResult(V40Model):
     advice_plans: list[AdvicePlan] = Field(default_factory=list)
     probes: list[ProbeCandidate] = Field(default_factory=list)
     product_projection: ProductProjectionBundle | None = None
+    expression_task: LLMExpressionTask | None = None
+    expression_result: LLMExpressionResult | None = None
+    acceptance_result: AcceptanceResult | None = None
     surface_bundle: SurfaceBundle | None = None
     chart_fact_mutation_allowed: bool = False
     v30_runtime_imported: bool = False

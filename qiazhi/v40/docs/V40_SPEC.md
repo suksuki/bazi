@@ -329,6 +329,14 @@ docs/V40_PHASE15_NATIVE_BATCH_EVALUATION.md
 
 本阶段新增 V40 native batch evaluation：从 synthetic seeds 一对一生成 native runtime、EvaluationCaseSpec、EvaluationRunResult、ReleaseGate 和 EvaluationBatchSummary。V40 因此可以直接评测原生引擎变更，不再只依赖 V30 DTO shadow compare。
 
+2026-06-30 Phase 16 已启动：
+
+```text
+docs/V40_PHASE16_LLM_EXPRESSION_ACCEPTANCE.md
+```
+
+本阶段新增 LLM expression acceptance：从 RuntimeResult 生成 `LLMExpressionTask`，接收本地表达或外部 provider 文本为 `LLMExpressionResult`，再由 `AcceptanceResult` 扫描工程语言泄漏、越界断语、chart fact mutation 和 verdict mutation。LLM 仍只负责表达，不拥有 verdict authority。
+
 ## V40 不做的事
 
 本阶段不做：

@@ -144,12 +144,22 @@ API boundary: no V30 writes, no production writes
 
 ## Next Phase
 
-Phase 16 should add:
+Phase 16 added:
 
 ```text
 LLMExpressionTask execution adapter
 AcceptanceResult scan for LLM output
+expression API
+local expression smoke renderer
+overclaim and internal leakage rejection
+```
+
+Phase 17 should add:
+
+```text
+real Ollama/Gemma provider adapter
 Admin native batch controls
 larger synthetic seed generation/import
 golden case import path for native runtime
+expression acceptance metrics in evaluation
 ```

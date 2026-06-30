@@ -34,6 +34,7 @@ docs/V40_PHASE12_NATIVE_BAZI_AND_SYNTHETIC_CASES.md
 docs/V40_PHASE13_NATIVE_DECISION_OUTPUT_RUNTIME.md
 docs/V40_PHASE14_NATIVE_BAZI_FACT_SIGNAL_ADAPTERS.md
 docs/V40_PHASE15_NATIVE_BATCH_EVALUATION.md
+docs/V40_PHASE16_LLM_EXPRESSION_ACCEPTANCE.md
 ```
 
 Initial principle:
@@ -55,5 +56,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 15: Native Batch Evaluation
+Phase 16: LLM Expression Acceptance
 ```

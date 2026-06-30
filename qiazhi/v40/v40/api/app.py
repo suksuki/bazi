@@ -10,6 +10,7 @@ from v40.api.models import (
     CandidateWeightFromBatchRequest,
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
+    ExpressionFromRuntimeRequest,
     NativeBatchFromSeedsRequest,
     NativeBaziRuntimeRequest,
     PractitionerCalibrationRequest,
@@ -21,6 +22,7 @@ from v40.api.models import (
 )
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.manifest import contract_manifest
+from v40.contracts.output import LLMExpressionResult
 from v40.contracts.training import LabelSource, TrainingLabelEvent
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
@@ -34,6 +36,7 @@ from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.storage import V40PostgresRepository
 from v40.storage.config import v40_repository_configured
 from v40.synthetic import build_evaluation_cases_from_seeds
+from v40.expression import accept_expression_result, build_expression_task_from_runtime, render_local_expression_result
 from v40.training import (
     build_candidate_weight_version_from_batch,
     build_training_impact_from_evaluation,
@@ -366,6 +369,49 @@ def create_app() -> FastAPI:
             "writes_v40_weight": False,
             "writes_v30_state": False,
             "boundary": "practitioner_calibration_records_training_label_without_direct_weight_write",
+        }
+
+    @app.post(f"{API_PREFIX}/expression/from-runtime")
+    def expression_from_runtime(payload: ExpressionFromRuntimeRequest) -> dict[str, object]:
+        task = build_expression_task_from_runtime(
+            task_id=payload.task_id,
+            runtime=payload.runtime,
+            role_key=payload.role_key,
+            topic=payload.topic,
+        )
+        if payload.provider_text.strip():
+            result = LLMExpressionResult(
+                result_id=payload.result_id,
+                task_id=task.task_id,
+                reading_id=payload.runtime.reading_id,
+                text=payload.provider_text,
+                raw_thinking=payload.raw_thinking,
+                provider=payload.provider,
+                model=payload.model,
+            )
+        else:
+            result = render_local_expression_result(
+                result_id=payload.result_id,
+                task=task,
+                runtime=payload.runtime,
+                provider=payload.provider,
+                model=payload.model,
+            )
+        acceptance = accept_expression_result(
+            result_id=payload.acceptance_id,
+            task=task,
+            result=result,
+            runtime=payload.runtime,
+        )
+        return {
+            "version": "v40.expression_from_runtime_response.v1",
+            "task": task.model_dump(mode="json"),
+            "result": result.model_dump(mode="json"),
+            "acceptance": acceptance.model_dump(mode="json"),
+            "accepted": acceptance.status.value == "accepted",
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "expression_from_runtime_allows_llm_language_but_not_verdict_authority",
         }
 
     @app.get(f"{API_PREFIX}/training/labels")
