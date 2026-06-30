@@ -161,6 +161,7 @@ def _console_html() -> str:
     <div class="sections">
       <section><div class="section-head"><h2>Batch</h2><span class="pill">latest</span></div><div class="list" id="batches"></div></section>
       <section><div class="section-head"><h2>Readiness</h2><span class="pill">release</span></div><div class="list" id="readiness"></div></section>
+      <section><div class="section-head"><h2>Training Feedback</h2><span class="pill">closed loop</span></div><div class="list" id="training"></div></section>
       <section><div class="section-head"><h2>Weight</h2><span class="pill">candidate</span></div><div class="list" id="weights"></div></section>
       <section><div class="section-head"><h2>Activation</h2><span class="pill">review</span></div><div class="list" id="activation"></div></section>
       <section><div class="section-head"><h2>LLM</h2><span class="pill">ollama</span></div><div class="list" id="llm"></div></section>
@@ -185,10 +186,17 @@ def _console_html() -> str:
         get("/admin/v40/api/llm-models"),
       ]);
       const counts = summary.summary?.counts || {};
-      $("metrics").innerHTML = ["evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
+      $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
         .map((key) => `<div class="metric"><span>${key}</span><strong>${counts[key] ?? 0}</strong></div>`).join("");
       $("batches").innerHTML = (batches.batches || []).map((item) => row(item.batch_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");
       $("readiness").innerHTML = (readiness.readiness || []).map((item) => row(item.readiness_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");
+      const latestExamples = summary.summary?.latest_training_examples || [];
+      const latestOverlays = summary.summary?.latest_local_overlays || [];
+      const latestTraining = [
+        ...latestExamples.map((item) => row(item.example_id, `${item.topic || ""} · ${item.reading_id || ""}`, "example")),
+        ...latestOverlays.map((item) => row(item.overlay_id, item.reading_id || "", "overlay")),
+      ];
+      $("training").innerHTML = latestTraining.join("") || row("暂无训练反馈", "等待命理师校准或用户反馈", "review");
       $("weights").innerHTML = (weights.weights || []).map((item) => row(item.weight_version_id, item.rollback_version_id || item.release_gate_id, item.active)).join("") || row("暂无数据", "", "");
       const combined = [...(reviews.reviews || []), ...(executions.executions || [])];
       $("activation").innerHTML = combined.map((item) => row(item.review_id || item.execution_id, item.weight_version_id, item.decision || item.activation_applied)).join("") || row("暂无数据", "", "");

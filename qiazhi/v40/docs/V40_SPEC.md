@@ -459,6 +459,14 @@ docs/V40_PHASE30_TRAINING_EXAMPLE_COMPILATION.md
 
 本阶段新增训练样本编译层。`POST /api/v40/training/example-from-reading` 会从指定 `reading_id` 读取已保存的 `TrainingLabelEvent` 与 `LocalOverlay`，编译为 `TrainingExampleV2`，并可保存到 `v40_training_examples`。新增 `GET /api/v40/training/examples`。该样本只进入训练/验证材料链路，`expected_update.scope=local_overlay_first`，并明确 `global_update_requires_release_gate=true`；没有标签时拒绝生成样本，避免空训练。
 
+2026-06-30 Phase 31 已启动：
+
+```text
+docs/V40_PHASE31_ADMIN_FEEDBACK_SUMMARY.md
+```
+
+本阶段把反馈闭环接入独立 Admin Control Plane 的只读摘要。`/admin/v40` 新增 `Training Feedback` section，展示 `training_label_events / local_overlays / training_examples` 三类计数，并列出最近的 `latest_training_examples` 与 `latest_local_overlays`。该控制面仍然只读，不启动训练、不写 production weight、不写 V30，也不把 Admin 功能塞回用户主系统。
+
 ## V40 不做的事
 
 本阶段不做：
