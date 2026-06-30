@@ -192,6 +192,41 @@ class PractitionerCalibrationRequest(V40Model):
         return self
 
 
+class PractitionerLensActionRequest(V40Model):
+    version: str = "v40.practitioner_lens_action_request.v1"
+    action_id: str
+    runtime: RuntimeResult
+    action_key: str
+    target_type: LabelTargetType = LabelTargetType.SIGNAL
+    target_ids: list[str] = Field(default_factory=list)
+    note: str = ""
+    created_by_role: RoleKey = "practitioner"
+    persist: bool = False
+    persist_overlay: bool = False
+    boundary: str = "practitioner_lens_action_creates_local_feedback_without_verdict_or_weight_mutation"
+
+    @model_validator(mode="after")
+    def _lens_action_boundary(self) -> "PractitionerLensActionRequest":
+        allowed_actions = {
+            "more_like_this",
+            "supporting_context",
+            "do_not_use_now",
+            "ask_to_confirm",
+            "user_mismatch",
+        }
+        if self.created_by_role not in {"practitioner", "admin"}:
+            raise ValueError("Practitioner lens action requires practitioner or admin role")
+        if self.runtime.request.role_key != "practitioner":
+            raise ValueError("Practitioner lens action requires a practitioner runtime")
+        if self.action_key not in allowed_actions:
+            raise ValueError("Unknown practitioner lens action_key")
+        if not self.action_id.strip():
+            raise ValueError("Practitioner lens action requires action_id")
+        if not self.target_ids:
+            raise ValueError("Practitioner lens action requires target_ids")
+        return self
+
+
 class ExpressionFromRuntimeRequest(V40Model):
     version: str = "v40.expression_from_runtime_request.v1"
     task_id: str

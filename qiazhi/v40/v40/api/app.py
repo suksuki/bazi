@@ -17,6 +17,7 @@ from v40.api.models import (
     NativeBaziRuntimeRequest,
     NativeReadingReportRequest,
     PractitionerCalibrationRequest,
+    PractitionerLensActionRequest,
     ReleaseReadinessFromBatchesRequest,
     SyntheticCasesFromSeedsRequest,
     TrainingImpactFromEvaluationRequest,
@@ -52,6 +53,7 @@ from v40.expression import (
 )
 from v40.training import (
     build_candidate_weight_version_from_batch,
+    build_practitioner_lens_action,
     build_training_impact_from_evaluation,
     build_weight_activation_execution,
     build_weight_activation_review,
@@ -595,6 +597,48 @@ def create_app() -> FastAPI:
             "boundary": "practitioner_calibration_records_training_label_without_direct_weight_write",
         }
 
+    @app.post(f"{API_PREFIX}/calibration/practitioner-lens-action")
+    def save_practitioner_lens_action(payload: PractitionerLensActionRequest) -> dict[str, object]:
+        try:
+            event, overlay = build_practitioner_lens_action(
+                action_id=payload.action_id,
+                runtime=payload.runtime,
+                action_key=payload.action_key,
+                target_type=payload.target_type,
+                target_ids=payload.target_ids,
+                note=payload.note,
+                created_by_role=payload.created_by_role,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        event_persisted = False
+        overlay_persisted = False
+        if payload.persist or payload.persist_overlay:
+            try:
+                repository = V40PostgresRepository.from_env()
+                if payload.persist:
+                    repository.save_training_label_event(event)
+                    event_persisted = True
+                if payload.persist_overlay:
+                    repository.save_local_overlay(overlay)
+                    overlay_persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.practitioner_lens_action_response.v1",
+            "event": event.model_dump(mode="json"),
+            "overlay": overlay.model_dump(mode="json"),
+            "event_persisted": event_persisted,
+            "overlay_persisted": overlay_persisted,
+            "applies_to_current_reading": True,
+            "writes_v40_weight": False,
+            "writes_v40_production": False,
+            "writes_v30_state": False,
+            "changes_verdict": False,
+            "changes_chart_facts": False,
+            "boundary": "practitioner_lens_action_records_local_training_feedback_without_direct_decision_mutation",
+        }
+
     @app.post(f"{API_PREFIX}/expression/from-runtime")
     def expression_from_runtime(payload: ExpressionFromRuntimeRequest) -> dict[str, object]:
         try:
@@ -669,6 +713,24 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "training_labels_read_v40_feedback_events_only",
+        }
+
+    @app.get(f"{API_PREFIX}/calibration/local-overlays")
+    def list_local_overlays(
+        limit: int = Query(default=20, ge=1, le=100),
+        reading_id: str = "",
+    ) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            overlays = repository.list_local_overlays(limit=limit, reading_id=reading_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.local_overlays_response.v1",
+            "overlays": overlays,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "local_overlays_read_current_reading_feedback_scope_only",
         }
 
     @app.post(f"{API_PREFIX}/training/impact-from-evaluation")

@@ -435,6 +435,14 @@ docs/V40_PHASE27_PRACTITIONER_LENS.md
 
 本阶段新增命理师专业视角 `practitioner_lens`，挂在 `SurfaceBundle.surfaces[calibration]`。普通用户只得到 `available=false`，命理师可以看到八字信号数量、紫微信号数量、同向主题、紫微旁路信号、紫微触发的 Probe、分支数量和人话校准动作。该视角不是 Admin，也不是第二份报告，不改 verdict、不改 chart facts、不写全局权重；后续校准动作会通过训练事件进入闭环。
 
+2026-06-30 Phase 28 已启动：
+
+```text
+docs/V40_PHASE28_PRACTITIONER_CALIBRATION_LOOP.md
+```
+
+本阶段把命理师专业视角的动作接入训练闭环。`POST /api/v40/calibration/practitioner-lens-action` 会把 `more_like_this / supporting_context / do_not_use_now / ask_to_confirm / user_mismatch` 转换为 `TrainingLabelEvent(source=practitioner_selection, local_only=true)`，同时生成 `LocalOverlay(expires_after_reading=true, global_update_allowed=false)`。新增 `v40_local_overlays` 表和 `GET /api/v40/calibration/local-overlays`。该流程只记录本次 reading 的局部反馈和训练素材，不改命盘事实、不改当前 verdict、不写 V40 production weight、不写 V30 状态。
+
 ## V40 不做的事
 
 本阶段不做：

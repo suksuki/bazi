@@ -84,7 +84,8 @@ def build_surface_bundle(
             "branch_card_ids": [card.card_id for card in projection.branch_cards],
             "branch_count": branch_count,
             "practitioner_lens": practitioner_lens,
-            "selection_endpoint": "/api/v40/calibration/practitioner-selection",
+            "selection_endpoint": "/api/v40/calibration/practitioner-lens-action",
+            "legacy_selection_endpoint": "/api/v40/calibration/practitioner-selection",
             "auto_open": False,
         },
         SurfaceKey.CONVERSATION: {

@@ -19,6 +19,7 @@ from v40.contracts.output import ConversationTurn
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import (
     GlobalWeightVersion,
+    LocalOverlay,
     TrainingImpactDiff,
     TrainingLabelEvent,
     WeightActivationExecution,
@@ -325,6 +326,84 @@ class V40PostgresRepository:
                         SELECT event_id, reading_id, version, label_json, local_only, created_at
                         FROM v40_training_label_events
                         ORDER BY created_at DESC
+                        LIMIT %s
+                        """,
+                        (bounded_limit,),
+                    )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def save_local_overlay(self, overlay: LocalOverlay) -> None:
+        payload = overlay.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_local_overlays (
+                        overlay_id,
+                        reading_id,
+                        version,
+                        overlay_json,
+                        expires_after_reading,
+                        global_update_allowed,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, now())
+                    ON CONFLICT (overlay_id)
+                    DO UPDATE SET
+                        reading_id = EXCLUDED.reading_id,
+                        version = EXCLUDED.version,
+                        overlay_json = EXCLUDED.overlay_json,
+                        expires_after_reading = EXCLUDED.expires_after_reading,
+                        global_update_allowed = EXCLUDED.global_update_allowed,
+                        updated_at = now()
+                    """,
+                    (
+                        overlay.overlay_id,
+                        overlay.reading_id,
+                        overlay.version,
+                        json.dumps(payload, ensure_ascii=False),
+                        overlay.expires_after_reading,
+                        overlay.global_update_allowed,
+                    ),
+                )
+
+    def list_local_overlays(self, *, limit: int = 20, reading_id: str = "") -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                if reading_id:
+                    cur.execute(
+                        """
+                        SELECT
+                            overlay_id,
+                            reading_id,
+                            version,
+                            overlay_json,
+                            expires_after_reading,
+                            global_update_allowed,
+                            created_at,
+                            updated_at
+                        FROM v40_local_overlays
+                        WHERE reading_id = %s
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (reading_id, bounded_limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT
+                            overlay_id,
+                            reading_id,
+                            version,
+                            overlay_json,
+                            expires_after_reading,
+                            global_update_allowed,
+                            created_at,
+                            updated_at
+                        FROM v40_local_overlays
+                        ORDER BY updated_at DESC, created_at DESC
                         LIMIT %s
                         """,
                         (bounded_limit,),
@@ -823,6 +902,7 @@ class V40PostgresRepository:
             "evaluation_cases": "v40_evaluation_cases",
             "evaluation_runs": "v40_evaluation_runs",
             "training_label_events": "v40_training_label_events",
+            "local_overlays": "v40_local_overlays",
             "conversation_turns": "v40_conversation_turns",
             "training_impact_diffs": "v40_training_impact_diffs",
             "shadow_compare_runs": "v40_shadow_compare_runs",
@@ -843,6 +923,7 @@ class V40PostgresRepository:
                 latest_runs = self._latest_rows(cur, "v40_evaluation_runs", "updated_at", limit=5)
                 latest_batches = self._latest_rows(cur, "v40_evaluation_batches", "updated_at", limit=5)
                 latest_impacts = self._latest_rows(cur, "v40_training_impact_diffs", "created_at", limit=5)
+                latest_local_overlays = self._latest_rows(cur, "v40_local_overlays", "updated_at", limit=5)
                 latest_conversation_turns = self._latest_rows(cur, "v40_conversation_turns", "updated_at", limit=5)
                 latest_gates = self._latest_rows(cur, "v40_release_gates", "created_at", limit=5)
                 latest_weights = self._latest_rows(cur, "v40_global_weight_versions", "updated_at", limit=5)
@@ -864,6 +945,7 @@ class V40PostgresRepository:
             "latest_evaluation_runs": latest_runs,
             "latest_evaluation_batches": latest_batches,
             "latest_training_impacts": latest_impacts,
+            "latest_local_overlays": latest_local_overlays,
             "latest_conversation_turns": latest_conversation_turns,
             "latest_release_gates": latest_gates,
             "latest_global_weight_versions": latest_weights,
