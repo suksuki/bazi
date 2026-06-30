@@ -20,6 +20,7 @@ from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import (
     GlobalWeightVersion,
     LocalOverlay,
+    TrainingExampleV2,
     TrainingImpactDiff,
     TrainingLabelEvent,
     WeightActivationExecution,
@@ -403,6 +404,79 @@ class V40PostgresRepository:
                             created_at,
                             updated_at
                         FROM v40_local_overlays
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (bounded_limit,),
+                    )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def save_training_example(self, example: TrainingExampleV2) -> None:
+        payload = example.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_training_examples (
+                        example_id,
+                        reading_id,
+                        topic,
+                        version,
+                        example_json,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s::jsonb, now())
+                    ON CONFLICT (example_id)
+                    DO UPDATE SET
+                        reading_id = EXCLUDED.reading_id,
+                        topic = EXCLUDED.topic,
+                        version = EXCLUDED.version,
+                        example_json = EXCLUDED.example_json,
+                        updated_at = now()
+                    """,
+                    (
+                        example.example_id,
+                        example.reading_id,
+                        example.topic.value,
+                        example.version,
+                        json.dumps(payload, ensure_ascii=False),
+                    ),
+                )
+
+    def list_training_examples(self, *, limit: int = 20, reading_id: str = "") -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                if reading_id:
+                    cur.execute(
+                        """
+                        SELECT
+                            example_id,
+                            reading_id,
+                            topic,
+                            version,
+                            example_json,
+                            created_at,
+                            updated_at
+                        FROM v40_training_examples
+                        WHERE reading_id = %s
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (reading_id, bounded_limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT
+                            example_id,
+                            reading_id,
+                            topic,
+                            version,
+                            example_json,
+                            created_at,
+                            updated_at
+                        FROM v40_training_examples
                         ORDER BY updated_at DESC, created_at DESC
                         LIMIT %s
                         """,
@@ -903,6 +977,7 @@ class V40PostgresRepository:
             "evaluation_runs": "v40_evaluation_runs",
             "training_label_events": "v40_training_label_events",
             "local_overlays": "v40_local_overlays",
+            "training_examples": "v40_training_examples",
             "conversation_turns": "v40_conversation_turns",
             "training_impact_diffs": "v40_training_impact_diffs",
             "shadow_compare_runs": "v40_shadow_compare_runs",
@@ -924,6 +999,7 @@ class V40PostgresRepository:
                 latest_batches = self._latest_rows(cur, "v40_evaluation_batches", "updated_at", limit=5)
                 latest_impacts = self._latest_rows(cur, "v40_training_impact_diffs", "created_at", limit=5)
                 latest_local_overlays = self._latest_rows(cur, "v40_local_overlays", "updated_at", limit=5)
+                latest_training_examples = self._latest_rows(cur, "v40_training_examples", "updated_at", limit=5)
                 latest_conversation_turns = self._latest_rows(cur, "v40_conversation_turns", "updated_at", limit=5)
                 latest_gates = self._latest_rows(cur, "v40_release_gates", "created_at", limit=5)
                 latest_weights = self._latest_rows(cur, "v40_global_weight_versions", "updated_at", limit=5)
@@ -946,6 +1022,7 @@ class V40PostgresRepository:
             "latest_evaluation_batches": latest_batches,
             "latest_training_impacts": latest_impacts,
             "latest_local_overlays": latest_local_overlays,
+            "latest_training_examples": latest_training_examples,
             "latest_conversation_turns": latest_conversation_turns,
             "latest_release_gates": latest_gates,
             "latest_global_weight_versions": latest_weights,

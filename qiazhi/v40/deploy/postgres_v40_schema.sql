@@ -71,6 +71,19 @@ CREATE TABLE IF NOT EXISTS v40_local_overlays (
 CREATE INDEX IF NOT EXISTS idx_v40_local_overlays_reading
 ON v40_local_overlays (reading_id);
 
+CREATE TABLE IF NOT EXISTS v40_training_examples (
+    example_id TEXT PRIMARY KEY,
+    reading_id TEXT NOT NULL,
+    topic TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.training_example_v2.v1',
+    example_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_training_examples_reading
+ON v40_training_examples (reading_id);
+
 CREATE TABLE IF NOT EXISTS v40_conversation_turns (
     turn_id TEXT PRIMARY KEY,
     reading_id TEXT NOT NULL,

@@ -20,6 +20,7 @@ from v40.api.models import (
     PractitionerLensActionRequest,
     ReleaseReadinessFromBatchesRequest,
     SyntheticCasesFromSeedsRequest,
+    TrainingExampleFromReadingRequest,
     TrainingImpactFromEvaluationRequest,
     WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
@@ -54,6 +55,7 @@ from v40.expression import (
 from v40.training import (
     build_candidate_weight_version_from_batch,
     build_practitioner_lens_action,
+    build_training_example_from_labels,
     build_training_impact_from_evaluation,
     build_weight_activation_execution,
     build_weight_activation_review,
@@ -731,6 +733,71 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "local_overlays_read_current_reading_feedback_scope_only",
+        }
+
+    @app.post(f"{API_PREFIX}/training/example-from-reading")
+    def build_training_example_from_reading(payload: TrainingExampleFromReadingRequest) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            label_rows = repository.list_training_label_events(reading_id=payload.reading_id, limit=100)
+            overlay_rows = repository.list_local_overlays(reading_id=payload.reading_id, limit=100)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        label_events = [
+            TrainingLabelEvent.model_validate(row["label_json"])
+            for row in label_rows
+            if row.get("label_json")
+        ]
+        if not label_events:
+            raise HTTPException(status_code=422, detail="No training labels found for reading_id")
+        overlay_refs = [
+            str(row["overlay_id"])
+            for row in overlay_rows
+            if row.get("overlay_id")
+        ]
+        example = build_training_example_from_labels(
+            example_id=payload.example_id,
+            reading_id=payload.reading_id,
+            label_events=label_events,
+            topic=payload.topic,
+            input_snapshot_ref=payload.input_snapshot_ref,
+            runtime_output_ref=payload.runtime_output_ref,
+            local_overlay_refs=overlay_refs,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository.save_training_example(example)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_example_from_reading_response.v1",
+            "example": example.model_dump(mode="json"),
+            "label_count": len(label_events),
+            "local_overlay_count": len(overlay_refs),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_example_compiles_feedback_material_without_weight_write",
+        }
+
+    @app.get(f"{API_PREFIX}/training/examples")
+    def list_training_examples(
+        limit: int = Query(default=20, ge=1, le=100),
+        reading_id: str = "",
+    ) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            examples = repository.list_training_examples(limit=limit, reading_id=reading_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_examples_response.v1",
+            "examples": examples,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_examples_read_compiled_feedback_material_only",
         }
 
     @app.post(f"{API_PREFIX}/training/impact-from-evaluation")

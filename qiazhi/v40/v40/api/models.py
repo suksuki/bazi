@@ -34,6 +34,25 @@ class TrainingImpactFromEvaluationRequest(V40Model):
     boundary: str = "training_impact_request_builds_candidate_diff_without_production_write"
 
 
+class TrainingExampleFromReadingRequest(V40Model):
+    version: str = "v40.training_example_from_reading_request.v1"
+    example_id: str
+    reading_id: str
+    topic: Topic = Topic.UNKNOWN
+    input_snapshot_ref: str = ""
+    runtime_output_ref: str = ""
+    persist: bool = True
+    boundary: str = "training_example_from_reading_compiles_feedback_without_production_write"
+
+    @model_validator(mode="after")
+    def _example_boundary(self) -> "TrainingExampleFromReadingRequest":
+        if not self.example_id.strip():
+            raise ValueError("Training example request requires example_id")
+        if not self.reading_id.strip():
+            raise ValueError("Training example request requires reading_id")
+        return self
+
+
 class EvaluationBatchFromRuntimeRequest(V40Model):
     version: str = "v40.evaluation_batch_from_runtime_request.v1"
     batch_id: str

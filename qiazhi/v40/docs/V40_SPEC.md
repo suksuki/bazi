@@ -451,6 +451,14 @@ docs/V40_PHASE29_PRACTITIONER_UI_CALIBRATION.md
 
 本阶段把命理师校准闭环接入 `/v40/ui`。页面新增 `role_key` 选择，普通用户仍只看到报告、反馈和继续追问；命理师模式下，在报告形成后显示 `practitioner_lens` 校准面板。校准面板最多展示 6 条紫微旁路信号或分支候选，每个动作调用 `POST /api/v40/calibration/practitioner-lens-action`，只生成 `TrainingLabelEvent + LocalOverlay`，不会重跑报告、不会刷新对话、不会直接改 verdict 或 production weight。
 
+2026-06-30 Phase 30 已启动：
+
+```text
+docs/V40_PHASE30_TRAINING_EXAMPLE_COMPILATION.md
+```
+
+本阶段新增训练样本编译层。`POST /api/v40/training/example-from-reading` 会从指定 `reading_id` 读取已保存的 `TrainingLabelEvent` 与 `LocalOverlay`，编译为 `TrainingExampleV2`，并可保存到 `v40_training_examples`。新增 `GET /api/v40/training/examples`。该样本只进入训练/验证材料链路，`expected_update.scope=local_overlay_first`，并明确 `global_update_requires_release_gate=true`；没有标签时拒绝生成样本，避免空训练。
+
 ## V40 不做的事
 
 本阶段不做：

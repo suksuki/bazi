@@ -12,6 +12,7 @@ def build_training_example_from_labels(
     topic: Topic = Topic.UNKNOWN,
     input_snapshot_ref: str = "",
     runtime_output_ref: str = "",
+    local_overlay_refs: list[str] | None = None,
 ) -> TrainingExampleV2:
     target_ids: list[str] = []
     seen: set[str] = set()
@@ -31,5 +32,7 @@ def build_training_example_from_labels(
         expected_update={
             "scope": "local_overlay_first",
             "global_update_requires_release_gate": True,
+            "local_overlay_refs": local_overlay_refs or [],
+            "local_overlay_count": len(local_overlay_refs or []),
         },
     )

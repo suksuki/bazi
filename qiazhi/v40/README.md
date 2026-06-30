@@ -48,6 +48,7 @@ docs/V40_PHASE26_ZIWEI_VALIDATION_SPINE.md
 docs/V40_PHASE27_PRACTITIONER_LENS.md
 docs/V40_PHASE28_PRACTITIONER_CALIBRATION_LOOP.md
 docs/V40_PHASE29_PRACTITIONER_UI_CALIBRATION.md
+docs/V40_PHASE30_TRAINING_EXAMPLE_COMPILATION.md
 ```
 
 Initial principle:
@@ -69,5 +70,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 29: Practitioner UI Calibration
+Phase 30: Training Example Compilation
 ```
