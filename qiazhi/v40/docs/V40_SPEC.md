@@ -313,6 +313,14 @@ docs/V40_PHASE13_NATIVE_DECISION_OUTPUT_RUNTIME.md
 
 本阶段把 Phase 12 的临时产出拆成正式 runtime 链路：BaziEngine 只输出 facts/features/signals，SignalRegistry 收集素材，DecisionEngine 生成 branches/verdicts/advice/probes，ProductProjection 和 SurfaceBundle 负责用户端与命理师端展示。命理师校准通过 `TrainingLabelEvent(source=practitioner_selection)` 回流训练闭环，不直接改 chart facts、不直接写全局权重、不写 V30。
 
+2026-06-30 Phase 14 已启动：
+
+```text
+docs/V40_PHASE14_NATIVE_BAZI_FACT_SIGNAL_ADAPTERS.md
+```
+
+本阶段新增 `v40/engines/bazi_adapters.py`，把显性十神、用神候选、原局/时运地支合冲和领域信号抽成原生 adapter。BaziEngine 仍只产出 facts/features/signals，不做最终裁决；DecisionEngine 可以用这些更具体的信号回答财运、关系、健康等主题问题，避免退回结构空话。
+
 ## V40 不做的事
 
 本阶段不做：

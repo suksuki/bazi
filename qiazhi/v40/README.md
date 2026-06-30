@@ -32,6 +32,7 @@ docs/V40_PHASE10_RELEASE_READINESS_AND_ACTIVATION_REVIEW.md
 docs/V40_PHASE11_ADMIN_AND_ACTIVATION_EXECUTION.md
 docs/V40_PHASE12_NATIVE_BAZI_AND_SYNTHETIC_CASES.md
 docs/V40_PHASE13_NATIVE_DECISION_OUTPUT_RUNTIME.md
+docs/V40_PHASE14_NATIVE_BAZI_FACT_SIGNAL_ADAPTERS.md
 ```
 
 Initial principle:
@@ -53,5 +54,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 13: Native Decision Output Runtime
+Phase 14: Native Bazi Fact and Signal Adapters
 ```

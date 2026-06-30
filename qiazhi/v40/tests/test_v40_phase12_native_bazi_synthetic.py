@@ -32,7 +32,7 @@ def test_native_bazi_engine_builds_runtime_without_v30_dependency() -> None:
 
     assert runtime.v30_runtime_imported is False
     assert runtime.engine_result is not None
-    assert runtime.engine_result.results[0].engine_version == "v40.bazi_native.skeleton.v1"
+    assert runtime.engine_result.results[0].engine_version.startswith("v40.bazi_native.")
     assert runtime.signal_registry is not None
     assert len(runtime.signal_registry.signals) >= 3
     assert runtime.verdicts

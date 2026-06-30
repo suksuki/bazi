@@ -196,11 +196,20 @@ Remaining work:
 
 ```text
 native Bazi fact layer is still skeletal
-ten-god / useful-god / branch relation adapters need expansion
+ten-god / useful-god / branch relation adapters need expansion beyond Phase 14 visible-stem and harmony/clash scope
 LLM expression tasks are defined but not executed in V40 runtime
 real golden cases and larger synthetic batches need to run through native runtime
 frontend V40 user flow is not yet built
 admin native-run buttons are not yet added
+```
+
+Phase 14 added the first native adapter layer:
+
+```text
+visible-stem ten-god profile
+useful-god candidate profile
+six harmony / six clash branch relation profile
+wealth / relationship / health domain signals
 ```
 
 ## Tests
