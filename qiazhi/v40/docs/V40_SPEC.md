@@ -483,6 +483,14 @@ docs/V40_PHASE33_TRAINING_REPLAY_BATCH.md
 
 本阶段新增 `TrainingReplayBatchSummary`。`POST /api/v40/training/replay-batches` 会聚合多条 `TrainingExampleReplayResult`，统计 replay 通过/复核/阻断数量、平均反馈对齐分、平均目标覆盖率和失败原因分布。新增 `v40_training_replay_batches` 与 `GET /api/v40/training/replay-batches`。推荐规则为：存在 blocked 则 reject，全部 passed 则 approve，其余 needs_review。该 approve 只表示反馈 replay 具备进入候选训练的资格，不发布生产权重。
 
+2026-06-30 Phase 34 已启动：
+
+```text
+docs/V40_PHASE34_PROJECT_STATUS_DASHBOARD.md
+```
+
+本阶段新增 V40 项目完成度状态。`GET /api/v40/project/status` 会聚合 roadmap 与 `lab_summary.counts`，输出当前 phase、总体完成度、architecture / user_beta / training_validation / v30_replacement 四条主线进度、实时证据计数和下一步任务。`/admin/v40` 新增 `V40 Completion` 面板，并通过 `/admin/v40/api/project-status` 每 15 秒刷新一次。该状态只读，不启动训练、不写 production weight、不作为发布批准。
+
 ## V40 不做的事
 
 本阶段不做：

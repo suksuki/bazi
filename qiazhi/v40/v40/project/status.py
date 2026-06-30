@@ -1,0 +1,147 @@
+from __future__ import annotations
+
+from dataclasses import dataclass
+from datetime import datetime, timezone
+from typing import Any
+
+
+CURRENT_PHASE = 34
+CURRENT_PHASE_NAME = "Project Completion Dashboard"
+
+
+@dataclass(frozen=True)
+class CompletionDomain:
+    key: str
+    label: str
+    percent: int
+    status: str
+    evidence_keys: tuple[str, ...]
+    next_step: str
+
+
+DOMAINS: tuple[CompletionDomain, ...] = (
+    CompletionDomain(
+        key="architecture",
+        label="架构主线",
+        percent=84,
+        status="on_track",
+        evidence_keys=("runtime_records", "training_examples", "training_example_replays", "training_replay_batches"),
+        next_step="把 approved replay batch 接入候选权重前置门禁。",
+    ),
+    CompletionDomain(
+        key="user_beta",
+        label="用户侧 beta",
+        percent=58,
+        status="on_track",
+        evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
+        next_step="继续打磨 report-first UI、命理师模式和对话体验。",
+    ),
+    CompletionDomain(
+        key="training_validation",
+        label="训练验证闭环",
+        percent=64,
+        status="accelerating",
+        evidence_keys=("training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches"),
+        next_step="让 replay batch 参与 candidate weight / release readiness。",
+    ),
+    CompletionDomain(
+        key="v30_replacement",
+        label="替代 V30",
+        percent=45,
+        status="needs_more_runtime_cases",
+        evidence_keys=("shadow_compare_runs", "evaluation_batches", "release_readiness"),
+        next_step="增加 V30 shadow compare、真实案例回归和迁移验收。",
+    ),
+)
+
+
+PHASE_GROUPS: tuple[dict[str, object], ...] = (
+    {"range": "1-11", "label": "隔离骨架、合约、Admin/Lab、训练验证底座", "status": "complete"},
+    {"range": "12-20", "label": "原生八字 runtime、Decision/Output、LLM 表达、用户页面", "status": "complete"},
+    {"range": "21-24", "label": "报告后智能对话、反馈到训练", "status": "complete"},
+    {"range": "25-27", "label": "紫微 Domain Lens 与命理师专业视角", "status": "complete"},
+    {"range": "28-33", "label": "命理师校准、训练样本、replay 与 replay batch", "status": "complete"},
+    {"range": "34", "label": "完成度实时控制面", "status": "active"},
+    {"range": "35+", "label": "Replay batch -> candidate weight -> release readiness -> migration closeout", "status": "planned"},
+)
+
+
+def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[str, object]:
+    counts = _counts(lab_summary)
+    domains = [_domain_status(domain, counts) for domain in DOMAINS]
+    overall = _weighted_overall(domains)
+    return {
+        "version": "v40.project_status.v1",
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "current_phase": CURRENT_PHASE,
+        "current_phase_name": CURRENT_PHASE_NAME,
+        "overall_completion_percent": overall,
+        "can_auto_continue": True,
+        "requires_user_for": [
+            "最终产品验收",
+            "真实命例质量判断",
+            "线上切换窗口",
+            "外部账号或凭证",
+        ],
+        "domains": domains,
+        "phase_groups": list(PHASE_GROUPS),
+        "next_mainline_tasks": [
+            "Phase35: approved replay batch 接入 candidate weight 前置门禁",
+            "Phase36: release readiness 同时聚合 evaluation batch 与 replay batch",
+            "Phase37: Admin 展示训练候选版本来源、风险和回滚路径",
+            "Phase38: V30 shadow compare 扩大到真实运行样本",
+        ],
+        "runtime_evidence_counts": counts,
+        "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",
+    }
+
+
+def _domain_status(domain: CompletionDomain, counts: dict[str, int]) -> dict[str, object]:
+    evidence = {key: counts.get(key, 0) for key in domain.evidence_keys}
+    active_evidence_count = sum(1 for value in evidence.values() if value > 0)
+    evidence_rate = 0.0
+    if evidence:
+        evidence_rate = round(active_evidence_count / len(evidence), 4)
+    adjusted = domain.percent
+    if domain.key == "training_validation" and evidence_rate >= 0.8:
+        adjusted = max(adjusted, 64)
+    if domain.key == "v30_replacement" and evidence.get("shadow_compare_runs", 0) == 0:
+        adjusted = min(adjusted, 45)
+    return {
+        "key": domain.key,
+        "label": domain.label,
+        "completion_percent": adjusted,
+        "status": domain.status,
+        "evidence": evidence,
+        "evidence_rate": evidence_rate,
+        "next_step": domain.next_step,
+    }
+
+
+def _weighted_overall(domains: list[dict[str, object]]) -> int:
+    weights = {
+        "architecture": 0.30,
+        "user_beta": 0.20,
+        "training_validation": 0.30,
+        "v30_replacement": 0.20,
+    }
+    total = 0.0
+    for domain in domains:
+        key = str(domain["key"])
+        total += float(domain["completion_percent"]) * weights.get(key, 0.0)
+    return int(round(total))
+
+
+def _counts(lab_summary: dict[str, Any] | None) -> dict[str, int]:
+    if not lab_summary:
+        return {}
+    raw_counts = lab_summary.get("counts", {})
+    if not isinstance(raw_counts, dict):
+        return {}
+    counts: dict[str, int] = {}
+    for key, value in raw_counts.items():
+        try:
+            counts[str(key)] = int(value)
+        except (TypeError, ValueError):
+            counts[str(key)] = 0
+    return counts

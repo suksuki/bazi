@@ -52,6 +52,7 @@ docs/V40_PHASE30_TRAINING_EXAMPLE_COMPILATION.md
 docs/V40_PHASE31_ADMIN_FEEDBACK_SUMMARY.md
 docs/V40_PHASE32_TRAINING_EXAMPLE_REPLAY.md
 docs/V40_PHASE33_TRAINING_REPLAY_BATCH.md
+docs/V40_PHASE34_PROJECT_STATUS_DASHBOARD.md
 ```
 
 Initial principle:
@@ -73,5 +74,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 33: Training Replay Batch
+Phase 34: Project Status Dashboard
 ```

@@ -35,6 +35,10 @@ def create_admin_app() -> FastAPI:
     def summary() -> dict[str, object]:
         return _fetch_json("/api/v40/lab/summary")
 
+    @app.get(f"{ADMIN_PREFIX}/api/project-status")
+    def project_status() -> dict[str, object]:
+        return _fetch_json("/api/v40/project/status")
+
     @app.get(f"{ADMIN_PREFIX}/api/batches")
     def batches() -> dict[str, object]:
         return _fetch_json("/api/v40/evaluation/batches?limit=8")
@@ -122,6 +126,7 @@ def _console_html() -> str:
       cursor: pointer;
     }
     .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-bottom: 14px; }
+    .progress-grid { display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 14px; margin-bottom: 14px; }
     .metric, section {
       background: var(--panel);
       border: 1px solid var(--line);
@@ -130,6 +135,14 @@ def _console_html() -> str:
     .metric { border-radius: 7px; padding: 14px; }
     .metric span { display: block; color: var(--muted); font-size: 12px; }
     .metric strong { display: block; margin-top: 6px; font-size: 24px; }
+    .completion { border-radius: 8px; padding: 16px; }
+    .completion strong { display: block; font-size: 42px; line-height: 1; margin: 10px 0 8px; }
+    .completion span { color: var(--muted); font-size: 12px; }
+    .bars { display: grid; gap: 9px; }
+    .bar-row { display: grid; gap: 5px; }
+    .bar-meta { display: flex; justify-content: space-between; gap: 8px; color: var(--muted); font-size: 12px; }
+    .bar-track { height: 8px; border-radius: 999px; background: rgba(255,255,255,.07); overflow: hidden; }
+    .bar-fill { height: 100%; border-radius: inherit; background: linear-gradient(90deg, #4b9f88, #8be0c4); }
     .sections { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
     section { border-radius: 8px; overflow: hidden; }
     .section-head { display: flex; justify-content: space-between; align-items: center; padding: 13px 14px; border-bottom: 1px solid var(--line); }
@@ -143,7 +156,7 @@ def _console_html() -> str:
     .review { color: var(--warn); }
     .bad { color: var(--bad); }
     @media (max-width: 880px) {
-      .grid, .sections { grid-template-columns: 1fr; }
+      .grid, .sections, .progress-grid { grid-template-columns: 1fr; }
       header { flex-direction: column; }
     }
   </style>
@@ -157,6 +170,10 @@ def _console_html() -> str:
       </div>
       <button id="refresh">刷新</button>
     </header>
+    <div class="progress-grid">
+      <section class="completion" id="completion"></section>
+      <section><div class="section-head"><h2>V40 Completion</h2><span class="pill" id="phase"></span></div><div class="list" id="progress"></div></section>
+    </div>
     <div class="grid" id="metrics"></div>
     <div class="sections">
       <section><div class="section-head"><h2>Batch</h2><span class="pill">latest</span></div><div class="list" id="batches"></div></section>
@@ -175,7 +192,8 @@ def _console_html() -> str:
       return `<div class="row"><strong>${title || "-"}</strong><span>${meta || ""}</span><span class="${cls(value)}">${value ?? ""}</span></div>`;
     }
     async function load() {
-      const [summary, batches, readiness, weights, reviews, executions, llm, models] = await Promise.all([
+      const [project, summary, batches, readiness, weights, reviews, executions, llm, models] = await Promise.all([
+        get("/admin/v40/api/project-status"),
         get("/admin/v40/api/summary"),
         get("/admin/v40/api/batches"),
         get("/admin/v40/api/readiness"),
@@ -185,6 +203,17 @@ def _console_html() -> str:
         get("/admin/v40/api/llm"),
         get("/admin/v40/api/llm-models"),
       ]);
+      const status = project.status || {};
+      const domains = status.domains || [];
+      $("phase").textContent = `Phase ${status.current_phase || "-"}`;
+      $("completion").innerHTML = `<span>overall</span><strong>${status.overall_completion_percent ?? 0}%</strong><span>${status.current_phase_name || ""}</span>`;
+      $("progress").innerHTML = domains.map((item) => `
+        <div class="row bar-row">
+          <div class="bar-meta"><span>${item.label}</span><span>${item.completion_percent}% · ${item.status}</span></div>
+          <div class="bar-track"><div class="bar-fill" style="width:${Math.max(0, Math.min(100, item.completion_percent || 0))}%"></div></div>
+          <span>${item.next_step || ""}</span>
+        </div>
+      `).join("") || row("暂无完成度数据", "", "review");
       const counts = summary.summary?.counts || {};
       $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
         .map((key) => `<div class="metric"><span>${key}</span><strong>${counts[key] ?? 0}</strong></div>`).join("");
@@ -212,6 +241,7 @@ def _console_html() -> str:
       ].join("");
     }
     $("refresh").addEventListener("click", load);
+    setInterval(load, 15000);
     load().catch((error) => {
       $("metrics").innerHTML = `<div class="metric"><span>error</span><strong>API</strong></div>`;
       $("batches").innerHTML = row("V40 runtime unavailable", error.message, "reject");

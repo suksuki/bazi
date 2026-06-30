@@ -43,6 +43,7 @@ from v40.evaluation import (
     replay_training_example,
 )
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
+from v40.project import build_project_status
 from v40.storage import V40PostgresRepository
 from v40.storage.config import v40_repository_configured
 from v40.synthetic import build_evaluation_cases_from_seeds
@@ -1138,6 +1139,23 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "lab_summary_reads_v40_control_plane_state_only",
+        }
+
+    @app.get(f"{API_PREFIX}/project/status")
+    def project_status() -> dict[str, object]:
+        lab_snapshot: dict[str, object] | None = None
+        try:
+            repository = V40PostgresRepository.from_env()
+            lab_snapshot = repository.lab_summary()
+        except Exception:
+            lab_snapshot = None
+        status = build_project_status(lab_summary=lab_snapshot)
+        return {
+            "version": "v40.project_status_response.v1",
+            "status": status,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "project_status_reads_v40_progress_without_mutation",
         }
 
     return app
