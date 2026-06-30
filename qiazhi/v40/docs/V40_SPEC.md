@@ -547,6 +547,14 @@ docs/V40_PHASE41_PRODUCTION_CUTOVER_CHECKLIST.md
 
 本阶段新增 `build_production_cutover_checklist` 与 `GET /api/v40/project/production-cutover-checklist`，把 V30 replacement candidate readiness、active weight、rollback、LLM 配置和 repository 配置合成 production beta cutover checklist。自动项全部 ready 时仍返回 `cutover_status=blocked_by_human_signoff`，明确系统不能自行切生产流量。
 
+2026-06-30 Phase 42 已启动：
+
+```text
+docs/V40_PHASE42_RELEASE_CANDIDATE_AUDIT.md
+```
+
+本阶段新增 `build_release_candidate_audit` 与 `GET /api/v40/project/release-candidate-audit`，聚合 project status、surface beta readiness、V30 replacement readiness 和 production cutover checklist。自动审计全通过时返回 `automatic_audit_passed_human_signoff_required`，仍不切流量、不激活权重。
+
 ## V40 不做的事
 
 本阶段不做：

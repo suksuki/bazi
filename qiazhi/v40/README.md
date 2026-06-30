@@ -60,6 +60,7 @@ docs/V40_PHASE38_SHADOW_COMPARE_BATCH_RISK.md
 docs/V40_PHASE39_USER_SURFACE_BETA_READINESS.md
 docs/V40_PHASE40_V30_REPLACEMENT_READINESS.md
 docs/V40_PHASE41_PRODUCTION_CUTOVER_CHECKLIST.md
+docs/V40_PHASE42_RELEASE_CANDIDATE_AUDIT.md
 ```
 
 Initial principle:
@@ -81,5 +82,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 41: Production Beta Cutover Checklist
+Phase 42: Release Candidate Audit
 ```

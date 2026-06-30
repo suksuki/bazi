@@ -48,7 +48,12 @@ from v40.evaluation import (
     replay_training_example,
 )
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
-from v40.project import build_production_cutover_checklist, build_project_status, build_v30_replacement_readiness
+from v40.project import (
+    build_production_cutover_checklist,
+    build_project_status,
+    build_release_candidate_audit,
+    build_v30_replacement_readiness,
+)
 from v40.storage import V40PostgresRepository
 from v40.storage.config import v40_repository_configured
 from v40.synthetic import build_evaluation_cases_from_seeds
@@ -1369,6 +1374,40 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "production_cutover_checklist_reads_v40_evidence_without_switching_traffic",
+        }
+
+    @app.get(f"{API_PREFIX}/project/release-candidate-audit")
+    def release_candidate_audit() -> dict[str, object]:
+        lab_snapshot: dict[str, object] | None = None
+        weights: list[dict[str, object]] = []
+        try:
+            repository = V40PostgresRepository.from_env()
+            lab_snapshot = repository.lab_summary()
+            weights = repository.list_global_weight_versions(limit=20)
+        except Exception:
+            lab_snapshot = None
+            weights = []
+        surface = _build_surface_beta_readiness()
+        replacement = build_v30_replacement_readiness(lab_summary=lab_snapshot, surface_readiness=surface)
+        llm_config = resolve_ollama_expression_config()
+        cutover = build_production_cutover_checklist(
+            replacement_readiness=replacement,
+            weights=weights,
+            llm_ready=llm_config.enabled and llm_config.execute,
+            repository_configured=v40_repository_configured(),
+        )
+        audit = build_release_candidate_audit(
+            project_status=build_project_status(lab_summary=lab_snapshot),
+            surface_readiness=surface,
+            replacement_readiness=replacement,
+            cutover_checklist=cutover,
+        )
+        return {
+            "version": "v40.release_candidate_audit_response.v1",
+            "audit": audit,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "release_candidate_audit_reads_v40_readiness_without_releasing_traffic",
         }
 
     return app
