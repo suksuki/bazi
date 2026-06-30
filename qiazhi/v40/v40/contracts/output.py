@@ -196,6 +196,50 @@ class ConversationSeed(V40Model):
         return self
 
 
+class ConversationTurn(V40Model):
+    version: str = "v40.conversation_turn.v1"
+    turn_id: str
+    reading_id: str
+    role_key: RoleKey = "user"
+    topic: Topic = Topic.UNKNOWN
+    question: str
+    selected_option: str = ""
+    source_seed_id: str = ""
+    source_probe_ids: list[str] = Field(default_factory=list)
+    source_verdict_ids: list[str] = Field(default_factory=list)
+    source_advice_ids: list[str] = Field(default_factory=list)
+    answer_text: str = ""
+    raw_thinking: str = ""
+    provider: str = ""
+    model: str = ""
+    accepted: bool = False
+    acceptance_status: AcceptanceStatus = AcceptanceStatus.REPAIR
+    next_seeds: list[ConversationSeed] = Field(default_factory=list)
+    can_change_verdict: bool = False
+    can_create_chart_facts: bool = False
+    writes_v30_state: bool = False
+    writes_v40_production: bool = False
+    boundary: str = "conversation_turn_answers_user_question_without_verdict_or_chart_fact_authority"
+
+    @model_validator(mode="after")
+    def _turn_boundary(self) -> "ConversationTurn":
+        if not self.turn_id.strip():
+            raise ValueError("ConversationTurn requires turn_id")
+        if not self.question.strip():
+            raise ValueError("ConversationTurn requires question")
+        if self.accepted and not self.answer_text.strip():
+            raise ValueError("Accepted ConversationTurn requires answer_text")
+        if self.can_change_verdict:
+            raise ValueError("ConversationTurn cannot change verdict")
+        if self.can_create_chart_facts:
+            raise ValueError("ConversationTurn cannot create chart facts")
+        if self.writes_v30_state:
+            raise ValueError("ConversationTurn cannot write V30 state")
+        if self.writes_v40_production:
+            raise ValueError("ConversationTurn cannot write V40 production")
+        return self
+
+
 class ProductProjectionBundle(V40Model):
     version: str = "v40.product_projection_bundle.v1"
     reading_id: str

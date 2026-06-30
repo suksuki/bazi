@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from v40 import __version__
 from v40.api.models import (
     CandidateWeightFromBatchRequest,
+    ConversationTurnRequest,
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
     ExpressionFromRuntimeRequest,
@@ -26,7 +27,7 @@ from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.manifest import contract_manifest
 from v40.contracts.output import LLMExpressionResult
 from v40.contracts.training import LabelSource, TrainingLabelEvent
-from v40.conversation import build_conversation_seeds
+from v40.conversation import build_conversation_seeds, build_conversation_turn
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
@@ -243,6 +244,45 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "native_reading_report_is_product_runtime_entry_without_llm_verdict_authority",
+        }
+
+    @app.post(f"{API_PREFIX}/conversation/turn")
+    def conversation_turn(payload: ConversationTurnRequest) -> dict[str, object]:
+        try:
+            turn, task, result, acceptance, telemetry = build_conversation_turn(
+                turn_id=payload.turn_id,
+                runtime=payload.runtime,
+                question=payload.question,
+                seed_id=payload.seed_id,
+                selected_option=payload.selected_option,
+                role_key=payload.role_key,
+                topic=payload.topic,
+                execution_mode=payload.execution_mode,
+                provider_text=payload.provider_text,
+                provider=payload.provider,
+                model=payload.model,
+                raw_thinking=payload.raw_thinking,
+            )
+        except OllamaExpressionError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {
+            "version": "v40.conversation_turn_response.v1",
+            "turn": turn.model_dump(mode="json"),
+            "answer_text": turn.answer_text,
+            "accepted": turn.accepted,
+            "next_seeds": [seed.model_dump(mode="json") for seed in turn.next_seeds],
+            "expression": {
+                "task": task.model_dump(mode="json"),
+                "result": result.model_dump(mode="json"),
+                "acceptance": acceptance.model_dump(mode="json"),
+                "telemetry": telemetry.model_dump(mode="json"),
+            },
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "reruns_reading": False,
+            "boundary": "conversation_turn_is_independent_dialogue_runtime_after_report",
         }
 
     @app.post(f"{API_PREFIX}/synthetic/cases/from-seeds")
@@ -951,6 +991,17 @@ def _user_ui_html() -> str:
     .report li { margin: 4px 0; }
     .meta { display: flex; flex-wrap: wrap; gap: 8px; }
     .seeds { display: flex; flex-wrap: wrap; gap: 8px; }
+    .conversation { display: grid; gap: 10px; }
+    .message {
+      border-left: 2px solid rgba(102,217,185,.44);
+      background: rgba(255,255,255,.045);
+      border-radius: 8px;
+      padding: 11px 12px;
+    }
+    .message .q { color: var(--accent-strong); font-size: 12px; margin-bottom: 6px; }
+    .message .a { color: var(--text); }
+    .followup { display: none; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+    .followup.active { display: grid; }
     .tag {
       border-radius: 999px;
       background: rgba(255,255,255,.07);
@@ -1010,13 +1061,20 @@ def _user_ui_html() -> str:
           <div class="status" id="status"><span class="dot"></span><span>等待测算</span></div>
           <div class="meta" id="meta"></div>
           <div class="report" id="report">填写命盘后开始。</div>
+          <div class="conversation" id="conversation"></div>
           <div class="seeds" id="seeds"></div>
+          <div class="followup" id="followupBox">
+            <input id="followupQuestion" placeholder="也可以直接追问，例如：今年财运如何？" />
+            <button id="askFollowup" type="button">继续问</button>
+          </div>
         </div>
       </section>
     </div>
   </main>
   <script>
     const $ = (id) => document.getElementById(id);
+    let currentRuntime = null;
+    let currentExecutionMode = "ollama";
     const value = (id) => $(id).value.trim();
     function setStatus(text, busy = false) {
       $("status").className = busy ? "status thinking" : "status";
@@ -1025,6 +1083,12 @@ def _user_ui_html() -> str:
     }
     function tag(text, mode = "") {
       return `<span class="tag ${mode}">${text}</span>`;
+    }
+    function displayProvider(provider, model) {
+      const raw = String(model || provider || "");
+      if (raw.includes("gemma") || raw.includes("ollama")) return raw;
+      if (raw.includes("conversation.contract") || raw.includes("expression.contract")) return "Local";
+      return raw || "Local";
     }
     function escapeHtml(text) {
       return String(text || "").replace(/[&<>"']/g, (ch) => ({
@@ -1052,6 +1116,52 @@ def _user_ui_html() -> str:
       }
       closeList();
       return html.join("");
+    }
+    function renderSeedButtons(seeds) {
+      $("seeds").innerHTML = (seeds || []).map((seed) => (
+        `<button class="seed-button" type="button" data-seed-id="${escapeHtml(seed.seed_id)}" data-question="${escapeHtml(seed.question)}">${escapeHtml(seed.question)}</button>`
+      )).join("");
+      $("followupBox").classList.toggle("active", Boolean(currentRuntime));
+    }
+    function appendConversation(question, answer, telemetry) {
+      const meta = telemetry ? ` · ${escapeHtml(displayProvider(telemetry.provider, telemetry.model))}` : "";
+      const node = document.createElement("div");
+      node.className = "message";
+      node.innerHTML = `<div class="q">${escapeHtml(question)}${meta}</div><div class="a report">${renderReport(answer)}</div>`;
+      $("conversation").appendChild(node);
+    }
+    async function askConversation(question, seedId = "") {
+      if (!currentRuntime || !question.trim()) return;
+      const button = $("askFollowup");
+      button.disabled = true;
+      setStatus("对话中", true);
+      try {
+        const turnId = `turn-${Date.now()}`;
+        const res = await fetch("/api/v40/conversation/turn", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            turn_id: turnId,
+            runtime: currentRuntime,
+            question,
+            seed_id: seedId,
+            execution_mode: currentExecutionMode
+          })
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.detail || "对话失败");
+        const telemetry = body.expression.telemetry;
+        if (!body.accepted) throw new Error("本轮对话未通过验收。");
+        appendConversation(question, body.answer_text, telemetry);
+        renderSeedButtons(body.next_seeds || []);
+        $("followupQuestion").value = "";
+        setStatus("对话已形成", false);
+      } catch (error) {
+        appendConversation(question, error.message, null);
+        setStatus("模型不可用", false);
+      } finally {
+        button.disabled = false;
+      }
     }
     async function loadProvider() {
       try {
@@ -1086,10 +1196,14 @@ def _user_ui_html() -> str:
         },
         persist: false
       };
+      currentRuntime = null;
+      currentExecutionMode = payload.execution_mode;
       setStatus("推演中", true);
       $("report").textContent = "";
       $("meta").innerHTML = "";
       $("seeds").innerHTML = "";
+      $("conversation").innerHTML = "";
+      $("followupBox").classList.remove("active");
       try {
         const res = await fetch("/api/v40/readings/native-report", {
           method: "POST",
@@ -1099,16 +1213,15 @@ def _user_ui_html() -> str:
         const body = await res.json();
         if (!res.ok) throw new Error(body.detail || "请求失败");
         const telemetry = body.expression.telemetry;
+        currentRuntime = body.runtime;
         setStatus(body.accepted ? "已形成" : "未采用", false);
         $("report").innerHTML = renderReport(body.accepted_text || "本次表达未通过验收。");
         $("meta").innerHTML = [
-          tag(telemetry.model || telemetry.provider, body.accepted ? "ok" : "bad"),
+          tag(displayProvider(telemetry.provider, telemetry.model), body.accepted ? "ok" : "bad"),
           tag(`thinking ${telemetry.thinking_trace_chars || 0}`),
           tag(telemetry.acceptance_status, body.accepted ? "ok" : "bad")
         ].join("");
-        $("seeds").innerHTML = (body.conversation_seeds || []).map((seed) => (
-          `<button class="seed-button" type="button" data-question="${escapeHtml(seed.question)}">${escapeHtml(seed.question)}</button>`
-        )).join("");
+        renderSeedButtons(body.conversation_seeds || []);
       } catch (error) {
         setStatus("模型不可用", false);
         $("report").textContent = error.message;
@@ -1118,8 +1231,10 @@ def _user_ui_html() -> str:
     $("seeds").addEventListener("click", (event) => {
       const button = event.target.closest("button[data-question]");
       if (!button) return;
-      $("question").value = button.dataset.question || "";
-      $("question").focus();
+      askConversation(button.dataset.question || "", button.dataset.seedId || "");
+    });
+    $("askFollowup").addEventListener("click", () => {
+      askConversation(value("followupQuestion"), "");
     });
     loadProvider();
   </script>

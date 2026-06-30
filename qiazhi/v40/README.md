@@ -40,6 +40,7 @@ docs/V40_PHASE18_LLM_OBSERVABILITY_AND_EVALUATION.md
 docs/V40_PHASE19_NATIVE_REPORT_RUNTIME.md
 docs/V40_PHASE20_USER_REPORT_UI.md
 docs/V40_PHASE21_CONVERSATION_SEEDS.md
+docs/V40_PHASE22_CONVERSATION_TURN_RUNTIME.md
 ```
 
 Initial principle:
@@ -61,5 +62,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 21: Conversation Seeds
+Phase 22: Conversation Turn Runtime
 ```

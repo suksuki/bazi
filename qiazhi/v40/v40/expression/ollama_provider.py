@@ -66,13 +66,31 @@ def render_ollama_expression_result(
     config: OllamaExpressionConfig | None = None,
     transport: Callable[[str, dict[str, object], float], dict[str, object]] | None = None,
 ) -> LLMExpressionResult:
+    prompt = build_ollama_expression_prompt(task=task, runtime=runtime)
+    return render_ollama_prompt_expression_result(
+        result_id=result_id,
+        task=task,
+        prompt=prompt,
+        config=config,
+        transport=transport,
+    )
+
+
+def render_ollama_prompt_expression_result(
+    *,
+    result_id: str,
+    task: LLMExpressionTask,
+    prompt: str,
+    config: OllamaExpressionConfig | None = None,
+    system_content: str | None = None,
+    transport: Callable[[str, dict[str, object], float], dict[str, object]] | None = None,
+) -> LLMExpressionResult:
     resolved = config or resolve_ollama_expression_config()
     if not resolved.enabled or not resolved.execute:
         raise OllamaExpressionError("V40 LLM execution is disabled")
-    prompt = build_ollama_expression_prompt(task=task, runtime=runtime)
     payload = {
         "model": resolved.model,
-        "messages": _messages(prompt),
+        "messages": _messages(prompt, system_content=system_content),
         "stream": False,
         "think": True,
         "options": {
@@ -90,7 +108,7 @@ def render_ollama_expression_result(
     return LLMExpressionResult(
         result_id=result_id,
         task_id=task.task_id,
-        reading_id=runtime.reading_id,
+        reading_id=task.reading_id,
         text=text,
         raw_thinking=thinking,
         provider=resolved.provider,
@@ -257,11 +275,12 @@ def _extract_thinking(payload: dict[str, object]) -> str:
     return ""
 
 
-def _messages(prompt: str) -> list[dict[str, str]]:
+def _messages(prompt: str, *, system_content: str | None = None) -> list[dict[str, str]]:
     return [
         {
             "role": "system",
-            "content": (
+            "content": system_content
+            or (
                 "You are V40's bounded Bazi expression layer. Use only the provided product cards. "
                 "Do not create pillars, luck cycles, flow years, event years, hidden-factor facts, or fixed promises. "
                 "Return customer-visible Chinese text, not diagnostics."

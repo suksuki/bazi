@@ -25,6 +25,7 @@ def contract_manifest() -> dict[str, object]:
             "AcceptanceResult",
             "ExpressionTelemetry",
             "ConversationSeed",
+            "ConversationTurn",
             "ProductProjectionBundle",
             "SurfaceBundle",
         ],

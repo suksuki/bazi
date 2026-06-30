@@ -144,9 +144,12 @@ BranchCard
 AdvicePlan
 ProbeCandidate
 ProductProjectionBundle
+ConversationSeed
+ConversationTurn
 LLMExpressionTask
 LLMExpressionResult
 AcceptanceResult
+ExpressionTelemetry
 SurfaceBundle
 EvaluationCaseSpec
 GoldenCase
@@ -379,7 +382,15 @@ docs/V40_PHASE20_USER_REPORT_UI.md
 docs/V40_PHASE21_CONVERSATION_SEEDS.md
 ```
 
-本阶段新增 `ConversationSeed` 与 `v40/conversation/seeds.py`。native report 在 accepted report text 形成后，会基于 probes、verdicts 和 advice plans 生成最多三个下一问种子，并返回 `conversation_seeds` 与 `runtime.conversation_seeds`。`/v40/ui` 会把这些种子显示为“继续追问”按钮；点击只把问题放回输入框，不自动提交，保持 report first、dialogue invited、conversation separate。
+本阶段新增 `ConversationSeed` 与 `v40/conversation/seeds.py`。native report 在 accepted report text 形成后，会基于 probes、verdicts 和 advice plans 生成最多三个下一问种子，并返回 `conversation_seeds` 与 `runtime.conversation_seeds`。`/v40/ui` 会把这些种子显示为“继续追问”按钮，保持 report first、dialogue invited、conversation separate。
+
+2026-06-30 Phase 22 已启动：
+
+```text
+docs/V40_PHASE22_CONVERSATION_TURN_RUNTIME.md
+```
+
+本阶段新增 `ConversationTurn`、`v40/conversation/turns.py` 和 `POST /api/v40/conversation/turn`。用户点击种子问题或直接输入追问后，会以当前 accepted report 和 runtime 中的 verdict/advice/probe 为上下文生成一轮独立对话回答，并返回下一组 seeds。该对话 runtime 不重跑测算、不刷新 report、不写 V30、不写 V40 production，LLM 仍只负责表达和 dialogue，不拥有 verdict authority，也不能创建 chart facts。
 
 ## V40 不做的事
 

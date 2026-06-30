@@ -65,7 +65,7 @@ Seeds are generated only after accepted report text exists.
 
 `GET /v40/ui` now shows invited follow-up buttons after report generation.
 
-Clicking a seed copies the question into the question box, but does not auto-submit. This preserves the boundary:
+Phase 21 originally only exposed invited follow-up seeds. Phase 22 consumes those seeds through the independent conversation turn runtime. The preserved boundary is:
 
 ```text
 report first
@@ -93,7 +93,7 @@ UI exposes invited seed buttons
 
 ## Next Phase
 
-Phase 22 should add the first real conversation turn endpoint:
+Phase 22 adds the first real conversation turn endpoint:
 
 ```text
 POST /api/v40/conversation/turn
