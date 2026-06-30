@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 40
-CURRENT_PHASE_NAME = "V30 Replacement Readiness Closeout"
+CURRENT_PHASE = 41
+CURRENT_PHASE_NAME = "Production Beta Cutover Checklist"
 
 
 @dataclass(frozen=True)
@@ -23,7 +23,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="architecture",
         label="架构主线",
-        percent=94,
+        percent=95,
         status="on_track",
         evidence_keys=("runtime_records", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions", "release_readiness"),
         next_step="把 candidate weight 来源、风险和回滚路径在 Admin 中解释清楚。",
@@ -31,7 +31,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="user_beta",
         label="用户侧 beta",
-        percent=72,
+        percent=76,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
         next_step="继续打磨 report-first UI、命理师模式和对话体验。",
@@ -39,7 +39,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="training_validation",
         label="训练验证闭环",
-        percent=80,
+        percent=82,
         status="accelerating",
         evidence_keys=("training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions", "release_readiness"),
         next_step="把 readiness 风险、证据来源和激活条件展示到 Admin。",
@@ -47,7 +47,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="v30_replacement",
         label="替代 V30",
-        percent=70,
+        percent=78,
         status="needs_more_runtime_cases",
         evidence_keys=("shadow_compare_runs", "evaluation_batches", "release_readiness"),
         next_step="增加 V30 shadow compare、真实案例回归和迁移验收。",
@@ -67,8 +67,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "37", "label": "Admin candidate risk、source 与 rollback read model", "status": "complete"},
     {"range": "38", "label": "V30 shadow compare batch risk summary", "status": "complete"},
     {"range": "39", "label": "User report-first surface beta readiness", "status": "complete"},
-    {"range": "40", "label": "V30 replacement readiness closeout", "status": "active"},
-    {"range": "41+", "label": "production cutover checklist、RC audit、handoff", "status": "planned"},
+    {"range": "40", "label": "V30 replacement readiness closeout", "status": "complete"},
+    {"range": "41", "label": "Production beta cutover checklist", "status": "active"},
+    {"range": "42+", "label": "RC audit、production smoke、handoff", "status": "planned"},
 )
 
 
@@ -92,10 +93,10 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "Phase41: production beta cutover checklist",
             "Phase42: V40 100% release candidate audit",
             "Phase43: production smoke and handoff",
             "Phase44: final docs and operating guide",
+            "Phase45: final user acceptance window",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

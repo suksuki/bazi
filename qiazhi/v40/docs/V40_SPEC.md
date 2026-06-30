@@ -539,6 +539,14 @@ docs/V40_PHASE40_V30_REPLACEMENT_READINESS.md
 
 本阶段新增 `build_v30_replacement_readiness` 与 `GET /api/v40/project/v30-replacement-readiness`，把 shadow compare、evaluation/readiness、训练反馈回放、candidate weight 审计、用户侧 beta readiness 和 V40 隔离边界合成 V30 replacement candidate readiness。该接口只给候选替代状态，仍保留真实命例质量判断、最终产品验收和线上切换窗口三项人工确认。
 
+2026-06-30 Phase 41 已启动：
+
+```text
+docs/V40_PHASE41_PRODUCTION_CUTOVER_CHECKLIST.md
+```
+
+本阶段新增 `build_production_cutover_checklist` 与 `GET /api/v40/project/production-cutover-checklist`，把 V30 replacement candidate readiness、active weight、rollback、LLM 配置和 repository 配置合成 production beta cutover checklist。自动项全部 ready 时仍返回 `cutover_status=blocked_by_human_signoff`，明确系统不能自行切生产流量。
+
 ## V40 不做的事
 
 本阶段不做：
