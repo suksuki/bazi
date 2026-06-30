@@ -365,6 +365,14 @@ docs/V40_PHASE19_NATIVE_REPORT_RUNTIME.md
 
 本阶段新增第一个产品侧 V40 测算入口：`POST /api/v40/readings/native-report`。它一次性运行 native Bazi runtime、expression、acceptance 和 telemetry，并把 `expression_task / expression_result / acceptance_result / expression_telemetry` 绑定回 `RuntimeResult`。调用者可以选择 `execution_mode=local|provider_text|ollama`；如果请求 Ollama 且模型不可用，接口返回 `503`，不使用本地 fallback。该入口仍不读 V30、不写 V30、不允许 LLM 改 Verdict、不允许 LLM 创建 chart facts。
 
+2026-06-30 Phase 20 已启动：
+
+```text
+docs/V40_PHASE20_USER_REPORT_UI.md
+```
+
+本阶段新增第一个 V40 用户侧页面：`GET /v40/ui`。页面只保留最小 report-first 流程：输入四柱/大运/流年/问题，选择 `local` 或 `Gemma4`，调用 `POST /api/v40/readings/native-report`，优先展示 accepted report text，并显示 provider/model、thinking trace 字符数和 acceptance status。如果 Gemma4 不可用，页面展示模型错误，不做本地 fallback。
+
 ## V40 不做的事
 
 本阶段不做：

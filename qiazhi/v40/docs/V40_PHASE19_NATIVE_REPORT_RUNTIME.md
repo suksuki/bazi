@@ -97,13 +97,21 @@ provider_text mode accepts external expression and thinking trace
 no V30 writes and no V40 production writes
 ```
 
-## Next Phase
+## Phase 20 Handoff
 
-Phase 20 should make this endpoint useful to the actual product surface:
+Phase 20 added:
 
 ```text
 minimal V40 user page / UI route for native report
 report accepted text as primary first-screen content
+provider status lookup
+expression telemetry display
+no fallback display when explicit Ollama execution is unavailable
+```
+
+Still open after Phase 20:
+
+```text
 conversation seed generation after accepted report
 telemetry persistence/history for report runs
 safe public-thinking streaming contract

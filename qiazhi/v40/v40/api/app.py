@@ -4,6 +4,7 @@ import os
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Query
+from fastapi.responses import HTMLResponse
 
 from v40 import __version__
 from v40.api.models import (
@@ -144,6 +145,10 @@ def create_app() -> FastAPI:
     @app.get(f"{API_PREFIX}/contracts")
     def contracts() -> dict[str, object]:
         return contract_manifest()
+
+    @app.get("/v40/ui", response_class=HTMLResponse)
+    def user_ui() -> HTMLResponse:
+        return HTMLResponse(_user_ui_html())
 
     @app.post(f"{API_PREFIX}/runtime/native-bazi")
     def native_bazi_runtime(payload: NativeBaziRuntimeRequest) -> dict[str, object]:
@@ -832,6 +837,267 @@ def create_app() -> FastAPI:
         }
 
     return app
+
+
+def _user_ui_html() -> str:
+    return """<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>掐指一算 V40</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #070b0b;
+      --panel: rgba(20, 28, 27, 0.78);
+      --panel-soft: rgba(255,255,255,0.055);
+      --line: rgba(190, 210, 198, 0.12);
+      --text: #eef5ef;
+      --muted: #8d9d95;
+      --accent: #66d9b9;
+      --accent-strong: #c7f2df;
+      --warn: #eccb83;
+      --bad: #ff928b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        linear-gradient(135deg, rgba(102, 217, 185, 0.12), transparent 34%),
+        linear-gradient(180deg, #081010 0%, var(--bg) 68%);
+      color: var(--text);
+      font: 14px/1.58 ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+    main { max-width: 1180px; margin: 0 auto; padding: 26px 18px 42px; }
+    header { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 18px; }
+    h1 { margin: 0; font-size: 24px; font-weight: 760; }
+    .brand-mark { color: var(--accent); font-size: 13px; margin-bottom: 4px; }
+    .layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .panel {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.24);
+      overflow: hidden;
+    }
+    .panel-head { padding: 15px 16px 10px; border-bottom: 1px solid var(--line); }
+    .panel-head h2 { margin: 0; font-size: 15px; font-weight: 720; }
+    form { padding: 14px 16px 16px; display: grid; gap: 12px; }
+    label { display: grid; gap: 6px; color: var(--muted); font-size: 12px; }
+    input, select, textarea {
+      width: 100%;
+      border: 0;
+      border-radius: 8px;
+      background: var(--panel-soft);
+      color: var(--text);
+      padding: 10px 11px;
+      outline: 1px solid transparent;
+      font: inherit;
+    }
+    textarea { min-height: 76px; resize: vertical; }
+    input:focus, select:focus, textarea:focus { outline-color: rgba(102,217,185,0.62); }
+    .pillars { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .pillar { display: grid; gap: 6px; }
+    .pillar strong { color: var(--accent-strong); font-size: 12px; font-weight: 680; }
+    .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    button {
+      border: 0;
+      border-radius: 8px;
+      background: #1d735f;
+      color: white;
+      padding: 11px 14px;
+      font-weight: 760;
+      cursor: pointer;
+    }
+    button:disabled { opacity: .6; cursor: wait; }
+    .result { min-height: 520px; }
+    .result-body { padding: 18px; display: grid; gap: 14px; }
+    .status {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      color: var(--muted);
+      font-size: 12px;
+    }
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--accent);
+      box-shadow: 0 0 18px rgba(102,217,185,.8);
+    }
+    .thinking .dot { animation: pulse 1s ease-in-out infinite alternate; }
+    @keyframes pulse { from { transform: scale(.78); opacity:.55; } to { transform: scale(1.18); opacity:1; } }
+    .report {
+      font-size: 15px;
+      line-height: 1.78;
+      color: var(--text);
+    }
+    .report h3 { margin: 10px 0 8px; font-size: 14px; color: var(--accent-strong); }
+    .report p { margin: 0 0 10px; }
+    .report ul { margin: 0 0 16px; padding-left: 18px; }
+    .report li { margin: 4px 0; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; }
+    .tag {
+      border-radius: 999px;
+      background: rgba(255,255,255,.07);
+      color: var(--muted);
+      padding: 6px 9px;
+      font-size: 12px;
+    }
+    .tag.ok { color: var(--accent-strong); background: rgba(102,217,185,.12); }
+    .tag.bad { color: var(--bad); background: rgba(255,146,139,.12); }
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+      header { align-items: start; flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <div class="brand-mark">V40</div>
+        <h1>掐指一算</h1>
+      </div>
+      <div class="status" id="provider"><span class="dot"></span><span>Gemma4</span></div>
+    </header>
+    <div class="layout">
+      <section class="panel">
+        <div class="panel-head"><h2>命盘</h2></div>
+        <form id="form">
+          <div class="row">
+            <label>性别<select id="gender"><option value="乾">乾</option><option value="坤">坤</option></select></label>
+            <label>模式<select id="execution"><option value="ollama">Gemma4</option><option value="local">Local</option></select></label>
+          </div>
+          <div class="pillars">
+            <div class="pillar"><strong>年</strong><div class="pair"><input id="yearStem" value="甲" maxlength="1" /><input id="yearBranch" value="子" maxlength="1" /></div></div>
+            <div class="pillar"><strong>月</strong><div class="pair"><input id="monthStem" value="戊" maxlength="1" /><input id="monthBranch" value="辰" maxlength="1" /></div></div>
+            <div class="pillar"><strong>日</strong><div class="pair"><input id="dayStem" value="丙" maxlength="1" /><input id="dayBranch" value="午" maxlength="1" /></div></div>
+            <div class="pillar"><strong>时</strong><div class="pair"><input id="hourStem" value="辛" maxlength="1" /><input id="hourBranch" value="卯" maxlength="1" /></div></div>
+          </div>
+          <div class="row">
+            <label>大运<input id="currentLuck" value="甲辰" /></label>
+            <label>流年<input id="currentYear" value="丙午" /></label>
+          </div>
+          <label>问题<textarea id="question">这个八字今年事业适合稳定发展还是转型突破？</textarea></label>
+          <button id="submit" type="submit">开始测算</button>
+        </form>
+      </section>
+      <section class="panel result">
+        <div class="panel-head"><h2>测算结果</h2></div>
+        <div class="result-body">
+          <div class="status" id="status"><span class="dot"></span><span>等待测算</span></div>
+          <div class="meta" id="meta"></div>
+          <div class="report" id="report">填写命盘后开始。</div>
+        </div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const value = (id) => $(id).value.trim();
+    function setStatus(text, busy = false) {
+      $("status").className = busy ? "status thinking" : "status";
+      $("status").lastElementChild.textContent = text;
+      $("submit").disabled = busy;
+    }
+    function tag(text, mode = "") {
+      return `<span class="tag ${mode}">${text}</span>`;
+    }
+    function escapeHtml(text) {
+      return String(text || "").replace(/[&<>"']/g, (ch) => ({
+        "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+      }[ch]));
+    }
+    function renderReport(text) {
+      const lines = String(text || "").split(/\\n+/).map((line) => line.trim()).filter(Boolean);
+      const html = [];
+      let listOpen = false;
+      const closeList = () => { if (listOpen) { html.push("</ul>"); listOpen = false; } };
+      for (const raw of lines) {
+        const clean = raw.replace(/^\\*\\*(.+?)\\*\\*$/, "$1").replace(/^#+\\s*/, "");
+        const bullet = clean.match(/^[*-]\\s*(.+)$/);
+        if (["结论", "建议", "校准", "命理师校准"].includes(clean)) {
+          closeList();
+          html.push(`<h3>${escapeHtml(clean)}</h3>`);
+        } else if (bullet) {
+          if (!listOpen) { html.push("<ul>"); listOpen = true; }
+          html.push(`<li>${escapeHtml(bullet[1])}</li>`);
+        } else {
+          closeList();
+          html.push(`<p>${escapeHtml(clean)}</p>`);
+        }
+      }
+      closeList();
+      return html.join("");
+    }
+    async function loadProvider() {
+      try {
+        const res = await fetch("/api/v40/expression/provider/ollama");
+        const body = await res.json();
+        $("provider").lastElementChild.textContent = `${body.model} · ${body.base_url}`;
+      } catch (_) {}
+    }
+    $("form").addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const readingId = `ui-${Date.now()}`;
+      const payload = {
+        request_id: `request-${readingId}`,
+        reading_id: readingId,
+        execution_mode: value("execution"),
+        topic: "career",
+        role_key: "user",
+        user_question: value("question"),
+        chart_facts: {
+          chart_id: `chart-${readingId}`,
+          gender: value("gender"),
+          year_stem: value("yearStem"),
+          year_branch: value("yearBranch"),
+          month_stem: value("monthStem"),
+          month_branch: value("monthBranch"),
+          day_stem: value("dayStem"),
+          day_branch: value("dayBranch"),
+          hour_stem: value("hourStem"),
+          hour_branch: value("hourBranch"),
+          current_luck: value("currentLuck"),
+          current_year: value("currentYear")
+        },
+        persist: false
+      };
+      setStatus("推演中", true);
+      $("report").textContent = "";
+      $("meta").innerHTML = "";
+      try {
+        const res = await fetch("/api/v40/readings/native-report", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(payload)
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.detail || "请求失败");
+        const telemetry = body.expression.telemetry;
+        setStatus(body.accepted ? "已形成" : "未采用", false);
+        $("report").innerHTML = renderReport(body.accepted_text || "本次表达未通过验收。");
+        $("meta").innerHTML = [
+          tag(telemetry.model || telemetry.provider, body.accepted ? "ok" : "bad"),
+          tag(`thinking ${telemetry.thinking_trace_chars || 0}`),
+          tag(telemetry.acceptance_status, body.accepted ? "ok" : "bad")
+        ].join("");
+      } catch (error) {
+        setStatus("模型不可用", false);
+        $("report").textContent = error.message;
+        $("meta").innerHTML = tag("no fallback", "bad");
+      }
+    });
+    loadProvider();
+  </script>
+</body>
+</html>"""
 
 
 app = create_app()
