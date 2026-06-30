@@ -9,6 +9,7 @@ from v40.contracts.evaluation import (
 )
 from v40.contracts.output import AcceptanceStatus, ExpressionTelemetry
 from v40.contracts.runtime import RuntimeResult
+from v40.contracts.signal import SignalSource
 from v40.evaluation.release_gate import build_release_gate_from_metrics
 
 
@@ -57,6 +58,8 @@ def build_metric_summary(
     llm_violation_rate = 1.0 if any(verdict.llm_decision_authority for verdict in runtime.verdicts) else 0.0
     expression_acceptance_rate = _expression_acceptance_rate(expression_telemetry)
     expression_thinking_trace_rate = _expression_thinking_trace_rate(expression_telemetry)
+    ziwei_sidecar_signal_rate = _ziwei_sidecar_signal_rate(runtime)
+    cross_engine_topic_agreement_rate = _cross_engine_topic_agreement_rate(runtime)
     if _expression_boundary_failed(expression_telemetry):
         llm_violation_rate = 1.0
     leakage_rate = 0.0
@@ -102,6 +105,8 @@ def build_metric_summary(
         llm_boundary_violation_rate=llm_violation_rate,
         expression_acceptance_rate=expression_acceptance_rate,
         expression_thinking_trace_rate=expression_thinking_trace_rate,
+        ziwei_sidecar_signal_rate=ziwei_sidecar_signal_rate,
+        cross_engine_topic_agreement_rate=cross_engine_topic_agreement_rate,
         surface_leakage_rate=leakage_rate,
         overall_score=overall,
         status=status,
@@ -275,6 +280,24 @@ def _expression_boundary_failed(telemetry: ExpressionTelemetry | None) -> bool:
         or telemetry.overclaim_hits
         or telemetry.chart_fact_mutation_detected
     )
+
+
+def _ziwei_sidecar_signal_rate(runtime: RuntimeResult) -> float:
+    if not runtime.engine_result or not any(result.engine.value == "ziwei" for result in runtime.engine_result.results):
+        return 0.0
+    signals = runtime.signal_registry.signals if runtime.signal_registry else []
+    return 1.0 if any(signal.source == SignalSource.ZIWEI_ENGINE for signal in signals) else 0.0
+
+
+def _cross_engine_topic_agreement_rate(runtime: RuntimeResult) -> float:
+    signals = runtime.signal_registry.signals if runtime.signal_registry else []
+    ziwei_topics = {signal.topic for signal in signals if signal.source == SignalSource.ZIWEI_ENGINE}
+    if not ziwei_topics:
+        return 1.0
+    bazi_topics = {signal.topic for signal in signals if signal.source == SignalSource.BAZI_ENGINE}
+    if not bazi_topics:
+        return 0.0
+    return _ratio(len(ziwei_topics.intersection(bazi_topics)), len(ziwei_topics))
 
 
 def _topic_matches(actual: Topic, expected: Topic) -> bool:

@@ -134,6 +134,7 @@ V40 第一阶段只定义 contract，不写完整业务逻辑：
 RuntimeRequest
 RuntimeResult
 BaziChartFacts
+BirthInputCanonical
 ZiweiChartFacts
 EngineRunRequest
 EngineRunResult
@@ -417,6 +418,14 @@ docs/V40_PHASE25_ZIWEI_DOMAIN_LENS_V1.md
 ```
 
 本阶段新增 `ZiweiChartFacts` 和 `v40/engines/ziwei_native.py`。紫微在 V40 V1 中定位为 Domain Lens：可选传入 `ziwei_chart_facts` 后，runtime 会生成 `EngineRunResult(engine=ziwei)` 和 `RuntimeSignal(source=ziwei_engine)`，并进入 `MultiEngineRunResult / SignalRegistry`；但 `decision_weight=0`，DecisionEngine 在 Phase 25 会过滤紫微信号，不让它进入最终 verdict 输入。也就是说，紫微已经进入 V40 框架，但只作为旁路事实/信号和未来命理师视角，不与八字主引擎平权。
+
+2026-06-30 Phase 26 已启动：
+
+```text
+docs/V40_PHASE26_ZIWEI_VALIDATION_SPINE.md
+```
+
+本阶段把紫微三阶段路线写入主线：V0 固定排盘事实，V1 进入 `SignalRegistry` 但 `decision_weight=0`，V2 才在验证后以 0.05-0.15 轻量参与 DecisionEngine。新增 `BirthInputCanonical`，明确 `can_run_ziwei` 与 `ziwei_input_quality`，避免系统只凭四柱硬跑紫微。`ZiweiChartFacts` 增加十二宫、四化、大限、流年字段；`ZiweiEngine` 增加专题宫位映射和 ProbeTrigger；Evaluation 新增 `ziwei_sidecar_signal_rate` 与 `cross_engine_topic_agreement_rate`，只做观测，不进入 release gate。
 
 ## V40 不做的事
 

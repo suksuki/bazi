@@ -121,6 +121,8 @@ class MetricSummary(V40Model):
     llm_boundary_violation_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     expression_acceptance_rate: float = Field(default=1.0, ge=0.0, le=1.0)
     expression_thinking_trace_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    ziwei_sidecar_signal_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    cross_engine_topic_agreement_rate: float = Field(default=1.0, ge=0.0, le=1.0)
     surface_leakage_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     overall_score: float = Field(default=0.0, ge=0.0, le=1.0)
     status: EvaluationStatus = EvaluationStatus.REVIEW

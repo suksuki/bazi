@@ -1,8 +1,45 @@
 from __future__ import annotations
 
+from typing import Literal
+
 from pydantic import Field, model_validator
 
 from v40.contracts.base import V40Model
+
+
+class BirthInputCanonical(V40Model):
+    version: str = "v40.birth_input_canonical.v1"
+    input_id: str
+    calendar_type: Literal["solar", "lunar"] = "solar"
+    birth_date: str = ""
+    birth_time: str = ""
+    gender: str = ""
+    timezone: str = ""
+    location: str = ""
+    leap_month: bool = False
+    source: str = "user_supplied_birth_input"
+    immutable: bool = True
+    boundary: str = "birth_input_canonical_enables_chart_engines_without_training_birth_facts"
+
+    @model_validator(mode="after")
+    def _birth_input_boundary(self) -> "BirthInputCanonical":
+        if not self.input_id.strip():
+            raise ValueError("BirthInputCanonical requires input_id")
+        if not self.immutable:
+            raise ValueError("BirthInputCanonical must be immutable in V40 runtime")
+        return self
+
+    @property
+    def can_run_ziwei(self) -> bool:
+        return bool(self.birth_date.strip() and self.birth_time.strip() and self.gender.strip())
+
+    @property
+    def ziwei_input_quality(self) -> str:
+        if self.can_run_ziwei:
+            return "complete"
+        if self.birth_date.strip() or self.birth_time.strip() or self.gender.strip():
+            return "partial"
+        return "unavailable"
 
 
 class BaziChartFacts(V40Model):
@@ -57,7 +94,11 @@ class ZiweiChartFacts(V40Model):
     chart_id: str
     life_palace: str = ""
     body_palace: str = ""
+    palaces: dict[str, dict[str, object]] = Field(default_factory=dict)
     major_stars: dict[str, list[str]] = Field(default_factory=dict)
+    annual_transformations: dict[str, str] = Field(default_factory=dict)
+    decade_luck: str = ""
+    flow_year: str = ""
     palace_notes: dict[str, str] = Field(default_factory=dict)
     domain_lenses: dict[str, str] = Field(default_factory=dict)
     source: str = "user_supplied_or_imported_ziwei_facts"
