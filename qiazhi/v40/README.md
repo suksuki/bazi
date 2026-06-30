@@ -37,6 +37,7 @@ docs/V40_PHASE15_NATIVE_BATCH_EVALUATION.md
 docs/V40_PHASE16_LLM_EXPRESSION_ACCEPTANCE.md
 docs/V40_PHASE17_OLLAMA_EXPRESSION_PROVIDER.md
 docs/V40_PHASE18_LLM_OBSERVABILITY_AND_EVALUATION.md
+docs/V40_PHASE19_NATIVE_REPORT_RUNTIME.md
 ```
 
 Initial principle:
@@ -58,5 +59,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 18: LLM Observability And Evaluation
+Phase 19: Native Report Runtime
 ```

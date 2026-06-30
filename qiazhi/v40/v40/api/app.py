@@ -13,6 +13,7 @@ from v40.api.models import (
     ExpressionFromRuntimeRequest,
     NativeBatchFromSeedsRequest,
     NativeBaziRuntimeRequest,
+    NativeReadingReportRequest,
     PractitionerCalibrationRequest,
     ReleaseReadinessFromBatchesRequest,
     SyntheticCasesFromSeedsRequest,
@@ -55,6 +56,66 @@ from v40.training import (
 
 
 API_PREFIX = "/api/v40"
+
+
+def _build_expression_bundle(
+    *,
+    task_id: str,
+    result_id: str,
+    acceptance_id: str,
+    runtime,
+    role_key,
+    topic,
+    execution_mode: str,
+    provider_text: str = "",
+    provider: str = "local_expression_adapter",
+    model: str = "v40.expression.contract.v1",
+    raw_thinking: str = "",
+) -> tuple[object, LLMExpressionResult, object, object]:
+    task = build_expression_task_from_runtime(
+        task_id=task_id,
+        runtime=runtime,
+        role_key=role_key,
+        topic=topic,
+    )
+    if execution_mode == "provider_text":
+        result = LLMExpressionResult(
+            result_id=result_id,
+            task_id=task.task_id,
+            reading_id=runtime.reading_id,
+            text=provider_text,
+            raw_thinking=raw_thinking,
+            provider=provider,
+            model=model,
+        )
+    elif execution_mode == "ollama":
+        result = render_ollama_expression_result(
+            result_id=result_id,
+            task=task,
+            runtime=runtime,
+        )
+    else:
+        result = render_local_expression_result(
+            result_id=result_id,
+            task=task,
+            runtime=runtime,
+            provider=provider,
+            model=model,
+        )
+    acceptance = accept_expression_result(
+        result_id=acceptance_id,
+        task=task,
+        result=result,
+        runtime=runtime,
+    )
+    telemetry = build_expression_telemetry(
+        telemetry_id=f"telemetry:{result_id}",
+        task=task,
+        result=result,
+        acceptance=acceptance,
+        execution_mode=execution_mode,
+    )
+    return task, result, acceptance, telemetry
 
 
 def create_app() -> FastAPI:
@@ -109,6 +170,66 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "native_bazi_runtime_uses_v40_engine_skeleton_without_v30_runtime",
+        }
+
+    @app.post(f"{API_PREFIX}/readings/native-report")
+    def native_reading_report(payload: NativeReadingReportRequest) -> dict[str, object]:
+        runtime = build_native_bazi_runtime(
+            request_id=payload.request_id,
+            reading_id=payload.reading_id,
+            chart=payload.chart_facts,
+            user_question=payload.user_question,
+            topic=payload.topic,
+            role_key=payload.role_key,
+        )
+        try:
+            task, result, acceptance, telemetry = _build_expression_bundle(
+                task_id=f"task:{payload.reading_id}:report",
+                result_id=f"result:{payload.reading_id}:report",
+                acceptance_id=f"acceptance:{payload.reading_id}:report",
+                runtime=runtime,
+                role_key=payload.role_key,
+                topic=payload.topic,
+                execution_mode=payload.execution_mode,
+                provider_text=payload.provider_text,
+                provider=payload.provider,
+                model=payload.model,
+                raw_thinking=payload.raw_thinking,
+            )
+        except OllamaExpressionError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
+        enriched_runtime = runtime.model_copy(
+            update={
+                "expression_task": task,
+                "expression_result": result,
+                "acceptance_result": acceptance,
+                "expression_telemetry": telemetry,
+            }
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_runtime(enriched_runtime)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.native_reading_report_response.v1",
+            "runtime": enriched_runtime.model_dump(mode="json"),
+            "surface_bundle": enriched_runtime.surface_bundle.model_dump(mode="json") if enriched_runtime.surface_bundle else {},
+            "accepted_text": acceptance.accepted_text,
+            "accepted": acceptance.status.value == "accepted",
+            "expression": {
+                "task": task.model_dump(mode="json"),
+                "result": result.model_dump(mode="json"),
+                "acceptance": acceptance.model_dump(mode="json"),
+                "telemetry": telemetry.model_dump(mode="json"),
+            },
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "native_reading_report_is_product_runtime_entry_without_llm_verdict_authority",
         }
 
     @app.post(f"{API_PREFIX}/synthetic/cases/from-seeds")
@@ -383,52 +504,22 @@ def create_app() -> FastAPI:
 
     @app.post(f"{API_PREFIX}/expression/from-runtime")
     def expression_from_runtime(payload: ExpressionFromRuntimeRequest) -> dict[str, object]:
-        task = build_expression_task_from_runtime(
-            task_id=payload.task_id,
-            runtime=payload.runtime,
-            role_key=payload.role_key,
-            topic=payload.topic,
-        )
-        if payload.execution_mode == "provider_text":
-            result = LLMExpressionResult(
+        try:
+            task, result, acceptance, telemetry = _build_expression_bundle(
+                task_id=payload.task_id,
                 result_id=payload.result_id,
-                task_id=task.task_id,
-                reading_id=payload.runtime.reading_id,
-                text=payload.provider_text,
-                raw_thinking=payload.raw_thinking,
-                provider=payload.provider,
-                model=payload.model,
-            )
-        elif payload.execution_mode == "ollama":
-            try:
-                result = render_ollama_expression_result(
-                    result_id=payload.result_id,
-                    task=task,
-                    runtime=payload.runtime,
-                )
-            except OllamaExpressionError as exc:
-                raise HTTPException(status_code=503, detail=str(exc)) from exc
-        else:
-            result = render_local_expression_result(
-                result_id=payload.result_id,
-                task=task,
+                acceptance_id=payload.acceptance_id,
                 runtime=payload.runtime,
+                role_key=payload.role_key,
+                topic=payload.topic,
+                execution_mode=payload.execution_mode,
+                provider_text=payload.provider_text,
                 provider=payload.provider,
                 model=payload.model,
+                raw_thinking=payload.raw_thinking,
             )
-        acceptance = accept_expression_result(
-            result_id=payload.acceptance_id,
-            task=task,
-            result=result,
-            runtime=payload.runtime,
-        )
-        telemetry = build_expression_telemetry(
-            telemetry_id=f"telemetry:{payload.result_id}",
-            task=task,
-            result=result,
-            acceptance=acceptance,
-            execution_mode=payload.execution_mode,
-        )
+        except OllamaExpressionError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
         return {
             "version": "v40.expression_from_runtime_response.v1",
             "task": task.model_dump(mode="json"),

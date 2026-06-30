@@ -150,12 +150,20 @@ accepted expression telemetry enters MetricSummary and release gate
 rejected expression telemetry blocks LLM gate
 ```
 
-## Next Phase
+## Phase 19 Handoff
 
-Phase 19 should connect this into the product runtime:
+Phase 19 connected this into the product runtime:
 
 ```text
 report-first user result endpoint with optional execution_mode=ollama
+RuntimeResult binds expression task/result/acceptance/telemetry
+provider_text mode for external expression acceptance
+no fallback when explicit Ollama execution is unavailable
+```
+
+Still open after Phase 19:
+
+```text
 conversation seed generation after accepted report output
 expression telemetry persistence/history
 live streaming of safe public thinking lines

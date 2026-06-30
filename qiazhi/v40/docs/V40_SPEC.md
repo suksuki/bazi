@@ -357,6 +357,14 @@ docs/V40_PHASE18_LLM_OBSERVABILITY_AND_EVALUATION.md
 
 本阶段还新增 Ollama 模型发现：`GET /api/v40/expression/provider/ollama/models` 读取 `/api/tags`，Admin 通过 `/admin/v40/api/llm` 与 `/admin/v40/api/llm-models` 展示当前模型、effective thinking token/timeout 和模型列表。该能力只读，不写 V30，不写 V40 production。
 
+2026-06-30 Phase 19 已启动：
+
+```text
+docs/V40_PHASE19_NATIVE_REPORT_RUNTIME.md
+```
+
+本阶段新增第一个产品侧 V40 测算入口：`POST /api/v40/readings/native-report`。它一次性运行 native Bazi runtime、expression、acceptance 和 telemetry，并把 `expression_task / expression_result / acceptance_result / expression_telemetry` 绑定回 `RuntimeResult`。调用者可以选择 `execution_mode=local|provider_text|ollama`；如果请求 Ollama 且模型不可用，接口返回 `503`，不使用本地 fallback。该入口仍不读 V30、不写 V30、不允许 LLM 改 Verdict、不允许 LLM 创建 chart facts。
+
 ## V40 不做的事
 
 本阶段不做：

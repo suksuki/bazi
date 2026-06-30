@@ -95,6 +95,31 @@ class NativeBaziRuntimeRequest(V40Model):
     boundary: str = "native_bazi_runtime_request_uses_v40_chart_facts_without_v30_runtime"
 
 
+class NativeReadingReportRequest(V40Model):
+    version: str = "v40.native_reading_report_request.v1"
+    request_id: str
+    reading_id: str
+    chart_facts: BaziChartFacts
+    user_question: str = ""
+    topic: Topic = Topic.OVERVIEW
+    role_key: RoleKey = "user"
+    execution_mode: str = "local"
+    provider_text: str = ""
+    provider: str = "local_expression_adapter"
+    model: str = "v40.expression.contract.v1"
+    raw_thinking: str = ""
+    persist: bool = False
+    boundary: str = "native_reading_report_runs_runtime_and_expression_without_v30_state"
+
+    @model_validator(mode="after")
+    def _report_mode_boundary(self) -> "NativeReadingReportRequest":
+        if self.execution_mode not in {"local", "provider_text", "ollama"}:
+            raise ValueError("report execution_mode must be local, provider_text, or ollama")
+        if self.execution_mode == "provider_text" and not self.provider_text.strip():
+            raise ValueError("provider_text mode requires provider_text")
+        return self
+
+
 class SyntheticCasesFromSeedsRequest(V40Model):
     version: str = "v40.synthetic_cases_from_seeds_request.v1"
     seeds: list[SyntheticCaseSeed]
