@@ -54,6 +54,7 @@ docs/V40_PHASE32_TRAINING_EXAMPLE_REPLAY.md
 docs/V40_PHASE33_TRAINING_REPLAY_BATCH.md
 docs/V40_PHASE34_PROJECT_STATUS_DASHBOARD.md
 docs/V40_PHASE35_REPLAY_BATCH_CANDIDATE_WEIGHT.md
+docs/V40_PHASE36_RELEASE_READINESS_EVIDENCE_BATCHES.md
 ```
 
 Initial principle:
@@ -75,5 +76,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 35: Replay Batch Candidate Weight Gate
+Phase 36: Release Readiness Evidence Aggregation
 ```

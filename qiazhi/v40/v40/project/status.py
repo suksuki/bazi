@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 35
-CURRENT_PHASE_NAME = "Replay Batch Candidate Weight Gate"
+CURRENT_PHASE = 36
+CURRENT_PHASE_NAME = "Release Readiness Evidence Aggregation"
 
 
 @dataclass(frozen=True)
@@ -23,9 +23,9 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="architecture",
         label="架构主线",
-        percent=86,
+        percent=88,
         status="on_track",
-        evidence_keys=("runtime_records", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions"),
+        evidence_keys=("runtime_records", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions", "release_readiness"),
         next_step="把 candidate weight 来源、风险和回滚路径在 Admin 中解释清楚。",
     ),
     CompletionDomain(
@@ -39,15 +39,15 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="training_validation",
         label="训练验证闭环",
-        percent=68,
+        percent=72,
         status="accelerating",
-        evidence_keys=("training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions"),
-        next_step="让 release readiness 同时聚合 evaluation batch 与 replay batch。",
+        evidence_keys=("training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions", "release_readiness"),
+        next_step="把 readiness 风险、证据来源和激活条件展示到 Admin。",
     ),
     CompletionDomain(
         key="v30_replacement",
         label="替代 V30",
-        percent=45,
+        percent=47,
         status="needs_more_runtime_cases",
         evidence_keys=("shadow_compare_runs", "evaluation_batches", "release_readiness"),
         next_step="增加 V30 shadow compare、真实案例回归和迁移验收。",
@@ -62,8 +62,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "25-27", "label": "紫微 Domain Lens 与命理师专业视角", "status": "complete"},
     {"range": "28-33", "label": "命理师校准、训练样本、replay 与 replay batch", "status": "complete"},
     {"range": "34", "label": "完成度实时控制面", "status": "complete"},
-    {"range": "35", "label": "Replay batch -> candidate weight 前置门禁", "status": "active"},
-    {"range": "36+", "label": "Release readiness 聚合、Admin 风险展示、V30 迁移验收", "status": "planned"},
+    {"range": "35", "label": "Replay batch -> candidate weight 前置门禁", "status": "complete"},
+    {"range": "36", "label": "Release readiness 聚合 evaluation/replay evidence", "status": "active"},
+    {"range": "37+", "label": "Admin 风险展示、V30 shadow compare、迁移验收", "status": "planned"},
 )
 
 
@@ -87,10 +88,10 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "Phase36: release readiness 同时聚合 evaluation batch 与 replay batch",
             "Phase37: Admin 展示训练候选版本来源、风险和回滚路径",
             "Phase38: V30 shadow compare 扩大到真实运行样本",
             "Phase39: report-first UI 与命理师校准进入 beta 验收",
+            "Phase40: V30 replacement readiness closeout",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

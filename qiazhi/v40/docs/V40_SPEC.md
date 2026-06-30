@@ -499,6 +499,14 @@ docs/V40_PHASE35_REPLAY_BATCH_CANDIDATE_WEIGHT.md
 
 本阶段把通过的 `TrainingReplayBatchSummary` 接入候选权重登记：`POST /api/v40/weights/candidates/from-replay-batch` 会生成 `GlobalWeightVersion(active=false)`，并可保存到 `v40_global_weight_versions`。该入口要求 replay batch 已 approve、不能允许 production write、且必须有 replay evidence；它只把训练反馈验证结果变成可审计的候选版本，不激活权重、不改用户报告、不写 V30。
 
+2026-06-30 Phase 36 已启动：
+
+```text
+docs/V40_PHASE36_RELEASE_READINESS_EVIDENCE_BATCHES.md
+```
+
+本阶段新增 `build_release_readiness_from_evidence_batches` 与 `POST /api/v40/release-readiness/from-evidence-batches`，把 `EvaluationBatchSummary` 和 `TrainingReplayBatchSummary` 一起聚合进 `ReleaseReadinessSummary`。新入口要求 evaluation evidence 与 replay evidence 同时存在且都 approve，平均分达到阈值且没有失败原因时才 approve；缺任一证据只给 `needs_review`。旧 `from-batches` evaluation-only 接口保留兼容。
+
 ## V40 不做的事
 
 本阶段不做：

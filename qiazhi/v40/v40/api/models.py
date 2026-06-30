@@ -145,6 +145,24 @@ class ReleaseReadinessFromBatchesRequest(V40Model):
     boundary: str = "release_readiness_request_aggregates_batches_without_activation"
 
 
+class ReleaseReadinessFromEvidenceBatchesRequest(V40Model):
+    version: str = "v40.release_readiness_from_evidence_batches_request.v1"
+    readiness_id: str
+    candidate_version: str
+    evaluation_batches: list[EvaluationBatchSummary] = Field(default_factory=list)
+    replay_batches: list[TrainingReplayBatchSummary] = Field(default_factory=list)
+    persist: bool = True
+    boundary: str = "release_readiness_request_aggregates_evaluation_and_replay_batches_without_activation"
+
+    @model_validator(mode="after")
+    def _readiness_evidence_boundary(self) -> "ReleaseReadinessFromEvidenceBatchesRequest":
+        if not self.readiness_id.strip():
+            raise ValueError("Release readiness evidence request requires readiness_id")
+        if not self.candidate_version.strip():
+            raise ValueError("Release readiness evidence request requires candidate_version")
+        return self
+
+
 class WeightActivationReviewRequest(V40Model):
     version: str = "v40.weight_activation_review_request.v1"
     review_id: str

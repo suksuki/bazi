@@ -14,6 +14,7 @@ from v40.evaluation import build_training_replay_batch_summary, replay_training_
 from v40.storage import resolve_v40_database_config
 from v40.synthetic import load_synthetic_seeds
 from v40.training import build_candidate_weight_version_from_replay_batch, build_training_example_from_labels
+from v40.project import build_project_status
 
 
 def _runtime():
@@ -135,6 +136,7 @@ def test_phase35_replay_batch_candidate_weight_boundary_is_v40_only() -> None:
     assert "build_candidate_weight_version_from_replay_batch" in candidate
     assert "/weights/candidates/from-replay-batch" in app_source
     assert "CandidateWeightFromReplayBatchRequest" in models
-    assert "CURRENT_PHASE = 35" in project_status
+    assert build_project_status()["current_phase"] >= 35
+    assert "Replay batch -> candidate weight" in project_status
     assert "writes_v40_production" in app_source
     assert "v30_" not in candidate

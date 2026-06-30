@@ -20,6 +20,7 @@ from v40.api.models import (
     PractitionerCalibrationRequest,
     PractitionerLensActionRequest,
     ReleaseReadinessFromBatchesRequest,
+    ReleaseReadinessFromEvidenceBatchesRequest,
     SyntheticCasesFromSeedsRequest,
     TrainingExampleFromReadingRequest,
     TrainingExampleReplayRequest,
@@ -36,6 +37,7 @@ from v40.conversation import build_conversation_seeds, build_conversation_turn, 
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
+    build_release_readiness_from_evidence_batches,
     build_shadow_compare_result,
     build_training_replay_batch_summary,
     evaluate_cases_against_runtime,
@@ -1025,6 +1027,31 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "release_readiness_aggregated_without_activation",
+        }
+
+    @app.post(f"{API_PREFIX}/release-readiness/from-evidence-batches")
+    def build_release_readiness_from_mixed_evidence(payload: ReleaseReadinessFromEvidenceBatchesRequest) -> dict[str, object]:
+        summary = build_release_readiness_from_evidence_batches(
+            readiness_id=payload.readiness_id,
+            candidate_version=payload.candidate_version,
+            evaluation_batches=payload.evaluation_batches,
+            replay_batches=payload.replay_batches,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_release_readiness(summary)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.release_readiness_from_evidence_batches_response.v1",
+            "summary": summary.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "release_readiness_aggregates_evaluation_and_replay_batches_without_activation",
         }
 
     @app.get(f"{API_PREFIX}/release-readiness")
