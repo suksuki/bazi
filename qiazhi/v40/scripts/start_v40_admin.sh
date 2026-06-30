@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [ -f ".env.v40.local" ]; then
+  set -a
+  . ".env.v40.local"
+  set +a
+fi
+
 export V40_ADMIN_HOST="${V40_ADMIN_HOST:-127.0.0.1}"
 export V40_ADMIN_PORT="${V40_ADMIN_PORT:-9041}"
 export V40_API_BASE="${V40_API_BASE:-http://127.0.0.1:9040}"

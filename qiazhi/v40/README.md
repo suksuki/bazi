@@ -35,6 +35,7 @@ docs/V40_PHASE13_NATIVE_DECISION_OUTPUT_RUNTIME.md
 docs/V40_PHASE14_NATIVE_BAZI_FACT_SIGNAL_ADAPTERS.md
 docs/V40_PHASE15_NATIVE_BATCH_EVALUATION.md
 docs/V40_PHASE16_LLM_EXPRESSION_ACCEPTANCE.md
+docs/V40_PHASE17_OLLAMA_EXPRESSION_PROVIDER.md
 ```
 
 Initial principle:
@@ -56,5 +57,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 16: LLM Expression Acceptance
+Phase 17: Ollama Expression Provider aligned with V30 thinking transport
 ```

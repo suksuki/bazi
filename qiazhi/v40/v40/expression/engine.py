@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 from v40.contracts.base import RoleKey, Topic
 from v40.contracts.output import AcceptanceResult, AcceptanceStatus, LLMExpressionResult, LLMExpressionTask
 from v40.contracts.runtime import RuntimeResult
@@ -185,23 +187,53 @@ def _verdict_mutation_detected(*, task: LLMExpressionTask, text: str) -> bool:
         return False
     normalized = _normalize(text)
     for assertion in task.allowed_assertions:
-        tokens = _meaningful_tokens(assertion)
-        if tokens and all(token in normalized for token in tokens[:3]):
+        if _assertion_preserved(assertion=assertion, normalized_text=normalized):
             return False
     return True
 
 
-def _meaningful_tokens(text: str) -> list[str]:
-    normalized = _normalize(text)
-    chunks = [
-        chunk
-        for separator in ["，", "。", "；", "、", "：", " ", "\n", "\t"]
-        for chunk in normalized.split(separator)
-    ]
-    tokens = [chunk for chunk in chunks if len(chunk) >= 2]
-    if tokens:
-        return tokens[:4]
-    return [normalized[:8]] if normalized else []
+def _assertion_preserved(*, assertion: str, normalized_text: str) -> bool:
+    normalized_assertion = _normalize(assertion)
+    if not normalized_assertion:
+        return False
+    if normalized_assertion in normalized_text:
+        return True
+    windows = _semantic_windows(normalized_assertion)
+    if not windows:
+        return False
+    hits = sum(1 for window in windows if window in normalized_text)
+    if len(normalized_assertion) <= 10:
+        return hits >= max(2, int(len(windows) * 0.55))
+    return hits >= max(5, int(len(windows) * 0.42))
+
+
+def _semantic_windows(text: str) -> list[str]:
+    compact = _remove_low_value_words(text)
+    if len(compact) < 2:
+        return []
+    window_size = 2 if len(compact) <= 18 else 3
+    return _unique([compact[index : index + window_size] for index in range(0, len(compact) - window_size + 1)])
+
+
+def _remove_low_value_words(text: str) -> str:
+    compact = _normalize(text)
+    for word in (
+        "建议",
+        "当前",
+        "目前",
+        "可以",
+        "需要",
+        "如果",
+        "后续",
+        "这个",
+        "一个",
+        "不要",
+        "直接",
+        "等同于",
+        "优先",
+    ):
+        compact = compact.replace(word, "")
+    return re.sub(r"[^\u4e00-\u9fffA-Za-z0-9]", "", compact)
 
 
 def _hits(text: str, tokens: list[str]) -> list[str]:

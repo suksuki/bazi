@@ -36,7 +36,14 @@ from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.storage import V40PostgresRepository
 from v40.storage.config import v40_repository_configured
 from v40.synthetic import build_evaluation_cases_from_seeds
-from v40.expression import accept_expression_result, build_expression_task_from_runtime, render_local_expression_result
+from v40.expression import (
+    OllamaExpressionError,
+    accept_expression_result,
+    build_expression_task_from_runtime,
+    render_local_expression_result,
+    render_ollama_expression_result,
+    resolve_ollama_expression_config,
+)
 from v40.training import (
     build_candidate_weight_version_from_batch,
     build_training_impact_from_evaluation,
@@ -379,7 +386,7 @@ def create_app() -> FastAPI:
             role_key=payload.role_key,
             topic=payload.topic,
         )
-        if payload.provider_text.strip():
+        if payload.execution_mode == "provider_text":
             result = LLMExpressionResult(
                 result_id=payload.result_id,
                 task_id=task.task_id,
@@ -389,6 +396,15 @@ def create_app() -> FastAPI:
                 provider=payload.provider,
                 model=payload.model,
             )
+        elif payload.execution_mode == "ollama":
+            try:
+                result = render_ollama_expression_result(
+                    result_id=payload.result_id,
+                    task=task,
+                    runtime=payload.runtime,
+                )
+            except OllamaExpressionError as exc:
+                raise HTTPException(status_code=503, detail=str(exc)) from exc
         else:
             result = render_local_expression_result(
                 result_id=payload.result_id,
@@ -409,9 +425,30 @@ def create_app() -> FastAPI:
             "result": result.model_dump(mode="json"),
             "acceptance": acceptance.model_dump(mode="json"),
             "accepted": acceptance.status.value == "accepted",
+            "execution_mode": payload.execution_mode,
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "expression_from_runtime_allows_llm_language_but_not_verdict_authority",
+        }
+
+    @app.get(f"{API_PREFIX}/expression/provider/ollama")
+    def ollama_expression_provider_status() -> dict[str, object]:
+        config = resolve_ollama_expression_config()
+        return {
+            "version": "v40.ollama_expression_provider_status.v1",
+            "provider": config.provider,
+            "base_url": config.base_url,
+            "model": config.model,
+            "timeout_seconds": config.timeout_seconds,
+            "effective_thinking_timeout_seconds": config.effective_thinking_timeout_seconds,
+            "temperature": config.temperature,
+            "max_tokens": config.max_tokens,
+            "effective_thinking_max_tokens": config.effective_thinking_max_tokens,
+            "enabled": config.enabled,
+            "execute": config.execute,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "ollama_expression_provider_status_exposes_v40_llm_config_without_secrets",
         }
 
     @app.get(f"{API_PREFIX}/training/labels")

@@ -337,6 +337,16 @@ docs/V40_PHASE16_LLM_EXPRESSION_ACCEPTANCE.md
 
 本阶段新增 LLM expression acceptance：从 RuntimeResult 生成 `LLMExpressionTask`，接收本地表达或外部 provider 文本为 `LLMExpressionResult`，再由 `AcceptanceResult` 扫描工程语言泄漏、越界断语、chart fact mutation 和 verdict mutation。LLM 仍只负责表达，不拥有 verdict authority。
 
+2026-06-30 Phase 17 已启动：
+
+```text
+docs/V40_PHASE17_OLLAMA_EXPRESSION_PROVIDER.md
+```
+
+本阶段把 expression contract 接到真实 Ollama provider。`execution_mode=ollama` 会读取 V40 独立的 `V40_LLM_*` 配置，并按 V30 `ollama_native` thinking 链路调用 `/api/chat`：`think=true`、`messages=system+user`、`num_predict` 在 thinking 模式下至少 2400、timeout 至少 180 秒。返回 `LLMExpressionResult` 后仍必须通过 `AcceptanceResult`。如果模型不可用，API 明确返回不可用，不做本地表达 fallback。
+
+本阶段同步修正 expression acceptance：LLM 可以把产品结论改写得更自然，但必须保留核心命理术语和建议语义。验收不再要求逐字模板匹配；它以允许断言的关键词/短语覆盖来判断是否保留 Verdict，同时继续硬拒绝工程语言泄漏、越界断语和 chart fact mutation。
+
 ## V40 不做的事
 
 本阶段不做：

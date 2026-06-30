@@ -163,10 +163,21 @@ no V40 production write
 
 ## Next Phase
 
-Phase 17 should add:
+Phase 17 added:
 
 ```text
 real Ollama/Gemma provider adapter
+execution_mode = ollama
+provider status endpoint
+V30-aligned /api/chat + think=true transport
+thinking token/timeout floor for Gemma4
+semantic assertion-preservation acceptance instead of brittle exact-template matching
+no fallback when model execution is requested
+```
+
+Phase 18 should add:
+
+```text
 streaming thinking/display contract
 Admin and UI controls for expression runs
 expression acceptance metrics in evaluation

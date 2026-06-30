@@ -142,8 +142,17 @@ class ExpressionFromRuntimeRequest(V40Model):
     runtime: RuntimeResult
     role_key: RoleKey | None = None
     topic: Topic | None = None
+    execution_mode: str = "local"
     provider_text: str = ""
     provider: str = "local_expression_adapter"
     model: str = "v40.expression.contract.v1"
     raw_thinking: str = ""
     boundary: str = "expression_from_runtime_rewrites_language_without_verdict_or_chart_fact_mutation"
+
+    @model_validator(mode="after")
+    def _expression_mode_boundary(self) -> "ExpressionFromRuntimeRequest":
+        if self.execution_mode not in {"local", "provider_text", "ollama"}:
+            raise ValueError("expression execution_mode must be local, provider_text, or ollama")
+        if self.execution_mode == "provider_text" and not self.provider_text.strip():
+            raise ValueError("provider_text mode requires provider_text")
+        return self
