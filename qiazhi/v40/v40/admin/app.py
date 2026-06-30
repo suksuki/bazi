@@ -59,6 +59,18 @@ def create_admin_app() -> FastAPI:
     def activation_executions() -> dict[str, object]:
         return _fetch_json("/api/v40/weights/activation-executions?limit=8")
 
+    @app.get(f"{ADMIN_PREFIX}/api/weight-risk")
+    def weight_risk() -> dict[str, object]:
+        weights = _fetch_json("/api/v40/weights/candidates?limit=20")
+        readiness = _fetch_json("/api/v40/release-readiness?limit=20")
+        return {
+            "version": "v40.admin_weight_risk_response.v1",
+            "summary": _build_weight_risk_summary(weights, readiness),
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "admin_weight_risk_reads_candidate_weight_and_readiness_without_activation",
+        }
+
     @app.get(f"{ADMIN_PREFIX}/api/llm")
     def llm_status() -> dict[str, object]:
         return _fetch_json("/api/v40/expression/provider/ollama")
@@ -80,6 +92,64 @@ def _fetch_json(path: str) -> dict[str, object]:
             return json.loads(response.read().decode("utf-8"))
     except Exception as exc:
         raise HTTPException(status_code=502, detail="V40 runtime API is unavailable") from exc
+
+
+def _build_weight_risk_summary(weights_payload: dict[str, object], readiness_payload: dict[str, object]) -> dict[str, object]:
+    weights = [item for item in weights_payload.get("weights", []) if isinstance(item, dict)]
+    readiness_rows = [item for item in readiness_payload.get("readiness", []) if isinstance(item, dict)]
+    readiness_by_id = {str(item.get("readiness_id", "")): item for item in readiness_rows}
+    records = [_weight_risk_record(weight, readiness_by_id) for weight in weights]
+    return {
+        "candidate_count": len(records),
+        "ready_count": sum(1 for record in records if record["risk_level"] == "ready"),
+        "review_count": sum(1 for record in records if record["risk_level"] == "review"),
+        "blocked_count": sum(1 for record in records if record["risk_level"] == "blocked"),
+        "records": records,
+    }
+
+
+def _weight_risk_record(weight: dict[str, object], readiness_by_id: dict[str, dict[str, object]]) -> dict[str, object]:
+    weight_json = weight.get("weight_json")
+    if not isinstance(weight_json, dict):
+        weight_json = {}
+    weight_id = str(weight.get("weight_version_id") or weight_json.get("weight_version_id") or "")
+    release_gate_id = str(weight.get("release_gate_id") or weight_json.get("release_gate_id") or "")
+    rollback_version_id = str(weight.get("rollback_version_id") or weight_json.get("rollback_version_id") or "")
+    active = bool(weight.get("active") or weight_json.get("active"))
+    linked_readiness = readiness_by_id.get(release_gate_id)
+    recommendation = str(linked_readiness.get("recommendation", "")) if linked_readiness else ""
+    reasons: list[str] = []
+    risk_level = "ready"
+    if not linked_readiness:
+        reasons.append("release_gate_id 未匹配 release_readiness")
+        risk_level = "review"
+    elif recommendation in {"reject", "rollback"}:
+        reasons.append("release readiness 已拒绝")
+        risk_level = "blocked"
+    elif recommendation != "approve":
+        reasons.append("release readiness 仍需复核")
+        risk_level = "review"
+    if not rollback_version_id:
+        reasons.append("缺少 rollback_version_id")
+        if risk_level == "ready":
+            risk_level = "review"
+    if active:
+        reasons.append("当前版本已激活，继续保留回滚审计")
+    next_action = "可进入显式激活审核" if risk_level == "ready" else "补齐 readiness 关联、风险说明或 rollback 后再审核"
+    if risk_level == "blocked":
+        next_action = "停止激活，回到 evaluation/replay 修复"
+    return {
+        "weight_version_id": weight_id,
+        "source_training_run_id": str(weight.get("source_training_run_id") or weight_json.get("source_training_run_id") or ""),
+        "release_gate_id": release_gate_id,
+        "active": active,
+        "rollback_version_id": rollback_version_id,
+        "readiness_id": str(linked_readiness.get("readiness_id", "")) if linked_readiness else "",
+        "readiness_recommendation": recommendation,
+        "risk_level": risk_level,
+        "reasons": reasons,
+        "next_action": next_action,
+    }
 
 
 def _console_html() -> str:
@@ -178,6 +248,7 @@ def _console_html() -> str:
     <div class="sections">
       <section><div class="section-head"><h2>Batch</h2><span class="pill">latest</span></div><div class="list" id="batches"></div></section>
       <section><div class="section-head"><h2>Readiness</h2><span class="pill">release</span></div><div class="list" id="readiness"></div></section>
+      <section><div class="section-head"><h2>Candidate Risk</h2><span class="pill">source · rollback</span></div><div class="list" id="weight-risk"></div></section>
       <section><div class="section-head"><h2>Training Feedback</h2><span class="pill">closed loop</span></div><div class="list" id="training"></div></section>
       <section><div class="section-head"><h2>Weight</h2><span class="pill">candidate</span></div><div class="list" id="weights"></div></section>
       <section><div class="section-head"><h2>Activation</h2><span class="pill">review</span></div><div class="list" id="activation"></div></section>
@@ -187,16 +258,17 @@ def _console_html() -> str:
   <script>
     const $ = (id) => document.getElementById(id);
     const get = (path) => fetch(path).then((r) => r.json());
-    const cls = (value) => value === "approve" || value === true ? "ok" : value === "reject" ? "bad" : "review";
+    const cls = (value) => value === "approve" || value === "ready" || value === true ? "ok" : value === "reject" || value === "blocked" ? "bad" : "review";
     function row(title, meta, value) {
       return `<div class="row"><strong>${title || "-"}</strong><span>${meta || ""}</span><span class="${cls(value)}">${value ?? ""}</span></div>`;
     }
     async function load() {
-      const [project, summary, batches, readiness, weights, reviews, executions, llm, models] = await Promise.all([
+      const [project, summary, batches, readiness, risk, weights, reviews, executions, llm, models] = await Promise.all([
         get("/admin/v40/api/project-status"),
         get("/admin/v40/api/summary"),
         get("/admin/v40/api/batches"),
         get("/admin/v40/api/readiness"),
+        get("/admin/v40/api/weight-risk"),
         get("/admin/v40/api/weights"),
         get("/admin/v40/api/activation-reviews"),
         get("/admin/v40/api/activation-executions"),
@@ -219,6 +291,7 @@ def _console_html() -> str:
         .map((key) => `<div class="metric"><span>${key}</span><strong>${counts[key] ?? 0}</strong></div>`).join("");
       $("batches").innerHTML = (batches.batches || []).map((item) => row(item.batch_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");
       $("readiness").innerHTML = (readiness.readiness || []).map((item) => row(item.readiness_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");
+      $("weight-risk").innerHTML = (risk.summary?.records || []).map((item) => row(item.weight_version_id, `${item.release_gate_id || "未关联"} · ${item.next_action}`, item.risk_level)).join("") || row("暂无候选权重", "", "review");
       const latestExamples = summary.summary?.latest_training_examples || [];
       const latestOverlays = summary.summary?.latest_local_overlays || [];
       const latestReplays = summary.summary?.latest_training_example_replays || [];

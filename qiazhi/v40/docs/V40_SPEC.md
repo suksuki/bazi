@@ -507,6 +507,14 @@ docs/V40_PHASE36_RELEASE_READINESS_EVIDENCE_BATCHES.md
 
 本阶段新增 `build_release_readiness_from_evidence_batches` 与 `POST /api/v40/release-readiness/from-evidence-batches`，把 `EvaluationBatchSummary` 和 `TrainingReplayBatchSummary` 一起聚合进 `ReleaseReadinessSummary`。新入口要求 evaluation evidence 与 replay evidence 同时存在且都 approve，平均分达到阈值且没有失败原因时才 approve；缺任一证据只给 `needs_review`。旧 `from-batches` evaluation-only 接口保留兼容。
 
+2026-06-30 Phase 37 已启动：
+
+```text
+docs/V40_PHASE37_ADMIN_CANDIDATE_RISK.md
+```
+
+本阶段新增 Admin 只读 read model：`GET /admin/v40/api/weight-risk`。它把候选权重、readiness 推荐、rollback version 和下一步动作合成 `ready / review / blocked` 风险摘要，并在 Admin 页面展示 `Candidate Risk` 面板。该能力只读，不激活权重、不写 V40 production、不写 V30。
+
 ## V40 不做的事
 
 本阶段不做：
