@@ -2,11 +2,11 @@ from __future__ import annotations
 
 from v40.contracts.base import AssertionLevel, EngineKey, EngineMode, Polarity, RoleKey, Topic
 from v40.contracts.chart import BaziChartFacts
-from v40.contracts.decision import AdvicePlan, DecisionVerdict, ProbeCandidate
 from v40.contracts.engine import EnginePlan, EnginePlanItem, EngineRunRequest, EngineRunResult, MultiEngineRunResult
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
-from v40.presentation import build_product_projection
+from v40.decision import build_decision_output
+from v40.presentation import build_product_projection, build_surface_bundle
 
 
 STEM_ELEMENTS = {
@@ -112,22 +112,38 @@ def build_native_bazi_runtime(
         results=[engine_result],
         signal_registry=registry,
     )
-    verdicts = _build_verdicts(reading_id=reading_id, chart=chart, topic=topic, signals=engine_result.signals)
-    advice_plans = _build_advice(reading_id=reading_id, verdicts=verdicts)
-    probes = _build_probes(reading_id=reading_id, topic=topic, verdicts=verdicts)
+    decision_output = build_decision_output(
+        reading_id=reading_id,
+        registry=registry,
+        topic=topic,
+        role_key=role_key,
+        user_question=user_question,
+    )
+    product_projection = build_product_projection(
+        reading_id=reading_id,
+        role_key=role_key,
+        verdicts=decision_output.verdicts,
+        advice_plans=decision_output.advice_plans,
+        branches=decision_output.branch_candidates,
+    )
     return RuntimeResult(
         reading_id=reading_id,
         request=request,
         engine_result=multi_engine,
         signal_registry=registry,
-        verdicts=verdicts,
-        advice_plans=advice_plans,
-        probes=probes,
-        product_projection=build_product_projection(
+        decision_input=decision_output.input_bundle,
+        branches=decision_output.branch_candidates,
+        verdicts=decision_output.verdicts,
+        advice_plans=decision_output.advice_plans,
+        probes=decision_output.probes,
+        product_projection=product_projection,
+        surface_bundle=build_surface_bundle(
             reading_id=reading_id,
             role_key=role_key,
-            verdicts=verdicts,
-            advice_plans=advice_plans,
+            projection=product_projection,
+            probes=decision_output.probes,
+            signal_count=len(registry.signals),
+            branch_count=len(decision_output.branch_candidates),
         ),
     )
 
@@ -251,79 +267,6 @@ def _build_signals(
     return signals
 
 
-def _build_verdicts(
-    *,
-    reading_id: str,
-    chart: BaziChartFacts,
-    topic: Topic,
-    signals: list[RuntimeSignal],
-) -> list[DecisionVerdict]:
-    career_signal = next((signal for signal in signals if signal.topic == Topic.CAREER), signals[0])
-    useful_signal = next((signal for signal in signals if signal.topic == Topic.USEFUL_GOD), signals[0])
-    target_topic = topic if topic not in {Topic.OVERVIEW, Topic.UNKNOWN} else Topic.CAREER
-    headline = _headline(topic=target_topic, chart=chart)
-    return [
-        DecisionVerdict(
-            verdict_id=f"verdict:{reading_id}:{target_topic.value}",
-            reading_id=reading_id,
-            topic=target_topic,
-            headline=headline,
-            assertion_level=AssertionLevel.SUPPORTED,
-            confidence=0.64,
-            allowed_assertions=[
-                career_signal.claim,
-                useful_signal.claim,
-            ],
-            evidence_refs=[career_signal.signal_id, useful_signal.signal_id],
-            next_probe_ids=[f"probe:{reading_id}:{target_topic.value}:calibration"],
-        )
-    ]
-
-
-def _build_advice(*, reading_id: str, verdicts: list[DecisionVerdict]) -> list[AdvicePlan]:
-    plans: list[AdvicePlan] = []
-    for verdict in verdicts:
-        plans.append(
-            AdvicePlan(
-                advice_id=f"advice:{verdict.verdict_id}",
-                reading_id=reading_id,
-                topic=verdict.topic,
-                source_verdict_ids=[verdict.verdict_id],
-                action_points=[
-                    "先把当前结论绑定到可验证的现实问题上，再进入细分领域追问。",
-                    "优先观察用神候选是否能在职责、资源、学习或合作中落地。",
-                ],
-                avoid_points=[
-                    "不要把骨架判断当成最终断语；需要结合大运、流年和用户反馈继续校准。"
-                ],
-                condition_points=[
-                    "如果用户提供关键年份或反复事件，再提高对应领域分支权重。"
-                ],
-                priority=verdict.confidence,
-                evidence_refs=verdict.evidence_refs,
-            )
-        )
-    return plans
-
-
-def _build_probes(*, reading_id: str, topic: Topic, verdicts: list[DecisionVerdict]) -> list[ProbeCandidate]:
-    target = verdicts[0] if verdicts else None
-    if target is None:
-        return []
-    return [
-        ProbeCandidate(
-            probe_id=f"probe:{reading_id}:{topic.value}:calibration",
-            reading_id=reading_id,
-            topic=topic if topic not in {Topic.OVERVIEW, Topic.UNKNOWN} else Topic.CAREER,
-            question="最近更能印证的是职责压力、资源支持，还是方向转换？",
-            target_verdict_ids=[target.verdict_id],
-            expected_information_gain=0.72,
-            user_cost=0.28,
-            ask_now=False,
-        )
-    ]
-
-
 def _support_score(*, day_element: str, chart: BaziChartFacts) -> float:
     if day_element == "未知":
         return 0.5
@@ -379,14 +322,3 @@ def _career_claim(*, structure: str, useful_candidates: list[str], pressure_scor
     if pressure_score >= 0.6:
         return f"事业线索以压力转承接为主，适合先看{useful}能否形成资质、规则、平台或稳定交付。"
     return f"事业线索更适合从{useful}的资源与输出方式切入，先稳住主线再判断突破窗口。"
-
-
-def _headline(*, topic: Topic, chart: BaziChartFacts) -> str:
-    labels = {
-        Topic.CAREER: "事业先看压力承接与用神落点",
-        Topic.WEALTH: "财运先看资源转化与风险边界",
-        Topic.RELATIONSHIP: "关系先看互动节奏与边界",
-        Topic.HEALTH: "健康先看压力消耗与作息反馈",
-        Topic.USEFUL_GOD: "用神候选需要在现实反馈中校准",
-    }
-    return f"{chart.day_stem}日主：{labels.get(topic, '命局先看结构、用神与现实校准')}"

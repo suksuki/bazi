@@ -99,10 +99,18 @@ python scripts/v40_artifact_cli.py run-native-seed \
 
 ## 下一阶段
 
-Phase 13 应进入：
+Phase 13 已进入正式产出编排层：
 
 1. V40 原生命理引擎从 skeleton 升级为 fact layer；
-2. Ten-god / useful-god / branch relation 的原生 signal adapter；
-3. Native runtime batch evaluation；
+2. Engine verdict/advice/probe 临时逻辑拆入 DecisionEngine；
+3. ProductProjection 区分用户结果与命理师分支校准；
+4. SurfaceBundle 分离 reading、calibration、conversation、thinking；
+5. Practitioner calibration 进入 TrainingLabelEvent。
+
+Phase 14 应继续：
+
+1. Ten-god / useful-god / branch relation 的原生 signal adapter；
+2. Native runtime batch evaluation；
+3. LLM expression task 执行和 acceptance scan；
 4. Admin Console 增加 native run/synthetic import 操作；
 5. V30 DTO batch export 工具。

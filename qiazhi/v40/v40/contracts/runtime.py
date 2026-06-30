@@ -3,7 +3,7 @@ from __future__ import annotations
 from pydantic import Field, model_validator
 
 from v40.contracts.base import ClientKey, LocaleKey, RoleKey, Topic, V40Model
-from v40.contracts.decision import AdvicePlan, DecisionVerdict, ProbeCandidate
+from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionInputBundle, DecisionVerdict, ProbeCandidate
 from v40.contracts.engine import MultiEngineRunResult
 from v40.contracts.output import ProductProjectionBundle, SurfaceBundle
 from v40.contracts.signal import SignalRegistrySnapshot
@@ -29,6 +29,8 @@ class RuntimeResult(V40Model):
     request: RuntimeRequest
     engine_result: MultiEngineRunResult | None = None
     signal_registry: SignalRegistrySnapshot | None = None
+    decision_input: DecisionInputBundle | None = None
+    branches: list[BranchCandidate] = Field(default_factory=list)
     verdicts: list[DecisionVerdict] = Field(default_factory=list)
     advice_plans: list[AdvicePlan] = Field(default_factory=list)
     probes: list[ProbeCandidate] = Field(default_factory=list)

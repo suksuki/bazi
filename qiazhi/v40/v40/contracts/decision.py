@@ -136,3 +136,35 @@ class ProbeCandidate(V40Model):
         if self.ask_now and self.expected_information_gain <= self.user_cost:
             raise ValueError("ProbeCandidate can ask now only when information gain exceeds user cost")
         return self
+
+
+class DecisionEngineOutput(V40Model):
+    version: str = "v40.decision_engine_output.v1"
+    output_id: str
+    reading_id: str
+    input_bundle: DecisionInputBundle
+    branch_candidates: list[BranchCandidate] = Field(default_factory=list)
+    verdicts: list[DecisionVerdict] = Field(default_factory=list)
+    advice_plans: list[AdvicePlan] = Field(default_factory=list)
+    probes: list[ProbeCandidate] = Field(default_factory=list)
+    policy_version: str = "v40.decision.native_product.v1"
+    llm_decision_authority: bool = False
+    central_brain_decision_authority: bool = False
+    chart_fact_mutation_allowed: bool = False
+    boundary: str = "decision_engine_output_is_product_decision_layer_not_engine_or_llm"
+
+    @model_validator(mode="after")
+    def _decision_output_boundary(self) -> "DecisionEngineOutput":
+        if not self.output_id.strip():
+            raise ValueError("DecisionEngineOutput requires output_id")
+        if not self.verdicts:
+            raise ValueError("DecisionEngineOutput requires verdicts")
+        if not self.advice_plans:
+            raise ValueError("DecisionEngineOutput requires advice_plans")
+        if self.llm_decision_authority:
+            raise ValueError("DecisionEngineOutput cannot grant LLM decision authority")
+        if self.central_brain_decision_authority:
+            raise ValueError("DecisionEngineOutput cannot grant CentralBrain decision authority")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("DecisionEngineOutput cannot mutate chart facts")
+        return self

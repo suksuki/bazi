@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from v40.contracts.base import RoleKey, Topic
-from v40.contracts.decision import AdvicePlan, DecisionVerdict
-from v40.contracts.output import ProductAdviceCard, ProductProjectionBundle, ProductVerdictCard
+from v40.contracts.base import RoleKey, SurfaceKey, Topic
+from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionVerdict, ProbeCandidate
+from v40.contracts.output import BranchCard, ProductAdviceCard, ProductProjectionBundle, ProductVerdictCard, SurfaceBundle
 
 
 def build_product_projection(
@@ -11,6 +11,7 @@ def build_product_projection(
     role_key: RoleKey,
     verdicts: list[DecisionVerdict],
     advice_plans: list[AdvicePlan],
+    branches: list[BranchCandidate] | None = None,
 ) -> ProductProjectionBundle:
     product_verdict_cards = [
         ProductVerdictCard(
@@ -39,13 +40,93 @@ def build_product_projection(
         )
         for advice in advice_plans
     ]
+    branch_cards = _build_branch_cards(role_key=role_key, branches=branches or [])
     return ProductProjectionBundle(
         reading_id=reading_id,
         role_key=role_key,
         verdict_cards=product_verdict_cards,
+        branch_cards=branch_cards,
         advice_cards=product_advice_cards,
-        leakage_scan_passed=_projection_is_clean(product_verdict_cards, product_advice_cards),
+        leakage_scan_passed=_projection_is_clean(product_verdict_cards, branch_cards, product_advice_cards),
     )
+
+
+def build_surface_bundle(
+    *,
+    reading_id: str,
+    role_key: RoleKey,
+    projection: ProductProjectionBundle,
+    probes: list[ProbeCandidate],
+    signal_count: int,
+    branch_count: int,
+) -> SurfaceBundle:
+    surfaces = {
+        SurfaceKey.READING: {
+            "title": "命理测算结果",
+            "verdict_card_ids": [card.card_id for card in projection.verdict_cards],
+            "advice_card_ids": [card.card_id for card in projection.advice_cards],
+            "signal_count": signal_count,
+            "report_first": True,
+        },
+        SurfaceKey.CALIBRATION: {
+            "available": role_key == "practitioner",
+            "branch_card_ids": [card.card_id for card in projection.branch_cards],
+            "branch_count": branch_count,
+            "selection_endpoint": "/api/v40/calibration/practitioner-selection",
+            "auto_open": False,
+        },
+        SurfaceKey.CONVERSATION: {
+            "available": bool(probes),
+            "probe_ids": [probe.probe_id for probe in probes],
+            "auto_start": False,
+            "invited_only": True,
+        },
+        SurfaceKey.THINKING: {
+            "available": False,
+            "requested_only": True,
+            "reason": "V40 separates internal reasoning, user report, and optional dialogue surfaces.",
+        },
+    }
+    return SurfaceBundle(
+        reading_id=reading_id,
+        role_key=role_key,
+        surfaces=surfaces,
+        report_first=True,
+        probe_invited_only=True,
+        conversation_invited_only=True,
+        thinking_requested_only=True,
+    )
+
+
+def _build_branch_cards(*, role_key: RoleKey, branches: list[BranchCandidate]) -> list[BranchCard]:
+    if role_key != "practitioner":
+        return []
+    return [
+        BranchCard(
+            card_id=f"card:{branch.branch_id}",
+            source_branch_id=branch.branch_id,
+            topic=branch.topic,
+            title=f"{_topic_label(branch.topic)}分支 {index}",
+            user_summary=_branch_user_summary(branch),
+            practitioner_summary=_branch_practitioner_summary(branch),
+            key_question=branch.probe_question,
+            confidence_label=_confidence_label(branch.confidence),
+            role_visibility=["practitioner"],
+        )
+        for index, branch in enumerate(branches, start=1)
+    ]
+
+
+def _branch_user_summary(branch: BranchCandidate) -> str:
+    label = _topic_label(branch.topic)
+    return f"{label}当前保留这一种可能：{branch.claim}"
+
+
+def _branch_practitioner_summary(branch: BranchCandidate) -> str:
+    percent = int(round(branch.probability * 100))
+    if branch.needs_probe:
+        return f"权重约{percent}%，需要通过追问或命理师校准拉开分支。"
+    return f"权重约{percent}%，可作为当前主分支或备选分支审阅。"
 
 
 def _role_visibility(role_key: RoleKey) -> list[RoleKey]:
@@ -74,6 +155,21 @@ def _advice_title(topic: Topic) -> str:
         Topic.USEFUL_GOD: "用神建议",
     }
     return labels.get(topic, "行动建议")
+
+
+def _topic_label(topic: Topic) -> str:
+    labels = {
+        Topic.CAREER: "事业",
+        Topic.WEALTH: "财运",
+        Topic.RELATIONSHIP: "关系",
+        Topic.HEALTH: "健康",
+        Topic.TIMING: "时运",
+        Topic.USEFUL_GOD: "用神",
+        Topic.STRUCTURE: "结构",
+        Topic.FAMILY: "亲情",
+        Topic.HIDDEN_ATTRIBUTE: "隐藏线索",
+    }
+    return labels.get(topic, "命局")
 
 
 def _projection_is_clean(*groups: object) -> bool:

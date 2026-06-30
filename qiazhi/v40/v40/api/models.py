@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+from pydantic import Field, model_validator
+
 from v40.contracts.base import V40Model
 from v40.contracts.base import RoleKey
 from v40.contracts.base import Topic
 from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed
 from v40.contracts.evaluation import EvaluationBatchSummary, EvaluationCaseSpec, EvaluationRunResult, ReleaseReadinessSummary
 from v40.contracts.runtime import RuntimeResult
-from v40.contracts.training import GlobalWeightVersion, WeightActivationReview
+from v40.contracts.training import GlobalWeightVersion, LabelTargetType, LabelValue, WeightActivationReview
 
 
 class EvaluationRunFromRuntimeRequest(V40Model):
@@ -96,3 +98,27 @@ class SyntheticCasesFromSeedsRequest(V40Model):
     seeds: list[SyntheticCaseSeed]
     persist: bool = False
     boundary: str = "synthetic_cases_request_builds_evaluation_cases_without_real_world_truth_claim"
+
+
+class PractitionerCalibrationRequest(V40Model):
+    version: str = "v40.practitioner_calibration_request.v1"
+    event_id: str
+    reading_id: str
+    target_type: LabelTargetType = LabelTargetType.BRANCH
+    target_ids: list[str] = Field(default_factory=list)
+    label: LabelValue = LabelValue.SUPPORTS
+    strength: float = Field(default=0.7, ge=0.0, le=1.0)
+    confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    reason: str = ""
+    evidence_refs: list[str] = Field(default_factory=list)
+    created_by_role: RoleKey = "practitioner"
+    persist: bool = True
+    boundary: str = "practitioner_calibration_becomes_training_label_without_chart_fact_mutation"
+
+    @model_validator(mode="after")
+    def _calibration_boundary(self) -> "PractitionerCalibrationRequest":
+        if self.created_by_role not in {"practitioner", "admin"}:
+            raise ValueError("Practitioner calibration requires practitioner or admin role")
+        if not self.target_ids:
+            raise ValueError("Practitioner calibration requires target_ids")
+        return self

@@ -14,7 +14,14 @@ from v40.contracts.base import (
     V40Model,
 )
 from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed
-from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionInputBundle, DecisionVerdict, ProbeCandidate
+from v40.contracts.decision import (
+    AdvicePlan,
+    BranchCandidate,
+    DecisionEngineOutput,
+    DecisionInputBundle,
+    DecisionVerdict,
+    ProbeCandidate,
+)
 from v40.contracts.engine import EnginePlan, EnginePlanItem, EngineRunRequest, EngineRunResult, MultiEngineRunResult
 from v40.contracts.evaluation import (
     EvaluationBatchSummary,
@@ -54,6 +61,7 @@ __all__ = [
     "BranchCard",
     "BaziChartFacts",
     "ClientKey",
+    "DecisionEngineOutput",
     "DecisionInputBundle",
     "DecisionVerdict",
     "EngineKey",

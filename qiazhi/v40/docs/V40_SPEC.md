@@ -305,6 +305,14 @@ docs/V40_PHASE12_NATIVE_BAZI_AND_SYNTHETIC_CASES.md
 
 本阶段新增 `BaziChartFacts`、`SyntheticCaseSeed`、V40 原生 Bazi engine skeleton 和 synthetic case generator。V40 可以在不读取 V30 runtime 的情况下，从已校准 chart facts 生成 signals、verdict、advice、probe 和 product projection，并进入 evaluation loop。
 
+2026-06-30 Phase 13 已启动：
+
+```text
+docs/V40_PHASE13_NATIVE_DECISION_OUTPUT_RUNTIME.md
+```
+
+本阶段把 Phase 12 的临时产出拆成正式 runtime 链路：BaziEngine 只输出 facts/features/signals，SignalRegistry 收集素材，DecisionEngine 生成 branches/verdicts/advice/probes，ProductProjection 和 SurfaceBundle 负责用户端与命理师端展示。命理师校准通过 `TrainingLabelEvent(source=practitioner_selection)` 回流训练闭环，不直接改 chart facts、不直接写全局权重、不写 V30。
+
 ## V40 不做的事
 
 本阶段不做：

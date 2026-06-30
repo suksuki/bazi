@@ -11,6 +11,7 @@ from v40.api.models import (
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
     NativeBaziRuntimeRequest,
+    PractitionerCalibrationRequest,
     ReleaseReadinessFromBatchesRequest,
     SyntheticCasesFromSeedsRequest,
     TrainingImpactFromEvaluationRequest,
@@ -19,7 +20,7 @@ from v40.api.models import (
 )
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.manifest import contract_manifest
-from v40.contracts.training import TrainingLabelEvent
+from v40.contracts.training import LabelSource, TrainingLabelEvent
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
@@ -293,6 +294,40 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "training_label_saved_as_feedback_signal_without_weight_write",
+        }
+
+    @app.post(f"{API_PREFIX}/calibration/practitioner-selection")
+    def save_practitioner_calibration(payload: PractitionerCalibrationRequest) -> dict[str, object]:
+        event = TrainingLabelEvent(
+            event_id=payload.event_id,
+            reading_id=payload.reading_id,
+            source=LabelSource.PRACTITIONER_SELECTION,
+            target_type=payload.target_type,
+            target_ids=payload.target_ids,
+            label=payload.label,
+            strength=payload.strength,
+            confidence=payload.confidence,
+            reason=payload.reason,
+            evidence_refs=payload.evidence_refs,
+            created_by_role=payload.created_by_role,
+            local_only=True,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_training_label_event(event)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.practitioner_calibration_response.v1",
+            "event": event.model_dump(mode="json"),
+            "persisted": persisted,
+            "applies_to_current_reading": True,
+            "writes_v40_weight": False,
+            "writes_v30_state": False,
+            "boundary": "practitioner_calibration_records_training_label_without_direct_weight_write",
         }
 
     @app.get(f"{API_PREFIX}/training/labels")

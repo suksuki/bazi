@@ -31,6 +31,7 @@ docs/V40_PHASE9_CANDIDATE_WEIGHT_VERSION.md
 docs/V40_PHASE10_RELEASE_READINESS_AND_ACTIVATION_REVIEW.md
 docs/V40_PHASE11_ADMIN_AND_ACTIVATION_EXECUTION.md
 docs/V40_PHASE12_NATIVE_BAZI_AND_SYNTHETIC_CASES.md
+docs/V40_PHASE13_NATIVE_DECISION_OUTPUT_RUNTIME.md
 ```
 
 Initial principle:
@@ -52,5 +53,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 12: Native Bazi Skeleton and Synthetic Cases
+Phase 13: Native Decision Output Runtime
 ```

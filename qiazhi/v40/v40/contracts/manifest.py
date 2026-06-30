@@ -8,7 +8,14 @@ def contract_manifest() -> dict[str, object]:
         "chart": ["BaziChartFacts", "SyntheticCaseSeed"],
         "engine": ["EnginePlan", "EngineRunRequest", "EngineRunResult", "MultiEngineRunResult"],
         "signal": ["RuntimeSignal", "SignalRegistrySnapshot"],
-        "decision": ["DecisionInputBundle", "DecisionVerdict", "AdvicePlan", "ProbeCandidate"],
+        "decision": [
+            "DecisionInputBundle",
+            "BranchCandidate",
+            "DecisionVerdict",
+            "AdvicePlan",
+            "ProbeCandidate",
+            "DecisionEngineOutput",
+        ],
         "output": [
             "ProductVerdictCard",
             "BranchCard",
