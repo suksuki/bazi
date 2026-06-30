@@ -77,10 +77,10 @@ activation executions
 
 ## 下一阶段
 
-Phase 12 应进入：
+Phase 12 已进入：
 
 1. Synthetic case generator；
 2. V40 原生命理引擎骨架；
-3. V30 DTO batch export 工具；
-4. Admin Console 增加操作流，但继续要求显式确认；
-5. 多候选版本 rollback 演练。
+3. V30 DTO batch export 工具进入后续阶段；
+4. Admin Console 增加操作流进入后续阶段，但继续要求显式确认；
+5. 多候选版本 rollback 演练进入后续阶段。

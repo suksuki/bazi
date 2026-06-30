@@ -10,7 +10,9 @@ from v40.api.models import (
     CandidateWeightFromBatchRequest,
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
+    NativeBaziRuntimeRequest,
     ReleaseReadinessFromBatchesRequest,
+    SyntheticCasesFromSeedsRequest,
     TrainingImpactFromEvaluationRequest,
     WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
@@ -18,6 +20,7 @@ from v40.api.models import (
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.manifest import contract_manifest
 from v40.contracts.training import TrainingLabelEvent
+from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
     build_shadow_compare_result,
@@ -27,6 +30,7 @@ from v40.evaluation import (
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.storage import V40PostgresRepository
 from v40.storage.config import v40_repository_configured
+from v40.synthetic import build_evaluation_cases_from_seeds
 from v40.training import (
     build_candidate_weight_version_from_batch,
     build_training_impact_from_evaluation,
@@ -64,6 +68,54 @@ def create_app() -> FastAPI:
     @app.get(f"{API_PREFIX}/contracts")
     def contracts() -> dict[str, object]:
         return contract_manifest()
+
+    @app.post(f"{API_PREFIX}/runtime/native-bazi")
+    def native_bazi_runtime(payload: NativeBaziRuntimeRequest) -> dict[str, object]:
+        runtime = build_native_bazi_runtime(
+            request_id=payload.request_id,
+            reading_id=payload.reading_id,
+            chart=payload.chart_facts,
+            user_question=payload.user_question,
+            topic=payload.topic,
+            role_key=payload.role_key,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_runtime(runtime)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.native_bazi_runtime_response.v1",
+            "runtime": runtime.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "native_bazi_runtime_uses_v40_engine_skeleton_without_v30_runtime",
+        }
+
+    @app.post(f"{API_PREFIX}/synthetic/cases/from-seeds")
+    def synthetic_cases_from_seeds(payload: SyntheticCasesFromSeedsRequest) -> dict[str, object]:
+        cases = build_evaluation_cases_from_seeds(payload.seeds)
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                for case in cases:
+                    repository.save_evaluation_case(case)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.synthetic_cases_from_seeds_response.v1",
+            "cases": [case.model_dump(mode="json") for case in cases],
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "synthetic_cases_are_evaluation_contracts_not_real_world_truth",
+        }
 
     @app.post(f"{API_PREFIX}/shadow-compare")
     def shadow_compare(payload: V30ExportEnvelope, persist: bool = False) -> dict[str, object]:

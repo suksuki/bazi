@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from v40.contracts.base import V40Model
 from v40.contracts.base import RoleKey
+from v40.contracts.base import Topic
+from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed
 from v40.contracts.evaluation import EvaluationBatchSummary, EvaluationCaseSpec, EvaluationRunResult, ReleaseReadinessSummary
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import GlobalWeightVersion, WeightActivationReview
@@ -75,3 +77,22 @@ class WeightActivationExecutionRequest(V40Model):
     rollback_version_id: str
     confirm_phrase: str
     boundary: str = "weight_activation_execution_request_requires_explicit_confirmation"
+
+
+class NativeBaziRuntimeRequest(V40Model):
+    version: str = "v40.native_bazi_runtime_request.v1"
+    request_id: str
+    reading_id: str
+    chart_facts: BaziChartFacts
+    user_question: str = ""
+    topic: Topic = Topic.OVERVIEW
+    role_key: RoleKey = "user"
+    persist: bool = False
+    boundary: str = "native_bazi_runtime_request_uses_v40_chart_facts_without_v30_runtime"
+
+
+class SyntheticCasesFromSeedsRequest(V40Model):
+    version: str = "v40.synthetic_cases_from_seeds_request.v1"
+    seeds: list[SyntheticCaseSeed]
+    persist: bool = False
+    boundary: str = "synthetic_cases_request_builds_evaluation_cases_without_real_world_truth_claim"

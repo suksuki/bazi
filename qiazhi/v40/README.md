@@ -30,6 +30,7 @@ docs/V40_PHASE8_BATCH_EVALUATION.md
 docs/V40_PHASE9_CANDIDATE_WEIGHT_VERSION.md
 docs/V40_PHASE10_RELEASE_READINESS_AND_ACTIVATION_REVIEW.md
 docs/V40_PHASE11_ADMIN_AND_ACTIVATION_EXECUTION.md
+docs/V40_PHASE12_NATIVE_BAZI_AND_SYNTHETIC_CASES.md
 ```
 
 Initial principle:
@@ -51,5 +52,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 11: Admin Console and Activation Execution
+Phase 12: Native Bazi Skeleton and Synthetic Cases
 ```

@@ -1,0 +1,47 @@
+{
+  "version": "v40.synthetic_seed_pack.v1",
+  "seeds": [
+    {
+      "seed_id": "native.career.bingchen.001",
+      "question": "这个八字今年事业适合稳定发展还是转型突破？",
+      "topic": "career",
+      "chart_facts": {
+        "chart_id": "chart.synthetic.bingchen.001",
+        "gender": "乾",
+        "year_stem": "甲",
+        "year_branch": "子",
+        "month_stem": "戊",
+        "month_branch": "辰",
+        "day_stem": "丙",
+        "day_branch": "午",
+        "hour_stem": "辛",
+        "hour_branch": "卯",
+        "current_luck": "甲辰",
+        "current_year": "丙午"
+      },
+      "expected_keywords": ["事业", "压力", "用神"],
+      "forbidden_assertions": ["保证升职发财", "一定转型成功"]
+    },
+    {
+      "seed_id": "native.wealth.genghai.001",
+      "question": "这个八字财运更适合主动争取还是保守积累？",
+      "topic": "wealth",
+      "chart_facts": {
+        "chart_id": "chart.synthetic.genghai.001",
+        "gender": "坤",
+        "year_stem": "丁",
+        "year_branch": "卯",
+        "month_stem": "辛",
+        "month_branch": "亥",
+        "day_stem": "庚",
+        "day_branch": "申",
+        "hour_stem": "壬",
+        "hour_branch": "午",
+        "current_luck": "乙巳",
+        "current_year": "丙午"
+      },
+      "expected_keywords": ["财运", "风险", "边界"],
+      "forbidden_assertions": ["保证发财", "稳赚不赔"]
+    }
+  ]
+}

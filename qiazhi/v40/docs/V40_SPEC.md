@@ -297,6 +297,14 @@ docs/V40_PHASE11_ADMIN_AND_ACTIVATION_EXECUTION.md
 
 本阶段新增 `WeightActivationExecution` 和独立 Admin/Lab 前端服务。候选权重可以在 approved review、rollback version 和显式确认语齐备时写入 V40 控制面 active 状态；这仍然只作用于 `qiazhi_v40` 的 `v40_*` 表，不写 V30，不改 chart facts。
 
+2026-06-30 Phase 12 已启动：
+
+```text
+docs/V40_PHASE12_NATIVE_BAZI_AND_SYNTHETIC_CASES.md
+```
+
+本阶段新增 `BaziChartFacts`、`SyntheticCaseSeed`、V40 原生 Bazi engine skeleton 和 synthetic case generator。V40 可以在不读取 V30 runtime 的情况下，从已校准 chart facts 生成 signals、verdict、advice、probe 和 product projection，并进入 evaluation loop。
+
 ## V40 不做的事
 
 本阶段不做：

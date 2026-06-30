@@ -1,0 +1,75 @@
+from __future__ import annotations
+
+from pydantic import Field, model_validator
+
+from v40.contracts.base import V40Model
+
+
+class BaziChartFacts(V40Model):
+    version: str = "v40.bazi_chart_facts.v1"
+    chart_id: str
+    gender: str = ""
+    year_stem: str
+    year_branch: str
+    month_stem: str
+    month_branch: str
+    day_stem: str
+    day_branch: str
+    hour_stem: str = ""
+    hour_branch: str = ""
+    current_luck: str = ""
+    current_year: str = ""
+    source: str = "user_supplied_or_imported_chart_facts"
+    immutable: bool = True
+    boundary: str = "bazi_chart_facts_are_input_facts_not_trainable_policy"
+
+    @model_validator(mode="after")
+    def _chart_fact_boundary(self) -> "BaziChartFacts":
+        required = [
+            self.chart_id,
+            self.year_stem,
+            self.year_branch,
+            self.month_stem,
+            self.month_branch,
+            self.day_stem,
+            self.day_branch,
+        ]
+        if not all(value.strip() for value in required):
+            raise ValueError("BaziChartFacts requires chart_id and at least year/month/day pillars")
+        if not self.immutable:
+            raise ValueError("BaziChartFacts must be immutable in V40 runtime")
+        return self
+
+    @property
+    def pillars_text(self) -> str:
+        pillars = [
+            f"{self.year_stem}{self.year_branch}",
+            f"{self.month_stem}{self.month_branch}",
+            f"{self.day_stem}{self.day_branch}",
+        ]
+        if self.hour_stem and self.hour_branch:
+            pillars.append(f"{self.hour_stem}{self.hour_branch}")
+        return " ".join(pillars)
+
+
+class SyntheticCaseSeed(V40Model):
+    version: str = "v40.synthetic_case_seed.v1"
+    seed_id: str
+    question: str
+    topic: str = "career"
+    chart_facts: BaziChartFacts
+    expected_keywords: list[str] = Field(default_factory=list)
+    forbidden_assertions: list[str] = Field(default_factory=list)
+    boundary: str = "synthetic_case_seed_generates_evaluation_case_without_claiming_real_world_truth"
+
+    @model_validator(mode="after")
+    def _seed_boundary(self) -> "SyntheticCaseSeed":
+        if not self.seed_id.strip():
+            raise ValueError("SyntheticCaseSeed requires seed_id")
+        if not self.question.strip():
+            raise ValueError("SyntheticCaseSeed requires question")
+        if not self.expected_keywords:
+            raise ValueError("SyntheticCaseSeed requires expected_keywords")
+        if not self.forbidden_assertions:
+            raise ValueError("SyntheticCaseSeed requires forbidden_assertions")
+        return self

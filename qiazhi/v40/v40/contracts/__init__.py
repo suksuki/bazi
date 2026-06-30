@@ -13,6 +13,7 @@ from v40.contracts.base import (
     Topic,
     V40Model,
 )
+from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed
 from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionInputBundle, DecisionVerdict, ProbeCandidate
 from v40.contracts.engine import EnginePlan, EnginePlanItem, EngineRunRequest, EngineRunResult, MultiEngineRunResult
 from v40.contracts.evaluation import (
@@ -51,6 +52,7 @@ __all__ = [
     "AssertionLevel",
     "BranchCandidate",
     "BranchCard",
+    "BaziChartFacts",
     "ClientKey",
     "DecisionInputBundle",
     "DecisionVerdict",
@@ -86,6 +88,7 @@ __all__ = [
     "SignalRegistrySnapshot",
     "SurfaceBundle",
     "SurfaceKey",
+    "SyntheticCaseSeed",
     "Topic",
     "TrainingExampleV2",
     "TrainingImpactDiff",
