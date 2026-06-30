@@ -55,6 +55,14 @@ def create_admin_app() -> FastAPI:
     def activation_executions() -> dict[str, object]:
         return _fetch_json("/api/v40/weights/activation-executions?limit=8")
 
+    @app.get(f"{ADMIN_PREFIX}/api/llm")
+    def llm_status() -> dict[str, object]:
+        return _fetch_json("/api/v40/expression/provider/ollama")
+
+    @app.get(f"{ADMIN_PREFIX}/api/llm-models")
+    def llm_models() -> dict[str, object]:
+        return _fetch_json("/api/v40/expression/provider/ollama/models")
+
     return app
 
 
@@ -155,6 +163,7 @@ def _console_html() -> str:
       <section><div class="section-head"><h2>Readiness</h2><span class="pill">release</span></div><div class="list" id="readiness"></div></section>
       <section><div class="section-head"><h2>Weight</h2><span class="pill">candidate</span></div><div class="list" id="weights"></div></section>
       <section><div class="section-head"><h2>Activation</h2><span class="pill">review</span></div><div class="list" id="activation"></div></section>
+      <section><div class="section-head"><h2>LLM</h2><span class="pill">ollama</span></div><div class="list" id="llm"></div></section>
     </div>
   </main>
   <script>
@@ -165,13 +174,15 @@ def _console_html() -> str:
       return `<div class="row"><strong>${title || "-"}</strong><span>${meta || ""}</span><span class="${cls(value)}">${value ?? ""}</span></div>`;
     }
     async function load() {
-      const [summary, batches, readiness, weights, reviews, executions] = await Promise.all([
+      const [summary, batches, readiness, weights, reviews, executions, llm, models] = await Promise.all([
         get("/admin/v40/api/summary"),
         get("/admin/v40/api/batches"),
         get("/admin/v40/api/readiness"),
         get("/admin/v40/api/weights"),
         get("/admin/v40/api/activation-reviews"),
         get("/admin/v40/api/activation-executions"),
+        get("/admin/v40/api/llm"),
+        get("/admin/v40/api/llm-models"),
       ]);
       const counts = summary.summary?.counts || {};
       $("metrics").innerHTML = ["evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
@@ -181,6 +192,12 @@ def _console_html() -> str:
       $("weights").innerHTML = (weights.weights || []).map((item) => row(item.weight_version_id, item.rollback_version_id || item.release_gate_id, item.active)).join("") || row("暂无数据", "", "");
       const combined = [...(reviews.reviews || []), ...(executions.executions || [])];
       $("activation").innerHTML = combined.map((item) => row(item.review_id || item.execution_id, item.weight_version_id, item.decision || item.activation_applied)).join("") || row("暂无数据", "", "");
+      const modelRows = (models.models || []).slice(0, 6).map((name) => row(name, name === llm.model ? "当前模型" : "", name === llm.model ? "ready" : ""));
+      $("llm").innerHTML = [
+        row(llm.model || "未配置模型", `${llm.base_url || ""} · think ${llm.effective_thinking_max_tokens || 0}/${llm.effective_thinking_timeout_seconds || 0}s`, llm.enabled && llm.execute ? "ready" : "disabled"),
+        row("模型发现", `${models.model_count || 0} models`, models.configured_model_available ? "ready" : "review"),
+        ...modelRows
+      ].join("");
     }
     $("refresh").addEventListener("click", load);
     load().catch((error) => {

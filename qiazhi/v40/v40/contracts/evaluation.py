@@ -5,6 +5,7 @@ from enum import Enum
 from pydantic import Field, model_validator
 
 from v40.contracts.base import AssertionLevel, ReleaseRecommendation, Topic, V40Model
+from v40.contracts.output import ExpressionTelemetry
 
 
 class EvaluationCaseType(str, Enum):
@@ -118,6 +119,8 @@ class MetricSummary(V40Model):
     advice_grounding_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     probe_yield_score: float = Field(default=0.0, ge=0.0, le=1.0)
     llm_boundary_violation_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    expression_acceptance_rate: float = Field(default=1.0, ge=0.0, le=1.0)
+    expression_thinking_trace_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     surface_leakage_rate: float = Field(default=0.0, ge=0.0, le=1.0)
     overall_score: float = Field(default=0.0, ge=0.0, le=1.0)
     status: EvaluationStatus = EvaluationStatus.REVIEW
@@ -166,6 +169,7 @@ class EvaluationRunResult(V40Model):
     reading_id: str
     metric_summary: MetricSummary
     release_gate: ReleaseGateResult | None = None
+    expression_telemetry: ExpressionTelemetry | None = None
     status: EvaluationStatus = EvaluationStatus.REVIEW
     chart_fact_mutation_allowed: bool = False
     production_write_allowed: bool = False

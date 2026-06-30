@@ -347,6 +347,16 @@ docs/V40_PHASE17_OLLAMA_EXPRESSION_PROVIDER.md
 
 本阶段同步修正 expression acceptance：LLM 可以把产品结论改写得更自然，但必须保留核心命理术语和建议语义。验收不再要求逐字模板匹配；它以允许断言的关键词/短语覆盖来判断是否保留 Verdict，同时继续硬拒绝工程语言泄漏、越界断语和 chart fact mutation。
 
+2026-06-30 Phase 18 已启动：
+
+```text
+docs/V40_PHASE18_LLM_OBSERVABILITY_AND_EVALUATION.md
+```
+
+本阶段新增 `ExpressionTelemetry`，把表达层是否 accepted、provider/model、thinking trace 字数、repair reasons、leakage/overclaim hits 等记录为观测数据。`POST /api/v40/expression/from-runtime` 返回 telemetry；`EvaluationRunFromRuntimeRequest` 可携带 telemetry 并进入 `MetricSummary.expression_acceptance_rate` 与 `expression_thinking_trace_rate`。Release gate 的 LLM gate 现在同时要求无 LLM 边界违规且表达层通过 acceptance。
+
+本阶段还新增 Ollama 模型发现：`GET /api/v40/expression/provider/ollama/models` 读取 `/api/tags`，Admin 通过 `/admin/v40/api/llm` 与 `/admin/v40/api/llm-models` 展示当前模型、effective thinking token/timeout 和模型列表。该能力只读，不写 V30，不写 V40 production。
+
 ## V40 不做的事
 
 本阶段不做：

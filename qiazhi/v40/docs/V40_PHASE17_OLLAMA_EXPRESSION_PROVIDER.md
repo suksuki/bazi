@@ -186,14 +186,22 @@ disabled Ollama raises without fallback
 provider status exposes no secrets and writes no state
 ```
 
-## Next Phase
+## Phase 18 Handoff
 
-Phase 18 should add:
+Phase 18 added the first pass of:
+
+```text
+Ollama model discovery endpoint
+Admin LLM status/model visibility
+ExpressionTelemetry returned by expression runtime
+expression acceptance metrics inside EvaluationRunResult
+```
+
+Still open after Phase 18:
 
 ```text
 streaming expression/thinking contract
-UI/Admin controls for native expression runs
-expression acceptance metrics inside EvaluationRunResult
 larger synthetic/golden expression corpus
-Ollama model discovery endpoint
+expression telemetry persistence/history
+product runtime report endpoint using execution_mode=ollama
 ```

@@ -98,6 +98,34 @@ def render_ollama_expression_result(
     )
 
 
+def list_ollama_models(
+    *,
+    config: OllamaExpressionConfig | None = None,
+    transport: Callable[[str, dict[str, object], float], dict[str, object]] | None = None,
+) -> dict[str, object]:
+    resolved = config or resolve_ollama_expression_config()
+    if not resolved.enabled:
+        raise OllamaExpressionError("V40 LLM provider is disabled")
+    response_payload = (transport or _get_json)(
+        f"{resolved.base_url}/api/tags",
+        {},
+        _provider_timeout(resolved, enable_thinking=False),
+    )
+    models = _extract_model_names(response_payload)
+    return {
+        "version": "v40.ollama_model_discovery.v1",
+        "provider": resolved.provider,
+        "base_url": resolved.base_url,
+        "configured_model": resolved.model,
+        "model_count": len(models),
+        "models": models,
+        "configured_model_available": resolved.model in models,
+        "writes_v30_state": False,
+        "writes_v40_production": False,
+        "boundary": "ollama_model_discovery_reads_provider_catalog_without_runtime_mutation",
+    }
+
+
 def build_ollama_expression_prompt(*, task: LLMExpressionTask, runtime: RuntimeResult) -> str:
     projection = runtime.product_projection
     verdict_lines: list[str] = []
@@ -166,6 +194,37 @@ def _post_json(url: str, payload: dict[str, object], timeout_seconds: float) -> 
         raise OllamaExpressionError("Ollama request timed out") from exc
     except json.JSONDecodeError as exc:
         raise OllamaExpressionError("Ollama returned invalid JSON") from exc
+
+
+def _get_json(url: str, _payload: dict[str, object], timeout_seconds: float) -> dict[str, object]:
+    request = Request(url, headers={"Content-Type": "application/json"}, method="GET")
+    try:
+        with urlopen(request, timeout=timeout_seconds) as response:
+            return json.loads(response.read().decode("utf-8"))
+    except HTTPError as exc:
+        raise OllamaExpressionError(f"Ollama request failed with HTTP {exc.code}") from exc
+    except URLError as exc:
+        raise OllamaExpressionError(f"Ollama is unreachable: {exc.reason}") from exc
+    except TimeoutError as exc:
+        raise OllamaExpressionError("Ollama request timed out") from exc
+    except json.JSONDecodeError as exc:
+        raise OllamaExpressionError("Ollama returned invalid JSON") from exc
+
+
+def _extract_model_names(payload: dict[str, object]) -> list[str]:
+    rows = payload.get("models")
+    if not isinstance(rows, list):
+        return []
+    names: list[str] = []
+    for row in rows:
+        name = ""
+        if isinstance(row, dict):
+            name = str(row.get("name") or row.get("model") or row.get("id") or "").strip()
+        elif isinstance(row, str):
+            name = row.strip()
+        if name and name not in names:
+            names.append(name)
+    return names
 
 
 def _extract_response_text(payload: dict[str, object]) -> str:

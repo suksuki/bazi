@@ -3,7 +3,13 @@ from __future__ import annotations
 import re
 
 from v40.contracts.base import RoleKey, Topic
-from v40.contracts.output import AcceptanceResult, AcceptanceStatus, LLMExpressionResult, LLMExpressionTask
+from v40.contracts.output import (
+    AcceptanceResult,
+    AcceptanceStatus,
+    ExpressionTelemetry,
+    LLMExpressionResult,
+    LLMExpressionTask,
+)
 from v40.contracts.runtime import RuntimeResult
 
 
@@ -126,6 +132,35 @@ def accept_expression_result(
         overclaim_hits=overclaim_hits,
         verdict_mutation_detected=verdict_mutation,
         chart_fact_mutation_detected=chart_fact_mutation,
+    )
+
+
+def build_expression_telemetry(
+    *,
+    telemetry_id: str,
+    task: LLMExpressionTask,
+    result: LLMExpressionResult,
+    acceptance: AcceptanceResult,
+    execution_mode: str,
+) -> ExpressionTelemetry:
+    return ExpressionTelemetry(
+        telemetry_id=telemetry_id,
+        reading_id=task.reading_id,
+        task_id=task.task_id,
+        result_id=result.result_id,
+        execution_mode=execution_mode,
+        provider=result.provider,
+        model=result.model,
+        accepted=acceptance.status == AcceptanceStatus.ACCEPTED,
+        acceptance_status=acceptance.status,
+        thinking_trace_available=bool(result.raw_thinking.strip()),
+        thinking_trace_chars=len(result.raw_thinking),
+        repair_reasons=acceptance.repair_reasons,
+        leakage_hits=acceptance.leakage_hits,
+        overclaim_hits=acceptance.overclaim_hits,
+        verdict_mutation_detected=acceptance.verdict_mutation_detected,
+        chart_fact_mutation_detected=acceptance.chart_fact_mutation_detected,
+        llm_decision_authority=task.can_change_verdict or result.changed_verdict or task.can_create_chart_facts or result.created_chart_facts,
     )
 
 

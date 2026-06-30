@@ -17,7 +17,7 @@ def build_release_gate_from_metrics(
     overclaim_gate = metrics.overclaim_rate <= 0.05
     advice_gate = metrics.advice_grounding_rate >= 0.8
     probe_gate = metrics.probe_yield_score >= 0.45
-    llm_gate = metrics.llm_boundary_violation_rate == 0
+    llm_gate = metrics.llm_boundary_violation_rate == 0 and metrics.expression_acceptance_rate >= 1.0
     leakage_gate = metrics.surface_leakage_rate == 0
     all_passed = all([fact_gate, golden_gate, overclaim_gate, advice_gate, probe_gate, llm_gate, leakage_gate]) and not failures
     return ReleaseGateResult(

@@ -39,7 +39,9 @@ from v40.synthetic import build_evaluation_cases_from_seeds
 from v40.expression import (
     OllamaExpressionError,
     accept_expression_result,
+    build_expression_telemetry,
     build_expression_task_from_runtime,
+    list_ollama_models,
     render_local_expression_result,
     render_ollama_expression_result,
     resolve_ollama_expression_config,
@@ -247,6 +249,7 @@ def create_app() -> FastAPI:
             runtime=payload.runtime,
             candidate_version=payload.candidate_version,
             build_release_gate=payload.build_release_gate,
+            expression_telemetry=payload.expression_telemetry,
         )
         persisted = False
         if payload.persist:
@@ -419,11 +422,19 @@ def create_app() -> FastAPI:
             result=result,
             runtime=payload.runtime,
         )
+        telemetry = build_expression_telemetry(
+            telemetry_id=f"telemetry:{payload.result_id}",
+            task=task,
+            result=result,
+            acceptance=acceptance,
+            execution_mode=payload.execution_mode,
+        )
         return {
             "version": "v40.expression_from_runtime_response.v1",
             "task": task.model_dump(mode="json"),
             "result": result.model_dump(mode="json"),
             "acceptance": acceptance.model_dump(mode="json"),
+            "telemetry": telemetry.model_dump(mode="json"),
             "accepted": acceptance.status.value == "accepted",
             "execution_mode": payload.execution_mode,
             "writes_v30_state": False,
@@ -450,6 +461,13 @@ def create_app() -> FastAPI:
             "writes_v40_production": False,
             "boundary": "ollama_expression_provider_status_exposes_v40_llm_config_without_secrets",
         }
+
+    @app.get(f"{API_PREFIX}/expression/provider/ollama/models")
+    def ollama_expression_provider_models() -> dict[str, object]:
+        try:
+            return list_ollama_models()
+        except OllamaExpressionError as exc:
+            raise HTTPException(status_code=503, detail=str(exc)) from exc
 
     @app.get(f"{API_PREFIX}/training/labels")
     def list_training_labels(

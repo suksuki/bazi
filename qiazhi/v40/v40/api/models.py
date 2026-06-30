@@ -7,6 +7,7 @@ from v40.contracts.base import RoleKey
 from v40.contracts.base import Topic
 from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed
 from v40.contracts.evaluation import EvaluationBatchSummary, EvaluationCaseSpec, EvaluationRunResult, ReleaseReadinessSummary
+from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import GlobalWeightVersion, LabelTargetType, LabelValue, WeightActivationReview
 
@@ -18,6 +19,7 @@ class EvaluationRunFromRuntimeRequest(V40Model):
     runtime: RuntimeResult
     candidate_version: str = "v40-alpha"
     build_release_gate: bool = True
+    expression_telemetry: ExpressionTelemetry | None = None
     persist: bool = True
     boundary: str = "evaluation_run_request_evaluates_runtime_without_llm_judge"
 

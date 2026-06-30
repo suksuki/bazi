@@ -133,6 +133,40 @@ class AcceptanceResult(V40Model):
         return self
 
 
+class ExpressionTelemetry(V40Model):
+    version: str = "v40.expression_telemetry.v1"
+    telemetry_id: str
+    reading_id: str
+    task_id: str
+    result_id: str
+    execution_mode: str = "local"
+    provider: str = ""
+    model: str = ""
+    accepted: bool = False
+    acceptance_status: AcceptanceStatus = AcceptanceStatus.REPAIR
+    thinking_trace_available: bool = False
+    thinking_trace_chars: int = Field(default=0, ge=0)
+    repair_reasons: list[str] = Field(default_factory=list)
+    leakage_hits: list[str] = Field(default_factory=list)
+    overclaim_hits: list[str] = Field(default_factory=list)
+    verdict_mutation_detected: bool = False
+    chart_fact_mutation_detected: bool = False
+    llm_decision_authority: bool = False
+    writes_v30_state: bool = False
+    writes_v40_production: bool = False
+    boundary: str = "expression_telemetry_observes_llm_expression_without_decision_authority"
+
+    @model_validator(mode="after")
+    def _telemetry_boundary(self) -> "ExpressionTelemetry":
+        if self.llm_decision_authority:
+            raise ValueError("ExpressionTelemetry cannot grant LLM decision authority")
+        if self.writes_v30_state:
+            raise ValueError("ExpressionTelemetry cannot write V30 state")
+        if self.writes_v40_production:
+            raise ValueError("ExpressionTelemetry cannot write V40 production")
+        return self
+
+
 class ProductProjectionBundle(V40Model):
     version: str = "v40.product_projection_bundle.v1"
     reading_id: str

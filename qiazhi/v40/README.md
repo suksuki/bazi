@@ -36,6 +36,7 @@ docs/V40_PHASE14_NATIVE_BAZI_FACT_SIGNAL_ADAPTERS.md
 docs/V40_PHASE15_NATIVE_BATCH_EVALUATION.md
 docs/V40_PHASE16_LLM_EXPRESSION_ACCEPTANCE.md
 docs/V40_PHASE17_OLLAMA_EXPRESSION_PROVIDER.md
+docs/V40_PHASE18_LLM_OBSERVABILITY_AND_EVALUATION.md
 ```
 
 Initial principle:
@@ -57,5 +58,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 17: Ollama Expression Provider aligned with V30 thinking transport
+Phase 18: LLM Observability And Evaluation
 ```
