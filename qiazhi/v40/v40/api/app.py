@@ -12,6 +12,7 @@ from v40.api.models import (
     EvaluationRunFromRuntimeRequest,
     ReleaseReadinessFromBatchesRequest,
     TrainingImpactFromEvaluationRequest,
+    WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
 )
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
@@ -29,6 +30,7 @@ from v40.storage.config import v40_repository_configured
 from v40.training import (
     build_candidate_weight_version_from_batch,
     build_training_impact_from_evaluation,
+    build_weight_activation_execution,
     build_weight_activation_review,
 )
 
@@ -421,6 +423,47 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "activation_reviews_read_v40_repository_without_activation",
+        }
+
+    @app.post(f"{API_PREFIX}/weights/activate")
+    def activate_weight(payload: WeightActivationExecutionRequest) -> dict[str, object]:
+        if payload.confirm_phrase != "ACTIVATE_V40_WEIGHT":
+            raise HTTPException(status_code=422, detail="Activation requires explicit confirmation phrase")
+        try:
+            execution = build_weight_activation_execution(
+                execution_id=payload.execution_id,
+                review=payload.review,
+                weight_version=payload.weight_version,
+                rollback_version_id=payload.rollback_version_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        try:
+            repository = V40PostgresRepository.from_env()
+            applied = repository.activate_global_weight_version(execution)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.weight_activation_execution_response.v1",
+            "execution": applied.model_dump(mode="json"),
+            "activation_applied": True,
+            "writes_v30_state": False,
+            "writes_v40_weight": True,
+            "boundary": "activation_execution_updates_v40_weight_only_with_explicit_confirmation",
+        }
+
+    @app.get(f"{API_PREFIX}/weights/activation-executions")
+    def list_activation_executions(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            executions = repository.list_weight_activation_executions(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.weight_activation_executions_response.v1",
+            "executions": executions,
+            "writes_v30_state": False,
+            "boundary": "activation_executions_read_v40_repository_only",
         }
 
     @app.post(f"{API_PREFIX}/release-gates")

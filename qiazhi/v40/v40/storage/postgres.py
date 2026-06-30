@@ -16,7 +16,13 @@ from v40.contracts.evaluation import (
     ShadowCompareResult,
 )
 from v40.contracts.runtime import RuntimeResult
-from v40.contracts.training import GlobalWeightVersion, TrainingImpactDiff, TrainingLabelEvent, WeightActivationReview
+from v40.contracts.training import (
+    GlobalWeightVersion,
+    TrainingImpactDiff,
+    TrainingLabelEvent,
+    WeightActivationExecution,
+    WeightActivationReview,
+)
 from v40.storage.config import V40DatabaseConfig, resolve_v40_database_config
 
 
@@ -398,9 +404,10 @@ class V40PostgresRepository:
                         version,
                         weight_json,
                         active,
+                        rollback_version_id,
                         updated_at
                     )
-                    VALUES (%s, %s, %s, %s, %s::jsonb, %s, now())
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, now())
                     ON CONFLICT (weight_version_id)
                     DO UPDATE SET
                         source_training_run_id = EXCLUDED.source_training_run_id,
@@ -408,6 +415,7 @@ class V40PostgresRepository:
                         version = EXCLUDED.version,
                         weight_json = EXCLUDED.weight_json,
                         active = EXCLUDED.active,
+                        rollback_version_id = EXCLUDED.rollback_version_id,
                         updated_at = now()
                     """,
                     (
@@ -417,6 +425,7 @@ class V40PostgresRepository:
                         weight_version.version,
                         json.dumps(payload, ensure_ascii=False),
                         weight_version.active,
+                        weight_version.rollback_version_id,
                     ),
                 )
 
@@ -433,10 +442,131 @@ class V40PostgresRepository:
                         version,
                         weight_json,
                         active,
+                        rollback_version_id,
                         created_at,
                         updated_at
                     FROM v40_global_weight_versions
                     ORDER BY updated_at DESC, created_at DESC
+                    LIMIT %s
+                    """,
+                    (bounded_limit,),
+                )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def activate_global_weight_version(self, execution: WeightActivationExecution) -> WeightActivationExecution:
+        payload = execution.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT weight_version_id
+                    FROM v40_global_weight_versions
+                    WHERE active = true
+                    ORDER BY updated_at DESC
+                    """
+                )
+                deactivated_ids = [
+                    row["weight_version_id"]
+                    for row in cur.fetchall()
+                    if row["weight_version_id"] != execution.weight_version_id
+                ]
+                cur.execute(
+                    """
+                    SELECT weight_json
+                    FROM v40_global_weight_versions
+                    WHERE weight_version_id = %s
+                    FOR UPDATE
+                    """,
+                    (execution.weight_version_id,),
+                )
+                target = cur.fetchone()
+                if target is None:
+                    raise RuntimeError("Target V40 weight version does not exist")
+                target_payload = dict(target["weight_json"])
+                target_payload["active"] = True
+                target_payload["rollback_version_id"] = execution.rollback_version_id
+                cur.execute("UPDATE v40_global_weight_versions SET active = false, updated_at = now() WHERE active = true")
+                cur.execute(
+                    """
+                    UPDATE v40_global_weight_versions
+                    SET active = true,
+                        rollback_version_id = %s,
+                        weight_json = %s::jsonb,
+                        updated_at = now()
+                    WHERE weight_version_id = %s
+                    """,
+                    (
+                        execution.rollback_version_id,
+                        json.dumps(target_payload, ensure_ascii=False),
+                        execution.weight_version_id,
+                    ),
+                )
+                applied = execution.model_copy(update={"deactivated_weight_ids": deactivated_ids})
+                applied_payload = applied.model_dump(mode="json")
+                cur.execute(
+                    """
+                    INSERT INTO v40_weight_activation_executions (
+                        execution_id,
+                        review_id,
+                        weight_version_id,
+                        release_readiness_id,
+                        rollback_version_id,
+                        version,
+                        execution_json,
+                        activation_applied,
+                        v40_weight_write_applied,
+                        source_state_mutated,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, now())
+                    ON CONFLICT (execution_id)
+                    DO UPDATE SET
+                        review_id = EXCLUDED.review_id,
+                        weight_version_id = EXCLUDED.weight_version_id,
+                        release_readiness_id = EXCLUDED.release_readiness_id,
+                        rollback_version_id = EXCLUDED.rollback_version_id,
+                        version = EXCLUDED.version,
+                        execution_json = EXCLUDED.execution_json,
+                        activation_applied = EXCLUDED.activation_applied,
+                        v40_weight_write_applied = EXCLUDED.v40_weight_write_applied,
+                        source_state_mutated = EXCLUDED.source_state_mutated,
+                        created_at = now()
+                    """,
+                    (
+                        applied.execution_id,
+                        applied.review_id,
+                        applied.weight_version_id,
+                        applied.release_readiness_id,
+                        applied.rollback_version_id,
+                        applied.version,
+                        json.dumps(applied_payload, ensure_ascii=False),
+                        applied.activation_applied,
+                        applied.v40_weight_write_applied,
+                        applied.v30_state_mutated,
+                    ),
+                )
+                return applied
+
+    def list_weight_activation_executions(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        execution_id,
+                        review_id,
+                        weight_version_id,
+                        release_readiness_id,
+                        rollback_version_id,
+                        version,
+                        execution_json,
+                        activation_applied,
+                        v40_weight_write_applied,
+                        source_state_mutated,
+                        created_at
+                    FROM v40_weight_activation_executions
+                    ORDER BY created_at DESC
                     LIMIT %s
                     """,
                     (bounded_limit,),
@@ -637,6 +767,7 @@ class V40PostgresRepository:
             "global_weight_versions": "v40_global_weight_versions",
             "release_readiness": "v40_release_readiness",
             "weight_activation_reviews": "v40_weight_activation_reviews",
+            "weight_activation_executions": "v40_weight_activation_executions",
         }
         counts: dict[str, int] = {}
         with self._connect() as conn:
@@ -657,6 +788,12 @@ class V40PostgresRepository:
                     "updated_at",
                     limit=5,
                 )
+                latest_activation_executions = self._latest_rows(
+                    cur,
+                    "v40_weight_activation_executions",
+                    "created_at",
+                    limit=5,
+                )
         return {
             "counts": counts,
             "latest_evaluation_runs": latest_runs,
@@ -666,6 +803,7 @@ class V40PostgresRepository:
             "latest_global_weight_versions": latest_weights,
             "latest_release_readiness": latest_readiness,
             "latest_weight_activation_reviews": latest_activation_reviews,
+            "latest_weight_activation_executions": latest_activation_executions,
         }
 
     def _connect(self) -> psycopg.Connection[Any]:

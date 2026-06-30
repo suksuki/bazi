@@ -73,10 +73,10 @@ Phase 10 只记录审核结果，不执行激活。
 
 ## 下一阶段
 
-Phase 11 应进入：
+Phase 11 已进入：
 
 1. Admin Console 独立前端；
 2. candidate activation 执行端点，但必须需要显式人工动作和 rollback version；
-3. synthetic case generator；
-4. V40 原生命理引擎骨架；
-5. V30 DTO batch export 工具。
+3. synthetic case generator 进入后续阶段；
+4. V40 原生命理引擎骨架进入后续阶段；
+5. V30 DTO batch export 工具进入后续阶段。

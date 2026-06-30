@@ -75,9 +75,13 @@ CREATE TABLE IF NOT EXISTS v40_global_weight_versions (
     version TEXT NOT NULL DEFAULT 'v40.global_weight_version.v1',
     weight_json JSONB NOT NULL,
     active BOOLEAN NOT NULL DEFAULT false,
+    rollback_version_id TEXT NOT NULL DEFAULT '',
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+ALTER TABLE IF EXISTS v40_global_weight_versions
+ADD COLUMN IF NOT EXISTS rollback_version_id TEXT NOT NULL DEFAULT '';
 
 CREATE TABLE IF NOT EXISTS v40_release_readiness (
     readiness_id TEXT PRIMARY KEY,
@@ -101,6 +105,20 @@ CREATE TABLE IF NOT EXISTS v40_weight_activation_reviews (
     production_write_allowed BOOLEAN NOT NULL DEFAULT false,
     created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v40_weight_activation_executions (
+    execution_id TEXT PRIMARY KEY,
+    review_id TEXT NOT NULL,
+    weight_version_id TEXT NOT NULL,
+    release_readiness_id TEXT NOT NULL,
+    rollback_version_id TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.weight_activation_execution.v1',
+    execution_json JSONB NOT NULL,
+    activation_applied BOOLEAN NOT NULL DEFAULT true,
+    v40_weight_write_applied BOOLEAN NOT NULL DEFAULT true,
+    source_state_mutated BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS v40_shadow_compare_runs (

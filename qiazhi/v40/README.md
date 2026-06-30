@@ -29,6 +29,7 @@ docs/V40_PHASE7_LAB_ARTIFACTS.md
 docs/V40_PHASE8_BATCH_EVALUATION.md
 docs/V40_PHASE9_CANDIDATE_WEIGHT_VERSION.md
 docs/V40_PHASE10_RELEASE_READINESS_AND_ACTIVATION_REVIEW.md
+docs/V40_PHASE11_ADMIN_AND_ACTIVATION_EXECUTION.md
 ```
 
 Initial principle:
@@ -50,5 +51,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 10: Release Readiness and Activation Review
+Phase 11: Admin Console and Activation Execution
 ```

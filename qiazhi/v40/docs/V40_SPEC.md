@@ -289,6 +289,14 @@ docs/V40_PHASE10_RELEASE_READINESS_AND_ACTIVATION_REVIEW.md
 
 本阶段新增 `ReleaseReadinessSummary` 与 `WeightActivationReview`。V40 可以聚合多个 batch 的 readiness，并记录候选权重激活审核结果；审核结果仍不执行激活，`activation_applied=false`。
 
+2026-06-30 Phase 11 已启动：
+
+```text
+docs/V40_PHASE11_ADMIN_AND_ACTIVATION_EXECUTION.md
+```
+
+本阶段新增 `WeightActivationExecution` 和独立 Admin/Lab 前端服务。候选权重可以在 approved review、rollback version 和显式确认语齐备时写入 V40 控制面 active 状态；这仍然只作用于 `qiazhi_v40` 的 `v40_*` 表，不写 V30，不改 chart facts。
+
 ## V40 不做的事
 
 本阶段不做：

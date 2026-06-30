@@ -35,6 +35,7 @@ def contract_manifest() -> dict[str, object]:
             "LocalOverlay",
             "GlobalWeightVersion",
             "WeightActivationReview",
+            "WeightActivationExecution",
         ],
         "migration": ["V30ExportEnvelope", "V30ToV40MigrationPlan"],
         "boundaries": {

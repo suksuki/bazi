@@ -42,6 +42,7 @@ from v40.contracts.training import (
     TrainingExampleV2,
     TrainingImpactDiff,
     TrainingLabelEvent,
+    WeightActivationExecution,
     WeightActivationReview,
 )
 
@@ -90,5 +91,6 @@ __all__ = [
     "TrainingImpactDiff",
     "TrainingLabelEvent",
     "V40Model",
+    "WeightActivationExecution",
     "WeightActivationReview",
 ]

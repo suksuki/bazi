@@ -4,7 +4,7 @@ from v40.contracts.base import V40Model
 from v40.contracts.base import RoleKey
 from v40.contracts.evaluation import EvaluationBatchSummary, EvaluationCaseSpec, EvaluationRunResult, ReleaseReadinessSummary
 from v40.contracts.runtime import RuntimeResult
-from v40.contracts.training import GlobalWeightVersion
+from v40.contracts.training import GlobalWeightVersion, WeightActivationReview
 
 
 class EvaluationRunFromRuntimeRequest(V40Model):
@@ -65,3 +65,13 @@ class WeightActivationReviewRequest(V40Model):
     reviewed_by_role: RoleKey = "admin"
     persist: bool = True
     boundary: str = "weight_activation_review_request_records_review_without_activation"
+
+
+class WeightActivationExecutionRequest(V40Model):
+    version: str = "v40.weight_activation_execution_request.v1"
+    execution_id: str
+    review: WeightActivationReview
+    weight_version: GlobalWeightVersion
+    rollback_version_id: str
+    confirm_phrase: str
+    boundary: str = "weight_activation_execution_request_requires_explicit_confirmation"

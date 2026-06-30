@@ -199,3 +199,38 @@ class WeightActivationReview(V40Model):
         if self.production_write_allowed:
             raise ValueError("WeightActivationReview cannot write production policy")
         return self
+
+
+class WeightActivationExecution(V40Model):
+    version: str = "v40.weight_activation_execution.v1"
+    execution_id: str
+    review_id: str
+    weight_version_id: str
+    release_readiness_id: str
+    rollback_version_id: str
+    executed_by_role: RoleKey = "admin"
+    review_decision: ReleaseRecommendation = ReleaseRecommendation.NEEDS_REVIEW
+    deactivated_weight_ids: list[str] = Field(default_factory=list)
+    activation_applied: bool = True
+    v40_weight_write_applied: bool = True
+    v30_state_mutated: bool = False
+    chart_fact_mutation_allowed: bool = False
+    boundary: str = "weight_activation_execution_requires_explicit_review_and_rollback_without_v30_mutation"
+
+    @model_validator(mode="after")
+    def _activation_execution_boundary(self) -> "WeightActivationExecution":
+        if not self.execution_id.strip():
+            raise ValueError("WeightActivationExecution requires execution_id")
+        if not self.rollback_version_id.strip():
+            raise ValueError("WeightActivationExecution requires rollback_version_id")
+        if self.executed_by_role != "admin":
+            raise ValueError("WeightActivationExecution requires admin role")
+        if self.review_decision != ReleaseRecommendation.APPROVE:
+            raise ValueError("WeightActivationExecution requires approved review")
+        if not self.activation_applied or not self.v40_weight_write_applied:
+            raise ValueError("WeightActivationExecution records an applied V40 weight activation")
+        if self.v30_state_mutated:
+            raise ValueError("WeightActivationExecution cannot mutate V30 state")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("WeightActivationExecution cannot mutate chart facts")
+        return self
