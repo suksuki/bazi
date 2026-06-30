@@ -76,6 +76,66 @@ from v40.training import (
 API_PREFIX = "/api/v40"
 
 
+def _surface_beta_check(key: str, label: str, ready: bool, evidence: str) -> dict[str, object]:
+    return {
+        "key": key,
+        "label": label,
+        "ready": ready,
+        "evidence": evidence,
+    }
+
+
+def _build_surface_beta_readiness() -> dict[str, object]:
+    html = _user_ui_html()
+    checks = [
+        _surface_beta_check(
+            "report_first",
+            "报告优先",
+            "/api/v40/readings/native-report" in html and "测算结果" in html,
+            "用户先看到完整报告，而不是先进入聊天。",
+        ),
+        _surface_beta_check(
+            "conversation_after_report",
+            "报告后追问",
+            "/api/v40/conversation/turn" in html and "followupBox" in html,
+            "智能对话独立于测算报告之后。",
+        ),
+        _surface_beta_check(
+            "feedback_to_training",
+            "反馈入训练",
+            "/api/v40/training/labels" in html and "reportFeedback" in html,
+            "用户反馈进入本地训练素材，不直接改生产权重。",
+        ),
+        _surface_beta_check(
+            "practitioner_calibration",
+            "命理师校准",
+            "practitioner-lens-action" in html and 'value="practitioner"' in html,
+            "命理师可校准分支，校准只影响训练素材。",
+        ),
+        _surface_beta_check(
+            "admin_separated",
+            "Admin 分离",
+            "/admin/v40" not in html,
+            "用户主页面不暴露 Admin 控制面。",
+        ),
+        _surface_beta_check(
+            "no_local_fallback_when_llm_required",
+            "无静默 fallback",
+            "no fallback" in html and "模型不可用" in html,
+            "模型不可用时明确提示，不伪造智能表达。",
+        ),
+    ]
+    ready_count = sum(1 for check in checks if check["ready"])
+    percent = int(round(ready_count / len(checks) * 100)) if checks else 0
+    return {
+        "beta_ready_percent": percent,
+        "beta_status": "ready" if percent == 100 else "review",
+        "ready_count": ready_count,
+        "check_count": len(checks),
+        "checks": checks,
+    }
+
+
 def _build_expression_bundle(
     *,
     task_id: str,
@@ -166,6 +226,16 @@ def create_app() -> FastAPI:
     @app.get("/v40/ui", response_class=HTMLResponse)
     def user_ui() -> HTMLResponse:
         return HTMLResponse(_user_ui_html())
+
+    @app.get(f"{API_PREFIX}/surface/beta-readiness")
+    def surface_beta_readiness() -> dict[str, object]:
+        return {
+            "version": "v40.surface_beta_readiness_response.v1",
+            "readiness": _build_surface_beta_readiness(),
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "surface_beta_readiness_observes_user_surface_without_mutation",
+        }
 
     @app.post(f"{API_PREFIX}/runtime/native-bazi")
     def native_bazi_runtime(payload: NativeBaziRuntimeRequest) -> dict[str, object]:
@@ -1288,6 +1358,7 @@ def _user_ui_html() -> str:
     }
     main { max-width: 1180px; margin: 0 auto; padding: 26px 18px 42px; }
     header { display: flex; justify-content: space-between; gap: 16px; align-items: end; margin-bottom: 18px; }
+    .header-status { display: grid; gap: 7px; justify-items: end; }
     h1 { margin: 0; font-size: 24px; font-weight: 760; }
     .brand-mark { color: var(--accent); font-size: 13px; margin-bottom: 4px; }
     .layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; }
@@ -1452,7 +1523,10 @@ def _user_ui_html() -> str:
         <div class="brand-mark">V40</div>
         <h1>掐指一算</h1>
       </div>
-      <div class="status" id="provider"><span class="dot"></span><span>智能测算服务</span></div>
+      <div class="header-status">
+        <div class="status" id="provider"><span class="dot"></span><span>智能测算服务</span></div>
+        <div class="status" id="surfaceReady"><span class="dot"></span><span>报告优先 · 可继续追问</span></div>
+      </div>
     </header>
     <div class="layout">
       <section class="panel">
@@ -1725,6 +1799,16 @@ def _user_ui_html() -> str:
         $("provider").lastElementChild.textContent = "智能测算服务未连接";
       }
     }
+    async function loadSurfaceReadiness() {
+      try {
+        const res = await fetch("/api/v40/surface/beta-readiness");
+        const body = await res.json();
+        const ready = body.readiness?.beta_status === "ready";
+        $("surfaceReady").lastElementChild.textContent = ready ? "报告优先 · 可继续追问" : "体验完善中";
+      } catch (_) {
+        $("surfaceReady").lastElementChild.textContent = "报告优先 · 可继续追问";
+      }
+    }
     $("form").addEventListener("submit", async (event) => {
       event.preventDefault();
       const readingId = `ui-${Date.now()}`;
@@ -1811,6 +1895,7 @@ def _user_ui_html() -> str:
       submitFeedback(button.dataset.feedbackScope || "", button.dataset.feedbackValue || "");
     });
     loadProvider();
+    loadSurfaceReadiness();
   </script>
 </body>
 </html>"""

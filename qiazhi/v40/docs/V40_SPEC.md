@@ -523,6 +523,14 @@ docs/V40_PHASE38_SHADOW_COMPARE_BATCH_RISK.md
 
 本阶段新增 `ShadowCompareBatchSummary`、`build_shadow_compare_batch_summary` 与 `POST /api/v40/shadow-compare/batch`，允许一次提交多份 `V30ExportEnvelope` plain JSON DTO，批量生成 `ShadowCompareResult` 并汇总迁移风险。通过口径聚焦 import coverage、verdict topic overlap、product projection ready 和 leakage free；该流程仍不 import V30 runtime、不写 V30、不写 V40 production。
 
+2026-06-30 Phase 39 已启动：
+
+```text
+docs/V40_PHASE39_USER_SURFACE_BETA_READINESS.md
+```
+
+本阶段新增 `GET /api/v40/surface/beta-readiness`，把用户侧 report-first、报告后追问、反馈入训练、命理师校准、Admin 分离和无静默 fallback 六项作为 beta readiness 检查。`/v40/ui` 顶部只显示“报告优先 · 可继续追问”这种用户可理解状态，不暴露工程检查项或 production weight 语言。
+
 ## V40 不做的事
 
 本阶段不做：
