@@ -531,6 +531,14 @@ docs/V40_PHASE39_USER_SURFACE_BETA_READINESS.md
 
 本阶段新增 `GET /api/v40/surface/beta-readiness`，把用户侧 report-first、报告后追问、反馈入训练、命理师校准、Admin 分离和无静默 fallback 六项作为 beta readiness 检查。`/v40/ui` 顶部只显示“报告优先 · 可继续追问”这种用户可理解状态，不暴露工程检查项或 production weight 语言。
 
+2026-06-30 Phase 40 已启动：
+
+```text
+docs/V40_PHASE40_V30_REPLACEMENT_READINESS.md
+```
+
+本阶段新增 `build_v30_replacement_readiness` 与 `GET /api/v40/project/v30-replacement-readiness`，把 shadow compare、evaluation/readiness、训练反馈回放、candidate weight 审计、用户侧 beta readiness 和 V40 隔离边界合成 V30 replacement candidate readiness。该接口只给候选替代状态，仍保留真实命例质量判断、最终产品验收和线上切换窗口三项人工确认。
+
 ## V40 不做的事
 
 本阶段不做：

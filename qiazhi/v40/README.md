@@ -58,6 +58,7 @@ docs/V40_PHASE36_RELEASE_READINESS_EVIDENCE_BATCHES.md
 docs/V40_PHASE37_ADMIN_CANDIDATE_RISK.md
 docs/V40_PHASE38_SHADOW_COMPARE_BATCH_RISK.md
 docs/V40_PHASE39_USER_SURFACE_BETA_READINESS.md
+docs/V40_PHASE40_V30_REPLACEMENT_READINESS.md
 ```
 
 Initial principle:
@@ -79,5 +80,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 39: User Surface Beta Readiness
+Phase 40: V30 Replacement Readiness Closeout
 ```
