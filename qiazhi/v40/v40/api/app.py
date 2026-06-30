@@ -21,6 +21,7 @@ from v40.api.models import (
     PractitionerLensActionRequest,
     ReleaseReadinessFromBatchesRequest,
     ReleaseReadinessFromEvidenceBatchesRequest,
+    ShadowCompareBatchRequest,
     SyntheticCasesFromSeedsRequest,
     TrainingExampleFromReadingRequest,
     TrainingExampleReplayRequest,
@@ -38,6 +39,7 @@ from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
     build_release_readiness_from_batches,
     build_release_readiness_from_evidence_batches,
+    build_shadow_compare_batch_summary,
     build_shadow_compare_result,
     build_training_replay_batch_summary,
     evaluate_cases_against_runtime,
@@ -435,6 +437,39 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "shadow_compare_history_reads_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/shadow-compare/batch")
+    def shadow_compare_batch(payload: ShadowCompareBatchRequest) -> dict[str, object]:
+        runtimes = [build_runtime_from_v30_export(envelope) for envelope in payload.exports]
+        compares = [
+            build_shadow_compare_result(
+                compare_id=f"compare:{payload.batch_id}:{envelope.export_id}",
+                envelope=envelope,
+                runtime_result=runtime,
+            )
+            for envelope, runtime in zip(payload.exports, runtimes)
+        ]
+        summary = build_shadow_compare_batch_summary(batch_id=payload.batch_id, compares=compares)
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                for runtime, compare in zip(runtimes, compares):
+                    repository.save_runtime(runtime)
+                    repository.save_shadow_compare(compare)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.shadow_compare_batch_response.v1",
+            "summary": summary.model_dump(mode="json"),
+            "compares": [compare.model_dump(mode="json") for compare in compares],
+            "runtime_refs": [runtime.reading_id for runtime in runtimes],
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "shadow_compare_batch_imports_plain_json_without_touching_v30_runtime",
         }
 
     @app.post(f"{API_PREFIX}/evaluation/cases")

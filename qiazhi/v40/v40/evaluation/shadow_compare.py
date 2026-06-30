@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+from collections import Counter
+
 from v40.contracts.base import ReleaseRecommendation, Topic
-from v40.contracts.evaluation import ShadowCompareResult
+from v40.contracts.evaluation import ShadowCompareBatchSummary, ShadowCompareResult
 from v40.contracts.runtime import RuntimeResult
 from v40.migration.v30_export import V30ExportEnvelope
 
@@ -61,6 +63,49 @@ def build_shadow_compare_result(
     )
 
 
+def build_shadow_compare_batch_summary(
+    *,
+    batch_id: str,
+    compares: list[ShadowCompareResult],
+) -> ShadowCompareBatchSummary:
+    reason_counts: Counter[str] = Counter()
+    for compare in compares:
+        reason_counts.update(compare.failed_reasons)
+        if compare.import_coverage_rate < 0.9:
+            reason_counts["import_coverage_low"] += 1
+        if compare.verdict_topic_overlap_rate < 0.8:
+            reason_counts["verdict_topic_overlap_low"] += 1
+        if not compare.product_projection_ready:
+            reason_counts["product_projection_not_ready"] += 1
+        if not compare.leakage_free:
+            reason_counts["leakage_not_free"] += 1
+
+    passed_count = sum(1 for compare in compares if _shadow_compare_passed(compare))
+    regression_count = sum(1 for compare in compares if compare.regression_detected)
+    review_count = len(compares) - passed_count - regression_count
+    average_import = _average([compare.import_coverage_rate for compare in compares])
+    average_overlap = _average([compare.verdict_topic_overlap_rate for compare in compares])
+    product_ready_rate = _average([1.0 if compare.product_projection_ready else 0.0 for compare in compares])
+    recommendation = ReleaseRecommendation.NEEDS_REVIEW
+    if regression_count:
+        recommendation = ReleaseRecommendation.REJECT
+    elif compares and passed_count == len(compares) and not reason_counts:
+        recommendation = ReleaseRecommendation.APPROVE
+    return ShadowCompareBatchSummary(
+        batch_id=batch_id,
+        compare_count=len(compares),
+        compare_ids=[compare.compare_id for compare in compares],
+        passed_count=passed_count,
+        review_count=review_count,
+        regression_count=regression_count,
+        average_import_coverage_rate=average_import,
+        average_verdict_topic_overlap_rate=average_overlap,
+        product_projection_ready_rate=product_ready_rate,
+        failed_reason_counts=dict(sorted(reason_counts.items())),
+        recommendation=recommendation,
+    )
+
+
 def _topics_from_rows(rows: list[dict[str, object]]) -> set[Topic]:
     topics: set[Topic] = set()
     for row in rows:
@@ -76,3 +121,19 @@ def _coverage(converted_count: int, source_count: int) -> float:
     if source_count <= 0:
         return 1.0
     return max(0.0, min(1.0, converted_count / source_count))
+
+
+def _shadow_compare_passed(compare: ShadowCompareResult) -> bool:
+    return (
+        not compare.regression_detected
+        and compare.import_coverage_rate >= 0.9
+        and compare.verdict_topic_overlap_rate >= 0.8
+        and compare.product_projection_ready
+        and compare.leakage_free
+    )
+
+
+def _average(values: list[float]) -> float:
+    if not values:
+        return 0.0
+    return round(sum(values) / len(values), 4)

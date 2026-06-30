@@ -56,6 +56,7 @@ docs/V40_PHASE34_PROJECT_STATUS_DASHBOARD.md
 docs/V40_PHASE35_REPLAY_BATCH_CANDIDATE_WEIGHT.md
 docs/V40_PHASE36_RELEASE_READINESS_EVIDENCE_BATCHES.md
 docs/V40_PHASE37_ADMIN_CANDIDATE_RISK.md
+docs/V40_PHASE38_SHADOW_COMPARE_BATCH_RISK.md
 ```
 
 Initial principle:
@@ -77,5 +78,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 37: Admin Candidate Risk Read Model
+Phase 38: Shadow Compare Batch Risk
 ```

@@ -347,3 +347,35 @@ class ShadowCompareResult(V40Model):
         ):
             raise ValueError("ShadowCompareResult cannot approve with regression or failures")
         return self
+
+
+class ShadowCompareBatchSummary(V40Model):
+    version: str = "v40.shadow_compare_batch_summary.v1"
+    batch_id: str
+    compare_count: int = Field(default=0, ge=0)
+    compare_ids: list[str] = Field(default_factory=list)
+    passed_count: int = Field(default=0, ge=0)
+    review_count: int = Field(default=0, ge=0)
+    regression_count: int = Field(default=0, ge=0)
+    average_import_coverage_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_verdict_topic_overlap_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    product_projection_ready_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    failed_reason_counts: dict[str, int] = Field(default_factory=dict)
+    recommendation: ReleaseRecommendation = ReleaseRecommendation.NEEDS_REVIEW
+    writes_v30_state: bool = False
+    writes_v40_production: bool = False
+    boundary: str = "shadow_compare_batch_observes_migration_risk_without_mutating_v30_or_v40_production"
+
+    @model_validator(mode="after")
+    def _shadow_compare_batch_boundary(self) -> "ShadowCompareBatchSummary":
+        if not self.batch_id.strip():
+            raise ValueError("ShadowCompareBatchSummary requires batch_id")
+        if self.compare_count != len(self.compare_ids):
+            raise ValueError("ShadowCompareBatchSummary compare_count must match compare_ids")
+        if self.passed_count + self.review_count + self.regression_count != self.compare_count:
+            raise ValueError("ShadowCompareBatchSummary status counts must match compare_count")
+        if self.writes_v30_state:
+            raise ValueError("ShadowCompareBatchSummary cannot write V30 state")
+        if self.writes_v40_production:
+            raise ValueError("ShadowCompareBatchSummary cannot write V40 production")
+        return self

@@ -17,6 +17,7 @@ from v40.contracts.evaluation import (
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import GlobalWeightVersion, LabelTargetType, LabelValue, TrainingExampleV2, WeightActivationReview
+from v40.migration import V30ExportEnvelope
 
 
 class EvaluationRunFromRuntimeRequest(V40Model):
@@ -29,6 +30,22 @@ class EvaluationRunFromRuntimeRequest(V40Model):
     expression_telemetry: ExpressionTelemetry | None = None
     persist: bool = True
     boundary: str = "evaluation_run_request_evaluates_runtime_without_llm_judge"
+
+
+class ShadowCompareBatchRequest(V40Model):
+    version: str = "v40.shadow_compare_batch_request.v1"
+    batch_id: str
+    exports: list[V30ExportEnvelope]
+    persist: bool = True
+    boundary: str = "shadow_compare_batch_request_imports_plain_v30_json_without_touching_v30_runtime"
+
+    @model_validator(mode="after")
+    def _shadow_batch_boundary(self) -> "ShadowCompareBatchRequest":
+        if not self.batch_id.strip():
+            raise ValueError("Shadow compare batch request requires batch_id")
+        if not self.exports:
+            raise ValueError("Shadow compare batch request requires exports")
+        return self
 
 
 class TrainingImpactFromEvaluationRequest(V40Model):
