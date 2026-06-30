@@ -9,6 +9,7 @@ from fastapi.responses import HTMLResponse
 from v40 import __version__
 from v40.api.models import (
     CandidateWeightFromBatchRequest,
+    CandidateWeightFromReplayBatchRequest,
     ConversationTurnRequest,
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
@@ -59,6 +60,7 @@ from v40.expression import (
 )
 from v40.training import (
     build_candidate_weight_version_from_batch,
+    build_candidate_weight_version_from_replay_batch,
     build_practitioner_lens_action,
     build_training_example_from_labels,
     build_training_impact_from_evaluation,
@@ -955,6 +957,35 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "candidate_weight_version_registered_without_activation",
+        }
+
+    @app.post(f"{API_PREFIX}/weights/candidates/from-replay-batch")
+    def build_candidate_weight_from_replay_batch(payload: CandidateWeightFromReplayBatchRequest) -> dict[str, object]:
+        try:
+            weight_version = build_candidate_weight_version_from_replay_batch(
+                summary=payload.replay_batch_summary,
+                weight_version_id=payload.weight_version_id,
+                source_training_run_id=payload.source_training_run_id,
+                release_gate_id=payload.release_gate_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_global_weight_version(weight_version)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.candidate_weight_from_replay_batch_response.v1",
+            "weight_version": weight_version.model_dump(mode="json"),
+            "persisted": persisted,
+            "active": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "candidate_weight_version_registered_from_replay_batch_without_activation",
         }
 
     @app.get(f"{API_PREFIX}/weights/candidates")

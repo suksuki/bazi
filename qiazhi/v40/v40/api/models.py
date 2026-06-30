@@ -11,6 +11,7 @@ from v40.contracts.evaluation import (
     EvaluationCaseSpec,
     EvaluationRunResult,
     ReleaseReadinessSummary,
+    TrainingReplayBatchSummary,
     TrainingExampleReplayResult,
 )
 from v40.contracts.output import ExpressionTelemetry
@@ -113,6 +114,26 @@ class CandidateWeightFromBatchRequest(V40Model):
     batch_summary: EvaluationBatchSummary
     persist: bool = True
     boundary: str = "candidate_weight_request_registers_candidate_without_activation"
+
+
+class CandidateWeightFromReplayBatchRequest(V40Model):
+    version: str = "v40.candidate_weight_from_replay_batch_request.v1"
+    weight_version_id: str
+    source_training_run_id: str
+    release_gate_id: str
+    replay_batch_summary: TrainingReplayBatchSummary
+    persist: bool = True
+    boundary: str = "candidate_weight_from_replay_batch_registers_candidate_without_activation"
+
+    @model_validator(mode="after")
+    def _replay_candidate_boundary(self) -> "CandidateWeightFromReplayBatchRequest":
+        if not self.weight_version_id.strip():
+            raise ValueError("Candidate replay weight request requires weight_version_id")
+        if not self.source_training_run_id.strip():
+            raise ValueError("Candidate replay weight request requires source_training_run_id")
+        if not self.release_gate_id.strip():
+            raise ValueError("Candidate replay weight request requires release_gate_id")
+        return self
 
 
 class ReleaseReadinessFromBatchesRequest(V40Model):

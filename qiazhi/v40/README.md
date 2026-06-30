@@ -53,6 +53,7 @@ docs/V40_PHASE31_ADMIN_FEEDBACK_SUMMARY.md
 docs/V40_PHASE32_TRAINING_EXAMPLE_REPLAY.md
 docs/V40_PHASE33_TRAINING_REPLAY_BATCH.md
 docs/V40_PHASE34_PROJECT_STATUS_DASHBOARD.md
+docs/V40_PHASE35_REPLAY_BATCH_CANDIDATE_WEIGHT.md
 ```
 
 Initial principle:
@@ -74,5 +75,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 34: Project Status Dashboard
+Phase 35: Replay Batch Candidate Weight Gate
 ```

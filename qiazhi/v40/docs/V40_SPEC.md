@@ -491,6 +491,14 @@ docs/V40_PHASE34_PROJECT_STATUS_DASHBOARD.md
 
 本阶段新增 V40 项目完成度状态。`GET /api/v40/project/status` 会聚合 roadmap 与 `lab_summary.counts`，输出当前 phase、总体完成度、architecture / user_beta / training_validation / v30_replacement 四条主线进度、实时证据计数和下一步任务。`/admin/v40` 新增 `V40 Completion` 面板，并通过 `/admin/v40/api/project-status` 每 15 秒刷新一次。该状态只读，不启动训练、不写 production weight、不作为发布批准。
 
+2026-06-30 Phase 35 已启动：
+
+```text
+docs/V40_PHASE35_REPLAY_BATCH_CANDIDATE_WEIGHT.md
+```
+
+本阶段把通过的 `TrainingReplayBatchSummary` 接入候选权重登记：`POST /api/v40/weights/candidates/from-replay-batch` 会生成 `GlobalWeightVersion(active=false)`，并可保存到 `v40_global_weight_versions`。该入口要求 replay batch 已 approve、不能允许 production write、且必须有 replay evidence；它只把训练反馈验证结果变成可审计的候选版本，不激活权重、不改用户报告、不写 V30。
+
 ## V40 不做的事
 
 本阶段不做：
