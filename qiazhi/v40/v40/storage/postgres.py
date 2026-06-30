@@ -14,6 +14,7 @@ from v40.contracts.evaluation import (
     ReleaseGateResult,
     ReleaseReadinessSummary,
     ShadowCompareResult,
+    TrainingExampleReplayResult,
 )
 from v40.contracts.output import ConversationTurn
 from v40.contracts.runtime import RuntimeResult
@@ -478,6 +479,97 @@ class V40PostgresRepository:
                             updated_at
                         FROM v40_training_examples
                         ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (bounded_limit,),
+                    )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def save_training_example_replay(self, replay: TrainingExampleReplayResult) -> None:
+        payload = replay.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_training_example_replays (
+                        replay_id,
+                        example_id,
+                        reading_id,
+                        candidate_version,
+                        version,
+                        replay_json,
+                        status,
+                        recommendation,
+                        production_write_allowed,
+                        created_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, %s, %s, %s, now())
+                    ON CONFLICT (replay_id)
+                    DO UPDATE SET
+                        example_id = EXCLUDED.example_id,
+                        reading_id = EXCLUDED.reading_id,
+                        candidate_version = EXCLUDED.candidate_version,
+                        version = EXCLUDED.version,
+                        replay_json = EXCLUDED.replay_json,
+                        status = EXCLUDED.status,
+                        recommendation = EXCLUDED.recommendation,
+                        production_write_allowed = EXCLUDED.production_write_allowed,
+                        created_at = now()
+                    """,
+                    (
+                        replay.replay_id,
+                        replay.example_id,
+                        replay.reading_id,
+                        replay.candidate_version,
+                        replay.version,
+                        json.dumps(payload, ensure_ascii=False),
+                        replay.status.value,
+                        replay.recommendation.value,
+                        replay.production_write_allowed,
+                    ),
+                )
+
+    def list_training_example_replays(self, *, limit: int = 20, reading_id: str = "") -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                if reading_id:
+                    cur.execute(
+                        """
+                        SELECT
+                            replay_id,
+                            example_id,
+                            reading_id,
+                            candidate_version,
+                            version,
+                            replay_json,
+                            status,
+                            recommendation,
+                            production_write_allowed,
+                            created_at
+                        FROM v40_training_example_replays
+                        WHERE reading_id = %s
+                        ORDER BY created_at DESC
+                        LIMIT %s
+                        """,
+                        (reading_id, bounded_limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT
+                            replay_id,
+                            example_id,
+                            reading_id,
+                            candidate_version,
+                            version,
+                            replay_json,
+                            status,
+                            recommendation,
+                            production_write_allowed,
+                            created_at
+                        FROM v40_training_example_replays
+                        ORDER BY created_at DESC
                         LIMIT %s
                         """,
                         (bounded_limit,),
@@ -978,6 +1070,7 @@ class V40PostgresRepository:
             "training_label_events": "v40_training_label_events",
             "local_overlays": "v40_local_overlays",
             "training_examples": "v40_training_examples",
+            "training_example_replays": "v40_training_example_replays",
             "conversation_turns": "v40_conversation_turns",
             "training_impact_diffs": "v40_training_impact_diffs",
             "shadow_compare_runs": "v40_shadow_compare_runs",
@@ -1000,6 +1093,12 @@ class V40PostgresRepository:
                 latest_impacts = self._latest_rows(cur, "v40_training_impact_diffs", "created_at", limit=5)
                 latest_local_overlays = self._latest_rows(cur, "v40_local_overlays", "updated_at", limit=5)
                 latest_training_examples = self._latest_rows(cur, "v40_training_examples", "updated_at", limit=5)
+                latest_training_example_replays = self._latest_rows(
+                    cur,
+                    "v40_training_example_replays",
+                    "created_at",
+                    limit=5,
+                )
                 latest_conversation_turns = self._latest_rows(cur, "v40_conversation_turns", "updated_at", limit=5)
                 latest_gates = self._latest_rows(cur, "v40_release_gates", "created_at", limit=5)
                 latest_weights = self._latest_rows(cur, "v40_global_weight_versions", "updated_at", limit=5)
@@ -1023,6 +1122,7 @@ class V40PostgresRepository:
             "latest_training_impacts": latest_impacts,
             "latest_local_overlays": latest_local_overlays,
             "latest_training_examples": latest_training_examples,
+            "latest_training_example_replays": latest_training_example_replays,
             "latest_conversation_turns": latest_conversation_turns,
             "latest_release_gates": latest_gates,
             "latest_global_weight_versions": latest_weights,

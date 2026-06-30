@@ -38,6 +38,7 @@ def contract_manifest() -> dict[str, object]:
             "ReleaseGateResult",
             "ReleaseReadinessSummary",
             "ShadowCompareResult",
+            "TrainingExampleReplayResult",
         ],
         "training": [
             "TrainingLabelEvent",

@@ -21,6 +21,7 @@ from v40.api.models import (
     ReleaseReadinessFromBatchesRequest,
     SyntheticCasesFromSeedsRequest,
     TrainingExampleFromReadingRequest,
+    TrainingExampleReplayRequest,
     TrainingImpactFromEvaluationRequest,
     WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
@@ -37,6 +38,7 @@ from v40.evaluation import (
     evaluate_cases_against_runtime,
     evaluate_native_seeds,
     evaluate_runtime_against_case,
+    replay_training_example,
 )
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.storage import V40PostgresRepository
@@ -798,6 +800,50 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "training_examples_read_compiled_feedback_material_only",
+        }
+
+    @app.post(f"{API_PREFIX}/training/replay-example")
+    def replay_training_example_from_runtime(payload: TrainingExampleReplayRequest) -> dict[str, object]:
+        replay = replay_training_example(
+            replay_id=payload.replay_id,
+            training_example=payload.training_example,
+            runtime=payload.runtime,
+            candidate_version=payload.candidate_version,
+            include_source_example=payload.include_source_example,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_training_example_replay(replay)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_example_replay_response.v1",
+            "replay": replay.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_example_replay_scores_feedback_without_weight_write",
+        }
+
+    @app.get(f"{API_PREFIX}/training/example-replays")
+    def list_training_example_replays(
+        limit: int = Query(default=20, ge=1, le=100),
+        reading_id: str = "",
+    ) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            replays = repository.list_training_example_replays(limit=limit, reading_id=reading_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_example_replays_response.v1",
+            "replays": replays,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_example_replays_read_feedback_validation_material_only",
         }
 
     @app.post(f"{API_PREFIX}/training/impact-from-evaluation")

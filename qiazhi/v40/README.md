@@ -50,6 +50,7 @@ docs/V40_PHASE28_PRACTITIONER_CALIBRATION_LOOP.md
 docs/V40_PHASE29_PRACTITIONER_UI_CALIBRATION.md
 docs/V40_PHASE30_TRAINING_EXAMPLE_COMPILATION.md
 docs/V40_PHASE31_ADMIN_FEEDBACK_SUMMARY.md
+docs/V40_PHASE32_TRAINING_EXAMPLE_REPLAY.md
 ```
 
 Initial principle:
@@ -71,5 +72,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 31: Admin Feedback Summary
+Phase 32: Training Example Replay
 ```

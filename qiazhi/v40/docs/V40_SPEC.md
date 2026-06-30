@@ -467,6 +467,14 @@ docs/V40_PHASE31_ADMIN_FEEDBACK_SUMMARY.md
 
 本阶段把反馈闭环接入独立 Admin Control Plane 的只读摘要。`/admin/v40` 新增 `Training Feedback` section，展示 `training_label_events / local_overlays / training_examples` 三类计数，并列出最近的 `latest_training_examples` 与 `latest_local_overlays`。该控制面仍然只读，不启动训练、不写 production weight、不写 V30，也不把 Admin 功能塞回用户主系统。
 
+2026-06-30 Phase 32 已启动：
+
+```text
+docs/V40_PHASE32_TRAINING_EXAMPLE_REPLAY.md
+```
+
+本阶段新增 `TrainingExampleReplayResult` 与 replay 运行时。`POST /api/v40/training/replay-example` 会把 `TrainingExampleV2` 与当前 `RuntimeResult` 对齐，检查反馈目标是否仍能在 signal / branch / verdict / advice / probe / projection / conversation seed / evidence refs 中找回，并计算 `target_coverage_rate`、`feedback_alignment_score`、正负反馈数量和 `needs_probe` 数量。新增 `v40_training_example_replays` 与 `GET /api/v40/training/example-replays`。Replay 是确定性评估，不让 LLM 当 judge，不改 verdict，不写 production weight，不写 V30。
+
 ## V40 不做的事
 
 本阶段不做：

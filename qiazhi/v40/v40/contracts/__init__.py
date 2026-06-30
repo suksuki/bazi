@@ -31,6 +31,7 @@ from v40.contracts.evaluation import (
     ReleaseGateResult,
     ReleaseReadinessSummary,
     ShadowCompareResult,
+    TrainingExampleReplayResult,
 )
 from v40.contracts.output import (
     AcceptanceResult,
@@ -109,6 +110,7 @@ __all__ = [
     "SyntheticCaseSeed",
     "Topic",
     "TrainingExampleV2",
+    "TrainingExampleReplayResult",
     "TrainingImpactDiff",
     "TrainingLabelEvent",
     "V40Model",

@@ -9,7 +9,7 @@ from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed, ZiweiChartFac
 from v40.contracts.evaluation import EvaluationBatchSummary, EvaluationCaseSpec, EvaluationRunResult, ReleaseReadinessSummary
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.runtime import RuntimeResult
-from v40.contracts.training import GlobalWeightVersion, LabelTargetType, LabelValue, WeightActivationReview
+from v40.contracts.training import GlobalWeightVersion, LabelTargetType, LabelValue, TrainingExampleV2, WeightActivationReview
 
 
 class EvaluationRunFromRuntimeRequest(V40Model):
@@ -50,6 +50,25 @@ class TrainingExampleFromReadingRequest(V40Model):
             raise ValueError("Training example request requires example_id")
         if not self.reading_id.strip():
             raise ValueError("Training example request requires reading_id")
+        return self
+
+
+class TrainingExampleReplayRequest(V40Model):
+    version: str = "v40.training_example_replay_request.v1"
+    replay_id: str
+    training_example: TrainingExampleV2
+    runtime: RuntimeResult
+    candidate_version: str = "v40-alpha"
+    persist: bool = True
+    include_source_example: bool = True
+    boundary: str = "training_example_replay_request_scores_feedback_without_production_write"
+
+    @model_validator(mode="after")
+    def _replay_boundary(self) -> "TrainingExampleReplayRequest":
+        if not self.replay_id.strip():
+            raise ValueError("Training example replay request requires replay_id")
+        if self.training_example.reading_id != self.runtime.reading_id:
+            raise ValueError("Training example replay requires matching reading_id")
         return self
 
 

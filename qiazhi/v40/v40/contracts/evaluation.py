@@ -6,6 +6,7 @@ from pydantic import Field, model_validator
 
 from v40.contracts.base import AssertionLevel, ReleaseRecommendation, Topic, V40Model
 from v40.contracts.output import ExpressionTelemetry
+from v40.contracts.training import TrainingExampleV2
 
 
 class EvaluationCaseType(str, Enum):
@@ -211,6 +212,44 @@ class EvaluationBatchSummary(V40Model):
             raise ValueError("EvaluationBatchSummary status counts must match case_count")
         if self.production_write_allowed:
             raise ValueError("EvaluationBatchSummary cannot write production policy")
+        return self
+
+
+class TrainingExampleReplayResult(V40Model):
+    version: str = "v40.training_example_replay_result.v1"
+    replay_id: str
+    example_id: str
+    reading_id: str
+    candidate_version: str = "v40-alpha"
+    target_count: int = Field(default=0, ge=0)
+    matched_target_ids: list[str] = Field(default_factory=list)
+    missing_target_ids: list[str] = Field(default_factory=list)
+    target_coverage_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    local_overlay_ref_count: int = Field(default=0, ge=0)
+    positive_label_count: int = Field(default=0, ge=0)
+    negative_label_count: int = Field(default=0, ge=0)
+    needs_probe_count: int = Field(default=0, ge=0)
+    feedback_alignment_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    status: EvaluationStatus = EvaluationStatus.REVIEW
+    failed_reasons: list[str] = Field(default_factory=list)
+    recommendation: ReleaseRecommendation = ReleaseRecommendation.NEEDS_REVIEW
+    production_write_allowed: bool = False
+    chart_fact_mutation_allowed: bool = False
+    source_example: TrainingExampleV2 | None = None
+    boundary: str = "training_example_replay_scores_feedback_against_runtime_without_weight_write"
+
+    @model_validator(mode="after")
+    def _training_example_replay_boundary(self) -> "TrainingExampleReplayResult":
+        if not self.replay_id.strip():
+            raise ValueError("TrainingExampleReplayResult requires replay_id")
+        if not self.example_id.strip():
+            raise ValueError("TrainingExampleReplayResult requires example_id")
+        if self.production_write_allowed:
+            raise ValueError("TrainingExampleReplayResult cannot write production policy")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("TrainingExampleReplayResult cannot mutate chart facts")
+        if self.recommendation == ReleaseRecommendation.APPROVE and self.status != EvaluationStatus.PASSED:
+            raise ValueError("TrainingExampleReplayResult can approve only when replay passed")
         return self
 
 

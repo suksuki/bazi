@@ -16,6 +16,8 @@ def test_admin_console_surfaces_training_feedback_closed_loop() -> None:
     assert "training_label_events" in response.text
     assert "local_overlays" in response.text
     assert "training_examples" in response.text
+    assert "training_example_replays" in response.text
     assert "latest_training_examples" in response.text
     assert "latest_local_overlays" in response.text
+    assert "latest_training_example_replays" in response.text
     assert "production write" not in response.text
