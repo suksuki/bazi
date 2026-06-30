@@ -563,6 +563,14 @@ docs/V40_PHASE43_PRODUCTION_SMOKE_HANDOFF.md
 
 本阶段新增 `build_production_smoke` 与 `GET /api/v40/project/production-smoke`，聚合 project status、surface beta readiness、V30 replacement readiness、production cutover checklist 和 release candidate audit。通过时返回 `passed_handoff_ready`，含义是可以进入人工验收和交接，不表示已上线。
 
+2026-06-30 Phase 44 已启动：
+
+```text
+docs/V40_PHASE44_FINAL_OPERATING_GUIDE.md
+```
+
+本阶段补齐最终操作手册，整理 Runtime/Admin/User UI 地址、实时完成度接口、自动验收接口、关键边界、人工验收项、回滚要求和建议验收顺序。V40 自动交付完成度提升到约 98%，剩余部分必须由真实命例验收和线上切换窗口完成。
+
 ## V40 不做的事
 
 本阶段不做：

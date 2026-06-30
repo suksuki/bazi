@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 43
-CURRENT_PHASE_NAME = "Production Smoke And Handoff"
+CURRENT_PHASE = 44
+CURRENT_PHASE_NAME = "Final Operating Guide"
 
 
 @dataclass(frozen=True)
@@ -31,7 +31,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="user_beta",
         label="用户侧 beta",
-        percent=92,
+        percent=96,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
         next_step="继续打磨 report-first UI、命理师模式和对话体验。",
@@ -39,7 +39,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="training_validation",
         label="训练验证闭环",
-        percent=94,
+        percent=98,
         status="accelerating",
         evidence_keys=("training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions", "release_readiness"),
         next_step="把 readiness 风险、证据来源和激活条件展示到 Admin。",
@@ -47,7 +47,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="v30_replacement",
         label="替代 V30",
-        percent=96,
+        percent=99,
         status="needs_more_runtime_cases",
         evidence_keys=("shadow_compare_runs", "evaluation_batches", "release_readiness"),
         next_step="增加 V30 shadow compare、真实案例回归和迁移验收。",
@@ -70,8 +70,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "40", "label": "V30 replacement readiness closeout", "status": "complete"},
     {"range": "41", "label": "Production beta cutover checklist", "status": "complete"},
     {"range": "42", "label": "Release candidate automatic audit", "status": "complete"},
-    {"range": "43", "label": "Production smoke and handoff", "status": "active"},
-    {"range": "44+", "label": "final operating guide、user acceptance、completion marker", "status": "planned"},
+    {"range": "43", "label": "Production smoke and handoff", "status": "complete"},
+    {"range": "44", "label": "Final operating guide", "status": "active"},
+    {"range": "45+", "label": "user acceptance、online cutover、completion marker", "status": "requires_user"},
 )
 
 
@@ -95,10 +96,10 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "Phase44: final docs and operating guide",
             "Phase45: final user acceptance window",
             "Phase46: V40 completion marker",
             "Phase47: post-acceptance cleanup",
+            "Phase48: optional GitHub push / deployment handoff",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

@@ -62,6 +62,7 @@ docs/V40_PHASE40_V30_REPLACEMENT_READINESS.md
 docs/V40_PHASE41_PRODUCTION_CUTOVER_CHECKLIST.md
 docs/V40_PHASE42_RELEASE_CANDIDATE_AUDIT.md
 docs/V40_PHASE43_PRODUCTION_SMOKE_HANDOFF.md
+docs/V40_PHASE44_FINAL_OPERATING_GUIDE.md
 ```
 
 Initial principle:
@@ -83,5 +84,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 43: Production Smoke And Handoff
+Phase 44: Final Operating Guide
 ```
