@@ -100,6 +100,16 @@ class SyntheticCasesFromSeedsRequest(V40Model):
     boundary: str = "synthetic_cases_request_builds_evaluation_cases_without_real_world_truth_claim"
 
 
+class NativeBatchFromSeedsRequest(V40Model):
+    version: str = "v40.native_batch_from_seeds_request.v1"
+    batch_id: str
+    candidate_version: str = "v40-native"
+    seeds: list[SyntheticCaseSeed]
+    role_key: RoleKey = "user"
+    persist: bool = False
+    boundary: str = "native_batch_from_seeds_runs_v40_native_runtime_without_v30_state"
+
+
 class PractitionerCalibrationRequest(V40Model):
     version: str = "v40.practitioner_calibration_request.v1"
     event_id: str

@@ -218,10 +218,19 @@ wealth question uses wealth signal as primary runtime topic
 
 ## Next Phase
 
-Phase 15 should add:
+Phase 15 added native batch evaluation:
 
 ```text
 native runtime batch evaluation using synthetic seeds
+one RuntimeResult per seed
+one EvaluationRunResult per generated case
+EvaluationBatchSummary and release gates
+API and CLI entry
+```
+
+Phase 16 should add:
+
+```text
 LLMExpressionTask execution adapter
 AcceptanceResult scan for expression output
 Admin native run and synthetic import actions

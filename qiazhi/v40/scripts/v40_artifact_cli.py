@@ -12,7 +12,7 @@ if str(ROOT) not in sys.path:
 
 from v40.artifacts import load_evaluation_cases
 from v40.engines import build_native_bazi_runtime
-from v40.evaluation import evaluate_cases_against_runtime
+from v40.evaluation import evaluate_cases_against_runtime, evaluate_native_seeds
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.storage import V40PostgresRepository
 from v40.synthetic import build_evaluation_cases_from_seeds, load_synthetic_seeds
@@ -44,6 +44,12 @@ def main() -> None:
     native_seed.add_argument("--seed-id", required=True)
     native_seed.add_argument("--reading-id", required=True)
     native_seed.add_argument("--no-persist", action="store_true")
+
+    native_batch = subparsers.add_parser("run-native-batch", help="Run V40 native Bazi batch from synthetic seeds")
+    native_batch.add_argument("--path", required=True)
+    native_batch.add_argument("--batch-id", required=True)
+    native_batch.add_argument("--candidate-version", required=True)
+    native_batch.add_argument("--no-persist", action="store_true")
 
     subparsers.add_parser("lab-summary", help="Print V40 lab summary")
 
@@ -116,6 +122,26 @@ def main() -> None:
                 indent=2,
             )
         )
+        return
+
+    if args.command == "run-native-batch":
+        seeds = load_synthetic_seeds(args.path)
+        runtimes, cases, runs, summary = evaluate_native_seeds(
+            batch_id=args.batch_id,
+            seeds=seeds,
+            candidate_version=args.candidate_version,
+        )
+        if not args.no_persist:
+            for runtime in runtimes:
+                repository.save_runtime(runtime)
+            for case in cases:
+                repository.save_evaluation_case(case)
+            for run in runs:
+                repository.save_evaluation_run(run)
+                if run.release_gate:
+                    repository.save_release_gate(run.release_gate)
+            repository.save_evaluation_batch_summary(summary)
+        print(json.dumps(summary.model_dump(mode="json"), ensure_ascii=False, indent=2))
         return
 
     if args.command == "lab-summary":

@@ -321,6 +321,14 @@ docs/V40_PHASE14_NATIVE_BAZI_FACT_SIGNAL_ADAPTERS.md
 
 本阶段新增 `v40/engines/bazi_adapters.py`，把显性十神、用神候选、原局/时运地支合冲和领域信号抽成原生 adapter。BaziEngine 仍只产出 facts/features/signals，不做最终裁决；DecisionEngine 可以用这些更具体的信号回答财运、关系、健康等主题问题，避免退回结构空话。
 
+2026-06-30 Phase 15 已启动：
+
+```text
+docs/V40_PHASE15_NATIVE_BATCH_EVALUATION.md
+```
+
+本阶段新增 V40 native batch evaluation：从 synthetic seeds 一对一生成 native runtime、EvaluationCaseSpec、EvaluationRunResult、ReleaseGate 和 EvaluationBatchSummary。V40 因此可以直接评测原生引擎变更，不再只依赖 V30 DTO shadow compare。
+
 ## V40 不做的事
 
 本阶段不做：

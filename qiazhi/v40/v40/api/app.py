@@ -10,6 +10,7 @@ from v40.api.models import (
     CandidateWeightFromBatchRequest,
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
+    NativeBatchFromSeedsRequest,
     NativeBaziRuntimeRequest,
     PractitionerCalibrationRequest,
     ReleaseReadinessFromBatchesRequest,
@@ -26,6 +27,7 @@ from v40.evaluation import (
     build_release_readiness_from_batches,
     build_shadow_compare_result,
     evaluate_cases_against_runtime,
+    evaluate_native_seeds,
     evaluate_runtime_against_case,
 )
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
@@ -116,6 +118,42 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "synthetic_cases_are_evaluation_contracts_not_real_world_truth",
+        }
+
+    @app.post(f"{API_PREFIX}/evaluation/native-batch/from-seeds")
+    def native_batch_from_seeds(payload: NativeBatchFromSeedsRequest) -> dict[str, object]:
+        runtimes, cases, runs, summary = evaluate_native_seeds(
+            batch_id=payload.batch_id,
+            seeds=payload.seeds,
+            candidate_version=payload.candidate_version,
+            role_key=payload.role_key,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                for runtime in runtimes:
+                    repository.save_runtime(runtime)
+                for case in cases:
+                    repository.save_evaluation_case(case)
+                for run in runs:
+                    repository.save_evaluation_run(run)
+                    if run.release_gate:
+                        repository.save_release_gate(run.release_gate)
+                repository.save_evaluation_batch_summary(summary)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.native_batch_from_seeds_response.v1",
+            "summary": summary.model_dump(mode="json"),
+            "runs": [run.model_dump(mode="json") for run in runs],
+            "runtime_refs": [runtime.reading_id for runtime in runtimes],
+            "case_refs": [case.case_id for case in cases],
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "native_batch_from_seeds_evaluates_v40_native_runtime_without_v30_state",
         }
 
     @app.post(f"{API_PREFIX}/shadow-compare")
