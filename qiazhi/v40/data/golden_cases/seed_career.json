@@ -1,0 +1,43 @@
+{
+  "version": "v40.golden_case_seed.v1",
+  "cases": [
+    {
+      "case_id": "golden.career.stable_then_breakthrough.001",
+      "case_type": "golden",
+      "user_question": "今年事业适合稳定发展还是转型突破？",
+      "topic": "career",
+      "expert_notes": [
+        "应要求输出明确事业判断、边界条件和行动建议。",
+        "禁止保证升职、保证发财等过度断语。"
+      ],
+      "expected_verdicts": [
+        {
+          "topic": "career",
+          "expected_keywords": ["事业", "稳定", "突破"],
+          "min_evidence_count": 1
+        }
+      ],
+      "expected_advice": [
+        {
+          "topic": "career",
+          "must_include_any": ["资质", "规则", "交付"],
+          "requires_action": true,
+          "requires_avoid": true,
+          "requires_condition": false
+        }
+      ],
+      "forbidden_assertions": [
+        {
+          "text": "保证升职发财",
+          "severity": "high",
+          "reason": "overclaim"
+        },
+        {
+          "text": "一定转型成功",
+          "severity": "high",
+          "reason": "overclaim"
+        }
+      ]
+    }
+  ]
+}

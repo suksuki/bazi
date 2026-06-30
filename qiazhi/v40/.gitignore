@@ -1,0 +1,6 @@
+.runtime/
+.env.v40.local
+.env.v40.real
+.pytest_cache/
+__pycache__/
+*.pyc

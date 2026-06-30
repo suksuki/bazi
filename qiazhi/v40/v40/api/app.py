@@ -1,0 +1,477 @@
+from __future__ import annotations
+
+import os
+from pathlib import Path
+
+from fastapi import FastAPI, HTTPException, Query
+
+from v40 import __version__
+from v40.api.models import (
+    CandidateWeightFromBatchRequest,
+    EvaluationBatchFromRuntimeRequest,
+    EvaluationRunFromRuntimeRequest,
+    ReleaseReadinessFromBatchesRequest,
+    TrainingImpactFromEvaluationRequest,
+    WeightActivationReviewRequest,
+)
+from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
+from v40.contracts.manifest import contract_manifest
+from v40.contracts.training import TrainingLabelEvent
+from v40.evaluation import (
+    build_release_readiness_from_batches,
+    build_shadow_compare_result,
+    evaluate_cases_against_runtime,
+    evaluate_runtime_against_case,
+)
+from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
+from v40.storage import V40PostgresRepository
+from v40.storage.config import v40_repository_configured
+from v40.training import (
+    build_candidate_weight_version_from_batch,
+    build_training_impact_from_evaluation,
+    build_weight_activation_review,
+)
+
+
+API_PREFIX = "/api/v40"
+
+
+def create_app() -> FastAPI:
+    app = FastAPI(title="Qiazhi V40", version=__version__)
+
+    @app.get(f"{API_PREFIX}/health")
+    def health() -> dict[str, object]:
+        runtime_dir = os.getenv("V40_RUNTIME_DIR", str(Path(__file__).resolve().parents[2] / ".runtime"))
+        return {
+            "ok": True,
+            "package": "v40",
+            "version": __version__,
+            "api_prefix": API_PREFIX,
+            "admin_prefix": "/admin/v40",
+            "ui_prefix": "/v40/ui",
+            "runtime_dir": runtime_dir,
+            "repository": os.getenv("V40_REPOSITORY", "postgres"),
+            "database_boundary": "qiazhi_v40",
+            "postgres_table_prefix": "v40_",
+            "repository_configured": v40_repository_configured(),
+            "redis_prefix": os.getenv("V40_REDIS_PREFIX", "v40"),
+            "v30_runtime_import_allowed": False,
+            "boundary": "v40_health_reports_independent_runtime_boundaries",
+        }
+
+    @app.get(f"{API_PREFIX}/contracts")
+    def contracts() -> dict[str, object]:
+        return contract_manifest()
+
+    @app.post(f"{API_PREFIX}/shadow-compare")
+    def shadow_compare(payload: V30ExportEnvelope, persist: bool = False) -> dict[str, object]:
+        runtime = build_runtime_from_v30_export(payload)
+        compare = build_shadow_compare_result(
+            compare_id=f"compare:{payload.export_id}",
+            envelope=payload,
+            runtime_result=runtime,
+        )
+        persisted = False
+        if persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_runtime(runtime)
+                repository.save_shadow_compare(compare)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.shadow_compare_response.v1",
+            "runtime": runtime.model_dump(mode="json"),
+            "compare": compare.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "shadow_compare_endpoint_imports_plain_json_without_touching_v30_runtime",
+        }
+
+    @app.get(f"{API_PREFIX}/shadow-compare/runs")
+    def shadow_compare_runs(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            runs = repository.list_shadow_compare_runs(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.shadow_compare_runs_response.v1",
+            "runs": runs,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "shadow_compare_history_reads_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/evaluation/cases")
+    def save_evaluation_case(payload: EvaluationCaseSpec) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            repository.save_evaluation_case(payload)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.evaluation_case_save_response.v1",
+            "saved": True,
+            "case_id": payload.case_id,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "evaluation_case_saved_as_v40_measurement_contract_only",
+        }
+
+    @app.get(f"{API_PREFIX}/evaluation/cases")
+    def list_evaluation_cases(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            cases = repository.list_evaluation_cases(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.evaluation_cases_response.v1",
+            "cases": cases,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "evaluation_cases_read_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/evaluation/runs/from-runtime")
+    def build_evaluation_run(payload: EvaluationRunFromRuntimeRequest) -> dict[str, object]:
+        run = evaluate_runtime_against_case(
+            run_id=payload.run_id,
+            case_spec=payload.case_spec,
+            runtime=payload.runtime,
+            candidate_version=payload.candidate_version,
+            build_release_gate=payload.build_release_gate,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_evaluation_run(run)
+                if run.release_gate:
+                    repository.save_release_gate(run.release_gate)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.evaluation_run_from_runtime_response.v1",
+            "run": run.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "evaluation_run_built_by_deterministic_metrics_without_llm_judge",
+        }
+
+    @app.get(f"{API_PREFIX}/evaluation/runs")
+    def list_evaluation_runs(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            runs = repository.list_evaluation_runs(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.evaluation_runs_response.v1",
+            "runs": runs,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "evaluation_runs_read_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/evaluation/batches/from-runtime")
+    def build_evaluation_batch(payload: EvaluationBatchFromRuntimeRequest) -> dict[str, object]:
+        runs, summary = evaluate_cases_against_runtime(
+            batch_id=payload.batch_id,
+            cases=payload.cases,
+            runtime=payload.runtime,
+            candidate_version=payload.candidate_version,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                for run in runs:
+                    repository.save_evaluation_run(run)
+                    if run.release_gate:
+                        repository.save_release_gate(run.release_gate)
+                repository.save_evaluation_batch_summary(summary)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.evaluation_batch_from_runtime_response.v1",
+            "summary": summary.model_dump(mode="json"),
+            "runs": [run.model_dump(mode="json") for run in runs],
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "evaluation_batch_built_by_deterministic_metrics_without_llm_judge",
+        }
+
+    @app.get(f"{API_PREFIX}/evaluation/batches")
+    def list_evaluation_batches(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            batches = repository.list_evaluation_batches(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.evaluation_batches_response.v1",
+            "batches": batches,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "evaluation_batches_read_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/training/labels")
+    def save_training_label(payload: TrainingLabelEvent) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            repository.save_training_label_event(payload)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_label_save_response.v1",
+            "saved": True,
+            "event_id": payload.event_id,
+            "local_only": payload.local_only,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_label_saved_as_feedback_signal_without_weight_write",
+        }
+
+    @app.get(f"{API_PREFIX}/training/labels")
+    def list_training_labels(
+        limit: int = Query(default=20, ge=1, le=100),
+        reading_id: str = "",
+    ) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            events = repository.list_training_label_events(limit=limit, reading_id=reading_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_labels_response.v1",
+            "events": events,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_labels_read_v40_feedback_events_only",
+        }
+
+    @app.post(f"{API_PREFIX}/training/impact-from-evaluation")
+    def build_training_impact(payload: TrainingImpactFromEvaluationRequest) -> dict[str, object]:
+        diff = build_training_impact_from_evaluation(
+            evaluation_run=payload.evaluation_run,
+            training_run_id=payload.training_run_id,
+            base_version=payload.base_version,
+            candidate_version=payload.candidate_version,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_training_impact_diff(diff)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_impact_from_evaluation_response.v1",
+            "impact": diff.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_impact_diff_generated_without_applying_production_weight",
+        }
+
+    @app.get(f"{API_PREFIX}/training/impact-diffs")
+    def list_training_impacts(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            impacts = repository.list_training_impact_diffs(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.training_impact_diffs_response.v1",
+            "impacts": impacts,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "training_impact_diffs_read_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/weights/candidates/from-batch")
+    def build_candidate_weight(payload: CandidateWeightFromBatchRequest) -> dict[str, object]:
+        try:
+            weight_version = build_candidate_weight_version_from_batch(
+                summary=payload.batch_summary,
+                weight_version_id=payload.weight_version_id,
+                source_training_run_id=payload.source_training_run_id,
+                release_gate_id=payload.release_gate_id,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_global_weight_version(weight_version)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.candidate_weight_from_batch_response.v1",
+            "weight_version": weight_version.model_dump(mode="json"),
+            "persisted": persisted,
+            "active": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "candidate_weight_version_registered_without_activation",
+        }
+
+    @app.get(f"{API_PREFIX}/weights/candidates")
+    def list_candidate_weights(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            weights = repository.list_global_weight_versions(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.candidate_weights_response.v1",
+            "weights": weights,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "candidate_weights_read_v40_repository_without_activation",
+        }
+
+    @app.post(f"{API_PREFIX}/release-readiness/from-batches")
+    def build_release_readiness(payload: ReleaseReadinessFromBatchesRequest) -> dict[str, object]:
+        summary = build_release_readiness_from_batches(
+            readiness_id=payload.readiness_id,
+            candidate_version=payload.candidate_version,
+            batches=payload.batches,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_release_readiness(summary)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.release_readiness_from_batches_response.v1",
+            "summary": summary.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "release_readiness_aggregated_without_activation",
+        }
+
+    @app.get(f"{API_PREFIX}/release-readiness")
+    def list_release_readiness(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            readiness = repository.list_release_readiness(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.release_readiness_response.v1",
+            "readiness": readiness,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "release_readiness_read_v40_repository_without_activation",
+        }
+
+    @app.post(f"{API_PREFIX}/weights/activation-reviews")
+    def build_activation_review(payload: WeightActivationReviewRequest) -> dict[str, object]:
+        review = build_weight_activation_review(
+            review_id=payload.review_id,
+            weight_version=payload.weight_version,
+            release_readiness=payload.release_readiness,
+            reviewed_by_role=payload.reviewed_by_role,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_weight_activation_review(review)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.weight_activation_review_response.v1",
+            "review": review.model_dump(mode="json"),
+            "persisted": persisted,
+            "activation_applied": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "activation_review_recorded_without_applying_weight",
+        }
+
+    @app.get(f"{API_PREFIX}/weights/activation-reviews")
+    def list_activation_reviews(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            reviews = repository.list_weight_activation_reviews(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.weight_activation_reviews_response.v1",
+            "reviews": reviews,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "activation_reviews_read_v40_repository_without_activation",
+        }
+
+    @app.post(f"{API_PREFIX}/release-gates")
+    def save_release_gate(payload: ReleaseGateResult) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            repository.save_release_gate(payload)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.release_gate_save_response.v1",
+            "saved": True,
+            "gate_id": payload.gate_id,
+            "recommendation": payload.recommendation.value,
+            "production_write_allowed": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "release_gate_record_saved_without_applying_production_weight",
+        }
+
+    @app.get(f"{API_PREFIX}/release-gates")
+    def list_release_gates(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            gates = repository.list_release_gates(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.release_gates_response.v1",
+            "gates": gates,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "release_gates_read_v40_repository_only",
+        }
+
+    @app.get(f"{API_PREFIX}/lab/summary")
+    def lab_summary() -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            summary = repository.lab_summary()
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.lab_summary_response.v1",
+            "summary": summary,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "lab_summary_reads_v40_control_plane_state_only",
+        }
+
+    return app
+
+
+app = create_app()

@@ -1,0 +1,49 @@
+from __future__ import annotations
+
+
+def contract_manifest() -> dict[str, object]:
+    return {
+        "version": "v40.contract_manifest.v1",
+        "runtime": ["RuntimeRequest", "RuntimeResult"],
+        "engine": ["EnginePlan", "EngineRunRequest", "EngineRunResult", "MultiEngineRunResult"],
+        "signal": ["RuntimeSignal", "SignalRegistrySnapshot"],
+        "decision": ["DecisionInputBundle", "DecisionVerdict", "AdvicePlan", "ProbeCandidate"],
+        "output": [
+            "ProductVerdictCard",
+            "BranchCard",
+            "ProductAdviceCard",
+            "LLMExpressionTask",
+            "LLMExpressionResult",
+            "AcceptanceResult",
+            "ProductProjectionBundle",
+            "SurfaceBundle",
+        ],
+        "evaluation": [
+            "EvaluationCaseSpec",
+            "GoldenCase",
+            "MetricSummary",
+            "EvaluationRunResult",
+            "EvaluationBatchSummary",
+            "ReleaseGateResult",
+            "ReleaseReadinessSummary",
+            "ShadowCompareResult",
+        ],
+        "training": [
+            "TrainingLabelEvent",
+            "TrainingExampleV2",
+            "TrainingImpactDiff",
+            "LocalOverlay",
+            "GlobalWeightVersion",
+            "WeightActivationReview",
+        ],
+        "migration": ["V30ExportEnvelope", "V30ToV40MigrationPlan"],
+        "boundaries": {
+            "v30_runtime_import_allowed": False,
+            "v30_database_access_allowed": False,
+            "v30_redis_access_allowed": False,
+            "chart_fact_training_allowed": False,
+            "llm_verdict_authority_allowed": False,
+            "central_brain_verdict_authority_allowed": False,
+            "shadow_compare_writes_production": False,
+        },
+    }
