@@ -47,6 +47,7 @@ docs/V40_PHASE25_ZIWEI_DOMAIN_LENS_V1.md
 docs/V40_PHASE26_ZIWEI_VALIDATION_SPINE.md
 docs/V40_PHASE27_PRACTITIONER_LENS.md
 docs/V40_PHASE28_PRACTITIONER_CALIBRATION_LOOP.md
+docs/V40_PHASE29_PRACTITIONER_UI_CALIBRATION.md
 ```
 
 Initial principle:
@@ -68,5 +69,5 @@ Start order:
 Current phase:
 
 ```text
-Phase 28: Practitioner Calibration Loop
+Phase 29: Practitioner UI Calibration
 ```

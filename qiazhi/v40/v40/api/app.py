@@ -1111,6 +1111,43 @@ def _user_ui_html() -> str:
       font-weight: 680;
     }
     .conversation { display: grid; gap: 10px; }
+    .practitioner-panel {
+      display: none;
+      gap: 10px;
+      padding: 12px;
+      border-radius: 10px;
+      background: rgba(255,255,255,.04);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
+    }
+    .practitioner-panel.active { display: grid; }
+    .calibration-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 760;
+    }
+    .calibration-list { display: grid; gap: 8px; }
+    .calibration-card {
+      display: grid;
+      gap: 8px;
+      padding: 10px;
+      border-radius: 8px;
+      background: rgba(0,0,0,.16);
+    }
+    .calibration-card strong { font-size: 13px; color: var(--text); }
+    .calibration-card p { margin: 0; color: var(--muted); font-size: 12px; }
+    .calibration-actions { display: flex; flex-wrap: wrap; gap: 7px; }
+    .calibration-actions button {
+      padding: 7px 9px;
+      border-radius: 999px;
+      background: rgba(102,217,185,.10);
+      color: var(--accent-strong);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .calibration-status { color: var(--muted); font-size: 12px; min-height: 18px; }
     .message {
       border-left: 2px solid rgba(102,217,185,.44);
       background: rgba(255,255,255,.045);
@@ -1169,8 +1206,9 @@ def _user_ui_html() -> str:
           </label>
           <div class="row">
             <label>性别<select id="gender"><option value="乾">乾</option><option value="坤">坤</option></select></label>
-            <label>表达方式<select id="execution"><option value="ollama">智能表达</option><option value="local">快速预览</option></select></label>
+            <label>身份<select id="roleKey"><option value="user">普通用户</option><option value="practitioner">命理师</option></select></label>
           </div>
+          <label>表达方式<select id="execution"><option value="ollama">智能表达</option><option value="local">快速预览</option></select></label>
           <div class="pillars">
             <div class="pillar"><strong>年</strong><div class="pair"><input id="yearStem" value="甲" maxlength="1" /><input id="yearBranch" value="子" maxlength="1" /></div></div>
             <div class="pillar"><strong>月</strong><div class="pair"><input id="monthStem" value="戊" maxlength="1" /><input id="monthBranch" value="辰" maxlength="1" /></div></div>
@@ -1197,6 +1235,11 @@ def _user_ui_html() -> str:
             <button type="button" data-feedback-scope="report" data-feedback-value="partial">部分像</button>
             <button type="button" data-feedback-scope="report" data-feedback-value="mismatch">不太像</button>
             <span id="feedbackStatus"></span>
+          </div>
+          <div class="practitioner-panel" id="practitionerPanel">
+            <div class="calibration-title"><span>命理师校准</span><span>只影响本次读盘</span></div>
+            <div class="calibration-list" id="calibrationList"></div>
+            <div class="calibration-status" id="calibrationStatus"></div>
           </div>
           <div class="conversation" id="conversation"></div>
           <div class="seeds" id="seeds"></div>
@@ -1261,6 +1304,48 @@ def _user_ui_html() -> str:
       )).join("");
       $("followupBox").classList.toggle("active", Boolean(currentRuntime));
     }
+    function renderPractitionerPanel(runtime) {
+      const panel = $("practitionerPanel");
+      const list = $("calibrationList");
+      const status = $("calibrationStatus");
+      const calibration = runtime?.surface_bundle?.surfaces?.calibration || {};
+      const lens = calibration.practitioner_lens || {};
+      if (!lens.available) {
+        panel.classList.remove("active");
+        list.innerHTML = "";
+        status.textContent = "";
+        return;
+      }
+      const signalTargets = (lens.ziwei_signals || []).map((signal) => ({
+        id: signal.signal_id,
+        type: "signal",
+        title: `${signal.topic || "紫微"}旁路信号`,
+        text: signal.claim || ""
+      }));
+      const branchTargets = ((runtime.product_projection || {}).branch_cards || []).map((card) => ({
+        id: card.source_branch_id,
+        type: "branch",
+        title: card.title || "分支候选",
+        text: card.practitioner_summary || card.user_summary || ""
+      })).filter((item) => item.id);
+      const targets = signalTargets.concat(branchTargets).slice(0, 6);
+      const actions = lens.calibration_actions || [];
+      panel.classList.add("active");
+      if (!targets.length) {
+        list.innerHTML = `<div class="calibration-card"><strong>暂无需要校准的分支</strong><p>当前报告可以先按主结论阅读。</p></div>`;
+        return;
+      }
+      list.innerHTML = targets.map((target) => `
+        <div class="calibration-card">
+          <strong>${escapeHtml(target.title)}</strong>
+          <p>${escapeHtml(target.text)}</p>
+          <div class="calibration-actions">
+            ${actions.map((action) => `<button type="button" data-calibration-action="${escapeHtml(action.key)}" data-target-type="${escapeHtml(target.type)}" data-target-id="${escapeHtml(target.id)}">${escapeHtml(action.label)}</button>`).join("")}
+          </div>
+        </div>
+      `).join("");
+      status.textContent = "校准会进入训练素材，不会直接改结论。";
+    }
     function appendConversation(question, answer, telemetry) {
       const node = document.createElement("div");
       node.className = "message";
@@ -1305,6 +1390,31 @@ def _user_ui_html() -> str:
         $("feedbackStatus").textContent = "已记录";
       } catch (_) {
         $("feedbackStatus").textContent = "已收到";
+      }
+    }
+    async function submitCalibrationAction(actionKey, targetType, targetId) {
+      if (!currentRuntime || !actionKey || !targetId) return;
+      $("calibrationStatus").textContent = "正在记录校准";
+      try {
+        const res = await fetch("/api/v40/calibration/practitioner-lens-action", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            action_id: `ui-calibration-${Date.now()}`,
+            runtime: currentRuntime,
+            action_key: actionKey,
+            target_type: targetType,
+            target_ids: [targetId],
+            created_by_role: "practitioner",
+            persist: true,
+            persist_overlay: true
+          })
+        });
+        const body = await res.json();
+        if (!res.ok) throw new Error(body.detail || "校准记录失败");
+        $("calibrationStatus").textContent = "已记录，本次读盘会保留这条校准素材。";
+      } catch (error) {
+        $("calibrationStatus").textContent = error.message;
       }
     }
     async function askConversation(question, seedId = "") {
@@ -1358,7 +1468,7 @@ def _user_ui_html() -> str:
         reading_id: readingId,
         execution_mode: value("execution"),
             topic: value("topic"),
-        role_key: "user",
+        role_key: value("roleKey"),
         user_question: value("question"),
         chart_facts: {
           chart_id: `chart-${readingId}`,
@@ -1384,6 +1494,7 @@ def _user_ui_html() -> str:
       $("meta").innerHTML = "";
       $("seeds").innerHTML = "";
       $("conversation").innerHTML = "";
+      renderPractitionerPanel(null);
       $("followupBox").classList.remove("active");
       $("reportFeedback").classList.remove("active");
       try {
@@ -1404,6 +1515,7 @@ def _user_ui_html() -> str:
           tag("可以继续追问")
         ].join("");
         $("reportFeedback").classList.toggle("active", Boolean(body.accepted));
+        renderPractitionerPanel(currentRuntime);
         renderSeedButtons(body.conversation_seeds || []);
       } catch (error) {
         setStatus("模型不可用", false);
@@ -1420,6 +1532,15 @@ def _user_ui_html() -> str:
       askConversation(value("followupQuestion"), "");
     });
     document.addEventListener("click", (event) => {
+      const calibrationButton = event.target.closest("button[data-calibration-action]");
+      if (calibrationButton) {
+        submitCalibrationAction(
+          calibrationButton.dataset.calibrationAction || "",
+          calibrationButton.dataset.targetType || "",
+          calibrationButton.dataset.targetId || ""
+        );
+        return;
+      }
       const button = event.target.closest("button[data-feedback-scope]");
       if (!button) return;
       submitFeedback(button.dataset.feedbackScope || "", button.dataset.feedbackValue || "");

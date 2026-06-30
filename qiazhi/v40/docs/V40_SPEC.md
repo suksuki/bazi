@@ -443,6 +443,14 @@ docs/V40_PHASE28_PRACTITIONER_CALIBRATION_LOOP.md
 
 本阶段把命理师专业视角的动作接入训练闭环。`POST /api/v40/calibration/practitioner-lens-action` 会把 `more_like_this / supporting_context / do_not_use_now / ask_to_confirm / user_mismatch` 转换为 `TrainingLabelEvent(source=practitioner_selection, local_only=true)`，同时生成 `LocalOverlay(expires_after_reading=true, global_update_allowed=false)`。新增 `v40_local_overlays` 表和 `GET /api/v40/calibration/local-overlays`。该流程只记录本次 reading 的局部反馈和训练素材，不改命盘事实、不改当前 verdict、不写 V40 production weight、不写 V30 状态。
 
+2026-06-30 Phase 29 已启动：
+
+```text
+docs/V40_PHASE29_PRACTITIONER_UI_CALIBRATION.md
+```
+
+本阶段把命理师校准闭环接入 `/v40/ui`。页面新增 `role_key` 选择，普通用户仍只看到报告、反馈和继续追问；命理师模式下，在报告形成后显示 `practitioner_lens` 校准面板。校准面板最多展示 6 条紫微旁路信号或分支候选，每个动作调用 `POST /api/v40/calibration/practitioner-lens-action`，只生成 `TrainingLabelEvent + LocalOverlay`，不会重跑报告、不会刷新对话、不会直接改 verdict 或 production weight。
+
 ## V40 不做的事
 
 本阶段不做：
