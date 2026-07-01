@@ -71,6 +71,7 @@ def test_user_ui_exposes_invited_conversation_seed_container() -> None:
     response = client.get("/v40/ui")
 
     assert response.status_code == 200
-    assert 'id="seeds"' in response.text
+    assert 'id="seedCards"' in response.text
+    assert 'id="followupHub"' in response.text
     assert "conversation_seeds" in response.text
-    assert "seed-button" in response.text
+    assert "question-card" in response.text

@@ -95,5 +95,6 @@ def test_user_ui_contains_independent_conversation_turn_runtime() -> None:
     assert response.status_code == 200
     assert "/api/v40/conversation/turn" in response.text
     assert "askConversation" in response.text
-    assert 'id="conversation"' in response.text
+    assert 'id="conversationSurface"' in response.text
+    assert 'id="conversationTurns"' in response.text
     assert "继续问" in response.text

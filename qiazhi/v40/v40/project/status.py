@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 45
-CURRENT_PHASE_NAME = "UI Product Flow And Human-Machine Training IA"
+CURRENT_PHASE = 46
+CURRENT_PHASE_NAME = "User Product Shell Runtime"
 
 
 @dataclass(frozen=True)
@@ -31,10 +31,10 @@ DOMAINS: tuple[CompletionDomain, ...] = (
     CompletionDomain(
         key="user_beta",
         label="用户侧 beta",
-        percent=96,
+        percent=98,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
-        next_step="按 V40_UI_PRODUCT_FLOW_SPEC 重构 product shell、Reading Surface、Probe 卡片和 Practitioner Lens。",
+        next_step="补齐 Probe answer API、auth-derived role context，并做桌面/移动浏览器视觉验收。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -72,8 +72,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "42", "label": "Release candidate automatic audit", "status": "complete"},
     {"range": "43", "label": "Production smoke and handoff", "status": "complete"},
     {"range": "44", "label": "Final operating guide", "status": "complete"},
-    {"range": "45", "label": "UI product flow、Probe calibration、Practitioner Lens IA", "status": "active"},
-    {"range": "46+", "label": "user acceptance、online cutover、completion marker", "status": "requires_user"},
+    {"range": "45", "label": "UI product flow、Probe calibration、Practitioner Lens IA", "status": "complete"},
+    {"range": "46", "label": "User product shell runtime", "status": "active"},
+    {"range": "47+", "label": "Probe answer、auth role、visual QA、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -97,12 +98,10 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-1: final warm-light product shell",
-            "UI-2: VerdictHero / TopicInsightCard / AdviceCard / RiskBoundaryCard",
-            "UI-3: report-grounded conversation surface",
-            "UI-4: first-class Probe calibration cards",
-            "UI-5: Practitioner Lens drawer",
-            "UI-6: ConsentGrant and practitioner review queue contracts",
+            "UI-4: implement /api/v40/probes/answer and refined advice projection",
+            "UI-5: replace URL role hook with auth-derived role context",
+            "UI-6: desktop/mobile browser visual QA for product shell",
+            "UI-7: ConsentGrant and practitioner review queue contracts",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",
