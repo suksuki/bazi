@@ -39,6 +39,14 @@ def create_admin_app() -> FastAPI:
     def project_status() -> dict[str, object]:
         return _fetch_json("/api/v40/project/status")
 
+    @app.get(f"{ADMIN_PREFIX}/api/mingli-depth-index")
+    def mingli_depth_index() -> dict[str, object]:
+        return _fetch_json("/api/v40/project/mingli-depth-index")
+
+    @app.get(f"{ADMIN_PREFIX}/api/module-migration-status")
+    def module_migration_status() -> dict[str, object]:
+        return _fetch_json("/api/v40/project/module-migration-status")
+
     @app.get(f"{ADMIN_PREFIX}/api/batches")
     def batches() -> dict[str, object]:
         return _fetch_json("/api/v40/evaluation/batches?limit=8")
@@ -243,6 +251,8 @@ def _console_html() -> str:
     <div class="progress-grid">
       <section class="completion" id="completion"></section>
       <section><div class="section-head"><h2>V40 Completion</h2><span class="pill" id="phase"></span></div><div class="list" id="progress"></div></section>
+      <section><div class="section-head"><h2>Mingli Depth</h2><span class="pill">RC2</span></div><div class="list" id="mingli-depth"></div></section>
+      <section><div class="section-head"><h2>Module Map</h2><span class="pill">migration</span></div><div class="list" id="module-map"></div></section>
     </div>
     <div class="grid" id="metrics"></div>
     <div class="sections">
@@ -263,8 +273,10 @@ def _console_html() -> str:
       return `<div class="row"><strong>${title || "-"}</strong><span>${meta || ""}</span><span class="${cls(value)}">${value ?? ""}</span></div>`;
     }
     async function load() {
-      const [project, summary, batches, readiness, risk, weights, reviews, executions, llm, models] = await Promise.all([
+      const [project, depth, modules, summary, batches, readiness, risk, weights, reviews, executions, llm, models] = await Promise.all([
         get("/admin/v40/api/project-status"),
+        get("/admin/v40/api/mingli-depth-index"),
+        get("/admin/v40/api/module-migration-status"),
         get("/admin/v40/api/summary"),
         get("/admin/v40/api/batches"),
         get("/admin/v40/api/readiness"),
@@ -286,6 +298,19 @@ def _console_html() -> str:
           <span>${item.next_step || ""}</span>
         </div>
       `).join("") || row("暂无完成度数据", "", "review");
+      const depthIndex = depth.index || {};
+      $("mingli-depth").innerHTML = [
+        row(`命理纵深 ${depthIndex.mingli_depth_percent ?? 0}%`, `架构参考 ${depthIndex.architecture_completion_reference ?? 0}%`, depthIndex.status || "review"),
+        ...(depthIndex.domains || []).map((item) => row(`${item.label} ${item.completion_percent}%`, item.next_step, item.status))
+      ].join("");
+      const moduleStatus = modules.status || {};
+      const moduleSummary = moduleStatus.summary || {};
+      $("module-map").innerHTML = [
+        row("V40 原生模块", `${moduleSummary.v40_native_or_ready_groups ?? 0}/${moduleSummary.module_groups_total ?? 0}`, "ready"),
+        row("V30 直接复用", "runtime import allowed", moduleSummary.v30_direct_runtime_reuse_allowed ?? 0),
+        row("V30 资产可萃取", `${moduleSummary.reusable_v30_asset_groups ?? 0} groups`, "review"),
+        row("RC2 必须新建", `${moduleSummary.new_required_groups ?? 0} groups`, "review"),
+      ].join("");
       const counts = summary.summary?.counts || {};
       $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
         .map((key) => `<div class="metric"><span>${key}</span><strong>${counts[key] ?? 0}</strong></div>`).join("");

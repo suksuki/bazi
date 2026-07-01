@@ -571,6 +571,20 @@ docs/V40_PHASE44_FINAL_OPERATING_GUIDE.md
 
 本阶段补齐最终操作手册，整理 Runtime/Admin/User UI 地址、实时完成度接口、自动验收接口、关键边界、人工验收项、回滚要求和建议验收顺序。V40 自动交付完成度提升到约 98%，剩余部分必须由真实命例验收和线上切换窗口完成。
 
+2026-07-01 V40-RC2 已启动：
+
+```text
+docs/V40_RC2_MINGLI_DEPTH_MIGRATION_PLAN.md
+docs/V40_RC2_ASSET_MIGRATION_GATE.md
+docs/V40_RC2_MODULE_STATUS_AND_MIGRATION_MAP.md
+GET /api/v40/project/mingli-depth-index
+GET /api/v40/project/module-migration-status
+```
+
+V40-RC2 不再以架构完成度作为唯一主指标，而是新增 `Mingli Depth Index`，拆分 Fact / Signal / Domain / Probe / Training / Evaluation 六个维度。下一阶段目标是把 V30 命理资产通过 plain JSON DTO 和 Asset Migration Gate 萃取进 V40 原生 Engine / RuntimeSignal / Decision / Advice / Probe / Training / Evaluation 链路。所有迁移资产先 sidecar，再 evaluating，最后 enabled；每批迁移必须跑 before/after diff，且不允许 overclaim rate 上升。
+
+同时新增模块迁移状态 read model，明确 V40 原生模块、V30 可萃取资产、V40-RC2 必须新建模块和不迁移的旧模块。V30 runtime 直接复用数量固定为 0；可复用的是 V30 命理资产、算法口径和测试样本，必须通过 DTO / adapter / gate 进入 V40。
+
 ## V40 不做的事
 
 本阶段不做：
