@@ -32,9 +32,10 @@ from v40.api.models import (
     WeightActivationReviewRequest,
 )
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
+from v40.contracts.context import EngineContext
 from v40.contracts.manifest import contract_manifest
 from v40.contracts.output import LLMExpressionResult
-from v40.contracts.training import LabelSource, TrainingLabelEvent
+from v40.contracts.training import LabelSource, TrainablePolicyRegistry, TrainingLabelEvent
 from v40.conversation import build_conversation_seeds, build_conversation_turn, build_training_label_from_conversation_turn
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
@@ -208,6 +209,24 @@ def _build_expression_bundle(
     return task, result, acceptance, telemetry
 
 
+def _resolve_active_policy_engine_context(payload_engine_context: EngineContext | None) -> EngineContext | None:
+    if payload_engine_context is not None:
+        return payload_engine_context
+    if not v40_repository_configured():
+        return None
+    try:
+        repository = V40PostgresRepository.from_env()
+        active_registry = repository.get_active_trainable_policy_registry()
+    except Exception as exc:
+        raise HTTPException(status_code=503, detail="V40 active policy registry is unavailable") from exc
+    if not active_registry:
+        return None
+    policy_version = str(active_registry.get("active_policy_version") or "").strip()
+    if not policy_version:
+        return None
+    return EngineContext(engine_policy_version=policy_version)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Qiazhi V40", version=__version__)
 
@@ -262,7 +281,7 @@ def create_app() -> FastAPI:
             locale_context=payload.locale_context,
             role_context=payload.role_context,
             client_context=payload.client_context,
-            engine_context=payload.engine_context,
+            engine_context=_resolve_active_policy_engine_context(payload.engine_context),
         )
         persisted = False
         if payload.persist:
@@ -294,7 +313,7 @@ def create_app() -> FastAPI:
             locale_context=payload.locale_context,
             role_context=payload.role_context,
             client_context=payload.client_context,
-            engine_context=payload.engine_context,
+            engine_context=_resolve_active_policy_engine_context(payload.engine_context),
         )
         try:
             task, result, acceptance, telemetry = _build_expression_bundle(
@@ -1057,6 +1076,61 @@ def create_app() -> FastAPI:
             "boundary": "training_impact_diffs_read_v40_repository_only",
         }
 
+    @app.post(f"{API_PREFIX}/training/policy-registries")
+    def save_trainable_policy_registry(payload: TrainablePolicyRegistry) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            repository.save_trainable_policy_registry(payload)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.trainable_policy_registry_save_response.v1",
+            "saved": True,
+            "registry_id": payload.registry_id,
+            "active_policy_version": payload.active_policy_version,
+            "candidate_policy_version": payload.candidate_policy_version,
+            "active": payload.active,
+            "previous_registry_id": payload.previous_registry_id,
+            "previous_policy_version": payload.previous_policy_version,
+            "unit_count": len(payload.units),
+            "writes_v30_state": False,
+            "writes_v40_production": payload.active,
+            "writes_v40_policy": payload.active,
+            "changes_chart_facts": False,
+            "boundary": "trainable_policy_registry_saved_as_active_policy_with_rollback_without_fact_mutation",
+        }
+
+    @app.get(f"{API_PREFIX}/training/policy-registries/active")
+    def active_trainable_policy_registry() -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            registry = repository.get_active_trainable_policy_registry()
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.active_trainable_policy_registry_response.v1",
+            "registry": registry or {},
+            "active_policy_version": str((registry or {}).get("active_policy_version") or "baseline"),
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "active_trainable_policy_registry_reads_current_high_iteration_policy_without_mutation",
+        }
+
+    @app.get(f"{API_PREFIX}/training/policy-registries")
+    def list_trainable_policy_registries(limit: int = Query(default=20, ge=1, le=100)) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            registries = repository.list_trainable_policy_registries(limit=limit)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.trainable_policy_registries_response.v1",
+            "registries": registries,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "trainable_policy_registries_read_v40_repository_with_active_and_rollback_history",
+        }
+
     @app.post(f"{API_PREFIX}/training/batch-trainer-v1")
     def run_batch_trainer_v1(payload: BatchTrainerV1Request) -> dict[str, object]:
         try:
@@ -1070,11 +1144,16 @@ def create_app() -> FastAPI:
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         impact_persisted = False
-        if payload.persist_impact:
+        registry_persisted = False
+        if payload.persist_impact or payload.persist_registry:
             try:
                 repository = V40PostgresRepository.from_env()
-                repository.save_training_impact_diff(result.impact_diff)
-                impact_persisted = True
+                if payload.persist_registry:
+                    repository.save_trainable_policy_registry(result.candidate_registry)
+                    registry_persisted = True
+                if payload.persist_impact:
+                    repository.save_training_impact_diff(result.impact_diff)
+                    impact_persisted = True
             except Exception as exc:
                 raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
@@ -1082,11 +1161,16 @@ def create_app() -> FastAPI:
             "result": result.model_dump(mode="json"),
             "candidate_registry": result.candidate_registry.model_dump(mode="json"),
             "impact": result.impact_diff.model_dump(mode="json"),
+            "registry_persisted": registry_persisted,
             "impact_persisted": impact_persisted,
+            "active_policy_applied": registry_persisted and result.active_policy_applied,
+            "rollback_registry_id": result.rollback_registry_id,
+            "policy_version_used_next": result.candidate_registry.active_policy_version if registry_persisted else payload.base_registry.active_policy_version,
             "writes_v30_state": False,
-            "writes_v40_production": False,
+            "writes_v40_production": registry_persisted,
+            "writes_v40_policy": registry_persisted,
             "changes_chart_facts": False,
-            "boundary": "batch_trainer_v1_creates_candidate_policy_without_activation",
+            "boundary": "batch_trainer_v1_applies_trainable_policy_immediately_with_rollback_without_fact_mutation",
         }
 
     @app.post(f"{API_PREFIX}/weights/candidates/from-batch")

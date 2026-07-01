@@ -148,6 +148,11 @@ class TrainablePolicyRegistry(V40Model):
     registry_id: str
     active_policy_version: str
     candidate_policy_version: str = ""
+    active: bool = True
+    previous_registry_id: str = ""
+    previous_policy_version: str = ""
+    activated_by_training_run_id: str = ""
+    rollback_available: bool = True
     units: list[TrainableUnit] = Field(default_factory=list)
     immutable_fact_modules: list[str] = Field(
         default_factory=lambda: [
@@ -158,10 +163,11 @@ class TrainablePolicyRegistry(V40Model):
             "true_solar_time_policy",
         ]
     )
-    release_gate_required_for_global: bool = True
+    release_gate_required_for_global: bool = False
+    direct_effect_after_training: bool = True
     chart_fact_mutation_allowed: bool = False
     direct_global_update_allowed: bool = False
-    boundary: str = "trainable_policy_registry_versioned_replayable_and_fact_immutable"
+    boundary: str = "trainable_policy_registry_active_after_training_with_rollback_and_fact_immutable"
 
     @model_validator(mode="after")
     def _registry_boundary(self) -> "TrainablePolicyRegistry":
@@ -175,7 +181,11 @@ class TrainablePolicyRegistry(V40Model):
         if self.chart_fact_mutation_allowed:
             raise ValueError("TrainablePolicyRegistry cannot mutate chart facts")
         if self.direct_global_update_allowed:
-            raise ValueError("TrainablePolicyRegistry cannot allow direct global update")
+            raise ValueError("TrainablePolicyRegistry cannot allow naked global update outside trainer")
+        if self.active and not self.rollback_available:
+            raise ValueError("active TrainablePolicyRegistry requires rollback availability")
+        if self.active and self.previous_policy_version and not self.previous_registry_id:
+            raise ValueError("active TrainablePolicyRegistry with previous_policy_version requires previous_registry_id")
         if any("fact" in module.lower() for module in self.immutable_fact_modules) is False:
             raise ValueError("TrainablePolicyRegistry must declare immutable fact modules")
         return self
@@ -306,20 +316,27 @@ class BatchTrainerV1Result(V40Model):
     changed_unit_count: int = Field(default=0, ge=0)
     candidate_registry: TrainablePolicyRegistry
     impact_diff: TrainingImpactDiff
-    production_write_allowed: bool = False
+    active_policy_applied: bool = True
+    rollback_registry_id: str = ""
+    previous_policy_version: str = ""
+    production_write_allowed: bool = True
     chart_fact_mutation_allowed: bool = False
-    boundary: str = "batch_trainer_v1_creates_candidate_policy_without_activation_or_fact_mutation"
+    boundary: str = "batch_trainer_v1_applies_policy_immediately_with_rollback_without_fact_mutation"
 
     @model_validator(mode="after")
     def _batch_trainer_boundary(self) -> "BatchTrainerV1Result":
         if not self.training_run_id.strip():
             raise ValueError("BatchTrainerV1Result requires training_run_id")
-        if self.production_write_allowed:
-            raise ValueError("BatchTrainerV1Result cannot write production directly")
         if self.chart_fact_mutation_allowed:
             raise ValueError("BatchTrainerV1Result cannot mutate chart facts")
         if self.candidate_registry.direct_global_update_allowed:
             raise ValueError("BatchTrainerV1Result cannot allow direct global update")
+        if self.active_policy_applied and not self.candidate_registry.active:
+            raise ValueError("BatchTrainerV1Result active_policy_applied requires active registry")
+        if self.active_policy_applied and not self.rollback_registry_id:
+            raise ValueError("BatchTrainerV1Result active policy requires rollback_registry_id")
+        if self.production_write_allowed and not self.active_policy_applied:
+            raise ValueError("BatchTrainerV1Result production write requires active_policy_applied")
         if self.impact_diff.production_write_allowed:
             raise ValueError("BatchTrainerV1Result impact cannot write production")
         return self

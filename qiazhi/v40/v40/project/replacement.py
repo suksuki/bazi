@@ -39,11 +39,11 @@ def build_v30_replacement_readiness(
             "训练样本、回放和批量回放都需要打通。",
         ),
         _gate(
-            "candidate_weight_audit",
-            "Candidate weight audit",
-            counts.get("global_weight_versions", 0) > 0 and counts.get("weight_activation_reviews", 0) > 0,
-            f"{counts.get('global_weight_versions', 0)} weights / {counts.get('weight_activation_reviews', 0)} reviews",
-            "候选权重必须有审核记录，不能裸写生产。",
+            "active_policy_rollback_audit",
+            "Active policy rollback audit",
+            counts.get("trainable_policy_registries", 0) > 0,
+            f"{counts.get('trainable_policy_registries', 0)} active/history policy registries",
+            "训练后直接生效必须保留 active/history registry 和回滚依据。",
         ),
         _gate(
             "user_surface_beta",

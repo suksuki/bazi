@@ -80,9 +80,14 @@ def test_batch_trainer_v1_creates_candidate_policy_and_impact_diff() -> None:
         candidate_policy_version="policy.candidate.v1",
     )
 
-    assert result.production_write_allowed is False
-    assert result.candidate_registry.active_policy_version == "policy.base.v1"
+    assert result.production_write_allowed is True
+    assert result.active_policy_applied is True
+    assert result.rollback_registry_id == "registry.batch.v1"
+    assert result.previous_policy_version == "policy.base.v1"
+    assert result.candidate_registry.active is True
+    assert result.candidate_registry.active_policy_version == "policy.candidate.v1"
     assert result.candidate_registry.candidate_policy_version == "policy.candidate.v1"
+    assert result.candidate_registry.previous_registry_id == "registry.batch.v1"
     assert result.changed_unit_count == 4
     unit_ids = {unit.unit_id for unit in result.candidate_registry.units}
     assert "rule_weight.food_output_to_wealth" in unit_ids
@@ -95,7 +100,7 @@ def test_batch_trainer_v1_creates_candidate_policy_and_impact_diff() -> None:
     assert "local_feedback_downweighted_until_batch_validation" in result.impact_diff.risk_summary
 
 
-def test_batch_trainer_v1_api_is_candidate_only() -> None:
+def test_batch_trainer_v1_api_can_run_as_dry_run_without_applying_policy() -> None:
     response = TestClient(create_app()).post(
         f"{API_PREFIX}/training/batch-trainer-v1",
         json={
@@ -104,6 +109,7 @@ def test_batch_trainer_v1_api_is_candidate_only() -> None:
             "attributions": [_attribution().model_dump(mode="json")],
             "label_events": [_label().model_dump(mode="json")],
             "candidate_policy_version": "policy.candidate.api.v1",
+            "persist_registry": False,
             "persist_impact": False,
         },
     )
@@ -111,9 +117,13 @@ def test_batch_trainer_v1_api_is_candidate_only() -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["writes_v40_production"] is False
+    assert body["writes_v40_policy"] is False
     assert body["changes_chart_facts"] is False
     assert body["impact_persisted"] is False
+    assert body["registry_persisted"] is False
+    assert body["active_policy_applied"] is False
     assert body["result"]["candidate_policy_version"] == "policy.candidate.api.v1"
+    assert body["candidate_registry"]["active_policy_version"] == "policy.candidate.api.v1"
     assert body["impact"]["release_recommendation"] == "needs_review"
 
 
@@ -123,6 +133,7 @@ def test_batch_trainer_v1_docs_and_status_are_updated() -> None:
     app_source = Path("qiazhi/v40/v40/api/app.py").read_text(encoding="utf-8")
 
     assert "POST /api/v40/training/batch-trainer-v1" in doc
-    assert "BatchTrainerV1 deterministic candidate policy builder" in status
+    assert "BatchTrainerV1 deterministic active policy builder" in status
+    assert "Direct effect after training with rollback registry pointer" in status
     assert "/training/batch-trainer-v1" in app_source
     assert "writes_v40_production" in app_source

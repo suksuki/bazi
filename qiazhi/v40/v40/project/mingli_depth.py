@@ -52,8 +52,8 @@ DOMAINS: tuple[MingliDepthDomain, ...] = (
         label="训练闭环深度",
         percent=72,
         status="spine_ready_needs_real_cases",
-        evidence_keys=("training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions"),
-        next_step="训练闭环已通，下一步接真实案例验收和 before/after diff。",
+        evidence_keys=("training_examples", "training_example_replays", "training_replay_batches", "trainable_policy_registries"),
+        next_step="训练闭环已通，下一步接真实案例验收、active policy before/after diff 和回滚补救。",
     ),
     MingliDepthDomain(
         key="evaluation_depth",

@@ -25,8 +25,8 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         label="架构主线",
         percent=99,
         status="on_track",
-        evidence_keys=("runtime_records", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions", "release_readiness"),
-        next_step="把 candidate weight 来源、风险和回滚路径在 Admin 中解释清楚。",
+        evidence_keys=("runtime_records", "training_examples", "training_example_replays", "training_replay_batches", "trainable_policy_registries", "global_weight_versions", "release_readiness"),
+        next_step="把 active policy 来源、影响和回滚路径在 Admin 中解释清楚。",
     ),
     CompletionDomain(
         key="user_beta",
@@ -41,8 +41,8 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         label="训练验证闭环",
         percent=98,
         status="accelerating",
-        evidence_keys=("training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "global_weight_versions", "release_readiness"),
-        next_step="把 readiness 风险、证据来源和激活条件展示到 Admin。",
+        evidence_keys=("training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "trainable_policy_registries", "release_readiness"),
+        next_step="把训练后直接生效、影响差异和回滚补救展示到 Admin。",
     ),
     CompletionDomain(
         key="v30_replacement",
@@ -115,7 +115,7 @@ def _domain_status(domain: CompletionDomain, counts: dict[str, int]) -> dict[str
     adjusted = domain.percent
     if domain.key == "training_validation" and evidence_rate >= 0.8:
         adjusted = max(adjusted, 64)
-    if domain.key == "v30_replacement" and evidence.get("shadow_compare_runs", 0) == 0:
+    if domain.key == "v30_replacement" and counts and evidence.get("shadow_compare_runs", 0) == 0:
         adjusted = min(adjusted, 45)
     return {
         "key": domain.key,

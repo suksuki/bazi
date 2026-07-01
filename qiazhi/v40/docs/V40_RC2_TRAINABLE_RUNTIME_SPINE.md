@@ -172,14 +172,21 @@ GET /api/v40/project/trainable-runtime-spine
 - 可训练 unit types。
 - 可训练模块边界。
 - 反馈归因链路。
-- 发布硬 gate。
+- 高迭代训练生效边界。
 - 下一步 BatchTrainerV1 任务。
 
 ## 下一步任务
+
+已完成：
 
 1. 持久化 `TrainablePolicyRegistry` 版本。
 2. Runtime 记录 `policy_version_used`。
 3. 实现 `BatchTrainerV1`。
 4. 把 `TrainingAttribution` 接入训练样本编译。
-5. Acceptance Window 增加 `baseline_policy vs candidate_policy` diff。
-6. Admin 展示 candidate policy 影响面和 rollback 入口。
+5. BatchTrainerV1 默认训练后直接生效，并保留 rollback registry。
+
+后续：
+
+1. Acceptance Window 增加 `previous_policy vs active_policy` diff。
+2. Admin 展示 active policy 影响面和 rollback 入口。
+3. 增加真实命例窗口的训练后补救记录。

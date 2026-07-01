@@ -15,6 +15,7 @@ def _ready_lab_summary() -> dict[str, object]:
             "training_examples": 2,
             "training_example_replays": 2,
             "training_replay_batches": 1,
+            "trainable_policy_registries": 1,
             "global_weight_versions": 1,
             "weight_activation_reviews": 1,
         }

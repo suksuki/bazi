@@ -539,6 +539,14 @@ docs/V40_PHASE40_V30_REPLACEMENT_READINESS.md
 
 本阶段新增 `build_v30_replacement_readiness` 与 `GET /api/v40/project/v30-replacement-readiness`，把 shadow compare、evaluation/readiness、训练反馈回放、candidate weight 审计、用户侧 beta readiness 和 V40 隔离边界合成 V30 replacement candidate readiness。该接口只给候选替代状态，仍保留真实命例质量判断、最终产品验收和线上切换窗口三项人工确认。
 
+2026-07-01 RC2 Policy Registry Persistence 已启动：
+
+```text
+docs/V40_RC2_POLICY_REGISTRY_PERSISTENCE.md
+```
+
+本阶段把 `BatchTrainerV1` 产出的 `TrainablePolicyRegistry` 接入 V40 持久化与 Admin 观察面，并按命理高迭代原则默认训练后直接生效。新增 `v40_trainable_policy_registries`、`POST /api/v40/training/policy-registries`、`GET /api/v40/training/policy-registries`、`GET /api/v40/training/policy-registries/active`、`BatchTrainerV1Request.persist_registry` 与 `/admin/v40/api/policy-registries`。同时 `RuntimeRequest / RuntimeResult` 增加 `policy_version_used`，用于记录本次测算采用的策略版本。该链路允许 active policy 快速迭代，但每次生效都保留 previous registry、previous policy 和 impact diff 作为回滚与补救依据；仍然不改命盘事实、不让 LLM 成为裁决者。
+
 2026-06-30 Phase 41 已启动：
 
 ```text
@@ -591,11 +599,11 @@ V40-RC2 不再以架构完成度作为唯一主指标，而是新增 `Mingli Dep
 
 同时新增模块迁移状态 read model，明确 V40 原生模块、V30 可萃取资产、V40-RC2 必须新建模块和不迁移的旧模块。V30 runtime 直接复用数量固定为 0；可复用的是 V30 命理资产、算法口径和测试样本，必须通过 DTO / adapter / gate 进入 V40。
 
-训练边界同步收敛为 `Trainable Runtime Spine`：事实型基础模块只验证不训练；判断型基础模块只能训练 `source_weight / rule_weight / path_weight / claim_score / conflict_policy / assertion_threshold / advice_priority / probe_voi / llm_acceptance` 等有限 policy unit。新增 `TrainableUnit / TrainablePolicyRegistry / TrainingAttribution`，并让 `RuntimeSignal.trainable_refs` 成为反馈归因入口。单次反馈先进入 `LocalOverlay`；全局候选策略必须经过 replay、golden/regression、overclaim、advice grounding、probe yield、leakage 和 LLM boundary gate。
+训练边界同步收敛为 `Trainable Runtime Spine`：事实型基础模块只验证不训练；判断型基础模块只能训练 `source_weight / rule_weight / path_weight / claim_score / conflict_policy / assertion_threshold / advice_priority / probe_voi / llm_acceptance` 等有限 policy unit。新增 `TrainableUnit / TrainablePolicyRegistry / TrainingAttribution`，并让 `RuntimeSignal.trainable_refs` 成为反馈归因入口。V40 是命理高迭代系统，训练后的 policy 默认直接成为 active policy；replay、golden/regression、overclaim、advice grounding、probe yield、leakage 和 LLM boundary gate 作为持续评估和补救依据，不作为每次试错前的重审批。
 
 横向能力同步升格为 `Horizontal Runtime Context`：V40 是多语言、多角色、多终端、多引擎的可训练命理运行时。新增 `LocaleContext / RoleContext / ClientContext / EngineContext / EngineCapability / RuntimeContext / MingliTermDictionary / SurfaceSection`。多语言不靠前端翻译，角色不靠 UI 隐藏，手机端不只是压缩桌面端，多引擎不直接下 verdict。训练和评测必须能按 locale / role / client / engine_source 拆分。Admin 继续保持独立控制台和端口，只作为控制面、审计面、训练发布面存在。
 
-BatchTrainerV1 已进入 RC2 主线：`TrainingLabelEvent + TrainingAttribution` 可以聚合成 candidate `TrainablePolicyRegistry` 和 `TrainingImpactDiff`。该 trainer 只调整有限 policy unit，跳过 fact refs，将 local-only feedback 降权，默认需要 release gate 复核；它不写生产权重、不激活 global policy、不改变命盘事实。
+BatchTrainerV1 已进入 RC2 主线：`TrainingLabelEvent + TrainingAttribution` 可以聚合成 active `TrainablePolicyRegistry` 和 `TrainingImpactDiff`。该 trainer 只调整有限 policy unit，跳过 fact refs，将 local-only feedback 降权，训练后直接生效，并通过 previous registry、previous policy 与 impact diff 支持回滚和补救；它不改变命盘事实，也不让 LLM 成为命理裁决者。
 
 ## V40 不做的事
 

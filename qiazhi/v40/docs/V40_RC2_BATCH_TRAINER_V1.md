@@ -21,12 +21,12 @@ Mingli Depth Index: 51%
 TrainingLabelEvent
 → TrainingAttribution
 → BatchTrainerV1
-→ Candidate TrainablePolicyRegistry
+→ Active TrainablePolicyRegistry
 → TrainingImpactDiff
-→ Release Gate / Candidate Weight
+→ Runtime policy_version_used
 ```
 
-也就是让 V40 从“可记录反馈”推进到“可生成候选策略”。
+也就是让 V40 从“可记录反馈”推进到“训练后直接生效的可回滚策略”。
 
 ## 已实现
 
@@ -43,19 +43,20 @@ BatchTrainerV1 能做：
 - 聚合 `TrainingAttribution.affected_trainable_refs`。
 - 根据 `TrainingLabelEvent.label / confidence / local_only` 计算有限 delta。
 - 自动创建缺失的 `TrainableUnit`。
-- 输出 candidate `TrainablePolicyRegistry`。
+- 输出 active `TrainablePolicyRegistry`。
 - 输出 `TrainingImpactDiff`。
+- 默认把新 `TrainablePolicyRegistry` 标记为 active。
+- 保存 previous registry / previous policy，支持回滚和补救。
 - 跳过 fact refs。
 - 将 local-only feedback 降权。
-- 默认 `release_recommendation=needs_review`。
+- 默认 `release_recommendation=needs_review` 只表示需要继续观察，不阻止训练策略生效。
 
 ## 不做
 
 BatchTrainerV1 不做：
 
 - 不改命盘事实。
-- 不写生产权重。
-- 不激活 global policy。
+- 不裸写无法回滚的生产权重。
 - 不让 LLM 参与训练判断。
 - 不直接替换 DecisionEngine。
 
@@ -89,6 +90,7 @@ base_registry
 attributions
 label_events
 candidate_policy_version
+persist_registry
 persist_impact
 ```
 
@@ -98,14 +100,25 @@ persist_impact
 BatchTrainerV1Result
 candidate_registry
 impact
+registry_persisted
+impact_persisted
+active_policy_applied
+rollback_registry_id
 ```
 
-默认不持久化。即使 `persist_impact=true`，也只保存 `TrainingImpactDiff`，不保存 active policy，不写 production。
+默认持久化。`persist_registry=true` 时保存并激活新的 `TrainablePolicyRegistry`；`persist_impact=true` 时保存 `TrainingImpactDiff`。这是命理高迭代系统的默认模式：允许训练后直接生效，同时保留 previous registry、previous policy 和 impact diff 作为补救与回滚依据。
 
 ## 后续任务
 
+已完成：
+
 1. 持久化 `TrainablePolicyRegistry` 版本。
 2. Runtime 记录 `policy_version_used`。
-3. Acceptance Window 支持 `baseline_policy vs candidate_policy` diff。
-4. Admin 可从 replay batch 选择样本运行 BatchTrainerV1。
-5. Release Gate 通过后再生成可激活的 `GlobalWeightVersion`。
+3. Admin 可读取 active/history policy registry。
+4. BatchTrainerV1 默认训练后直接生效。
+
+后续任务：
+
+1. Acceptance Window 支持 `previous_policy vs active_policy` diff。
+2. Admin 可从 replay batch 选择样本运行 BatchTrainerV1。
+3. 增加一键回滚到 previous registry 的补救动作。

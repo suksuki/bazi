@@ -143,6 +143,7 @@ def build_native_bazi_runtime(
         topic=topic,
         role_key=role_key,
         user_question=user_question,
+        policy_version=resolved_engine.engine_policy_version,
     )
     product_projection = build_product_projection(
         reading_id=reading_id,
@@ -154,6 +155,7 @@ def build_native_bazi_runtime(
     return RuntimeResult(
         reading_id=reading_id,
         request=request,
+        policy_version_used=request.policy_version_used,
         engine_result=multi_engine,
         signal_registry=registry,
         decision_input=decision_output.input_bundle,

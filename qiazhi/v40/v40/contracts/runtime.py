@@ -28,6 +28,7 @@ class RuntimeRequest(V40Model):
     locale: LocaleKey = "zh"
     client: ClientKey = "web"
     runtime_context: RuntimeContext = Field(default_factory=RuntimeContext)
+    policy_version_used: str = "baseline"
     user_question: str = ""
     topic: Topic = Topic.OVERVIEW
     birth_input_ref: str = ""
@@ -39,17 +40,19 @@ class RuntimeRequest(V40Model):
     def _sync_runtime_context(cls, data: Any) -> Any:
         if not isinstance(data, dict):
             return data
+        data = dict(data)
         if data.get("runtime_context"):
+            data["policy_version_used"] = data.get("policy_version_used") or _policy_version_from_context(data["runtime_context"])
             return data
         role_key = data.get("role_key", "user")
         locale = data.get("locale", "zh-CN")
         client = data.get("client", "web")
-        data = dict(data)
         data["runtime_context"] = RuntimeContext(
             locale_context=default_locale_context(locale),
             role_context=default_role_context(role_key),
             client_context=default_client_context(client),
         )
+        data["policy_version_used"] = data.get("policy_version_used") or _policy_version_from_context(data["runtime_context"])
         return data
 
 
@@ -57,6 +60,7 @@ class RuntimeResult(V40Model):
     version: str = "v40.runtime_result.v1"
     reading_id: str
     request: RuntimeRequest
+    policy_version_used: str = "baseline"
     engine_result: MultiEngineRunResult | None = None
     signal_registry: SignalRegistrySnapshot | None = None
     decision_input: DecisionInputBundle | None = None
@@ -75,10 +79,46 @@ class RuntimeResult(V40Model):
     v30_runtime_imported: bool = False
     boundary: str = "runtime_result_keeps_v40_state_independent_from_v30_runtime"
 
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_policy_version(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        data = dict(data)
+        request_policy = _policy_version_from_request(data.get("request"))
+        data["policy_version_used"] = data.get("policy_version_used") or request_policy or "baseline"
+        return data
+
     @model_validator(mode="after")
     def _runtime_boundary(self) -> "RuntimeResult":
         if self.chart_fact_mutation_allowed:
             raise ValueError("RuntimeResult cannot mutate chart facts")
         if self.v30_runtime_imported:
             raise ValueError("RuntimeResult cannot import V30 runtime state")
+        if not self.policy_version_used.strip():
+            raise ValueError("RuntimeResult requires policy_version_used")
+        if self.request.policy_version_used and self.policy_version_used != self.request.policy_version_used:
+            raise ValueError("RuntimeResult policy_version_used must match request")
         return self
+
+
+def _policy_version_from_request(request: Any) -> str:
+    if isinstance(request, RuntimeRequest):
+        return request.policy_version_used
+    if isinstance(request, dict):
+        value = str(request.get("policy_version_used") or "").strip()
+        if value:
+            return value
+        return _policy_version_from_context(request.get("runtime_context"))
+    return ""
+
+
+def _policy_version_from_context(runtime_context: Any) -> str:
+    if isinstance(runtime_context, RuntimeContext):
+        return runtime_context.engine_context.engine_policy_version
+    if isinstance(runtime_context, dict):
+        engine_context = runtime_context.get("engine_context") or {}
+        if isinstance(engine_context, dict):
+            return str(engine_context.get("engine_policy_version") or "baseline").strip() or "baseline"
+        return str(getattr(engine_context, "engine_policy_version", "baseline") or "baseline").strip() or "baseline"
+    return str(getattr(getattr(runtime_context, "engine_context", None), "engine_policy_version", "baseline") or "baseline").strip() or "baseline"

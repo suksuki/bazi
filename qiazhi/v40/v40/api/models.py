@@ -75,8 +75,9 @@ class BatchTrainerV1Request(V40Model):
     attributions: list[TrainingAttribution]
     label_events: list[TrainingLabelEvent] = Field(default_factory=list)
     candidate_policy_version: str
-    persist_impact: bool = False
-    boundary: str = "batch_trainer_v1_request_builds_candidate_policy_without_activation"
+    persist_registry: bool = True
+    persist_impact: bool = True
+    boundary: str = "batch_trainer_v1_request_applies_policy_immediately_with_rollback"
 
     @model_validator(mode="after")
     def _batch_trainer_boundary(self) -> "BatchTrainerV1Request":

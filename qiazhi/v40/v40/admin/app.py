@@ -67,6 +67,10 @@ def create_admin_app() -> FastAPI:
     def weights() -> dict[str, object]:
         return _fetch_json("/api/v40/weights/candidates?limit=8")
 
+    @app.get(f"{ADMIN_PREFIX}/api/policy-registries")
+    def policy_registries() -> dict[str, object]:
+        return _fetch_json("/api/v40/training/policy-registries?limit=8")
+
     @app.get(f"{ADMIN_PREFIX}/api/activation-reviews")
     def activation_reviews() -> dict[str, object]:
         return _fetch_json("/api/v40/weights/activation-reviews?limit=8")
@@ -262,6 +266,7 @@ def _console_html() -> str:
       <section><div class="section-head"><h2>Mingli Depth</h2><span class="pill">RC2</span></div><div class="list" id="mingli-depth"></div></section>
       <section><div class="section-head"><h2>Module Map</h2><span class="pill">migration</span></div><div class="list" id="module-map"></div></section>
       <section><div class="section-head"><h2>Trainable Spine</h2><span class="pill">policy</span></div><div class="list" id="trainable-spine"></div></section>
+      <section><div class="section-head"><h2>Policy Registry</h2><span class="pill">active · rollback</span></div><div class="list" id="policy-registries"></div></section>
       <section><div class="section-head"><h2>Runtime Context</h2><span class="pill">platform</span></div><div class="list" id="runtime-context"></div></section>
     </div>
     <div class="grid" id="metrics"></div>
@@ -283,11 +288,12 @@ def _console_html() -> str:
       return `<div class="row"><strong>${title || "-"}</strong><span>${meta || ""}</span><span class="${cls(value)}">${value ?? ""}</span></div>`;
     }
     async function load() {
-      const [project, depth, modules, trainable, context, summary, batches, readiness, risk, weights, reviews, executions, llm, models] = await Promise.all([
+      const [project, depth, modules, trainable, policyRegistries, context, summary, batches, readiness, risk, weights, reviews, executions, llm, models] = await Promise.all([
         get("/admin/v40/api/project-status"),
         get("/admin/v40/api/mingli-depth-index"),
         get("/admin/v40/api/module-migration-status"),
         get("/admin/v40/api/trainable-runtime-spine"),
+        get("/admin/v40/api/policy-registries"),
         get("/admin/v40/api/horizontal-runtime-context"),
         get("/admin/v40/api/summary"),
         get("/admin/v40/api/batches"),
@@ -331,6 +337,7 @@ def _console_html() -> str:
         row("反馈链路", `${(trainableStatus.feedback_flow || []).length} steps`, "review"),
         row("边界", trainableStatus.principle || "", trainableStatus.boundary || "review"),
       ].join("");
+      $("policy-registries").innerHTML = (policyRegistries.registries || []).map((item) => row(item.registry_id, `${item.active_policy_version} · rollback ${item.previous_policy_version || "baseline"} · ${item.unit_count || 0} units`, item.active ? "ready" : "history")).join("") || row("暂无训练策略", "BatchTrainerV1 训练后可直接生效", "review");
       const contextStatus = context.status || {};
       $("runtime-context").innerHTML = [
         row("Locale / Role / Client / Engine", `${(contextStatus.contexts || []).length} contexts`, "ready"),
@@ -339,7 +346,7 @@ def _console_html() -> str:
         row("Admin", "独立控制台和端口", "ready"),
       ].join("");
       const counts = summary.summary?.counts || {};
-      $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]
+      $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "evaluation_batches", "release_readiness", "trainable_policy_registries", "global_weight_versions", "weight_activation_executions"]
         .map((key) => `<div class="metric"><span>${key}</span><strong>${counts[key] ?? 0}</strong></div>`).join("");
       $("batches").innerHTML = (batches.batches || []).map((item) => row(item.batch_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");
       $("readiness").innerHTML = (readiness.readiness || []).map((item) => row(item.readiness_id, item.candidate_version, item.recommendation)).join("") || row("暂无数据", "", "");

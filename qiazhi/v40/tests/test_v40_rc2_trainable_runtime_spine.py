@@ -61,7 +61,9 @@ def test_trainable_units_cannot_target_fact_modules() -> None:
     )
 
     assert registry.direct_global_update_allowed is False
-    assert registry.release_gate_required_for_global is True
+    assert registry.release_gate_required_for_global is False
+    assert registry.direct_effect_after_training is True
+    assert registry.rollback_available is True
 
     with pytest.raises(ValueError, match="cannot target fact modules"):
         TrainableUnit(
@@ -133,6 +135,7 @@ def test_trainable_runtime_spine_status_and_docs_are_available() -> None:
     assert "bazi_four_pillars" in status["immutable_fact_modules"]
     assert "rule_weight" in status["trainable_unit_types"]
     assert "TrainablePolicyRegistry" in status["contracts"]
+    assert "Direct effect after training with rollback registry pointer" in status["implemented_capabilities"]
 
     response = TestClient(create_app()).get(f"{API_PREFIX}/project/trainable-runtime-spine")
     assert response.status_code == 200

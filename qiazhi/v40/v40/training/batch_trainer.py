@@ -90,9 +90,14 @@ def build_batch_trainer_v1(
             changed_advice_priorities.append(unit_id)
 
     candidate_registry = TrainablePolicyRegistry(
-        registry_id=f"{base_registry.registry_id}:candidate:{candidate_policy_version}",
-        active_policy_version=base_registry.active_policy_version,
+        registry_id=f"{base_registry.registry_id}:active:{candidate_policy_version}",
+        active_policy_version=candidate_policy_version,
         candidate_policy_version=candidate_policy_version,
+        active=True,
+        previous_registry_id=base_registry.registry_id,
+        previous_policy_version=base_registry.active_policy_version,
+        activated_by_training_run_id=training_run_id,
+        rollback_available=True,
         units=candidate_units,
         immutable_fact_modules=base_registry.immutable_fact_modules,
     )
@@ -125,6 +130,9 @@ def build_batch_trainer_v1(
         changed_unit_count=len(changed_weights) + len(changed_thresholds),
         candidate_registry=candidate_registry,
         impact_diff=impact,
+        active_policy_applied=True,
+        rollback_registry_id=base_registry.registry_id,
+        previous_policy_version=base_registry.active_policy_version,
     )
 
 

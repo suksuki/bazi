@@ -136,6 +136,47 @@ CREATE TABLE IF NOT EXISTS v40_training_impact_diffs (
     created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS v40_trainable_policy_registries (
+    registry_id TEXT PRIMARY KEY,
+    active_policy_version TEXT NOT NULL,
+    candidate_policy_version TEXT NOT NULL DEFAULT '',
+    version TEXT NOT NULL DEFAULT 'v40.trainable_policy_registry.v1',
+    registry_json JSONB NOT NULL,
+    unit_count INTEGER NOT NULL DEFAULT 0,
+    active BOOLEAN NOT NULL DEFAULT true,
+    previous_registry_id TEXT NOT NULL DEFAULT '',
+    previous_policy_version TEXT NOT NULL DEFAULT '',
+    activated_by_training_run_id TEXT NOT NULL DEFAULT '',
+    rollback_available BOOLEAN NOT NULL DEFAULT true,
+    activated_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_trainable_policy_registries_candidate
+ON v40_trainable_policy_registries (candidate_policy_version);
+
+CREATE INDEX IF NOT EXISTS idx_v40_trainable_policy_registries_active
+ON v40_trainable_policy_registries (active, updated_at);
+
+ALTER TABLE IF EXISTS v40_trainable_policy_registries
+ADD COLUMN IF NOT EXISTS active BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE IF EXISTS v40_trainable_policy_registries
+ADD COLUMN IF NOT EXISTS previous_registry_id TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE IF EXISTS v40_trainable_policy_registries
+ADD COLUMN IF NOT EXISTS previous_policy_version TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE IF EXISTS v40_trainable_policy_registries
+ADD COLUMN IF NOT EXISTS activated_by_training_run_id TEXT NOT NULL DEFAULT '';
+
+ALTER TABLE IF EXISTS v40_trainable_policy_registries
+ADD COLUMN IF NOT EXISTS rollback_available BOOLEAN NOT NULL DEFAULT true;
+
+ALTER TABLE IF EXISTS v40_trainable_policy_registries
+ADD COLUMN IF NOT EXISTS activated_at TIMESTAMPTZ;
+
 CREATE TABLE IF NOT EXISTS v40_global_weight_versions (
     weight_version_id TEXT PRIMARY KEY,
     source_training_run_id TEXT NOT NULL,

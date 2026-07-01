@@ -22,6 +22,7 @@ from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import (
     GlobalWeightVersion,
     LocalOverlay,
+    TrainablePolicyRegistry,
     TrainingExampleV2,
     TrainingImpactDiff,
     TrainingLabelEvent,
@@ -758,6 +759,129 @@ class V40PostgresRepository:
                 )
                 return [_serialize_row(row) for row in cur.fetchall()]
 
+    def save_trainable_policy_registry(self, registry: TrainablePolicyRegistry) -> None:
+        payload = registry.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                if registry.active:
+                    cur.execute(
+                        """
+                        UPDATE v40_trainable_policy_registries
+                        SET active = false,
+                            registry_json = jsonb_set(registry_json, '{active}', 'false'::jsonb, true),
+                            updated_at = now()
+                        WHERE active = true
+                          AND registry_id <> %s
+                        """,
+                        (registry.registry_id,),
+                    )
+                cur.execute(
+                    """
+                    INSERT INTO v40_trainable_policy_registries (
+                        registry_id,
+                        active_policy_version,
+                        candidate_policy_version,
+                        version,
+                        registry_json,
+                        unit_count,
+                        active,
+                        previous_registry_id,
+                        previous_policy_version,
+                        activated_by_training_run_id,
+                        rollback_available,
+                        activated_at,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s, %s, %s, %s, %s, %s, CASE WHEN %s THEN now() ELSE NULL END, now())
+                    ON CONFLICT (registry_id)
+                    DO UPDATE SET
+                        active_policy_version = EXCLUDED.active_policy_version,
+                        candidate_policy_version = EXCLUDED.candidate_policy_version,
+                        version = EXCLUDED.version,
+                        registry_json = EXCLUDED.registry_json,
+                        unit_count = EXCLUDED.unit_count,
+                        active = EXCLUDED.active,
+                        previous_registry_id = EXCLUDED.previous_registry_id,
+                        previous_policy_version = EXCLUDED.previous_policy_version,
+                        activated_by_training_run_id = EXCLUDED.activated_by_training_run_id,
+                        rollback_available = EXCLUDED.rollback_available,
+                        activated_at = COALESCE(EXCLUDED.activated_at, v40_trainable_policy_registries.activated_at),
+                        updated_at = now()
+                    """,
+                    (
+                        registry.registry_id,
+                        registry.active_policy_version,
+                        registry.candidate_policy_version,
+                        registry.version,
+                        json.dumps(payload, ensure_ascii=False),
+                        len(registry.units),
+                        registry.active,
+                        registry.previous_registry_id,
+                        registry.previous_policy_version,
+                        registry.activated_by_training_run_id,
+                        registry.rollback_available,
+                        registry.active,
+                    ),
+                )
+
+    def get_active_trainable_policy_registry(self) -> dict[str, Any] | None:
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        registry_id,
+                        active_policy_version,
+                        candidate_policy_version,
+                        version,
+                        registry_json,
+                        unit_count,
+                        active,
+                        previous_registry_id,
+                        previous_policy_version,
+                        activated_by_training_run_id,
+                        rollback_available,
+                        activated_at,
+                        created_at,
+                        updated_at
+                    FROM v40_trainable_policy_registries
+                    WHERE active = true
+                    ORDER BY activated_at DESC NULLS LAST, updated_at DESC, created_at DESC
+                    LIMIT 1
+                    """
+                )
+                row = cur.fetchone()
+                return _serialize_row(row) if row else None
+
+    def list_trainable_policy_registries(self, *, limit: int = 20) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT
+                        registry_id,
+                        active_policy_version,
+                        candidate_policy_version,
+                        version,
+                        registry_json,
+                        unit_count,
+                        active,
+                        previous_registry_id,
+                        previous_policy_version,
+                        activated_by_training_run_id,
+                        rollback_available,
+                        activated_at,
+                        created_at,
+                        updated_at
+                    FROM v40_trainable_policy_registries
+                    ORDER BY active DESC, updated_at DESC, created_at DESC
+                    LIMIT %s
+                    """,
+                    (bounded_limit,),
+                )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
     def save_global_weight_version(self, weight_version: GlobalWeightVersion) -> None:
         payload = weight_version.model_dump(mode="json")
         with self._connect() as conn:
@@ -1133,6 +1257,7 @@ class V40PostgresRepository:
             "training_replay_batches": "v40_training_replay_batches",
             "conversation_turns": "v40_conversation_turns",
             "training_impact_diffs": "v40_training_impact_diffs",
+            "trainable_policy_registries": "v40_trainable_policy_registries",
             "shadow_compare_runs": "v40_shadow_compare_runs",
             "release_gates": "v40_release_gates",
             "evaluation_batches": "v40_evaluation_batches",
@@ -1151,6 +1276,12 @@ class V40PostgresRepository:
                 latest_runs = self._latest_rows(cur, "v40_evaluation_runs", "updated_at", limit=5)
                 latest_batches = self._latest_rows(cur, "v40_evaluation_batches", "updated_at", limit=5)
                 latest_impacts = self._latest_rows(cur, "v40_training_impact_diffs", "created_at", limit=5)
+                latest_policy_registries = self._latest_rows(
+                    cur,
+                    "v40_trainable_policy_registries",
+                    "updated_at",
+                    limit=5,
+                )
                 latest_local_overlays = self._latest_rows(cur, "v40_local_overlays", "updated_at", limit=5)
                 latest_training_examples = self._latest_rows(cur, "v40_training_examples", "updated_at", limit=5)
                 latest_training_example_replays = self._latest_rows(
@@ -1186,6 +1317,7 @@ class V40PostgresRepository:
             "latest_evaluation_runs": latest_runs,
             "latest_evaluation_batches": latest_batches,
             "latest_training_impacts": latest_impacts,
+            "latest_trainable_policy_registries": latest_policy_registries,
             "latest_local_overlays": latest_local_overlays,
             "latest_training_examples": latest_training_examples,
             "latest_training_example_replays": latest_training_example_replays,
@@ -1229,4 +1361,7 @@ def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
     updated_at = serialized.get("updated_at")
     if isinstance(updated_at, datetime):
         serialized["updated_at"] = updated_at.isoformat()
+    activated_at = serialized.get("activated_at")
+    if isinstance(activated_at, datetime):
+        serialized["activated_at"] = activated_at.isoformat()
     return serialized
