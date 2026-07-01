@@ -608,6 +608,18 @@ POST /api/v40/probes/answer
 
 本阶段把 Probe 回答从 UI 临时训练标签升级为正式运行时产物：`ProbeAnswerRequest` 消费当前 `RuntimeResult`、`probe_id`、用户选项或短答案，返回 `AnswerSignal`、`HiddenAttributeUpdate`、`TrainingLabelEvent`、`LocalOverlay`、`refined_advice_points` 和用户可读确认。`/v40/ui` 的 Probe 卡现在调用 `/api/v40/probes/answer`，不再直接把 Probe 答案简化成一条裸训练标签；`不太像` 反馈也可以在没有现成 ProbeCandidate 时形成 recovery hidden attribute，例如 `wealth.money_mode`。该链路不重跑报告、不改 verdict、不改 chart facts、不写生产权重、不写 V30。
 
+2026-07-01 Phase 48 已启动：
+
+```text
+docs/V40_PHASE48_PROBE_AWARE_CONVERSATION_PLAN.md
+ConversationTurnRequest.probe_answer_results
+ConversationTurn.source_answer_signal_ids
+ConversationTurn.source_hidden_attribute_update_ids
+ConversationTurn.calibration_context
+```
+
+本阶段把 Phase 47 的 `ProbeAnswerResult` 接入后续智能对话上下文。`POST /api/v40/conversation/turn` 现在可以接收 `probe_answer_results`，conversation runtime 会把 `AnswerSignal.interpreted_claim`、`HiddenAttributeUpdate.value` 和 `ProbeAnswerResult.refined_advice_points` 放入 LLM prompt、local answer 和 `ConversationTurn` 源追踪字段。`/v40/ui` 在 Probe 回答后本地保存 result，后续追问会随请求带上这些校准结果。用户侧只看到“结合你刚才补充的线索……”这类自然语言，不暴露 AnswerSignal、HiddenAttributeUpdate、ProbeAnswerResult、TrainingLabelEvent 或 LocalOverlay。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

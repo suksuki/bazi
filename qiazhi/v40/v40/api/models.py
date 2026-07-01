@@ -16,6 +16,7 @@ from v40.contracts.evaluation import (
     TrainingExampleReplayResult,
 )
 from v40.contracts.output import ExpressionTelemetry
+from v40.contracts.probe import ProbeAnswerResult
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import (
     GlobalWeightVersion,
@@ -288,6 +289,7 @@ class ConversationTurnRequest(V40Model):
     selected_option: str = ""
     role_key: RoleKey | None = None
     topic: Topic | None = None
+    probe_answer_results: list[ProbeAnswerResult] = Field(default_factory=list)
     execution_mode: str = "local"
     provider_text: str = ""
     provider: str = "local_conversation_adapter"

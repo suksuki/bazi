@@ -10,6 +10,7 @@ from v40.contracts.output import (
     LLMExpressionResult,
     LLMExpressionTask,
 )
+from v40.contracts.probe import ProbeAnswerResult
 from v40.contracts.runtime import RuntimeResult
 from v40.conversation.seeds import build_conversation_seeds
 from v40.expression import (
@@ -21,7 +22,7 @@ from v40.expression import (
 
 CONVERSATION_SYSTEM = (
     "You are Qiazhi V40's bounded Bazi conversation layer. "
-    "Answer only from the supplied runtime verdicts, advice, probes, and accepted report context. "
+    "Answer only from the supplied runtime verdicts, advice, probes, probe answers, and accepted report context. "
     "Do not create new pillars, luck cycles, flow years, hidden facts, event years, or guaranteed promises. "
     "Do not expose engineering terms. Return customer-visible Chinese text."
 )
@@ -36,6 +37,7 @@ def build_conversation_turn(
     selected_option: str = "",
     role_key: RoleKey | None = None,
     topic: Topic | None = None,
+    probe_answer_results: list[ProbeAnswerResult] | None = None,
     execution_mode: str = "local",
     provider_text: str = "",
     provider: str = "local_conversation_adapter",
@@ -48,6 +50,11 @@ def build_conversation_turn(
     source_seed = _find_seed(runtime=runtime, seed_id=seed_id, question=clean_question)
     resolved_role = role_key or runtime.request.role_key
     resolved_topic = topic or _infer_topic(question=clean_question, runtime=runtime, source_seed=source_seed)
+    probe_answers = _relevant_probe_answers(
+        probe_answer_results=probe_answer_results or [],
+        topic=resolved_topic,
+        source_seed=source_seed,
+    )
     verdicts = _relevant_verdicts(runtime=runtime, topic=resolved_topic, source_seed=source_seed)
     advice_plans = _relevant_advice(runtime=runtime, topic=resolved_topic, source_seed=source_seed)
     task = _build_turn_task(
@@ -60,6 +67,7 @@ def build_conversation_turn(
         source_seed=source_seed,
         verdicts=verdicts,
         advice_plans=advice_plans,
+        probe_answer_results=probe_answers,
     )
     if execution_mode == "provider_text":
         result = LLMExpressionResult(
@@ -82,6 +90,7 @@ def build_conversation_turn(
                 source_seed=source_seed,
                 verdicts=verdicts,
                 advice_plans=advice_plans,
+                probe_answer_results=probe_answers,
                 role_key=resolved_role,
             ),
             system_content=CONVERSATION_SYSTEM,
@@ -98,6 +107,7 @@ def build_conversation_turn(
                 source_seed=source_seed,
                 verdicts=verdicts,
                 advice_plans=advice_plans,
+                probe_answer_results=probe_answers,
                 role_key=resolved_role,
             ),
             raw_thinking="",
@@ -137,6 +147,9 @@ def build_conversation_turn(
         source_probe_ids=source_seed.source_probe_ids if source_seed else [],
         source_verdict_ids=[verdict.verdict_id for verdict in verdicts],
         source_advice_ids=[advice.advice_id for advice in advice_plans],
+        source_answer_signal_ids=[item.answer_signal.signal_id for item in probe_answers],
+        source_hidden_attribute_update_ids=[item.hidden_attribute_update.update_id for item in probe_answers],
+        calibration_context=_calibration_context(probe_answers),
         answer_text=answer_text,
         raw_thinking=result.raw_thinking,
         provider=result.provider,
@@ -157,6 +170,7 @@ def build_conversation_prompt(
     verdicts: list[DecisionVerdict],
     advice_plans: list[AdvicePlan],
     role_key: RoleKey,
+    probe_answer_results: list[ProbeAnswerResult] | None = None,
 ) -> str:
     accepted_report = runtime.acceptance_result.accepted_text if runtime.acceptance_result else ""
     seed_context = source_seed.question if source_seed else ""
@@ -188,6 +202,9 @@ def build_conversation_prompt(
             "本轮相关建议:",
             *_bullet_lines(_advice_lines(advice_plans)),
             "",
+            "已校准的现实线索:",
+            *_bullet_lines(_calibration_context(probe_answer_results or [])),
+            "",
             "可继续追问的问题:",
             *_bullet_lines([probe.question for probe in runtime.probes[:5]]),
             "",
@@ -213,6 +230,7 @@ def render_local_conversation_answer(
     verdicts: list[DecisionVerdict],
     advice_plans: list[AdvicePlan],
     role_key: RoleKey,
+    probe_answer_results: list[ProbeAnswerResult] | None = None,
 ) -> str:
     lines = ["结论"]
     if selected_option.strip():
@@ -229,7 +247,15 @@ def render_local_conversation_answer(
         lines.append("- 当前已结合命局结构、做功路径和领域建议，不另起新的命盘事实。")
     if verdicts and verdicts[0].evidence_refs:
         lines.append("- 判断主要来自命局结构、做功路径和领域建议的共同指向。")
+    calibration_rows = _calibration_context(probe_answer_results or [])
+    if calibration_rows:
+        for row in calibration_rows[:3]:
+            lines.append(f"- 结合你刚才补充的线索：{row}")
     lines.append("建议")
+    refined_rows = _refined_advice_lines(probe_answer_results or [])
+    if refined_rows:
+        for row in refined_rows[:3]:
+            lines.append(f"- {row}")
     advice_rows = _advice_lines(advice_plans)
     if advice_rows:
         for row in advice_rows[:4]:
@@ -259,12 +285,16 @@ def _build_turn_task(
     source_seed: ConversationSeed | None,
     verdicts: list[DecisionVerdict],
     advice_plans: list[AdvicePlan],
+    probe_answer_results: list[ProbeAnswerResult] | None = None,
 ) -> LLMExpressionTask:
     source_ids: list[str] = []
     if source_seed:
         source_ids.extend(source_seed.source_verdict_ids)
         source_ids.extend(source_seed.source_advice_ids)
         source_ids.extend(source_seed.source_probe_ids)
+    for item in probe_answer_results or []:
+        source_ids.append(item.answer_signal.signal_id)
+        source_ids.append(item.hidden_attribute_update.update_id)
     instruction = (
         "回答用户这一轮八字追问，只使用当前 runtime 的结论、建议、报告和追问种子。"
         "输出必须简洁、可执行、通俗，不出现工程字段。"
@@ -272,6 +302,9 @@ def _build_turn_task(
     )
     if selected_option.strip():
         instruction += f" 用户选择：{selected_option.strip()}"
+    calibration_rows = _calibration_context(probe_answer_results or [])
+    if calibration_rows:
+        instruction += " 已校准现实线索：" + "；".join(calibration_rows[:3])
     return LLMExpressionTask(
         task_id=f"task:{turn_id}",
         reading_id=runtime.reading_id,
@@ -279,7 +312,11 @@ def _build_turn_task(
         topic=topic,
         input_card_ids=source_ids,
         instruction=instruction,
-        allowed_assertions=_allowed_assertions(verdicts=verdicts, advice_plans=advice_plans),
+        allowed_assertions=[
+            *_allowed_assertions(verdicts=verdicts, advice_plans=advice_plans),
+            *_calibration_context(probe_answer_results or []),
+            *_refined_advice_lines(probe_answer_results or []),
+        ],
         forbidden_assertions=_forbidden_assertions(verdicts=verdicts),
     )
 
@@ -346,6 +383,48 @@ def _relevant_advice(
         if advice.topic == topic or verdict_ids.intersection(advice.source_verdict_ids)
     ]
     return rows or runtime.advice_plans[:2]
+
+
+def _relevant_probe_answers(
+    *,
+    probe_answer_results: list[ProbeAnswerResult],
+    topic: Topic,
+    source_seed: ConversationSeed | None,
+) -> list[ProbeAnswerResult]:
+    if not probe_answer_results:
+        return []
+    source_probe_ids = set(source_seed.source_probe_ids if source_seed else [])
+    rows: list[ProbeAnswerResult] = []
+    for result in probe_answer_results:
+        probe_id = result.answer_signal.probe_id
+        signal_topic = result.answer_signal.topic
+        hidden_topic = result.hidden_attribute_update.topic
+        if source_probe_ids and probe_id in source_probe_ids:
+            rows.append(result)
+        elif signal_topic == topic or hidden_topic == topic:
+            rows.append(result)
+        elif result.training_label.target_type.value == "hidden_attribute" and topic in {Topic.OVERVIEW, Topic.UNKNOWN}:
+            rows.append(result)
+    return rows[:4]
+
+
+def _calibration_context(probe_answer_results: list[ProbeAnswerResult]) -> list[str]:
+    rows: list[str] = []
+    for result in probe_answer_results:
+        claim = result.answer_signal.interpreted_claim.strip()
+        value = result.hidden_attribute_update.value.strip()
+        if claim:
+            rows.append(claim)
+        elif value:
+            rows.append(f"用户补充的现实线索为「{value}」。")
+    return _unique(rows)
+
+
+def _refined_advice_lines(probe_answer_results: list[ProbeAnswerResult]) -> list[str]:
+    rows: list[str] = []
+    for result in probe_answer_results:
+        rows.extend(result.refined_advice_points)
+    return _unique(rows)
 
 
 def _allowed_assertions(*, verdicts: list[DecisionVerdict], advice_plans: list[AdvicePlan]) -> list[str]:

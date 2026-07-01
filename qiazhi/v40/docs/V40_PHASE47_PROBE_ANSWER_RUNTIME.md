@@ -157,7 +157,7 @@ Coverage:
 
 ## Remaining Work
 
-1. Feed `ProbeAnswerResult` into conversation context so later answers use the calibrated reality signal.
+1. Phase 48 feeds `ProbeAnswerResult` into conversation context so later answers use the calibrated reality signal.
 2. Persist Probe answer events by default once auth/user history storage is finalized.
 3. Replace temporary URL role hook with auth-derived role context.
 4. Run desktop/mobile browser visual QA after the next UI pass.

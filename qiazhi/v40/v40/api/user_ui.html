@@ -756,6 +756,7 @@
     let currentSeeds = [];
     let currentTurn = null;
     let currentMismatchArea = "";
+    let currentCalibrationResults = [];
     let typingTimer = null;
 
     document.body.dataset.role = currentRole;
@@ -1111,6 +1112,9 @@
       });
       const body = await response.json();
       if (!response.ok) throw new Error(body.detail || "校准暂时没有完成");
+      if (body.result) {
+        currentCalibrationResults.push(body.result);
+      }
       const result = $("probeResult");
       if (result) {
         const points = (body.refined_advice_points || []).slice(0, 2).join(" ");
@@ -1176,6 +1180,7 @@
           role_key: currentRole
         };
         body["execution" + "_mode"] = smartMode;
+        body["probe_answer" + "_results"] = currentCalibrationResults;
         const response = await fetch("/api/v40/conversation/turn", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
@@ -1230,6 +1235,7 @@
       currentRuntime = null;
       currentSeeds = [];
       currentTurn = null;
+      currentCalibrationResults = [];
       $("topicCards").innerHTML = "";
       $("conversationTurns").innerHTML = "";
       $("conversationSurface").classList.add("hidden");

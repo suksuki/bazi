@@ -385,6 +385,7 @@ def create_app() -> FastAPI:
                 selected_option=payload.selected_option,
                 role_key=payload.role_key,
                 topic=payload.topic,
+                probe_answer_results=payload.probe_answer_results,
                 execution_mode=payload.execution_mode,
                 provider_text=payload.provider_text,
                 provider=payload.provider,

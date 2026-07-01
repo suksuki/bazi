@@ -212,6 +212,9 @@ class ConversationTurn(V40Model):
     source_probe_ids: list[str] = Field(default_factory=list)
     source_verdict_ids: list[str] = Field(default_factory=list)
     source_advice_ids: list[str] = Field(default_factory=list)
+    source_answer_signal_ids: list[str] = Field(default_factory=list)
+    source_hidden_attribute_update_ids: list[str] = Field(default_factory=list)
+    calibration_context: list[str] = Field(default_factory=list)
     answer_text: str = ""
     raw_thinking: str = ""
     provider: str = ""
