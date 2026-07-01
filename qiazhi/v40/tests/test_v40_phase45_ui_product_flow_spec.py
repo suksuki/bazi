@@ -11,13 +11,22 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
     spec = Path("qiazhi/v40/docs/V40_SPEC.md").read_text(encoding="utf-8")
 
     assert "Report-first reading" in doc
+    assert "user-side product runtime contract" in doc
+    assert "用户侧 UI" in doc
     assert "Probe Calibration Surface" in doc
     assert "ConsentGrant" in doc
     assert "Practitioner Lens" in doc
+    assert "表达方式" in doc
+    assert "Local / Gemma4" in doc
+    assert "哪里不太像" in doc
+    assert "Phase 1: Hide Engineering Status" in doc
+    assert "Core judgment is visible within 5 seconds" in doc
+    assert "训练闭环在后台安静发生" in doc
     assert "UI-1 Product Shell" in doc
     assert "docs/V40_UI_PRODUCT_FLOW_SPEC.md" in readme
     assert "2026-07-01 Phase 45" in spec
     assert "普通用户不暴露 provider/model/prompt/acceptance/policy/debug" in spec
+    assert "产品运行合同" in spec
 
 
 def test_phase45_project_status_points_to_ui_mainline() -> None:
