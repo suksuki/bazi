@@ -17,7 +17,16 @@ from v40.contracts.evaluation import (
 )
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.runtime import RuntimeResult
-from v40.contracts.training import GlobalWeightVersion, LabelTargetType, LabelValue, TrainingExampleV2, WeightActivationReview
+from v40.contracts.training import (
+    GlobalWeightVersion,
+    LabelTargetType,
+    LabelValue,
+    TrainablePolicyRegistry,
+    TrainingAttribution,
+    TrainingExampleV2,
+    TrainingLabelEvent,
+    WeightActivationReview,
+)
 from v40.migration import V30ExportEnvelope
 
 
@@ -57,6 +66,27 @@ class TrainingImpactFromEvaluationRequest(V40Model):
     evaluation_run: EvaluationRunResult
     persist: bool = True
     boundary: str = "training_impact_request_builds_candidate_diff_without_production_write"
+
+
+class BatchTrainerV1Request(V40Model):
+    version: str = "v40.batch_trainer_v1_request.v1"
+    training_run_id: str
+    base_registry: TrainablePolicyRegistry
+    attributions: list[TrainingAttribution]
+    label_events: list[TrainingLabelEvent] = Field(default_factory=list)
+    candidate_policy_version: str
+    persist_impact: bool = False
+    boundary: str = "batch_trainer_v1_request_builds_candidate_policy_without_activation"
+
+    @model_validator(mode="after")
+    def _batch_trainer_boundary(self) -> "BatchTrainerV1Request":
+        if not self.training_run_id.strip():
+            raise ValueError("BatchTrainerV1 request requires training_run_id")
+        if not self.candidate_policy_version.strip():
+            raise ValueError("BatchTrainerV1 request requires candidate_policy_version")
+        if not self.attributions:
+            raise ValueError("BatchTrainerV1 request requires attributions")
+        return self
 
 
 class TrainingExampleFromReadingRequest(V40Model):

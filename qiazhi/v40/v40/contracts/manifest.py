@@ -58,6 +58,7 @@ def contract_manifest() -> dict[str, object]:
             "TrainableUnit",
             "TrainablePolicyRegistry",
             "TrainingAttribution",
+            "BatchTrainerV1Result",
             "TrainingExampleV2",
             "TrainingImpactDiff",
             "LocalOverlay",

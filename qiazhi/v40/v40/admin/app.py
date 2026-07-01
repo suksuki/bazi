@@ -327,6 +327,7 @@ def _console_html() -> str:
       $("trainable-spine").innerHTML = [
         row("事实模块", `${(trainableStatus.immutable_fact_modules || []).length} validation only`, "ready"),
         row("可训练单元", `${(trainableStatus.trainable_unit_types || []).length} policy unit types`, "review"),
+        row("BatchTrainerV1", `${(trainableStatus.implemented_capabilities || []).length} capabilities`, "ready"),
         row("反馈链路", `${(trainableStatus.feedback_flow || []).length} steps`, "review"),
         row("边界", trainableStatus.principle || "", trainableStatus.boundary || "review"),
       ].join("");

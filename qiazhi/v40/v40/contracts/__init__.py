@@ -63,6 +63,7 @@ from v40.contracts.output import (
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot
 from v40.contracts.training import (
+    BatchTrainerV1Result,
     GlobalWeightVersion,
     LocalOverlay,
     TrainablePolicyRegistry,
@@ -85,6 +86,7 @@ __all__ = [
     "BranchCandidate",
     "BranchCard",
     "BaziChartFacts",
+    "BatchTrainerV1Result",
     "BirthInputCanonical",
     "ClientKey",
     "ClientContext",

@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from v40 import __version__
 from v40.api.models import (
+    BatchTrainerV1Request,
     CandidateWeightFromBatchRequest,
     CandidateWeightFromReplayBatchRequest,
     ConversationTurnRequest,
@@ -73,6 +74,7 @@ from v40.expression import (
     resolve_ollama_expression_config,
 )
 from v40.training import (
+    build_batch_trainer_v1,
     build_candidate_weight_version_from_batch,
     build_candidate_weight_version_from_replay_batch,
     build_practitioner_lens_action,
@@ -1053,6 +1055,38 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "training_impact_diffs_read_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/training/batch-trainer-v1")
+    def run_batch_trainer_v1(payload: BatchTrainerV1Request) -> dict[str, object]:
+        try:
+            result = build_batch_trainer_v1(
+                training_run_id=payload.training_run_id,
+                base_registry=payload.base_registry,
+                attributions=payload.attributions,
+                label_events=payload.label_events,
+                candidate_policy_version=payload.candidate_policy_version,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        impact_persisted = False
+        if payload.persist_impact:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_training_impact_diff(result.impact_diff)
+                impact_persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.batch_trainer_v1_response.v1",
+            "result": result.model_dump(mode="json"),
+            "candidate_registry": result.candidate_registry.model_dump(mode="json"),
+            "impact": result.impact_diff.model_dump(mode="json"),
+            "impact_persisted": impact_persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "changes_chart_facts": False,
+            "boundary": "batch_trainer_v1_creates_candidate_policy_without_activation",
         }
 
     @app.post(f"{API_PREFIX}/weights/candidates/from-batch")

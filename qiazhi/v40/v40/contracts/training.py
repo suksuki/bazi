@@ -129,7 +129,8 @@ class TrainableUnit(V40Model):
             raise ValueError("TrainableUnit requires unit_id")
         if not self.module.strip():
             raise ValueError("TrainableUnit requires module")
-        if "fact" in self.module.lower():
+        module_key = self.module.lower()
+        if module_key.startswith("fact") or "fact_engine" in module_key or module_key.endswith("_facts"):
             raise ValueError("TrainableUnit cannot target fact modules")
         if self.min_value >= self.max_value:
             raise ValueError("TrainableUnit requires min_value < max_value")
@@ -292,6 +293,35 @@ class TrainingImpactDiff(V40Model):
             raise ValueError("TrainingImpactDiff cannot mutate chart facts")
         if self.release_recommendation == ReleaseRecommendation.APPROVE and self.regression_failures:
             raise ValueError("TrainingImpactDiff cannot approve with regression failures")
+        return self
+
+
+class BatchTrainerV1Result(V40Model):
+    version: str = "v40.batch_trainer_v1_result.v1"
+    training_run_id: str
+    base_policy_version: str
+    candidate_policy_version: str
+    label_event_count: int = Field(default=0, ge=0)
+    attribution_count: int = Field(default=0, ge=0)
+    changed_unit_count: int = Field(default=0, ge=0)
+    candidate_registry: TrainablePolicyRegistry
+    impact_diff: TrainingImpactDiff
+    production_write_allowed: bool = False
+    chart_fact_mutation_allowed: bool = False
+    boundary: str = "batch_trainer_v1_creates_candidate_policy_without_activation_or_fact_mutation"
+
+    @model_validator(mode="after")
+    def _batch_trainer_boundary(self) -> "BatchTrainerV1Result":
+        if not self.training_run_id.strip():
+            raise ValueError("BatchTrainerV1Result requires training_run_id")
+        if self.production_write_allowed:
+            raise ValueError("BatchTrainerV1Result cannot write production directly")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("BatchTrainerV1Result cannot mutate chart facts")
+        if self.candidate_registry.direct_global_update_allowed:
+            raise ValueError("BatchTrainerV1Result cannot allow direct global update")
+        if self.impact_diff.production_write_allowed:
+            raise ValueError("BatchTrainerV1Result impact cannot write production")
         return self
 
 
