@@ -47,6 +47,10 @@ def create_admin_app() -> FastAPI:
     def module_migration_status() -> dict[str, object]:
         return _fetch_json("/api/v40/project/module-migration-status")
 
+    @app.get(f"{ADMIN_PREFIX}/api/trainable-runtime-spine")
+    def trainable_runtime_spine() -> dict[str, object]:
+        return _fetch_json("/api/v40/project/trainable-runtime-spine")
+
     @app.get(f"{ADMIN_PREFIX}/api/batches")
     def batches() -> dict[str, object]:
         return _fetch_json("/api/v40/evaluation/batches?limit=8")
@@ -253,6 +257,7 @@ def _console_html() -> str:
       <section><div class="section-head"><h2>V40 Completion</h2><span class="pill" id="phase"></span></div><div class="list" id="progress"></div></section>
       <section><div class="section-head"><h2>Mingli Depth</h2><span class="pill">RC2</span></div><div class="list" id="mingli-depth"></div></section>
       <section><div class="section-head"><h2>Module Map</h2><span class="pill">migration</span></div><div class="list" id="module-map"></div></section>
+      <section><div class="section-head"><h2>Trainable Spine</h2><span class="pill">policy</span></div><div class="list" id="trainable-spine"></div></section>
     </div>
     <div class="grid" id="metrics"></div>
     <div class="sections">
@@ -273,10 +278,11 @@ def _console_html() -> str:
       return `<div class="row"><strong>${title || "-"}</strong><span>${meta || ""}</span><span class="${cls(value)}">${value ?? ""}</span></div>`;
     }
     async function load() {
-      const [project, depth, modules, summary, batches, readiness, risk, weights, reviews, executions, llm, models] = await Promise.all([
+      const [project, depth, modules, trainable, summary, batches, readiness, risk, weights, reviews, executions, llm, models] = await Promise.all([
         get("/admin/v40/api/project-status"),
         get("/admin/v40/api/mingli-depth-index"),
         get("/admin/v40/api/module-migration-status"),
+        get("/admin/v40/api/trainable-runtime-spine"),
         get("/admin/v40/api/summary"),
         get("/admin/v40/api/batches"),
         get("/admin/v40/api/readiness"),
@@ -310,6 +316,13 @@ def _console_html() -> str:
         row("V30 直接复用", "runtime import allowed", moduleSummary.v30_direct_runtime_reuse_allowed ?? 0),
         row("V30 资产可萃取", `${moduleSummary.reusable_v30_asset_groups ?? 0} groups`, "review"),
         row("RC2 必须新建", `${moduleSummary.new_required_groups ?? 0} groups`, "review"),
+      ].join("");
+      const trainableStatus = trainable.status || {};
+      $("trainable-spine").innerHTML = [
+        row("事实模块", `${(trainableStatus.immutable_fact_modules || []).length} validation only`, "ready"),
+        row("可训练单元", `${(trainableStatus.trainable_unit_types || []).length} policy unit types`, "review"),
+        row("反馈链路", `${(trainableStatus.feedback_flow || []).length} steps`, "review"),
+        row("边界", trainableStatus.principle || "", trainableStatus.boundary || "review"),
       ].join("");
       const counts = summary.summary?.counts || {};
       $("metrics").innerHTML = ["training_label_events", "local_overlays", "training_examples", "training_example_replays", "training_replay_batches", "evaluation_batches", "release_readiness", "global_weight_versions", "weight_activation_executions"]

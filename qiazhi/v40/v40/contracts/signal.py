@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from enum import Enum
+from typing import Any
 
 from pydantic import Field, model_validator
 
@@ -35,10 +36,25 @@ class RuntimeSignal(V40Model):
     counter_evidence_refs: list[str] = Field(default_factory=list)
     branch_group_id: str = ""
     role_visibility: list[RoleKey] = Field(default_factory=lambda: ["user", "practitioner", "admin"])
+    trainable_refs: list[str] = Field(default_factory=list)
     trainable_targets: list[str] = Field(default_factory=list)
     chart_fact_mutation_allowed: bool = False
     decision_authority: bool = False
     boundary: str = "runtime_signal_is_material_for_decision_not_verdict_authority"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_trainable_refs(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        refs = list(data.get("trainable_refs") or [])
+        targets = list(data.get("trainable_targets") or [])
+        merged = list(dict.fromkeys([str(item) for item in refs + targets if str(item).strip()]))
+        if merged:
+            data = dict(data)
+            data["trainable_refs"] = merged
+            data["trainable_targets"] = merged
+        return data
 
     @model_validator(mode="after")
     def _signal_boundary(self) -> "RuntimeSignal":

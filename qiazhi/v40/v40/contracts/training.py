@@ -24,6 +24,8 @@ class LabelTargetType(str, Enum):
     VERDICT = "verdict"
     ADVICE = "advice"
     PROBE = "probe"
+    HIDDEN_ATTRIBUTE = "hidden_attribute"
+    TRAINABLE_UNIT = "trainable_unit"
     LLM_OUTPUT = "llm_output"
     SURFACE = "surface"
 
@@ -52,12 +54,16 @@ class TrainingLabelEvent(V40Model):
     target_type: LabelTargetType
     target_ids: list[str]
     label: LabelValue
+    also_supports: list[str] = Field(default_factory=list)
+    weakens: list[str] = Field(default_factory=list)
+    affected_trainable_refs: list[str] = Field(default_factory=list)
     strength: float = Field(default=0.0, ge=0.0, le=1.0)
     confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     reason: str = ""
     evidence_refs: list[str] = Field(default_factory=list)
     created_by_role: RoleKey = "user"
     local_only: bool = True
+    requires_batch_review: bool = False
     chart_fact_mutation_allowed: bool = False
     boundary: str = "training_label_event_is_feedback_signal_not_chart_fact_or_direct_weight_write"
 
@@ -69,6 +75,139 @@ class TrainingLabelEvent(V40Model):
             raise ValueError("TrainingLabelEvent requires target_ids")
         if self.chart_fact_mutation_allowed:
             raise ValueError("TrainingLabelEvent cannot mutate chart facts")
+        if not self.local_only and not self.requires_batch_review:
+            raise ValueError("non-local TrainingLabelEvent requires batch review")
+        return self
+
+
+class TrainableUnitType(str, Enum):
+    SOURCE_WEIGHT = "source_weight"
+    RULE_WEIGHT = "rule_weight"
+    PATH_WEIGHT = "path_weight"
+    CLAIM_SCORE = "claim_score"
+    CONFLICT_POLICY = "conflict_policy"
+    ASSERTION_THRESHOLD = "assertion_threshold"
+    ADVICE_PRIORITY = "advice_priority"
+    PROBE_VOI = "probe_voi"
+    LLM_ACCEPTANCE = "llm_acceptance"
+
+
+class TrainableUpdateScope(str, Enum):
+    LOCAL_OVERLAY = "local_overlay"
+    CANDIDATE_POLICY = "candidate_policy"
+    GLOBAL_POLICY = "global_policy"
+
+
+class TrainableUnit(V40Model):
+    version: str = "v40.trainable_unit.v1"
+    unit_id: str
+    module: str
+    unit_type: TrainableUnitType
+    domain: Topic = Topic.UNKNOWN
+    claim_key: str = ""
+    default_value: float = Field(default=0.0)
+    current_value: float = Field(default=0.0)
+    min_value: float = Field(default=0.0)
+    max_value: float = Field(default=1.0)
+    update_scope: TrainableUpdateScope = TrainableUpdateScope.LOCAL_OVERLAY
+    policy_version: str = "baseline"
+    enabled: bool = True
+    chart_fact_mutation_allowed: bool = False
+    boundary: str = "trainable_unit_tunes_policy_not_chart_facts"
+
+    @model_validator(mode="after")
+    def _trainable_unit_boundary(self) -> "TrainableUnit":
+        if not self.unit_id.strip():
+            raise ValueError("TrainableUnit requires unit_id")
+        if not self.module.strip():
+            raise ValueError("TrainableUnit requires module")
+        if "fact" in self.module.lower():
+            raise ValueError("TrainableUnit cannot target fact modules")
+        if self.min_value >= self.max_value:
+            raise ValueError("TrainableUnit requires min_value < max_value")
+        if not self.min_value <= self.default_value <= self.max_value:
+            raise ValueError("TrainableUnit default_value outside bounds")
+        if not self.min_value <= self.current_value <= self.max_value:
+            raise ValueError("TrainableUnit current_value outside bounds")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("TrainableUnit cannot mutate chart facts")
+        return self
+
+
+class TrainablePolicyRegistry(V40Model):
+    version: str = "v40.trainable_policy_registry.v1"
+    registry_id: str
+    active_policy_version: str
+    candidate_policy_version: str = ""
+    units: list[TrainableUnit] = Field(default_factory=list)
+    immutable_fact_modules: list[str] = Field(
+        default_factory=lambda: [
+            "bazi_fact_engine_pro",
+            "ziwei_fact_engine",
+            "solar_term_policy",
+            "luck_start_policy",
+            "true_solar_time_policy",
+        ]
+    )
+    release_gate_required_for_global: bool = True
+    chart_fact_mutation_allowed: bool = False
+    direct_global_update_allowed: bool = False
+    boundary: str = "trainable_policy_registry_versioned_replayable_and_fact_immutable"
+
+    @model_validator(mode="after")
+    def _registry_boundary(self) -> "TrainablePolicyRegistry":
+        if not self.registry_id.strip():
+            raise ValueError("TrainablePolicyRegistry requires registry_id")
+        if not self.active_policy_version.strip():
+            raise ValueError("TrainablePolicyRegistry requires active_policy_version")
+        unit_ids = [unit.unit_id for unit in self.units]
+        if len(unit_ids) != len(set(unit_ids)):
+            raise ValueError("TrainablePolicyRegistry requires unique unit_id")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("TrainablePolicyRegistry cannot mutate chart facts")
+        if self.direct_global_update_allowed:
+            raise ValueError("TrainablePolicyRegistry cannot allow direct global update")
+        if any("fact" in module.lower() for module in self.immutable_fact_modules) is False:
+            raise ValueError("TrainablePolicyRegistry must declare immutable fact modules")
+        return self
+
+
+class TrainingAttribution(V40Model):
+    version: str = "v40.training_attribution.v1"
+    attribution_id: str
+    label_event_id: str
+    affected_signal_ids: list[str] = Field(default_factory=list)
+    affected_trainable_refs: list[str] = Field(default_factory=list)
+    affected_branch_ids: list[str] = Field(default_factory=list)
+    affected_verdict_ids: list[str] = Field(default_factory=list)
+    affected_advice_ids: list[str] = Field(default_factory=list)
+    affected_probe_ids: list[str] = Field(default_factory=list)
+    attribution_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
+    update_scope: TrainableUpdateScope = TrainableUpdateScope.LOCAL_OVERLAY
+    release_gate_required: bool = True
+    chart_fact_mutation_allowed: bool = False
+    boundary: str = "training_attribution_maps_feedback_to_policy_units_without_mutating_facts"
+
+    @model_validator(mode="after")
+    def _attribution_boundary(self) -> "TrainingAttribution":
+        if not self.attribution_id.strip():
+            raise ValueError("TrainingAttribution requires attribution_id")
+        if not self.label_event_id.strip():
+            raise ValueError("TrainingAttribution requires label_event_id")
+        affected = (
+            self.affected_signal_ids
+            + self.affected_trainable_refs
+            + self.affected_branch_ids
+            + self.affected_verdict_ids
+            + self.affected_advice_ids
+            + self.affected_probe_ids
+        )
+        if not affected:
+            raise ValueError("TrainingAttribution requires affected targets")
+        if self.update_scope == TrainableUpdateScope.GLOBAL_POLICY and not self.release_gate_required:
+            raise ValueError("global TrainingAttribution requires release gate")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("TrainingAttribution cannot mutate chart facts")
         return self
 
 

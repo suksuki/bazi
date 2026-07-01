@@ -55,6 +55,7 @@ from v40.project import (
     build_project_status,
     build_release_candidate_audit,
     build_production_smoke,
+    build_trainable_runtime_spine_status,
     build_v30_replacement_readiness,
 )
 from v40.storage import V40PostgresRepository
@@ -1353,6 +1354,16 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "module_migration_status_reads_static_rc2_plan_without_mutation",
+        }
+
+    @app.get(f"{API_PREFIX}/project/trainable-runtime-spine")
+    def trainable_runtime_spine() -> dict[str, object]:
+        return {
+            "version": "v40.trainable_runtime_spine_response.v1",
+            "status": build_trainable_runtime_spine_status(),
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "trainable_runtime_spine_reads_policy_training_plan_without_mutation",
         }
 
     @app.get(f"{API_PREFIX}/project/v30-replacement-readiness")
