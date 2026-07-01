@@ -630,6 +630,15 @@ GET /api/v40/session/context
 
 本阶段把用户侧身份从临时 URL hook 收束到服务端会话上下文。`/v40/ui` 不再读取 `window.location.search`，也不再支持 `?role=practitioner`；页面启动时调用 `/api/v40/session/context`，再用返回的 `UserAppSessionContext` 决定普通用户、游客或命理师视角。主系统只保留 guest/user/practitioner 三种产品角色；admin 如果进入主系统，会被映射为特殊 practitioner，Admin Control Plane 继续独立，不进入用户侧流程。报告、Probe、智能对话和 Practitioner Lens 都使用 session role context 投影权限。
 
+2026-07-01 Phase 50 已启动：
+
+```text
+docs/V40_PHASE50_USER_UI_VISUAL_QA.md
+scripts/run_user_ui_visual_qa.py
+```
+
+本阶段把用户侧产品壳进入可重复视觉验收：脚本使用 Playwright 访问运行中的 `/v40/ui`，覆盖 desktop_user、desktop_practitioner、mobile_user 三种场景，生成 full-page PNG 和 `visual_qa_report.json`。验收重点是报告优先页面能打开、session role context 能切换命理师视角、Practitioner Lens 只在命理师身份出现、普通用户页面不泄漏 provider/model/prompt/acceptance/policy/debug/telemetry/admin 等工程词，并检查手机端明显横向溢出和控件文本溢出。该 QA 只观察用户表面，不改 runtime、训练权重或 V30 状态。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text
