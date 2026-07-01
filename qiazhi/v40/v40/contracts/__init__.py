@@ -63,6 +63,16 @@ from v40.contracts.output import (
 )
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
 from v40.contracts.probe import AnswerSignal, HiddenAttributeUpdate, ProbeAnswerResult
+from v40.contracts.review import (
+    AnonymizedCaseView,
+    ConsentGrant,
+    ConsentScope,
+    PractitionerReviewDecision,
+    PractitionerReviewQueueItem,
+    PractitionerReviewRequest,
+    PractitionerReviewResult,
+    ReviewRequestStatus,
+)
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot
 from v40.contracts.training import (
     BatchTrainerV1Result,
@@ -85,6 +95,7 @@ __all__ = [
     "AcceptanceResult",
     "AcceptanceStatus",
     "AnswerSignal",
+    "AnonymizedCaseView",
     "AssertionLevel",
     "BranchCandidate",
     "BranchCard",
@@ -93,6 +104,8 @@ __all__ = [
     "BirthInputCanonical",
     "ClientKey",
     "ClientContext",
+    "ConsentGrant",
+    "ConsentScope",
     "ConversationSeed",
     "ConversationTurn",
     "DecisionEngineOutput",
@@ -124,6 +137,10 @@ __all__ = [
     "Polarity",
     "ProbeCandidate",
     "ProbeAnswerResult",
+    "PractitionerReviewDecision",
+    "PractitionerReviewQueueItem",
+    "PractitionerReviewRequest",
+    "PractitionerReviewResult",
     "ProductAdviceCard",
     "ProductProjectionBundle",
     "ProductVerdictCard",
@@ -132,6 +149,7 @@ __all__ = [
     "ReleaseRecommendation",
     "RoleKey",
     "RoleContext",
+    "ReviewRequestStatus",
     "RuntimeContext",
     "RuntimeRequest",
     "RuntimeResult",

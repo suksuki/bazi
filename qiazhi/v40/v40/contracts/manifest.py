@@ -32,6 +32,13 @@ def contract_manifest() -> dict[str, object]:
             "HiddenAttributeUpdate",
             "ProbeAnswerResult",
         ],
+        "review": [
+            "ConsentGrant",
+            "AnonymizedCaseView",
+            "PractitionerReviewRequest",
+            "PractitionerReviewQueueItem",
+            "PractitionerReviewResult",
+        ],
         "output": [
             "ProductVerdictCard",
             "BranchCard",

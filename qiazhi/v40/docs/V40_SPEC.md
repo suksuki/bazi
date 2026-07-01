@@ -639,6 +639,23 @@ scripts/run_user_ui_visual_qa.py
 
 本阶段把用户侧产品壳进入可重复视觉验收：脚本使用 Playwright 访问运行中的 `/v40/ui`，覆盖 desktop_user、desktop_practitioner、mobile_user 三种场景，生成 full-page PNG 和 `visual_qa_report.json`。验收重点是报告优先页面能打开、session role context 能切换命理师视角、Practitioner Lens 只在命理师身份出现、普通用户页面不泄漏 provider/model/prompt/acceptance/policy/debug/telemetry/admin 等工程词，并检查手机端明显横向溢出和控件文本溢出。该 QA 只观察用户表面，不改 runtime、训练权重或 V30 状态。
 
+2026-07-01 Phase 51 已启动：
+
+```text
+docs/V40_PHASE51_CONSENT_REVIEW_QUEUE.md
+ConsentGrant
+AnonymizedCaseView
+PractitionerReviewRequest
+PractitionerReviewQueueItem
+PractitionerReviewResult
+POST /api/v40/consent/grants
+POST /api/v40/practitioner/review-requests
+GET  /api/v40/practitioner/review-queue
+POST /api/v40/practitioner/review-results
+```
+
+本阶段建立用户授权与命理师审阅的最小合同层。`ConsentGrant` 明确用户是否允许 practitioner review、training feedback 和 anonymized case share；`AnonymizedCaseView` 只包含 verdict/advice/probe/evidence/signal 摘要，不返回 raw runtime、chart facts、出生时间、账号或联系方式；`PractitionerReviewResult` 只生成 `TrainingLabelEvent(local_only=true)`，不能直接改 verdict、chart facts、global weight 或 V30 状态。当前 API 先返回合同产物，不做持久化和真实派单，后续 Phase 52+ 再接 review queue persistence、assignment、reliability score 与用户侧 consent UI。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

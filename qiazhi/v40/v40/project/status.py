@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 50
-CURRENT_PHASE_NAME = "User UI Visual QA"
+CURRENT_PHASE = 51
+CURRENT_PHASE_NAME = "ConsentGrant And Practitioner Review Queue"
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         percent=99,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
-        next_step="补齐 ConsentGrant 与 Practitioner Review Queue 合同，然后做真实命例验收。",
+        next_step="补齐 review queue 持久化、用户侧 consent UI 和真实命例验收。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -77,8 +77,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "47", "label": "Probe answer runtime", "status": "complete"},
     {"range": "48", "label": "Probe-aware conversation context", "status": "complete"},
     {"range": "49", "label": "auth-derived user role context", "status": "complete"},
-    {"range": "50", "label": "user UI visual QA", "status": "active"},
-    {"range": "51+", "label": "consent/review queue、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "50", "label": "user UI visual QA", "status": "complete"},
+    {"range": "51", "label": "ConsentGrant and practitioner review queue contracts", "status": "active"},
+    {"range": "52+", "label": "review persistence、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -102,10 +103,10 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-8: ConsentGrant and practitioner review queue contracts",
-            "UI-9: practitioner review queue runtime skeleton",
-            "UI-10: real-case acceptance and cutover checklist rehearsal",
-            "UI-11: online cutover decision with user acceptance evidence",
+            "UI-9: practitioner review queue persistence and assignment",
+            "UI-10: user-side consent UI",
+            "UI-11: real-case acceptance and cutover checklist rehearsal",
+            "UI-12: online cutover decision with user acceptance evidence",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

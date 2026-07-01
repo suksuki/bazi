@@ -11,6 +11,7 @@ from v40.api.models import (
     BatchTrainerV1Request,
     CandidateWeightFromBatchRequest,
     CandidateWeightFromReplayBatchRequest,
+    ConsentGrantRequest,
     ConversationTurnRequest,
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
@@ -20,6 +21,8 @@ from v40.api.models import (
     NativeReadingReportRequest,
     PractitionerCalibrationRequest,
     PractitionerLensActionRequest,
+    PractitionerReviewCreateRequest,
+    PractitionerReviewResultRequest,
     ProbeAnswerRequest,
     ReleaseReadinessFromBatchesRequest,
     ReleaseReadinessFromEvidenceBatchesRequest,
@@ -54,6 +57,12 @@ from v40.evaluation import (
 )
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.probes import build_probe_answer_result
+from v40.review import (
+    build_consent_grant,
+    build_practitioner_review_request,
+    build_practitioner_review_result,
+    build_review_queue_item,
+)
 from v40.project import (
     build_horizontal_runtime_context_status,
     build_mingli_depth_index,
@@ -824,6 +833,92 @@ def create_app() -> FastAPI:
             "changes_verdict": False,
             "changes_chart_facts": False,
             "boundary": "practitioner_lens_action_records_local_training_feedback_without_direct_decision_mutation",
+        }
+
+    @app.post(f"{API_PREFIX}/consent/grants")
+    def create_consent_grant(payload: ConsentGrantRequest) -> dict[str, object]:
+        try:
+            grant = build_consent_grant(
+                grant_id=payload.grant_id,
+                reading_id=payload.reading_id,
+                granted_by_role=payload.granted_by_role,
+                allow_practitioner_review=payload.allow_practitioner_review,
+                allow_training_use=payload.allow_training_use,
+                note=payload.note,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {
+            "version": "v40.consent_grant_response.v1",
+            "consent_grant": grant.model_dump(mode="json"),
+            "persisted": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "consent_grant_created_as_user_app_contract_without_admin_control",
+        }
+
+    @app.post(f"{API_PREFIX}/practitioner/review-requests")
+    def create_practitioner_review_request(payload: PractitionerReviewCreateRequest) -> dict[str, object]:
+        try:
+            review_request = build_practitioner_review_request(
+                review_request_id=payload.review_request_id,
+                consent_grant=payload.consent_grant,
+                runtime=payload.runtime,
+                requested_topic=payload.requested_topic,
+                requested_by_role=payload.requested_by_role,
+                note=payload.note,
+            )
+            queue_item = build_review_queue_item(review_request)
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {
+            "version": "v40.practitioner_review_request_response.v1",
+            "review_request": review_request.model_dump(mode="json"),
+            "queue_item": queue_item.model_dump(mode="json"),
+            "persisted": False,
+            "raw_runtime_returned": False,
+            "chart_facts_returned": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "practitioner_review_request_queues_anonymized_case_without_runtime_or_chart_fact_leakage",
+        }
+
+    @app.get(f"{API_PREFIX}/practitioner/review-queue")
+    def list_practitioner_review_queue() -> dict[str, object]:
+        return {
+            "version": "v40.practitioner_review_queue_response.v1",
+            "queue_items": [],
+            "persisted_queue_available": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "practitioner_review_queue_endpoint_declares_contract_before_persistent_assignment_store",
+        }
+
+    @app.post(f"{API_PREFIX}/practitioner/review-results")
+    def create_practitioner_review_result(payload: PractitionerReviewResultRequest) -> dict[str, object]:
+        try:
+            result = build_practitioner_review_result(
+                result_id=payload.result_id,
+                review_request=payload.review_request,
+                reviewer_role=payload.reviewer_role,
+                decision=payload.decision,
+                selected_signal_ids=payload.selected_signal_ids,
+                selected_verdict_ids=payload.selected_verdict_ids,
+                advice_notes=payload.advice_notes,
+                probe_suggestions=payload.probe_suggestions,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        return {
+            "version": "v40.practitioner_review_result_response.v1",
+            "review_result": result.model_dump(mode="json"),
+            "training_label_events": [event.model_dump(mode="json") for event in result.training_label_events],
+            "persisted": False,
+            "changes_verdict": False,
+            "changes_chart_facts": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "practitioner_review_result_returns_training_material_without_direct_decision_or_weight_mutation",
         }
 
     @app.post(f"{API_PREFIX}/probes/answer")

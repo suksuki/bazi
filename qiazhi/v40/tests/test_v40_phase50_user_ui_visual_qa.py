@@ -28,11 +28,11 @@ def test_phase50_visual_qa_doc_and_script_are_mainline_artifacts() -> None:
     assert "docs/V40_PHASE50_USER_UI_VISUAL_QA.md" in readme
 
 
-def test_phase50_project_status_tracks_visual_qa_as_current_mainline() -> None:
+def test_phase50_project_status_tracks_visual_qa_as_completed_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 50
-    assert status["current_phase_name"] == "User UI Visual QA"
+    assert status["current_phase"] == 51
+    assert status["current_phase_name"] == "ConsentGrant And Practitioner Review Queue"
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "50" and row["status"] == "active" for row in status["phase_groups"])
-    assert "UI-8: ConsentGrant and practitioner review queue contracts" in status["next_mainline_tasks"]
+    assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
+    assert "UI-9: practitioner review queue persistence and assignment" in status["next_mainline_tasks"]

@@ -17,6 +17,7 @@ from v40.contracts.evaluation import (
 )
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.probe import ProbeAnswerResult
+from v40.contracts.review import ConsentGrant, PractitionerReviewDecision, PractitionerReviewRequest
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import (
     GlobalWeightVersion,
@@ -384,6 +385,41 @@ class PractitionerLensActionRequest(V40Model):
         if not self.target_ids:
             raise ValueError("Practitioner lens action requires target_ids")
         return self
+
+
+class ConsentGrantRequest(V40Model):
+    version: str = "v40.consent_grant_request.v1"
+    grant_id: str
+    reading_id: str
+    granted_by_role: RoleKey = "user"
+    allow_practitioner_review: bool = True
+    allow_training_use: bool = True
+    note: str = ""
+    boundary: str = "consent_grant_request_creates_user_app_consent_without_admin_control"
+
+
+class PractitionerReviewCreateRequest(V40Model):
+    version: str = "v40.practitioner_review_create_request.v1"
+    review_request_id: str
+    runtime: RuntimeResult
+    consent_grant: ConsentGrant
+    requested_topic: Topic | None = None
+    requested_by_role: RoleKey = "user"
+    note: str = ""
+    boundary: str = "practitioner_review_create_request_queues_anonymized_case_only"
+
+
+class PractitionerReviewResultRequest(V40Model):
+    version: str = "v40.practitioner_review_result_request.v1"
+    result_id: str
+    review_request: PractitionerReviewRequest
+    reviewer_role: RoleKey = "practitioner"
+    decision: PractitionerReviewDecision = PractitionerReviewDecision.UNSURE
+    selected_signal_ids: list[str] = Field(default_factory=list)
+    selected_verdict_ids: list[str] = Field(default_factory=list)
+    advice_notes: list[str] = Field(default_factory=list)
+    probe_suggestions: list[str] = Field(default_factory=list)
+    boundary: str = "practitioner_review_result_request_creates_training_material_without_direct_runtime_mutation"
 
 
 class ProbeAnswerRequest(V40Model):
