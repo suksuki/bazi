@@ -587,6 +587,7 @@ Future API mapping:
 POST /api/v40/consent/grants
 POST /api/v40/practitioner/review-requests
 GET  /api/v40/practitioner/review-queue
+POST /api/v40/practitioner/review-queue/assign
 POST /api/v40/practitioner/review-results
 ```
 
@@ -601,13 +602,19 @@ Current `/v40/ui` already has:
 - Admin separated on `/admin/v40`.
 - No silent local fallback when LLM is required.
 
+Current completed cleanup:
+
+- Ordinary users no longer see execution mode/provider/model controls.
+- Role is now derived from `/api/v40/session/context`.
+- Practitioner Lens is a right drawer and only appears for practitioner role.
+- Probe is a first-class calibration card.
+- Desktop/mobile visual QA is repeatable through `scripts/run_user_ui_visual_qa.py`.
+
 Current gaps:
 
-- UI still exposes `execution_mode` to ordinary users.
-- Role can be selected casually instead of being login-derived.
-- Practitioner panel is embedded inside result flow instead of a right drawer.
-- Visual direction is dark control-plane style, not final user product style.
-- Probe is not yet a first-class calibration card.
+- User-side consent UI is not yet wired into the product surface.
+- Practitioner review queue has persistence and assignment contracts, but no final practitioner workbench.
+- Real-case acceptance is still required before online cutover.
 - Four pillars are free text inputs instead of stem/branch selectors.
 - Thinking is not formalized as a clean disclosure component.
 - Human review and ConsentGrant are not yet modeled.

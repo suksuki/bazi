@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 51
-CURRENT_PHASE_NAME = "ConsentGrant And Practitioner Review Queue"
+CURRENT_PHASE = 52
+CURRENT_PHASE_NAME = "Review Queue Persistence And Assignment"
 
 
 @dataclass(frozen=True)
@@ -33,8 +33,8 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         label="用户侧 beta",
         percent=99,
         status="on_track",
-        evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
-        next_step="补齐 review queue 持久化、用户侧 consent UI 和真实命例验收。",
+        evidence_keys=("runtime_records", "conversation_turns", "training_label_events", "consent_grants", "practitioner_review_queue", "practitioner_review_results"),
+        next_step="补齐用户侧 consent UI、命理师审阅体验和真实命例验收。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -78,8 +78,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "48", "label": "Probe-aware conversation context", "status": "complete"},
     {"range": "49", "label": "auth-derived user role context", "status": "complete"},
     {"range": "50", "label": "user UI visual QA", "status": "complete"},
-    {"range": "51", "label": "ConsentGrant and practitioner review queue contracts", "status": "active"},
-    {"range": "52+", "label": "review persistence、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "51", "label": "ConsentGrant and practitioner review queue contracts", "status": "complete"},
+    {"range": "52", "label": "review queue persistence and assignment", "status": "active"},
+    {"range": "53+", "label": "consent UI、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -103,7 +104,6 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-9: practitioner review queue persistence and assignment",
             "UI-10: user-side consent UI",
             "UI-11: real-case acceptance and cutover checklist rehearsal",
             "UI-12: online cutover decision with user acceptance evidence",

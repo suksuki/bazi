@@ -395,6 +395,7 @@ class ConsentGrantRequest(V40Model):
     allow_practitioner_review: bool = True
     allow_training_use: bool = True
     note: str = ""
+    persist: bool = False
     boundary: str = "consent_grant_request_creates_user_app_consent_without_admin_control"
 
 
@@ -406,7 +407,23 @@ class PractitionerReviewCreateRequest(V40Model):
     requested_topic: Topic | None = None
     requested_by_role: RoleKey = "user"
     note: str = ""
+    persist: bool = False
     boundary: str = "practitioner_review_create_request_queues_anonymized_case_only"
+
+
+class PractitionerReviewAssignRequest(V40Model):
+    version: str = "v40.practitioner_review_assign_request.v1"
+    queue_item_id: str
+    practitioner_ref: str
+    boundary: str = "practitioner_review_assign_request_updates_queue_metadata_only"
+
+    @model_validator(mode="after")
+    def _assign_boundary(self) -> "PractitionerReviewAssignRequest":
+        if not self.queue_item_id.strip():
+            raise ValueError("Review assignment requires queue_item_id")
+        if not self.practitioner_ref.strip():
+            raise ValueError("Review assignment requires practitioner_ref")
+        return self
 
 
 class PractitionerReviewResultRequest(V40Model):
@@ -419,6 +436,7 @@ class PractitionerReviewResultRequest(V40Model):
     selected_verdict_ids: list[str] = Field(default_factory=list)
     advice_notes: list[str] = Field(default_factory=list)
     probe_suggestions: list[str] = Field(default_factory=list)
+    persist: bool = False
     boundary: str = "practitioner_review_result_request_creates_training_material_without_direct_runtime_mutation"
 
 

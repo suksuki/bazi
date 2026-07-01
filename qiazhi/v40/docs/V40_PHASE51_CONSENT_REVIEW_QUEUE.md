@@ -110,10 +110,9 @@ RuntimeResult
 
 ## 后续
 
-Phase 52+ 再做：
+Phase 52 已接入 review queue persistence 与 assignment。后续再做：
 
-1. review queue persistence；
-2. practitioner assignment；
-3. practitioner reliability score；
-4. user-side consent UI；
-5. Admin review audit。
+1. practitioner reliability score；
+2. user-side consent UI；
+3. Admin review audit；
+4. real-case review acceptance。

@@ -32,10 +32,10 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 51
-    assert status["current_phase_name"] == "ConsentGrant And Practitioner Review Queue"
+    assert status["current_phase"] == 52
+    assert status["current_phase_name"] == "Review Queue Persistence And Assignment"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
     assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-9: practitioner review queue persistence and assignment" in status["next_mainline_tasks"]
+    assert "UI-10: user-side consent UI" in status["next_mainline_tasks"]
     user_beta = next(domain for domain in status["domains"] if domain["key"] == "user_beta")
-    assert "review queue" in user_beta["next_step"]
+    assert "consent UI" in user_beta["next_step"]

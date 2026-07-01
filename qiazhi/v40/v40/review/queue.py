@@ -10,6 +10,7 @@ from v40.contracts.review import (
     PractitionerReviewQueueItem,
     PractitionerReviewRequest,
     PractitionerReviewResult,
+    ReviewRequestStatus,
 )
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import LabelSource, LabelTargetType, LabelValue, TrainingLabelEvent
@@ -111,6 +112,22 @@ def build_review_queue_item(request: PractitionerReviewRequest) -> PractitionerR
         summary=request.case_view.summary,
         consent_scopes=[ConsentScope.PRACTITIONER_REVIEW, ConsentScope.ANONYMIZED_CASE_SHARE],
         assigned_to_practitioner_ref=request.assigned_to_practitioner_ref,
+    )
+
+
+def assign_review_queue_item(
+    item: PractitionerReviewQueueItem,
+    *,
+    practitioner_ref: str,
+) -> PractitionerReviewQueueItem:
+    clean_ref = practitioner_ref.strip()
+    if not clean_ref:
+        raise ValueError("Practitioner assignment requires practitioner_ref")
+    return item.model_copy(
+        update={
+            "status": ReviewRequestStatus.ASSIGNED,
+            "assigned_to_practitioner_ref": clean_ref,
+        }
     )
 
 

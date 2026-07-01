@@ -21,6 +21,7 @@ from v40.api.models import (
     NativeReadingReportRequest,
     PractitionerCalibrationRequest,
     PractitionerLensActionRequest,
+    PractitionerReviewAssignRequest,
     PractitionerReviewCreateRequest,
     PractitionerReviewResultRequest,
     ProbeAnswerRequest,
@@ -848,10 +849,18 @@ def create_app() -> FastAPI:
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_consent_grant(grant)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.consent_grant_response.v1",
             "consent_grant": grant.model_dump(mode="json"),
-            "persisted": False,
+            "persisted": persisted,
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "consent_grant_created_as_user_app_contract_without_admin_control",
@@ -871,11 +880,20 @@ def create_app() -> FastAPI:
             queue_item = build_review_queue_item(review_request)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_practitioner_review_request(review_request)
+                repository.save_practitioner_review_queue_item(queue_item)
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.practitioner_review_request_response.v1",
             "review_request": review_request.model_dump(mode="json"),
             "queue_item": queue_item.model_dump(mode="json"),
-            "persisted": False,
+            "persisted": persisted,
             "raw_runtime_returned": False,
             "chart_facts_returned": False,
             "writes_v30_state": False,
@@ -884,14 +902,61 @@ def create_app() -> FastAPI:
         }
 
     @app.get(f"{API_PREFIX}/practitioner/review-queue")
-    def list_practitioner_review_queue() -> dict[str, object]:
+    def list_practitioner_review_queue(
+        limit: int = Query(default=20, ge=1, le=100),
+        status: str = "",
+        assigned_to_practitioner_ref: str = "",
+    ) -> dict[str, object]:
+        if not v40_repository_configured():
+            return {
+                "version": "v40.practitioner_review_queue_response.v1",
+                "queue_items": [],
+                "repository_configured": False,
+                "persisted_queue_available": False,
+                "writes_v30_state": False,
+                "writes_v40_production": False,
+                "boundary": "practitioner_review_queue_endpoint_requires_repository_for_persisted_items",
+            }
+        try:
+            repository = V40PostgresRepository.from_env()
+            queue_items = repository.list_practitioner_review_queue(
+                limit=limit,
+                status=status or None,
+                assigned_to_practitioner_ref=assigned_to_practitioner_ref,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.practitioner_review_queue_response.v1",
-            "queue_items": [],
-            "persisted_queue_available": False,
+            "queue_items": queue_items,
+            "repository_configured": True,
+            "persisted_queue_available": True,
             "writes_v30_state": False,
             "writes_v40_production": False,
-            "boundary": "practitioner_review_queue_endpoint_declares_contract_before_persistent_assignment_store",
+            "boundary": "practitioner_review_queue_reads_v40_persisted_queue_without_raw_case_data",
+        }
+
+    @app.post(f"{API_PREFIX}/practitioner/review-queue/assign")
+    def assign_practitioner_review_queue(payload: PractitionerReviewAssignRequest) -> dict[str, object]:
+        try:
+            repository = V40PostgresRepository.from_env()
+            queue_item = repository.assign_practitioner_review_queue_item(
+                queue_item_id=payload.queue_item_id,
+                practitioner_ref=payload.practitioner_ref,
+            )
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        if queue_item is None:
+            raise HTTPException(status_code=404, detail="Review queue item was not found")
+        return {
+            "version": "v40.practitioner_review_queue_assign_response.v1",
+            "queue_item": queue_item,
+            "assigned": True,
+            "changes_verdict": False,
+            "changes_chart_facts": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "practitioner_review_assignment_updates_queue_metadata_without_decision_mutation",
         }
 
     @app.post(f"{API_PREFIX}/practitioner/review-results")
@@ -909,11 +974,22 @@ def create_app() -> FastAPI:
             )
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        persisted = False
+        training_label_persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                repository.save_practitioner_review_result(result)
+                persisted = True
+                training_label_persisted = bool(result.training_label_events)
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.practitioner_review_result_response.v1",
             "review_result": result.model_dump(mode="json"),
             "training_label_events": [event.model_dump(mode="json") for event in result.training_label_events],
-            "persisted": False,
+            "persisted": persisted,
+            "training_label_persisted": training_label_persisted,
             "changes_verdict": False,
             "changes_chart_facts": False,
             "writes_v30_state": False,

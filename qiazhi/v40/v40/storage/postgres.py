@@ -18,6 +18,13 @@ from v40.contracts.evaluation import (
     TrainingReplayBatchSummary,
 )
 from v40.contracts.output import ConversationTurn
+from v40.contracts.review import (
+    ConsentGrant,
+    PractitionerReviewQueueItem,
+    PractitionerReviewRequest,
+    PractitionerReviewResult,
+    ReviewRequestStatus,
+)
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.training import (
     GlobalWeightVersion,
@@ -698,6 +705,467 @@ class V40PostgresRepository:
                     )
                 return [_serialize_row(row) for row in cur.fetchall()]
 
+    def save_consent_grant(self, grant: ConsentGrant) -> None:
+        payload = grant.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_consent_grants (
+                        grant_id,
+                        reading_id,
+                        version,
+                        grant_json,
+                        granted_by_role,
+                        allow_practitioner_review,
+                        allow_training_use,
+                        revoked,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s::jsonb, %s, %s, %s, %s, now())
+                    ON CONFLICT (grant_id)
+                    DO UPDATE SET
+                        reading_id = EXCLUDED.reading_id,
+                        version = EXCLUDED.version,
+                        grant_json = EXCLUDED.grant_json,
+                        granted_by_role = EXCLUDED.granted_by_role,
+                        allow_practitioner_review = EXCLUDED.allow_practitioner_review,
+                        allow_training_use = EXCLUDED.allow_training_use,
+                        revoked = EXCLUDED.revoked,
+                        updated_at = now()
+                    """,
+                    (
+                        grant.grant_id,
+                        grant.reading_id,
+                        grant.version,
+                        json.dumps(payload, ensure_ascii=False),
+                        grant.granted_by_role,
+                        grant.allow_practitioner_review,
+                        grant.allow_training_use,
+                        grant.revoked,
+                    ),
+                )
+
+    def list_consent_grants(self, *, limit: int = 20, reading_id: str = "") -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                if reading_id:
+                    cur.execute(
+                        """
+                        SELECT
+                            grant_id,
+                            reading_id,
+                            version,
+                            grant_json,
+                            granted_by_role,
+                            allow_practitioner_review,
+                            allow_training_use,
+                            revoked,
+                            created_at,
+                            updated_at
+                        FROM v40_consent_grants
+                        WHERE reading_id = %s
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (reading_id, bounded_limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT
+                            grant_id,
+                            reading_id,
+                            version,
+                            grant_json,
+                            granted_by_role,
+                            allow_practitioner_review,
+                            allow_training_use,
+                            revoked,
+                            created_at,
+                            updated_at
+                        FROM v40_consent_grants
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (bounded_limit,),
+                    )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def save_practitioner_review_request(self, request: PractitionerReviewRequest) -> None:
+        payload = request.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_practitioner_review_requests (
+                        review_request_id,
+                        consent_grant_id,
+                        reading_id,
+                        version,
+                        topic,
+                        status,
+                        request_json,
+                        assigned_to_practitioner_ref,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, now())
+                    ON CONFLICT (review_request_id)
+                    DO UPDATE SET
+                        consent_grant_id = EXCLUDED.consent_grant_id,
+                        reading_id = EXCLUDED.reading_id,
+                        version = EXCLUDED.version,
+                        topic = EXCLUDED.topic,
+                        status = EXCLUDED.status,
+                        request_json = EXCLUDED.request_json,
+                        assigned_to_practitioner_ref = EXCLUDED.assigned_to_practitioner_ref,
+                        updated_at = now()
+                    """,
+                    (
+                        request.review_request_id,
+                        request.consent_grant_id,
+                        request.reading_id,
+                        request.version,
+                        request.requested_topic.value,
+                        request.status.value,
+                        json.dumps(payload, ensure_ascii=False),
+                        request.assigned_to_practitioner_ref,
+                    ),
+                )
+
+    def list_practitioner_review_requests(self, *, limit: int = 20, reading_id: str = "") -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                if reading_id:
+                    cur.execute(
+                        """
+                        SELECT
+                            review_request_id,
+                            consent_grant_id,
+                            reading_id,
+                            version,
+                            topic,
+                            status,
+                            request_json,
+                            assigned_to_practitioner_ref,
+                            created_at,
+                            updated_at
+                        FROM v40_practitioner_review_requests
+                        WHERE reading_id = %s
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (reading_id, bounded_limit),
+                    )
+                else:
+                    cur.execute(
+                        """
+                        SELECT
+                            review_request_id,
+                            consent_grant_id,
+                            reading_id,
+                            version,
+                            topic,
+                            status,
+                            request_json,
+                            assigned_to_practitioner_ref,
+                            created_at,
+                            updated_at
+                        FROM v40_practitioner_review_requests
+                        ORDER BY updated_at DESC, created_at DESC
+                        LIMIT %s
+                        """,
+                        (bounded_limit,),
+                    )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def save_practitioner_review_queue_item(self, item: PractitionerReviewQueueItem) -> None:
+        payload = item.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_practitioner_review_queue (
+                        queue_item_id,
+                        review_request_id,
+                        reading_id,
+                        version,
+                        topic,
+                        status,
+                        queue_json,
+                        assigned_to_practitioner_ref,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, %s, now())
+                    ON CONFLICT (queue_item_id)
+                    DO UPDATE SET
+                        review_request_id = EXCLUDED.review_request_id,
+                        reading_id = EXCLUDED.reading_id,
+                        version = EXCLUDED.version,
+                        topic = EXCLUDED.topic,
+                        status = EXCLUDED.status,
+                        queue_json = EXCLUDED.queue_json,
+                        assigned_to_practitioner_ref = EXCLUDED.assigned_to_practitioner_ref,
+                        updated_at = now()
+                    """,
+                    (
+                        item.queue_item_id,
+                        item.review_request_id,
+                        item.reading_id,
+                        item.version,
+                        item.topic.value,
+                        item.status.value,
+                        json.dumps(payload, ensure_ascii=False),
+                        item.assigned_to_practitioner_ref,
+                    ),
+                )
+
+    def list_practitioner_review_queue(
+        self,
+        *,
+        limit: int = 20,
+        status: ReviewRequestStatus | str | None = None,
+        assigned_to_practitioner_ref: str = "",
+    ) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        status_value = status.value if isinstance(status, ReviewRequestStatus) else str(status or "").strip()
+        assignee = assigned_to_practitioner_ref.strip()
+        filters = []
+        params: list[Any] = []
+        if status_value:
+            filters.append("status = %s")
+            params.append(status_value)
+        if assignee:
+            filters.append("assigned_to_practitioner_ref = %s")
+            params.append(assignee)
+        where = f"WHERE {' AND '.join(filters)}" if filters else ""
+        params.append(bounded_limit)
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    f"""
+                    SELECT
+                        queue_item_id,
+                        review_request_id,
+                        reading_id,
+                        version,
+                        topic,
+                        status,
+                        queue_json,
+                        assigned_to_practitioner_ref,
+                        created_at,
+                        updated_at
+                    FROM v40_practitioner_review_queue
+                    {where}
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT %s
+                    """,
+                    tuple(params),
+                )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def assign_practitioner_review_queue_item(
+        self,
+        *,
+        queue_item_id: str,
+        practitioner_ref: str,
+    ) -> dict[str, Any] | None:
+        clean_ref = practitioner_ref.strip()
+        if not clean_ref:
+            raise RuntimeError("Practitioner assignment requires practitioner_ref")
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    UPDATE v40_practitioner_review_queue
+                    SET status = %s,
+                        assigned_to_practitioner_ref = %s,
+                        queue_json = jsonb_set(
+                            jsonb_set(queue_json, '{status}', to_jsonb(%s::text), true),
+                            '{assigned_to_practitioner_ref}',
+                            to_jsonb(%s::text),
+                            true
+                        ),
+                        updated_at = now()
+                    WHERE queue_item_id = %s
+                    RETURNING
+                        queue_item_id,
+                        review_request_id,
+                        reading_id,
+                        version,
+                        topic,
+                        status,
+                        queue_json,
+                        assigned_to_practitioner_ref,
+                        created_at,
+                        updated_at
+                    """,
+                    (
+                        ReviewRequestStatus.ASSIGNED.value,
+                        clean_ref,
+                        ReviewRequestStatus.ASSIGNED.value,
+                        clean_ref,
+                        queue_item_id,
+                    ),
+                )
+                row = cur.fetchone()
+                if row is None:
+                    return None
+                review_request_id = row["review_request_id"]
+                cur.execute(
+                    """
+                    UPDATE v40_practitioner_review_requests
+                    SET status = %s,
+                        assigned_to_practitioner_ref = %s,
+                        request_json = jsonb_set(
+                            jsonb_set(request_json, '{status}', to_jsonb(%s::text), true),
+                            '{assigned_to_practitioner_ref}',
+                            to_jsonb(%s::text),
+                            true
+                        ),
+                        updated_at = now()
+                    WHERE review_request_id = %s
+                    """,
+                    (
+                        ReviewRequestStatus.ASSIGNED.value,
+                        clean_ref,
+                        ReviewRequestStatus.ASSIGNED.value,
+                        clean_ref,
+                        review_request_id,
+                    ),
+                )
+                return _serialize_row(row)
+
+    def save_practitioner_review_result(self, result: PractitionerReviewResult) -> None:
+        payload = result.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_practitioner_review_results (
+                        result_id,
+                        review_request_id,
+                        reading_id,
+                        version,
+                        decision,
+                        reviewer_role,
+                        result_json,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s::jsonb, now())
+                    ON CONFLICT (result_id)
+                    DO UPDATE SET
+                        review_request_id = EXCLUDED.review_request_id,
+                        reading_id = EXCLUDED.reading_id,
+                        version = EXCLUDED.version,
+                        decision = EXCLUDED.decision,
+                        reviewer_role = EXCLUDED.reviewer_role,
+                        result_json = EXCLUDED.result_json,
+                        updated_at = now()
+                    """,
+                    (
+                        result.result_id,
+                        result.review_request_id,
+                        result.reading_id,
+                        result.version,
+                        result.decision.value,
+                        result.reviewer_role,
+                        json.dumps(payload, ensure_ascii=False),
+                    ),
+                )
+                cur.execute(
+                    """
+                    UPDATE v40_practitioner_review_queue
+                    SET status = %s,
+                        queue_json = jsonb_set(queue_json, '{status}', to_jsonb(%s::text), true),
+                        updated_at = now()
+                    WHERE review_request_id = %s
+                    """,
+                    (ReviewRequestStatus.COMPLETED.value, ReviewRequestStatus.COMPLETED.value, result.review_request_id),
+                )
+                cur.execute(
+                    """
+                    UPDATE v40_practitioner_review_requests
+                    SET status = %s,
+                        request_json = jsonb_set(request_json, '{status}', to_jsonb(%s::text), true),
+                        updated_at = now()
+                    WHERE review_request_id = %s
+                    """,
+                    (ReviewRequestStatus.COMPLETED.value, ReviewRequestStatus.COMPLETED.value, result.review_request_id),
+                )
+                for event in result.training_label_events:
+                    event_payload = event.model_dump(mode="json")
+                    cur.execute(
+                        """
+                        INSERT INTO v40_training_label_events (
+                            event_id,
+                            reading_id,
+                            version,
+                            label_json,
+                            local_only,
+                            created_at
+                        )
+                        VALUES (%s, %s, %s, %s::jsonb, %s, now())
+                        ON CONFLICT (event_id)
+                        DO UPDATE SET
+                            reading_id = EXCLUDED.reading_id,
+                            version = EXCLUDED.version,
+                            label_json = EXCLUDED.label_json,
+                            local_only = EXCLUDED.local_only,
+                            created_at = now()
+                        """,
+                        (
+                            event.event_id,
+                            event.reading_id,
+                            event.version,
+                            json.dumps(event_payload, ensure_ascii=False),
+                            event.local_only,
+                        ),
+                    )
+
+    def list_practitioner_review_results(
+        self,
+        *,
+        limit: int = 20,
+        reading_id: str = "",
+        review_request_id: str = "",
+    ) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        filters = []
+        params: list[Any] = []
+        if reading_id:
+            filters.append("reading_id = %s")
+            params.append(reading_id)
+        if review_request_id:
+            filters.append("review_request_id = %s")
+            params.append(review_request_id)
+        where = f"WHERE {' AND '.join(filters)}" if filters else ""
+        params.append(bounded_limit)
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    f"""
+                    SELECT
+                        result_id,
+                        review_request_id,
+                        reading_id,
+                        version,
+                        decision,
+                        reviewer_role,
+                        result_json,
+                        created_at,
+                        updated_at
+                    FROM v40_practitioner_review_results
+                    {where}
+                    ORDER BY updated_at DESC, created_at DESC
+                    LIMIT %s
+                    """,
+                    tuple(params),
+                )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
     def save_training_impact_diff(self, diff: TrainingImpactDiff) -> None:
         payload = diff.model_dump(mode="json")
         with self._connect() as conn:
@@ -1256,6 +1724,10 @@ class V40PostgresRepository:
             "training_example_replays": "v40_training_example_replays",
             "training_replay_batches": "v40_training_replay_batches",
             "conversation_turns": "v40_conversation_turns",
+            "consent_grants": "v40_consent_grants",
+            "practitioner_review_requests": "v40_practitioner_review_requests",
+            "practitioner_review_queue": "v40_practitioner_review_queue",
+            "practitioner_review_results": "v40_practitioner_review_results",
             "training_impact_diffs": "v40_training_impact_diffs",
             "trainable_policy_registries": "v40_trainable_policy_registries",
             "shadow_compare_runs": "v40_shadow_compare_runs",
@@ -1297,6 +1769,25 @@ class V40PostgresRepository:
                     limit=5,
                 )
                 latest_conversation_turns = self._latest_rows(cur, "v40_conversation_turns", "updated_at", limit=5)
+                latest_consent_grants = self._latest_rows(cur, "v40_consent_grants", "updated_at", limit=5)
+                latest_practitioner_review_requests = self._latest_rows(
+                    cur,
+                    "v40_practitioner_review_requests",
+                    "updated_at",
+                    limit=5,
+                )
+                latest_practitioner_review_queue = self._latest_rows(
+                    cur,
+                    "v40_practitioner_review_queue",
+                    "updated_at",
+                    limit=5,
+                )
+                latest_practitioner_review_results = self._latest_rows(
+                    cur,
+                    "v40_practitioner_review_results",
+                    "updated_at",
+                    limit=5,
+                )
                 latest_gates = self._latest_rows(cur, "v40_release_gates", "created_at", limit=5)
                 latest_weights = self._latest_rows(cur, "v40_global_weight_versions", "updated_at", limit=5)
                 latest_readiness = self._latest_rows(cur, "v40_release_readiness", "updated_at", limit=5)
@@ -1323,6 +1814,10 @@ class V40PostgresRepository:
             "latest_training_example_replays": latest_training_example_replays,
             "latest_training_replay_batches": latest_training_replay_batches,
             "latest_conversation_turns": latest_conversation_turns,
+            "latest_consent_grants": latest_consent_grants,
+            "latest_practitioner_review_requests": latest_practitioner_review_requests,
+            "latest_practitioner_review_queue": latest_practitioner_review_queue,
+            "latest_practitioner_review_results": latest_practitioner_review_results,
             "latest_release_gates": latest_gates,
             "latest_global_weight_versions": latest_weights,
             "latest_release_readiness": latest_readiness,

@@ -1,4 +1,5 @@
 from v40.review.queue import (
+    assign_review_queue_item,
     build_anonymized_case_view,
     build_consent_grant,
     build_practitioner_review_request,
@@ -7,6 +8,7 @@ from v40.review.queue import (
 )
 
 __all__ = [
+    "assign_review_queue_item",
     "build_anonymized_case_view",
     "build_consent_grant",
     "build_practitioner_review_request",

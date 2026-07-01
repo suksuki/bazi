@@ -654,7 +654,20 @@ GET  /api/v40/practitioner/review-queue
 POST /api/v40/practitioner/review-results
 ```
 
-本阶段建立用户授权与命理师审阅的最小合同层。`ConsentGrant` 明确用户是否允许 practitioner review、training feedback 和 anonymized case share；`AnonymizedCaseView` 只包含 verdict/advice/probe/evidence/signal 摘要，不返回 raw runtime、chart facts、出生时间、账号或联系方式；`PractitionerReviewResult` 只生成 `TrainingLabelEvent(local_only=true)`，不能直接改 verdict、chart facts、global weight 或 V30 状态。当前 API 先返回合同产物，不做持久化和真实派单，后续 Phase 52+ 再接 review queue persistence、assignment、reliability score 与用户侧 consent UI。
+本阶段建立用户授权与命理师审阅的最小合同层。`ConsentGrant` 明确用户是否允许 practitioner review、training feedback 和 anonymized case share；`AnonymizedCaseView` 只包含 verdict/advice/probe/evidence/signal 摘要，不返回 raw runtime、chart facts、出生时间、账号或联系方式；`PractitionerReviewResult` 只生成 `TrainingLabelEvent(local_only=true)`，不能直接改 verdict、chart facts、global weight 或 V30 状态。Phase 51 API 先返回合同产物，不做持久化和真实派单；Phase 52 已接入 review queue persistence 与 assignment。
+
+2026-07-01 Phase 52 已启动：
+
+```text
+docs/V40_PHASE52_REVIEW_QUEUE_PERSISTENCE.md
+v40_consent_grants
+v40_practitioner_review_requests
+v40_practitioner_review_queue
+v40_practitioner_review_results
+POST /api/v40/practitioner/review-queue/assign
+```
+
+本阶段把 Phase 51 的授权与命理师审阅合同接入 V40 独立 Postgres 仓储。`persist=true` 时，consent grants、review requests、queue items 和 review results 都会写入 `v40_` 表；`GET /api/v40/practitioner/review-queue` 读取持久化队列；assignment 只更新 queue item 与 request 的 `status/assigned_to_practitioner_ref` 元数据，不改 verdict、chart facts 或权重；review result persist 会同步保存内部 `TrainingLabelEvent(local_only=true)`，让命理师复核进入训练素材，但仍然 `writes_v40_production=false`、`writes_v30_state=false`。
 
 2026-07-01 V40-RC2 已启动：
 

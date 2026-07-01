@@ -125,6 +125,78 @@ CREATE TABLE IF NOT EXISTS v40_conversation_turns (
 CREATE INDEX IF NOT EXISTS idx_v40_conversation_turns_reading
 ON v40_conversation_turns (reading_id);
 
+CREATE TABLE IF NOT EXISTS v40_consent_grants (
+    grant_id TEXT PRIMARY KEY,
+    reading_id TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.consent_grant.v1',
+    grant_json JSONB NOT NULL,
+    granted_by_role TEXT NOT NULL,
+    allow_practitioner_review BOOLEAN NOT NULL DEFAULT false,
+    allow_training_use BOOLEAN NOT NULL DEFAULT false,
+    revoked BOOLEAN NOT NULL DEFAULT false,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_consent_grants_reading
+ON v40_consent_grants (reading_id);
+
+CREATE TABLE IF NOT EXISTS v40_practitioner_review_requests (
+    review_request_id TEXT PRIMARY KEY,
+    consent_grant_id TEXT NOT NULL,
+    reading_id TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.practitioner_review_request.v1',
+    topic TEXT NOT NULL,
+    status TEXT NOT NULL,
+    request_json JSONB NOT NULL,
+    assigned_to_practitioner_ref TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_practitioner_review_requests_reading
+ON v40_practitioner_review_requests (reading_id);
+
+CREATE INDEX IF NOT EXISTS idx_v40_practitioner_review_requests_status
+ON v40_practitioner_review_requests (status, updated_at);
+
+CREATE TABLE IF NOT EXISTS v40_practitioner_review_queue (
+    queue_item_id TEXT PRIMARY KEY,
+    review_request_id TEXT NOT NULL,
+    reading_id TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.practitioner_review_queue_item.v1',
+    topic TEXT NOT NULL,
+    status TEXT NOT NULL,
+    queue_json JSONB NOT NULL,
+    assigned_to_practitioner_ref TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_practitioner_review_queue_status
+ON v40_practitioner_review_queue (status, updated_at);
+
+CREATE INDEX IF NOT EXISTS idx_v40_practitioner_review_queue_assignee
+ON v40_practitioner_review_queue (assigned_to_practitioner_ref, updated_at);
+
+CREATE TABLE IF NOT EXISTS v40_practitioner_review_results (
+    result_id TEXT PRIMARY KEY,
+    review_request_id TEXT NOT NULL,
+    reading_id TEXT NOT NULL,
+    version TEXT NOT NULL DEFAULT 'v40.practitioner_review_result.v1',
+    decision TEXT NOT NULL,
+    reviewer_role TEXT NOT NULL,
+    result_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_practitioner_review_results_request
+ON v40_practitioner_review_results (review_request_id);
+
+CREATE INDEX IF NOT EXISTS idx_v40_practitioner_review_results_reading
+ON v40_practitioner_review_results (reading_id);
+
 CREATE TABLE IF NOT EXISTS v40_training_impact_diffs (
     training_run_id TEXT PRIMARY KEY,
     base_version TEXT NOT NULL,
