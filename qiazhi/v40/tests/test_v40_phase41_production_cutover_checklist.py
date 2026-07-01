@@ -57,4 +57,4 @@ def test_phase41_project_status_advances_cutover_track() -> None:
 
     assert status["current_phase"] >= 41
     assert status["overall_completion_percent"] >= 84
-    assert "Phase" in status["next_mainline_tasks"][0]
+    assert status["next_mainline_tasks"][0].startswith("UI-")

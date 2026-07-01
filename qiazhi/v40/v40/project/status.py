@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 44
-CURRENT_PHASE_NAME = "Final Operating Guide"
+CURRENT_PHASE = 45
+CURRENT_PHASE_NAME = "UI Product Flow And Human-Machine Training IA"
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         percent=96,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
-        next_step="继续打磨 report-first UI、命理师模式和对话体验。",
+        next_step="按 V40_UI_PRODUCT_FLOW_SPEC 重构 product shell、Reading Surface、Probe 卡片和 Practitioner Lens。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -71,8 +71,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "41", "label": "Production beta cutover checklist", "status": "complete"},
     {"range": "42", "label": "Release candidate automatic audit", "status": "complete"},
     {"range": "43", "label": "Production smoke and handoff", "status": "complete"},
-    {"range": "44", "label": "Final operating guide", "status": "active"},
-    {"range": "45+", "label": "user acceptance、online cutover、completion marker", "status": "requires_user"},
+    {"range": "44", "label": "Final operating guide", "status": "complete"},
+    {"range": "45", "label": "UI product flow、Probe calibration、Practitioner Lens IA", "status": "active"},
+    {"range": "46+", "label": "user acceptance、online cutover、completion marker", "status": "requires_user"},
 )
 
 
@@ -96,10 +97,12 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "Phase45: final user acceptance window",
-            "Phase46: V40 completion marker",
-            "Phase47: post-acceptance cleanup",
-            "Phase48: optional GitHub push / deployment handoff",
+            "UI-1: final warm-light product shell",
+            "UI-2: VerdictHero / TopicInsightCard / AdviceCard / RiskBoundaryCard",
+            "UI-3: report-grounded conversation surface",
+            "UI-4: first-class Probe calibration cards",
+            "UI-5: Practitioner Lens drawer",
+            "UI-6: ConsentGrant and practitioner review queue contracts",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

@@ -579,6 +579,14 @@ docs/V40_PHASE44_FINAL_OPERATING_GUIDE.md
 
 本阶段补齐最终操作手册，整理 Runtime/Admin/User UI 地址、实时完成度接口、自动验收接口、关键边界、人工验收项、回滚要求和建议验收顺序。V40 自动交付完成度提升到约 98%，剩余部分必须由真实命例验收和线上切换窗口完成。
 
+2026-07-01 Phase 45 已启动：
+
+```text
+docs/V40_UI_PRODUCT_FLOW_SPEC.md
+```
+
+本阶段把 V40 用户侧 UI 和交互流程正式定稿为 `report-first + conversation-after + probe-when-needed + practitioner-as-lens`。普通用户主线是输入、核心报告、推荐追问、智能对话和反馈；深度校准以 Probe 卡片承载；命理师以 Practitioner Lens 抽屉进行分支、证据、反证和专业校准；未来人工复核必须经过 ConsentGrant 和匿名 case。该规格明确普通用户不暴露 provider/model/prompt/acceptance/policy/debug 语言，Admin 继续独立，所有有价值交互都进入结构化训练材料。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text
