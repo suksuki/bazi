@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from v40.contracts.base import AssertionLevel, EngineKey, EngineMode, Polarity, RoleKey, Topic
 from v40.contracts.chart import BaziChartFacts, ZiweiChartFacts
+from v40.contracts.context import ClientContext, EngineContext, LocaleContext, RoleContext, RuntimeContext, default_client_context, default_locale_context, default_role_context
 from v40.contracts.engine import EnginePlan, EnginePlanItem, EngineRunRequest, EngineRunResult, MultiEngineRunResult
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
@@ -28,11 +29,40 @@ def build_native_bazi_runtime(
     topic: Topic = Topic.OVERVIEW,
     role_key: RoleKey = "user",
     ziwei_chart: ZiweiChartFacts | None = None,
+    locale_context: LocaleContext | None = None,
+    role_context: RoleContext | None = None,
+    client_context: ClientContext | None = None,
+    engine_context: EngineContext | None = None,
 ) -> RuntimeResult:
+    resolved_locale = locale_context or default_locale_context("zh-CN")
+    resolved_role = role_context or default_role_context(role_key)
+    resolved_client = client_context or default_client_context("web")
+    enabled_engines = [EngineKey.BAZI]
+    engine_weights = {EngineKey.BAZI: 1.0}
+    engine_run_modes = {EngineKey.BAZI: EngineMode.SIGNAL_SIDECAR}
+    if ziwei_chart is not None:
+        enabled_engines.append(EngineKey.ZIWEI)
+        engine_weights[EngineKey.ZIWEI] = 0.0
+        engine_run_modes[EngineKey.ZIWEI] = EngineMode.SIGNAL_SIDECAR
+    resolved_engine = engine_context or EngineContext(
+        enabled_engines=enabled_engines,
+        requested_engines=enabled_engines,
+        engine_plan_id=f"plan:{reading_id}",
+        engine_weights=engine_weights,
+        engine_run_modes=engine_run_modes,
+    )
     request = RuntimeRequest(
         request_id=request_id,
         reading_id=reading_id,
         role_key=role_key,
+        locale=resolved_locale.locale,
+        client=resolved_client.client,
+        runtime_context=RuntimeContext(
+            locale_context=resolved_locale,
+            role_context=resolved_role,
+            client_context=resolved_client,
+            engine_context=resolved_engine,
+        ),
         user_question=user_question,
         topic=topic,
         birth_input_ref=chart.chart_id,
@@ -141,6 +171,9 @@ def build_native_bazi_runtime(
             branch_count=len(decision_output.branch_candidates),
             signal_registry=registry,
             engine_result=multi_engine,
+            locale_context=resolved_locale,
+            role_context=resolved_role,
+            client_context=resolved_client,
         ),
     )
 

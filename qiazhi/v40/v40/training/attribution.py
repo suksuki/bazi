@@ -120,6 +120,7 @@ def build_training_attribution_from_label(
         affected_verdict_ids=affected_verdict_ids,
         affected_advice_ids=affected_advice_ids,
         affected_probe_ids=affected_probe_ids,
+        engine_source=label_event.engine_source,
         attribution_confidence=label_event.confidence,
         update_scope=update_scope,
         release_gate_required=True,

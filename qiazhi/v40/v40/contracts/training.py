@@ -4,7 +4,8 @@ from enum import Enum
 
 from pydantic import Field, model_validator
 
-from v40.contracts.base import ReleaseRecommendation, RoleKey, Topic, V40Model
+from v40.contracts.base import ClientKey, EngineKey, LocaleKey, ReleaseRecommendation, RoleKey, Topic, V40Model
+from v40.contracts.context import ClientContext, EngineContext, LocaleContext, RoleContext
 
 
 class LabelSource(str, Enum):
@@ -62,6 +63,13 @@ class TrainingLabelEvent(V40Model):
     reason: str = ""
     evidence_refs: list[str] = Field(default_factory=list)
     created_by_role: RoleKey = "user"
+    locale: LocaleKey = "zh-CN"
+    client: ClientKey = "web"
+    engine_source: EngineKey | None = None
+    locale_context: LocaleContext | None = None
+    role_context: RoleContext | None = None
+    client_context: ClientContext | None = None
+    engine_context: EngineContext | None = None
     local_only: bool = True
     requires_batch_review: bool = False
     chart_fact_mutation_allowed: bool = False
@@ -182,6 +190,7 @@ class TrainingAttribution(V40Model):
     affected_verdict_ids: list[str] = Field(default_factory=list)
     affected_advice_ids: list[str] = Field(default_factory=list)
     affected_probe_ids: list[str] = Field(default_factory=list)
+    engine_source: EngineKey | None = None
     attribution_confidence: float = Field(default=0.0, ge=0.0, le=1.0)
     update_scope: TrainableUpdateScope = TrainableUpdateScope.LOCAL_OVERLAY
     release_gate_required: bool = True

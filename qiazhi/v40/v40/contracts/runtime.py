@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from typing import Any
+
 from pydantic import Field, model_validator
 
 from v40.contracts.base import ClientKey, LocaleKey, RoleKey, Topic, V40Model
+from v40.contracts.context import RuntimeContext, default_client_context, default_locale_context, default_role_context
 from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionInputBundle, DecisionVerdict, ProbeCandidate
 from v40.contracts.engine import MultiEngineRunResult
 from v40.contracts.output import (
@@ -24,11 +27,30 @@ class RuntimeRequest(V40Model):
     role_key: RoleKey = "user"
     locale: LocaleKey = "zh"
     client: ClientKey = "web"
+    runtime_context: RuntimeContext = Field(default_factory=RuntimeContext)
     user_question: str = ""
     topic: Topic = Topic.OVERVIEW
     birth_input_ref: str = ""
     imported_case_ref: str = ""
     boundary: str = "runtime_request_starts_v40_runtime_without_reading_v30_state"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _sync_runtime_context(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+        if data.get("runtime_context"):
+            return data
+        role_key = data.get("role_key", "user")
+        locale = data.get("locale", "zh-CN")
+        client = data.get("client", "web")
+        data = dict(data)
+        data["runtime_context"] = RuntimeContext(
+            locale_context=default_locale_context(locale),
+            role_context=default_role_context(role_key),
+            client_context=default_client_context(client),
+        )
+        return data
 
 
 class RuntimeResult(V40Model):

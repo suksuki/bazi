@@ -6,6 +6,7 @@ from v40.contracts.base import V40Model
 from v40.contracts.base import RoleKey
 from v40.contracts.base import Topic
 from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed, ZiweiChartFacts
+from v40.contracts.context import ClientContext, EngineContext, LocaleContext, RoleContext
 from v40.contracts.evaluation import (
     EvaluationBatchSummary,
     EvaluationCaseSpec,
@@ -209,6 +210,10 @@ class NativeBaziRuntimeRequest(V40Model):
     user_question: str = ""
     topic: Topic = Topic.OVERVIEW
     role_key: RoleKey = "user"
+    locale_context: LocaleContext | None = None
+    role_context: RoleContext | None = None
+    client_context: ClientContext | None = None
+    engine_context: EngineContext | None = None
     persist: bool = False
     boundary: str = "native_bazi_runtime_request_uses_v40_chart_facts_without_v30_runtime"
 
@@ -222,6 +227,10 @@ class NativeReadingReportRequest(V40Model):
     user_question: str = ""
     topic: Topic = Topic.OVERVIEW
     role_key: RoleKey = "user"
+    locale_context: LocaleContext | None = None
+    role_context: RoleContext | None = None
+    client_context: ClientContext | None = None
+    engine_context: EngineContext | None = None
     execution_mode: str = "local"
     provider_text: str = ""
     provider: str = "local_expression_adapter"

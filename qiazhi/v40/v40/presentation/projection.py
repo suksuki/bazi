@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from v40.contracts.base import EngineKey, RoleKey, SurfaceKey, Topic
+from v40.contracts.context import ClientContext, LocaleContext, RoleContext, default_client_context, default_locale_context, default_role_context
 from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionVerdict, ProbeCandidate
 from v40.contracts.engine import MultiEngineRunResult
-from v40.contracts.output import BranchCard, ProductAdviceCard, ProductProjectionBundle, ProductVerdictCard, SurfaceBundle
+from v40.contracts.output import BranchCard, ProductAdviceCard, ProductProjectionBundle, ProductVerdictCard, SurfaceBundle, SurfaceSection
 from v40.contracts.signal import SignalRegistrySnapshot, SignalSource
 
 
@@ -63,7 +64,13 @@ def build_surface_bundle(
     branch_count: int,
     signal_registry: SignalRegistrySnapshot | None = None,
     engine_result: MultiEngineRunResult | None = None,
+    locale_context: LocaleContext | None = None,
+    role_context: RoleContext | None = None,
+    client_context: ClientContext | None = None,
 ) -> SurfaceBundle:
+    resolved_locale = locale_context or default_locale_context("zh-CN")
+    resolved_role = role_context or default_role_context(role_key)
+    resolved_client = client_context or default_client_context("web")
     practitioner_lens = build_practitioner_lens(
         role_key=role_key,
         signal_registry=signal_registry,
@@ -103,12 +110,59 @@ def build_surface_bundle(
     return SurfaceBundle(
         reading_id=reading_id,
         role_key=role_key,
+        locale=resolved_locale.locale,
+        device_type=resolved_client.device_type,
+        locale_context=resolved_locale,
+        role_context=resolved_role,
+        client_context=resolved_client,
+        sections=_surface_sections(role_key=role_key, client_context=resolved_client),
         surfaces=surfaces,
         report_first=True,
         probe_invited_only=True,
         conversation_invited_only=True,
         thinking_requested_only=True,
     )
+
+
+def _surface_sections(*, role_key: RoleKey, client_context: ClientContext) -> list[SurfaceSection]:
+    mobile = client_context.device_type == "mobile"
+    sections = [
+        SurfaceSection(
+            section_id="reading.core",
+            section_type=SurfaceKey.READING,
+            priority=100,
+            default_collapsed=False,
+            mobile_collapsed=False,
+            role_visibility=["guest", "user", "practitioner"],
+        ),
+        SurfaceSection(
+            section_id="conversation.invited",
+            section_type=SurfaceKey.CONVERSATION,
+            priority=70,
+            default_collapsed=False,
+            mobile_collapsed=False,
+            role_visibility=["user", "practitioner"],
+        ),
+        SurfaceSection(
+            section_id="calibration.practitioner",
+            section_type=SurfaceKey.CALIBRATION,
+            priority=60,
+            default_collapsed=role_key != "practitioner",
+            mobile_collapsed=True,
+            role_visibility=["practitioner"],
+        ),
+        SurfaceSection(
+            section_id="thinking.requested",
+            section_type=SurfaceKey.THINKING,
+            priority=20,
+            default_collapsed=True,
+            mobile_collapsed=True,
+            role_visibility=["practitioner", "admin"],
+        ),
+    ]
+    if mobile:
+        return sorted(sections, key=lambda item: (-item.priority, item.mobile_collapsed))
+    return sorted(sections, key=lambda item: -item.priority)
 
 
 def build_practitioner_lens(

@@ -4,7 +4,8 @@ from enum import Enum
 
 from pydantic import Field, model_validator
 
-from v40.contracts.base import AssertionLevel, RoleKey, SurfaceKey, Topic, V40Model
+from v40.contracts.base import AssertionLevel, LocaleKey, RoleKey, SurfaceKey, Topic, V40Model
+from v40.contracts.context import ClientContext, LocaleContext, RoleContext
 
 
 class AcceptanceStatus(str, Enum):
@@ -63,6 +64,8 @@ class LLMExpressionTask(V40Model):
     task_id: str
     reading_id: str
     role_key: RoleKey = "user"
+    locale_context: LocaleContext = Field(default_factory=LocaleContext)
+    output_language: str = "zh-CN"
     topic: Topic = Topic.UNKNOWN
     input_card_ids: list[str] = Field(default_factory=list)
     instruction: str
@@ -89,6 +92,7 @@ class LLMExpressionResult(V40Model):
     task_id: str
     reading_id: str
     text: str
+    output_language: str = "zh-CN"
     raw_thinking: str = ""
     provider: str = ""
     model: str = ""
@@ -251,13 +255,45 @@ class ProductProjectionBundle(V40Model):
     boundary: str = "product_projection_bundle_is_surface_ready_projection_not_decision_authority"
 
 
+class SurfaceSection(V40Model):
+    version: str = "v40.surface_section.v1"
+    section_id: str
+    section_type: SurfaceKey
+    priority: int = Field(default=50, ge=0, le=100)
+    default_collapsed: bool = False
+    mobile_collapsed: bool = False
+    role_visibility: list[RoleKey] = Field(default_factory=lambda: ["guest", "user", "practitioner"])
+    boundary: str = "surface_section_controls_density_without_changing_mingli_content"
+
+    @model_validator(mode="after")
+    def _section_boundary(self) -> "SurfaceSection":
+        if not self.section_id.strip():
+            raise ValueError("SurfaceSection requires section_id")
+        if "admin" in self.role_visibility and any(role in self.role_visibility for role in ["guest", "user"]):
+            raise ValueError("admin SurfaceSection cannot be mixed into user projection")
+        return self
+
+
 class SurfaceBundle(V40Model):
     version: str = "v40.surface_bundle.v1"
     reading_id: str
     role_key: RoleKey = "user"
+    locale: LocaleKey = "zh-CN"
+    device_type: str = "desktop"
+    locale_context: LocaleContext = Field(default_factory=LocaleContext)
+    role_context: RoleContext = Field(default_factory=RoleContext)
+    client_context: ClientContext = Field(default_factory=ClientContext)
+    sections: list[SurfaceSection] = Field(default_factory=list)
     surfaces: dict[SurfaceKey, dict[str, object]] = Field(default_factory=dict)
+    hidden_admin_refs: dict[str, object] = Field(default_factory=dict)
     report_first: bool = True
     probe_invited_only: bool = True
     conversation_invited_only: bool = True
     thinking_requested_only: bool = True
     boundary: str = "surface_bundle_keeps_reading_probe_conversation_and_thinking_separate"
+
+    @model_validator(mode="after")
+    def _surface_boundary(self) -> "SurfaceBundle":
+        if self.role_key not in {"admin", "lab"} and self.hidden_admin_refs:
+            raise ValueError("SurfaceBundle hidden_admin_refs require admin or lab role")
+        return self

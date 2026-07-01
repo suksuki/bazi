@@ -578,9 +578,11 @@ docs/V40_RC2_MINGLI_DEPTH_MIGRATION_PLAN.md
 docs/V40_RC2_ASSET_MIGRATION_GATE.md
 docs/V40_RC2_MODULE_STATUS_AND_MIGRATION_MAP.md
 docs/V40_RC2_TRAINABLE_RUNTIME_SPINE.md
+docs/V40_RC2_HORIZONTAL_RUNTIME_CONTEXT.md
 GET /api/v40/project/mingli-depth-index
 GET /api/v40/project/module-migration-status
 GET /api/v40/project/trainable-runtime-spine
+GET /api/v40/project/horizontal-runtime-context
 ```
 
 V40-RC2 不再以架构完成度作为唯一主指标，而是新增 `Mingli Depth Index`，拆分 Fact / Signal / Domain / Probe / Training / Evaluation 六个维度。下一阶段目标是把 V30 命理资产通过 plain JSON DTO 和 Asset Migration Gate 萃取进 V40 原生 Engine / RuntimeSignal / Decision / Advice / Probe / Training / Evaluation 链路。所有迁移资产先 sidecar，再 evaluating，最后 enabled；每批迁移必须跑 before/after diff，且不允许 overclaim rate 上升。
@@ -588,6 +590,8 @@ V40-RC2 不再以架构完成度作为唯一主指标，而是新增 `Mingli Dep
 同时新增模块迁移状态 read model，明确 V40 原生模块、V30 可萃取资产、V40-RC2 必须新建模块和不迁移的旧模块。V30 runtime 直接复用数量固定为 0；可复用的是 V30 命理资产、算法口径和测试样本，必须通过 DTO / adapter / gate 进入 V40。
 
 训练边界同步收敛为 `Trainable Runtime Spine`：事实型基础模块只验证不训练；判断型基础模块只能训练 `source_weight / rule_weight / path_weight / claim_score / conflict_policy / assertion_threshold / advice_priority / probe_voi / llm_acceptance` 等有限 policy unit。新增 `TrainableUnit / TrainablePolicyRegistry / TrainingAttribution`，并让 `RuntimeSignal.trainable_refs` 成为反馈归因入口。单次反馈先进入 `LocalOverlay`；全局候选策略必须经过 replay、golden/regression、overclaim、advice grounding、probe yield、leakage 和 LLM boundary gate。
+
+横向能力同步升格为 `Horizontal Runtime Context`：V40 是多语言、多角色、多终端、多引擎的可训练命理运行时。新增 `LocaleContext / RoleContext / ClientContext / EngineContext / EngineCapability / RuntimeContext / MingliTermDictionary / SurfaceSection`。多语言不靠前端翻译，角色不靠 UI 隐藏，手机端不只是压缩桌面端，多引擎不直接下 verdict。训练和评测必须能按 locale / role / client / engine_source 拆分。Admin 继续保持独立控制台和端口，只作为控制面、审计面、训练发布面存在。
 
 ## V40 不做的事
 

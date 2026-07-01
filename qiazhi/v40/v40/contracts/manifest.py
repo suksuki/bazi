@@ -4,6 +4,16 @@ from __future__ import annotations
 def contract_manifest() -> dict[str, object]:
     return {
         "version": "v40.contract_manifest.v1",
+        "context": [
+            "LocaleContext",
+            "MingliTermEntry",
+            "MingliTermDictionary",
+            "RoleContext",
+            "ClientContext",
+            "EngineContext",
+            "EngineCapability",
+            "RuntimeContext",
+        ],
         "runtime": ["RuntimeRequest", "RuntimeResult"],
         "chart": ["BirthInputCanonical", "BaziChartFacts", "ZiweiChartFacts", "SyntheticCaseSeed"],
         "engine": ["EnginePlan", "EngineRunRequest", "EngineRunResult", "MultiEngineRunResult"],
@@ -27,6 +37,7 @@ def contract_manifest() -> dict[str, object]:
             "ConversationSeed",
             "ConversationTurn",
             "ProductProjectionBundle",
+            "SurfaceSection",
             "SurfaceBundle",
         ],
         "evaluation": [
@@ -63,5 +74,9 @@ def contract_manifest() -> dict[str, object]:
             "llm_verdict_authority_allowed": False,
             "central_brain_verdict_authority_allowed": False,
             "shadow_compare_writes_production": False,
+            "frontend_translation_as_primary_locale_strategy_allowed": False,
+            "ui_role_hiding_as_permission_model_allowed": False,
+            "client_layout_changes_verdict_allowed": False,
+            "engine_direct_verdict_allowed": False,
         },
     }

@@ -5,6 +5,7 @@ from enum import Enum
 from pydantic import Field, model_validator
 
 from v40.contracts.base import AssertionLevel, ReleaseRecommendation, Topic, V40Model
+from v40.contracts.context import RuntimeContext
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.training import TrainingExampleV2
 
@@ -79,6 +80,8 @@ class EvaluationCaseSpec(V40Model):
     user_question: str = ""
     topic: Topic = Topic.OVERVIEW
     known_reality: dict[str, object] = Field(default_factory=dict)
+    runtime_context: RuntimeContext | None = None
+    context_variants: list[RuntimeContext] = Field(default_factory=list)
     expert_notes: list[str] = Field(default_factory=list)
     expected_signals: list[ExpectedSignal] = Field(default_factory=list)
     expected_verdicts: list[ExpectedVerdict] = Field(default_factory=list)

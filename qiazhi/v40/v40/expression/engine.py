@@ -61,10 +61,13 @@ def build_expression_task_from_runtime(
     allowed_assertions = _allowed_assertions(runtime)
     forbidden_assertions = _forbidden_assertions(runtime)
     requested_topic = topic or runtime.request.topic
+    locale_context = runtime.request.runtime_context.locale_context
     return LLMExpressionTask(
         task_id=task_id,
         reading_id=runtime.reading_id,
         role_key=role_key or runtime.request.role_key,
+        locale_context=locale_context,
+        output_language=locale_context.output_language,
         topic=requested_topic,
         input_card_ids=card_ids,
         instruction=_instruction(role_key=role_key or runtime.request.role_key),
@@ -87,6 +90,7 @@ def render_local_expression_result(
         task_id=task.task_id,
         reading_id=runtime.reading_id,
         text=text,
+        output_language=task.output_language,
         raw_thinking="",
         provider=provider,
         model=model,

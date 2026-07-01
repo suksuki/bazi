@@ -49,6 +49,7 @@ from v40.evaluation import (
 )
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
 from v40.project import (
+    build_horizontal_runtime_context_status,
     build_mingli_depth_index,
     build_module_migration_status,
     build_production_cutover_checklist,
@@ -256,6 +257,10 @@ def create_app() -> FastAPI:
             topic=payload.topic,
             role_key=payload.role_key,
             ziwei_chart=payload.ziwei_chart_facts,
+            locale_context=payload.locale_context,
+            role_context=payload.role_context,
+            client_context=payload.client_context,
+            engine_context=payload.engine_context,
         )
         persisted = False
         if payload.persist:
@@ -284,6 +289,10 @@ def create_app() -> FastAPI:
             topic=payload.topic,
             role_key=payload.role_key,
             ziwei_chart=payload.ziwei_chart_facts,
+            locale_context=payload.locale_context,
+            role_context=payload.role_context,
+            client_context=payload.client_context,
+            engine_context=payload.engine_context,
         )
         try:
             task, result, acceptance, telemetry = _build_expression_bundle(
@@ -1364,6 +1373,16 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "trainable_runtime_spine_reads_policy_training_plan_without_mutation",
+        }
+
+    @app.get(f"{API_PREFIX}/project/horizontal-runtime-context")
+    def horizontal_runtime_context() -> dict[str, object]:
+        return {
+            "version": "v40.horizontal_runtime_context_response.v1",
+            "status": build_horizontal_runtime_context_status(),
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "horizontal_runtime_context_reads_platform_context_plan_without_mutation",
         }
 
     @app.get(f"{API_PREFIX}/project/v30-replacement-readiness")

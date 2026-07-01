@@ -9,8 +9,8 @@ from pydantic import BaseModel, ConfigDict
 V40_CONTRACT_VERSION = "v40.contracts.v1"
 
 RoleKey = Literal["guest", "user", "practitioner", "analyst", "admin", "lab"]
-LocaleKey = Literal["zh", "en", "ko"]
-ClientKey = Literal["web", "mobile", "admin", "lab"]
+LocaleKey = Literal["zh", "en", "ko", "zh-CN", "en-US", "ko-KR", "zh-TW"]
+ClientKey = Literal["web", "mobile", "desktop", "tablet", "admin", "lab"]
 
 
 class V40Model(BaseModel):
@@ -55,6 +55,7 @@ class EngineKey(str, Enum):
     BAZI = "bazi"
     ZIWEI = "ziwei"
     REALITY_PROBE = "reality_probe"
+    CONVERSATION = "conversation"
 
 
 class EngineMode(str, Enum):

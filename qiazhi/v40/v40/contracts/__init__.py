@@ -14,6 +14,16 @@ from v40.contracts.base import (
     V40Model,
 )
 from v40.contracts.chart import BaziChartFacts, BirthInputCanonical, SyntheticCaseSeed, ZiweiChartFacts
+from v40.contracts.context import (
+    ClientContext,
+    EngineCapability,
+    EngineContext,
+    LocaleContext,
+    MingliTermDictionary,
+    MingliTermEntry,
+    RoleContext,
+    RuntimeContext,
+)
 from v40.contracts.decision import (
     AdvicePlan,
     BranchCandidate,
@@ -47,6 +57,7 @@ from v40.contracts.output import (
     ProductAdviceCard,
     ProductProjectionBundle,
     ProductVerdictCard,
+    SurfaceSection,
     SurfaceBundle,
 )
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
@@ -76,12 +87,15 @@ __all__ = [
     "BaziChartFacts",
     "BirthInputCanonical",
     "ClientKey",
+    "ClientContext",
     "ConversationSeed",
     "ConversationTurn",
     "DecisionEngineOutput",
     "DecisionInputBundle",
     "DecisionVerdict",
     "EngineKey",
+    "EngineCapability",
+    "EngineContext",
     "EngineMode",
     "EnginePlan",
     "EnginePlanItem",
@@ -95,7 +109,10 @@ __all__ = [
     "LLMExpressionResult",
     "LLMExpressionTask",
     "LocaleKey",
+    "LocaleContext",
     "LocalOverlay",
+    "MingliTermDictionary",
+    "MingliTermEntry",
     "MetricSummary",
     "MultiEngineRunResult",
     "Polarity",
@@ -107,6 +124,8 @@ __all__ = [
     "ReleaseReadinessSummary",
     "ReleaseRecommendation",
     "RoleKey",
+    "RoleContext",
+    "RuntimeContext",
     "RuntimeRequest",
     "RuntimeResult",
     "RuntimeSignal",
@@ -114,6 +133,7 @@ __all__ = [
     "ShadowCompareBatchSummary",
     "SignalRegistrySnapshot",
     "SurfaceBundle",
+    "SurfaceSection",
     "SurfaceKey",
     "SyntheticCaseSeed",
     "Topic",
