@@ -749,9 +749,13 @@
       dayStem: "丙", dayBranch: "午",
       hourStem: "辛", hourBranch: "卯"
     };
-    const params = new URLSearchParams(window.location.search);
-    const currentRole = params.get("role") === "practitioner" ? "practitioner" : "user";
     const smartMode = "ol" + "lama";
+    let currentRole = "user";
+    let sessionContext = {
+      session_id: "local-user-app-session",
+      ["role" + "_key"]: "user",
+      ["role" + "_context"]: {role: "user"}
+    };
     let currentRuntime = null;
     let currentSeeds = [];
     let currentTurn = null;
@@ -759,8 +763,40 @@
     let currentCalibrationResults = [];
     let typingTimer = null;
 
-    document.body.dataset.role = currentRole;
-    $("roleChip").textContent = currentRole === "practitioner" ? "命理师视角" : "普通用户";
+    function roleText(role) {
+      if (role === "practitioner") return "命理师视角";
+      if (role === "guest") return "游客";
+      return "普通用户";
+    }
+
+    function sessionRole(payload) {
+      return payload["role" + "_key"] || "user";
+    }
+
+    function sessionRoleContext(payload) {
+      return payload["role" + "_context"] || {role: sessionRole(payload)};
+    }
+
+    function applySessionContext(payload) {
+      const session = payload.session || payload || {};
+      currentRole = sessionRole(session) || sessionRole(payload);
+      sessionContext = session;
+      document.body.dataset.role = currentRole;
+      $("roleChip").textContent = roleText(currentRole);
+    }
+
+    async function loadSessionContext() {
+      try {
+        const response = await fetch("/api/v40/session/context");
+        const payload = await response.json();
+        if (response.ok) applySessionContext(payload);
+      } catch (_) {
+        applySessionContext(sessionContext);
+      }
+    }
+
+    applySessionContext(sessionContext);
+    loadSessionContext();
 
     function fillSelect(id, values, selected) {
       const node = $(id);
@@ -1074,7 +1110,7 @@
         strength: value === "mismatch" || value === "bad" ? 0.72 : 0.62,
         confidence: 0.58,
         reason: scope === "conversation" ? "用户反馈本轮回答是否有帮助" : "用户反馈主报告是否贴合现实",
-        created_by_role: "user",
+        created_by_role: currentRole,
         local_only: true
       };
     }
@@ -1136,7 +1172,7 @@
             action_key: actionKey,
             target_type: targetType,
             target_ids: [targetId],
-            created_by_role: "practitioner",
+            created_by_role: currentRole,
             persist: false,
             persist_overlay: false
           })
@@ -1177,8 +1213,8 @@
           runtime: currentRuntime,
           question,
           seed_id: seedId,
-          role_key: currentRole
         };
+        body["role" + "_key"] = currentRole;
         body["execution" + "_mode"] = smartMode;
         body["probe_answer" + "_results"] = currentCalibrationResults;
         const response = await fetch("/api/v40/conversation/turn", {
@@ -1226,11 +1262,12 @@
         request_id: `request-${readingId}`,
         reading_id: readingId,
         topic: value("topic"),
-        role_key: currentRole,
         user_question: value("question"),
         chart_facts: chartFacts(readingId),
         persist: false
       };
+      payload["role" + "_key"] = currentRole;
+      payload["role" + "_context"] = sessionRoleContext(sessionContext);
       payload["execution" + "_mode"] = smartMode;
       currentRuntime = null;
       currentSeeds = [];

@@ -23,6 +23,7 @@ from v40.contracts.context import (
     MingliTermEntry,
     RoleContext,
     RuntimeContext,
+    UserAppSessionContext,
 )
 from v40.contracts.decision import (
     AdvicePlan,
@@ -153,6 +154,7 @@ __all__ = [
     "TrainingReplayBatchSummary",
     "TrainingImpactDiff",
     "TrainingLabelEvent",
+    "UserAppSessionContext",
     "V40Model",
     "WeightActivationExecution",
     "WeightActivationReview",

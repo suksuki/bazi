@@ -32,11 +32,11 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 48
-    assert status["current_phase_name"] == "Probe-Aware Conversation Context"
+    assert status["current_phase"] == 49
+    assert status["current_phase_name"] == "Auth-Derived User Role Context"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
     assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-6: replace URL role hook with auth-derived role context" in status["next_mainline_tasks"]
     assert "UI-7: desktop/mobile browser visual QA for product shell" in status["next_mainline_tasks"]
+    assert "UI-8: ConsentGrant and practitioner review queue contracts" in status["next_mainline_tasks"]
     user_beta = next(domain for domain in status["domains"] if domain["key"] == "user_beta")
-    assert "auth-derived role context" in user_beta["next_step"]
+    assert "ConsentGrant" in user_beta["next_step"]

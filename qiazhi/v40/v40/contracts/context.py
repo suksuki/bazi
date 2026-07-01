@@ -75,6 +75,31 @@ class RoleContext(V40Model):
         return self
 
 
+class UserAppSessionContext(V40Model):
+    version: str = "v40.user_app_session_context.v1"
+    session_id: str = "local-user-app-session"
+    role_key: RoleKey = "user"
+    role_context: RoleContext = Field(default_factory=RoleContext)
+    authenticated: bool = False
+    source: str = "default:user_app"
+    admin_mapped_to_practitioner: bool = False
+    allowed_user_app_roles: list[RoleKey] = Field(default_factory=lambda: ["guest", "user", "practitioner"])
+    admin_control_plane_separated: bool = True
+    boundary: str = "user_app_session_context_derives_role_server_side_without_granting_admin_control"
+
+    @model_validator(mode="after")
+    def _session_boundary(self) -> "UserAppSessionContext":
+        if self.role_key not in {"guest", "user", "practitioner"}:
+            raise ValueError("User app session role must be guest, user, or practitioner")
+        if self.role_context.role != self.role_key:
+            raise ValueError("User app session role_context must match role_key")
+        if "admin" in self.allowed_user_app_roles:
+            raise ValueError("Admin is not a user app role")
+        if not self.admin_control_plane_separated:
+            raise ValueError("User app session cannot merge Admin control plane")
+        return self
+
+
 class ClientContext(V40Model):
     version: str = "v40.client_context.v1"
     client: ClientKey = "web"

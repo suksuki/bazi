@@ -9,6 +9,7 @@ def contract_manifest() -> dict[str, object]:
             "MingliTermEntry",
             "MingliTermDictionary",
             "RoleContext",
+            "UserAppSessionContext",
             "ClientContext",
             "EngineContext",
             "EngineCapability",

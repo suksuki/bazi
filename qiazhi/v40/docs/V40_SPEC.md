@@ -595,7 +595,7 @@ v40/api/user_ui.html
 GET /v40/ui
 ```
 
-本阶段把 Phase 45 合同落到真实用户页：`/v40/ui` 改为独立 `user_ui.html` 模板，输入区使用四柱天干地支选择器和折叠大运流年，不再暴露执行模式、角色下拉、provider/model、acceptance、policy、debug、telemetry 或 Admin 链接。Reading Surface 优先消费 `product_projection.verdict_cards/advice_cards`、`verdicts[].forbidden_assertions` 和 `probes`，渲染 VerdictHero、TopicCard、AdviceCard、RiskBoundary 与折叠推演摘要；Follow-up Hub 只在报告 accepted 后出现；Conversation 调用 `POST /api/v40/conversation/turn` 且不刷新报告；Probe 是独立校准卡，当前先把回答记录成本地训练标签；Practitioner Lens 作为右侧抽屉出现，通过 `?role=practitioner` 临时开启，后续需要接入真实 auth role context。
+本阶段把 Phase 45 合同落到真实用户页：`/v40/ui` 改为独立 `user_ui.html` 模板，输入区使用四柱天干地支选择器和折叠大运流年，不再暴露执行模式、角色下拉、provider/model、acceptance、policy、debug、telemetry 或 Admin 链接。Reading Surface 优先消费 `product_projection.verdict_cards/advice_cards`、`verdicts[].forbidden_assertions` 和 `probes`，渲染 VerdictHero、TopicCard、AdviceCard、RiskBoundary 与折叠推演摘要；Follow-up Hub 只在报告 accepted 后出现；Conversation 调用 `POST /api/v40/conversation/turn` 且不刷新报告；Probe 是独立校准卡，当前先把回答记录成本地训练标签；Practitioner Lens 作为右侧抽屉出现。Phase 46 曾用 `?role=practitioner` 临时开启命理师视角，Phase 49 已替换为 auth-derived session context。
 
 2026-07-01 Phase 47 已启动：
 
@@ -619,6 +619,16 @@ ConversationTurn.calibration_context
 ```
 
 本阶段把 Phase 47 的 `ProbeAnswerResult` 接入后续智能对话上下文。`POST /api/v40/conversation/turn` 现在可以接收 `probe_answer_results`，conversation runtime 会把 `AnswerSignal.interpreted_claim`、`HiddenAttributeUpdate.value` 和 `ProbeAnswerResult.refined_advice_points` 放入 LLM prompt、local answer 和 `ConversationTurn` 源追踪字段。`/v40/ui` 在 Probe 回答后本地保存 result，后续追问会随请求带上这些校准结果。用户侧只看到“结合你刚才补充的线索……”这类自然语言，不暴露 AnswerSignal、HiddenAttributeUpdate、ProbeAnswerResult、TrainingLabelEvent 或 LocalOverlay。
+
+2026-07-01 Phase 49 已启动：
+
+```text
+docs/V40_PHASE49_AUTH_DERIVED_ROLE_CONTEXT.md
+UserAppSessionContext
+GET /api/v40/session/context
+```
+
+本阶段把用户侧身份从临时 URL hook 收束到服务端会话上下文。`/v40/ui` 不再读取 `window.location.search`，也不再支持 `?role=practitioner`；页面启动时调用 `/api/v40/session/context`，再用返回的 `UserAppSessionContext` 决定普通用户、游客或命理师视角。主系统只保留 guest/user/practitioner 三种产品角色；admin 如果进入主系统，会被映射为特殊 practitioner，Admin Control Plane 继续独立，不进入用户侧流程。报告、Probe、智能对话和 Practitioner Lens 都使用 session role context 投影权限。
 
 2026-07-01 V40-RC2 已启动：
 

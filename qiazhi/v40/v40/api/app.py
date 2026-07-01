@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.responses import HTMLResponse
 
 from v40 import __version__
@@ -32,6 +32,8 @@ from v40.api.models import (
     WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
 )
+from v40.auth import resolve_user_app_session_context
+from v40.auth.session import role_context_from_payload_or_session
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.context import EngineContext
 from v40.contracts.manifest import contract_manifest
@@ -260,6 +262,21 @@ def create_app() -> FastAPI:
     def user_ui() -> HTMLResponse:
         return HTMLResponse(_user_ui_html())
 
+    @app.get(f"{API_PREFIX}/session/context")
+    def user_app_session_context(request: Request) -> dict[str, object]:
+        session = resolve_user_app_session_context(request)
+        return {
+            "version": "v40.user_app_session_context_response.v1",
+            "session": session.model_dump(mode="json"),
+            "role_key": session.role_key,
+            "role_context": session.role_context.model_dump(mode="json"),
+            "authenticated": session.authenticated,
+            "admin_control_plane_separated": session.admin_control_plane_separated,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "user_app_session_context_is_server_derived_and_does_not_expose_admin_control",
+        }
+
     @app.get(f"{API_PREFIX}/surface/beta-readiness")
     def surface_beta_readiness() -> dict[str, object]:
         return {
@@ -271,17 +288,22 @@ def create_app() -> FastAPI:
         }
 
     @app.post(f"{API_PREFIX}/runtime/native-bazi")
-    def native_bazi_runtime(payload: NativeBaziRuntimeRequest) -> dict[str, object]:
+    def native_bazi_runtime(payload: NativeBaziRuntimeRequest, request: Request) -> dict[str, object]:
+        role_key, role_context, session = role_context_from_payload_or_session(
+            request=request,
+            payload_role_key=payload.role_key,
+            payload_role_context=payload.role_context,
+        )
         runtime = build_native_bazi_runtime(
             request_id=payload.request_id,
             reading_id=payload.reading_id,
             chart=payload.chart_facts,
             user_question=payload.user_question,
             topic=payload.topic,
-            role_key=payload.role_key,
+            role_key=role_key,
             ziwei_chart=payload.ziwei_chart_facts,
             locale_context=payload.locale_context,
-            role_context=payload.role_context,
+            role_context=role_context,
             client_context=payload.client_context,
             engine_context=_resolve_active_policy_engine_context(payload.engine_context),
         )
@@ -296,6 +318,7 @@ def create_app() -> FastAPI:
         return {
             "version": "v40.native_bazi_runtime_response.v1",
             "runtime": runtime.model_dump(mode="json"),
+            "session": session.model_dump(mode="json"),
             "persisted": persisted,
             "writes_v30_state": False,
             "writes_v40_production": False,
@@ -303,17 +326,22 @@ def create_app() -> FastAPI:
         }
 
     @app.post(f"{API_PREFIX}/readings/native-report")
-    def native_reading_report(payload: NativeReadingReportRequest) -> dict[str, object]:
+    def native_reading_report(payload: NativeReadingReportRequest, request: Request) -> dict[str, object]:
+        role_key, role_context, session = role_context_from_payload_or_session(
+            request=request,
+            payload_role_key=payload.role_key,
+            payload_role_context=payload.role_context,
+        )
         runtime = build_native_bazi_runtime(
             request_id=payload.request_id,
             reading_id=payload.reading_id,
             chart=payload.chart_facts,
             user_question=payload.user_question,
             topic=payload.topic,
-            role_key=payload.role_key,
+            role_key=role_key,
             ziwei_chart=payload.ziwei_chart_facts,
             locale_context=payload.locale_context,
-            role_context=payload.role_context,
+            role_context=role_context,
             client_context=payload.client_context,
             engine_context=_resolve_active_policy_engine_context(payload.engine_context),
         )
@@ -323,7 +351,7 @@ def create_app() -> FastAPI:
                 result_id=f"result:{payload.reading_id}:report",
                 acceptance_id=f"acceptance:{payload.reading_id}:report",
                 runtime=runtime,
-                role_key=payload.role_key,
+                role_key=role_key,
                 topic=payload.topic,
                 execution_mode=payload.execution_mode,
                 provider_text=payload.provider_text,
@@ -336,7 +364,7 @@ def create_app() -> FastAPI:
         conversation_seeds = build_conversation_seeds(
             runtime=runtime,
             accepted_text=acceptance.accepted_text,
-            role_key=payload.role_key,
+            role_key=role_key,
         )
         enriched_runtime = runtime.model_copy(
             update={
@@ -361,6 +389,7 @@ def create_app() -> FastAPI:
             "surface_bundle": enriched_runtime.surface_bundle.model_dump(mode="json") if enriched_runtime.surface_bundle else {},
             "accepted_text": acceptance.accepted_text,
             "accepted": acceptance.status.value == "accepted",
+            "session": session.model_dump(mode="json"),
             "conversation_seeds": [seed.model_dump(mode="json") for seed in conversation_seeds],
             "expression": {
                 "task": task.model_dump(mode="json"),

@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 48
-CURRENT_PHASE_NAME = "Probe-Aware Conversation Context"
+CURRENT_PHASE = 49
+CURRENT_PHASE_NAME = "Auth-Derived User Role Context"
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         percent=99,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events"),
-        next_step="替换 URL role hook，补齐 auth-derived role context，并做桌面/移动浏览器视觉验收。",
+        next_step="做桌面/移动浏览器视觉验收，并补齐 ConsentGrant 与 Practitioner Review Queue 合同。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -75,8 +75,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "45", "label": "UI product flow、Probe calibration、Practitioner Lens IA", "status": "complete"},
     {"range": "46", "label": "User product shell runtime", "status": "complete"},
     {"range": "47", "label": "Probe answer runtime", "status": "complete"},
-    {"range": "48", "label": "Probe-aware conversation context", "status": "active"},
-    {"range": "49+", "label": "auth role、visual QA、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "48", "label": "Probe-aware conversation context", "status": "complete"},
+    {"range": "49", "label": "auth-derived user role context", "status": "active"},
+    {"range": "50+", "label": "visual QA、consent/review queue、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -100,10 +101,10 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-6: replace URL role hook with auth-derived role context",
             "UI-7: desktop/mobile browser visual QA for product shell",
             "UI-8: ConsentGrant and practitioner review queue contracts",
-            "UI-9: real-case acceptance and cutover checklist rehearsal",
+            "UI-9: practitioner review queue runtime skeleton",
+            "UI-10: real-case acceptance and cutover checklist rehearsal",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

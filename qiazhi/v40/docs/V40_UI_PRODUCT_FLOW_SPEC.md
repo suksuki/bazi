@@ -696,7 +696,17 @@ Move Practitioner Lens to drawer:
 - Notes.
 - Training event bridge.
 
-### UI-6 Consent And Review Queue
+### UI-6 Auth-Derived Role Context
+
+Replace development-only URL role hooks:
+
+- User app calls `/api/v40/session/context`.
+- Main system supports only guest/user/practitioner.
+- Admin entering the user app is projected as a special practitioner.
+- Practitioner Lens visibility follows `RoleContext`, not query params.
+- User app never exposes Admin control plane.
+
+### UI-7 Consent And Review Queue
 
 Prepare future human review:
 

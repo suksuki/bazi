@@ -46,14 +46,14 @@ Removed from ordinary user UI:
 - Provider/model status.
 - Engineering readiness endpoint display.
 
-Role is currently derived from URL context:
+Phase 46 originally used a temporary URL role hook:
 
 ```text
 /v40/ui                  -> user
 /v40/ui?role=practitioner -> practitioner Lens enabled
 ```
 
-This is a temporary runtime hook until auth context is wired.
+Phase 49 replaces this with `/api/v40/session/context`. The user app must no longer parse URL query parameters for role.
 
 ### 3. Reading Surface
 
@@ -192,8 +192,8 @@ The checks now assert:
 
 ## Remaining Work
 
-1. Replace temporary URL role hook with auth-derived role context.
-2. Feed `ProbeAnswerResult` into later conversation context.
+1. Feed `ProbeAnswerResult` into later conversation context. Done in Phase 48.
+2. Replace temporary URL role hook with auth-derived role context. Done in Phase 49.
 3. Run browser visual QA across desktop and mobile.
 4. Add consent contracts before human practitioner review.
 5. Continue real case evaluation and training replay before production cutover.
