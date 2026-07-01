@@ -61,6 +61,7 @@ from v40.contracts.output import (
     SurfaceBundle,
 )
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
+from v40.contracts.probe import AnswerSignal, HiddenAttributeUpdate, ProbeAnswerResult
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot
 from v40.contracts.training import (
     BatchTrainerV1Result,
@@ -82,6 +83,7 @@ __all__ = [
     "AdvicePlan",
     "AcceptanceResult",
     "AcceptanceStatus",
+    "AnswerSignal",
     "AssertionLevel",
     "BranchCandidate",
     "BranchCard",
@@ -108,6 +110,7 @@ __all__ = [
     "ExpressionTelemetry",
     "GlobalWeightVersion",
     "GoldenCase",
+    "HiddenAttributeUpdate",
     "LLMExpressionResult",
     "LLMExpressionTask",
     "LocaleKey",
@@ -119,6 +122,7 @@ __all__ = [
     "MultiEngineRunResult",
     "Polarity",
     "ProbeCandidate",
+    "ProbeAnswerResult",
     "ProductAdviceCard",
     "ProductProjectionBundle",
     "ProductVerdictCard",

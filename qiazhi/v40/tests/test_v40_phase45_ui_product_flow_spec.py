@@ -32,11 +32,11 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 46
-    assert status["current_phase_name"] == "User Product Shell Runtime"
+    assert status["current_phase"] == 47
+    assert status["current_phase_name"] == "Probe Answer Runtime"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
-    assert any(row["range"] == "46" and row["status"] == "active" for row in status["phase_groups"])
-    assert "UI-4: implement /api/v40/probes/answer and refined advice projection" in status["next_mainline_tasks"]
-    assert "UI-6: desktop/mobile browser visual QA for product shell" in status["next_mainline_tasks"]
+    assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
+    assert "UI-5: feed ProbeAnswerResult into conversation context" in status["next_mainline_tasks"]
+    assert "UI-7: desktop/mobile browser visual QA for product shell" in status["next_mainline_tasks"]
     user_beta = next(domain for domain in status["domains"] if domain["key"] == "user_beta")
-    assert "Probe answer API" in user_beta["next_step"]
+    assert "ProbeAnswerResult" in user_beta["next_step"]

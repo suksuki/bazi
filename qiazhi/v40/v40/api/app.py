@@ -20,6 +20,7 @@ from v40.api.models import (
     NativeReadingReportRequest,
     PractitionerCalibrationRequest,
     PractitionerLensActionRequest,
+    ProbeAnswerRequest,
     ReleaseReadinessFromBatchesRequest,
     ReleaseReadinessFromEvidenceBatchesRequest,
     ShadowCompareBatchRequest,
@@ -50,6 +51,7 @@ from v40.evaluation import (
     replay_training_example,
 )
 from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
+from v40.probes import build_probe_answer_result
 from v40.project import (
     build_horizontal_runtime_context_status,
     build_mingli_depth_index,
@@ -792,6 +794,53 @@ def create_app() -> FastAPI:
             "changes_verdict": False,
             "changes_chart_facts": False,
             "boundary": "practitioner_lens_action_records_local_training_feedback_without_direct_decision_mutation",
+        }
+
+    @app.post(f"{API_PREFIX}/probes/answer")
+    def answer_probe(payload: ProbeAnswerRequest) -> dict[str, object]:
+        try:
+            result = build_probe_answer_result(
+                answer_id=payload.answer_id,
+                runtime=payload.runtime,
+                probe_id=payload.probe_id,
+                answer_text=payload.answer_text,
+                selected_option=payload.selected_option,
+                mismatch_area=payload.mismatch_area,
+                created_by_role=payload.created_by_role,
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        event_persisted = False
+        overlay_persisted = False
+        if payload.persist or payload.persist_overlay:
+            try:
+                repository = V40PostgresRepository.from_env()
+                if payload.persist:
+                    repository.save_training_label_event(result.training_label)
+                    event_persisted = True
+                if payload.persist_overlay:
+                    repository.save_local_overlay(result.local_overlay)
+                    overlay_persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.probe_answer_response.v1",
+            "result": result.model_dump(mode="json"),
+            "answer_signal": result.answer_signal.model_dump(mode="json"),
+            "hidden_attribute_update": result.hidden_attribute_update.model_dump(mode="json"),
+            "training_label": result.training_label.model_dump(mode="json"),
+            "local_overlay": result.local_overlay.model_dump(mode="json"),
+            "refined_advice_points": result.refined_advice_points,
+            "user_message": result.user_message,
+            "event_persisted": event_persisted,
+            "overlay_persisted": overlay_persisted,
+            "applies_to_current_reading": True,
+            "reruns_reading": False,
+            "changes_verdict": False,
+            "changes_chart_facts": False,
+            "writes_v40_production": False,
+            "writes_v30_state": False,
+            "boundary": "probe_answer_creates_answer_signal_hidden_attribute_overlay_and_training_label_without_decision_mutation",
         }
 
     @app.post(f"{API_PREFIX}/expression/from-runtime")

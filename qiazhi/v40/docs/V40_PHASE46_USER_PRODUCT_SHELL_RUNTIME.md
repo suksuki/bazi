@@ -105,7 +105,7 @@ It can appear when:
 
 Current phase records Probe answers as `TrainingLabelEvent(local_only=true)`.
 
-Future phase should add the full endpoint:
+Phase 47 adds the full endpoint:
 
 ```text
 POST /api/v40/probes/answer
@@ -193,7 +193,7 @@ The checks now assert:
 ## Remaining Work
 
 1. Replace temporary URL role hook with auth-derived role context.
-2. Add `POST /api/v40/probes/answer` and refined advice output.
+2. Feed `ProbeAnswerResult` into later conversation context.
 3. Run browser visual QA across desktop and mobile.
 4. Add consent contracts before human practitioner review.
 5. Continue real case evaluation and training replay before production cutover.

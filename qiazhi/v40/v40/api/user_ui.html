@@ -755,6 +755,7 @@
     let currentRuntime = null;
     let currentSeeds = [];
     let currentTurn = null;
+    let currentMismatchArea = "";
     let typingTimer = null;
 
     document.body.dataset.role = currentRole;
@@ -968,6 +969,7 @@
     function renderProbeIfNeeded(runtime) {
       const probe = (runtime.probes || []).find((item) => item.ask_now) || null;
       if (probe) {
+        currentMismatchArea = "";
         showProbe("这里需要补一个现实线索，再把建议落细。", probe);
       } else {
         $("probeSurface").classList.add("hidden");
@@ -1085,30 +1087,34 @@
       if (value === "mismatch") {
         $("mismatchChoices").classList.add("active");
         const probe = (currentRuntime.probes || [])[0];
+        currentMismatchArea = "";
         showProbe("你说不太像时，先补一个关键差异点。", probe);
       }
     }
 
     async function submitProbeAnswer(answer, probeId) {
       if (!currentRuntime) return;
-      const targetType = probeId ? "probe" : "surface";
-      const targetIds = [probeId || `surface:${currentRuntime.reading_id}:recovery`];
-      await postLabel({
-        event_id: `ui-probe-${Date.now()}`,
-        reading_id: currentRuntime.reading_id,
-        source: "probe_answer",
-        target_type: targetType,
-        target_ids: targetIds,
-        label: "probe_helpful",
-        strength: 0.68,
-        confidence: 0.6,
-        reason: `用户选择校准线索：${answer}`,
-        created_by_role: "user",
-        local_only: true
+      const response = await fetch("/api/v40/probes/answer", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({
+          answer_id: `ui-probe-${Date.now()}`,
+          runtime: currentRuntime,
+          probe_id: probeId,
+          selected_option: answer,
+          answer_text: answer,
+          mismatch_area: currentMismatchArea,
+          created_by_role: currentRole,
+          persist: false,
+          persist_overlay: false
+        })
       });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.detail || "校准暂时没有完成");
       const result = $("probeResult");
       if (result) {
-        result.textContent = `已校准：这条反馈会进入本次读盘材料。`;
+        const points = (body.refined_advice_points || []).slice(0, 2).join(" ");
+        result.textContent = `${body.user_message || "已校准。"} ${points}`;
         result.classList.add("active");
       }
     }
@@ -1232,6 +1238,7 @@
       $("mismatchChoices").classList.remove("active");
       $("probeSurface").classList.add("hidden");
       $("probeSurface").innerHTML = "";
+      currentMismatchArea = "";
       $("lensStack").innerHTML = `<div class="empty">报告生成后显示。</div>`;
       setState("正在推演", "等待智能服务返回", true);
       try {
@@ -1273,17 +1280,25 @@
       const mismatch = event.target.closest("button[data-mismatch]");
       if (mismatch) {
         const probe = (currentRuntime?.probes || [])[0];
+        currentMismatchArea = mismatch.dataset.mismatch || "";
         showProbe(`重点校准：${mismatch.dataset.mismatch}`, probe);
         return;
       }
       const probe = event.target.closest("button[data-probe-answer]");
       if (probe) {
-        submitProbeAnswer(probe.dataset.probeAnswer || "", probe.dataset.probeId || "");
+        submitProbeAnswer(probe.dataset.probeAnswer || "", probe.dataset.probeId || "").catch((error) => {
+          const result = $("probeResult");
+          if (result) {
+            result.textContent = error.message || "校准暂时没有完成";
+            result.classList.add("active");
+          }
+        });
         return;
       }
       const skip = event.target.closest("button[data-probe-skip]");
       if (skip) {
         $("probeSurface").classList.add("hidden");
+        currentMismatchArea = "";
         return;
       }
       const lens = event.target.closest("button[data-lens-action]");

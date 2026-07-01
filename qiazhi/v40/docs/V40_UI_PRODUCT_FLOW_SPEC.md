@@ -574,6 +574,7 @@ Current API mapping:
 ```text
 POST /api/v40/readings/native-report
 POST /api/v40/conversation/turn
+POST /api/v40/probes/answer
 POST /api/v40/training/labels
 POST /api/v40/calibration/practitioner-lens-action
 GET  /api/v40/surface/beta-readiness
@@ -583,7 +584,6 @@ GET  /api/v40/training/policy-registries/active
 Future API mapping:
 
 ```text
-POST /api/v40/probes/answer
 POST /api/v40/consent/grants
 POST /api/v40/practitioner/review-requests
 GET  /api/v40/practitioner/review-queue

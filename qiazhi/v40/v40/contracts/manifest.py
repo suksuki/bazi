@@ -26,6 +26,11 @@ def contract_manifest() -> dict[str, object]:
             "ProbeCandidate",
             "DecisionEngineOutput",
         ],
+        "probe": [
+            "AnswerSignal",
+            "HiddenAttributeUpdate",
+            "ProbeAnswerResult",
+        ],
         "output": [
             "ProductVerdictCard",
             "BranchCard",

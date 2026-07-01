@@ -384,6 +384,32 @@ class PractitionerLensActionRequest(V40Model):
         return self
 
 
+class ProbeAnswerRequest(V40Model):
+    version: str = "v40.probe_answer_request.v1"
+    answer_id: str
+    runtime: RuntimeResult
+    probe_id: str = ""
+    answer_text: str = ""
+    selected_option: str = ""
+    mismatch_area: str = ""
+    created_by_role: RoleKey = "user"
+    persist: bool = False
+    persist_overlay: bool = False
+    boundary: str = "probe_answer_request_creates_current_reading_calibration_without_rerunning_chart"
+
+    @model_validator(mode="after")
+    def _probe_answer_boundary(self) -> "ProbeAnswerRequest":
+        if not self.answer_id.strip():
+            raise ValueError("Probe answer requires answer_id")
+        if not (self.answer_text.strip() or self.selected_option.strip()):
+            raise ValueError("Probe answer requires answer_text or selected_option")
+        if self.created_by_role not in {"guest", "user", "practitioner"}:
+            raise ValueError("Probe answer requires guest, user, or practitioner role")
+        if self.probe_id and not any(probe.probe_id == self.probe_id for probe in self.runtime.probes):
+            raise ValueError("Probe answer references unknown probe_id")
+        return self
+
+
 class ExpressionFromRuntimeRequest(V40Model):
     version: str = "v40.expression_from_runtime_request.v1"
     task_id: str

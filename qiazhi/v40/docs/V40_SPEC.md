@@ -597,6 +597,17 @@ GET /v40/ui
 
 本阶段把 Phase 45 合同落到真实用户页：`/v40/ui` 改为独立 `user_ui.html` 模板，输入区使用四柱天干地支选择器和折叠大运流年，不再暴露执行模式、角色下拉、provider/model、acceptance、policy、debug、telemetry 或 Admin 链接。Reading Surface 优先消费 `product_projection.verdict_cards/advice_cards`、`verdicts[].forbidden_assertions` 和 `probes`，渲染 VerdictHero、TopicCard、AdviceCard、RiskBoundary 与折叠推演摘要；Follow-up Hub 只在报告 accepted 后出现；Conversation 调用 `POST /api/v40/conversation/turn` 且不刷新报告；Probe 是独立校准卡，当前先把回答记录成本地训练标签；Practitioner Lens 作为右侧抽屉出现，通过 `?role=practitioner` 临时开启，后续需要接入真实 auth role context。
 
+2026-07-01 Phase 47 已启动：
+
+```text
+docs/V40_PHASE47_PROBE_ANSWER_RUNTIME.md
+v40/contracts/probe.py
+v40/probes/answer.py
+POST /api/v40/probes/answer
+```
+
+本阶段把 Probe 回答从 UI 临时训练标签升级为正式运行时产物：`ProbeAnswerRequest` 消费当前 `RuntimeResult`、`probe_id`、用户选项或短答案，返回 `AnswerSignal`、`HiddenAttributeUpdate`、`TrainingLabelEvent`、`LocalOverlay`、`refined_advice_points` 和用户可读确认。`/v40/ui` 的 Probe 卡现在调用 `/api/v40/probes/answer`，不再直接把 Probe 答案简化成一条裸训练标签；`不太像` 反馈也可以在没有现成 ProbeCandidate 时形成 recovery hidden attribute，例如 `wealth.money_mode`。该链路不重跑报告、不改 verdict、不改 chart facts、不写生产权重、不写 V30。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text
