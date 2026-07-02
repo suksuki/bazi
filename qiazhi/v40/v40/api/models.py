@@ -490,12 +490,12 @@ class UserLoginRequest(V40Model):
     version: str = "v40.user_login_request.v1"
     email: str
     password: str
-    boundary: str = "user_login_request_creates_user_app_session_without_admin_control"
+    boundary: str = "user_login_request_accepts_email_or_builtin_admin_username_without_admin_control"
 
     @model_validator(mode="after")
     def _login_boundary(self) -> "UserLoginRequest":
-        if "@" not in self.email:
-            raise ValueError("Login requires email")
+        if not self.email.strip():
+            raise ValueError("Login requires account identifier")
         if not self.password.strip():
             raise ValueError("Login requires password")
         return self

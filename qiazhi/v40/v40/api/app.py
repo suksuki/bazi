@@ -42,7 +42,14 @@ from v40.api.models import (
     WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
 )
-from v40.auth.accounts import build_user_account, build_user_session, normalize_email, verify_password
+from v40.auth.accounts import (
+    build_user_account,
+    build_user_session,
+    is_builtin_admin_identifier,
+    normalize_email,
+    normalize_login_identifier,
+    verify_password,
+)
 from v40.auth import resolve_user_app_session_context
 from v40.auth.session import USER_APP_ROLE_COOKIE, USER_APP_SESSION_COOKIE, role_context_from_payload_or_session
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
@@ -269,6 +276,10 @@ def _load_account_by_email(email: str) -> UserAccountInternal | None:
     return _MEMORY_ACCOUNTS_BY_EMAIL.get(clean_email)
 
 
+def _load_account_by_login(identifier: str) -> UserAccountInternal | None:
+    return _load_account_by_email(normalize_login_identifier(identifier))
+
+
 def _load_account_by_id(user_id: str) -> UserAccountInternal | None:
     repository = _repository_or_none()
     if repository is not None:
@@ -437,6 +448,8 @@ def create_app() -> FastAPI:
     @app.post(f"{API_PREFIX}/auth/register")
     def register_user(payload: UserRegisterRequest, response: Response) -> dict[str, object]:
         try:
+            if is_builtin_admin_identifier(payload.email):
+                raise HTTPException(status_code=403, detail="Built-in admin cannot be registered from the user app")
             if _load_account_by_email(payload.email) is not None:
                 raise HTTPException(status_code=409, detail="Email already registered")
             account = build_user_account(
@@ -470,7 +483,7 @@ def create_app() -> FastAPI:
     @app.post(f"{API_PREFIX}/auth/login")
     def login_user(payload: UserLoginRequest, response: Response) -> dict[str, object]:
         try:
-            account = _load_account_by_email(payload.email)
+            account = _load_account_by_login(payload.email)
             if account is None or not verify_password(
                 payload.password,
                 password_hash=account.password_hash,

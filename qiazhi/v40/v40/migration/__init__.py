@@ -8,6 +8,12 @@ from v40.migration.v30_importer import (
     build_product_projection,
     build_runtime_from_v30_export,
 )
+from v40.migration.admin_v30_profiles import (
+    build_admin_account,
+    convert_v30_profile_to_v40,
+    select_v30_admin_profiles,
+    sync_v30_admin_profiles_to_repository,
+)
 
 __all__ = [
     "V30ExportEnvelope",
@@ -15,6 +21,10 @@ __all__ = [
     "adapt_advice",
     "adapt_signals",
     "adapt_verdicts",
+    "build_admin_account",
     "build_product_projection",
     "build_runtime_from_v30_export",
+    "convert_v30_profile_to_v40",
+    "select_v30_admin_profiles",
+    "sync_v30_admin_profiles_to_repository",
 ]

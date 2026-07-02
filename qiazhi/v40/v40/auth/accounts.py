@@ -9,8 +9,27 @@ from v40.contracts.base import RoleKey
 from v40.contracts.user import UserAccountInternal, UserSessionRecord
 
 
+BUILTIN_ADMIN_USERNAME = "admin"
+BUILTIN_ADMIN_EMAIL = "jerrydidi@gmail.com"
+BUILTIN_ADMIN_PASSWORD = "abcd1235"
+BUILTIN_ADMIN_USER_ID = "user:admin"
+BUILTIN_ADMIN_PASSWORD_SALT = "v40_builtin_admin_salt_v1"
+
+
 def normalize_email(email: str) -> str:
     return email.strip().lower()
+
+
+def normalize_login_identifier(identifier: str) -> str:
+    clean_identifier = identifier.strip().lower()
+    if clean_identifier == BUILTIN_ADMIN_USERNAME:
+        return BUILTIN_ADMIN_EMAIL
+    return normalize_email(clean_identifier)
+
+
+def is_builtin_admin_identifier(identifier: str) -> bool:
+    clean_identifier = identifier.strip().lower()
+    return clean_identifier in {BUILTIN_ADMIN_USERNAME, BUILTIN_ADMIN_EMAIL}
 
 
 def hash_password(password: str, *, salt: str | None = None) -> tuple[str, str]:
@@ -52,6 +71,19 @@ def build_user_account(
     )
 
 
+def build_builtin_admin_account() -> UserAccountInternal:
+    password_hash, password_salt = hash_password(BUILTIN_ADMIN_PASSWORD, salt=BUILTIN_ADMIN_PASSWORD_SALT)
+    return UserAccountInternal(
+        user_id=BUILTIN_ADMIN_USER_ID,
+        email=BUILTIN_ADMIN_EMAIL,
+        display_name=BUILTIN_ADMIN_USERNAME,
+        role_key="practitioner",
+        active=True,
+        password_hash=password_hash,
+        password_salt=password_salt,
+    )
+
+
 def build_user_session(*, user_id: str, role_key: RoleKey) -> UserSessionRecord:
     if role_key not in {"user", "practitioner"}:
         raise ValueError("User app session only supports user or practitioner")
@@ -64,4 +96,3 @@ def build_user_session(*, user_id: str, role_key: RoleKey) -> UserSessionRecord:
         expires_at=now + timedelta(days=30),
         revoked=False,
     )
-

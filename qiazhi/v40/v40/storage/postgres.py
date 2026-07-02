@@ -275,7 +275,7 @@ class V40PostgresRepository:
                     """,
                     tuple(params),
                 )
-                return [_serialize_row(row) for row in cur.fetchall()]
+                return [_serialize_bazi_profile_row(row) for row in cur.fetchall()]
 
     def get_bazi_profile(self, *, user_id: str, profile_id: str) -> BaziProfileRecord | None:
         with self._connect() as conn:
@@ -2114,3 +2114,19 @@ def _serialize_row(row: dict[str, Any]) -> dict[str, Any]:
     if isinstance(activated_at, datetime):
         serialized["activated_at"] = activated_at.isoformat()
     return serialized
+
+
+def _serialize_bazi_profile_row(row: dict[str, Any]) -> dict[str, Any]:
+    serialized = _serialize_row(row)
+    profile_json = serialized.get("profile_json")
+    if not isinstance(profile_json, dict):
+        return serialized
+    profile = dict(profile_json)
+    for key in ("profile_id", "user_id", "display_name", "gender", "is_default", "deleted", "created_at", "updated_at"):
+        if key in serialized and key not in profile:
+            profile[key] = serialized[key]
+    profile.setdefault("chart_facts", profile.get("chart_facts") or serialized.get("chart_json"))
+    profile.setdefault("chart_json", serialized.get("chart_json"))
+    profile.setdefault("birth_json", serialized.get("birth_json"))
+    profile.setdefault("ziwei_json", serialized.get("ziwei_json"))
+    return profile

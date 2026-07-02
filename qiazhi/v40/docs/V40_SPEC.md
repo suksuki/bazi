@@ -707,6 +707,17 @@ renderProcessTicker
 
 本阶段保留“不让普通用户参与 V30 多步页面”的产品判断，但在报告页增加三行可见推演流。用户点击开始测算后，会看到 `定盘 / 取象 / 合参` 三行打字机提示；报告返回后，这三行会根据真实 runtime 改写，展示日主、月令、大运流年、信号数量、紫微旁路与隐藏线索校准状态。该组件只做用户可读过程投影，不显示 provider/model/prompt/debug/Admin 信息，不提供可点击步骤，也不改变 verdict、chart facts、runtime 权重、V30 状态或生产权重。
 
+2026-07-02 Phase 56 已启动：
+
+```text
+docs/V40_PHASE56_ADMIN_PROFILE_SYNC.md
+qiazhi/v40/scripts/sync_v30_admin_profiles.py
+admin / abcd1235
+jerrydidi@gmail.com
+```
+
+本阶段把 V30 的固定 admin 习惯迁入 V40：用户侧登录名为 `admin`，邮箱为 `jerrydidi@gmail.com`，密码为 `abcd1235`，主系统角色投影为 `practitioner`。`/api/v40/auth/register` 仍不能注册 admin，也不能抢占内置 admin 邮箱。V30 中归属 `v20-admin/admin` 的 18 个八字档案通过 migration-only CLI 转为 V40 `BaziProfileRecord`，写入独立 `v40_user_accounts` 和 `v40_bazi_profiles`；迁移时允许调用 V30 确定性排盘函数生成四柱、大运、流年，但 V40 runtime 不直接读取或修改 V30 状态。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

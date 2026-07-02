@@ -256,6 +256,8 @@ Admin is not a user-app role. Admin is an independent control plane.
 
 If the admin account enters the user app, it behaves as a special practitioner, not as the management console.
 
+The built-in testing account is `admin / abcd1235`, with email `jerrydidi@gmail.com`. Its user-app projection is always `practitioner`, and its V30 admin Bazi profiles are imported into V40-owned profile records.
+
 ## Hidden Information Contract
 
 Ordinary users must never see:
@@ -711,6 +713,7 @@ Replace development-only URL role hooks:
 - User app calls `/api/v40/session/context`.
 - Main system supports only guest/user/practitioner.
 - Admin entering the user app is projected as a special practitioner.
+- The built-in `admin` login maps to the unique admin email and practitioner role; it cannot be registered from the user app.
 - Practitioner Lens visibility follows `RoleContext`, not query params.
 - User app never exposes Admin control plane.
 
