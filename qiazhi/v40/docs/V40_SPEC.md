@@ -816,6 +816,16 @@ domain_verdict_adapter
 
 本阶段在原始 signals 和最终 DecisionEngine verdict 之间增加领域组织层。Domain Verdict Adapter 会读取 native Bazi Pro facts、迁移 V30 signals 和核心结构信号，按事业、财运、感情、健康、时运、用神、隐藏线索生成领域 adapter signal；这些 signal 会进入 DecisionEngine evidence，但仍不拥有 verdict authority，不改 chart facts，不调用 LLM。训练只作用在 domain claim score、advice priority 和 signal weight 上。
 
+2026-07-02 Phase 67 Hidden Factor Probe Engine 已启动：
+
+```text
+docs/V40_PHASE67_HIDDEN_FACTOR_PROBE_ENGINE.md
+build_hidden_factor_probe_candidates
+build_hidden_factor_answer_runtime_signal
+```
+
+本阶段把隐藏属性追问从 UI 临时问题升级为 runtime 横向能力。Hidden Factor Probe Engine 读取 `DecisionVerdict`、`BranchCandidate` 和 runtime signals，按置信度不足、分支差距过近、反证和 hidden/mixed signal 计算信息增益，只生成一条聚焦的 `Topic.HIDDEN_ATTRIBUTE` ProbeCandidate。用户或命理师回答后，`ProbeAnswerResult` 可继续绑定成 `reality_probe` RuntimeSignal，进入后续对话、训练和回放；它不自动启动对话、不改命盘事实、不拥有 verdict authority。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

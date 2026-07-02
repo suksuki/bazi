@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 66
-CURRENT_PHASE_NAME = "Domain Verdict Adapters"
+CURRENT_PHASE = 67
+CURRENT_PHASE_NAME = "Hidden Factor Probe Engine"
 
 
 @dataclass(frozen=True)
@@ -93,8 +93,10 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "63", "label": "real case bank and acceptance window", "status": "complete"},
     {"range": "64", "label": "Bazi Fact Engine Pro", "status": "complete"},
     {"range": "65", "label": "V30 Mingli Asset Migration Gate", "status": "complete"},
-    {"range": "66", "label": "Domain Verdict Adapters", "status": "active"},
-    {"range": "67+", "label": "hidden factor probe", "status": "requires_user"},
+    {"range": "66", "label": "Domain Verdict Adapters", "status": "complete"},
+    {"range": "67", "label": "Hidden Factor Probe Engine", "status": "active"},
+    {"range": "68+", "label": "knowledge / portrait / ziwei enrichment", "status": "planned"},
+    {"range": "user-acceptance", "label": "真实命例验收与线上切换", "status": "requires_user"},
 )
 
 
@@ -118,8 +120,8 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "P66-1: Domain Verdict Adapters",
             "P67-1: Hidden Factor Probe Engine",
+            "P68-1: Knowledge / Portrait / Ziwei sidecar enrichment",
             "TRAIN-16: direct training activation before/after acceptance and rollback UX",
             "UI-17: online cutover decision with real case acceptance evidence",
         ],

@@ -13,6 +13,7 @@ from v40.contracts.decision import (
 )
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
 from v40.decision.domain_adapters import build_domain_adapter_signals
+from v40.probes.hidden_factor import build_hidden_factor_probe_candidates
 
 
 POLICY_VERSION = "v40.decision.native_product.v1"
@@ -93,6 +94,16 @@ def build_decision_output(
     )
     advice_plans = _build_advice_plans(reading_id=reading_id, verdicts=verdicts)
     probes = _build_probes(reading_id=reading_id, verdicts=verdicts, branches=branch_candidates, role_key=role_key)
+    probes = [
+        *probes,
+        *build_hidden_factor_probe_candidates(
+            reading_id=reading_id,
+            verdicts=verdicts,
+            branches=branch_candidates,
+            signals=decision_signals,
+            role_key=role_key,
+        ),
+    ]
     return DecisionEngineOutput(
         output_id=f"decision-output:{reading_id}",
         reading_id=reading_id,

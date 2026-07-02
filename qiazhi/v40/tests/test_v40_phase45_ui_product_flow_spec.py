@@ -32,10 +32,10 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 66
-    assert status["current_phase_name"] == "Domain Verdict Adapters"
+    assert status["current_phase"] == 67
+    assert status["current_phase_name"] == "Hidden Factor Probe Engine"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
     assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P66-1: Domain Verdict Adapters" in status["next_mainline_tasks"]
+    assert "P67-1: Hidden Factor Probe Engine" in status["next_mainline_tasks"]
     user_beta = next(domain for domain in status["domains"] if domain["key"] == "user_beta")
     assert "真实命例" in user_beta["next_step"]

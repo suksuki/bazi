@@ -136,11 +136,11 @@ MODULES: tuple[ModuleMigrationStatus, ...] = (
     ModuleMigrationStatus(
         key="hidden_factor_probe_engine",
         label="Hidden Factor Probe Engine",
-        current_state="new_required",
+        current_state="v40_native_v1_probe_signal_ready",
         reuse_policy="build_v40_native_with_v30_hidden_factor_assets",
         v30_sources=("hidden_factor",),
-        v40_target="conversation/hidden_factor",
-        rc2_action="把用户回答转成 HiddenAttributeUpdate / LocalOverlay / TrainingLabelEvent。",
+        v40_target="probes/hidden_factor",
+        rc2_action="V1 已能按 VOI 生成隐藏线索 Probe，并把回答绑定为 reality_probe RuntimeSignal / HiddenAttributeUpdate / TrainingLabelEvent。",
     ),
     ModuleMigrationStatus(
         key="knowledge_cards",

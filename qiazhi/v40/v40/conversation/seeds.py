@@ -76,6 +76,7 @@ def _options_for_topic(topic: Topic) -> list[str]:
         Topic.RELATIONSHIP: ["相处模式", "反复矛盾", "关系节奏"],
         Topic.HEALTH: ["压力消耗", "作息负荷", "身体反馈"],
         Topic.USEFUL_GOD: ["先看用神", "先看忌神", "先看反证"],
+        Topic.HIDDEN_ATTRIBUTE: ["反复经历", "暗线校准", "暂不明显"],
     }
     return options.get(topic, ["先看结论", "先看风险", "先看建议"])
 

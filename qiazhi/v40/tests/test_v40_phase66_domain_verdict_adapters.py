@@ -91,8 +91,8 @@ def test_phase66_project_status_tracks_domain_verdict_adapters() -> None:
 
     assert "Domain Verdict Adapters" in doc
     assert "docs/V40_PHASE66_DOMAIN_VERDICT_ADAPTERS.md" in readme
-    assert status["current_phase"] == 66
-    assert status["current_phase_name"] == "Domain Verdict Adapters"
+    assert status["current_phase"] == 67
+    assert status["current_phase_name"] == "Hidden Factor Probe Engine"
     assert any(row["range"] == "65" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "66" and row["status"] == "active" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P66-1: Domain Verdict Adapters"
+    assert any(row["range"] == "66" and row["status"] == "complete" for row in status["phase_groups"])
+    assert status["next_mainline_tasks"][0] == "P67-1: Hidden Factor Probe Engine"

@@ -33,8 +33,8 @@ def test_phase59_ui_product_convergence_plan_is_documented() -> None:
 def test_phase59_ui_product_convergence_is_next_mainline_task() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 66
-    assert status["current_phase_name"] == "Domain Verdict Adapters"
+    assert status["current_phase"] == 67
+    assert status["current_phase_name"] == "Hidden Factor Probe Engine"
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P66-1: Domain Verdict Adapters" in status["next_mainline_tasks"]
+    assert "P67-1: Hidden Factor Probe Engine" in status["next_mainline_tasks"]

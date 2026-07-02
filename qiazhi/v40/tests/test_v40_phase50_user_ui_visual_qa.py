@@ -31,8 +31,8 @@ def test_phase50_visual_qa_doc_and_script_are_mainline_artifacts() -> None:
 def test_phase50_project_status_tracks_visual_qa_as_completed_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 66
-    assert status["current_phase_name"] == "Domain Verdict Adapters"
+    assert status["current_phase"] == 67
+    assert status["current_phase_name"] == "Hidden Factor Probe Engine"
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P66-1: Domain Verdict Adapters" in status["next_mainline_tasks"]
+    assert "P67-1: Hidden Factor Probe Engine" in status["next_mainline_tasks"]

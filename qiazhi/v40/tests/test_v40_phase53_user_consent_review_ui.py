@@ -114,8 +114,8 @@ def test_phase53_docs_and_project_status_track_user_consent_review_ui() -> None:
     assert "2026-07-02 Phase 53" in spec
     assert "docs/V40_PHASE53_USER_CONSENT_REVIEW_UI.md" in readme
     assert "User-side practitioner review authorization is wired" in ui_spec
-    assert status["current_phase"] == 66
-    assert status["current_phase_name"] == "Domain Verdict Adapters"
+    assert status["current_phase"] == 67
+    assert status["current_phase_name"] == "Hidden Factor Probe Engine"
     assert any(row["range"] == "52" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P66-1: Domain Verdict Adapters" in status["next_mainline_tasks"]
+    assert "P67-1: Hidden Factor Probe Engine" in status["next_mainline_tasks"]
