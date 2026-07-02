@@ -23,6 +23,7 @@ from v40.contracts.review import ConsentGrant, PractitionerReviewDecision, Pract
 from v40.contracts.runtime import RuntimeResult
 from v40.contracts.user import BaziProfileRecord
 from v40.contracts.training import (
+    BatchTrainerV1Result,
     GlobalWeightVersion,
     LabelTargetType,
     LabelValue,
@@ -212,6 +213,12 @@ class RealCaseExpansionEvidenceRequest(V40Model):
         if not self.cases:
             raise ValueError("Real case expansion evidence request requires cases")
         return self
+
+
+class DirectTrainingActivationEvidenceRequest(V40Model):
+    version: str = "v40.direct_training_activation_evidence_request.v1"
+    result: BatchTrainerV1Result
+    boundary: str = "direct_training_activation_evidence_request_reads_batch_trainer_result_without_mutation"
 
 
 class CandidateWeightFromBatchRequest(V40Model):

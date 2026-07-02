@@ -31,8 +31,8 @@ def test_phase50_visual_qa_doc_and_script_are_mainline_artifacts() -> None:
 def test_phase50_project_status_tracks_visual_qa_as_completed_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 69
-    assert status["current_phase_name"] == "Real Case Expansion And Cutover Evidence"
+    assert status["current_phase"] == 70
+    assert status["current_phase_name"] == "Direct Training Activation Evidence"
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P69-1: real case expansion and online cutover evidence" in status["next_mainline_tasks"]
+    assert "TRAIN-16: direct training activation before/after acceptance and rollback UX" in status["next_mainline_tasks"]

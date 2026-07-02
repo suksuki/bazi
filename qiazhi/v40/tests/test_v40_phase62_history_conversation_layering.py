@@ -56,8 +56,8 @@ def test_phase62_user_ui_has_left_history_and_folded_reverse_conversation_items(
 def test_phase62_project_status_marks_history_conversation_layering_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 69
-    assert status["current_phase_name"] == "Real Case Expansion And Cutover Evidence"
+    assert status["current_phase"] == 70
+    assert status["current_phase_name"] == "Direct Training Activation Evidence"
     assert any(row["range"] == "61" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P69-1: real case expansion and online cutover evidence"
+    assert status["next_mainline_tasks"][0] == "TRAIN-16: direct training activation before/after acceptance and rollback UX"

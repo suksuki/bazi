@@ -846,6 +846,16 @@ POST /api/v40/project/real-case-expansion-evidence
 
 本阶段把真实命例验收从单次窗口升级为扩容与上线证据包。`Real Case Expansion Evidence Pack` 会检查真实案例总量、可训练案例数、事业/财运/关系/健康/时运/用神/隐藏线索覆盖、最新 Acceptance Window 推荐、overclaim 和 blocked count。它只输出 `automatic_status`、`cutover_status`、coverage gaps 和下一批采集任务，不切流量、不写生产策略、不改命盘事实；即使自动证据 ready，线上切换仍需要人工确认。
 
+2026-07-02 Phase 70 Direct Training Activation Evidence 已启动：
+
+```text
+docs/V40_PHASE70_DIRECT_TRAINING_ACTIVATION_EVIDENCE.md
+build_direct_training_activation_evidence
+POST /api/v40/project/direct-training-activation-evidence
+```
+
+本阶段把“训练后直接生效”的系统原则产品化为只读证据包。`Direct Training Activation Evidence` 消费 `BatchTrainerV1Result`，展示 base/candidate/active policy、rollback registry、权重和阈值 before/after delta、受影响 signals/branches/verdicts/advice/probes、risk summary 和下一步 replay/acceptance 动作。它不增加审批闸门、不回滚、不写生产策略，只解释已经生效的训练结果和补救路径。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

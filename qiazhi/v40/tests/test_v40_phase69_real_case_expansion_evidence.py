@@ -159,8 +159,9 @@ def test_phase69_docs_and_project_status_track_real_case_expansion_evidence() ->
     assert "Real Case Expansion And Cutover Evidence" in doc
     assert "POST /api/v40/project/real-case-expansion-evidence" in doc
     assert "docs/V40_PHASE69_REAL_CASE_EXPANSION_AND_CUTOVER_EVIDENCE.md" in readme
-    assert status["current_phase"] == 69
-    assert status["current_phase_name"] == "Real Case Expansion And Cutover Evidence"
+    assert status["current_phase"] == 70
+    assert status["current_phase_name"] == "Direct Training Activation Evidence"
     assert any(row["range"] == "68" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "69" and row["status"] == "active" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P69-1: real case expansion and online cutover evidence"
+    assert any(row["range"] == "69" and row["status"] == "complete" for row in status["phase_groups"])
+    assert any(row["range"] == "70" and row["status"] == "active" for row in status["phase_groups"])
+    assert status["next_mainline_tasks"][0] == "TRAIN-16: direct training activation before/after acceptance and rollback UX"

@@ -18,6 +18,7 @@ from v40.api.models import (
     CandidateWeightFromReplayBatchRequest,
     ConsentGrantRequest,
     ConversationTurnRequest,
+    DirectTrainingActivationEvidenceRequest,
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
     ExpressionFromRuntimeRequest,
@@ -89,6 +90,7 @@ from v40.project import (
     build_mingli_depth_index,
     build_module_migration_status,
     build_production_cutover_checklist,
+    build_direct_training_activation_evidence,
     build_real_case_expansion_evidence_pack,
     build_project_status,
     build_release_candidate_audit,
@@ -2203,6 +2205,17 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "real_case_expansion_evidence_reads_cases_without_cutover_or_policy_write",
+        }
+
+    @app.post(f"{API_PREFIX}/project/direct-training-activation-evidence")
+    def direct_training_activation_evidence(payload: DirectTrainingActivationEvidenceRequest) -> dict[str, object]:
+        evidence = build_direct_training_activation_evidence(result=payload.result)
+        return {
+            "version": "v40.direct_training_activation_evidence_response.v1",
+            "evidence": evidence,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "direct_training_activation_evidence_reads_active_policy_without_mutation",
         }
 
     @app.get(f"{API_PREFIX}/project/release-candidate-audit")

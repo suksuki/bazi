@@ -43,9 +43,9 @@ def test_phase57_docs_and_project_status_track_process_feedback_and_llm_boundary
     assert "execution_mode=ollama" in spec
     assert "docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md" in readme
     assert "waiting for the LLM expression path" in ui_spec
-    assert status["current_phase"] == 69
-    assert status["current_phase_name"] == "Real Case Expansion And Cutover Evidence"
+    assert status["current_phase"] == 70
+    assert status["current_phase_name"] == "Direct Training Activation Evidence"
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "57" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P69-1: real case expansion and online cutover evidence" in status["next_mainline_tasks"]
+    assert "TRAIN-16: direct training activation before/after acceptance and rollback UX" in status["next_mainline_tasks"]
