@@ -49,7 +49,7 @@ BatchTrainerV1 能做：
 - 保存 previous registry / previous policy，支持回滚和补救。
 - 跳过 fact refs。
 - 将 local-only feedback 降权。
-- 默认 `release_recommendation=needs_review` 只表示需要继续观察，不阻止训练策略生效。
+- 默认 `release_recommendation=approve`，表示这批已验证训练会直接进入 active policy；风险摘要只用于事后观察、回滚或下一轮补救训练。
 
 ## 不做
 
@@ -106,7 +106,7 @@ active_policy_applied
 rollback_registry_id
 ```
 
-默认持久化。`persist_registry=true` 时保存并激活新的 `TrainablePolicyRegistry`；`persist_impact=true` 时保存 `TrainingImpactDiff`。这是命理高迭代系统的默认模式：允许训练后直接生效，同时保留 previous registry、previous policy 和 impact diff 作为补救与回滚依据。
+默认持久化。`persist_registry=true` 时保存并激活新的 `TrainablePolicyRegistry`；`persist_impact=true` 时保存 `TrainingImpactDiff`。这是命理高迭代系统的默认模式：训练和验证通过后直接生效，不设置人工审核门，同时保留 previous registry、previous policy 和 impact diff 作为补救与回滚依据。
 
 ## 后续任务
 

@@ -718,7 +718,7 @@ jerrydidi@gmail.com
 
 本阶段把 V30 的固定 admin 习惯迁入 V40：用户侧登录名为 `admin`，邮箱为 `jerrydidi@gmail.com`，密码为 `abcd1235`，主系统角色投影为 `practitioner`。`/api/v40/auth/register` 仍不能注册 admin，也不能抢占内置 admin 邮箱。V30 中归属 `v20-admin/admin` 的 18 个八字档案通过 migration-only CLI 转为 V40 `BaziProfileRecord`，写入独立 `v40_user_accounts` 和 `v40_bazi_profiles`；迁移时允许调用 V30 确定性排盘函数生成四柱、大运、流年，但 V40 runtime 不直接读取或修改 V30 状态。
 
-2026-07-02 Phase 57 已启动：
+2026-07-02 Phase 57 已完成：
 
 ```text
 docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md
@@ -727,6 +727,17 @@ execution_mode=ollama
 ```
 
 本阶段把报告等待态从“一次性三行提示”升级为持续轮转的三行打字机推演流。用户点击测算后，在 LLM 返回前页面会持续显示 `定盘 / 取象 / 合参` 三行过程，轮转覆盖四柱校验、十神用神、规则画像路径、八字主引擎、紫微旁路、智能表达层等阶段；报告返回后停止轮转，并用真实 runtime 结果改写三行摘要。用户侧报告和对话仍必须调用 LLM 表达路径：前台通过非可见字段发送 `execution_mode=ollama`，不暴露 provider/model/prompt/debug/Admin 信息；如果模型不可用，显示明确失败，不使用本地模板静默替代。
+
+2026-07-02 Phase 58 已启动：
+
+```text
+docs/V40_PHASE58_HARD_LLM_AND_DIRECT_TRAINING_PRINCIPLES.md
+NativeReadingReportRequest.execution_mode=ollama
+ConversationTurnRequest.execution_mode=ollama
+BatchTrainerV1 direct active policy
+```
+
+本阶段把两条主系统原则固化为硬合约：第一，没有 LLM 时产品运行时直接失败，API 返回明确错误，页面展示 LLM 故障，不允许本地模板静默 fallback；第二，训练和验证通过后直接生成并持久化 active policy registry，下一次测算立即读取新策略，不设置人工审核门。旧的 activation review/execution 链路仅保留为历史审计或 Lab 资料，不再代表 V40 主训练路径。保留 rollback pointer、TrainingImpactDiff、风险摘要和回放证据作为事后补救，不作为事前审批。
 
 2026-07-01 V40-RC2 已启动：
 

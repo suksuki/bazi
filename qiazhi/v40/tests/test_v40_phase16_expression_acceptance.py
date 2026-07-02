@@ -141,6 +141,7 @@ def test_expression_from_runtime_api_returns_task_result_and_acceptance() -> Non
             "result_id": "result.phase16.api.001",
             "acceptance_id": "acceptance.phase16.api.001",
             "runtime": runtime.model_dump(mode="json"),
+            "execution_mode": "local",
         },
     )
 

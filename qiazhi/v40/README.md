@@ -75,6 +75,7 @@ docs/V40_PHASE54_USER_ACCOUNT_PROFILE_FLOW.md
 docs/V40_PHASE55_COMPACT_PROCESS_TICKER.md
 docs/V40_PHASE56_ADMIN_PROFILE_SYNC.md
 docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md
+docs/V40_PHASE58_HARD_LLM_AND_DIRECT_TRAINING_PRINCIPLES.md
 docs/V40_RC2_MINGLI_DEPTH_MIGRATION_PLAN.md
 docs/V40_RC2_ASSET_MIGRATION_GATE.md
 docs/V40_RC2_MODULE_STATUS_AND_MIGRATION_MAP.md
@@ -91,6 +92,8 @@ Initial principle:
 Contract first.
 Evaluation first.
 Migration by DTO import, not big-bang rewrite.
+LLM required in product runtime; no silent local fallback.
+Validated training applies immediately with rollback, not pre-approval.
 ```
 
 Start order:

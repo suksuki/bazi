@@ -13,7 +13,6 @@ class AcceptanceStatus(str, Enum):
     REPAIR = "repair"
     SALVAGE = "salvage"
     REASK = "reask"
-    FALLBACK = "fallback"
     HARD_REJECT = "hard_reject"
 
 
@@ -143,7 +142,7 @@ class ExpressionTelemetry(V40Model):
     reading_id: str
     task_id: str
     result_id: str
-    execution_mode: str = "local"
+    execution_mode: str = "ollama"
     provider: str = ""
     model: str = ""
     accepted: bool = False

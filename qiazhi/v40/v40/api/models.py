@@ -80,7 +80,7 @@ class BatchTrainerV1Request(V40Model):
     candidate_policy_version: str
     persist_registry: bool = True
     persist_impact: bool = True
-    boundary: str = "batch_trainer_v1_request_applies_policy_immediately_with_rollback"
+    boundary: str = "batch_trainer_v1_request_applies_validated_policy_immediately_with_rollback_without_approval_gate"
 
     @model_validator(mode="after")
     def _batch_trainer_boundary(self) -> "BatchTrainerV1Request":
@@ -265,7 +265,7 @@ class NativeReadingReportRequest(V40Model):
     role_context: RoleContext | None = None
     client_context: ClientContext | None = None
     engine_context: EngineContext | None = None
-    execution_mode: str = "local"
+    execution_mode: str = "ollama"
     provider_text: str = ""
     provider: str = "local_expression_adapter"
     model: str = "v40.expression.contract.v1"
@@ -292,7 +292,7 @@ class ConversationTurnRequest(V40Model):
     role_key: RoleKey | None = None
     topic: Topic | None = None
     probe_answer_results: list[ProbeAnswerResult] = Field(default_factory=list)
-    execution_mode: str = "local"
+    execution_mode: str = "ollama"
     provider_text: str = ""
     provider: str = "local_conversation_adapter"
     model: str = "v40.conversation.contract.v1"
@@ -533,7 +533,7 @@ class ExpressionFromRuntimeRequest(V40Model):
     runtime: RuntimeResult
     role_key: RoleKey | None = None
     topic: Topic | None = None
-    execution_mode: str = "local"
+    execution_mode: str = "ollama"
     provider_text: str = ""
     provider: str = "local_expression_adapter"
     model: str = "v40.expression.contract.v1"

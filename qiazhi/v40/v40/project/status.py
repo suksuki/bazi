@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 57
-CURRENT_PHASE_NAME = "Process Feedback And UI Review Brief"
+CURRENT_PHASE = 58
+CURRENT_PHASE_NAME = "Hard LLM And Direct Training Principles"
 
 
 @dataclass(frozen=True)
@@ -84,8 +84,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "54", "label": "user account and profile flow", "status": "complete"},
     {"range": "55", "label": "compact staged process ticker", "status": "complete"},
     {"range": "56", "label": "built-in admin and V30 profile sync", "status": "complete"},
-    {"range": "57", "label": "process feedback and UI review brief", "status": "active"},
-    {"range": "58+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "57", "label": "process feedback and UI review brief", "status": "complete"},
+    {"range": "58", "label": "hard LLM runtime and direct training activation principles", "status": "active"},
+    {"range": "59+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -110,6 +111,7 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
             "UI-15: live LLM user acceptance with admin profiles",
+            "TRAIN-16: direct training activation remediation and rollback UX",
             "UI-16: practitioner review workbench polish",
             "UI-17: online cutover decision with user acceptance evidence",
         ],

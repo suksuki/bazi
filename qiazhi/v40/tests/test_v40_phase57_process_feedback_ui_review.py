@@ -43,8 +43,9 @@ def test_phase57_docs_and_project_status_track_process_feedback_and_llm_boundary
     assert "execution_mode=ollama" in spec
     assert "docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md" in readme
     assert "waiting for the LLM expression path" in ui_spec
-    assert status["current_phase"] == 57
-    assert status["current_phase_name"] == "Process Feedback And UI Review Brief"
+    assert status["current_phase"] == 58
+    assert status["current_phase_name"] == "Hard LLM And Direct Training Principles"
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "57" and row["status"] == "active" for row in status["phase_groups"])
+    assert any(row["range"] == "57" and row["status"] == "complete" for row in status["phase_groups"])
+    assert any(row["range"] == "58" and row["status"] == "active" for row in status["phase_groups"])
     assert "UI-15: live LLM user acceptance with admin profiles" in status["next_mainline_tasks"]

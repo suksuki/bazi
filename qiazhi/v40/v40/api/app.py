@@ -1745,7 +1745,7 @@ def create_app() -> FastAPI:
             "writes_v40_production": registry_persisted,
             "writes_v40_policy": registry_persisted,
             "changes_chart_facts": False,
-            "boundary": "batch_trainer_v1_applies_trainable_policy_immediately_with_rollback_without_fact_mutation",
+            "boundary": "batch_trainer_v1_applies_validated_policy_immediately_with_rollback_without_approval_gate_or_fact_mutation",
         }
 
     @app.post(f"{API_PREFIX}/weights/candidates/from-batch")

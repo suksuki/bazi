@@ -38,7 +38,7 @@ def build_conversation_turn(
     role_key: RoleKey | None = None,
     topic: Topic | None = None,
     probe_answer_results: list[ProbeAnswerResult] | None = None,
-    execution_mode: str = "local",
+    execution_mode: str = "ollama",
     provider_text: str = "",
     provider: str = "local_conversation_adapter",
     model: str = "v40.conversation.contract.v1",

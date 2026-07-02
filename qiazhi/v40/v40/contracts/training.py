@@ -321,7 +321,7 @@ class BatchTrainerV1Result(V40Model):
     previous_policy_version: str = ""
     production_write_allowed: bool = True
     chart_fact_mutation_allowed: bool = False
-    boundary: str = "batch_trainer_v1_applies_policy_immediately_with_rollback_without_fact_mutation"
+    boundary: str = "batch_trainer_v1_applies_validated_policy_immediately_with_rollback_without_approval_gate_or_fact_mutation"
 
     @model_validator(mode="after")
     def _batch_trainer_boundary(self) -> "BatchTrainerV1Result":

@@ -64,6 +64,8 @@ AI initial reading
 8. Every meaningful user or practitioner interaction must become structured training material.
 9. Training policy is high-iteration: training can take effect immediately, with rollback and repair records.
 10. UI should feel modern, quiet, professional, and lightly inspired by mingli, not old-fashioned fortune-telling.
+11. No LLM means the product runtime fails loudly; the user app must not silently substitute local template text.
+12. Training and validation updates apply immediately to the active policy registry; rollback and repair happen after activation, not as a pre-approval gate.
 
 The ordinary user should quickly answer:
 

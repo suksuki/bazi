@@ -116,10 +116,11 @@ def build_batch_trainer_v1(
         affected_probes=_unique(item for attr in attributions for item in attr.affected_probe_ids),
         improvement_summary=[
             "candidate_policy_registry_created",
+            "direct_policy_activation_after_validation",
             f"changed_unit_count:{len(changed_weights) + len(changed_thresholds)}",
         ],
         risk_summary=_risk_summary(label_events or []),
-        release_recommendation=ReleaseRecommendation.NEEDS_REVIEW,
+        release_recommendation=ReleaseRecommendation.APPROVE,
     )
     return BatchTrainerV1Result(
         training_run_id=training_run_id,

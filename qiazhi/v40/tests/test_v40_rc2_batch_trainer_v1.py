@@ -97,6 +97,8 @@ def test_batch_trainer_v1_creates_candidate_policy_and_impact_diff() -> None:
     assert "advice_priority.wealth" in result.impact_diff.changed_advice_priorities
     assert "probe_voi.partnership_money_effect" in result.impact_diff.changed_probe_policies
     assert result.impact_diff.changed_thresholds[0].target_id == "assertion_threshold.wealth.supported"
+    assert result.impact_diff.release_recommendation.value == "approve"
+    assert "direct_policy_activation_after_validation" in result.impact_diff.improvement_summary
     assert "local_feedback_downweighted_until_batch_validation" in result.impact_diff.risk_summary
 
 
@@ -124,7 +126,8 @@ def test_batch_trainer_v1_api_can_run_as_dry_run_without_applying_policy() -> No
     assert body["active_policy_applied"] is False
     assert body["result"]["candidate_policy_version"] == "policy.candidate.api.v1"
     assert body["candidate_registry"]["active_policy_version"] == "policy.candidate.api.v1"
-    assert body["impact"]["release_recommendation"] == "needs_review"
+    assert body["impact"]["release_recommendation"] == "approve"
+    assert "direct_policy_activation_after_validation" in body["impact"]["improvement_summary"]
 
 
 def test_batch_trainer_v1_docs_and_status_are_updated() -> None:
