@@ -23,7 +23,7 @@ def test_v40_user_report_ui_serves_report_first_page() -> None:
     assert "表达方式" not in response.text
     assert 'id="roleKey"' not in response.text
     assert "192.168." not in response.text
-    assert "本次报告" in response.text
+    assert "判断与建议" in response.text
     assert "核心判断" in response.text
     assert "继续追问" in response.text
     assert "没有使用备用文本" in response.text

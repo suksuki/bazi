@@ -16,9 +16,10 @@ def test_phase46_user_ui_uses_product_shell_template_without_engineering_leakage
     assert "测算入口" in html
     assert "当前命盘" in html
     assert "核心判断" in html
-    assert "本次报告" in html
+    assert "判断与建议" in html
     assert "继续追问" in html
-    assert "一个问题，让判断更准" in html
+    assert "校准一问" in html
+    assert "查看完整报告" in html
     assert "专业视角" in html
     assert "paintReading" in html
     assert "product_projection" in html

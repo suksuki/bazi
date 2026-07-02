@@ -87,7 +87,7 @@ User-facing names:
 ```text
 Follow-up seeds -> 你可以继续追问
 Thinking -> 查看推演过程
-Probe -> 一个问题，让判断更准
+Probe -> 校准一问
 Training feedback -> 这个判断像你吗？
 Practitioner Lens -> 专业视角
 ```
@@ -183,16 +183,19 @@ Conversation rules:
 one turn answers one question
 do not auto-answer a question the user did not click/type
 do not refresh the report
-append turns below report
+collapse full report into a compact hero summary when conversation starts
+append turns as the main surface after the summary
 generate next suggestions after each answer
 ```
+
+Once the user starts a follow-up, the full report should no longer keep occupying the main page. The report remains recoverable through a clear "查看完整报告" entry, while the main surface becomes the one-question-one-answer consultation.
 
 ## P4: Probe Card
 
 Probe appears only as a special card:
 
 ```text
-一个问题，让判断更准
+校准一问
 ```
 
 It may appear:
@@ -391,7 +394,7 @@ CurrentChartCard
 collapsed four-pillar editor
 completed process ticker collapse
 report topic focus limited to 3 visible domains
-Probe renamed to 一个问题，让判断更准
+Probe renamed to 校准一问
 review consent hidden until explicit request
 Practitioner Lens renamed to 专业视角
 ```
@@ -405,6 +408,17 @@ report cards can focus Lens by topic
 Lens actions use human language and backend-safe action keys
 practitioner note is captured as local training material
 mobile practitioner view behaves as a lightweight drawer
+```
+
+2026-07-02 第三轮 runtime 收敛目标：
+
+```text
+conversation mode collapses the full report after the first follow-up starts
+full report remains recoverable through 查看完整报告
+follow-up seeds render as lightweight chips instead of stacked cards
+Probe is renamed to 校准一问 and folds into an 已校准 result after answer
+report feedback does not compete with an active Probe
+top role copy uses 命理师模式 and hides account/admin wording from the main header
 ```
 
 Next runtime work:

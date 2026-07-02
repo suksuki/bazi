@@ -123,7 +123,7 @@ def test_phase54_user_ui_exposes_account_profile_probe_and_simple_dialogue_flow(
         "八字档案",
         "保存档案",
         "测算档案",
-        "一个问题，让判断更准",
+        "校准一问",
         "继续追问",
         "智能对话",
         "/api/v40/auth/",

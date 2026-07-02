@@ -50,8 +50,8 @@ qiazhi/v40/.runtime/visual_qa/phase50/
 
 1. 页面必须出现品牌与输入表单；
 2. 普通用户身份显示为普通用户；
-3. 命理师 header 会触发命理师视角；
-4. 命理师视角下专业视角入口可见，抽屉默认收起；
+3. 命理师 header 会触发命理师模式；
+4. 命理师模式下专业视角入口可见，抽屉默认收起；
 5. 普通用户不出现专业校准入口；
 6. 页面可见文字不得泄漏 provider/model/prompt/acceptance/policy/debug/telemetry/admin 等工程词；
 7. 页面源码不得使用 URL role hook；

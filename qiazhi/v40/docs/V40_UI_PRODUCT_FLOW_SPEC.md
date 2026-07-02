@@ -37,7 +37,8 @@ The product shape is:
 ```text
 Input
 → Report-first reading
-→ Follow-up conversation
+→ Follow-up chips
+→ Conversation mode with compact report summary
 → Probe calibration when useful
 → Feedback to training
 → Practitioner Lens when role allows
@@ -67,6 +68,7 @@ AI initial reading
 11. No LLM means the product runtime fails loudly; the user app must not silently substitute local template text.
 12. Training and validation updates apply immediately to the active policy registry; rollback and repair happen after activation, not as a pre-approval gate.
 13. Practitioner is a role-based lens on the same Reading, not a separate user-side reading page.
+14. After the first follow-up starts, the full report collapses into a compact summary and conversation becomes the main surface.
 
 The ordinary user should quickly answer:
 
@@ -160,6 +162,15 @@ The ordinary user sees:
 - Suggested follow-up questions.
 - Optional feedback controls.
 
+After the first follow-up starts, the ordinary user sees:
+
+- Compact core judgment summary.
+- A `查看完整报告` recovery action.
+- One-question-one-answer conversation turns.
+- Fresh lightweight follow-up chips.
+
+The full report does not continue to occupy the main page during conversation mode.
+
 The ordinary user does not see:
 
 - Provider/model/base URL.
@@ -192,10 +203,13 @@ report
 Probe must be skippable, short, and explained in user language:
 
 ```text
-这个问题会让财富判断更准。
+校准一问
+这个问题会影响财富判断如何落到现实建议。
 当前更像哪一种赚钱方式？
 固定工资 / 项目客户 / 合伙团队 / 投资资产 / 暂不确定
 ```
+
+After the user answers, the Probe folds into a compact `已校准` result and normal report feedback can reappear.
 
 ### Practitioner
 

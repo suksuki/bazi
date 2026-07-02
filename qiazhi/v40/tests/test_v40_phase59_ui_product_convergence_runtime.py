@@ -19,9 +19,12 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
         "开始测算",
         "本次已完成：定盘 / 取象 / 合参",
         "核心判断",
-        "本次报告",
+        "判断与建议",
         "继续追问",
-        "一个问题，让判断更准",
+        "校准一问",
+        "查看完整报告",
+        "question-chip",
+        "conversation-mode",
         "专业视角",
         "lensToggleButton",
         "data-lens-topic",
@@ -33,7 +36,7 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
         "do_not_use_now",
         "ask_to_confirm",
         "user_mismatch",
-        "报告不会刷新",
+        "报告已收起，正在进入对话",
     ]:
         assert text in html
 

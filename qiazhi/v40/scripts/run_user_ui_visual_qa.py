@@ -47,7 +47,7 @@ SCENARIOS = [
         width=1440,
         height=960,
         role_header="practitioner",
-        expected_role_text="命理师视角",
+        expected_role_text="命理师模式",
         expect_lens_entry_visible=True,
         expect_lens_drawer_open=False,
     ),

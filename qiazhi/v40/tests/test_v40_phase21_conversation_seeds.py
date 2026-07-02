@@ -74,4 +74,5 @@ def test_user_ui_exposes_invited_conversation_seed_container() -> None:
     assert 'id="seedCards"' in response.text
     assert 'id="followupHub"' in response.text
     assert "conversation_seeds" in response.text
-    assert "question-card" in response.text
+    assert "question-chip" in response.text
+    assert "conversation-mode" in response.text

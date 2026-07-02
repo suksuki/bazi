@@ -139,7 +139,7 @@ def _build_surface_beta_readiness() -> dict[str, object]:
         _surface_beta_check(
             "report_first",
             "报告优先",
-            "/api/v40/readings/native-report" in html and "本次报告" in html and "核心判断" in html,
+            "/api/v40/readings/native-report" in html and "判断与建议" in html and "核心判断" in html,
             "用户先看到完整报告，而不是先进入聊天。",
         ),
         _surface_beta_check(

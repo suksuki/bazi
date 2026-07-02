@@ -280,7 +280,6 @@
     .danger-button,
     .feedback-row button,
     .option-row button,
-    .question-card button,
     .lens-action {
       border: 0;
       border-radius: 999px;
@@ -293,8 +292,7 @@
       cursor: pointer;
     }
     .mode-tabs button.active,
-    .primary-button,
-    .question-card > button {
+    .primary-button {
       background: var(--accent);
       color: #fff;
     }
@@ -318,8 +316,7 @@
     .primary-button:disabled,
     .ghost-button:disabled,
     .secondary-button:disabled,
-    .danger-button:disabled,
-    .question-card button:disabled {
+    .danger-button:disabled {
       opacity: .58;
       cursor: wait;
     }
@@ -461,7 +458,6 @@
     .report-card,
     .process-card,
     .review-card,
-    .question-card,
     .conversation-turn,
     .probe-card,
     .notice {
@@ -510,6 +506,40 @@
       color: var(--soft-ink);
       font-size: 15px;
     }
+    .report-toggle {
+      display: none;
+      margin-top: 16px;
+      position: relative;
+    }
+    .reading.conversation-mode .report-toggle {
+      display: inline-flex;
+    }
+    .reading.conversation-mode #reportSurface,
+    .reading.conversation-mode #probeSurface {
+      display: none;
+    }
+    .reading.conversation-mode .hero {
+      padding: 17px;
+      background:
+        linear-gradient(90deg, rgba(110,139,126,.08), transparent 50%),
+        #fffdf8;
+    }
+    .reading.conversation-mode .hero::after {
+      opacity: .36;
+      width: 60px;
+      height: 60px;
+    }
+    .reading.conversation-mode .hero h2 {
+      font-size: 19px;
+      margin-bottom: 6px;
+    }
+    .reading.conversation-mode .hero p {
+      font-size: 13px;
+      max-width: 720px;
+    }
+    .reading.conversation-mode .hero .metric-row {
+      margin-top: 10px;
+    }
     .metric-row {
       position: relative;
       display: flex;
@@ -549,14 +579,12 @@
     .report-card,
     .process-card,
     .review-card,
-    .question-card,
     .conversation-turn,
     .probe-card,
     .notice {
       padding: 14px;
     }
     .report-card h4,
-    .question-card h4,
     .probe-card h4,
     .conversation-turn h4 {
       margin: 0 0 8px;
@@ -729,20 +757,29 @@
       display: grid;
       gap: 10px;
     }
-    .question-card {
-      display: grid;
-      gap: 10px;
-      background: #fffdf8;
+    #seedCards {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
     }
-    .question-card p {
-      margin: 0;
-      color: var(--soft-ink);
-    }
-    .question-card > button {
-      justify-self: start;
-      border-radius: var(--radius);
+    .question-chip {
+      border: 0;
+      border-radius: 999px;
+      background: #f1e8da;
+      color: var(--ink);
+      padding: 9px 12px;
+      font: inherit;
       font-size: 13px;
-      text-align: left;
+      font-weight: 720;
+      cursor: pointer;
+    }
+    .question-chip:hover {
+      background: var(--support-soft);
+      color: #3e6659;
+    }
+    .question-chip:disabled {
+      opacity: .58;
+      cursor: wait;
     }
     .option-row button {
       background: var(--support-soft);
@@ -772,6 +809,11 @@
     .probe-card {
       border-left: 4px solid var(--support);
       background: #fbfff9;
+      padding: 12px 14px;
+    }
+    .probe-card.answered .probe-question,
+    .probe-card.answered .option-row {
+      display: none;
     }
     .probe-result {
       display: none;
@@ -1071,7 +1113,7 @@
         </form>
       </aside>
 
-      <section class="reading">
+      <section class="reading" id="readingPane">
         <div class="surface">
           <div class="state-line" id="stateLine"><span><span class="pulse"></span><span id="stateText">等待命盘</span></span><span id="stateHint">报告会先出现</span></div>
         </div>
@@ -1081,12 +1123,13 @@
           <h2 id="heroTitle">先建立命盘，再给出结论。</h2>
           <p id="heroText">输入四柱后开始测算。</p>
           <div class="metric-row" id="heroMetrics"></div>
+          <button class="ghost-button report-toggle" id="reportToggleButton" type="button">查看完整报告</button>
         </section>
 
         <section class="surface" id="reportSurface">
           <div class="section-label">
-            <h3>本次报告</h3>
-            <span class="mini" id="reportMini">结论、建议和边界分开显示</span>
+            <h3>判断与建议</h3>
+            <span class="mini" id="reportMini">结论、行动和边界分开显示</span>
           </div>
           <div class="process-card hidden" id="processTicker">
             <div class="process-head">
@@ -1135,7 +1178,7 @@
         <section class="surface followup-hub hidden" id="followupHub">
           <div class="section-label">
             <h3>继续追问</h3>
-            <span class="mini">围绕本次报告</span>
+            <span class="mini">基于报告，不重新测算</span>
           </div>
           <div class="card-grid" id="seedCards"></div>
           <div class="followup-input">
@@ -1175,6 +1218,7 @@
     };
     const smartMode = "ol" + "lama";
     let currentRole = "user";
+    let readingMode = "setup";
     let currentUser = null;
     let currentProfiles = [];
     let selectedProfile = null;
@@ -1219,9 +1263,14 @@
     ];
 
     function roleText(role) {
-      if (role === "practitioner") return "命理师视角";
+      if (role === "practitioner") return "命理师模式";
       if (role === "guest") return "游客";
       return "普通用户";
+    }
+
+    function setReadingMode(mode) {
+      readingMode = mode || "report";
+      $("readingPane").classList.toggle("conversation-mode", readingMode === "conversation");
     }
 
     function lensIsOpen() {
@@ -1308,7 +1357,7 @@
       if (loggedIn) {
         $("accountMini").textContent = roleText(currentUser["role" + "_key"] || currentRole);
         $("authStatus").textContent = `${currentUser.display_name || currentUser.email} 已登录。`;
-        $("userMenuLabel").textContent = `我的命盘 · ${currentUser.display_name || currentUser.email}`;
+        $("userMenuLabel").textContent = "我的命盘";
       } else {
         $("accountMini").textContent = "多用户";
         $("authStatus").textContent = "登录后可以保存和选择自己的八字档案。";
@@ -1726,16 +1775,9 @@
     function renderFollowups(seeds) {
       currentSeeds = seeds || [];
       $("followupHub").classList.toggle("hidden", !currentSeeds.length);
-      $("seedCards").innerHTML = currentSeeds.map((seed) => {
-        const optionButtons = (seed.options || []).map((option) => (
-          `<button type="button" data-seed-id="${escapeHtml(seed.seed_id)}" data-question="${escapeHtml(seed.question + "：" + option)}">${escapeHtml(option)}</button>`
-        )).join("");
-        return `
-          <article class="question-card">
-            <button type="button" data-seed-id="${escapeHtml(seed.seed_id)}" data-question="${escapeHtml(seed.question)}">${escapeHtml(seed.question)}</button>
-            <div class="option-row">${optionButtons}</div>
-          </article>`;
-      }).join("");
+      $("seedCards").innerHTML = currentSeeds.slice(0, 5).map((seed) => `
+        <button class="question-chip" type="button" data-seed-id="${escapeHtml(seed.seed_id)}" data-question="${escapeHtml(seed.question)}">${escapeHtml(seed.question)}</button>
+      `).join("");
     }
 
     function probeOptions(topic) {
@@ -1756,9 +1798,9 @@
       $("probeSurface").classList.remove("hidden");
       $("probeSurface").innerHTML = `
         <article class="probe-card">
-          <h4>一个问题，让判断更准</h4>
+          <h4>校准一问</h4>
           <p>${escapeHtml(reason || "这个问题会让判断更贴近你的现实。")}</p>
-          <p><strong>${escapeHtml(probe?.question || "哪里不太像？")}</strong></p>
+          <p class="probe-question"><strong>${escapeHtml(probe?.question || "哪里不太像？")}</strong></p>
           <div class="option-row">
             ${options.map((option) => `<button type="button" data-probe-id="${escapeHtml(probe?.probe_id || "")}" data-probe-answer="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
             <button type="button" data-probe-skip="true">跳过，先看当前建议</button>
@@ -1771,11 +1813,13 @@
       const probe = (runtime.probes || []).find((item) => item.ask_now) || null;
       if (probe) {
         currentMismatchArea = "";
-        showProbe("这里需要补一个现实线索，再把建议落细。", probe);
+        showProbe("这个问题会影响当前判断如何落到现实建议。", probe);
+        return true;
       } else {
         currentMismatchArea = "";
         $("probeSurface").classList.add("hidden");
         $("probeSurface").innerHTML = "";
+        return false;
       }
     }
 
@@ -1873,16 +1917,17 @@
     }
 
     function paintReading(runtime, seeds) {
+      setReadingMode("report");
       renderHero(runtime);
       renderProcessTicker(runtime);
       renderTopicCards(runtime);
       renderAdvice(runtime);
       renderRisk(runtime);
-      renderProbeIfNeeded(runtime);
+      const probeVisible = renderProbeIfNeeded(runtime);
       renderReviewInvite(runtime);
       renderFollowups(seeds);
       renderLens(runtime);
-      $("reportFeedback").classList.add("active");
+      $("reportFeedback").classList.toggle("active", !probeVisible);
     }
 
     async function postLabel(payload, statusNode) {
@@ -1965,7 +2010,9 @@
         const points = (body.refined_advice_points || []).slice(0, 2).join(" ");
         result.textContent = `${body.user_message || "已校准。"} ${points}`;
         result.classList.add("active");
+        result.closest(".probe-card")?.classList.add("answered");
       }
+      $("reportFeedback").classList.add("active");
     }
 
     async function applyLensAction(actionKey, targetType, targetId, node) {
@@ -2068,7 +2115,9 @@
     async function askConversation(question, seedId = "") {
       if (!currentRuntime || !question.trim()) return;
       $("askButton").disabled = true;
-      setState("正在生成本轮回答", "报告不会刷新", true);
+      setReadingMode("conversation");
+      $("conversationSurface").classList.remove("hidden");
+      setState("正在生成本轮回答", "报告已收起，正在进入对话", true);
       try {
         const turnId = `turn-${Date.now()}`;
         const body = {
@@ -2133,6 +2182,7 @@
       payload["role" + "_key"] = currentRole;
       payload["role" + "_context"] = sessionRoleContext(sessionContext);
       payload["execution" + "_mode"] = smartMode;
+      setReadingMode("report");
       currentRuntime = null;
       currentSeeds = [];
       currentTurn = null;
@@ -2182,6 +2232,12 @@
 
     $("askButton").addEventListener("click", () => {
       askConversation(value("followupQuestion"), "");
+    });
+
+    $("reportToggleButton").addEventListener("click", () => {
+      if (!currentRuntime) return;
+      setReadingMode("report");
+      $("reportSurface").scrollIntoView({behavior: "smooth", block: "start"});
     });
 
     $("processSummary").addEventListener("click", () => {
@@ -2276,6 +2332,7 @@
       if (skip) {
         $("probeSurface").classList.add("hidden");
         currentMismatchArea = "";
+        $("reportFeedback").classList.add("active");
         return;
       }
       const lens = event.target.closest("button[data-lens-action]");
