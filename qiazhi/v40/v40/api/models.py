@@ -221,6 +221,29 @@ class DirectTrainingActivationEvidenceRequest(V40Model):
     boundary: str = "direct_training_activation_evidence_request_reads_batch_trainer_result_without_mutation"
 
 
+class OnlineCutoverDecisionRequest(V40Model):
+    version: str = "v40.online_cutover_decision_request.v1"
+    project_status: dict[str, object]
+    cutover_checklist: dict[str, object]
+    real_case_evidence: dict[str, object]
+    training_activation_evidence: dict[str, object]
+    release_candidate_audit: dict[str, object] = Field(default_factory=dict)
+    boundary: str = "online_cutover_decision_request_reads_evidence_without_switching_traffic"
+
+    @model_validator(mode="after")
+    def _online_cutover_decision_boundary(self) -> "OnlineCutoverDecisionRequest":
+        required = {
+            "project_status": self.project_status,
+            "cutover_checklist": self.cutover_checklist,
+            "real_case_evidence": self.real_case_evidence,
+            "training_activation_evidence": self.training_activation_evidence,
+        }
+        missing = [key for key, value in required.items() if not value]
+        if missing:
+            raise ValueError(f"Online cutover decision request requires {', '.join(missing)}")
+        return self
+
+
 class CandidateWeightFromBatchRequest(V40Model):
     version: str = "v40.candidate_weight_from_batch_request.v1"
     weight_version_id: str

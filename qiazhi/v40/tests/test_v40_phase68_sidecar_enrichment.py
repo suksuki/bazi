@@ -115,13 +115,13 @@ def test_phase68_docs_status_and_module_map_track_sidecar_enrichment() -> None:
 
     assert "Knowledge Portrait Ziwei Sidecar Enrichment" in doc
     assert "docs/V40_PHASE68_SIDECAR_ENRICHMENT.md" in readme
-    assert status["current_phase"] == 70
-    assert status["current_phase_name"] == "Direct Training Activation Evidence"
+    assert status["current_phase"] == 71
+    assert status["current_phase_name"] == "Online Cutover Decision Pack"
     assert any(row["range"] == "67" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "68" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "69" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "70" and row["status"] == "active" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "TRAIN-16: direct training activation before/after acceptance and rollback UX"
+    assert any(row["range"] == "70" and row["status"] == "complete" for row in status["phase_groups"])
+    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"
     assert module_map["knowledge_cards"]["current_state"] == "v40_native_v1_explanation_sidecar_ready"
     assert module_map["portrait_signals"]["current_state"] == "v40_native_v1_low_weight_signal_ready"
     assert module_map["ziwei_sidecar"]["current_state"] == "v40_sidecar_v1_enriched"

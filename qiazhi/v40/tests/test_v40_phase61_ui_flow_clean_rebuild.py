@@ -49,9 +49,9 @@ def test_phase61_user_ui_has_state_machine_shell_and_lightweight_surfaces() -> N
 def test_phase61_project_status_marks_ui_clean_rebuild_complete() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 70
-    assert status["current_phase_name"] == "Direct Training Activation Evidence"
+    assert status["current_phase"] == 71
+    assert status["current_phase_name"] == "Online Cutover Decision Pack"
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "61" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "TRAIN-16: direct training activation before/after acceptance and rollback UX"
+    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"

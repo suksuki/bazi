@@ -59,9 +59,9 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
 def test_phase59_project_status_marks_ui_convergence_runtime_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 70
-    assert status["current_phase_name"] == "Direct Training Activation Evidence"
+    assert status["current_phase"] == 71
+    assert status["current_phase_name"] == "Online Cutover Decision Pack"
     assert any(row["range"] == "58" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "TRAIN-16: direct training activation before/after acceptance and rollback UX"
+    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"

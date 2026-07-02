@@ -30,7 +30,7 @@ def test_project_status_reports_realtime_completion_domains() -> None:
     assert any(domain["key"] == "training_validation" for domain in status["domains"])
     assert status["runtime_evidence_counts"]["training_replay_batches"] == 1
     assert "global_weight_versions" in status["runtime_evidence_counts"]
-    assert status["next_mainline_tasks"][0].startswith("TRAIN-16")
+    assert status["next_mainline_tasks"][0].startswith("UI-17")
     assert status["boundary"] == "project_status_observes_v40_progress_without_mutating_runtime_or_weights"
 
 

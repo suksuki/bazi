@@ -91,8 +91,8 @@ def test_phase66_project_status_tracks_domain_verdict_adapters() -> None:
 
     assert "Domain Verdict Adapters" in doc
     assert "docs/V40_PHASE66_DOMAIN_VERDICT_ADAPTERS.md" in readme
-    assert status["current_phase"] == 70
-    assert status["current_phase_name"] == "Direct Training Activation Evidence"
+    assert status["current_phase"] == 71
+    assert status["current_phase_name"] == "Online Cutover Decision Pack"
     assert any(row["range"] == "65" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "66" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "TRAIN-16: direct training activation before/after acceptance and rollback UX"
+    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"

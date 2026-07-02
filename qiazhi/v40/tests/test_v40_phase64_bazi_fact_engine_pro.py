@@ -96,8 +96,8 @@ def test_phase64_project_status_tracks_fact_engine_pro_mainline() -> None:
 
     assert "Bazi Fact Engine Pro V1" in doc
     assert "docs/V40_PHASE64_BAZI_FACT_ENGINE_PRO.md" in readme
-    assert status["current_phase"] == 70
-    assert status["current_phase_name"] == "Direct Training Activation Evidence"
+    assert status["current_phase"] == 71
+    assert status["current_phase_name"] == "Online Cutover Decision Pack"
     assert any(row["range"] == "63" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "64" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "TRAIN-16: direct training activation before/after acceptance and rollback UX"
+    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"

@@ -856,6 +856,17 @@ POST /api/v40/project/direct-training-activation-evidence
 
 本阶段把“训练后直接生效”的系统原则产品化为只读证据包。`Direct Training Activation Evidence` 消费 `BatchTrainerV1Result`，展示 base/candidate/active policy、rollback registry、权重和阈值 before/after delta、受影响 signals/branches/verdicts/advice/probes、risk summary 和下一步 replay/acceptance 动作。它不增加审批闸门、不回滚、不写生产策略，只解释已经生效的训练结果和补救路径。
 
+2026-07-02 Phase 71 Online Cutover Decision Pack 已启动：
+
+```text
+docs/V40_PHASE71_ONLINE_CUTOVER_DECISION_PACK.md
+docs/V40_PHASE71_SYSTEM_REVIEW_AND_MAINLINE_SYNC.md
+build_online_cutover_decision_pack
+POST /api/v40/project/online-cutover-decision
+```
+
+本阶段完成系统级 review 与主线任务同步，把 project status、production cutover checklist、real case expansion evidence、direct training activation evidence 和 release candidate audit 合成一个上线决策包。它输出 blocked/near-ready/ready-for-human-signoff、blockers、next_actions 和人工签核要求，但不切流量、不写 V40 production policy、不写 V30 state。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

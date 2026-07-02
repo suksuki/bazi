@@ -6,6 +6,7 @@ from v40.project.cutover import build_production_cutover_checklist
 from v40.project.horizontal_context import build_horizontal_runtime_context_status
 from v40.project.mingli_depth import build_mingli_depth_index
 from v40.project.module_status import build_module_migration_status
+from v40.project.online_cutover_decision import build_online_cutover_decision_pack
 from v40.project.release_candidate import build_release_candidate_audit
 from v40.project.real_case_expansion import build_real_case_expansion_evidence_pack
 from v40.project.smoke import build_production_smoke
@@ -17,6 +18,7 @@ __all__ = [
     "build_horizontal_runtime_context_status",
     "build_mingli_depth_index",
     "build_module_migration_status",
+    "build_online_cutover_decision_pack",
     "build_production_cutover_checklist",
     "build_release_candidate_audit",
     "build_real_case_expansion_evidence_pack",

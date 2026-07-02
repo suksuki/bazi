@@ -26,6 +26,7 @@ from v40.api.models import (
     NativeBatchFromSeedsRequest,
     NativeBaziRuntimeRequest,
     NativeReadingReportRequest,
+    OnlineCutoverDecisionRequest,
     PractitionerCalibrationRequest,
     PractitionerLensActionRequest,
     PractitionerReviewAssignRequest,
@@ -89,6 +90,7 @@ from v40.project import (
     build_horizontal_runtime_context_status,
     build_mingli_depth_index,
     build_module_migration_status,
+    build_online_cutover_decision_pack,
     build_production_cutover_checklist,
     build_direct_training_activation_evidence,
     build_real_case_expansion_evidence_pack,
@@ -2216,6 +2218,23 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "direct_training_activation_evidence_reads_active_policy_without_mutation",
+        }
+
+    @app.post(f"{API_PREFIX}/project/online-cutover-decision")
+    def online_cutover_decision(payload: OnlineCutoverDecisionRequest) -> dict[str, object]:
+        decision = build_online_cutover_decision_pack(
+            project_status=payload.project_status,
+            cutover_checklist=payload.cutover_checklist,
+            real_case_evidence=payload.real_case_evidence,
+            training_activation_evidence=payload.training_activation_evidence,
+            release_candidate_audit=payload.release_candidate_audit,
+        )
+        return {
+            "version": "v40.online_cutover_decision_response.v1",
+            "decision": decision,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "online_cutover_decision_reads_evidence_without_switching_traffic",
         }
 
     @app.get(f"{API_PREFIX}/project/release-candidate-audit")
