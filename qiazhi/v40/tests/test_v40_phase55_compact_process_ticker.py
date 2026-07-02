@@ -42,10 +42,10 @@ def test_phase55_docs_and_project_status_track_compact_process_ticker() -> None:
     assert "2026-07-02 Phase 55" in spec
     assert "docs/V40_PHASE55_COMPACT_PROCESS_TICKER.md" in readme
     assert "three-line staged process ticker" in ui_spec
-    assert status["current_phase"] == 65
-    assert status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
+    assert status["current_phase"] == 66
+    assert status["current_phase_name"] == "Domain Verdict Adapters"
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "55" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P65-1: V30 Mingli Asset Migration Gate" in status["next_mainline_tasks"]
+    assert "P66-1: Domain Verdict Adapters" in status["next_mainline_tasks"]

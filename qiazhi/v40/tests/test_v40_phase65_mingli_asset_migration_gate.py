@@ -139,8 +139,8 @@ def test_phase65_manifest_module_status_and_project_status_track_asset_gate() ->
     assert "plain JSON asset -> RuntimeSignal sidecar" in doc
     asset_gate = next(row for row in module_status["modules"] if row["key"] == "asset_migration_gate")
     assert asset_gate["current_state"] == "v40_native_v1_sidecar_ready"
-    assert project_status["current_phase"] == 65
-    assert project_status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
+    assert project_status["current_phase"] == 66
+    assert project_status["current_phase_name"] == "Domain Verdict Adapters"
     assert any(row["range"] == "64" and row["status"] == "complete" for row in project_status["phase_groups"])
-    assert any(row["range"] == "65" and row["status"] == "active" for row in project_status["phase_groups"])
-    assert project_status["next_mainline_tasks"][0] == "P65-1: V30 Mingli Asset Migration Gate"
+    assert any(row["range"] == "65" and row["status"] == "complete" for row in project_status["phase_groups"])
+    assert project_status["next_mainline_tasks"][0] == "P66-1: Domain Verdict Adapters"

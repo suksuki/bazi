@@ -156,8 +156,8 @@ def test_phase54_docs_schema_and_project_status_track_user_account_profile_flow(
     assert "v40_user_accounts" in schema
     assert "v40_user_sessions" in schema
     assert "v40_bazi_profiles" in schema
-    assert status["current_phase"] == 65
-    assert status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
+    assert status["current_phase"] == 66
+    assert status["current_phase_name"] == "Domain Verdict Adapters"
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P65-1: V30 Mingli Asset Migration Gate" in status["next_mainline_tasks"]
+    assert "P66-1: Domain Verdict Adapters" in status["next_mainline_tasks"]

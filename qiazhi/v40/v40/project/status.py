@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 65
-CURRENT_PHASE_NAME = "V30 Mingli Asset Migration Gate"
+CURRENT_PHASE = 66
+CURRENT_PHASE_NAME = "Domain Verdict Adapters"
 
 
 @dataclass(frozen=True)
@@ -92,8 +92,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "62", "label": "reading history sidebar and folded conversation chain", "status": "complete"},
     {"range": "63", "label": "real case bank and acceptance window", "status": "complete"},
     {"range": "64", "label": "Bazi Fact Engine Pro", "status": "complete"},
-    {"range": "65", "label": "V30 Mingli Asset Migration Gate", "status": "active"},
-    {"range": "66+", "label": "domain adapters、hidden factor probe", "status": "requires_user"},
+    {"range": "65", "label": "V30 Mingli Asset Migration Gate", "status": "complete"},
+    {"range": "66", "label": "Domain Verdict Adapters", "status": "active"},
+    {"range": "67+", "label": "hidden factor probe", "status": "requires_user"},
 )
 
 
@@ -117,7 +118,6 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "P65-1: V30 Mingli Asset Migration Gate",
             "P66-1: Domain Verdict Adapters",
             "P67-1: Hidden Factor Probe Engine",
             "TRAIN-16: direct training activation before/after acceptance and rollback UX",

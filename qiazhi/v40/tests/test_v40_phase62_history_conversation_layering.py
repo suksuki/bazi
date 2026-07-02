@@ -56,8 +56,8 @@ def test_phase62_user_ui_has_left_history_and_folded_reverse_conversation_items(
 def test_phase62_project_status_marks_history_conversation_layering_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 65
-    assert status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
+    assert status["current_phase"] == 66
+    assert status["current_phase_name"] == "Domain Verdict Adapters"
     assert any(row["range"] == "61" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P65-1: V30 Mingli Asset Migration Gate"
+    assert status["next_mainline_tasks"][0] == "P66-1: Domain Verdict Adapters"

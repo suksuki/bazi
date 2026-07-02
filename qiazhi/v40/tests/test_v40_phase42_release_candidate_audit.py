@@ -49,4 +49,4 @@ def test_phase42_project_status_advances_rc_audit_track() -> None:
 
     assert status["current_phase"] >= 42
     assert status["overall_completion_percent"] >= 90
-    assert status["next_mainline_tasks"][0].startswith("P65-")
+    assert status["next_mainline_tasks"][0].startswith("P66-")

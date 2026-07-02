@@ -12,6 +12,7 @@ from v40.contracts.decision import (
     ProbeCandidate,
 )
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
+from v40.decision.domain_adapters import build_domain_adapter_signals
 
 
 POLICY_VERSION = "v40.decision.native_product.v1"
@@ -66,6 +67,14 @@ def build_decision_output(
 ) -> DecisionEngineOutput:
     eligible_signals = _decision_eligible_signals(registry.signals)
     decision_topics = _select_decision_topics(signals=eligible_signals, topic=topic, user_question=user_question)
+    eligible_signals = [
+        *eligible_signals,
+        *build_domain_adapter_signals(
+            reading_id=reading_id,
+            signals=eligible_signals,
+            topics=decision_topics,
+        ),
+    ]
     decision_signals = _select_decision_signals(eligible_signals, decision_topics)
     input_bundle = DecisionInputBundle(
         bundle_id=f"decision-input:{reading_id}",
