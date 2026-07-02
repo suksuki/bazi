@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 60
-CURRENT_PHASE_NAME = "Probe V2 And Mingli Candidate Board"
+CURRENT_PHASE = 61
+CURRENT_PHASE_NAME = "UI Flow Clean Rebuild"
 
 
 @dataclass(frozen=True)
@@ -87,8 +87,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "57", "label": "process feedback and UI review brief", "status": "complete"},
     {"range": "58", "label": "hard LLM runtime and direct training activation principles", "status": "complete"},
     {"range": "59", "label": "UI product convergence runtime", "status": "complete"},
-    {"range": "60", "label": "Probe V2 and Mingli candidate board", "status": "active"},
-    {"range": "61+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "60", "label": "Probe V2 and Mingli candidate board", "status": "complete"},
+    {"range": "61", "label": "UI flow clean rebuild", "status": "active"},
+    {"range": "62+", "label": "Reading Revision、practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -112,10 +113,11 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-21: Probe V2 target-bound candidate board and ask-to-confirm Probe card",
-            "PROBE-20: target-bound manifestation and timeline probes",
-            "LENS-21: Mingli Candidate Board with impact preview",
+            "UI-22: /v40/ui state-machine shell cleanup",
+            "UI-23: report, Probe, follow-up and conversation layering QA",
+            "LENS-22: practitioner drawer calm layout with candidate board",
             "UI-15: live LLM user acceptance with admin profiles",
+            "REV-21: Reading Revision and selection history contracts",
             "TRAIN-16: direct training activation remediation and rollback UX",
             "UI-17: online cutover decision with user acceptance evidence",
         ],

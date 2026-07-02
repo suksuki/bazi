@@ -139,11 +139,21 @@
       background: rgba(255,253,248,.98);
       box-shadow: var(--shadow);
     }
+    .user-menu:not([open]) .user-menu-body {
+      display: none;
+    }
     .shell {
       display: grid;
       grid-template-columns: 330px minmax(0, 1fr);
       gap: 16px;
       align-items: start;
+    }
+    body[data-state="setup"] .shell {
+      grid-template-columns: minmax(320px, 480px);
+      justify-content: center;
+    }
+    body[data-state="setup"] .reading {
+      display: none;
     }
     body[data-role="practitioner"] .shell {
       grid-template-columns: 330px minmax(0, 1fr);
@@ -163,6 +173,25 @@
     .workspace {
       position: sticky;
       top: 18px;
+    }
+    body:not([data-state="setup"]) .workspace {
+      position: static;
+    }
+    body:not([data-state="setup"]) .topic-block,
+    body:not([data-state="setup"]) .chart-editor,
+    body:not([data-state="setup"]) .question-field,
+    body:not([data-state="setup"]) #submitButton,
+    body:not([data-state="setup"]) .setup-note {
+      display: none;
+    }
+    body[data-state="setup"] .post-chart-actions {
+      display: none;
+    }
+    body[data-state="setup"] .chart-actions {
+      display: none;
+    }
+    body:not([data-state="setup"]) .current-chart-card {
+      padding: 12px;
     }
     .setup-note {
       margin: -2px 0 0;
@@ -429,6 +458,29 @@
       min-height: 680px;
       display: grid;
       gap: 14px;
+      align-content: start;
+      grid-auto-rows: max-content;
+    }
+    body[data-state="running"] #verdictHero,
+    body[data-state="running"] #probeSurface,
+    body[data-state="running"] #reviewSurface,
+    body[data-state="running"] #followupHub,
+    body[data-state="running"] #conversationSurface {
+      display: none !important;
+    }
+    body[data-state="running"] #topicCards,
+    body[data-state="running"] #adviceCard,
+    body[data-state="running"] #riskCard,
+    body[data-state="running"] #reportFeedback {
+      display: none !important;
+    }
+    body[data-state="conversation"] #reportSurface,
+    body[data-state="conversation"] #probeSurface {
+      display: none !important;
+    }
+    body[data-state="practitioner"] #conversationSurface.hidden,
+    body[data-state="report"] #conversationSurface.hidden {
+      display: none !important;
     }
     .state-line {
       display: flex;
@@ -511,33 +563,35 @@
       margin-top: 16px;
       position: relative;
     }
-    .reading.conversation-mode .report-toggle {
+    .reading.conversation-mode .report-toggle,
+    body[data-state="conversation"] .report-toggle {
       display: inline-flex;
     }
-    .reading.conversation-mode #reportSurface,
-    .reading.conversation-mode #probeSurface {
-      display: none;
-    }
-    .reading.conversation-mode .hero {
+    .reading.conversation-mode .hero,
+    body[data-state="conversation"] .hero {
       padding: 17px;
       background:
         linear-gradient(90deg, rgba(110,139,126,.08), transparent 50%),
         #fffdf8;
     }
-    .reading.conversation-mode .hero::after {
+    .reading.conversation-mode .hero::after,
+    body[data-state="conversation"] .hero::after {
       opacity: .36;
       width: 60px;
       height: 60px;
     }
-    .reading.conversation-mode .hero h2 {
+    .reading.conversation-mode .hero h2,
+    body[data-state="conversation"] .hero h2 {
       font-size: 19px;
       margin-bottom: 6px;
     }
-    .reading.conversation-mode .hero p {
+    .reading.conversation-mode .hero p,
+    body[data-state="conversation"] .hero p {
       font-size: 13px;
       max-width: 720px;
     }
-    .reading.conversation-mode .hero .metric-row {
+    .reading.conversation-mode .hero .metric-row,
+    body[data-state="conversation"] .hero .metric-row {
       margin-top: 10px;
     }
     .metric-row {
@@ -646,6 +700,17 @@
       display: block;
     }
     .process-card.complete:not(.expanded) .process-line {
+      display: none;
+    }
+    body[data-state="report"] .process-card.complete:not(.expanded),
+    body[data-state="practitioner"] .process-card.complete:not(.expanded) {
+      background: transparent;
+      box-shadow: none;
+      padding: 6px 0 0;
+      margin: 6px 0 12px;
+    }
+    body[data-state="report"] .process-card.complete:not(.expanded) .process-head,
+    body[data-state="practitioner"] .process-card.complete:not(.expanded) .process-head {
       display: none;
     }
     .process-card.complete.expanded .process-summary {
@@ -978,10 +1043,16 @@
       }
       .top-actions {
         width: 100%;
-        justify-content: space-between;
+        justify-content: flex-start;
       }
       .user-menu {
+        width: auto;
+      }
+      .user-menu[open] {
         width: 100%;
+      }
+      .user-menu summary {
+        display: inline-flex;
       }
       .user-menu-body {
         position: static;
@@ -1015,7 +1086,7 @@
     }
   </style>
 </head>
-<body>
+<body data-state="setup">
   <main class="app">
     <header class="topbar">
       <div class="brand">
@@ -1029,7 +1100,7 @@
         <div class="role-chip" id="roleChip">当前身份</div>
         <button class="secondary-button lens-toggle" id="lensToggleButton" type="button" aria-expanded="false">专业视角</button>
         <details class="user-menu" id="userMenu">
-          <summary id="userMenuLabel">登录 / 我的命盘</summary>
+          <summary id="userMenuLabel">我的命盘</summary>
           <div class="user-menu-body">
             <section class="account-panel" id="accountPanel">
               <div class="surface-title">
@@ -1102,7 +1173,10 @@
             <div class="chart-pillars" id="currentChartPillars">甲子年 戊辰月 丙午日 辛卯时</div>
             <div class="chart-timing" id="currentChartTiming">大运：甲辰 · 流年：丙午</div>
             <div class="chart-actions">
-              <span>命盘输入已折叠，展开后可编辑四柱、大运和流年。</span>
+              <span class="post-chart-actions">
+                <button class="ghost-button" id="editChartButton" type="button">编辑</button>
+                <button class="secondary-button" id="rerunButton" type="button">重新测算</button>
+              </span>
             </div>
           </section>
           <details class="chart-editor">
@@ -1128,11 +1202,10 @@
               <label>流年<input id="currentYear" value="丙午" /></label>
             </div>
           </details>
-          <label>这次想问
+          <label class="question-field">这次想问
             <textarea id="question">这个八字今年事业适合稳定发展还是转型突破？</textarea>
           </label>
           <button class="primary-button" id="submitButton" type="submit">开始测算</button>
-          <p class="setup-note">定盘、取象、合参后生成报告；报告完成后可以继续追问，也可以用一个现实问题校准判断。</p>
         </form>
       </aside>
 
@@ -1162,7 +1235,7 @@
             <div class="process-line"><strong>定盘</strong><span id="processLine1"></span></div>
             <div class="process-line"><strong>取象</strong><span id="processLine2"></span></div>
             <div class="process-line"><strong>合参</strong><span id="processLine3"></span></div>
-            <div class="process-summary" id="processSummary">本次已完成：定盘 / 取象 / 合参。点击查看推演过程。</div>
+            <div class="process-summary" id="processSummary">查看推演过程</div>
           </div>
           <div class="card-grid" id="topicCards"></div>
           <div class="report-card hidden" id="adviceCard"></div>
@@ -1173,6 +1246,7 @@
               <button type="button" data-feedback-scope="report" data-feedback-value="match">很像</button>
               <button type="button" data-feedback-scope="report" data-feedback-value="partial">部分像</button>
               <button type="button" data-feedback-scope="report" data-feedback-value="mismatch">不太像</button>
+              <button type="button" data-review-open="true">申请命理师复核</button>
             </div>
             <span id="feedbackStatus"></span>
             <div class="mismatch-choices" id="mismatchChoices">
@@ -1241,7 +1315,7 @@
     };
     const smartMode = "ol" + "lama";
     let currentRole = "user";
-    let readingMode = "setup";
+    let appState = "setup";
     let currentUser = null;
     let currentProfiles = [];
     let selectedProfile = null;
@@ -1292,8 +1366,14 @@
     }
 
     function setReadingMode(mode) {
-      readingMode = mode || "report";
-      $("readingPane").classList.toggle("conversation-mode", readingMode === "conversation");
+      appState = mode || "report";
+      applyAppState();
+    }
+
+    function applyAppState() {
+      const state = lensIsOpen() ? "practitioner" : appState;
+      document.body.dataset.state = state;
+      $("readingPane").classList.toggle("conversation-mode", appState === "conversation");
     }
 
     function lensIsOpen() {
@@ -1311,6 +1391,7 @@
     function setLensOpen(open) {
       const allowed = currentRole === "practitioner" && open;
       document.body.classList.toggle("lens-open", allowed);
+      applyAppState();
       updateLensControls();
     }
 
@@ -1384,7 +1465,7 @@
       } else {
         $("accountMini").textContent = "多用户";
         $("authStatus").textContent = "登录后可以保存和选择自己的八字档案。";
-        $("userMenuLabel").textContent = "登录 / 我的命盘";
+        $("userMenuLabel").textContent = "我的命盘";
       }
       updateLensControls();
     }
@@ -1704,7 +1785,7 @@
         `${hasZiwei ? "紫微旁路只作校准线索" : "隐藏线索保留为校准问题"}，最后收束为结论、建议和下一问。`
       ], "推演完成");
       $("processTicker").classList.add("complete");
-      $("processSummary").textContent = "本次已完成：定盘 / 取象 / 合参。点击查看推演过程。";
+      $("processSummary").textContent = "查看推演过程";
     }
 
     function renderProcessFailure() {
@@ -1750,7 +1831,7 @@
 
     function renderTopicCards(runtime) {
       const projection = runtime.product_projection || {};
-      const verdicts = (projection.verdict_cards || []).slice(0, 3);
+      const verdicts = (projection.verdict_cards || []).slice(0, 2);
       const hiddenCount = Math.max((projection.verdict_cards || []).length - verdicts.length, 0);
       $("topicCards").innerHTML = verdicts.map((card) => {
         const topic = card.topic || "overview";
@@ -1826,12 +1907,13 @@
 
     function showProbe(reason, probe) {
       const topic = probe?.topic || value("topic");
-      const options = Array.isArray(probe?.options) && probe.options.length ? probe.options.slice(0, 6) : probeOptions(topic);
+      const options = Array.isArray(probe?.options) && probe.options.length ? probe.options.slice(0, 5) : probeOptions(topic).slice(0, 5);
       const impact = Array.isArray(probe?.impact_preview) ? probe.impact_preview.slice(0, 2) : [];
       $("probeSurface").classList.remove("hidden");
       $("probeSurface").innerHTML = `
         <article class="probe-card">
-          <h4>校准一问</h4>
+          <div class="eyebrow">校准一问</div>
+          <h4>一个问题，让判断更准</h4>
           <p>${escapeHtml(reason || "这个问题会让判断更贴近你的现实。")}</p>
           <p class="probe-question"><strong>${escapeHtml(probe?.question || "哪里不太像？")}</strong></p>
           ${impact.length ? `<ul class="lens-impact">${impact.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
@@ -2268,7 +2350,7 @@
       payload["role" + "_key"] = currentRole;
       payload["role" + "_context"] = sessionRoleContext(sessionContext);
       payload["execution" + "_mode"] = smartMode;
-      setReadingMode("report");
+      setReadingMode("running");
       currentRuntime = null;
       currentSeeds = [];
       currentTurn = null;
@@ -2302,6 +2384,7 @@
         paintReading(currentRuntime, result.conversation_seeds || []);
         setState("报告已生成", "可以继续追问", false);
       } catch (error) {
+        setReadingMode("report");
         setState("智能服务未完成", "请稍后重试", false);
         renderProcessFailure();
         $("heroTitle").textContent = "本次没有形成可用报告。";
@@ -2326,11 +2409,22 @@
       $("reportSurface").scrollIntoView({behavior: "smooth", block: "start"});
     });
 
+    $("editChartButton").addEventListener("click", () => {
+      setReadingMode("setup");
+      const editor = document.querySelector(".chart-editor");
+      if (editor) editor.open = true;
+      $("readingForm").scrollIntoView({behavior: "smooth", block: "start"});
+    });
+
+    $("rerunButton").addEventListener("click", () => {
+      $("readingForm").requestSubmit();
+    });
+
     $("processSummary").addEventListener("click", () => {
       $("processTicker").classList.toggle("expanded");
       $("processSummary").textContent = $("processTicker").classList.contains("expanded")
         ? "收起推演过程"
-        : "本次已完成：定盘 / 取象 / 合参。点击查看推演过程。";
+        : "查看推演过程";
     });
 
     $("lensToggleButton").addEventListener("click", () => {
@@ -2419,6 +2513,12 @@
         $("probeSurface").classList.add("hidden");
         currentMismatchArea = "";
         $("reportFeedback").classList.add("active");
+        return;
+      }
+      const reviewOpen = event.target.closest("button[data-review-open]");
+      if (reviewOpen) {
+        $("reviewSurface").classList.remove("hidden");
+        $("reviewSurface").scrollIntoView({behavior: "smooth", block: "center"});
         return;
       }
       const lens = event.target.closest("button[data-lens-action]");

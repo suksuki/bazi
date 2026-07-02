@@ -126,7 +126,7 @@ def test_phase58_docs_and_status_record_hard_principles() -> None:
     assert "2026-07-02 Phase 58" in spec
     assert "No LLM means the product runtime fails loudly" in ui_spec
     assert "docs/V40_PHASE58_HARD_LLM_AND_DIRECT_TRAINING_PRINCIPLES.md" in readme
-    assert status["current_phase"] == 60
-    assert status["current_phase_name"] == "Probe V2 And Mingli Candidate Board"
+    assert status["current_phase"] == 61
+    assert status["current_phase_name"] == "UI Flow Clean Rebuild"
     assert any(row["range"] == "58" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])

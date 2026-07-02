@@ -44,6 +44,13 @@ Input
 → Practitioner Lens when role allows
 ```
 
+Phase 61 clean shell rule:
+
+```text
+/v40/ui is a product shell, not a capability dashboard.
+It must run through setup / running / report / conversation / practitioner states.
+```
+
 The long-term product identity is:
 
 ```text
@@ -116,6 +123,16 @@ Admin App
   Training
   Active Policy Registry
   Release / Cutover / Smoke
+```
+
+UI state machine:
+
+```text
+setup        show topic, chart card, chart input, question and start button
+running      show compact chart summary and three-line process ticker
+report       show core verdict, advice, risk boundary, follow-up chips and feedback
+conversation show compact report summary plus turns after explicit user question
+practitioner show same report plus right-side Lens drawer
 ```
 
 Admin is not part of the user app.

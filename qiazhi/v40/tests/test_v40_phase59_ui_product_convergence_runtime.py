@@ -10,14 +10,14 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
     html = TestClient(create_app()).get("/v40/ui").text
 
     for text in [
-        "登录 / 我的命盘",
+        "我的命盘",
         "测算入口",
         "你想先看什么？",
         "当前命盘",
         "currentChartCard",
         "命盘输入：编辑四柱与高级设置",
         "开始测算",
-        "本次已完成：定盘 / 取象 / 合参",
+        "查看推演过程",
         "核心判断",
         "判断与建议",
         "继续追问",
@@ -59,9 +59,9 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
 def test_phase59_project_status_marks_ui_convergence_runtime_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 60
-    assert status["current_phase_name"] == "Probe V2 And Mingli Candidate Board"
+    assert status["current_phase"] == 61
+    assert status["current_phase_name"] == "UI Flow Clean Rebuild"
     assert any(row["range"] == "58" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "60" and row["status"] == "active" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "UI-21: Probe V2 target-bound candidate board and ask-to-confirm Probe card"
+    assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
+    assert status["next_mainline_tasks"][0] == "UI-22: /v40/ui state-machine shell cleanup"
