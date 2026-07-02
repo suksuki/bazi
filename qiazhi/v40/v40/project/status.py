@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 56
-CURRENT_PHASE_NAME = "Built-In Admin And V30 Profile Sync"
+CURRENT_PHASE = 57
+CURRENT_PHASE_NAME = "Process Feedback And UI Review Brief"
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         percent=99,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events", "consent_grants", "practitioner_review_queue", "practitioner_review_results", "user_accounts", "bazi_profiles"),
-        next_step="用 admin 账号和真实命例验收 V30 档案、三行推演流、双引擎报告、Probe 和一问一答链路。",
+        next_step="用 admin 账号和真实命例验收持续推演流、LLM 报告表达、Probe 和一问一答链路。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -83,8 +83,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "53", "label": "user consent review UI", "status": "complete"},
     {"range": "54", "label": "user account and profile flow", "status": "complete"},
     {"range": "55", "label": "compact staged process ticker", "status": "complete"},
-    {"range": "56", "label": "built-in admin and V30 profile sync", "status": "active"},
-    {"range": "57+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "56", "label": "built-in admin and V30 profile sync", "status": "complete"},
+    {"range": "57", "label": "process feedback and UI review brief", "status": "active"},
+    {"range": "58+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -108,9 +109,9 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-14: admin profile acceptance with real V30 profiles",
-            "UI-15: practitioner review workbench polish",
-            "UI-16: online cutover decision with user acceptance evidence",
+            "UI-15: live LLM user acceptance with admin profiles",
+            "UI-16: practitioner review workbench polish",
+            "UI-17: online cutover decision with user acceptance evidence",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

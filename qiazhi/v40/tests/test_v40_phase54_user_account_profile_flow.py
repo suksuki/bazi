@@ -156,8 +156,8 @@ def test_phase54_docs_schema_and_project_status_track_user_account_profile_flow(
     assert "v40_user_accounts" in schema
     assert "v40_user_sessions" in schema
     assert "v40_bazi_profiles" in schema
-    assert status["current_phase"] == 56
-    assert status["current_phase_name"] == "Built-In Admin And V30 Profile Sync"
+    assert status["current_phase"] == 57
+    assert status["current_phase_name"] == "Process Feedback And UI Review Brief"
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-14: admin profile acceptance with real V30 profiles" in status["next_mainline_tasks"]
+    assert "UI-15: live LLM user acceptance with admin profiles" in status["next_mainline_tasks"]

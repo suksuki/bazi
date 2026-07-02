@@ -465,6 +465,8 @@ RiskBoundaryCard explains what cannot be said too absolutely.
 
 CompactProcessTicker shows exactly three visible lines: `定盘 / 取象 / 合参`. Ordinary users see this lightweight staged process instead of a clickable multi-step flow or a folded debug disclosure. Practitioners can still see evidence summaries through the practitioner lens, and Admin sees full trace in the independent Admin app.
 
+During report generation, the three-line ticker loops with a typewriter effect until the LLM expression path returns. The product UI sends report and conversation calls through `execution_mode=ollama` without exposing that field; if the LLM is unavailable, the UI must show failure instead of substituting local fallback text.
+
 ### Follow-Up Hub
 
 Appears only after accepted report.
@@ -615,6 +617,7 @@ Current completed cleanup:
 - Registration, login and per-user Bazi profiles are now part of `/v40/ui`.
 - Native report requests carry both Bazi chart facts and Ziwei sidecar facts.
 - A three-line staged process ticker shows `定盘 / 取象 / 合参` without restoring V30 multi-step interaction.
+- The staged process ticker now keeps moving while waiting for the LLM expression path.
 
 Current gaps:
 

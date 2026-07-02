@@ -467,11 +467,43 @@
     }
     .process-card {
       display: grid;
-      gap: 8px;
+      gap: 10px;
       margin: 12px 0;
       background:
         linear-gradient(90deg, rgba(110,139,126,.08), transparent 48%),
         #fffdf8;
+    }
+    .process-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 780;
+    }
+    .process-pulse {
+      display: inline-flex;
+      gap: 4px;
+      align-items: center;
+    }
+    .process-pulse i {
+      width: 5px;
+      height: 5px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .28;
+      animation: processPulse 1.2s ease-in-out infinite;
+    }
+    .process-pulse i:nth-child(2) {
+      animation-delay: .18s;
+    }
+    .process-pulse i:nth-child(3) {
+      animation-delay: .36s;
+    }
+    @keyframes processPulse {
+      0%, 100% { opacity: .24; transform: translateY(0); }
+      45% { opacity: .9; transform: translateY(-2px); }
     }
     .process-line {
       display: grid;
@@ -845,6 +877,10 @@
             <span class="mini" id="reportMini">结论、建议和边界分开显示</span>
           </div>
           <div class="process-card hidden" id="processTicker">
+            <div class="process-head">
+              <span id="processStatus">正在推演</span>
+              <span class="process-pulse" aria-hidden="true"><i></i><i></i><i></i></span>
+            </div>
             <div class="process-line"><strong>定盘</strong><span id="processLine1"></span></div>
             <div class="process-line"><strong>取象</strong><span id="processLine2"></span></div>
             <div class="process-line"><strong>合参</strong><span id="processLine3"></span></div>
@@ -942,6 +978,30 @@
     let reviewSubmitted = false;
     let typingTimer = null;
     let processTypingTimers = [];
+    let processLoopTimer = null;
+    let processLoopIndex = 0;
+    const processLoadingFrames = [
+      [
+        "正在核对四柱、日主与月令，先把命盘根基固定。",
+        "正在读取大运流年，把当前时间层放入命局。",
+        "命盘事实只由排盘生成，模型不会改写。"
+      ],
+      [
+        "正在抽取十神显隐、五行偏向和用神候选。",
+        "正在匹配规则、画像、做功路径，把素材归并成信号。",
+        "分支先保留权重，不急着说成唯一结论。"
+      ],
+      [
+        "正在让八字主引擎先下判断，紫微只做旁路校准。",
+        "正在排除证据不足和过度断言的说法。",
+        "优先留下能解释现状、能给建议的判断。"
+      ],
+      [
+        "正在交给智能表达层组织语言，报告回来前不生成替代文本。",
+        "正在分离结论、建议和风险边界。",
+        "报告返回后，会继续给出下一轮自然追问。"
+      ]
+    ];
 
     function roleText(role) {
       if (role === "practitioner") return "命理师视角";
@@ -1223,6 +1283,11 @@
       processTypingTimers = [];
     }
 
+    function stopProcessLoop() {
+      if (processLoopTimer) window.clearInterval(processLoopTimer);
+      processLoopTimer = null;
+    }
+
     function typeProcessLine(node, text, delay) {
       const source = String(text || "");
       node.textContent = "";
@@ -1238,23 +1303,27 @@
       processTypingTimers.push(startTimer);
     }
 
-    function setProcessLines(lines) {
+    function setProcessLines(lines, statusText) {
       clearProcessTyping();
       $("processTicker").classList.remove("hidden");
+      $("processStatus").textContent = statusText || "正在推演";
       [1, 2, 3].forEach((index) => {
         typeProcessLine($(`processLine${index}`), lines[index - 1] || "", (index - 1) * 260);
       });
     }
 
     function renderProcessLoading() {
-      setProcessLines([
-        "正在固定四柱、日主、月令、大运与流年。",
-        "正在汇合十神、用神候选、规则路径与领域信号。",
-        "正在合参紫微旁路和隐藏线索，收束成结论、建议与下一问。"
-      ]);
+      stopProcessLoop();
+      processLoopIndex = 0;
+      setProcessLines(processLoadingFrames[processLoopIndex], "正在推演");
+      processLoopTimer = window.setInterval(() => {
+        processLoopIndex = (processLoopIndex + 1) % processLoadingFrames.length;
+        setProcessLines(processLoadingFrames[processLoopIndex], "正在推演");
+      }, 3600);
     }
 
     function renderProcessTicker(runtime) {
+      stopProcessLoop();
       const chart = runtime?.engine_result?.results?.[0]?.facts || [];
       const factValue = (id) => {
         const row = chart.find((item) => item.fact_id === id);
@@ -1270,15 +1339,16 @@
         `四柱入局：${dayMaster}日主、${monthBranch}月令，${luck}大运与${year}流年已固定。`,
         `素材汇合：十神、用神候选、规则路径与 ${signalCount} 条信号已进入本轮判断。`,
         `${hasZiwei ? "紫微旁路只作校准线索" : "隐藏线索保留为校准问题"}，最后收束为结论、建议和下一问。`
-      ]);
+      ], "推演完成");
     }
 
     function renderProcessFailure() {
+      stopProcessLoop();
       setProcessLines([
         "本轮定盘没有完成，命盘事实没有被改写。",
         "素材链路没有形成可用报告，暂不生成替代结论。",
         "请稍后重试，或先检查模型与本地服务连接。"
-      ]);
+      ], "推演未完成");
     }
 
     function topicLabel(topic) {
