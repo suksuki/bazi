@@ -123,7 +123,7 @@ def test_phase54_user_ui_exposes_account_profile_probe_and_simple_dialogue_flow(
         "八字档案",
         "保存档案",
         "测算档案",
-        "校准问题",
+        "一个问题，让判断更准",
         "继续追问",
         "智能对话",
         "/api/v40/auth/",
@@ -156,8 +156,8 @@ def test_phase54_docs_schema_and_project_status_track_user_account_profile_flow(
     assert "v40_user_accounts" in schema
     assert "v40_user_sessions" in schema
     assert "v40_bazi_profiles" in schema
-    assert status["current_phase"] == 58
-    assert status["current_phase_name"] == "Hard LLM And Direct Training Principles"
+    assert status["current_phase"] == 59
+    assert status["current_phase_name"] == "UI Product Convergence Runtime"
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
     assert "UI-15: live LLM user acceptance with admin profiles" in status["next_mainline_tasks"]

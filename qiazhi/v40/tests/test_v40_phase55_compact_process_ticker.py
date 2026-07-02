@@ -21,7 +21,7 @@ def test_phase55_user_ui_has_three_line_process_ticker_without_multistep_interac
     assert "定盘" in html
     assert "取象" in html
     assert "合参" in html
-    assert "查看推演过程" not in html
+    assert "查看推演过程" in html
     assert "三行" not in html
     assert "V30 多步" not in html
     assert "provider" not in html
@@ -42,10 +42,10 @@ def test_phase55_docs_and_project_status_track_compact_process_ticker() -> None:
     assert "2026-07-02 Phase 55" in spec
     assert "docs/V40_PHASE55_COMPACT_PROCESS_TICKER.md" in readme
     assert "three-line staged process ticker" in ui_spec
-    assert status["current_phase"] == 58
-    assert status["current_phase_name"] == "Hard LLM And Direct Training Principles"
+    assert status["current_phase"] == 59
+    assert status["current_phase_name"] == "UI Product Convergence Runtime"
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "55" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "58" and row["status"] == "active" for row in status["phase_groups"])
+    assert any(row["range"] == "59" and row["status"] == "active" for row in status["phase_groups"])
     assert "UI-15: live LLM user acceptance with admin profiles" in status["next_mainline_tasks"]

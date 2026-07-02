@@ -349,6 +349,31 @@ Probe as a single calibration card
 mobile single-column staged flow
 ```
 
+## Runtime Progress
+
+2026-07-02 已完成第一轮 runtime 收敛：
+
+```text
+top user/profile drawer
+Reading Setup first screen
+CurrentChartCard
+collapsed four-pillar editor
+completed process ticker collapse
+report topic focus limited to 3 visible domains
+Probe renamed to 一个问题，让判断更准
+review consent hidden until explicit request
+Practitioner Lens renamed to 专业视角
+```
+
+Next runtime work:
+
+```text
+mobile visual QA
+report typography polish
+conversation next-suggestion refresh after each answer
+optional chart/profile drawer animation
+```
+
 ## Acceptance Checklist
 
 - First screen no longer feels like account/profile admin.
@@ -359,4 +384,3 @@ mobile single-column staged flow
 - Practitioner Lens is hidden for ordinary users.
 - Mobile reads as a staged product flow, not compressed desktop.
 - No engineering/provider/model/policy language leaks into user app.
-

@@ -17,7 +17,7 @@ def test_v40_user_report_ui_serves_report_first_page() -> None:
     assert "execution_mode" not in response.text
     assert "renderReport" not in response.text
     assert "renderHero" in response.text
-    assert "关注主题" in response.text
+    assert "你想先看什么？" in response.text
     assert "这个判断像你吗" in response.text
     assert "Gemma4" not in response.text
     assert "表达方式" not in response.text

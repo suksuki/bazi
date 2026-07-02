@@ -13,12 +13,13 @@ def test_phase46_user_ui_uses_product_shell_template_without_engineering_leakage
 
     assert "v40/api/user_ui.html" not in html
     assert "Input Workspace" not in html
-    assert "命盘输入" in html
+    assert "测算入口" in html
+    assert "当前命盘" in html
     assert "核心判断" in html
     assert "本次报告" in html
     assert "继续追问" in html
-    assert "校准问题" in html
-    assert "Practitioner Lens" in html
+    assert "一个问题，让判断更准" in html
+    assert "专业视角" in html
     assert "paintReading" in html
     assert "product_projection" in html
     assert "/api/v40/readings/native-report" in html
@@ -56,6 +57,6 @@ def test_phase46_docs_and_project_status_track_product_shell_runtime() -> None:
     assert "POST /api/v40/probes/answer" in doc
     assert "2026-07-01 Phase 46" in spec
     assert "docs/V40_PHASE46_USER_PRODUCT_SHELL_RUNTIME.md" in readme
-    assert status["current_phase"] == 58
-    assert status["current_phase_name"] == "Hard LLM And Direct Training Principles"
+    assert status["current_phase"] == 59
+    assert status["current_phase_name"] == "UI Product Convergence Runtime"
     assert any(row["range"] == "46" and row["status"] == "complete" for row in status["phase_groups"])

@@ -157,7 +157,7 @@ def _build_surface_beta_readiness() -> dict[str, object]:
         _surface_beta_check(
             "practitioner_calibration",
             "命理师校准",
-            "practitioner-lens-action" in html and "Practitioner Lens" in html and 'data-role="practitioner"' in html,
+            "practitioner-lens-action" in html and "专业视角" in html and 'data-role="practitioner"' in html,
             "命理师可校准分支，校准只影响训练素材。",
         ),
         _surface_beta_check(

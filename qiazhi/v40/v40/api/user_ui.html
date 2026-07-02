@@ -54,6 +54,13 @@
       gap: 18px;
       margin-bottom: 18px;
     }
+    .top-actions {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
     .brand {
       display: flex;
       align-items: center;
@@ -94,6 +101,36 @@
       font-size: 12px;
       white-space: nowrap;
     }
+    .user-menu {
+      position: relative;
+      z-index: 6;
+    }
+    .user-menu summary {
+      list-style: none;
+      cursor: pointer;
+      border-radius: 999px;
+      background: var(--accent);
+      color: #fff;
+      padding: 9px 13px;
+      font-size: 12px;
+      font-weight: 760;
+      box-shadow: 0 10px 24px rgba(154,59,47,.16);
+    }
+    .user-menu summary::-webkit-details-marker {
+      display: none;
+    }
+    .user-menu-body {
+      position: absolute;
+      right: 0;
+      top: calc(100% + 10px);
+      width: min(360px, calc(100vw - 28px));
+      display: grid;
+      gap: 12px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background: rgba(255,253,248,.98);
+      box-shadow: var(--shadow);
+    }
     .shell {
       display: grid;
       grid-template-columns: 330px minmax(0, 1fr);
@@ -115,6 +152,50 @@
     .workspace {
       position: sticky;
       top: 18px;
+    }
+    .setup-note {
+      margin: -2px 0 0;
+      color: var(--soft-ink);
+      font-size: 12px;
+    }
+    .topic-block {
+      padding: 13px;
+      border-radius: var(--radius);
+      background: #fffaf4;
+      box-shadow: inset 0 0 0 1px rgba(229,220,203,.68);
+    }
+    .current-chart-card {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: var(--radius);
+      background:
+        linear-gradient(90deg, rgba(110,139,126,.08), transparent 52%),
+        #fffdf8;
+      box-shadow: inset 0 0 0 1px rgba(229,220,203,.68);
+    }
+    .current-chart-card h3 {
+      margin: 0;
+      font-size: 14px;
+      font-weight: 780;
+    }
+    .chart-pillars {
+      font-family: "Songti SC", "STSong", serif;
+      font-size: 17px;
+      color: var(--ink);
+      font-weight: 760;
+      letter-spacing: 0;
+    }
+    .chart-timing {
+      color: var(--soft-ink);
+      font-size: 12px;
+    }
+    .chart-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      color: var(--soft-ink);
+      font-size: 12px;
     }
     .surface-title {
       display: flex;
@@ -235,9 +316,13 @@
     .profile-panel {
       display: grid;
       gap: 10px;
-      margin-bottom: 14px;
-      padding-bottom: 14px;
+      margin-bottom: 0;
+      padding-bottom: 12px;
       box-shadow: inset 0 -1px 0 rgba(229,220,203,.82);
+    }
+    .profile-panel {
+      padding-bottom: 0;
+      box-shadow: none;
     }
     .account-grid {
       display: grid;
@@ -308,7 +393,7 @@
       grid-template-columns: 1fr 1fr;
       gap: 9px;
     }
-    details {
+    details:not(.user-menu) {
       border-radius: var(--radius);
       background: rgba(242,237,228,.74);
       padding: 10px 11px;
@@ -319,7 +404,17 @@
       font-weight: 720;
       font-size: 12px;
     }
-    details .field-grid {
+    details:not(.user-menu) .field-grid {
+      margin-top: 10px;
+    }
+    .chart-editor {
+      background: rgba(242,237,228,.58) !important;
+    }
+    .chart-editor .mode-tabs,
+    .chart-editor .pillars,
+    .chart-editor label,
+    .chart-editor details,
+    .chart-editor .field-grid {
       margin-top: 10px;
     }
     .reading {
@@ -472,6 +567,21 @@
       background:
         linear-gradient(90deg, rgba(110,139,126,.08), transparent 48%),
         #fffdf8;
+    }
+    .process-summary {
+      display: none;
+      color: var(--soft-ink);
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .process-card.complete .process-summary {
+      display: block;
+    }
+    .process-card.complete:not(.expanded) .process-line {
+      display: none;
+    }
+    .process-card.complete.expanded .process-summary {
+      color: var(--accent);
     }
     .process-head {
       display: flex;
@@ -734,6 +844,18 @@
         align-items: flex-start;
         flex-direction: column;
       }
+      .top-actions {
+        width: 100%;
+        justify-content: space-between;
+      }
+      .user-menu {
+        width: 100%;
+      }
+      .user-menu-body {
+        position: static;
+        width: 100%;
+        margin-top: 10px;
+      }
       .shell {
         grid-template-columns: 1fr;
       }
@@ -768,61 +890,64 @@
           <div class="tagline">报告优先 · 自然追问 · 轻量校准</div>
         </div>
       </div>
-      <div class="role-chip" id="roleChip">当前身份</div>
+      <div class="top-actions">
+        <div class="role-chip" id="roleChip">当前身份</div>
+        <details class="user-menu" id="userMenu">
+          <summary id="userMenuLabel">登录 / 我的命盘</summary>
+          <div class="user-menu-body">
+            <section class="account-panel" id="accountPanel">
+              <div class="surface-title">
+                <h2>账号</h2>
+                <span class="mini" id="accountMini">多用户</span>
+              </div>
+              <div class="account-grid" id="authFields">
+                <label>账号或邮箱<input id="authEmail" autocomplete="username" value="admin" /></label>
+                <label>密码<input id="authPassword" autocomplete="current-password" type="password" value="abcd1235" /></label>
+                <label>昵称<input id="authName" value="玄明用户" /></label>
+                <label>身份
+                  <select id="authRole">
+                    <option value="user">普通用户</option>
+                    <option value="practitioner">命理师</option>
+                  </select>
+                </label>
+                <div class="account-actions">
+                  <button class="primary-button" id="loginButton" type="button">登录</button>
+                  <button class="secondary-button" id="registerButton" type="button">注册</button>
+                </div>
+              </div>
+              <div class="account-actions hidden" id="userActions">
+                <button class="secondary-button" id="logoutButton" type="button">退出</button>
+              </div>
+              <p class="account-note" id="authStatus">登录后可以保存和选择自己的八字档案。</p>
+            </section>
+
+            <section class="profile-panel hidden" id="profilePanel">
+              <div class="surface-title">
+                <h2>八字档案</h2>
+                <span class="mini" id="profileMini">选择后测算</span>
+              </div>
+              <div class="profile-list" id="profileList"></div>
+              <label>档案名<input id="profileName" value="我的八字" /></label>
+              <div class="profile-actions">
+                <button class="secondary-button" id="saveProfileButton" type="button">保存档案</button>
+                <button class="secondary-button" id="runProfileButton" type="button">测算档案</button>
+                <button class="danger-button" id="deleteProfileButton" type="button">删除</button>
+              </div>
+              <p class="profile-note" id="profileStatus">档案只属于当前登录用户。</p>
+            </section>
+          </div>
+        </details>
+      </div>
     </header>
 
     <div class="shell">
       <aside class="surface workspace">
         <div class="surface-title">
-          <h2>命盘输入</h2>
-          <span class="mini">四柱</span>
+          <h2>测算入口</h2>
+          <span class="mini">先测 · 再读 · 再问</span>
         </div>
-        <section class="account-panel" id="accountPanel">
-          <div class="surface-title">
-            <h2>账号</h2>
-            <span class="mini" id="accountMini">多用户</span>
-          </div>
-          <div class="account-grid" id="authFields">
-            <label>账号或邮箱<input id="authEmail" autocomplete="username" value="admin" /></label>
-            <label>密码<input id="authPassword" autocomplete="current-password" type="password" value="abcd1235" /></label>
-            <label>昵称<input id="authName" value="玄明用户" /></label>
-            <label>身份
-              <select id="authRole">
-                <option value="user">普通用户</option>
-                <option value="practitioner">命理师</option>
-              </select>
-            </label>
-            <div class="account-actions">
-              <button class="primary-button" id="loginButton" type="button">登录</button>
-              <button class="secondary-button" id="registerButton" type="button">注册</button>
-            </div>
-          </div>
-          <div class="account-actions hidden" id="userActions">
-            <button class="secondary-button" id="logoutButton" type="button">退出</button>
-          </div>
-          <p class="account-note" id="authStatus">登录后可以保存和选择自己的八字档案。</p>
-        </section>
-
-        <section class="profile-panel hidden" id="profilePanel">
-          <div class="surface-title">
-            <h2>八字档案</h2>
-            <span class="mini" id="profileMini">选择后测算</span>
-          </div>
-          <div class="profile-list" id="profileList"></div>
-          <label>档案名<input id="profileName" value="我的八字" /></label>
-          <div class="profile-actions">
-            <button class="secondary-button" id="saveProfileButton" type="button">保存档案</button>
-            <button class="secondary-button" id="runProfileButton" type="button">测算档案</button>
-            <button class="danger-button" id="deleteProfileButton" type="button">删除</button>
-          </div>
-          <p class="profile-note" id="profileStatus">档案只属于当前登录用户。</p>
-        </section>
         <form id="readingForm">
-          <div class="mode-tabs" aria-label="输入方式">
-            <button type="button" class="active">我知道四柱</button>
-            <button type="button" disabled>我知道出生时间</button>
-          </div>
-          <label>关注主题
+          <label class="topic-block">你想先看什么？
             <select id="topic">
               <option value="overview">综合命盘</option>
               <option value="career" selected>事业方向</option>
@@ -833,20 +958,35 @@
               <option value="useful_god">用神喜忌</option>
             </select>
           </label>
-          <label>性别
-            <select id="gender">
-              <option value="乾">乾</option>
-              <option value="坤">坤</option>
-            </select>
-          </label>
-          <div class="pillars" aria-label="四柱">
-            <div class="pillar"><strong>年柱</strong><select id="yearStem"></select><select id="yearBranch"></select></div>
-            <div class="pillar"><strong>月柱</strong><select id="monthStem"></select><select id="monthBranch"></select></div>
-            <div class="pillar"><strong>日柱</strong><select id="dayStem"></select><select id="dayBranch"></select></div>
-            <div class="pillar"><strong>时柱</strong><select id="hourStem"></select><select id="hourBranch"></select></div>
-          </div>
-          <details>
-            <summary>大运与流年</summary>
+          <section class="current-chart-card" id="currentChartCard">
+            <div class="surface-title">
+              <h3>当前命盘</h3>
+              <span class="mini" id="currentChartGender">乾造</span>
+            </div>
+            <div class="chart-pillars" id="currentChartPillars">甲子年 戊辰月 丙午日 辛卯时</div>
+            <div class="chart-timing" id="currentChartTiming">大运：甲辰 · 流年：丙午</div>
+            <div class="chart-actions">
+              <span>命盘输入已折叠，展开后可编辑四柱、大运和流年。</span>
+            </div>
+          </section>
+          <details class="chart-editor">
+            <summary>命盘输入：编辑四柱与高级设置</summary>
+            <div class="mode-tabs" aria-label="输入方式">
+              <button type="button" class="active">我知道四柱</button>
+              <button type="button" disabled>我知道出生时间</button>
+            </div>
+            <label>性别
+              <select id="gender">
+                <option value="乾">乾</option>
+                <option value="坤">坤</option>
+              </select>
+            </label>
+            <div class="pillars" aria-label="四柱">
+              <div class="pillar"><strong>年柱</strong><select id="yearStem"></select><select id="yearBranch"></select></div>
+              <div class="pillar"><strong>月柱</strong><select id="monthStem"></select><select id="monthBranch"></select></div>
+              <div class="pillar"><strong>日柱</strong><select id="dayStem"></select><select id="dayBranch"></select></div>
+              <div class="pillar"><strong>时柱</strong><select id="hourStem"></select><select id="hourBranch"></select></div>
+            </div>
             <div class="field-grid">
               <label>大运<input id="currentLuck" value="甲辰" /></label>
               <label>流年<input id="currentYear" value="丙午" /></label>
@@ -856,6 +996,7 @@
             <textarea id="question">这个八字今年事业适合稳定发展还是转型突破？</textarea>
           </label>
           <button class="primary-button" id="submitButton" type="submit">开始测算</button>
+          <p class="setup-note">定盘、取象、合参后生成报告；报告完成后可以继续追问，也可以用一个现实问题校准判断。</p>
         </form>
       </aside>
 
@@ -884,6 +1025,7 @@
             <div class="process-line"><strong>定盘</strong><span id="processLine1"></span></div>
             <div class="process-line"><strong>取象</strong><span id="processLine2"></span></div>
             <div class="process-line"><strong>合参</strong><span id="processLine3"></span></div>
+            <div class="process-summary" id="processSummary">本次已完成：定盘 / 取象 / 合参。点击查看推演过程。</div>
           </div>
           <div class="card-grid" id="topicCards"></div>
           <div class="report-card hidden" id="adviceCard"></div>
@@ -941,8 +1083,8 @@
       </section>
 
       <aside class="drawer" id="lensDrawer">
-        <h2>Practitioner Lens</h2>
-        <div class="mini">分支、证据和校准动作</div>
+        <h2>专业视角</h2>
+        <div class="mini">主分支、证据和校准动作</div>
         <div class="lens-stack" id="lensStack">
           <div class="empty">报告生成后显示。</div>
         </div>
@@ -1060,9 +1202,11 @@
       if (loggedIn) {
         $("accountMini").textContent = roleText(currentUser["role" + "_key"] || currentRole);
         $("authStatus").textContent = `${currentUser.display_name || currentUser.email} 已登录。`;
+        $("userMenuLabel").textContent = `我的命盘 · ${currentUser.display_name || currentUser.email}`;
       } else {
         $("accountMini").textContent = "多用户";
         $("authStatus").textContent = "登录后可以保存和选择自己的八字档案。";
+        $("userMenuLabel").textContent = "登录 / 我的命盘";
       }
     }
 
@@ -1140,6 +1284,7 @@
       $("hourBranch").value = chart.hour_branch || "卯";
       $("currentLuck").value = chart.current_luck || "甲辰";
       $("currentYear").value = chart.current_year || "丙午";
+      updateCurrentChartCard();
     }
 
     function birthInput(profileId) {
@@ -1223,6 +1368,21 @@
     for (const id of ["yearStem", "monthStem", "dayStem", "hourStem"]) fillSelect(id, stems, defaults[id]);
     for (const id of ["yearBranch", "monthBranch", "dayBranch", "hourBranch"]) fillSelect(id, branches, defaults[id]);
 
+    function currentPillarLabel(stemId, branchId, suffix) {
+      return `${value(stemId)}${value(branchId)}${suffix}`;
+    }
+
+    function updateCurrentChartCard() {
+      $("currentChartGender").textContent = value("gender") === "坤" ? "坤造" : "乾造";
+      $("currentChartPillars").textContent = [
+        currentPillarLabel("yearStem", "yearBranch", "年"),
+        currentPillarLabel("monthStem", "monthBranch", "月"),
+        currentPillarLabel("dayStem", "dayBranch", "日"),
+        currentPillarLabel("hourStem", "hourBranch", "时")
+      ].join(" ");
+      $("currentChartTiming").textContent = `大运：${value("currentLuck") || "未定"} · 流年：${value("currentYear") || "未定"}`;
+    }
+
     function escapeHtml(text) {
       return String(text || "").replace(/[&<>"']/g, (ch) => ({
         "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
@@ -1232,6 +1392,10 @@
     function value(id) {
       return $(id).value.trim();
     }
+
+    updateCurrentChartCard();
+    $("readingForm").addEventListener("input", updateCurrentChartCard);
+    $("readingForm").addEventListener("change", updateCurrentChartCard);
 
     function setState(text, hint = "", busy = false) {
       $("stateText").textContent = text;
@@ -1315,6 +1479,7 @@
     function renderProcessLoading() {
       stopProcessLoop();
       processLoopIndex = 0;
+      $("processTicker").classList.remove("complete", "expanded");
       setProcessLines(processLoadingFrames[processLoopIndex], "正在推演");
       processLoopTimer = window.setInterval(() => {
         processLoopIndex = (processLoopIndex + 1) % processLoadingFrames.length;
@@ -1340,10 +1505,13 @@
         `素材汇合：十神、用神候选、规则路径与 ${signalCount} 条信号已进入本轮判断。`,
         `${hasZiwei ? "紫微旁路只作校准线索" : "隐藏线索保留为校准问题"}，最后收束为结论、建议和下一问。`
       ], "推演完成");
+      $("processTicker").classList.add("complete");
+      $("processSummary").textContent = "本次已完成：定盘 / 取象 / 合参。点击查看推演过程。";
     }
 
     function renderProcessFailure() {
       stopProcessLoop();
+      $("processTicker").classList.remove("complete", "expanded");
       setProcessLines([
         "本轮定盘没有完成，命盘事实没有被改写。",
         "素材链路没有形成可用报告，暂不生成替代结论。",
@@ -1384,17 +1552,18 @@
 
     function renderTopicCards(runtime) {
       const projection = runtime.product_projection || {};
-      const verdicts = projection.verdict_cards || [];
+      const verdicts = (projection.verdict_cards || []).slice(0, 3);
+      const hiddenCount = Math.max((projection.verdict_cards || []).length - verdicts.length, 0);
       $("topicCards").innerHTML = verdicts.map((card) => `
         <article class="report-card">
-          <h4>${escapeHtml(topicLabel(card.topic))}判断</h4>
+          <h4>${escapeHtml(topicLabel(card.topic))}重点</h4>
           <p>${escapeHtml(card.primary_text)}</p>
           <div class="metric-row">
             <span class="metric strong">${escapeHtml(card.confidence_label || "证据支持")}</span>
             <span class="metric">证据 ${escapeHtml(card.evidence_count || 0)}</span>
           </div>
         </article>
-      `).join("") || `<div class="notice">本次没有形成可展示判断。</div>`;
+      `).join("") + (hiddenCount ? `<div class="notice">还有 ${hiddenCount} 个领域已折叠，后续可以通过追问展开。</div>` : "") || `<div class="notice">本次没有形成可展示判断。</div>`;
     }
 
     function renderAdvice(runtime) {
@@ -1427,6 +1596,7 @@
       node.classList.remove("hidden");
       node.innerHTML = `
         <h4>风险边界</h4>
+        <p>这里不把单次测算说成绝对定论；更准确的是看机会、压力和承接方式如何同时出现。</p>
         <ul>${rows.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>不把单次判断说成绝对定论。</li>"}</ul>`;
     }
 
@@ -1463,12 +1633,12 @@
       $("probeSurface").classList.remove("hidden");
       $("probeSurface").innerHTML = `
         <article class="probe-card">
-          <h4>校准问题</h4>
+          <h4>一个问题，让判断更准</h4>
           <p>${escapeHtml(reason || "这个问题会让判断更贴近你的现实。")}</p>
           <p><strong>${escapeHtml(probe?.question || "哪里不太像？")}</strong></p>
           <div class="option-row">
             ${options.map((option) => `<button type="button" data-probe-id="${escapeHtml(probe?.probe_id || "")}" data-probe-answer="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
-            <button type="button" data-probe-skip="true">暂不确定</button>
+            <button type="button" data-probe-skip="true">跳过，先看当前建议</button>
           </div>
           <p class="probe-result" id="probeResult"></p>
         </article>`;
@@ -1480,12 +1650,9 @@
         currentMismatchArea = "";
         showProbe("这里需要补一个现实线索，再把建议落细。", probe);
       } else {
-        currentMismatchArea = "隐藏线索";
-        showProbe("确认一个隐藏线索，后面的问答会更贴近命主。", {
-          probe_id: "",
-          topic: "hidden_attribute",
-          question: "是否有反复出现，但表层经历不容易直接解释的压力、机会或关系模式？"
-        });
+        currentMismatchArea = "";
+        $("probeSurface").classList.add("hidden");
+        $("probeSurface").innerHTML = "";
       }
     }
 
@@ -1504,16 +1671,7 @@
     }
 
     function renderReviewInvite(runtime) {
-      if (!runtime) {
-        resetReviewSurface();
-        return;
-      }
-      $("reviewSurface").classList.remove("hidden");
-      if (!reviewSubmitted) {
-        $("reviewButton").disabled = false;
-        $("reviewButton").textContent = "授权复核";
-        setReviewState("命理师只会看到本次报告摘要、建议、证据和必要的校准问题。", true);
-      }
+      resetReviewSurface();
     }
 
     function lensTargetCards(runtime) {
@@ -1742,7 +1900,8 @@
       const node = document.createElement("article");
       node.className = "conversation-turn";
       node.innerHTML = `
-        <div class="question">${escapeHtml(question)}</div>
+        <div class="question">你问：${escapeHtml(question)}</div>
+        <h4>回答</h4>
         <div class="answer">${textBlocks(answerText)}</div>
         <div class="feedback active">
           <span>这个回答有帮助吗？</span>
@@ -1869,6 +2028,13 @@
 
     $("askButton").addEventListener("click", () => {
       askConversation(value("followupQuestion"), "");
+    });
+
+    $("processSummary").addEventListener("click", () => {
+      $("processTicker").classList.toggle("expanded");
+      $("processSummary").textContent = $("processTicker").classList.contains("expanded")
+        ? "收起推演过程"
+        : "本次已完成：定盘 / 取象 / 合参。点击查看推演过程。";
     });
 
     $("loginButton").addEventListener("click", () => {

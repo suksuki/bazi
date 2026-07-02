@@ -21,7 +21,7 @@ def test_phase59_ui_product_convergence_plan_is_documented() -> None:
     assert "P2: Report-First Layout" in doc
     assert "P3: Follow-Up And Conversation Layering" in doc
     assert "docs/V40_PHASE59_UI_PRODUCT_CONVERGENCE_PLAN.md" in readme
-    assert "2026-07-02 Phase 59 UI 收敛计划已纳入主线" in spec
+    assert "2026-07-02 Phase 59 UI 收敛 runtime 已启动" in spec
     assert "Reading Setup" in ui_spec
     assert "Account/profile management" in ui_spec
 
@@ -29,7 +29,6 @@ def test_phase59_ui_product_convergence_plan_is_documented() -> None:
 def test_phase59_ui_product_convergence_is_next_mainline_task() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 58
-    assert status["current_phase_name"] == "Hard LLM And Direct Training Principles"
+    assert status["current_phase"] == 59
+    assert status["current_phase_name"] == "UI Product Convergence Runtime"
     assert "UI-18: Phase 59 productized reading setup and report-first convergence" in status["next_mainline_tasks"]
-
