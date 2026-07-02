@@ -56,6 +56,6 @@ def test_phase46_docs_and_project_status_track_product_shell_runtime() -> None:
     assert "POST /api/v40/probes/answer" in doc
     assert "2026-07-01 Phase 46" in spec
     assert "docs/V40_PHASE46_USER_PRODUCT_SHELL_RUNTIME.md" in readme
-    assert status["current_phase"] == 52
-    assert status["current_phase_name"] == "Review Queue Persistence And Assignment"
+    assert status["current_phase"] == 53
+    assert status["current_phase_name"] == "User Consent Review UI"
     assert any(row["range"] == "46" and row["status"] == "complete" for row in status["phase_groups"])

@@ -609,15 +609,15 @@ Current completed cleanup:
 - Practitioner Lens is a right drawer and only appears for practitioner role.
 - Probe is a first-class calibration card.
 - Desktop/mobile visual QA is repeatable through `scripts/run_user_ui_visual_qa.py`.
+- User-side practitioner review authorization is wired after report generation.
 
 Current gaps:
 
-- User-side consent UI is not yet wired into the product surface.
 - Practitioner review queue has persistence and assignment contracts, but no final practitioner workbench.
 - Real-case acceptance is still required before online cutover.
 - Four pillars are free text inputs instead of stem/branch selectors.
 - Thinking is not formalized as a clean disclosure component.
-- Human review and ConsentGrant are not yet modeled.
+- Human review is modeled and queued, but practitioner-side review UX still needs product polishing.
 
 ## Implementation Sequence
 

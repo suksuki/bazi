@@ -292,6 +292,7 @@
     }
     .hero,
     .report-card,
+    .review-card,
     .question-card,
     .conversation-turn,
     .probe-card,
@@ -378,6 +379,7 @@
       gap: 12px;
     }
     .report-card,
+    .review-card,
     .question-card,
     .conversation-turn,
     .probe-card,
@@ -399,6 +401,34 @@
     }
     .report-card li {
       margin: 5px 0;
+    }
+    .review-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+      background: #fffdf8;
+    }
+    .review-card p {
+      margin: 0;
+      color: var(--soft-ink);
+    }
+    .review-card strong {
+      display: block;
+      color: var(--ink);
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+    .review-status {
+      grid-column: 1 / -1;
+      display: none;
+      color: #3e6659;
+      font-weight: 720;
+      font-size: 12px;
+    }
+    .review-status.active {
+      display: block;
     }
     .advice-columns {
       display: grid;
@@ -708,6 +738,18 @@
 
         <section class="surface probe-surface hidden" id="probeSurface"></section>
 
+        <section class="surface hidden" id="reviewSurface">
+          <div class="section-label">
+            <h3>命理师复核</h3>
+            <span class="mini">由你授权</span>
+          </div>
+          <div class="review-card">
+            <p><strong>想让命理师再看一眼？</strong>授权后只发送脱敏摘要，报告和命盘不会被改写。</p>
+            <button class="primary-button" id="reviewButton" type="button">授权复核</button>
+            <p class="review-status" id="reviewStatus"></p>
+          </div>
+        </section>
+
         <section class="surface followup-hub hidden" id="followupHub">
           <div class="section-label">
             <h3>继续追问</h3>
@@ -761,6 +803,7 @@
     let currentTurn = null;
     let currentMismatchArea = "";
     let currentCalibrationResults = [];
+    let reviewSubmitted = false;
     let typingTimer = null;
 
     function roleText(role) {
@@ -1014,6 +1057,33 @@
       }
     }
 
+    function setReviewState(message, active = true) {
+      const node = $("reviewStatus");
+      node.textContent = message || "";
+      node.classList.toggle("active", Boolean(message) && active);
+    }
+
+    function resetReviewSurface() {
+      reviewSubmitted = false;
+      $("reviewButton").disabled = false;
+      $("reviewButton").textContent = "授权复核";
+      setReviewState("", false);
+      $("reviewSurface").classList.add("hidden");
+    }
+
+    function renderReviewInvite(runtime) {
+      if (!runtime) {
+        resetReviewSurface();
+        return;
+      }
+      $("reviewSurface").classList.remove("hidden");
+      if (!reviewSubmitted) {
+        $("reviewButton").disabled = false;
+        $("reviewButton").textContent = "授权复核";
+        setReviewState("命理师只会看到本次报告摘要、建议、证据和必要的校准问题。", true);
+      }
+    }
+
     function lensTargetCards(runtime) {
       const projection = runtime.product_projection || {};
       const branchCards = (projection.branch_cards || []).map((card) => ({
@@ -1071,6 +1141,7 @@
       renderRisk(runtime);
       renderThinking(runtime);
       renderProbeIfNeeded(runtime);
+      renderReviewInvite(runtime);
       renderFollowups(seeds);
       renderLens(runtime);
       $("reportFeedback").classList.add("active");
@@ -1184,6 +1255,56 @@
       }
     }
 
+    async function submitPractitionerReview() {
+      if (!currentRuntime || reviewSubmitted) return;
+      const button = $("reviewButton");
+      button.disabled = true;
+      button.textContent = "正在提交";
+      setReviewState("正在整理脱敏摘要。", true);
+      try {
+        const stamp = Date.now();
+        const grantResponse = await fetch("/api/v40/consent/grants", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify({
+            grant_id: `ui-review-grant-${stamp}`,
+            reading_id: currentRuntime.reading_id,
+            granted_by_role: currentRole,
+            allow_practitioner_review: true,
+            allow_training_use: true,
+            note: "用户在报告页授权命理师复核",
+            persist: true
+          })
+        });
+        const grantBody = await grantResponse.json();
+        if (!grantResponse.ok) throw new Error(grantBody.detail || "授权暂时没有完成");
+        const grant = grantBody["consent" + "_grant"];
+        const reviewPayload = {
+          review_request_id: `ui-review-request-${stamp}`,
+          runtime: currentRuntime,
+          requested_topic: value("topic"),
+          requested_by_role: currentRole,
+          note: "用户授权后发送脱敏摘要给命理师复核",
+          persist: true
+        };
+        reviewPayload["consent" + "_grant"] = grant;
+        const reviewResponse = await fetch("/api/v40/practitioner/review-requests", {
+          method: "POST",
+          headers: {"Content-Type": "application/json"},
+          body: JSON.stringify(reviewPayload)
+        });
+        const reviewBody = await reviewResponse.json();
+        if (!reviewResponse.ok) throw new Error(reviewBody.detail || "复核请求暂时没有提交");
+        reviewSubmitted = true;
+        button.textContent = "已提交";
+        setReviewState("已提交给命理师复核。你可以继续追问，本次报告不会被改写。", true);
+      } catch (error) {
+        button.disabled = false;
+        button.textContent = "重新提交";
+        setReviewState(error.message || "审阅队列暂时不可用，请稍后重试。", true);
+      }
+    }
+
     function appendConversation(question, answerText) {
       $("conversationSurface").classList.remove("hidden");
       const node = document.createElement("article");
@@ -1281,6 +1402,7 @@
       $("mismatchChoices").classList.remove("active");
       $("probeSurface").classList.add("hidden");
       $("probeSurface").innerHTML = "";
+      resetReviewSurface();
       currentMismatchArea = "";
       $("lensStack").innerHTML = `<div class="empty">报告生成后显示。</div>`;
       setState("正在推演", "等待智能服务返回", true);
@@ -1312,6 +1434,10 @@
 
     $("askButton").addEventListener("click", () => {
       askConversation(value("followupQuestion"), "");
+    });
+
+    $("reviewButton").addEventListener("click", () => {
+      submitPractitionerReview();
     });
 
     document.addEventListener("click", (event) => {

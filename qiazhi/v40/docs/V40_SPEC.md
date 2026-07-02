@@ -669,6 +669,17 @@ POST /api/v40/practitioner/review-queue/assign
 
 本阶段把 Phase 51 的授权与命理师审阅合同接入 V40 独立 Postgres 仓储。`persist=true` 时，consent grants、review requests、queue items 和 review results 都会写入 `v40_` 表；`GET /api/v40/practitioner/review-queue` 读取持久化队列；assignment 只更新 queue item 与 request 的 `status/assigned_to_practitioner_ref` 元数据，不改 verdict、chart facts 或权重；review result persist 会同步保存内部 `TrainingLabelEvent(local_only=true)`，让命理师复核进入训练素材，但仍然 `writes_v40_production=false`、`writes_v30_state=false`。
 
+2026-07-02 Phase 53 已启动：
+
+```text
+docs/V40_PHASE53_USER_CONSENT_REVIEW_UI.md
+/v40/ui 命理师复核
+POST /api/v40/consent/grants
+POST /api/v40/practitioner/review-requests
+```
+
+本阶段把 Phase 52 的持久化审阅队列接入用户侧产品流。报告生成前不显示审阅入口；报告生成后，用户可以点击“授权复核”，前台先创建授权，再把当前 `RuntimeResult` 交给审阅请求构建器生成脱敏 case view 并写入 V40 队列。用户页面只显示授权和提交状态，不展示内部合同类型、Admin 控制面、provider/model/prompt/debug/telemetry 等工程信息；如果 V40 仓储不可用，页面必须提示稍后重试，不能假装已提交成功。此阶段不改 verdict、chart facts、signal registry、训练权重、V30 状态或生产权重。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

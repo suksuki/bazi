@@ -31,8 +31,8 @@ def test_phase50_visual_qa_doc_and_script_are_mainline_artifacts() -> None:
 def test_phase50_project_status_tracks_visual_qa_as_completed_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 52
-    assert status["current_phase_name"] == "Review Queue Persistence And Assignment"
+    assert status["current_phase"] == 53
+    assert status["current_phase_name"] == "User Consent Review UI"
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-10: user-side consent UI" in status["next_mainline_tasks"]
+    assert "UI-11: real-case acceptance and cutover checklist rehearsal" in status["next_mainline_tasks"]
