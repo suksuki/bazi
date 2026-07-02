@@ -152,8 +152,8 @@ def test_phase63_project_status_and_docs_track_acceptance_window_plan() -> None:
 
     assert "Real Case Bank / Acceptance Window V1" in doc
     assert "docs/V40_PHASE63_SYSTEM_REVIEW_AND_NEXT_MAINLINE_PLAN.md" in readme
-    assert status["current_phase"] == 64
-    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
+    assert status["current_phase"] == 65
+    assert status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "63" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P64-1: Bazi Fact Engine Pro V1"
+    assert status["next_mainline_tasks"][0] == "P65-1: V30 Mingli Asset Migration Gate"

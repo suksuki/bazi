@@ -68,12 +68,14 @@ def test_module_migration_status_keeps_v30_reuse_as_asset_migration_only() -> No
     status = build_module_migration_status()
 
     assert status["summary"]["v30_direct_runtime_reuse_allowed"] == 0
-    assert status["summary"]["new_required_groups"] >= 5
+    assert status["summary"]["new_required_groups"] >= 4
     assert status["summary"]["reusable_v30_asset_groups"] >= 10
     assert status["hard_rule"].startswith("V40 can reuse V30 mingli assets only through DTO")
     module_keys = {module["key"] for module in status["modules"]}
     assert "bazi_fact_engine_pro" in module_keys
     assert "asset_migration_gate" in module_keys
+    asset_gate = next(row for row in status["modules"] if row["key"] == "asset_migration_gate")
+    assert asset_gate["current_state"] == "v40_native_v1_sidecar_ready"
     assert "hidden_factor_probe_engine" in module_keys
     assert "legacy_v30_ui_admin" in module_keys
 

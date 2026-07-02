@@ -43,9 +43,9 @@ def test_phase57_docs_and_project_status_track_process_feedback_and_llm_boundary
     assert "execution_mode=ollama" in spec
     assert "docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md" in readme
     assert "waiting for the LLM expression path" in ui_spec
-    assert status["current_phase"] == 64
-    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
+    assert status["current_phase"] == 65
+    assert status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "57" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P64-1: Bazi Fact Engine Pro V1" in status["next_mainline_tasks"]
+    assert "P65-1: V30 Mingli Asset Migration Gate" in status["next_mainline_tasks"]

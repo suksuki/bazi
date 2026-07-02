@@ -32,10 +32,10 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 64
-    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
+    assert status["current_phase"] == 65
+    assert status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
     assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P64-1: Bazi Fact Engine Pro V1" in status["next_mainline_tasks"]
+    assert "P65-1: V30 Mingli Asset Migration Gate" in status["next_mainline_tasks"]
     user_beta = next(domain for domain in status["domains"] if domain["key"] == "user_beta")
     assert "真实命例" in user_beta["next_step"]

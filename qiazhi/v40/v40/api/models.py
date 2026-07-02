@@ -31,7 +31,7 @@ from v40.contracts.training import (
     TrainingLabelEvent,
     WeightActivationReview,
 )
-from v40.migration import V30ExportEnvelope
+from v40.migration import MigratedMingliAsset, V30ExportEnvelope
 
 
 class EvaluationRunFromRuntimeRequest(V40Model):
@@ -59,6 +59,25 @@ class ShadowCompareBatchRequest(V40Model):
             raise ValueError("Shadow compare batch request requires batch_id")
         if not self.exports:
             raise ValueError("Shadow compare batch request requires exports")
+        return self
+
+
+class MingliAssetMigrationGateRequest(V40Model):
+    version: str = "v40.mingli_asset_migration_gate_request.v1"
+    gate_id: str
+    reading_id: str
+    assets: list[MigratedMingliAsset]
+    persist: bool = False
+    boundary: str = "mingli_asset_migration_gate_request_accepts_plain_json_assets_without_v30_runtime_import"
+
+    @model_validator(mode="after")
+    def _asset_gate_boundary(self) -> "MingliAssetMigrationGateRequest":
+        if not self.gate_id.strip():
+            raise ValueError("Mingli asset migration gate request requires gate_id")
+        if not self.reading_id.strip():
+            raise ValueError("Mingli asset migration gate request requires reading_id")
+        if not self.assets:
+            raise ValueError("Mingli asset migration gate request requires assets")
         return self
 
 

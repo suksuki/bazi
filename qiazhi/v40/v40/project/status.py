@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 64
-CURRENT_PHASE_NAME = "Bazi Fact Engine Pro"
+CURRENT_PHASE = 65
+CURRENT_PHASE_NAME = "V30 Mingli Asset Migration Gate"
 
 
 @dataclass(frozen=True)
@@ -91,8 +91,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "61", "label": "UI flow clean rebuild", "status": "complete"},
     {"range": "62", "label": "reading history sidebar and folded conversation chain", "status": "complete"},
     {"range": "63", "label": "real case bank and acceptance window", "status": "complete"},
-    {"range": "64", "label": "Bazi Fact Engine Pro", "status": "active"},
-    {"range": "65+", "label": "asset migration、domain adapters、hidden factor probe", "status": "requires_user"},
+    {"range": "64", "label": "Bazi Fact Engine Pro", "status": "complete"},
+    {"range": "65", "label": "V30 Mingli Asset Migration Gate", "status": "active"},
+    {"range": "66+", "label": "domain adapters、hidden factor probe", "status": "requires_user"},
 )
 
 
@@ -116,7 +117,6 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "P64-1: Bazi Fact Engine Pro V1",
             "P65-1: V30 Mingli Asset Migration Gate",
             "P66-1: Domain Verdict Adapters",
             "P67-1: Hidden Factor Probe Engine",

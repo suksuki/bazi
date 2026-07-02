@@ -86,7 +86,12 @@ def contract_manifest() -> dict[str, object]:
             "WeightActivationReview",
             "WeightActivationExecution",
         ],
-        "migration": ["V30ExportEnvelope", "V30ToV40MigrationPlan"],
+        "migration": [
+            "V30ExportEnvelope",
+            "V30ToV40MigrationPlan",
+            "MigratedMingliAsset",
+            "MingliAssetMigrationGateResult",
+        ],
         "boundaries": {
             "v30_runtime_import_allowed": False,
             "v30_database_access_allowed": False,

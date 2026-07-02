@@ -181,11 +181,11 @@ MODULES: tuple[ModuleMigrationStatus, ...] = (
     ModuleMigrationStatus(
         key="asset_migration_gate",
         label="命理资产迁移 Gate",
-        current_state="new_required",
+        current_state="v40_native_v1_sidecar_ready",
         reuse_policy="build_v40_native",
         v30_sources=("core", "rules", "diagnosis", "knowledge", "portrait", "questions", "hidden_factor", "ziwei"),
         v40_target="migration/mingli_assets",
-        rc2_action="实现 draft/sidecar/evaluating/enabled 状态与 before/after diff。",
+        rc2_action="V1 已支持 plain JSON asset -> RuntimeSignal sidecar；下一步接 before/after diff 与 enabled gate。",
     ),
     ModuleMigrationStatus(
         key="real_case_bank",

@@ -21,6 +21,7 @@ from v40.api.models import (
     EvaluationBatchFromRuntimeRequest,
     EvaluationRunFromRuntimeRequest,
     ExpressionFromRuntimeRequest,
+    MingliAssetMigrationGateRequest,
     NativeBatchFromSeedsRequest,
     NativeBaziRuntimeRequest,
     NativeReadingReportRequest,
@@ -74,7 +75,7 @@ from v40.evaluation import (
     evaluate_runtime_against_case,
     replay_training_example,
 )
-from v40.migration import V30ExportEnvelope, build_runtime_from_v30_export
+from v40.migration import V30ExportEnvelope, build_mingli_asset_migration_gate, build_runtime_from_v30_export
 from v40.probes import build_probe_answer_result
 from v40.review import (
     build_consent_grant,
@@ -916,6 +917,23 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "shadow_compare_history_reads_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/migration/mingli-assets/gate")
+    def mingli_asset_migration_gate(payload: MingliAssetMigrationGateRequest) -> dict[str, object]:
+        gate = build_mingli_asset_migration_gate(
+            gate_id=payload.gate_id,
+            reading_id=payload.reading_id,
+            assets=payload.assets,
+        )
+        return {
+            "version": "v40.mingli_asset_migration_gate_response.v1",
+            "gate": gate.model_dump(mode="json"),
+            "signals": [signal.model_dump(mode="json") for signal in gate.signals],
+            "persisted": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "mingli_asset_migration_gate_endpoint_converts_plain_assets_without_production_write",
         }
 
     @app.post(f"{API_PREFIX}/shadow-compare/batch")

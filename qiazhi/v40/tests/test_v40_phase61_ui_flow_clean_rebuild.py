@@ -49,9 +49,9 @@ def test_phase61_user_ui_has_state_machine_shell_and_lightweight_surfaces() -> N
 def test_phase61_project_status_marks_ui_clean_rebuild_complete() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 64
-    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
+    assert status["current_phase"] == 65
+    assert status["current_phase_name"] == "V30 Mingli Asset Migration Gate"
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "61" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P64-1: Bazi Fact Engine Pro V1"
+    assert status["next_mainline_tasks"][0] == "P65-1: V30 Mingli Asset Migration Gate"

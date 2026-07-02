@@ -795,6 +795,17 @@ native_bazi_fact_engine_pro
 
 本阶段把 native Bazi 事实层从简版 adapter 提升为 `Bazi Fact Engine Pro V1`：新增藏干、藏干十神加权、日主根气、月令权重、刑害破、三合三会和大运流年动态触发事实。这些内容进入 runtime facts/features/signals，并被 DecisionEngine 作为证据消费；它们仍是确定性事实素材，只验证不训练，不改 chart facts，不让 LLM 或 fact engine 直接生成 verdict。
 
+2026-07-02 Phase 65 V30 命理资产迁移 Gate 已启动：
+
+```text
+docs/V40_PHASE65_V30_MINGLI_ASSET_MIGRATION_GATE.md
+POST /api/v40/migration/mingli-assets/gate
+MigratedMingliAsset
+MingliAssetMigrationGateResult
+```
+
+本阶段把 V30 规则、画像、路径、知识和追问等成熟命理资产的迁移入口固化为 plain JSON DTO。`Mingli Asset Migration Gate` 会验证资产边界，把可运行的 sidecar/evaluating/enabled runtime-signal 资产转换成 V40 `RuntimeSignal`，并阻断 draft/disabled/rejected 或携带 raw V30 runtime/DB/Redis 引用的资产。V1 只做 read/convert，不持久化、不写生产策略、不 import V30 runtime。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text
