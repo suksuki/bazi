@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 68
-CURRENT_PHASE_NAME = "Knowledge Portrait Ziwei Sidecar Enrichment"
+CURRENT_PHASE = 69
+CURRENT_PHASE_NAME = "Real Case Expansion And Cutover Evidence"
 
 
 @dataclass(frozen=True)
@@ -95,8 +95,8 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "65", "label": "V30 Mingli Asset Migration Gate", "status": "complete"},
     {"range": "66", "label": "Domain Verdict Adapters", "status": "complete"},
     {"range": "67", "label": "Hidden Factor Probe Engine", "status": "complete"},
-    {"range": "68", "label": "Knowledge Portrait Ziwei Sidecar Enrichment", "status": "active"},
-    {"range": "69+", "label": "real case expansion and online cutover", "status": "planned"},
+    {"range": "68", "label": "Knowledge Portrait Ziwei Sidecar Enrichment", "status": "complete"},
+    {"range": "69", "label": "Real Case Expansion And Cutover Evidence", "status": "active"},
     {"range": "user-acceptance", "label": "真实命例验收与线上切换", "status": "requires_user"},
 )
 
@@ -121,7 +121,6 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "P68-1: Knowledge / Portrait / Ziwei sidecar enrichment",
             "P69-1: real case expansion and online cutover evidence",
             "TRAIN-16: direct training activation before/after acceptance and rollback UX",
             "UI-17: online cutover decision with real case acceptance evidence",

@@ -59,9 +59,9 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
 def test_phase59_project_status_marks_ui_convergence_runtime_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 68
-    assert status["current_phase_name"] == "Knowledge Portrait Ziwei Sidecar Enrichment"
+    assert status["current_phase"] == 69
+    assert status["current_phase_name"] == "Real Case Expansion And Cutover Evidence"
     assert any(row["range"] == "58" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P68-1: Knowledge / Portrait / Ziwei sidecar enrichment"
+    assert status["next_mainline_tasks"][0] == "P69-1: real case expansion and online cutover evidence"

@@ -836,6 +836,16 @@ EXPLANATION_ONLY_SOURCE_REFS
 
 本阶段新增受控 enrichment 层，把八字 runtime signals 和紫微 sidecar signals 整理成知识卡、画像和紫微旁路增强信号。知识卡是 explanation-only，进入 SignalRegistry 但被 DecisionEngine 过滤；画像是低权重 RuntimeSignal，可作为候选排序素材但不能强断；紫微增强继续保持 `source=ziwei_engine` 和 zero decision weight，只服务命理师 Lens、追问和训练观察。
 
+2026-07-02 Phase 69 Real Case Expansion And Cutover Evidence 已启动：
+
+```text
+docs/V40_PHASE69_REAL_CASE_EXPANSION_AND_CUTOVER_EVIDENCE.md
+build_real_case_expansion_evidence_pack
+POST /api/v40/project/real-case-expansion-evidence
+```
+
+本阶段把真实命例验收从单次窗口升级为扩容与上线证据包。`Real Case Expansion Evidence Pack` 会检查真实案例总量、可训练案例数、事业/财运/关系/健康/时运/用神/隐藏线索覆盖、最新 Acceptance Window 推荐、overclaim 和 blocked count。它只输出 `automatic_status`、`cutover_status`、coverage gaps 和下一批采集任务，不切流量、不写生产策略、不改命盘事实；即使自动证据 ready，线上切换仍需要人工确认。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

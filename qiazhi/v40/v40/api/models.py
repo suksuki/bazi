@@ -8,6 +8,7 @@ from v40.contracts.base import Topic
 from v40.contracts.chart import BaziChartFacts, BirthInputCanonical, SyntheticCaseSeed, ZiweiChartFacts
 from v40.contracts.context import ClientContext, EngineContext, LocaleContext, RoleContext
 from v40.contracts.evaluation import (
+    AcceptanceWindowResult,
     EvaluationBatchSummary,
     EvaluationCaseSpec,
     EvaluationRunResult,
@@ -194,6 +195,22 @@ class AcceptanceWindowFromRuntimeRequest(V40Model):
             raise ValueError("Acceptance window request requires window_id")
         if not self.cases:
             raise ValueError("Acceptance window request requires cases")
+        return self
+
+
+class RealCaseExpansionEvidenceRequest(V40Model):
+    version: str = "v40.real_case_expansion_evidence_request.v1"
+    cases: list[RealCaseRecord]
+    acceptance_windows: list[AcceptanceWindowResult] = Field(default_factory=list)
+    target_case_count: int = Field(default=100, ge=1)
+    min_cases_per_topic: int = Field(default=8, ge=1)
+    min_trainable_case_count: int = Field(default=20, ge=0)
+    boundary: str = "real_case_expansion_request_reads_cases_and_windows_without_cutover"
+
+    @model_validator(mode="after")
+    def _real_case_expansion_boundary(self) -> "RealCaseExpansionEvidenceRequest":
+        if not self.cases:
+            raise ValueError("Real case expansion evidence request requires cases")
         return self
 
 

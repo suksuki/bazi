@@ -31,6 +31,7 @@ from v40.api.models import (
     PractitionerReviewCreateRequest,
     PractitionerReviewResultRequest,
     ProbeAnswerRequest,
+    RealCaseExpansionEvidenceRequest,
     ReleaseReadinessFromBatchesRequest,
     ReleaseReadinessFromEvidenceBatchesRequest,
     ShadowCompareBatchRequest,
@@ -88,6 +89,7 @@ from v40.project import (
     build_mingli_depth_index,
     build_module_migration_status,
     build_production_cutover_checklist,
+    build_real_case_expansion_evidence_pack,
     build_project_status,
     build_release_candidate_audit,
     build_production_smoke,
@@ -2184,6 +2186,23 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "production_cutover_checklist_reads_v40_evidence_without_switching_traffic",
+        }
+
+    @app.post(f"{API_PREFIX}/project/real-case-expansion-evidence")
+    def real_case_expansion_evidence(payload: RealCaseExpansionEvidenceRequest) -> dict[str, object]:
+        evidence = build_real_case_expansion_evidence_pack(
+            cases=payload.cases,
+            acceptance_windows=payload.acceptance_windows,
+            target_case_count=payload.target_case_count,
+            min_cases_per_topic=payload.min_cases_per_topic,
+            min_trainable_case_count=payload.min_trainable_case_count,
+        )
+        return {
+            "version": "v40.real_case_expansion_evidence_response.v1",
+            "evidence": evidence,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "real_case_expansion_evidence_reads_cases_without_cutover_or_policy_write",
         }
 
     @app.get(f"{API_PREFIX}/project/release-candidate-audit")

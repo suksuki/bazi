@@ -156,8 +156,8 @@ def test_phase54_docs_schema_and_project_status_track_user_account_profile_flow(
     assert "v40_user_accounts" in schema
     assert "v40_user_sessions" in schema
     assert "v40_bazi_profiles" in schema
-    assert status["current_phase"] == 68
-    assert status["current_phase_name"] == "Knowledge Portrait Ziwei Sidecar Enrichment"
+    assert status["current_phase"] == 69
+    assert status["current_phase_name"] == "Real Case Expansion And Cutover Evidence"
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P68-1: Knowledge / Portrait / Ziwei sidecar enrichment" in status["next_mainline_tasks"]
+    assert "P69-1: real case expansion and online cutover evidence" in status["next_mainline_tasks"]
