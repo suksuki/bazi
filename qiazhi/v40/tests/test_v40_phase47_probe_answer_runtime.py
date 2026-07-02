@@ -150,6 +150,6 @@ def test_phase47_docs_manifest_and_project_status_track_probe_answer_runtime() -
     assert "2026-07-01 Phase 47" in spec
     assert "docs/V40_PHASE47_PROBE_ANSWER_RUNTIME.md" in readme
     assert manifest["probe"] == ["AnswerSignal", "HiddenAttributeUpdate", "ProbeAnswerResult"]
-    assert status["current_phase"] == 54
-    assert status["current_phase_name"] == "User Account And Profile Flow"
+    assert status["current_phase"] == 55
+    assert status["current_phase_name"] == "Compact Staged Process Ticker"
     assert any(row["range"] == "47" and row["status"] == "complete" for row in status["phase_groups"])

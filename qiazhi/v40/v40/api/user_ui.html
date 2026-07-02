@@ -353,6 +353,7 @@
     }
     .hero,
     .report-card,
+    .process-card,
     .review-card,
     .question-card,
     .conversation-turn,
@@ -440,6 +441,7 @@
       gap: 12px;
     }
     .report-card,
+    .process-card,
     .review-card,
     .question-card,
     .conversation-turn,
@@ -462,6 +464,32 @@
     }
     .report-card li {
       margin: 5px 0;
+    }
+    .process-card {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+      background:
+        linear-gradient(90deg, rgba(110,139,126,.08), transparent 48%),
+        #fffdf8;
+    }
+    .process-line {
+      display: grid;
+      grid-template-columns: 42px minmax(0, 1fr);
+      gap: 10px;
+      align-items: start;
+      min-height: 24px;
+      color: var(--soft-ink);
+      font-size: 13px;
+    }
+    .process-line strong {
+      color: var(--accent);
+      font-size: 12px;
+      font-weight: 780;
+    }
+    .process-line span {
+      min-width: 0;
+      overflow-wrap: anywhere;
     }
     .review-card {
       display: grid;
@@ -816,10 +844,14 @@
             <h3>本次报告</h3>
             <span class="mini" id="reportMini">结论、建议和边界分开显示</span>
           </div>
+          <div class="process-card hidden" id="processTicker">
+            <div class="process-line"><strong>定盘</strong><span id="processLine1"></span></div>
+            <div class="process-line"><strong>取象</strong><span id="processLine2"></span></div>
+            <div class="process-line"><strong>合参</strong><span id="processLine3"></span></div>
+          </div>
           <div class="card-grid" id="topicCards"></div>
           <div class="report-card hidden" id="adviceCard"></div>
           <div class="report-card hidden" id="riskCard"></div>
-          <div class="report-card thinking hidden" id="thinkingCard"></div>
           <div class="feedback" id="reportFeedback">
             <span>这个判断像你吗？</span>
             <div class="feedback-row">
@@ -909,6 +941,7 @@
     let currentCalibrationResults = [];
     let reviewSubmitted = false;
     let typingTimer = null;
+    let processTypingTimers = [];
 
     function roleText(role) {
       if (role === "practitioner") return "命理师视角";
@@ -1185,6 +1218,69 @@
       }, source.length > 120 ? 8 : 14);
     }
 
+    function clearProcessTyping() {
+      for (const timer of processTypingTimers) window.clearTimeout(timer);
+      processTypingTimers = [];
+    }
+
+    function typeProcessLine(node, text, delay) {
+      const source = String(text || "");
+      node.textContent = "";
+      const startTimer = window.setTimeout(() => {
+        let index = 0;
+        const interval = window.setInterval(() => {
+          node.textContent = source.slice(0, index + 1);
+          index += 1;
+          if (index >= source.length) window.clearInterval(interval);
+        }, source.length > 80 ? 9 : 16);
+        processTypingTimers.push(interval);
+      }, delay);
+      processTypingTimers.push(startTimer);
+    }
+
+    function setProcessLines(lines) {
+      clearProcessTyping();
+      $("processTicker").classList.remove("hidden");
+      [1, 2, 3].forEach((index) => {
+        typeProcessLine($(`processLine${index}`), lines[index - 1] || "", (index - 1) * 260);
+      });
+    }
+
+    function renderProcessLoading() {
+      setProcessLines([
+        "正在固定四柱、日主、月令、大运与流年。",
+        "正在汇合十神、用神候选、规则路径与领域信号。",
+        "正在合参紫微旁路和隐藏线索，收束成结论、建议与下一问。"
+      ]);
+    }
+
+    function renderProcessTicker(runtime) {
+      const chart = runtime?.engine_result?.results?.[0]?.facts || [];
+      const factValue = (id) => {
+        const row = chart.find((item) => item.fact_id === id);
+        return row ? row.value : "";
+      };
+      const dayMaster = factValue("chart.day_master") || "日主";
+      const monthBranch = factValue("chart.month_branch") || "月令";
+      const luck = factValue("chart.current_luck") || "大运";
+      const year = factValue("chart.current_year") || "流年";
+      const signalCount = runtime?.signal_registry?.signals?.length || 0;
+      const hasZiwei = (runtime?.engine_result?.results || []).some((result) => result.engine === "ziwei");
+      setProcessLines([
+        `四柱入局：${dayMaster}日主、${monthBranch}月令，${luck}大运与${year}流年已固定。`,
+        `素材汇合：十神、用神候选、规则路径与 ${signalCount} 条信号已进入本轮判断。`,
+        `${hasZiwei ? "紫微旁路只作校准线索" : "隐藏线索保留为校准问题"}，最后收束为结论、建议和下一问。`
+      ]);
+    }
+
+    function renderProcessFailure() {
+      setProcessLines([
+        "本轮定盘没有完成，命盘事实没有被改写。",
+        "素材链路没有形成可用报告，暂不生成替代结论。",
+        "请稍后重试，或先检查模型与本地服务连接。"
+      ]);
+    }
+
     function topicLabel(topic) {
       return {
         overview: "综合",
@@ -1262,24 +1358,6 @@
       node.innerHTML = `
         <h4>风险边界</h4>
         <ul>${rows.map((item) => `<li>${escapeHtml(item)}</li>`).join("") || "<li>不把单次判断说成绝对定论。</li>"}</ul>`;
-    }
-
-    function renderThinking(runtime) {
-      const signalCount = runtime.signal_registry?.signals?.length || 0;
-      const branchCount = (runtime.branches || []).length;
-      const probeCount = (runtime.probes || []).length;
-      const node = $("thinkingCard");
-      node.classList.remove("hidden");
-      node.innerHTML = `
-        <details>
-          <summary>查看推演过程</summary>
-          <ul>
-            <li>先固定四柱、大运和流年，不改命盘事实。</li>
-            <li>再汇总结构、规则、画像、路径与领域信号，共 ${escapeHtml(signalCount)} 条。</li>
-            <li>保留 ${escapeHtml(branchCount)} 条分支，必要时生成 ${escapeHtml(probeCount)} 个校准问题。</li>
-            <li>最后把结论、建议和风险边界整理成用户可读报告。</li>
-          </ul>
-        </details>`;
     }
 
     function renderFollowups(seeds) {
@@ -1420,10 +1498,10 @@
 
     function paintReading(runtime, seeds) {
       renderHero(runtime);
+      renderProcessTicker(runtime);
       renderTopicCards(runtime);
       renderAdvice(runtime);
       renderRisk(runtime);
-      renderThinking(runtime);
       renderProbeIfNeeded(runtime);
       renderReviewInvite(runtime);
       renderFollowups(seeds);
@@ -1691,6 +1769,7 @@
       currentMismatchArea = "";
       $("lensStack").innerHTML = `<div class="empty">报告生成后显示。</div>`;
       setState("正在推演", "等待智能服务返回", true);
+      renderProcessLoading();
       try {
         const response = await fetch("/api/v40/readings/native-report", {
           method: "POST",
@@ -1705,6 +1784,7 @@
         setState("报告已生成", "可以继续追问", false);
       } catch (error) {
         setState("智能服务未完成", "请稍后重试", false);
+        renderProcessFailure();
         $("heroTitle").textContent = "本次没有形成可用报告。";
         $("heroText").textContent = error.message || "智能服务暂时不可用。";
         $("heroMetrics").innerHTML = `<span class="metric">没有使用备用文本</span>`;

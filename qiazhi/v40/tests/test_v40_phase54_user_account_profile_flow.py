@@ -156,8 +156,8 @@ def test_phase54_docs_schema_and_project_status_track_user_account_profile_flow(
     assert "v40_user_accounts" in schema
     assert "v40_user_sessions" in schema
     assert "v40_bazi_profiles" in schema
-    assert status["current_phase"] == 54
-    assert status["current_phase_name"] == "User Account And Profile Flow"
+    assert status["current_phase"] == 55
+    assert status["current_phase_name"] == "Compact Staged Process Ticker"
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "54" and row["status"] == "active" for row in status["phase_groups"])
-    assert "UI-12: real-case account/profile acceptance" in status["next_mainline_tasks"]
+    assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
+    assert "UI-13: real-case account/profile/process acceptance" in status["next_mainline_tasks"]

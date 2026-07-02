@@ -166,7 +166,7 @@ def test_phase52_docs_and_project_status_track_review_persistence() -> None:
     assert "POST /api/v40/practitioner/review-queue/assign" in spec
     assert "2026-07-01 Phase 52" in spec
     assert "docs/V40_PHASE52_REVIEW_QUEUE_PERSISTENCE.md" in readme
-    assert status["current_phase"] == 54
-    assert status["current_phase_name"] == "User Account And Profile Flow"
+    assert status["current_phase"] == 55
+    assert status["current_phase_name"] == "Compact Staged Process Ticker"
     assert any(row["range"] == "51" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "52" and row["status"] == "complete" for row in status["phase_groups"])

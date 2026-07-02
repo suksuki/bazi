@@ -461,7 +461,7 @@ Advice must come from `Verdict` / `AdvicePlan` / accepted runtime facts. LLM may
 
 RiskBoundaryCard explains what cannot be said too absolutely.
 
-ThinkingSummaryDisclosure is folded by default under "查看推演过程". Ordinary users see only concise reasoning summaries. Practitioners can see evidence summaries. Admin sees full trace in the independent Admin app.
+CompactProcessTicker shows exactly three visible lines: `定盘 / 取象 / 合参`. Ordinary users see this lightweight staged process instead of a clickable multi-step flow or a folded debug disclosure. Practitioners can still see evidence summaries through the practitioner lens, and Admin sees full trace in the independent Admin app.
 
 ### Follow-Up Hub
 
@@ -612,12 +612,12 @@ Current completed cleanup:
 - User-side practitioner review authorization is wired after report generation.
 - Registration, login and per-user Bazi profiles are now part of `/v40/ui`.
 - Native report requests carry both Bazi chart facts and Ziwei sidecar facts.
+- A three-line staged process ticker shows `定盘 / 取象 / 合参` without restoring V30 multi-step interaction.
 
 Current gaps:
 
 - Practitioner review queue has persistence and assignment contracts, but no final practitioner workbench.
 - Real-case acceptance is still required before online cutover.
-- Thinking is not formalized as a clean disclosure component.
 - Human review is modeled and queued, but practitioner-side review UX still needs product polishing.
 
 ## Implementation Sequence

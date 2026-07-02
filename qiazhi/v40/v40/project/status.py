@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 54
-CURRENT_PHASE_NAME = "User Account And Profile Flow"
+CURRENT_PHASE = 55
+CURRENT_PHASE_NAME = "Compact Staged Process Ticker"
 
 
 @dataclass(frozen=True)
@@ -34,7 +34,7 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         percent=99,
         status="on_track",
         evidence_keys=("runtime_records", "conversation_turns", "training_label_events", "consent_grants", "practitioner_review_queue", "practitioner_review_results", "user_accounts", "bazi_profiles"),
-        next_step="用真实命例验收账号、档案、双引擎报告、Probe 和一问一答链路。",
+        next_step="用真实命例验收账号、档案、三行推演流、双引擎报告、Probe 和一问一答链路。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -81,8 +81,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "51", "label": "ConsentGrant and practitioner review queue contracts", "status": "complete"},
     {"range": "52", "label": "review queue persistence and assignment", "status": "complete"},
     {"range": "53", "label": "user consent review UI", "status": "complete"},
-    {"range": "54", "label": "user account and profile flow", "status": "active"},
-    {"range": "55+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "54", "label": "user account and profile flow", "status": "complete"},
+    {"range": "55", "label": "compact staged process ticker", "status": "active"},
+    {"range": "56+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -106,9 +107,9 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-12: real-case account/profile acceptance",
-            "UI-13: practitioner review workbench polish",
-            "UI-14: online cutover decision with user acceptance evidence",
+            "UI-13: real-case account/profile/process acceptance",
+            "UI-14: practitioner review workbench polish",
+            "UI-15: online cutover decision with user acceptance evidence",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

@@ -696,6 +696,17 @@ DELETE /api/v40/profiles/{profile_id}
 
 本阶段把 `/v40/ui` 固化为用户产品流：注册/登录、多用户八字档案、选择档案测算、双引擎报告、Probe 校准和简洁一问一答。V30 多分步测算页面不作为 V40 普通用户主流程保留；V40 仍保留分阶段素材、证据、双引擎信号和命理师 Lens，但普通用户只看到“档案 -> 报告 -> 必要校准 -> 对话”。注册只允许 `user/practitioner`，admin 不能从主系统注册；用户、会话和档案全部写入 V40 独立表，不读写 V30。
 
+2026-07-02 Phase 55 已启动：
+
+```text
+docs/V40_PHASE55_COMPACT_PROCESS_TICKER.md
+/v40/ui processTicker
+renderProcessLoading
+renderProcessTicker
+```
+
+本阶段保留“不让普通用户参与 V30 多步页面”的产品判断，但在报告页增加三行可见推演流。用户点击开始测算后，会看到 `定盘 / 取象 / 合参` 三行打字机提示；报告返回后，这三行会根据真实 runtime 改写，展示日主、月令、大运流年、信号数量、紫微旁路与隐藏线索校准状态。该组件只做用户可读过程投影，不显示 provider/model/prompt/debug/Admin 信息，不提供可点击步骤，也不改变 verdict、chart facts、runtime 权重、V30 状态或生产权重。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

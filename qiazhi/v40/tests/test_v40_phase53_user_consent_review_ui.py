@@ -114,8 +114,8 @@ def test_phase53_docs_and_project_status_track_user_consent_review_ui() -> None:
     assert "2026-07-02 Phase 53" in spec
     assert "docs/V40_PHASE53_USER_CONSENT_REVIEW_UI.md" in readme
     assert "User-side practitioner review authorization is wired" in ui_spec
-    assert status["current_phase"] == 54
-    assert status["current_phase_name"] == "User Account And Profile Flow"
+    assert status["current_phase"] == 55
+    assert status["current_phase_name"] == "Compact Staged Process Ticker"
     assert any(row["range"] == "52" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-12: real-case account/profile acceptance" in status["next_mainline_tasks"]
+    assert "UI-13: real-case account/profile/process acceptance" in status["next_mainline_tasks"]

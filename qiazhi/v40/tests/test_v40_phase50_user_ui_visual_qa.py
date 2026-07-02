@@ -31,8 +31,8 @@ def test_phase50_visual_qa_doc_and_script_are_mainline_artifacts() -> None:
 def test_phase50_project_status_tracks_visual_qa_as_completed_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 54
-    assert status["current_phase_name"] == "User Account And Profile Flow"
+    assert status["current_phase"] == 55
+    assert status["current_phase_name"] == "Compact Staged Process Ticker"
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-12: real-case account/profile acceptance" in status["next_mainline_tasks"]
+    assert "UI-13: real-case account/profile/process acceptance" in status["next_mainline_tasks"]
