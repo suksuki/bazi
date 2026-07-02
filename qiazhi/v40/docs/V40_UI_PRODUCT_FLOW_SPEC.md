@@ -66,6 +66,7 @@ AI initial reading
 10. UI should feel modern, quiet, professional, and lightly inspired by mingli, not old-fashioned fortune-telling.
 11. No LLM means the product runtime fails loudly; the user app must not silently substitute local template text.
 12. Training and validation updates apply immediately to the active policy registry; rollback and repair happen after activation, not as a pre-approval gate.
+13. Practitioner is a role-based lens on the same Reading, not a separate user-side reading page.
 
 The ordinary user should quickly answer:
 
@@ -106,7 +107,7 @@ User App
     ProbeCard
     Probe Calibration Surface (legacy capability name, now presented as one ProbeCard)
     FeedbackLayer
-    PractitionerLensDrawer
+    ContextualPractitionerLensDrawer
 
 Admin App
   Evaluation
@@ -199,11 +200,32 @@ Probe must be skippable, short, and explained in user language:
 ### Practitioner
 
 ```text
-open Practitioner Lens
+open Contextual Practitioner Lens from the same report
 → inspect main verdict, alternative branches, evidence and counter-evidence
 → choose professional action
 → add optional note
 → action becomes local overlay and training label
+```
+
+Practitioner mode uses the same Reading / Report / Conversation / Probe context as ordinary users.
+
+```text
+same Reading
+same Report
+same Conversation
+same Probe
+different RoleProjection
+```
+
+There is no separate practitioner measurement page. A practitioner sees a professional layer on top of the same user-facing report.
+
+The Lens is contextual and collapsed by default:
+
+```text
+click topic card -> focus Lens on that topic
+click 专业视角 -> open the current report focus
+desktop -> right drawer
+mobile -> bottom drawer behavior
 ```
 
 Practitioner actions are human-language choices:
@@ -232,6 +254,8 @@ Practitioners cannot:
 - Edit global weights directly.
 - Publish policy.
 - View Admin debug by default.
+
+The Practitioner Lens must not show internal implementation names such as raw ids, policy keys, training target names, model provider fields, raw prompts, raw LLM outputs, or debug traces. Those stay in the independent Admin app.
 
 ## Role Permissions
 
@@ -272,7 +296,7 @@ Registered user cannot:
 Practitioner can:
 
 - Use everything a registered user can use.
-- Open Practitioner Lens.
+- Open Contextual Practitioner Lens on the same Reading page.
 - Inspect main verdict, alternative branches, evidence, counter-evidence, Probe candidates, user feedback, and notes.
 - Mark branch actions in human language.
 - Add practitioner notes.
@@ -334,6 +358,8 @@ user requests practitioner review
 → review result returns to user
 → user optionally allows anonymized training use
 ```
+
+Review queue is only a task list. Review detail still opens the same V40 Reading UI with practitioner RoleProjection and the Contextual Practitioner Lens.
 
 Required future contracts:
 
@@ -571,7 +597,7 @@ Mismatch should trigger a recovery probe instead of only recording a negative la
 
 ### Practitioner Lens
 
-Practitioner Lens shows:
+Contextual Practitioner Lens shows after a practitioner opens a topic focus:
 
 - Main verdict.
 - Alternative branches.
@@ -644,7 +670,7 @@ Current completed cleanup:
 
 - Ordinary users no longer see execution mode/provider/model controls.
 - Role is now derived from `/api/v40/session/context`.
-- Practitioner Lens is a right drawer and only appears for practitioner role.
+- Contextual Practitioner Lens is a collapsed drawer and only opens for practitioner role.
 - Probe is a first-class calibration card.
 - Desktop/mobile visual QA is repeatable through `scripts/run_user_ui_visual_qa.py`.
 - User-side practitioner review authorization is wired after report generation.
@@ -733,15 +759,16 @@ Make Probe a first-class surface:
 - Immediate refined advice.
 - AnswerSignal / HiddenAttributeUpdate / LocalOverlay / TrainingLabelEvent.
 
-### UI-5 Practitioner Lens
+### UI-5 Contextual Practitioner Lens
 
-Move Practitioner Lens to drawer:
+Move Practitioner Lens to a collapsed contextual drawer:
 
 - Professional language.
 - Branch and evidence cards.
 - Human-readable calibration actions.
 - Notes.
 - Training event bridge.
+- Focus follows the selected report card or current topic.
 
 ### UI-6 Auth-Derived Role Context
 

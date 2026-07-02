@@ -101,6 +101,14 @@
       font-size: 12px;
       white-space: nowrap;
     }
+    .lens-toggle {
+      display: none;
+      align-items: center;
+      min-height: 36px;
+    }
+    body[data-role="practitioner"] .lens-toggle {
+      display: inline-flex;
+    }
     .user-menu {
       position: relative;
       z-index: 6;
@@ -138,6 +146,9 @@
       align-items: start;
     }
     body[data-role="practitioner"] .shell {
+      grid-template-columns: 330px minmax(0, 1fr);
+    }
+    body[data-role="practitioner"].lens-open .shell {
       grid-template-columns: 330px minmax(0, 1fr) 320px;
     }
     .surface,
@@ -560,6 +571,35 @@
     .report-card li {
       margin: 5px 0;
     }
+    .report-card[data-lens-topic] {
+      transition: transform 140ms ease, box-shadow 140ms ease, background 140ms ease;
+    }
+    body[data-role="practitioner"] .report-card[data-lens-topic] {
+      cursor: pointer;
+    }
+    body[data-role="practitioner"] .report-card[data-lens-topic]:hover,
+    body[data-role="practitioner"] .report-card[data-lens-topic].lens-focused {
+      transform: translateY(-1px);
+      background:
+        linear-gradient(90deg, rgba(110,139,126,.10), transparent 52%),
+        #fffdf8;
+      box-shadow: inset 0 0 0 1px rgba(110,139,126,.36), 0 12px 28px rgba(52,43,31,.08);
+    }
+    .lens-inline {
+      display: none;
+      margin-top: 12px;
+      padding: 0;
+      border: 0;
+      background: transparent;
+      color: #3e6659;
+      font: inherit;
+      font-size: 12px;
+      font-weight: 780;
+      cursor: pointer;
+    }
+    body[data-role="practitioner"] .lens-inline {
+      display: inline-flex;
+    }
     .process-card {
       display: grid;
       gap: 10px;
@@ -780,7 +820,7 @@
       padding: 14px;
       min-height: 360px;
     }
-    body[data-role="practitioner"] .drawer {
+    body[data-role="practitioner"].lens-open .drawer {
       display: block;
     }
     .drawer h2 {
@@ -790,6 +830,20 @@
     .lens-stack {
       display: grid;
       gap: 10px;
+    }
+    .lens-focus {
+      display: grid;
+      gap: 5px;
+      margin: 12px 0;
+      padding: 11px;
+      border-radius: var(--radius);
+      background: #f5efe5;
+      color: var(--soft-ink);
+      font-size: 12px;
+    }
+    .lens-focus strong {
+      color: var(--accent);
+      font-size: 13px;
     }
     .lens-card {
       border-radius: var(--radius);
@@ -816,6 +870,16 @@
       background: var(--support-soft);
       color: #3e6659;
     }
+    .lens-note {
+      display: grid;
+      gap: 6px;
+      margin: 2px 0 10px;
+      color: var(--soft-ink);
+      font-size: 12px;
+    }
+    .lens-note textarea {
+      min-height: 62px;
+    }
     .empty {
       color: var(--soft-ink);
       padding: 32px 8px;
@@ -829,6 +893,9 @@
         grid-template-columns: 310px minmax(0, 1fr);
       }
       body[data-role="practitioner"] .shell {
+        grid-template-columns: 310px minmax(0, 1fr);
+      }
+      body[data-role="practitioner"].lens-open .shell {
         grid-template-columns: 310px minmax(0, 1fr);
       }
       .drawer {
@@ -857,6 +924,9 @@
         margin-top: 10px;
       }
       .shell {
+        grid-template-columns: 1fr;
+      }
+      body[data-role="practitioner"].lens-open .shell {
         grid-template-columns: 1fr;
       }
       .workspace,
@@ -892,6 +962,7 @@
       </div>
       <div class="top-actions">
         <div class="role-chip" id="roleChip">当前身份</div>
+        <button class="secondary-button lens-toggle" id="lensToggleButton" type="button" aria-expanded="false">专业视角</button>
         <details class="user-menu" id="userMenu">
           <summary id="userMenuLabel">登录 / 我的命盘</summary>
           <div class="user-menu-body">
@@ -1117,6 +1188,8 @@
     let currentTurn = null;
     let currentMismatchArea = "";
     let currentCalibrationResults = [];
+    let activeLensTopic = "";
+    let activeLensTitle = "";
     let reviewSubmitted = false;
     let typingTimer = null;
     let processTypingTimers = [];
@@ -1151,6 +1224,32 @@
       return "普通用户";
     }
 
+    function lensIsOpen() {
+      return document.body.classList.contains("lens-open");
+    }
+
+    function updateLensControls() {
+      const button = $("lensToggleButton");
+      if (!button) return;
+      const open = lensIsOpen();
+      button.textContent = open ? "收起专业视角" : "专业视角";
+      button.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+
+    function setLensOpen(open) {
+      const allowed = currentRole === "practitioner" && open;
+      document.body.classList.toggle("lens-open", allowed);
+      updateLensControls();
+    }
+
+    function focusLensTopic(topic, title) {
+      if (currentRole !== "practitioner") return;
+      activeLensTopic = topic || "";
+      activeLensTitle = title || (activeLensTopic ? `${topicLabel(activeLensTopic)}重点` : "本次报告");
+      setLensOpen(true);
+      renderLens(currentRuntime);
+    }
+
     function profileChartText(profile) {
       const chart = profile?.chart_facts || profile?.chart_json || {};
       return [
@@ -1178,6 +1277,13 @@
       currentUser = payload.user || currentUser;
       document.body.dataset.role = currentRole;
       $("roleChip").textContent = roleText(currentRole);
+      if (currentRole !== "practitioner") {
+        activeLensTopic = "";
+        activeLensTitle = "";
+        setLensOpen(false);
+      } else {
+        updateLensControls();
+      }
       renderAuthState();
     }
 
@@ -1208,6 +1314,7 @@
         $("authStatus").textContent = "登录后可以保存和选择自己的八字档案。";
         $("userMenuLabel").textContent = "登录 / 我的命盘";
       }
+      updateLensControls();
     }
 
     async function authRequest(kind) {
@@ -1238,6 +1345,16 @@
       currentUser = null;
       currentProfiles = [];
       selectedProfile = null;
+      currentRole = "user";
+      sessionContext = {
+        session_id: "local-user-app-session",
+        ["role" + "_key"]: "user",
+        ["role" + "_context"]: {role: "user"}
+      };
+      activeLensTopic = "";
+      activeLensTitle = "";
+      document.body.dataset.role = currentRole;
+      setLensOpen(false);
       renderAuthState();
       renderProfiles();
       $("roleChip").textContent = roleText("user");
@@ -1554,16 +1671,22 @@
       const projection = runtime.product_projection || {};
       const verdicts = (projection.verdict_cards || []).slice(0, 3);
       const hiddenCount = Math.max((projection.verdict_cards || []).length - verdicts.length, 0);
-      $("topicCards").innerHTML = verdicts.map((card) => `
-        <article class="report-card">
-          <h4>${escapeHtml(topicLabel(card.topic))}重点</h4>
+      $("topicCards").innerHTML = verdicts.map((card) => {
+        const topic = card.topic || "overview";
+        const title = `${topicLabel(topic)}重点`;
+        const focused = activeLensTopic && activeLensTopic === topic ? " lens-focused" : "";
+        return `
+        <article class="report-card${focused}" data-lens-topic="${escapeHtml(topic)}" data-lens-title="${escapeHtml(title)}" tabindex="${currentRole === "practitioner" ? "0" : "-1"}">
+          <h4>${escapeHtml(title)}</h4>
           <p>${escapeHtml(card.primary_text)}</p>
           <div class="metric-row">
             <span class="metric strong">${escapeHtml(card.confidence_label || "证据支持")}</span>
             <span class="metric">证据 ${escapeHtml(card.evidence_count || 0)}</span>
           </div>
+          <button class="lens-inline" type="button" data-lens-topic="${escapeHtml(topic)}" data-lens-title="${escapeHtml(title)}">查看专业视角</button>
         </article>
-      `).join("") + (hiddenCount ? `<div class="notice">还有 ${hiddenCount} 个领域已折叠，后续可以通过追问展开。</div>` : "") || `<div class="notice">本次没有形成可展示判断。</div>`;
+      `;
+      }).join("") + (hiddenCount ? `<div class="notice">还有 ${hiddenCount} 个领域已折叠，后续可以通过追问展开。</div>` : "") || `<div class="notice">本次没有形成可展示判断。</div>`;
     }
 
     function renderAdvice(runtime) {
@@ -1679,44 +1802,69 @@
       const branchCards = (projection.branch_cards || []).map((card) => ({
         id: card.source_branch_id,
         type: "branch",
+        topic: card.topic || "overview",
         title: card.title || "分支候选",
-        text: card.practitioner_summary || card.user_summary || ""
+        text: card.practitioner_summary || card.user_summary || "",
+        question: card.key_question || ""
       })).filter((item) => item.id);
       const calibration = runtime.surface_bundle?.surfaces?.calibration || {};
       const lens = calibration.practitioner_lens || {};
       const sideSignals = (lens.ziwei_signals || []).map((signal) => ({
         id: signal.signal_id,
         type: "signal",
+        topic: signal.topic || "overview",
         title: `${topicLabel(signal.topic)}旁路信号`,
         text: signal.claim || ""
       }));
       const verdictCards = (projection.verdict_cards || []).map((card) => ({
         id: card.source_verdict_id,
         type: "verdict",
+        topic: card.topic || "overview",
         title: card.title || "主判断",
         text: card.primary_text || ""
       })).filter((item) => item.id);
-      return verdictCards.concat(branchCards, sideSignals).slice(0, 7);
+      const probeCards = (runtime.probes || []).map((probe) => ({
+        id: probe.probe_id,
+        type: "probe",
+        topic: probe.topic || "overview",
+        title: `${topicLabel(probe.topic)}建议追问`,
+        text: probe.question || ""
+      })).filter((item) => item.id);
+      return verdictCards.concat(branchCards, sideSignals, probeCards).slice(0, 9);
     }
 
     function renderLens(runtime) {
       if (currentRole !== "practitioner") return;
-      const targets = runtime ? lensTargetCards(runtime) : [];
+      const allTargets = runtime ? lensTargetCards(runtime) : [];
+      const targets = activeLensTopic
+        ? allTargets.filter((target) => target.topic === activeLensTopic)
+        : allTargets;
       const actions = [
-        ["support", "更像这个表现"],
-        ["auxiliary", "作为辅助参考"],
-        ["downweight", "暂不采用"],
-        ["ask_more", "需要追问确认"],
-        ["mismatch", "用户反馈不符合"]
+        ["more_like_this", "更像这个表现"],
+        ["supporting_context", "作为辅助参考"],
+        ["do_not_use_now", "暂不采用"],
+        ["ask_to_confirm", "需要追问确认"],
+        ["user_mismatch", "用户反馈不符合"],
+        ["note", "添加备注"]
       ];
+      const focusTitle = activeLensTitle || (activeLensTopic ? `${topicLabel(activeLensTopic)}重点` : "本次报告");
+      const focusBlock = `
+        <div class="lens-focus">
+          <strong>当前聚焦</strong>
+          <span>${escapeHtml(focusTitle)}</span>
+        </div>
+        <label class="lens-note">命理师备注
+          <textarea id="lensNote" placeholder="只记录本次判断的专业备注，不改命盘事实。"></textarea>
+        </label>`;
       if (!targets.length) {
-        $("lensStack").innerHTML = `<div class="empty">当前没有需要校准的分支。</div>`;
+        $("lensStack").innerHTML = `${focusBlock}<div class="empty">当前主题暂时没有需要校准的分支。</div>`;
         return;
       }
-      $("lensStack").innerHTML = targets.map((target) => `
+      $("lensStack").innerHTML = focusBlock + targets.map((target) => `
         <div class="lens-card">
           <strong>${escapeHtml(target.title)}</strong>
           <p>${escapeHtml(target.text)}</p>
+          ${target.question ? `<p>建议追问：${escapeHtml(target.question)}</p>` : ""}
           <div class="lens-actions">
             ${actions.map(([key, label]) => `<button class="lens-action" type="button" data-lens-action="${escapeHtml(key)}" data-target-type="${escapeHtml(target.type)}" data-target-id="${escapeHtml(target.id)}">${escapeHtml(label)}</button>`).join("")}
           </div>
@@ -1822,6 +1970,7 @@
 
     async function applyLensAction(actionKey, targetType, targetId, node) {
       if (!currentRuntime || currentRole !== "practitioner") return;
+      const note = $("lensNote")?.value || "";
       if (node) node.disabled = true;
       try {
         const response = await fetch("/api/v40/calibration/practitioner-lens-action", {
@@ -1833,6 +1982,7 @@
             action_key: actionKey,
             target_type: targetType,
             target_ids: [targetId],
+            note,
             created_by_role: currentRole,
             persist: false,
             persist_overlay: false
@@ -1840,6 +1990,7 @@
         });
         if (!response.ok) throw new Error("校准未记录");
         if (node) node.textContent = "已记录";
+        if (actionKey === "note" && $("lensNote")) $("lensNote").value = "";
       } catch (error) {
         if (node) node.textContent = error.message;
       }
@@ -1986,6 +2137,9 @@
       currentSeeds = [];
       currentTurn = null;
       currentCalibrationResults = [];
+      activeLensTopic = "";
+      activeLensTitle = "";
+      setLensOpen(false);
       $("topicCards").innerHTML = "";
       $("conversationTurns").innerHTML = "";
       $("conversationSurface").classList.add("hidden");
@@ -2035,6 +2189,16 @@
       $("processSummary").textContent = $("processTicker").classList.contains("expanded")
         ? "收起推演过程"
         : "本次已完成：定盘 / 取象 / 合参。点击查看推演过程。";
+    });
+
+    $("lensToggleButton").addEventListener("click", () => {
+      if (currentRole !== "practitioner") return;
+      if (lensIsOpen()) {
+        setLensOpen(false);
+        return;
+      }
+      const firstTopic = currentRuntime?.product_projection?.verdict_cards?.[0]?.topic || value("topic");
+      focusLensTopic(activeLensTopic || firstTopic, activeLensTitle || `${topicLabel(firstTopic)}重点`);
     });
 
     $("loginButton").addEventListener("click", () => {
@@ -2117,7 +2281,20 @@
       const lens = event.target.closest("button[data-lens-action]");
       if (lens) {
         applyLensAction(lens.dataset.lensAction || "", lens.dataset.targetType || "", lens.dataset.targetId || "", lens);
+        return;
       }
+      const lensTopic = event.target.closest("[data-lens-topic]");
+      if (lensTopic && currentRole === "practitioner") {
+        focusLensTopic(lensTopic.dataset.lensTopic || "", lensTopic.dataset.lensTitle || "");
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      const lensTopic = event.target.closest?.("[data-lens-topic]");
+      if (!lensTopic || currentRole !== "practitioner") return;
+      event.preventDefault();
+      focusLensTopic(lensTopic.dataset.lensTopic || "", lensTopic.dataset.lensTitle || "");
     });
   </script>
 </body>

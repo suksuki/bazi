@@ -747,6 +747,8 @@ docs/V40_PHASE59_UI_PRODUCT_CONVERGENCE_PLAN.md
 
 外部 UI review 已确认 V40 方向正确，但用户侧页面需要从“工程工作台”进一步收敛为“命理测试产品”。Phase 59 的主线是四层渐进披露：测算入口、测算报告、继续追问、校准/命理师 Lens。本阶段已把用户页首屏收敛为主题、当前命盘和开始测算；账号/档案进入顶部“登录 / 我的命盘”抽屉；四柱、大运和流年进入折叠编辑区；报告优先展示核心判断、建议、风险和追问；Probe 只作为“一个问题，让判断更准”的校准卡出现；命理师 Lens 改为“专业视角”，仅命理师/admin 可见。
 
+Phase 59 第二轮把命理师体验正式收敛为 `same Reading + RoleProjection + Contextual Practitioner Lens`：命理师不是另一个测算页面，而是同一份 Reading、Report、Conversation 和 Probe 上的专业增强层。专业视角默认收起，点击报告卡片或顶部“专业视角”后按当前主题聚焦，展示当前判断、分支、旁路证据、建议追问、人话校准动作和备注入口；普通用户永远不看到命理师动作，Admin debug 继续留在独立控制台。未来复核队列可以作为任务列表存在，但 case 详情仍打开同一个 V40 Reading UI。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

@@ -220,9 +220,39 @@ Only practitioner/admin role sees:
 专业视角
 ```
 
+Phase 59 locks the product rule:
+
+```text
+Practitioner is a role-based lens, not a separate product surface.
+命理师是同一测算结果上的专业视角，不是另一个测算流程。
+```
+
+The same user app must serve:
+
+```text
+same Reading
+same Report
+same Conversation
+same Probe
+different RoleProjection
+```
+
+There must not be a separate practitioner reading page. Future review queue items may open a case list, but the case detail returns to this same Reading UI with practitioner RoleProjection.
+
+The drawer is contextual:
+
+```text
+click 财富卡 -> focus wealth evidence, branches, probes and actions
+click 关系卡 -> focus relationship evidence, branches, probes and actions
+click 专业视角 -> open the current report focus
+```
+
+It is collapsed by default, so the normal report remains the spine even for practitioners.
+
 Drawer content:
 
 ```text
+当前判断
 主分支
 备选分支
 证据
@@ -239,6 +269,7 @@ Actions use human professional language:
 暂不采用
 需要追问确认
 用户反馈不符合
+添加备注
 ```
 
 No internal words:
@@ -365,13 +396,24 @@ review consent hidden until explicit request
 Practitioner Lens renamed to 专业视角
 ```
 
+2026-07-02 第二轮 runtime 收敛目标：
+
+```text
+same Reading + RoleProjection principle documented
+professional Lens is collapsed by default
+report cards can focus Lens by topic
+Lens actions use human language and backend-safe action keys
+practitioner note is captured as local training material
+mobile practitioner view behaves as a lightweight drawer
+```
+
 Next runtime work:
 
 ```text
-mobile visual QA
-report typography polish
+contextual practitioner Lens QA
 conversation next-suggestion refresh after each answer
-optional chart/profile drawer animation
+live LLM acceptance with admin profiles
+online cutover decision with user acceptance evidence
 ```
 
 ## Acceptance Checklist
@@ -381,6 +423,6 @@ optional chart/profile drawer animation
 - Report is readable before follow-up appears.
 - Conversation never refreshes or blocks the report.
 - Probe asks one question and explains the payoff.
-- Practitioner Lens is hidden for ordinary users.
+- Practitioner Lens is hidden for ordinary users, collapsed by default for practitioners, and focused by current report topic.
 - Mobile reads as a staged product flow, not compressed desktop.
 - No engineering/provider/model/policy language leaks into user app.

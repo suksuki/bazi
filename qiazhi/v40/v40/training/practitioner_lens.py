@@ -46,6 +46,12 @@ ACTION_POLICIES: dict[str, PractitionerLensActionPolicy] = {
         confidence=0.74,
         reason="命理师记录用户反馈与该信号不符，应作为后续训练和校准素材。",
     ),
+    "note": PractitionerLensActionPolicy(
+        label=LabelValue.PROBE_HELPFUL,
+        strength=0.54,
+        confidence=0.56,
+        reason="命理师仅补充本次判断备注，作为后续复核和训练素材，不直接改变结论。",
+    ),
 }
 
 

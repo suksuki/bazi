@@ -111,7 +111,7 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-18: Phase 59 productized reading setup and report-first convergence",
+            "UI-20: contextual practitioner Lens on the same Reading page",
             "UI-19: Phase 59 mobile and visual QA",
             "UI-15: live LLM user acceptance with admin profiles",
             "TRAIN-16: direct training activation remediation and rollback UX",

@@ -35,7 +35,8 @@ class Scenario:
     height: int
     role_header: str = ""
     expected_role_text: str = "普通用户"
-    expect_lens_visible: bool = False
+    expect_lens_entry_visible: bool = False
+    expect_lens_drawer_open: bool = False
     mobile: bool = False
 
 
@@ -47,7 +48,8 @@ SCENARIOS = [
         height=960,
         role_header="practitioner",
         expected_role_text="命理师视角",
-        expect_lens_visible=True,
+        expect_lens_entry_visible=True,
+        expect_lens_drawer_open=False,
     ),
     Scenario(name="mobile_user", width=390, height=844, mobile=True),
 ]
@@ -158,11 +160,16 @@ def _check_role_surface(page: Any, scenario: Scenario) -> list[str]:
     role_text = page.locator("#roleChip").inner_text(timeout=5000)
     if scenario.expected_role_text not in role_text:
         issues.append(f"expected role text {scenario.expected_role_text}, got {role_text}")
-    lens_visible = page.locator("#lensDrawer").is_visible(timeout=5000)
-    if scenario.expect_lens_visible and not lens_visible:
-        issues.append("practitioner lens should be visible")
-    if not scenario.expect_lens_visible and lens_visible:
-        issues.append("practitioner lens should be hidden")
+    lens_entry_visible = page.locator("#lensToggleButton").is_visible(timeout=5000)
+    lens_drawer_open = page.locator("#lensDrawer").is_visible(timeout=5000)
+    if scenario.expect_lens_entry_visible and not lens_entry_visible:
+        issues.append("practitioner lens entry should be visible")
+    if not scenario.expect_lens_entry_visible and lens_entry_visible:
+        issues.append("practitioner lens entry should be hidden")
+    if scenario.expect_lens_drawer_open and not lens_drawer_open:
+        issues.append("practitioner lens drawer should be open")
+    if not scenario.expect_lens_drawer_open and lens_drawer_open:
+        issues.append("practitioner lens drawer should be collapsed")
     return issues
 
 

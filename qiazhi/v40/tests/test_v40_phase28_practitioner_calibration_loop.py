@@ -116,6 +116,24 @@ def test_practitioner_lens_action_api_rejects_user_runtime_and_accepts_practitio
     body = accepted.json()
     assert body["event"]["label"] == "supports"
     assert body["overlay"]["affected_target_ids"] == [target_id]
+
+    noted = client.post(
+        f"{API_PREFIX}/calibration/practitioner-lens-action",
+        json={
+            "action_id": "phase28.note.001",
+            "runtime": practitioner_runtime.model_dump(mode="json"),
+            "action_key": "note",
+            "target_type": "signal",
+            "target_ids": [target_id],
+            "note": "这条先作为专业备注保留。",
+            "persist": False,
+            "persist_overlay": False,
+        },
+    )
+    assert noted.status_code == 200
+    note_body = noted.json()
+    assert note_body["event"]["label"] == "probe_helpful"
+    assert "命理师备注" in note_body["event"]["reason"]
     assert body["event_persisted"] is False
     assert body["overlay_persisted"] is False
     assert body["writes_v40_weight"] is False

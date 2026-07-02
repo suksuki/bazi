@@ -374,6 +374,7 @@ class PractitionerLensActionRequest(V40Model):
             "do_not_use_now",
             "ask_to_confirm",
             "user_mismatch",
+            "note",
         }
         if self.created_by_role not in {"practitioner", "admin"}:
             raise ValueError("Practitioner lens action requires practitioner or admin role")

@@ -13,7 +13,7 @@ Phase 50 把 V40 用户侧从“功能可跑”推进到“页面可验收”。
 | 场景 | 视口 | 身份 | 重点 |
 | --- | --- | --- | --- |
 | desktop_user | 1440x960 | user | 普通用户主流程、报告优先、无工程词 |
-| desktop_practitioner | 1440x960 | practitioner | Practitioner Lens 只在命理师身份出现 |
+| desktop_practitioner | 1440x960 | practitioner | 专业视角入口只在命理师身份出现，抽屉默认收起 |
 | mobile_user | 390x844 | user | 手机端无横向溢出，核心输入可见 |
 
 ## 脚本
@@ -51,8 +51,8 @@ qiazhi/v40/.runtime/visual_qa/phase50/
 1. 页面必须出现品牌与输入表单；
 2. 普通用户身份显示为普通用户；
 3. 命理师 header 会触发命理师视角；
-4. 命理师视角下 Practitioner Lens 可见；
-5. 普通用户和手机端不出现 Practitioner Lens；
+4. 命理师视角下专业视角入口可见，抽屉默认收起；
+5. 普通用户不出现专业校准入口；
 6. 页面可见文字不得泄漏 provider/model/prompt/acceptance/policy/debug/telemetry/admin 等工程词；
 7. 页面源码不得使用 URL role hook；
 8. 手机端不得出现明显横向滚动；

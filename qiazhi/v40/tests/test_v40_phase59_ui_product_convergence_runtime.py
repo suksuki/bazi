@@ -23,6 +23,16 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
         "继续追问",
         "一个问题，让判断更准",
         "专业视角",
+        "lensToggleButton",
+        "data-lens-topic",
+        "查看专业视角",
+        "当前聚焦",
+        "添加备注",
+        "more_like_this",
+        "supporting_context",
+        "do_not_use_now",
+        "ask_to_confirm",
+        "user_mismatch",
         "报告不会刷新",
     ]:
         assert text in html
@@ -32,6 +42,9 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
     assert "/admin/v40" not in html
     assert "local_expression_adapter" not in html
     assert "execution_mode" not in html
+    assert "downweight" not in html
+    assert "policy_key" not in html
+    assert "trainable_refs" not in html
 
 
 def test_phase59_project_status_marks_ui_convergence_runtime_active() -> None:
@@ -41,5 +54,4 @@ def test_phase59_project_status_marks_ui_convergence_runtime_active() -> None:
     assert status["current_phase_name"] == "UI Product Convergence Runtime"
     assert any(row["range"] == "58" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "active" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "UI-18: Phase 59 productized reading setup and report-first convergence"
-
+    assert status["next_mainline_tasks"][0] == "UI-20: contextual practitioner Lens on the same Reading page"

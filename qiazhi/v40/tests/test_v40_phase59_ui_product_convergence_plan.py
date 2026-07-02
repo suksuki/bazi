@@ -20,8 +20,12 @@ def test_phase59_ui_product_convergence_plan_is_documented() -> None:
     assert "P1: Reading Setup First Screen" in doc
     assert "P2: Report-First Layout" in doc
     assert "P3: Follow-Up And Conversation Layering" in doc
+    assert "Practitioner is a role-based lens" in doc
+    assert "same Reading" in doc
+    assert "ContextualPractitionerLensDrawer" in ui_spec
     assert "docs/V40_PHASE59_UI_PRODUCT_CONVERGENCE_PLAN.md" in readme
     assert "2026-07-02 Phase 59 UI 收敛 runtime 已启动" in spec
+    assert "same Reading + RoleProjection + Contextual Practitioner Lens" in spec
     assert "Reading Setup" in ui_spec
     assert "Account/profile management" in ui_spec
 
@@ -31,4 +35,4 @@ def test_phase59_ui_product_convergence_is_next_mainline_task() -> None:
 
     assert status["current_phase"] == 59
     assert status["current_phase_name"] == "UI Product Convergence Runtime"
-    assert "UI-18: Phase 59 productized reading setup and report-first convergence" in status["next_mainline_tasks"]
+    assert "UI-20: contextual practitioner Lens on the same Reading page" in status["next_mainline_tasks"]
