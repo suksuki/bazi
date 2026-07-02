@@ -56,8 +56,8 @@ def test_phase62_user_ui_has_left_history_and_folded_reverse_conversation_items(
 def test_phase62_project_status_marks_history_conversation_layering_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 63
-    assert status["current_phase_name"] == "Real Case Acceptance Window"
+    assert status["current_phase"] == 64
+    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
     assert any(row["range"] == "61" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P63-1: Real Case Bank / Acceptance Window V1"
+    assert status["next_mainline_tasks"][0] == "P64-1: Bazi Fact Engine Pro V1"

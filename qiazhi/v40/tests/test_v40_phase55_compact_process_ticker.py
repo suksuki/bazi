@@ -42,10 +42,10 @@ def test_phase55_docs_and_project_status_track_compact_process_ticker() -> None:
     assert "2026-07-02 Phase 55" in spec
     assert "docs/V40_PHASE55_COMPACT_PROCESS_TICKER.md" in readme
     assert "three-line staged process ticker" in ui_spec
-    assert status["current_phase"] == 63
-    assert status["current_phase_name"] == "Real Case Acceptance Window"
+    assert status["current_phase"] == 64
+    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "55" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P63-1: Real Case Bank / Acceptance Window V1" in status["next_mainline_tasks"]
+    assert "P64-1: Bazi Fact Engine Pro V1" in status["next_mainline_tasks"]

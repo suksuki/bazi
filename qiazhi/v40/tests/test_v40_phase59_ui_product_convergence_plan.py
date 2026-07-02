@@ -33,8 +33,8 @@ def test_phase59_ui_product_convergence_plan_is_documented() -> None:
 def test_phase59_ui_product_convergence_is_next_mainline_task() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 63
-    assert status["current_phase_name"] == "Real Case Acceptance Window"
+    assert status["current_phase"] == 64
+    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "P63-1: Real Case Bank / Acceptance Window V1" in status["next_mainline_tasks"]
+    assert "P64-1: Bazi Fact Engine Pro V1" in status["next_mainline_tasks"]

@@ -106,7 +106,7 @@ def test_phase56_docs_and_status_track_admin_profile_sync() -> None:
     assert "18 个 V30 admin 八字档案" in doc
     assert "2026-07-02 Phase 56" in spec
     assert "docs/V40_PHASE56_ADMIN_PROFILE_SYNC.md" in readme
-    assert status["current_phase"] == 63
-    assert status["current_phase_name"] == "Real Case Acceptance Window"
+    assert status["current_phase"] == 64
+    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])

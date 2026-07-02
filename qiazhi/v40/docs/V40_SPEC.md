@@ -784,6 +784,17 @@ AcceptanceWindowResult
 
 本阶段把真实命例质量闭环从计划推进到运行时合约：`RealCaseRecord` 记录用户问题、已知人生事件、命理师判断、期望命理结论、禁止断语和验收阈值；`AcceptanceWindowResult` 汇总当前 `RuntimeResult` 在真实案例窗口里的 verdict match、advice grounding、overclaim、domain coverage、Probe usefulness、LLM expression clarity 和 trainable attribution hints。Acceptance Window 只写 evaluation evidence 和 batch summary，不改 chart facts，不写 production policy，不导入 V30 runtime，也不让 LLM 作为评测裁判。
 
+2026-07-02 Phase 64 八字事实层 Pro 已启动：
+
+```text
+docs/V40_PHASE64_BAZI_FACT_ENGINE_PRO.md
+build_fact_engine_pro_profile
+adapter.fact_engine_pro
+native_bazi_fact_engine_pro
+```
+
+本阶段把 native Bazi 事实层从简版 adapter 提升为 `Bazi Fact Engine Pro V1`：新增藏干、藏干十神加权、日主根气、月令权重、刑害破、三合三会和大运流年动态触发事实。这些内容进入 runtime facts/features/signals，并被 DecisionEngine 作为证据消费；它们仍是确定性事实素材，只验证不训练，不改 chart facts，不让 LLM 或 fact engine 直接生成 verdict。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

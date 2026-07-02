@@ -126,6 +126,6 @@ def test_phase48_docs_and_project_status_track_probe_aware_conversation() -> Non
     assert "source_answer_signal_ids" in doc
     assert "2026-07-01 Phase 48" in spec
     assert "docs/V40_PHASE48_PROBE_AWARE_CONVERSATION_PLAN.md" in readme
-    assert status["current_phase"] == 63
-    assert status["current_phase_name"] == "Real Case Acceptance Window"
+    assert status["current_phase"] == 64
+    assert status["current_phase_name"] == "Bazi Fact Engine Pro"
     assert any(row["range"] == "48" and row["status"] == "complete" for row in status["phase_groups"])
