@@ -87,13 +87,26 @@ The target experience is:
 
 ```text
 User App
-  Input Workspace
-  Reading Surface
-  Follow-up Hub
-  Conversation Surface
-  Probe Calibration Surface
-  Feedback Layer
-  Practitioner Lens
+  Reading Setup
+    TopicSelector
+    CurrentChartCard
+    ChartInputDrawer
+    StartReadingButton
+  Reading Result
+    VerdictHero
+    FocusSummary
+    AdviceBlock
+    RiskBoundary
+    CollapsedProcessSummary
+  Follow-up And Conversation
+    RecommendedFollowUps
+    OneQuestionOneAnswerTurns
+    QuestionInput
+  Calibration And Practitioner Layer
+    ProbeCard
+    Probe Calibration Surface (legacy capability name, now presented as one ProbeCard)
+    FeedbackLayer
+    PractitionerLensDrawer
 
 Admin App
   Evaluation
@@ -103,6 +116,25 @@ Admin App
 ```
 
 Admin is not part of the user app.
+
+Phase 59 product convergence rule:
+
+```text
+少一点系统能力展示，多一点测算仪式感。
+少一点后台感，多一点清晰结论。
+```
+
+The app should disclose capability in layers:
+
+```text
+先测
+再读
+再问
+必要时校准
+最后反馈
+```
+
+Account/profile management, advanced chart settings, consent review and practitioner calibration must not compete with the first-screen reading setup.
 
 ## User Flow
 
