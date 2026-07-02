@@ -1,6 +1,54 @@
 -- Qiazhi V40 isolated runtime schema.
 -- All tables must use v40_ prefix and live in qiazhi_v40.
 
+CREATE TABLE IF NOT EXISTS v40_user_accounts (
+    user_id TEXT PRIMARY KEY,
+    email TEXT NOT NULL UNIQUE,
+    display_name TEXT NOT NULL DEFAULT '',
+    role_key TEXT NOT NULL,
+    password_hash TEXT NOT NULL,
+    password_salt TEXT NOT NULL,
+    active BOOLEAN NOT NULL DEFAULT true,
+    account_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_user_accounts_email
+ON v40_user_accounts (email);
+
+CREATE TABLE IF NOT EXISTS v40_user_sessions (
+    session_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    role_key TEXT NOT NULL,
+    expires_at TIMESTAMPTZ,
+    revoked BOOLEAN NOT NULL DEFAULT false,
+    session_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_user_sessions_user
+ON v40_user_sessions (user_id, updated_at);
+
+CREATE TABLE IF NOT EXISTS v40_bazi_profiles (
+    profile_id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL,
+    display_name TEXT NOT NULL,
+    gender TEXT NOT NULL DEFAULT '',
+    chart_json JSONB NOT NULL,
+    birth_json JSONB,
+    ziwei_json JSONB,
+    is_default BOOLEAN NOT NULL DEFAULT false,
+    deleted BOOLEAN NOT NULL DEFAULT false,
+    profile_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v40_bazi_profiles_user
+ON v40_bazi_profiles (user_id, deleted, updated_at);
+
 CREATE TABLE IF NOT EXISTS v40_runtime_records (
     reading_id TEXT PRIMARY KEY,
     version TEXT NOT NULL DEFAULT 'v40.runtime_record.v1',

@@ -680,6 +680,22 @@ POST /api/v40/practitioner/review-requests
 
 本阶段把 Phase 52 的持久化审阅队列接入用户侧产品流。报告生成前不显示审阅入口；报告生成后，用户可以点击“授权复核”，前台先创建授权，再把当前 `RuntimeResult` 交给审阅请求构建器生成脱敏 case view 并写入 V40 队列。用户页面只显示授权和提交状态，不展示内部合同类型、Admin 控制面、provider/model/prompt/debug/telemetry 等工程信息；如果 V40 仓储不可用，页面必须提示稍后重试，不能假装已提交成功。此阶段不改 verdict、chart facts、signal registry、训练权重、V30 状态或生产权重。
 
+2026-07-02 Phase 54 已启动：
+
+```text
+docs/V40_PHASE54_USER_ACCOUNT_PROFILE_FLOW.md
+POST /api/v40/auth/register
+POST /api/v40/auth/login
+POST /api/v40/auth/logout
+GET  /api/v40/auth/me
+GET  /api/v40/profiles
+POST /api/v40/profiles
+PUT  /api/v40/profiles/{profile_id}
+DELETE /api/v40/profiles/{profile_id}
+```
+
+本阶段把 `/v40/ui` 固化为用户产品流：注册/登录、多用户八字档案、选择档案测算、双引擎报告、Probe 校准和简洁一问一答。V30 多分步测算页面不作为 V40 普通用户主流程保留；V40 仍保留分阶段素材、证据、双引擎信号和命理师 Lens，但普通用户只看到“档案 -> 报告 -> 必要校准 -> 对话”。注册只允许 `user/practitioner`，admin 不能从主系统注册；用户、会话和档案全部写入 V40 独立表，不读写 V30。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

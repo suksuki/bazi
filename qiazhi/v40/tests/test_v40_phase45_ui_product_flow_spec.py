@@ -32,10 +32,10 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 53
-    assert status["current_phase_name"] == "User Consent Review UI"
+    assert status["current_phase"] == 54
+    assert status["current_phase_name"] == "User Account And Profile Flow"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
     assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-11: real-case acceptance and cutover checklist rehearsal" in status["next_mainline_tasks"]
+    assert "UI-12: real-case account/profile acceptance" in status["next_mainline_tasks"]
     user_beta = next(domain for domain in status["domains"] if domain["key"] == "user_beta")
     assert "真实命例" in user_beta["next_step"]

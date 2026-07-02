@@ -36,6 +36,7 @@ from v40.contracts.training import (
     WeightActivationExecution,
     WeightActivationReview,
 )
+from v40.contracts.user import BaziProfileRecord, UserAccountInternal, UserSessionRecord
 from v40.storage.config import V40DatabaseConfig, resolve_v40_database_config
 
 
@@ -49,6 +50,259 @@ class V40PostgresRepository:
         if config is None:
             raise RuntimeError("V40_DATABASE_URL is not configured")
         return cls(config)
+
+    def save_user_account(self, account: UserAccountInternal) -> None:
+        payload = account.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_user_accounts (
+                        user_id,
+                        email,
+                        display_name,
+                        role_key,
+                        password_hash,
+                        password_salt,
+                        active,
+                        account_json,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s::jsonb, now())
+                    ON CONFLICT (user_id)
+                    DO UPDATE SET
+                        email = EXCLUDED.email,
+                        display_name = EXCLUDED.display_name,
+                        role_key = EXCLUDED.role_key,
+                        password_hash = EXCLUDED.password_hash,
+                        password_salt = EXCLUDED.password_salt,
+                        active = EXCLUDED.active,
+                        account_json = EXCLUDED.account_json,
+                        updated_at = now()
+                    """,
+                    (
+                        account.user_id,
+                        account.email,
+                        account.display_name,
+                        account.role_key,
+                        account.password_hash,
+                        account.password_salt,
+                        account.active,
+                        json.dumps(payload, ensure_ascii=False),
+                    ),
+                )
+
+    def get_user_account_by_email(self, email: str) -> UserAccountInternal | None:
+        clean_email = email.strip().lower()
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT account_json
+                    FROM v40_user_accounts
+                    WHERE email = %s AND active = true
+                    LIMIT 1
+                    """,
+                    (clean_email,),
+                )
+                row = cur.fetchone()
+        return UserAccountInternal.model_validate(row["account_json"]) if row else None
+
+    def get_user_account_by_id(self, user_id: str) -> UserAccountInternal | None:
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT account_json
+                    FROM v40_user_accounts
+                    WHERE user_id = %s AND active = true
+                    LIMIT 1
+                    """,
+                    (user_id,),
+                )
+                row = cur.fetchone()
+        return UserAccountInternal.model_validate(row["account_json"]) if row else None
+
+    def save_user_session(self, session: UserSessionRecord) -> None:
+        payload = session.model_dump(mode="json")
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    INSERT INTO v40_user_sessions (
+                        session_id,
+                        user_id,
+                        role_key,
+                        expires_at,
+                        revoked,
+                        session_json,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s, %s::jsonb, now())
+                    ON CONFLICT (session_id)
+                    DO UPDATE SET
+                        user_id = EXCLUDED.user_id,
+                        role_key = EXCLUDED.role_key,
+                        expires_at = EXCLUDED.expires_at,
+                        revoked = EXCLUDED.revoked,
+                        session_json = EXCLUDED.session_json,
+                        updated_at = now()
+                    """,
+                    (
+                        session.session_id,
+                        session.user_id,
+                        session.role_key,
+                        session.expires_at,
+                        session.revoked,
+                        json.dumps(payload, ensure_ascii=False),
+                    ),
+                )
+
+    def get_user_session(self, session_id: str) -> UserSessionRecord | None:
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT session_json
+                    FROM v40_user_sessions
+                    WHERE session_id = %s AND revoked = false
+                    LIMIT 1
+                    """,
+                    (session_id,),
+                )
+                row = cur.fetchone()
+        return UserSessionRecord.model_validate(row["session_json"]) if row else None
+
+    def revoke_user_session(self, session_id: str) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE v40_user_sessions
+                    SET revoked = true, updated_at = now()
+                    WHERE session_id = %s
+                    """,
+                    (session_id,),
+                )
+
+    def save_bazi_profile(self, profile: BaziProfileRecord) -> None:
+        payload = profile.model_dump(mode="json")
+        chart_payload = profile.chart_facts.model_dump(mode="json")
+        birth_payload = profile.birth_input.model_dump(mode="json") if profile.birth_input else None
+        ziwei_payload = profile.ziwei_chart_facts.model_dump(mode="json") if profile.ziwei_chart_facts else None
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                if profile.is_default:
+                    cur.execute(
+                        """
+                        UPDATE v40_bazi_profiles
+                        SET is_default = false, updated_at = now()
+                        WHERE user_id = %s AND deleted = false
+                        """,
+                        (profile.user_id,),
+                    )
+                cur.execute(
+                    """
+                    INSERT INTO v40_bazi_profiles (
+                        profile_id,
+                        user_id,
+                        display_name,
+                        gender,
+                        chart_json,
+                        birth_json,
+                        ziwei_json,
+                        is_default,
+                        deleted,
+                        profile_json,
+                        updated_at
+                    )
+                    VALUES (%s, %s, %s, %s, %s::jsonb, %s::jsonb, %s::jsonb, %s, %s, %s::jsonb, now())
+                    ON CONFLICT (profile_id)
+                    DO UPDATE SET
+                        user_id = EXCLUDED.user_id,
+                        display_name = EXCLUDED.display_name,
+                        gender = EXCLUDED.gender,
+                        chart_json = EXCLUDED.chart_json,
+                        birth_json = EXCLUDED.birth_json,
+                        ziwei_json = EXCLUDED.ziwei_json,
+                        is_default = EXCLUDED.is_default,
+                        deleted = EXCLUDED.deleted,
+                        profile_json = EXCLUDED.profile_json,
+                        updated_at = now()
+                    """,
+                    (
+                        profile.profile_id,
+                        profile.user_id,
+                        profile.display_name,
+                        profile.gender,
+                        json.dumps(chart_payload, ensure_ascii=False),
+                        json.dumps(birth_payload, ensure_ascii=False) if birth_payload else None,
+                        json.dumps(ziwei_payload, ensure_ascii=False) if ziwei_payload else None,
+                        profile.is_default,
+                        profile.deleted,
+                        json.dumps(payload, ensure_ascii=False),
+                    ),
+                )
+
+    def list_bazi_profiles(self, *, user_id: str, include_deleted: bool = False, limit: int = 50) -> list[dict[str, Any]]:
+        bounded_limit = max(1, min(limit, 100))
+        filters = ["user_id = %s"]
+        params: list[Any] = [user_id]
+        if not include_deleted:
+            filters.append("deleted = false")
+        params.append(bounded_limit)
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    f"""
+                    SELECT
+                        profile_id,
+                        user_id,
+                        display_name,
+                        gender,
+                        chart_json,
+                        birth_json,
+                        ziwei_json,
+                        is_default,
+                        deleted,
+                        profile_json,
+                        created_at,
+                        updated_at
+                    FROM v40_bazi_profiles
+                    WHERE {' AND '.join(filters)}
+                    ORDER BY is_default DESC, updated_at DESC, created_at DESC
+                    LIMIT %s
+                    """,
+                    tuple(params),
+                )
+                return [_serialize_row(row) for row in cur.fetchall()]
+
+    def get_bazi_profile(self, *, user_id: str, profile_id: str) -> BaziProfileRecord | None:
+        with self._connect() as conn:
+            with conn.cursor(row_factory=dict_row) as cur:
+                cur.execute(
+                    """
+                    SELECT profile_json
+                    FROM v40_bazi_profiles
+                    WHERE user_id = %s AND profile_id = %s AND deleted = false
+                    LIMIT 1
+                    """,
+                    (user_id, profile_id),
+                )
+                row = cur.fetchone()
+        return BaziProfileRecord.model_validate(row["profile_json"]) if row else None
+
+    def delete_bazi_profile(self, *, user_id: str, profile_id: str) -> None:
+        with self._connect() as conn:
+            with conn.cursor() as cur:
+                cur.execute(
+                    """
+                    UPDATE v40_bazi_profiles
+                    SET deleted = true, is_default = false, updated_at = now()
+                    WHERE user_id = %s AND profile_id = %s
+                    """,
+                    (user_id, profile_id),
+                )
 
     def save_runtime(self, runtime: RuntimeResult) -> None:
         payload = runtime.model_dump(mode="json")

@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 53
-CURRENT_PHASE_NAME = "User Consent Review UI"
+CURRENT_PHASE = 54
+CURRENT_PHASE_NAME = "User Account And Profile Flow"
 
 
 @dataclass(frozen=True)
@@ -33,8 +33,8 @@ DOMAINS: tuple[CompletionDomain, ...] = (
         label="用户侧 beta",
         percent=99,
         status="on_track",
-        evidence_keys=("runtime_records", "conversation_turns", "training_label_events", "consent_grants", "practitioner_review_queue", "practitioner_review_results"),
-        next_step="用真实命例验收授权复核链路，并打磨命理师审阅体验。",
+        evidence_keys=("runtime_records", "conversation_turns", "training_label_events", "consent_grants", "practitioner_review_queue", "practitioner_review_results", "user_accounts", "bazi_profiles"),
+        next_step="用真实命例验收账号、档案、双引擎报告、Probe 和一问一答链路。",
     ),
     CompletionDomain(
         key="training_validation",
@@ -80,8 +80,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "50", "label": "user UI visual QA", "status": "complete"},
     {"range": "51", "label": "ConsentGrant and practitioner review queue contracts", "status": "complete"},
     {"range": "52", "label": "review queue persistence and assignment", "status": "complete"},
-    {"range": "53", "label": "user consent review UI", "status": "active"},
-    {"range": "54+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "53", "label": "user consent review UI", "status": "complete"},
+    {"range": "54", "label": "user account and profile flow", "status": "active"},
+    {"range": "55+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -105,9 +106,9 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-11: real-case acceptance and cutover checklist rehearsal",
-            "UI-12: practitioner review workbench polish",
-            "UI-13: online cutover decision with user acceptance evidence",
+            "UI-12: real-case account/profile acceptance",
+            "UI-13: practitioner review workbench polish",
+            "UI-14: online cutover decision with user acceptance evidence",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

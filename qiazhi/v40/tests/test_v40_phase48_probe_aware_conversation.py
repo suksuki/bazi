@@ -126,6 +126,6 @@ def test_phase48_docs_and_project_status_track_probe_aware_conversation() -> Non
     assert "source_answer_signal_ids" in doc
     assert "2026-07-01 Phase 48" in spec
     assert "docs/V40_PHASE48_PROBE_AWARE_CONVERSATION_PLAN.md" in readme
-    assert status["current_phase"] == 53
-    assert status["current_phase_name"] == "User Consent Review UI"
+    assert status["current_phase"] == 54
+    assert status["current_phase_name"] == "User Account And Profile Flow"
     assert any(row["range"] == "48" and row["status"] == "complete" for row in status["phase_groups"])

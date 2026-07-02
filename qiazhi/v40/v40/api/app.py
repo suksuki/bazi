@@ -1,13 +1,17 @@
 from __future__ import annotations
 
 import os
+import secrets
+from datetime import datetime, timezone
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException, Query, Request
+from fastapi import FastAPI, HTTPException, Query, Request, Response
 from fastapi.responses import HTMLResponse
 
 from v40 import __version__
 from v40.api.models import (
+    BaziProfileCreateRequest,
+    BaziProfileUpdateRequest,
     BatchTrainerV1Request,
     CandidateWeightFromBatchRequest,
     CandidateWeightFromReplayBatchRequest,
@@ -33,16 +37,20 @@ from v40.api.models import (
     TrainingExampleReplayRequest,
     TrainingReplayBatchRequest,
     TrainingImpactFromEvaluationRequest,
+    UserLoginRequest,
+    UserRegisterRequest,
     WeightActivationExecutionRequest,
     WeightActivationReviewRequest,
 )
+from v40.auth.accounts import build_user_account, build_user_session, normalize_email, verify_password
 from v40.auth import resolve_user_app_session_context
-from v40.auth.session import role_context_from_payload_or_session
+from v40.auth.session import USER_APP_ROLE_COOKIE, USER_APP_SESSION_COOKIE, role_context_from_payload_or_session
 from v40.contracts.evaluation import EvaluationCaseSpec, ReleaseGateResult
 from v40.contracts.context import EngineContext
 from v40.contracts.manifest import contract_manifest
 from v40.contracts.output import LLMExpressionResult
 from v40.contracts.training import LabelSource, TrainablePolicyRegistry, TrainingLabelEvent
+from v40.contracts.user import BaziProfileRecord, UserAccountInternal, UserSessionRecord
 from v40.conversation import build_conversation_seeds, build_conversation_turn, build_training_label_from_conversation_turn
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
@@ -101,6 +109,12 @@ from v40.training import (
 
 
 API_PREFIX = "/api/v40"
+
+
+_MEMORY_ACCOUNTS_BY_EMAIL: dict[str, UserAccountInternal] = {}
+_MEMORY_ACCOUNTS_BY_ID: dict[str, UserAccountInternal] = {}
+_MEMORY_SESSIONS: dict[str, UserSessionRecord] = {}
+_MEMORY_PROFILES_BY_USER: dict[str, dict[str, BaziProfileRecord]] = {}
 
 
 def _surface_beta_check(key: str, label: str, ready: bool, evidence: str) -> dict[str, object]:
@@ -241,6 +255,136 @@ def _resolve_active_policy_engine_context(payload_engine_context: EngineContext 
     return EngineContext(engine_policy_version=policy_version)
 
 
+def _repository_or_none() -> V40PostgresRepository | None:
+    if not v40_repository_configured():
+        return None
+    return V40PostgresRepository.from_env()
+
+
+def _load_account_by_email(email: str) -> UserAccountInternal | None:
+    clean_email = normalize_email(email)
+    repository = _repository_or_none()
+    if repository is not None:
+        return repository.get_user_account_by_email(clean_email)
+    return _MEMORY_ACCOUNTS_BY_EMAIL.get(clean_email)
+
+
+def _load_account_by_id(user_id: str) -> UserAccountInternal | None:
+    repository = _repository_or_none()
+    if repository is not None:
+        return repository.get_user_account_by_id(user_id)
+    return _MEMORY_ACCOUNTS_BY_ID.get(user_id)
+
+
+def _save_account(account: UserAccountInternal) -> bool:
+    repository = _repository_or_none()
+    if repository is not None:
+        repository.save_user_account(account)
+        return True
+    _MEMORY_ACCOUNTS_BY_EMAIL[account.email] = account
+    _MEMORY_ACCOUNTS_BY_ID[account.user_id] = account
+    return False
+
+
+def _save_session(session: UserSessionRecord) -> bool:
+    repository = _repository_or_none()
+    if repository is not None:
+        repository.save_user_session(session)
+        return True
+    _MEMORY_SESSIONS[session.session_id] = session
+    return False
+
+
+def _session_token_from_request(request: Request) -> str:
+    return (
+        request.cookies.get(USER_APP_SESSION_COOKIE, "").strip()
+        or request.headers.get("x-v40-session-id", "").strip()
+    )
+
+
+def _authenticated_account(request: Request) -> tuple[UserAccountInternal, UserSessionRecord]:
+    session_id = _session_token_from_request(request)
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Please login first")
+    repository = _repository_or_none()
+    session = repository.get_user_session(session_id) if repository is not None else _MEMORY_SESSIONS.get(session_id)
+    if session is None or session.revoked:
+        raise HTTPException(status_code=401, detail="Session is not valid")
+    if session.expires_at and session.expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=401, detail="Session has expired")
+    account = _load_account_by_id(session.user_id)
+    if account is None or not account.active:
+        raise HTTPException(status_code=401, detail="Account is not active")
+    return account, session
+
+
+def _optional_authenticated_account(request: Request) -> tuple[UserAccountInternal, UserSessionRecord] | None:
+    try:
+        return _authenticated_account(request)
+    except HTTPException:
+        return None
+
+
+def _set_user_cookies(response: Response, *, session: UserSessionRecord, account: UserAccountInternal) -> None:
+    max_age = 60 * 60 * 24 * 30
+    response.set_cookie(USER_APP_SESSION_COOKIE, session.session_id, httponly=True, samesite="lax", max_age=max_age)
+    response.set_cookie(USER_APP_ROLE_COOKIE, account.role_key, httponly=True, samesite="lax", max_age=max_age)
+
+
+def _clear_user_cookies(response: Response) -> None:
+    response.delete_cookie(USER_APP_SESSION_COOKIE)
+    response.delete_cookie(USER_APP_ROLE_COOKIE)
+
+
+def _profile_from_create_payload(*, user_id: str, payload: BaziProfileCreateRequest) -> BaziProfileRecord:
+    profile_id = f"profile:{secrets.token_urlsafe(18)}"
+    gender = payload.gender.strip() or payload.chart_facts.gender
+    chart = payload.chart_facts.model_copy(update={"gender": gender})
+    return BaziProfileRecord(
+        profile_id=profile_id,
+        user_id=user_id,
+        display_name=payload.display_name.strip(),
+        gender=gender,
+        chart_facts=chart,
+        birth_input=payload.birth_input,
+        ziwei_chart_facts=payload.ziwei_chart_facts,
+        is_default=payload.is_default,
+        tags=payload.tags,
+    )
+
+
+def _save_profile(profile: BaziProfileRecord) -> bool:
+    repository = _repository_or_none()
+    if repository is not None:
+        repository.save_bazi_profile(profile)
+        return True
+    user_profiles = _MEMORY_PROFILES_BY_USER.setdefault(profile.user_id, {})
+    if profile.is_default:
+        user_profiles.update({key: value.model_copy(update={"is_default": False}) for key, value in user_profiles.items()})
+    user_profiles[profile.profile_id] = profile
+    return False
+
+
+def _list_profiles(user_id: str) -> list[dict[str, object]]:
+    repository = _repository_or_none()
+    if repository is not None:
+        return repository.list_bazi_profiles(user_id=user_id)
+    profiles = [profile for profile in _MEMORY_PROFILES_BY_USER.get(user_id, {}).values() if not profile.deleted]
+    profiles.sort(key=lambda item: (not item.is_default, item.display_name))
+    return [profile.model_dump(mode="json") for profile in profiles]
+
+
+def _delete_profile(*, user_id: str, profile_id: str) -> bool:
+    repository = _repository_or_none()
+    if repository is not None:
+        repository.delete_bazi_profile(user_id=user_id, profile_id=profile_id)
+        return True
+    profile = _MEMORY_PROFILES_BY_USER.get(user_id, {}).get(profile_id)
+    if profile:
+        _MEMORY_PROFILES_BY_USER[user_id][profile_id] = profile.model_copy(update={"deleted": True, "is_default": False})
+    return False
+
+
 def create_app() -> FastAPI:
     app = FastAPI(title="Qiazhi V40", version=__version__)
 
@@ -275,16 +419,184 @@ def create_app() -> FastAPI:
     @app.get(f"{API_PREFIX}/session/context")
     def user_app_session_context(request: Request) -> dict[str, object]:
         session = resolve_user_app_session_context(request)
+        account_pair = _optional_authenticated_account(request)
+        account = account_pair[0].public() if account_pair else None
         return {
             "version": "v40.user_app_session_context_response.v1",
             "session": session.model_dump(mode="json"),
             "role_key": session.role_key,
             "role_context": session.role_context.model_dump(mode="json"),
             "authenticated": session.authenticated,
+            "user": account.model_dump(mode="json") if account else None,
             "admin_control_plane_separated": session.admin_control_plane_separated,
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "user_app_session_context_is_server_derived_and_does_not_expose_admin_control",
+        }
+
+    @app.post(f"{API_PREFIX}/auth/register")
+    def register_user(payload: UserRegisterRequest, response: Response) -> dict[str, object]:
+        try:
+            if _load_account_by_email(payload.email) is not None:
+                raise HTTPException(status_code=409, detail="Email already registered")
+            account = build_user_account(
+                email=payload.email,
+                password=payload.password,
+                display_name=payload.display_name,
+                role_key=payload.role_key,
+            )
+            account_persisted = _save_account(account)
+            session = build_user_session(user_id=account.user_id, role_key=account.role_key)
+            session_persisted = _save_session(session)
+        except HTTPException:
+            raise
+        except ValueError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 user repository is unavailable") from exc
+        _set_user_cookies(response, session=session, account=account)
+        return {
+            "version": "v40.user_register_response.v1",
+            "user": account.public().model_dump(mode="json"),
+            "session": session.model_dump(mode="json"),
+            "account_persisted": account_persisted,
+            "session_persisted": session_persisted,
+            "admin_registered": False,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "user_registration_creates_v40_user_app_account_without_admin_control",
+        }
+
+    @app.post(f"{API_PREFIX}/auth/login")
+    def login_user(payload: UserLoginRequest, response: Response) -> dict[str, object]:
+        try:
+            account = _load_account_by_email(payload.email)
+            if account is None or not verify_password(
+                payload.password,
+                password_hash=account.password_hash,
+                password_salt=account.password_salt,
+            ):
+                raise HTTPException(status_code=401, detail="Email or password is incorrect")
+            session = build_user_session(user_id=account.user_id, role_key=account.role_key)
+            session_persisted = _save_session(session)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 user repository is unavailable") from exc
+        _set_user_cookies(response, session=session, account=account)
+        return {
+            "version": "v40.user_login_response.v1",
+            "user": account.public().model_dump(mode="json"),
+            "session": session.model_dump(mode="json"),
+            "session_persisted": session_persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "user_login_creates_v40_user_app_session_without_admin_control",
+        }
+
+    @app.post(f"{API_PREFIX}/auth/logout")
+    def logout_user(request: Request, response: Response) -> dict[str, object]:
+        session_id = _session_token_from_request(request)
+        revoked = False
+        if session_id:
+            try:
+                repository = _repository_or_none()
+                if repository is not None:
+                    repository.revoke_user_session(session_id)
+                elif session_id in _MEMORY_SESSIONS:
+                    _MEMORY_SESSIONS[session_id] = _MEMORY_SESSIONS[session_id].model_copy(update={"revoked": True})
+                revoked = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 user repository is unavailable") from exc
+        _clear_user_cookies(response)
+        return {
+            "version": "v40.user_logout_response.v1",
+            "revoked": revoked,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "user_logout_revokes_user_app_session_without_admin_control",
+        }
+
+    @app.get(f"{API_PREFIX}/auth/me")
+    def current_user(request: Request) -> dict[str, object]:
+        account, session = _authenticated_account(request)
+        return {
+            "version": "v40.current_user_response.v1",
+            "user": account.public().model_dump(mode="json"),
+            "session": session.model_dump(mode="json"),
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "current_user_reads_v40_user_app_session_only",
+        }
+
+    @app.get(f"{API_PREFIX}/profiles")
+    def list_profiles(request: Request) -> dict[str, object]:
+        account, _session = _authenticated_account(request)
+        try:
+            profiles = _list_profiles(account.user_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 profile repository is unavailable") from exc
+        return {
+            "version": "v40.bazi_profiles_response.v1",
+            "profiles": profiles,
+            "user_id": account.user_id,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "bazi_profiles_are_scoped_to_authenticated_v40_user",
+        }
+
+    @app.post(f"{API_PREFIX}/profiles")
+    def create_profile(payload: BaziProfileCreateRequest, request: Request) -> dict[str, object]:
+        account, _session = _authenticated_account(request)
+        profile = _profile_from_create_payload(user_id=account.user_id, payload=payload)
+        try:
+            persisted = _save_profile(profile)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 profile repository is unavailable") from exc
+        return {
+            "version": "v40.bazi_profile_create_response.v1",
+            "profile": profile.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "bazi_profile_created_for_authenticated_v40_user_only",
+        }
+
+    @app.put(f"{API_PREFIX}/profiles/{{profile_id}}")
+    def update_profile(profile_id: str, payload: BaziProfileUpdateRequest, request: Request) -> dict[str, object]:
+        account, _session = _authenticated_account(request)
+        if payload.profile.profile_id != profile_id:
+            raise HTTPException(status_code=422, detail="Profile id mismatch")
+        if payload.profile.user_id != account.user_id:
+            raise HTTPException(status_code=403, detail="Profile does not belong to current user")
+        try:
+            persisted = _save_profile(payload.profile)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 profile repository is unavailable") from exc
+        return {
+            "version": "v40.bazi_profile_update_response.v1",
+            "profile": payload.profile.model_dump(mode="json"),
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "bazi_profile_update_is_scoped_to_authenticated_v40_user",
+        }
+
+    @app.delete(f"{API_PREFIX}/profiles/{{profile_id}}")
+    def delete_profile(profile_id: str, request: Request) -> dict[str, object]:
+        account, _session = _authenticated_account(request)
+        try:
+            persisted = _delete_profile(user_id=account.user_id, profile_id=profile_id)
+        except Exception as exc:
+            raise HTTPException(status_code=503, detail="V40 profile repository is unavailable") from exc
+        return {
+            "version": "v40.bazi_profile_delete_response.v1",
+            "profile_id": profile_id,
+            "deleted": True,
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "bazi_profile_delete_is_scoped_to_authenticated_v40_user",
         }
 
     @app.get(f"{API_PREFIX}/surface/beta-readiness")

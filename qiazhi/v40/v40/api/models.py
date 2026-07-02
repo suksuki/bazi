@@ -5,7 +5,7 @@ from pydantic import Field, model_validator
 from v40.contracts.base import V40Model
 from v40.contracts.base import RoleKey
 from v40.contracts.base import Topic
-from v40.contracts.chart import BaziChartFacts, SyntheticCaseSeed, ZiweiChartFacts
+from v40.contracts.chart import BaziChartFacts, BirthInputCanonical, SyntheticCaseSeed, ZiweiChartFacts
 from v40.contracts.context import ClientContext, EngineContext, LocaleContext, RoleContext
 from v40.contracts.evaluation import (
     EvaluationBatchSummary,
@@ -19,6 +19,7 @@ from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.probe import ProbeAnswerResult
 from v40.contracts.review import ConsentGrant, PractitionerReviewDecision, PractitionerReviewRequest
 from v40.contracts.runtime import RuntimeResult
+from v40.contracts.user import BaziProfileRecord
 from v40.contracts.training import (
     GlobalWeightVersion,
     LabelTargetType,
@@ -464,6 +465,64 @@ class ProbeAnswerRequest(V40Model):
         if self.probe_id and not any(probe.probe_id == self.probe_id for probe in self.runtime.probes):
             raise ValueError("Probe answer references unknown probe_id")
         return self
+
+
+class UserRegisterRequest(V40Model):
+    version: str = "v40.user_register_request.v1"
+    email: str
+    password: str
+    display_name: str = ""
+    role_key: RoleKey = "user"
+    boundary: str = "user_register_request_creates_user_app_account_without_admin_role"
+
+    @model_validator(mode="after")
+    def _register_boundary(self) -> "UserRegisterRequest":
+        if self.role_key not in {"user", "practitioner"}:
+            raise ValueError("User app cannot register admin or lab roles")
+        if "@" not in self.email:
+            raise ValueError("Registration requires email")
+        if len(self.password.strip()) < 6:
+            raise ValueError("Password must be at least 6 characters")
+        return self
+
+
+class UserLoginRequest(V40Model):
+    version: str = "v40.user_login_request.v1"
+    email: str
+    password: str
+    boundary: str = "user_login_request_creates_user_app_session_without_admin_control"
+
+    @model_validator(mode="after")
+    def _login_boundary(self) -> "UserLoginRequest":
+        if "@" not in self.email:
+            raise ValueError("Login requires email")
+        if not self.password.strip():
+            raise ValueError("Login requires password")
+        return self
+
+
+class BaziProfileCreateRequest(V40Model):
+    version: str = "v40.bazi_profile_create_request.v1"
+    display_name: str
+    gender: str = ""
+    chart_facts: BaziChartFacts
+    birth_input: BirthInputCanonical | None = None
+    ziwei_chart_facts: ZiweiChartFacts | None = None
+    is_default: bool = False
+    tags: list[str] = Field(default_factory=list)
+    boundary: str = "bazi_profile_create_request_saves_user_owned_profile_without_training_policy"
+
+    @model_validator(mode="after")
+    def _profile_create_boundary(self) -> "BaziProfileCreateRequest":
+        if not self.display_name.strip():
+            raise ValueError("Profile requires display_name")
+        return self
+
+
+class BaziProfileUpdateRequest(V40Model):
+    version: str = "v40.bazi_profile_update_request.v1"
+    profile: BaziProfileRecord
+    boundary: str = "bazi_profile_update_request_replaces_user_owned_profile_without_chart_runtime_mutation"
 
 
 class ExpressionFromRuntimeRequest(V40Model):

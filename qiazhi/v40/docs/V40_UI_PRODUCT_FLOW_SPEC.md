@@ -610,12 +610,13 @@ Current completed cleanup:
 - Probe is a first-class calibration card.
 - Desktop/mobile visual QA is repeatable through `scripts/run_user_ui_visual_qa.py`.
 - User-side practitioner review authorization is wired after report generation.
+- Registration, login and per-user Bazi profiles are now part of `/v40/ui`.
+- Native report requests carry both Bazi chart facts and Ziwei sidecar facts.
 
 Current gaps:
 
 - Practitioner review queue has persistence and assignment contracts, but no final practitioner workbench.
 - Real-case acceptance is still required before online cutover.
-- Four pillars are free text inputs instead of stem/branch selectors.
 - Thinking is not formalized as a clean disclosure component.
 - Human review is modeled and queued, but practitioner-side review UX still needs product polishing.
 

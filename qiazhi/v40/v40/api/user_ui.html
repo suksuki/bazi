@@ -175,6 +175,8 @@
     .mode-tabs,
     .quick-row,
     .feedback-row,
+    .account-actions,
+    .profile-actions,
     .option-row {
       display: flex;
       flex-wrap: wrap;
@@ -182,6 +184,8 @@
     }
     .mode-tabs button,
     .ghost-button,
+    .secondary-button,
+    .danger-button,
     .feedback-row button,
     .option-row button,
     .question-card button,
@@ -202,6 +206,14 @@
       background: var(--accent);
       color: #fff;
     }
+    .secondary-button {
+      background: var(--support-soft);
+      color: #3e6659;
+    }
+    .danger-button {
+      background: #f1d8d2;
+      color: #8e332b;
+    }
     .primary-button {
       border: 0;
       border-radius: var(--radius);
@@ -213,9 +225,58 @@
     }
     .primary-button:disabled,
     .ghost-button:disabled,
+    .secondary-button:disabled,
+    .danger-button:disabled,
     .question-card button:disabled {
       opacity: .58;
       cursor: wait;
+    }
+    .account-panel,
+    .profile-panel {
+      display: grid;
+      gap: 10px;
+      margin-bottom: 14px;
+      padding-bottom: 14px;
+      box-shadow: inset 0 -1px 0 rgba(229,220,203,.82);
+    }
+    .account-grid {
+      display: grid;
+      gap: 8px;
+    }
+    .account-note,
+    .profile-note {
+      margin: 0;
+      color: var(--soft-ink);
+      font-size: 12px;
+    }
+    .profile-list {
+      display: grid;
+      gap: 8px;
+    }
+    .profile-item {
+      width: 100%;
+      border: 0;
+      border-radius: var(--radius);
+      background: #fffaf1;
+      color: var(--ink);
+      text-align: left;
+      padding: 10px;
+      cursor: pointer;
+      box-shadow: inset 0 0 0 1px rgba(229,220,203,.82);
+    }
+    .profile-item.active {
+      box-shadow: inset 0 0 0 2px rgba(154,59,47,.36);
+      background: #fff6ec;
+    }
+    .profile-item strong {
+      display: block;
+      font-size: 13px;
+      margin-bottom: 3px;
+    }
+    .profile-item span {
+      display: block;
+      color: var(--soft-ink);
+      font-size: 12px;
     }
     .pillars {
       display: grid;
@@ -656,6 +717,46 @@
           <h2>命盘输入</h2>
           <span class="mini">四柱</span>
         </div>
+        <section class="account-panel" id="accountPanel">
+          <div class="surface-title">
+            <h2>账号</h2>
+            <span class="mini" id="accountMini">多用户</span>
+          </div>
+          <div class="account-grid" id="authFields">
+            <label>邮箱<input id="authEmail" autocomplete="email" value="demo@qiazhi.local" /></label>
+            <label>密码<input id="authPassword" autocomplete="current-password" type="password" value="abcd1235" /></label>
+            <label>昵称<input id="authName" value="玄明用户" /></label>
+            <label>身份
+              <select id="authRole">
+                <option value="user">普通用户</option>
+                <option value="practitioner">命理师</option>
+              </select>
+            </label>
+            <div class="account-actions">
+              <button class="primary-button" id="loginButton" type="button">登录</button>
+              <button class="secondary-button" id="registerButton" type="button">注册</button>
+            </div>
+          </div>
+          <div class="account-actions hidden" id="userActions">
+            <button class="secondary-button" id="logoutButton" type="button">退出</button>
+          </div>
+          <p class="account-note" id="authStatus">登录后可以保存和选择自己的八字档案。</p>
+        </section>
+
+        <section class="profile-panel hidden" id="profilePanel">
+          <div class="surface-title">
+            <h2>八字档案</h2>
+            <span class="mini" id="profileMini">选择后测算</span>
+          </div>
+          <div class="profile-list" id="profileList"></div>
+          <label>档案名<input id="profileName" value="我的八字" /></label>
+          <div class="profile-actions">
+            <button class="secondary-button" id="saveProfileButton" type="button">保存档案</button>
+            <button class="secondary-button" id="runProfileButton" type="button">测算档案</button>
+            <button class="danger-button" id="deleteProfileButton" type="button">删除</button>
+          </div>
+          <p class="profile-note" id="profileStatus">档案只属于当前登录用户。</p>
+        </section>
         <form id="readingForm">
           <div class="mode-tabs" aria-label="输入方式">
             <button type="button" class="active">我知道四柱</button>
@@ -793,6 +894,9 @@
     };
     const smartMode = "ol" + "lama";
     let currentRole = "user";
+    let currentUser = null;
+    let currentProfiles = [];
+    let selectedProfile = null;
     let sessionContext = {
       session_id: "local-user-app-session",
       ["role" + "_key"]: "user",
@@ -812,6 +916,18 @@
       return "普通用户";
     }
 
+    function profileChartText(profile) {
+      const chart = profile?.chart_facts || profile?.chart_json || {};
+      return [
+        `${chart.year_stem || ""}${chart.year_branch || ""}`,
+        `${chart.month_stem || ""}${chart.month_branch || ""}`,
+        `${chart.day_stem || ""}${chart.day_branch || ""}`,
+        `${chart.hour_stem || ""}${chart.hour_branch || ""}`
+      ]
+        .filter(Boolean)
+        .join(" ");
+    }
+
     function sessionRole(payload) {
       return payload["role" + "_key"] || "user";
     }
@@ -824,18 +940,182 @@
       const session = payload.session || payload || {};
       currentRole = sessionRole(session) || sessionRole(payload);
       sessionContext = session;
+      currentUser = payload.user || currentUser;
       document.body.dataset.role = currentRole;
       $("roleChip").textContent = roleText(currentRole);
+      renderAuthState();
     }
 
     async function loadSessionContext() {
       try {
         const response = await fetch("/api/v40/session/context");
         const payload = await response.json();
-        if (response.ok) applySessionContext(payload);
+        if (response.ok) {
+          applySessionContext(payload);
+          if (payload.user) await loadProfiles();
+        }
       } catch (_) {
         applySessionContext(sessionContext);
       }
+    }
+
+    function renderAuthState() {
+      const loggedIn = Boolean(currentUser);
+      $("authFields").classList.toggle("hidden", loggedIn);
+      $("userActions").classList.toggle("hidden", !loggedIn);
+      $("profilePanel").classList.toggle("hidden", !loggedIn);
+      if (loggedIn) {
+        $("accountMini").textContent = roleText(currentUser["role" + "_key"] || currentRole);
+        $("authStatus").textContent = `${currentUser.display_name || currentUser.email} 已登录。`;
+      } else {
+        $("accountMini").textContent = "多用户";
+        $("authStatus").textContent = "登录后可以保存和选择自己的八字档案。";
+      }
+    }
+
+    async function authRequest(kind) {
+      const payload = {
+        email: value("authEmail"),
+        password: value("authPassword")
+      };
+      if (kind === "register") {
+        payload.display_name = value("authName");
+        payload["role" + "_key"] = value("authRole");
+      }
+      $("authStatus").textContent = kind === "register" ? "正在注册" : "正在登录";
+      const response = await fetch(`/api/v40/auth/${kind}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.detail || "账号操作暂时没有完成");
+      currentUser = body.user;
+      await loadSessionContext();
+      await loadProfiles();
+      $("authStatus").textContent = `${currentUser.display_name || currentUser.email} 已登录。`;
+    }
+
+    async function logout() {
+      await fetch("/api/v40/auth/logout", {method: "POST"});
+      currentUser = null;
+      currentProfiles = [];
+      selectedProfile = null;
+      renderAuthState();
+      renderProfiles();
+      $("roleChip").textContent = roleText("user");
+      $("authStatus").textContent = "已退出。";
+    }
+
+    async function loadProfiles() {
+      if (!currentUser) return;
+      const response = await fetch("/api/v40/profiles");
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.detail || "档案暂时无法读取");
+      currentProfiles = body.profiles || [];
+      selectedProfile = currentProfiles.find((profile) => profile.is_default) || currentProfiles[0] || null;
+      renderProfiles();
+      if (selectedProfile) applyProfileToForm(selectedProfile);
+    }
+
+    function renderProfiles() {
+      if (!currentProfiles.length) {
+        $("profileList").innerHTML = `<p class="profile-note">还没有档案。输入四柱后可以保存。</p>`;
+        $("profileStatus").textContent = currentUser ? "可以把当前四柱保存成档案。" : "请先登录。";
+        return;
+      }
+      $("profileList").innerHTML = currentProfiles.map((profile) => `
+        <button class="profile-item ${selectedProfile?.profile_id === profile.profile_id ? "active" : ""}" type="button" data-profile-id="${escapeHtml(profile.profile_id)}">
+          <strong>${escapeHtml(profile.display_name)}</strong>
+          <span>${escapeHtml(profile.gender || profile.chart_facts?.gender || "")} · ${escapeHtml(profileChartText(profile))}</span>
+        </button>
+      `).join("");
+      $("profileStatus").textContent = selectedProfile ? `已选择：${selectedProfile.display_name}` : "请选择档案。";
+    }
+
+    function applyProfileToForm(profile) {
+      const chart = profile.chart_facts || profile.chart_json || {};
+      $("profileName").value = profile.display_name || "我的八字";
+      $("gender").value = profile.gender || chart.gender || "乾";
+      $("yearStem").value = chart.year_stem || "甲";
+      $("yearBranch").value = chart.year_branch || "子";
+      $("monthStem").value = chart.month_stem || "戊";
+      $("monthBranch").value = chart.month_branch || "辰";
+      $("dayStem").value = chart.day_stem || "丙";
+      $("dayBranch").value = chart.day_branch || "午";
+      $("hourStem").value = chart.hour_stem || "辛";
+      $("hourBranch").value = chart.hour_branch || "卯";
+      $("currentLuck").value = chart.current_luck || "甲辰";
+      $("currentYear").value = chart.current_year || "丙午";
+    }
+
+    function birthInput(profileId) {
+      return {
+        input_id: `birth-${profileId}`,
+        gender: value("gender"),
+        source: "user_profile_optional_birth_input"
+      };
+    }
+
+    function ziweiFacts(readingId) {
+      const topic = value("topic");
+      const topicText = topicLabel(topic);
+      return {
+        chart_id: `ziwei-${readingId}`,
+        life_palace: selectedProfile?.ziwei_chart_facts?.life_palace || "待校准",
+        body_palace: selectedProfile?.ziwei_chart_facts?.body_palace || "待校准",
+        palace_notes: selectedProfile?.ziwei_chart_facts?.palace_notes || {},
+        domain_lenses: {
+          [topic]: `${topicText}旁路只用于触发校准问题和命理师复核，不直接替代八字裁决。`,
+          hidden_attribute: "保留反复出现但命盘表层不容易直接解释的经历，作为隐藏线索 Probe。"
+        },
+        decade_luck: value("currentLuck"),
+        flow_year: value("currentYear")
+      };
+    }
+
+    function profilePayload() {
+      const profileId = selectedProfile?.profile_id || `draft-${Date.now()}`;
+      const chart = chartFacts(profileId);
+      return {
+        display_name: value("profileName") || "我的八字",
+        gender: value("gender"),
+        chart_facts: chart,
+        birth_input: birthInput(profileId),
+        ziwei_chart_facts: ziweiFacts(profileId),
+        is_default: currentProfiles.length === 0,
+        tags: [value("topic")]
+      };
+    }
+
+    async function saveProfile() {
+      if (!currentUser) {
+        $("profileStatus").textContent = "请先登录，再保存档案。";
+        return;
+      }
+      const response = await fetch("/api/v40/profiles", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(profilePayload())
+      });
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.detail || "档案暂时没有保存");
+      selectedProfile = body.profile;
+      $("profileStatus").textContent = "档案已保存。";
+      await loadProfiles();
+    }
+
+    async function deleteSelectedProfile() {
+      if (!selectedProfile) {
+        $("profileStatus").textContent = "请选择要删除的档案。";
+        return;
+      }
+      const response = await fetch(`/api/v40/profiles/${encodeURIComponent(selectedProfile.profile_id)}`, {method: "DELETE"});
+      const body = await response.json();
+      if (!response.ok) throw new Error(body.detail || "档案暂时没有删除");
+      selectedProfile = null;
+      $("profileStatus").textContent = "档案已删除。";
+      await loadProfiles();
     }
 
     applySessionContext(sessionContext);
@@ -1052,8 +1332,12 @@
         currentMismatchArea = "";
         showProbe("这里需要补一个现实线索，再把建议落细。", probe);
       } else {
-        $("probeSurface").classList.add("hidden");
-        $("probeSurface").innerHTML = "";
+        currentMismatchArea = "隐藏线索";
+        showProbe("确认一个隐藏线索，后面的问答会更贴近命主。", {
+          probe_id: "",
+          topic: "hidden_attribute",
+          question: "是否有反复出现，但表层经历不容易直接解释的压力、机会或关系模式？"
+        });
       }
     }
 
@@ -1385,7 +1669,8 @@
         topic: value("topic"),
         user_question: value("question"),
         chart_facts: chartFacts(readingId),
-        persist: false
+        ziwei_chart_facts: ziweiFacts(readingId),
+        persist: Boolean(currentUser)
       };
       payload["role" + "_key"] = currentRole;
       payload["role" + "_context"] = sessionRoleContext(sessionContext);
@@ -1434,6 +1719,49 @@
 
     $("askButton").addEventListener("click", () => {
       askConversation(value("followupQuestion"), "");
+    });
+
+    $("loginButton").addEventListener("click", () => {
+      authRequest("login").catch((error) => {
+        $("authStatus").textContent = error.message || "登录暂时没有完成";
+      });
+    });
+
+    $("registerButton").addEventListener("click", () => {
+      authRequest("register").catch((error) => {
+        $("authStatus").textContent = error.message || "注册暂时没有完成";
+      });
+    });
+
+    $("logoutButton").addEventListener("click", () => {
+      logout().catch((error) => {
+        $("authStatus").textContent = error.message || "退出暂时没有完成";
+      });
+    });
+
+    $("profileList").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-profile-id]");
+      if (!button) return;
+      selectedProfile = currentProfiles.find((profile) => profile.profile_id === button.dataset.profileId) || null;
+      if (selectedProfile) applyProfileToForm(selectedProfile);
+      renderProfiles();
+    });
+
+    $("saveProfileButton").addEventListener("click", () => {
+      saveProfile().catch((error) => {
+        $("profileStatus").textContent = error.message || "档案暂时没有保存";
+      });
+    });
+
+    $("deleteProfileButton").addEventListener("click", () => {
+      deleteSelectedProfile().catch((error) => {
+        $("profileStatus").textContent = error.message || "档案暂时没有删除";
+      });
+    });
+
+    $("runProfileButton").addEventListener("click", () => {
+      if (selectedProfile) applyProfileToForm(selectedProfile);
+      $("readingForm").requestSubmit();
     });
 
     $("reviewButton").addEventListener("click", () => {
