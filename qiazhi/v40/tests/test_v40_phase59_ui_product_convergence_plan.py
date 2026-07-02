@@ -33,8 +33,8 @@ def test_phase59_ui_product_convergence_plan_is_documented() -> None:
 def test_phase59_ui_product_convergence_is_next_mainline_task() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 61
-    assert status["current_phase_name"] == "UI Flow Clean Rebuild"
+    assert status["current_phase"] == 62
+    assert status["current_phase_name"] == "Reading History And Conversation Layering"
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-22: /v40/ui state-machine shell cleanup" in status["next_mainline_tasks"]
+    assert "UI-23: report history sidebar and folded conversation chain QA" in status["next_mainline_tasks"]

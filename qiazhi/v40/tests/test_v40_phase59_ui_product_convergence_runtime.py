@@ -59,9 +59,9 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
 def test_phase59_project_status_marks_ui_convergence_runtime_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 61
-    assert status["current_phase_name"] == "UI Flow Clean Rebuild"
+    assert status["current_phase"] == 62
+    assert status["current_phase_name"] == "Reading History And Conversation Layering"
     assert any(row["range"] == "58" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "UI-22: /v40/ui state-machine shell cleanup"
+    assert status["next_mainline_tasks"][0] == "UI-23: report history sidebar and folded conversation chain QA"

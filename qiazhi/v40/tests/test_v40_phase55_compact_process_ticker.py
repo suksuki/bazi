@@ -42,8 +42,8 @@ def test_phase55_docs_and_project_status_track_compact_process_ticker() -> None:
     assert "2026-07-02 Phase 55" in spec
     assert "docs/V40_PHASE55_COMPACT_PROCESS_TICKER.md" in readme
     assert "three-line staged process ticker" in ui_spec
-    assert status["current_phase"] == 61
-    assert status["current_phase_name"] == "UI Flow Clean Rebuild"
+    assert status["current_phase"] == 62
+    assert status["current_phase_name"] == "Reading History And Conversation Layering"
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "55" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])

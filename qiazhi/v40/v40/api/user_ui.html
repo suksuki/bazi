@@ -478,6 +478,15 @@
     body[data-state="conversation"] #probeSurface {
       display: none !important;
     }
+    body[data-state="conversation"] #verdictHero {
+      order: 1;
+    }
+    body[data-state="conversation"] #conversationSurface {
+      order: 2;
+    }
+    body[data-state="conversation"] #followupHub {
+      order: 3;
+    }
     body[data-state="practitioner"] #conversationSurface.hidden,
     body[data-state="report"] #conversationSurface.hidden {
       display: none !important;
@@ -822,6 +831,41 @@
       display: grid;
       gap: 10px;
     }
+    .history-panel {
+      margin-top: 14px;
+    }
+    .history-list {
+      display: grid;
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .history-item {
+      width: 100%;
+      border: 0;
+      border-radius: var(--radius);
+      background: rgba(255,250,244,.72);
+      color: var(--ink);
+      cursor: pointer;
+      display: grid;
+      gap: 5px;
+      padding: 10px 11px;
+      text-align: left;
+      box-shadow: inset 0 0 0 1px rgba(229,220,203,.7);
+    }
+    .history-item:hover,
+    .history-item.active {
+      background: #fffdf8;
+      box-shadow: inset 0 0 0 1px rgba(110,139,126,.34), 0 10px 22px rgba(52,43,31,.06);
+    }
+    .history-item strong {
+      font-size: 13px;
+      line-height: 1.35;
+    }
+    .history-item span {
+      color: var(--soft-ink);
+      font-size: 12px;
+      line-height: 1.42;
+    }
     #seedCards {
       display: flex;
       flex-wrap: wrap;
@@ -857,6 +901,51 @@
     }
     .conversation-turn {
       background: #fffdf8;
+    }
+    .conversation-turn.folded {
+      padding: 0;
+      overflow: hidden;
+    }
+    .conversation-turn.folded .conversation-body {
+      display: none;
+    }
+    .conversation-toggle {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 13px 14px;
+      text-align: left;
+      font: inherit;
+      font-size: 13px;
+      font-weight: 760;
+    }
+    .conversation-toggle span:first-child {
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .conversation-toggle span:last-child {
+      color: var(--soft-ink);
+      font-size: 12px;
+      flex: 0 0 auto;
+    }
+    .conversation-body {
+      padding: 0 14px 14px;
+    }
+    .conversation-turn.pending {
+      background:
+        linear-gradient(90deg, rgba(110,139,126,.08), transparent 46%),
+        #fffdf8;
+    }
+    .conversation-turn.pending .feedback {
+      display: none;
     }
     .conversation-turn .question {
       color: var(--accent);
@@ -1207,6 +1296,13 @@
           </label>
           <button class="primary-button" id="submitButton" type="submit">开始测算</button>
         </form>
+        <section class="history-panel hidden" id="historyPanel">
+          <div class="surface-title">
+            <h2>历史报告</h2>
+            <span class="mini" id="historyMini">最近测算</span>
+          </div>
+          <div class="history-list" id="historyList"></div>
+        </section>
       </aside>
 
       <section class="reading" id="readingPane">
@@ -1287,7 +1383,7 @@
         <section class="surface conversation hidden" id="conversationSurface">
           <div class="section-label">
             <h3>智能对话</h3>
-            <span class="mini">不刷新报告</span>
+            <span class="mini">一问一答 · 围绕本次报告</span>
           </div>
           <div class="conversation" id="conversationTurns"></div>
         </section>
@@ -1327,6 +1423,7 @@
     let currentRuntime = null;
     let currentSeeds = [];
     let currentTurn = null;
+    let readingHistory = [];
     let currentMismatchArea = "";
     let currentCalibrationResults = [];
     let activeLensTopic = "";
@@ -1467,6 +1564,7 @@
         $("authStatus").textContent = "登录后可以保存和选择自己的八字档案。";
         $("userMenuLabel").textContent = "我的命盘";
       }
+      loadReadingHistory();
       updateLensControls();
     }
 
@@ -1893,6 +1991,97 @@
       `).join("");
     }
 
+    function historyStorageKey() {
+      const owner = currentUser?.user_id || "guest";
+      return `qiazhi:v40:reading-history:${owner}`;
+    }
+
+    function loadReadingHistory() {
+      try {
+        readingHistory = JSON.parse(window.localStorage.getItem(historyStorageKey()) || "[]");
+        if (!Array.isArray(readingHistory)) readingHistory = [];
+      } catch (_) {
+        readingHistory = [];
+      }
+      renderReadingHistory();
+    }
+
+    function saveReadingHistory() {
+      try {
+        window.localStorage.setItem(historyStorageKey(), JSON.stringify(readingHistory.slice(0, 8)));
+      } catch (_) {
+        readingHistory = readingHistory.slice(0, 4);
+      }
+    }
+
+    function readingHistoryTitle(runtime) {
+      const verdict = runtime?.product_projection?.verdict_cards?.[0] || {};
+      const topic = topicLabel(verdict.topic || runtime?.request?.topic || value("topic"));
+      return `${topic} · ${verdict.title || "命理报告"}`;
+    }
+
+    function readingHistorySubtitle(runtime, updatedAt) {
+      const question = runtime?.request?.user_question || "本次测算";
+      const stamp = updatedAt ? new Date(updatedAt) : null;
+      const pad = (value) => String(value).padStart(2, "0");
+      const time = stamp && !Number.isNaN(stamp.getTime())
+        ? `${pad(stamp.getMonth() + 1)}-${pad(stamp.getDate())} ${pad(stamp.getHours())}:${pad(stamp.getMinutes())}`
+        : "";
+      return `${time} · ${question}`.replace(/^ · /, "");
+    }
+
+    function rememberReading(runtime, seeds) {
+      if (!runtime?.reading_id) return;
+      const updatedAt = new Date().toISOString();
+      const entry = {
+        reading_id: runtime.reading_id,
+        title: readingHistoryTitle(runtime),
+        subtitle: readingHistorySubtitle(runtime, updatedAt),
+        updated_at: updatedAt,
+        runtime,
+        seeds: seeds || runtime.conversation_seeds || []
+      };
+      readingHistory = [entry].concat(readingHistory.filter((item) => item.reading_id !== entry.reading_id)).slice(0, 8);
+      saveReadingHistory();
+      renderReadingHistory();
+    }
+
+    function renderReadingHistory() {
+      const hasHistory = readingHistory.length > 0;
+      $("historyPanel").classList.toggle("hidden", !hasHistory);
+      if (!hasHistory) {
+        $("historyList").innerHTML = "";
+        return;
+      }
+      $("historyMini").textContent = `${readingHistory.length} 份`;
+      $("historyList").innerHTML = readingHistory.map((entry) => `
+        <button class="history-item ${currentRuntime?.reading_id === entry.reading_id ? "active" : ""}" type="button" data-reading-id="${escapeHtml(entry.reading_id)}">
+          <strong>${escapeHtml(entry.title || "命理报告")}</strong>
+          <span>${escapeHtml(entry.subtitle || entry.reading_id)}</span>
+        </button>
+      `).join("");
+    }
+
+    function openHistoryReading(readingId) {
+      const entry = readingHistory.find((item) => item.reading_id === readingId);
+      if (!entry?.runtime) return;
+      currentRuntime = entry.runtime;
+      currentSeeds = entry.seeds || entry.runtime.conversation_seeds || [];
+      currentTurn = null;
+      currentCalibrationResults = [];
+      currentMismatchArea = "";
+      activeLensTopic = "";
+      activeLensTitle = "";
+      setLensOpen(false);
+      $("conversationTurns").innerHTML = "";
+      $("conversationSurface").classList.add("hidden");
+      $("mismatchChoices").classList.remove("active");
+      resetReviewSurface();
+      paintReading(currentRuntime, currentSeeds);
+      renderReadingHistory();
+      setState("历史报告已打开", "可以继续追问", false);
+    }
+
     function probeOptions(topic) {
       const map = {
         career: ["职责压力", "平台资源", "想换方向"],
@@ -2261,23 +2450,66 @@
       }
     }
 
-    function appendConversation(question, answerText) {
+    function foldConversationTurns(exceptNode = null) {
+      document.querySelectorAll(".conversation-turn").forEach((turn) => {
+        if (turn !== exceptNode) {
+          turn.classList.add("folded");
+          const state = turn.querySelector(".conversation-toggle span:last-child");
+          if (state) state.textContent = "展开";
+        }
+      });
+    }
+
+    function openConversationTurn(node) {
+      if (!node) return;
+      foldConversationTurns(node);
+      node.classList.remove("folded");
+      const state = node.querySelector(".conversation-toggle span:last-child");
+      if (state) state.textContent = node.classList.contains("pending") ? "推演中" : "当前";
+      node.scrollIntoView({behavior: "smooth", block: "nearest"});
+    }
+
+    function appendConversation(question, answerText, options = {}) {
       $("conversationSurface").classList.remove("hidden");
+      foldConversationTurns();
       const node = document.createElement("article");
-      node.className = "conversation-turn";
+      node.className = `conversation-turn${options.pending ? " pending" : ""}${options.error ? " error" : ""}`;
       node.innerHTML = `
-        <div class="question">你问：${escapeHtml(question)}</div>
-        <h4>回答</h4>
-        <div class="answer">${textBlocks(answerText)}</div>
-        <div class="feedback active">
-          <span>这个回答有帮助吗？</span>
-          <div class="feedback-row">
-            <button type="button" data-feedback-scope="conversation" data-feedback-value="helpful">有帮助</button>
-            <button type="button" data-feedback-scope="conversation" data-feedback-value="neutral">一般</button>
-            <button type="button" data-feedback-scope="conversation" data-feedback-value="bad">不准确</button>
+        <button class="conversation-toggle" type="button" data-turn-toggle>
+          <span>你问：${escapeHtml(question)}</span>
+          <span>${options.pending ? "推演中" : "展开"}</span>
+        </button>
+        <div class="conversation-body">
+          <div class="question">你问：${escapeHtml(question)}</div>
+          <h4>${options.pending ? "推演中" : "回答"}</h4>
+          <div class="answer">${textBlocks(answerText)}</div>
+          <div class="feedback ${options.pending ? "" : "active"}">
+            <span>这个回答有帮助吗？</span>
+            <div class="feedback-row">
+              <button type="button" data-feedback-scope="conversation" data-feedback-value="helpful">有帮助</button>
+              <button type="button" data-feedback-scope="conversation" data-feedback-value="neutral">一般</button>
+              <button type="button" data-feedback-scope="conversation" data-feedback-value="bad">不准确</button>
+            </div>
           </div>
         </div>`;
-      $("conversationTurns").appendChild(node);
+      $("conversationTurns").prepend(node);
+      return node;
+    }
+
+    function settleConversation(node, answerText, options = {}) {
+      if (!node) return appendConversation("", answerText, options);
+      node.classList.remove("pending");
+      node.classList.toggle("error", Boolean(options.error));
+      openConversationTurn(node);
+      const title = node.querySelector("h4");
+      if (title) title.textContent = options.error ? "未完成" : "回答";
+      const toggleState = node.querySelector(".conversation-toggle span:last-child");
+      if (toggleState) toggleState.textContent = options.error ? "未完成" : "当前";
+      const answer = node.querySelector(".answer");
+      if (answer) answer.innerHTML = textBlocks(answerText);
+      const feedback = node.querySelector(".feedback");
+      if (feedback && !options.error) feedback.classList.add("active");
+      return node;
     }
 
     async function askConversation(question, seedId = "") {
@@ -2286,6 +2518,11 @@
       setReadingMode("conversation");
       $("conversationSurface").classList.remove("hidden");
       setState("正在生成本轮回答", "报告已收起，正在进入对话", true);
+      const pendingNode = appendConversation(
+        question,
+        "正在围绕本次报告组织回答。Gemma 返回前不会生成替代结论。",
+        {pending: true}
+      );
       try {
         const turnId = `turn-${Date.now()}`;
         const body = {
@@ -2306,12 +2543,12 @@
         if (!response.ok) throw new Error(result.detail || "本轮回答暂时没有完成");
         if (!result.accepted) throw new Error("本轮回答暂时没有形成可用结果");
         currentTurn = result.turn;
-        appendConversation(question, result.answer_text);
+        settleConversation(pendingNode, result.answer_text);
         renderFollowups(result.next_seeds || []);
         $("followupQuestion").value = "";
         setState("回答已生成", "可以继续追问", false);
       } catch (error) {
-        appendConversation(question, error.message || "本轮回答暂时没有完成");
+        settleConversation(pendingNode, error.message || "本轮回答暂时没有完成", {error: true});
         setState("智能服务未完成", "可以稍后重试", false);
       } finally {
         $("askButton").disabled = false;
@@ -2381,7 +2618,9 @@
         if (!response.ok) throw new Error(result.detail || "智能服务暂时不可用");
         if (!result.accepted) throw new Error("本次报告没有形成可用结果");
         currentRuntime = result.runtime;
-        paintReading(currentRuntime, result.conversation_seeds || []);
+        const seeds = result.conversation_seeds || [];
+        paintReading(currentRuntime, seeds);
+        rememberReading(currentRuntime, seeds);
         setState("报告已生成", "可以继续追问", false);
       } catch (error) {
         setReadingMode("report");
@@ -2401,6 +2640,12 @@
 
     $("askButton").addEventListener("click", () => {
       askConversation(value("followupQuestion"), "");
+    });
+
+    $("historyList").addEventListener("click", (event) => {
+      const button = event.target.closest("button[data-reading-id]");
+      if (!button) return;
+      openHistoryReading(button.dataset.readingId || "");
     });
 
     $("reportToggleButton").addEventListener("click", () => {
@@ -2506,6 +2751,11 @@
             result.classList.add("active");
           }
         });
+        return;
+      }
+      const turnToggle = event.target.closest("button[data-turn-toggle]");
+      if (turnToggle) {
+        openConversationTurn(turnToggle.closest(".conversation-turn"));
         return;
       }
       const skip = event.target.closest("button[data-probe-skip]");

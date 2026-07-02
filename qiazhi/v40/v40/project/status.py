@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 61
-CURRENT_PHASE_NAME = "UI Flow Clean Rebuild"
+CURRENT_PHASE = 62
+CURRENT_PHASE_NAME = "Reading History And Conversation Layering"
 
 
 @dataclass(frozen=True)
@@ -88,8 +88,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "58", "label": "hard LLM runtime and direct training activation principles", "status": "complete"},
     {"range": "59", "label": "UI product convergence runtime", "status": "complete"},
     {"range": "60", "label": "Probe V2 and Mingli candidate board", "status": "complete"},
-    {"range": "61", "label": "UI flow clean rebuild", "status": "active"},
-    {"range": "62+", "label": "Reading Revision、practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "61", "label": "UI flow clean rebuild", "status": "complete"},
+    {"range": "62", "label": "reading history sidebar and folded conversation chain", "status": "active"},
+    {"range": "63+", "label": "Reading Revision、practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -113,8 +114,8 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-22: /v40/ui state-machine shell cleanup",
-            "UI-23: report, Probe, follow-up and conversation layering QA",
+            "UI-23: report history sidebar and folded conversation chain QA",
+            "UI-24: report, Probe, follow-up and conversation layering acceptance",
             "LENS-22: practitioner drawer calm layout with candidate board",
             "UI-15: live LLM user acceptance with admin profiles",
             "REV-21: Reading Revision and selection history contracts",

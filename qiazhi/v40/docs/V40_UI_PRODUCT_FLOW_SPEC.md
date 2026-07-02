@@ -810,6 +810,27 @@ Refine report-grounded conversation:
 - Render basis and next seeds.
 - Persist feedback as training labels.
 - Never auto-start conversation.
+- In conversation mode, render turns as newest-first folded items.
+- Keep the current/latest question expanded and fold older turns.
+- Show a pending item while waiting for the LLM; do not synthesize a fallback answer.
+
+### UI-3A Reading History Sidebar
+
+History belongs in the left rail:
+
+```text
+测算入口
+当前命盘
+历史报告
+```
+
+Rules:
+
+- Recent reports appear after a report is generated.
+- Clicking history restores the report and conversation seeds.
+- Restoring history must not call LLM, rerun reading, or mutate chart facts.
+- Phase 62 uses current account / current browser local history because runtime ownership is not yet a backend contract.
+- Do not expose global backend runtime records as user history.
 
 ### UI-4 Probe Calibration
 

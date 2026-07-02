@@ -765,6 +765,14 @@ Phase 59 第二轮把命理师体验正式收敛为 `same Reading + RoleProjecti
 
 Phase 59 第三轮把页面从“报告与对话同时铺满”收敛为 `report mode -> conversation mode`：报告刚生成时完整展示判断、建议、风险、校准一问和追问入口；用户点击追问或输入问题后，完整报告自动收起为核心判断摘要，并提供“查看完整报告”恢复动作，主区进入一问一答咨询流。Follow-up 从堆叠卡片改为轻量 chips，Probe 回答后折叠成“已校准”提示，顶部角色文案改为“命理师模式”，主页面不再强调 admin/email。
 
+2026-07-02 Phase 62 历史报告与问答层级已启动：
+
+```text
+docs/V40_PHASE62_HISTORY_AND_CONVERSATION_LAYERING.md
+```
+
+本阶段把左侧栏从单纯输入区升级为用户侧测算记忆区：测算入口、当前命盘和历史报告同处左栏；生成报告后会写入当前账号/当前浏览器历史，点击历史项可以恢复报告和追问种子，不重新调用 LLM，不改命盘事实。进入智能对话后，问答以倒序 item 链显示，最新问题在最上方并展开，旧问题自动折叠；等待 Gemma 时显示 pending item，不生成本地替代回答。由于 `v40_runtime_records` 尚未携带用户 ownership contract，本阶段不开放全局后端历史报告列表，跨设备持久历史进入 Reading Revision / ownership contract 阶段。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text
