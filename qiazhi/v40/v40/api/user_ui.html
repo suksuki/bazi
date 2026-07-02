@@ -474,18 +474,15 @@
     body[data-state="running"] #reportFeedback {
       display: none !important;
     }
+    body[data-state="conversation"] #verdictHero,
     body[data-state="conversation"] #reportSurface,
-    body[data-state="conversation"] #probeSurface {
+    body[data-state="conversation"] #probeSurface,
+    body[data-state="conversation"] #reviewSurface,
+    body[data-state="conversation"] #followupHub {
       display: none !important;
     }
-    body[data-state="conversation"] #verdictHero {
-      order: 1;
-    }
     body[data-state="conversation"] #conversationSurface {
-      order: 2;
-    }
-    body[data-state="conversation"] #followupHub {
-      order: 3;
+      order: 1;
     }
     body[data-state="practitioner"] #conversationSurface.hidden,
     body[data-state="report"] #conversationSurface.hidden {
@@ -866,7 +863,8 @@
       font-size: 12px;
       line-height: 1.42;
     }
-    #seedCards {
+    #seedCards,
+    #conversationSeedCards {
       display: flex;
       flex-wrap: wrap;
       gap: 8px;
@@ -898,6 +896,18 @@
       display: grid;
       grid-template-columns: minmax(0, 1fr) auto;
       gap: 8px;
+    }
+    .conversation-compose {
+      display: grid;
+      gap: 10px;
+      padding: 12px;
+      border-radius: var(--radius);
+      background: #f5efe5;
+    }
+    .conversation-note {
+      color: var(--soft-ink);
+      font-size: 12px;
+      margin: 0;
     }
     .conversation-turn {
       background: #fffdf8;
@@ -1383,7 +1393,15 @@
         <section class="surface conversation hidden" id="conversationSurface">
           <div class="section-label">
             <h3>智能对话</h3>
-            <span class="mini">一问一答 · 围绕本次报告</span>
+            <span class="mini">报告在左侧历史报告里查阅</span>
+          </div>
+          <div class="conversation-compose">
+            <p class="conversation-note">现在只围绕本次报告继续问答；想回看报告，请点左侧历史报告。</p>
+            <div class="card-grid" id="conversationSeedCards"></div>
+            <div class="followup-input">
+              <input id="conversationQuestion" placeholder="继续问，比如：今年财运如何？" />
+              <button class="primary-button" id="conversationAskButton" type="button">继续问</button>
+            </div>
           </div>
           <div class="conversation" id="conversationTurns"></div>
         </section>
@@ -1986,9 +2004,11 @@
     function renderFollowups(seeds) {
       currentSeeds = seeds || [];
       $("followupHub").classList.toggle("hidden", !currentSeeds.length);
-      $("seedCards").innerHTML = currentSeeds.slice(0, 5).map((seed) => `
+      const chips = currentSeeds.slice(0, 5).map((seed) => `
         <button class="question-chip" type="button" data-seed-id="${escapeHtml(seed.seed_id)}" data-question="${escapeHtml(seed.question)}">${escapeHtml(seed.question)}</button>
       `).join("");
+      $("seedCards").innerHTML = chips;
+      $("conversationSeedCards").innerHTML = chips;
     }
 
     function historyStorageKey() {
@@ -2515,9 +2535,10 @@
     async function askConversation(question, seedId = "") {
       if (!currentRuntime || !question.trim()) return;
       $("askButton").disabled = true;
+      $("conversationAskButton").disabled = true;
       setReadingMode("conversation");
       $("conversationSurface").classList.remove("hidden");
-      setState("正在生成本轮回答", "报告已收起，正在进入对话", true);
+      setState("正在生成本轮回答", "报告已放到左侧历史报告", true);
       const pendingNode = appendConversation(
         question,
         "正在围绕本次报告组织回答。Gemma 返回前不会生成替代结论。",
@@ -2546,12 +2567,14 @@
         settleConversation(pendingNode, result.answer_text);
         renderFollowups(result.next_seeds || []);
         $("followupQuestion").value = "";
+        $("conversationQuestion").value = "";
         setState("回答已生成", "可以继续追问", false);
       } catch (error) {
         settleConversation(pendingNode, error.message || "本轮回答暂时没有完成", {error: true});
         setState("智能服务未完成", "可以稍后重试", false);
       } finally {
         $("askButton").disabled = false;
+        $("conversationAskButton").disabled = false;
       }
     }
 
@@ -2632,14 +2655,32 @@
       }
     });
 
-    $("seedCards").addEventListener("click", (event) => {
+    function handleSeedClick(event) {
       const button = event.target.closest("button[data-question]");
       if (!button) return;
       askConversation(button.dataset.question || "", button.dataset.seedId || "");
+    }
+
+    $("seedCards").addEventListener("click", (event) => {
+      handleSeedClick(event);
+    });
+
+    $("conversationSeedCards").addEventListener("click", (event) => {
+      handleSeedClick(event);
     });
 
     $("askButton").addEventListener("click", () => {
       askConversation(value("followupQuestion"), "");
+    });
+
+    $("conversationAskButton").addEventListener("click", () => {
+      askConversation(value("conversationQuestion"), "");
+    });
+
+    $("conversationQuestion").addEventListener("keydown", (event) => {
+      if (event.key !== "Enter" || event.shiftKey) return;
+      event.preventDefault();
+      askConversation(value("conversationQuestion"), "");
     });
 
     $("historyList").addEventListener("click", (event) => {

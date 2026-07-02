@@ -42,7 +42,7 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
         "do_not_use_now",
         "ask_to_confirm",
         "user_mismatch",
-        "报告已收起，正在进入对话",
+        "报告已放到左侧历史报告",
     ]:
         assert text in html
 

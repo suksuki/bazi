@@ -37,8 +37,14 @@ def test_phase62_user_ui_has_left_history_and_folded_reverse_conversation_items(
         "data-turn-toggle",
         "foldConversationTurns",
         "$(\"conversationTurns\").prepend(node)",
+        'body[data-state="conversation"] #verdictHero',
+        'body[data-state="conversation"] #reviewSurface',
+        'body[data-state="conversation"] #followupHub',
+        'id="conversationSeedCards"',
+        'id="conversationQuestion"',
+        'id="conversationAskButton"',
         "Gemma 返回前不会生成替代结论",
-        "一问一答 · 围绕本次报告",
+        "报告在左侧历史报告里查阅",
     ]:
         assert text in html
 

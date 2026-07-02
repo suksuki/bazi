@@ -181,12 +181,11 @@ The ordinary user sees:
 
 After the first follow-up starts, the ordinary user sees:
 
-- Compact core judgment summary.
-- A `查看完整报告` recovery action.
 - One-question-one-answer conversation turns.
 - Fresh lightweight follow-up chips.
+- Question input inside the conversation surface.
 
-The full report does not continue to occupy the main page during conversation mode.
+The full report does not continue to occupy the main page during conversation mode. Report lookup moves to the left-rail history list.
 
 The ordinary user does not see:
 
@@ -813,6 +812,8 @@ Refine report-grounded conversation:
 - In conversation mode, render turns as newest-first folded items.
 - Keep the current/latest question expanded and fold older turns.
 - Show a pending item while waiting for the LLM; do not synthesize a fallback answer.
+- Hide the report hero, report cards, Probe surface, practitioner-review invite, and report-mode follow-up hub from the main page.
+- Keep conversation seed chips and the question input inside the conversation surface.
 
 ### UI-3A Reading History Sidebar
 

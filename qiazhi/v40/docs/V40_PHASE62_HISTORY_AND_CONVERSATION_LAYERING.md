@@ -29,7 +29,7 @@ The main page is still report-first:
 setup -> running -> report -> conversation
 ```
 
-After the user starts conversation, the full report folds away. The page keeps only the compact core judgment and the conversation chain.
+After the user starts conversation, the report leaves the main page. The left rail history becomes the way to reopen the report; the main page keeps only the conversation chain, pending answer state, seed chips and the question input.
 
 ## History Scope
 
@@ -61,6 +61,8 @@ Rules:
 4. Clicking a folded question opens it and folds the others.
 5. Pending LLM answers stay visible as a pending item; no local fallback answer is generated.
 6. The conversation does not rerun the reading and does not mutate chart facts.
+7. Verdict, report, Probe, review and the report-mode follow-up hub do not remain on the main page during conversation mode.
+8. To review earlier report content, the user clicks the left-rail history item.
 
 ## UI Boundary
 
