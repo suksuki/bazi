@@ -43,9 +43,9 @@ def test_phase57_docs_and_project_status_track_process_feedback_and_llm_boundary
     assert "execution_mode=ollama" in spec
     assert "docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md" in readme
     assert "waiting for the LLM expression path" in ui_spec
-    assert status["current_phase"] == 59
-    assert status["current_phase_name"] == "UI Product Convergence Runtime"
+    assert status["current_phase"] == 60
+    assert status["current_phase_name"] == "Probe V2 And Mingli Candidate Board"
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "57" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "59" and row["status"] == "active" for row in status["phase_groups"])
+    assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert "UI-15: live LLM user acceptance with admin profiles" in status["next_mainline_tasks"]

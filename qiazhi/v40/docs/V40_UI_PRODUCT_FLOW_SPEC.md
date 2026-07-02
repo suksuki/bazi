@@ -200,7 +200,7 @@ report
 → feedback is converted into training labels
 ```
 
-Probe must be skippable, short, and explained in user language:
+Probe must be skippable, short, and explained in user language. Since Phase 60, Probe is a V2 target-bound object, not a generic follow-up:
 
 ```text
 校准一问
@@ -208,6 +208,15 @@ Probe must be skippable, short, and explained in user language:
 当前更像哪一种赚钱方式？
 固定工资 / 项目客户 / 合伙团队 / 投资资产 / 暂不确定
 ```
+
+Probe V2 may be:
+
+- 显化探针：确认现实模式。
+- 年份探针：确认哪一年或哪段时间最明显。
+- 事件探针：确认事件类型。
+- 大运切换探针：确认大运阶段感受。
+
+Every Probe must bind to target verdicts, branches, domains, years, hidden attributes, or advice impact.
 
 After the user answers, the Probe folds into a compact `已校准` result and normal report feedback can reappear.
 
@@ -244,11 +253,11 @@ mobile -> bottom drawer behavior
 
 Practitioner actions are human-language choices:
 
-- 更像这个表现
-- 作为辅助参考
+- 采为主断
+- 作为辅助
 - 暂不采用
-- 需要追问确认
-- 用户反馈不符合
+- 需要追问
+- 用户反馈不符
 - 添加备注
 
 Internal mapping may become:
@@ -321,6 +330,28 @@ Practitioner cannot:
 - Change global training weights directly.
 - Publish active policy.
 - Access Admin debug from the user app.
+
+Since Phase 60, Practitioner Lens displays a `Mingli Candidate Board / 断项池` instead of a loose list of raw runtime targets:
+
+```text
+命局骨架
+财富断项
+事业断项
+感情断项
+时运断项
+健康断项
+隐藏线索
+```
+
+Each candidate must show:
+
+- Candidate title and concise human summary.
+- Current status and confidence label.
+- Suggested Probe question when useful.
+- Impact preview before the practitioner acts.
+- Product action buttons that map into the training loop.
+
+When a practitioner clicks `需要追问`, the same user page creates a visible Probe card for the current reading. It does not start hidden dialogue, does not refresh the report, and does not mutate chart facts.
 
 ### Admin
 

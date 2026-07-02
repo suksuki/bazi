@@ -58,6 +58,75 @@ class ProductAdviceCard(V40Model):
     boundary: str = "product_advice_card_uses_advice_plan_without_exceeding_verdict"
 
 
+class SystemAssertionCandidate(V40Model):
+    version: str = "v40.system_assertion_candidate.v1"
+    candidate_id: str
+    candidate_type: str
+    topic: Topic = Topic.UNKNOWN
+    title: str
+    summary: str
+    current_status: str = "alternative"
+    confidence_label: str = ""
+    target_type: str
+    target_ids: list[str] = Field(default_factory=list)
+    suggested_probe_question: str = ""
+    evidence_refs: list[str] = Field(default_factory=list)
+    counter_evidence_refs: list[str] = Field(default_factory=list)
+    impact_preview: list[str] = Field(default_factory=list)
+    available_actions: list[str] = Field(
+        default_factory=lambda: [
+            "more_like_this",
+            "supporting_context",
+            "do_not_use_now",
+            "ask_to_confirm",
+            "user_mismatch",
+            "note",
+        ]
+    )
+    boundary: str = "system_assertion_candidate_is_practitioner_selectable_projection_not_chart_fact"
+
+    @model_validator(mode="after")
+    def _candidate_boundary(self) -> "SystemAssertionCandidate":
+        if not self.candidate_id.strip():
+            raise ValueError("SystemAssertionCandidate requires candidate_id")
+        if not self.candidate_type.strip():
+            raise ValueError("SystemAssertionCandidate requires candidate_type")
+        if not self.title.strip():
+            raise ValueError("SystemAssertionCandidate requires title")
+        if not self.summary.strip():
+            raise ValueError("SystemAssertionCandidate requires summary")
+        if not self.target_type.strip():
+            raise ValueError("SystemAssertionCandidate requires target_type")
+        if not self.target_ids:
+            raise ValueError("SystemAssertionCandidate requires target_ids")
+        return self
+
+
+class MingliCandidateGroup(V40Model):
+    version: str = "v40.mingli_candidate_group.v1"
+    group_id: str
+    title: str
+    candidates: list[SystemAssertionCandidate] = Field(default_factory=list)
+    boundary: str = "mingli_candidate_group_groups_projection_candidates_for_practitioner_lens"
+
+
+class MingliCandidateBoard(V40Model):
+    version: str = "v40.mingli_candidate_board.v1"
+    board_id: str
+    reading_id: str
+    groups: list[MingliCandidateGroup] = Field(default_factory=list)
+    actions: list[dict[str, str]] = Field(default_factory=list)
+    boundary: str = "mingli_candidate_board_is_role_projected_for_practitioner_selection"
+
+    @model_validator(mode="after")
+    def _board_boundary(self) -> "MingliCandidateBoard":
+        if not self.board_id.strip():
+            raise ValueError("MingliCandidateBoard requires board_id")
+        if not self.reading_id.strip():
+            raise ValueError("MingliCandidateBoard requires reading_id")
+        return self
+
+
 class LLMExpressionTask(V40Model):
     version: str = "v40.llm_expression_task.v1"
     task_id: str

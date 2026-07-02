@@ -28,6 +28,7 @@ PRODUCT_TOPICS = [
     Topic.TIMING,
     Topic.STRUCTURE,
 ]
+TIMELINE_PROBE_TOPICS = {Topic.CAREER, Topic.WEALTH, Topic.RELATIONSHIP, Topic.TIMING}
 
 TOPIC_LABELS = {
     Topic.STRUCTURE: "结构",
@@ -258,15 +259,39 @@ def _build_probes(
             ProbeCandidate(
                 probe_id=f"probe:{reading_id}:{verdict.topic.value}:1",
                 reading_id=reading_id,
+                probe_type="manifestation",
                 topic=verdict.topic,
                 question=_probe_question(verdict.topic),
+                options=_probe_options(verdict.topic),
                 target_branch_ids=target_branches,
                 target_verdict_ids=[verdict.verdict_id],
+                target_domains=[verdict.topic],
+                target_hidden_attribute_ids=[verdict.verdict_id] if verdict.topic == Topic.HIDDEN_ATTRIBUTE else [],
+                impact_preview=_probe_impact_preview(verdict.topic, "manifestation"),
                 expected_information_gain=_information_gain(verdict, topic_branches),
                 user_cost=0.25 if role_key == "practitioner" else 0.32,
                 ask_now=False,
             )
         )
+        if verdict.topic in TIMELINE_PROBE_TOPICS:
+            probes.append(
+                ProbeCandidate(
+                    probe_id=f"probe:{reading_id}:{verdict.topic.value}:timeline",
+                    reading_id=reading_id,
+                    probe_type="timeline",
+                    topic=verdict.topic,
+                    question=_timeline_probe_question(verdict.topic),
+                    options=_timeline_probe_options(),
+                    target_branch_ids=target_branches,
+                    target_verdict_ids=[verdict.verdict_id],
+                    target_domains=[verdict.topic, Topic.TIMING],
+                    target_years=_timeline_probe_years(),
+                    impact_preview=_probe_impact_preview(verdict.topic, "timeline"),
+                    expected_information_gain=min(0.86, _information_gain(verdict, topic_branches) + 0.08),
+                    user_cost=0.30 if role_key == "practitioner" else 0.38,
+                    ask_now=False,
+                )
+            )
     return probes
 
 
@@ -438,6 +463,51 @@ def _probe_question(topic: Topic) -> str:
         Topic.STRUCTURE: "当前更能印证身强、身弱，还是中和待复核？",
     }
     return table.get(topic, "这个问题最需要补充哪一条现实线索？")
+
+
+def _probe_options(topic: Topic) -> list[str]:
+    table = {
+        Topic.CAREER: ["职责压力", "平台资源", "想换方向", "都不明显"],
+        Topic.WEALTH: ["固定收入", "项目客户", "合伙分配", "投资波动", "暂不确定"],
+        Topic.RELATIONSHIP: ["表达冲突", "距离边界", "承诺节奏", "暂不确定"],
+        Topic.HEALTH: ["压力消耗", "作息紊乱", "身体反馈", "暂不确定"],
+        Topic.FAMILY: ["责任牵引", "资源支持", "边界压力", "暂不确定"],
+        Topic.HIDDEN_ATTRIBUTE: ["反复经历明显", "偶尔出现", "暂时没有", "不确定"],
+        Topic.USEFUL_GOD: ["更像扶身", "更像疏通", "更像承压后转化", "还不确定"],
+        Topic.TIMING: ["事业触发", "财务触发", "关系触发", "健康节奏", "暂不明显"],
+        Topic.STRUCTURE: ["更像身强", "更像身弱", "中和待复核", "还不确定"],
+    }
+    return table.get(topic, ["更像前者", "更像后者", "暂不确定"])
+
+
+def _timeline_probe_question(topic: Topic) -> str:
+    label = TOPIC_LABELS.get(topic, "命局")
+    if topic == Topic.TIMING:
+        return "这几年里，哪一年变化最明显？"
+    return f"从{label}来看，这几年里哪一年变化最明显？"
+
+
+def _timeline_probe_options() -> list[str]:
+    return [*_timeline_probe_years(), "都不明显"]
+
+
+def _timeline_probe_years() -> list[str]:
+    return ["2023", "2024", "2025", "2026"]
+
+
+def _probe_impact_preview(topic: Topic, probe_type: str) -> list[str]:
+    label = TOPIC_LABELS.get(topic, "命局")
+    if probe_type == "timeline":
+        return [
+            f"会影响{label}判断里哪一年应事更明显。",
+            "会影响时运触发点和下一条事件追问。",
+            "会把年份反馈转成后续训练素材。",
+        ]
+    return [
+        f"会影响{label}主分支和备选分支的权重。",
+        "会影响本页建议从宽泛判断转成现实可执行建议。",
+        "会生成可回放的用户反馈训练素材。",
+    ]
 
 
 def _clean_claim(text: str) -> str:

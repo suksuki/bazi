@@ -28,7 +28,7 @@ Practitioner Lens Action
 | `more_like_this` | `supports` | 命理师认为该信号更贴合当前盘面或用户反馈 |
 | `supporting_context` | `probe_helpful` | 作为辅助背景，不直接升格为断语 |
 | `do_not_use_now` | `weakens` | 本次测算中降权或保留边界 |
-| `ask_to_confirm` | `needs_probe` | 需要追问确认，不直接进入结论 |
+| `ask_to_confirm` | `needs_probe` | 需要追问，不直接进入结论 |
 | `user_mismatch` | `mismatch` | 用户反馈与信号不符，进入训练素材 |
 
 ## 新增模块

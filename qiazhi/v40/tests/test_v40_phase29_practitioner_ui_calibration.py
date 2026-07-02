@@ -17,6 +17,6 @@ def test_v40_ui_exposes_practitioner_calibration_without_admin_controls() -> Non
     assert "practitioner-lens-action" in response.text
     assert "renderLens" in response.text
     assert "data-lens-action" in response.text
-    assert "主分支、证据和校准动作" in response.text
+    assert "断项池、影响预览和校准动作" in response.text
     assert "production weight" not in response.text
     assert "/admin/v40" not in response.text

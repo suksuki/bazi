@@ -136,7 +136,7 @@ login as practitioner/admin
 → run report
 → inspect practitioner Lens
 → choose professional action:
-   更像这个表现 / 作为辅助参考 / 暂不采用 / 需要追问确认
+   采为主断 / 作为辅助 / 暂不采用 / 需要追问
 → optional note
 → action becomes local overlay and training label
 ```

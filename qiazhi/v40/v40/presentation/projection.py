@@ -4,7 +4,17 @@ from v40.contracts.base import EngineKey, RoleKey, SurfaceKey, Topic
 from v40.contracts.context import ClientContext, LocaleContext, RoleContext, default_client_context, default_locale_context, default_role_context
 from v40.contracts.decision import AdvicePlan, BranchCandidate, DecisionVerdict, ProbeCandidate
 from v40.contracts.engine import MultiEngineRunResult
-from v40.contracts.output import BranchCard, ProductAdviceCard, ProductProjectionBundle, ProductVerdictCard, SurfaceBundle, SurfaceSection
+from v40.contracts.output import (
+    BranchCard,
+    MingliCandidateBoard,
+    MingliCandidateGroup,
+    ProductAdviceCard,
+    ProductProjectionBundle,
+    ProductVerdictCard,
+    SurfaceBundle,
+    SurfaceSection,
+    SystemAssertionCandidate,
+)
 from v40.contracts.signal import SignalRegistrySnapshot, SignalSource
 
 
@@ -72,6 +82,7 @@ def build_surface_bundle(
     resolved_role = role_context or default_role_context(role_key)
     resolved_client = client_context or default_client_context("web")
     practitioner_lens = build_practitioner_lens(
+        reading_id=reading_id,
         role_key=role_key,
         signal_registry=signal_registry,
         engine_result=engine_result,
@@ -167,6 +178,7 @@ def _surface_sections(*, role_key: RoleKey, client_context: ClientContext) -> li
 
 def build_practitioner_lens(
     *,
+    reading_id: str,
     role_key: RoleKey,
     signal_registry: SignalRegistrySnapshot | None,
     engine_result: MultiEngineRunResult | None,
@@ -184,6 +196,7 @@ def build_practitioner_lens(
     bazi_topics = {signal.topic for signal in bazi_signals}
     ziwei_topics = {signal.topic for signal in ziwei_signals}
     sidecar_probes = _ziwei_probe_triggers(engine_result)
+    candidate_board = _build_candidate_board(reading_id=reading_id, branches=branches, probes=probes)
     return {
         "available": True,
         "mode": "practitioner_lens",
@@ -193,7 +206,9 @@ def build_practitioner_lens(
             "branch_count": len(branches),
             "probe_count": len(probes),
             "ziwei_probe_trigger_count": len(sidecar_probes),
+            "candidate_count": sum(len(group["candidates"]) for group in candidate_board["groups"]),
         },
+        "candidate_board": candidate_board,
         "agreement_topics": [_topic_label(topic) for topic in sorted(bazi_topics.intersection(ziwei_topics), key=lambda row: row.value)],
         "ziwei_sidecar_topics": [_topic_label(topic) for topic in sorted(ziwei_topics, key=lambda row: row.value)],
         "ziwei_signals": [
@@ -208,11 +223,12 @@ def build_practitioner_lens(
         ],
         "probe_triggers": sidecar_probes[:6],
         "calibration_actions": [
-            {"key": "more_like_this", "label": "更像这个表现", "training_label": "supports"},
-            {"key": "supporting_context", "label": "作为辅助参考", "training_label": "probe_helpful"},
+            {"key": "more_like_this", "label": "采为主断", "training_label": "supports"},
+            {"key": "supporting_context", "label": "作为辅助", "training_label": "probe_helpful"},
             {"key": "do_not_use_now", "label": "暂不采用", "training_label": "weakens"},
-            {"key": "ask_to_confirm", "label": "需要追问确认", "training_label": "needs_probe"},
-            {"key": "user_mismatch", "label": "用户反馈不符合", "training_label": "mismatch"},
+            {"key": "ask_to_confirm", "label": "需要追问", "training_label": "needs_probe"},
+            {"key": "user_mismatch", "label": "用户反馈不符", "training_label": "mismatch"},
+            {"key": "note", "label": "添加备注", "training_label": "probe_helpful"},
         ],
         "boundaries": {
             "changes_verdict": False,
@@ -232,6 +248,167 @@ def _ziwei_probe_triggers(engine_result: MultiEngineRunResult | None) -> list[di
             continue
         triggers.extend(result.probe_candidates)
     return triggers
+
+
+def _build_candidate_board(
+    *,
+    reading_id: str,
+    branches: list[BranchCard],
+    probes: list[ProbeCandidate],
+) -> dict[str, object]:
+    grouped: dict[str, list[SystemAssertionCandidate]] = {}
+    branch_rank: dict[Topic, int] = {}
+    for branch in branches:
+        branch_rank[branch.topic] = branch_rank.get(branch.topic, 0) + 1
+        candidate = SystemAssertionCandidate(
+            candidate_id=f"candidate:{branch.source_branch_id}",
+            candidate_type=_branch_candidate_type(branch.topic),
+            topic=branch.topic,
+            title=branch.title,
+            summary=branch.practitioner_summary or branch.user_summary,
+            current_status="primary" if branch_rank[branch.topic] == 1 else "alternative",
+            confidence_label=branch.confidence_label,
+            target_type="branch",
+            target_ids=[branch.source_branch_id],
+            suggested_probe_question=branch.key_question,
+            impact_preview=_candidate_impact_preview(branch.topic, "branch"),
+        )
+        grouped.setdefault(_candidate_group_id(branch.topic), []).append(candidate)
+    for probe in probes:
+        candidate = SystemAssertionCandidate(
+            candidate_id=f"candidate:{probe.probe_id}",
+            candidate_type="timeline_probe" if probe.probe_type == "timeline" else "probe_candidate",
+            topic=probe.topic,
+            title=_probe_candidate_title(probe),
+            summary=probe.question,
+            current_status="needs_probe",
+            confidence_label=_probe_gain_label(probe.expected_information_gain),
+            target_type="probe",
+            target_ids=[probe.probe_id],
+            suggested_probe_question=probe.question,
+            impact_preview=probe.impact_preview or _candidate_impact_preview(probe.topic, "probe"),
+        )
+        grouped.setdefault(_candidate_group_id(probe.topic), []).append(candidate)
+    groups = [
+        MingliCandidateGroup(
+            group_id=group_id,
+            title=_candidate_group_title(group_id),
+            candidates=candidates[:5],
+        )
+        for group_id, candidates in grouped.items()
+        if candidates
+    ]
+    board = MingliCandidateBoard(
+        board_id=f"candidate-board:{reading_id}",
+        reading_id=reading_id,
+        groups=sorted(groups, key=lambda group: _candidate_group_order(group.group_id)),
+        actions=_candidate_board_actions(),
+    )
+    return board.model_dump(mode="json")
+
+
+def _candidate_board_actions() -> list[dict[str, str]]:
+    return [
+        {"key": "more_like_this", "label": "采为主断"},
+        {"key": "supporting_context", "label": "作为辅助"},
+        {"key": "do_not_use_now", "label": "暂不采用"},
+        {"key": "ask_to_confirm", "label": "需要追问"},
+        {"key": "user_mismatch", "label": "用户反馈不符"},
+        {"key": "note", "label": "添加备注"},
+    ]
+
+
+def _branch_candidate_type(topic: Topic) -> str:
+    table = {
+        Topic.STRUCTURE: "structure_candidate",
+        Topic.USEFUL_GOD: "useful_god_candidate",
+        Topic.TIMING: "timing_window",
+        Topic.WEALTH: "wealth_branch",
+        Topic.CAREER: "career_branch",
+        Topic.RELATIONSHIP: "relationship_branch",
+        Topic.HEALTH: "health_branch",
+        Topic.FAMILY: "family_branch",
+        Topic.HIDDEN_ATTRIBUTE: "hidden_attribute_candidate",
+    }
+    return table.get(topic, "mingli_branch")
+
+
+def _candidate_group_id(topic: Topic) -> str:
+    table = {
+        Topic.STRUCTURE: "structure",
+        Topic.USEFUL_GOD: "structure",
+        Topic.TIMING: "timing",
+        Topic.WEALTH: "wealth",
+        Topic.CAREER: "career",
+        Topic.RELATIONSHIP: "relationship",
+        Topic.HEALTH: "health",
+        Topic.FAMILY: "family",
+        Topic.HIDDEN_ATTRIBUTE: "hidden_attribute",
+    }
+    return table.get(topic, "overview")
+
+
+def _candidate_group_title(group_id: str) -> str:
+    table = {
+        "structure": "命局骨架",
+        "wealth": "财富断项",
+        "career": "事业断项",
+        "relationship": "感情断项",
+        "timing": "时运断项",
+        "health": "健康断项",
+        "family": "亲情断项",
+        "hidden_attribute": "隐藏线索",
+    }
+    return table.get(group_id, "综合断项")
+
+
+def _candidate_group_order(group_id: str) -> int:
+    order = {
+        "structure": 10,
+        "wealth": 20,
+        "career": 30,
+        "relationship": 40,
+        "timing": 50,
+        "health": 60,
+        "family": 70,
+        "hidden_attribute": 80,
+    }
+    return order.get(group_id, 99)
+
+
+def _probe_candidate_title(probe: ProbeCandidate) -> str:
+    label = _topic_label(probe.topic)
+    if probe.probe_type == "timeline":
+        years = " / ".join(probe.target_years[:3])
+        return f"{label}年份探针" if not years else f"{label}年份探针：{years}"
+    if probe.probe_type == "event":
+        return f"{label}事件探针"
+    if probe.probe_type == "luck_transition":
+        return f"{label}大运切换探针"
+    return f"{label}显化探针"
+
+
+def _probe_gain_label(value: float) -> str:
+    if value >= 0.72:
+        return "信息增益高"
+    if value >= 0.50:
+        return "值得追问"
+    return "轻量校准"
+
+
+def _candidate_impact_preview(topic: Topic, target_kind: str) -> list[str]:
+    label = _topic_label(topic)
+    if target_kind == "branch":
+        return [
+            f"会影响{label}主断与备选断项排序。",
+            f"会调整{label}建议的表达重点。",
+            "会形成命理师本地校准记录并进入训练素材。",
+        ]
+    return [
+        f"会补足{label}判断的现实线索。",
+        "会影响下一轮 Probe 或对话问题。",
+        "会把用户回答转成可回放训练素材。",
+    ]
 
 
 def _build_branch_cards(*, role_key: RoleKey, branches: list[BranchCandidate]) -> list[BranchCard]:

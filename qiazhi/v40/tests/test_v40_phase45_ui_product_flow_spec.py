@@ -32,8 +32,8 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 59
-    assert status["current_phase_name"] == "UI Product Convergence Runtime"
+    assert status["current_phase"] == 60
+    assert status["current_phase_name"] == "Probe V2 And Mingli Candidate Board"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
     assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
     assert "UI-15: live LLM user acceptance with admin profiles" in status["next_mainline_tasks"]

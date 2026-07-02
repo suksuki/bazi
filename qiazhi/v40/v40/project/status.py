@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 59
-CURRENT_PHASE_NAME = "UI Product Convergence Runtime"
+CURRENT_PHASE = 60
+CURRENT_PHASE_NAME = "Probe V2 And Mingli Candidate Board"
 
 
 @dataclass(frozen=True)
@@ -86,8 +86,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "56", "label": "built-in admin and V30 profile sync", "status": "complete"},
     {"range": "57", "label": "process feedback and UI review brief", "status": "complete"},
     {"range": "58", "label": "hard LLM runtime and direct training activation principles", "status": "complete"},
-    {"range": "59", "label": "UI product convergence runtime", "status": "active"},
-    {"range": "60+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "59", "label": "UI product convergence runtime", "status": "complete"},
+    {"range": "60", "label": "Probe V2 and Mingli candidate board", "status": "active"},
+    {"range": "61+", "label": "practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
 )
 
 
@@ -111,11 +112,11 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-20: contextual practitioner Lens on the same Reading page",
-            "UI-19: Phase 59 mobile and visual QA",
+            "UI-21: Probe V2 target-bound candidate board and ask-to-confirm Probe card",
+            "PROBE-20: target-bound manifestation and timeline probes",
+            "LENS-21: Mingli Candidate Board with impact preview",
             "UI-15: live LLM user acceptance with admin profiles",
             "TRAIN-16: direct training activation remediation and rollback UX",
-            "UI-16: practitioner review workbench polish",
             "UI-17: online cutover decision with user acceptance evidence",
         ],
         "runtime_evidence_counts": counts,

@@ -267,11 +267,11 @@ Drawer content:
 Actions use human professional language:
 
 ```text
-更像这个表现
-作为辅助参考
+采为主断
+作为辅助
 暂不采用
-需要追问确认
-用户反馈不符合
+需要追问
+用户反馈不符
 添加备注
 ```
 

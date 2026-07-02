@@ -1,6 +1,6 @@
 # V40 Spec
 
-更新时间：2026-06-30
+更新时间：2026-07-02
 
 ## 定位
 
@@ -40,6 +40,8 @@ V30 继续作为当前生产线维护；V40 作为新目录、新数据库、新
 8. ProductProjection + LLMExpressionPipelineV2 + SurfaceOrchestrator 是用户体验主链。
 9. Admin Control Plane 和 Evaluation & Training Spine 从第一天进入 V40。
 10. 所有训练更新必须可回放、可解释、可验证、可回滚。
+11. Practitioner Lens 是同一测算页面上的命理师断项池，不是单独测算页，也不是 Admin。
+12. Probe V2 必须绑定明确目标、选项和影响预览，不能只是宽泛追问。
 
 ## V40 运行时架构
 
@@ -67,6 +69,17 @@ User / Case Input
       -> ThinkingSurface
   -> Role Projection
       -> Guest / User / Practitioner / Admin
+```
+
+Phase 60 adds the professional selection layer:
+
+```text
+ProductProjection
+  -> SystemAssertionCandidate
+  -> MingliCandidateBoard
+  -> PractitionerSelection
+  -> TrainingLabelEvent + LocalOverlay
+  -> Probe V2 when evidence gain is useful
 ```
 
 训练验证闭环：

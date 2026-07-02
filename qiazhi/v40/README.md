@@ -77,6 +77,7 @@ docs/V40_PHASE56_ADMIN_PROFILE_SYNC.md
 docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md
 docs/V40_PHASE58_HARD_LLM_AND_DIRECT_TRAINING_PRINCIPLES.md
 docs/V40_PHASE59_UI_PRODUCT_CONVERGENCE_PLAN.md
+docs/V40_PHASE60_PROBE_V2_AND_CANDIDATE_BOARD.md
 docs/V40_RC2_MINGLI_DEPTH_MIGRATION_PLAN.md
 docs/V40_RC2_ASSET_MIGRATION_GATE.md
 docs/V40_RC2_MODULE_STATUS_AND_MIGRATION_MAP.md
@@ -107,6 +108,12 @@ Start order:
 5. Only then migrate runtime behavior.
 
 Current phase:
+
+```text
+V40 Phase 60: Probe V2 And Mingli Candidate Board
+```
+
+Previous RC2 track retained:
 
 ```text
 V40-RC2: Mingli Depth Migration

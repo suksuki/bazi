@@ -903,6 +903,29 @@
       color: var(--soft-ink);
       font-size: 13px;
     }
+    .lens-meta {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin: 0 0 8px;
+    }
+    .lens-meta span {
+      border-radius: 999px;
+      background: #f1eadf;
+      color: var(--soft-ink);
+      padding: 4px 7px;
+      font-size: 11px;
+      font-weight: 720;
+    }
+    .lens-impact {
+      margin: 0 0 10px;
+      padding-left: 16px;
+      color: var(--soft-ink);
+      font-size: 12px;
+    }
+    .lens-impact li {
+      margin: 3px 0;
+    }
     .lens-actions {
       display: flex;
       flex-wrap: wrap;
@@ -1198,7 +1221,7 @@
 
       <aside class="drawer" id="lensDrawer">
         <h2>专业视角</h2>
-        <div class="mini">主分支、证据和校准动作</div>
+        <div class="mini">断项池、影响预览和校准动作</div>
         <div class="lens-stack" id="lensStack">
           <div class="empty">报告生成后显示。</div>
         </div>
@@ -1555,6 +1578,15 @@
       }[ch]));
     }
 
+    function safeJsonList(text) {
+      try {
+        const parsed = JSON.parse(text || "[]");
+        return Array.isArray(parsed) ? parsed : [];
+      } catch (_) {
+        return [];
+      }
+    }
+
     function value(id) {
       return $(id).value.trim();
     }
@@ -1794,13 +1826,15 @@
 
     function showProbe(reason, probe) {
       const topic = probe?.topic || value("topic");
-      const options = probeOptions(topic);
+      const options = Array.isArray(probe?.options) && probe.options.length ? probe.options.slice(0, 6) : probeOptions(topic);
+      const impact = Array.isArray(probe?.impact_preview) ? probe.impact_preview.slice(0, 2) : [];
       $("probeSurface").classList.remove("hidden");
       $("probeSurface").innerHTML = `
         <article class="probe-card">
           <h4>校准一问</h4>
           <p>${escapeHtml(reason || "这个问题会让判断更贴近你的现实。")}</p>
           <p class="probe-question"><strong>${escapeHtml(probe?.question || "哪里不太像？")}</strong></p>
+          ${impact.length ? `<ul class="lens-impact">${impact.map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
           <div class="option-row">
             ${options.map((option) => `<button type="button" data-probe-id="${escapeHtml(probe?.probe_id || "")}" data-probe-answer="${escapeHtml(option)}">${escapeHtml(option)}</button>`).join("")}
             <button type="button" data-probe-skip="true">跳过，先看当前建议</button>
@@ -1843,6 +1877,37 @@
 
     function lensTargetCards(runtime) {
       const projection = runtime.product_projection || {};
+      const calibration = runtime.surface_bundle?.surfaces?.calibration || {};
+      const lens = calibration.practitioner_lens || {};
+      const runtimeProbes = runtime.probes || [];
+      const candidateTargets = (lens.candidate_board?.groups || []).flatMap((group) =>
+        (group.candidates || []).map((candidate) => {
+          const targetIds = candidate.target_ids || [];
+          const probeRef = runtimeProbes.find((probe) => probe.probe_id === targetIds[0])
+            || runtimeProbes.find((probe) => probe.topic === candidate.topic && probe.probe_type === "manifestation")
+            || runtimeProbes.find((probe) => probe.topic === candidate.topic);
+          return {
+            id: targetIds[0] || candidate.candidate_id,
+            type: candidate.target_type || "verdict",
+            candidateId: candidate.candidate_id,
+            candidateType: candidate.candidate_type || "mingli_candidate",
+            groupTitle: group.title || "断项池",
+            status: candidate.current_status || "",
+            confidence: candidate.confidence_label || "",
+            topic: candidate.topic || "overview",
+            title: candidate.title || "候选断项",
+            text: candidate.summary || "",
+            question: candidate.suggested_probe_question || "",
+            impact: candidate.impact_preview || [],
+            actions: candidate.available_actions || [],
+            probeId: probeRef?.probe_id || "",
+            probeType: probeRef?.probe_type || "manifestation",
+            probeOptions: probeRef?.options || [],
+            probeImpact: probeRef?.impact_preview || candidate.impact_preview || []
+          };
+        })
+      ).filter((item) => item.id);
+      if (candidateTargets.length) return candidateTargets.slice(0, 12);
       const branchCards = (projection.branch_cards || []).map((card) => ({
         id: card.source_branch_id,
         type: "branch",
@@ -1851,8 +1916,6 @@
         text: card.practitioner_summary || card.user_summary || "",
         question: card.key_question || ""
       })).filter((item) => item.id);
-      const calibration = runtime.surface_bundle?.surfaces?.calibration || {};
-      const lens = calibration.practitioner_lens || {};
       const sideSignals = (lens.ziwei_signals || []).map((signal) => ({
         id: signal.signal_id,
         type: "signal",
@@ -1884,11 +1947,11 @@
         ? allTargets.filter((target) => target.topic === activeLensTopic)
         : allTargets;
       const actions = [
-        ["more_like_this", "更像这个表现"],
-        ["supporting_context", "作为辅助参考"],
+        ["more_like_this", "采为主断"],
+        ["supporting_context", "作为辅助"],
         ["do_not_use_now", "暂不采用"],
-        ["ask_to_confirm", "需要追问确认"],
-        ["user_mismatch", "用户反馈不符合"],
+        ["ask_to_confirm", "需要追问"],
+        ["user_mismatch", "用户反馈不符"],
         ["note", "添加备注"]
       ];
       const focusTitle = activeLensTitle || (activeLensTopic ? `${topicLabel(activeLensTopic)}重点` : "本次报告");
@@ -1907,10 +1970,19 @@
       $("lensStack").innerHTML = focusBlock + targets.map((target) => `
         <div class="lens-card">
           <strong>${escapeHtml(target.title)}</strong>
+          <div class="lens-meta">
+            ${target.groupTitle ? `<span>${escapeHtml(target.groupTitle)}</span>` : ""}
+            ${target.status ? `<span>${escapeHtml(target.status)}</span>` : ""}
+            ${target.confidence ? `<span>${escapeHtml(target.confidence)}</span>` : ""}
+          </div>
           <p>${escapeHtml(target.text)}</p>
           ${target.question ? `<p>建议追问：${escapeHtml(target.question)}</p>` : ""}
+          ${target.impact?.length ? `<ul class="lens-impact">${target.impact.slice(0, 3).map((item) => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
           <div class="lens-actions">
-            ${actions.map(([key, label]) => `<button class="lens-action" type="button" data-lens-action="${escapeHtml(key)}" data-target-type="${escapeHtml(target.type)}" data-target-id="${escapeHtml(target.id)}">${escapeHtml(label)}</button>`).join("")}
+            ${actions
+              .filter(([key]) => !target.actions?.length || target.actions.includes(key))
+              .map(([key, label]) => `<button class="lens-action" type="button" data-lens-action="${escapeHtml(key)}" data-target-type="${escapeHtml(target.type)}" data-target-id="${escapeHtml(target.id)}" data-probe-id="${escapeHtml(target.probeId || "")}" data-probe-type="${escapeHtml(target.probeType || "manifestation")}" data-probe-topic="${escapeHtml(target.topic || "overview")}" data-probe-question="${escapeHtml(target.question || target.text || "")}" data-probe-options="${escapeHtml(JSON.stringify(target.probeOptions || []))}" data-probe-impact="${escapeHtml(JSON.stringify(target.probeImpact || target.impact || []))}">${escapeHtml(label)}</button>`)
+              .join("")}
           </div>
         </div>
       `).join("");
@@ -2038,6 +2110,20 @@
         if (!response.ok) throw new Error("校准未记录");
         if (node) node.textContent = "已记录";
         if (actionKey === "note" && $("lensNote")) $("lensNote").value = "";
+        if (actionKey === "ask_to_confirm") {
+          const probeQuestion = node?.dataset?.probeQuestion || "";
+          const probeOptions = safeJsonList(node?.dataset?.probeOptions || "[]");
+          const probeImpact = safeJsonList(node?.dataset?.probeImpact || "[]");
+          showProbe("命理师选择需要追问，先补这一条现实线索。", {
+            probe_id: node?.dataset?.probeId || "",
+            probe_type: node?.dataset?.probeType || "manifestation",
+            topic: node?.dataset?.probeTopic || value("topic"),
+            question: probeQuestion || "这个判断需要补哪一条现实线索？",
+            options: probeOptions,
+            impact_preview: probeImpact
+          });
+          $("reportFeedback").classList.remove("active");
+        }
       } catch (error) {
         if (node) node.textContent = error.message;
       }

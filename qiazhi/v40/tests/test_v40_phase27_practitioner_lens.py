@@ -64,7 +64,8 @@ def test_practitioner_lens_exposes_bazi_ziwei_sidecar_without_verdict_mutation()
     assert "事业" in lens["agreement_topics"]
     assert lens["ziwei_signals"][0]["topic"] == "事业"
     assert "职责边界" in lens["probe_triggers"][0]["question"]
-    assert any(action["label"] == "需要追问确认" for action in lens["calibration_actions"])
+    assert any(action["label"] == "需要追问" for action in lens["calibration_actions"])
+    assert lens["candidate_board"]["version"] == "v40.mingli_candidate_board.v1"
     assert lens["boundaries"]["changes_verdict"] is False
     assert lens["boundaries"]["ordinary_user_visible"] is False
     assert runtime.decision_input is not None

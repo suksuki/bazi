@@ -116,10 +116,17 @@ class ProbeCandidate(V40Model):
     version: str = "v40.probe_candidate.v1"
     probe_id: str
     reading_id: str
+    probe_type: str = "manifestation"
     topic: Topic = Topic.UNKNOWN
     question: str
+    options: list[str] = Field(default_factory=list)
     target_branch_ids: list[str] = Field(default_factory=list)
     target_verdict_ids: list[str] = Field(default_factory=list)
+    target_advice_ids: list[str] = Field(default_factory=list)
+    target_domains: list[Topic] = Field(default_factory=list)
+    target_years: list[str] = Field(default_factory=list)
+    target_hidden_attribute_ids: list[str] = Field(default_factory=list)
+    impact_preview: list[str] = Field(default_factory=list)
     expected_information_gain: float = Field(default=0.0, ge=0.0, le=1.0)
     user_cost: float = Field(default=0.0, ge=0.0, le=1.0)
     ask_now: bool = False
@@ -129,6 +136,8 @@ class ProbeCandidate(V40Model):
     def _probe_boundary(self) -> "ProbeCandidate":
         if not self.probe_id.strip():
             raise ValueError("ProbeCandidate requires probe_id")
+        if self.probe_type not in {"manifestation", "timeline", "event", "luck_transition"}:
+            raise ValueError("ProbeCandidate probe_type must be manifestation, timeline, event, or luck_transition")
         if not self.question.strip():
             raise ValueError("ProbeCandidate requires question")
         if not (self.target_branch_ids or self.target_verdict_ids):

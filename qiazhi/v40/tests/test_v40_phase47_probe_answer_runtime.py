@@ -150,6 +150,6 @@ def test_phase47_docs_manifest_and_project_status_track_probe_answer_runtime() -
     assert "2026-07-01 Phase 47" in spec
     assert "docs/V40_PHASE47_PROBE_ANSWER_RUNTIME.md" in readme
     assert manifest["probe"] == ["AnswerSignal", "HiddenAttributeUpdate", "ProbeAnswerResult"]
-    assert status["current_phase"] == 59
-    assert status["current_phase_name"] == "UI Product Convergence Runtime"
+    assert status["current_phase"] == 60
+    assert status["current_phase_name"] == "Probe V2 And Mingli Candidate Board"
     assert any(row["range"] == "47" and row["status"] == "complete" for row in status["phase_groups"])
