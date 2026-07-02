@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 62
-CURRENT_PHASE_NAME = "Reading History And Conversation Layering"
+CURRENT_PHASE = 63
+CURRENT_PHASE_NAME = "Real Case Acceptance Window"
 
 
 @dataclass(frozen=True)
@@ -89,8 +89,9 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "59", "label": "UI product convergence runtime", "status": "complete"},
     {"range": "60", "label": "Probe V2 and Mingli candidate board", "status": "complete"},
     {"range": "61", "label": "UI flow clean rebuild", "status": "complete"},
-    {"range": "62", "label": "reading history sidebar and folded conversation chain", "status": "active"},
-    {"range": "63+", "label": "Reading Revision、practitioner review UX、user acceptance、online cutover", "status": "requires_user"},
+    {"range": "62", "label": "reading history sidebar and folded conversation chain", "status": "complete"},
+    {"range": "63", "label": "real case bank and acceptance window", "status": "active"},
+    {"range": "64+", "label": "Bazi Fact Engine Pro、asset migration、domain adapters、hidden factor probe", "status": "requires_user"},
 )
 
 
@@ -114,13 +115,13 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "UI-23: report history sidebar and folded conversation chain QA",
-            "UI-24: report, Probe, follow-up and conversation layering acceptance",
-            "LENS-22: practitioner drawer calm layout with candidate board",
-            "UI-15: live LLM user acceptance with admin profiles",
-            "REV-21: Reading Revision and selection history contracts",
-            "TRAIN-16: direct training activation remediation and rollback UX",
-            "UI-17: online cutover decision with user acceptance evidence",
+            "P63-1: Real Case Bank / Acceptance Window V1",
+            "P64-1: Bazi Fact Engine Pro V1",
+            "P65-1: V30 Mingli Asset Migration Gate",
+            "P66-1: Domain Verdict Adapters",
+            "P67-1: Hidden Factor Probe Engine",
+            "TRAIN-16: direct training activation before/after acceptance and rollback UX",
+            "UI-17: online cutover decision with real case acceptance evidence",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

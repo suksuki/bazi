@@ -10,6 +10,7 @@ from fastapi.responses import HTMLResponse
 
 from v40 import __version__
 from v40.api.models import (
+    AcceptanceWindowFromRuntimeRequest,
     BaziProfileCreateRequest,
     BaziProfileUpdateRequest,
     BatchTrainerV1Request,
@@ -61,6 +62,8 @@ from v40.contracts.user import BaziProfileRecord, UserAccountInternal, UserSessi
 from v40.conversation import build_conversation_seeds, build_conversation_turn, build_training_label_from_conversation_turn
 from v40.engines import build_native_bazi_runtime
 from v40.evaluation import (
+    build_acceptance_window_from_runtime,
+    build_evaluation_batch_summary,
     build_release_readiness_from_batches,
     build_release_readiness_from_evidence_batches,
     build_shadow_compare_batch_summary,
@@ -1066,6 +1069,43 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "evaluation_batches_read_v40_repository_only",
+        }
+
+    @app.post(f"{API_PREFIX}/acceptance/windows/from-runtime")
+    def build_acceptance_window(payload: AcceptanceWindowFromRuntimeRequest) -> dict[str, object]:
+        runs, window = build_acceptance_window_from_runtime(
+            window_id=payload.window_id,
+            cases=payload.cases,
+            runtime=payload.runtime,
+            candidate_version=payload.candidate_version,
+            expression_telemetry=payload.expression_telemetry,
+        )
+        persisted = False
+        if payload.persist:
+            try:
+                repository = V40PostgresRepository.from_env()
+                for run in runs:
+                    repository.save_evaluation_run(run)
+                    if run.release_gate:
+                        repository.save_release_gate(run.release_gate)
+                repository.save_evaluation_batch_summary(
+                    build_evaluation_batch_summary(
+                        batch_id=f"acceptance:{payload.window_id}",
+                        candidate_version=payload.candidate_version,
+                        runs=runs,
+                    )
+                )
+                persisted = True
+            except Exception as exc:
+                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
+        return {
+            "version": "v40.acceptance_window_from_runtime_response.v1",
+            "window": window.model_dump(mode="json"),
+            "runs": [run.model_dump(mode="json") for run in runs],
+            "persisted": persisted,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "boundary": "acceptance_window_scores_real_cases_and_persists_evidence_without_policy_write",
         }
 
     @app.post(f"{API_PREFIX}/training/labels")

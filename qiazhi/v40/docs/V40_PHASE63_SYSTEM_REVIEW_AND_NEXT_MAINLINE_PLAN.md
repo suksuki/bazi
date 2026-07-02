@@ -10,7 +10,8 @@ Observed from live status endpoints:
 
 ```text
 Project completion: 99%
-Current phase: 62 / Reading History And Conversation Layering
+Current phase at review time: 62 / Reading History And Conversation Layering
+Implementation phase: 63 / Real Case Acceptance Window
 Mingli Depth Index: 51%
 V30 replacement readiness: candidate_ready / 100%
 ```
@@ -140,6 +141,43 @@ Create a small initial case set:
 ```
 
 The smoke set is not the final 100-200 case bank, but it gives us repeatable acceptance.
+
+## Phase 63 V1 Implemented
+
+Phase 63 V1 now adds the runtime contracts and API entry needed to start the quality loop:
+
+```text
+RealCaseRecord
+ObservedLifeEvent
+ExpectedMingliOutcome
+PractitionerJudgment
+AcceptanceRubric
+AcceptanceWindowCaseResult
+AcceptanceWindowResult
+POST /api/v40/acceptance/windows/from-runtime
+```
+
+The endpoint evaluates a current `RuntimeResult` against real-case records, returns per-case and window-level scores, and can persist the underlying deterministic evaluation runs and batch summary as Admin/Lab evidence.
+
+It scores:
+
+- verdict match;
+- advice grounding;
+- overclaim rate;
+- domain coverage;
+- Probe usefulness;
+- LLM expression clarity;
+- trainable attribution hints.
+
+Boundary:
+
+```text
+Acceptance Window writes evaluation evidence only.
+It does not mutate chart facts.
+It does not write production policy.
+It does not import V30 runtime.
+LLM is not used as the judge.
+```
 
 ## What To Defer
 

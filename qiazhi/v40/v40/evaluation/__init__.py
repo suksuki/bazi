@@ -1,5 +1,6 @@
 """V40 evaluation spine."""
 
+from v40.evaluation.acceptance_window import build_acceptance_window_from_runtime
 from v40.evaluation.batch import build_evaluation_batch_summary, evaluate_cases_against_runtime
 from v40.evaluation.native_batch import evaluate_native_seeds
 from v40.evaluation.readiness import build_release_readiness_from_batches, build_release_readiness_from_evidence_batches
@@ -10,6 +11,7 @@ from v40.evaluation.training_replay import build_training_replay_batch_summary, 
 
 __all__ = [
     "build_metric_summary",
+    "build_acceptance_window_from_runtime",
     "build_evaluation_batch_summary",
     "build_release_gate_from_metrics",
     "build_release_readiness_from_batches",

@@ -113,7 +113,7 @@ Start order:
 Current phase:
 
 ```text
-V40 Phase 62: Reading History And Conversation Layering
+V40 Phase 63: Real Case Acceptance Window
 ```
 
 Previous RC2 track retained:

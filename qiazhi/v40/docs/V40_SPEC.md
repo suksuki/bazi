@@ -773,6 +773,17 @@ docs/V40_PHASE62_HISTORY_AND_CONVERSATION_LAYERING.md
 
 本阶段把左侧栏从单纯输入区升级为用户侧测算记忆区：测算入口、当前命盘和历史报告同处左栏；生成报告后会写入当前账号/当前浏览器历史，点击历史项可以恢复报告和追问种子，不重新调用 LLM，不改命盘事实。进入智能对话后，主区只保留智能对话链、pending 等待项、推荐问题 chips 和输入框；报告、Probe、复核和报告态追问入口退出主区，由左侧历史报告承接查阅。问答以倒序 item 链显示，最新问题在最上方并展开，旧问题自动折叠；等待 Gemma 时显示 pending item，不生成本地替代回答。由于 `v40_runtime_records` 尚未携带用户 ownership contract，本阶段不开放全局后端历史报告列表，跨设备持久历史进入 Reading Revision / ownership contract 阶段。
 
+2026-07-02 Phase 63 真实案例验收窗口已启动：
+
+```text
+docs/V40_PHASE63_SYSTEM_REVIEW_AND_NEXT_MAINLINE_PLAN.md
+POST /api/v40/acceptance/windows/from-runtime
+RealCaseRecord
+AcceptanceWindowResult
+```
+
+本阶段把真实命例质量闭环从计划推进到运行时合约：`RealCaseRecord` 记录用户问题、已知人生事件、命理师判断、期望命理结论、禁止断语和验收阈值；`AcceptanceWindowResult` 汇总当前 `RuntimeResult` 在真实案例窗口里的 verdict match、advice grounding、overclaim、domain coverage、Probe usefulness、LLM expression clarity 和 trainable attribution hints。Acceptance Window 只写 evaluation evidence 和 batch summary，不改 chart facts，不写 production policy，不导入 V30 runtime，也不让 LLM 作为评测裁判。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

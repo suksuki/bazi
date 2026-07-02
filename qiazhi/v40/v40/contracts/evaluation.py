@@ -5,6 +5,7 @@ from enum import Enum
 from pydantic import Field, model_validator
 
 from v40.contracts.base import AssertionLevel, ReleaseRecommendation, Topic, V40Model
+from v40.contracts.chart import BaziChartFacts, BirthInputCanonical, ZiweiChartFacts
 from v40.contracts.context import RuntimeContext
 from v40.contracts.output import ExpressionTelemetry
 from v40.contracts.training import TrainingExampleV2
@@ -215,6 +216,207 @@ class EvaluationBatchSummary(V40Model):
             raise ValueError("EvaluationBatchSummary status counts must match case_count")
         if self.production_write_allowed:
             raise ValueError("EvaluationBatchSummary cannot write production policy")
+        return self
+
+
+class ObservedLifeEvent(V40Model):
+    version: str = "v40.observed_life_event.v1"
+    event_id: str
+    topic: Topic = Topic.UNKNOWN
+    year: str = ""
+    description: str
+    evidence_tags: list[str] = Field(default_factory=list)
+    confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    privacy_level: str = "private"
+    boundary: str = "observed_life_event_is_case_evidence_not_chart_fact"
+
+    @model_validator(mode="after")
+    def _life_event_boundary(self) -> "ObservedLifeEvent":
+        if not self.event_id.strip():
+            raise ValueError("ObservedLifeEvent requires event_id")
+        if not self.description.strip():
+            raise ValueError("ObservedLifeEvent requires description")
+        return self
+
+
+class ExpectedMingliOutcome(V40Model):
+    version: str = "v40.expected_mingli_outcome.v1"
+    topic: Topic = Topic.UNKNOWN
+    verdict_keywords: list[str] = Field(default_factory=list)
+    advice_keywords: list[str] = Field(default_factory=list)
+    requires_probe: bool = False
+    requires_conflict_handling: bool = False
+    min_evidence_count: int = Field(default=1, ge=0)
+    observed_event_refs: list[str] = Field(default_factory=list)
+    weight: float = Field(default=1.0, ge=0.0, le=1.0)
+    boundary: str = "expected_mingli_outcome_defines_acceptance_target_not_verdict_source"
+
+    @model_validator(mode="after")
+    def _outcome_boundary(self) -> "ExpectedMingliOutcome":
+        if not self.verdict_keywords and not self.advice_keywords:
+            raise ValueError("ExpectedMingliOutcome requires verdict or advice keywords")
+        return self
+
+
+class PractitionerJudgment(V40Model):
+    version: str = "v40.practitioner_judgment.v1"
+    judgment_id: str
+    reviewer_role: str = "practitioner"
+    summary: str
+    accepted_topics: list[Topic] = Field(default_factory=list)
+    rejected_claims: list[str] = Field(default_factory=list)
+    notes: list[str] = Field(default_factory=list)
+    confidence: float = Field(default=0.7, ge=0.0, le=1.0)
+    boundary: str = "practitioner_judgment_guides_acceptance_not_runtime_fact_mutation"
+
+    @model_validator(mode="after")
+    def _judgment_boundary(self) -> "PractitionerJudgment":
+        if not self.judgment_id.strip():
+            raise ValueError("PractitionerJudgment requires judgment_id")
+        if not self.summary.strip():
+            raise ValueError("PractitionerJudgment requires summary")
+        return self
+
+
+class AcceptanceRubric(V40Model):
+    version: str = "v40.acceptance_rubric.v1"
+    min_verdict_match_score: float = Field(default=0.72, ge=0.0, le=1.0)
+    min_advice_grounding_score: float = Field(default=0.68, ge=0.0, le=1.0)
+    min_domain_coverage_score: float = Field(default=0.65, ge=0.0, le=1.0)
+    min_probe_usefulness_score: float = Field(default=0.55, ge=0.0, le=1.0)
+    min_llm_expression_clarity_score: float = Field(default=0.70, ge=0.0, le=1.0)
+    max_overclaim_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    boundary: str = "acceptance_rubric_sets_measurement_thresholds_without_activating_policy"
+
+
+class RealCaseRecord(V40Model):
+    version: str = "v40.real_case_record.v1"
+    case_id: str
+    display_name: str = ""
+    user_question: str
+    topic: Topic = Topic.OVERVIEW
+    chart_facts: BaziChartFacts | None = None
+    birth_input: BirthInputCanonical | None = None
+    ziwei_chart_facts: ZiweiChartFacts | None = None
+    observed_events: list[ObservedLifeEvent] = Field(default_factory=list)
+    expected_outcomes: list[ExpectedMingliOutcome]
+    practitioner_judgments: list[PractitionerJudgment] = Field(default_factory=list)
+    forbidden_assertions: list[ForbiddenAssertion]
+    rubric: AcceptanceRubric = Field(default_factory=AcceptanceRubric)
+    tags: list[str] = Field(default_factory=list)
+    privacy_level: str = "private"
+    allow_training_use: bool = False
+    chart_fact_mutation_allowed: bool = False
+    boundary: str = "real_case_record_is_acceptance_material_not_runtime_policy_or_public_user_data"
+
+    @model_validator(mode="after")
+    def _real_case_boundary(self) -> "RealCaseRecord":
+        if not self.case_id.strip():
+            raise ValueError("RealCaseRecord requires case_id")
+        if not self.user_question.strip():
+            raise ValueError("RealCaseRecord requires user_question")
+        if not self.expected_outcomes:
+            raise ValueError("RealCaseRecord requires expected_outcomes")
+        if not self.forbidden_assertions:
+            raise ValueError("RealCaseRecord requires forbidden_assertions")
+        if self.chart_fact_mutation_allowed:
+            raise ValueError("RealCaseRecord cannot allow chart fact mutation")
+        return self
+
+    def to_evaluation_case(self) -> EvaluationCaseSpec:
+        return EvaluationCaseSpec(
+            case_id=self.case_id,
+            case_type=EvaluationCaseType.REAL_FEEDBACK,
+            user_question=self.user_question,
+            topic=self.topic,
+            known_reality={
+                "observed_events": [event.model_dump(mode="json") for event in self.observed_events],
+                "practitioner_judgments": [
+                    judgment.model_dump(mode="json") for judgment in self.practitioner_judgments
+                ],
+                "privacy_level": self.privacy_level,
+                "allow_training_use": self.allow_training_use,
+            },
+            expected_verdicts=[
+                ExpectedVerdict(
+                    topic=outcome.topic,
+                    expected_keywords=outcome.verdict_keywords,
+                    min_evidence_count=outcome.min_evidence_count,
+                    requires_conflict_handling=outcome.requires_conflict_handling,
+                )
+                for outcome in self.expected_outcomes
+            ],
+            expected_advice=[
+                ExpectedAdvice(topic=outcome.topic, must_include_any=outcome.advice_keywords)
+                for outcome in self.expected_outcomes
+                if outcome.advice_keywords
+            ],
+            expected_probes=[
+                ExpectedProbe(
+                    topic=outcome.topic,
+                    expected_keywords=outcome.verdict_keywords + outcome.advice_keywords,
+                    required=outcome.requires_probe,
+                )
+                for outcome in self.expected_outcomes
+                if outcome.requires_probe
+            ],
+            forbidden_assertions=self.forbidden_assertions,
+            expert_notes=[judgment.summary for judgment in self.practitioner_judgments],
+        )
+
+
+class AcceptanceWindowCaseResult(V40Model):
+    version: str = "v40.acceptance_window_case_result.v1"
+    case_id: str
+    run_id: str
+    reading_id: str
+    verdict_match_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    advice_grounding_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    overclaim_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    domain_coverage_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    probe_usefulness_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    llm_expression_clarity_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    overall_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    status: EvaluationStatus = EvaluationStatus.REVIEW
+    failed_reasons: list[str] = Field(default_factory=list)
+    trainable_attribution_hints: list[str] = Field(default_factory=list)
+    boundary: str = "acceptance_window_case_result_scores_real_case_without_runtime_mutation"
+
+
+class AcceptanceWindowResult(V40Model):
+    version: str = "v40.acceptance_window_result.v1"
+    window_id: str
+    candidate_version: str = "v40-alpha"
+    case_count: int = Field(default=0, ge=0)
+    case_results: list[AcceptanceWindowCaseResult] = Field(default_factory=list)
+    run_ids: list[str] = Field(default_factory=list)
+    passed_count: int = Field(default=0, ge=0)
+    review_count: int = Field(default=0, ge=0)
+    blocked_count: int = Field(default=0, ge=0)
+    average_verdict_match_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_advice_grounding_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_overclaim_rate: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_domain_coverage_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_probe_usefulness_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_llm_expression_clarity_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    average_overall_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    failed_reason_counts: dict[str, int] = Field(default_factory=dict)
+    recommendation: ReleaseRecommendation = ReleaseRecommendation.NEEDS_REVIEW
+    production_write_allowed: bool = False
+    boundary: str = "acceptance_window_result_aggregates_real_case_acceptance_without_policy_write"
+
+    @model_validator(mode="after")
+    def _acceptance_window_boundary(self) -> "AcceptanceWindowResult":
+        if not self.window_id.strip():
+            raise ValueError("AcceptanceWindowResult requires window_id")
+        if self.case_count != len(self.case_results):
+            raise ValueError("AcceptanceWindowResult case_count must match case_results")
+        if self.case_count != len(self.run_ids):
+            raise ValueError("AcceptanceWindowResult case_count must match run_ids")
+        if self.passed_count + self.review_count + self.blocked_count != self.case_count:
+            raise ValueError("AcceptanceWindowResult status counts must match case_count")
+        if self.production_write_allowed:
+            raise ValueError("AcceptanceWindowResult cannot write production policy")
         return self
 
 

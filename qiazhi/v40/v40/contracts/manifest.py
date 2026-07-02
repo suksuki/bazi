@@ -56,6 +56,13 @@ def contract_manifest() -> dict[str, object]:
         "evaluation": [
             "EvaluationCaseSpec",
             "GoldenCase",
+            "RealCaseRecord",
+            "ObservedLifeEvent",
+            "ExpectedMingliOutcome",
+            "PractitionerJudgment",
+            "AcceptanceRubric",
+            "AcceptanceWindowCaseResult",
+            "AcceptanceWindowResult",
             "MetricSummary",
             "EvaluationRunResult",
             "EvaluationBatchSummary",

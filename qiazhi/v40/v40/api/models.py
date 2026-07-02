@@ -11,6 +11,7 @@ from v40.contracts.evaluation import (
     EvaluationBatchSummary,
     EvaluationCaseSpec,
     EvaluationRunResult,
+    RealCaseRecord,
     ReleaseReadinessSummary,
     TrainingReplayBatchSummary,
     TrainingExampleReplayResult,
@@ -156,6 +157,25 @@ class EvaluationBatchFromRuntimeRequest(V40Model):
     candidate_version: str = "v40-alpha"
     persist: bool = True
     boundary: str = "evaluation_batch_request_runs_many_cases_without_llm_judge"
+
+
+class AcceptanceWindowFromRuntimeRequest(V40Model):
+    version: str = "v40.acceptance_window_from_runtime_request.v1"
+    window_id: str
+    cases: list[RealCaseRecord]
+    runtime: RuntimeResult
+    candidate_version: str = "v40-alpha"
+    expression_telemetry: ExpressionTelemetry | None = None
+    persist: bool = True
+    boundary: str = "acceptance_window_request_scores_real_cases_without_llm_judge_or_fact_mutation"
+
+    @model_validator(mode="after")
+    def _acceptance_window_boundary(self) -> "AcceptanceWindowFromRuntimeRequest":
+        if not self.window_id.strip():
+            raise ValueError("Acceptance window request requires window_id")
+        if not self.cases:
+            raise ValueError("Acceptance window request requires cases")
+        return self
 
 
 class CandidateWeightFromBatchRequest(V40Model):
