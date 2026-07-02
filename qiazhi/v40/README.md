@@ -85,6 +85,7 @@ docs/V40_PHASE64_BAZI_FACT_ENGINE_PRO.md
 docs/V40_PHASE65_V30_MINGLI_ASSET_MIGRATION_GATE.md
 docs/V40_PHASE66_DOMAIN_VERDICT_ADAPTERS.md
 docs/V40_PHASE67_HIDDEN_FACTOR_PROBE_ENGINE.md
+docs/V40_PHASE68_SIDECAR_ENRICHMENT.md
 docs/V40_RC2_MINGLI_DEPTH_MIGRATION_PLAN.md
 docs/V40_RC2_ASSET_MIGRATION_GATE.md
 docs/V40_RC2_MODULE_STATUS_AND_MIGRATION_MAP.md
@@ -117,7 +118,7 @@ Start order:
 Current phase:
 
 ```text
-V40 Phase 67: Hidden Factor Probe Engine
+V40 Phase 68: Knowledge Portrait Ziwei Sidecar Enrichment
 ```
 
 Previous RC2 track retained:

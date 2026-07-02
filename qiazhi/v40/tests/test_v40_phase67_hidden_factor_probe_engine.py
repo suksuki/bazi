@@ -96,8 +96,9 @@ def test_phase67_docs_and_project_status_track_hidden_factor_probe_engine() -> N
 
     assert "Hidden Factor Probe Engine" in doc
     assert "docs/V40_PHASE67_HIDDEN_FACTOR_PROBE_ENGINE.md" in readme
-    assert status["current_phase"] == 67
-    assert status["current_phase_name"] == "Hidden Factor Probe Engine"
+    assert status["current_phase"] == 68
+    assert status["current_phase_name"] == "Knowledge Portrait Ziwei Sidecar Enrichment"
     assert any(row["range"] == "66" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "67" and row["status"] == "active" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "P67-1: Hidden Factor Probe Engine"
+    assert any(row["range"] == "67" and row["status"] == "complete" for row in status["phase_groups"])
+    assert any(row["range"] == "68" and row["status"] == "active" for row in status["phase_groups"])
+    assert status["next_mainline_tasks"][0] == "P68-1: Knowledge / Portrait / Ziwei sidecar enrichment"

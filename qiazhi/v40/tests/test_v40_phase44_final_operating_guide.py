@@ -22,5 +22,5 @@ def test_phase44_project_status_marks_automatic_boundary_before_user_acceptance(
 
     assert status["current_phase"] >= 44
     assert status["overall_completion_percent"] >= 98
-    assert status["next_mainline_tasks"][0].startswith("P67-")
+    assert status["next_mainline_tasks"][0].startswith("P68-")
     assert any(group["status"] == "requires_user" for group in status["phase_groups"])

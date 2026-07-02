@@ -13,6 +13,7 @@ from v40.contracts.decision import (
 )
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
 from v40.decision.domain_adapters import build_domain_adapter_signals
+from v40.enrichment import EXPLANATION_ONLY_SOURCE_REFS
 from v40.probes.hidden_factor import build_hidden_factor_probe_candidates
 
 
@@ -129,7 +130,11 @@ def _select_decision_topics(*, signals: list[RuntimeSignal], topic: Topic, user_
 
 
 def _decision_eligible_signals(signals: list[RuntimeSignal]) -> list[RuntimeSignal]:
-    return [signal for signal in signals if signal.source != SignalSource.ZIWEI_ENGINE]
+    return [
+        signal
+        for signal in signals
+        if signal.source != SignalSource.ZIWEI_ENGINE and signal.source_ref not in EXPLANATION_ONLY_SOURCE_REFS
+    ]
 
 
 def _infer_topic(user_question: str) -> Topic:

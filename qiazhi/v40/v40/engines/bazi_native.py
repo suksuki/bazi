@@ -7,6 +7,7 @@ from v40.contracts.engine import EnginePlan, EnginePlanItem, EngineRunRequest, E
 from v40.contracts.runtime import RuntimeRequest, RuntimeResult
 from v40.contracts.signal import RuntimeSignal, SignalRegistrySnapshot, SignalSource
 from v40.decision import build_decision_output
+from v40.enrichment import build_sidecar_enrichment_signals
 from v40.engines.bazi_adapters import (
     BRANCH_ELEMENTS,
     DRAINING_ELEMENTS,
@@ -93,6 +94,7 @@ def build_native_bazi_runtime(
         )
     ]
     registry_signals = [*engine_result.signals]
+    ziwei_signals: list[RuntimeSignal] = []
     if ziwei_chart is not None:
         ziwei_request = EngineRunRequest(
             request_id=f"engine:ziwei:{request_id}",
@@ -107,7 +109,8 @@ def build_native_bazi_runtime(
         )
         ziwei_result = run_native_ziwei_engine(engine_request=ziwei_request, chart=ziwei_chart)
         engine_results.append(ziwei_result)
-        registry_signals.extend(ziwei_result.signals)
+        ziwei_signals = [*ziwei_result.signals]
+        registry_signals.extend(ziwei_signals)
         plan_items.append(
             EnginePlanItem(
                 engine=EngineKey.ZIWEI,
@@ -119,6 +122,13 @@ def build_native_bazi_runtime(
                 output_weight=0.25,
             )
         )
+    registry_signals.extend(
+        build_sidecar_enrichment_signals(
+            reading_id=reading_id,
+            bazi_signals=engine_result.signals,
+            ziwei_signals=ziwei_signals,
+        )
+    )
     registry = SignalRegistrySnapshot(
         registry_id=f"registry:{reading_id}",
         reading_id=reading_id,

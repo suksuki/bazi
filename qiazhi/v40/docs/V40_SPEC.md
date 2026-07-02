@@ -826,6 +826,16 @@ build_hidden_factor_answer_runtime_signal
 
 本阶段把隐藏属性追问从 UI 临时问题升级为 runtime 横向能力。Hidden Factor Probe Engine 读取 `DecisionVerdict`、`BranchCandidate` 和 runtime signals，按置信度不足、分支差距过近、反证和 hidden/mixed signal 计算信息增益，只生成一条聚焦的 `Topic.HIDDEN_ATTRIBUTE` ProbeCandidate。用户或命理师回答后，`ProbeAnswerResult` 可继续绑定成 `reality_probe` RuntimeSignal，进入后续对话、训练和回放；它不自动启动对话、不改命盘事实、不拥有 verdict authority。
 
+2026-07-02 Phase 68 Knowledge Portrait Ziwei Sidecar Enrichment 已启动：
+
+```text
+docs/V40_PHASE68_SIDECAR_ENRICHMENT.md
+build_sidecar_enrichment_signals
+EXPLANATION_ONLY_SOURCE_REFS
+```
+
+本阶段新增受控 enrichment 层，把八字 runtime signals 和紫微 sidecar signals 整理成知识卡、画像和紫微旁路增强信号。知识卡是 explanation-only，进入 SignalRegistry 但被 DecisionEngine 过滤；画像是低权重 RuntimeSignal，可作为候选排序素材但不能强断；紫微增强继续保持 `source=ziwei_engine` 和 zero decision weight，只服务命理师 Lens、追问和训练观察。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text
