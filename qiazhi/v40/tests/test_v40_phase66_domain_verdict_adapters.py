@@ -91,8 +91,8 @@ def test_phase66_project_status_tracks_domain_verdict_adapters() -> None:
 
     assert "Domain Verdict Adapters" in doc
     assert "docs/V40_PHASE66_DOMAIN_VERDICT_ADAPTERS.md" in readme
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "65" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "66" and row["status"] == "complete" for row in status["phase_groups"])
     assert status["next_mainline_tasks"][0] == "QA-19: live LLM report/conversation acceptance on selected real cases"

@@ -32,8 +32,8 @@ def test_phase45_ui_product_flow_spec_is_mainline_document() -> None:
 def test_phase45_project_status_points_to_ui_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any("UI product flow" in row["label"] for row in status["phase_groups"])
     assert any(row["range"] == "45" and row["status"] == "complete" for row in status["phase_groups"])
     assert "QA-19: live LLM report/conversation acceptance on selected real cases" in status["next_mainline_tasks"]

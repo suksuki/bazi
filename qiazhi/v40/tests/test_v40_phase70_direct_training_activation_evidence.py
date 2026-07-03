@@ -119,8 +119,8 @@ def test_phase70_docs_and_project_status_track_direct_training_activation_eviden
     assert "Direct Training Activation Evidence" in doc
     assert "POST /api/v40/project/direct-training-activation-evidence" in doc
     assert "docs/V40_PHASE70_DIRECT_TRAINING_ACTIVATION_EVIDENCE.md" in readme
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "69" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "70" and row["status"] == "complete" for row in status["phase_groups"])
     assert status["next_mainline_tasks"][0] == "QA-19: live LLM report/conversation acceptance on selected real cases"

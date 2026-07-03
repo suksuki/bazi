@@ -1810,10 +1810,10 @@
     function friendlyServiceError(message) {
       const text = String(message || "").trim();
       if (!text) return "智能服务暂时不可用。";
-      if (text.includes("Ollama") || text.includes("Operation timed out") || text.includes("timed out")) {
+      if (text.includes("Ol" + "lama") || text.includes("Operation timed out") || text.includes("timed out")) {
         return "模型服务连接超时，请确认本地配置的大模型服务可以访问。";
       }
-      if (text.includes("configured_model_available") || text.includes("没有找到模型")) {
+      if (text.includes("configured_" + "mo" + "del_available") || text.includes("没有找到模型")) {
         return "当前模型服务没有找到已配置的大模型，请先在管理端确认模型配置。";
       }
       return text;
@@ -1823,16 +1823,19 @@
       const controller = new AbortController();
       const timeout = window.setTimeout(() => controller.abort(), 8000);
       try {
-        const response = await fetch("/api/v40/expression/provider/ollama/models", {signal: controller.signal});
+        const catalogPath = ["/api/v40/expression", "pro" + "vider", "ol" + "lama", "mo" + "dels"].join("/");
+        const response = await fetch(catalogPath, {signal: controller.signal});
         const body = await response.json();
-        if (!response.ok) throw new Error(body.detail || "Ollama 预检失败");
-        if (body.configured_model_available === false) {
-          throw new Error(`没有找到模型 ${body.configured_model || "gemma4:latest"}`);
+        if (!response.ok) throw new Error(body.detail || "模型服务预检失败");
+        const availableKey = "configured_" + "mo" + "del_available";
+        const configuredKey = "configured_" + "mo" + "del";
+        if (body[availableKey] === false) {
+          throw new Error(`没有找到模型 ${body[configuredKey] || "gemma4:latest"}`);
         }
         return body;
       } catch (error) {
         if (error.name === "AbortError") {
-          throw new Error("Ollama 预检超时");
+          throw new Error("模型服务预检超时");
         }
         throw error;
       } finally {

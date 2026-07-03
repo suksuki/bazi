@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 73
-CURRENT_PHASE_NAME = "Real Case Acceptance Pack"
+CURRENT_PHASE = 74
+CURRENT_PHASE_NAME = "Mainline Completion Audit And Next Plan"
 
 
 @dataclass(frozen=True)
@@ -100,7 +100,8 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "70", "label": "Direct Training Activation Evidence", "status": "complete"},
     {"range": "71", "label": "Online Cutover Decision Pack", "status": "complete"},
     {"range": "72", "label": "Real Case Acceptance And Beta Cutover Plan", "status": "complete"},
-    {"range": "73", "label": "Real Case Acceptance Pack", "status": "active"},
+    {"range": "73", "label": "Real Case Acceptance Pack", "status": "complete"},
+    {"range": "74", "label": "Mainline Completion Audit And Next Plan", "status": "active"},
     {"range": "user-acceptance", "label": "真实命例验收与线上切换", "status": "requires_user"},
 )
 

@@ -161,7 +161,7 @@ def test_phase51_docs_and_project_status_track_consent_review_queue() -> None:
     assert "POST /api/v40/practitioner/review-results" in doc
     assert "2026-07-01 Phase 51" in spec
     assert "docs/V40_PHASE51_CONSENT_REVIEW_QUEUE.md" in readme
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "51" and row["status"] == "complete" for row in status["phase_groups"])

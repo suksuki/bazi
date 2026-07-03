@@ -31,8 +31,8 @@ def test_phase50_visual_qa_doc_and_script_are_mainline_artifacts() -> None:
 def test_phase50_project_status_tracks_visual_qa_as_completed_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
     assert "QA-19: live LLM report/conversation acceptance on selected real cases" in status["next_mainline_tasks"]

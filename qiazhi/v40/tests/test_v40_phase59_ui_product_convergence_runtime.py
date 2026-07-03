@@ -59,8 +59,8 @@ def test_phase59_user_ui_converges_to_reading_product_flow() -> None:
 def test_phase59_project_status_marks_ui_convergence_runtime_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "58" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])

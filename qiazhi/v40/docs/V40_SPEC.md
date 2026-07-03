@@ -888,6 +888,19 @@ POST /api/v40/project/real-case-acceptance-pack
 
 本阶段把 USER-18 的真实命例签核准备转成运行时只读验收包。`Real Case Acceptance Pack` 会合并 selected real cases、Acceptance Window、Real Case Expansion Evidence、Online Cutover Decision Pack、failed_reason_counts、topic coverage 与 trainable_attribution_hints，输出 ready_for_owner_review / needs_more_cases / needs_replay / blocked_by_quality。它只准备 owner review，不切流量、不写 V30、不写 V40 production policy、不改命盘事实。
 
+2026-07-03 Phase 74 Mainline Completion Audit And Next Plan 已启动：
+
+```text
+docs/V40_PHASE74_MAINLINE_COMPLETION_AND_NEXT_PLAN.md
+QA-19: live LLM report/conversation acceptance on selected real cases
+OPS-20: rollback rehearsal and beta traffic smoke
+USER-21: owner approval for beta cutover window
+DATA-22: V40 persistent runtime evidence
+DEPTH-23: mingli depth regression
+```
+
+本阶段把 V40 当前状态收束为“架构与用户 runtime 约 99%，产品质量验收进入真实命例和 owner review”。下一轮不继续堆散乱模块，而是围绕真实命例、LLM 报告/对话表达、训练后直接生效的 impact diff、rollback 补救、V40 持久化仓储和命理纵深回归推进。Phase 74 继续坚持硬边界：没有 LLM 就失败，不做 fallback；LLM 负责表达，不负责最终命理裁决；训练后直接成为 active policy，但必须保留 previous registry 和补救路径；Admin 继续独立，主系统中 admin 只是特殊命理师；本阶段不切流量、不写 V30 state、不自动批准 beta。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

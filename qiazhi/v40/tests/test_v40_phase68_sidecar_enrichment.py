@@ -115,8 +115,8 @@ def test_phase68_docs_status_and_module_map_track_sidecar_enrichment() -> None:
 
     assert "Knowledge Portrait Ziwei Sidecar Enrichment" in doc
     assert "docs/V40_PHASE68_SIDECAR_ENRICHMENT.md" in readme
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "67" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "68" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "69" and row["status"] == "complete" for row in status["phase_groups"])

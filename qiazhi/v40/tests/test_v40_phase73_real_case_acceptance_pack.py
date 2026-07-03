@@ -202,8 +202,9 @@ def test_phase73_docs_and_project_status_track_real_case_acceptance_pack() -> No
     assert "POST /api/v40/project/real-case-acceptance-pack" in doc
     assert "build_real_case_acceptance_pack" in spec
     assert "docs/V40_PHASE73_REAL_CASE_ACCEPTANCE_PACK.md" in readme
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "72" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "73" and row["status"] == "active" for row in status["phase_groups"])
+    assert any(row["range"] == "73" and row["status"] == "complete" for row in status["phase_groups"])
+    assert any(row["range"] == "74" and row["status"] == "active" for row in status["phase_groups"])
     assert status["next_mainline_tasks"][0] == "QA-19: live LLM report/conversation acceptance on selected real cases"

@@ -49,8 +49,8 @@ def test_phase61_user_ui_has_state_machine_shell_and_lightweight_surfaces() -> N
 def test_phase61_project_status_marks_ui_clean_rebuild_complete() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 73
-    assert status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert status["current_phase"] == 74
+    assert status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "60" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "61" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])

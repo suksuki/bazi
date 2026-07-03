@@ -132,7 +132,13 @@ Start order:
 Current phase:
 
 ```text
-V40 Phase 73: Real Case Acceptance Pack
+V40 Phase 74: Mainline Completion Audit And Next Plan
+```
+
+Mainline plan:
+
+```text
+docs/V40_PHASE74_MAINLINE_COMPLETION_AND_NEXT_PLAN.md
 ```
 
 Previous RC2 track retained:

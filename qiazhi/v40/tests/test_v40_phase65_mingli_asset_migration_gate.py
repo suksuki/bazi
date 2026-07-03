@@ -139,8 +139,8 @@ def test_phase65_manifest_module_status_and_project_status_track_asset_gate() ->
     assert "plain JSON asset -> RuntimeSignal sidecar" in doc
     asset_gate = next(row for row in module_status["modules"] if row["key"] == "asset_migration_gate")
     assert asset_gate["current_state"] == "v40_native_v1_sidecar_ready"
-    assert project_status["current_phase"] == 73
-    assert project_status["current_phase_name"] == "Real Case Acceptance Pack"
+    assert project_status["current_phase"] == 74
+    assert project_status["current_phase_name"] == "Mainline Completion Audit And Next Plan"
     assert any(row["range"] == "64" and row["status"] == "complete" for row in project_status["phase_groups"])
     assert any(row["range"] == "65" and row["status"] == "complete" for row in project_status["phase_groups"])
     assert project_status["next_mainline_tasks"][0] == "QA-19: live LLM report/conversation acceptance on selected real cases"
