@@ -152,8 +152,8 @@ def test_phase63_project_status_and_docs_track_acceptance_window_plan() -> None:
 
     assert "Real Case Bank / Acceptance Window V1" in doc
     assert "docs/V40_PHASE63_SYSTEM_REVIEW_AND_NEXT_MAINLINE_PLAN.md" in readme
-    assert status["current_phase"] == 71
-    assert status["current_phase_name"] == "Online Cutover Decision Pack"
+    assert status["current_phase"] == 72
+    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "63" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"
+    assert status["next_mainline_tasks"][0] == "USER-18: real case quality signoff and beta cutover window"

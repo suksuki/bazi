@@ -112,7 +112,7 @@ def test_phase49_docs_and_project_status_track_auth_role_context() -> None:
     assert "GET /api/v40/session/context" in doc
     assert "2026-07-01 Phase 49" in spec
     assert "docs/V40_PHASE49_AUTH_DERIVED_ROLE_CONTEXT.md" in readme
-    assert status["current_phase"] == 71
-    assert status["current_phase_name"] == "Online Cutover Decision Pack"
+    assert status["current_phase"] == 72
+    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
     assert any(row["range"] == "48" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])

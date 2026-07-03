@@ -867,6 +867,17 @@ POST /api/v40/project/online-cutover-decision
 
 本阶段完成系统级 review 与主线任务同步，把 project status、production cutover checklist、real case expansion evidence、direct training activation evidence 和 release candidate audit 合成一个上线决策包。它输出 blocked/near-ready/ready-for-human-signoff、blockers、next_actions 和人工签核要求，但不切流量、不写 V40 production policy、不写 V30 state。
 
+2026-07-03 Phase 72 Real Case Acceptance And Beta Cutover Plan 已启动：
+
+```text
+docs/V40_PHASE72_REAL_CASE_ACCEPTANCE_AND_BETA_CUTOVER_PLAN.md
+USER-18: real case quality signoff and beta cutover window
+QA-19: live LLM report/conversation acceptance on selected real cases
+OPS-20: rollback rehearsal and beta traffic smoke
+```
+
+本阶段不再扩张命理模块，而是把 V40 从“架构可运行”推到“真实验收可用”。Phase 72 聚焦真实命例验收包、真实 LLM 报告/对话 QA、训练影响解释与回滚路径、beta 切换窗口。系统可以继续自动生成证据和建议，但最终真实命例质量判断、产品验收和线上窗口仍然需要人工签核。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

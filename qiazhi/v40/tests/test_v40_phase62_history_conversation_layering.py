@@ -56,8 +56,8 @@ def test_phase62_user_ui_has_left_history_and_folded_reverse_conversation_items(
 def test_phase62_project_status_marks_history_conversation_layering_active() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 71
-    assert status["current_phase_name"] == "Online Cutover Decision Pack"
+    assert status["current_phase"] == 72
+    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
     assert any(row["range"] == "61" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "62" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"
+    assert status["next_mainline_tasks"][0] == "USER-18: real case quality signoff and beta cutover window"

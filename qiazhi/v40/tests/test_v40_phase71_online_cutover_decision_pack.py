@@ -77,8 +77,9 @@ def test_phase71_docs_and_project_status_track_online_cutover_decision() -> None
     assert "build_online_cutover_decision_pack" in spec
     assert "docs/V40_PHASE71_ONLINE_CUTOVER_DECISION_PACK.md" in readme
     assert "docs/V40_PHASE71_SYSTEM_REVIEW_AND_MAINLINE_SYNC.md" in readme
-    assert status["current_phase"] == 71
-    assert status["current_phase_name"] == "Online Cutover Decision Pack"
+    assert status["current_phase"] == 72
+    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
     assert any(row["range"] == "70" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "71" and row["status"] == "active" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "UI-17: online cutover decision with real case acceptance evidence"
+    assert any(row["range"] == "71" and row["status"] == "complete" for row in status["phase_groups"])
+    assert any(row["range"] == "72" and row["status"] == "active" for row in status["phase_groups"])
+    assert status["next_mainline_tasks"][0] == "USER-18: real case quality signoff and beta cutover window"

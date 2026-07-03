@@ -156,8 +156,8 @@ def test_phase54_docs_schema_and_project_status_track_user_account_profile_flow(
     assert "v40_user_accounts" in schema
     assert "v40_user_sessions" in schema
     assert "v40_bazi_profiles" in schema
-    assert status["current_phase"] == 71
-    assert status["current_phase_name"] == "Online Cutover Decision Pack"
+    assert status["current_phase"] == 72
+    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
     assert any(row["range"] == "53" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-17: online cutover decision with real case acceptance evidence" in status["next_mainline_tasks"]
+    assert "USER-18: real case quality signoff and beta cutover window" in status["next_mainline_tasks"]

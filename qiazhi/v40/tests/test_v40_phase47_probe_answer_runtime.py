@@ -150,6 +150,6 @@ def test_phase47_docs_manifest_and_project_status_track_probe_answer_runtime() -
     assert "2026-07-01 Phase 47" in spec
     assert "docs/V40_PHASE47_PROBE_ANSWER_RUNTIME.md" in readme
     assert manifest["probe"] == ["AnswerSignal", "HiddenAttributeUpdate", "ProbeAnswerResult"]
-    assert status["current_phase"] == 71
-    assert status["current_phase_name"] == "Online Cutover Decision Pack"
+    assert status["current_phase"] == 72
+    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
     assert any(row["range"] == "47" and row["status"] == "complete" for row in status["phase_groups"])

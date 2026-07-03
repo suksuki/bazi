@@ -31,8 +31,8 @@ def test_phase50_visual_qa_doc_and_script_are_mainline_artifacts() -> None:
 def test_phase50_project_status_tracks_visual_qa_as_completed_mainline() -> None:
     status = build_project_status()
 
-    assert status["current_phase"] == 71
-    assert status["current_phase_name"] == "Online Cutover Decision Pack"
+    assert status["current_phase"] == 72
+    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
     assert any(row["range"] == "49" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "50" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "UI-17: online cutover decision with real case acceptance evidence" in status["next_mainline_tasks"]
+    assert "USER-18: real case quality signoff and beta cutover window" in status["next_mainline_tasks"]
