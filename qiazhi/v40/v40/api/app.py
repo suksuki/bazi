@@ -82,6 +82,13 @@ from v40.evaluation import (
     replay_training_example,
 )
 from v40.migration import V30ExportEnvelope, build_mingli_asset_migration_gate, build_runtime_from_v30_export
+from v40.migration.admin_v30_profiles import (
+    build_chart_payload_from_v30_birth_input,
+    convert_v30_profile_to_v40,
+    default_v30_product_store_path,
+    load_v30_product_store,
+    select_v30_admin_profiles,
+)
 from v40.probes import build_probe_answer_result
 from v40.review import (
     build_consent_grant,
@@ -136,6 +143,7 @@ _MEMORY_ACCOUNTS_BY_EMAIL: dict[str, UserAccountInternal] = {}
 _MEMORY_ACCOUNTS_BY_ID: dict[str, UserAccountInternal] = {}
 _MEMORY_SESSIONS: dict[str, UserSessionRecord] = {}
 _MEMORY_PROFILES_BY_USER: dict[str, dict[str, BaziProfileRecord]] = {}
+_MEMORY_ADMIN_PROFILES_BOOTSTRAPPED = False
 
 
 def _surface_beta_check(key: str, label: str, ready: bool, evidence: str) -> dict[str, object]:
@@ -427,9 +435,38 @@ def _list_profiles(user_id: str) -> list[dict[str, object]]:
     repository = _repository_or_none()
     if repository is not None:
         return repository.list_bazi_profiles(user_id=user_id)
+    if user_id == BUILTIN_ADMIN_USER_ID:
+        _bootstrap_memory_admin_profiles()
     profiles = [profile for profile in _MEMORY_PROFILES_BY_USER.get(user_id, {}).values() if not profile.deleted]
     profiles.sort(key=lambda item: (not item.is_default, item.display_name))
     return [profile.model_dump(mode="json") for profile in profiles]
+
+
+def _bootstrap_memory_admin_profiles() -> None:
+    global _MEMORY_ADMIN_PROFILES_BOOTSTRAPPED
+    if _MEMORY_ADMIN_PROFILES_BOOTSTRAPPED or _MEMORY_PROFILES_BY_USER.get(BUILTIN_ADMIN_USER_ID):
+        return
+    _MEMORY_ADMIN_PROFILES_BOOTSTRAPPED = True
+    source_store_path = default_v30_product_store_path()
+    if not source_store_path.exists():
+        return
+    store = load_v30_product_store(source_store_path)
+    source_profiles = select_v30_admin_profiles(store)
+    user_profiles = _MEMORY_PROFILES_BY_USER.setdefault(BUILTIN_ADMIN_USER_ID, {})
+    for index, source_profile in enumerate(source_profiles):
+        try:
+            profile = convert_v30_profile_to_v40(
+                source_profile,
+                user_id=BUILTIN_ADMIN_USER_ID,
+                chart_builder=build_chart_payload_from_v30_birth_input,
+                is_default=index == 0,
+            )
+        except Exception:
+            continue
+        if profile.profile_id not in user_profiles:
+            if profile.is_default:
+                user_profiles.update({key: value.model_copy(update={"is_default": False}) for key, value in user_profiles.items()})
+            user_profiles[profile.profile_id] = profile
 
 
 def _delete_profile(*, user_id: str, profile_id: str) -> bool:

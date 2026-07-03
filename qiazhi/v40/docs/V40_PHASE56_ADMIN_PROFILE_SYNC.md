@@ -83,6 +83,15 @@ v40_bazi_profiles
 
 It is idempotent: the admin account has a stable `user:admin` id, and migrated profiles have stable `v30-admin:<source_profile_id>` ids.
 
+## Local Runtime Bootstrap
+
+When V40 Postgres is not configured, the user app still has to support the fixed admin test account. In that local runtime mode:
+
+- `admin / abcd1235` is seeded in memory as the unique practitioner account.
+- `/api/v40/profiles` bootstraps the 18 V30 admin profiles from the V30 product store snapshot.
+- The bootstrap converts the profiles into V40 `BaziProfileRecord` objects and keeps them in V40 memory for the current process.
+- This is a local development bridge only; it does not mutate V30 and does not replace the independent V40 database path.
+
 ## Acceptance
 
 - Login by `admin / abcd1235` succeeds.
@@ -90,6 +99,7 @@ It is idempotent: the admin account has a stable `user:admin` id, and migrated p
 - Built-in admin email is `jerrydidi@gmail.com`.
 - `/api/v40/auth/register` cannot create the built-in admin identity.
 - `/api/v40/profiles` after admin login returns the imported V30 admin profiles.
+- Without a configured V40 repository, `/api/v40/profiles` after admin login still returns the imported V30 admin profiles through memory bootstrap.
 - Imported chart facts are deterministic migration facts, not LLM-generated facts.
 
 ## Boundary

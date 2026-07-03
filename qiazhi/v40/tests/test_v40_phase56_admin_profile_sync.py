@@ -27,6 +27,7 @@ def _reset_memory(monkeypatch) -> None:
     api_app._MEMORY_ACCOUNTS_BY_ID.clear()
     api_app._MEMORY_SESSIONS.clear()
     api_app._MEMORY_PROFILES_BY_USER.clear()
+    api_app._MEMORY_ADMIN_PROFILES_BOOTSTRAPPED = False
 
 
 def test_phase56_builtin_admin_is_practitioner_with_fixed_email_and_password() -> None:
@@ -68,6 +69,26 @@ def test_phase56_admin_can_login_by_username_and_registration_cannot_claim_admin
         },
     )
     assert claimed.status_code == 403
+
+
+def test_phase56_admin_profiles_bootstrap_from_v30_snapshot_without_repository(monkeypatch) -> None:
+    _reset_memory(monkeypatch)
+    client = TestClient(create_app())
+
+    login = client.post(
+        f"{API_PREFIX}/auth/login",
+        json={"email": BUILTIN_ADMIN_USERNAME, "password": BUILTIN_ADMIN_PASSWORD},
+    )
+    assert login.status_code == 200
+
+    profiles = client.get(f"{API_PREFIX}/profiles")
+
+    assert profiles.status_code == 200
+    body = profiles.json()
+    assert body["user_id"] == "user:admin"
+    assert len(body["profiles"]) == 18
+    assert {row["display_name"] for row in body["profiles"]} >= {"刘晋", "秦姥姥", "朱甫晓"}
+    assert all(row["profile_id"].startswith("v30-admin:") for row in body["profiles"])
 
 
 def test_phase56_selects_v30_admin_profiles_and_converts_profile_contract() -> None:

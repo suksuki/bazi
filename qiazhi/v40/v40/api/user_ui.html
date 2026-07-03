@@ -365,6 +365,10 @@
       display: grid;
       gap: 8px;
     }
+    .register-only {
+      display: grid;
+      gap: 8px;
+    }
     .account-note,
     .profile-note {
       margin: 0;
@@ -1209,16 +1213,18 @@
               <div class="account-grid" id="authFields">
                 <label>账号或邮箱<input id="authEmail" autocomplete="username" value="admin" /></label>
                 <label>密码<input id="authPassword" autocomplete="current-password" type="password" value="abcd1235" /></label>
-                <label>昵称<input id="authName" value="玄明用户" /></label>
-                <label>身份
-                  <select id="authRole">
-                    <option value="user">普通用户</option>
-                    <option value="practitioner">命理师</option>
-                  </select>
-                </label>
+                <div class="register-only hidden" id="registerFields">
+                  <label>昵称<input id="authName" value="玄明用户" /></label>
+                  <label>注册身份
+                    <select id="authRole">
+                      <option value="user">普通用户</option>
+                      <option value="practitioner">命理师</option>
+                    </select>
+                  </label>
+                </div>
                 <div class="account-actions">
                   <button class="primary-button" id="loginButton" type="button">登录</button>
-                  <button class="secondary-button" id="registerButton" type="button">注册</button>
+                  <button class="secondary-button" id="registerButton" type="button">注册新账号</button>
                 </div>
               </div>
               <div class="account-actions hidden" id="userActions">
@@ -1573,6 +1579,7 @@
       $("authFields").classList.toggle("hidden", loggedIn);
       $("userActions").classList.toggle("hidden", !loggedIn);
       $("profilePanel").classList.toggle("hidden", !loggedIn);
+      if (!loggedIn) setRegisterMode(false);
       if (loggedIn) {
         $("accountMini").textContent = roleText(currentUser["role" + "_key"] || currentRole);
         $("authStatus").textContent = `${currentUser.display_name || currentUser.email} 已登录。`;
@@ -1584,6 +1591,18 @@
       }
       loadReadingHistory();
       updateLensControls();
+    }
+
+    function setRegisterMode(enabled) {
+      $("registerFields").classList.toggle("hidden", !enabled);
+      $("registerButton").textContent = enabled ? "确认注册" : "注册新账号";
+      $("authStatus").textContent = enabled
+        ? "注册时选择身份，创建后不可在登录时切换。"
+        : "登录只验证账号和密码，身份由账号本身决定。";
+    }
+
+    function registerModeEnabled() {
+      return !$("registerFields").classList.contains("hidden");
     }
 
     async function authRequest(kind) {
@@ -2761,12 +2780,17 @@
     });
 
     $("loginButton").addEventListener("click", () => {
+      setRegisterMode(false);
       authRequest("login").catch((error) => {
         $("authStatus").textContent = error.message || "登录暂时没有完成";
       });
     });
 
     $("registerButton").addEventListener("click", () => {
+      if (!registerModeEnabled()) {
+        setRegisterMode(true);
+        return;
+      }
       authRequest("register").catch((error) => {
         $("authStatus").textContent = error.message || "注册暂时没有完成";
       });

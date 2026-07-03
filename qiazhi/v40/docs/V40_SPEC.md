@@ -708,7 +708,7 @@ PUT  /api/v40/profiles/{profile_id}
 DELETE /api/v40/profiles/{profile_id}
 ```
 
-本阶段把 `/v40/ui` 固化为用户产品流：注册/登录、多用户八字档案、选择档案测算、双引擎报告、Probe 校准和简洁一问一答。V30 多分步测算页面不作为 V40 普通用户主流程保留；V40 仍保留分阶段素材、证据、双引擎信号和命理师 Lens，但普通用户只看到“档案 -> 报告 -> 必要校准 -> 对话”。注册只允许 `user/practitioner`，admin 不能从主系统注册；用户、会话和档案全部写入 V40 独立表，不读写 V30。
+本阶段把 `/v40/ui` 固化为用户产品流：注册/登录、多用户八字档案、选择档案测算、双引擎报告、Probe 校准和简洁一问一答。V30 多分步测算页面不作为 V40 普通用户主流程保留；V40 仍保留分阶段素材、证据、双引擎信号和命理师 Lens，但普通用户只看到“档案 -> 报告 -> 必要校准 -> 对话”。注册只允许 `user/practitioner`，admin 不能从主系统注册；登录只验证账号和密码，不允许在登录页临时选择普通用户或命理师，角色由注册账号固定派生；用户、会话和档案全部写入 V40 独立表，不读写 V30。
 
 2026-07-02 Phase 55 已启动：
 
@@ -730,7 +730,7 @@ admin / abcd1235
 jerrydidi@gmail.com
 ```
 
-本阶段把 V30 的固定 admin 习惯迁入 V40：用户侧登录名为 `admin`，邮箱为 `jerrydidi@gmail.com`，密码为 `abcd1235`，主系统角色投影为 `practitioner`。`/api/v40/auth/register` 仍不能注册 admin，也不能抢占内置 admin 邮箱。V30 中归属 `v20-admin/admin` 的 18 个八字档案通过 migration-only CLI 转为 V40 `BaziProfileRecord`，写入独立 `v40_user_accounts` 和 `v40_bazi_profiles`；迁移时允许调用 V30 确定性排盘函数生成四柱、大运、流年，但 V40 runtime 不直接读取或修改 V30 状态。
+本阶段把 V30 的固定 admin 习惯迁入 V40：用户侧登录名为 `admin`，邮箱为 `jerrydidi@gmail.com`，密码为 `abcd1235`，主系统角色投影为 `practitioner`。`/api/v40/auth/register` 仍不能注册 admin，也不能抢占内置 admin 邮箱。V30 中归属 `v20-admin/admin` 的 18 个八字档案通过 migration-only CLI 转为 V40 `BaziProfileRecord`，写入独立 `v40_user_accounts` 和 `v40_bazi_profiles`；本地无 V40 repository 时，`/api/v40/profiles` 会从 V30 product store snapshot 自举这 18 个 admin 档案到当前 V40 内存，避免测试账号重启后档案列表为空。迁移时允许调用 V30 确定性排盘函数生成四柱、大运、流年，但 V40 runtime 不直接修改 V30 状态。
 
 2026-07-02 Phase 57 已完成：
 

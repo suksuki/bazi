@@ -82,6 +82,7 @@ The dialogue mode starts after report/probe and is intentionally simple:
 Phase 54 includes:
 
 - user registration and login for `user` and `practitioner`;
+- role is selected only during registration and then fixed by the account; login never asks the user to choose a role;
 - admin cannot register in the user app;
 - multi-user session cookies;
 - per-user Bazi profile CRUD;
@@ -114,10 +115,10 @@ These tables must not read or write V30 users, profiles or runtime state.
 
 - `/v40/ui` exposes a clear auth/profile/report/probe/dialogue flow.
 - Registration rejects `admin` as a user-app role.
+- Login uses account/password only; it derives role from the saved account instead of a login-page role selector.
 - Login creates a multi-user session and sets user-app cookies.
 - Profiles are scoped by user session.
 - Native report receives `ziwei_chart_facts` from the selected profile or generated sidecar.
 - Probe can record hidden-attribute calibration before or alongside dialogue.
 - Conversation remains one-turn-at-a-time and report-grounded.
 - Focused tests, visual QA and full V40 tests pass.
-

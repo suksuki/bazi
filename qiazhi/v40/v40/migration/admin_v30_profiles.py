@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import json
+import sys
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
@@ -36,6 +38,51 @@ class AdminProfileSyncResult:
 def load_v30_product_store(path: Path) -> dict[str, Any]:
     payload = json.loads(path.read_text(encoding="utf-8"))
     return payload if isinstance(payload, dict) else {}
+
+
+def default_v30_product_store_path() -> Path:
+    qiazhi_root = Path(__file__).resolve().parents[3]
+    remote_snapshot = qiazhi_root / "v30" / ".runtime" / "remote_product_sync" / "product_ui_store.13.json"
+    if remote_snapshot.exists():
+        return remote_snapshot
+    return qiazhi_root / "v30" / ".runtime" / "product_ui_store.json"
+
+
+def build_chart_payload_from_v30_birth_input(profile: Mapping[str, Any], target_year: int) -> dict[str, Any]:
+    qiazhi_root = Path(__file__).resolve().parents[3]
+    v30_package_root = qiazhi_root / "v30"
+    if str(v30_package_root) not in sys.path:
+        sys.path.insert(0, str(v30_package_root))
+
+    from v30.contracts import BirthInput
+    from v30.core.chart_context import build_chart_context_from_birth_input
+
+    source_profile_id = str(profile.get("profile_id") or "v30-profile")
+    birth_payload = dict(profile.get("birth_input") or {})
+    birth_payload["input_id"] = source_profile_id
+    birth_input = BirthInput.model_validate(birth_payload)
+    result = build_chart_context_from_birth_input(
+        reading_id=f"v40-sync:{source_profile_id}",
+        birth_input=birth_input,
+        locale="zh",
+        created_at=datetime(target_year, 6, 1, 12, 0, tzinfo=timezone.utc),
+    )
+    if result.status != "ready" or not result.chart_context:
+        return {
+            "status": result.status,
+            "pillars": {},
+            "failures": result.failures,
+        }
+    time_layers = result.chart_context.time_layers if isinstance(result.chart_context.time_layers, Mapping) else {}
+    luck_context = time_layers.get("luck_cycle_context") if isinstance(time_layers.get("luck_cycle_context"), Mapping) else {}
+    flow_context = time_layers.get("flow_context") if isinstance(time_layers.get("flow_context"), Mapping) else {}
+    return {
+        "status": "ready",
+        "pillars": result.four_pillar_result.pillars,
+        "current_luck": str(luck_context.get("current_luck_pillar") or ""),
+        "current_year": str(flow_context.get("flow_year_pillar") or ""),
+        "failures": [],
+    }
 
 
 def select_v30_admin_profiles(store: Mapping[str, Any]) -> list[dict[str, Any]]:

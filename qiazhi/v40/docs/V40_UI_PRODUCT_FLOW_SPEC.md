@@ -863,6 +863,8 @@ Replace development-only URL role hooks:
 - Admin entering the user app is projected as a special practitioner.
 - The built-in `admin` login maps to the unique admin email and practitioner role; it cannot be registered from the user app.
 - The built-in `admin / abcd1235` account must be available at runtime even when the V40 repository is not configured; it is a unique practitioner projection, not a registerable user.
+- Login never asks the user to choose ordinary user or practitioner. Role is fixed by the account created at registration, and session context is derived from that account.
+- Registration may ask for ordinary user or practitioner, but that selection belongs only to account creation.
 - Practitioner Lens visibility follows `RoleContext`, not query params.
 - User app never exposes Admin control plane.
 
