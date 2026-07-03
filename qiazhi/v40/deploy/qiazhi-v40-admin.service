@@ -1,0 +1,15 @@
+[Unit]
+Description=Qiazhi V40 Admin
+After=network.target qiazhi-v40-api.service
+
+[Service]
+Type=simple
+User=hlsystem
+WorkingDirectory=/home/hlsystem/bazi/qiazhi/v40
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/hlsystem/bazi/qiazhi/v40/scripts/start_v40_admin.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

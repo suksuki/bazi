@@ -1,0 +1,15 @@
+[Unit]
+Description=Qiazhi V40 API
+After=network.target docker.service
+
+[Service]
+Type=simple
+User=hlsystem
+WorkingDirectory=/home/hlsystem/bazi/qiazhi/v40
+Environment=PYTHONUNBUFFERED=1
+ExecStart=/home/hlsystem/bazi/qiazhi/v40/scripts/start_v40.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
