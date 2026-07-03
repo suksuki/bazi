@@ -862,6 +862,7 @@ Replace development-only URL role hooks:
 - Main system supports only guest/user/practitioner.
 - Admin entering the user app is projected as a special practitioner.
 - The built-in `admin` login maps to the unique admin email and practitioner role; it cannot be registered from the user app.
+- The built-in `admin / abcd1235` account must be available at runtime even when the V40 repository is not configured; it is a unique practitioner projection, not a registerable user.
 - Practitioner Lens visibility follows `RoleContext`, not query params.
 - User app never exposes Admin control plane.
 
@@ -875,6 +876,16 @@ Prepare future human review:
 - PractitionerReviewResult.
 - CaseAssignment.
 - PractitionerReliabilityScore.
+
+### UI-8 LLM Preflight Before Long Work
+
+Before report generation or conversation calls, the user app must run a short Ollama model preflight:
+
+- Query `/api/v40/expression/provider/ollama/models`.
+- Require the configured Gemma model to exist.
+- Fail fast when Ollama is unreachable.
+- Do not enter a long-running report or conversation wait state when the model is clearly unavailable.
+- Still do not produce fallback text. The UI shows the model failure as the product state.
 
 ## Acceptance Gates
 
@@ -895,6 +906,7 @@ User surface is acceptable when:
 13. Practitioner action creates structured calibration material.
 14. Admin remains independent and never enters the user flow.
 15. Active policy version used by runtime remains traceable outside ordinary user UI.
+16. LLM preflight failure is visible before report/conversation starts waiting on a long Gemma request.
 
 Final product rule:
 

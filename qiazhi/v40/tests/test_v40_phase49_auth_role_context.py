@@ -36,6 +36,24 @@ def test_session_context_defaults_to_user_and_maps_admin_to_practitioner() -> No
     assert admin_session["role_context"]["can_view_debug"] is False
 
 
+def test_builtin_admin_login_is_available_as_practitioner_without_repository() -> None:
+    client = TestClient(create_app())
+
+    response = client.post(
+        f"{API_PREFIX}/auth/login",
+        json={"email": "admin", "password": "abcd1235"},
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["user"]["email"] == "jerrydidi@gmail.com"
+    assert body["user"]["role_key"] == "practitioner"
+
+    me = client.get(f"{API_PREFIX}/auth/me")
+    assert me.status_code == 200
+    assert me.json()["user"]["role_key"] == "practitioner"
+
+
 def test_native_report_uses_session_role_context_for_practitioner_surface() -> None:
     client = TestClient(create_app())
     seed = load_synthetic_seeds(SEED_PATH)[0]

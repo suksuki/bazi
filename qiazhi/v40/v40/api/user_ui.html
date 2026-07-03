@@ -1788,6 +1788,39 @@
       return $(id).value.trim();
     }
 
+    function friendlyServiceError(message) {
+      const text = String(message || "").trim();
+      if (!text) return "智能服务暂时不可用。";
+      if (text.includes("Ollama") || text.includes("Operation timed out") || text.includes("timed out")) {
+        return "模型服务连接超时，请确认本地配置的大模型服务可以访问。";
+      }
+      if (text.includes("configured_model_available") || text.includes("没有找到模型")) {
+        return "当前模型服务没有找到已配置的大模型，请先在管理端确认模型配置。";
+      }
+      return text;
+    }
+
+    async function ensureLlmReady() {
+      const controller = new AbortController();
+      const timeout = window.setTimeout(() => controller.abort(), 8000);
+      try {
+        const response = await fetch("/api/v40/expression/provider/ollama/models", {signal: controller.signal});
+        const body = await response.json();
+        if (!response.ok) throw new Error(body.detail || "Ollama 预检失败");
+        if (body.configured_model_available === false) {
+          throw new Error(`没有找到模型 ${body.configured_model || "gemma4:latest"}`);
+        }
+        return body;
+      } catch (error) {
+        if (error.name === "AbortError") {
+          throw new Error("Ollama 预检超时");
+        }
+        throw error;
+      } finally {
+        window.clearTimeout(timeout);
+      }
+    }
+
     updateCurrentChartCard();
     $("readingForm").addEventListener("input", updateCurrentChartCard);
     $("readingForm").addEventListener("change", updateCurrentChartCard);
@@ -1904,13 +1937,13 @@
       $("processSummary").textContent = "查看推演过程";
     }
 
-    function renderProcessFailure() {
+    function renderProcessFailure(reason = "") {
       stopProcessLoop();
       $("processTicker").classList.remove("complete", "expanded");
       setProcessLines([
         "本轮定盘没有完成，命盘事实没有被改写。",
         "素材链路没有形成可用报告，暂不生成替代结论。",
-        "请稍后重试，或先检查模型与本地服务连接。"
+        friendlyServiceError(reason || "请稍后重试，或先检查模型与本地服务连接。")
       ], "推演未完成");
     }
 
@@ -2538,13 +2571,15 @@
       $("conversationAskButton").disabled = true;
       setReadingMode("conversation");
       $("conversationSurface").classList.remove("hidden");
-      setState("正在生成本轮回答", "报告已放到左侧历史报告", true);
+      setState("检查模型连接", "确认大模型可用后再生成本轮回答", true);
       const pendingNode = appendConversation(
         question,
         "正在围绕本次报告组织回答。Gemma 返回前不会生成替代结论。",
         {pending: true}
       );
       try {
+        await ensureLlmReady();
+        setState("正在生成本轮回答", "报告已放到左侧历史报告", true);
         const turnId = `turn-${Date.now()}`;
         const body = {
           turn_id: turnId,
@@ -2570,7 +2605,7 @@
         $("conversationQuestion").value = "";
         setState("回答已生成", "可以继续追问", false);
       } catch (error) {
-        settleConversation(pendingNode, error.message || "本轮回答暂时没有完成", {error: true});
+        settleConversation(pendingNode, friendlyServiceError(error.message || "本轮回答暂时没有完成"), {error: true});
         setState("智能服务未完成", "可以稍后重试", false);
       } finally {
         $("askButton").disabled = false;
@@ -2629,9 +2664,11 @@
       resetReviewSurface();
       currentMismatchArea = "";
       $("lensStack").innerHTML = `<div class="empty">报告生成后显示。</div>`;
-      setState("正在推演", "等待智能服务返回", true);
+      setState("检查模型连接", "正在确认大模型服务可用", true);
       renderProcessLoading();
       try {
+        await ensureLlmReady();
+        setState("正在推演", "大模型已连接，等待测算报告", true);
         const response = await fetch("/api/v40/readings/native-report", {
           method: "POST",
           headers: {"Content-Type": "application/json"},
@@ -2648,9 +2685,9 @@
       } catch (error) {
         setReadingMode("report");
         setState("智能服务未完成", "请稍后重试", false);
-        renderProcessFailure();
+        renderProcessFailure(error.message);
         $("heroTitle").textContent = "本次没有形成可用报告。";
-        $("heroText").textContent = error.message || "智能服务暂时不可用。";
+        $("heroText").textContent = friendlyServiceError(error.message || "智能服务暂时不可用。");
         $("heroMetrics").innerHTML = `<span class="metric">没有使用备用文本</span>`;
       }
     });

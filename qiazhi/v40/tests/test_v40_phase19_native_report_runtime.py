@@ -47,6 +47,21 @@ def test_native_report_endpoint_returns_runtime_expression_and_telemetry() -> No
     assert body["writes_v40_production"] is False
 
 
+def test_native_report_persist_true_does_not_block_without_repository() -> None:
+    client = TestClient(create_app())
+    payload = _seed_payload()
+    payload["persist"] = True
+    payload["reading_id"] = "reading.phase19.report.persist.no.repository"
+
+    response = client.post(f"{API_PREFIX}/readings/native-report", json=payload)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["accepted"] is True
+    assert body["persisted"] is False
+    assert body["accepted_text"]
+
+
 def test_native_report_provider_text_mode_accepts_external_expression() -> None:
     client = TestClient(create_app())
     payload = _seed_payload()

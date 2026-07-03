@@ -10,6 +10,23 @@ Admin:   http://127.0.0.1:9041/admin/v40
 User UI: http://127.0.0.1:9040/v40/ui
 ```
 
+## Python 版本红线
+
+V40 只用 Python 3.12 运行。默认入口是：
+
+```text
+qiazhi/v40/scripts/start_v40.sh
+qiazhi/v40/scripts/start_v40_admin.sh
+```
+
+这两个脚本会优先使用：
+
+```text
+qiazhi/.venv312/bin/python
+```
+
+不要裸用系统 `python3` 跑 V40 命令；macOS 自带 `python3` 可能是 3.9，会导致 V40 的类型合约和 Pydantic 模型加载失败。
+
 ## 实时完成度
 
 ```text
@@ -47,8 +64,8 @@ V40 自动流程不做：
 - 不切生产流量。
 - 不静默 fallback。
 - 不让 LLM 做 verdict。
-- 不让训练直接改 production weight。
-- 不跳过人工验收。
+- 不让 LLM 不可用时生成替代报告。
+- 训练验证通过后直接生效，但必须保留回滚和补救路径。
 
 ## 人工验收项
 

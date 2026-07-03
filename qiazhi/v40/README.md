@@ -113,6 +113,14 @@ LLM required in product runtime; no silent local fallback.
 Validated training applies immediately with rollback, not pre-approval.
 ```
 
+Runtime command rule:
+
+```text
+V40 requires Python 3.12.
+Use qiazhi/.venv312/bin/python or scripts/start_v40*.sh.
+Do not run V40 commands with bare system python3, because macOS python3 may be 3.9 and cannot load V40 typing contracts.
+```
+
 Start order:
 
 1. Define contracts.

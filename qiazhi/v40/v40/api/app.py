@@ -49,6 +49,8 @@ from v40.api.models import (
     WeightActivationReviewRequest,
 )
 from v40.auth.accounts import (
+    BUILTIN_ADMIN_USER_ID,
+    build_builtin_admin_account,
     build_user_account,
     build_user_session,
     is_builtin_admin_identifier,
@@ -284,8 +286,18 @@ def _load_account_by_email(email: str) -> UserAccountInternal | None:
     clean_email = normalize_email(email)
     repository = _repository_or_none()
     if repository is not None:
-        return repository.get_user_account_by_email(clean_email)
-    return _MEMORY_ACCOUNTS_BY_EMAIL.get(clean_email)
+        account = repository.get_user_account_by_email(clean_email)
+        if account is not None:
+            return account
+        if is_builtin_admin_identifier(clean_email):
+            return _save_and_return_builtin_admin(repository)
+        return None
+    account = _MEMORY_ACCOUNTS_BY_EMAIL.get(clean_email)
+    if account is not None:
+        return account
+    if is_builtin_admin_identifier(clean_email):
+        return _save_and_return_builtin_admin(None)
+    return None
 
 
 def _load_account_by_login(identifier: str) -> UserAccountInternal | None:
@@ -295,8 +307,31 @@ def _load_account_by_login(identifier: str) -> UserAccountInternal | None:
 def _load_account_by_id(user_id: str) -> UserAccountInternal | None:
     repository = _repository_or_none()
     if repository is not None:
-        return repository.get_user_account_by_id(user_id)
-    return _MEMORY_ACCOUNTS_BY_ID.get(user_id)
+        account = repository.get_user_account_by_id(user_id)
+        if account is not None:
+            return account
+        if user_id == BUILTIN_ADMIN_USER_ID:
+            return _save_and_return_builtin_admin(repository)
+        return None
+    account = _MEMORY_ACCOUNTS_BY_ID.get(user_id)
+    if account is not None:
+        return account
+    if user_id == BUILTIN_ADMIN_USER_ID:
+        return _save_and_return_builtin_admin(None)
+    return None
+
+
+def _save_and_return_builtin_admin(repository: V40PostgresRepository | None) -> UserAccountInternal:
+    account = build_builtin_admin_account()
+    if repository is not None:
+        existing = repository.get_user_account_by_email(account.email) or repository.get_user_account_by_id(account.user_id)
+        if existing is not None:
+            return existing
+        repository.save_user_account(account)
+        return account
+    _MEMORY_ACCOUNTS_BY_EMAIL[account.email] = account
+    _MEMORY_ACCOUNTS_BY_ID[account.user_id] = account
+    return account
 
 
 def _save_account(account: UserAccountInternal) -> bool:
@@ -656,12 +691,10 @@ def create_app() -> FastAPI:
         )
         persisted = False
         if payload.persist:
-            try:
-                repository = V40PostgresRepository.from_env()
+            repository = _repository_or_none()
+            if repository is not None:
                 repository.save_runtime(runtime)
                 persisted = True
-            except Exception as exc:
-                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.native_bazi_runtime_response.v1",
             "runtime": runtime.model_dump(mode="json"),
@@ -724,12 +757,10 @@ def create_app() -> FastAPI:
         )
         persisted = False
         if payload.persist:
-            try:
-                repository = V40PostgresRepository.from_env()
+            repository = _repository_or_none()
+            if repository is not None:
                 repository.save_runtime(enriched_runtime)
                 persisted = True
-            except Exception as exc:
-                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.native_reading_report_response.v1",
             "runtime": enriched_runtime.model_dump(mode="json"),
@@ -780,15 +811,13 @@ def create_app() -> FastAPI:
         persisted = False
         training_label_persisted = False
         if payload.persist:
-            try:
-                repository = V40PostgresRepository.from_env()
+            repository = _repository_or_none()
+            if repository is not None:
                 repository.save_conversation_turn(turn)
                 persisted = True
                 if payload.persist_training_label:
                     repository.save_training_label_event(training_label)
                     training_label_persisted = True
-            except Exception as exc:
-                raise HTTPException(status_code=503, detail="V40 repository is unavailable") from exc
         return {
             "version": "v40.conversation_turn_response.v1",
             "turn": turn.model_dump(mode="json"),
