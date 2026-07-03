@@ -42,10 +42,10 @@ def test_phase55_docs_and_project_status_track_compact_process_ticker() -> None:
     assert "2026-07-02 Phase 55" in spec
     assert "docs/V40_PHASE55_COMPACT_PROCESS_TICKER.md" in readme
     assert "three-line staged process ticker" in ui_spec
-    assert status["current_phase"] == 72
-    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
+    assert status["current_phase"] == 73
+    assert status["current_phase_name"] == "Real Case Acceptance Pack"
     assert any(row["range"] == "54" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "55" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "USER-18: real case quality signoff and beta cutover window" in status["next_mainline_tasks"]
+    assert "QA-19: live LLM report/conversation acceptance on selected real cases" in status["next_mainline_tasks"]

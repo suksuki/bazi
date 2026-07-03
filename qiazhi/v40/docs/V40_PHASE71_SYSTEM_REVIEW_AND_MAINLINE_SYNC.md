@@ -51,7 +51,8 @@ The remaining work is no longer mostly architecture. It is evidence quality:
 
 ```text
 Phase 71 completed: online cutover decision with real case acceptance evidence
-Phase 72 active: USER-18 real case quality signoff and beta cutover window
+Phase 72 completed: real case acceptance and beta cutover plan
+Phase 73 active: real case acceptance pack
 ```
 
 The system can continue generating evidence automatically, but final product acceptance and online cutover remain human decisions.

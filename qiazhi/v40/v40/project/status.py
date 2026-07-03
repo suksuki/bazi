@@ -5,8 +5,8 @@ from datetime import datetime, timezone
 from typing import Any
 
 
-CURRENT_PHASE = 72
-CURRENT_PHASE_NAME = "Real Case Acceptance And Beta Cutover Plan"
+CURRENT_PHASE = 73
+CURRENT_PHASE_NAME = "Real Case Acceptance Pack"
 
 
 @dataclass(frozen=True)
@@ -99,7 +99,8 @@ PHASE_GROUPS: tuple[dict[str, object], ...] = (
     {"range": "69", "label": "Real Case Expansion And Cutover Evidence", "status": "complete"},
     {"range": "70", "label": "Direct Training Activation Evidence", "status": "complete"},
     {"range": "71", "label": "Online Cutover Decision Pack", "status": "complete"},
-    {"range": "72", "label": "Real Case Acceptance And Beta Cutover Plan", "status": "active"},
+    {"range": "72", "label": "Real Case Acceptance And Beta Cutover Plan", "status": "complete"},
+    {"range": "73", "label": "Real Case Acceptance Pack", "status": "active"},
     {"range": "user-acceptance", "label": "真实命例验收与线上切换", "status": "requires_user"},
 )
 
@@ -124,9 +125,9 @@ def build_project_status(*, lab_summary: dict[str, Any] | None = None) -> dict[s
         "domains": domains,
         "phase_groups": list(PHASE_GROUPS),
         "next_mainline_tasks": [
-            "USER-18: real case quality signoff and beta cutover window",
             "QA-19: live LLM report/conversation acceptance on selected real cases",
             "OPS-20: rollback rehearsal and beta traffic smoke",
+            "USER-21: owner approval for beta cutover window",
         ],
         "runtime_evidence_counts": counts,
         "boundary": "project_status_observes_v40_progress_without_mutating_runtime_or_weights",

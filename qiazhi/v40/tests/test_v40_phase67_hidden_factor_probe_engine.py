@@ -96,11 +96,11 @@ def test_phase67_docs_and_project_status_track_hidden_factor_probe_engine() -> N
 
     assert "Hidden Factor Probe Engine" in doc
     assert "docs/V40_PHASE67_HIDDEN_FACTOR_PROBE_ENGINE.md" in readme
-    assert status["current_phase"] == 72
-    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
+    assert status["current_phase"] == 73
+    assert status["current_phase_name"] == "Real Case Acceptance Pack"
     assert any(row["range"] == "66" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "67" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "68" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "69" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "70" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "USER-18: real case quality signoff and beta cutover window"
+    assert status["next_mainline_tasks"][0] == "QA-19: live LLM report/conversation acceptance on selected real cases"

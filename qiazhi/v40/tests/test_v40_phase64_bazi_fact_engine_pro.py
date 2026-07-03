@@ -96,8 +96,8 @@ def test_phase64_project_status_tracks_fact_engine_pro_mainline() -> None:
 
     assert "Bazi Fact Engine Pro V1" in doc
     assert "docs/V40_PHASE64_BAZI_FACT_ENGINE_PRO.md" in readme
-    assert status["current_phase"] == 72
-    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
+    assert status["current_phase"] == 73
+    assert status["current_phase_name"] == "Real Case Acceptance Pack"
     assert any(row["range"] == "63" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "64" and row["status"] == "complete" for row in status["phase_groups"])
-    assert status["next_mainline_tasks"][0] == "USER-18: real case quality signoff and beta cutover window"
+    assert status["next_mainline_tasks"][0] == "QA-19: live LLM report/conversation acceptance on selected real cases"

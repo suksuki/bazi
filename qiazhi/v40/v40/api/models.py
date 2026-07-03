@@ -244,6 +244,26 @@ class OnlineCutoverDecisionRequest(V40Model):
         return self
 
 
+class RealCaseAcceptancePackRequest(V40Model):
+    version: str = "v40.real_case_acceptance_pack_request.v1"
+    cases: list[RealCaseRecord]
+    acceptance_window: AcceptanceWindowResult | None = None
+    real_case_evidence: dict[str, object]
+    online_cutover_decision: dict[str, object]
+    min_owner_review_case_count: int = Field(default=1, ge=1)
+    boundary: str = "real_case_acceptance_pack_request_reads_evidence_without_cutover"
+
+    @model_validator(mode="after")
+    def _real_case_acceptance_pack_boundary(self) -> "RealCaseAcceptancePackRequest":
+        if not self.cases:
+            raise ValueError("Real case acceptance pack request requires cases")
+        if not self.real_case_evidence:
+            raise ValueError("Real case acceptance pack request requires real_case_evidence")
+        if not self.online_cutover_decision:
+            raise ValueError("Real case acceptance pack request requires online_cutover_decision")
+        return self
+
+
 class CandidateWeightFromBatchRequest(V40Model):
     version: str = "v40.candidate_weight_from_batch_request.v1"
     weight_version_id: str

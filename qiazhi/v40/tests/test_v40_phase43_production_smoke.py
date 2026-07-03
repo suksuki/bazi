@@ -37,4 +37,4 @@ def test_phase43_project_status_advances_smoke_track() -> None:
 
     assert status["current_phase"] >= 43
     assert status["overall_completion_percent"] >= 95
-    assert status["next_mainline_tasks"][0].startswith("USER-18")
+    assert status["next_mainline_tasks"][0].startswith("QA-19")

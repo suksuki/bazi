@@ -878,6 +878,16 @@ OPS-20: rollback rehearsal and beta traffic smoke
 
 本阶段不再扩张命理模块，而是把 V40 从“架构可运行”推到“真实验收可用”。Phase 72 聚焦真实命例验收包、真实 LLM 报告/对话 QA、训练影响解释与回滚路径、beta 切换窗口。系统可以继续自动生成证据和建议，但最终真实命例质量判断、产品验收和线上窗口仍然需要人工签核。
 
+2026-07-03 Phase 73 Real Case Acceptance Pack 已启动：
+
+```text
+docs/V40_PHASE73_REAL_CASE_ACCEPTANCE_PACK.md
+build_real_case_acceptance_pack
+POST /api/v40/project/real-case-acceptance-pack
+```
+
+本阶段把 USER-18 的真实命例签核准备转成运行时只读验收包。`Real Case Acceptance Pack` 会合并 selected real cases、Acceptance Window、Real Case Expansion Evidence、Online Cutover Decision Pack、failed_reason_counts、topic coverage 与 trainable_attribution_hints，输出 ready_for_owner_review / needs_more_cases / needs_replay / blocked_by_quality。它只准备 owner review，不切流量、不写 V30、不写 V40 production policy、不改命盘事实。
+
 2026-07-01 V40-RC2 已启动：
 
 ```text

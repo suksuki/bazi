@@ -33,6 +33,7 @@ from v40.api.models import (
     PractitionerReviewCreateRequest,
     PractitionerReviewResultRequest,
     ProbeAnswerRequest,
+    RealCaseAcceptancePackRequest,
     RealCaseExpansionEvidenceRequest,
     ReleaseReadinessFromBatchesRequest,
     ReleaseReadinessFromEvidenceBatchesRequest,
@@ -93,6 +94,7 @@ from v40.project import (
     build_online_cutover_decision_pack,
     build_production_cutover_checklist,
     build_direct_training_activation_evidence,
+    build_real_case_acceptance_pack,
     build_real_case_expansion_evidence_pack,
     build_project_status,
     build_release_candidate_audit,
@@ -2235,6 +2237,24 @@ def create_app() -> FastAPI:
             "writes_v30_state": False,
             "writes_v40_production": False,
             "boundary": "online_cutover_decision_reads_evidence_without_switching_traffic",
+        }
+
+    @app.post(f"{API_PREFIX}/project/real-case-acceptance-pack")
+    def real_case_acceptance_pack(payload: RealCaseAcceptancePackRequest) -> dict[str, object]:
+        pack = build_real_case_acceptance_pack(
+            cases=payload.cases,
+            acceptance_window=payload.acceptance_window,
+            real_case_evidence=payload.real_case_evidence,
+            online_cutover_decision=payload.online_cutover_decision,
+            min_owner_review_case_count=payload.min_owner_review_case_count,
+        )
+        return {
+            "version": "v40.real_case_acceptance_pack_response.v1",
+            "pack": pack,
+            "writes_v30_state": False,
+            "writes_v40_production": False,
+            "traffic_switch_allowed_by_system": False,
+            "boundary": "real_case_acceptance_pack_reads_evidence_without_cutover",
         }
 
     @app.get(f"{API_PREFIX}/project/release-candidate-audit")

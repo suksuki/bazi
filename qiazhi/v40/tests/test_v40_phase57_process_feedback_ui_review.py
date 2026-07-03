@@ -43,9 +43,9 @@ def test_phase57_docs_and_project_status_track_process_feedback_and_llm_boundary
     assert "execution_mode=ollama" in spec
     assert "docs/V40_PHASE57_PROCESS_FEEDBACK_AND_UI_REVIEW_BRIEF.md" in readme
     assert "waiting for the LLM expression path" in ui_spec
-    assert status["current_phase"] == 72
-    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
+    assert status["current_phase"] == 73
+    assert status["current_phase_name"] == "Real Case Acceptance Pack"
     assert any(row["range"] == "56" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "57" and row["status"] == "complete" for row in status["phase_groups"])
     assert any(row["range"] == "59" and row["status"] == "complete" for row in status["phase_groups"])
-    assert "USER-18: real case quality signoff and beta cutover window" in status["next_mainline_tasks"]
+    assert "QA-19: live LLM report/conversation acceptance on selected real cases" in status["next_mainline_tasks"]

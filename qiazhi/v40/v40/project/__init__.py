@@ -8,6 +8,7 @@ from v40.project.mingli_depth import build_mingli_depth_index
 from v40.project.module_status import build_module_migration_status
 from v40.project.online_cutover_decision import build_online_cutover_decision_pack
 from v40.project.release_candidate import build_release_candidate_audit
+from v40.project.real_case_acceptance import build_real_case_acceptance_pack
 from v40.project.real_case_expansion import build_real_case_expansion_evidence_pack
 from v40.project.smoke import build_production_smoke
 from v40.project.trainable_spine import build_trainable_runtime_spine_status
@@ -21,6 +22,7 @@ __all__ = [
     "build_online_cutover_decision_pack",
     "build_production_cutover_checklist",
     "build_release_candidate_audit",
+    "build_real_case_acceptance_pack",
     "build_real_case_expansion_evidence_pack",
     "build_production_smoke",
     "build_trainable_runtime_spine_status",

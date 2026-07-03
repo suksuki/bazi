@@ -19,14 +19,15 @@ def test_phase72_docs_and_project_status_track_real_case_acceptance_cutover_plan
     assert "OPS-20: rollback rehearsal and beta traffic smoke" in doc
     assert "docs/V40_PHASE72_REAL_CASE_ACCEPTANCE_AND_BETA_CUTOVER_PLAN.md" in readme
     assert "Phase 72 Real Case Acceptance And Beta Cutover Plan" in spec
-    assert status["current_phase"] == 72
-    assert status["current_phase_name"] == "Real Case Acceptance And Beta Cutover Plan"
+    assert status["current_phase"] == 73
+    assert status["current_phase_name"] == "Real Case Acceptance Pack"
     assert status["overall_completion_percent"] == 99
     assert any(row["range"] == "71" and row["status"] == "complete" for row in status["phase_groups"])
-    assert any(row["range"] == "72" and row["status"] == "active" for row in status["phase_groups"])
+    assert any(row["range"] == "72" and row["status"] == "complete" for row in status["phase_groups"])
+    assert any(row["range"] == "73" and row["status"] == "active" for row in status["phase_groups"])
     assert status["next_mainline_tasks"] == [
-        "USER-18: real case quality signoff and beta cutover window",
         "QA-19: live LLM report/conversation acceptance on selected real cases",
         "OPS-20: rollback rehearsal and beta traffic smoke",
+        "USER-21: owner approval for beta cutover window",
     ]
     assert "真实命例质量判断" in status["requires_user_for"]
