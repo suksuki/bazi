@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import v30.llm.client as llm_client
 from v30.llm import compose_bazi_llm_answer_draft
 from v30.llm.provider import V30LLMProviderConfig
 from v30.runtime import attach_question_outcome, create_smoke_runtime
@@ -23,9 +24,33 @@ def test_runtime_answer_result_uses_bazi_llm_prompt_request_metadata() -> None:
     assert prompt_request["chart_fact_mutation_allowed"] is False
 
 
-def test_default_runtime_defers_live_llm_to_keep_answer_fast(monkeypatch) -> None:
+def test_product_default_executes_blocking_llm_when_no_fast_override(monkeypatch) -> None:
     monkeypatch.delenv("V30_LLM_SYNC_MODE", raising=False)
-    runtime = create_smoke_runtime("pytest-bl4-fast-default")
+    monkeypatch.setattr(llm_client, "call_bazi_llm_answer_draft", _accepted_call)
+
+    runtime = create_smoke_runtime("pytest-bl4-blocking-default")
+
+    assert runtime.answer_result is not None
+    assert runtime.answer_result.source == "llm_bazi_answer_draft"
+    assert runtime.answer_result.llm_metadata["status"] == "accepted"
+    assert runtime.answer_result.llm_metadata["executed"] is True
+    assert runtime.answer_result.llm_metadata["sync_mode"] == "blocking"
+
+
+def test_blocking_sync_mode_can_still_use_provider_path(monkeypatch) -> None:
+    monkeypatch.setenv("V30_LLM_SYNC_MODE", "blocking")
+    monkeypatch.setattr(llm_client, "call_bazi_llm_answer_draft", _accepted_call)
+    runtime = create_smoke_runtime("pytest-bl4-blocking-mode")
+
+    assert runtime.answer_result is not None
+    assert runtime.answer_result.source == "llm_bazi_answer_draft"
+    assert runtime.answer_result.llm_metadata["status"] == "accepted"
+    assert runtime.answer_result.llm_metadata["executed"] is True
+
+
+def test_fast_sync_mode_is_explicit_test_and_performance_path(monkeypatch) -> None:
+    monkeypatch.setenv("V30_LLM_SYNC_MODE", "fast")
+    runtime = create_smoke_runtime("pytest-bl4-fast-explicit")
 
     assert runtime.answer_result is not None
     assert runtime.answer_result.source == "rule_bound_llm_deferred"
@@ -33,15 +58,6 @@ def test_default_runtime_defers_live_llm_to_keep_answer_fast(monkeypatch) -> Non
     assert runtime.answer_result.llm_metadata["fallback_reason"] == "sync_mode_fast_llm_deferred"
     assert runtime.answer_result.llm_metadata["executed"] is False
     assert runtime.answer_result.llm_metadata["llm_execution_required"] is False
-
-
-def test_blocking_sync_mode_can_still_use_provider_path(monkeypatch) -> None:
-    monkeypatch.setenv("V30_LLM_SYNC_MODE", "blocking")
-    runtime = create_smoke_runtime("pytest-bl4-blocking-mode")
-
-    assert runtime.answer_result is not None
-    assert runtime.answer_result.llm_metadata["status"] in {"fallback", "accepted"}
-    assert runtime.answer_result.llm_metadata["status"] != "deferred"
 
 
 def test_bazi_llm_answer_generator_fallback_preserves_rule_answer_by_role() -> None:
@@ -107,3 +123,23 @@ def _disabled_config() -> V30LLMProviderConfig:
         max_tokens=120,
         config_source="test",
     )
+
+
+def _accepted_call(*args, **kwargs) -> dict[str, object]:
+    return {
+        "version": "v30.bazi_llm_answer_draft_call.v1",
+        "status": "accepted",
+        "text": "结论：LLM 已按中枢裁决组织表达。\n建议：继续围绕已验证证据给出行动建议。",
+        "executed": True,
+        "sync_mode": "blocking",
+        "task_type": str(kwargs.get("task_type") or "customer_initial_reading"),
+        "role_key": str(kwargs.get("role_key") or "user"),
+        "prompt_request": {
+            "version": "v30.bazi_llm_prompt_request.v1",
+            "context_pack": "BaziCoreContext",
+            "role_contract_id": "v30.bazi_llm_role.user.v1",
+            "raw_runtime_payload_included": False,
+            "chart_fact_mutation_allowed": False,
+        },
+        "boundary": "bazi_llm_answer_draft_expression_only_no_chart_fact_mutation",
+    }

@@ -96,6 +96,32 @@ class RuntimePointerStore:
     def active_versions(self, families: tuple[PolicyFamily, ...]) -> dict[str, str]:
         return {family: self.load_pointer(family).active_artifact_id for family in families}
 
+    def rollback_to_previous(self, family: PolicyFamily, *, updated_by: str = "v30.policy.rollback") -> RuntimePointer:
+        current = self.load_pointer(family)
+        target = current.rollback_pointer.get("active_artifact_id") if isinstance(current.rollback_pointer, dict) else ""
+        if not target:
+            raise ValueError(f"rollback pointer is not available for {family}")
+        target_artifact = self.load_artifact(family, str(target))
+        pointer = RuntimePointer(
+            family=family,
+            active_artifact_id=target_artifact.artifact_id,
+            active_artifact_version=target_artifact.version,
+            previous_artifact_id=current.active_artifact_id,
+            validation_run_id=current.validation_run_id,
+            promotion_reason="admin_policy_pointer_rollback_to_previous",
+            env=current.env,
+            status="active",
+            updated_at=datetime.now(timezone.utc),
+            updated_by=updated_by,
+            rollback_pointer={
+                "family": current.family,
+                "active_artifact_id": current.active_artifact_id,
+                "active_artifact_version": current.active_artifact_version,
+            },
+        )
+        self.save_pointer(pointer)
+        return pointer
+
     def _pointer_path(self, family: PolicyFamily) -> Path:
         return self._root / family / "active.json"
 

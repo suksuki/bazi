@@ -29,7 +29,7 @@ It must validate:
 The active support-system completion plan is:
 
 ```text
-docs/V30_BRAIN_TRAINING_SYNTHETIC_COMPLETION_MAINLINE.md
+docs/archive/V30_BRAIN_TRAINING_SYNTHETIC_COMPLETION_MAINLINE.md
 ```
 
 Synthetic validation completion now follows:

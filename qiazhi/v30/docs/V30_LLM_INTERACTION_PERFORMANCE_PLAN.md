@@ -1,6 +1,6 @@
 # V30 LLM Interaction Performance Plan
 
-Updated: 2026-06-13
+Updated: 2026-06-30
 
 ## Problem
 
@@ -27,17 +27,18 @@ The model token generation is not the main cost. The request waits on remote Oll
 
 ## Mainline Fix
 
-### LLM-PERF1 Fast Answer Path
+### LLM-PERF1 Product Blocking Expression Path
 
 Status: Active
 
 Rules:
 
 - Bazi calculation, RBD claims, domain cards, paths, portraits, and rule-bound answer remain synchronous.
-- LLM expression is not allowed to block normal customer answer latency by default.
-- Default production mode is `V30_LLM_SYNC_MODE=fast`.
-- In `fast` mode, answer API returns the RBD/rule answer immediately with `llm_metadata.status=deferred`.
-- Explicit blocking mode is still available with `V30_LLM_SYNC_MODE=blocking`.
+- LLM expression is part of the customer-visible product answer and should run by default.
+- Default product mode is `V30_LLM_SYNC_MODE=blocking`.
+- In `blocking` mode, the answer API waits for bounded Gemma/Ollama expression and accepts it only after drift/acceptance checks.
+- Explicit fast mode remains available with `V30_LLM_SYNC_MODE=fast` for tests, offline validation, and emergency performance mode.
+- Fast mode returns the RBD/rule answer with `llm_metadata.status=deferred`; it must not be treated as the normal product experience.
 
 ### LLM-PERF2 Smaller Synchronous Budget
 
@@ -49,23 +50,23 @@ Rules:
 - Lower `V30_LLM_HTTP_TIMEOUT_SEC`.
 - Do not force Ollama timeout to 30 seconds when operator configured a smaller value.
 
-### LLM-PERF2.5 Optional Enhancement Endpoint
+### LLM-PERF2.5 Deferred Enhancement Endpoint
 
 Status: Complete
 
 Rules:
 
-- Main answer API remains fast and returns RBD/rule answer.
-- Optional endpoint is available:
+- Main product answer should now use blocking LLM expression by default.
+- Deferred enhancement endpoint remains available when an operator explicitly enables fast mode:
 
 ```text
 POST /api/v30/readings/{reading_id}/questions/{question_id}/answer/llm
 ```
 
-- The endpoint is allowed to wait for LLM because it is called after the user already sees the answer.
+- The endpoint is allowed to wait for LLM because it is called after a fast-mode response.
 - Accepted LLM output updates the runtime answer panel.
 - Fallback output does not replace the existing RBD answer.
-- Frontend calls this endpoint in the background when `answer_panel.llm_metadata.status=deferred`.
+- Frontend calls this endpoint when `answer_panel.llm_metadata.status=deferred`.
 
 Observed after implementation:
 
@@ -76,7 +77,7 @@ optional enhancement: 9.923s
 optional enhancement status: accepted
 ```
 
-This is the intended split: customer reading is visible immediately, while remote Gemma/Ollama enhancement can finish later.
+This split is now an explicit performance fallback, not the default customer experience.
 
 ### LLM-PERF3 Future True Streaming
 
@@ -101,4 +102,15 @@ python3 scripts/run_bazi_llm_output_acceptance_readiness.py
 curl -fsS http://127.0.0.1:9030/api/v30/health
 ```
 
-No full pytest, synthetic-all, live LLM smoke, or full 518K for this subtask.
+No full pytest, synthetic-all, or full 518K for this subtask.
+
+2026-06-30 live LLM smoke:
+
+```text
+POST /api/v30/admin/runtime/llm/test
+status: ok
+provider: ollama_native
+model: gemma4:latest
+executed: true
+duration_ms: 4459.29
+```

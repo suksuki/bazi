@@ -16,6 +16,7 @@ from v30.brain import (
     CENTRAL_BRAIN_VERSION,
     build_adaptive_question_diagnostics,
     build_central_brain_trace,
+    build_central_reading_state,
     build_expression_role_state,
     build_recommendation_brain_context,
     route_real_bazi_diagnosis,
@@ -70,6 +71,7 @@ from v30.portrait import (
     summarize_macro_portrait_projections,
 )
 from v30.practical import build_agent_question_flow, build_practical_reading_context, build_ranked_decisions
+from v30.production import build_production_sidecar
 from v30.diagnosis import (
     build_diagnosis_graph,
     extract_diagnosis_features,
@@ -346,6 +348,19 @@ def create_runtime_from_context(
         hidden_factor_state={},
     )
     interaction_state = _interaction_state(question_dialogue_graph.model_dump(mode="json"), [], recommendations)
+    central_reading_state = build_central_reading_state(
+        reading_id=reading_id,
+        role_key="user",
+        diagnosis=real_bazi_diagnosis,
+        recommendations=recommendations,
+        question_dialogue_graph=question_dialogue_graph.model_dump(mode="json"),
+        interaction_state=interaction_state,
+        practical_reading_context=practical_reading.model_dump(mode="json"),
+        ranked_decisions=ranked_decisions,
+        model_signal_summary=model_signal_summary,
+        question_policy=question_policy,
+        question_outcomes=[],
+    )
     plan = QuestionIntentPlan(
         plan_id=f"{reading_id}:question-plan:smoke",
         role_key="user",
@@ -387,6 +402,7 @@ def create_runtime_from_context(
             "recommendation_brain_context": recommendation_brain_context,
             "question_dialogue_graph": question_dialogue_graph.model_dump(mode="json"),
             "interaction_state": interaction_state,
+            "central_reading_state": central_reading_state,
         },
     )
     selected_anchor = _select_answer_anchor(question_anchors, recommendations)
@@ -414,7 +430,7 @@ def create_runtime_from_context(
             reading_surface=_runtime_reading_surface(without_answer),
         )
     plan = _attach_expression_policy_effect(without_answer, plan, answer_context, answer_result)
-    return CoreRuntimeResult(
+    result = CoreRuntimeResult(
         reading_id=reading_id,
         chart_context=context,
         feature_evidence=feature_evidence,
@@ -426,6 +442,7 @@ def create_runtime_from_context(
         answer_result=answer_result,
         trace_id=f"{reading_id}:trace:{trace_suffix}",
     )
+    return _attach_production_sidecar(result)
 
 
 def attach_hidden_factor_state(
@@ -504,6 +521,24 @@ def attach_hidden_factor_state(
         time_status=str(runtime.chart_context.time_layers.get("status", "not_provided")),
         hidden_factor_status=str(hidden_factor_state.get("status") or _dict_policy_effect(runtime, "hidden_factor_calibration").get("status") or "unknown"),
     )
+    interaction_state = _interaction_state(
+        question_dialogue_graph.model_dump(mode="json"),
+        question_outcomes,
+        recommendations,
+    )
+    central_reading_state = build_central_reading_state(
+        reading_id=runtime.reading_id,
+        role_key=str(runtime.question_plan.role_key),
+        diagnosis=_dict_policy_effect(runtime, "real_bazi_diagnosis"),
+        recommendations=recommendations,
+        question_dialogue_graph=question_dialogue_graph.model_dump(mode="json"),
+        interaction_state=interaction_state,
+        practical_reading_context=_dict_policy_effect(runtime, "practical_reading_context"),
+        ranked_decisions=_dict_policy_effect(runtime, "ranked_decisions"),
+        model_signal_summary=_dict_policy_effect(runtime, "model_signal_summary"),
+        question_policy=question_policy if isinstance(question_policy, dict) else {},
+        question_outcomes=question_outcomes,
+    )
     policy_effect = {
         **runtime.question_plan.policy_effect,
         "hidden_factor_state": hidden_factor_state,
@@ -516,11 +551,8 @@ def attach_hidden_factor_state(
         "latent_question_strategy": latent_question_strategy,
         "recommendation_brain_context": recommendation_brain_context,
         "question_dialogue_graph": question_dialogue_graph.model_dump(mode="json"),
-        "interaction_state": _interaction_state(
-            question_dialogue_graph.model_dump(mode="json"),
-            question_outcomes,
-            recommendations,
-        ),
+        "interaction_state": interaction_state,
+        "central_reading_state": central_reading_state,
     }
     plan = runtime.question_plan.model_copy(
         update={
@@ -545,7 +577,8 @@ def attach_hidden_factor_state(
             reading_surface=_runtime_reading_surface(without_answer),
         )
     plan = _attach_expression_policy_effect(without_answer, plan, answer_context, answer_result)
-    return without_answer.model_copy(update={"question_plan": plan, "answer_context": answer_context, "answer_result": answer_result})
+    result = without_answer.model_copy(update={"question_plan": plan, "answer_context": answer_context, "answer_result": answer_result})
+    return _attach_production_sidecar(result)
 
 
 def attach_question_outcome(
@@ -590,6 +623,14 @@ def attach_question_outcome(
         "intent_id": anchor.intent_id,
         "topic": topic,
         "stage": stage,
+        "submit_source": {
+            "version": "v30.question_outcome_submit_source.v1",
+            "submit_surface": str(answer_payload.get("submit_surface") or "legacy_answer_endpoint"),
+            "submit_source_id": str(answer_payload.get("submit_source_id") or ""),
+            "submit_contract_version": str(answer_payload.get("submit_contract_version") or ""),
+            "legacy": not bool(answer_payload.get("submit_surface")),
+            "boundary": "submit_source_records_ui_surface_without_changing_chart_facts",
+        },
         "answer": str(answer_payload.get("answer") or ""),
         "outcome_status": _question_outcome_status(answer_payload.get("outcome_status")),
         "selected_option": str(answer_payload.get("selected_option") or ""),
@@ -655,12 +696,26 @@ def attach_question_outcome(
         question_outcomes=merged,
     )
     interaction_state = _interaction_state(question_dialogue_graph.model_dump(mode="json"), merged, recommendations)
+    central_reading_state = build_central_reading_state(
+        reading_id=runtime.reading_id,
+        role_key=str(runtime.question_plan.role_key),
+        diagnosis=_dict_policy_effect(runtime, "real_bazi_diagnosis"),
+        recommendations=recommendations,
+        question_dialogue_graph=question_dialogue_graph.model_dump(mode="json"),
+        interaction_state=interaction_state,
+        practical_reading_context=_dict_policy_effect(runtime, "practical_reading_context"),
+        ranked_decisions=_dict_policy_effect(runtime, "ranked_decisions"),
+        model_signal_summary=_dict_policy_effect(runtime, "model_signal_summary"),
+        question_policy=question_policy if isinstance(question_policy, dict) else {},
+        question_outcomes=merged,
+    )
     policy_effect = {
         **runtime.question_plan.policy_effect,
         "question_outcomes": merged,
         "known_user_signals": _known_user_signals(merged),
         "question_dialogue_graph": question_dialogue_graph.model_dump(mode="json"),
         "interaction_state": interaction_state,
+        "central_reading_state": central_reading_state,
         "latent_question_strategy": latent_question_strategy,
         "latest_interaction_turn_signal": interaction_turn_signal,
         "interaction_brain_result": process_interaction_turn(
@@ -677,7 +732,7 @@ def attach_question_outcome(
             "policy_effect": policy_effect,
         }
     )
-    selected_anchor = _select_answer_anchor(runtime.question_anchors, recommendations)
+    selected_anchor = anchor
     without_answer = runtime.model_copy(update={"question_plan": plan, "answer_context": None, "answer_result": None})
     answer_context = build_answer_context(without_answer, selected_anchor) if selected_anchor is not None else None
     answer_result = (
@@ -693,7 +748,8 @@ def attach_question_outcome(
             reading_surface=_runtime_reading_surface(without_answer),
         )
     plan = _attach_expression_policy_effect(without_answer, plan, answer_context, answer_result)
-    return without_answer.model_copy(update={"question_plan": plan, "answer_context": answer_context, "answer_result": answer_result})
+    result = without_answer.model_copy(update={"question_plan": plan, "answer_context": answer_context, "answer_result": answer_result})
+    return _attach_production_sidecar(result)
 
 
 def _attach_expression_policy_effect(
@@ -748,6 +804,37 @@ def _attach_expression_policy_effect(
             }
         )
     return plan.model_copy(update={"policy_effect": policy_effect})
+
+
+def _attach_production_sidecar(runtime: CoreRuntimeResult) -> CoreRuntimeResult:
+    policy_effect = runtime.question_plan.policy_effect
+    central_state = _dict_policy_effect(runtime, "central_reading_state")
+    sidecar = build_production_sidecar(
+        reading_id=runtime.reading_id,
+        feature_evidence=runtime.feature_evidence,
+        macro_signals=_list_policy_effect(runtime, "macro_dimension_signals"),
+        ranked_decisions=_dict_policy_effect(runtime, "ranked_decisions"),
+        practical_context=_dict_policy_effect(runtime, "practical_reading_context"),
+        diagnosis=_dict_policy_effect(runtime, "real_bazi_diagnosis"),
+        central_state=central_state,
+        decision_result=central_state.get("decision_result") if isinstance(central_state, dict) else {},
+        final_synthesis=central_state.get("final_synthesis") if isinstance(central_state, dict) else {},
+        reading_surface=_runtime_reading_surface(runtime),
+    )
+    sidecar_payload = sidecar.model_dump(mode="json")
+    plan = runtime.question_plan.model_copy(
+        update={
+            "policy_effect": {
+                **policy_effect,
+                "production_sidecar": sidecar_payload,
+                "production_signal_registry": sidecar_payload["registry"],
+                "production_usage_audit": sidecar_payload["usage_audit"],
+                "production_module_audit": sidecar_payload["module_audit"],
+                "production_audit_summary": sidecar_payload["summary"],
+            }
+        }
+    )
+    return runtime.model_copy(update={"question_plan": plan})
 
 
 def _dict_policy_effect(runtime: CoreRuntimeResult, key: str) -> dict[str, object]:
@@ -829,6 +916,7 @@ def _build_real_bazi_diagnosis_payload(
         "claims": claim_payloads,
         "paths": path_payloads,
         "portraits": portrait_payloads,
+        "graph": graph.model_dump(mode="json"),
         "public_projection": _real_bazi_public_projection(claim_payloads, path_payloads, portrait_payloads, routes),
         "storage_policy": {
             "postgres_target": "v30_diagnosis_runs",

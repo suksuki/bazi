@@ -60,7 +60,7 @@ Make the usable customer product loop start with reliable deterministic chart fa
 
 Implementation direction:
 
-- Finish M1/M2 through `docs/V30_M1_M2_BAZI_CALCULATION_FACT_LAYER_COMPLETION_PLAN.md`.
+- Finish M1/M2 through `docs/archive/V30_M1_M2_BAZI_CALCULATION_FACT_LAYER_COMPLETION_PLAN.md`.
 - Keep M1 responsible for BirthInput conversion, chart facts, boundary traces, luck/flow, and six-pillar context.
 - Keep M2 responsible for day master, visible/hidden ten gods, hidden stems, five elements, relation families, fact integrity, and base explanations.
 - Keep the customer-safe `core_bazi_reading` projection under `reading_surface` concise; internal evidence diagnostics stay behind admin/training projections.

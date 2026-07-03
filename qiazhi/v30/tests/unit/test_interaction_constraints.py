@@ -93,6 +93,10 @@ def test_runtime_records_interaction_brain_result_without_mutating_chart_facts()
     result = updated.question_plan.policy_effect["interaction_brain_result"]
     outcome = updated.question_plan.session_state["question_outcomes"][0]
     assert result["version"] == "v30.unified_interaction_brain_result.v1"
+    assert result["component_role"] == "structured_feedback_adapter"
+    assert result["customer_decision_owner"] == "central_reading_state.brain_decision_trace"
+    assert result["can_select_next_question"] is False
+    assert result["can_generate_public_conclusion"] is False
     assert result["valid"] is True
     assert result["allowed_to_update_hidden_factor"] is True
     assert result["hidden_factor_feedback_payload"]["source"] == "unified_interaction_brain_structured_payload"

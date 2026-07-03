@@ -20,6 +20,11 @@ def process_interaction_turn(
     )
     return {
         "version": UNIFIED_INTERACTION_BRAIN_RESULT_VERSION,
+        "component_role": "structured_feedback_adapter",
+        "central_brain_integration": "feeds_structured_turn_signal_into_hidden_factor_and_central_reading_feedback",
+        "customer_decision_owner": "central_reading_state.brain_decision_trace",
+        "can_select_next_question": False,
+        "can_generate_public_conclusion": False,
         "valid": bool(turn_signal.get("valid")),
         "question_id": str(turn_signal.get("question_id") or question_id),
         "question_type": str(turn_signal.get("question_type") or ""),
@@ -30,7 +35,7 @@ def process_interaction_turn(
         "hidden_factor_feedback_payload": feedback_payload,
         "hidden_factor_feedback_saved": False,
         "chart_fact_mutation_allowed": False,
-        "boundary": "unified_interaction_brain_routes_structured_feedback_without_chart_fact_mutation",
+        "boundary": "interaction_brain_is_feedback_adapter_not_parallel_decision_brain",
     }
 
 

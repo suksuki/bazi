@@ -47,6 +47,14 @@ curl -fsS 'http://127.0.0.1:9030/api/v30/admin/training/m3-background/status'
 
 The Admin Training page exposes the same queue with a progress bar. Default steps are M3 snapshot write, `m3_core_spine` synthetic, `training_pipeline` synthetic, and 518K sample. 518K shard and readiness matrix are opt-in. Full 518K remains explicit-only and is not exposed as a routine background button.
 
+Runtime isolation update, 2026-06-28:
+
+- The V30 API process must not execute heavy training loops directly.
+- Admin training entry points create a job file and start `scripts/run_admin_training_worker.py` as an isolated process.
+- Job state, progress percent, worker pid, and log tail are read from `.runtime/training/...`.
+- Login, profile, reading, and LLM endpoints must stay responsive while training runs.
+- Legacy `/api/v30/admin/training/run` is kept as a compatibility entry, but it now queues the same isolated auto-apply worker instead of blocking the API process.
+
 Latest M3/training evidence, 2026-06-10:
 
 ```text
@@ -87,7 +95,7 @@ These are promoted immediately after required validation passes.
 The active support-system completion plan is now:
 
 ```text
-docs/V30_BRAIN_TRAINING_SYNTHETIC_COMPLETION_MAINLINE.md
+docs/archive/V30_BRAIN_TRAINING_SYNTHETIC_COMPLETION_MAINLINE.md
 ```
 
 Training work must follow this order:

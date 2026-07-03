@@ -84,3 +84,33 @@ def test_question_outcome_recomputes_graph_and_followup_reasons() -> None:
     assert rehydrated.question_plan.session_state["known_user_signals"]["selected_options"] == ["domain:career"]
     assert rehydrated.chart_context == runtime.chart_context
     assert rehydrated.feature_evidence == runtime.feature_evidence
+
+
+def test_question_answer_stays_bound_to_clicked_question_when_followup_changes() -> None:
+    runtime = create_smoke_runtime("v30-question-answer-stage-boundary")
+    answered_question_id = "q_v30_hidden_factor_boundary_discovery"
+
+    rehydrated = attach_question_outcome(
+        runtime,
+        answered_question_id,
+        {
+            "answer": "2024 repeated as career pressure.",
+            "outcome_status": "answered",
+            "selected_option": "domain:career",
+            "structured_payload": {
+                "years": [2024],
+                "state_tags": ["career_pressure"],
+                "intensity": "medium",
+                "recurrence": "repeated",
+                "confidence": "approximate",
+            },
+            "confidence": 0.8,
+            "feedback_tags": ["career"],
+        },
+    )
+
+    assert rehydrated.question_plan.policy_effect["interaction_state"]["visible_next_question_id"] == "q_v30_user_career_direction"
+    assert rehydrated.answer_context is not None
+    assert rehydrated.answer_result is not None
+    assert rehydrated.answer_context.selected_question_anchor.question_id == answered_question_id
+    assert rehydrated.answer_result.question_id == answered_question_id

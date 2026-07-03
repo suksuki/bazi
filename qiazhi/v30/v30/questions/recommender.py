@@ -3,6 +3,7 @@ from __future__ import annotations
 from v30.contracts import BaziQuestionAnchor, FeatureEvidence, MainlineState, StructureState
 from v30.interaction_constraints import answer_constraints_for_question
 from v30.knowledge import KnowledgeRulePortraitSignal
+from v30.semantics import semantic_projection_for_question
 
 
 QUESTION_RECOMMENDER_VERSION = "v30.question_recommender.v1"
@@ -267,10 +268,12 @@ def _score_anchor(
         question_outcomes=question_outcomes,
         practical_focus=practical_focus,
     )
-    return {
+    row = {
         "question_id": anchor.question_id,
         "intent_id": anchor.intent_id,
         "anchor_id": anchor.anchor_id,
+        "candidate_source": "question_recommender_candidate",
+        "decision_owner": "dialogue_brain",
         "score": round(min(score, 1.0), 3),
         "_rank_score": round(score, 3),
         "stage": stage,
@@ -281,6 +284,15 @@ def _score_anchor(
         "answer_mode": "direct_answer" if anchor.intent_id in USER_QUESTION_INTENTS else "calibration_feedback",
         "question_value": _question_value(stage, topic),
         "expected_information_gain": expected_information_gain,
+        "semantic_projection": {},
+        "question_score_components": {
+            "base_score": 0.35,
+            "policy_weight": policy_weight,
+            "expected_information_gain": expected_information_gain.get("score"),
+            "reason_count": len(reasons),
+            "semantic_weight_slot": "",
+            "boundary": "question_score_components_feed_dialogue_training_not_chart_facts",
+        },
         "options": _structured_options(stage, topic, practical_focus),
         "answer_constraints": answer_constraints_for_question(stage=stage, topic=topic),
         "latent_question_strategy": _question_latent_strategy_projection(
@@ -300,7 +312,15 @@ def _score_anchor(
         },
         "policy_version": question_policy_version,
         "policy_weight": policy_weight,
+        "boundary": "question_recommender_outputs_candidates_dialogue_brain_selects_customer_turn",
     }
+    semantic_projection = semantic_projection_for_question(row)
+    row["semantic_projection"] = semantic_projection
+    components = row["question_score_components"]
+    if isinstance(components, dict):
+        components["semantic_weight_slot"] = semantic_projection.get("weight_slot", "")
+        components["macro_domain"] = semantic_projection.get("macro_domain", "")
+    return row
 
 
 def _stage(anchor: BaziQuestionAnchor) -> str:

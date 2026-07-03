@@ -31,10 +31,10 @@ def _p1_payload(*, failed: bool = False) -> dict[str, object]:
         },
     ]
     return {
-        "version": "v30.lightweight_core_monitoring_checks.v1",
+        "version": "v30.core_observation_baseline.v1",
         "status": "completed" if not failed else "blocked",
         "decision": {
-            "decision_status": "lightweight_core_monitoring_checks_passed" if not failed else "lightweight_core_monitoring_checks_blocked",
+            "decision_status": "core_observation_baseline_ready" if not failed else "core_observation_baseline_blocked",
             "monitoring_checks_completed": not failed,
             "regression_detected": failed,
             "failed_check_ids": ["targeted_validation_gate"] if failed else [],

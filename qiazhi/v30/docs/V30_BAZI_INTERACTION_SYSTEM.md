@@ -19,6 +19,43 @@ BirthInput
 
 The user should not see internal calibration as the primary first-screen experience.
 
+## Hard Boundary: Reading Steps vs Dialogue Surface
+
+Updated: 2026-06-29
+
+This is a non-negotiable architecture rule for V30:
+
+- The Bazi reading journey and the intelligent dialogue system are two independent product surfaces.
+- Reading steps are only for staged Bazi analysis: chart, rules, portraits, features, paths, useful-god arbitration, domains, timing, final synthesis, and related stage conclusions.
+- Intelligent dialogue is not a reading step, not a hidden extra page, and not a `question_followup` pseudo-step.
+- `reading_surface.current_dialogue_turn` is the only customer-facing dialogue entry. It may be mounted inside any current reading page when the central brain decides the question is useful.
+- A candidate `next_question` alone is not permission to render dialogue. The central brain must explicitly select `ask_stage_question` or a hidden-attribute probe, and the turn must pass the relevance gate.
+- Clicking or answering a dialogue question must not change the active reading step, refresh the analysis page, or move the user into a separate dialogue journey.
+- Dialogue answers update dialogue state, belief state, user signals, hidden-factor signals, and training traces; they do not rewrite chart facts or replace the current page result.
+- LLM pending/deferred dialogue answers must show a waiting state. Rule-bound drafts, diagnostics, evidence counts, prompt traces, and fallback text must never be displayed as final customer conclusions.
+- Frontend navigation must only know `input` and real `stage:<step_id>` keys. The old `question_followup` pseudo-step is removed from runtime thinking steps, backend projection, and frontend navigation.
+
+Design implication:
+
+```text
+Reading Step Page
+-> stage conclusion and advice
+-> optional Dialogue Surface mounted on the same page
+-> answer updates dialogue/belief state
+-> page stays on the same reading step
+```
+
+This rule exists to prevent the old failure mode where intelligent dialogue became an extra analysis step, got blocked by page summary LLM status, or caused navigation refreshes after the user answered.
+
+中文摘要：
+
+- 测算步骤是“页面分析流程”，智能对话是“可挂载的对话面板”，两者不能混成一个导航体系。
+- 对话可以出现在任何当前页面，但不能成为第 13 步、隐藏页或独立问答页。
+- 对话是否出现由中枢大脑决定，不由前端自行判断；只有 `ask_stage_question`、页面 stage 相关、VOI 信息增益足够时才显示。
+- 回答问题以后，只更新对话和中枢状态，不改变用户所在测算步骤。
+- 页面小结 LLM 和对话 LLM 是两条链路：小结服务本页结论，对话服务当前追问。
+- 任何 pending/deferred 的 LLM 回答都不能用规则草稿、诊断口径或模板话术假装完成。
+
 ## Current Mainline: Unified Interaction Brain
 
 The unified interaction mainline is now closed at baseline:

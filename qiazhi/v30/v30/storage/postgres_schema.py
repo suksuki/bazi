@@ -175,6 +175,35 @@ CREATE TABLE IF NOT EXISTS v30_artifacts (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 """.strip(),
+    "v30_product_users": """
+CREATE TABLE IF NOT EXISTS v30_product_users (
+  username TEXT PRIMARY KEY,
+  actor_id TEXT NOT NULL,
+  role TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+""".strip(),
+    "v30_product_sessions": """
+CREATE TABLE IF NOT EXISTS v30_product_sessions (
+  session_token TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  actor_id TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+""".strip(),
+    "v30_bazi_profiles": """
+CREATE TABLE IF NOT EXISTS v30_bazi_profiles (
+  profile_id TEXT PRIMARY KEY,
+  actor_id TEXT NOT NULL,
+  status TEXT NOT NULL,
+  payload JSONB NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+""".strip(),
 }
 
 

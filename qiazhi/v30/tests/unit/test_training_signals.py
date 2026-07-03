@@ -20,6 +20,8 @@ def test_extract_training_signals_from_synthetic_all() -> None:
     assert "v30.training_signal.interaction_loop_quality" in signal_ids
     assert "v30.training_signal.adaptive_question_replay" in signal_ids
     assert "v30.training_signal.central_brain_route_coverage" in signal_ids
+    assert "v30.training_signal.central_brain_judge_quality" in signal_ids
+    assert "v30.training_signal.central_brain_synthesis_blueprint_quality" in signal_ids
     assert "v30.training_signal.expression_quality" in signal_ids
     assert "v30.training_signal.llm_output_contract_quality" in signal_ids
     assert "v30.training_signal.structure_dynamic_competition" in signal_ids
@@ -117,6 +119,28 @@ def test_extract_training_signals_from_synthetic_all() -> None:
     brain_signal = next(signal for signal in signals if signal.signal_id == "v30.training_signal.central_brain_route_coverage")
     assert set(brain_signal.payload["route_domains"]) >= {"question_intelligence", "expression", "hidden_factor"}
     assert brain_signal.strength == 1.0
+    brain_judge_signal = next(signal for signal in signals if signal.signal_id == "v30.training_signal.central_brain_judge_quality")
+    assert brain_judge_signal.domain == "central_brain"
+    assert brain_judge_signal.payload["observed_count"] >= 1
+    assert brain_judge_signal.payload["accepted_count"] >= 1
+    assert brain_judge_signal.payload["average_quality_score"] >= 0.58
+    assert brain_judge_signal.payload["can_tune_final_synthesis_quality"] is True
+    assert brain_judge_signal.payload["can_tune_template_risk_penalty"] is True
+    assert brain_judge_signal.payload["can_tune_chart_facts"] is False
+    assert brain_judge_signal.payload["boundary"] == "central_brain_judge_quality_trains_synthesis_policy_not_chart_facts"
+    blueprint_signal = next(
+        signal for signal in signals
+        if signal.signal_id == "v30.training_signal.central_brain_synthesis_blueprint_quality"
+    )
+    assert blueprint_signal.domain == "central_brain"
+    assert blueprint_signal.payload["observed_count"] >= 1
+    assert blueprint_signal.payload["decision_focus_coverage"] >= 0.9
+    assert blueprint_signal.payload["action_step_coverage"] >= 0.9
+    assert blueprint_signal.payload["risk_boundary_coverage"] >= 0.9
+    assert blueprint_signal.payload["chart_fact_mutation_allowed_count"] == 0
+    assert blueprint_signal.payload["can_tune_synthesis_blueprint"] is True
+    assert blueprint_signal.payload["can_tune_chart_facts"] is False
+    assert blueprint_signal.payload["boundary"] == "central_brain_synthesis_blueprint_quality_trains_synthesis_policy_not_chart_facts"
     expression_signal = next(signal for signal in signals if signal.signal_id == "v30.training_signal.expression_quality")
     assert expression_signal.domain == "expression"
     assert expression_signal.payload["min_bazi_term_count"] >= 2

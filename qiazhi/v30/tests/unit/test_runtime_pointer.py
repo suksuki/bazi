@@ -80,3 +80,37 @@ def test_runtime_pointer_store_loads_active_artifact_payload(tmp_path: Path) -> 
     active = store.load_active_artifact("structure_policy")
     assert active.artifact_id == "structure_policy.weighted"
     assert active.payload["weights"]["mechanism.hidden_factor_dialogue_probe"] == 1.2
+
+
+def test_runtime_pointer_store_rolls_back_to_previous_artifact(tmp_path: Path) -> None:
+    store = RuntimePointerStore(_settings(tmp_path))
+    store.load_pointer("structure_policy")
+    artifact = PolicyArtifact(
+        artifact_id="structure_policy.weighted",
+        family="structure_policy",
+        version="v30.policy_artifact.v1",
+        candidate_id="weighted",
+        payload={"weights": {"mechanism.hidden_factor_dialogue_probe": 1.2}},
+        created_at=datetime.now(timezone.utc),
+    )
+    pointer = baseline_pointer("structure_policy", env="test").model_copy(
+        update={
+            "active_artifact_id": artifact.artifact_id,
+            "previous_artifact_id": "structure_policy.v30-baseline",
+            "updated_by": "test",
+            "rollback_pointer": {
+                "family": "structure_policy",
+                "active_artifact_id": "structure_policy.v30-baseline",
+                "active_artifact_version": "v30.policy_artifact.v1",
+            },
+        }
+    )
+    store.save_artifact(artifact)
+    store.save_pointer(pointer)
+
+    rolled_back = store.rollback_to_previous("structure_policy", updated_by="unit-test")
+
+    assert rolled_back.active_artifact_id == "structure_policy.v30-baseline"
+    assert rolled_back.previous_artifact_id == "structure_policy.weighted"
+    assert rolled_back.rollback_pointer["active_artifact_id"] == "structure_policy.weighted"
+    assert store.load_active_artifact("structure_policy").artifact_id == "structure_policy.v30-baseline"

@@ -18,9 +18,11 @@ from v30.llm.bazi_context import (
 from v30.llm.drift import LLMDriftCheckResult, check_llm_answer_drift
 from v30.llm.client import (
     call_bazi_llm_answer_draft,
+    call_bazi_llm_thinking_step_summary,
     call_llm_answer_draft,
     compose_bazi_llm_answer_draft,
     compose_llm_answer_draft,
+    stream_bazi_llm_thinking_step_summary_events,
 )
 from v30.llm.output_contracts import (
     LLM_OUTPUT_CONTRACT_VERSION,
@@ -39,8 +41,14 @@ from v30.llm.provider import (
 from v30.llm.prompt_registry import (
     BAZI_LLM_PROMPT_REGISTRY_VERSION,
     build_bazi_llm_prompt_request,
+    build_thinking_step_prompt_request,
     prompt_contract_for_task,
+    prompt_contract_for_thinking_step,
     supported_prompt_contracts,
+)
+from v30.llm.thinking_context import (
+    THINKING_STAGE_CONTEXT_VERSION,
+    build_thinking_stage_context_pack,
 )
 
 __all__ = [
@@ -51,10 +59,13 @@ __all__ = [
     "BAZI_LLM_CONTEXT_PACK_VERSION",
     "BAZI_LLM_OUTPUT_ACCEPTANCE_VERSION",
     "BAZI_LLM_PROMPT_REGISTRY_VERSION",
+    "THINKING_STAGE_CONTEXT_VERSION",
     "V30LLMProviderConfig",
     "build_answer_draft_contract",
     "build_bazi_llm_context_pack",
     "build_bazi_llm_prompt_request",
+    "build_thinking_stage_context_pack",
+    "build_thinking_step_prompt_request",
     "build_failure_cluster_summary_contract",
     "build_llm_role_prompt_context",
     "build_question_explanation_contract",
@@ -62,11 +73,14 @@ __all__ = [
     "check_llm_answer_drift",
     "call_llm_answer_draft",
     "call_bazi_llm_answer_draft",
+    "call_bazi_llm_thinking_step_summary",
     "compose_bazi_llm_answer_draft",
     "compose_llm_answer_draft",
+    "stream_bazi_llm_thinking_step_summary_events",
     "llm_provider_readiness_report",
     "load_v30_llm_provider_config_from_env",
     "prompt_contract_for_task",
+    "prompt_contract_for_thinking_step",
     "role_llm_profile",
     "supported_bazi_llm_roles",
     "supported_bazi_llm_tasks",

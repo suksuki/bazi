@@ -7,10 +7,12 @@ from v30.llm import (
     BAZI_LLM_PROMPT_REGISTRY_VERSION,
     build_bazi_llm_context_pack,
     build_bazi_llm_prompt_request,
+    build_thinking_step_prompt_request,
     prompt_contract_for_task,
     supported_bazi_llm_roles,
     supported_bazi_llm_tasks,
 )
+from v30.presentation.thinking import build_thinking_projection
 from v30.runtime import create_smoke_runtime
 from v30.validation import run_bazi_llm_context_prompt_readiness
 
@@ -25,7 +27,15 @@ def test_bazi_llm_context_packs_are_task_specific_and_bounded() -> None:
     assert customer["context_pack"] == "BaziCoreContext"
     assert hidden["context_pack"] == "BaziHiddenFactorDialogueContext"
     assert customer["sections"] != hidden["sections"]
+    customer_sections = {section["section_id"]: section for section in customer["sections"]}
+    assert "decision_verdicts" in customer_sections
+    assert customer_sections["decision_verdicts"]["module_id"] == "DecisionEngine"
+    assert customer_sections["decision_verdicts"]["boundary"] == "decision_verdicts_are_final_verdict_boundary_for_llm_expression_not_raw_material"
     assert customer["fact_boundary"]["chart_fact_mutation_allowed"] is False
+    assert customer["fact_boundary"]["llm_can_override_decision_verdict"] is False
+    assert customer["fact_boundary"]["llm_must_stay_within_allowed_assertions"] is True
+    assert customer["uncertainty_policy"]["allow_candidate_branches"] is True
+    assert "可能" in customer["uncertainty_policy"]["allowed_branch_language"]
     assert customer["budget"]["observed_context_sections"] <= customer["budget"]["max_context_sections"]
     assert customer["budget"]["observed_evidence_items"] <= customer["budget"]["max_evidence_items"]
     assert "raw_runtime_payload" in customer["excluded_modules"]
@@ -48,8 +58,32 @@ def test_prompt_registry_builds_matching_contracts_for_all_bazi_tasks() -> None:
         assert request["raw_runtime_payload_included"] is False
         assert request["chart_fact_mutation_allowed"] is False
         assert contract["verifier"]["checks"]
+        if task_type != "locale_rewrite":
+            assert "decision_verdict_boundary" in contract["verifier"]["checks"]
         assert contract["fallback"]["on_verifier_failure"] == "block_llm_output_and_keep_verified_answer"
         assert contract["role_contract"]["role_contract_id"] == context["role_contract"]["role_contract_id"]
+
+
+def test_rule_matching_thinking_prompt_has_stage_context_pack() -> None:
+    runtime = create_smoke_runtime(reading_id="pytest-thinking-rule-context")
+    thinking = build_thinking_projection(runtime)
+    rule_step = next(row for row in thinking["steps"] if row["step_id"] == "rule_matching")
+
+    request = build_thinking_step_prompt_request(
+        runtime,
+        rule_step,
+        role_key="admin",
+        locale="zh",
+        client="admin",
+    )
+
+    context = request["context_pack"]
+    assert context["context_pack"] == "ThinkingStageContext"
+    assert context["stage"]["step_id"] == "rule_matching"
+    assert context["prompt_profile"]["profile_id"] == "v30.stage_prompt.rule_matching.v1"
+    assert context["module_context"]
+    assert context["output_policy"]["uncertainty_policy"]["allow_evidence_bound_branches"] is True
+    assert request["prompt_contract"]["required_context_pack"] == "ThinkingStageContext"
 
 
 def test_bazi_llm_role_contracts_gate_user_visibility() -> None:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from pydantic import Field
 
@@ -19,6 +19,8 @@ DEFAULT_AUTO_TRAINING_FAMILIES: tuple[PolicyFamily, ...] = (
     "rule_policy",
 )
 
+TrainingProgressCallback = Callable[[dict[str, Any]], None]
+
 
 class AutoTrainingRunResult(V30Model):
     training_run_id: str
@@ -30,6 +32,8 @@ class AutoTrainingRunResult(V30Model):
     candidates: list[PolicyCandidate] = Field(default_factory=list)
     promotions: list[PromotionResult] = Field(default_factory=list)
     active_policy_versions: dict[str, str] = Field(default_factory=dict)
+    policy_application: dict[str, Any] = Field(default_factory=dict)
+    training_signal_summary: dict[str, Any] = Field(default_factory=dict)
     metrics: dict[str, Any] = Field(default_factory=dict)
     failures: list[str] = Field(default_factory=list)
 
@@ -41,45 +45,127 @@ def run_auto_apply_training(
     store: RuntimePointerStore | None = None,
     validation_artifact_dir: str | Path | None = None,
     promotion_validation_mode: str = "strict",
+    progress_callback: TrainingProgressCallback | None = None,
 ) -> AutoTrainingRunResult:
     from v30.validation import extract_training_signals, run_synthetic_tier
 
     started_at = datetime.now(timezone.utc)
     run_id = training_run_id or f"v30.auto_training.{started_at.strftime('%Y%m%d%H%M%S')}"
     store = store or RuntimePointerStore()
+    _emit_training_progress(
+        progress_callback,
+        training_run_id=run_id,
+        step="started",
+        progress_percent=1,
+        message="training_run_started",
+    )
     synthetic_signal_source = run_synthetic_tier("all", suite_id=f"{run_id}.training_signal_source")
+    _emit_training_progress(
+        progress_callback,
+        training_run_id=run_id,
+        step="synthetic_signal_source_ready",
+        progress_percent=20,
+        message="synthetic_validation_passed",
+        case_count=synthetic_signal_source.case_count,
+        passed_count=synthetic_signal_source.passed_count,
+    )
     training_signals = extract_training_signals(synthetic_signal_source)
-    candidates = [
-        make_baseline_candidate(
-            candidate_id=f"{run_id}.{family}",
-            family=family,
-            payload=_candidate_payload(family, run_id, training_signals),
-            change_summary="auto-generated candidate from V30 mainline training loop",
+    _emit_training_progress(
+        progress_callback,
+        training_run_id=run_id,
+        step="training_signals_extracted",
+        progress_percent=35,
+        message="training_signals_extracted",
+        training_signal_count=len(training_signals),
+    )
+    candidates = []
+    for family in families:
+        candidates.append(
+            make_baseline_candidate(
+                candidate_id=f"{run_id}.{family}",
+                family=family,
+                payload=_candidate_payload(family, run_id, training_signals),
+                change_summary="auto-generated candidate from V30 mainline training loop",
+            )
         )
-        for family in families
-    ]
-    promotions = [
-        promote_candidate_if_valid(
+    _emit_training_progress(
+        progress_callback,
+        training_run_id=run_id,
+        step="candidates_generated",
+        progress_percent=50,
+        message="policy_candidates_generated",
+        candidate_count=len(candidates),
+    )
+    promotions = []
+    total_candidates = max(1, len(candidates))
+    for index, candidate in enumerate(candidates, start=1):
+        family = str(candidate.family)
+        _emit_training_progress(
+            progress_callback,
+            training_run_id=run_id,
+            step=f"promoting_{family}",
+            progress_percent=50 + int(((index - 1) / total_candidates) * 40),
+            message="validating_and_promoting_policy_candidate",
+            family=family,
+            candidate_id=candidate.candidate_id,
+            completed_steps=index - 1,
+            total_steps=len(candidates),
+        )
+        promotion = promote_candidate_if_valid(
             candidate,
             store=store,
             validation_artifact_dir=validation_artifact_dir,
             validation_mode=promotion_validation_mode,
         )
-        for candidate in candidates
-    ]
+        promotions.append(promotion)
+        _emit_training_progress(
+            progress_callback,
+            training_run_id=run_id,
+            step=f"promoted_{family}",
+            progress_percent=50 + int((index / total_candidates) * 40),
+            message="policy_candidate_promotion_finished",
+            family=family,
+            candidate_id=candidate.candidate_id,
+            promoted=promotion.promoted,
+            completed_steps=index,
+            total_steps=len(candidates),
+        )
     failures = [failure for promotion in promotions for failure in promotion.failures]
     promoted_count = sum(1 for promotion in promotions if promotion.promoted)
     finished_at = datetime.now(timezone.utc)
     active_versions = store.active_versions(families)
+    policy_application = _policy_application_summary(promotions, active_versions)
+    training_signal_summary = _training_signal_summary(training_signals)
+    _emit_training_progress(
+        progress_callback,
+        training_run_id=run_id,
+        step="active_policy_versions_loaded",
+        progress_percent=95,
+        message="active_policy_versions_loaded",
+        active_policy_versions=active_versions,
+    )
+    status = "applied" if promoted_count == len(promotions) else "failed"
+    _emit_training_progress(
+        progress_callback,
+        training_run_id=run_id,
+        step="completed",
+        progress_percent=100,
+        message="training_run_completed",
+        status=status,
+        promoted_count=promoted_count,
+        candidate_count=len(candidates),
+    )
     return AutoTrainingRunResult(
         training_run_id=run_id,
         families=list(families),
         started_at=started_at,
         finished_at=finished_at,
-        status="applied" if promoted_count == len(promotions) else "failed",
+        status=status,
         candidates=candidates,
         promotions=promotions,
         active_policy_versions=active_versions,
+        policy_application=policy_application,
+        training_signal_summary=training_signal_summary,
         metrics={
             "candidate_count": len(candidates),
             "promoted_count": promoted_count,
@@ -90,6 +176,138 @@ def run_auto_apply_training(
         },
         failures=failures,
     )
+
+
+def _emit_training_progress(
+    callback: TrainingProgressCallback | None,
+    *,
+    training_run_id: str,
+    step: str,
+    progress_percent: int,
+    message: str,
+    **payload: Any,
+) -> None:
+    if callback is None:
+        return
+    callback(
+        {
+            "version": "v30.auto_apply_training.progress.v1",
+            "training_run_id": training_run_id,
+            "step": step,
+            "progress_percent": max(0, min(100, int(progress_percent))),
+            "message": message,
+            "at": datetime.now(timezone.utc).isoformat(),
+            **payload,
+        }
+    )
+
+
+def _policy_application_summary(
+    promotions: list[PromotionResult],
+    active_versions: dict[str, str],
+) -> dict[str, Any]:
+    rows = []
+    for promotion in promotions:
+        rollback_target = promotion.previous_artifact_id if promotion.promoted else ""
+        rows.append(
+            {
+                "family": promotion.family,
+                "promoted": promotion.promoted,
+                "active_artifact_id": active_versions.get(str(promotion.family), promotion.artifact_id),
+                "previous_artifact_id": promotion.previous_artifact_id,
+                "rollback_target_artifact_id": rollback_target,
+                "validation_run_id": promotion.validation_run_id,
+                "pointer_status": promotion.pointer_status,
+                "failures": list(promotion.failures),
+            }
+        )
+    return {
+        "version": "v30.auto_apply.policy_application.v1",
+        "mode": "validated_auto_apply",
+        "auto_apply_enabled": True,
+        "policy_pointer_write_performed": any(row["promoted"] for row in rows),
+        "promoted_family_count": sum(1 for row in rows if row["promoted"]),
+        "active_policy_versions": dict(active_versions),
+        "families": rows,
+        "rollback_available": any(bool(row["rollback_target_artifact_id"]) for row in rows),
+        "chart_fact_mutation_allowed": False,
+        "boundary": "auto_apply_training_updates_runtime_pointers_after_validation_without_mutating_chart_facts",
+    }
+
+
+def _training_signal_summary(training_signals: list[Any]) -> dict[str, Any]:
+    signal_ids = [str(getattr(signal, "signal_id", "")) for signal in training_signals if getattr(signal, "signal_id", "")]
+    domains = sorted({str(getattr(signal, "domain", "")) for signal in training_signals if getattr(signal, "domain", "")})
+    central_signal_ids = [signal_id for signal_id in signal_ids if signal_id.startswith("v30.training_signal.central_brain")]
+    quality_metrics = _training_quality_metrics(training_signals)
+    return {
+        "version": "v30.auto_apply.training_signal_summary.v1",
+        "signal_count": len(signal_ids),
+        "domains": domains,
+        "central_brain_signal_ids": sorted(central_signal_ids),
+        "brain_judge_quality_present": "v30.training_signal.central_brain_judge_quality" in signal_ids,
+        "synthesis_blueprint_quality_present": "v30.training_signal.central_brain_synthesis_blueprint_quality" in signal_ids,
+        "quality_metrics": quality_metrics,
+        "can_tune_chart_facts": False,
+        "boundary": "training_signal_summary_reports_candidate_inputs_without_fact_mutation",
+    }
+
+
+def _training_quality_metrics(training_signals: list[Any]) -> dict[str, Any]:
+    metrics: dict[str, Any] = {
+        "version": "v30.training_quality_metrics.v1",
+        "quality_metric_count": 0,
+        "chart_fact_mutation_allowed": False,
+        "boundary": "training_quality_metrics_compare_synthesis_and_question_quality_without_chart_fact_mutation",
+    }
+    for signal in training_signals:
+        payload = getattr(signal, "payload", {})
+        if not isinstance(payload, dict):
+            continue
+        signal_id = str(getattr(signal, "signal_id", ""))
+        if signal_id == "v30.training_signal.central_brain_judge_quality":
+            observed = _payload_float(payload, "observed_count")
+            accepted = _payload_float(payload, "accepted_count")
+            metrics.update(
+                {
+                    "final_synthesis_quality_score": round(_payload_float(payload, "average_quality_score"), 3),
+                    "brain_judge_accepted_rate": round(accepted / max(1.0, observed), 3),
+                    "advice_actionability": round(_payload_float(payload, "average_advice_actionability"), 3),
+                    "template_risk": round(_payload_float(payload, "average_template_risk"), 3),
+                    "overclaim_risk": round(_payload_float(payload, "average_overclaim_risk"), 3),
+                    "brain_judge_observed_count": int(observed),
+                }
+            )
+        if signal_id == "v30.training_signal.central_brain_synthesis_blueprint_quality":
+            metrics.update(
+                {
+                    "decision_focus_coverage": round(_payload_float(payload, "decision_focus_coverage"), 3),
+                    "action_step_coverage": round(_payload_float(payload, "action_step_coverage"), 3),
+                    "risk_boundary_coverage": round(_payload_float(payload, "risk_boundary_coverage"), 3),
+                    "evidence_chain_coverage": round(_payload_float(payload, "evidence_chain_coverage"), 3),
+                    "average_action_step_count": round(_payload_float(payload, "average_action_step_count"), 3),
+                }
+            )
+        if signal_id == "v30.training_signal.interaction_loop_quality":
+            metrics["interaction_loop_strength"] = round(float(getattr(signal, "strength", 0.0)), 3)
+        if signal_id == "v30.training_signal.high_value_question_quality":
+            metrics["high_value_question_strength"] = round(float(getattr(signal, "strength", 0.0)), 3)
+        if signal_id == "v30.training_signal.expression_quality":
+            metrics["expression_quality_strength"] = round(float(getattr(signal, "strength", 0.0)), 3)
+    metrics["quality_metric_count"] = len(
+        [
+            key
+            for key in metrics
+            if key
+            not in {
+                "version",
+                "quality_metric_count",
+                "chart_fact_mutation_allowed",
+                "boundary",
+            }
+        ]
+    )
+    return metrics
 
 
 def _candidate_payload(
@@ -367,6 +585,7 @@ def _question_policy_weights_from_signals(training_signals: list[Any]) -> dict[s
     interaction_policy = _interaction_followup_policy_from_signals(training_signals)
     model_signal_policy = _model_signal_question_policy_from_signals(training_signals)
     latent_bazi_attribute_policy = _latent_bazi_attribute_policy_from_signals(training_signals)
+    central_brain_synthesis_policy = _central_brain_synthesis_policy_from_signals(training_signals)
     for topic, weight in adaptive_policy["topic_weights"].items():
         if topic in topic_weights:
             topic_weights[topic] = round(max(topic_weights[topic], float(weight)), 3)
@@ -383,11 +602,130 @@ def _question_policy_weights_from_signals(training_signals: list[Any]) -> dict[s
         "adaptive_question_policy": adaptive_policy,
         "interaction_followup_policy": interaction_policy,
         "model_signal_question_policy": model_signal_policy,
+        "central_brain_synthesis_policy": central_brain_synthesis_policy,
         "hidden_factor_event_policy": _hidden_factor_event_policy_from_signals(training_signals),
         "latent_bazi_attribute_policy": latent_bazi_attribute_policy,
         "question_weights": {"*": 1.0},
         "krp_unit_weights": _krp_unit_weights_from_signals(training_signals),
     }
+
+
+def _central_brain_synthesis_policy_from_signals(training_signals: list[Any]) -> dict[str, Any]:
+    policy: dict[str, Any] = {
+        "version": "v30.central_brain_synthesis_policy.v1",
+        "source_signal_id": "v30.training_signal.central_brain_judge_quality",
+        "source_signal_ids": [
+            "v30.training_signal.central_brain_judge_quality",
+            "v30.training_signal.central_brain_synthesis_blueprint_quality",
+        ],
+        "mode": "judge_quality_weight_candidate_not_chart_fact",
+        "weights": {
+            "final_synthesis_quality": 1.0,
+            "evidence_binding": 1.0,
+            "conclusion_strength": 1.0,
+            "advice_actionability": 1.0,
+            "template_risk_penalty": 1.0,
+            "overclaim_risk_penalty": 1.0,
+        },
+        "failure_weights": {},
+        "min_quality_score": 0.58,
+        "quality_observation_count": 0,
+        "accepted_rate": 0.0,
+        "can_tune_final_synthesis_quality": False,
+        "can_tune_question_strategy": False,
+        "can_tune_chart_facts": False,
+        "blocked_training_routes": ["calendar_conversion", "chart_facts", "pillar_calculation", "base_diagnosis_claim_text"],
+        "max_delta": 0.06,
+        "boundary": "central_brain_synthesis_policy_trains_quality_and_dialogue_strategy_not_chart_facts",
+    }
+    for signal in training_signals:
+        if getattr(signal, "signal_id", "") != "v30.training_signal.central_brain_judge_quality":
+            continue
+        strength = float(getattr(signal, "strength", 0.0))
+        payload = getattr(signal, "payload", {})
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("can_tune_chart_facts") is True:
+            continue
+        observed = max(1.0, _payload_float(payload, "observed_count"))
+        accepted = _payload_float(payload, "accepted_count")
+        rejected = _payload_float(payload, "rejected_count")
+        accepted_rate = accepted / observed
+        rejected_rate = rejected / observed
+        quality = _payload_float(payload, "average_quality_score")
+        template_risk = _payload_float(payload, "average_template_risk")
+        overclaim_risk = _payload_float(payload, "average_overclaim_risk")
+        actionability = _payload_float(payload, "average_advice_actionability")
+        failure_counts = payload.get("failure_counts", {})
+        failures = failure_counts if isinstance(failure_counts, dict) else {}
+        weak_evidence_rate = _payload_float(failures, "weak_evidence_binding") / observed
+        weak_advice_rate = _payload_float(failures, "weak_advice_actionability") / observed
+        template_failure_rate = _payload_float(failures, "template_language_risk") / observed
+        overclaim_failure_rate = _payload_float(failures, "overclaim_risk") / observed
+        policy.update(
+            {
+                "weights": {
+                    "final_synthesis_quality": round(1.0 + min(0.05, strength * 0.018 + quality * 0.018), 3),
+                    "evidence_binding": round(1.0 + min(0.045, strength * 0.012 + weak_evidence_rate * 0.028), 3),
+                    "conclusion_strength": round(1.0 + min(0.04, strength * 0.014 + quality * 0.012), 3),
+                    "advice_actionability": round(1.0 + min(0.045, actionability * 0.022 + weak_advice_rate * 0.018), 3),
+                    "template_risk_penalty": round(1.0 + min(0.06, template_risk * 0.04 + template_failure_rate * 0.025), 3),
+                    "overclaim_risk_penalty": round(1.0 + min(0.06, overclaim_risk * 0.04 + overclaim_failure_rate * 0.025), 3),
+                },
+                "failure_weights": {
+                    str(key): round(1.0 + min(0.05, _payload_float(failures, str(key)) / observed * 0.035), 3)
+                    for key in sorted(failures)
+                },
+                "min_quality_score": round(max(0.58, min(0.72, 0.58 + rejected_rate * 0.04 + template_risk * 0.025 + overclaim_risk * 0.025)), 3),
+                "quality_observation_count": int(observed),
+                "accepted_rate": round(accepted_rate, 3),
+                "rejected_rate": round(rejected_rate, 3),
+                "signal_strength": round(strength, 3),
+                "can_tune_final_synthesis_quality": payload.get("can_tune_final_synthesis_quality") is True,
+                "can_tune_question_strategy": True,
+                "can_tune_chart_facts": False,
+            }
+        )
+    for signal in training_signals:
+        if getattr(signal, "signal_id", "") != "v30.training_signal.central_brain_synthesis_blueprint_quality":
+            continue
+        strength = float(getattr(signal, "strength", 0.0))
+        payload = getattr(signal, "payload", {})
+        if not isinstance(payload, dict):
+            continue
+        if payload.get("can_tune_chart_facts") is True:
+            continue
+        weights = policy.get("weights")
+        weights = weights if isinstance(weights, dict) else {}
+        focus_coverage = _payload_float(payload, "decision_focus_coverage")
+        action_coverage = _payload_float(payload, "action_step_coverage")
+        risk_coverage = _payload_float(payload, "risk_boundary_coverage")
+        evidence_coverage = _payload_float(payload, "evidence_chain_coverage")
+        average_action_steps = _payload_float(payload, "average_action_step_count")
+        policy["weights"] = {
+            **weights,
+            "evidence_binding": round(max(_payload_float(weights, "evidence_binding"), 1.0 + min(0.04, evidence_coverage * 0.025 + strength * 0.008)), 3),
+            "conclusion_strength": round(max(_payload_float(weights, "conclusion_strength"), 1.0 + min(0.04, focus_coverage * 0.022 + strength * 0.01)), 3),
+            "advice_actionability": round(max(_payload_float(weights, "advice_actionability"), 1.0 + min(0.045, action_coverage * 0.024 + min(1.0, average_action_steps / 2.0) * 0.012)), 3),
+            "risk_boundary_clarity": round(1.0 + min(0.035, risk_coverage * 0.02 + strength * 0.008), 3),
+        }
+        policy.update(
+            {
+                "blueprint_quality": {
+                    "observed_count": int(_payload_float(payload, "observed_count")),
+                    "decision_focus_coverage": round(focus_coverage, 3),
+                    "action_step_coverage": round(action_coverage, 3),
+                    "risk_boundary_coverage": round(risk_coverage, 3),
+                    "evidence_chain_coverage": round(evidence_coverage, 3),
+                    "average_action_step_count": round(average_action_steps, 3),
+                },
+                "can_tune_synthesis_blueprint": payload.get("can_tune_synthesis_blueprint") is True,
+                "can_tune_final_synthesis_quality": True,
+                "can_tune_question_strategy": True,
+                "can_tune_chart_facts": False,
+            }
+        )
+    return policy
 
 
 def _model_signal_question_policy_from_signals(training_signals: list[Any]) -> dict[str, Any]:

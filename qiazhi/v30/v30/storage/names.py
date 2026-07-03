@@ -19,6 +19,9 @@ V30_TABLES = (
     "v30_diagnosis_feedback",
     "v30_policy_pointers",
     "v30_artifacts",
+    "v30_product_users",
+    "v30_product_sessions",
+    "v30_bazi_profiles",
 )
 
 

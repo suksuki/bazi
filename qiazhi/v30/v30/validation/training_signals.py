@@ -48,6 +48,8 @@ def extract_training_signals(result: SyntheticValidationSuiteResult) -> list[Syn
     signals.extend(_interaction_brain_structured_constraint_signals(result))
     signals.extend(_adaptive_question_replay_signals(result))
     signals.extend(_central_brain_route_signals(result))
+    signals.extend(_central_brain_judge_quality_signals(result))
+    signals.extend(_central_brain_synthesis_blueprint_quality_signals(result))
     signals.extend(_expression_quality_signals(result))
     signals.extend(_llm_output_contract_signals(result))
     signals.extend(_bazi_llm_output_acceptance_signals(result))
@@ -2071,6 +2073,155 @@ def _central_brain_route_signals(result: SyntheticValidationSuiteResult) -> list
     ]
 
 
+def _central_brain_judge_quality_signals(result: SyntheticValidationSuiteResult) -> list[SyntheticTrainingSignal]:
+    rows: list[dict[str, object]] = []
+    source_cases: list[str] = []
+    for row in result.results:
+        surface = row.observed.get("customer_reading_surface", {})
+        surface = surface if isinstance(surface, dict) else {}
+        final_synthesis = surface.get("final_synthesis", {})
+        final_synthesis = final_synthesis if isinstance(final_synthesis, dict) else {}
+        judge = final_synthesis.get("brain_judge", {}) or final_synthesis.get("quality_judge", {})
+        judge = judge if isinstance(judge, dict) else {}
+        if not judge:
+            continue
+        rows.append(judge)
+        source_cases.append(row.case_id)
+    if not rows:
+        return []
+    accepted_count = sum(1 for row in rows if row.get("accepted") is True)
+    rejected_count = len(rows) - accepted_count
+    quality_scores = [_float(row.get("quality_score")) for row in rows]
+    score_rows = [_dict(row.get("scores")) for row in rows]
+    failure_counts: dict[str, int] = {}
+    reason_counts: dict[str, int] = {}
+    for row in rows:
+        for failure in _list(row.get("failures")):
+            key = str(failure)
+            if key:
+                failure_counts[key] = failure_counts.get(key, 0) + 1
+        for reason in _list(row.get("reason_codes")):
+            key = str(reason)
+            if key:
+                reason_counts[key] = reason_counts.get(key, 0) + 1
+    average_quality = sum(quality_scores) / max(1, len(quality_scores))
+    average_template_risk = sum(_float(row.get("template_risk")) for row in score_rows) / max(1, len(score_rows))
+    average_overclaim_risk = sum(_float(row.get("overclaim_risk")) for row in score_rows) / max(1, len(score_rows))
+    average_advice_actionability = sum(_float(row.get("advice_actionability")) for row in score_rows) / max(1, len(score_rows))
+    strength = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                accepted_count / max(1, len(rows)) * 0.45
+                + average_quality * 0.35
+                + max(0.0, 1.0 - average_template_risk) * 0.10
+                + max(0.0, 1.0 - average_overclaim_risk) * 0.10,
+            ),
+        ),
+        3,
+    )
+    return [
+        SyntheticTrainingSignal(
+            signal_id="v30.training_signal.central_brain_judge_quality",
+            domain="central_brain",
+            signal_type="final_synthesis_quality_judge",
+            strength=strength,
+            source_case_ids=source_cases,
+            payload={
+                "observed_count": len(rows),
+                "accepted_count": accepted_count,
+                "rejected_count": rejected_count,
+                "average_quality_score": round(average_quality, 3),
+                "average_template_risk": round(average_template_risk, 3),
+                "average_overclaim_risk": round(average_overclaim_risk, 3),
+                "average_advice_actionability": round(average_advice_actionability, 3),
+                "failure_counts": dict(sorted(failure_counts.items())),
+                "reason_counts": dict(sorted(reason_counts.items())),
+                "can_tune_final_synthesis_quality": True,
+                "can_tune_template_risk_penalty": True,
+                "can_tune_chart_facts": False,
+                "boundary": "central_brain_judge_quality_trains_synthesis_policy_not_chart_facts",
+            },
+        )
+    ]
+
+
+def _central_brain_synthesis_blueprint_quality_signals(result: SyntheticValidationSuiteResult) -> list[SyntheticTrainingSignal]:
+    rows: list[dict[str, object]] = []
+    source_cases: list[str] = []
+    for row in result.results:
+        surface = row.observed.get("customer_reading_surface", {})
+        surface = surface if isinstance(surface, dict) else {}
+        final_synthesis = surface.get("final_synthesis", {})
+        final_synthesis = final_synthesis if isinstance(final_synthesis, dict) else {}
+        if not final_synthesis:
+            continue
+        rows.append(final_synthesis)
+        source_cases.append(row.case_id)
+    if not rows:
+        return []
+    observed_count = len(rows)
+    decision_focus_count = sum(1 for row in rows if str(row.get("decision_focus") or "").strip())
+    action_step_counts = [len(_list(row.get("action_steps"))) for row in rows]
+    risk_boundary_count = sum(1 for row in rows if str(row.get("risk_boundary") or "").strip())
+    evidence_chain_count = sum(1 for row in rows if _list(row.get("evidence_chain")))
+    conclusion_count = sum(1 for row in rows if str(row.get("conclusion") or "").startswith("结论："))
+    advice_count = sum(1 for row in rows if str(row.get("advice") or "").startswith("建议："))
+    chart_fact_mutation_allowed_count = sum(
+        1
+        for row in rows
+        if _dict(row.get("quality_contract")).get("chart_fact_mutation_allowed") is True
+    )
+    average_action_step_count = sum(action_step_counts) / max(1, observed_count)
+    focus_coverage = decision_focus_count / max(1, observed_count)
+    action_coverage = sum(1 for count in action_step_counts if count > 0) / max(1, observed_count)
+    risk_coverage = risk_boundary_count / max(1, observed_count)
+    evidence_coverage = evidence_chain_count / max(1, observed_count)
+    strength = round(
+        max(
+            0.0,
+            min(
+                1.0,
+                focus_coverage * 0.25
+                + action_coverage * 0.25
+                + risk_coverage * 0.20
+                + evidence_coverage * 0.20
+                + min(1.0, average_action_step_count / 2.0) * 0.10,
+            ),
+        ),
+        3,
+    )
+    return [
+        SyntheticTrainingSignal(
+            signal_id="v30.training_signal.central_brain_synthesis_blueprint_quality",
+            domain="central_brain",
+            signal_type="final_synthesis_blueprint_quality",
+            strength=strength,
+            source_case_ids=source_cases,
+            payload={
+                "observed_count": observed_count,
+                "decision_focus_count": decision_focus_count,
+                "action_step_surface_count": sum(1 for count in action_step_counts if count > 0),
+                "risk_boundary_count": risk_boundary_count,
+                "evidence_chain_count": evidence_chain_count,
+                "conclusion_first_count": conclusion_count,
+                "advice_explicit_count": advice_count,
+                "average_action_step_count": round(average_action_step_count, 3),
+                "decision_focus_coverage": round(focus_coverage, 3),
+                "action_step_coverage": round(action_coverage, 3),
+                "risk_boundary_coverage": round(risk_coverage, 3),
+                "evidence_chain_coverage": round(evidence_coverage, 3),
+                "chart_fact_mutation_allowed_count": chart_fact_mutation_allowed_count,
+                "can_tune_synthesis_blueprint": True,
+                "can_tune_final_synthesis_quality": True,
+                "can_tune_chart_facts": False,
+                "boundary": "central_brain_synthesis_blueprint_quality_trains_synthesis_policy_not_chart_facts",
+            },
+        )
+    ]
+
+
 def _expression_quality_signals(result: SyntheticValidationSuiteResult) -> list[SyntheticTrainingSignal]:
     bazi_counts: list[int] = []
     forbidden_hits: list[str] = []
@@ -2456,6 +2607,10 @@ def _float(value: object) -> float:
 
 def _dict(value: object) -> dict[str, object]:
     return dict(value) if isinstance(value, dict) else {}
+
+
+def _list(value: object) -> list[object]:
+    return value if isinstance(value, list) else []
 
 
 def _float_default(value: object, default: float) -> float:

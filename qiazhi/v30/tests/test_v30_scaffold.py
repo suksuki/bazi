@@ -6,9 +6,19 @@ from pathlib import Path
 import pytest
 from fastapi import HTTPException
 
-from v30.api.app import API_PREFIX, UI_PREFIX, app
-from v30.api.app import AnswerRequest, AuthRegisterRequest, ReadingRequest, create_app
+from v30.api.app import ADMIN_API_PREFIX, API_PREFIX, UI_PREFIX, app
+from v30.api.app import (
+    AnswerRequest,
+    AuthRegisterRequest,
+    LLMThinkingBatchSummaryRequest,
+    LLMThinkingSummaryRequest,
+    ReadingRequest,
+    _new_product_session,
+    _public_product_user,
+    create_app,
+)
 from v30.config import load_settings
+from v30.llm import build_thinking_step_prompt_request
 from v30.presentation.client_model import build_presentation_model
 from v30.runtime import create_smoke_runtime
 from v30.storage.names import V30_TABLES, redis_key, require_v30_table
@@ -36,6 +46,7 @@ def test_no_runtime_imports_from_v20() -> None:
 def test_v30_prefixes_and_settings() -> None:
     settings = load_settings()
     assert API_PREFIX == "/api/v30"
+    assert ADMIN_API_PREFIX == "/api/admin/v30"
     assert UI_PREFIX == "/v30/ui"
     assert settings.redis_prefix == "v30"
     assert settings.runtime_dir.name == ".runtime"
@@ -54,11 +65,23 @@ def test_api_routes_are_v30_only() -> None:
     assert "/api/v30/ui/capabilities" in route_paths
     assert "/api/v30/readings" in route_paths
     assert "/api/v30/readings/history" in route_paths
+    assert "/api/v30/readings/{reading_id}/thinking" in route_paths
+    assert "/api/v30/readings/{reading_id}/thinking/summary/llm" in route_paths
+    assert "/api/v30/readings/{reading_id}/thinking/{step_id}/summary/llm" in route_paths
+    assert "/api/v30/readings/{reading_id}/thinking/{step_id}/summary/llm/stream" in route_paths
     assert "/api/v30/admin/training/run" in route_paths
     assert "/api/v30/admin/training/m3-background/run" in route_paths
     assert "/api/v30/admin/training/m3-background/status" in route_paths
     assert "/api/v30/admin/training/system-closeout" in route_paths
     assert "/api/v30/admin/training/candidate-quarantine" in route_paths
+    assert "/api/v30/admin/training/dialogue-calibration-loop" in route_paths
+    assert "/api/v30/admin/training/dialogue-policy-candidate-review" in route_paths
+    assert "/api/v30/admin/training/dialogue-strategy-validation-gate" in route_paths
+    assert "/api/v30/admin/training/dialogue-synthetic-replay-queue" in route_paths
+    assert "/api/v30/admin/training/dialogue-operator-review-pack" in route_paths
+    assert "/api/v30/admin/training/dialogue-heavy-validation-decision" in route_paths
+    assert "/api/v30/admin/training/dialogue-heavy-validation-authorization" in route_paths
+    assert "/api/v30/admin/training/dialogue-heavy-validation-execution-plan" in route_paths
     assert "/api/v30/admin/validation/synthetic-coverage-manifest" in route_paths
     assert "/api/v30/admin/validation/518k/artifacts" in route_paths
     assert "/api/v30/admin/validation/518k/readiness-matrix" in route_paths
@@ -120,22 +143,6 @@ def test_api_routes_are_v30_only() -> None:
     assert "/api/v30/admin/release/candidate-review" in route_paths
     assert "/api/v30/admin/release/candidate-gate-review" in route_paths
     assert "/api/v30/admin/release/boundary-finalization" in route_paths
-    assert "/api/v30/admin/release/external-dry-run" in route_paths
-    assert "/api/v30/admin/release/full-pytest-decision" in route_paths
-    assert "/api/v30/admin/release/blocked-status" in route_paths
-    assert "/api/v30/admin/release/post-boundary-authorization" in route_paths
-    assert "/api/v30/admin/mainline/selection-after-release-pause" in route_paths
-    assert "/api/v30/admin/core/monitoring-loop" in route_paths
-    assert "/api/v30/admin/core/lightweight-monitoring-checks" in route_paths
-    assert "/api/v30/admin/core/calibration-observation-summary" in route_paths
-    assert "/api/v30/admin/core/calibration-drift-watch" in route_paths
-    assert "/api/v30/admin/core/focused-calibration-evidence-queue" in route_paths
-    assert "/api/v30/admin/core/calibration-queue-review" in route_paths
-    assert "/api/v30/admin/core/calibration-watch-closeout" in route_paths
-    assert "/api/v30/admin/core/monitoring-cadence-baseline" in route_paths
-    assert "/api/v30/admin/core/monitoring-cadence-documentation-sync" in route_paths
-    assert "/api/v30/admin/core/monitoring-steady-state" in route_paths
-    assert "/api/v30/admin/core/monitoring-s0-status" in route_paths
     assert "/api/v30/admin/calibration/frozen-core-review" in route_paths
     assert "/api/v30/admin/calibration/targeted-candidate-review" in route_paths
     assert "/api/v30/admin/calibration/targeted-validation-gate" in route_paths
@@ -154,7 +161,21 @@ def test_api_routes_are_v30_only() -> None:
     assert "/api/v30/admin/runtime/redis/config" in route_paths
     assert "/api/v30/admin/runtime/llm" in route_paths
     assert "/api/v30/admin/runtime/llm/config" in route_paths
+    assert "/api/v30/admin/runtime/llm/probe" in route_paths
     assert "/api/v30/admin/runtime/llm/test" in route_paths
+    assert "/api/v30/admin/evaluation/training-spine" in route_paths
+    assert "/api/admin/v30/control-plane/manifest" in route_paths
+    assert "/api/admin/v30/readings/{reading_id}/trace" in route_paths
+    assert "/api/admin/v30/readings/{reading_id}/production-audit" in route_paths
+    assert "/api/admin/v30/readings/{reading_id}/decision-workbench-quality" in route_paths
+    assert "/api/admin/v30/evaluation/training-spine" in route_paths
+    assert "/api/admin/v30/training/orchestrator/plans" in route_paths
+    assert "/api/admin/v30/training/orchestrator/run" in route_paths
+    assert "/api/admin/v30/training/orchestrator/status" in route_paths
+    assert "/api/admin/v30/training/orchestrator/history" in route_paths
+    assert "/api/admin/v30/training/orchestrator/diff" in route_paths
+    assert "/api/admin/v30/validation/artifacts" in route_paths
+    assert "/api/admin/v30/validation/518k/artifacts" in route_paths
     assert "/api/v30/readings/{reading_id}/hidden-factor/feedback" in route_paths
     assert "/api/v30/readings/{reading_id}/hidden-factor/state" in route_paths
     assert "/v30/ui" in route_paths
@@ -162,6 +183,8 @@ def test_api_routes_are_v30_only() -> None:
 
 
 def test_admin_runtime_config_endpoints_are_v30_safe(tmp_path, monkeypatch) -> None:
+    from v30.ops import admin_runtime as admin_runtime_module
+
     monkeypatch.setenv("V30_RUNTIME_DIR", str(tmp_path / ".runtime"))
     monkeypatch.setenv("V30_REPOSITORY", "memory")
     monkeypatch.delenv("V30_DATABASE_URL", raising=False)
@@ -210,6 +233,38 @@ def test_admin_runtime_config_endpoints_are_v30_safe(tmp_path, monkeypatch) -> N
     assert llm_saved["restart_required"] is False
     assert "V30_LLM_API_KEY" in llm_saved["updated_env"]
     assert "llm-secret" not in str(llm_saved)
+
+    monkeypatch.setattr(
+        admin_runtime_module,
+        "_load_ollama_native_models",
+        lambda cfg: [{"id": "gemma4:latest", "owned_by": "ollama"}, {"id": "qwen3:14b", "owned_by": "ollama"}],
+    )
+    llm_probe_route = next(
+        route for route in local_app.routes if getattr(route, "path", "") == "/api/v30/admin/runtime/llm/probe"
+    )
+    probe = llm_probe_route.endpoint(
+        {
+            "quick_ollama": True,
+            "host": "192.168.0.19",
+            "port": "11434",
+        }
+    )
+    assert probe["status"] == "model_probe_ready"
+    assert probe["runtime_mutation"] is False
+    assert probe["model_count"] == 2
+    assert probe["resolved_base_url"] == "http://192.168.0.19:11434/v1"
+
+    quick_saved = llm_config_route.endpoint(
+        {
+            "quick_ollama": True,
+            "host": "192.168.0.19",
+            "port": "11434",
+            "model": "gemma4:latest",
+        }
+    )
+    assert quick_saved["status"] == "saved"
+    assert quick_saved["restart_required"] is False
+    assert {"V30_LLM_BASE_URL", "V30_LLM_HOST", "V30_LLM_MODEL", "V30_LLM_PROVIDER"} <= set(quick_saved["updated_env"])
 
 
 def test_admin_release_artifact_review_endpoint_is_observability_only(monkeypatch) -> None:
@@ -855,6 +910,426 @@ def test_admin_training_candidate_quarantine_endpoint_is_read_only(monkeypatch) 
     assert payload["policy_boundary"]["failed_candidate_pointer_write_allowed"] is False
     assert payload["quarantine_summary"]["status"] == "quarantined"
     assert payload["next_mainline_selection"]["task_id"] == "BT6"
+
+
+def test_admin_dialogue_training_calibration_loop_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_training_calibration_loop as dtc_module
+
+    def fake_validation(*, runtime_payloads=None, sample_limit: int = 20, run_id: str = "dtc") -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_training_calibration_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_training_calibration_ready": True,
+                "decision_status": "dtc1_dialogue_training_calibration_ready",
+                "sample_count": 2,
+                "policy_candidate_count": 3,
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+            },
+            "loop_result": {
+                "run_id": run_id,
+                "sample_summary": {"sample_count": 2},
+                "policy_candidates": [{"candidate_id": "dtc1.semantic"}],
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+            },
+        }
+
+    monkeypatch.setattr(dtc_module, "run_dialogue_training_calibration_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-calibration-loop"
+    )
+    payload = route.endpoint(run_id="dtc-test", sample_limit=4)
+
+    assert payload["version"] == "v30.dialogue_training_calibration_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc1_dialogue_training_calibration_ready"
+    assert payload["decision"]["chart_fact_mutation_allowed"] is False
+    assert payload["decision"]["policy_pointer_write_allowed"] is False
+    assert payload["decision"]["auto_apply_training_allowed"] is False
+
+
+def test_admin_dialogue_policy_candidate_review_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_policy_candidate_review as dtc2_module
+
+    def fake_validation(
+        *,
+        runtime_payloads=None,
+        sample_limit: int = 20,
+        run_id: str = "dtc2",
+        persist: bool = True,
+        settings=None,
+    ) -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_policy_candidate_review_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_policy_candidate_review_ready": True,
+                "decision_status": "dtc2_dialogue_policy_candidate_review_ready",
+                "compiled_candidate_ready": True,
+                "comparison_artifact_ready": True,
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+            },
+            "review_result": {
+                "run_id": run_id,
+                "candidate_payload": {"candidate_id": "dtc2.question_policy.candidate"},
+                "question_policy_comparison": {"version": "v30.question_policy_comparison.v1"},
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+            },
+        }
+
+    monkeypatch.setattr(dtc2_module, "run_dialogue_policy_candidate_review_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-policy-candidate-review"
+    )
+    payload = route.endpoint(run_id="dtc2-test", sample_limit=4, persist=True)
+
+    assert payload["version"] == "v30.dialogue_policy_candidate_review_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc2_dialogue_policy_candidate_review_ready"
+    assert payload["decision"]["chart_fact_mutation_allowed"] is False
+    assert payload["decision"]["policy_pointer_write_allowed"] is False
+    assert payload["decision"]["auto_apply_training_allowed"] is False
+
+
+def test_admin_dialogue_strategy_validation_gate_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_strategy_validation_gate as dtc3_module
+
+    def fake_validation(
+        *,
+        runtime_payloads=None,
+        sample_limit: int = 20,
+        run_id: str = "dtc3",
+        persist_review: bool = True,
+        settings=None,
+    ) -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_strategy_validation_gate_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_strategy_validation_gate_ready": True,
+                "decision_status": "dtc3_dialogue_strategy_validation_gate_ready",
+                "candidate_deserves_synthetic_replay": True,
+                "promotion_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+                "chart_fact_mutation_allowed": False,
+            },
+            "gate_result": {
+                "run_id": run_id,
+                "replay_evaluation": {"synthetic_replay_recommended": True},
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+            },
+        }
+
+    monkeypatch.setattr(dtc3_module, "run_dialogue_strategy_validation_gate_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-strategy-validation-gate"
+    )
+    payload = route.endpoint(run_id="dtc3-test", sample_limit=4, persist_review=True)
+
+    assert payload["version"] == "v30.dialogue_strategy_validation_gate_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc3_dialogue_strategy_validation_gate_ready"
+    assert payload["decision"]["candidate_deserves_synthetic_replay"] is True
+    assert payload["decision"]["promotion_allowed"] is False
+    assert payload["decision"]["policy_pointer_write_allowed"] is False
+    assert payload["decision"]["chart_fact_mutation_allowed"] is False
+
+
+def test_admin_dialogue_synthetic_replay_queue_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_synthetic_replay_queue as dtc4_module
+
+    def fake_validation(
+        *,
+        runtime_payloads=None,
+        sample_limit: int = 20,
+        run_id: str = "dtc4",
+        persist_review: bool = True,
+        settings=None,
+    ) -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_synthetic_replay_queue_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_synthetic_replay_queue_ready": True,
+                "decision_status": "dtc4_dialogue_synthetic_replay_queue_ready",
+                "candidate_ready_for_operator_review": True,
+                "promotion_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+                "chart_fact_mutation_allowed": False,
+            },
+            "queue_result": {
+                "run_id": run_id,
+                "aggregate": {"case_count": 4, "pass_ratio": 1.0},
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+            },
+        }
+
+    monkeypatch.setattr(dtc4_module, "run_dialogue_synthetic_replay_queue_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-synthetic-replay-queue"
+    )
+    payload = route.endpoint(run_id="dtc4-test", sample_limit=4, persist_review=True)
+
+    assert payload["version"] == "v30.dialogue_synthetic_replay_queue_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc4_dialogue_synthetic_replay_queue_ready"
+    assert payload["decision"]["candidate_ready_for_operator_review"] is True
+    assert payload["decision"]["promotion_allowed"] is False
+    assert payload["decision"]["policy_pointer_write_allowed"] is False
+    assert payload["decision"]["chart_fact_mutation_allowed"] is False
+
+
+def test_admin_dialogue_operator_review_pack_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_operator_review_pack as dtc5_module
+
+    def fake_validation(
+        *,
+        runtime_payloads=None,
+        sample_limit: int = 20,
+        run_id: str = "dtc5",
+        persist_review: bool = True,
+        settings=None,
+    ) -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_operator_review_pack_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_operator_review_pack_ready": True,
+                "decision_status": "dtc5_dialogue_operator_review_pack_ready",
+                "operator_review_required": True,
+                "candidate_ready_for_heavy_validation_review": True,
+                "promotion_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+                "chart_fact_mutation_allowed": False,
+            },
+            "pack_result": {
+                "run_id": run_id,
+                "evidence_summary": {"dtc4_pass_ratio": 1.0},
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+            },
+        }
+
+    monkeypatch.setattr(dtc5_module, "run_dialogue_operator_review_pack_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-operator-review-pack"
+    )
+    payload = route.endpoint(run_id="dtc5-test", sample_limit=4, persist_review=True)
+
+    assert payload["version"] == "v30.dialogue_operator_review_pack_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc5_dialogue_operator_review_pack_ready"
+    assert payload["decision"]["operator_review_required"] is True
+    assert payload["decision"]["candidate_ready_for_heavy_validation_review"] is True
+    assert payload["decision"]["promotion_allowed"] is False
+    assert payload["decision"]["policy_pointer_write_allowed"] is False
+    assert payload["decision"]["chart_fact_mutation_allowed"] is False
+
+
+def test_admin_dialogue_heavy_validation_decision_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_heavy_validation_decision as dtc6_module
+
+    def fake_validation(
+        *,
+        runtime_payloads=None,
+        sample_limit: int = 20,
+        run_id: str = "dtc6",
+        persist_review: bool = True,
+        settings=None,
+    ) -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_heavy_validation_decision_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_heavy_validation_decision_ready": True,
+                "decision_status": "dtc6_dialogue_heavy_validation_decision_ready",
+                "heavy_validation_recommended": True,
+                "recommended_gate_ids": ["dialogue_synthetic_all", "dialogue_518k_sample"],
+                "runs_triggered": False,
+                "promotion_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+                "chart_fact_mutation_allowed": False,
+            },
+            "decision_result": {
+                "run_id": run_id,
+                "gate_matrix": [],
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+                "heavy_validation_execution_allowed": False,
+            },
+        }
+
+    monkeypatch.setattr(dtc6_module, "run_dialogue_heavy_validation_decision_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-heavy-validation-decision"
+    )
+    payload = route.endpoint(run_id="dtc6-test", sample_limit=4, persist_review=True)
+
+    assert payload["version"] == "v30.dialogue_heavy_validation_decision_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc6_dialogue_heavy_validation_decision_ready"
+    assert payload["decision"]["heavy_validation_recommended"] is True
+    assert payload["decision"]["runs_triggered"] is False
+    assert payload["decision"]["promotion_allowed"] is False
+    assert payload["decision"]["policy_pointer_write_allowed"] is False
+    assert payload["policy_boundary"]["heavy_validation_execution_allowed"] is False
+
+
+def test_admin_dialogue_heavy_validation_authorization_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_heavy_validation_authorization as dtc7_module
+
+    def fake_validation(
+        *,
+        runtime_payloads=None,
+        sample_limit: int = 20,
+        run_id: str = "dtc7",
+        persist_review: bool = True,
+        authorization_decision: str = "authorize_recommended",
+        settings=None,
+    ) -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_heavy_validation_authorization_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_heavy_validation_authorization_ready": True,
+                "decision_status": "dtc7_dialogue_heavy_validation_authorization_ready",
+                "authorized_gate_ids": ["dialogue_synthetic_all", "dialogue_518k_sample"],
+                "runs_triggered": False,
+                "execution_allowed_in_this_step": False,
+                "promotion_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+                "chart_fact_mutation_allowed": False,
+            },
+            "authorization_result": {
+                "run_id": run_id,
+                "authorization_request": {"operator_decision": authorization_decision},
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+                "execution_requires_dtc8": True,
+            },
+        }
+
+    monkeypatch.setattr(dtc7_module, "run_dialogue_heavy_validation_authorization_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-heavy-validation-authorization"
+    )
+    payload = route.endpoint(
+        run_id="dtc7-test",
+        sample_limit=4,
+        persist_review=True,
+        authorization_decision="authorize_recommended",
+    )
+
+    assert payload["version"] == "v30.dialogue_heavy_validation_authorization_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc7_dialogue_heavy_validation_authorization_ready"
+    assert payload["decision"]["authorized_gate_ids"] == ["dialogue_synthetic_all", "dialogue_518k_sample"]
+    assert payload["decision"]["runs_triggered"] is False
+    assert payload["decision"]["execution_allowed_in_this_step"] is False
+    assert payload["decision"]["promotion_allowed"] is False
+    assert payload["policy_boundary"]["execution_requires_dtc8"] is True
+
+
+def test_admin_dialogue_heavy_validation_execution_plan_endpoint_is_read_only(monkeypatch) -> None:
+    from v30.validation import dialogue_heavy_validation_execution_plan as dtc8_module
+
+    def fake_validation(
+        *,
+        runtime_payloads=None,
+        sample_limit: int = 20,
+        run_id: str = "dtc8",
+        persist_review: bool = True,
+        authorization_decision: str = "authorize_recommended",
+        settings=None,
+    ) -> dict[str, object]:
+        return {
+            "version": "v30.dialogue_heavy_validation_execution_plan_validation.v1",
+            "status": "completed",
+            "decision": {
+                "dialogue_heavy_validation_execution_plan_ready": True,
+                "decision_status": "dtc8_dialogue_heavy_validation_execution_plan_ready",
+                "planned_step_count": 2,
+                "ready_to_execute": False,
+                "runs_triggered": False,
+                "execution_started": False,
+                "promotion_allowed": False,
+                "policy_pointer_write_allowed": False,
+                "auto_apply_training_allowed": False,
+                "chart_fact_mutation_allowed": False,
+            },
+            "plan_result": {
+                "run_id": run_id,
+                "plan_summary": {"planned_step_count": 2},
+            },
+            "policy_boundary": {
+                "chart_fact_mutation_allowed": False,
+                "policy_pointer_promotion_allowed": False,
+                "auto_apply_training_allowed": False,
+                "manual_execution_required": True,
+            },
+        }
+
+    monkeypatch.setattr(dtc8_module, "run_dialogue_heavy_validation_execution_plan_validation", fake_validation)
+    local_app = create_app()
+    route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/admin/training/dialogue-heavy-validation-execution-plan"
+    )
+    payload = route.endpoint(
+        run_id="dtc8-test",
+        sample_limit=4,
+        persist_review=True,
+        authorization_decision="authorize_recommended",
+    )
+
+    assert payload["version"] == "v30.dialogue_heavy_validation_execution_plan_validation.v1"
+    assert payload["decision"]["decision_status"] == "dtc8_dialogue_heavy_validation_execution_plan_ready"
+    assert payload["decision"]["planned_step_count"] == 2
+    assert payload["decision"]["runs_triggered"] is False
+    assert payload["decision"]["execution_started"] is False
+    assert payload["decision"]["promotion_allowed"] is False
+    assert payload["policy_boundary"]["manual_execution_required"] is True
 
 
 def test_admin_latent_attribute_training_review_endpoint_is_read_only(monkeypatch) -> None:
@@ -1671,327 +2146,6 @@ def test_admin_mainline_selection_endpoint_is_read_only() -> None:
     assert payload["boundary"] == "m0_selects_next_mainline_after_f6_without_mutating_policy_or_chart_facts"
 
 
-def test_admin_external_release_dry_run_endpoint_defers_full_pytest_by_default() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/release/external-dry-run"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8, full_pytest_decision="defer")
-
-    assert payload["version"] == "v30.external_release_dry_run.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "external_release_dry_run_deferred_full_pytest"
-    assert payload["decision"]["external_release_ready"] is False
-    assert payload["decision"]["full_pytest_deferred"] is True
-    assert payload["policy_boundary"]["policy_pointer_promotion_allowed"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["external_release_requirements"]["full_pytest_required_before_external_release"] is True
-    assert payload["boundary"] == "r13_records_external_release_dry_run_without_running_full_pytest_by_default"
-
-
-def test_admin_external_release_full_pytest_decision_endpoint_defers_by_default() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/release/full-pytest-decision"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8, full_pytest_decision="defer")
-
-    assert payload["version"] == "v30.external_release_full_pytest_decision.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "external_release_full_pytest_deferred"
-    assert payload["decision"]["external_release_ready"] is False
-    assert payload["decision"]["external_release_blocked"] is True
-    assert payload["decision"]["full_pytest_deferred"] is True
-    assert payload["policy_boundary"]["policy_pointer_promotion_allowed"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["boundary"] == (
-        "r14_makes_full_pytest_execution_explicit_and_keeps_external_release_blocked_when_deferred"
-    )
-
-
-def test_admin_external_release_blocked_status_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/release/blocked-status"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.external_release_blocked_status.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "external_release_blocked_pending_full_pytest"
-    assert payload["decision"]["external_release_ready"] is False
-    assert payload["decision"]["external_release_blocked"] is True
-    assert payload["policy_boundary"]["external_release_allowed"] is False
-    assert payload["policy_boundary"]["policy_pointer_promotion_allowed"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "R16"
-    assert payload["boundary"] == "r15_records_external_release_blocked_pending_full_pytest"
-
-
-def test_admin_post_release_boundary_authorization_endpoint_pauses_by_default() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/release/post-boundary-authorization"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8, authorization_decision="pause")
-
-    assert payload["version"] == "v30.post_release_boundary_authorization.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "release_boundary_paused_pending_full_pytest_authorization"
-    assert payload["decision"]["release_boundary_paused"] is True
-    assert payload["decision"]["full_pytest_authorized"] is False
-    assert payload["decision"]["full_pytest_run_triggered"] is False
-    assert payload["policy_boundary"]["policy_pointer_promotion_allowed"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "M0"
-    assert payload["boundary"] == "r16_records_pause_or_full_pytest_authorization_without_running_full_pytest"
-
-
-def test_admin_mainline_selection_after_release_pause_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/mainline/selection-after-release-pause"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.mainline_selection_after_release_pause.v1"
-    assert payload["status"] == "ready_for_next_mainline"
-    assert payload["decision"]["decision_status"] == "core_monitoring_and_calibration_loop_selected"
-    assert payload["decision"]["selected_task_id"] == "P0"
-    assert payload["selected_non_release_mainline"]["title"] == "Core Module Monitoring And Calibration Loop"
-    assert payload["policy_boundary"]["external_release_allowed"] is False
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["boundary"] == "m0_after_release_pause_selects_non_release_mainline"
-
-
-def test_admin_core_monitoring_loop_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/monitoring-loop"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_monitoring_loop.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_monitoring_loop_ready"
-    assert payload["decision"]["regression_detected"] is False
-    assert payload["decision"]["core_module_reopen_recommended"] is False
-    assert payload["monitoring_baseline_summary"]["check_count"] == 4
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P1"
-    assert payload["boundary"] == "p0_core_monitoring_loop_records_lightweight_monitoring_without_full_pytest"
-
-
-def test_admin_lightweight_core_monitoring_checks_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/lightweight-monitoring-checks"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.lightweight_core_monitoring_checks.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "lightweight_core_monitoring_checks_passed"
-    assert payload["decision"]["regression_detected"] is False
-    assert payload["check_summary"]["passed_check_count"] == 4
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P2"
-    assert payload["boundary"] == "p1_executes_lightweight_core_monitoring_checks_without_full_pytest"
-
-
-def test_admin_core_calibration_observation_summary_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/calibration-observation-summary"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_calibration_observation_summary.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_calibration_observation_summary_ready"
-    assert payload["decision"]["stable_observation_count"] == 4
-    assert payload["decision"]["regression_detected"] is False
-    assert payload["decision"]["focused_module_fix_required"] is False
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P3"
-    assert payload["boundary"] == "p2_summarizes_core_calibration_observations_without_full_pytest"
-
-
-def test_admin_core_calibration_drift_watch_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/calibration-drift-watch"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_calibration_drift_watch.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_calibration_drift_watch_ready"
-    assert payload["decision"]["drift_detected"] is False
-    assert payload["decision"]["focused_module_fix_required"] is False
-    assert payload["drift_watch_policy"]["full_pytest_trigger"] == "explicit_release_or_full_freeze_decision_only"
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P4"
-    assert payload["boundary"] == "p3_establishes_core_calibration_drift_watch_without_full_pytest"
-
-
-def test_admin_focused_core_calibration_evidence_queue_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/focused-calibration-evidence-queue"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.focused_core_calibration_evidence_queue.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "focused_core_calibration_evidence_queue_ready"
-    assert payload["decision"]["queued_evidence_count"] == 0
-    assert payload["decision"]["queue_item_count"] == 0
-    assert payload["decision"]["focused_module_fix_required"] is False
-    assert payload["queue_policy"]["batch_key"] == "m1_m8_module_target"
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P5"
-    assert payload["boundary"] == "p4_builds_focused_core_calibration_evidence_queue_without_full_pytest"
-
-
-def test_admin_core_calibration_queue_review_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/calibration-queue-review"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_calibration_queue_review.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_calibration_queue_review_ready"
-    assert payload["decision"]["reviewed_module_count"] == 0
-    assert payload["decision"]["focused_module_fix_required"] is False
-    assert payload["review_policy"]["fix_execution_allowed"] is False
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P6"
-    assert payload["boundary"] == "p5_reviews_core_calibration_queue_without_full_pytest"
-
-
-def test_admin_core_calibration_watch_closeout_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/calibration-watch-closeout"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_calibration_watch_closeout.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_calibration_watch_closeout_ready"
-    assert payload["decision"]["passed_closeout_check_count"] == 4
-    assert payload["decision"]["current_cycle_closed"] is True
-    assert payload["decision"]["future_monitoring_ready"] is True
-    assert payload["watch_cycle_summary"]["future_evidence_entrypoint"] == "P4 Focused Core Calibration Evidence Queue"
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P7"
-    assert payload["boundary"] == "p6_closes_core_calibration_watch_without_full_pytest"
-
-
-def test_admin_core_monitoring_cadence_baseline_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/monitoring-cadence-baseline"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_monitoring_cadence_baseline.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_monitoring_cadence_baseline_ready"
-    assert payload["decision"]["current_cycle_closed"] is True
-    assert payload["decision"]["future_monitoring_ready"] is True
-    assert payload["cadence_rules"]["default_cadence"] == "on_new_calibration_evidence_only"
-    assert payload["trigger_matrix"][1]["entrypoint"] == "P4 Focused Core Calibration Evidence Queue"
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P8"
-    assert payload["boundary"] == "p7_establishes_core_monitoring_cadence_without_full_pytest"
-
-
-def test_admin_core_monitoring_cadence_documentation_sync_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/monitoring-cadence-documentation-sync"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_monitoring_cadence_documentation_sync.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_monitoring_cadence_documentation_sync_ready"
-    assert payload["decision"]["synced_document_count"] == payload["decision"]["required_document_count"]
-    assert payload["documentation_policy"]["default_cadence"] == "on_new_calibration_evidence_only"
-    assert payload["documentation_policy"]["future_evidence_entrypoint"] == "P4 Focused Core Calibration Evidence Queue"
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "P9"
-    assert payload["boundary"] == "p8_syncs_core_monitoring_cadence_docs_without_full_pytest"
-
-
-def test_admin_core_monitoring_steady_state_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/monitoring-steady-state"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_monitoring_steady_state.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_monitoring_steady_state_ready"
-    assert payload["decision"]["waiting_for_new_evidence"] is True
-    assert payload["steady_state_policy"]["default_action"] == "wait_for_new_calibration_evidence"
-    assert payload["steady_state_policy"]["new_evidence_entrypoint"] == "P4 Focused Core Calibration Evidence Queue"
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "S0"
-    assert payload["boundary"] == "p9_enters_core_monitoring_steady_state_without_full_pytest"
-
-
-def test_admin_core_monitoring_s0_status_endpoint_is_read_only() -> None:
-    local_app = create_app()
-    route = next(
-        route for route in local_app.routes
-        if getattr(route, "path", "") == "/api/v30/admin/core/monitoring-s0-status"
-    )
-    payload = route.endpoint(run_gate=False, sample_limit=8)
-
-    assert payload["version"] == "v30.core_monitoring_s0_status.v1"
-    assert payload["status"] == "completed"
-    assert payload["decision"]["decision_status"] == "core_monitoring_s0_status_ready"
-    assert payload["decision"]["waiting_for_new_evidence"] is True
-    assert payload["decision"]["new_core_monitoring_task_allowed_by_default"] is False
-    assert payload["s0_policy"]["new_evidence_entrypoint"] == "P4 Focused Core Calibration Evidence Queue"
-    assert payload["policy_boundary"]["full_pytest_run_allowed_by_default"] is False
-    assert payload["policy_boundary"]["pointer_write_allowed"] is False
-    assert payload["next_mainline_selection"]["task_id"] == "S0"
-    assert payload["boundary"] == "s0_records_steady_state_without_full_pytest"
-
-
 def test_ui_capabilities_expose_projection_params() -> None:
     route = next(route for route in app.routes if getattr(route, "path", "") == "/api/v30/ui/capabilities")
     payload = route.endpoint()
@@ -2000,47 +2154,86 @@ def test_ui_capabilities_expose_projection_params() -> None:
     assert payload["default_locale"] == "zh"
     assert payload["default_client"] == "web"
     assert [row["key"] for row in payload["locales"]] == ["zh", "en", "ko"]
-    assert [row["key"] for row in payload["clients"]] == ["web", "mobile", "admin"]
-    assert [row["key"] for row in payload["roles"]] == ["guest", "user", "practitioner", "admin"]
-    assert payload["supported_view_params"]["role"] == ["guest", "user", "practitioner", "admin"]
+    assert [row["key"] for row in payload["clients"]] == ["web", "mobile"]
+    assert [row["key"] for row in payload["roles"]] == ["guest", "user", "practitioner"]
+    roles = {row["key"]: row for row in payload["roles"]}
+    assert roles["practitioner"]["label"] == "命理师"
+    assert "practitioner_reading" in roles["practitioner"]["capabilities"]
+    assert "admin" not in roles
+    assert payload["supported_view_params"]["role"] == ["guest", "user", "practitioner"]
     assert payload["api_contract"]["version"] == "v30.ui_api_contract.v1"
+    assert "admin_console" not in payload["api_contract"]
+    assert "role_boundary" not in payload
     assert "selected_option" in payload["api_contract"]["structured_answer_fields"]
     assert payload["api_contract"]["interaction_brain_result_contract"] == "v30.unified_interaction_brain_result.v1"
     assert payload["api_contract"]["diagnostic_summary_contract"] == "v30.interaction_brain_diagnostics_summary.v1"
     assert payload["api_contract"]["synthetic_tier"] == "interaction_brain_structured_constraints"
     assert payload["api_contract"]["dedicated_interactions_endpoint"] == "deferred_until_answer_endpoint_stable"
     assert payload["api_contract"]["enhance_answer_with_llm"].endswith("/answer/llm")
-    assert payload["api_contract"]["llm_answer_enhancement_mode"] == "fast_answer_then_optional_llm_enhancement"
+    assert payload["api_contract"]["llm_answer_enhancement_mode"] == "blocking_llm_expression_default_fast_mode_explicit_only"
     assert payload["boundary"] == "ui_capabilities_describe_projection_not_bazi_facts"
 
 
-def test_product_auth_allows_only_one_admin(tmp_path, monkeypatch) -> None:
+def test_product_auth_registration_allows_user_and_practitioner_but_not_admin(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("V30_RUNTIME_DIR", str(tmp_path / ".runtime"))
+    monkeypatch.setenv("V30_REPOSITORY", "local_json")
+    monkeypatch.delenv("V30_DATABASE_URL", raising=False)
     local_app = create_app()
     route = next(route for route in local_app.routes if getattr(route, "path", "") == "/api/v30/auth/register")
 
-    first = route.endpoint(
+    user = route.endpoint(
         AuthRegisterRequest(
-            username="admin@example.com",
+            username="normal-user",
             password="secret123",
-            display_name="管理员",
-            role="admin",
+            display_name="普通用户",
+            role="user",
+        )
+    )
+    practitioner = route.endpoint(
+        AuthRegisterRequest(
+            username="reader-one",
+            password="secret123",
+            display_name="命理师",
+            role="practitioner",
         )
     )
 
-    assert first["status"] == "registered"
-    assert first["user"]["role"] == "admin"
+    assert user["status"] == "registered"
+    assert user["user"]["role"] == "user"
+    assert "personal_reading" in user["user"]["capabilities"]
+    assert practitioner["user"]["role"] == "practitioner"
+    assert "practitioner_reading" in practitioner["user"]["capabilities"]
     with pytest.raises(HTTPException) as exc:
         route.endpoint(
             AuthRegisterRequest(
-                username="second-admin@example.com",
+                username="admin",
                 password="secret123",
-                display_name="第二管理员",
+                display_name="管理员",
                 role="admin",
             )
         )
-    assert exc.value.status_code == 409
-    assert exc.value.detail == "admin already exists"
+    assert exc.value.status_code == 403
+    assert exc.value.detail == "admin account cannot be registered"
+
+
+def test_product_admin_role_includes_practitioner_capability() -> None:
+    admin_user = {
+        "username": "admin",
+        "actor_id": "actor-admin",
+        "display_name": "管理员",
+        "role": "admin",
+    }
+
+    public = _public_product_user(admin_user)
+    session = _new_product_session(admin_user, token="test-token")
+
+    assert public["role"] == "admin"
+    assert public["main_system_role"] == "practitioner"
+    assert "admin_console" in public["capabilities"]
+    assert "practitioner_reading" in public["capabilities"]
+    assert session["role"] == "admin"
+    assert session["main_system_role"] == "practitioner"
+    assert "practitioner_reading" in session["capabilities"]
 
 
 def test_smoke_runtime_and_view_contract() -> None:
@@ -2062,6 +2255,20 @@ def test_smoke_runtime_and_view_contract() -> None:
     assert all("options" in question for question in payload["questions"])
     assert all(question["label_source"] == "expression_rendered_question_label" for question in payload["questions"])
     assert runtime.question_plan.recommended_questions
+    assert runtime.question_plan.recommended_questions[0]["candidate_source"] == "question_recommender_candidate"
+    assert runtime.question_plan.recommended_questions[0]["decision_owner"] == "dialogue_brain"
+    assert runtime.question_plan.recommended_questions[0]["semantic_projection"]["version"] == "v30.semantic_domain_mapping.v1"
+    assert runtime.question_plan.recommended_questions[0]["question_score_components"]["semantic_weight_slot"]
+    assert (
+        runtime.question_plan.recommended_questions[0]["boundary"]
+        == "question_recommender_outputs_candidates_dialogue_brain_selects_customer_turn"
+    )
+    central_state = runtime.question_plan.policy_effect["central_reading_state"]
+    assert central_state["semantic_ontology_version"] == "v30.bazi_semantic_ontology.v1"
+    assert central_state["semantic_ontology"]["ten_god_count"] >= 10
+    assert central_state["dialogue_plan"]["semantic_trace"]["version"] == "v30.semantic_dialogue_trace.v1"
+    assert central_state["dialogue_training_trace"]["version"] == "v30.dialogue_training_trace.v1"
+    assert "chart_facts" in central_state["dialogue_training_trace"]["blocked_targets"]
     assert payload["questions"][0]["question_id"] == "q_v30_user_career_direction"
     assert payload["questions"][0]["interaction_type"] == "user_question"
     assert not any(question["topic"] == "hidden_factor" for question in payload["questions"])
@@ -2072,6 +2279,7 @@ def test_smoke_runtime_and_view_contract() -> None:
 def test_api_local_json_repository_persists_reading(tmp_path, monkeypatch) -> None:
     monkeypatch.setenv("V30_REPOSITORY", "local_json")
     monkeypatch.setenv("V30_RUNTIME_DIR", str(tmp_path / ".runtime"))
+    monkeypatch.setenv("V30_LLM_EXECUTE", "0")
     monkeypatch.delenv("V30_DATABASE_URL", raising=False)
     monkeypatch.delenv("V30_REDIS_URL", raising=False)
     local_app = create_app()
@@ -2157,6 +2365,77 @@ def test_api_local_json_repository_persists_reading(tmp_path, monkeypatch) -> No
     assert outcomes[0]["boundary"] == "question_outcome_feedback_not_chart_fact"
     assert outcomes[0]["interaction_turn_signal"]["structured_payload"]["state_tags"] == ["career_pressure"]
     assert outcomes[0]["interaction_turn_signal"]["allowed_to_update_chart_facts"] is False
+    recommended_questions = updated_trace["trace"]["question_plan"]["recommended_questions"]
+    assert recommended_questions
+    assert recommended_questions[0]["candidate_source"] == "question_recommender_candidate"
+    assert recommended_questions[0]["decision_owner"] == "dialogue_brain"
+    assert recommended_questions[0]["boundary"] == "question_recommender_outputs_candidates_dialogue_brain_selects_customer_turn"
+    central_reading_state = updated_trace["trace"]["question_plan"]["policy_effect"]["central_reading_state"]
+    assert central_reading_state["version"] == "v30.central_reading_state.v1"
+    assert central_reading_state["engine_version"] == "v30.central_reading_engine.v1"
+    assert central_reading_state["dialogue_planner_version"] == "v30.dialogue_planner.v1"
+    assert central_reading_state["feedback_weight_updater_version"] == "v30.feedback_weight_updater.v1"
+    assert central_reading_state["final_synthesis_engine_version"] == "v30.final_synthesis_engine.v1"
+    assert central_reading_state["claim_scores"]
+    feedback_update = central_reading_state["feedback_weight_update"]
+    assert feedback_update["version"] == "v30.feedback_weight_update.v1"
+    assert feedback_update["updater_version"] == "v30.feedback_weight_updater.v1"
+    assert feedback_update["training_signal"]["trainable"] is True
+    assert "feedback_alignment_weight" in feedback_update["training_signal"]["targets"]
+    assert "chart_facts" in feedback_update["training_signal"]["blocked_targets"]
+    assert feedback_update["boundary"] == "feedback_weight_update_adjusts_claim_ranking_signals_without_mutating_chart_facts"
+    assert any(row["chart_fact_mutation_allowed"] is False for row in feedback_update["claim_alignment_signals"])
+    assert any(
+        score["components"]["feedback_alignment"] >= 0
+        and "feedback_signal" in score
+        and score["feedback_signal"].get("chart_fact_mutation_allowed") is False
+        for score in central_reading_state["claim_scores"]
+    )
+    final_synthesis = central_reading_state["final_synthesis"]
+    assert final_synthesis["version"] == "v30.final_synthesis.v1"
+    assert final_synthesis["engine_version"] == "v30.final_synthesis_engine.v1"
+    assert final_synthesis["status"] == "ready"
+    assert final_synthesis["conclusion"].startswith("结论：")
+    assert final_synthesis["advice"].startswith("建议：")
+    assert "不作为固定人生结论" not in final_synthesis["conclusion"]
+    assert "不作为具体人生结果断语" not in final_synthesis["conclusion"]
+    assert final_synthesis["evidence_chain"]
+    assert final_synthesis["visual_hint"]["version"] == "v30.final_synthesis_visual_hint.v1"
+    assert final_synthesis["visual_hint"]["markers"]
+    assert final_synthesis["quality_contract"]["conclusion_first"] is True
+    assert final_synthesis["quality_contract"]["chart_fact_mutation_allowed"] is False
+    assert final_synthesis["training_signal"]["trainable"] is True
+    assert "claim_selection_for_final_synthesis" in final_synthesis["training_signal"]["targets"]
+    assert "chart_facts" in final_synthesis["training_signal"]["blocked_targets"]
+    assert central_reading_state["dialogue_decision_owner"] == "dialogue_brain"
+    assert central_reading_state["customer_decision_field"] == "reading_surface.conversation_surface"
+    assert central_reading_state["legacy_customer_decision_field"] == "reading_surface.current_dialogue_turn"
+    assert central_reading_state["surface_decision_fields"]["conversation"] == "reading_surface.conversation_surface"
+    assert central_reading_state["candidate_sources"] == [
+        "diagnosis_graph",
+        "signal_registry",
+        "question_recommender",
+        "question_dialogue_graph",
+    ]
+    assert central_reading_state["dialogue_plan"]["version"] == "v30.dialogue_plan.v1"
+    assert central_reading_state["dialogue_plan"]["planner_version"] == "v30.dialogue_planner.v1"
+    assert central_reading_state["dialogue_plan"]["decision_owner"] == "dialogue_brain"
+    assert central_reading_state["dialogue_plan"]["customer_decision_field"] == "reading_surface.conversation_surface"
+    assert central_reading_state["dialogue_plan"]["legacy_customer_decision_field"] == "reading_surface.current_dialogue_turn"
+    assert central_reading_state["dialogue_plan"]["surface_decision_fields"]["calibration"] == "reading_surface.calibration_surface"
+    assert central_reading_state["dialogue_plan"]["selection_inputs"]["boundary"] == "selection_inputs_are_memory_and_candidates_not_customer_decision_fields"
+    assert central_reading_state["dialogue_plan"]["training_signal"]["trainable"] is True
+    assert "question_selection_policy" in central_reading_state["dialogue_plan"]["training_signal"]["targets"]
+    assert central_reading_state["current_turn_seed"]["version"] == "v30.dialogue_turn_seed.v1"
+    assert central_reading_state["current_turn_seed"]["decision_owner"] == "dialogue_brain"
+    assert central_reading_state["current_turn_seed"]["source_plan_version"] == "v30.dialogue_plan.v1"
+    assert central_reading_state["next_action"]["version"] == "v30.central_reading_action.v1"
+    assert central_reading_state["training_signal"]["trainable"] is True
+    assert "dialogue_turn_policy" in central_reading_state["training_signal"]["targets"]
+    assert "question_selection_policy" in central_reading_state["training_signal"]["targets"]
+    assert "feedback_alignment_weight" in central_reading_state["training_signal"]["targets"]
+    assert "claim_selection_for_final_synthesis" in central_reading_state["training_signal"]["targets"]
+    assert "chart_facts" in central_reading_state["training_signal"]["blocked_targets"]
     replay = updated_trace["trace"]["question_plan"]["policy_effect"]["adaptive_question_diagnostics"]
     assert replay["decision_count"] == len(updated_trace["trace"]["question_plan"]["recommended_questions"])
     assert replay["replay_controls"]["can_replay_from_runtime_trace"] is True
@@ -2205,8 +2484,39 @@ def test_api_local_json_repository_persists_reading(tmp_path, monkeypatch) -> No
     assert view_payload["diagnostics"]["interaction_brain_summary"]["latest_constraint_valid"] is True
     assert view_payload["diagnostics"]["interaction_brain_summary"]["chart_fact_mutation_allowed"] is False
     assert view_payload["diagnostics"]["interaction_brain_summary"]["internal_feedback_payload_visible"] is True
+    assert view_payload["diagnostics"]["question_dialogue_graph"]["decision_owner"] == "dialogue_brain"
+    assert (
+        view_payload["diagnostics"]["question_dialogue_graph"]["customer_decision_field"]
+        == "reading_surface.conversation_surface"
+    )
+    assert (
+        view_payload["diagnostics"]["question_dialogue_graph"]["legacy_customer_decision_field"]
+        == "reading_surface.current_dialogue_turn"
+    )
+    assert (
+        view_payload["diagnostics"]["question_dialogue_graph"]["boundary"]
+        == "question_dialogue_graph_is_memory_relation_graph_not_customer_decision_owner"
+    )
     assert "question_dialogue_outcome_consumed" in view_payload["diagnostics"]["question_dialogue_graph"]["policy_notes"]
     assert "persisted_hidden_factor_state_can_condition_followups" in view_payload["diagnostics"]["question_dialogue_graph"]["policy_notes"]
+    assert view_payload["diagnostics"]["central_reading_state"]["version"] == "v30.central_reading_state.v1"
+    assert view_payload["diagnostics"]["central_reading_state"]["customer_decision_field"] == "reading_surface.conversation_surface"
+    assert view_payload["diagnostics"]["central_reading_state"]["legacy_customer_decision_field"] == "reading_surface.current_dialogue_turn"
+    assert view_payload["diagnostics"]["central_reading_state"]["dialogue_plan"]["version"] == "v30.dialogue_plan.v1"
+    assert view_payload["diagnostics"]["central_reading_state"]["feedback_weight_update"]["version"] == "v30.feedback_weight_update.v1"
+    assert view_payload["diagnostics"]["central_reading_state"]["final_synthesis"]["version"] == "v30.final_synthesis.v1"
+    assert view_payload["diagnostics"]["central_reading_state"]["top_claim_ids"]
+    customer_final = view_payload["reading_surface"]["final_synthesis"]
+    assert customer_final["version"] == "v30.final_synthesis.v1"
+    assert customer_final["conclusion"].startswith("结论：")
+    assert customer_final["advice"].startswith("建议：")
+    assert "不作为固定人生结论" not in customer_final["conclusion"]
+    assert customer_final["visual_hint"]["version"] == "v30.final_synthesis_visual_hint.v1"
+    assert customer_final["visual_hint"]["chips"]
+    assert customer_final["visual_hint"]["markers"]
+    assert customer_final["quality_contract"]["conclusion_first"] is True
+    assert customer_final["quality_contract"]["chart_fact_mutation_allowed"] is False
+    assert view_payload["reading_surface"]["reading_summary"]["primary_message"].startswith("结论：")
     assert view_payload["diagnostics"]["llm_output_contract_summary"]["validation_status"] == "passed"
     assert view_payload["diagnostics"]["llm_output_contract_summary"]["contract_count"] == 4
     assert view_payload["diagnostics"]["llm_provider_readiness"]["version"] == "v30.llm_provider_readiness.v1"
@@ -2217,6 +2527,11 @@ def test_api_local_json_repository_persists_reading(tmp_path, monkeypatch) -> No
     assert view_payload["diagnostics"]["macro_portrait_view_summary"]["roles"] == ["admin"]
     assert view_payload["diagnostics"]["rendered_question_label_summary"]["fallback_count"] == 0
     assert view_payload["diagnostics"]["adaptive_question_diagnostics"]["version"] == "v30.adaptive_question_diagnostics.v1"
+    dialogue = view_payload["reading_surface"]["dialogue"]
+    assert dialogue["version"] == "v30.customer_dialogue_projection.v1"
+    assert dialogue["progress"]["answered_count"] >= 1
+    assert dialogue["reply_guidance"]
+    assert dialogue["boundary"] == "customer_dialogue_projection_shows_conversation_state_without_internal_strategy_trace"
 
     replay_route = next(
         route for route in local_app.routes if getattr(route, "path", "") == "/api/v30/admin/runs/{reading_id}/question-replay"
@@ -2224,6 +2539,205 @@ def test_api_local_json_repository_persists_reading(tmp_path, monkeypatch) -> No
     replay_payload = replay_route.endpoint("api-local")
     assert replay_payload["reading_id"] == "api-local"
     assert replay_payload["adaptive_question_diagnostics"]["decision_rows"]
+
+    thinking_route = next(
+        route for route in local_app.routes if getattr(route, "path", "") == "/api/v30/readings/{reading_id}/thinking"
+    )
+    thinking_payload = thinking_route.endpoint("api-local")
+    assert thinking_payload["version"] == "v30.thinking_projection.v1"
+    assert thinking_payload["mode"] == "professional_thinking"
+    assert thinking_payload["reasoning_model"]["version"] == "v30.xuanming_core_model.v1"
+    assert thinking_payload["reasoning_model"]["contracts"]["chart_fact_mutation_allowed"] is False
+    assert thinking_payload["reasoning_model"]["contracts"]["llm_role"] == "expression_only_after_core_model"
+    assert thinking_payload["reasoning_model"]["strength_model"]["classification"]
+    assert thinking_payload["reasoning_model"]["strength_model"]["algorithm"] == "weighted_month_root_stem_relation_v1"
+    assert thinking_payload["reasoning_model"]["strength_model"]["seasonal_model"]["seasonal_state"]
+    assert "root" in thinking_payload["reasoning_model"]["strength_model"]["scoring_components"]
+    assert "visible_stem" in thinking_payload["reasoning_model"]["strength_model"]["scoring_components"]
+    assert "relation" in thinking_payload["reasoning_model"]["strength_model"]["scoring_components"]
+    assert thinking_payload["reasoning_model"]["useful_god_model"]["algorithm"] == "multi_strategy_useful_god_candidate_v1"
+    assert thinking_payload["reasoning_model"]["useful_god_model"]["candidates"]
+    assert thinking_payload["reasoning_model"]["useful_god_model"]["primary_label"]
+    assert thinking_payload["reasoning_model"]["useful_god_model"]["boundary"] == "useful_god_model_outputs_ranked_candidate_strategies_not_fixed_favorable_verdict"
+    assert thinking_payload["reasoning_model"]["mainline"]["thesis"]
+    assert thinking_payload["reasoning_model"]["mainline"]["risks"]
+    assert thinking_payload["central_reading_state"]["version"] == "v30.central_reading_state.v1"
+    assert thinking_payload["central_reading_state"]["claim_scores"]
+    assert thinking_payload["central_reading_state"]["dialogue_decision_owner"] == "dialogue_brain"
+    assert thinking_payload["central_reading_state"]["customer_decision_field"] == "reading_surface.conversation_surface"
+    assert thinking_payload["central_reading_state"]["legacy_customer_decision_field"] == "reading_surface.current_dialogue_turn"
+    assert thinking_payload["central_reading_state"]["dialogue_plan"]["version"] == "v30.dialogue_plan.v1"
+    assert thinking_payload["central_reading_state"]["dialogue_plan"]["decision_features"]["necessity_score"] >= 0
+    assert thinking_payload["central_reading_state"]["feedback_weight_update"]["version"] == "v30.feedback_weight_update.v1"
+    assert thinking_payload["central_reading_state"]["feedback_weight_update"]["training_signal"]["trainable"] is True
+    assert thinking_payload["central_reading_state"]["final_synthesis"]["version"] == "v30.final_synthesis.v1"
+    assert thinking_payload["central_reading_state"]["final_synthesis"]["conclusion"].startswith("结论：")
+    assert thinking_payload["central_reading_state"]["current_turn_seed"]["version"] == "v30.dialogue_turn_seed.v1"
+    assert thinking_payload["central_reading_state"]["current_turn_seed"]["decision_owner"] == "dialogue_brain"
+    opportunities = thinking_payload["central_reading_state"]["stage_question_opportunities"]
+    assert opportunities
+    assert opportunities[0]["version"] == "v30.stage_question_opportunity.v1"
+    assert opportunities[0]["step_id"]
+    assert opportunities[0]["question_id"]
+    assert opportunities[0]["target_claim_ids"]
+    assert thinking_payload["credit_preview"]["status"] == "reserved"
+    assert thinking_payload["credit_preview"]["actual_credits"] == 0
+    assert thinking_payload["progress"]["total_steps"] >= 10
+    step_ids = {step["step_id"] for step in thinking_payload["steps"]}
+    assert {
+        "knowledge_library",
+        "rule_matching",
+        "feature_extraction",
+        "portrait_projection",
+        "path_reasoning",
+    }.issubset(step_ids)
+    phases = {step["phase"] for step in thinking_payload["steps"]}
+    assert {"思考", "分析", "撰写报告"}.issubset(phases)
+    assert all(step["credit_preview"]["status"] == "reserved" for step in thinking_payload["steps"])
+    chart_step = next(step for step in thinking_payload["steps"] if step["step_id"] == "chart_build")
+    assert chart_step["summary_panel"]["boundary"] == "stage_summary_is_customer_safe_interpretation_not_raw_trace"
+    assert chart_step["summary_panel"]["source"] == "central_brain_rule_summary"
+    assert chart_step["summary_panel"]["llm_metadata"]["status"] == "not_requested"
+    assert chart_step["summary_policy"]["version"] == "v30.stage_summary_policy.v1"
+    assert chart_step["summary_policy"]["llm_enhancement"] == "not_required"
+    assert chart_step["summary_policy"]["signals"]["token_budget_class"] == "save"
+    assert chart_step["summary_policy"]["signals"]["central_brain_contract"]
+    assert chart_step["summary_policy"]["training_signal"]["trainable"] is True
+    assert chart_step["summary_panel"]["summary_policy"]["version"] == "v30.stage_summary_policy.v1"
+    assert chart_step["analysis_result"]["version"] == "v30.xuanming_step_analysis_result.v1"
+    assert chart_step["analysis_result"]["conclusion"]
+    assert len(chart_step["analysis_result"]["reasoning_points"]) >= 3
+    assert chart_step["analysis_result"]["next_focus"]
+    assert chart_step["analysis_result"]["public_trace"]
+    assert chart_step["analysis_result"]["summary_decision"]["owner"] == "central_brain"
+    assert chart_step["analysis_result"]["summary_decision"]["llm_task"]["input_source"] == "summary_decision"
+    assert chart_step["analysis_result"]["summary_decision"]["training_target"]["trainable"] is True
+    soft_stage_words = ["后续可", "结论待形成", "下一步要看", "下一步看", "下一步把"]
+    for step in thinking_payload["steps"]:
+        analysis = step["analysis_result"]
+        assert analysis["conclusion"]
+        assert analysis["next_focus"]
+        assert analysis["public_trace"]
+        assert any(row["label"] == "执行建议" for row in analysis["public_trace"])
+        assert any(row["label"] == "测算作用" for row in analysis["public_trace"])
+        assert not any(word in f"{analysis['conclusion']} {analysis['next_focus']}" for word in soft_stage_words)
+    assert "context_id" not in str(chart_step["analysis_result"])
+    assert chart_step["evidence_digest"]["boundary"] == "evidence_digest_hides_internal_ids_for_customer_surface"
+    assert chart_step["narration"].startswith("结论：")
+    assert "建议：" in chart_step["narration"]
+    assert "玄明先生正在看" not in chart_step["narration"]
+    assert "系统共采纳" not in chart_step["evidence_digest"]["body"]
+    assert "context_id" not in str(chart_step["evidence_digest"]["items"])
+    rule_step = next(step for step in thinking_payload["steps"] if step["step_id"] == "rule_matching")
+    assert "规则" in rule_step["summary_panel"]["title"]
+    assert rule_step["analysis_result"]["conclusion"]
+    assert any(row["label"] == "匹配规则" for row in rule_step["analysis_result"]["public_trace"])
+    assert any(row["label"] == "测算作用" for row in rule_step["analysis_result"]["public_trace"])
+    assert "用于" in str(rule_step["analysis_result"]["public_trace"])
+    assert "规则命中" in str(rule_step["analysis_result"]) or "规则" in str(rule_step["analysis_result"])
+    assert "v30." not in str(rule_step["evidence_digest"]["items"])
+    assert "krp." not in str(rule_step["evidence_digest"]["items"])
+    path_step = next(step for step in thinking_payload["steps"] if step["step_id"] == "path_reasoning")
+    assert any(row["label"] == "路径结论" for row in path_step["analysis_result"]["public_trace"])
+    assert "力量" in path_step["analysis_result"]["user_summary"] or "路径" in path_step["analysis_result"]["user_summary"]
+    assert path_step["summary_policy"]["mode"] == "full"
+    assert path_step["summary_policy"]["llm_enhancement"] == "auto"
+    structure_step = next(step for step in thinking_payload["steps"] if step["step_id"] == "structure_reasoning")
+    assert structure_step["analysis_result"]["contradictions"]
+    assert structure_step["summary_policy"]["signals"]["stage_importance"] >= 0.9
+    portrait_step = next(step for step in thinking_payload["steps"] if step["step_id"] == "portrait_projection")
+    assert any(row["label"] == "画像结论" for row in portrait_step["analysis_result"]["public_trace"])
+    knowledge_step = next(step for step in thinking_payload["steps"] if step["step_id"] == "knowledge_library")
+    assert knowledge_step["summary_policy"]["llm_enhancement"] == "not_required"
+    assert knowledge_step["summary_policy"]["signals"]["token_budget_class"] == "save"
+    step_ids = [step["step_id"] for step in thinking_payload["steps"]]
+    assert "question_followup" not in step_ids
+    final_step = next(step for step in thinking_payload["steps"] if step["step_id"] == "final_report")
+    assert final_step["analysis_result"]["conclusion"].startswith("结论：")
+    assert final_step["analysis_result"]["next_focus"].startswith("建议：")
+    assert any(row["label"] == "报告结论" for row in final_step["analysis_result"]["public_trace"])
+    opportunity_step = next(
+        step for step in thinking_payload["steps"]
+        if step.get("stage_question_opportunity")
+    )
+    assert opportunity_step["stage_question_opportunity"]["step_id"] == opportunity_step["step_id"]
+    assert opportunity_step["next_action"]["action"] in {"ask_stage_question", "conclude_stage", "continue_next_stage"}
+    thinking_llm_route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/readings/{reading_id}/thinking/{step_id}/summary/llm"
+    )
+    thinking_llm_payload = thinking_llm_route.endpoint(
+        "api-local",
+        "rule_matching",
+        LLMThinkingSummaryRequest(role="user", locale="zh", client="web"),
+    )
+    assert thinking_llm_payload["accepted"] is False
+    assert thinking_llm_payload["summary_panel"]["source"] == "llm_unavailable"
+    assert thinking_llm_payload["summary_panel"]["llm_metadata"]["status"] == "unavailable"
+    assert thinking_llm_payload["summary_panel"]["llm_metadata"]["user_message"].startswith("本页需要大模型推演")
+    assert thinking_llm_payload["summary_panel"]["llm_metadata"]["executed"] is False
+    thinking_llm_meta = thinking_llm_payload["summary_panel"]["llm_metadata"]["prompt_request"]
+    assert thinking_llm_meta["version"] == "v30.thinking_step_summary_prompt.v3"
+    assert thinking_llm_meta["task"] == "thinking_step_summary"
+    assert thinking_llm_meta["prompt_contract_id"] == "v30.bazi_llm_prompt.thinking_step_summary.user.v1"
+    assert thinking_llm_meta["context_pack"] == "ThinkingStageContext"
+    assert thinking_llm_meta["raw_runtime_payload_included"] is False
+    assert thinking_llm_payload["boundary"] == "thinking_step_summary_llm_endpoint_expression_only_no_runtime_mutation"
+
+    thinking_skip_payload = thinking_llm_route.endpoint(
+        "api-local",
+        "chart_build",
+        LLMThinkingSummaryRequest(role="user", locale="zh", client="web"),
+    )
+    assert thinking_skip_payload["accepted"] is False
+    assert thinking_skip_payload["summary_panel"]["llm_metadata"]["fallback_reason"] == "stage_summary_policy_not_required"
+    assert thinking_skip_payload["summary_panel"]["llm_metadata"]["executed"] is False
+    assert thinking_skip_payload["summary_panel"]["llm_metadata"]["prompt_request"]["task"] == "thinking_step_summary"
+
+    formal_prompt_request = build_thinking_step_prompt_request(
+        create_smoke_runtime(reading_id="thinking-framework-local", locale="zh"),
+        chart_step,
+        role_key="user",
+        locale="zh",
+        client="web",
+    )
+    assert formal_prompt_request["task_type"] == "thinking_step_summary"
+    assert formal_prompt_request["prompt_contract"]["required_context_pack"] == "ThinkingStageContext"
+    assert formal_prompt_request["context_pack"]["context_pack"] == "ThinkingStageContext"
+    assert formal_prompt_request["context_pack"]["stage"]["analysis_result"]["version"] == "v30.xuanming_step_analysis_result.v1"
+    assert formal_prompt_request["context_pack"]["stage"]["summary_decision"]["version"] == "v30.central_brain_stage_summary_decision.v1"
+    assert formal_prompt_request["context_pack"]["module_context"]
+    assert formal_prompt_request["context_pack"]["raw_runtime_payload_included"] is False
+    assert formal_prompt_request["chart_fact_mutation_allowed"] is False
+
+    thinking_batch_route = next(
+        route for route in local_app.routes
+        if getattr(route, "path", "") == "/api/v30/readings/{reading_id}/thinking/summary/llm"
+    )
+    thinking_batch_payload = thinking_batch_route.endpoint(
+        "api-local",
+        LLMThinkingBatchSummaryRequest(
+            role="user",
+            locale="zh",
+            client="web",
+            step_ids=["chart_build", "rule_matching"],
+            max_steps=2,
+        ),
+    )
+    assert thinking_batch_payload["accepted_count"] == 0
+    assert thinking_batch_payload["fallback_count"] == 2
+    assert thinking_batch_payload["boundary"] == "thinking_summary_llm_batch_endpoint_expression_only_no_runtime_mutation"
+    batch_meta = thinking_batch_payload["thinking"]["llm_summary_batch"]
+    assert batch_meta["requested_step_count"] == 2
+    assert batch_meta["executed_count"] == 0
+    assert batch_meta["boundary"] == "batch_summary_expression_only_no_runtime_or_chart_fact_mutation"
+    batch_chart_step = next(
+        step for step in thinking_batch_payload["thinking"]["steps"]
+        if step["step_id"] == "chart_build"
+    )
+    assert batch_chart_step["summary_panel"]["source"] == "central_brain_rule_summary"
+    assert batch_chart_step["summary_panel"]["llm_metadata"]["status"] == "fallback"
+    assert "context_id" not in str(batch_chart_step["summary_panel"])
 
     artifact_route = next(
         route for route in local_app.routes if getattr(route, "path", "") == "/api/v30/admin/validation/518k/artifacts"
@@ -2286,7 +2800,21 @@ def test_api_birth_input_creates_ready_runtime_or_returns_trace(tmp_path, monkey
     assert user_view["reading_surface"]["time_context"]["target_year"] == 2030
     assert len(user_view["reading_surface"]["time_context"]["six_pillars"]) >= 6
     assert user_view["reading_surface"]["time_context"]["current_luck"]["pillar"]
-    top_question_id = user_view["reading_surface"]["next_question"]["question_id"]
+    assert "current_dialogue_turn" not in user_view["reading_surface"]
+    assert "next_question" not in user_view["reading_surface"]
+    assert "options" not in user_view["reading_surface"]
+    assert user_view["reading_surface"]["legacy_dialogue_surface"]["status"] == "hidden_for_customer"
+    assert user_view["reading_surface"]["conversation_surface"]["entry_policy"]["user_invited_only"] is True
+    top_question_id = user_view["answer_panel"]["question_id"]
+    assert user_view["answer_panel"]["question_id"] == top_question_id
+    assert user_view["answer_panel"]["user_submitted"] is False
+    assert user_view["answer_panel"]["question_stage_id"]
+    admin_central = view_payload["diagnostics"]["central_reading_state"]
+    assert top_question_id == admin_central["dialogue_plan"]["current_question_id"]
+    user_questions = user_view["questions"]
+    assert user_questions
+    assert "candidate_source" not in user_questions[0]
+    assert "decision_owner" not in user_questions[0]
     answer_route = next(
         route
         for route in local_app.routes
@@ -2311,7 +2839,14 @@ def test_api_birth_input_creates_ready_runtime_or_returns_trace(tmp_path, monkey
     assert interaction_response["view"]["client"] == "mobile"
     assert interaction_response["view"]["layout"]["density"] == "compact"
     assert interaction_response["view"]["reading_surface"]["surface_type"] == "customer_reading_loop"
-    assert interaction_response["view"]["reading_surface"]["next_question"]["question_id"] != top_question_id
+    assert "current_dialogue_turn" not in interaction_response["view"]["reading_surface"]
+    assert "next_question" not in interaction_response["view"]["reading_surface"]
+    assert "options" not in interaction_response["view"]["reading_surface"]
+    assert interaction_response["view"]["reading_surface"]["legacy_dialogue_surface"]["status"] == "hidden_for_customer"
+    assert interaction_response["next_question_id"] is None or interaction_response["next_question_id"] != top_question_id
+    assert interaction_response["view"]["answer_panel"]["visual_hint"]["version"] == "v30.answer_visual_hint.v1"
+    assert interaction_response["view"]["answer_panel"]["user_submitted"] is True
+    assert interaction_response["view"]["answer_panel"]["question_stage_id"]
     assert interaction_response["view"]["answer_panel"]["source"] in {
         "llm_bounded_answer_draft",
         "llm_bazi_answer_draft",

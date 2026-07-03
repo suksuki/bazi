@@ -38,6 +38,22 @@ def test_auto_apply_training_updates_core_policy_pointers(tmp_path: Path) -> Non
     rule_artifact = store.load_active_artifact("rule_policy")
     assert result.status == "applied"
     assert result.metrics["promoted_count"] == 4
+    assert result.policy_application["mode"] == "validated_auto_apply"
+    assert result.policy_application["policy_pointer_write_performed"] is True
+    assert result.policy_application["promoted_family_count"] == 4
+    assert result.policy_application["rollback_available"] is True
+    assert result.policy_application["chart_fact_mutation_allowed"] is False
+    assert result.training_signal_summary["brain_judge_quality_present"] is True
+    assert result.training_signal_summary["synthesis_blueprint_quality_present"] is True
+    assert result.training_signal_summary["can_tune_chart_facts"] is False
+    assert result.training_signal_summary["signal_count"] == result.metrics["training_signal_count"]
+    quality_metrics = result.training_signal_summary["quality_metrics"]
+    assert quality_metrics["version"] == "v30.training_quality_metrics.v1"
+    assert quality_metrics["final_synthesis_quality_score"] > 0
+    assert quality_metrics["advice_actionability"] > 0
+    assert quality_metrics["decision_focus_coverage"] > 0
+    assert quality_metrics["quality_metric_count"] >= 8
+    assert quality_metrics["chart_fact_mutation_allowed"] is False
     assert result.active_policy_versions["structure_policy"] == "structure_policy.unit-auto.structure_policy"
     assert result.active_policy_versions["mainline_policy"] == "mainline_policy.unit-auto.mainline_policy"
     assert result.active_policy_versions["question_policy"] == "question_policy.unit-auto.question_policy"
@@ -77,6 +93,7 @@ def test_auto_apply_training_updates_core_policy_pointers(tmp_path: Path) -> Non
     adaptive_policy = question_artifact.payload["weights"]["adaptive_question_policy"]
     interaction_policy = question_artifact.payload["weights"]["interaction_followup_policy"]
     model_signal_question_policy = question_artifact.payload["weights"]["model_signal_question_policy"]
+    central_brain_synthesis_policy = question_artifact.payload["weights"]["central_brain_synthesis_policy"]
     assert adaptive_policy["mode"] == "trace_replay_weight_candidate_not_chart_fact"
     assert adaptive_policy["boundary"] == "adaptive_question_policy_weights_replay_diagnostics_not_chart_facts"
     assert adaptive_policy["alignment_coverage"] > 0
@@ -94,6 +111,21 @@ def test_auto_apply_training_updates_core_policy_pointers(tmp_path: Path) -> Non
     assert model_signal_question_policy["can_tune_question_strategy"] is True
     assert model_signal_question_policy["can_tune_chart_facts"] is False
     assert model_signal_question_policy["boundary"] == "model_signal_question_policy_trains_question_strategy_not_chart_facts"
+    assert central_brain_synthesis_policy["mode"] == "judge_quality_weight_candidate_not_chart_fact"
+    assert central_brain_synthesis_policy["source_signal_id"] == "v30.training_signal.central_brain_judge_quality"
+    assert "v30.training_signal.central_brain_synthesis_blueprint_quality" in central_brain_synthesis_policy["source_signal_ids"]
+    assert central_brain_synthesis_policy["weights"]["final_synthesis_quality"] > 1.0
+    assert central_brain_synthesis_policy["weights"]["conclusion_strength"] > 1.0
+    assert central_brain_synthesis_policy["weights"]["advice_actionability"] > 1.0
+    assert central_brain_synthesis_policy["weights"]["risk_boundary_clarity"] > 1.0
+    assert central_brain_synthesis_policy["blueprint_quality"]["decision_focus_coverage"] >= 0.9
+    assert central_brain_synthesis_policy["blueprint_quality"]["action_step_coverage"] >= 0.9
+    assert central_brain_synthesis_policy["can_tune_final_synthesis_quality"] is True
+    assert central_brain_synthesis_policy["can_tune_synthesis_blueprint"] is True
+    assert central_brain_synthesis_policy["can_tune_question_strategy"] is True
+    assert central_brain_synthesis_policy["can_tune_chart_facts"] is False
+    assert "chart_facts" in central_brain_synthesis_policy["blocked_training_routes"]
+    assert central_brain_synthesis_policy["boundary"] == "central_brain_synthesis_policy_trains_quality_and_dialogue_strategy_not_chart_facts"
     assert hidden_event_policy["mode"] == "feedback_conditioned_not_chart_fact"
     assert hidden_event_policy["candidate_alignment_multiplier"] > 1.0
     assert hidden_event_policy["time_layer_alignment_multiplier"] > 1.0
@@ -117,12 +149,24 @@ def test_auto_apply_training_updates_core_policy_pointers(tmp_path: Path) -> Non
         signal["signal_id"] == "v30.training_signal.question_model_signal_personalization"
         for signal in question_artifact.payload["training_signals"]
     )
+    assert any(
+        signal["signal_id"] == "v30.training_signal.central_brain_judge_quality"
+        for signal in question_artifact.payload["training_signals"]
+    )
+    assert any(
+        signal["signal_id"] == "v30.training_signal.central_brain_synthesis_blueprint_quality"
+        for signal in question_artifact.payload["training_signals"]
+    )
     comparison = question_artifact.validation_summary["question_policy_comparison"]
     assert comparison["version"] == "v30.question_policy_comparison.v1"
     assert comparison["candidate_id"] == "unit-auto.question_policy"
     assert comparison["artifact_uri"]
     assert question_artifact.metrics["question_policy_comparison_weighted_delta_count"] > 0
     assert result.metrics["training_signal_count"] >= 3
+    family_rows = {row["family"]: row for row in result.policy_application["families"]}
+    assert family_rows["question_policy"]["active_artifact_id"] == "question_policy.unit-auto.question_policy"
+    assert family_rows["question_policy"]["rollback_target_artifact_id"]
+    assert family_rows["question_policy"]["promoted"] is True
     assert rule_artifact.payload["weights"]["rule_weights"]["v30.rule.hidden_factor.requires_dialogue"] >= 1.03
     assert rule_artifact.payload["weights"]["hidden_factor_event_policy"]["boundary"] == "hidden_factor_policy_weights_feedback_conditioned_not_chart_fact"
     assert question_artifact.payload["weights"]["latent_bazi_attribute_policy"]["reverse_inference_weight"] == 1.0
@@ -209,6 +253,33 @@ def test_runtime_reports_auto_applied_policy_versions(tmp_path: Path, monkeypatc
         if row.get("kind") == "mechanism_path" and row.get("node_id") == "mechanism.useful_god_candidate_gate"
     )
     assert runtime.question_plan.recommended_questions[0]["policy_weight"] > 1.0
+    final_synthesis = runtime.question_plan.policy_effect["central_reading_state"]["final_synthesis"]
+    assert final_synthesis["synthesis_policy_effect"]["applied"] is True
+    assert final_synthesis["synthesis_policy_effect"]["source_signal_id"] == "v30.training_signal.central_brain_judge_quality"
+    assert final_synthesis["quality_contract"]["synthesis_policy_applied"] is True
+    assert final_synthesis["quality_contract"]["chart_fact_mutation_allowed"] is False
+
+
+def test_auto_apply_training_reports_progress_events(tmp_path: Path) -> None:
+    store = RuntimePointerStore(_settings(tmp_path))
+    events: list[dict[str, object]] = []
+
+    result = run_auto_apply_training(
+        training_run_id="unit-auto-progress",
+        store=store,
+        promotion_validation_mode="smoke",
+        progress_callback=events.append,
+    )
+
+    steps = [event["step"] for event in events]
+    assert result.status == "applied"
+    assert events[0]["step"] == "started"
+    assert "synthetic_signal_source_ready" in steps
+    assert "training_signals_extracted" in steps
+    assert "candidates_generated" in steps
+    assert "promoted_question_policy" in steps
+    assert events[-1]["step"] == "completed"
+    assert events[-1]["progress_percent"] == 100
 
 
 def test_auto_training_script_applies_without_review_gate(tmp_path: Path) -> None:
@@ -236,3 +307,43 @@ def test_auto_training_script_applies_without_review_gate(tmp_path: Path) -> Non
     assert "script-auto: applied (4/4 promoted)" in result.stdout
     assert pointer_path.exists()
     assert "question_policy.script-auto.question_policy" in pointer_path.read_text(encoding="utf-8")
+
+
+def test_admin_training_ui_states_validated_auto_apply() -> None:
+    html = Path("admin_frontend/app.js").read_text(encoding="utf-8")
+
+    assert "推荐训练与验证" in html
+    assert "启动计划" in html
+    assert "高级训练工具" in html
+    assert "策略训练并自动生效" in html
+    assert "/api/v30/admin/training/auto-apply/run" in html
+    assert "/api/v30/admin/training/auto-apply/status" in html
+    assert "/api/v30/admin/training/auto-apply/history" in html
+    assert "/api/v30/admin/policies/lineage/summary" in html
+    assert "/api/v30/admin/policies/rollback" in html
+    assert "/api/v30/admin/training/orchestrator/plans" in html
+    assert "/api/v30/admin/training/orchestrator/run" in html
+    assert "/api/v30/admin/training/orchestrator/status" in html
+    assert "/api/v30/admin/training/orchestrator/history" in html
+    assert "/api/v30/admin/training/orchestrator/diff" in html
+    assert "/api/v30/admin/training/orchestrator/rerun-failed" in html
+    assert "/api/v30/admin/training/brain-examples/summary" in html
+    assert "admin/training/brain-examples/distribution-gate" in Path("v30/api/app.py").read_text(encoding="utf-8")
+    assert "中枢训练样本" in html
+    assert "Synthetic Replay Gate" in html
+    assert "renderTrainingOrchestratorJob" in html
+    assert "renderTrainingOrchestratorHistory" in html
+    assert "renderTrainingOrchestratorDiff" in html
+    assert "/api/v30/admin/training/dialogue-heavy-validation-decision" not in html
+    assert "/api/v30/admin/training/dialogue-calibration-loop" not in html
+    assert "智能质量对比" in html
+    assert "重跑失败步骤" in html
+    assert "m3_518k_validation" in html
+    assert "central_brain_phase2_training" in html
+    assert "include_readiness_matrix" in html
+    assert "renderAutoTrainingHistory" in html
+    assert "renderPolicyLineageSummary" in html
+    assert "训练任务已启动；验证通过后会自动生效，页面会刷新进度。" in html
+    assert "renderAutoTrainingJobProgress" in html
+    assert "renderAutoApplyTrainingRun" in html
+    assert "未自动发布策略" not in html

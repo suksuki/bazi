@@ -24,6 +24,7 @@ class QuestionDialogueEdge(V30Model):
 
 
 class QuestionDialogueGraph(V30Model):
+    version: str = "v30.question_dialogue_graph.v1"
     graph_id: str
     nodes: list[QuestionDialogueNode]
     edges: list[QuestionDialogueEdge]
@@ -31,6 +32,18 @@ class QuestionDialogueGraph(V30Model):
     internal_next_question_id: str | None = None
     followup_reason: str = ""
     policy_notes: list[str] = Field(default_factory=list)
+    decision_owner: str = "dialogue_brain"
+    customer_decision_field: str = "reading_surface.conversation_surface"
+    legacy_customer_decision_field: str = "reading_surface.current_dialogue_turn"
+    surface_decision_fields: dict[str, str] = Field(
+        default_factory=lambda: {
+            "calibration": "reading_surface.calibration_surface",
+            "conversation": "reading_surface.conversation_surface",
+            "thinking": "reading_surface.thinking_surface",
+        }
+    )
+    legacy_customer_decision_field_status: str = "diagnostic_compatibility_only"
+    boundary: str = "question_dialogue_graph_is_memory_relation_graph_not_customer_decision_owner"
 
 
 def build_question_dialogue_graph(

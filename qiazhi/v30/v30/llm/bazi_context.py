@@ -7,7 +7,7 @@ from v30.contracts import CoreRuntimeResult
 
 BAZI_LLM_CONTEXT_PACK_VERSION = "v30.bazi_llm_context_pack.v1"
 
-MAX_CONTEXT_SECTIONS = 6
+MAX_CONTEXT_SECTIONS = 7
 MAX_EVIDENCE_ITEMS = 8
 MAX_RANKED_CANDIDATES_PER_DOMAIN = 3
 MAX_USER_HISTORY_ITEMS = 3
@@ -45,7 +45,7 @@ ROLE_LLM_PROFILES: dict[str, dict[str, object]] = {
         ],
         "forbidden_sections": ["diagnostics_summary"],
         "forbidden_modules": ["admin_diagnostics", "diagnostics_summary", "training", "policy_weights"],
-        "max_context_sections": 6,
+        "max_context_sections": 7,
     },
     "practitioner": {
         "role_contract_id": "v30.bazi_llm_role.practitioner.v1",
@@ -63,7 +63,7 @@ ROLE_LLM_PROFILES: dict[str, dict[str, object]] = {
         ],
         "forbidden_sections": [],
         "forbidden_modules": ["training", "policy_pointer_write"],
-        "max_context_sections": 6,
+        "max_context_sections": 7,
     },
     "analyst": {
         "role_contract_id": "v30.bazi_llm_role.analyst.v1",
@@ -103,16 +103,17 @@ ROLE_LLM_PROFILES: dict[str, dict[str, object]] = {
 TASK_CONTEXT_SPECS: dict[str, dict[str, object]] = {
     "customer_initial_reading": {
         "context_pack": "BaziCoreContext",
-        "allowed_modules": ["M1_M2", "M4", "M5", "M6", "M8"],
-        "required_sections": ["chart_facts", "model_signals", "ranked_decisions", "practical_reading", "answer_surface"],
+        "allowed_modules": ["M1_M2", "DecisionEngine", "M4", "M5", "M6", "M8"],
+        "required_sections": ["chart_facts", "decision_verdicts", "model_signals", "ranked_decisions", "practical_reading", "answer_surface"],
         "forbidden_modules": ["training", "policy_weights", "admin_diagnostics"],
-        "allowed_answer_scope": "summarize verified Bazi reading, ranked domain tendencies, and next question boundaries",
+        "allowed_answer_scope": "express Decision Engine verdicts, verified Bazi reading, ranked domain tendencies, and next question boundaries",
         "max_prompt_tokens_estimate": 1400,
     },
     "domain_followup": {
         "context_pack": "BaziDomainContext",
-        "allowed_modules": ["M3", "M4", "M5", "M6", "interaction_state", "known_user_signals"],
+        "allowed_modules": ["DecisionEngine", "M3", "M4", "M5", "M6", "interaction_state", "known_user_signals"],
         "required_sections": [
+            "decision_verdicts",
             "structure_dynamics",
             "model_signals",
             "ranked_decisions",
@@ -129,8 +130,8 @@ TASK_CONTEXT_SPECS: dict[str, dict[str, object]] = {
     },
     "useful_god_candidate_explanation": {
         "context_pack": "BaziCandidatePathContext",
-        "allowed_modules": ["M3", "M4", "M5"],
-        "required_sections": ["structure_dynamics", "model_signals", "ranked_decisions", "evidence"],
+        "allowed_modules": ["DecisionEngine", "M3", "M4", "M5"],
+        "required_sections": ["decision_verdicts", "structure_dynamics", "model_signals", "ranked_decisions", "evidence"],
         "forbidden_modules": ["training", "policy_weights", "admin_diagnostics"],
         "allowed_answer_scope": "explain useful-god candidate path and unresolved boundaries without fixing a final verdict",
         "max_prompt_tokens_estimate": 1200,
@@ -145,8 +146,8 @@ TASK_CONTEXT_SPECS: dict[str, dict[str, object]] = {
     },
     "practitioner_analysis": {
         "context_pack": "BaziPractitionerContext",
-        "allowed_modules": ["M1_M2", "M3", "M4", "M5", "M6", "diagnostics_summary"],
-        "required_sections": ["chart_facts", "structure_dynamics", "model_signals", "ranked_decisions", "practical_reading"],
+        "allowed_modules": ["M1_M2", "DecisionEngine", "M3", "M4", "M5", "M6", "diagnostics_summary"],
+        "required_sections": ["chart_facts", "decision_verdicts", "structure_dynamics", "model_signals", "ranked_decisions", "practical_reading"],
         "forbidden_modules": ["training", "policy_pointer_write"],
         "allowed_answer_scope": "provide denser evidence, candidate paths, and diagnostic boundaries for practitioner review",
         "max_prompt_tokens_estimate": 1800,
@@ -222,7 +223,18 @@ def build_bazi_llm_context_pack(
             "training_signal_mutation_allowed": False,
             "policy_pointer_write_allowed": False,
             "raw_runtime_payload_allowed": False,
-            "boundary": "llm_context_pack_reads_module_outputs_without_fact_mutation",
+            "llm_can_override_decision_verdict": False,
+            "llm_must_stay_within_allowed_assertions": True,
+            "boundary": "llm_context_pack_reads_module_outputs_and_decision_verdicts_without_fact_mutation",
+        },
+        "uncertainty_policy": {
+            "version": "v30.evidence_bound_uncertainty_policy.v1",
+            "allow_candidate_branches": True,
+            "allowed_branch_language": ["可能", "候选", "分支", "概率", "置信", "取向", "待复核"],
+            "required_branch_binding": ["bazi_evidence", "confidence_or_probability", "counter_evidence_or_resolution_condition"],
+            "reject_empty_hedges": ["不好说", "仅供参考", "后续再看"],
+            "practitioner_option_target": "OptionSet",
+            "boundary": "uncertainty_language_is_allowed_only_when_evidence_bound_and_trainable",
         },
         "forbidden_claims": [
             "create_or_change_four_pillars",
@@ -230,6 +242,8 @@ def build_bazi_llm_context_pack(
             "invent_event_year_or_user_history",
             "turn_hidden_factor_hypothesis_into_confirmed_fact",
             "make_fixed_useful_god_verdict_without_ranked_decision_support",
+            "override_decision_engine_verdict_or_assertion_level",
+            "ignore_forbidden_assertions_from_decision_engine",
             "write_training_or_policy_pointer_changes",
         ],
         "allowed_answer_scope": spec["allowed_answer_scope"],
@@ -272,6 +286,7 @@ def _build_sections(
     ranked = _dict(policy.get("ranked_decisions"))
     return {
         "chart_facts": _chart_fact_section(runtime),
+        "decision_verdicts": _decision_verdict_section(policy, domain=domain),
         "structure_dynamics": _structure_section(runtime, policy),
         "model_signals": _model_signal_section(runtime, policy),
         "ranked_decisions": _ranked_decision_section(ranked, domain=domain),
@@ -306,6 +321,60 @@ def _select_required_sections(
     return selected[:max_context_sections]
 
 
+def _decision_verdict_section(policy: dict[str, Any], *, domain: str) -> dict[str, object]:
+    central = _dict(policy.get("central_reading_state"))
+    result = _dict(central.get("decision_result"))
+    verdicts = _list(result.get("verdicts")) or _list(central.get("decision_verdicts"))
+    rows: list[dict[str, object]] = []
+    for raw in verdicts:
+        row = _dict(raw)
+        if not row:
+            continue
+        row_domain = str(row.get("domain") or "")
+        if domain and row_domain != domain:
+            continue
+        rows.append(
+            {
+                "verdict_id": str(row.get("verdict_id") or ""),
+                "domain": row_domain,
+                "headline": str(row.get("headline") or ""),
+                "assertion_level": str(row.get("assertion_level") or ""),
+                "confidence": _float(row.get("confidence"), 0.0),
+                "evidence_refs": [str(item) for item in _list(row.get("evidence_refs"))][:MAX_EVIDENCE_ITEMS],
+                "counter_evidence_refs": [str(item) for item in _list(row.get("counter_evidence_refs"))][:MAX_EVIDENCE_ITEMS],
+                "allowed_assertions": [str(item) for item in _list(row.get("allowed_assertions"))][:3],
+                "forbidden_assertions": [str(item) for item in _list(row.get("forbidden_assertions"))][:3],
+                "advice_points": [str(item) for item in _list(row.get("advice_points"))][:3],
+                "next_question_slots": [
+                    {
+                        "domain": str(_dict(slot).get("domain") or ""),
+                        "question": str(_dict(slot).get("question") or ""),
+                        "answer_shape": str(_dict(slot).get("answer_shape") or ""),
+                    }
+                    for slot in _list(row.get("next_question_slots"))[:2]
+                ],
+            }
+        )
+    contract = _dict(result.get("llm_expression_contract"))
+    return {
+        "section_id": "decision_verdicts",
+        "module_id": "DecisionEngine",
+        "content": {
+            "engine_version": str(result.get("engine_version") or central.get("decision_engine_version") or ""),
+            "domain": domain or "all",
+            "verdicts": rows[:MAX_RANKED_CANDIDATES_PER_DOMAIN],
+            "llm_expression_contract": {
+                "llm_can_rewrite_expression_only": contract.get("llm_can_rewrite_expression_only") is not False,
+                "llm_can_override_verdict": contract.get("llm_can_override_verdict") is True,
+                "must_stay_within_allowed_assertions": contract.get("must_stay_within_allowed_assertions") is not False,
+                "must_respect_forbidden_assertions": contract.get("must_respect_forbidden_assertions") is not False,
+            },
+        },
+        "evidence_ids": _decision_verdict_evidence_ids(rows),
+        "boundary": "decision_verdicts_are_final_verdict_boundary_for_llm_expression_not_raw_material",
+    }
+
+
 def _chart_fact_section(runtime: CoreRuntimeResult) -> dict[str, object]:
     time_layers = runtime.chart_context.time_layers
     return {
@@ -331,8 +400,8 @@ def _structure_section(runtime: CoreRuntimeResult, policy: dict[str, Any]) -> di
         "module_id": "M3",
         "content": {
             "state": runtime.structure_state.state,
-            "semantic_label": runtime.structure_state.semantic_label,
-            "primary_chain": runtime.structure_state.primary_chain,
+            "semantic_label": _public_structure_label(runtime.structure_state.semantic_label),
+            "primary_chain": [_public_chain_label(row) for row in runtime.structure_state.primary_chain[:8]],
             "candidate_chain_count": len(runtime.structure_state.candidate_chains),
             "path_scores": runtime.structure_state.path_scores,
             "m3_completion_summary": _dict(policy.get("m3_completion_summary")),
@@ -367,9 +436,16 @@ def _ranked_decision_section(ranked: dict[str, object], *, domain: str) -> dict[
         if isinstance(scores, dict):
             row = {
                 **row,
-                "candidate_scores": dict(list(scores.items())[:MAX_RANKED_CANDIDATES_PER_DOMAIN]),
+                "candidate_scores": {
+                    _public_candidate_label(key): value
+                    for key, value in list(scores.items())[:MAX_RANKED_CANDIDATES_PER_DOMAIN]
+                },
             }
-        domain_rows[key] = row
+        domain_rows[key] = {
+            **row,
+            "primary_candidate": _public_candidate_label(row.get("primary_candidate", "")),
+            "alternatives": [_public_candidate_label(item) for item in _list(row.get("alternatives"))[:MAX_RANKED_CANDIDATES_PER_DOMAIN]],
+        }
     return {
         "section_id": "ranked_decisions",
         "module_id": "M5",
@@ -525,12 +601,97 @@ def _ranked_evidence_ids(domain_rows: dict[str, object]) -> list[str]:
     return ids[:MAX_EVIDENCE_ITEMS]
 
 
+def _decision_verdict_evidence_ids(rows: list[dict[str, object]]) -> list[str]:
+    ids: list[str] = []
+    for row in rows:
+        for key in ("evidence_refs", "counter_evidence_refs"):
+            for evidence_id in _list(row.get(key)):
+                text = str(evidence_id)
+                if text and text not in ids:
+                    ids.append(text)
+    return ids[:MAX_EVIDENCE_ITEMS]
+
+
+def _public_structure_label(value: str) -> str:
+    raw = str(value or "").strip()
+    lowered = raw.lower()
+    traits: list[str] = []
+    if any(token in lowered for token in ("branch", "dynamic")):
+        traits.append("地支动态")
+    if any(token in lowered for token in ("strength", "pattern")):
+        traits.append("旺衰候选")
+    if "ten-god" in lowered or "ten_god" in lowered:
+        traits.append("十神评分")
+    if "counter" in lowered:
+        traits.append("反证")
+    if any(token in lowered for token in ("path", "mechanism")):
+        traits.append("路径评分")
+    if "time layer missing" in lowered:
+        traits.append("时运待补")
+    if any(token in lowered for token in ("evidence", "chart", "knowledge/rule/portrait", "rule evidence")):
+        traits.insert(0, "证据约束")
+    priority = ["证据约束", "反证", "地支动态", "旺衰候选", "路径评分", "十神评分", "时运待补"]
+    traits = [row for row in priority if row in _unique_strs(traits)][:4]
+    if traits:
+        detail = "、".join(row for row in traits if row != "证据约束")
+        return f"证据约束型结构（含{detail}）" if detail else "证据约束型结构"
+    return raw[:80] or "结构待复核"
+
+
+def _public_chain_label(value: str) -> str:
+    labels = {
+        "chart_context": "命盘事实",
+        "ten_god_visibility": "十神显隐",
+        "ten_god_energy_model": "十神能量",
+        "element_distribution": "五行分布",
+        "branch_relation": "地支关系",
+        "branch_relations": "地支关系",
+        "rule_evidence": "规则证据",
+        "mechanism_paths": "做功路径",
+        "domain_rules": "领域规则",
+    }
+    return labels.get(str(value or ""), str(value or "").replace("_", " "))
+
+
+def _public_candidate_label(value: object) -> str:
+    raw = str(value or "").strip()
+    labels = {
+        "strong": "日主偏旺候选",
+        "slightly_strong": "日主略偏旺候选",
+        "balanced": "平衡取向",
+        "slightly_weak": "日主略偏弱候选",
+        "weak": "日主偏弱候选",
+        "dynamic_structure_review": "动态结构复核",
+        "ordinary_structure_review": "常规格局复核",
+        "special_structure_boundary_review": "特殊格局边界复核",
+        "mediation_path_review": "通关承接路径",
+        "resource_or_self_support_review": "印比扶助方向",
+        "output_or_wealth_release_review": "食伤生财或财星释放方向",
+        "authority_regulation_review": "官杀约束承接方向",
+        "climate_regulation_review": "调候平衡方向",
+        "balance_review": "平衡调候方向",
+        "needs_time_layer_review": "需要时运复核",
+    }
+    if raw in labels:
+        return labels[raw]
+    if "evidence-bound" in raw.lower():
+        return _public_structure_label(raw)
+    return raw.replace("_", " ") or "候选待复核"
+
+
 def _dict(value: object) -> dict[str, Any]:
     return value if isinstance(value, dict) else {}
 
 
 def _list(value: object) -> list[Any]:
     return value if isinstance(value, list) else []
+
+
+def _float(value: object, default: float) -> float:
+    try:
+        return round(float(value), 3)
+    except (TypeError, ValueError):
+        return default
 
 
 def _unique_strs(values: list[object]) -> list[str]:

@@ -68,28 +68,6 @@ from v30.validation.targeted_calibration_closeout import (
     run_targeted_calibration_closeout,
 )
 from v30.validation.mainline_selection import build_mainline_selection, run_mainline_selection
-from v30.validation.external_release_dry_run import build_external_release_dry_run, run_external_release_dry_run
-from v30.validation.external_release_full_pytest_decision import (
-    build_external_release_full_pytest_decision,
-    run_external_release_full_pytest_decision,
-)
-from v30.validation.external_release_blocked_status import (
-    build_external_release_blocked_status,
-    run_external_release_blocked_status,
-)
-from v30.validation.post_release_boundary_authorization import (
-    build_post_release_boundary_authorization,
-    run_post_release_boundary_authorization,
-)
-from v30.validation.mainline_selection_after_release_pause import (
-    build_mainline_selection_after_release_pause,
-    run_mainline_selection_after_release_pause,
-)
-from v30.validation.core_monitoring_loop import build_core_monitoring_loop, run_core_monitoring_loop
-from v30.validation.lightweight_core_monitoring_checks import (
-    build_lightweight_core_monitoring_checks,
-    run_lightweight_core_monitoring_checks,
-)
 from v30.validation.core_calibration_observation_summary import (
     build_core_calibration_observation_summary,
     run_core_calibration_observation_summary,
@@ -110,22 +88,6 @@ from v30.validation.core_calibration_watch_closeout import (
     build_core_calibration_watch_closeout,
     run_core_calibration_watch_closeout,
 )
-from v30.validation.core_monitoring_cadence_baseline import (
-    build_core_monitoring_cadence_baseline,
-    run_core_monitoring_cadence_baseline,
-)
-from v30.validation.core_monitoring_cadence_documentation_sync import (
-    build_core_monitoring_cadence_documentation_sync,
-    run_core_monitoring_cadence_documentation_sync,
-)
-from v30.validation.core_monitoring_steady_state import (
-    build_core_monitoring_steady_state,
-    run_core_monitoring_steady_state,
-)
-from v30.validation.core_monitoring_s0_status import (
-    build_core_monitoring_s0_status,
-    run_core_monitoring_s0_status,
-)
 from v30.validation.central_brain_acceptance import (
     build_central_brain_acceptance,
     run_central_brain_acceptance,
@@ -138,6 +100,51 @@ from v30.validation.central_brain_failure_routing import (
     build_central_brain_failure_routing,
     run_central_brain_failure_routing,
 )
+from v30.validation.central_reading_synthetic_validation import (
+    CENTRAL_READING_SYNTHETIC_VALIDATION_VERSION,
+    build_central_reading_synthetic_validation,
+    run_central_reading_synthetic_validation,
+)
+from v30.validation.dialogue_training_calibration_loop import (
+    DIALOGUE_TRAINING_CALIBRATION_VALIDATION_VERSION,
+    build_dialogue_training_calibration_validation,
+    run_dialogue_training_calibration_validation,
+)
+from v30.validation.dialogue_policy_candidate_review import (
+    DIALOGUE_POLICY_CANDIDATE_REVIEW_VALIDATION_VERSION,
+    build_dialogue_policy_candidate_review_validation,
+    run_dialogue_policy_candidate_review_validation,
+)
+from v30.validation.dialogue_strategy_validation_gate import (
+    DIALOGUE_STRATEGY_VALIDATION_GATE_VALIDATION_VERSION,
+    build_dialogue_strategy_validation_gate_validation,
+    run_dialogue_strategy_validation_gate_validation,
+)
+from v30.validation.dialogue_synthetic_replay_queue import (
+    DIALOGUE_SYNTHETIC_REPLAY_QUEUE_VALIDATION_VERSION,
+    build_dialogue_synthetic_replay_queue_validation,
+    run_dialogue_synthetic_replay_queue_validation,
+)
+from v30.validation.dialogue_operator_review_pack import (
+    DIALOGUE_OPERATOR_REVIEW_PACK_VALIDATION_VERSION,
+    build_dialogue_operator_review_pack_validation,
+    run_dialogue_operator_review_pack_validation,
+)
+from v30.validation.dialogue_heavy_validation_decision import (
+    DIALOGUE_HEAVY_VALIDATION_DECISION_VALIDATION_VERSION,
+    build_dialogue_heavy_validation_decision_validation,
+    run_dialogue_heavy_validation_decision_validation,
+)
+from v30.validation.dialogue_heavy_validation_authorization import (
+    DIALOGUE_HEAVY_VALIDATION_AUTHORIZATION_VALIDATION_VERSION,
+    build_dialogue_heavy_validation_authorization_validation,
+    run_dialogue_heavy_validation_authorization_validation,
+)
+from v30.validation.dialogue_heavy_validation_execution_plan import (
+    DIALOGUE_HEAVY_VALIDATION_EXECUTION_PLAN_VALIDATION_VERSION,
+    build_dialogue_heavy_validation_execution_plan_validation,
+    run_dialogue_heavy_validation_execution_plan_validation,
+)
 from v30.validation.training_system_closeout import (
     build_training_system_closeout,
     run_training_system_closeout,
@@ -149,6 +156,18 @@ from v30.validation.training_candidate_quarantine import (
 from v30.validation.synthetic_coverage_manifest import (
     build_synthetic_coverage_manifest,
     run_synthetic_coverage_manifest,
+)
+from v30.validation.stage_option_intelligence_replay import (
+    STAGE_OPTION_INTELLIGENCE_REPLAY_VERSION,
+    run_stage_option_intelligence_replay,
+)
+from v30.validation.text_option_synthetic_validation import (
+    TEXT_OPTION_SYNTHETIC_VALIDATION_VERSION,
+    run_text_option_synthetic_validation,
+)
+from v30.validation.llm_prompt_profile_quality_audit import (
+    LLM_PROMPT_PROFILE_QUALITY_AUDIT_VERSION,
+    run_llm_prompt_profile_quality_audit,
 )
 from v30.validation.brain_training_synthetic_closeout import (
     build_brain_training_synthetic_closeout,
@@ -275,6 +294,10 @@ from v30.validation.core_calibration_steady_state_queue import (
 from v30.validation.bazi_llm_context_prompt_readiness import (
     build_bazi_llm_context_prompt_readiness,
     run_bazi_llm_context_prompt_readiness,
+)
+from v30.validation.decision_centered_architecture import (
+    build_decision_centered_architecture_validation,
+    run_decision_centered_architecture_validation,
 )
 from v30.validation.bazi_llm_answer_generator_readiness import (
     build_bazi_llm_answer_generator_readiness,
@@ -485,6 +508,10 @@ from v30.validation.core_answer_calibration_wait_status import (
     build_core_answer_calibration_wait_status,
     run_core_answer_calibration_wait_status,
 )
+from v30.validation.evaluation_training_spine import (
+    EVALUATION_TRAINING_SPINE_RUNNER_VERSION,
+    run_evaluation_training_spine,
+)
 from v30.validation.training_signals import SyntheticTrainingSignal, extract_training_signals
 
 __all__ = [
@@ -547,20 +574,6 @@ __all__ = [
     "run_targeted_calibration_closeout",
     "build_mainline_selection",
     "run_mainline_selection",
-    "build_external_release_dry_run",
-    "run_external_release_dry_run",
-    "build_external_release_full_pytest_decision",
-    "run_external_release_full_pytest_decision",
-    "build_external_release_blocked_status",
-    "run_external_release_blocked_status",
-    "build_post_release_boundary_authorization",
-    "run_post_release_boundary_authorization",
-    "build_mainline_selection_after_release_pause",
-    "run_mainline_selection_after_release_pause",
-    "build_core_monitoring_loop",
-    "run_core_monitoring_loop",
-    "build_lightweight_core_monitoring_checks",
-    "run_lightweight_core_monitoring_checks",
     "build_core_calibration_observation_summary",
     "run_core_calibration_observation_summary",
     "build_core_calibration_drift_watch",
@@ -571,26 +584,27 @@ __all__ = [
     "run_core_calibration_queue_review",
     "build_core_calibration_watch_closeout",
     "run_core_calibration_watch_closeout",
-    "build_core_monitoring_cadence_baseline",
-    "run_core_monitoring_cadence_baseline",
-    "build_core_monitoring_cadence_documentation_sync",
-    "run_core_monitoring_cadence_documentation_sync",
-    "build_core_monitoring_steady_state",
-    "run_core_monitoring_steady_state",
-    "build_core_monitoring_s0_status",
-    "run_core_monitoring_s0_status",
     "build_central_brain_acceptance",
     "run_central_brain_acceptance",
     "build_central_brain_session_replay",
     "run_central_brain_session_replay",
     "build_central_brain_failure_routing",
     "run_central_brain_failure_routing",
+    "DIALOGUE_TRAINING_CALIBRATION_VALIDATION_VERSION",
+    "build_dialogue_training_calibration_validation",
+    "run_dialogue_training_calibration_validation",
     "build_training_system_closeout",
     "run_training_system_closeout",
     "build_training_candidate_quarantine",
     "run_training_candidate_quarantine",
     "build_synthetic_coverage_manifest",
     "run_synthetic_coverage_manifest",
+    "STAGE_OPTION_INTELLIGENCE_REPLAY_VERSION",
+    "run_stage_option_intelligence_replay",
+    "TEXT_OPTION_SYNTHETIC_VALIDATION_VERSION",
+    "run_text_option_synthetic_validation",
+    "LLM_PROMPT_PROFILE_QUALITY_AUDIT_VERSION",
+    "run_llm_prompt_profile_quality_audit",
     "build_brain_training_synthetic_closeout",
     "run_brain_training_synthetic_closeout",
     "build_multi_user_terminal_locale_readiness",
@@ -637,6 +651,8 @@ __all__ = [
     "run_core_calibration_steady_state_queue",
     "build_bazi_llm_context_prompt_readiness",
     "run_bazi_llm_context_prompt_readiness",
+    "build_decision_centered_architecture_validation",
+    "run_decision_centered_architecture_validation",
     "build_bazi_llm_answer_generator_readiness",
     "run_bazi_llm_answer_generator_readiness",
     "build_bazi_llm_output_acceptance_readiness",
@@ -746,6 +762,8 @@ __all__ = [
     "CORE_ANSWER_CALIBRATION_WAIT_STATUS_VERSION",
     "build_core_answer_calibration_wait_status",
     "run_core_answer_calibration_wait_status",
+    "EVALUATION_TRAINING_SPINE_RUNNER_VERSION",
+    "run_evaluation_training_spine",
     "LATENT_POLICY_OBSERVABILITY_VERSION",
     "build_latent_policy_observability_readiness",
     "run_latent_policy_observability_readiness",

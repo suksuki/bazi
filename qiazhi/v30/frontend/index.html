@@ -3,36 +3,33 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>齐知 V30 八字测算台</title>
-    <link rel="stylesheet" href="/v30/ui/styles.css">
+    <title>掐指一算 · 八字智能推演</title>
+    <link rel="stylesheet" href="/v30/ui/styles.css?v=20260630-output-runtime">
   </head>
   <body>
     <main class="shell">
       <header class="topbar">
         <div class="brand-lockup">
-          <span class="brand-mark" aria-hidden="true">乾</span>
+          <span class="brand-mark" aria-hidden="true">算</span>
           <div>
-            <p class="eyebrow">齐知命理</p>
-            <h1>八字测算台</h1>
+            <p class="eyebrow">八字智能推演系统</p>
+            <h1>掐指一算</h1>
           </div>
         </div>
         <nav class="top-actions" aria-label="主入口">
-          <a href="/v30/ui/?page=auth">登录</a>
-          <a href="/v30/ui/?page=profiles">档案</a>
-          <a href="/v30/ui/?role=user">测算</a>
-          <label class="top-select">语言
-            <select id="locale-switch" aria-label="语言">
-              <option value="zh">中文</option>
-              <option value="en" disabled>English · 预留</option>
-              <option value="ko" disabled>한국어 · 준비중</option>
-            </select>
-          </label>
-          <span id="terminal-status" class="status">自动适配</span>
-          <span id="status" class="status">就绪</span>
+          <details class="top-system" data-system-menu>
+            <summary><span data-system-label>系统</span></summary>
+            <div class="system-menu">
+              <a href="/v30/ui/?page=auth" data-system-auth>登录</a>
+              <a href="/v30/ui/?role=user">测算台</a>
+              <a href="/v30/ui/?page=profiles">八字档案</a>
+              <button type="button" data-system-logout>退出登录</button>
+            </div>
+          </details>
         </nav>
       </header>
       <section id="app" class="workspace" aria-live="polite"></section>
     </main>
-    <script src="/v30/ui/app.js"></script>
+    <script src="/v30/ui/app.js?v=20260630-output-runtime"></script>
   </body>
 </html>

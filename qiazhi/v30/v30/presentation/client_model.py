@@ -1,9 +1,19 @@
 from __future__ import annotations
 
 from v30.contracts import ClientPresentationModel, CoreRuntimeResult
+from v30.brain.text_options import build_response_option_set_for_question, role_visible_option_sets
 from v30.expression import render_question_label, summarize_question_labels
 from v30.presentation.client_profiles import client_profile
 from v30.presentation.i18n import build_locale_terminology_contract, label, term_label
+from v30.presentation.product_projection import (
+    build_decision_workbench_product_surface,
+    output_runtime_contract,
+)
+from v30.presentation.surface_orchestrator import (
+    build_surface_orchestration,
+    output_pipeline_contract,
+    surface_orchestration_policy,
+)
 from v30.portrait import build_macro_portrait_projection_views, summarize_macro_portrait_projection_views
 
 
@@ -112,6 +122,7 @@ def build_presentation_model(
             "options": recommendations.get(anchor.question_id, {}).get("options", []),
             "answer_constraints": recommendations.get(anchor.question_id, {}).get("answer_constraints", {}),
             "quality_contract": recommendations.get(anchor.question_id, {}).get("quality_contract", {}),
+            "semantic_projection": recommendations.get(anchor.question_id, {}).get("semantic_projection", {}),
             "reasons": recommendations.get(anchor.question_id, {}).get("reasons", []) if show_reasons else [],
         }
         for anchor in visible_anchors
@@ -133,6 +144,19 @@ def build_presentation_model(
         rendered_label_summary,
     ) if show_diagnostics else {}
     answer_panel = runtime.answer_result.model_dump(mode="json") if runtime.answer_result else None
+    if answer_panel is not None:
+        answer_panel = {
+            **answer_panel,
+            "user_submitted": _answer_panel_user_submitted(runtime, answer_panel),
+            "question_stage_id": _answer_panel_question_stage_id(runtime, answer_panel),
+            "question_label": _answer_panel_question_label(
+                runtime,
+                answer_panel,
+                role_key=role_key,
+                locale=locale,
+                client=resolved_client,
+            ),
+        }
     if role_key in USER_VISIBLE_ROLES and answer_panel is not None:
         answer_panel = _customer_answer_panel(answer_panel, reading_surface)
     elif role_key in DIAGNOSTIC_ROLES and answer_panel is not None:
@@ -225,6 +249,9 @@ def _customer_question_row(row: dict[str, object]) -> dict[str, object]:
             for key, value in contract.items()
             if key in {"version", "purpose", "optimizes_for", "reading_focus"}
         }
+    semantic = payload.get("semantic_projection", {})
+    if isinstance(semantic, dict):
+        payload["semantic_projection"] = _customer_question_semantic_projection(semantic)
     payload["reasons"] = []
     return payload
 
@@ -247,7 +274,12 @@ def _customer_answer_panel(answer_panel: dict[str, object], reading_surface: dic
     payload = dict(answer_panel)
     question_id = str(payload.get("question_id") or "")
     payload["answer_id"] = f"{question_id}:answer" if question_id else "answer"
-    payload["text"] = _customer_answer_text(str(payload.get("text") or ""))
+    payload["text"] = _customer_answer_text(
+        str(payload.get("text") or ""),
+        source=str(payload.get("source") or ""),
+        llm_metadata=payload.get("llm_metadata") if isinstance(payload.get("llm_metadata"), dict) else {},
+    )
+    payload["visual_hint"] = _answer_visual_hint(payload, reading_surface)
     evidence_ids = payload.get("evidence_ids", [])
     if isinstance(evidence_ids, list):
         payload["evidence_count"] = len(evidence_ids)
@@ -263,10 +295,98 @@ def _customer_answer_panel(answer_panel: dict[str, object], reading_surface: dic
     return payload
 
 
-def _customer_answer_text(text: str) -> str:
+def _answer_panel_user_submitted(runtime: CoreRuntimeResult, answer_panel: dict[str, object]) -> bool:
+    question_id = str(answer_panel.get("question_id") or "")
+    if not question_id:
+        return False
+    outcomes = runtime.question_plan.session_state.get("question_outcomes", [])
+    if not isinstance(outcomes, list):
+        return False
+    for row in outcomes:
+        if not isinstance(row, dict):
+            continue
+        if str(row.get("question_id") or "") != question_id:
+            continue
+        return str(row.get("outcome_status") or "") in {"answered", "skipped", "invalid"}
+    return False
+
+
+def _answer_panel_question_stage_id(runtime: CoreRuntimeResult, answer_panel: dict[str, object]) -> str:
+    question_id = str(answer_panel.get("question_id") or "")
+    if not question_id:
+        return ""
+    outcomes = runtime.question_plan.session_state.get("question_outcomes", [])
+    if isinstance(outcomes, list):
+        for row in outcomes:
+            if not isinstance(row, dict) or str(row.get("question_id") or "") != question_id:
+                continue
+            stage_id = _dialogue_stage_id_from_topic_stage(
+                topic=str(row.get("topic") or ""),
+                stage=str(row.get("stage") or ""),
+            )
+            if stage_id:
+                return stage_id
+    central = runtime.question_plan.policy_effect.get("central_reading_state", {})
+    central = central if isinstance(central, dict) else {}
+    recommended = runtime.question_plan.recommended_questions
+    for row in recommended:
+        if not isinstance(row, dict) or str(row.get("question_id") or "") != question_id:
+            continue
+        stage_id = _dialogue_turn_stage_id(central, _surface_question_projection(row))
+        return stage_id
+    return ""
+
+
+def _answer_panel_question_label(
+    runtime: CoreRuntimeResult,
+    answer_panel: dict[str, object],
+    *,
+    role_key: str,
+    locale: str,
+    client: str,
+) -> str:
+    question_id = str(answer_panel.get("question_id") or "")
+    if not question_id:
+        return ""
+    recommendations = {
+        str(row.get("question_id")): row
+        for row in runtime.question_plan.recommended_questions
+        if isinstance(row, dict)
+    }
+    anchor = next((row for row in runtime.question_anchors if row.question_id == question_id), None)
+    if anchor is not None:
+        return render_question_label(
+            anchor,
+            recommendations.get(question_id, {}),
+            role_key=role_key,
+            locale=locale,
+            client=client,
+        ).label
+    recommendation = recommendations.get(question_id, {})
+    if isinstance(recommendation, dict):
+        return str(
+            recommendation.get("label")
+            or recommendation.get("question")
+            or recommendation.get("prompt")
+            or recommendation.get("title")
+            or ""
+        )
+    return ""
+
+
+def _customer_answer_text(
+    text: str,
+    *,
+    source: str = "",
+    llm_metadata: dict[str, object] | None = None,
+) -> str:
+    metadata = llm_metadata if isinstance(llm_metadata, dict) else {}
+    status = str(metadata.get("status") or "")
+    if status in {"deferred", "loading"} or source in {"rule_bound_llm_deferred", "llm_pending"}:
+        return "本次回答正在等待大模型推演，完成后会只展示结论和建议。"
     lines = [line.strip() for line in text.splitlines()]
     kept: list[str] = []
-    blocked_prefixes = ("基础判断：", "路径复核：", "特征画像：", "边界：")
+    blocked_prefixes = ("基础判断：", "路径复核：", "特征画像：", "边界：", "诊断口径：")
     blocked_contains = (
         "llm_bazi_answer_draft",
         "LLM accepted",
@@ -275,6 +395,8 @@ def _customer_answer_text(text: str) -> str:
         "rule_bound_llm_deferred",
         "policy_effect",
         "证据数=",
+        "当前回答已绑定",
+        "结构化明细见诊断字段",
     )
     for line in lines:
         if not line:
@@ -289,7 +411,11 @@ def _customer_answer_text(text: str) -> str:
             continue
         kept.append(line)
     cleaned = "\n".join(kept).strip()
-    return cleaned or text.strip()
+    if cleaned:
+        return cleaned
+    if any(token in text for token in blocked_contains) or any(text.strip().startswith(prefix) for prefix in blocked_prefixes):
+        return "本次回答没有形成可展示的用户结论，请重新推演这一问。"
+    return text.strip()
 
 
 def _ensure_product_context_summary(
@@ -481,7 +607,9 @@ def _projection_contract(
         "core_bazi_reading",
         "domain_cards",
         "time_context",
-        "next_question",
+        "calibration_surface",
+        "conversation_surface",
+        "thinking_surface",
     ]
     hidden_fields = _hidden_projection_tokens()
     additive_fields = [
@@ -490,6 +618,11 @@ def _projection_contract(
         "domain_cards",
         "questions",
         "answer_panel",
+        "surface_orchestrator",
+        "calibration_surface",
+        "conversation_surface",
+        "thinking_surface",
+        "legacy_dialogue_surface",
         "next_question_id",
         "visible_next_question_id",
         "internal_next_question_id",
@@ -517,11 +650,16 @@ def _projection_contract(
             "core_bazi_reading",
             "domain_cards",
             "time_context",
-            "next_question",
-            "options",
-            "interaction_goal",
+            "surface_orchestrator",
+            "calibration_surface",
+            "conversation_surface",
+            "thinking_surface",
+            "legacy_dialogue_surface",
         ],
         "customer_surface_order": customer_surface_order,
+        "surface_orchestration_policy": surface_orchestration_policy(),
+        "surface_output_pipeline_contract": output_pipeline_contract(),
+        "output_runtime_product_projection_contract": output_runtime_contract(),
         "core_first_projection": {
             "version": "v30.core_first_projection.v1",
             "required_surface_prefix": customer_surface_order[:2],
@@ -531,6 +669,26 @@ def _projection_contract(
             "boundary": "core_bazi_calculation_is_presented_before_questions_or_feedback_loops",
         },
         "customer_surface_contract": surface_contract,
+        "dialogue_entry_policy": {
+            "version": "v30.dialogue_entry_policy.v1",
+            "customer_primary_entry": "reading_surface.conversation_surface",
+            "legacy_customer_primary_entry": "reading_surface.current_dialogue_turn",
+            "stage_probe_entry_v2": "reading_surface.calibration_surface",
+            "thinking_entry_v2": "reading_surface.thinking_surface",
+            "legacy_current_dialogue_turn_status": "diagnostic_compatibility_only",
+            "customer_direct_legacy_fields_exposed": False,
+            "questions_array_role": "fallback_compatibility_and_non_customer_diagnostics",
+            "question_dialogue_graph_role": "memory_relation_graph_only",
+            "recommender_role": "candidate_source_only",
+            "frontend_selection_allowed": False,
+            "answer_submit_source": "reading_surface.calibration_surface.visible_probe_cards[].submit_contract",
+            "legacy_answer_submit_source": "reading_surface.current_dialogue_turn.question",
+            "legacy_answer_submit_source_status": "deprecated_compatibility_only",
+            "calibration_submit_source_v2": "reading_surface.calibration_surface.visible_probe_cards[].submit_contract",
+            "conversation_submit_source_v2": "reading_surface.conversation_surface.submit_contract",
+            "max_visible_customer_questions": 1,
+            "boundary": "dialogue_entry_policy_prevents_legacy_question_pool_from_selecting_customer_turn",
+        },
         "customer_visible_roles": sorted(USER_VISIBLE_ROLES),
         "diagnostic_roles": sorted(DIAGNOSTIC_ROLES),
         "diagnostics_visible": bool(diagnostics),
@@ -610,12 +768,23 @@ def _customer_surface_contract(
     core = reading_surface.get("core_bazi_reading", {})
     domain_cards = reading_surface.get("domain_cards", [])
     next_question = reading_surface.get("next_question", {})
+    current_turn = reading_surface.get("current_dialogue_turn", {})
+    legacy = reading_surface.get("legacy_dialogue_surface", {})
+    legacy = legacy if isinstance(legacy, dict) else {}
+    calibration = reading_surface.get("calibration_surface", {})
+    conversation = reading_surface.get("conversation_surface", {})
+    thinking = reading_surface.get("thinking_surface", {})
     ready = (
         isinstance(core, dict)
         and core.get("surface_type") == "core_bazi_calculation"
         and isinstance(domain_cards, list)
         and bool(domain_cards)
-        and isinstance(next_question, dict)
+        and isinstance(calibration, dict)
+        and bool(calibration)
+        and isinstance(conversation, dict)
+        and bool(conversation)
+        and isinstance(thinking, dict)
+        and bool(thinking)
     )
     return {
         "version": "v30.customer_surface_contract.v1",
@@ -623,7 +792,22 @@ def _customer_surface_contract(
         "has_core_bazi_reading": isinstance(core, dict) and core.get("surface_type") == "core_bazi_calculation",
         "has_domain_cards": isinstance(domain_cards, list) and bool(domain_cards),
         "has_time_context": isinstance(reading_surface.get("time_context", {}), dict) and bool(reading_surface.get("time_context", {})),
+        "has_current_dialogue_turn": isinstance(current_turn, dict) and bool(current_turn),
         "has_next_question": isinstance(next_question, dict) and bool(next_question),
+        "has_legacy_dialogue_surface": bool(legacy),
+        "direct_legacy_fields_exposed": bool(legacy.get("direct_fields_exposed")),
+        "legacy_status": str(legacy.get("status") or ""),
+        "has_calibration_surface": isinstance(calibration, dict) and bool(calibration),
+        "has_conversation_surface": isinstance(conversation, dict) and bool(conversation),
+        "has_thinking_surface": isinstance(thinking, dict) and bool(thinking),
+        "questions_array_fallback_only": True if not current_turn else (
+            _nested_bool(current_turn, "compatibility", "questions_array_is_legacy_only")
+            or _nested_bool(current_turn, "compatibility", "questions_array_is_fallback_only")
+        ),
+        "primary_dialogue_entry": "conversation_surface",
+        "legacy_dialogue_entry": "current_dialogue_turn",
+        "primary_probe_entry_v2": "calibration_surface",
+        "primary_thinking_entry_v2": "thinking_surface",
         "surface_prefix_ready": ready,
         "surface_order": customer_surface_order,
         "boundary": "customer_surface_contract_validates_projection_shape_not_bazi_facts",
@@ -743,6 +927,7 @@ def _diagnostics(
         "question_outcomes": runtime.question_plan.policy_effect.get("question_outcomes", []),
         "question_dialogue_graph": runtime.question_plan.policy_effect.get("question_dialogue_graph", {}),
         "interaction_state": runtime.question_plan.policy_effect.get("interaction_state", {}),
+        "central_reading_state": runtime.question_plan.policy_effect.get("central_reading_state", {}),
         "interaction_brain_summary": _interaction_brain_summary(runtime),
         "adaptive_question_diagnostics": runtime.question_plan.policy_effect.get("adaptive_question_diagnostics", {}),
         "ranked_decisions": runtime.question_plan.policy_effect.get("ranked_decisions", {}),
@@ -920,15 +1105,68 @@ def _reading_surface(
     client: str,
 ) -> dict[str, object]:
     practical = runtime.question_plan.policy_effect.get("practical_reading_context", {})
+    central = runtime.question_plan.policy_effect.get("central_reading_state", {})
+    final_synthesis = central.get("final_synthesis", {}) if isinstance(central, dict) else {}
+    final_synthesis = final_synthesis if isinstance(final_synthesis, dict) else {}
     agent_flow = runtime.question_plan.policy_effect.get("agent_question_flow", {})
     domain_readings = practical.get("domain_readings", {}) if isinstance(practical, dict) else {}
     focus_domains = _focus_domains(domain_readings)
     domain_cards = _domain_cards(domain_readings, focus_domains, locale=locale)
-    next_question = _surface_question_projection(_next_question_from_graph(runtime, questions))
+    next_question = _surface_question_projection(_next_question_from_dialogue_plan(runtime, questions))
+    current_dialogue_turn = _current_dialogue_turn(
+        runtime,
+        next_question=next_question,
+        questions=questions,
+        role_key=role_key,
+    )
+    if isinstance(current_dialogue_turn.get("question"), dict) and current_dialogue_turn["question"].get("response_option_set"):
+        next_question = {
+            **next_question,
+            "response_option_set": current_dialogue_turn["question"]["response_option_set"],
+        }
+    dialogue = _dialogue_projection(runtime, next_question=next_question, questions=questions)
     core_bazi_reading = _core_bazi_reading(runtime, domain_cards)
     basic_assertions = core_bazi_reading.get("basic_assertions", [])
     basic_assertions = basic_assertions if isinstance(basic_assertions, list) else []
-    return {
+    reading_summary = {
+        "title": _customer_summary_title(
+            runtime,
+            domain_cards,
+            locale=locale,
+            diagnostic=role_key not in USER_VISIBLE_ROLES,
+        ),
+        "status": practical.get("status", "ready") if isinstance(practical, dict) else "ready",
+        "focus_domains": focus_domains,
+        "primary_message": _primary_message(domain_cards, locale=locale, final_synthesis=final_synthesis),
+        "final_conclusion": str(final_synthesis.get("conclusion") or ""),
+        "final_advice": str(final_synthesis.get("advice") or ""),
+        "final_synthesis_status": str(final_synthesis.get("status") or ""),
+        "diagnosis_overview": _diagnosis_overview(runtime),
+        "timing_status": _nested_dict(practical, "timing_summary", "status", default="natal_only"),
+        "boundary": "customer_summary_uses_final_synthesis_without_exposing_internal_diagnostics",
+    }
+    customer_final_synthesis = _customer_final_synthesis(final_synthesis)
+    surface_orchestrator = build_surface_orchestration(
+        runtime,
+        reading_summary=reading_summary,
+        final_synthesis=customer_final_synthesis,
+        domain_cards=domain_cards,
+        current_dialogue_turn=current_dialogue_turn,
+        next_question=next_question,
+        dialogue=dialogue,
+        questions=questions,
+        role_key=role_key,
+        locale=locale,
+        client=client,
+    )
+    legacy_dialogue_surface = _legacy_dialogue_surface(
+        current_dialogue_turn=current_dialogue_turn,
+        next_question=next_question,
+        dialogue=dialogue,
+        domain_cards=domain_cards,
+        role_key=role_key,
+    )
+    surface = {
         "version": "v30.customer_reading_surface.v1",
         "role_key": role_key,
         "role_contract": _reading_surface_role_contract(role_key),
@@ -939,20 +1177,10 @@ def _reading_surface(
             "status",
             runtime.chart_context.time_layers.get("status", "ready"),
         ),
-        "reading_summary": {
-            "title": _customer_summary_title(
-                runtime,
-                domain_cards,
-                locale=locale,
-                diagnostic=role_key not in USER_VISIBLE_ROLES,
-            ),
-            "status": practical.get("status", "ready") if isinstance(practical, dict) else "ready",
-            "focus_domains": focus_domains,
-            "primary_message": _primary_message(domain_cards, locale=locale),
-            "diagnosis_overview": _diagnosis_overview(runtime),
-            "timing_status": _nested_dict(practical, "timing_summary", "status", default="natal_only"),
-            "boundary": "customer_summary_expresses_bazi_context_without_exposing_internal_diagnostics",
-        },
+        "reading_summary": reading_summary,
+        "final_synthesis": customer_final_synthesis,
+        "decision_workbench": _decision_workbench_projection(central, role_key=role_key),
+        "decision_feedback": _decision_feedback_projection(central, role_key=role_key),
         "diagnosis_overview": _diagnosis_overview(runtime),
         "domain_cards": domain_cards,
         "basic_assertions": basic_assertions,
@@ -962,18 +1190,523 @@ def _reading_surface(
         "core_bazi_reading": core_bazi_reading,
         "structure_dynamics": _customer_structure_dynamics(runtime, role_key=role_key, locale=locale),
         "time_context": _customer_time_context(runtime),
-        "next_question": next_question,
-        "next_question_id": str(next_question.get("question_id") or "") if isinstance(next_question, dict) else "",
+        "surface_orchestrator": surface_orchestrator,
+        "surface_policy": surface_orchestrator["reading_surface_policy"],
+        "calibration_surface": surface_orchestrator["calibration_surface"],
+        "conversation_surface": surface_orchestrator["conversation_surface"],
+        "thinking_surface": surface_orchestrator["thinking_surface"],
+        "legacy_dialogue_surface": legacy_dialogue_surface,
         "interaction_stage": _interaction_stage(runtime),
         "selected_domain": _interaction_selected_domain(runtime),
-        "visible_next_question_id": str(next_question.get("question_id") or "") if isinstance(next_question, dict) else "",
-        "options": _surface_options(next_question, domain_cards),
         "question_count": len(questions),
         "next_stage": agent_flow.get("next_stage", "") if isinstance(agent_flow, dict) else "",
-        "interaction_goal": "ask_high_value_question_then_refresh_context",
+        "interaction_goal": "surface_orchestrated_reading_probe_conversation_thinking",
         "internal_context_visible": role_key not in USER_VISIBLE_ROLES,
-        "boundary": "customer_surface_is_projection_not_chart_fact_or_debug_trace",
+        "boundary": "customer_surface_uses_four_surface_contracts_legacy_dialogue_role_gated",
     }
+    if role_key not in USER_VISIBLE_ROLES:
+        surface.update(_diagnostic_legacy_dialogue_fields(legacy_dialogue_surface))
+    return surface
+
+
+def _current_dialogue_turn(
+    runtime: CoreRuntimeResult,
+    *,
+    next_question: dict[str, object],
+    questions: list[dict[str, object]],
+    role_key: str,
+) -> dict[str, object]:
+    central = runtime.question_plan.policy_effect.get("central_reading_state", {})
+    central = central if isinstance(central, dict) else {}
+    action = central.get("next_action", {})
+    action = action if isinstance(action, dict) else {}
+    decision_trace = central.get("brain_decision_trace", {})
+    decision_trace = decision_trace if isinstance(decision_trace, dict) else {}
+    voi_policy = central.get("value_of_information_policy", {})
+    voi_policy = voi_policy if isinstance(voi_policy, dict) else {}
+    stage_id = _dialogue_turn_stage_id(central, next_question)
+    target_claim_ids = _dialogue_turn_target_claim_ids(central, next_question)
+    question = next_question if isinstance(next_question, dict) else {}
+    raw_action = str(decision_trace.get("selected_action") or action.get("action") or "")
+    has_question = bool(question.get("question_id"))
+    relevance = _dialogue_turn_relevance_gate(
+        raw_action=raw_action,
+        question=question,
+        stage_id=stage_id,
+        target_claim_ids=target_claim_ids,
+        voi_policy=voi_policy,
+    )
+    turn_action = "ask" if has_question and relevance["passed"] else (
+        "continue" if raw_action == "continue_next_stage" else "conclude" if raw_action == "conclude_stage" else "stop"
+    )
+    if role_key in USER_VISIBLE_ROLES and has_question and turn_action != "ask":
+        question = {}
+    response_option_set = build_response_option_set_for_question(
+        question,
+        stage_id=stage_id,
+        role_key=role_key,
+    ) if turn_action == "ask" else {}
+    if question and response_option_set:
+        question = {
+            **question,
+            "response_option_set": response_option_set,
+        }
+    visible_option_sets = role_visible_option_sets([response_option_set], role_key=role_key) if response_option_set else []
+    return {
+        "version": "v30.current_dialogue_turn.v1",
+        "action": turn_action,
+        "stage_id": stage_id,
+        "stage_display": _dialogue_turn_stage_display(stage_id),
+        "question": question if turn_action == "ask" else {},
+        "why_now": _dialogue_turn_reason(action, question, stage_id),
+        "target_claim_ids": target_claim_ids,
+        "target_claim_count": len(target_claim_ids),
+        "semantic_focus": _customer_semantic_focus(question),
+        "response_option_set": response_option_set if response_option_set else {},
+        "visible_option_sets": visible_option_sets,
+        "visual_hint": _dialogue_turn_visual_hint(question, stage_id, action=turn_action, voi_policy=voi_policy),
+        "decision_source": "central_reading_state.brain_decision_trace",
+        "decision_basis": {
+            "selected_action": str(decision_trace.get("selected_action") or raw_action),
+            "question_value": _bounded_float(voi_policy.get("question_value"), 0.0),
+            "information_gain": _bounded_float(voi_policy.get("information_gain"), 0.0),
+            "user_cost": _bounded_float(voi_policy.get("user_cost"), 0.0),
+            "top_claim_score": _bounded_float(voi_policy.get("top_claim_score"), 0.0),
+            "relevance_passed": relevance["passed"],
+            "relevance_reason": relevance["reason"],
+            "boundary": "decision_basis_is_customer_safe_summary_not_internal_trace",
+        },
+        "ui_policy": {
+            "max_visible_questions": 1,
+            "allow_free_text": False,
+            "show_engine_diagnostics": False,
+            "question_source": "current_dialogue_turn",
+            "boundary": "frontend_must_not_select_question_from_questions_array",
+        },
+        "compatibility": {
+            "questions_array_is_legacy_only": True,
+            "compatible_question_count": len(questions),
+            "next_question_id": str(question.get("question_id") or ""),
+        },
+        "boundary": "current_dialogue_turn_is_customer_safe_single_dialogue_exit_not_chart_fact",
+    }
+
+
+def _legacy_dialogue_surface(
+    *,
+    current_dialogue_turn: dict[str, object],
+    next_question: dict[str, object],
+    dialogue: dict[str, object],
+    domain_cards: list[dict[str, object]],
+    role_key: str,
+) -> dict[str, object]:
+    direct_fields_exposed = role_key not in USER_VISIBLE_ROLES
+    next_question_id = str(next_question.get("question_id") or "") if isinstance(next_question, dict) else ""
+    payload: dict[str, object] = {
+        "version": "v30.legacy_dialogue_surface.v1",
+        "status": "diagnostic_payload_available" if direct_fields_exposed else "hidden_for_customer",
+        "direct_fields_exposed": direct_fields_exposed,
+        "customer_product_entry": False,
+        "replacement_entries": [
+            "calibration_surface",
+            "conversation_surface",
+            "thinking_surface",
+        ],
+        "legacy_next_question_id": next_question_id if direct_fields_exposed else "",
+        "legacy_field_names": [
+            "current_dialogue_turn",
+            "next_question",
+            "dialogue",
+            "next_question_id",
+            "visible_next_question_id",
+            "options",
+        ],
+        "boundary": "legacy_dialogue_payload_is_role_gated_and_not_customer_product_entry",
+    }
+    if direct_fields_exposed:
+        payload["payload"] = {
+            "current_dialogue_turn": current_dialogue_turn,
+            "next_question": next_question,
+            "dialogue": dialogue,
+            "next_question_id": next_question_id,
+            "visible_next_question_id": next_question_id,
+            "options": _surface_options(next_question, domain_cards),
+        }
+    return payload
+
+
+def _diagnostic_legacy_dialogue_fields(legacy_dialogue_surface: dict[str, object]) -> dict[str, object]:
+    payload = legacy_dialogue_surface.get("payload", {})
+    return payload if isinstance(payload, dict) else {}
+
+
+def _dialogue_turn_relevance_gate(
+    *,
+    raw_action: str,
+    question: dict[str, object],
+    stage_id: str,
+    target_claim_ids: list[str],
+    voi_policy: dict[str, object],
+) -> dict[str, object]:
+    if raw_action not in {"ask_stage_question", "ask_hidden_attribute_probe"}:
+        return {"passed": False, "reason": "central_brain_did_not_select_dialogue"}
+    if not question.get("question_id"):
+        return {"passed": False, "reason": "missing_question"}
+    if not stage_id:
+        return {"passed": False, "reason": "missing_relevant_stage"}
+    question_value = _bounded_float(voi_policy.get("question_value"), 0.0)
+    information_gain = _bounded_float(voi_policy.get("information_gain"), 0.0)
+    user_cost = _bounded_float(voi_policy.get("user_cost"), 0.0)
+    if user_cost >= 0.85:
+        return {"passed": False, "reason": "user_cost_too_high"}
+    if target_claim_ids:
+        return {"passed": True, "reason": "target_claim_bound"}
+    if question_value >= 0.25 and information_gain >= 0.35:
+        return {"passed": True, "reason": "voi_threshold_passed"}
+    return {"passed": False, "reason": "low_relevance"}
+
+
+def _customer_semantic_focus(question: dict[str, object]) -> dict[str, object]:
+    semantic = question.get("semantic_projection", {}) if isinstance(question, dict) else {}
+    semantic = semantic if isinstance(semantic, dict) else {}
+    if not semantic:
+        return {}
+    return {
+        "version": "v30.customer_semantic_focus.v1",
+        "macro_domain": str(semantic.get("macro_domain") or ""),
+        "macro_label": str(semantic.get("macro_label") or ""),
+        "selected_slot": str(semantic.get("selected_slot") or ""),
+        "keywords": [str(row) for row in _as_list(semantic.get("keywords"))[:6]],
+        "ten_god_drivers": _customer_ten_god_drivers(_as_list(semantic.get("ten_god_drivers"))),
+        "boundary": "customer_semantic_focus_explains_question_theme_without_internal_weights",
+    }
+
+
+def _customer_ten_god_drivers(rows: list[object]) -> list[dict[str, object]]:
+    projected: list[dict[str, object]] = []
+    for row in rows[:3]:
+        if not isinstance(row, dict):
+            continue
+        projected.append({
+            "ten_god": str(row.get("ten_god") or ""),
+            "label": str(row.get("label") or ""),
+        })
+    return projected
+
+
+def _dialogue_turn_stage_id(central: dict[str, object], question: dict[str, object]) -> str:
+    seed = central.get("current_turn_seed", {})
+    if isinstance(seed, dict) and str(seed.get("question_id") or "") == str(question.get("question_id") or ""):
+        stage_id = str(seed.get("stage_id") or "")
+        if stage_id:
+            return stage_id
+    question_id = str(question.get("question_id") or "")
+    opportunities = central.get("stage_question_opportunities", [])
+    if isinstance(opportunities, list):
+        for row in opportunities:
+            if isinstance(row, dict) and str(row.get("question_id") or "") == question_id:
+                return str(row.get("step_id") or "")
+    topic = str(question.get("topic") or "")
+    stage = str(question.get("stage") or "")
+    stage_id = _dialogue_stage_id_from_topic_stage(topic=topic, stage=stage)
+    if stage_id:
+        return stage_id
+    return ""
+
+
+def _dialogue_stage_id_from_topic_stage(*, topic: str, stage: str) -> str:
+    if topic in {"time_context", "timing"} or stage == "context_completion":
+        return "timing_layers"
+    if topic in {"useful_god", "structure_dynamic", "decision"} or stage == "candidate_review":
+        return "path_reasoning"
+    if topic == "hidden_factor" or stage == "dialogue_discovery":
+        return "portrait_projection"
+    if topic in {"career", "wealth", "relationship", "health", "practical_reading"}:
+        return "domain_synthesis"
+    if stage == "mainline_review":
+        return "structure_reasoning"
+    return ""
+
+
+def _dialogue_turn_target_claim_ids(central: dict[str, object], question: dict[str, object]) -> list[str]:
+    seed = central.get("current_turn_seed", {})
+    if isinstance(seed, dict) and str(seed.get("question_id") or "") == str(question.get("question_id") or ""):
+        claims = seed.get("target_claim_ids", [])
+        if isinstance(claims, list) and claims:
+            return [str(claim_id) for claim_id in claims if claim_id][:4]
+    question_id = str(question.get("question_id") or "")
+    opportunities = central.get("stage_question_opportunities", [])
+    if isinstance(opportunities, list):
+        for row in opportunities:
+            if isinstance(row, dict) and str(row.get("question_id") or "") == question_id:
+                claims = row.get("target_claim_ids", [])
+                return [str(claim_id) for claim_id in claims if claim_id][:4] if isinstance(claims, list) else []
+    needs = central.get("needs_question_claim_ids", [])
+    if isinstance(needs, list) and needs:
+        return [str(claim_id) for claim_id in needs if claim_id][:4]
+    top = central.get("top_claim_ids", [])
+    return [str(claim_id) for claim_id in top if claim_id][:1] if isinstance(top, list) else []
+
+
+def _dialogue_turn_reason(action: dict[str, object], question: dict[str, object], stage_id: str) -> str:
+    if not question:
+        reason = str(action.get("reason") or "")
+        if reason == "top_claim_has_enough_multi_module_support":
+            return "这一页证据已经足够，优先给结论和建议，不再额外追问。"
+        return "当前阶段先收束结论，不额外增加用户输入。"
+    topic = _topic_label(str(question.get("topic") or ""))
+    gain = question.get("expected_information_gain", {})
+    gain = gain if isinstance(gain, dict) else {}
+    readable_gain = _readable_gain(str(gain.get("primary_gain") or ""))
+    stage = _dialogue_turn_stage_display(stage_id)
+    return f"这个问题只补“{stage}”里的一个关键背景，用来把{topic}判断落到更具体的结论和建议：{readable_gain}。"
+
+
+def _dialogue_turn_stage_display(stage_id: str) -> str:
+    labels = {
+        "chart_build": "排盘校准",
+        "rule_matching": "规则匹配",
+        "feature_extraction": "特征抽取",
+        "portrait_projection": "画像校准",
+        "path_reasoning": "路径判断",
+        "structure_reasoning": "结构判断",
+        "timing_layers": "时运判断",
+        "domain_synthesis": "领域建议",
+    }
+    return labels.get(stage_id, "当前步骤")
+
+
+def _dialogue_turn_visual_hint(
+    question: dict[str, object],
+    stage_id: str,
+    *,
+    action: str,
+    voi_policy: dict[str, object] | None = None,
+) -> dict[str, object]:
+    voi_policy = voi_policy if isinstance(voi_policy, dict) else {}
+    topic = str(question.get("topic") or "")
+    gain = question.get("expected_information_gain", {}) if isinstance(question, dict) else {}
+    gain = gain if isinstance(gain, dict) else {}
+    score = _bounded_float(voi_policy.get("information_gain"), _bounded_float(gain.get("score"), 0.0))
+    user_cost = _bounded_float(voi_policy.get("user_cost"), 0.22 if topic != "hidden_factor" else 0.34)
+    if action != "ask" or not question:
+        return {
+            "version": "v30.dialogue_visual_hint.v1",
+            "kind": "stage_conclusion_marker",
+            "title": "本页直接收束",
+            "chips": ["结论优先", "不额外追问"],
+            "markers": [],
+            "guidance": "证据足够时，系统不强行提问。",
+            "boundary": "visual_hint_explains_dialogue_action_not_bazi_fact",
+        }
+    chips = [_topic_label(topic), _dialogue_turn_stage_display(stage_id), "只问一个关键点"]
+    if topic == "hidden_factor":
+        chips.append("校准线索")
+    return {
+        "version": "v30.dialogue_visual_hint.v1",
+        "kind": "advice_compass" if topic != "hidden_factor" else "hidden_signal_probe",
+        "title": f"{_topic_label(topic)}判断焦点",
+        "chips": [chip for chip in chips if chip][:4],
+        "markers": [
+            {"label": "信息增益", "value": score or 0.56},
+            {"label": "输入成本", "value": user_cost},
+        ],
+        "guidance": _dialogue_visual_guidance(topic, str(gain.get("primary_gain") or "")),
+        "boundary": "visual_hint_turns_dialogue_context_into_lightweight_customer_visual_not_diagnostic_trace",
+    }
+
+
+def _dialogue_visual_guidance(topic: str, gain: str) -> str:
+    if topic == "career":
+        return "回答后会把事业建议收束到稳定承接、职责上升或转型突破。"
+    if topic == "wealth":
+        return "回答后会把财务建议收束到赚钱方式、风险边界和节奏。"
+    if topic == "relationship":
+        return "回答后会把关系建议收束到相处模式、反复矛盾和边界。"
+    if topic == "timing":
+        return "回答后会把建议放到当前大运和流年的触发点上。"
+    if topic == "hidden_factor":
+        return "回答只作为隐藏线索校准，不会改写四柱和命盘事实。"
+    if "decision" in gain or topic == "decision":
+        return "回答后会突出当前最需要避开的决策盲点。"
+    return "回答后会把结论和建议变得更具体。"
+
+
+def _answer_visual_hint(answer_panel: dict[str, object], reading_surface: dict[str, object]) -> dict[str, object]:
+    calibration = reading_surface.get("calibration_surface", {}) if isinstance(reading_surface, dict) else {}
+    cards = calibration.get("visible_probe_cards", []) if isinstance(calibration, dict) else []
+    card = cards[0] if isinstance(cards, list) and cards and isinstance(cards[0], dict) else {}
+    visual = card.get("visual_hint", {}) if isinstance(card, dict) else {}
+    topic = str(card.get("topic") or "") if isinstance(card, dict) else ""
+    status = str((answer_panel.get("llm_metadata", {}) if isinstance(answer_panel.get("llm_metadata"), dict) else {}).get("status") or "")
+    chips = [_topic_label(topic) if topic else "", "结论优先", "建议落地"]
+    if status:
+        chips.append("LLM增强" if status == "accepted" else "等待推演" if status in {"deferred", "loading"} else "未完成")
+    return {
+        "version": "v30.answer_visual_hint.v1",
+        "kind": "advice_compass",
+        "title": "本轮建议方向",
+        "chips": [chip for chip in chips if chip][:4],
+        "guidance": str(visual.get("guidance") or "优先阅读结论和建议，再看依据。") if isinstance(visual, dict) else "优先阅读结论和建议，再看依据。",
+        "boundary": "answer_visual_hint_summarizes_customer_advice_direction_not_internal_reasoning",
+    }
+
+
+def _bounded_float(value: object, default: float = 0.0) -> float:
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return default
+    return round(max(0.0, min(1.0, number)), 3)
+
+
+def _int_count(value: object, default: int = 0) -> int:
+    try:
+        return max(0, int(float(value)))
+    except (TypeError, ValueError):
+        return default
+
+
+def _as_list(value: object) -> list[object]:
+    return value if isinstance(value, list) else []
+
+
+def _dialogue_projection(
+    runtime: CoreRuntimeResult,
+    *,
+    next_question: dict[str, object],
+    questions: list[dict[str, object]],
+) -> dict[str, object]:
+    state = runtime.question_plan.policy_effect.get("interaction_state", {})
+    state = state if isinstance(state, dict) else {}
+    known = state.get("known_user_signals", {})
+    known = known if isinstance(known, dict) else {}
+    outcomes = runtime.question_plan.session_state.get("question_outcomes", [])
+    outcomes = outcomes if isinstance(outcomes, list) else []
+    answered_ids = [
+        str(row)
+        for row in state.get("answered_question_ids", [])
+        if row
+    ] if isinstance(state.get("answered_question_ids"), list) else []
+    selected_options = [
+        str(row)
+        for row in state.get("selected_option_ids", [])
+        if row
+    ] if isinstance(state.get("selected_option_ids"), list) else []
+    next_topic = str(next_question.get("topic") or "")
+    next_gain = next_question.get("expected_information_gain", {})
+    next_gain = next_gain if isinstance(next_gain, dict) else {}
+    return {
+        "version": "v30.customer_dialogue_projection.v1",
+        "status": "ready" if next_question else "complete",
+        "title": "智能问答会话",
+        "summary": _dialogue_summary(answered_count=len(answered_ids), next_topic=next_topic),
+        "next_question_id": str(next_question.get("question_id") or ""),
+        "next_question_label": str(next_question.get("label") or ""),
+        "why_this_question": _why_this_question(next_topic, str(next_gain.get("primary_gain") or "")),
+        "reply_guidance": _reply_guidance(next_question),
+        "progress": {
+            "answered_count": len(answered_ids),
+            "selected_option_count": len(selected_options),
+            "absorbed_signal_count": int(known.get("answered_question_count") or 0),
+        },
+        "memory_chips": _dialogue_memory_chips(state, known),
+        "latest_turn": _latest_turn_summary(outcomes),
+        "boundary": "customer_dialogue_projection_shows_conversation_state_without_internal_strategy_trace",
+    }
+
+
+def _dialogue_summary(*, answered_count: int, next_topic: str) -> str:
+    if answered_count:
+        return f"已吸收 {answered_count} 轮回答，下一步继续校准{_topic_label(next_topic)}。"
+    return f"先从{_topic_label(next_topic)}切入，让后续解读更贴近你的真实处境。"
+
+
+def _why_this_question(topic: str, primary_gain: str) -> str:
+    topic_label = _topic_label(topic)
+    if primary_gain:
+        return f"这个问题能补足{topic_label}判断所需的关键背景：{_readable_gain(primary_gain)}。"
+    return f"这个问题用于确认{topic_label}里的真实关注点，再把报告收束到更具体的方向。"
+
+
+def _readable_gain(value: str) -> str:
+    labels = {
+        "answer_career_direction": "确认事业方向和现实选择",
+        "answer_wealth_tendency": "确认财务关注点和风险偏好",
+        "answer_relationship_pattern": "确认关系模式和互动压力",
+        "answer_timing_pressure": "确认近期年份与阶段压力",
+        "answer_decision_blindspot": "确认决策盲点和需要避开的误区",
+        "hidden_factor": "确认隐藏线索是否反复出现",
+        "structure": "确认结构判断的现实落点",
+        "timing": "确认时运触发点",
+    }
+    key = str(value or "").strip().lower()
+    if key in labels:
+        return labels[key]
+    for token, label in labels.items():
+        if token in key:
+            return label
+    return key.replace("_", " ") or "补充关键背景"
+
+
+def _reply_guidance(question: dict[str, object]) -> str:
+    constraints = question.get("answer_constraints", {})
+    constraint_type = str(constraints.get("constraint_type") or "") if isinstance(constraints, dict) else ""
+    if constraint_type == "structured_hidden_factor":
+        return "优先选择反复出现的状态、年份和强度；系统只把它当作校准线索，不会改写命盘事实。"
+    if constraint_type == "timing_context_check":
+        return "可以补充相关年份或阶段，系统会用它定位时运语境。"
+    if constraint_type == "domain_followup":
+        return "选择最想看的领域，也可以补一句最近正在面对的具体选择。"
+    return "可以直接选择一个方向，也可以补一句最近最困扰你的背景。"
+
+
+def _dialogue_memory_chips(state: dict[str, object], known: dict[str, object]) -> list[str]:
+    chips: list[str] = []
+    selected_domain = str(state.get("selected_domain") or "")
+    if selected_domain:
+        chips.append(f"关注：{_topic_label(selected_domain)}")
+    answered = state.get("answered_question_ids", [])
+    if isinstance(answered, list) and answered:
+        chips.append(f"已答：{len(answered)}")
+    selected = state.get("selected_option_ids", [])
+    if isinstance(selected, list) and selected:
+        chips.append(f"选项：{len(selected)}")
+    absorbed = int(known.get("answered_question_count") or 0)
+    if absorbed:
+        chips.append(f"线索：{absorbed}")
+    return chips[:6]
+
+
+def _latest_turn_summary(outcomes: list[object]) -> dict[str, object]:
+    for row in reversed(outcomes):
+        if not isinstance(row, dict):
+            continue
+        return {
+            "question_id": str(row.get("question_id") or ""),
+            "status": str(row.get("outcome_status") or row.get("status") or ""),
+            "selected_option": str(row.get("selected_option") or ""),
+            "boundary": "latest_turn_summary_is_user_visible_memory_not_chart_fact",
+        }
+    return {}
+
+
+def _topic_label(topic: str) -> str:
+    labels = {
+        "career": "事业",
+        "wealth": "财运",
+        "relationship": "关系",
+        "romance": "关系",
+        "health": "健康",
+        "timing": "时运",
+        "structure": "结构",
+        "useful_god": "用神",
+        "hidden_factor": "隐藏线索",
+        "decision": "决策",
+        "risk": "风险",
+        "overview": "整体",
+    }
+    return labels.get(str(topic or "").lower(), str(topic or "当前命盘"))
 
 
 def _focus_domains(domain_readings: object) -> list[str]:
@@ -1059,7 +1792,11 @@ def _customer_summary_title(
     return f"命盘已排好，可以先看{domains or '结构与重点问题'}"
 
 
-def _primary_message(domain_cards: list[dict[str, object]], *, locale: str) -> str:
+def _primary_message(domain_cards: list[dict[str, object]], *, locale: str, final_synthesis: dict[str, object] | None = None) -> str:
+    final_synthesis = final_synthesis if isinstance(final_synthesis, dict) else {}
+    customer_summary = str(final_synthesis.get("customer_summary") or "")
+    if customer_summary:
+        return customer_summary
     if not domain_cards:
         if locale == "en":
             return "The reading will first confirm the most useful question, then expand into concrete areas."
@@ -1076,6 +1813,318 @@ def _primary_message(domain_cards: list[dict[str, object]], *, locale: str) -> s
     if summary:
         return summary
     return f"当前优先看{label_text}。系统会结合命盘结构、十神、五行和时间层来分析，但只作为有依据的候选判断，不直接下绝对断语。"
+
+
+def _customer_final_synthesis(final_synthesis: dict[str, object]) -> dict[str, object]:
+    if not isinstance(final_synthesis, dict) or not final_synthesis:
+        return {}
+    return {
+        "version": str(final_synthesis.get("version") or ""),
+        "status": str(final_synthesis.get("status") or ""),
+        "primary_domain": str(final_synthesis.get("primary_domain") or ""),
+        "focus_domains": [str(row) for row in final_synthesis.get("focus_domains", []) if row] if isinstance(final_synthesis.get("focus_domains"), list) else [],
+        "conclusion": str(final_synthesis.get("conclusion") or ""),
+        "advice": str(final_synthesis.get("advice") or ""),
+        "customer_summary": str(final_synthesis.get("customer_summary") or ""),
+        "decision_engine": _customer_decision_engine_summary(final_synthesis.get("decision_engine", {})),
+        "decision_verdicts": _customer_decision_verdicts(final_synthesis.get("decision_verdicts", [])),
+        "decision_focus": str(_nested(final_synthesis, "synthesis_blueprint", "decision_focus", default="")),
+        "assertion_level": str(_nested(final_synthesis, "synthesis_blueprint", "assertion_level", default="")),
+        "allowed_assertions": [
+            str(row)
+            for row in _nested(final_synthesis, "synthesis_blueprint", "allowed_assertions", default=[])
+            if row
+        ][:3] if isinstance(_nested(final_synthesis, "synthesis_blueprint", "allowed_assertions", default=[]), list) else [],
+        "action_steps": [
+            str(row)
+            for row in _nested(final_synthesis, "synthesis_blueprint", "action_steps", default=[])
+            if row
+        ][:3] if isinstance(_nested(final_synthesis, "synthesis_blueprint", "action_steps", default=[]), list) else [],
+        "risk_boundary": str(_nested(final_synthesis, "synthesis_blueprint", "risk_boundary", default="")),
+        "evidence_chain": [
+            {
+                "domain": str(row.get("domain") or ""),
+                "score": row.get("score"),
+                "evidence": [str(item) for item in row.get("evidence", []) if item] if isinstance(row.get("evidence"), list) else [],
+                "boundary": "customer_final_synthesis_evidence_is_summary_not_raw_trace",
+            }
+            for row in final_synthesis.get("evidence_chain", [])
+            if isinstance(row, dict)
+        ][:4] if isinstance(final_synthesis.get("evidence_chain"), list) else [],
+        "visual_hint": _customer_final_synthesis_visual_hint(final_synthesis.get("visual_hint", {})),
+        "quality_judge": _customer_final_synthesis_quality_judge(final_synthesis.get("brain_judge", {})),
+        "quality_contract": {
+            "conclusion_first": bool(_nested(final_synthesis, "quality_contract", "conclusion_first", default=True)),
+            "advice_actionable": bool(_nested(final_synthesis, "quality_contract", "advice_actionable", default=True)),
+            "uses_decision_verdicts": bool(_nested(final_synthesis, "quality_contract", "uses_decision_verdicts", default=False)),
+            "brain_judge_accepted": bool(_nested(final_synthesis, "quality_contract", "brain_judge_accepted", default=False)),
+            "chart_fact_mutation_allowed": False,
+        },
+        "boundary": "customer_final_synthesis_is_central_brain_output_not_llm_or_chart_fact_mutation",
+    }
+
+
+def _decision_feedback_projection(central: object, *, role_key: str) -> dict[str, object]:
+    central_dict = central if isinstance(central, dict) else {}
+    summary = central_dict.get("decision_feedback_recalculation_summary", {})
+    summary = summary if isinstance(summary, dict) else {}
+    if not summary:
+        return {}
+    diagnostic = role_key in DIAGNOSTIC_ROLES
+    affected_domains = [
+        str(row)
+        for row in summary.get("affected_domains", [])
+        if row
+    ][:6] if isinstance(summary.get("affected_domains"), list) else []
+    base = {
+        "version": str(summary.get("version") or ""),
+        "feedback_applied": bool(summary.get("feedback_applied")),
+        "visible_detail_level": "diagnostic" if diagnostic else "customer_summary",
+        "affected_verdict_count": len(summary.get("affected_verdict_ids", [])) if isinstance(summary.get("affected_verdict_ids"), list) else 0,
+        "affected_domains": affected_domains if diagnostic else [],
+        "status_text": "本轮反馈已进入裁决校准。" if summary.get("feedback_applied") else "当前暂无反馈校准。",
+        "chart_fact_mutation_allowed": False,
+        "boundary": "decision_feedback_projection_shows_feedback_recalculation_without_mutating_chart_facts",
+    }
+    if not diagnostic:
+        return base
+    admin_projection = summary.get("admin_training_projection", {})
+    admin_projection = admin_projection if isinstance(admin_projection, dict) else {}
+    return {
+        **base,
+        "effect_count": int(_bounded_float(summary.get("effect_count"), 0.0)),
+        "question_outcome_count": int(_bounded_float(summary.get("question_outcome_count"), 0.0)),
+        "practitioner_selection_count": int(_bounded_float(summary.get("practitioner_selection_count"), 0.0)),
+        "affected_candidate_ids": [
+            str(row)
+            for row in summary.get("affected_candidate_ids", [])
+            if row
+        ][:8] if isinstance(summary.get("affected_candidate_ids"), list) else [],
+        "affected_claim_ids": [
+            str(row)
+            for row in summary.get("affected_claim_ids", [])
+            if row
+        ][:8] if isinstance(summary.get("affected_claim_ids"), list) else [],
+        "affected_verdict_ids": [
+            str(row)
+            for row in summary.get("affected_verdict_ids", [])
+            if row
+        ][:8] if isinstance(summary.get("affected_verdict_ids"), list) else [],
+        "score_adjustments": [
+            {
+                "candidate_id": str(row.get("candidate_id") or ""),
+                "claim_id": str(row.get("claim_id") or ""),
+                "domain": str(row.get("domain") or ""),
+                "score_delta": _bounded_float(row.get("score_delta"), 0.0),
+                "confidence_after_feedback": _bounded_float(row.get("confidence_after_feedback"), 0.0),
+                "boundary": "score_adjustment_is_feedback_weight_trace_not_chart_fact",
+            }
+            for row in summary.get("score_adjustments", [])
+            if isinstance(row, dict)
+        ][:8] if isinstance(summary.get("score_adjustments"), list) else [],
+        "admin_training_projection": {
+            "version": str(admin_projection.get("version") or ""),
+            "trainable": bool(admin_projection.get("trainable")),
+            "targets": [
+                str(row)
+                for row in admin_projection.get("targets", [])
+                if row
+            ][:8] if isinstance(admin_projection.get("targets"), list) else [],
+            "blocked_targets": [
+                str(row)
+                for row in admin_projection.get("blocked_targets", [])
+                if row
+            ][:8] if isinstance(admin_projection.get("blocked_targets"), list) else [],
+            "boundary": "admin_training_projection_is_diagnostic_feedback_trace_not_policy_promotion",
+        },
+    }
+
+
+def _decision_workbench_projection(central: object, *, role_key: str) -> dict[str, object]:
+    return build_decision_workbench_product_surface(central, role_key=role_key)
+
+
+def _decision_workbench_verdict_cards(
+    verdicts: list[dict[str, object]],
+    *,
+    diagnostic: bool,
+) -> list[dict[str, object]]:
+    rows: list[dict[str, object]] = []
+    limit = 8 if diagnostic else 5
+    for verdict in verdicts[:limit]:
+        allowed = [str(row) for row in _as_list(verdict.get("allowed_assertions")) if str(row)][:2]
+        advice = [str(row) for row in _as_list(verdict.get("advice_points")) if str(row)][:2]
+        rows.append(
+            {
+                "verdict_id": str(verdict.get("verdict_id") or ""),
+                "domain": str(verdict.get("domain") or ""),
+                "domain_label": _domain_label(str(verdict.get("domain") or "")),
+                "headline": str(verdict.get("headline") or ""),
+                "assertion_level": str(verdict.get("assertion_level") or ""),
+                "confidence": _bounded_float(verdict.get("confidence"), 0.0),
+                "primary_text": allowed[0] if allowed else str(verdict.get("headline") or ""),
+                "advice_points": advice,
+                "has_alternative_branch": bool(_as_list(verdict.get("alternative_branch_ids"))),
+                "next_question_count": len(_as_list(verdict.get("next_question_slots"))),
+                "evidence_count": len(_as_list(verdict.get("evidence_refs"))),
+                "counter_evidence_count": len(_as_list(verdict.get("counter_evidence_refs"))),
+                "diagnostic_trace": _decision_workbench_trace(verdict) if diagnostic else {},
+                "boundary": "decision_workbench_verdict_card_is_verdict_projection_not_llm_or_raw_signal",
+            }
+        )
+    return rows
+
+
+def _decision_workbench_trace(verdict: dict[str, object]) -> dict[str, object]:
+    trace = verdict.get("trace", {})
+    trace = trace if isinstance(trace, dict) else {}
+    conflict = trace.get("conflict_resolver", {})
+    conflict = conflict if isinstance(conflict, dict) else {}
+    return {
+        "source_candidate_id": str(trace.get("source_candidate_id") or ""),
+        "source_claim_id": str(trace.get("source_claim_id") or ""),
+        "candidate_signal_count": len(_as_list(trace.get("source_signal_ids"))),
+        "conflict_count": _int_count(conflict.get("conflict_count")),
+        "top_source_signal_count": _int_count(conflict.get("top_source_signal_count")),
+        "score_mutation_allowed": False,
+        "chart_fact_mutation_allowed": False,
+        "boundary": "diagnostic_trace_is_role_gated_and_read_only",
+    }
+
+
+def _decision_workbench_conflict_cards(
+    audits: list[dict[str, object]],
+    *,
+    diagnostic: bool,
+) -> list[dict[str, object]]:
+    cards: list[dict[str, object]] = []
+    for audit in audits:
+        conflict_count = _int_count(audit.get("conflict_count"))
+        if conflict_count <= 0:
+            continue
+        conflict_types = [str(row) for row in _as_list(audit.get("conflict_types")) if str(row)]
+        card = {
+            "domain": str(audit.get("domain") or ""),
+            "domain_label": _domain_label(str(audit.get("domain") or "")),
+            "conflict_count": conflict_count,
+            "conflict_types": [_conflict_type_label(row) for row in conflict_types[:3]],
+            "top_candidate_id": str(audit.get("top_candidate_id") or "") if diagnostic else "",
+            "top_confidence": _bounded_float(audit.get("top_confidence"), 0.0),
+            "runner_up_confidence": _bounded_float(audit.get("runner_up_confidence"), 0.0),
+            "confidence_gap": _bounded_float(audit.get("confidence_gap"), 0.0),
+            "needed_question": str(audit.get("needed_question") or ""),
+            "resolution_policy": _resolution_policy_label(str(audit.get("resolution_policy") or "")),
+            "signal_bound_candidate_count": _int_count(audit.get("signal_bound_candidate_count")) if diagnostic else 0,
+            "candidate_signal_count": _int_count(audit.get("candidate_signal_count")) if diagnostic else 0,
+            "boundary": "decision_workbench_conflict_card_preserves_branch_uncertainty_without_forcing_verdict",
+        }
+        cards.append(card)
+    return cards[:8 if diagnostic else 4]
+
+
+def _conflict_type_label(value: str) -> str:
+    labels = {
+        "close_branch_probability": "分支权重接近",
+        "requires_calibration": "需要校准",
+        "counter_evidence_present": "存在反证",
+    }
+    return labels.get(value, value or "冲突")
+
+
+def _resolution_policy_label(value: str) -> str:
+    if not value:
+        return "保留分支，等待更多证据。"
+    if "keep_both_branches" in value:
+        return "主分支和备选先同时保留，等待命理师或用户反馈拉开权重。"
+    if "ask_only_if_value" in value:
+        return "只有问题信息增益足够时才追问，避免打扰用户。"
+    if "downgrade_assertion" in value:
+        return "反证未解决前降低断语强度。"
+    policies = [part.strip() for part in value.split(";") if part.strip()]
+    if len(policies) > 1:
+        return "；".join(_resolution_policy_label(part) for part in policies)
+    return value
+
+
+def _customer_decision_engine_summary(value: object) -> dict[str, object]:
+    if not isinstance(value, dict) or not value:
+        return {}
+    return {
+        "version": str(value.get("version") or ""),
+        "status": str(value.get("status") or ""),
+        "engine_version": str(value.get("engine_version") or ""),
+        "uses_decision_verdicts": bool(value.get("uses_decision_verdicts")),
+        "verdict_count": int(_bounded_float(value.get("verdict_count"), 0.0)),
+        "llm_expression_only": bool(value.get("llm_expression_only")),
+        "chart_fact_mutation_allowed": False,
+        "boundary": "customer_decision_engine_summary_hides_internal_weights_and_preserves_verdict_boundary",
+    }
+
+
+def _customer_decision_verdicts(value: object) -> list[dict[str, object]]:
+    verdicts = value if isinstance(value, list) else []
+    rows: list[dict[str, object]] = []
+    for row in verdicts[:4]:
+        if not isinstance(row, dict):
+            continue
+        rows.append(
+            {
+                "verdict_id": str(row.get("verdict_id") or ""),
+                "domain": str(row.get("domain") or ""),
+                "headline": str(row.get("headline") or ""),
+                "assertion_level": str(row.get("assertion_level") or ""),
+                "confidence": _bounded_float(row.get("confidence"), 0.0),
+                "allowed_assertions": [str(item) for item in row.get("allowed_assertions", []) if item][:2] if isinstance(row.get("allowed_assertions"), list) else [],
+                "advice_points": [str(item) for item in row.get("advice_points", []) if item][:2] if isinstance(row.get("advice_points"), list) else [],
+                "has_next_question_slot": bool(row.get("next_question_slots")),
+                "boundary": "customer_decision_verdict_is_public_projection_of_decision_engine_not_llm_text",
+            }
+        )
+    return rows
+
+
+def _customer_final_synthesis_quality_judge(value: object) -> dict[str, object]:
+    if not isinstance(value, dict) or not value:
+        return {}
+    scores = value.get("scores", {})
+    scores = scores if isinstance(scores, dict) else {}
+    return {
+        "version": str(value.get("version") or ""),
+        "accepted": bool(value.get("accepted")),
+        "quality_score": _bounded_float(value.get("quality_score"), 0.0),
+        "scores": {
+            "evidence_binding": _bounded_float(scores.get("evidence_binding"), 0.0),
+            "conclusion_strength": _bounded_float(scores.get("conclusion_strength"), 0.0),
+            "advice_actionability": _bounded_float(scores.get("advice_actionability"), 0.0),
+            "template_risk": _bounded_float(scores.get("template_risk"), 0.0),
+            "overclaim_risk": _bounded_float(scores.get("overclaim_risk"), 0.0),
+        },
+        "failure_count": len(value.get("failures", [])) if isinstance(value.get("failures"), list) else 0,
+        "reason_codes": [str(row) for row in value.get("reason_codes", []) if row][:5] if isinstance(value.get("reason_codes"), list) else [],
+        "boundary": "customer_quality_judge_is_safe_summary_not_internal_judge_trace",
+    }
+
+
+def _customer_final_synthesis_visual_hint(value: object) -> dict[str, object]:
+    if not isinstance(value, dict) or not value:
+        return {}
+    markers = value.get("markers", [])
+    return {
+        "version": str(value.get("version") or ""),
+        "kind": str(value.get("kind") or "advice_compass"),
+        "title": str(value.get("title") or ""),
+        "chips": [str(row) for row in value.get("chips", []) if row][:4] if isinstance(value.get("chips"), list) else [],
+        "markers": [
+            {
+                "label": str(row.get("label") or ""),
+                "value": _bounded_float(row.get("value"), 0.0),
+            }
+            for row in markers
+            if isinstance(row, dict)
+        ][:3] if isinstance(markers, list) else [],
+        "guidance": str(value.get("guidance") or ""),
+        "boundary": "customer_final_synthesis_visual_hint_is_structured_result_preview_not_raw_trace",
+    }
 
 
 def _customer_structure_dynamics(runtime: CoreRuntimeResult, *, role_key: str, locale: str) -> dict[str, object]:
@@ -1549,6 +2598,9 @@ def _dynamic_path_rows(nodes: list[dict[str, object]], *, detailed: bool) -> lis
 def _customer_structure_label(label: str) -> str:
     if not label:
         return "结构动态已进入复核路径。"
+    lowered = label.lower()
+    if "evidence-bound" in lowered or "counter-evidence" in lowered or "mechanism paths scored" in lowered:
+        return "结构主线已按证据链、反证和做功路径进入复核。"
     if "branch relations require dynamic review" in label:
         return "地支关系已触发结构动态复核。"
     if "dynamic" in label:
@@ -2241,7 +3293,10 @@ def _candidate_label(candidate: str) -> str:
         "climate_regulation_review": "调候平衡方向",
         "balance_review": "平衡调候方向",
         "output": "输出表达方向",
+        "evidence-bound chart structure": "证据约束型结构",
     }
+    if "evidence-bound" in candidate:
+        return "证据约束型结构"
     return labels.get(candidate, candidate or "待判断")
 
 
@@ -2398,7 +3453,23 @@ def _surface_question_projection(question: dict[str, object]) -> dict[str, objec
         "options": _customer_question_options(question.get("options", [])),
         "answer_constraints": _customer_answer_constraints(question.get("answer_constraints", {})),
         "quality_contract": _customer_question_quality_contract(question.get("quality_contract", {})),
+        "semantic_projection": _customer_question_semantic_projection(question.get("semantic_projection", {})),
         "boundary": "next_question_is_customer_projection_not_internal_strategy_trace",
+    }
+
+
+def _customer_question_semantic_projection(value: object) -> dict[str, object]:
+    semantic = value if isinstance(value, dict) else {}
+    if not semantic:
+        return {}
+    return {
+        "version": str(semantic.get("version") or ""),
+        "macro_domain": str(semantic.get("macro_domain") or ""),
+        "macro_label": str(semantic.get("macro_label") or ""),
+        "selected_slot": str(semantic.get("selected_slot") or ""),
+        "keywords": [str(row) for row in _as_list(semantic.get("keywords"))[:6]],
+        "ten_god_drivers": _customer_ten_god_drivers(_as_list(semantic.get("ten_god_drivers"))),
+        "boundary": "customer_question_semantic_projection_hides_internal_weights",
     }
 
 
@@ -2449,22 +3520,18 @@ def _customer_question_quality_contract(contract: object) -> dict[str, object]:
     }
 
 
-def _next_question_from_graph(runtime: CoreRuntimeResult, questions: list[dict[str, object]]) -> dict[str, object]:
+def _next_question_from_dialogue_plan(runtime: CoreRuntimeResult, questions: list[dict[str, object]]) -> dict[str, object]:
     if not questions:
         return {}
-    state = runtime.question_plan.policy_effect.get("interaction_state", {})
-    visible_next_id = state.get("visible_next_question_id") if isinstance(state, dict) else ""
-    if visible_next_id:
-        for question in questions:
-            if str(question.get("question_id")) == str(visible_next_id):
-                return question
-    graph = runtime.question_plan.policy_effect.get("question_dialogue_graph", {})
-    next_id = graph.get("next_question_id") if isinstance(graph, dict) else ""
-    if next_id:
-        for question in questions:
-            if str(question.get("question_id")) == str(next_id):
-                return question
-    return questions[0]
+    central = runtime.question_plan.policy_effect.get("central_reading_state", {})
+    dialogue_plan = central.get("dialogue_plan", {}) if isinstance(central, dict) else {}
+    planner_question_id = str(dialogue_plan.get("current_question_id") or "") if isinstance(dialogue_plan, dict) else ""
+    if not planner_question_id:
+        return {}
+    for question in questions:
+        if str(question.get("question_id")) == planner_question_id:
+            return question
+    return {}
 
 
 def _nested_dict(payload: object, section: str, key: str, *, default: object = None) -> object:
@@ -2474,6 +3541,10 @@ def _nested_dict(payload: object, section: str, key: str, *, default: object = N
     if not isinstance(section_payload, dict):
         return default
     return section_payload.get(key, default)
+
+
+def _nested_bool(payload: object, section: str, key: str) -> bool:
+    return bool(_nested_dict(payload, section, key, default=False))
 
 
 def _bazi_context(runtime: CoreRuntimeResult) -> dict[str, object]:

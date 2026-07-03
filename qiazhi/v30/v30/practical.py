@@ -611,13 +611,13 @@ def _domain_reading(
         "state": state,
         "summary": profile["active"] if active else profile["review"],
         "customer_takeaway": _customer_takeaway(domain, active=active, timing_ready=timing_ready),
-        "basis": [score_key, structure.semantic_label],
+        "basis": [score_key, _public_structure_label(structure.semantic_label)],
         "depends_on_modules": ["M1/M2_chart_facts", "M3_evidence_rule_structure", "M4_model_signal", "M5_ranked_decisions"],
         "calculation_basis": calculation_basis,
         "decision_context": {
-            "strength_candidate": str(strength.get("primary_candidate", "")),
-            "structure_candidate": str(decision.get("primary_candidate", structure.semantic_label)),
-            "useful_god_candidate": str(useful.get("primary_candidate", "")),
+            "strength_candidate": _public_candidate_label(strength.get("primary_candidate", "")),
+            "structure_candidate": _public_candidate_label(decision.get("primary_candidate", _public_structure_label(structure.semantic_label))),
+            "useful_god_candidate": _public_candidate_label(useful.get("primary_candidate", "")),
             "confidence_band": _confidence_band(float(decision.get("confidence", structure.confidence))),
         },
         "ranked_decision_links": decision_links,
@@ -668,13 +668,13 @@ def _timing_reading(
         "state": "active" if timing_ready else "needs_context",
         "summary": "当前已接入大运/流年上下文，可把阅读限定在阶段趋势与触发条件。" if timing_ready else "当前只做原局分析，时运判断需要大运/流年上下文。",
         "customer_takeaway": "时机内容只能作为阶段性复核线索，不是确定事件预测。",
-        "basis": ["six_pillar_context", structure.semantic_label],
+        "basis": ["six_pillar_context", _public_structure_label(structure.semantic_label)],
         "depends_on_modules": ["M1/M2_chart_facts", "M3_evidence_rule_structure", "M4_model_signal", "M5_ranked_decisions"],
         "calculation_basis": calculation_basis,
         "decision_context": {
-            "strength_candidate": str(ranked_decisions.get("strength", {}).get("primary_candidate", "")),
-            "structure_candidate": str(ranked_decisions.get("structure_pattern", {}).get("primary_candidate", "")),
-            "useful_god_candidate": str(ranked_decisions.get("useful_god", {}).get("primary_candidate", "")),
+            "strength_candidate": _public_candidate_label(ranked_decisions.get("strength", {}).get("primary_candidate", "")),
+            "structure_candidate": _public_candidate_label(ranked_decisions.get("structure_pattern", {}).get("primary_candidate", "")),
+            "useful_god_candidate": _public_candidate_label(ranked_decisions.get("useful_god", {}).get("primary_candidate", "")),
             "confidence_band": _confidence_band(float(ranked_decisions.get("structure_pattern", {}).get("confidence", structure.confidence))),
         },
         "ranked_decision_links": decision_links,
@@ -718,7 +718,7 @@ def _ranked_decision_links(ranked_decisions: dict[str, dict[str, Any]]) -> dict[
             continue
         out[domain] = {
             "decision_id": str(decision.get("decision_id", "")),
-            "primary_candidate": str(decision.get("primary_candidate", "")),
+            "primary_candidate": _public_candidate_label(decision.get("primary_candidate", "")),
             "confidence_band": _confidence_band(float(decision.get("confidence", 0.0) or 0.0)),
             "supporting_evidence": _string_list(decision.get("supporting_evidence", []))[:8],
             "weakening_evidence": _string_list(decision.get("weakening_evidence", []))[:8],
@@ -750,7 +750,7 @@ def _practical_calculation_basis(
         "root_fact_summary_version": str(root_summary.get("version") or ""),
         "root_vault_boundary": str(root_summary.get("boundary") or ""),
         "structure_state": structure.state,
-        "structure_label": structure.semantic_label,
+        "structure_label": _public_structure_label(structure.semantic_label),
         "path_score_key": path_score_key,
         "path_score_value": round(float(path_score_value), 3),
         "timing_status": str(timing.get("status", "")),
@@ -1012,6 +1012,62 @@ def _string_list(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
     return [str(row) for row in value if row]
+
+
+def _public_structure_label(value: str) -> str:
+    raw = str(value or "").strip()
+    lowered = raw.lower()
+    traits: list[str] = []
+    if any(token in lowered for token in ("branch", "dynamic")):
+        traits.append("地支动态")
+    if any(token in lowered for token in ("strength", "pattern")):
+        traits.append("旺衰候选")
+    if "ten-god" in lowered or "ten_god" in lowered:
+        traits.append("十神评分")
+    if "counter" in lowered:
+        traits.append("反证")
+    if any(token in lowered for token in ("path", "mechanism")):
+        traits.append("路径评分")
+    if "time layer missing" in lowered:
+        traits.append("时运待补")
+    if any(token in lowered for token in ("evidence", "chart", "knowledge/rule/portrait", "rule evidence")):
+        traits.insert(0, "证据约束")
+    rows: list[str] = []
+    for trait in traits:
+        if trait and trait not in rows:
+            rows.append(trait)
+    if rows:
+        priority = ["证据约束", "反证", "地支动态", "旺衰候选", "路径评分", "十神评分", "时运待补"]
+        rows = [row for row in priority if row in rows][:4]
+        detail = "、".join(row for row in rows if row != "证据约束")
+        return f"证据约束型结构（含{detail}）" if detail else "证据约束型结构"
+    return raw[:80] or "结构待复核"
+
+
+def _public_candidate_label(value: Any) -> str:
+    raw = str(value or "").strip()
+    labels = {
+        "strong": "日主偏旺候选",
+        "slightly_strong": "日主略偏旺候选",
+        "balanced": "平衡取向",
+        "slightly_weak": "日主略偏弱候选",
+        "weak": "日主偏弱候选",
+        "dynamic_structure_review": "动态结构复核",
+        "ordinary_structure_review": "常规格局复核",
+        "special_structure_boundary_review": "特殊格局边界复核",
+        "mediation_path_review": "通关承接路径",
+        "resource_or_self_support_review": "印比扶助方向",
+        "output_or_wealth_release_review": "食伤生财或财星释放方向",
+        "authority_regulation_review": "官杀约束承接方向",
+        "climate_regulation_review": "调候平衡方向",
+        "balance_review": "平衡调候方向",
+        "needs_time_layer_review": "需要时运复核",
+    }
+    if raw in labels:
+        return labels[raw]
+    if "evidence-bound" in raw.lower():
+        return _public_structure_label(raw)
+    return raw.replace("_", " ") or "候选待复核"
 
 
 def _customer_takeaway(domain: str, *, active: bool, timing_ready: bool) -> str:

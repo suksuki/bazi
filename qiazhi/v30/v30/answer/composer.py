@@ -21,7 +21,7 @@ def build_answer_context(runtime: CoreRuntimeResult, anchor: BaziQuestionAnchor)
         },
         structure_summary={
             "state": runtime.structure_state.state,
-            "semantic_label": runtime.structure_state.semantic_label,
+            "semantic_label": _public_structure_label(runtime.structure_state.semantic_label),
             "path_scores": runtime.structure_state.path_scores,
         },
         mainline_summary={
@@ -73,6 +73,34 @@ def build_answer_context(runtime: CoreRuntimeResult, anchor: BaziQuestionAnchor)
             "NO_HIDDEN_FACTOR_AS_DETERMINISTIC_FACT",
         ],
     )
+
+
+def _public_structure_label(value: str) -> str:
+    raw = str(value or "").strip()
+    lowered = raw.lower()
+    traits: list[str] = []
+    if any(token in lowered for token in ("branch", "dynamic")):
+        traits.append("地支动态")
+    if any(token in lowered for token in ("strength", "pattern")):
+        traits.append("旺衰候选")
+    if "ten-god" in lowered or "ten_god" in lowered:
+        traits.append("十神评分")
+    if "counter" in lowered:
+        traits.append("反证")
+    if any(token in lowered for token in ("path", "mechanism")):
+        traits.append("路径评分")
+    if any(token in lowered for token in ("evidence", "chart", "knowledge/rule/portrait", "rule evidence")):
+        traits.insert(0, "证据约束")
+    seen: list[str] = []
+    for row in traits:
+        if row and row not in seen:
+            seen.append(row)
+    if seen:
+        priority = ["证据约束", "反证", "地支动态", "旺衰候选", "路径评分", "十神评分"]
+        seen = [row for row in priority if row in seen][:4]
+        detail = "、".join(row for row in seen if row != "证据约束")
+        return f"证据约束型结构（含{detail}）" if detail else "证据约束型结构"
+    return raw[:80] or "结构待复核"
 
 
 def _macro_signals_for_anchor(runtime: CoreRuntimeResult, anchor: BaziQuestionAnchor) -> list[dict[str, object]]:

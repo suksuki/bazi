@@ -8,7 +8,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import urlparse
 
-from v30.llm.provider import load_v30_llm_provider_config_from_env, llm_provider_readiness_report
+from v30.llm.provider import (
+    V30LLMProviderConfig,
+    load_v30_llm_provider_config_from_env,
+    llm_provider_readiness_report,
+    resolve_llm_base_url,
+)
 
 CONFIG_VERSION = "v30.admin_runtime_config.v1"
 SECRET_FIELDS = {"database_url", "api_key"}
@@ -95,6 +100,7 @@ def save_admin_redis_config(payload: dict[str, Any]) -> dict[str, object]:
 
 
 def save_admin_llm_config(payload: dict[str, Any]) -> dict[str, object]:
+    payload = _expand_quick_ollama_payload(payload)
     updates, secret_fields = _extract_updates(payload, LLM_FIELD_ENV)
     _persist_env_updates(updates)
     return _save_response("v30.admin_llm_config_save.v1", updates, secret_fields, restart_required=False)
@@ -244,9 +250,45 @@ def llm_admin_status(*, probe_models: bool = False) -> dict[str, object]:
     return payload | {"status": "model_probe_ready", "model_count": len(models), "models": models}
 
 
+def llm_admin_probe(payload: dict[str, object] | None = None) -> dict[str, object]:
+    cfg = _temporary_llm_config(payload or {}, default_execute=True)
+    readiness = llm_provider_readiness_report(cfg)
+    base: dict[str, object] = {
+        "version": "v30.admin_llm_probe.v1",
+        "status": "not_ready",
+        "provider": cfg.provider,
+        "host": cfg.host,
+        "port": cfg.port,
+        "model": cfg.model,
+        "resolved_base_url": cfg.resolved_base_url(),
+        "ready_for_connection": readiness["ready_for_connection"],
+        "model_count": 0,
+        "models": [],
+        "runtime_mutation": False,
+        "guardrails": ["ADMIN_ONLY_LLM_PROBE", "NO_CONFIG_WRITE", "NO_SECRET_VALUES_RENDERED"],
+        "boundary": "llm_probe_reads_remote_models_without_saving_runtime_config",
+    }
+    if not readiness["ready_for_connection"]:
+        return base | {"failure": "provider_not_ready"}
+    try:
+        models = _load_ollama_native_models(cfg) if cfg.provider.lower() in {"ollama", "ollama_native"} else _load_models(cfg)
+    except Exception as exc:
+        return base | {"status": "model_probe_failed", "failure": type(exc).__name__, "failure_detail": _failure_detail(exc)}
+    return base | {
+        "status": "model_probe_ready",
+        "model_count": len(models),
+        "models": models,
+    }
+
+
 def llm_admin_test(payload: dict[str, object] | None = None) -> dict[str, object]:
     apply_saved_v30_admin_env_overrides()
-    cfg = load_v30_llm_provider_config_from_env()
+    raw_payload = payload or {}
+    cfg = (
+        _temporary_llm_config(raw_payload, default_execute=True)
+        if _has_llm_connection_override(raw_payload)
+        else load_v30_llm_provider_config_from_env()
+    )
     readiness = llm_provider_readiness_report(cfg)
     base: dict[str, object] = {
         "version": "v30.admin_llm_test.v1",
@@ -260,6 +302,8 @@ def llm_admin_test(payload: dict[str, object] | None = None) -> dict[str, object
     }
     if not readiness["ready_for_connection"]:
         return base | {"failure": "provider_not_ready"}
+    if not cfg.model:
+        return base | {"failure": "missing_model"}
     prompt = str((payload or {}).get("prompt") or "用一句中文回答：启智 V30 LLM 测试正常。").strip()[:500]
     started = time.monotonic()
     try:
@@ -298,6 +342,63 @@ def _extract_updates(payload: dict[str, Any], field_env: dict[str, str]) -> tupl
         if field in SECRET_FIELDS:
             secret_fields.append(field)
     return updates, secret_fields
+
+
+def _expand_quick_ollama_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    if not payload.get("quick_ollama"):
+        return payload
+    host = str(payload.get("host") or "").strip()
+    port = _normalize_value("port", payload.get("port") or 11434) or "11434"
+    return {
+        **payload,
+        "enabled": True,
+        "execute_llm": True,
+        "provider": "ollama_native",
+        "host": host,
+        "port": port,
+        "base_url": resolve_llm_base_url("", host, int(port)),
+        "http_timeout_sec": payload.get("http_timeout_sec") or 60,
+        "temperature": payload.get("temperature") or 0.2,
+        "max_tokens": payload.get("max_tokens") or 1200,
+    }
+
+
+def _temporary_llm_config(payload: dict[str, object], *, default_execute: bool) -> V30LLMProviderConfig:
+    expanded = _expand_quick_ollama_payload(dict(payload))
+    current = load_v30_llm_provider_config_from_env()
+    provider = str(expanded.get("provider") or "ollama_native").strip() or "ollama_native"
+    host = str(expanded.get("host") or current.host or "127.0.0.1").strip()
+    port = int(_normalize_value("port", expanded.get("port") or current.port or 11434) or 11434)
+    model = str(expanded.get("model") or current.model or "").strip()
+    base_url = str(expanded.get("base_url") or "").strip()
+    if expanded.get("quick_ollama") and not base_url:
+        base_url = resolve_llm_base_url("", host, port)
+    return V30LLMProviderConfig(
+        enabled=_bool_payload(expanded.get("enabled"), True),
+        execute_llm=_bool_payload(expanded.get("execute_llm"), default_execute),
+        provider=provider,
+        host=host,
+        port=port,
+        base_url=base_url,
+        model=model,
+        api_key_env=str(expanded.get("api_key_env") or current.api_key_env or "V30_LLM_API_KEY"),
+        http_timeout_sec=float(expanded.get("http_timeout_sec") or current.http_timeout_sec or 60.0),
+        temperature=float(expanded.get("temperature") or current.temperature or 0.2),
+        max_tokens=int(expanded.get("max_tokens") or current.max_tokens or 1200),
+        config_source="admin_temporary_probe",
+    )
+
+
+def _has_llm_connection_override(payload: dict[str, object]) -> bool:
+    return any(key in payload for key in ("quick_ollama", "host", "port", "base_url", "model", "provider"))
+
+
+def _bool_payload(value: object, default: bool) -> bool:
+    if value in (None, ""):
+        return default
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return bool(value)
 
 
 def _normalize_value(field: str, value: Any) -> str | None:

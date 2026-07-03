@@ -309,7 +309,7 @@ Full pytest / synthetic all / 518K: not run for this calibration task; reserved 
 
 Completed 2026-05-24 M4 Interface And Replay Seal:
 
-- Added dedicated M4 plan: `docs/V30_M4_TEN_GOD_ENERGY_MODEL_COMPLETION_PLAN.md`.
+- Added dedicated M4 plan: `docs/archive/V30_M4_TEN_GOD_ENERGY_MODEL_COMPLETION_PLAN.md`.
 - Added `v30.model_signal_interface_contract.v1` to `model_signal_summary`, including allowed consumers, allowed fields, forbidden raw-score fields, and interface boundary.
 - Added `v30.model_signal_calibration_profile.v1` with family coverage and energy/stability/volatility band counts.
 - Added dedicated `m4_ten_god_real_case_replay` synthetic tier with five canonical replay cases: solar male, solar female, lunar, leap-month lunar, and true-solar.
@@ -349,7 +349,7 @@ Target: 100%
 Controlling plan:
 
 ```text
-docs/V30_M3_CORE_KNOWLEDGE_STRUCTURE_COMPLETION_PLAN.md
+docs/archive/V30_M3_CORE_KNOWLEDGE_STRUCTURE_COMPLETION_PLAN.md
 ```
 
 Status: C6 complete for current core scope

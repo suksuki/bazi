@@ -2,6 +2,14 @@
 
 Updated: 2026-06-13
 
+2026-06-30 cleanup note:
+
+- This document is retained as historical UI design context.
+- The current canonical Admin Control Plane design is `V30_ADMIN_CONTROL_PLANE_MAINLINE_20260630.md`.
+- Main Product UI now only carries guest / user / practitioner surfaces.
+- Admin UI no longer lives under `http://127.0.0.1:9031/admin`; it is served by the standalone Admin Console at `http://127.0.0.1:9031/admin`.
+- Historical sections below that mention Admin Shell inside `/v30/ui` are archival records, not implementation guidance.
+
 ## Purpose
 
 This document defines the V30 UI design direction before implementation.
@@ -56,9 +64,9 @@ Customer UI should not expose a separate hidden-factor form. Hidden-factor calib
 Projection dimensions:
 
 ```text
-role = guest | user | practitioner | admin
+role = guest | user | practitioner
 locale = zh | en | ko
-client = web | mobile | admin
+client = web | mobile
 ```
 
 Stable view keys:
@@ -96,8 +104,6 @@ The Reading Shell question area should be one unified "智能问答" surface:
 - Historical Q&A list.
 
 Hidden-factor discovery must appear as bounded choices such as years, repeated states, intensity, recurrence, and confidence. If the active question requires structured choices, invalid or free-text-only input should ask the user to reselect instead of submitting noisy calibration data.
-- admin when doing a reading
-
 Primary job:
 
 ```text
@@ -117,12 +123,13 @@ Suggested route:
 
 The existing `/v30/ui` can initially redirect to or render this shell.
 
-### Admin Shell
+### Standalone Admin Console
 
-Primary users:
+Status:
 
-- admin
-- future analyst/lab roles if added later
+- Historical design only for this document.
+- Current Admin Console is an independent control-plane frontend on port 9031.
+- The main Reading Shell must not contain Admin Shell logic, admin routes, training/validation controls, or backend configuration UI.
 
 Primary job:
 
@@ -137,10 +144,10 @@ Observe system state
 Suggested route:
 
 ```text
-/v30/ui/admin
+http://127.0.0.1:9031/admin
 ```
 
-Admin can open a reading in the Reading Shell with `role=admin`.
+If an admin account uses the main product, it should do so through the practitioner surface.
 
 ## Reading Shell Information Architecture
 
@@ -321,7 +328,7 @@ Required UI:
 Rules:
 
 - Customer sees only `user_question` and suitable structured options.
-- Internal calibration questions stay hidden unless practitioner/admin.
+- Internal calibration questions stay hidden unless practitioner diagnostics or control-plane review is active.
 - Hidden factors are feedback clues, never deterministic chart facts.
 - Question training tunes question strategy only.
 
@@ -335,7 +342,9 @@ V30 contract dependencies:
 - `diagnostics.question_dialogue_graph`
 - `diagnostics.adaptive_question_diagnostics`
 
-## Admin Shell Information Architecture
+## Historical Admin Shell Information Architecture
+
+This section records the old in-product Admin Shell planning. Current implementation belongs to the standalone Admin Console documented in `V30_ADMIN_CONTROL_PLANE_MAINLINE_20260630.md`.
 
 ### 1. System Overview
 
@@ -502,16 +511,16 @@ Useful endpoints:
 - Left rail: profile/history.
 - Main content: birth input, chart, practical reading.
 - Right rail: question chain and answer panel.
-- Practitioner/admin can open diagnostics drawer.
+- Practitioner users can open diagnostics drawer; control-plane diagnostics belong to the standalone Admin Console.
 
 ### Mobile
 
 - Top: profile/current reading.
 - Tabs: Input, Chart, Reading, Questions.
 - Bottom action bar: build chart, submit answer, save profile.
-- Diagnostics hidden except admin client.
+- Diagnostics hidden from normal user/mobile clients; practitioner diagnostics stay role-gated.
 
-### Admin
+### Standalone Admin Console
 
 - Side navigation: Overview, Readings, DB/Artifacts, LLM, Training, Validation, Mainline.
 - Dense tables and status panels.
@@ -546,7 +555,7 @@ Status 2026-06-10: implemented first pass.
 - Visual style is concise and Bazi-oriented: paper surface, ink text, jade actions, cinnabar pillar emphasis, and restrained gold labels.
 - BirthInput form now includes actor/session/profile fields so later profile management can attach without changing the reading contract.
 - Core result order is chart/calculation first, then time context, practical domain cards, answer panel, and intelligent questions.
-- This pass does not implement the Admin Shell yet.
+- This historical pass did not implement the Admin Shell yet.
 
 ### UI2 Profile And History Layer
 
@@ -633,7 +642,7 @@ Known validation note:
 
 - `tests/test_v30_scaffold.py::test_api_local_json_repository_persists_reading` currently fails on a stale LLM draft version expectation: the test expects `v30.llm_answer_draft_call.v1`, while the runtime now emits `v30.bazi_llm_answer_draft_call.v1`. UI4 did not change that backend namespace.
 
-### UI5 Admin Shell Foundation
+### UI5 Historical Admin Shell Foundation
 
 - Admin navigation.
 - System overview.
@@ -642,14 +651,14 @@ Known validation note:
 
 Status 2026-06-10: implemented first pass.
 
-- `/v30/ui/?role=admin&surface=admin` now renders a dedicated Admin Shell instead of the customer Reading Shell.
+- Historical in-product Admin Shell work has been superseded by the standalone Admin Console at `http://127.0.0.1:9031/admin`.
 - Admin navigation includes Overview, Main Modules, Reading / Trace, and Contracts.
 - System overview reads health, UI capabilities, mainline selection, and main-module completion review.
 - Main Modules renders the module completion matrix and review checks from `/api/v30/admin/mainline/main-module-completion-review`.
 - Reading / Trace supports admin projection lookup and trace lookup by `reading_id`, plus role-gated admin history search by actor/session.
 - Contracts lists UI/API capabilities and endpoint readiness.
 - Admin endpoint requests have client-side timeouts so slow observability endpoints appear as partial readiness instead of blocking the whole shell.
-- The first Admin Shell is read-only: it does not delete data, mutate chart facts, run heavy validation, run live LLM smoke, or promote policy pointers.
+- The first historical Admin Shell was read-only: it did not delete data, mutate chart facts, run heavy validation, run live LLM smoke, or promote policy pointers.
 
 Validation 2026-06-10:
 
@@ -666,7 +675,7 @@ passed
 
 Runtime note:
 
-- 9030 was restarted after this pass so the latest static UI and current admin routes are served. `/api/v30/admin/mainline/main-module-completion-review` can still be slow in the live environment; the Admin Shell treats it as partial readiness when it exceeds the UI timeout.
+- Historical runtime note: `/api/v30/admin/mainline/main-module-completion-review` could be slow in the live environment; current control-plane UI treats slow observability endpoints as partial readiness.
 
 ### UI6 Admin LLM / Training / Validation
 
@@ -676,7 +685,7 @@ Runtime note:
 
 Status 2026-06-10: implemented first pass.
 
-- Admin Shell now includes LLM, Training, and Validation tabs.
+- Standalone Admin Console includes LLM, Training, and Validation tabs.
 - LLM tab reads Bazi context/prompt readiness, answer generator readiness, output acceptance, training/synthetic readiness, role/locale smoke, and closeout endpoints.
 - Training tab reads system closeout and candidate quarantine, and exposes bounded `/api/v30/admin/training/run` with explicit family selection.
 - Training UI does not perform policy pointer promotion; it only calls the existing bounded training endpoint.
@@ -711,8 +720,8 @@ Runtime note:
 
 Status 2026-06-10: implemented first pass.
 
-- The top bar now exposes stable Reading and Admin entry points.
-- Admin Shell supports deep links through `?role=admin&surface=admin&tab=...` for `overview`, `modules`, `readings`, `llm`, `training`, `validation`, and `contracts`.
+- The top bar exposes stable product entries; Admin entry has moved to the standalone control plane.
+- Standalone Admin Console supports control-plane tabs under `http://127.0.0.1:9031/admin` for `overview`, `modules`, `readings`, `llm`, `training`, `validation`, and `contracts`.
 - UI1-UI6 now form a complete first usable V30 UI surface:
   - customer Bazi calculation and reading flow
   - profile/history projection
@@ -741,7 +750,7 @@ Status 2026-06-10: implemented first pass.
   - `3 解读`: concise business reading, domain cards, answer panel, and quick options.
   - `4 问答`: answer panel, intelligent question card, structured options, free-text answer, local turn chain, and hidden-factor feedback.
 - Direct URLs support `?step=input|chart|reading|questions`; successful BirthInput creation and history opening move to `chart`.
-- Admin Shell keeps its existing tab navigation and is not mixed into the customer reading workflow.
+- Standalone Admin Console keeps its own tab navigation and is not mixed into the customer reading workflow.
 - This change is frontend-only and preserves the existing `/api/v30` contracts.
 
 Validation 2026-06-10:
@@ -759,7 +768,7 @@ passed
 curl /v30/ui/?role=user&step=chart
 returned static shell
 
-curl /v30/ui/?role=admin&surface=admin&tab=training
+curl http://127.0.0.1:9031/admin&tab=training
 returned static shell
 ```
 
@@ -767,7 +776,7 @@ returned static shell
 
 Status 2026-06-10: implemented first pass.
 
-- Top navigation now exposes first-class entries for 登录, 档案, 测算, Admin, and 训练.
+- Top navigation now exposes first-class product entries for 登录, 档案, and 测算; Admin and training controls belong to the standalone Admin Console.
 - Added minimal V30 product auth API:
   - `POST /api/v30/auth/register`
   - `POST /api/v30/auth/login`
@@ -819,7 +828,7 @@ pytest -q tests/unit/test_presentation_projection.py tests/test_v30_scaffold.py:
 
 Status 2026-06-10: implemented first pass.
 
-- Admin Shell now has a dedicated `DB / Redis` tab for V30 runtime database and cache configuration.
+- Standalone Admin Console now has a dedicated `DB / Redis` tab for V30 runtime database and cache configuration.
 - Added V30-native admin runtime endpoints:
   - `GET /api/v30/admin/runtime/config`
   - `GET /api/v30/admin/runtime/db`
@@ -860,6 +869,86 @@ status=ready, chart facts deterministic
 GET /api/v30/readings/{reading_id}/view?role=admin
 answer_panel.source=llm_bazi_answer_draft
 llm_metadata.status=accepted
+```
+
+### UI12 Decision Workbench And 7-Step Closeout
+
+Status 2026-06-29: implemented DCA-16 pass.
+
+- Reading Shell now consumes `reading_surface.decision_workbench` as the stable UI entry for Verdict, conflict audit, and calibration status.
+- The 7-step journey renders dedicated Decision Workbench sections:
+  - `分支冲突与命理师校准`: conflict cards, confidence gap, needed question, and practitioner calibration cue.
+  - `Decision Engine 裁决`: Verdict cards with domain, assertion level, confidence, advice, branch state, and next-question marker.
+  - `最终断语、建议与智能对话`: final synthesis visual hint plus compact Verdict basis cards.
+- `journey_branch_calibration` now generates explicit branch option sets from ConflictResolver output, so practitioner selection can operate on conflict audit instead of only final Verdict branches.
+- User projection remains concise and hides `training_signal`, candidate ids, and score adjustments.
+- Practitioner/Admin projection exposes diagnostic conflict summaries and training targets without allowing chart fact mutation.
+
+Validation 2026-06-29:
+
+```text
+../.venv312/bin/python -m py_compile v30/presentation/thinking.py v30/presentation/client_model.py v30/brain/practitioner_interaction.py
+node --check frontend/app.js
+../.venv312/bin/pytest tests/unit/test_sidebar_memory_useful_god.py tests/unit/test_presentation_projection.py tests/unit/test_practitioner_interaction_mainline.py tests/unit/test_decision_conflict_resolver.py tests/unit/test_signal_based_decision_candidate_builder.py -q
+
+24 passed
+```
+
+### UI13 Admin Decision Workbench Quality Audit
+
+Status 2026-06-29: implemented DCA-17 pass.
+
+- Admin `测算记录` 页面读取同一 `reading_id` 时，同步读取 `/api/v30/admin/readings/{reading_id}/decision-workbench-quality`。
+- 页面展示质量分、7 阶段、Verdict、冲突、分支选项、命理师选项和步骤页 LLM 策略摘要。
+- 失败检查优先显示；全部通过时显示少量通过检查，避免 admin 页面重新变成工程明细堆叠。
+- 该面板只观察产出链路，不启动训练、不写策略指针、不修改命盘事实。
+
+Validation 2026-06-29:
+
+```text
+../.venv312/bin/python -m py_compile v30/validation/decision_workbench_quality.py v30/api/app.py
+node --check frontend/app.js
+../.venv312/bin/pytest tests/unit/test_decision_workbench_quality_audit.py tests/unit/test_presentation_projection.py tests/unit/test_practitioner_interaction_mainline.py tests/unit/test_decision_conflict_resolver.py -q
+
+18 passed
+```
+
+### UI14 Dialogue Single-Flight Guard
+
+Status 2026-06-29: implemented bugfix pass.
+
+- 智能对话和 7 阶段测算继续保持两个独立 surface；步骤页只挂载 `reading_surface.current_dialogue_turn` 的一个当前问题。
+- 前端在一轮回答提交和 LLM 增强期间启用 single-flight guard，所有智能追问按钮会禁用，避免连续点击多个问题造成 pending 状态和旧回答覆盖。
+- 后端对同一 `reading_id` 的 `/questions/{question_id}/answer` 与 `/answer/llm` 使用 per-reading serialization，避免多个问答请求同时写同一 runtime。
+- LLM 增强返回必须匹配当前 `question_id`，旧请求不会覆盖当前页面。
+
+Validation 2026-06-29:
+
+```text
+../.venv312/bin/python -m py_compile v30/api/app.py
+node --check frontend/app.js
+../.venv312/bin/pytest tests/unit/test_practitioner_interaction_mainline.py tests/unit/test_decision_workbench_quality_audit.py -q
+
+6 passed
+```
+
+### UI15 Independent Ask-Bazi Dialogue Panel
+
+- 新增独立 `问八字` 面板，挂在测算页下方，但不属于 7 阶段导航。
+- 面板支持系统种子问题、用户自由输入和连续下一问选项。
+- 点击下一问只追加 `DialogueTurn`，不切换步骤、不刷新测算页、不复用阶段页单轮问题。
+- 本轮回答按 `断 / 策 / 歧` 列表展示，减少长段工程说明和 debug 文案。
+- 对话链使用独立 `/dialogue-seeds` 与 `/dialogues` API；旧 `current_dialogue_turn` 只保留为步骤页轻量追问入口。
+
+Status 2026-06-29: implemented Dialogue Chain MVP surface.
+
+Validation 2026-06-29:
+
+```text
+node --check frontend/app.js
+../.venv312/bin/python -m pytest tests/unit/test_dialogue_chain_mainline.py -q
+
+3 passed
 ```
 
 ## Default Validation For UI Work
