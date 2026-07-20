@@ -1,0 +1,118 @@
+{
+  "audit_version": "v50.ra0_518k_chart_realizability_audit.v1",
+  "boundaries": {
+    "database_migration": false,
+    "formal_algorithm_modified": false,
+    "legacy_518k_deleted_or_overwritten": false,
+    "llm_used": false,
+    "read_only": true
+  },
+  "command": [
+    "PYTHONPATH=packages:apps",
+    ".runtime/venv/bin/python",
+    "scripts/v50_run_ra0_518k_realizability_audit.py",
+    "--output-root",
+    "/Users/liujin/DEV/AIProjects/bazi-v50-ra0-518k/qiazhi/v50/.runtime/validation/ra0-518k-realizability-v1-final",
+    "--timezone",
+    "Asia/Shanghai",
+    "--legacy-generator",
+    "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/v30/validation/corpus_518k.py",
+    "--legacy-index",
+    "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/518k/index.json"
+  ],
+  "determinism": {
+    "compared_against": "/Users/liujin/DEV/AIProjects/bazi-v50-ra0-518k/qiazhi/v50/.runtime/validation/ra0-518k-realizability-v1-determinism-a2",
+    "current_hashes": {
+      "ra0_518k_boundary_evidence_v1.json": "4ef7d7952e3bdee6189802ee42695b66b3f8aa9aa33b2867e0ce8610aa0484d5",
+      "ra0_518k_classification_v1.jsonl.gz": "f8cd60c4a8a1ff8fa56726a4166af6bfcddc08bb7bb4e6a7336a942402ec3c9e",
+      "ra0_518k_semantic_summary_v1.json": "533d693f2b57cd65b2dcc99ba1feb34a27757afd5b9da33598ffaa5dd401024d",
+      "ra0_518k_structural_anomalies_v1.json": "819a827476cd062d476e1a65b9b3069ff442b6da59c9198da261159eda2e50ce"
+    },
+    "expected_hashes": {
+      "ra0_518k_boundary_evidence_v1.json": "4ef7d7952e3bdee6189802ee42695b66b3f8aa9aa33b2867e0ce8610aa0484d5",
+      "ra0_518k_classification_v1.jsonl.gz": "f8cd60c4a8a1ff8fa56726a4166af6bfcddc08bb7bb4e6a7336a942402ec3c9e",
+      "ra0_518k_semantic_summary_v1.json": "533d693f2b57cd65b2dcc99ba1feb34a27757afd5b9da33598ffaa5dd401024d",
+      "ra0_518k_structural_anomalies_v1.json": "819a827476cd062d476e1a65b9b3069ff442b6da59c9198da261159eda2e50ce"
+    },
+    "matches": {
+      "ra0_518k_boundary_evidence_v1.json": true,
+      "ra0_518k_classification_v1.jsonl.gz": true,
+      "ra0_518k_semantic_summary_v1.json": true,
+      "ra0_518k_structural_anomalies_v1.json": true
+    },
+    "status": "PASS"
+  },
+  "manifest_version": "v50.ra0_518k_run_manifest.v1",
+  "outputs": {
+    "RA0_518K_CHART_REALIZABILITY_AUDIT_V1.md": {
+      "sha256": "e87ba8d4c90b994f92e9267d317aa0f2fe30a19ff8111c870d0bf5e97e36c836",
+      "size_bytes": 3004
+    },
+    "ra0_518k_boundary_evidence_v1.json": {
+      "sha256": "4ef7d7952e3bdee6189802ee42695b66b3f8aa9aa33b2867e0ce8610aa0484d5",
+      "size_bytes": 11493
+    },
+    "ra0_518k_classification_v1.jsonl.gz": {
+      "sha256": "f8cd60c4a8a1ff8fa56726a4166af6bfcddc08bb7bb4e6a7336a942402ec3c9e",
+      "size_bytes": 9236174
+    },
+    "ra0_518k_execution_summary_v1.json": {
+      "sha256": "8c23a068d519e352fb13c0fc0d45da60be52cfc4e1e2c67d125e514138073a48",
+      "size_bytes": 18154
+    },
+    "ra0_518k_semantic_summary_v1.json": {
+      "sha256": "533d693f2b57cd65b2dcc99ba1feb34a27757afd5b9da33598ffaa5dd401024d",
+      "size_bytes": 15228
+    },
+    "ra0_518k_structural_anomalies_v1.json": {
+      "sha256": "819a827476cd062d476e1a65b9b3069ff442b6da59c9198da261159eda2e50ce",
+      "size_bytes": 1476
+    }
+  },
+  "parameters": {
+    "legacy_generator": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/v30/validation/corpus_518k.py",
+    "legacy_index": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/518k/index.json",
+    "ranges": [
+      {
+        "effective_end_exclusive_local_civil": "2044-02-04T12:45:00",
+        "effective_start_local_civil": "1984-02-04T23:19:00",
+        "exact_end_backend": "2044-02-04T12:44:21",
+        "exact_start_backend": "1984-02-04T23:18:44",
+        "label": "1984 LiChun to 2044 LiChun",
+        "range_id": "reference_60y_1984_2044",
+        "source": "requested_reference_jiazi_cycle"
+      },
+      {
+        "effective_end_exclusive_local_civil": "2101-01-01T00:00:00",
+        "effective_start_local_civil": "1900-01-01T00:00:00",
+        "exact_end_backend": null,
+        "exact_start_backend": null,
+        "label": "Current product full supported civil-date range",
+        "range_id": "product_supported_1900_2100",
+        "source": "pillar_cycle.BIRTH_YEAR_MIN_MAX"
+      },
+      {
+        "effective_end_exclusive_local_civil": "2044-02-04T12:45:00",
+        "effective_start_local_civil": "1804-02-05T06:52:00",
+        "exact_end_backend": "2044-02-04T12:44:21",
+        "exact_start_backend": "1804-02-05T06:51:11",
+        "label": "Four Jiazi cycles: 1804 LiChun to 2044 LiChun",
+        "range_id": "extended_4_jiazi_1804_2044",
+        "source": "calendar_engine_capability_probe_four_jiazi_cycles"
+      }
+    ],
+    "timezone": "Asia/Shanghai"
+  },
+  "policy_hash": "3d7af5b188bd444649ff0f2d693d498162ca4e331407554d16a6906326365215",
+  "source_hashes": {
+    "data/validation/fixtures/ra0_518k_realizability_v1.json": "044051c8bf65b8f9843a5aa41214b1b06fc35fd61d25daf884bf2a27014000ef",
+    "packages/core/audit/calendar_realizability.py": "f9382ce5fd11a616169d156f710f8ab9c92b44be15c33e6598a4b9cdb26dfb0e",
+    "packages/core/audit/chart_universe.py": "3f06d257525e53733d9dfff1b59fa713a6125c92ae85e34d53ac2b89f62adea7",
+    "packages/core/engines/bazi/chart_constraints.py": "3ff9f454cdd6bc35bc665ec8f20d370aa270365693900c836d20d68f2321549e",
+    "packages/core/engines/bazi/pillar_cycle.py": "ccfd9a2f83a36438e1d03328f9c2cc5d26d73f8d1a4444c343b3f71bc771aec1",
+    "packages/core/engines/bazi/temporal_service.py": "db2c5cd9491c0366b379eb5a6b68c9adefcb3ebdc4cc820038f47e4994d772d9",
+    "packages/core/engines/birth_calendar.py": "ef11753ed14414fb0d7776eeda1bf49cb00fe64b97a9c55edd9bd192e4aeb696",
+    "scripts/v50_run_ra0_518k_realizability_audit.py": "9cec835544ea0e3be0b419a11ba3416f2d2c5d7069c39586f552a4f107d6fbe2",
+    "tests/test_v50_ra0_518k_realizability_audit.py": "f7026bb4374a8462e88cc2e2d0f14106f1e0b9dc38a46d7002fe0a37b84f1eff"
+  }
+}
