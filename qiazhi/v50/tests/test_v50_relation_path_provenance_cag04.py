@@ -268,6 +268,62 @@ def test_canonical_scene_canvas_and_theater_share_one_formal_path_identity() -> 
     assert formal_path["assertion_ref"] in canvas_path["trace"]["commitment_refs"]
 
 
+def test_canonical_scene_cache_invalidates_when_formal_assertion_history_changes() -> None:
+    case_id = "case-cag04-cache-revision"
+    user_id = "user-cag04-cache-revision"
+    payload = _case_payload(case_id)
+    store = MemoryAgentCaseStore()
+    store.save(case_id=case_id, user_id=user_id, profile_id=None, payload=payload)
+    owner = CanonicalSceneOwner(case_store=store)
+    before = owner.issue_projection(
+        case_id=case_id,
+        participant_id=user_id,
+        account_role="member",
+        projection_kind="onecanvas",
+    )
+
+    life_case = LifeCase.model_validate(payload["life_case"])
+    world = ChartWorldInstance.model_validate(payload["world"])
+    relation_history, path_history = relation_path_assertions_for_case(
+        life_case=life_case,
+        world=world,
+    )
+    old_path = path_history[0]
+    replacement = PathAssertion(
+        path_key=old_path.path_key,
+        assertion_version=f"{life_case.case_version}:baseline-revision-2",
+        status=AssertionLifecycle.COMMITTED,
+        provenance=_provenance(
+            producer_version="reasoner-revision-2",
+            created_at="2026-07-21T01:00:00+00:00",
+        ),
+        supersedes=old_path.assertion_id,
+        statement="同一逻辑路径的新正式版本",
+    )
+    revised_case = life_case.model_copy(update={
+        "relation_assertions": relation_history,
+        "path_assertions": [*path_history, replacement],
+    })
+    revised_payload = deepcopy(payload)
+    revised_payload["life_case"] = revised_case.model_dump(mode="json")
+    store.save(
+        case_id=case_id,
+        user_id=user_id,
+        profile_id=None,
+        payload=revised_payload,
+    )
+
+    after = owner.issue_projection(
+        case_id=case_id,
+        participant_id=user_id,
+        account_role="member",
+        projection_kind="onecanvas",
+    )
+    assert after.projection_hash != before.projection_hash
+    assert after.payload["path_assertions"][0]["assertion_ref"] == replacement.assertion_id
+    assert old_path.assertion_id not in after.semantic_refs
+
+
 def test_role_disclosure_and_client_boundary_do_not_reintroduce_formal_paths() -> None:
     case_id = "case-cag04-client-boundary"
     payload = _case_payload(case_id)

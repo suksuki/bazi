@@ -2,7 +2,7 @@
 
 > Canonical architecture entry point
 >
-> Updated: 2026-07-20
+> Updated: 2026-07-21
 
 ## 1. Product Identity
 
@@ -100,6 +100,8 @@ First-run cognition aims for one primary LLM call. Repair is limited to machine-
 | DaYun and temporal snapshot | application-facing `CanonicalTemporalService` |
 | whole-chart baseline | committed LifeCase baseline insight |
 | domain cognition | committed LifeCase domain insight |
+| formal relation and path history | LifeCase `RelationAssertion` / `PathAssertion` |
+| relation and path logical identity | `NodeRef` / `RelationKey` / `PathKey` |
 | reality feedback | LifeCase reality evidence |
 | current task and navigation | Workspace / Journey state |
 | user experiment | isolated Sandbox state |
@@ -126,6 +128,9 @@ The target layers above are partially implemented. The following current-state d
 - production deployment of OneCanvas and Relation Atlas is blocked.
 - `CanonicalSceneOwner` is the only formal case-to-scene application owner;
   OneCanvas, Abu, Theater, Xiangfa and Workspace are projections, not facts.
+- LifeCase is the only formal owner of committed relation and path assertions.
+  Graph/Path v1 remains an experimental candidate producer; it cannot promote
+  its own output or rewrite historical committed identity.
 
 Known consolidation defects and their gates are defined in
 `V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V2.md`. L2 has since closed the Chart and
@@ -158,9 +163,24 @@ Formal chart and Sandbox experiment are separate. DaYun is derived and never fre
 
 ## 8. Relation and Path Direction
 
-Relation Core V2 and Path Core V2 remain blocked until CAG-03 through CAG-05 and
-the Architecture Consolidation Gate pass. CAG-04 has not started in the current
-task.
+Relation Core V2 and Path Core V2 remain blocked until CAG-05 and the
+Architecture Consolidation Gate pass. CAG-04 has established identity,
+provenance, lifecycle and historical stability without changing any Mingli
+relation or path semantics.
+
+```text
+Graph / Path v1
+→ candidate observations with deterministic candidate keys
+→ Reasoner and reliability decision
+→ LifeCase append-only RelationAssertion / PathAssertion
+→ CanonicalScene role-filtered assertion projection
+→ Canvas / Abu / Theater / Xiangfa / Workspace
+```
+
+An algorithm upgrade may issue a new candidate or superseding assertion. It may
+not overwrite an earlier committed assertion. A historical path without exact
+structured references remains `legacy_unresolved`; no label, score or nearby
+Graph path may be used to guess a replacement.
 
 ```text
 Relation Core V2
@@ -194,6 +214,7 @@ The LLM compares and synthesizes professionally meaningful hypotheses. Relation/
 - `CURRENT_PRODUCT_BASELINE.md`
 - `CURRENT_IMPLEMENTATION_ROADMAP.md`
 - `V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V2.md`
+- `architecture/V50_CAG04_RELATION_PATH_PROVENANCE_CLOSEOUT_V1.md`
 - `DECISION_REGISTER.md`
 - `config/data_authority_v1.json`
 - `config/runtime_authority_v1.json`

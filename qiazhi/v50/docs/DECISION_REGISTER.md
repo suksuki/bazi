@@ -2,7 +2,7 @@
 
 Status: active living record
 Owner: product strategy and architecture
-Last updated: 2026-07-18
+Last updated: 2026-07-21
 
 ## Purpose
 
@@ -1072,6 +1072,49 @@ blocked:
   - Self_Healing_platform
 R1_V6: immutable_20_file_regression_reference
 V40_changes: forbidden
+```
+
+### DR-034 — CAG-04 Establishes Stable Relation and Path Assertions
+
+```yaml
+decision_id: DR-034
+date: 2026-07-21
+status: implementation_complete_machine_pass_architecture_review_pending
+implementation_commit: 42072034
+authority:
+  candidate_observation: Graph_and_Path_v1
+  formal_assertion_owner: LifeCase
+  projection_owner: CanonicalSceneOwner
+contracts:
+  - NodeRef
+  - RelationKey
+  - RelationAssertion
+  - PathKey
+  - PathAssertion
+  - ProvenanceRecord
+historical_policy:
+  exact_structured_import_only: true
+  fuzzy_reconnection: forbidden
+  unmatched_history: legacy_unresolved
+  committed_history_append_only: true
+removed:
+  - Canvas_anonymous_committed_path_id
+  - Canvas_relation_text_matching
+  - Theater_legacy_path_signature_matching
+  - Theater_path_score_tolerance_matching
+unchanged:
+  - Mingli_relation_semantics
+  - Mingli_path_scoring
+  - R1_locked_20_files
+  - V40
+verification:
+  full_regression: 467_passed
+  r1_manifest: 20_of_20_ok
+next_gate: CAG_04_architecture_review
+blocked:
+  - CAG_05_implementation
+  - RA1_to_RA3
+  - production_deployment
 ```
 
 ## Open Constitutional Conflict

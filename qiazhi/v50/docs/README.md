@@ -20,7 +20,8 @@ V50 Lean & Consolidation
 → V50 Git Source Baseline CLOSED
 → R1 V6 retained as 20-file regression reference
 → CAG-03 Canonical Scene CLOSED / HARDENED
-→ CAG-04 then CAG-05 then Architecture Gate
+→ CAG-04 IMPLEMENTATION COMPLETE / REVIEW PENDING
+→ CAG-05 BLOCKED then Architecture Gate
 ```
 
 R1 v5's machine gate is green. The v6 review build now exposes the Solver's

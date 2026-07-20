@@ -2,12 +2,12 @@
 
 > Canonical product-state entry point
 >
-> Updated: 2026-07-20
+> Updated: 2026-07-21
 
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `7ec6f741db1f` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `a32088c1e182` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,16 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 458_PASSED_CAG03_HARDENED
+full_regression: 467_PASSED_CAG04
 ```
 
 Authorized now:
 
-- `CAG_03_CANONICAL_SCENE_CLOSEOUT`: canonical_scene_single_owner_projection_adapter_slimming_and_verification_only
+- `CAG_04_ARCHITECTURE_REVIEW`: relation_path_identity_provenance_lifecycle_historical_stability_closeout
 
-Next architecture slice: `CAG_04_FORMAL_RELATION_PATH_PROVENANCE` after `explicit_next_task_after_cag_03_closeout`.
+Next architecture slice: `CAG_05_SCHEMA_MODULE_OWNERSHIP` after `explicit_gate_decision_after_cag_04_architecture_review`.
 
-Blocked: `cag_04_implementation_in_current_task`, `cag_05_implementation_in_current_task`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `cag_05_implementation_before_cag_04_review`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product
@@ -173,7 +173,7 @@ asynchronous Reality Evidence.
 Current release blockers:
 
 1. Professional blind adjudication not completed.
-2. CAG-04 formal path provenance is not yet versioned independently from Graph v1 rebuilds.
+2. CAG-04 architecture review has not signed the machine-complete provenance slice.
 3. CAG-05 schema and module ownership consolidation is not complete.
 4. Architecture Consolidation Gate has not passed.
 
@@ -189,7 +189,11 @@ Closed by L1/L2:
 - Theater, read-only OneCanvas and Abu narration consume that Scene owner;
 - Abu narration no longer accepts legacy `record` fallback content;
 - Graph and Path semantics remain unchanged and isolated behind the declared
-  CAG-04 transitional adapter.
+  candidate adapter;
+- CAG-04 gives relations and paths stable logical keys, append-only LifeCase
+  assertions, exact provenance and explicit `legacy_unresolved` handling;
+- Canvas and Theater no longer invent anonymous committed IDs or reconnect old
+  paths by labels, signatures or score proximity.
 
 ## 8. Product Non-Goals
 
@@ -209,9 +213,9 @@ The main execution line is now:
 ```text
 1. keep L0/L1/L2 and the V50 Git Source Baseline closed;
 2. retain R1 V6 as a hash-locked regression reference;
-3. close CAG-03 with one Scene owner and thinner projection adapters;
-4. stop this task before CAG-04;
-5. execute CAG-04 and CAG-05 only as later explicit slices;
+3. keep CAG-03 closed with one Scene owner and thinner projection adapters;
+4. review the machine-complete CAG-04 stable identity and provenance slice;
+5. authorize CAG-05 only after that explicit architecture review;
 6. pass the Architecture Gate before RA1-RA3 and Workspace migration.
 ```
 

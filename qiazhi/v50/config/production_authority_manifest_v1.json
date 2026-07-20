@@ -86,6 +86,12 @@
       "authority_role": "formal_case_cognition_authority",
       "evidence_status": "PROVISIONAL"
     },
+    "relation_path_assertions": {
+      "status": "production",
+      "modules": ["core.graph.provenance", "core.life_case.relation_path"],
+      "authority_role": "stable_identity_and_append_only_assertion_contract_owned_by_life_case",
+      "evidence_status": "OPERATIONAL"
+    },
     "canonical_scene": {
       "status": "production",
       "modules": ["experience.canonical_scene", "product.canonical_scene"],
