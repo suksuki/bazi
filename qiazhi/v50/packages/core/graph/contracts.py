@@ -5,6 +5,14 @@ from enum import Enum
 from pydantic import Field, model_validator
 
 from core.contracts.base import V50Model, require_non_empty, require_refs
+from core.graph.provenance import (
+    RELATION_ONTOLOGY_VERSION,
+    RelationDirectionality,
+    relation_directionality,
+    stable_candidate_node_key,
+    stable_candidate_path_key,
+    stable_candidate_relation_key,
+)
 
 
 class MingliGraphNodeType(str, Enum):
@@ -54,6 +62,7 @@ class NodeRoleType(str, Enum):
 class MingliGraphNode(V50Model):
     version: str = "v50.mingli_graph_node.v1"
     node_id: str
+    node_key: str = ""
     reading_id: str
     label: str
     node_type: MingliGraphNodeType
@@ -71,6 +80,15 @@ class MingliGraphNode(V50Model):
         require_non_empty(self.node_id, "node_id")
         require_non_empty(self.reading_id, "reading_id")
         require_non_empty(self.label, "label")
+        expected = stable_candidate_node_key(
+            reading_id=self.reading_id,
+            position=self.position,
+            node_type=self.node_type.value,
+            label=self.label,
+        )
+        if self.node_key and self.node_key != expected:
+            raise ValueError("graph_node_key_identity_mismatch")
+        object.__setattr__(self, "node_key", expected)
         require_refs(self.material_refs, "material_refs")
         require_refs(self.evidence_refs, "evidence_refs")
         return self
@@ -79,10 +97,14 @@ class MingliGraphNode(V50Model):
 class MingliGraphEdge(V50Model):
     version: str = "v50.mingli_graph_edge.v1"
     edge_id: str
+    relation_key: str = ""
     reading_id: str
     from_node_id: str
     to_node_id: str
     edge_type: MingliGraphEdgeType
+    participant_node_ids: list[str] = Field(default_factory=list)
+    directionality: RelationDirectionality | None = None
+    ontology_version: str = RELATION_ONTOLOGY_VERSION
     strength: float = Field(default=0.0, ge=0.0, le=1.0)
     relation_label: str = ""
     attributes: dict[str, object] = Field(default_factory=dict)
@@ -96,6 +118,21 @@ class MingliGraphEdge(V50Model):
         require_non_empty(self.reading_id, "reading_id")
         require_non_empty(self.from_node_id, "from_node_id")
         require_non_empty(self.to_node_id, "to_node_id")
+        directionality = self.directionality or relation_directionality(self.edge_type.value)
+        participants = self.participant_node_ids or [self.from_node_id, self.to_node_id]
+        if len(participants) < 2 or self.from_node_id not in participants or self.to_node_id not in participants:
+            raise ValueError("graph_edge_participant_contract_invalid")
+        expected = stable_candidate_relation_key(
+            reading_id=self.reading_id,
+            relation_type=self.edge_type.value,
+            participant_node_keys=participants,
+            directionality=directionality,
+        )
+        if self.relation_key and self.relation_key != expected:
+            raise ValueError("graph_relation_key_identity_mismatch")
+        object.__setattr__(self, "relation_key", expected)
+        object.__setattr__(self, "participant_node_ids", participants)
+        object.__setattr__(self, "directionality", directionality)
         require_refs(self.material_refs, "material_refs")
         require_refs(self.evidence_refs, "evidence_refs")
         return self
@@ -130,11 +167,13 @@ class MingliGraph(V50Model):
 class MingliPath(V50Model):
     version: str = "v50.mingli_path.v1"
     path_id: str
+    path_key: str = ""
     reading_id: str
     graph_id: str
     state_layer: MingliStateLayer = MingliStateLayer.NATAL
     node_ids: list[str] = Field(default_factory=list)
     edge_ids: list[str] = Field(default_factory=list)
+    relation_keys: list[str] = Field(default_factory=list)
     relation_types: list[str] = Field(default_factory=list)
     source_strength: float = Field(default=0.0, ge=0.0, le=1.0)
     edge_strength: float = Field(default=0.0, ge=0.0, le=1.0)
@@ -157,6 +196,19 @@ class MingliPath(V50Model):
         if len(self.node_ids) < 2:
             raise ValueError("MingliPath requires at least two nodes")
         require_refs(self.edge_ids, "edge_ids")
+        if self.relation_keys and len(self.relation_keys) != len(self.edge_ids):
+            raise ValueError("mingli_path_relation_key_count_mismatch")
+        if self.path_key:
+            if not self.relation_keys:
+                raise ValueError("mingli_path_key_requires_relation_keys")
+            expected = stable_candidate_path_key(
+                reading_id=self.reading_id,
+                state_layer=self.state_layer.value,
+                node_keys=list(self.node_ids),
+                relation_keys=list(self.relation_keys),
+            )
+            if self.path_key != expected:
+                raise ValueError("mingli_path_key_identity_mismatch")
         require_refs(self.graph_refs, "graph_refs")
         require_refs(self.evidence_refs, "evidence_refs")
         return self

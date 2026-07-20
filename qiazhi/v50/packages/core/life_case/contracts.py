@@ -5,6 +5,12 @@ from typing import Any, Literal
 from pydantic import Field, model_validator
 
 from core.contracts.base import V50Model
+from core.graph.provenance import (
+    AssertionLifecycle,
+    PathAssertion,
+    RelationAssertion,
+    canonical_scene_scope_ref,
+)
 
 
 InsightType = Literal[
@@ -263,6 +269,8 @@ class LifeCase(V50Model):
     profile_id: str | None = None
     chart_version: ChartVersionRef
     baseline_insight: FormalInsight
+    relation_assertions: list[RelationAssertion] = Field(default_factory=list)
+    path_assertions: list[PathAssertion] = Field(default_factory=list)
     temporal_priors: list[FormalInsight] = Field(default_factory=list)
     domain_insights: dict[str, list[FormalInsight]] = Field(default_factory=dict)
     reality_evidence: list[RealityEvidence] = Field(default_factory=list)
@@ -323,3 +331,28 @@ class LifeCase(V50Model):
             })
             changed = True
         return {**value, "reality_evidence": migrated} if changed else value
+
+    @model_validator(mode="after")
+    def validate_relation_path_authority(self) -> "LifeCase":
+        relation_ids = [item.assertion_id for item in self.relation_assertions]
+        path_ids = [item.assertion_id for item in self.path_assertions]
+        if len(relation_ids) != len(set(relation_ids)):
+            raise ValueError("life_case_duplicate_relation_assertion")
+        if len(path_ids) != len(set(path_ids)):
+            raise ValueError("life_case_duplicate_path_assertion")
+        if any(item.status == AssertionLifecycle.CANDIDATE for item in self.relation_assertions):
+            raise ValueError("life_case_cannot_own_candidate_relation")
+        if any(item.status == AssertionLifecycle.CANDIDATE for item in self.path_assertions):
+            raise ValueError("life_case_cannot_own_candidate_path")
+        scene_ref = canonical_scene_scope_ref(
+            life_case_id=self.life_case_id,
+            chart_version_id=self.chart_version.version_id,
+        )
+        if any(item.relation_key.scene_ref != scene_ref for item in self.relation_assertions):
+            raise ValueError("life_case_relation_scene_scope_mismatch")
+        if any(
+            item.path_key is not None and item.path_key.scene_ref != scene_ref
+            for item in self.path_assertions
+        ):
+            raise ValueError("life_case_path_scene_scope_mismatch")
+        return self

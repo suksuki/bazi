@@ -10,8 +10,15 @@ from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
 from core.graph import build_mingli_graph_from_material_store, explore_mingli_paths
 from core.graph.contracts import MingliGraph, MingliGraphNode, MingliPath
-from core.life_case import LifeCase
-from core.mingli_agent.contracts import MingliCognitiveRecord
+from core.life_case import (
+    LifeCase,
+    active_path_assertions,
+    node_ref_for_graph_node,
+    path_key_for_graph_path,
+    relation_key_for_graph_edge,
+    relation_path_assertions_for_case,
+)
+from core.mingli_agent.contracts import ChartWorldInstance, MingliCognitiveRecord
 from experience.contracts import ParticipantRun, TheaterEvent, TopicExploration
 from experience.experiments import (
     MechanismEdge,
@@ -325,13 +332,19 @@ class ProductMingliExperimentPort:
 
 def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMechanismSnapshot:
     birth_payload = row.get("birth_input")
+    world_payload = row.get("world")
     life_case_payload = row.get("life_case")
     record_payload = row.get("record")
     if not isinstance(birth_payload, dict):
         raise MingliExperimentUnavailable("experiment_birth_input_missing")
-    if not isinstance(life_case_payload, dict) or not isinstance(record_payload, dict):
+    if (
+        not isinstance(world_payload, dict)
+        or not isinstance(life_case_payload, dict)
+        or not isinstance(record_payload, dict)
+    ):
         raise MingliExperimentUnavailable("approved_cognitive_record_required")
     birth_input = BirthInputCanonical.model_validate(birth_payload)
+    world = ChartWorldInstance.model_validate(world_payload)
     life_case = LifeCase.model_validate(life_case_payload)
     record = MingliCognitiveRecord.model_validate(record_payload)
     baseline = life_case.baseline_insight
@@ -350,29 +363,63 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
 
     graph, explored_paths = _rebuild_graph(case_id=case_id, birth_input=birth_input)
     nodes_by_id = {node.node_id: node for node in graph.nodes}
-    world_facts = row.get("world", {}).get("facts", []) if isinstance(row.get("world"), dict) else []
-    approved_refs = record.cognition.work_path.candidate_path_refs
-    competing_refs = record.cognition.work_path.competing_path_refs
-    approved = _match_referenced_paths(
-        refs=approved_refs,
-        paths=explored_paths.paths,
-        nodes_by_id=nodes_by_id,
-        world_facts=world_facts,
+    edges_by_id = {edge.edge_id: edge for edge in graph.edges}
+    node_ref_models = {
+        node_id: node_ref_for_graph_node(node=node, world=world, life_case=life_case)
+        for node_id, node in nodes_by_id.items()
+    }
+    node_refs = {node_id: item.node_ref for node_id, item in node_ref_models.items()}
+    relation_key_models = {
+        edge_id: relation_key_for_graph_edge(
+            edge=edge,
+            nodes_by_id=nodes_by_id,
+            world=world,
+            life_case=life_case,
+            node_refs_by_id=node_ref_models,
+        )
+        for edge_id, edge in edges_by_id.items()
+    }
+    relation_refs = {
+        edge_id: item.relation_key
+        for edge_id, item in relation_key_models.items()
+    }
+    path_refs = {
+        path.path_id: path_key_for_graph_path(
+            path=path,
+            nodes_by_id=nodes_by_id,
+            edges_by_id=edges_by_id,
+            world=world,
+            life_case=life_case,
+            node_refs_by_id=node_ref_models,
+            relation_keys_by_id=relation_key_models,
+        ).path_key
+        for path in explored_paths.paths
+    }
+    _, stored_path_assertions = relation_path_assertions_for_case(
+        life_case=life_case,
+        world=world,
     )
+    approved = _match_asserted_paths(
+        assertions=active_path_assertions(stored_path_assertions),
+        paths=explored_paths.paths,
+        path_refs=path_refs,
+    )
+    competing_refs = record.cognition.work_path.competing_path_refs
     if not approved:
-        raise MingliExperimentUnavailable("approved_path_not_uniquely_reconstructable")
+        raise MingliExperimentUnavailable("committed_path_not_exactly_available")
     competing = _match_referenced_paths(
         refs=competing_refs,
         paths=explored_paths.paths,
-        nodes_by_id=nodes_by_id,
-        world_facts=world_facts,
+        path_refs=path_refs,
     )[:1]
-    selected_paths = [approved[0], *competing]
+    selected_paths = [approved[0], *[
+        item for item in competing if item[2] != approved[0][2]
+    ]]
     selected_node_ids = {
-        node_id for _, path in selected_paths for node_id in path.node_ids
+        node_id for _, path, _ in selected_paths for node_id in path.node_ids
     }
     selected_edge_ids = {
-        edge_id for _, path in selected_paths for edge_id in path.edge_ids
+        edge_id for _, path, _ in selected_paths for edge_id in path.edge_ids
     }
     for node in graph.nodes:
         if node.node_type.value in {"stem", "branch"}:
@@ -383,7 +430,10 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
         _mechanism_path(
             ref=source_ref,
             path=path,
+            path_ref=path_ref,
             nodes_by_id=nodes_by_id,
+            node_refs=node_refs,
+            relation_refs=relation_refs,
             path_kind="approved" if index == 0 else "competing",
             display_label=(
                 record.cognition.work_path.path_statement
@@ -392,7 +442,7 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
             ),
             claim_refs=[baseline.insight_id] if index == 0 else [],
         )
-        for index, (source_ref, path) in enumerate(selected_paths)
+        for index, (source_ref, path, path_ref) in enumerate(selected_paths)
     ]
     approved_key_nodes = list(dict.fromkeys(
         node_ref
@@ -400,6 +450,7 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
         for node_ref in reasoning.node_refs
         if node_ref in selected_node_ids
     ))
+    approved_key_nodes = [node_refs[item] for item in approved_key_nodes]
     issued_at = _parse_datetime(record.created_at) or _parse_datetime(life_case.updated_at) or datetime.now(timezone.utc)
     return issue_mechanism_snapshot(
         snapshot_id=f"mechanism-snapshot:{case_id}:{life_case.case_version}:{record.record_id}",
@@ -407,13 +458,13 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
         chart_version=life_case.chart_version.version_id,
         life_case_version=life_case.case_version,
         cognitive_record_id=record.record_id,
-        pillars=_pillar_visuals(birth_input=birth_input, graph=graph),
-        nodes=[_mechanism_node(node) for node in graph_nodes],
+        pillars=_pillar_visuals(birth_input=birth_input, graph=graph, node_refs=node_refs),
+        nodes=[_mechanism_node(node, node_ref=node_refs[node.node_id]) for node in graph_nodes],
         edges=[
             MechanismEdge(
-                edge_id=edge.edge_id,
-                from_node_id=edge.from_node_id,
-                to_node_id=edge.to_node_id,
+                edge_id=relation_refs[edge.edge_id],
+                from_node_id=node_refs[edge.from_node_id],
+                to_node_id=node_refs[edge.to_node_id],
                 relation_type=edge.edge_type.value,
                 relation_label=edge.relation_label,
                 strength=edge.strength,
@@ -430,7 +481,7 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
             *record.cognition.unresolved_questions,
         ]))[:8],
         claim_refs=[baseline.insight_id],
-        visual_anchors={node.node_id: _visual_anchor(node) for node in graph_nodes},
+        visual_anchors={node_refs[node.node_id]: _visual_anchor(node) for node in graph_nodes},
         issued_at=issued_at,
     )
 
@@ -446,62 +497,57 @@ def _rebuild_graph(*, case_id: str, birth_input: BirthInputCanonical):
     return graph, explore_mingli_paths(graph)
 
 
+def _match_asserted_paths(
+    *,
+    assertions: Iterable[Any],
+    paths: list[MingliPath],
+    path_refs: dict[str, str],
+) -> list[tuple[str, MingliPath, str]]:
+    paths_by_ref = {
+        path_refs[path.path_id]: path
+        for path in paths
+    }
+    output: list[tuple[str, MingliPath, str]] = []
+    for assertion in assertions:
+        path_key = assertion.path_key
+        if path_key is None:
+            continue
+        path = paths_by_ref.get(path_key.path_key)
+        if path is not None:
+            output.append((assertion.assertion_id, path, path_key.path_key))
+    return output
+
+
 def _match_referenced_paths(
     *,
     refs: Iterable[str],
     paths: list[MingliPath],
-    nodes_by_id: dict[str, MingliGraphNode],
-    world_facts: list[Any],
-) -> list[tuple[str, MingliPath]]:
-    paths_by_id = {path.path_id: path for path in paths}
-    matched: list[tuple[str, MingliPath]] = []
+    path_refs: dict[str, str],
+) -> list[tuple[str, MingliPath, str]]:
+    paths_by_id = {
+        ref: path
+        for path in paths
+        for ref in (path.path_id, path.path_key)
+    }
+    matched: list[tuple[str, MingliPath, str]] = []
     used: set[str] = set()
     for raw_ref in refs:
         ref = str(raw_ref).strip()
         if not ref:
             continue
         path = paths_by_id.get(ref)
-        if path is None:
-            signature = _legacy_path_signature(ref=ref, world_facts=world_facts)
-            if signature is not None:
-                labels, relations, score = signature
-                candidates = [
-                    candidate
-                    for candidate in paths
-                    if [nodes_by_id[node_id].label for node_id in candidate.node_ids] == labels
-                    and candidate.relation_types == relations
-                    and abs(candidate.path_score - score) <= 0.002
-                ]
-                if len(candidates) == 1:
-                    path = candidates[0]
         if path is not None and path.path_id not in used:
-            matched.append((ref, path))
+            matched.append((ref, path, path_refs[path.path_id]))
             used.add(path.path_id)
     return matched
 
 
-def _legacy_path_signature(
+def _pillar_visuals(
     *,
-    ref: str,
-    world_facts: list[Any],
-) -> tuple[list[str], list[str], float] | None:
-    for raw in world_facts:
-        if not isinstance(raw, dict) or raw.get("category") != "candidate_path":
-            continue
-        source_refs = [str(item) for item in raw.get("source_refs") or []]
-        fact_id = str(raw.get("fact_id") or "")
-        if ref != fact_id and ref not in source_refs and not any(ref in item for item in source_refs):
-            continue
-        payload = raw.get("payload") or {}
-        labels = payload.get("labels")
-        relations = payload.get("relations")
-        score = payload.get("tool_score")
-        if isinstance(labels, list) and isinstance(relations, list) and isinstance(score, (int, float)):
-            return [str(item) for item in labels], [str(item) for item in relations], float(score)
-    return None
-
-
-def _pillar_visuals(*, birth_input: BirthInputCanonical, graph: MingliGraph) -> list[PillarVisual]:
+    birth_input: BirthInputCanonical,
+    graph: MingliGraph,
+    node_refs: dict[str, str],
+) -> list[PillarVisual]:
     nodes_by_position = {node.position: node for node in graph.nodes}
     pillars = {
         "year": birth_input.year_pillar,
@@ -519,16 +565,16 @@ def _pillar_visuals(*, birth_input: BirthInputCanonical, graph: MingliGraph) -> 
             stem=value[0],
             branch=value[1],
             hidden_stems=[str(item) for item in branch_node.attributes.get("hidden_stems", [])],
-            stem_node_id=stem_node.node_id,
-            branch_node_id=branch_node.node_id,
+            stem_node_id=node_refs[stem_node.node_id],
+            branch_node_id=node_refs[branch_node.node_id],
             visual_anchor_id=f"pillar-{slot}",
         ))
     return output
 
 
-def _mechanism_node(node: MingliGraphNode) -> MechanismNode:
+def _mechanism_node(node: MingliGraphNode, *, node_ref: str) -> MechanismNode:
     return MechanismNode(
-        node_id=node.node_id,
+        node_id=node_ref,
         label=node.label,
         node_type=node.node_type.value,
         position=node.position,
@@ -551,21 +597,24 @@ def _mechanism_path(
     *,
     ref: str,
     path: MingliPath,
+    path_ref: str,
     nodes_by_id: dict[str, MingliGraphNode],
+    node_refs: dict[str, str],
+    relation_refs: dict[str, str],
     path_kind: str,
     display_label: str,
     claim_refs: list[str],
 ) -> MechanismPath:
     return MechanismPath(
-        path_ref=path.path_id,
+        path_ref=path_ref,
         path_kind=path_kind,
         display_label=display_label,
-        node_ids=path.node_ids,
-        edge_ids=path.edge_ids,
+        node_ids=[node_refs[item] for item in path.node_ids],
+        edge_ids=[relation_refs[item] for item in path.edge_ids],
         relation_types=path.relation_types,
         tool_score=path.path_score,
         claim_refs=claim_refs,
-        source_refs=[ref, path.path_id, *path.graph_refs, *path.evidence_refs],
+        source_refs=[ref, path_ref, path.path_id, *path.graph_refs, *path.evidence_refs],
     )
 
 

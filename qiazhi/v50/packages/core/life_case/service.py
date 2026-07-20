@@ -28,6 +28,7 @@ from core.life_case.contracts import (
 )
 from core.mingli_agent.contracts import ChartWorldInstance, DomainExploration, MingliCognitiveRecord
 from core.mingli_agent.reliability import cognition_semantic_signature
+from core.life_case.relation_path import build_committed_relation_path_assertions
 
 
 def build_baseline_insight(
@@ -182,17 +183,28 @@ def commit_baseline_life_case(
         raise ValueError(f"formal_insight_validation_failed:{','.join(receipt.errors)}")
     now = datetime.now(timezone.utc).isoformat()
     committed = insight.model_copy(update={"status": "committed"})
+    life_case_id = f"life-case-{uuid4().hex[:20]}"
+    chart_version = ChartVersionRef(
+        version_id=f"chart-version-{uuid4().hex[:16]}",
+        world_id=world.world_id,
+        chart_hash=_chart_hash(world),
+        created_at=now,
+    )
+    relation_assertions, path_assertions = build_committed_relation_path_assertions(
+        insight=committed,
+        world=world,
+        life_case_id=life_case_id,
+        chart_version=chart_version,
+        case_version=committed.case_version,
+    )
     life_case = LifeCase(
-        life_case_id=f"life-case-{uuid4().hex[:20]}",
+        life_case_id=life_case_id,
         case_id=insight.case_id,
         profile_id=profile_id,
-        chart_version=ChartVersionRef(
-            version_id=f"chart-version-{uuid4().hex[:16]}",
-            world_id=world.world_id,
-            chart_hash=_chart_hash(world),
-            created_at=now,
-        ),
+        chart_version=chart_version,
         baseline_insight=committed,
+        relation_assertions=relation_assertions,
+        path_assertions=path_assertions,
         revisions=[LifeCaseRevision(
             revision_id=f"life-revision-{uuid4().hex[:16]}",
             kind="baseline_committed",

@@ -5,6 +5,11 @@ from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
+from core.graph.provenance import (
+    AssertionLifecycle,
+    PathAssertion,
+    RelationAssertion,
+)
 from experience.compiler import canonical_hash
 from experience.contracts import (
     AllowedChartFact,
@@ -39,6 +44,29 @@ class CanonicalTemporalState(ExperienceModel):
     source_refs: list[str] = Field(default_factory=list)
 
 
+class CanonicalRelationAssertionView(ExperienceModel):
+    assertion_ref: str = Field(min_length=1, max_length=180)
+    relation_ref: str = Field(min_length=1, max_length=180)
+    relation_type: str = Field(min_length=1, max_length=100)
+    participant_node_refs: list[str] = Field(min_length=2)
+    status: Literal["committed", "superseded", "rejected", "legacy_unresolved"]
+    supersedes: str = Field(default="", max_length=180)
+    statement: str = Field(default="", max_length=500)
+    source_refs: list[str] = Field(default_factory=list)
+
+
+class CanonicalPathAssertionView(ExperienceModel):
+    assertion_ref: str = Field(min_length=1, max_length=180)
+    path_ref: str = Field(min_length=1, max_length=180)
+    node_refs: list[str] = Field(default_factory=list)
+    relation_refs: list[str] = Field(default_factory=list)
+    status: Literal["committed", "superseded", "rejected", "legacy_unresolved"]
+    supersedes: str = Field(default="", max_length=180)
+    statement: str = Field(default="", max_length=500)
+    unresolved_reason: str = Field(default="", max_length=180)
+    source_refs: list[str] = Field(default_factory=list)
+
+
 class CanonicalSceneSource(ExperienceModel):
     schema_version: Literal["deepbazi.canonical_scene_source.v1"] = (
         "deepbazi.canonical_scene_source.v1"
@@ -54,6 +82,8 @@ class CanonicalSceneSource(ExperienceModel):
     approved_claims: list[ApprovedClaim] = Field(min_length=1)
     approved_reasoning_steps: list[ApprovedReasoningStep] = Field(default_factory=list)
     competing_hypotheses: list[CompetingHypothesis] = Field(default_factory=list)
+    relation_assertions: list[RelationAssertion] = Field(default_factory=list)
+    path_assertions: list[PathAssertion] = Field(default_factory=list)
     temporal_state: CanonicalTemporalState = Field(default_factory=CanonicalTemporalState)
     uncertainty: EnvelopeUncertainty = Field(default_factory=EnvelopeUncertainty)
     must_not_say: list[str] = Field(default_factory=list)
@@ -73,6 +103,20 @@ class CanonicalSceneSource(ExperienceModel):
             "hypothesis_ref",
             "canonical_scene_duplicate_hypothesis",
         )
+        _unique(
+            self.relation_assertions,
+            "assertion_id",
+            "canonical_scene_duplicate_relation_assertion",
+        )
+        _unique(
+            self.path_assertions,
+            "assertion_id",
+            "canonical_scene_duplicate_path_assertion",
+        )
+        if any(item.status == AssertionLifecycle.CANDIDATE for item in self.relation_assertions):
+            raise ValueError("canonical_scene_source_cannot_accept_candidate_relation")
+        if any(item.status == AssertionLifecycle.CANDIDATE for item in self.path_assertions):
+            raise ValueError("canonical_scene_source_cannot_accept_candidate_path")
         slots = [item.pillar_slot for item in self.chart_facts]
         if slots != ["year", "month", "day", "hour"]:
             raise ValueError("canonical_scene_requires_ordered_four_pillars")
@@ -100,6 +144,8 @@ class CanonicalRoleDisclosure(ExperienceModel):
     visible_reasoning_step_refs: list[str]
     visible_hypothesis_refs: list[str]
     visible_temporal_refs: list[str]
+    visible_relation_assertion_refs: list[str] = Field(default_factory=list)
+    visible_path_assertion_refs: list[str] = Field(default_factory=list)
     prohibited_fields: list[str]
     prohibited_capabilities: list[str]
     disclosure_hash: str = Field(min_length=64, max_length=64)
@@ -113,6 +159,8 @@ class CanonicalScene(ExperienceModel):
     approved_claims: list[ApprovedClaim]
     approved_reasoning_steps: list[ApprovedReasoningStep]
     competing_hypotheses: list[CompetingHypothesis]
+    relation_assertions: list[CanonicalRelationAssertionView]
+    path_assertions: list[CanonicalPathAssertionView]
     temporal_state: CanonicalTemporalState
     uncertainty: EnvelopeUncertainty
     must_not_say: list[str]
@@ -127,12 +175,16 @@ class CanonicalScene(ExperienceModel):
             "claims": [item.claim_ref for item in self.approved_claims],
             "reasoning": [item.step_ref for item in self.approved_reasoning_steps],
             "hypotheses": [item.hypothesis_ref for item in self.competing_hypotheses],
+            "relations": [item.assertion_ref for item in self.relation_assertions],
+            "paths": [item.assertion_ref for item in self.path_assertions],
         }
         expected = {
             "facts": disclosure.visible_fact_refs,
             "claims": disclosure.visible_claim_refs,
             "reasoning": disclosure.visible_reasoning_step_refs,
             "hypotheses": disclosure.visible_hypothesis_refs,
+            "relations": disclosure.visible_relation_assertion_refs,
+            "paths": disclosure.visible_path_assertion_refs,
         }
         if actual != expected:
             raise ValueError("canonical_scene_disclosure_content_mismatch")
@@ -141,6 +193,8 @@ class CanonicalScene(ExperienceModel):
             *actual["claims"],
             *actual["reasoning"],
             *actual["hypotheses"],
+            *actual["relations"],
+            *actual["paths"],
             *disclosure.visible_temporal_refs,
         }:
             raise ValueError("canonical_scene_semantic_ref_mismatch")
@@ -172,6 +226,8 @@ class CanonicalProjectionEnvelope(ExperienceModel):
             *self.role_disclosure.visible_reasoning_step_refs,
             *self.role_disclosure.visible_hypothesis_refs,
             *self.role_disclosure.visible_temporal_refs,
+            *self.role_disclosure.visible_relation_assertion_refs,
+            *self.role_disclosure.visible_path_assertion_refs,
         }
         if not set(self.semantic_refs).issubset(disclosed):
             raise ValueError("canonical_projection_uses_undisclosed_ref")
@@ -247,6 +303,20 @@ def compile_canonical_scene(
         else []
     )
     hypotheses = list(source.competing_hypotheses) if professional else []
+    active_relation_ids = _active_committed_assertion_ids(source.relation_assertions)
+    active_path_ids = _active_committed_assertion_ids(source.path_assertions)
+    relation_assertions = [
+        _relation_assertion_view(item, disclose_sources=professional)
+        for item in source.relation_assertions
+        if professional
+        or (role == "member" and item.assertion_id in active_relation_ids)
+    ]
+    path_assertions = [
+        _path_assertion_view(item, disclose_sources=professional)
+        for item in source.path_assertions
+        if professional
+        or (role == "member" and item.assertion_id in active_path_ids)
+    ]
     temporal_refs = list(source.temporal_state.temporal_snapshot_refs)
     temporal_state = (
         source.temporal_state
@@ -269,6 +339,8 @@ def compile_canonical_scene(
         "claims": [item.claim_ref for item in claims],
         "reasoning": [item.step_ref for item in reasoning],
         "hypotheses": [item.hypothesis_ref for item in hypotheses],
+        "relations": [item.assertion_ref for item in relation_assertions],
+        "paths": [item.assertion_ref for item in path_assertions],
         "temporal": temporal_refs,
         "prohibited_fields": [
             "reality_evidence",
@@ -276,12 +348,16 @@ def compile_canonical_scene(
             "research_context",
             "legacy_record",
             "raw_world_facts",
+            "undisclosed_relation_assertions",
+            "undisclosed_path_assertions",
         ],
         "prohibited_capabilities": [
             "modify_chart",
             "modify_life_case",
             "promote_candidate",
             "infer_missing_relation",
+            "promote_relation_assertion",
+            "promote_path_assertion",
             "override_scene_source",
         ],
     }
@@ -294,6 +370,8 @@ def compile_canonical_scene(
         visible_reasoning_step_refs=disclosure_payload["reasoning"],
         visible_hypothesis_refs=disclosure_payload["hypotheses"],
         visible_temporal_refs=temporal_refs,
+        visible_relation_assertion_refs=disclosure_payload["relations"],
+        visible_path_assertion_refs=disclosure_payload["paths"],
         prohibited_fields=disclosure_payload["prohibited_fields"],
         prohibited_capabilities=disclosure_payload["prohibited_capabilities"],
         disclosure_hash=canonical_hash(disclosure_payload),
@@ -303,6 +381,8 @@ def compile_canonical_scene(
         *disclosure.visible_claim_refs,
         *disclosure.visible_reasoning_step_refs,
         *disclosure.visible_hypothesis_refs,
+        *disclosure.visible_relation_assertion_refs,
+        *disclosure.visible_path_assertion_refs,
         *disclosure.visible_temporal_refs,
     ]))
     view_payload = {
@@ -312,6 +392,8 @@ def compile_canonical_scene(
         "approved_claims": [item.model_dump(mode="json") for item in claims],
         "approved_reasoning_steps": [item.model_dump(mode="json") for item in reasoning],
         "competing_hypotheses": [item.model_dump(mode="json") for item in hypotheses],
+        "relation_assertions": [item.model_dump(mode="json") for item in relation_assertions],
+        "path_assertions": [item.model_dump(mode="json") for item in path_assertions],
         "temporal_state": temporal_state.model_dump(mode="json"),
         "uncertainty": source.uncertainty.model_dump(mode="json"),
         "must_not_say": source.must_not_say,
@@ -342,6 +424,8 @@ def compile_canonical_scene_bundle(scene: CanonicalScene) -> CanonicalSceneBundl
             "legacy_routes_may_not_override_scene_identity": True,
             "client_formal_fact_input": False,
             "graph_and_path_semantics_changed": False,
+            "relation_path_identity_owner": "LifeCase",
+            "client_relation_path_input": False,
         },
     )
 
@@ -382,15 +466,30 @@ def _projection_payload(
     claim_refs = [item.claim_ref for item in scene.approved_claims]
     reasoning_refs = [item.step_ref for item in scene.approved_reasoning_steps]
     hypothesis_refs = [item.hypothesis_ref for item in scene.competing_hypotheses]
+    relation_assertion_refs = [item.assertion_ref for item in scene.relation_assertions]
+    path_assertion_refs = [item.assertion_ref for item in scene.path_assertions]
     temporal_refs = list(scene.role_disclosure.visible_temporal_refs)
 
     if kind == "onecanvas":
-        refs = [*fact_refs, *claim_refs, *reasoning_refs, *temporal_refs]
+        refs = [
+            *fact_refs,
+            *claim_refs,
+            *reasoning_refs,
+            *relation_assertion_refs,
+            *path_assertion_refs,
+            *temporal_refs,
+        ]
         payload = {
             "semantic_slots": [item.model_dump(mode="json") for item in scene.chart_facts],
             "temporal_state": scene.temporal_state.model_dump(mode="json"),
             "committed_claim_refs": claim_refs,
             "reasoning_step_refs": reasoning_refs,
+            "relation_assertions": [
+                item.model_dump(mode="json") for item in scene.relation_assertions
+            ],
+            "path_assertions": [
+                item.model_dump(mode="json") for item in scene.path_assertions
+            ],
             "renderer_policy": {
                 "infer_relations": False,
                 "infer_paths": False,
@@ -398,7 +497,14 @@ def _projection_payload(
             },
         }
     elif kind == "abu":
-        refs = [*claim_refs, *reasoning_refs, *hypothesis_refs, *temporal_refs]
+        refs = [
+            *claim_refs,
+            *reasoning_refs,
+            *hypothesis_refs,
+            *relation_assertion_refs,
+            *path_assertion_refs,
+            *temporal_refs,
+        ]
         payload = {
             "approved_claims": [item.model_dump(mode="json") for item in scene.approved_claims],
             "approved_reasoning_steps": [
@@ -407,28 +513,49 @@ def _projection_payload(
             "competing_hypotheses": [
                 item.model_dump(mode="json") for item in scene.competing_hypotheses
             ],
+            "relation_assertion_refs": relation_assertion_refs,
+            "path_assertions": [
+                item.model_dump(mode="json") for item in scene.path_assertions
+            ],
             "uncertainty": scene.uncertainty.model_dump(mode="json"),
             "must_not_say": scene.must_not_say,
             "abu_policy": "explain_navigate_and_request_approved_actions_only",
         }
     elif kind == "theater":
-        refs = [*fact_refs, *claim_refs, *reasoning_refs, *temporal_refs]
+        refs = [
+            *fact_refs,
+            *claim_refs,
+            *reasoning_refs,
+            *relation_assertion_refs,
+            *path_assertion_refs,
+            *temporal_refs,
+        ]
         payload = {
             "chart_facts": [item.model_dump(mode="json") for item in scene.chart_facts],
             "approved_claims": [item.model_dump(mode="json") for item in scene.approved_claims],
             "reasoning_steps": [
                 item.model_dump(mode="json") for item in scene.approved_reasoning_steps
             ],
+            "relation_assertion_refs": relation_assertion_refs,
+            "path_assertion_refs": path_assertion_refs,
             "cue_binding_refs": refs,
             "runtime_policy": "frozen_cues_may_only_consume_disclosed_refs",
         }
     elif kind == "xiangfa":
-        refs = [*fact_refs, *claim_refs, *temporal_refs]
+        refs = [
+            *fact_refs,
+            *claim_refs,
+            *relation_assertion_refs,
+            *path_assertion_refs,
+            *temporal_refs,
+        ]
         payload = {
             "semantic_bindings": [
                 *({"semantic_ref": ref, "kind": "chart_fact"} for ref in fact_refs),
                 *({"semantic_ref": ref, "kind": "approved_claim"} for ref in claim_refs),
                 *({"semantic_ref": ref, "kind": "temporal_state"} for ref in temporal_refs),
+                *({"semantic_ref": ref, "kind": "relation_assertion"} for ref in relation_assertion_refs),
+                *({"semantic_ref": ref, "kind": "path_assertion"} for ref in path_assertion_refs),
             ],
             "render_policy": {
                 "visual_metaphor_may_add_mingli_fact": False,
@@ -436,7 +563,13 @@ def _projection_payload(
             },
         }
     else:
-        refs = [*fact_refs, *claim_refs, *temporal_refs]
+        refs = [
+            *fact_refs,
+            *claim_refs,
+            *relation_assertion_refs,
+            *path_assertion_refs,
+            *temporal_refs,
+        ]
         payload = {
             "case_ref": scene.identity.case_ref,
             "baseline_claim": (
@@ -445,11 +578,79 @@ def _projection_payload(
                 else None
             ),
             "available_claim_refs": claim_refs,
+            "relation_assertion_refs": relation_assertion_refs,
+            "path_assertion_refs": path_assertion_refs,
             "temporal_state": scene.temporal_state.model_dump(mode="json"),
             "mode_catalog": ["overview", "onecanvas", "xiangfa", "theater", "mingli_lab"],
             "workspace_policy": "ui_state_never_becomes_formal_cognition",
         }
     return payload, list(dict.fromkeys(refs))
+
+
+def _relation_assertion_view(
+    assertion: RelationAssertion,
+    *,
+    disclose_sources: bool,
+) -> CanonicalRelationAssertionView:
+    return CanonicalRelationAssertionView(
+        assertion_ref=assertion.assertion_id,
+        relation_ref=assertion.relation_key.relation_key,
+        relation_type=assertion.relation_key.relation_type,
+        participant_node_refs=[
+            item.node_ref for item in assertion.relation_key.participant_refs
+        ],
+        status=assertion.status.value,  # type: ignore[arg-type]
+        supersedes=assertion.supersedes,
+        statement=assertion.statement,
+        source_refs=(
+            list(dict.fromkeys([
+                assertion.provenance.provenance_id,
+                *assertion.provenance.evidence_refs,
+                *assertion.provenance.source_refs,
+            ]))
+            if disclose_sources
+            else []
+        ),
+    )
+
+
+def _path_assertion_view(
+    assertion: PathAssertion,
+    *,
+    disclose_sources: bool,
+) -> CanonicalPathAssertionView:
+    path_key = assertion.path_key
+    return CanonicalPathAssertionView(
+        assertion_ref=assertion.assertion_id,
+        path_ref=path_key.path_key if path_key else assertion.legacy_ref,
+        node_refs=[item.node_ref for item in path_key.node_refs] if path_key else [],
+        relation_refs=[
+            item.relation_key for item in path_key.relation_keys
+        ] if path_key else [],
+        status=assertion.status.value,  # type: ignore[arg-type]
+        supersedes=assertion.supersedes,
+        statement=assertion.statement,
+        unresolved_reason=assertion.unresolved_reason,
+        source_refs=(
+            list(dict.fromkeys([
+                assertion.provenance.provenance_id,
+                *assertion.provenance.evidence_refs,
+                *assertion.provenance.source_refs,
+            ]))
+            if disclose_sources
+            else []
+        ),
+    )
+
+
+def _active_committed_assertion_ids(assertions: list[Any]) -> set[str]:
+    superseded = {item.supersedes for item in assertions if item.supersedes}
+    return {
+        item.assertion_id
+        for item in assertions
+        if item.status == AssertionLifecycle.COMMITTED
+        and item.assertion_id not in superseded
+    }
 
 
 def _unique(rows: list[Any], field: str, error: str) -> None:

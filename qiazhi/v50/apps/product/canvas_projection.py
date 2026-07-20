@@ -13,10 +13,15 @@ from core.engines.bazi.knowledge import (
     STEM_POLARITY,
 )
 from core.engines.bazi.material_engine import resolve_ten_god
-from core.graph import build_mingli_graph_from_material_store, explore_mingli_paths
+from core.graph import NodeRef, build_mingli_graph_from_material_store, canonical_scene_scope_ref, explore_mingli_paths
 from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphNode, MingliPath
-from core.life_case import LifeCase
-from core.mingli_agent.contracts import MingliCognitiveRecord
+from core.life_case import (
+    LifeCase,
+    node_ref_for_graph_node,
+    path_key_for_graph_path,
+    relation_key_for_graph_edge,
+)
+from core.mingli_agent.contracts import ChartWorldInstance, MingliCognitiveRecord
 from experience.canvas import (
     CanvasChartSource,
     CanvasCluster,
@@ -37,6 +42,7 @@ from experience.canvas import (
     compile_canvas_spec,
     project_canvas_spec_for_role,
 )
+from experience.compiler import canonical_hash
 from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 
@@ -116,6 +122,7 @@ class ReadOnlySixPillarCanvasService:
     def __init__(self, *, case_store: AgentCaseStore) -> None:
         self.case_store = case_store
         self.scene_owner = CanonicalSceneOwner(case_store=case_store)
+        self._compiled_cache: dict[tuple[str, str, str, str, str], dict[str, Any]] = {}
 
     def issue(
         self,
@@ -240,7 +247,21 @@ class ReadOnlySixPillarCanvasService:
             )
         except CanonicalSceneUnavailable as exc:
             raise ReadOnlyCanvasUnavailable(str(exc)) from exc
-        source, metadata = _compile_input_from_case_row(case_id=case_id, row=row)
+        cache_key = (
+            case_id,
+            participant_id,
+            role,
+            canonical_projection.projection_hash,
+            _candidate_selection_revision_token(row),
+        )
+        cached = self._compiled_cache.get(cache_key)
+        if cached is not None:
+            return cached
+        source, metadata = _compile_input_from_case_row(
+            case_id=case_id,
+            row=row,
+            canonical_projection_payload=canonical_projection.payload,
+        )
         identity = canonical_projection.scene_identity
         if (
             metadata["source"]["chart_version_id"] != identity.chart_version_id
@@ -275,7 +296,7 @@ class ReadOnlySixPillarCanvasService:
             "luck": compile_canvas_diff(specs["natal"], specs["luck"], source_action_ref="official:add-luck"),
             "year": compile_canvas_diff(specs["luck"], specs["year"], source_action_ref="official:add-year"),
         }
-        return {
+        compiled = {
             "source": metadata["source"],
             "path_availability": metadata["path_availability"],
             "specs": specs,
@@ -283,6 +304,13 @@ class ReadOnlySixPillarCanvasService:
             "canonical_scene": identity.model_dump(mode="json"),
             "projection_envelope": canonical_projection.model_dump(mode="json"),
         }
+        for key in list(self._compiled_cache):
+            if key[:3] == cache_key[:3] and key != cache_key:
+                self._compiled_cache.pop(key, None)
+        if len(self._compiled_cache) >= 128:
+            self._compiled_cache.clear()
+        self._compiled_cache[cache_key] = compiled
+        return compiled
 
 
 def canvas_role(account_role: str) -> CanvasRole:
@@ -295,10 +323,27 @@ def canvas_role(account_role: str) -> CanvasRole:
     }.get(str(account_role).strip().lower(), "guest")  # type: ignore[return-value]
 
 
+def _candidate_selection_revision_token(row: dict[str, Any]) -> str:
+    record = row.get("record") if isinstance(row.get("record"), dict) else {}
+    cognition = record.get("cognition") if isinstance(record.get("cognition"), dict) else {}
+    work_path = (
+        cognition.get("work_path")
+        if isinstance(cognition.get("work_path"), dict)
+        else {}
+    )
+    return canonical_hash({
+        "record_id": record.get("record_id"),
+        "candidate_path_refs": work_path.get("candidate_path_refs"),
+        "competing_path_refs": work_path.get("competing_path_refs"),
+        "evidence_refs": work_path.get("evidence_refs"),
+    })
+
+
 def _compile_input_from_case_row(
     *,
     case_id: str,
     row: dict[str, Any],
+    canonical_projection_payload: dict[str, Any],
 ) -> tuple[MingliCanvasCompileInput, dict[str, Any]]:
     birth_payload = row.get("birth_input")
     world = row.get("world")
@@ -310,6 +355,7 @@ def _compile_input_from_case_row(
         raise ReadOnlyCanvasUnavailable("formal_life_case_not_available")
 
     birth = BirthInputCanonical.model_validate(birth_payload)
+    world_model = ChartWorldInstance.model_validate(world)
     life_case = LifeCase.model_validate(life_case_payload)
     record = MingliCognitiveRecord.model_validate(record_payload)
     baseline = life_case.baseline_insight
@@ -326,7 +372,7 @@ def _compile_input_from_case_row(
     if source_record_id and source_record_id != record.record_id:
         raise ReadOnlyCanvasUnavailable("canvas_baseline_record_mismatch")
 
-    reading_id = str(world.get("reading_id") or case_id)
+    reading_id = world_model.reading_id or case_id
     calendar = normalize_birth_input(birth)
     material_store = build_bazi_material_store(
         reading_id=reading_id,
@@ -338,29 +384,77 @@ def _compile_input_from_case_row(
     if not graph.nodes:
         raise ReadOnlyCanvasUnavailable("canvas_graph_unavailable")
 
+    nodes_by_id = {item.node_id: item for item in graph.nodes}
+    edges_by_id = {item.edge_id: item for item in graph.edges}
+    node_ref_models = {
+        node_id: node_ref_for_graph_node(
+            node=node,
+            world=world_model,
+            life_case=life_case,
+        )
+        for node_id, node in nodes_by_id.items()
+    }
+    node_refs = {node_id: item.node_ref for node_id, item in node_ref_models.items()}
+    relation_key_models = {
+        edge_id: relation_key_for_graph_edge(
+            edge=edge,
+            nodes_by_id=nodes_by_id,
+            world=world_model,
+            life_case=life_case,
+            node_refs_by_id=node_ref_models,
+        )
+        for edge_id, edge in edges_by_id.items()
+    }
+    relation_refs = {
+        edge_id: item.relation_key
+        for edge_id, item in relation_key_models.items()
+    }
+    relation_assertions = {
+        str(item.get("relation_ref")): item
+        for item in _active_projection_assertions(
+            canonical_projection_payload.get("relation_assertions")
+        )
+        if item.get("relation_ref")
+    }
     chart_source = _chart_source(
         birth=birth,
         graph=graph,
         chart_version_id=life_case.chart_version.version_id,
-        world_id=str(world.get("world_id") or life_case.chart_version.world_id),
+        world_id=world_model.world_id,
+        node_refs=node_refs,
+        relation_refs=relation_refs,
+        relation_assertions=relation_assertions,
     )
-    committed_path = _committed_path(
-        graph=graph,
-        world=world,
+    committed_paths = _committed_paths(
+        canonical_projection_payload=canonical_projection_payload,
         life_case=life_case,
-        record=record,
+        available_node_refs=set(node_refs.values()),
+        available_relation_refs=set(relation_refs.values()),
     )
     candidate_paths = _candidate_paths(
-        graph=graph,
         explored_paths=explored.paths,
         record=record,
-        committed_path=committed_path,
+        committed_paths=committed_paths,
+        nodes_by_id=nodes_by_id,
+        edges_by_id=edges_by_id,
+        node_refs=node_refs,
+        relation_refs=relation_refs,
+        node_ref_models=node_ref_models,
+        relation_key_models=relation_key_models,
+        world=world_model,
+        life_case=life_case,
     )
-    path_available = committed_path is not None
+    path_available = bool(committed_paths)
+    projected_paths = canonical_projection_payload.get("path_assertions")
+    projected_paths = projected_paths if isinstance(projected_paths, list) else []
+    unresolved_count = sum(
+        1 for item in projected_paths
+        if isinstance(item, dict) and item.get("status") == "legacy_unresolved"
+    )
     path_message = (
-        "LifeCase 已提交主路径，并且结构化证据已唯一落到命盘关系。"
+        "LifeCase 已提交主路径，并以稳定身份绑定到命盘关系。"
         if path_available
-        else "LifeCase 已有文字判断，但尚未保存可唯一定位的结构化主路径；本页不会根据文字猜线。"
+        else "LifeCase 的历史路径未能精确落到当前结构；原断言仍保留，本页不会根据文字猜线。"
     )
     uncertainty = list(dict.fromkeys([
         *baseline.uncertainty.reasons,
@@ -369,7 +463,7 @@ def _compile_input_from_case_row(
     life_case_source = CanvasLifeCaseSource(
         life_case_id=life_case.life_case_id,
         life_case_version=life_case.case_version,
-        paths=[*([committed_path] if committed_path else []), *candidate_paths],
+        paths=[*committed_paths, *candidate_paths],
         uncertainty=uncertainty,
         must_not_say=[
             "不得把时间柱出现说成确定事件",
@@ -380,7 +474,8 @@ def _compile_input_from_case_row(
     timing = world.get("timing_context") if isinstance(world.get("timing_context"), dict) else {}
     temporal_layers = _temporal_layers(
         timing=timing,
-        world_id=str(world.get("world_id") or life_case.chart_version.world_id),
+        world=world_model,
+        life_case=life_case,
         day_stem=birth.day_pillar[0],
     )
     compiled_at = _parse_datetime(life_case.updated_at)
@@ -408,8 +503,9 @@ def _compile_input_from_case_row(
         "path_availability": {
             "status": "available" if path_available else "unavailable",
             "message": path_message,
-            "committed_path_count": 1 if path_available else 0,
+            "committed_path_count": len(committed_paths),
             "candidate_path_count": len(candidate_paths),
+            "legacy_unresolved_count": unresolved_count,
         },
     }
 
@@ -420,6 +516,9 @@ def _chart_source(
     graph: MingliGraph,
     chart_version_id: str,
     world_id: str,
+    node_refs: dict[str, str],
+    relation_refs: dict[str, str],
+    relation_assertions: dict[str, dict[str, Any]],
 ) -> CanvasChartSource:
     pillar_values = {
         "year": birth.year_pillar,
@@ -445,23 +544,35 @@ def _chart_source(
         )
         for position, value in pillar_values.items()
     ]
-    nodes = [_canvas_node(node) for node in graph.nodes]
+    nodes = [
+        _canvas_node(node, node_ref=node_refs[node.node_id])
+        for node in graph.nodes
+    ]
     nodes_by_id = {item.node_id: item for item in graph.nodes}
-    relations = [_canvas_relation(edge=edge, nodes_by_id=nodes_by_id) for edge in graph.edges]
+    relations = [
+        _canvas_relation(
+            edge=edge,
+            nodes_by_id=nodes_by_id,
+            node_refs=node_refs,
+            relation_ref=relation_refs[edge.edge_id],
+            assertion=relation_assertions.get(relation_refs[edge.edge_id]),
+        )
+        for edge in graph.edges
+    ]
     return CanvasChartSource(
         chart_version_id=chart_version_id,
         world_id=world_id,
         slots=slots,
         nodes=nodes,
         relations=relations,
-        clusters=_graph_clusters(graph=graph),
+        clusters=_graph_clusters(graph=graph, node_refs=node_refs),
     )
 
 
-def _canvas_node(node: MingliGraphNode) -> CanvasNode:
+def _canvas_node(node: MingliGraphNode, *, node_ref: str) -> CanvasNode:
     visible = node.node_type.value in {"stem", "branch"}
     return CanvasNode(
-        node_ref=node.node_id,
+        node_ref=node_ref,
         label=node.label,
         node_type=node.node_type.value,
         semantic_slot_ref=_slot_ref_for_position(node.position),
@@ -477,21 +588,43 @@ def _canvas_node(node: MingliGraphNode) -> CanvasNode:
     )
 
 
-def _canvas_relation(*, edge: MingliGraphEdge, nodes_by_id: dict[str, MingliGraphNode]) -> CanvasRelation:
+def _canvas_relation(
+    *,
+    edge: MingliGraphEdge,
+    nodes_by_id: dict[str, MingliGraphNode],
+    node_refs: dict[str, str],
+    relation_ref: str,
+    assertion: dict[str, Any] | None,
+) -> CanvasRelation:
     source = nodes_by_id[edge.from_node_id]
     target = nodes_by_id[edge.to_node_id]
     refs = _refs([*edge.material_refs, *edge.evidence_refs], fallback=edge.edge_id)
     label = f"{source.label}{RELATION_LABELS.get(edge.edge_type.value, edge.relation_label or edge.edge_type.value)}{target.label}"
-    trace = CanvasTrace(
-        source_mode="derived",
-        epistemic_status="derived",
-        source_refs=refs,
-        disclosure="member",
+    assertion_ref = str(assertion.get("assertion_ref")) if assertion else ""
+    trace = (
+        CanvasTrace(
+            source_mode="committed",
+            epistemic_status="committed",
+            source_refs=_refs(
+                [assertion_ref, *(assertion.get("source_refs") or []), *refs],
+                fallback=relation_ref,
+            ),
+            commitment_refs=[assertion_ref],
+            disclosure="member",
+        )
+        if assertion_ref
+        else CanvasTrace(
+            source_mode="derived",
+            epistemic_status="derived",
+            source_refs=refs,
+            disclosure="member",
+        )
     )
     return CanvasRelation(
-        relation_ref=edge.edge_id,
-        from_node_ref=edge.from_node_id,
-        to_node_ref=edge.to_node_id,
+        relation_ref=relation_ref,
+        from_node_ref=node_refs[edge.from_node_id],
+        to_node_ref=node_refs[edge.to_node_id],
+        participant_node_refs=[node_refs[item] for item in edge.participant_node_ids],
         relation_type=edge.edge_type.value,
         label=label,
         semantic_state="active",
@@ -501,7 +634,7 @@ def _canvas_relation(*, edge: MingliGraphEdge, nodes_by_id: dict[str, MingliGrap
     )
 
 
-def _graph_clusters(*, graph: MingliGraph) -> list[CanvasCluster]:
+def _graph_clusters(*, graph: MingliGraph, node_refs: dict[str, str]) -> list[CanvasCluster]:
     groups: dict[str, list[MingliGraphNode]] = {}
     for node in graph.nodes:
         cluster_id = str(node.attributes.get("triple_combination") or "")
@@ -516,7 +649,7 @@ def _graph_clusters(*, graph: MingliGraph) -> list[CanvasCluster]:
         output.append(CanvasCluster(
             cluster_ref=f"cluster:{graph.reading_id}:{cluster_id}",
             label="结构组合候选",
-            node_refs=[item.node_id for item in nodes],
+            node_refs=[node_refs[item.node_id] for item in nodes],
             relation_refs=[],
             trace=CanvasTrace(
                 source_mode="derived",
@@ -529,94 +662,112 @@ def _graph_clusters(*, graph: MingliGraph) -> list[CanvasCluster]:
     return output
 
 
-def _committed_path(
+def _committed_paths(
     *,
-    graph: MingliGraph,
-    world: dict[str, Any],
+    canonical_projection_payload: dict[str, Any],
     life_case: LifeCase,
-    record: MingliCognitiveRecord,
-) -> CanvasPath | None:
-    facts = {
-        str(item.get("fact_id")): item
-        for item in world.get("facts") or []
-        if isinstance(item, dict) and item.get("fact_id")
-    }
-    nodes_by_id = {item.node_id: item for item in graph.nodes}
-    relation_refs: list[str] = []
-    node_refs: list[str] = []
-    typed_refs: list[str] = []
-    for evidence_ref in record.cognition.work_path.evidence_refs:
-        fact = facts.get(str(evidence_ref))
-        if not fact or fact.get("category") != "graph_relation":
-            continue
-        payload = fact.get("payload") if isinstance(fact.get("payload"), dict) else {}
-        matches = [
-            edge for edge in graph.edges
-            if _edge_matches_fact(edge=edge, nodes_by_id=nodes_by_id, payload=payload)
-        ]
-        if len(matches) != 1:
-            return None
-        edge = matches[0]
-        typed_refs.append(str(evidence_ref))
-        relation_refs.append(edge.edge_id)
-        for node_ref in (edge.from_node_id, edge.to_node_id):
-            if node_ref not in node_refs:
-                node_refs.append(node_ref)
-    if not typed_refs or len(node_refs) < 2:
-        return None
+    available_node_refs: set[str],
+    available_relation_refs: set[str],
+) -> list[CanvasPath]:
     baseline = life_case.baseline_insight
-    trace = CanvasTrace(
-        source_mode="committed",
-        epistemic_status="committed",
-        source_refs=_refs([record.record_id, *typed_refs], fallback=baseline.insight_id),
-        commitment_refs=[baseline.insight_id],
-        uncertainty=baseline.uncertainty.reasons,
-        disclosure="member",
-    )
-    return CanvasPath(
-        path_ref=f"path-committed-{record.record_id}",
-        label=_bounded(record.cognition.work_path.path_statement or baseline.claim, 240),
-        node_refs=node_refs,
-        relation_refs=relation_refs,
-        required_refs=node_refs,
-        semantic_state="active",
-        trace=trace,
-        state_trace=trace,
-        change_reason_refs=[baseline.insight_id, *typed_refs],
-    )
+    output: list[CanvasPath] = []
+    for item in _active_projection_assertions(
+        canonical_projection_payload.get("path_assertions")
+    ):
+        node_refs = [str(ref) for ref in item.get("node_refs") or []]
+        relation_refs = [str(ref) for ref in item.get("relation_refs") or []]
+        assertion_ref = str(item.get("assertion_ref") or "")
+        path_ref = str(item.get("path_ref") or "")
+        if (
+            not assertion_ref
+            or not path_ref
+            or len(node_refs) < 2
+            or not relation_refs
+            or not set(node_refs).issubset(available_node_refs)
+            or not set(relation_refs).issubset(available_relation_refs)
+        ):
+            continue
+        trace = CanvasTrace(
+            source_mode="committed",
+            epistemic_status="committed",
+            source_refs=_refs(
+                [assertion_ref, *(item.get("source_refs") or [])],
+                fallback=baseline.insight_id,
+            ),
+            commitment_refs=[assertion_ref, baseline.insight_id],
+            uncertainty=baseline.uncertainty.reasons,
+            disclosure="member",
+        )
+        output.append(CanvasPath(
+            path_ref=path_ref,
+            label=_bounded(str(item.get("statement") or baseline.claim), 240),
+            node_refs=node_refs,
+            relation_refs=relation_refs,
+            required_refs=node_refs,
+            semantic_state="active",
+            trace=trace,
+            state_trace=trace,
+            change_reason_refs=[assertion_ref, baseline.insight_id],
+        ))
+    return output
 
 
 def _candidate_paths(
     *,
-    graph: MingliGraph,
     explored_paths: list[MingliPath],
     record: MingliCognitiveRecord,
-    committed_path: CanvasPath | None,
+    committed_paths: list[CanvasPath],
+    nodes_by_id: dict[str, MingliGraphNode],
+    edges_by_id: dict[str, MingliGraphEdge],
+    node_refs: dict[str, str],
+    relation_refs: dict[str, str],
+    node_ref_models: dict[str, NodeRef],
+    relation_key_models: dict[str, Any],
+    world: ChartWorldInstance,
+    life_case: LifeCase,
 ) -> list[CanvasPath]:
-    by_id = {item.path_id: item for item in explored_paths}
+    by_id = {
+        ref: item
+        for item in explored_paths
+        for ref in (item.path_id, item.path_key)
+    }
     output: list[CanvasPath] = []
     refs = list(dict.fromkeys(record.cognition.work_path.competing_path_refs))
+    committed_relation_chains = {
+        tuple(item.relation_refs) for item in committed_paths
+    }
     for ref in refs:
         path = by_id.get(ref)
         if path is None:
             continue
-        relation_refs = list(path.edge_ids)
-        if committed_path and relation_refs == committed_path.relation_refs:
+        stable_path = path_key_for_graph_path(
+            path=path,
+            nodes_by_id=nodes_by_id,
+            edges_by_id=edges_by_id,
+            world=world,
+            life_case=life_case,
+            node_refs_by_id=node_ref_models,
+            relation_keys_by_id=relation_key_models,
+        )
+        stable_relation_refs = [relation_refs[item] for item in path.edge_ids]
+        if tuple(stable_relation_refs) in committed_relation_chains:
             continue
-        nodes_by_id = {item.node_id: item for item in graph.nodes}
         label = "竞争路径：" + " → ".join(nodes_by_id[item].label for item in path.node_ids)
         trace = CanvasTrace(
             source_mode="derived",
             epistemic_status="candidate",
-            source_refs=_refs([ref, *path.graph_refs, *path.evidence_refs], fallback=path.path_id),
+            source_refs=_refs(
+                [ref, path.path_key, *path.graph_refs, *path.evidence_refs],
+                fallback=stable_path.path_key,
+            ),
             uncertainty=["这条路径尚未进入 LifeCase 正式主判断"],
             disclosure="practitioner",
         )
         output.append(CanvasPath(
-            path_ref=path.path_id,
+            path_ref=stable_path.path_key,
             label=_bounded(label, 240),
-            node_refs=path.node_ids,
-            relation_refs=path.edge_ids,
+            node_refs=[node_refs[item] for item in path.node_ids],
+            relation_refs=stable_relation_refs,
             semantic_state="latent",
             trace=trace,
             state_trace=trace,
@@ -625,34 +776,26 @@ def _candidate_paths(
     return output
 
 
-def _edge_matches_fact(
-    *,
-    edge: MingliGraphEdge,
-    nodes_by_id: dict[str, MingliGraphNode],
-    payload: dict[str, Any],
-) -> bool:
-    source = nodes_by_id.get(edge.from_node_id)
-    target = nodes_by_id.get(edge.to_node_id)
-    return bool(
-        source
-        and target
-        and edge.edge_type.value == str(payload.get("relation") or "")
-        and source.position == str(payload.get("from_position") or "")
-        and target.position == str(payload.get("to_position") or "")
-        and source.label == str(payload.get("from") or "")
-        and target.label == str(payload.get("to") or "")
-    )
+def _active_projection_assertions(value: Any) -> list[dict[str, Any]]:
+    rows = [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+    superseded = {str(item.get("supersedes")) for item in rows if item.get("supersedes")}
+    return [
+        item for item in rows
+        if item.get("status") == "committed"
+        and str(item.get("assertion_ref") or "") not in superseded
+    ]
 
 
 def _temporal_layers(
     *,
     timing: dict[str, Any],
-    world_id: str,
+    world: ChartWorldInstance,
+    life_case: LifeCase,
     day_stem: str,
 ) -> list[CanvasTemporalLayer]:
     refs = _refs(
         [str(item) for item in timing.get("calculation_refs") or []],
-        fallback=f"world:{world_id}:timing-context",
+        fallback=f"world:{world.world_id}:timing-context",
     )
     output: list[CanvasTemporalLayer] = []
     luck_pillar = str(timing.get("luck_pillar") or "")
@@ -662,7 +805,8 @@ def _temporal_layers(
         output.append(_temporal_layer(
             layer_type="luck",
             pillar=luck_pillar,
-            world_id=world_id,
+            world=world,
+            life_case=life_case,
             snapshot_suffix=suffix,
             day_stem=day_stem,
             source_refs=refs,
@@ -672,7 +816,8 @@ def _temporal_layers(
         output.append(_temporal_layer(
             layer_type="year",
             pillar=annual_pillar,
-            world_id=world_id,
+            world=world,
+            life_case=life_case,
             snapshot_suffix=str(timing.get("analysis_year") or "current"),
             day_stem=day_stem,
             source_refs=refs,
@@ -684,14 +829,44 @@ def _temporal_layer(
     *,
     layer_type: Literal["luck", "year"],
     pillar: str,
-    world_id: str,
+    world: ChartWorldInstance,
+    life_case: LifeCase,
     snapshot_suffix: str,
     day_stem: str,
     source_refs: list[str],
 ) -> CanvasTemporalLayer:
     stem, branch = pillar[0], pillar[1]
-    layer_id = f"{layer_type}:{world_id}:{pillar}:{snapshot_suffix}"
-    slot_ref = f"slot-{layer_type}-{world_id}-{pillar}"
+    layer_id = f"{layer_type}:{world.world_id}:{pillar}:{snapshot_suffix}"
+    slot_ref = f"slot-{layer_type}-{world.world_id}-{pillar}"
+    temporal_snapshot_ref = f"temporal:{world.world_id}:{layer_type}:{snapshot_suffix}"
+    scene_ref = canonical_scene_scope_ref(
+        life_case_id=life_case.life_case_id,
+        chart_version_id=life_case.chart_version.version_id,
+    )
+    temporal_node_refs = {
+        "stem": NodeRef(
+            scene_ref=scene_ref,
+            life_case_id=life_case.life_case_id,
+            chart_version_id=life_case.chart_version.version_id,
+            world_id=world.world_id,
+            scope=layer_type,
+            slot=layer_type,
+            level="stem",
+            component=stem,
+            temporal_snapshot_ref=temporal_snapshot_ref,
+        ).node_ref,
+        "branch": NodeRef(
+            scene_ref=scene_ref,
+            life_case_id=life_case.life_case_id,
+            chart_version_id=life_case.chart_version.version_id,
+            world_id=world.world_id,
+            scope=layer_type,
+            slot=layer_type,
+            level="branch",
+            component=branch,
+            temporal_snapshot_ref=temporal_snapshot_ref,
+        ).node_ref,
+    }
     trace = CanvasTrace(
         source_mode="derived",
         epistemic_status="fact",
@@ -703,7 +878,7 @@ def _temporal_layer(
         layer_id=layer_id,
         layer_type=layer_type,
         layer_mode="official",
-        temporal_snapshot_id=f"temporal:{world_id}:{layer_type}:{snapshot_suffix}",
+        temporal_snapshot_id=temporal_snapshot_ref,
         slot=CanvasSemanticSlot(
             slot_ref=slot_ref,
             slot_type=layer_type,
@@ -716,7 +891,7 @@ def _temporal_layer(
         ),
         nodes=[
             CanvasNode(
-                node_ref=f"node:{world_id}:{layer_type}:stem:{stem}",
+                node_ref=temporal_node_refs["stem"],
                 label=stem,
                 node_type=f"{layer_type}_stem",
                 semantic_slot_ref=slot_ref,
@@ -726,7 +901,7 @@ def _temporal_layer(
                 trace=trace,
             ),
             CanvasNode(
-                node_ref=f"node:{world_id}:{layer_type}:branch:{branch}",
+                node_ref=temporal_node_refs["branch"],
                 label=branch,
                 node_type=f"{layer_type}_branch",
                 semantic_slot_ref=slot_ref,

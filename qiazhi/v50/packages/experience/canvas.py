@@ -91,6 +91,7 @@ class CanvasRelation(ExperienceModel):
     relation_ref: str = Field(min_length=1, max_length=260)
     from_node_ref: str = Field(min_length=1, max_length=220)
     to_node_ref: str = Field(min_length=1, max_length=220)
+    participant_node_refs: list[str] = Field(default_factory=list, min_length=0)
     relation_type: str = Field(min_length=1, max_length=100)
     label: str = Field(min_length=1, max_length=140)
     semantic_state: CanvasSemanticState = "active"
@@ -330,6 +331,12 @@ class MingliCanvasSpec(ExperienceModel):
         for relation in self.relations:
             if relation.from_node_ref not in nodes or relation.to_node_ref not in nodes:
                 raise ValueError(f"canvas_relation_missing_node:{relation.relation_ref}")
+            participants = relation.participant_node_refs or [
+                relation.from_node_ref,
+                relation.to_node_ref,
+            ]
+            if len(participants) < 2 or not set(participants).issubset(nodes):
+                raise ValueError(f"canvas_relation_missing_participant:{relation.relation_ref}")
         for cluster in self.clusters:
             if not set(cluster.node_refs).issubset(nodes):
                 raise ValueError(f"canvas_cluster_missing_node:{cluster.cluster_ref}")
