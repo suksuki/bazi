@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `a32088c1e182` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `398f189c6757` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,7 +19,7 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 467_PASSED_CAG04
+full_regression: 477_PASSED_RA0_INTEGRATED
 ```
 
 Authorized now:
@@ -28,7 +28,7 @@ Authorized now:
 
 Next architecture slice: `CAG_05_SCHEMA_MODULE_OWNERSHIP` after `explicit_gate_decision_after_cag_04_architecture_review`.
 
-Blocked: `cag_05_implementation_before_cag_04_review`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `cag_05_implementation_before_cag_04_review`, `architecture_gate_until_cal_01_resolved_or_explicitly_isolated`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product
@@ -175,7 +175,8 @@ Current release blockers:
 1. Professional blind adjudication not completed.
 2. CAG-04 architecture review has not signed the machine-complete provenance slice.
 3. CAG-05 schema and module ownership consolidation is not complete.
-4. Architecture Consolidation Gate has not passed.
+4. `CAL-01 Late-Zi Five-Rats Consistency` is unresolved or not explicitly isolated.
+5. Architecture Consolidation Gate has not passed.
 
 Closed by L1/L2:
 
@@ -194,6 +195,8 @@ Closed by L1/L2:
   assertions, exact provenance and explicit `legacy_unresolved` handling;
 - Canvas and Theater no longer invent anonymous committed IDs or reconnect old
   paths by labels, signatures or score proximity.
+- RA0 reclassifies historical `518K` as a deterministic structural universe,
+  not a persisted entity database; no structurally valid ChartKey is deleted.
 
 ## 8. Product Non-Goals
 

@@ -142,6 +142,22 @@ R1 V6 already exposes the existing `single_solution`, `multiple_solutions` and
 `no_solution` contracts without reconstructing them in the browser. Its 20 files
 remain immutable regression evidence; no human-review prerequisite is active.
 
+### 6.1 Structural Chart Universe Boundary
+
+The historical V30 `518K` name is a validation target contract, not a persisted
+four-pillar entity corpus. V50 reconstructs it deterministically as
+`60 year pillars x 12 legal solar months x 60 day pillars x 12 legal double-hours`.
+All 518,400 unique ChartKeys are structurally valid under the current Five
+Tigers and Five Rats rules, and all receive a calendar witness across the
+audited four-Jiazi range. The expanded universe is reproducible evidence, not a
+database or Git-tracked fact owner.
+
+`CAL-01 Late-Zi Five-Rats Consistency` remains open: 4,019 sampled `23:xx`
+resolutions expose a disagreement between the formal Sect 2 day pillar and the
+dependency-provided hour stem. RA0 retained the raw evidence and did not change
+the formal algorithm. Architecture Gate cannot pass until CAL-01 is resolved or
+explicitly isolated; it does not alter the CAG-04 relation/path boundary.
+
 ## 7. OneCanvas Architecture
 
 OneCanvas uses six semantic slots and twelve primary nodes as the single interaction space:
@@ -215,6 +231,7 @@ The LLM compares and synthesizes professionally meaningful hypotheses. Relation/
 - `CURRENT_IMPLEMENTATION_ROADMAP.md`
 - `V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V2.md`
 - `architecture/V50_CAG04_RELATION_PATH_PROVENANCE_CLOSEOUT_V1.md`
+- `../reports/v50-lean-consolidation/ra0-518k-realizability-v1/RA0_518K_CHART_REALIZABILITY_AUDIT_V1.md`
 - `DECISION_REGISTER.md`
 - `config/data_authority_v1.json`
 - `config/runtime_authority_v1.json`

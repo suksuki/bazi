@@ -40,13 +40,15 @@ gates:
   r1_human_product_gate: CANCELED_NO_SCHEDULE
   cag_03_canonical_scene: CLOSED_PASS_HARDENED
   cag_04_relation_path_provenance: IMPLEMENTATION_COMPLETE_MACHINE_PASS_REVIEW_PENDING
+  ra0_518k_chart_realizability: PASS_WITH_BOUNDARY_FINDING
+  cal_01_late_zi_five_rats_consistency: OPEN_BLOCKS_ARCHITECTURE_GATE
   architecture_consolidation_gate: IN_PROGRESS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 467_PASSED_CAG04
+  full_regression: 477_PASSED_RA0_INTEGRATED
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -57,6 +59,16 @@ receipts:
   cag_04_regression: 467_PASSED
   cag_04_legacy_unresolved_tracked_cases: 0
   cag_04_legacy_unresolved_synthetic_negative_fixture: 1
+  ra0_source_branch: codex/ra0-518k-audit-v1
+  ra0_source_commit: 2ac55900fb5885649ba7fca7935e57005070406b
+  ra0_merge_base: 34cc5b17a86683ed4575d93e15134f0f26bc6687
+  ra0_controlled_integration_commit: f4c5527c
+  ra0_universe_content_sha256: 05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c
+  ra0_temporal_policy_sha256: 3d7af5b188bd444649ff0f2d693d498162ca4e331407554d16a6906326365215
+  ra0_structural_universe: 518400_OF_518400_VALID_UNIQUE
+  ra0_four_jiazi_realizability: 518400_OF_518400_WITNESSED
+  ra0_focused_regression: 10_PASSED
+  cal_01_late_zi_rejected_timestamps: 4019
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -80,6 +92,7 @@ next_architecture_slice:
 
 blocked:
   - cag_05_implementation_before_cag_04_review
+  - architecture_gate_until_cal_01_resolved_or_explicitly_isolated
   - relation_atlas_ra1
   - relation_core_v2_implementation
   - path_core_v2_implementation
@@ -98,6 +111,8 @@ protected_boundaries:
   abu_role: explanation_navigation_and_approved_actions
   lab_role: sandbox_only
   r1_role: immutable_regression_reference_not_global_freeze
+  ra0_518k_role: deterministic_structural_chart_universe_generator_not_entity_database
+  cal_01_role: retained_boundary_evidence_no_silent_normalization
 
 validation_policy:
   role: engineering_evidence_only
