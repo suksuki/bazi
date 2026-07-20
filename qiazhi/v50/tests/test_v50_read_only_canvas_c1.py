@@ -48,7 +48,14 @@ def _typed_real_case(case_id: str) -> tuple[dict[str, object], str]:
     work_path["candidate_path_refs"] = []
     work_path["path_statement"] = "结构化证据已经形成一条可定位的正式主路径。"
 
-    candidate_fact = next(item for item in world["facts"] if item["category"] == "candidate_path")
+    committed_fact_refs = set(
+        payload["life_case"]["baseline_insight"]["basis"]["chart_fact_refs"]
+    )
+    candidate_fact = next(
+        item for item in world["facts"]
+        if item["category"] == "candidate_path"
+        and item["fact_id"] not in committed_fact_refs
+    )
     candidate_ref = next(item for item in candidate_fact["source_refs"] if item.startswith("path:"))
     work_path["competing_path_refs"] = [candidate_ref]
     return payload, candidate_ref

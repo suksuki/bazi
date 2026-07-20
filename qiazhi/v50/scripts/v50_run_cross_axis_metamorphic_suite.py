@@ -132,12 +132,29 @@ def _structural_fingerprint(world: Any) -> str:
             "kind": fact.kind,
             "category": fact.category,
             "statement": fact.statement,
-            "payload": fact.payload,
+            "payload": _without_identity_metadata(fact.payload),
         }
         for fact in world.facts
         if fact.category != "timing_material" and not fact.category.startswith("ziwei_")
     ]
     return hashlib.sha256(json.dumps(payload, ensure_ascii=False, sort_keys=True).encode("utf-8")).hexdigest()[:20]
+
+
+def _without_identity_metadata(value: Any) -> Any:
+    if isinstance(value, dict):
+        return {
+            key: _without_identity_metadata(item)
+            for key, item in value.items()
+            if key not in {
+                "candidate_node_key",
+                "candidate_relation_key",
+                "candidate_path_key",
+                "node_id",
+            }
+        }
+    if isinstance(value, list):
+        return [_without_identity_metadata(item) for item in value]
+    return value
 
 
 def _path_relations(world: Any) -> list[list[str]]:

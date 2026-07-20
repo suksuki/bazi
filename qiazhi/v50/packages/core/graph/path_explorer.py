@@ -5,6 +5,7 @@ from collections import defaultdict
 from dataclasses import dataclass
 
 from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliPath, MingliStateLayer, PathExplorationResult
+from core.graph.provenance import stable_candidate_path_key
 
 
 VALID_PATH_EDGE_TYPES = {
@@ -62,6 +63,7 @@ def explore_mingli_paths(
         )
     paths = [_build_path(graph=graph, state_layer=state_layer, nodes_by_id=nodes_by_id, edges_by_id=edges_by_id, draft=draft) for draft in drafts.values()]
     paths = sorted(paths, key=lambda path: path.path_score, reverse=True)[:limit]
+    paths = [_attach_candidate_path_key(path, edges_by_id=edges_by_id) for path in paths]
     contribution = _node_path_contribution(paths)
     return PathExplorationResult(
         exploration_id=f"path_exploration:{graph.reading_id}:{state_layer.value}",
@@ -72,6 +74,23 @@ def explore_mingli_paths(
         ranked_path_ids=[path.path_id for path in paths],
         node_path_contribution=contribution,
     )
+
+
+def _attach_candidate_path_key(
+    path: MingliPath,
+    *,
+    edges_by_id: dict[str, MingliGraphEdge],
+) -> MingliPath:
+    relation_keys = [edges_by_id[edge_id].relation_key for edge_id in path.edge_ids]
+    return path.model_copy(update={
+        "path_key": stable_candidate_path_key(
+            reading_id=path.reading_id,
+            state_layer=path.state_layer.value,
+            node_keys=list(path.node_ids),
+            relation_keys=relation_keys,
+        ),
+        "relation_keys": relation_keys,
+    })
 
 
 def _adjacency(graph: MingliGraph) -> dict[str, list[MingliGraphEdge]]:

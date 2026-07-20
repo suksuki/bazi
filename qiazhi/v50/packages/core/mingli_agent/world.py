@@ -84,10 +84,11 @@ def compile_chart_world(
     )
 
     nodes = {node.node_id: node for node in graph.nodes}
+    edges = {edge.edge_id: edge for edge in graph.edges}
     facts: list[WorldFact] = []
     facts.extend(_chart_material_facts(store))
     facts.extend(_graph_relation_facts(graph=graph, nodes=nodes))
-    facts.extend(_path_observations(paths=paths, nodes=nodes))
+    facts.extend(_path_observations(paths=paths, nodes=nodes, edges=edges))
     facts.extend(_role_observations(roles=roles))
     facts.extend(_ablation_observations(ablation=ablation))
     facts.extend(_importance_observations(analysis=analysis))
@@ -308,6 +309,14 @@ def _graph_relation_facts(*, graph, nodes: dict[str, Any]) -> list[WorldFact]:
                     "to": target.label,
                     "to_position": target.position,
                     "relation": edge.edge_type.value,
+                    "candidate_relation_key": edge.relation_key,
+                    "directionality": edge.directionality.value,
+                    "ontology_version": edge.ontology_version,
+                    "participants": [
+                        _graph_node_descriptor(nodes[node_id])
+                        for node_id in edge.participant_node_ids
+                        if node_id in nodes
+                    ],
                 },
                 source_refs=[edge.edge_id, *edge.evidence_refs],
                 authority="experimental_tool_observation",
@@ -316,7 +325,7 @@ def _graph_relation_facts(*, graph, nodes: dict[str, Any]) -> list[WorldFact]:
     return output
 
 
-def _path_observations(*, paths, nodes: dict[str, Any]) -> list[WorldFact]:
+def _path_observations(*, paths, nodes: dict[str, Any], edges: dict[str, Any]) -> list[WorldFact]:
     output: list[WorldFact] = []
     for path in paths.paths[:8]:
         labels = [nodes[node_id].label for node_id in path.node_ids if node_id in nodes]
@@ -332,12 +341,43 @@ def _path_observations(*, paths, nodes: dict[str, Any]) -> list[WorldFact]:
                     "tool_score": path.path_score,
                     "mechanism_hints": list(path.mechanism_hints),
                     "validation_status": "experimental",
+                    "candidate_path_key": path.path_key,
+                    "node_descriptors": [
+                        _graph_node_descriptor(nodes[node_id])
+                        for node_id in path.node_ids
+                        if node_id in nodes
+                    ],
+                    "relation_descriptors": [
+                        {
+                            "relation_type": edges[edge_id].edge_type.value,
+                            "candidate_relation_key": edges[edge_id].relation_key,
+                            "directionality": edges[edge_id].directionality.value,
+                            "ontology_version": edges[edge_id].ontology_version,
+                            "participants": [
+                                _graph_node_descriptor(nodes[node_id])
+                                for node_id in edges[edge_id].participant_node_ids
+                                if node_id in nodes
+                            ],
+                        }
+                        for edge_id in path.edge_ids
+                        if edge_id in edges
+                    ],
                 },
                 source_refs=[path.path_id, *path.evidence_refs],
                 authority="experimental_tool_observation",
             )
         )
     return output
+
+
+def _graph_node_descriptor(node: Any) -> dict[str, str]:
+    return {
+        "candidate_node_key": str(node.node_key),
+        "node_id": str(node.node_id),
+        "position": str(node.position),
+        "node_type": str(node.node_type.value),
+        "label": str(node.label),
+    }
 
 
 def _role_observations(*, roles) -> list[WorldFact]:

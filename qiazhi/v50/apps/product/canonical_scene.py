@@ -6,7 +6,7 @@ from typing import Any
 from uuid import uuid4
 
 from core.engines.bazi.knowledge import BRANCH_ELEMENTS, STEM_ELEMENTS, STEM_POLARITY
-from core.life_case import FormalInsight, LifeCase
+from core.life_case import FormalInsight, LifeCase, relation_path_assertions_for_case
 from core.mingli_agent.contracts import ChartWorldInstance
 from experience.canonical_scene import (
     CanonicalProjectionEnvelope,
@@ -66,6 +66,7 @@ class CanonicalSceneOwner:
 
     def __init__(self, *, case_store: AgentCaseStore) -> None:
         self.case_store = case_store
+        self._scene_cache: dict[tuple[str, str, str, str], CanonicalScene] = {}
 
     def issue(
         self,
@@ -91,8 +92,25 @@ class CanonicalSceneOwner:
         row = self.case_store.get(case_id=case_id, user_id=participant_id)
         if row is None:
             raise CanonicalSceneUnavailable("canonical_scene_case_not_found")
+        role = canonical_scene_role(account_role)
+        cache_key = (
+            case_id,
+            participant_id,
+            role,
+            _canonical_source_revision_token(case_id=case_id, row=row),
+        )
+        cached = self._scene_cache.get(cache_key)
+        if cached is not None:
+            return cached
         source = canonical_scene_source_from_case_row(case_id=case_id, row=row)
-        return compile_canonical_scene(source=source, role=canonical_scene_role(account_role))
+        scene = compile_canonical_scene(source=source, role=role)
+        for key in list(self._scene_cache):
+            if key[:3] == cache_key[:3] and key != cache_key:
+                self._scene_cache.pop(key, None)
+        if len(self._scene_cache) >= 256:
+            self._scene_cache.clear()
+        self._scene_cache[cache_key] = scene
+        return scene
 
     def issue_projection(
         self,
@@ -287,6 +305,10 @@ def canonical_scene_source_from_case_row(
         reasoning.extend(_approved_reasoning_steps(committed))
 
     active_snapshots = [item for item in life_case.temporal_snapshots if item.status == "active"]
+    relation_assertions, path_assertions = relation_path_assertions_for_case(
+        life_case=life_case,
+        world=world,
+    )
     timing = world.timing_context
     temporal_refs = [item.snapshot_id for item in active_snapshots]
     source_refs = list(dict.fromkeys([
@@ -296,6 +318,8 @@ def canonical_scene_source_from_case_row(
         baseline.insight_id,
         *(item.claim_ref for item in claims[1:]),
         *temporal_refs,
+        *(item.assertion_id for item in relation_assertions),
+        *(item.assertion_id for item in path_assertions),
     ]))
     selected_snapshot = active_snapshots[-1] if active_snapshots else None
     return CanonicalSceneSource(
@@ -310,6 +334,8 @@ def canonical_scene_source_from_case_row(
         approved_claims=claims,
         approved_reasoning_steps=reasoning,
         competing_hypotheses=_competing_hypotheses(baseline),
+        relation_assertions=relation_assertions,
+        path_assertions=path_assertions,
         temporal_state=CanonicalTemporalState(
             temporal_snapshot_refs=temporal_refs,
             selected_period=selected_snapshot.period_key if selected_snapshot else "",
@@ -523,6 +549,61 @@ def _chart_version_from_row(row: dict[str, Any] | None) -> str:
             return str(chart_version["version_id"])
     world = row.get("world") if isinstance(row, dict) else None
     return str(world.get("world_id") or "chart-facts-unversioned") if isinstance(world, dict) else "observer-no-chart"
+
+
+def _canonical_source_revision_token(*, case_id: str, row: dict[str, Any]) -> str:
+    world = row.get("world") if isinstance(row.get("world"), dict) else {}
+    life_case = row.get("life_case") if isinstance(row.get("life_case"), dict) else {}
+    chart_version = (
+        life_case.get("chart_version")
+        if isinstance(life_case.get("chart_version"), dict)
+        else {}
+    )
+    baseline = (
+        life_case.get("baseline_insight")
+        if isinstance(life_case.get("baseline_insight"), dict)
+        else {}
+    )
+    domain_insights = (
+        life_case.get("domain_insights")
+        if isinstance(life_case.get("domain_insights"), dict)
+        else {}
+    )
+    return canonical_hash({
+        "case_id": case_id,
+        "world_id": world.get("world_id"),
+        "pillars": world.get("pillars"),
+        "timing_context": world.get("timing_context"),
+        "life_case_id": life_case.get("life_case_id"),
+        "case_version": life_case.get("case_version"),
+        "updated_at": life_case.get("updated_at"),
+        "chart_version_id": chart_version.get("version_id"),
+        "baseline_insight_id": baseline.get("insight_id"),
+        "domain_insight_ids": {
+            domain: [
+                item.get("insight_id")
+                for item in rows
+                if isinstance(item, dict)
+            ]
+            for domain, rows in domain_insights.items()
+            if isinstance(rows, list)
+        },
+        "temporal_snapshot_ids": [
+            (item.get("snapshot_id"), item.get("status"))
+            for item in life_case.get("temporal_snapshots") or []
+            if isinstance(item, dict)
+        ],
+        "relation_assertion_ids": [
+            item.get("assertion_id")
+            for item in life_case.get("relation_assertions") or []
+            if isinstance(item, dict)
+        ],
+        "path_assertion_ids": [
+            item.get("assertion_id")
+            for item in life_case.get("path_assertions") or []
+            if isinstance(item, dict)
+        ],
+    })
 
 
 def _parse_datetime(value: str) -> datetime:
