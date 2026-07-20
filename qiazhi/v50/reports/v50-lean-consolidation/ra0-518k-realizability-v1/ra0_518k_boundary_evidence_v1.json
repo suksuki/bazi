@@ -1,0 +1,300 @@
+{
+  "policy_hash": "3d7af5b188bd444649ff0f2d693d498162ca4e331407554d16a6906326365215",
+  "sample_count": 48,
+  "samples": [
+    {
+      "after_chart_key": "甲子|丙寅|乙酉|己卯",
+      "before_chart_key": "癸亥|乙丑|乙酉|己卯",
+      "boundary_type": "solar_term",
+      "effective_minute": "1804-02-05T06:52:00",
+      "exact_backend_timestamp": "1804-02-05T06:51:11",
+      "term": "立春"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|乙酉|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|丙戌|戊子",
+      "timestamp": "1804-02-05T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|丙戌|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|丁亥|庚子",
+      "timestamp": "1804-02-06T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|丁亥|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|戊子|壬子",
+      "timestamp": "1804-02-07T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|戊子|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|己丑|甲子",
+      "timestamp": "1804-02-08T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|己丑|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|庚寅|丙子",
+      "timestamp": "1804-02-09T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|庚寅|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|辛卯|戊子",
+      "timestamp": "1804-02-10T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|辛卯|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|壬辰|庚子",
+      "timestamp": "1804-02-11T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|壬辰|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|癸巳|壬子",
+      "timestamp": "1804-02-12T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|癸巳|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|甲午|甲子",
+      "timestamp": "1804-02-13T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|甲午|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|乙未|丙子",
+      "timestamp": "1804-02-14T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|乙未|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|丙申|戊子",
+      "timestamp": "1804-02-15T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|丙申|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|丁酉|庚子",
+      "timestamp": "1804-02-16T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|丁酉|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|戊戌|壬子",
+      "timestamp": "1804-02-17T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|戊戌|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|己亥|甲子",
+      "timestamp": "1804-02-18T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|己亥|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|庚子|丙子",
+      "timestamp": "1804-02-19T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|庚子|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|辛丑|戊子",
+      "timestamp": "1804-02-20T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|辛丑|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|壬寅|庚子",
+      "timestamp": "1804-02-21T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|壬寅|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|癸卯|壬子",
+      "timestamp": "1804-02-22T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|癸卯|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|甲辰|甲子",
+      "timestamp": "1804-02-23T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|甲辰|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|乙巳|丙子",
+      "timestamp": "1804-02-24T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|乙巳|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|丙午|戊子",
+      "timestamp": "1804-02-25T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|丙午|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|丁未|庚子",
+      "timestamp": "1804-02-26T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|丁未|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|戊申|壬子",
+      "timestamp": "1804-02-27T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|戊申|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|己酉|甲子",
+      "timestamp": "1804-02-28T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|己酉|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|庚戌|丙子",
+      "timestamp": "1804-02-29T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|庚戌|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|辛亥|戊子",
+      "timestamp": "1804-03-01T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|辛亥|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|壬子|庚子",
+      "timestamp": "1804-03-02T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|壬子|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|癸丑|壬子",
+      "timestamp": "1804-03-03T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|癸丑|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|甲寅|甲子",
+      "timestamp": "1804-03-04T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丙寅|甲寅|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丙寅|乙卯|丙子",
+      "timestamp": "1804-03-05T23:30:00"
+    },
+    {
+      "after_chart_key": "甲子|丁卯|乙卯|丁丑",
+      "before_chart_key": "甲子|丙寅|乙卯|丁丑",
+      "boundary_type": "solar_term",
+      "effective_minute": "1804-03-06T01:51:00",
+      "exact_backend_timestamp": "1804-03-06T01:50:36",
+      "term": "惊蛰"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|乙卯|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|丙辰|戊子",
+      "timestamp": "1804-03-06T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|丙辰|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|丁巳|庚子",
+      "timestamp": "1804-03-07T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|丁巳|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|戊午|壬子",
+      "timestamp": "1804-03-08T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|戊午|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|己未|甲子",
+      "timestamp": "1804-03-09T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|己未|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|庚申|丙子",
+      "timestamp": "1804-03-10T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|庚申|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|辛酉|戊子",
+      "timestamp": "1804-03-11T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|辛酉|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|壬戌|庚子",
+      "timestamp": "1804-03-12T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|壬戌|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|癸亥|壬子",
+      "timestamp": "1804-03-13T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|癸亥|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|甲子|甲子",
+      "timestamp": "1804-03-14T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|甲子|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|乙丑|丙子",
+      "timestamp": "1804-03-15T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|乙丑|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|丙寅|戊子",
+      "timestamp": "1804-03-16T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|丙寅|戊子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|丁卯|庚子",
+      "timestamp": "1804-03-17T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|丁卯|庚子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|戊辰|壬子",
+      "timestamp": "1804-03-18T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|戊辰|壬子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|己巳|甲子",
+      "timestamp": "1804-03-19T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|己巳|甲子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|庚午|丙子",
+      "timestamp": "1804-03-20T23:30:00"
+    },
+    {
+      "boundary_type": "zi_rollover_policy",
+      "formal_sect_2_chart_key": "甲子|丁卯|庚午|丙子",
+      "sensitivity_sect_1_chart_key": "甲子|丁卯|辛未|戊子",
+      "timestamp": "1804-03-21T23:30:00"
+    }
+  ],
+  "samples_are_representative_not_exhaustive": true,
+  "schema_version": "v50.ra0_518k_boundary_evidence.v1"
+}

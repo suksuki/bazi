@@ -1,0 +1,344 @@
+{
+  "audit_version": "v50.ra0_518k_chart_realizability_audit.v1",
+  "calendar_forward_scan": {
+    "actual_timestamp_structural_failure_count": 0,
+    "annual_authority_crosscheck_count": 297,
+    "calendar_days_scanned": 108443,
+    "canonical_raw_late_zi_invalid_count": 4019,
+    "canonical_raw_late_zi_invalid_samples": [
+      {
+        "audit_normalized_chart_key": "甲子|丙寅|乙酉|丙子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|丙寅|乙酉|戊子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-02-05T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|丁卯|乙卯|丙子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|丁卯|乙卯|戊子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-03-06T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|戊辰|乙酉|丙子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|戊辰|乙酉|戊子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-04-05T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|己巳|丙辰|戊子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|己巳|丙辰|庚子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-05-06T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|庚午|丁亥|庚子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|庚午|丁亥|壬子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-06-06T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|辛未|戊午|壬子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|辛未|戊午|甲子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-07-07T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|壬申|庚寅|丙子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|壬申|庚寅|戊子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-08-08T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|癸酉|辛酉|戊子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|癸酉|辛酉|庚子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-09-08T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|甲戌|辛卯|戊子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|甲戌|辛卯|庚子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-10-08T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|乙亥|辛酉|戊子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|乙亥|辛酉|庚子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-11-07T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|丙子|辛卯|戊子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|丙子|辛卯|庚子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1804-12-07T23:30:00"
+      },
+      {
+        "audit_normalized_chart_key": "甲子|丁丑|辛酉|戊子",
+        "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
+        "raw_chart_key": "甲子|丁丑|辛酉|庚子",
+        "raw_invalid_reasons": [
+          "hour_pillar_not_legal_for_day"
+        ],
+        "timestamp": "1805-01-06T23:30:00"
+      }
+    ],
+    "canonical_resolution_call_count": 176040,
+    "jie_boundary_count": 3563,
+    "method": "daily canonical year-month-day resolution plus twelve formal hour derivations; Jie dates split at canonical minute; no reverse per-chart lookup",
+    "ranges": {
+      "extended_4_jiazi_1804_2044": {
+        "boundary_ambiguous_chart_count": 48478,
+        "calendar_realizable_count": 518400,
+        "effective_end_exclusive_local_civil": "2044-02-04T12:45:00",
+        "effective_start_local_civil": "1804-02-05T06:52:00",
+        "exact_end_backend": "2044-02-04T12:44:21",
+        "exact_start_backend": "1804-02-05T06:51:11",
+        "label": "Four Jiazi cycles: 1804 LiChun to 2044 LiChun",
+        "range_edge_sensitive_chart_count": 2,
+        "range_id": "extended_4_jiazi_1804_2044",
+        "representative_witnesses": [
+          {
+            "chart_key": "丁巳|乙巳|乙丑|乙酉",
+            "first_witness_timestamp": "1917-05-23T18:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|甲子",
+            "first_witness_timestamp": "1864-02-29T00:30:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|乙丑",
+            "first_witness_timestamp": "1864-02-29T02:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|丙寅",
+            "first_witness_timestamp": "1864-02-29T04:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|丁卯",
+            "first_witness_timestamp": "1864-02-29T06:00:00"
+          }
+        ],
+        "solar_term_boundary_chart_count": 5760,
+        "solar_term_boundary_event_count": 2881,
+        "source": "calendar_engine_capability_probe_four_jiazi_cycles",
+        "timestamp_observation_count": 1063333,
+        "unseen_in_range_count": 0,
+        "zi_rollover_policy_event_count": 87658,
+        "zi_rollover_policy_sensitive_chart_count": 43200
+      },
+      "product_supported_1900_2100": {
+        "boundary_ambiguous_chart_count": 47579,
+        "calendar_realizable_count": 515576,
+        "effective_end_exclusive_local_civil": "2101-01-01T00:00:00",
+        "effective_start_local_civil": "1900-01-01T00:00:00",
+        "exact_end_backend": null,
+        "exact_start_backend": null,
+        "label": "Current product full supported civil-date range",
+        "range_edge_sensitive_chart_count": 2,
+        "range_id": "product_supported_1900_2100",
+        "representative_witnesses": [
+          {
+            "chart_key": "丁巳|乙巳|乙丑|乙酉",
+            "first_witness_timestamp": "1917-05-23T18:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|甲子",
+            "first_witness_timestamp": "1924-02-15T00:30:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|乙丑",
+            "first_witness_timestamp": "1924-02-15T02:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|丙寅",
+            "first_witness_timestamp": "1924-02-15T04:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|甲子|丁卯",
+            "first_witness_timestamp": "1924-02-15T06:00:00"
+          }
+        ],
+        "solar_term_boundary_chart_count": 4824,
+        "solar_term_boundary_event_count": 2412,
+        "source": "pillar_cycle.BIRTH_YEAR_MIN_MAX",
+        "timestamp_observation_count": 890546,
+        "unseen_in_range_count": 2824,
+        "zi_rollover_policy_event_count": 73414,
+        "zi_rollover_policy_sensitive_chart_count": 43158
+      },
+      "reference_60y_1984_2044": {
+        "boundary_ambiguous_chart_count": 23978,
+        "calendar_realizable_count": 264355,
+        "effective_end_exclusive_local_civil": "2044-02-04T12:45:00",
+        "effective_start_local_civil": "1984-02-04T23:19:00",
+        "exact_end_backend": "2044-02-04T12:44:21",
+        "exact_start_backend": "1984-02-04T23:18:44",
+        "label": "1984 LiChun to 2044 LiChun",
+        "range_edge_sensitive_chart_count": 2,
+        "range_id": "reference_60y_1984_2044",
+        "representative_witnesses": [
+          {
+            "chart_key": "甲子|丙寅|戊辰|壬子",
+            "first_witness_timestamp": "1984-02-04T23:19:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|己巳|甲子",
+            "first_witness_timestamp": "1984-02-05T00:30:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|己巳|乙丑",
+            "first_witness_timestamp": "1984-02-05T02:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|己巳|丙寅",
+            "first_witness_timestamp": "1984-02-05T04:00:00"
+          },
+          {
+            "chart_key": "甲子|丙寅|己巳|丁卯",
+            "first_witness_timestamp": "1984-02-05T06:00:00"
+          }
+        ],
+        "solar_term_boundary_chart_count": 1440,
+        "solar_term_boundary_event_count": 721,
+        "source": "requested_reference_jiazi_cycle",
+        "timestamp_observation_count": 265835,
+        "unseen_in_range_count": 254045,
+        "zi_rollover_policy_event_count": 21915,
+        "zi_rollover_policy_sensitive_chart_count": 22635
+      }
+    },
+    "valid_chart_key_representation": "canonical_indexed_bitmap_set"
+  },
+  "conclusions": {
+    "all_reconstructed_charts_realizable_across_four_jiazi_cycles": true,
+    "negative_fixture_retention": "retain explicit structural-rule counterexamples and boundary-policy divergences",
+    "positive_pool_exclusion": "exclude STRUCTURALLY_INVALID; range-scoped UNSEEN may not be used as positive witnesses for that range",
+    "structurally_impossible_inside_reconstructed_518k": 0,
+    "theoretical_candidate_retention": "retain UNSEEN_IN_RANGE as theory candidates unless disproven structurally; never delete solely for nonappearance",
+    "unseen_is_not_structurally_invalid": true
+  },
+  "legacy_518k_discovery": {
+    "actual_entity_record_count": 0,
+    "claimed_target_case_count": 518400,
+    "entity_518k_file_found": false,
+    "finding": "no_entity_518k_corpus_located",
+    "five_rats_applied": false,
+    "five_tigers_applied": false,
+    "four_pillar_schema_present": false,
+    "legacy_generator_sha256": "790d26c783410f19e4474e0f97679c5f7b018bf7cf7d76e40f1a072d8ee06bec",
+    "legacy_index_sha256": "72a2e00b69c66e21d0d05f5e739aa0e62cb6194c7a8399bf26e226d7e8ad11cf",
+    "legacy_schema_fields": [
+      "case_id",
+      "shard_id",
+      "day_master",
+      "mainline_quality_gate",
+      "question_count",
+      "top_question_id",
+      "hidden_factor_probe_count",
+      "knowledge_rule_portrait_signal_count",
+      "model_signal_summary_present",
+      "interaction_state_present",
+      "visible_next_question_id",
+      "internal_next_question_id",
+      "visible_internal_split",
+      "calibration_probe_user_visible",
+      "source",
+      "source_row_id"
+    ],
+    "legacy_validation_artifact_file_count": 1217,
+    "legacy_validation_artifact_size_bytes": 4890521,
+    "legacy_validation_run_count": 608
+  },
+  "reconstructed_universe": {
+    "content_sha256": "05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c",
+    "duplicate_count": 0,
+    "formal_five_rats_applied": true,
+    "formal_five_tigers_applied": true,
+    "formula": "60 year pillars x 12 legal solar months x 60 day pillars x 12 legal double-hours",
+    "formula_expression": "60*12*60*12",
+    "invalid_reason_distribution": {},
+    "record_count": 518400,
+    "schema": {
+      "chart_key": "year|month|day|hour",
+      "index_order": "year,legal_month_for_year,day,legal_hour_for_day",
+      "pillar_count": 4
+    },
+    "structurally_invalid_count": 0,
+    "structurally_valid_count": 518400,
+    "unique_chart_key_count": 518400
+  },
+  "source_hashes": {
+    "data/validation/fixtures/ra0_518k_realizability_v1.json": "044051c8bf65b8f9843a5aa41214b1b06fc35fd61d25daf884bf2a27014000ef",
+    "packages/core/audit/calendar_realizability.py": "f9382ce5fd11a616169d156f710f8ab9c92b44be15c33e6598a4b9cdb26dfb0e",
+    "packages/core/audit/chart_universe.py": "3f06d257525e53733d9dfff1b59fa713a6125c92ae85e34d53ac2b89f62adea7",
+    "packages/core/engines/bazi/chart_constraints.py": "3ff9f454cdd6bc35bc665ec8f20d370aa270365693900c836d20d68f2321549e",
+    "packages/core/engines/bazi/pillar_cycle.py": "ccfd9a2f83a36438e1d03328f9c2cc5d26d73f8d1a4444c343b3f71bc771aec1",
+    "packages/core/engines/bazi/temporal_service.py": "db2c5cd9491c0366b379eb5a6b68c9adefcb3ebdc4cc820038f47e4994d772d9",
+    "packages/core/engines/birth_calendar.py": "ef11753ed14414fb0d7776eeda1bf49cb00fe64b97a9c55edd9bd192e4aeb696",
+    "scripts/v50_run_ra0_518k_realizability_audit.py": "9cec835544ea0e3be0b419a11ba3416f2d2c5d7069c39586f552a4f107d6fbe2",
+    "tests/test_v50_ra0_518k_realizability_audit.py": "f7026bb4374a8462e88cc2e2d0f14106f1e0b9dc38a46d7002fe0a37b84f1eff"
+  },
+  "status": "PASS_WITH_BOUNDARY_FINDING",
+  "temporal_policy": {
+    "birth_pillar_engine_version": "v50.birth_pillar_engine.v1",
+    "calendar_dependency": "lunar_python.1.4.8",
+    "calendar_profile": "lunar_python.sect2.v1",
+    "day_rollover_formal": "midnight_lunar_python_sect_2",
+    "day_rollover_sensitivity": "late_zi_lunar_python_sect_1_read_only_comparison",
+    "formal_algorithm_modified": false,
+    "formal_source_sha256": {
+      "packages/core/engines/bazi/chart_constraints.py": "3ff9f454cdd6bc35bc665ec8f20d370aa270365693900c836d20d68f2321549e",
+      "packages/core/engines/bazi/pillar_cycle.py": "ccfd9a2f83a36438e1d03328f9c2cc5d26d73f8d1a4444c343b3f71bc771aec1",
+      "packages/core/engines/bazi/temporal_service.py": "db2c5cd9491c0366b379eb5a6b68c9adefcb3ebdc4cc820038f47e4994d772d9",
+      "packages/core/engines/birth_calendar.py": "ef11753ed14414fb0d7776eeda1bf49cb00fe64b97a9c55edd9bd192e4aeb696"
+    },
+    "historical_dst": "not_normalized_by_birth_pillar_engine_local_civil_input_used_as_supplied",
+    "input_precision": "minute",
+    "late_zi_audit_normalization": "when canonical raw sect_2 day and hour stem disagree, retain rejection evidence and derive Zi hour from the formal day pillar using existing Five Rats rules",
+    "llm_used": false,
+    "month_boundary": "twelve_jie_exact_backend_effective_at_first_supported_minute",
+    "product_birth_year_support": [
+      1900,
+      2100
+    ],
+    "temporal_service_version": "v50.canonical_temporal_service.v1",
+    "timezone": "Asia/Shanghai",
+    "timezone_application": "validated_label_local_civil_time_not_converted_by_birth_pillar_engine",
+    "true_solar_time": "not_applied",
+    "year_boundary": "lichun_exact_backend_effective_at_first_supported_minute"
+  },
+  "temporal_policy_hash": "3d7af5b188bd444649ff0f2d693d498162ca4e331407554d16a6906326365215"
+}
