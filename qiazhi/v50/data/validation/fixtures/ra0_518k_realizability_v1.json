@@ -1,0 +1,49 @@
+{
+  "schema_version": "v50.ra0_518k_realizability_fixtures.v1",
+  "positive_fixtures": [
+    {
+      "fixture_id": "five_tigers_and_five_rats_positive",
+      "pillars": ["甲子", "丙寅", "甲子", "甲子"],
+      "expected_invalid_reasons": []
+    },
+    {
+      "fixture_id": "known_calendar_witness",
+      "pillars": ["丁巳", "乙巳", "乙丑", "乙酉"],
+      "expected_first_known_witness": "1917-05-23T18:00"
+    }
+  ],
+  "structural_negative_fixtures": [
+    {
+      "fixture_id": "invalid_yin_yang_jiazi_pair",
+      "pillars": ["甲丑", "丙寅", "甲子", "甲子"],
+      "expected_invalid_reason": "invalid_year_jiazi"
+    },
+    {
+      "fixture_id": "five_tigers_violation",
+      "pillars": ["甲子", "戊寅", "甲子", "甲子"],
+      "expected_invalid_reason": "month_pillar_not_legal_for_year"
+    },
+    {
+      "fixture_id": "five_rats_violation",
+      "pillars": ["甲子", "丙寅", "甲子", "丙子"],
+      "expected_invalid_reason": "hour_pillar_not_legal_for_day"
+    }
+  ],
+  "boundary_fixtures": [
+    {
+      "fixture_id": "lichun_1984_minute_boundary",
+      "exact_backend_timestamp": "1984-02-04T23:18:44",
+      "formal_minute_before": "1984-02-04T23:18",
+      "formal_minute_after": "1984-02-04T23:19",
+      "expected_year_before": "癸亥",
+      "expected_year_after": "甲子"
+    },
+    {
+      "fixture_id": "late_zi_policy_sensitivity",
+      "timestamp": "1987-05-12T23:30",
+      "formal_sect_2_day": "辛酉",
+      "sensitivity_sect_1_day": "壬戌",
+      "expected_boundary_status": "ZI_ROLLOVER_POLICY_SENSITIVE"
+    }
+  ]
+}
