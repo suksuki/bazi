@@ -2,12 +2,12 @@
 
 > Canonical execution order
 >
-> Updated: 2026-07-20
+> Updated: 2026-07-21
 
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `7ec6f741db1f` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `a32088c1e182` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,16 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 458_PASSED_CAG03_HARDENED
+full_regression: 467_PASSED_CAG04
 ```
 
 Authorized now:
 
-- `CAG_03_CANONICAL_SCENE_CLOSEOUT`: canonical_scene_single_owner_projection_adapter_slimming_and_verification_only
+- `CAG_04_ARCHITECTURE_REVIEW`: relation_path_identity_provenance_lifecycle_historical_stability_closeout
 
-Next architecture slice: `CAG_04_FORMAL_RELATION_PATH_PROVENANCE` after `explicit_next_task_after_cag_03_closeout`.
+Next architecture slice: `CAG_05_SCHEMA_MODULE_OWNERSHIP` after `explicit_gate_decision_after_cag_04_architecture_review`.
 
-Blocked: `cag_04_implementation_in_current_task`, `cag_05_implementation_in_current_task`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `cag_05_implementation_before_cag_04_review`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 0. Rule
@@ -192,17 +192,26 @@ The canonical Scene Compiler projects one formal case source into:
 serialization, and issues one shared Scene identity plus projection envelopes.
 Theater delegates to this owner; read-only OneCanvas requests its projection
 from the same owner; Abu narration no longer reads `record` or invokes a legacy
-formal-projection fallback. Canvas Graph/Path assembly remains an explicitly
-transitional CAG-04 adapter.
+formal-projection fallback. Graph/Path v1 remains candidate-only behind the
+formal CAG-04 assertion boundary.
 
 Exit condition: one semantic identity model, no Renderer inference, no client
 formal-fact override, and tested compatibility paths for current contracts.
 
 ### CAG-04 — Formal Relation and Path Provenance
 
-Status: `NEXT / NOT STARTED IN THIS TASK`
+Status: `IMPLEMENTATION COMPLETE / MACHINE PASS / ARCHITECTURE REVIEW PENDING`
 
-Define versioned identifiers and historical adapters before changing Graph behavior.
+Implemented without changing Graph or Path semantics:
+
+- stable `NodeRef`, `RelationKey` and `PathKey` contracts;
+- append-only versioned `RelationAssertion` and `PathAssertion` history;
+- explicit provenance, lifecycle and supersession;
+- exact-only legacy migration with `legacy_unresolved` fallback;
+- one formal owner in LifeCase;
+- role-filtered assertion projection through Canonical Scene;
+- removal of Canvas anonymous path IDs and relation-text matching;
+- removal of Theater score-tolerance and signature-based reconnection.
 
 Exit condition:
 
@@ -210,9 +219,12 @@ Exit condition:
 - historical cognition is readable without silent rewriting;
 - candidate, committed, blocked, and user-draft paths remain distinct.
 
+Machine evidence: `467 passed`; R1 remains `20/20`; V40 is unchanged. The
+implementation is frozen at commit `42072034` pending architecture review.
+
 ### CAG-05 — Legacy and Documentation Ownership
 
-Status: `FIRST CLEANUP SLICE COMPLETE / RETIREMENT PENDING`
+Status: `BLOCKED PENDING CAG-04 ARCHITECTURE REVIEW`
 
 - retain usage tracking for legacy routes and Agent APIs;
 - freeze prototype identities;
@@ -236,7 +248,9 @@ Implement only:
 - RelationDefinition;
 - BinaryRelation and HyperRelation;
 - ContextModifier and TemporalActivation;
-- provenance, school profile, stable relation IDs;
+- school profile and semantic definitions bound to the existing CAG-04 keys
+  and assertion provenance;
+- no second relation or path identity system;
 - positive, negative, missing-condition, temporal, and coexistence fixtures.
 
 No new ordinary-user UI.
@@ -249,7 +263,7 @@ Model how DaYun and annual states introduce, activate, reinforce, weaken, block,
 
 Implement:
 
-- PathCandidate and PathAssertion;
+- PathCandidate semantics and extensions to the existing `PathAssertion`;
 - ordered PathSegment references;
 - segment eligibility;
 - whole-path continuity and blockers;

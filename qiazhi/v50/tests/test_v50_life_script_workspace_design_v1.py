@@ -32,6 +32,9 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["gates"]["r1_human_product_gate"] == "CANCELED_NO_SCHEDULE"
     assert state["gates"]["architecture_consolidation_gate"] == "IN_PROGRESS"
     assert state["gates"]["cag_03_canonical_scene"] == "CLOSED_PASS_HARDENED"
+    assert state["gates"]["cag_04_relation_path_provenance"] == (
+        "IMPLEMENTATION_COMPLETE_MACHINE_PASS_REVIEW_PENDING"
+    )
     assert state["gates"]["public_professional_release"] == "BLOCKED"
     assert state["protected_boundaries"]["r1_role"] == (
         "immutable_regression_reference_not_global_freeze"
@@ -39,10 +42,10 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert "production_workspace_migration" in state["blocked"]
     assert "mingli_lab_production_engineering" in state["blocked"]
     assert [item["id"] for item in state["authorized_now"]] == [
-        "CAG_03_CANONICAL_SCENE_CLOSEOUT"
+        "CAG_04_ARCHITECTURE_REVIEW"
     ]
     assert state["next_architecture_slice"]["id"] == (
-        "CAG_04_FORMAL_RELATION_PATH_PROVENANCE"
+        "CAG_05_SCHEMA_MODULE_OWNERSHIP"
     )
     assert state["validation_policy"]["new_platform_or_product_subsystem"] == "FORBIDDEN"
     assert "self_healing_loop" not in state

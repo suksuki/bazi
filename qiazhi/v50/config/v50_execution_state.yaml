@@ -1,5 +1,5 @@
 schema_version: v2
-updated_at: 2026-07-20
+updated_at: 2026-07-21
 
 phase:
   name: V50_CONSOLIDATION_AND_SLIMMING
@@ -39,18 +39,24 @@ gates:
   r1_review_build: V6_HASH_LOCKED_REGRESSION_REFERENCE
   r1_human_product_gate: CANCELED_NO_SCHEDULE
   cag_03_canonical_scene: CLOSED_PASS_HARDENED
+  cag_04_relation_path_provenance: IMPLEMENTATION_COMPLETE_MACHINE_PASS_REVIEW_PENDING
   architecture_consolidation_gate: IN_PROGRESS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 458_PASSED_CAG03_HARDENED
+  full_regression: 467_PASSED_CAG04
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
   cag_03_owner: product.canonical_scene.CanonicalSceneOwner
   cag_03_regression: 458_PASSED
+  cag_04_implementation_commit: 42072034
+  cag_04_identity_owner: core.life_case.LifeCase
+  cag_04_regression: 467_PASSED
+  cag_04_legacy_unresolved_tracked_cases: 0
+  cag_04_legacy_unresolved_synthetic_negative_fixture: 1
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -59,22 +65,21 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: CAG_03_CANONICAL_SCENE_CLOSEOUT
-    kind: architecture_consolidation
-    scope: canonical_scene_single_owner_projection_adapter_slimming_and_verification_only
+  - id: CAG_04_ARCHITECTURE_REVIEW
+    kind: review_only
+    scope: relation_path_identity_provenance_lifecycle_historical_stability_closeout
 
 next_architecture_slice:
-  id: CAG_04_FORMAL_RELATION_PATH_PROVENANCE
+  id: CAG_05_SCHEMA_MODULE_OWNERSHIP
   authorized_when:
-    - explicit_next_task_after_cag_03_closeout
+    - explicit_gate_decision_after_cag_04_architecture_review
   scope:
-    - stable_relation_and_path_identity
-    - provenance_and_historical_adapters
-    - no_graph_or_path_semantic_expansion
+    - schema_single_source
+    - module_and_database_ownership
+    - no_relation_or_path_semantic_expansion
 
 blocked:
-  - cag_04_implementation_in_current_task
-  - cag_05_implementation_in_current_task
+  - cag_05_implementation_before_cag_04_review
   - relation_atlas_ra1
   - relation_core_v2_implementation
   - path_core_v2_implementation
