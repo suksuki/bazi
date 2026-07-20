@@ -1117,6 +1117,59 @@ blocked:
   - production_deployment
 ```
 
+### DR-035 — RA0 Reclassifies 518K and Opens CAL-01
+
+```yaml
+decision_id: DR-035
+date: 2026-07-21
+status: accepted_pass_with_boundary_finding
+source:
+  branch: codex/ra0-518k-audit-v1
+  commit: 2ac55900fb5885649ba7fca7935e57005070406b
+  merge_base: 34cc5b17a86683ed4575d93e15134f0f26bc6687
+  controlled_integration_commit: f4c5527c
+legacy_finding:
+  v30_518k_identity: Legacy_Validation_Target_Contract
+  entity_four_pillar_corpus_found: false
+  validation_run_count: 608
+  historical_artifacts_retained_as_evidence: true
+formal_identity:
+  name: Deterministic_Structural_Chart_Universe_Generator
+  formula: 60_year_x_12_legal_month_x_60_day_x_12_legal_hour
+  record_count: 518400
+  unique_chart_keys: 518400
+  structurally_valid: 518400
+  structurally_invalid: 0
+  four_jiazi_realizable: 518400
+  universe_sha256: 05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c
+retention:
+  expanded_universe_in_git: forbidden
+  reproducible_gzip_artifact: manifest_and_hash_only
+  unseen_in_range_is_structurally_invalid: false
+boundary_finding:
+  issue: CAL-01_Late-Zi_Five-Rats_Consistency
+  formal_policy: lunar_python.sect2.v1
+  formal_day_rollover: midnight
+  retained_rejected_timestamps: 4019
+  formal_algorithm_modified: false
+  audit_normalization_may_become_formal: false
+  blocks_architecture_gate: true
+scope:
+  CAG_04_semantics_modified: false
+  R1_locked_files_modified: false
+  V40_modified: false
+  RA1_authorized: false
+verification:
+  ra0_focused: 10_passed
+  v50_full_regression: 477_passed
+  r1_manifest: 20_of_20_ok
+  v40_commit_diff: zero
+evidence:
+  - reports/v50-lean-consolidation/ra0-518k-realizability-v1/RA0_518K_CHART_REALIZABILITY_AUDIT_V1.md
+  - reports/v50-lean-consolidation/ra0-518k-realizability-v1/ra0_518k_run_manifest_v1.json
+  - reports/v50-lean-consolidation/ra0-518k-realizability-v1/ra0_518k_semantic_summary_v1.json
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

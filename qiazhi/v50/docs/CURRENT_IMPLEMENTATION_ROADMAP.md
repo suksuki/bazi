@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `a32088c1e182` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `398f189c6757` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,7 +19,7 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 467_PASSED_CAG04
+full_regression: 477_PASSED_RA0_INTEGRATED
 ```
 
 Authorized now:
@@ -28,7 +28,7 @@ Authorized now:
 
 Next architecture slice: `CAG_05_SCHEMA_MODULE_OWNERSHIP` after `explicit_gate_decision_after_cag_04_architecture_review`.
 
-Blocked: `cag_05_implementation_before_cag_04_review`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `cag_05_implementation_before_cag_04_review`, `architecture_gate_until_cal_01_resolved_or_explicitly_isolated`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 0. Rule
@@ -230,8 +230,13 @@ Status: `BLOCKED PENDING CAG-04 ARCHITECTURE REVIEW`
 - freeze prototype identities;
 - remove old docs from current-authority navigation;
 - assign owner and authority level to active modules.
+- classify the V30 `TARGET_CASE_COUNT=518400` implementation as a
+  `Legacy Validation Target Contract`, while retaining its 608 run records and
+  historical artifacts as evidence rather than an entity chart corpus.
 
-Exit condition: Architecture Consolidation Gate review is explicitly signed `PASS`.
+Exit condition: ownership consolidation is complete, and the Architecture Gate
+may be reviewed only after `CAL-01 Late-Zi Five-Rats Consistency` is resolved or
+explicitly isolated. CAG-05 does not silently adopt RA0 audit normalization.
 
 The current cleanup and large-file policy is recorded in
 `V50_DEEP_CLEANUP_AND_LARGE_FILE_GOVERNANCE_V1.md`. It does not authorize
