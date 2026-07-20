@@ -1,0 +1,72 @@
+{
+  "version": "v50.abu.designer_motion.v11",
+  "status": "production",
+  "motion": "sad_tears",
+  "source": {
+    "filename": "来一个阿布伤心掉泪的视频，透明背景，需要看到阿布伤心的内心戏.mp4",
+    "sha256": "69655a4f4bd04b6d7a3a95fdc0f2b8bd54e55ad72330c7daf501b6d78b899ed4",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      0.0,
+      9.93
+    ]
+  },
+  "canvas": [
+    960,
+    720
+  ],
+  "anchor": [
+    0.5,
+    0.9722222222222222
+  ],
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    180,
+    20,
+    1090,
+    720
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 12.0,
+    "high": 30.0
+  },
+  "webp": {
+    "quality": 94,
+    "method": 6,
+    "loop_count": 1
+  },
+  "runtime_display": {
+    "scale": 1.1,
+    "stage_profile": "wide",
+    "playback": "hold",
+    "category": "workflow"
+  },
+  "animation": "web/abu_sad_tears_v11.webp",
+  "poster": "posters/abu_sad_tears_v11.png",
+  "frame_count": 150,
+  "duration_ms": 10000,
+  "bytes": 10612952,
+  "usage": [
+    "whole_chart_blocked",
+    "reading_failed",
+    "domain_failed"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

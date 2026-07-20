@@ -1,0 +1,603 @@
+{
+  "$defs": {
+    "ActorCue": {
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "default": "attentive",
+          "maxLength": 80,
+          "title": "Expression",
+          "type": "string"
+        },
+        "motion_asset": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Motion Asset",
+          "type": "string"
+        },
+        "loop": {
+          "default": false,
+          "title": "Loop",
+          "type": "boolean"
+        }
+      },
+      "title": "ActorCue",
+      "type": "object"
+    },
+    "AssetDefinition": {
+      "additionalProperties": false,
+      "properties": {
+        "asset_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Asset Id",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "abu_motion",
+            "background",
+            "graph",
+            "music",
+            "sound",
+            "image"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "uri": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Uri",
+          "type": "string"
+        },
+        "fallback_asset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback Asset Id"
+        }
+      },
+      "required": [
+        "asset_id",
+        "kind",
+        "uri"
+      ],
+      "title": "AssetDefinition",
+      "type": "object"
+    },
+    "CueTemplate": {
+      "additionalProperties": false,
+      "properties": {
+        "template_id": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Template Id",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "participant_private"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        },
+        "semantic_intent": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Semantic Intent",
+          "type": "string"
+        },
+        "required_claim_category": {
+          "default": "",
+          "maxLength": 100,
+          "title": "Required Claim Category",
+          "type": "string"
+        },
+        "dialogue_template": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Dialogue Template",
+          "type": "string"
+        },
+        "subtitle_template": {
+          "maxLength": 2400,
+          "minLength": 1,
+          "title": "Subtitle Template",
+          "type": "string"
+        },
+        "phrase_policy": {
+          "default": "cautious_professional",
+          "maxLength": 100,
+          "title": "Phrase Policy",
+          "type": "string"
+        },
+        "voice": {
+          "$ref": "#/$defs/VoiceCue"
+        },
+        "actor": {
+          "$ref": "#/$defs/ActorCue"
+        },
+        "stage": {
+          "items": {
+            "$ref": "#/$defs/StageCommand"
+          },
+          "title": "Stage",
+          "type": "array"
+        },
+        "subtitle": {
+          "$ref": "#/$defs/SubtitleCue"
+        },
+        "fallback_template_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback Template Id"
+        }
+      },
+      "required": [
+        "template_id",
+        "visibility",
+        "semantic_intent",
+        "dialogue_template",
+        "subtitle_template"
+      ],
+      "title": "CueTemplate",
+      "type": "object"
+    },
+    "SceneInteraction": {
+      "additionalProperties": false,
+      "properties": {
+        "kind": {
+          "default": "none",
+          "enum": [
+            "none",
+            "choice",
+            "text",
+            "capsule",
+            "ready_barrier"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "prompt": {
+          "default": "",
+          "maxLength": 500,
+          "title": "Prompt",
+          "type": "string"
+        },
+        "options": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Options",
+          "type": "array"
+        },
+        "required": {
+          "default": false,
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "title": "SceneInteraction",
+      "type": "object"
+    },
+    "SceneNode": {
+      "additionalProperties": false,
+      "properties": {
+        "node_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Node Id",
+          "type": "string"
+        },
+        "act": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Act",
+          "type": "string"
+        },
+        "dramatic_purpose": {
+          "maxLength": 400,
+          "minLength": 1,
+          "title": "Dramatic Purpose",
+          "type": "string"
+        },
+        "visibility": {
+          "enum": [
+            "public",
+            "participant_private"
+          ],
+          "title": "Visibility",
+          "type": "string"
+        },
+        "expected_duration_seconds": {
+          "default": 20,
+          "maximum": 3600,
+          "minimum": 0,
+          "title": "Expected Duration Seconds",
+          "type": "integer"
+        },
+        "cue_template_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Cue Template Ids",
+          "type": "array"
+        },
+        "interaction": {
+          "$ref": "#/$defs/SceneInteraction"
+        },
+        "data_bindings": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Data Bindings",
+          "type": "array"
+        },
+        "transitions": {
+          "items": {
+            "$ref": "#/$defs/SceneTransition"
+          },
+          "title": "Transitions",
+          "type": "array"
+        },
+        "timeout_behavior": {
+          "default": "wait",
+          "enum": [
+            "wait",
+            "advance",
+            "fallback"
+          ],
+          "title": "Timeout Behavior",
+          "type": "string"
+        },
+        "fallback_node": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Fallback Node"
+        },
+        "rejoin_node": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Rejoin Node"
+        }
+      },
+      "required": [
+        "node_id",
+        "act",
+        "dramatic_purpose",
+        "visibility"
+      ],
+      "title": "SceneNode",
+      "type": "object"
+    },
+    "SceneTransition": {
+      "additionalProperties": false,
+      "properties": {
+        "event": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Event",
+          "type": "string"
+        },
+        "target": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "event",
+        "target"
+      ],
+      "title": "SceneTransition",
+      "type": "object"
+    },
+    "StageCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "enum": [
+            "set_background",
+            "highlight_visual_anchor",
+            "show_chart_facts",
+            "show_group_trace",
+            "show_capsule",
+            "clear_stage"
+          ],
+          "title": "Command",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "maxLength": 240,
+          "title": "Source",
+          "type": "string"
+        },
+        "asset_ref": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Asset Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "title": "StageCommand",
+      "type": "object"
+    },
+    "SubtitleCue": {
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "default": "default",
+          "maxLength": 80,
+          "title": "Style",
+          "type": "string"
+        }
+      },
+      "title": "SubtitleCue",
+      "type": "object"
+    },
+    "TopicMetadata": {
+      "additionalProperties": false,
+      "properties": {
+        "topic_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Topic Id",
+          "type": "string"
+        },
+        "version": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Version",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "purpose": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Purpose",
+          "type": "string"
+        },
+        "audience": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Audience",
+          "type": "array"
+        },
+        "supported_modes": {
+          "items": {
+            "enum": [
+              "live",
+              "time_shift",
+              "solo",
+              "replay"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Supported Modes",
+          "type": "array"
+        },
+        "required_experience_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Experience Capabilities",
+          "type": "array"
+        },
+        "knowledge_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Knowledge Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "topic_id",
+        "version",
+        "title",
+        "purpose",
+        "supported_modes"
+      ],
+      "title": "TopicMetadata",
+      "type": "object"
+    },
+    "TopicPolicies": {
+      "additionalProperties": false,
+      "properties": {
+        "privacy": {
+          "default": "private_by_default",
+          "maxLength": 120,
+          "title": "Privacy",
+          "type": "string"
+        },
+        "aggregation_minimum": {
+          "default": 3,
+          "maximum": 100,
+          "minimum": 2,
+          "title": "Aggregation Minimum",
+          "type": "integer"
+        },
+        "personal_scene": {
+          "default": "envelope_only",
+          "maxLength": 120,
+          "title": "Personal Scene",
+          "type": "string"
+        },
+        "temporal_message": {
+          "default": "explicit_consent",
+          "maxLength": 120,
+          "title": "Temporal Message",
+          "type": "string"
+        },
+        "failure_behavior": {
+          "default": "fallback_without_invention",
+          "maxLength": 160,
+          "title": "Failure Behavior",
+          "type": "string"
+        }
+      },
+      "title": "TopicPolicies",
+      "type": "object"
+    },
+    "VoiceCue": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "default": "abu-main",
+          "maxLength": 100,
+          "title": "Profile",
+          "type": "string"
+        },
+        "mode": {
+          "default": "companion",
+          "maxLength": 80,
+          "title": "Mode",
+          "type": "string"
+        },
+        "emotion": {
+          "default": "calm",
+          "maxLength": 80,
+          "title": "Emotion",
+          "type": "string"
+        },
+        "speed": {
+          "default": 1.0,
+          "maximum": 1.5,
+          "minimum": 0.5,
+          "title": "Speed",
+          "type": "number"
+        },
+        "audio_asset": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Audio Asset",
+          "type": "string"
+        }
+      },
+      "title": "VoiceCue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.compiled_topic.v1",
+      "default": "deepbazi.compiled_topic.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "topic": {
+      "$ref": "#/$defs/TopicMetadata"
+    },
+    "entry_node": {
+      "title": "Entry Node",
+      "type": "string"
+    },
+    "fallback_entry_nodes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "enum": [
+          "personal_ready",
+          "chart_facts_only",
+          "observer"
+        ]
+      },
+      "title": "Fallback Entry Nodes",
+      "type": "object"
+    },
+    "scene_nodes": {
+      "additionalProperties": {
+        "$ref": "#/$defs/SceneNode"
+      },
+      "title": "Scene Nodes",
+      "type": "object"
+    },
+    "cue_templates": {
+      "additionalProperties": {
+        "$ref": "#/$defs/CueTemplate"
+      },
+      "title": "Cue Templates",
+      "type": "object"
+    },
+    "assets": {
+      "additionalProperties": {
+        "$ref": "#/$defs/AssetDefinition"
+      },
+      "title": "Assets",
+      "type": "object"
+    },
+    "policies": {
+      "$ref": "#/$defs/TopicPolicies"
+    },
+    "source_hash": {
+      "title": "Source Hash",
+      "type": "string"
+    },
+    "content_hash": {
+      "title": "Content Hash",
+      "type": "string"
+    },
+    "compiled_at": {
+      "format": "date-time",
+      "title": "Compiled At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "topic",
+    "entry_node",
+    "fallback_entry_nodes",
+    "scene_nodes",
+    "cue_templates",
+    "assets",
+    "policies",
+    "source_hash",
+    "content_hash",
+    "compiled_at"
+  ],
+  "title": "CompiledTopic",
+  "type": "object"
+}

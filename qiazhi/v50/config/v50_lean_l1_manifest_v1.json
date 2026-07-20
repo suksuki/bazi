@@ -1,0 +1,61 @@
+{
+  "schema_version": "deepbazi.v50_lean_l1_manifest.v1",
+  "effective_date": "2026-07-20",
+  "authority": "V50 Lean & Consolidation L1",
+  "active_surface": {
+    "product": [
+      "apps/product/static/experience/active/onecanvas-r1"
+    ],
+    "isolated_product_validation": [
+      "apps/product/static/experience/active/xiangfa-generation-v1"
+    ],
+    "internal_tools": [
+      "apps/product/static/experience/internal-tools/abu-motion-gallery-v1",
+      "apps/product/static/experience/internal-tools/abu-says-mingli-s0-v12"
+    ],
+    "shared_locked_assets": [
+      "apps/product/static/experience/shared/s0-v12-shared"
+    ]
+  },
+  "archive_moves": [
+    "abu-says-mingli-s0",
+    "abu-says-mingli-s0-v11",
+    "mingli-lab-c2a",
+    "mingli-scene-c1r",
+    "s0-shared",
+    "xiangfa-s0-a"
+  ],
+  "deleted_regenerable_paths": [
+    "artifacts/s0-v11/frames",
+    "artifacts/s0-v11/package-staging-v1",
+    "artifacts/s0-v12/frames",
+    "artifacts/s0-v12/qa-*",
+    "artifacts/abu-actor-pass-v1/source-frames",
+    "artifacts/abu-actor-pass-v1/qa",
+    "artifacts/abu-actor-pass-v1/screenshots",
+    "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1"
+  ],
+  "deleted_superseded_packages": [
+    "artifacts/s0-v11/packages/DeepBazi_S0_V1.1_and_Xiangfa_V1_Review_Pack.zip",
+    "artifacts/s0-v11/packages/DeepBazi_Xiangfa_V1_Analyst_Pack.zip"
+  ],
+  "preserved_evidence": [
+    "artifacts/s0-v11/packages/*_v1.zip",
+    "artifacts/s0-v11/keyframes",
+    "artifacts/s0-v11/video",
+    "artifacts/s0-v12/keyframes",
+    "artifacts/s0-v12/video",
+    "artifacts/abu-actor-pass-v1/source-videos",
+    "artifacts/abu-actor-pass-v1/source-contact-sheets",
+    "artifacts/abu-actor-pass-v1/contact-sheets",
+    "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1.zip"
+  ],
+  "regeneration": {
+    "s0_v11_frames": "node tools/render_s0_v11.mjs (historical tool archived with proof)",
+    "s0_v12_frames": "node tools/render_s0_v12.mjs",
+    "actor_source_frames": "re-extract from artifacts/abu-actor-pass-v1/source-videos"
+  },
+  "estimated_removed_bytes_before_execution": 1118343168,
+  "behavior_change_authorized": false,
+  "formal_state_write_authorized": false
+}

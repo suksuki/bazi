@@ -1,0 +1,15 @@
+{
+  "version": "deepbazi.vnext_phase0.artifact_manifest.v1",
+  "run_id": "g1-6-nonsealed-access-probe",
+  "raw_outputs_sha256": "a06f3b1a26145c960da6a9ba7d2ed5792aa0b37280a820c42bcab6f83f857aa1",
+  "raw_output_count": 12,
+  "files": [
+    "vnext_phase0_benchmark_report_v1.json",
+    "vnext_phase0_benchmark_report_v1.md",
+    "vnext_phase0_blind_review_packet_v1.md",
+    "vnext_phase0_pairwise_review_packet_v1.md",
+    "vnext_phase0_operator_lane_map_v1.json",
+    "vnext_phase0_expert_reference_freeze_packet_v1.md",
+    "vnext_phase0_raw_outputs_v1.jsonl"
+  ]
+}

@@ -1,0 +1,450 @@
+{
+  "schema_version": "deepbazi.document_status_inventory.v1",
+  "documents": [
+    {
+      "path": "docs/CURRENT_ARCHITECTURE.md",
+      "status": "active",
+      "size_bytes": 7613
+    },
+    {
+      "path": "docs/CURRENT_IMPLEMENTATION_ROADMAP.md",
+      "status": "active",
+      "size_bytes": 8956
+    },
+    {
+      "path": "docs/CURRENT_PRODUCT_BASELINE.md",
+      "status": "active",
+      "size_bytes": 6964
+    },
+    {
+      "path": "docs/DECISION_REGISTER.md",
+      "status": "active",
+      "size_bytes": 41962
+    },
+    {
+      "path": "docs/README.md",
+      "status": "active",
+      "size_bytes": 6447
+    },
+    {
+      "path": "docs/V50_ABU_DUAL_LENS_MINGLI_EXPERIENCE_V1.md",
+      "status": "archive",
+      "size_bytes": 2854
+    },
+    {
+      "path": "docs/V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V1.md",
+      "status": "archive",
+      "size_bytes": 23477
+    },
+    {
+      "path": "docs/V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V2.md",
+      "status": "archive",
+      "size_bytes": 38861
+    },
+    {
+      "path": "docs/V50_ARCHITECTURE_PURIFICATION_AND_EXPERIENCE_REFOUNDATION_V1.md",
+      "status": "archive",
+      "size_bytes": 14670
+    },
+    {
+      "path": "docs/V50_CURRENT_ARCHITECTURE.md",
+      "status": "superseded",
+      "size_bytes": 777
+    },
+    {
+      "path": "docs/V50_DEEP_CLEANUP_AND_LARGE_FILE_GOVERNANCE_V1.md",
+      "status": "archive",
+      "size_bytes": 9732
+    },
+    {
+      "path": "docs/V50_DEVELOPMENT_PRINCIPLE.md",
+      "status": "archive",
+      "size_bytes": 3113
+    },
+    {
+      "path": "docs/V50_HIDDEN_ATTRIBUTE_TIMELINE_CALIBRATION_V1.md",
+      "status": "archive",
+      "size_bytes": 3488
+    },
+    {
+      "path": "docs/V50_LESSONS_LEARNED.md",
+      "status": "archive",
+      "size_bytes": 6927
+    },
+    {
+      "path": "docs/V50_LIFE_DOMAIN_SYSTEM.md",
+      "status": "archive",
+      "size_bytes": 2771
+    },
+    {
+      "path": "docs/V50_MECHANISM_REPRESENTATION.md",
+      "status": "archive",
+      "size_bytes": 2745
+    },
+    {
+      "path": "docs/V50_MECHANISM_REPRESENTATION_AUDIT_PROTOCOL.md",
+      "status": "archive",
+      "size_bytes": 4418
+    },
+    {
+      "path": "docs/V50_MINGLI_COGNITIVE_ARCHITECTURE_V1.md",
+      "status": "archive",
+      "size_bytes": 5080
+    },
+    {
+      "path": "docs/V50_MINGLI_RESEARCH_TO_RUNTIME_PROTOCOL.md",
+      "status": "archive",
+      "size_bytes": 5268
+    },
+    {
+      "path": "docs/V50_MISSION_AND_INTELLIGENCE_DEFINITION.md",
+      "status": "archive",
+      "size_bytes": 4307
+    },
+    {
+      "path": "docs/V50_RESEARCH_DRIVEN_DEVELOPMENT.md",
+      "status": "archive",
+      "size_bytes": 6079
+    },
+    {
+      "path": "docs/V50_RUNTIME_MODULE_AUTHORITY_MAP_V1.md",
+      "status": "archive",
+      "size_bytes": 1977
+    },
+    {
+      "path": "docs/V50_SYNTHETIC_CHART_TAXONOMY.md",
+      "status": "archive",
+      "size_bytes": 4903
+    },
+    {
+      "path": "docs/V50_SYNTHETIC_FIXTURE_MATRIX_V2.md",
+      "status": "fixture-only",
+      "size_bytes": 2562
+    },
+    {
+      "path": "docs/V50_TIMING_MODEL_CANDIDATES_V1.md",
+      "status": "archive",
+      "size_bytes": 1729
+    },
+    {
+      "path": "docs/archive/README.md",
+      "status": "archive",
+      "size_bytes": 1021
+    },
+    {
+      "path": "docs/archive/architecture/V50_LIFE_OS_ARCHITECTURE_CONVERGENCE_REVIEW_V1.md",
+      "status": "archive",
+      "size_bytes": 13903
+    },
+    {
+      "path": "docs/archive/architecture/V50_SYSTEM_ARCHITECTURE_COGNITIVE_AUTHORITY_AUDIT_V1.md",
+      "status": "archive",
+      "size_bytes": 38167
+    },
+    {
+      "path": "docs/archive/architecture/VNEXT_COGNITIVE_REFOUNDATION_LARGE_CYCLE_ROADMAP_V1.md",
+      "status": "archive",
+      "size_bytes": 7140
+    },
+    {
+      "path": "docs/archive/execution/MINGLI_RELIABILITY_GATE_V1_LONG_TASK.md",
+      "status": "archive",
+      "size_bytes": 5030
+    },
+    {
+      "path": "docs/archive/execution/V50_BALANCED_COGNITIVE_BENCHMARK_V1.md",
+      "status": "archive",
+      "size_bytes": 2141
+    },
+    {
+      "path": "docs/archive/execution/V50_COGNITIVE_AUTHORITY_REFOUNDATION_IMPLEMENTATION_ACCEPTANCE_V1.md",
+      "status": "archive",
+      "size_bytes": 10902
+    },
+    {
+      "path": "docs/archive/execution/V50_GENERATION_FIRST_AND_ROLLING_PREVIEW_V1.md",
+      "status": "archive",
+      "size_bytes": 4158
+    },
+    {
+      "path": "docs/archive/execution/V50_GUIDED_MINGLI_DELIBERATION_V1.md",
+      "status": "archive",
+      "size_bytes": 3955
+    },
+    {
+      "path": "docs/archive/execution/V50_LLM_COGNITIVE_LATENCY_OPTIMIZATION_PLAN_V1.md",
+      "status": "archive",
+      "size_bytes": 5697
+    },
+    {
+      "path": "docs/archive/execution/V50_PATTERN_GATE_AND_LOADING_PREVIEW_V1.md",
+      "status": "archive",
+      "size_bytes": 6370
+    },
+    {
+      "path": "docs/archive/execution/V50_STAGED_COGNITION_AND_STREAMING_V1.md",
+      "status": "archive",
+      "size_bytes": 3274
+    },
+    {
+      "path": "docs/archive/execution/V50_SYNTHETIC_WORK_SYSTEM_VALIDATION.md",
+      "status": "archive",
+      "size_bytes": 3304
+    },
+    {
+      "path": "docs/archive/execution/VNEXT_PHASE0_COGNITIVE_AUTHORITY_BLIND_BENCHMARK_RUNBOOK_V1.md",
+      "status": "archive",
+      "size_bytes": 7343
+    },
+    {
+      "path": "docs/archive/execution/VNEXT_PHASE0_P0_G1_5_HOLISTIC_BASELINE_AND_PREFLIGHT_LONG_TASK_V1.md",
+      "status": "archive",
+      "size_bytes": 6308
+    },
+    {
+      "path": "docs/archive/execution/VNEXT_PHASE0_P0_G1_6_EVIDENCE_GATE_CLOSURE_LONG_TASK_V1.md",
+      "status": "archive",
+      "size_bytes": 4154
+    },
+    {
+      "path": "docs/archive/execution/VNEXT_PHASE0_P0_G1_7_HUMAN_REFERENCE_FRONTIER_FORMAL_LOCK_FREEZE_V1.md",
+      "status": "archive",
+      "size_bytes": 2190
+    },
+    {
+      "path": "docs/archive/execution/VNEXT_PHASE0_P0_G1_8_EXTERNAL_FREEZE_WORKBENCH_LONG_TASK_V1.md",
+      "status": "archive",
+      "size_bytes": 1988
+    },
+    {
+      "path": "docs/archive/execution/VNEXT_PHASE0_P0_G1_9_PROFESSIONAL_FACT_INTEGRITY_AUTHORITY_CONVERGENCE_V1.md",
+      "status": "archive",
+      "size_bytes": 3472
+    },
+    {
+      "path": "docs/archive/execution/VNEXT_PHASE0_P0_G1_FORMAL_EXPERIMENT_LOCK_PLAN_V1.md",
+      "status": "archive",
+      "size_bytes": 4766
+    },
+    {
+      "path": "docs/archive/product/V50_C1_TIME_STRUCTURE_LENS_PRODUCT_REDESIGN.md",
+      "status": "archive",
+      "size_bytes": 8471
+    },
+    {
+      "path": "docs/archive/product/V50_ONECANVAS_PILLAR_DEPENDENCY_MODEL_V1.md",
+      "status": "archive",
+      "size_bytes": 5843
+    },
+    {
+      "path": "docs/archive/product/V50_PUBLIC_UI_CONVERGENCE_V1.md",
+      "status": "archive",
+      "size_bytes": 2357
+    },
+    {
+      "path": "docs/archive/product/V50_VALLEY_STORYBOOK_UI_SYSTEM_V1.md",
+      "status": "archive",
+      "size_bytes": 2450
+    },
+    {
+      "path": "docs/archive/proofs/V50_C1R_MINGLI_SHARED_SCENE_PROTOTYPE.md",
+      "status": "historical-proof",
+      "size_bytes": 4732
+    },
+    {
+      "path": "docs/archive/proofs/V50_C1_READ_ONLY_SIX_PILLAR_CANVAS.md",
+      "status": "historical-proof",
+      "size_bytes": 7117
+    },
+    {
+      "path": "docs/archive/proofs/V50_C2AR_MINGLI_ONECANVAS_PROTOTYPE.md",
+      "status": "historical-proof",
+      "size_bytes": 5094
+    },
+    {
+      "path": "docs/archive/proofs/V50_C2AR_ONECANVAS_THREE_STATE_INTEGRATION.md",
+      "status": "historical-proof",
+      "size_bytes": 3895
+    },
+    {
+      "path": "docs/archive/proofs/V50_C2A_MINGLI_LAB_DIRECT_MANIPULATION_PROTOTYPE.md",
+      "status": "historical-proof",
+      "size_bytes": 4983
+    },
+    {
+      "path": "docs/product/FIRST_RUN_STREAMING_AND_ACTIONS_V1.md",
+      "status": "archive",
+      "size_bytes": 1796
+    },
+    {
+      "path": "docs/product/KEY_COMPONENT_REFINEMENT_PROTOCOL_V1.md",
+      "status": "archive",
+      "size_bytes": 4380
+    },
+    {
+      "path": "docs/product/LIFE_CASE_AND_FORMAL_INSIGHT_V1.md",
+      "status": "archive",
+      "size_bytes": 1330
+    },
+    {
+      "path": "docs/product/MONTHLY_PRIOR_REVIEW_PROTOCOL.md",
+      "status": "archive",
+      "size_bytes": 1296
+    },
+    {
+      "path": "docs/product/PRODUCT_CONSTITUTION_V1_1.md",
+      "status": "archive",
+      "size_bytes": 2070
+    },
+    {
+      "path": "docs/product/ROLE_BASED_DISCLOSURE.md",
+      "status": "archive",
+      "size_bytes": 1178
+    },
+    {
+      "path": "docs/product/V50_ABU_CHARACTER_ASSET_BIBLE_V1.md",
+      "status": "archive",
+      "size_bytes": 7275
+    },
+    {
+      "path": "docs/product/V50_ABU_DESIGNER_MOTION_REQUESTS_V1.md",
+      "status": "archive",
+      "size_bytes": 6521
+    },
+    {
+      "path": "docs/product/V50_ABU_LIVING_THEATER_V1.md",
+      "status": "archive",
+      "size_bytes": 6925
+    },
+    {
+      "path": "docs/product/V50_ABU_MINGLI_TOPIC_01_STRUCTURAL_ABLATION.md",
+      "status": "archive",
+      "size_bytes": 6666
+    },
+    {
+      "path": "docs/product/V50_ABU_NARRATED_WORKSPACE_AND_LIFE_SCRIPT_V1.md",
+      "status": "archive",
+      "size_bytes": 7932
+    },
+    {
+      "path": "docs/product/V50_ABU_PERFORMANCE_PROOF_01.md",
+      "status": "fixture-only",
+      "size_bytes": 6027
+    },
+    {
+      "path": "docs/product/V50_ABU_PERSONA_GUIDANCE_AND_MOTION_V1.md",
+      "status": "archive",
+      "size_bytes": 5082
+    },
+    {
+      "path": "docs/product/V50_ABU_SAYS_MINGLI_S0_OPENING_THEATER_AND_XIANGFA_SYNC_V1.md",
+      "status": "archive",
+      "size_bytes": 28314
+    },
+    {
+      "path": "docs/product/V50_ABU_VOICE_COMPREHENSION_VALIDATION_V1.md",
+      "status": "archive",
+      "size_bytes": 7702
+    },
+    {
+      "path": "docs/product/V50_CONTENT_PLACEMENT_AND_ABU_DIALOGUE_V1.md",
+      "status": "archive",
+      "size_bytes": 3131
+    },
+    {
+      "path": "docs/product/V50_INTERACTIVE_MINGLI_THEATER_ARCHITECTURE_V1.md",
+      "status": "archive",
+      "size_bytes": 9724
+    },
+    {
+      "path": "docs/product/V50_LIFE_CASE_APPLICATION_CONVERGENCE_V1.md",
+      "status": "archive",
+      "size_bytes": 6825
+    },
+    {
+      "path": "docs/product/V50_MINGLI_INTERACTIVE_CANVAS_TEMPORAL_SANDBOX_V1.md",
+      "status": "archive",
+      "size_bytes": 13716
+    },
+    {
+      "path": "docs/product/V50_MINGLI_RELATION_ATLAS_CONSTITUTION_AND_ONECANVAS_LENS_V1.md",
+      "status": "archive",
+      "size_bytes": 16390
+    },
+    {
+      "path": "docs/product/V50_ONECANVAS_DIRECT_STEPPER_INTERACTION_V1.md",
+      "status": "archive",
+      "size_bytes": 9594
+    },
+    {
+      "path": "docs/product/V50_ONECANVAS_PILLAR_SELECTION_AND_DAYUN_ALGORITHM_V2.md",
+      "status": "archive",
+      "size_bytes": 25408
+    },
+    {
+      "path": "docs/product/V50_ONECANVAS_R1_IMPLEMENTATION_DESIGN.md",
+      "status": "archive",
+      "size_bytes": 9922
+    },
+    {
+      "path": "docs/product/V50_ONECANVAS_R1_UNGUIDED_HUMAN_PRODUCT_REVIEW_V1.md",
+      "status": "archive",
+      "size_bytes": 10579
+    },
+    {
+      "path": "docs/product/V50_ONECANVAS_REFINEMENT_SPEC_V1.md",
+      "status": "archive",
+      "size_bytes": 8618
+    },
+    {
+      "path": "docs/product/V50_ONECANVAS_SELECTION_AND_PATH_FINISHING_PATCH_V1.md",
+      "status": "archive",
+      "size_bytes": 2719
+    },
+    {
+      "path": "docs/product/V50_ONECANVAS_VISUAL_COMPONENT_CONTRACT_V1.md",
+      "status": "archive",
+      "size_bytes": 5432
+    },
+    {
+      "path": "docs/product/V50_R2_PREFLIGHT_MINGLI_RELATION_GRAPH_AUDIT.md",
+      "status": "archive",
+      "size_bytes": 8599
+    },
+    {
+      "path": "docs/product/V50_RELATION_ATLAS_AND_PATH_PROVENANCE_CURRENT_STATE_AUDIT_V1.md",
+      "status": "archive",
+      "size_bytes": 10895
+    },
+    {
+      "path": "docs/product/V50_RELATION_KNOWLEDGE_PROMOTION_AND_CORE_SYNC_V1.md",
+      "status": "archive",
+      "size_bytes": 9956
+    },
+    {
+      "path": "docs/research/V50_COMPUTATIONAL_MINGLI_RESEARCH_PROGRAM.md",
+      "status": "archive",
+      "size_bytes": 7758
+    },
+    {
+      "path": "docs/research/V50_EVIDENCE_LIBRARY.md",
+      "status": "archive",
+      "size_bytes": 12380
+    },
+    {
+      "path": "docs/research/V50_EVIDENCE_ONTOLOGY.md",
+      "status": "archive",
+      "size_bytes": 10145
+    },
+    {
+      "path": "docs/research/V50_OPEN_QUESTIONS.md",
+      "status": "archive",
+      "size_bytes": 6200
+    },
+    {
+      "path": "docs/research/V50_THEORY_LIBRARY.md",
+      "status": "archive",
+      "size_bytes": 17030
+    }
+  ]
+}

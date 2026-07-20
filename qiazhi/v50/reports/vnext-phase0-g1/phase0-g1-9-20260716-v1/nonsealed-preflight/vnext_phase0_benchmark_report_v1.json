@@ -1,0 +1,344 @@
+{
+  "version": "deepbazi.vnext_phase0_cognitive_benchmark_report.v1",
+  "run_id": "phase0-g1-9-20260716-v1-nonsealed",
+  "generated_at": "2026-07-16T04:11:14.639350+00:00",
+  "status": "passed",
+  "phase0_decision": "planned",
+  "ready_for_formal_run": false,
+  "professional_winner": null,
+  "scope": {
+    "dry_run": true,
+    "live": false,
+    "model_selection_run": false,
+    "rounds": [
+      "prior"
+    ],
+    "case_count": 2,
+    "lanes": [
+      "direct_same_model",
+      "direct_frontier",
+      "current_v50",
+      "fact_only_deepbazi",
+      "holistic_synthesis",
+      "vnext"
+    ],
+    "repeats": 1,
+    "same_model": "not-executed",
+    "frontier_model": "",
+    "frontier_kind": "pending_external_selection",
+    "true_frontier_comparison_complete": false,
+    "resource_access": {
+      "active_manifest": "data/validation/phase0/vnext_phase0_development_set_v1.json",
+      "fixture_pack": "data/validation/phase0/vnext_phase0_development_fixture_pack_v1.json",
+      "full_taxonomy_accessed": false,
+      "formal_manifest_accessed": false,
+      "model_selection_manifest_accessed": false,
+      "expert_reference_accessed": false,
+      "reality_evidence_accessed": false
+    }
+  },
+  "observed_data": {
+    "output_count": 12,
+    "completed_count": 0,
+    "failed_count": 0,
+    "harness_failure_count": 0,
+    "model_policy_failure_count": 0,
+    "planned_count": 12,
+    "schema_pass_count": 0,
+    "fact_conflict_output_count": 0,
+    "hard_fact_conflict_output_count": 0,
+    "world_model_gap_output_count": 0,
+    "lane_leakage_output_count": 0,
+    "expert_references_frozen": false,
+    "controlled_feedback_case_count": 0,
+    "failure_classifications": {}
+  },
+  "lane_results": [
+    {
+      "lane": "direct_same_model",
+      "status": "partial",
+      "runs": 2,
+      "completed": 0,
+      "failures": 0,
+      "avg_elapsed_seconds": null,
+      "fact_conflict_outputs": 0,
+      "world_model_gap_outputs": 0,
+      "generic_language_outputs": 0
+    },
+    {
+      "lane": "direct_frontier",
+      "status": "partial",
+      "runs": 2,
+      "completed": 0,
+      "failures": 0,
+      "avg_elapsed_seconds": null,
+      "fact_conflict_outputs": 0,
+      "world_model_gap_outputs": 0,
+      "generic_language_outputs": 0
+    },
+    {
+      "lane": "current_v50",
+      "status": "partial",
+      "runs": 2,
+      "completed": 0,
+      "failures": 0,
+      "avg_elapsed_seconds": null,
+      "fact_conflict_outputs": 0,
+      "world_model_gap_outputs": 0,
+      "generic_language_outputs": 0
+    },
+    {
+      "lane": "fact_only_deepbazi",
+      "status": "partial",
+      "runs": 2,
+      "completed": 0,
+      "failures": 0,
+      "avg_elapsed_seconds": null,
+      "fact_conflict_outputs": 0,
+      "world_model_gap_outputs": 0,
+      "generic_language_outputs": 0
+    },
+    {
+      "lane": "holistic_synthesis",
+      "status": "partial",
+      "runs": 2,
+      "completed": 0,
+      "failures": 0,
+      "avg_elapsed_seconds": null,
+      "fact_conflict_outputs": 0,
+      "world_model_gap_outputs": 0,
+      "generic_language_outputs": 0
+    },
+    {
+      "lane": "vnext",
+      "status": "partial",
+      "runs": 2,
+      "completed": 0,
+      "failures": 0,
+      "avg_elapsed_seconds": null,
+      "fact_conflict_outputs": 0,
+      "world_model_gap_outputs": 0,
+      "generic_language_outputs": 0
+    }
+  ],
+  "blind_review_rows": [],
+  "pairwise_review_rows": [],
+  "run_rows": [
+    {
+      "key": "c2.output_to_wealth.01|current_v50|prior|1",
+      "case_id": "c2.output_to_wealth.01",
+      "category": "development_contrast",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "current_v50",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "丙辰",
+        "戊戌",
+        "甲子",
+        "戊子"
+      ]
+    },
+    {
+      "key": "c2.mixed_no_obvious_main_path.01|direct_frontier|prior|1",
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "category": "development_ambiguous",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "direct_frontier",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "甲戌",
+        "己酉",
+        "丙寅",
+        "丙午"
+      ]
+    },
+    {
+      "key": "c2.mixed_no_obvious_main_path.01|fact_only_deepbazi|prior|1",
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "category": "development_ambiguous",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "fact_only_deepbazi",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "甲戌",
+        "己酉",
+        "丙寅",
+        "丙午"
+      ]
+    },
+    {
+      "key": "c2.mixed_no_obvious_main_path.01|vnext|prior|1",
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "category": "development_ambiguous",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "vnext",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "甲戌",
+        "己酉",
+        "丙寅",
+        "丙午"
+      ]
+    },
+    {
+      "key": "c2.output_to_wealth.01|direct_same_model|prior|1",
+      "case_id": "c2.output_to_wealth.01",
+      "category": "development_contrast",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "direct_same_model",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "丙辰",
+        "戊戌",
+        "甲子",
+        "戊子"
+      ]
+    },
+    {
+      "key": "c2.output_to_wealth.01|fact_only_deepbazi|prior|1",
+      "case_id": "c2.output_to_wealth.01",
+      "category": "development_contrast",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "fact_only_deepbazi",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "丙辰",
+        "戊戌",
+        "甲子",
+        "戊子"
+      ]
+    },
+    {
+      "key": "c2.output_to_wealth.01|holistic_synthesis|prior|1",
+      "case_id": "c2.output_to_wealth.01",
+      "category": "development_contrast",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "holistic_synthesis",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "丙辰",
+        "戊戌",
+        "甲子",
+        "戊子"
+      ]
+    },
+    {
+      "key": "c2.output_to_wealth.01|vnext|prior|1",
+      "case_id": "c2.output_to_wealth.01",
+      "category": "development_contrast",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "vnext",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "丙辰",
+        "戊戌",
+        "甲子",
+        "戊子"
+      ]
+    },
+    {
+      "key": "c2.mixed_no_obvious_main_path.01|holistic_synthesis|prior|1",
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "category": "development_ambiguous",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "holistic_synthesis",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "甲戌",
+        "己酉",
+        "丙寅",
+        "丙午"
+      ]
+    },
+    {
+      "key": "c2.mixed_no_obvious_main_path.01|direct_same_model|prior|1",
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "category": "development_ambiguous",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "direct_same_model",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "甲戌",
+        "己酉",
+        "丙寅",
+        "丙午"
+      ]
+    },
+    {
+      "key": "c2.mixed_no_obvious_main_path.01|current_v50|prior|1",
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "category": "development_ambiguous",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "current_v50",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "甲戌",
+        "己酉",
+        "丙寅",
+        "丙午"
+      ]
+    },
+    {
+      "key": "c2.output_to_wealth.01|direct_frontier|prior|1",
+      "case_id": "c2.output_to_wealth.01",
+      "category": "development_contrast",
+      "round": "prior",
+      "repeat": 1,
+      "lane": "direct_frontier",
+      "model": "not_executed",
+      "status": "planned",
+      "pillars": [
+        "丙辰",
+        "戊戌",
+        "甲子",
+        "戊子"
+      ]
+    }
+  ],
+  "interpretation": {
+    "observed": "6 路输出使用统一合同；preflight 只验证运行、隔离、盲码和可审阅性。",
+    "inference": "没有冻结专家参考时，任何自动指标都不能宣布哪条 Lane 命理更好。",
+    "recommendation": "先修复 harness、Lane 路由或盲审隔离，再进入任何冻结步骤。"
+  },
+  "boundary_status": {
+    "training_performed": false,
+    "weights_modified": false,
+    "production_runtime_rules_modified": false,
+    "brain_logic_modified": false,
+    "mingli_algorithm_modified": false,
+    "theory_modified": false,
+    "ui_modified": false,
+    "product_mode_modified": false,
+    "shadow_policy_promoted": false,
+    "expert_gold_fabricated": false,
+    "synthetic_expected_contract_visible_to_model": false,
+    "formal_outputs_generated": false,
+    "sealed_formal_charts_executed": false,
+    "model_selection_outputs_generated": false,
+    "professional_winner_claimed": false,
+    "benchmark_harness_only": true,
+    "model_policy_failure_reclassified_as_harness_failure": false
+  }
+}

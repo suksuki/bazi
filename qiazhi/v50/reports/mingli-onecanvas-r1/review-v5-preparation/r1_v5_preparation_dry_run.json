@@ -1,0 +1,79 @@
+{
+  "schema_version": "r1-v5-preparation-dry-run-v1",
+  "date": "2026-07-20",
+  "status": "preparation_blocked",
+  "machine_prerequisite": "pass",
+  "human_sessions_started": false,
+  "participants_recruited": false,
+  "final_review_build_frozen": false,
+  "blocker": "zero_many_solver_outcomes_not_exposed",
+  "route": "http://127.0.0.1:8053/experience-static/active/onecanvas-r1/index.html?r1ReviewDryRun=1",
+  "source": {
+    "git_head": "88da895bb860c25fd6166ac4fa9717cf7102a1e8",
+    "worktree_clean": false,
+    "aggregate_sha256": "f218526975f5b3304724b7dab7bfe7023a13502ac23ed318313096187f47e6e6",
+    "fixture_sha256": "840382c0c27b9e1786fad625ca3acd8fb05a513ae63e4bee0ec05299e24a320a"
+  },
+  "browser": {
+    "exercised": "Google Chrome 150.0.7871.125",
+    "inventory_only": "Safari 26.5.2 (21624.2.5.11.8)"
+  },
+  "verification": {
+    "focused_authority_regression": "36 passed",
+    "full_regression": "435 passed"
+  },
+  "core_solver_outcomes": [
+    "no_solution",
+    "single_solution",
+    "multiple_solutions"
+  ],
+  "active_surface": {
+    "request_shape": "complete_four_pillar_target",
+    "exposed_outcome": "selected_single_variant_only",
+    "missing_states": [
+      "multiple_solution_candidates",
+      "no_solution_conflicts",
+      "releasable_constraints"
+    ]
+  },
+  "blocked_review_tasks": [
+    "task_4_multiple_legal_solutions",
+    "task_5_no_solution_and_constraint_release"
+  ],
+  "code_anchors": [
+    "apps/product/static/experience/active/onecanvas-r1/prototype.js::requestTargetCompile",
+    "apps/product/experience_api.py::/onecanvas/target-compile",
+    "apps/product/onecanvas_structural.py::resolve_pillar_target",
+    "packages/core/engines/bazi/chart_constraints.py::solve_chart_constraints"
+  ],
+  "allowed_next_change": "r1_application_and_presentation_consumption_of_existing_zero_many_states",
+  "forbidden": [
+    "new_mingli_logic",
+    "browser_side_legality",
+    "candidate_professional_ranking",
+    "silent_first_candidate_selection",
+    "relation_atlas",
+    "assisted_path",
+    "theater",
+    "xiangfa_feature_expansion",
+    "production_deployment"
+  ],
+  "build_manifest": [
+    {"path": "apps/product/static/experience/active/onecanvas-r1/index.html", "sha256": "3af457b27222bc397a1c26eb3d4a8252c41bd8146f2063d766403aefbbb13657"},
+    {"path": "apps/product/static/experience/active/onecanvas-r1/prototype.js", "sha256": "a4327ed9673f652c0f4c04860baeefca820590637576507477354f9008c50132"},
+    {"path": "apps/product/static/experience/active/onecanvas-r1/onecanvas-runtime.js", "sha256": "13c5f2156b4c49fbd02ca41590da3a848c7fc0835ffcf84684d202f6d1fdd2e1"},
+    {"path": "apps/product/static/experience/active/onecanvas-r1/onecanvas-components.js", "sha256": "3afd0bc956e528c0802bd8fc056bcb4b40db28d655cef8b63a75435cb9ecbbc7"},
+    {"path": "apps/product/static/experience/active/onecanvas-r1/styles.css", "sha256": "a94820dfd42a086fda9f1b13312ab7daacd6de126936fa8c464b0adbc69f870f"},
+    {"path": "apps/product/static/experience/active/onecanvas-r1/fixture.json", "sha256": "840382c0c27b9e1786fad625ca3acd8fb05a513ae63e4bee0ec05299e24a320a"},
+    {"path": "apps/product/experience_api.py", "sha256": "53c1e64991ec0cd46e836f569384ddcd16b0beeb2469362c05f595eca7875f6a"},
+    {"path": "apps/product/onecanvas_structural.py", "sha256": "c0b169697b275a98561d7da1ad5c469cf173b38508c5213d6c7d0c2ceeff2f11"},
+    {"path": "apps/product/onecanvas_timing_adapter.py", "sha256": "e2693b65e3d22aabbf9f764129ba4f1b36dda783c5875318063968edb3d4f7b1"},
+    {"path": "apps/product/structural_variant_compiler.py", "sha256": "7318ce47579d5b1e33d6c5662e37beacf548895bf380dfecfe46a0747b8b0734"},
+    {"path": "packages/core/contracts/chart.py", "sha256": "2e6d4cc9d357c745a1948a17f1c7dbf49d5534afb9bbf1d68fe890e263f282a9"},
+    {"path": "packages/core/engines/birth_calendar.py", "sha256": "ef11753ed14414fb0d7776eeda1bf49cb00fe64b97a9c55edd9bd192e4aeb696"},
+    {"path": "packages/core/engines/bazi/chart_constraints.py", "sha256": "3ff9f454cdd6bc35bc665ec8f20d370aa270365693900c836d20d68f2321549e"},
+    {"path": "packages/core/engines/bazi/temporal_service.py", "sha256": "db2c5cd9491c0366b379eb5a6b68c9adefcb3ebdc4cc820038f47e4994d772d9"},
+    {"path": "packages/core/engines/bazi/pillar_cycle.py", "sha256": "ccfd9a2f83a36438e1d03328f9c2cc5d26d73f8d1a4444c343b3f71bc771aec1"},
+    {"path": "packages/core/engines/bazi/dayun.py", "sha256": "7bd44db37f94894d91ab3964e44ddebc0a2d2bad7e3691d6a41c79b9fb6181d3"}
+  ]
+}

@@ -1,0 +1,113 @@
+{
+  "group": "synthetic_fixture_matrix_v2",
+  "description": "Taxonomy-backed matrix. It runs Graph -> Path -> Role -> Importance -> Ablation for every Synthetic Chart Taxonomy v1 family and records known algorithm gaps without tuning weights.",
+  "source_fixture": "synthetic_chart_taxonomy_v1.json",
+  "runtime_active": false,
+  "llm_used": false,
+  "brain_used": false,
+  "training_performed": false,
+  "cases": [
+    {
+      "case_id": "matrix_v2_month_command_dominant",
+      "source_case_id": "tax_month_command_dominant_001",
+      "matrix_category": "month_command_dominant",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_bridge_node_dominant",
+      "source_case_id": "tax_bridge_node_dominant_001",
+      "matrix_category": "bridge_node_dominant",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_converter_dominant",
+      "source_case_id": "tax_converter_dominant_001",
+      "matrix_category": "converter_dominant",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_day_branch_anchor",
+      "source_case_id": "tax_day_branch_anchor_001",
+      "matrix_category": "day_branch_anchor",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_hidden_stem_dark_line",
+      "source_case_id": "tax_hidden_stem_dark_line_001",
+      "matrix_category": "hidden_stem_dark_line",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_complete_triple_combination",
+      "source_case_id": "tax_complete_triple_combination_001",
+      "matrix_category": "complete_triple_combination",
+      "expected_gap_codes": ["path:combination_future_scope"]
+    },
+    {
+      "case_id": "matrix_v2_broken_triple_combination",
+      "source_case_id": "tax_broken_triple_combination_001",
+      "matrix_category": "broken_triple_combination",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_clash_breaks_main_path",
+      "source_case_id": "tax_clash_breaks_main_path_001",
+      "matrix_category": "clash_breaks_main_path",
+      "expected_gap_codes": ["path:clash_pressure_path"]
+    },
+    {
+      "case_id": "matrix_v2_output_to_wealth",
+      "source_case_id": "tax_output_to_wealth_001",
+      "matrix_category": "output_to_wealth",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_output_controls_pressure",
+      "source_case_id": "tax_output_controls_pressure_001",
+      "matrix_category": "output_controls_pressure",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_mixed_officer_killing_with_control",
+      "source_case_id": "tax_mixed_officer_killing_with_control_001",
+      "matrix_category": "mixed_officer_killing_with_control",
+      "expected_gap_codes": ["path:output_controls_pressure", "path:pressure_path"]
+    },
+    {
+      "case_id": "matrix_v2_resource_disrupts_output",
+      "source_case_id": "tax_resource_disrupts_output_001",
+      "matrix_category": "resource_disrupts_output",
+      "expected_gap_codes": ["path:resource_to_body", "path:output_path_under_pressure"]
+    },
+    {
+      "case_id": "matrix_v2_wealth_generates_officer",
+      "source_case_id": "tax_wealth_generates_officer_001",
+      "matrix_category": "wealth_generates_officer",
+      "expected_gap_codes": ["path:wealth_generates_officer"]
+    },
+    {
+      "case_id": "matrix_v2_peer_competes_for_wealth",
+      "source_case_id": "tax_peer_competes_for_wealth_001",
+      "matrix_category": "peer_competes_for_wealth",
+      "expected_gap_codes": ["path:peer_competes_for_wealth"]
+    },
+    {
+      "case_id": "matrix_v2_mixed_no_obvious_main_path",
+      "source_case_id": "tax_mixed_no_obvious_main_path_001",
+      "matrix_category": "mixed_no_obvious_main_path",
+      "expected_gap_codes": []
+    },
+    {
+      "case_id": "matrix_v2_luck_changes_main_path",
+      "source_case_id": "tax_luck_changes_main_path_001",
+      "matrix_category": "luck_changes_main_path",
+      "expected_gap_codes": ["path:timing_resource_reroute_candidate"]
+    },
+    {
+      "case_id": "matrix_v2_year_activates_key_node",
+      "source_case_id": "tax_year_activates_key_node_001",
+      "matrix_category": "year_activates_key_node",
+      "expected_gap_codes": ["path:year_activation_existing_node"]
+    }
+  ]
+}

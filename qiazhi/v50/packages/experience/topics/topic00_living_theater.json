@@ -1,0 +1,294 @@
+{
+  "schema_version": "deepbazi.topic_package.v1",
+  "topic": {
+    "topic_id": "topic-00-seen-and-continuing",
+    "version": "1.0.0",
+    "title": "阿布第一次真正看见我",
+    "purpose": "让参与者先被准确看见，再理解判断的边界，最后留下可以继续验证的生命问题。",
+    "audience": ["guest", "member", "practitioner"],
+    "supported_modes": ["live", "time_shift", "solo", "replay"],
+    "required_experience_capabilities": ["private_scene", "barrier", "frozen_cue", "time_capsule"],
+    "knowledge_refs": ["life-case-approved-baseline", "chart-facts"]
+  },
+  "entry_node": "opening",
+  "fallback_entry_nodes": {
+    "personal_ready": "opening",
+    "chart_facts_only": "facts_entry",
+    "observer": "observer_entry"
+  },
+  "scene_nodes": [
+    {
+      "node_id": "opening",
+      "act": "act-1-seen",
+      "dramatic_purpose": "阿布欢迎所有参与者并说明这不是一场预言表演。",
+      "visibility": "public",
+      "expected_duration_seconds": 24,
+      "cue_template_ids": ["opening-welcome"],
+      "interaction": {"kind": "ready_barrier", "prompt": "准备好时，我们一起进入第一幕。", "required": false},
+      "data_bindings": [],
+      "transitions": [{"event": "next", "target": "intent_question"}],
+      "timeout_behavior": "advance"
+    },
+    {
+      "node_id": "observer_entry",
+      "act": "act-1-seen",
+      "dramatic_purpose": "没有命盘的旁听者获得诚实且完整的观看路径。",
+      "visibility": "public",
+      "expected_duration_seconds": 18,
+      "cue_template_ids": ["observer-welcome"],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [{"event": "next", "target": "method"}],
+      "timeout_behavior": "advance"
+    },
+    {
+      "node_id": "facts_entry",
+      "act": "act-1-seen",
+      "dramatic_purpose": "只有可靠排盘时，仅展示命盘事实，不伪造个人认知。",
+      "visibility": "participant_private",
+      "expected_duration_seconds": 24,
+      "cue_template_ids": ["chart-facts-intro"],
+      "interaction": {"kind": "ready_barrier", "prompt": "确认这是你的四柱后继续。", "required": false},
+      "data_bindings": ["envelope.allowed_chart_facts"],
+      "transitions": [{"event": "complete", "target": "method"}],
+      "timeout_behavior": "fallback",
+      "fallback_node": "method",
+      "rejoin_node": "method"
+    },
+    {
+      "node_id": "intent_question",
+      "act": "act-1-seen",
+      "dramatic_purpose": "先让参与者选择此刻最想被看见的生命问题。",
+      "visibility": "participant_private",
+      "expected_duration_seconds": 35,
+      "cue_template_ids": ["intent-question"],
+      "interaction": {
+        "kind": "choice",
+        "prompt": "此刻你最想让阿布看见的是哪一部分？",
+        "options": ["我正在坚持的事", "我反复卡住的地方", "我尚未说出口的变化"],
+        "required": true
+      },
+      "data_bindings": [],
+      "transitions": [{"event": "complete", "target": "group_reveal"}],
+      "timeout_behavior": "fallback",
+      "fallback_node": "group_reveal",
+      "rejoin_node": "group_reveal"
+    },
+    {
+      "node_id": "group_reveal",
+      "act": "act-1-seen",
+      "dramatic_purpose": "只在人数足够时展示匿名共同痕迹，不泄露私人答案。",
+      "visibility": "public",
+      "expected_duration_seconds": 22,
+      "cue_template_ids": ["group-reveal"],
+      "interaction": {"kind": "none"},
+      "data_bindings": ["aggregate.choice_counts"],
+      "transitions": [{"event": "next", "target": "personal_magic"}],
+      "timeout_behavior": "advance"
+    },
+    {
+      "node_id": "personal_magic",
+      "act": "act-1-seen",
+      "dramatic_purpose": "以四柱、一条批准认知与一个未决条件组成私人魔法镜头。",
+      "visibility": "participant_private",
+      "expected_duration_seconds": 45,
+      "cue_template_ids": ["personal-baseline-intro"],
+      "interaction": {"kind": "ready_barrier", "prompt": "这条判断是否值得继续验证？", "required": false},
+      "data_bindings": ["envelope.allowed_chart_facts", "envelope.approved_claims", "envelope.uncertainty"],
+      "transitions": [{"event": "complete", "target": "method"}],
+      "timeout_behavior": "fallback",
+      "fallback_node": "method",
+      "rejoin_node": "method"
+    },
+    {
+      "node_id": "method",
+      "act": "act-2-not-casual",
+      "dramatic_purpose": "解释系统为何保留竞争解释与不确定性。",
+      "visibility": "public",
+      "expected_duration_seconds": 32,
+      "cue_template_ids": ["method-explainer"],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [{"event": "next", "target": "time_story"}],
+      "timeout_behavior": "advance"
+    },
+    {
+      "node_id": "time_story",
+      "act": "act-2-not-casual",
+      "dramatic_purpose": "把命理从一次结论转回时间中的观察与验证。",
+      "visibility": "public",
+      "expected_duration_seconds": 28,
+      "cue_template_ids": ["time-story"],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [{"event": "next", "target": "time_capsule"}],
+      "timeout_behavior": "advance"
+    },
+    {
+      "node_id": "time_capsule",
+      "act": "act-3-continues",
+      "dramatic_purpose": "参与者留下只属于自己的未来验证问题。",
+      "visibility": "participant_private",
+      "expected_duration_seconds": 50,
+      "cue_template_ids": ["capsule-invitation"],
+      "interaction": {"kind": "capsule", "prompt": "留一句话给三个月后的自己。", "required": false},
+      "data_bindings": [],
+      "transitions": [{"event": "complete", "target": "closing"}],
+      "timeout_behavior": "fallback",
+      "fallback_node": "closing",
+      "rejoin_node": "closing"
+    },
+    {
+      "node_id": "closing",
+      "act": "act-3-continues",
+      "dramatic_purpose": "结束本场，但明确案例理解会在现实反馈中继续。",
+      "visibility": "public",
+      "expected_duration_seconds": 25,
+      "cue_template_ids": ["closing-promise"],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [],
+      "timeout_behavior": "wait"
+    }
+  ],
+  "cue_templates": [
+    {
+      "template_id": "opening-welcome",
+      "visibility": "public",
+      "semantic_intent": "welcome_without_prediction",
+      "dialogue_template": "晚上好，我是阿布。今晚我们不急着预测人生，而是先看看，一张命盘怎样照见一个人正在经历的事。",
+      "subtitle_template": "今晚不急着预测，我们先看看命盘怎样照见正在发生的人生。",
+      "voice": {"profile": "abu-main", "mode": "host", "emotion": "warm", "speed": 0.96},
+      "actor": {"expression": "welcoming", "motion_asset": "abu-welcome", "loop": false},
+      "stage": [{"command": "set_background", "asset_ref": "valley-dawn"}],
+      "subtitle": {"style": "public-opening"}
+    },
+    {
+      "template_id": "observer-welcome",
+      "visibility": "public",
+      "semantic_intent": "observer_fallback",
+      "dialogue_template": "你可以先旁听这场探索。阿布不会假装认识你，但会让你看见，我们怎样区分事实、判断与仍待验证的问题。",
+      "subtitle_template": "旁听也完整：不假装认识你，只展示我们怎样形成和保留判断。",
+      "voice": {"profile": "abu-main", "mode": "host", "emotion": "gentle", "speed": 0.96},
+      "actor": {"expression": "attentive", "motion_asset": "abu-idle", "loop": true},
+      "stage": [{"command": "set_background", "asset_ref": "valley-dawn"}],
+      "subtitle": {"style": "public-observer"}
+    },
+    {
+      "template_id": "chart-facts-intro",
+      "visibility": "participant_private",
+      "semantic_intent": "show_chart_facts_only",
+      "dialogue_template": "我目前能可靠确认的是你的四柱：{{four_pillars}}。更深的整盘认知还没有正式形成，所以阿布不会用漂亮话补齐未知。",
+      "subtitle_template": "已确认四柱：{{four_pillars}}。更深判断尚未形成。",
+      "voice": {"profile": "abu-main", "mode": "analyst", "emotion": "calm", "speed": 0.94},
+      "actor": {"expression": "focused", "motion_asset": "abu-divination", "loop": true},
+      "stage": [{"command": "show_chart_facts", "source": "envelope.allowed_chart_facts"}],
+      "subtitle": {"style": "private-facts"}
+    },
+    {
+      "template_id": "intent-question",
+      "visibility": "participant_private",
+      "semantic_intent": "invite_private_intent",
+      "dialogue_template": "在我打开你的命盘之前，先选一件此刻最想被看见的事。答案只留在你的私人场景里。",
+      "subtitle_template": "先选一件此刻最想被看见的事。答案只属于你。",
+      "voice": {"profile": "abu-main", "mode": "companion", "emotion": "curious", "speed": 0.98},
+      "actor": {"expression": "curious", "motion_asset": "abu-head-tilt", "loop": false},
+      "stage": [],
+      "subtitle": {"style": "private-question"}
+    },
+    {
+      "template_id": "group-reveal",
+      "visibility": "public",
+      "semantic_intent": "reveal_anonymous_group_trace",
+      "dialogue_template": "每个人的答案都仍是私人的。人数足够时，我们只看见共同关注的方向；人数不足时，就让这一幕安静地保留。",
+      "subtitle_template": "只展示足够人数下的匿名共同方向，不展示任何人的私人答案。",
+      "voice": {"profile": "abu-main", "mode": "host", "emotion": "calm", "speed": 0.96},
+      "actor": {"expression": "attentive", "motion_asset": "abu-idle", "loop": true},
+      "stage": [{"command": "show_group_trace", "source": "aggregate.choice_counts"}],
+      "subtitle": {"style": "public-reveal"}
+    },
+    {
+      "template_id": "personal-baseline-intro",
+      "visibility": "participant_private",
+      "semantic_intent": "explain_approved_claim",
+      "required_claim_category": "baseline",
+      "dialogue_template": "你的四柱是 {{four_pillars}}。目前经过正式认知确认的一条主线是：{{approved_claim}}。但它不是无条件成立，{{claim_conditions}}。",
+      "subtitle_template": "目前确认的主线：{{approved_claim}}。成立条件：{{claim_conditions}}。",
+      "voice": {"profile": "abu-main", "mode": "analyst", "emotion": "focused", "speed": 0.92},
+      "actor": {"expression": "divining", "motion_asset": "abu-taoist", "loop": true},
+      "stage": [
+        {"command": "show_chart_facts", "source": "envelope.allowed_chart_facts"},
+        {"command": "highlight_visual_anchor", "source": "approved_claim.visual_anchors"}
+      ],
+      "subtitle": {"style": "private-insight"},
+      "fallback_template_id": "chart-facts-intro"
+    },
+    {
+      "template_id": "method-explainer",
+      "visibility": "public",
+      "semantic_intent": "explain_epistemic_method",
+      "dialogue_template": "真正专业的判断，不是把每个术语都说一遍，而是知道哪条主线更值得相信，也知道何时应该保留第二种解释。",
+      "subtitle_template": "专业不是术语更多，而是知道相信什么、保留什么。",
+      "voice": {"profile": "abu-main", "mode": "analyst", "emotion": "steady", "speed": 0.94},
+      "actor": {"expression": "explaining", "motion_asset": "abu-taoist", "loop": false},
+      "stage": [{"command": "clear_stage"}],
+      "subtitle": {"style": "public-method"}
+    },
+    {
+      "template_id": "time-story",
+      "visibility": "public",
+      "semantic_intent": "introduce_longitudinal_observation",
+      "dialogue_template": "命盘不是一次说完的人生答案。时间会激活不同部分，现实会支持或推翻旧判断，而你的选择会让故事继续变化。",
+      "subtitle_template": "命盘给出起点；时间、现实与选择让理解继续更新。",
+      "voice": {"profile": "abu-main", "mode": "storyteller", "emotion": "reflective", "speed": 0.93},
+      "actor": {"expression": "reflective", "motion_asset": "abu-idle", "loop": true},
+      "stage": [{"command": "set_background", "asset_ref": "valley-night"}],
+      "subtitle": {"style": "public-time"}
+    },
+    {
+      "template_id": "capsule-invitation",
+      "visibility": "participant_private",
+      "semantic_intent": "create_private_time_capsule",
+      "dialogue_template": "留一句话给三个月后的自己。它不会自动改变你的命理案例，也不会公开；只有你决定回看时，它才重新出现。",
+      "subtitle_template": "留一句给未来自己的话。私人保存，不自动改写命理认知。",
+      "voice": {"profile": "abu-main", "mode": "companion", "emotion": "gentle", "speed": 0.94},
+      "actor": {"expression": "gentle", "motion_asset": "abu-idle", "loop": true},
+      "stage": [{"command": "show_capsule"}],
+      "subtitle": {"style": "private-capsule"}
+    },
+    {
+      "template_id": "closing-promise",
+      "visibility": "public",
+      "semantic_intent": "close_without_finality",
+      "dialogue_template": "这一场到这里结束，但理解不会停在这里。下一次回来，我们会从已经确认的地方继续，而不是重新编一份报告。",
+      "subtitle_template": "本场结束，理解继续。下次从已经确认的地方接着走。",
+      "voice": {"profile": "abu-main", "mode": "host", "emotion": "warm", "speed": 0.95},
+      "actor": {"expression": "happy", "motion_asset": "abu-welcome", "loop": false},
+      "stage": [{"command": "set_background", "asset_ref": "valley-night"}],
+      "subtitle": {"style": "public-closing"}
+    }
+  ],
+  "director_script": {
+    "temporary_dialogue": {"opening": "等待参与者进入", "private_window": "私人镜头进行中"},
+    "timing_notes": {"private_window": "不显示个人内容，只显示完成进度"}
+  },
+  "asset_manifest": {
+    "assets": [
+      {"asset_id": "abu-welcome", "kind": "abu_motion", "uri": "/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp"},
+      {"asset_id": "abu-idle", "kind": "abu_motion", "uri": "/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp"},
+      {"asset_id": "abu-head-tilt", "kind": "abu_motion", "uri": "/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp"},
+      {"asset_id": "abu-divination", "kind": "abu_motion", "uri": "/assets/abu/v8-designer-divination/web/abu_divination_v8.webp"},
+      {"asset_id": "abu-taoist", "kind": "abu_motion", "uri": "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp"},
+      {"asset_id": "valley-dawn", "kind": "background", "uri": "/assets/abu/v10-opening-scene/transition/abu_opening_background_v10.webp"},
+      {"asset_id": "valley-night", "kind": "background", "uri": "/assets/abu/v10-opening-scene/transition/abu_opening_background_v10.webp"}
+    ]
+  },
+  "policies": {
+    "privacy": "private_by_default",
+    "aggregation_minimum": 3,
+    "personal_scene": "envelope_only",
+    "temporal_message": "explicit_consent",
+    "failure_behavior": "fallback_without_invention"
+  },
+  "release": {"status": "draft", "approved_by": "", "package_hash": ""}
+}

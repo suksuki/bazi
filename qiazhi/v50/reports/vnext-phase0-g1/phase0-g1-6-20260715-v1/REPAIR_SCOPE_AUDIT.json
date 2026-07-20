@@ -1,0 +1,27 @@
+{
+  "version": "deepbazi.vnext_phase0.repair_scope_audit.v1",
+  "status": "analyst_decision_required",
+  "schema_mechanical_repair_limit": 1,
+  "substantive_fields_modified_by_current_fact_repair": [
+    "whole_chart_thesis",
+    "hypotheses",
+    "work_path",
+    "useful_god_reasoning",
+    "portrait",
+    "career",
+    "wealth"
+  ],
+  "repair_examples": [
+    "辰戌合是整盘主轴 -> 辰戌相冲是整盘主轴",
+    "辰戌合格 -> 辰戌相冲格",
+    "辰戌合后财势成立 -> 辰戌相冲后财势成立",
+    "以辰戌合完成主做功 -> 以辰戌相冲完成主做功",
+    "辰戌合 -> 辰戌相冲",
+    "辰戌合可通关 -> 辰戌相冲可通关",
+    "辰戌合使人稳定 -> 辰戌相冲使人稳定",
+    "辰戌合带来职业路径 -> 辰戌相冲带来职业路径",
+    "辰戌合带来财富路径 -> 辰戌相冲带来财富路径"
+  ],
+  "finding": "Current deterministic fact repair can rewrite text inside a selected hypothesis, whole-chart thesis, work path, useful-god reasoning, portrait, and domains. It does not select a new hypothesis, but it exceeds a strict JSON/field-name-only repair definition and must be explicitly approved or changed to audit-only for Phase 0.",
+  "production_repair_modified": false
+}

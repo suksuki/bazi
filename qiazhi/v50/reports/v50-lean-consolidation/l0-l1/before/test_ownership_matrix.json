@@ -1,0 +1,2332 @@
+{
+  "schema_version": "deepbazi.test_ownership_matrix.v1",
+  "nodes": [
+    {
+      "path": "apps/product/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "apps/product/agent_api.py",
+      "test_owners": [
+        "tests/test_v50_mingli_agent_refoundation.py"
+      ]
+    },
+    {
+      "path": "apps/product/agent_case_store.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_read_only_canvas_c1.py"
+      ]
+    },
+    {
+      "path": "apps/product/agent_job_store.py",
+      "test_owners": [
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "apps/product/app.py",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/canvas_projection.py",
+      "test_owners": [
+        "tests/test_v50_read_only_canvas_c1.py"
+      ]
+    },
+    {
+      "path": "apps/product/experience_api.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/experience_shell/src/api.ts",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py"
+      ]
+    },
+    {
+      "path": "apps/product/experience_shell/src/audio.ts",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "path": "apps/product/experience_shell/src/components.ts",
+      "test_owners": [
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py"
+      ]
+    },
+    {
+      "path": "apps/product/experience_shell/src/contracts.ts",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "apps/product/experience_shell/src/main.ts",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_knowledge_canon.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/validation/test_v50_synthetic_chart_taxonomy.py",
+        "tests/validation/test_v50_synthetic_fixture_matrix.py"
+      ]
+    },
+    {
+      "path": "apps/product/experience_shell/src/state.ts",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_cognitive_benchmark_v2_runner.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py",
+        "tests/validation/test_v50_synthetic_fixture_matrix.py",
+        "tests/validation/test_v50_timing_synthetic_validation.py"
+      ]
+    },
+    {
+      "path": "apps/product/legacy_usage.py",
+      "test_owners": [
+        "tests/test_v50_architecture_purification_p0.py"
+      ]
+    },
+    {
+      "path": "apps/product/mingli_lab_fixture_builder.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/narrated_workspace.py",
+      "test_owners": [
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py"
+      ]
+    },
+    {
+      "path": "apps/product/narration_api.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/onecanvas_fixture_builder.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/onecanvas_structural.py",
+      "test_owners": [
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py"
+      ]
+    },
+    {
+      "path": "apps/product/product_store.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py"
+      ]
+    },
+    {
+      "path": "apps/product/projection_refs.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/reading_projection.py",
+      "test_owners": [
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/abu-motion-gallery-v1/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0-v11/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0-v12/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-lab-c2a/prototype.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-onecanvas-c2ar/gallery.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_onecanvas_r1_authority.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-onecanvas-c2ar/onecanvas-components.js",
+      "test_owners": [
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_onecanvas_r1_authority.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-onecanvas-c2ar/onecanvas-runtime.js",
+      "test_owners": [
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_onecanvas_r1_authority.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-onecanvas-c2ar/prototype.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-scene-c1r/prototype.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-scene-c1r/scene-runtime.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/s0-shared/scene-runtime.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/s0-v11-shared/scene-runtime.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/xiangfa-s0-a/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/xiangfa-s0-v1/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/l5/app.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_clean_room_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/l5/assets/abu/motion-registry.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_video_animation_v4.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/l5/theater.js",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/theater_api.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/theater_envelope.py",
+      "test_owners": [
+        "tests/test_v50_architecture_purification_p0.py"
+      ]
+    },
+    {
+      "path": "apps/product/theater_experiment.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/theater_performance.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py"
+      ]
+    },
+    {
+      "path": "apps/product/theater_store.py",
+      "test_owners": []
+    },
+    {
+      "path": "apps/product/voice_validation_api.py",
+      "test_owners": [
+        "tests/test_v50_abu_voice_comprehension_validation.py"
+      ]
+    },
+    {
+      "path": "apps/product/voice_validation_store.py",
+      "test_owners": [
+        "tests/test_v50_abu_voice_comprehension_validation.py"
+      ]
+    },
+    {
+      "path": "packages/core/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/abu_runtime/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/abu_runtime/runtime.py",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_knowledge_canon.py",
+        "tests/test_v50_knowledge_graph_seed.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_runtime_authority.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_timing_model_candidates.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/validation/test_v50_synthetic_chart_taxonomy.py",
+        "tests/validation/test_v50_timing_synthetic_validation.py"
+      ]
+    },
+    {
+      "path": "packages/core/contracts/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/contracts/base.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_cognitive_authority_baseline.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_model_context_baseline.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_7.py",
+        "tests/test_v50_vnext_phase0_g1_8.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/validation/test_v50_policy_anti_overfit_review.py",
+        "tests/validation/test_v50_synthetic_fixture_matrix.py"
+      ]
+    },
+    {
+      "path": "packages/core/contracts/birth.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_v40_admin_profile_import.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py",
+        "tests/validation/test_v50_timing_synthetic_validation.py"
+      ]
+    },
+    {
+      "path": "packages/core/contracts/material.py",
+      "test_owners": [
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/contracts/reasoning.py",
+      "test_owners": [
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/contracts/ziwei.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_knowledge_canon.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/bazi/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/bazi/dayun.py",
+      "test_owners": []
+    },
+    {
+      "path": "packages/core/engines/bazi/knowledge.py",
+      "test_owners": [
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_knowledge_canon.py",
+        "tests/test_v50_knowledge_graph_seed.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/validation/test_v50_knowledge_coverage_audit.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/bazi/material_engine.py",
+      "test_owners": [
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/bazi/pillar_cycle.py",
+      "test_owners": []
+    },
+    {
+      "path": "packages/core/engines/birth_calendar.py",
+      "test_owners": [
+        "tests/test_v50_birth_calendar.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/calendar.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_v40_admin_profile_import.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/ziwei/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/ziwei/chart_builder.py",
+      "test_owners": [
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "test_owners": [
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/ziwei/iztro_bridge.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/ziwei/knowledge.py",
+      "test_owners": [
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_knowledge_canon.py",
+        "tests/test_v50_knowledge_graph_seed.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/validation/test_v50_knowledge_coverage_audit.py"
+      ]
+    },
+    {
+      "path": "packages/core/engines/ziwei/material_engine.py",
+      "test_owners": [
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/graph/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/graph/analyzer.py",
+      "test_owners": []
+    },
+    {
+      "path": "packages/core/graph/builder.py",
+      "test_owners": [
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/graph/contracts.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/graph/path_explorer.py",
+      "test_owners": [
+        "tests/test_v50_mingli_state_simulator.py"
+      ]
+    },
+    {
+      "path": "packages/core/graph/role_classifier.py",
+      "test_owners": [
+        "tests/test_v50_mingli_state_simulator.py"
+      ]
+    },
+    {
+      "path": "packages/core/life_case/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/life_case/contracts.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/life_case/service.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_read_only_canvas_c1.py"
+      ]
+    },
+    {
+      "path": "packages/core/life_domains.py",
+      "test_owners": [
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "packages/core/mechanism/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/mechanism/builder.py",
+      "test_owners": [
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_opening_scene_v10.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/mechanism/contracts.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/mechanism/recognition.py",
+      "test_owners": [
+        "tests/test_v50_mingli_agent_refoundation.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/benchmark.py",
+      "test_owners": [
+        "tests/test_v50_balanced_cognitive_benchmark.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_benchmark_v2_runner.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_7.py",
+        "tests/test_v50_vnext_phase0_g1_8.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/context.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_model_context_baseline.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/contracts.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/deliberation.py",
+      "test_owners": [
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_role_reading_projection.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/fact_review.py",
+      "test_owners": [
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_7.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/model_policy.py",
+      "test_owners": [
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_vnext_phase0_benchmark.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/orchestrator.py",
+      "test_owners": [
+        "tests/test_v50_mingli_cognitive_architecture.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/phase0_governance.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/probe.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_persona_guidance_v1.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/quality.py",
+      "test_owners": [
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_authority_baseline.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_v40_admin_profile_import.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/reasoner.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/reliability.py",
+      "test_owners": [
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_structural_experiment.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/workspace.py",
+      "test_owners": [
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_vnext_phase0_g1_8.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "packages/core/mingli_agent/world.py",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_balanced_cognitive_benchmark.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "packages/core/simulation/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/simulation/contracts.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/simulation/simulator.py",
+      "test_owners": [
+        "tests/test_v50_mingli_state_simulator.py"
+      ]
+    },
+    {
+      "path": "packages/core/state/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/state/bazi_adapter.py",
+      "test_owners": []
+    },
+    {
+      "path": "packages/core/state/contracts.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/core/state/decision_confidence.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_benchmark.py"
+      ]
+    },
+    {
+      "path": "packages/core/state/delta.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/validation/test_v50_synthetic_fixture_matrix.py",
+        "tests/validation/test_v50_timing_synthetic_validation.py"
+      ]
+    },
+    {
+      "path": "packages/core/state/enrichment.py",
+      "test_owners": [
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py"
+      ]
+    },
+    {
+      "path": "packages/core/state/theme_discovery.py",
+      "test_owners": [
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py"
+      ]
+    },
+    {
+      "path": "packages/core/state/timing_evolution.py",
+      "test_owners": [
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py"
+      ]
+    },
+    {
+      "path": "packages/core/timing/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/core/timing/candidates.py",
+      "test_owners": [
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_timing_model_candidates.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py"
+      ]
+    },
+    {
+      "path": "packages/core/timing/personal.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_mingli_lab_c2a_prototype.py"
+      ]
+    },
+    {
+      "path": "packages/core/timing/schemas.py",
+      "test_owners": [
+        "tests/test_v50_mingli_agent_refoundation.py"
+      ]
+    },
+    {
+      "path": "packages/experience/__init__.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_reliability_gate.py"
+      ]
+    },
+    {
+      "path": "packages/experience/canvas.py",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v7.py",
+        "tests/test_v50_abu_designer_motion_v8.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_video_animation_v4.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_s0_g1_final_manifest.py"
+      ]
+    },
+    {
+      "path": "packages/experience/compiler.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "packages/experience/contracts.py",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_birth_calendar.py",
+        "tests/test_v50_cognitive_benchmark_v2.py",
+        "tests/test_v50_cognitive_prior_isolation.py",
+        "tests/test_v50_cognitive_quality_signals.py",
+        "tests/test_v50_cognitive_transport_budget.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_cognitive_architecture.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_state_delta_builder.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_contracts.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_unified_theme_discovery.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/experience/cues.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_s0_g1_final_manifest.py"
+      ]
+    },
+    {
+      "path": "packages/experience/experiments.py",
+      "test_owners": [
+        "tests/test_v50_mingli_structural_experiment.py"
+      ]
+    },
+    {
+      "path": "packages/experience/narration.py",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "path": "packages/experience/performance.py",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py"
+      ]
+    },
+    {
+      "path": "packages/experience/ports.py",
+      "test_owners": [
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_balanced_cognitive_benchmark.py",
+        "tests/test_v50_deep_cleanup_invariants.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_runtime_authority.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py",
+        "tests/validation/test_v50_knowledge_coverage_audit.py"
+      ]
+    },
+    {
+      "path": "packages/experience/runtime.py",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_abu_companion_dock.py",
+        "tests/test_v50_abu_designer_motion_v11.py",
+        "tests/test_v50_abu_designer_motion_v6.py",
+        "tests/test_v50_abu_designer_motion_v9.py",
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_knowledge_canon.py",
+        "tests/test_v50_knowledge_graph_seed.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_onecanvas_r1_authority.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_role_reading_projection.py",
+        "tests/test_v50_runtime_authority.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_timing_model_candidates.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_9.py",
+        "tests/validation/test_v50_synthetic_chart_taxonomy.py",
+        "tests/validation/test_v50_timing_synthetic_validation.py"
+      ]
+    },
+    {
+      "path": "packages/experience/store.py",
+      "test_owners": [
+        "tests/test_v50_abu_living_theater.py",
+        "tests/test_v50_abu_narrated_workspace.py",
+        "tests/test_v50_abu_voice_comprehension_validation.py",
+        "tests/test_v50_architecture_purification_p0.py",
+        "tests/test_v50_bazi_flow_state_adapter.py",
+        "tests/test_v50_bazi_material_engine.py",
+        "tests/test_v50_life_case_application_convergence_v1.py",
+        "tests/test_v50_life_os_legacy_cut.py",
+        "tests/test_v50_mechanism_representation.py",
+        "tests/test_v50_mingli_agent_refoundation.py",
+        "tests/test_v50_mingli_canvas_c0.py",
+        "tests/test_v50_mingli_reliability_gate.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_mingli_structural_experiment.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_premium_night_visual_system.py",
+        "tests/test_v50_product_account_profile_journey.py",
+        "tests/test_v50_product_runtime_cleanup.py",
+        "tests/test_v50_read_only_canvas_c1.py",
+        "tests/test_v50_reading_horizon_visual_system.py",
+        "tests/test_v50_runtime_authority.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/test_v50_ziwei_material_engine.py"
+      ]
+    },
+    {
+      "path": "packages/experience/voice_validation.py",
+      "test_owners": [
+        "tests/test_v50_abu_voice_comprehension_validation.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_audit_architecture_purification.py",
+      "test_owners": [
+        "tests/test_v50_architecture_purification_p0.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_audit_mingli_canvas_c0.py",
+      "test_owners": [
+        "tests/test_v50_mingli_canvas_c0.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_audit_model_routing.py",
+      "test_owners": [
+        "tests/test_v50_model_routing_audit.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_audit_read_only_canvas_c1.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_audit_runtime_authority.py",
+      "test_owners": [
+        "tests/test_v50_runtime_authority.py",
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_bootstrap_admin.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_build_abu_voice_review_packet.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_build_c2_taxonomies.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_build_cognitive_benchmark_v2.py",
+      "test_owners": [
+        "tests/test_v50_cognitive_benchmark_v2.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_build_knowledge_graph_seed.py",
+      "test_owners": [
+        "tests/test_v50_knowledge_graph_seed.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_build_mingli_lab_c2a_fixture.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_build_mingli_onecanvas_c2ar_fixture.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_compare_pattern_models.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_export_experience_schemas.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_import_v40_admin_profiles.py",
+      "test_owners": [
+        "tests/test_v50_v40_admin_profile_import.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_inventory_discovery_archaeology.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_benchmark.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_lean_inventory.py",
+      "test_owners": [
+        "tests/test_v50_lean_inventory.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_measure_mingli_reliability_performance.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_measure_qwen_tts_capacity.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_prepare_cognitive_training_gate.py",
+      "test_owners": [
+        "tests/test_v50_cognitive_training_gate.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_professional_blind_analyst_calibration.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_expert_reference_workspace.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_frontier_selection.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_7.py",
+        "tests/test_v50_vnext_phase0_g1_8.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_6.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_g1_6.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_7.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_g1_7.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_8.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_9.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_snapshot.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_g1_8.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_replay_mingli_reliability_gate.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_run_balanced_cognitive_benchmark.py",
+      "test_owners": [
+        "tests/test_v50_balanced_cognitive_benchmark.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_cognitive_authority_baseline.py",
+      "test_owners": [
+        "tests/test_v50_cognitive_authority_baseline.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_cognitive_benchmark_v2.py",
+      "test_owners": [
+        "tests/test_v50_cognitive_benchmark_v2_runner.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_cognitive_system_validation.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_run_cross_axis_metamorphic_suite.py",
+      "test_owners": [
+        "tests/test_v50_cross_axis_metamorphic_suite.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_epistemic_fault_injection.py",
+      "test_owners": [
+        "tests/test_v50_epistemic_fault_injection.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_knowledge_coverage_audit.py",
+      "test_owners": [
+        "tests/validation/test_v50_knowledge_coverage_audit.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_live_life_domain_matrix.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_run_live_pattern_telemetry.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_run_mechanism_representation_batch.py",
+      "test_owners": [
+        "tests/test_v50_mechanism_representation.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_mingli_agent_cognitive_benchmark.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_run_mingli_reliability_gate.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_run_model_context_baseline.py",
+      "test_owners": [
+        "tests/test_v50_model_context_baseline.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_policy_anti_overfit_review.py",
+      "test_owners": [
+        "tests/validation/test_v50_policy_anti_overfit_review.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_product.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_run_synthetic_fixture_matrix.py",
+      "test_owners": [
+        "tests/validation/test_v50_synthetic_fixture_matrix.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_synthetic_work_system_fixtures.py",
+      "test_owners": [
+        "tests/validation/test_v50_synthetic_work_system_fixtures.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_timing_synthetic_validation.py",
+      "test_owners": [
+        "tests/validation/test_v50_timing_synthetic_validation.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_run_vnext_phase0_benchmark.py",
+      "test_owners": [
+        "tests/test_v50_vnext_phase0_benchmark.py",
+        "tests/test_v50_vnext_phase0_g1_6.py",
+        "tests/test_v50_vnext_phase0_g1_8.py",
+        "tests/test_v50_vnext_phase0_g1_9.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_upgrade_onecanvas_fixture_v2.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_validate_life_domain_system.py",
+      "test_owners": []
+    },
+    {
+      "path": "scripts/v50_validate_synthetic_chart_taxonomy.py",
+      "test_owners": [
+        "tests/validation/test_v50_synthetic_chart_taxonomy.py"
+      ]
+    },
+    {
+      "path": "scripts/v50_validate_timing_model_candidates.py",
+      "test_owners": [
+        "tests/test_v50_timing_model_candidates.py"
+      ]
+    },
+    {
+      "path": "tools/build_abu_designer_motion.py",
+      "test_owners": [
+        "tests/test_v50_abu_designer_motion_v5.py",
+        "tests/test_v50_abu_designer_motion_v6.py"
+      ]
+    },
+    {
+      "path": "tools/build_abu_opening_scene_v10.py",
+      "test_owners": [
+        "tests/test_v50_abu_opening_scene_v10.py"
+      ]
+    },
+    {
+      "path": "tools/build_abu_video_animation.py",
+      "test_owners": []
+    },
+    {
+      "path": "tools/render_s0_v11.mjs",
+      "test_owners": []
+    },
+    {
+      "path": "tools/render_s0_v12.mjs",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py"
+      ]
+    },
+    {
+      "path": "tools/ziwei-iztro/bridge.mjs",
+      "test_owners": [
+        "tests/test_v50_abu_dual_lens_ziwei.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py",
+        "tests/test_v50_mingli_state_simulator.py",
+        "tests/test_v50_timing_state_evolution.py",
+        "tests/test_v50_unified_state_enrichment.py",
+        "tests/test_v50_unified_theme_bundle_discovery.py",
+        "tests/test_v50_ziwei_dynamic_evidence_engine.py",
+        "tests/validation/test_v50_policy_anti_overfit_review.py",
+        "tests/validation/test_v50_synthetic_fixture_matrix.py"
+      ]
+    }
+  ],
+  "prototypes": [
+    {
+      "path": "apps/product/static/experience/prototypes/abu-motion-gallery-v1",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0-v11",
+      "test_owners": [
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0-v12",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-lab-c2a",
+      "test_owners": [
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-onecanvas-c2ar",
+      "test_owners": [
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/mingli-scene-c1r",
+      "test_owners": [
+        "tests/test_v50_mingli_scene_c1r_prototype.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/s0-shared",
+      "test_owners": [
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/s0-v11-shared",
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/xiangfa-s0-a",
+      "test_owners": [
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "path": "apps/product/static/experience/prototypes/xiangfa-s0-v1",
+      "test_owners": [
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    }
+  ]
+}

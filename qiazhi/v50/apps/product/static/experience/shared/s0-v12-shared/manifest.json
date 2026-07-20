@@ -1,0 +1,20 @@
+{
+  "schema_version": "deepbazi.s0_v11_manifest.v1",
+  "manifest_id": "s0-v11-anonymous-public-source-case-01",
+  "manifest_status": "INTERNAL_CREATIVE_PROTOTYPE",
+  "source_mode": "anonymized_public_source_teaching_case",
+  "identity_disclosed_to_client": false,
+  "allowed_path_ref": "path-observed-jia-ding-geng",
+  "allowed_relation_refs": [
+    "relation-jia-generates-ding",
+    "relation-ding-controls-geng",
+    "relation-year-chen-clashes-day-xu",
+    "relation-hour-chen-clashes-day-xu",
+    "relation-luck-geng-controls-jia",
+    "relation-luck-yin-roots-jia",
+    "relation-year-bing-supports-ding"
+  ],
+  "release_scope": "internal_browser_prototype_and_animatic",
+  "website_release_authorized": false,
+  "public_release_authorized": false
+}

@@ -1,0 +1,430 @@
+{
+  "$defs": {
+    "AllowedChartFact": {
+      "additionalProperties": false,
+      "properties": {
+        "fact_ref": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Fact Ref",
+          "type": "string"
+        },
+        "fact_type": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Fact Type",
+          "type": "string"
+        },
+        "display_value": {
+          "maxLength": 300,
+          "minLength": 1,
+          "title": "Display Value",
+          "type": "string"
+        },
+        "visual_anchor": {
+          "default": "",
+          "maxLength": 120,
+          "title": "Visual Anchor",
+          "type": "string"
+        },
+        "visibility": {
+          "const": "participant_private",
+          "default": "participant_private",
+          "title": "Visibility",
+          "type": "string"
+        }
+      },
+      "required": [
+        "fact_ref",
+        "fact_type",
+        "display_value"
+      ],
+      "title": "AllowedChartFact",
+      "type": "object"
+    },
+    "ApprovedClaim": {
+      "additionalProperties": false,
+      "properties": {
+        "claim_ref": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Claim Ref",
+          "type": "string"
+        },
+        "category": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Category",
+          "type": "string"
+        },
+        "approved_meaning": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Approved Meaning",
+          "type": "string"
+        },
+        "certainty": {
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Certainty",
+          "type": "string"
+        },
+        "conditions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Conditions",
+          "type": "array"
+        },
+        "counter_signals": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Counter Signals",
+          "type": "array"
+        },
+        "temporal_scope": {
+          "default": "natal",
+          "maxLength": 120,
+          "title": "Temporal Scope",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "visual_anchors": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Visual Anchors",
+          "type": "array"
+        },
+        "permitted_uses": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Permitted Uses",
+          "type": "array"
+        }
+      },
+      "required": [
+        "claim_ref",
+        "category",
+        "approved_meaning",
+        "certainty"
+      ],
+      "title": "ApprovedClaim",
+      "type": "object"
+    },
+    "CompetingHypothesis": {
+      "additionalProperties": false,
+      "properties": {
+        "hypothesis_ref": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Hypothesis Ref",
+          "type": "string"
+        },
+        "approved_meaning": {
+          "maxLength": 1000,
+          "minLength": 1,
+          "title": "Approved Meaning",
+          "type": "string"
+        },
+        "supporting_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Supporting Refs",
+          "type": "array"
+        },
+        "unresolved_reason": {
+          "default": "",
+          "maxLength": 600,
+          "title": "Unresolved Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "hypothesis_ref",
+        "approved_meaning"
+      ],
+      "title": "CompetingHypothesis",
+      "type": "object"
+    },
+    "EnvelopeFallback": {
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "enum": [
+            "chart_facts_only",
+            "observer"
+          ],
+          "title": "Mode",
+          "type": "string"
+        },
+        "allowed_content": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Content",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mode"
+      ],
+      "title": "EnvelopeFallback",
+      "type": "object"
+    },
+    "EnvelopeSource": {
+      "additionalProperties": false,
+      "properties": {
+        "chart_version": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Chart Version",
+          "type": "string"
+        },
+        "life_case_version": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Life Case Version"
+        },
+        "temporal_snapshot_version": {
+          "anyOf": [
+            {
+              "maxLength": 160,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Temporal Snapshot Version"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "expires_at": {
+          "format": "date-time",
+          "title": "Expires At",
+          "type": "string"
+        },
+        "source_hash": {
+          "maxLength": 128,
+          "minLength": 32,
+          "title": "Source Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "chart_version",
+        "generated_at",
+        "expires_at",
+        "source_hash"
+      ],
+      "title": "EnvelopeSource",
+      "type": "object"
+    },
+    "EnvelopeUncertainty": {
+      "additionalProperties": false,
+      "properties": {
+        "level": {
+          "default": "high",
+          "enum": [
+            "low",
+            "medium",
+            "high"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        }
+      },
+      "title": "EnvelopeUncertainty",
+      "type": "object"
+    },
+    "ParticipantScope": {
+      "additionalProperties": false,
+      "properties": {
+        "participant_ref": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Participant Ref",
+          "type": "string"
+        },
+        "privacy_level": {
+          "default": "anonymous",
+          "enum": [
+            "anonymous",
+            "account",
+            "client_case"
+          ],
+          "title": "Privacy Level",
+          "type": "string"
+        },
+        "disclosure_level": {
+          "default": "observer",
+          "enum": [
+            "observer",
+            "chart_facts",
+            "approved_insights"
+          ],
+          "title": "Disclosure Level",
+          "type": "string"
+        },
+        "language": {
+          "default": "zh-CN",
+          "maxLength": 20,
+          "minLength": 2,
+          "title": "Language",
+          "type": "string"
+        }
+      },
+      "required": [
+        "participant_ref"
+      ],
+      "title": "ParticipantScope",
+      "type": "object"
+    },
+    "TopicScope": {
+      "additionalProperties": false,
+      "properties": {
+        "topic_id": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Topic Id",
+          "type": "string"
+        },
+        "topic_version": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Topic Version",
+          "type": "string"
+        },
+        "permitted_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Permitted Capabilities",
+          "type": "array"
+        },
+        "prohibited_capabilities": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Prohibited Capabilities",
+          "type": "array"
+        }
+      },
+      "required": [
+        "topic_id",
+        "topic_version"
+      ],
+      "title": "TopicScope",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "envelope_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Envelope Id",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "deepbazi.mingli_experience_envelope.v1",
+      "default": "deepbazi.mingli_experience_envelope.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "mode": {
+      "enum": [
+        "personal_ready",
+        "chart_facts_only",
+        "observer"
+      ],
+      "title": "Mode",
+      "type": "string"
+    },
+    "participant_scope": {
+      "$ref": "#/$defs/ParticipantScope"
+    },
+    "source": {
+      "$ref": "#/$defs/EnvelopeSource"
+    },
+    "topic_scope": {
+      "$ref": "#/$defs/TopicScope"
+    },
+    "allowed_chart_facts": {
+      "items": {
+        "$ref": "#/$defs/AllowedChartFact"
+      },
+      "title": "Allowed Chart Facts",
+      "type": "array"
+    },
+    "approved_claims": {
+      "items": {
+        "$ref": "#/$defs/ApprovedClaim"
+      },
+      "title": "Approved Claims",
+      "type": "array"
+    },
+    "competing_hypotheses": {
+      "items": {
+        "$ref": "#/$defs/CompetingHypothesis"
+      },
+      "title": "Competing Hypotheses",
+      "type": "array"
+    },
+    "uncertainty": {
+      "$ref": "#/$defs/EnvelopeUncertainty"
+    },
+    "must_not_say": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Must Not Say",
+      "type": "array"
+    },
+    "fallback": {
+      "$ref": "#/$defs/EnvelopeFallback"
+    }
+  },
+  "required": [
+    "envelope_id",
+    "mode",
+    "participant_scope",
+    "source",
+    "topic_scope",
+    "fallback"
+  ],
+  "title": "MingliExperienceEnvelope",
+  "type": "object"
+}

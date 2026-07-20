@@ -1,0 +1,47 @@
+{
+  "version": "deepbazi.cognitive_benchmark_matrix.v1",
+  "source_fixture": "synthetic_chart_taxonomy_v1.json",
+  "development": [
+    "tax_month_command_dominant_001",
+    "tax_bridge_node_dominant_001",
+    "tax_converter_dominant_001",
+    "tax_day_branch_anchor_001",
+    "tax_output_to_wealth_001",
+    "tax_output_controls_pressure_001",
+    "tax_resource_disrupts_output_001",
+    "tax_mixed_no_obvious_main_path_001"
+  ],
+  "holdout": [
+    "tax_hidden_stem_dark_line_001",
+    "tax_clash_breaks_main_path_001",
+    "tax_mixed_officer_killing_with_control_001",
+    "tax_wealth_generates_officer_001",
+    "tax_peer_competes_for_wealth_001"
+  ],
+  "metamorphic": [
+    "tax_complete_triple_combination_001",
+    "tax_broken_triple_combination_001",
+    "tax_luck_changes_main_path_001",
+    "tax_year_activates_key_node_001"
+  ],
+  "metamorphic_pairs": [
+    {
+      "pair_id": "triple_combination_integrity",
+      "base_case_id": "tax_complete_triple_combination_001",
+      "variant_case_id": "tax_broken_triple_combination_001",
+      "expectation": "完整组三合应出现对应结构事实；破组应出现破坏关系，且两者不能坍缩为相同结构观察。"
+    },
+    {
+      "pair_id": "timing_changes_activation_not_natal_facts",
+      "base_case_id": "tax_luck_changes_main_path_001",
+      "variant_case_id": "tax_year_activates_key_node_001",
+      "expectation": "时序材料可以改变激活观察，但不得改写原局四柱事实。"
+    }
+  ],
+  "boundaries": {
+    "holdout_research_fixture_prior_allowed": false,
+    "engine_mutation_allowed": false,
+    "prompt_tuning_allowed": false,
+    "training_performed": false
+  }
+}

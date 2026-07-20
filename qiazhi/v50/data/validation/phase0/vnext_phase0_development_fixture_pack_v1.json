@@ -1,0 +1,47 @@
+{
+  "version": "deepbazi.vnext_phase0.development_fixture_pack.v1",
+  "purpose": "self_contained_nonsealed_preflight_inputs",
+  "cases": [
+    {
+      "case_id": "c2.output_to_wealth.01",
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.output_to_wealth.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲子",
+        "gender": "male",
+        "hour_pillar": "戊子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊戌",
+        "name": "c2.output_to_wealth.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丙辰"
+      }
+    },
+    {
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mixed_no_obvious_main_path.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丙寅",
+        "gender": "male",
+        "hour_pillar": "丙午",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己酉",
+        "name": "c2.mixed_no_obvious_main_path.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲戌"
+      }
+    }
+  ],
+  "boundaries": {
+    "contains_formal_cases": false,
+    "contains_model_selection_cases": false,
+    "formal_score_allowed": false
+  }
+}

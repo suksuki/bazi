@@ -1,0 +1,149 @@
+{
+  "schema_version": "deepbazi.s0_approved_teaching_projection.v1",
+  "projection_id": "s0-candidate-a-approved-teaching-projection-v1",
+  "fixture_id": "s0-fixture-candidate-a",
+  "source_mode": "approved_anonymous_teaching_fixture",
+  "approval_scope": "internal_teaching_projection",
+  "professional_confidence": "medium",
+  "professional_decision_ref": "reports/abu-says-mingli-s0/g1/S0_G1_CANDIDATE_A_PROFESSIONAL_DECISION_LOCK_V1.json",
+  "source_lineage": {
+    "c0_fixture_ref": "packages/experience/fixtures/temporal_sandbox_c0_v1.json",
+    "c0_fixture_sha256": "4d7c5cb1bd332b26024494247c8627687946ed519fea93a0899347a428435c5c",
+    "candidate_snapshot_ref": "reports/abu-says-mingli-s0/g1/sources/s0-fixture-candidate-a.json",
+    "candidate_snapshot_sha256": "d70880bfb440ecee9a9614c501aade2b37e3ca4b3cc33beeaf83e362a9df56ed",
+    "chart_version_ref": "chart-temporal-c0-v1",
+    "world_ref": "world-temporal-c0-v1",
+    "fixture_life_case_ref": "life-case-temporal-c0-v1"
+  },
+  "identity_boundary": {
+    "anonymous": true,
+    "real_user_life_case": false,
+    "birth_datetime_included": false,
+    "birth_location_included": false,
+    "reality_feedback_included": false,
+    "event_prediction_authorized": false
+  },
+  "chart": {
+    "semantic_slots": [
+      {"slot_ref": "slot-natal-year", "label": "年柱", "pillar": "丁巳"},
+      {"slot_ref": "slot-natal-month", "label": "月柱", "pillar": "乙巳"},
+      {"slot_ref": "slot-natal-day", "label": "日柱", "pillar": "乙丑"},
+      {"slot_ref": "slot-natal-hour", "label": "时柱", "pillar": "乙酉"}
+    ]
+  },
+  "approved_natal_path": {
+    "path_ref": "path-committed-output-pressure",
+    "public_label": "正式主路径",
+    "professional_expression": "乙木生丁火，丁火制约金结构",
+    "node_refs": [
+      "node-stem-day-yi",
+      "node-stem-year-ding",
+      "node-metal-structure"
+    ],
+    "relation_refs": [
+      "relation-yi-generates-ding",
+      "relation-ding-acts-on-metal"
+    ],
+    "terminal_label": "金结构",
+    "terminal_uncertainty": "金结构是教学投影中的候选结构，不表示巳酉丑无条件完全合化。",
+    "epistemic_status": "analyst_approved_teaching_projection"
+  },
+  "approved_temporal_stages": [
+    {
+      "stage_id": "s0-stage-luck-gengzi",
+      "temporal_ref": "snapshot-luck-gengzi-v1",
+      "pillar_slot_ref": "slot-luck-gengzi",
+      "pillar": "庚子",
+      "display_node_refs": ["node-luck-geng", "node-luck-zi"],
+      "approved_relation_refs": ["relation-luck-geng-controls-yi"],
+      "path_ref": "path-committed-output-pressure",
+      "approved_discrete_change": "weakened",
+      "relative_to": "original_chart",
+      "affected_object_refs": [
+        "node-stem-day-yi",
+        "relation-yi-generates-ding",
+        "path-committed-output-pressure"
+      ],
+      "approved_explanation": "庚作用于乙木路径源端，使源端向丁火的输出受到牵制，路径仍存在但支持相对原局下降。",
+      "display_label": "源端受制，路径支持减弱",
+      "forbidden_inferences": [
+        "子水独立作用",
+        "火侧直接受制",
+        "金侧必然增强",
+        "blocked",
+        "整体吉凶或现实事件"
+      ]
+    },
+    {
+      "stage_id": "s0-stage-year-bingwu",
+      "temporal_ref": "snapshot-year-bingwu-v1",
+      "pillar_slot_ref": "slot-year-bingwu",
+      "pillar": "丙午",
+      "display_node_refs": ["node-year-bing", "node-year-wu"],
+      "approved_relation_refs": ["relation-year-bing-supports-ding"],
+      "path_ref": "path-committed-output-pressure",
+      "approved_discrete_change": "reinforced",
+      "relative_to": "luck_stage",
+      "affected_object_refs": [
+        "node-stem-year-ding",
+        "relation-year-bing-supports-ding",
+        "path-committed-output-pressure"
+      ],
+      "approved_explanation": "丙火支持原局丁火路径节点，使火侧相对庚子阶段重新获得支持，路径相对前一阶段增强。",
+      "display_label": "火侧得助，路径相对前一阶段增强",
+      "forbidden_inferences": [
+        "午支独立作用",
+        "超过原局基线",
+        "fully_restored",
+        "整盘全面逆转",
+        "整体吉凶或现实事件"
+      ]
+    }
+  ],
+  "approved_animation_cues": [
+    {
+      "cue_id": "s0-cue-natal-path-reveal",
+      "stage": "original_chart",
+      "path_ref": "path-committed-output-pressure",
+      "relation_refs": [
+        "relation-yi-generates-ding",
+        "relation-ding-acts-on-metal"
+      ],
+      "allowed_action": "reveal_path_segments_in_order"
+    },
+    {
+      "cue_id": "s0-cue-luck-source-constrained",
+      "stage": "snapshot-luck-gengzi-v1",
+      "path_ref": "path-committed-output-pressure",
+      "relation_refs": ["relation-luck-geng-controls-yi"],
+      "target_node_refs": ["node-stem-day-yi"],
+      "allowed_action": "show_source_constraint_and_slow_path_without_breaking_it"
+    },
+    {
+      "cue_id": "s0-cue-year-fire-supported",
+      "stage": "snapshot-year-bingwu-v1",
+      "path_ref": "path-committed-output-pressure",
+      "relation_refs": ["relation-year-bing-supports-ding"],
+      "target_node_refs": ["node-stem-year-ding"],
+      "allowed_action": "show_ding_support_and_strengthen_path_relative_to_luck_stage"
+    }
+  ],
+  "presentation_copy": {
+    "original": "原局：路径成立",
+    "luck": "庚子：源端受制",
+    "year": "丙午：火侧得助"
+  },
+  "global_forbidden_claims": [
+    "系统最佳路径",
+    "算法最优路径",
+    "巳酉丑无条件完全化金",
+    "路径强度百分比或概率",
+    "weakened 等于 blocked",
+    "reinforced 等于 fully_restored",
+    "丙午超过原局基线",
+    "教学 Fixture 是真实用户命例",
+    "任何必然现实事件"
+  ],
+  "formal_state_write": false,
+  "source_fixture_modified": false
+}

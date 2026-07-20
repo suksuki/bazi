@@ -1,0 +1,94 @@
+{
+  "version": "v50.abu.designer_motion.v1",
+  "status": "production",
+  "motion": "turn_and_point",
+  "action_id": "abu_turn_and_point_v1",
+  "action_family": "guide",
+  "source_type": "extracted_video",
+  "source": {
+    "filename": "你赶紧生成里面的视频.mp4",
+    "sha256": "2e379f33437fffa32e5b7e5a0d8f662f6b692d3db1b77679d5a78843c94318e0",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      5.45,
+      7.35
+    ]
+  },
+  "canvas": [
+    720,
+    720
+  ],
+  "anchor": [
+    0.5,
+    0.9722222222222222
+  ],
+  "actor_contract": {
+    "facing": "right",
+    "gaze_target": "semantic_object",
+    "safe_crop": "full_body",
+    "background": "transparent",
+    "flip_horizontal": false,
+    "loop_mode": "one_shot",
+    "recommended_contexts": [
+      "onecanvas_reveal",
+      "relation_focus",
+      "xiangfa_transition"
+    ]
+  },
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    408,
+    56,
+    970,
+    690
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 10.0,
+    "high": 30.0
+  },
+  "webp": {
+    "quality": 92,
+    "method": 3,
+    "loop_count": 1
+  },
+  "runtime_display": {
+    "scale": 1.0,
+    "stage_profile": "standard",
+    "playback": "one_shot",
+    "category": "guidance"
+  },
+  "animation": "web/abu_turn_and_point_v1.webp",
+  "video": "web/abu_turn_and_point_v1.webm",
+  "poster": "posters/abu_turn_and_point_v1.png",
+  "contact_sheet": "contact-sheets/abu_turn_and_point_v1_contact_sheet.png",
+  "frame_count": 29,
+  "duration_ms": 1933,
+  "bytes": 1533588,
+  "delivery_bytes": {
+    "webp": 1533588,
+    "webm": 2314023
+  },
+  "usage": [
+    "onecanvas_reveal",
+    "relation_focus",
+    "xiangfa_transition"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "version": "deepbazi.vnext_phase0.development_set.v1",
+  "purpose": "harness_debugging_and_policy_development_only",
+  "sealed_evaluation_eligible": false,
+  "cases": [
+    {
+      "case_id": "c2.output_to_wealth.01",
+      "benchmark_role": "development_contrast",
+      "reason": "Used in the 2026-07-13 harness dry run and therefore no longer sealed."
+    },
+    {
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "benchmark_role": "development_ambiguous",
+      "reason": "Used in the 2026-07-13 harness dry run and therefore no longer sealed."
+    }
+  ],
+  "boundaries": {
+    "formal_score_allowed": false,
+    "prompt_or_model_policy_tuning_allowed": true,
+    "expert_reference_required": false
+  }
+}

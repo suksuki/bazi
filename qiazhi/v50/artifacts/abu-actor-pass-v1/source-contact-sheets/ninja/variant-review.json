@@ -1,0 +1,24 @@
+{
+  "version": "v50.abu.ninja_source_review.v1",
+  "selected_variant": "sitting_full_body",
+  "variants": [
+    {
+      "variant": "sitting_full_body",
+      "source_sha256": "cfaf404ed9e7441d6aa9c9bd5737e5288dacc08e8e4fff3bc0d83f0ff678effb",
+      "status": "selected_for_production",
+      "reason": "完整坐姿保持 Abu 的可爱体态，避免片尾以双脚直立形象突兀开场。"
+    },
+    {
+      "variant": "standing_full_body",
+      "source_sha256": "dfdbb220211e2d79557a762e636160a7fe4afce270a7dafe6adfaf05923c9fcf",
+      "status": "candidate_pose_hold",
+      "reason": "双脚直立形象改变了 Abu 的常规体态，片尾第一眼过于突兀。"
+    },
+    {
+      "variant": "half_body",
+      "source_sha256": "253eb763a8ab40c970da366081cdbd2eafa75ef1b0a321d4d485a36f560c18e6",
+      "status": "candidate_framing_hold",
+      "reason": "开场为半身近景，无法与片尾全身角色无缝衔接。"
+    }
+  ]
+}

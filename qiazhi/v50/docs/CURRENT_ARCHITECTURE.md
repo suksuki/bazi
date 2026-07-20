@@ -1,0 +1,207 @@
+# DeepBazi V50 Current Architecture
+
+> Canonical architecture entry point
+>
+> Updated: 2026-07-20
+
+## 1. Product Identity
+
+DeepBazi is a professional intelligent Mingli system with long-term LifeCase continuity.
+
+```text
+first understand the chart
+→ then understand domains and timing
+→ then support observation, verification and action
+```
+
+Abu is the guided explanation and interaction companion. Abu is not an independent source of Mingli facts and does not create a second judgment.
+
+## 2. Cognitive Authority
+
+```text
+Deterministic fact engines
+→ provide immutable chart, calendar and temporal facts
+
+Mingli World and tools
+→ provide relevant knowledge, structures and experimental candidates
+
+LLM Mingli Reasoner
+→ performs whole-chart pattern recognition, hypothesis comparison and domain reasoning
+
+Reliability and epistemic review
+→ checks facts, provenance, uncertainty and release eligibility
+
+LifeCase
+→ stores the committed case cognition and revision history
+```
+
+The LLM is the whole-chart cognitive reasoner. Deterministic modules define the world, calculate facts, expose tools, and enforce boundaries; they do not replace holistic Mingli reasoning.
+
+## 3. Layered Architecture
+
+```mermaid
+flowchart TD
+    subgraph Domain["Domain"]
+      CC["Chart / Calendar"]
+      DT["DaYun / Temporal"]
+      RC["Relation Core"]
+      PC["Path Core"]
+      LC["LifeCase"]
+    end
+
+    subgraph Application["Application"]
+      WM["Mingli World Compiler"]
+      CX["Reasoning Context Compiler"]
+      OR["Reasoning Orchestrator"]
+      RV["Reliability Review"]
+      SB["Sandbox Controller"]
+      SC["Scene Compiler"]
+    end
+
+    subgraph Presentation["Presentation"]
+      EX["Experience Shell"]
+      OC["OneCanvas"]
+      AB["Abu / Narrated Workspace"]
+      TH["Theater / Xiangfa"]
+      IN["Inspector / Gallery"]
+    end
+
+    Domain --> Application
+    Application --> Presentation
+```
+
+Only downward dependencies are allowed. Presentation emits intents and renders role-filtered ViewModels. It may not calculate calendar legality, DaYun, relations, paths, epistemic status, or formal Diff semantics.
+
+## 4. Formal Case Flow
+
+```text
+Birth Profile
+→ Bazi and Ziwei fact engines
+→ Chart World Instance
+→ minimal sufficient Context
+→ LLM whole-chart cognition
+→ reliability and epistemic review
+→ Formal Insight
+→ LifeCase revision
+→ on-demand domain and temporal reasoning
+→ reality evidence and case revision
+→ Abu / page / voice / Canvas projections
+```
+
+First-run cognition aims for one primary LLM call. Repair is limited to machine-identifiable structural issues. The page never waits for all future domains to be reasoned at once.
+
+## 5. Data Authorities
+
+| Data | Authority |
+|---|---|
+| four pillars and chart facts | ChartVersion and deterministic engines |
+| legal pillar targets | `PillarTargetDraft → solve_chart_constraints → ChartResolution` |
+| legal calendar candidates | strict Birth Calendar authority and `pillar_cycle` catalogs |
+| DaYun and temporal snapshot | application-facing `CanonicalTemporalService` |
+| whole-chart baseline | committed LifeCase baseline insight |
+| domain cognition | committed LifeCase domain insight |
+| reality feedback | LifeCase reality evidence |
+| current task and navigation | Workspace / Journey state |
+| user experiment | isolated Sandbox state |
+| user-drawn path | PathDraft, never formal by default |
+| role disclosure | server-side disclosure policy |
+
+Legacy reports, page state, conversation history, frontend storage, and generated prose are not formal Mingli authorities.
+
+## 6. Current Runtime Reality
+
+The target layers above are partially implemented. The following current-state distinctions are mandatory:
+
+- Graph v1, Path v1, Role v1, and estimated ablation are experimental advisory tools.
+- Mechanism, unified state, and legacy timing research projections are not production judgment authorities.
+- LifeCase is the formal case authority, but professional accuracy still requires human blind adjudication.
+- C0 Canvas contracts are deterministic and tested.
+- C1R and old C2A are archived proofs outside the runtime static tree.
+- R1 OneCanvas under `experience/active/onecanvas-r1` is the only user-side Canvas candidate.
+- Xiangfa Generation V1 is a retained, paused visual-validation route, not a cognitive owner.
+- S0 V1.2 and the Abu motion gallery are internal tools, not product routes.
+- Relation Atlas is a frozen design baseline; RA1 has not started.
+- the legacy L5 shell still serves `/` and `/app` and is `active_retiring`.
+- `/experience` is the new Experience Shell.
+- production deployment of OneCanvas and Relation Atlas is blocked.
+
+Known consolidation defects and their gates are defined in
+`V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V2.md`. L2 has since closed the Chart and
+Temporal authority defects: the server-owned global Solver returns zero, one
+or many legal variants; `CanonicalTemporalService` owns application DaYun
+facts; and browser-side Mingli derivation has been removed.
+
+The remaining R1 gap is presentation and interaction, not a second chart
+algorithm. The current OneCanvas wrapper submits complete targets and only
+projects a selected single variant. Before unguided human review, it must expose
+the existing `multiple_solutions` and `no_solution` contracts, including
+candidate choice, conflicts and releasable constraints, without reconstructing
+them in the browser.
+
+## 7. OneCanvas Architecture
+
+OneCanvas uses six semantic slots and twelve primary nodes as the single interaction space:
+
+```text
+year | month | day | hour | DaYun | annual
+ stem and branch for each slot
+```
+
+```text
+Li   = semantic structure
+Xiang = visual mapping of the same semantic objects
+Time  = deterministic playback of changes in the same scene
+```
+
+They are not three pages and must not create duplicate nodes or relations.
+
+Formal chart and Sandbox experiment are separate. DaYun is derived and never freely edited. The annual observation is selected by Gregorian year. User PathDraft and system/formal paths coexist with distinct epistemic status.
+
+## 8. Relation and Path Direction
+
+Relation Core V2 and Path Core V2 remain blocked until the R1 human gate and
+Architecture Consolidation Gates D/E/F pass.
+
+```text
+Relation Core V2
+→ typed binary and hyper relations
+→ temporal activation and context modifiers
+→ provenance, school profile and ontology version
+
+Path Core V2
+→ ordered path candidates and assertions
+→ segment eligibility and whole-path validation
+→ typed evidence, blockers and temporal states
+```
+
+The LLM compares and synthesizes professionally meaningful hypotheses. Relation/Path Core guarantees structure, sources, and legal operations.
+
+## 9. Hard Invariants
+
+1. Experimental observations cannot enter the independent first look as production facts.
+2. Frontend code cannot infer Mingli semantics.
+3. Sandbox operations never write ChartVersion or LifeCase.
+4. Role-filtered objects do not enter payload, client state, DOM, or fallback reconstruction.
+5. Candidate, committed, blocked, hypothetical, and presentation-only states remain distinct.
+6. DaYun is deterministic and cannot be manually fabricated.
+7. Abu explains the current formal or Sandbox context; it does not invent a new chart.
+8. Historical LifeCase cognition is versioned and never silently rewritten.
+9. Machine tests, product review, professional review, and production release are independent gates.
+10. A prototype cannot become a new authority by being visually persuasive.
+
+## 10. Governing Documents
+
+- `CURRENT_PRODUCT_BASELINE.md`
+- `CURRENT_IMPLEMENTATION_ROADMAP.md`
+- `V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V2.md`
+- `DECISION_REGISTER.md`
+- `config/data_authority_v1.json`
+- `config/runtime_authority_v1.json`
+- `config/legacy_register_v1.json`
+- `config/artifact_retention_v1.json`
+- `V50_DEEP_CLEANUP_AND_LARGE_FILE_GOVERNANCE_V1.md`
+- `product/PRODUCT_CONSTITUTION_V1_1.md`
+- `product/LIFE_CASE_AND_FORMAL_INSIGHT_V1.md`
+- `product/V50_MINGLI_RELATION_ATLAS_CONSTITUTION_AND_ONECANVAS_LENS_V1.md`
+
+When an older document conflicts with this file or the Decision Register, the newer current entry point and explicit supersession record control.

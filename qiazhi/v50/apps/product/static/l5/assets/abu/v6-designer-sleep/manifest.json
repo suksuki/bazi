@@ -1,0 +1,64 @@
+{
+  "version": "v50.abu.designer_motion.v6",
+  "status": "production",
+  "motion": "sleep_breathe",
+  "source": {
+    "filename": "赶紧给我生成一个新的阿布睡觉的视频，五秒钟.mp4",
+    "sha256": "76333476f95210a0c807b7fa4dbe0f3c6c04f944b05eb856af096a9f7d658526",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      3.8,
+      7.6
+    ]
+  },
+  "canvas": [
+    720,
+    720
+  ],
+  "anchor": [
+    0.5,
+    0.9722222222222222
+  ],
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    318,
+    55,
+    967,
+    689
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 30.0,
+    "high": 56.0
+  },
+  "webp": {
+    "quality": 93,
+    "method": 6
+  },
+  "animation": "web/abu_sleep_breathe_v6.webp",
+  "poster": "posters/abu_sleep_breathe_v6.png",
+  "frame_count": 58,
+  "duration_ms": 3867,
+  "bytes": 3678410,
+  "usage": [
+    "idle_timeout",
+    "quiet_waiting"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

@@ -1,0 +1,71 @@
+{
+  "version": "v50.abu.designer_motion.v9",
+  "status": "production",
+  "motion": "breakdance",
+  "source": {
+    "filename": "来一个阿布挑霹雳舞的视频～.mp4",
+    "sha256": "04adff7578bf784582aa2285888870414c2aee528a650b5f3e97943df1c6e6d7",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      0.0,
+      9.93
+    ]
+  },
+  "canvas": [
+    960,
+    720
+  ],
+  "anchor": [
+    0.5,
+    0.9722222222222222
+  ],
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    100,
+    10,
+    1030,
+    720
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 20.0,
+    "high": 42.0
+  },
+  "webp": {
+    "quality": 94,
+    "method": 6,
+    "loop_count": 1
+  },
+  "runtime_display": {
+    "scale": 1.12,
+    "stage_profile": "wide",
+    "playback": "one_shot",
+    "category": "ambient"
+  },
+  "animation": "web/abu_breakdance_v9.webp",
+  "poster": "posters/abu_breakdance_v9.png",
+  "frame_count": 150,
+  "duration_ms": 10000,
+  "bytes": 8322562,
+  "usage": [
+    "awake_idle_random",
+    "celebration_ambient"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

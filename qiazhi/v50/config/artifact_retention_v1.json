@@ -1,0 +1,75 @@
+{
+  "schema_version": "deepbazi.artifact_retention.v1",
+  "frozen_at": "2026-07-19",
+  "classes": {
+    "current_authority": {
+      "examples": [
+        "docs/CURRENT_ARCHITECTURE.md",
+        "docs/CURRENT_PRODUCT_BASELINE.md",
+        "docs/CURRENT_IMPLEMENTATION_ROADMAP.md",
+        "docs/DECISION_REGISTER.md"
+      ],
+      "policy": "edit_in_place_with_explicit_decision_record"
+    },
+    "frozen_proof": {
+      "examples": [
+        "docs/archive/proofs",
+        "archive/proofs/prototypes/mingli-scene-c1r",
+        "archive/proofs/prototypes/mingli-lab-c2a",
+        "archive/proofs/prototypes/abu-says-mingli-s0-v11"
+      ],
+      "policy": "retain_for_regression_no_parallel_product_evolution"
+    },
+    "active_retiring_runtime": {
+      "examples": [
+        "apps/product/static/l5",
+        "/",
+        "/app",
+        "/api/v50/agent/**"
+      ],
+      "policy": "retain_until_usage_parity_migration_and_rollback_gates_pass"
+    },
+    "generated_fixture": {
+      "examples": [
+        "apps/product/static/experience/active/onecanvas-r1/fixture.json"
+      ],
+      "policy": "compact_regenerable_no_manual_semantic_edits"
+    },
+    "locked_evidence": {
+      "examples": [
+        "reports/cognitive-authority-baseline",
+        "reports/abu-voice-review-v1"
+      ],
+      "policy": "retain_until_an_explicit_manifested_retention_decision"
+    },
+    "media_source": {
+      "examples": [
+        "apps/product/static/l5/assets/abu/*/source",
+        "apps/product/static/l5/assets/abu/*/transition"
+      ],
+      "policy": "retain_master_and_anchor_assets_optimize_delivery_copies_only"
+    },
+    "media_delivery": {
+      "examples": [
+        "apps/product/static/l5/assets/abu/*/web"
+      ],
+      "policy": "retain_while_referenced_replace_only_after_visual_and_browser_parity"
+    },
+    "disposable": {
+      "examples": [
+        ".pytest_cache",
+        "**/__pycache__",
+        "*.pyc",
+        "unreferenced_sample_frames"
+      ],
+      "policy": "delete_without_migration_after_reference_check"
+    }
+  },
+  "large_file_rules": {
+    "review_lines": 800,
+    "mandatory_split_plan_lines": 1500,
+    "generated_data_and_media_exempt": true,
+    "legacy_retiring_files_are_retired_not_refactored": true,
+    "splits_follow_authority_and_responsibility_not_line_count": true
+  }
+}

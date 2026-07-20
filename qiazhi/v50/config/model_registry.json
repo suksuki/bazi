@@ -1,0 +1,61 @@
+{
+  "version": "v50.model_registry.v2",
+  "default_endpoint": "http://192.168.0.7:11434",
+  "roles": {
+    "cognitive_whole_chart": {
+      "model": "qwen3.5:35b",
+      "endpoint_env": "V50_MINGLI_AGENT_BASE_URL",
+      "model_env": "V50_MINGLI_AGENT_MODEL",
+      "reason": "Primary world-grounded whole-chart cognitive reasoner.",
+      "options": {
+        "temperature": 0,
+        "num_ctx": 32768,
+        "think": false
+      }
+    },
+    "cognitive_pattern": {
+      "model": "qwen3.5:35b",
+      "model_env": "V50_MINGLI_PATTERN_MODEL",
+      "reason": "Same cognitive authority; avoids an unvalidated model switch at first-look pattern discovery."
+    },
+    "cognitive_work_path": {
+      "model": "qwen3.5:35b",
+      "model_env": "V50_MINGLI_WORK_MODEL",
+      "reason": "Preserves causal continuity from pattern to work path."
+    },
+    "cognitive_domain": {
+      "model": "qwen3.5:35b",
+      "model_env": "V50_MINGLI_DOMAIN_MODEL",
+      "reason": "Career, wealth, and other domains are cognition tasks, not expression tasks."
+    },
+    "intake": {
+      "model": "qwen3:8b",
+      "model_env": "V50_ABU_INTAKE_MODEL",
+      "reason": "Structured birth-information extraction only; never performs Mingli judgment."
+    },
+    "expression_candidate": {
+      "model": "gemma4:latest",
+      "model_env": "V50_ABU_LLM_MODEL",
+      "reason": "Natural-language expression and Abu phrasing after deterministic command planning."
+    },
+    "research_teacher_candidate": {
+      "model": "qwen3.6:27b",
+      "reason": "Shadow comparison, failure analysis, and counter-example generation only until blind expert review."
+    },
+    "embedding_primary": {
+      "model": "bge-m3:latest",
+      "reason": "Knowledge retrieval and semantic clustering."
+    },
+    "embedding_secondary": {
+      "model": "nomic-embed-text:latest",
+      "reason": "Lightweight embedding fallback."
+    }
+  },
+  "forbidden": [
+    "Do not assign expression-validated models to cognitive judgment without a blind cognitive benchmark.",
+    "Do not expose synthetic expected contracts to any cognitive model.",
+    "Do not lower the cognitive model merely to improve latency.",
+    "Do not treat model output as fact when it conflicts with the immutable chart ledger.",
+    "Do not fine-tune weights before expert gold and a sealed blind set exist."
+  ]
+}

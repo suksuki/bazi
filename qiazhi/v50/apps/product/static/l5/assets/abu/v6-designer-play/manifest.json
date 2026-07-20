@@ -1,0 +1,64 @@
+{
+  "version": "v50.abu.designer_motion.v6",
+  "status": "production",
+  "motion": "butterfly_play",
+  "source": {
+    "filename": "不错，再来阿布嬉戏扑蝴蝶视频.mp4",
+    "sha256": "59b5064310d0b9b3689c0c8a695059dd302f1881a730c8044110b0295ce78515",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      2.0,
+      7.0
+    ]
+  },
+  "canvas": [
+    960,
+    640
+  ],
+  "anchor": [
+    0.5,
+    0.96875
+  ],
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    70,
+    20,
+    1030,
+    700
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 36.0,
+    "high": 64.0
+  },
+  "webp": {
+    "quality": 93,
+    "method": 6
+  },
+  "animation": "web/abu_butterfly_play_v6.webp",
+  "poster": "posters/abu_butterfly_play_v6.png",
+  "frame_count": 76,
+  "duration_ms": 5067,
+  "bytes": 5996914,
+  "usage": [
+    "awake_idle_random",
+    "ambient_companion_moment"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

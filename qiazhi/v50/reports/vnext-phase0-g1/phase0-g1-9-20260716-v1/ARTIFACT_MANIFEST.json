@@ -1,0 +1,62 @@
+{
+  "version": "deepbazi.vnext_phase0.g1_9_artifact_manifest.v1",
+  "run_id": "phase0-g1-9-20260716-v1",
+  "files": [
+    {
+      "path": "MASTER_AUDIT_REPORT.json",
+      "sha256": "f05ccb69d462828081318c612731fa5f0e5f7a45f08dcc58ccb9e1478fad91d2"
+    },
+    {
+      "path": "MASTER_AUDIT_REPORT.md",
+      "sha256": "97767ddba6a50c8dcb88daf348db6456cde36ebff9815f3dddcda52ddd19be9f"
+    },
+    {
+      "path": "P0_G1_9_MACHINE_LOCK_CANDIDATE.json",
+      "sha256": "8a6cd9507ce8ea67cf3ed51569e2a28de71371fe12510b3635cd86064df1a45f"
+    },
+    {
+      "path": "execution-snapshot/EXECUTION_SNAPSHOT_CANDIDATE.json",
+      "sha256": "45dd37d87b303595370f4dd657f0e7509f0c77c0cff0c8a2d1d62348dc784f63"
+    },
+    {
+      "path": "execution-snapshot/EXECUTION_SNAPSHOT_README.md",
+      "sha256": "c2a22564ecdf49614915126a83dce91c544db11ce1b6fee020ea3668439533e7"
+    },
+    {
+      "path": "nonsealed-preflight/phase0_checkpoint.jsonl",
+      "sha256": "d50f89304d4e8f4417d9b99c17956a05589c0c123e2536d55b6ebab831de59f6"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_artifact_manifest_v1.json",
+      "sha256": "9d190959475bd8a67d1dab6be16852dcd2f37bf04338e03afaf241ff12c60802"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_benchmark_report_v1.json",
+      "sha256": "2f378d83d923519d8b79249ab389f3cc895d14433baffe77d06e429a787dc627"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_benchmark_report_v1.md",
+      "sha256": "0c74aee3150ce8efc1728ab19a8c5adb7306c8b1c67ee4f03f58e368e5d1a6e9"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_blind_review_packet_v1.md",
+      "sha256": "f6f688798151cecf6aff8e4cc41109795d565003c7509099cc649069585cf54c"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_expert_reference_freeze_packet_v1.md",
+      "sha256": "3c73c1deab99b400d963b36efd2de7f3c603c8b1f49b4d7bd31f2cfea944f07b"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_operator_lane_map_v1.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_pairwise_review_packet_v1.md",
+      "sha256": "4ba0cfa37ea77469d6b784c0ea89b29db0c75ed02369d2c95bf5d15e014e2bd9"
+    },
+    {
+      "path": "nonsealed-preflight/vnext_phase0_raw_outputs_v1.jsonl",
+      "sha256": "84c620d5a8b56eb4dddc7de1b721fbf39fbf725fe45cbc24e878edd0cc2993cc"
+    }
+  ]
+}

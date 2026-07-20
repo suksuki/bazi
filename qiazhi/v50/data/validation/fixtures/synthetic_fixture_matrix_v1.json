@@ -1,0 +1,256 @@
+{
+  "group": "synthetic_fixture_matrix_v1",
+  "description": "Synthetic Fixture Matrix v1 validates Graph -> Path -> Role -> Importance -> Ablation -> FlowState -> StateEvolution. It is not a final judgment or report test.",
+  "source_fixture": "synthetic_work_system_v1.json",
+  "cases": [
+    {
+      "case_id": "matrix_bridge_node_si_you_chou_complete",
+      "source_case_id": "bridge_node_si_you_chou_complete",
+      "matrix_category": "bridge_converter_flow",
+      "expected_flow_states": [
+        {
+          "mechanism": "output_controls_pressure",
+          "min_output_strength": 0.8,
+          "min_path_score": 0.75,
+          "min_ablation_sensitivity": 0.9,
+          "required_node_labels": ["酉:hour_branch", "丁:year_stem"]
+        },
+        {
+          "mechanism": "output_to_wealth",
+          "min_output_strength": 0.5,
+          "min_path_score": 0.75,
+          "min_ablation_sensitivity": 0.7,
+          "required_node_labels": ["酉:hour_branch", "丁:year_stem"]
+        }
+      ],
+      "temporal_state": {
+        "timing_layer": "luck_year",
+        "activated_paths": ["path.synthetic.bridge.output_control"],
+        "weakened_nodes": ["丁:year_stem"],
+        "rerouted_flows": ["flow.resource_backflow"],
+        "mechanism_shifts": {"output_controls_pressure": 0.42},
+        "evidence_refs": ["timing.synthetic.luck_year.bridge_weakens_converter"],
+        "confidence": 0.7
+      },
+      "expected_state_evolution": {
+        "mechanism": "output_controls_pressure",
+        "domain": "career",
+        "trend": "volatile",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"timing_mechanism_shift": "negative"},
+        "required_activated_by": ["luck_year.path_activation", "luck_year.mechanism_shift"],
+        "required_suppressed_by": ["luck_year.weakened_nodes", "luck_year.rerouted_flow"]
+      },
+      "forbidden_flow_mechanisms": ["structural_baseline"]
+    },
+    {
+      "case_id": "matrix_bridge_removed_no_you",
+      "source_case_id": "bridge_removed_no_you",
+      "matrix_category": "bridge_removed_flow_reroute",
+      "expected_flow_states": [
+        {
+          "mechanism": "output_to_wealth",
+          "min_output_strength": 0.5,
+          "min_path_score": 0.65,
+          "min_ablation_sensitivity": 0.85,
+          "required_node_labels": ["丁:year_stem"]
+        }
+      ],
+      "temporal_state": {
+        "timing_layer": "luck",
+        "activated_paths": ["path.synthetic.bridge_removed.wealth"],
+        "mechanism_shifts": {"output_to_wealth": 0.68},
+        "evidence_refs": ["timing.synthetic.luck.bridge_removed_wealth_activation"],
+        "confidence": 0.68
+      },
+      "expected_state_evolution": {
+        "mechanism": "output_to_wealth",
+        "domain": "wealth",
+        "trend": "increasing",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"timing_mechanism_shift": "positive"},
+        "required_activated_by": ["luck.path_activation", "luck.mechanism_shift"]
+      },
+      "forbidden_flow_mechanisms": ["output_controls_pressure"]
+    },
+    {
+      "case_id": "matrix_converter_removed_no_ding",
+      "source_case_id": "converter_removed_no_ding",
+      "matrix_category": "converter_removed_flow_loss",
+      "expected_flow_states": [
+        {
+          "mechanism": "output_to_wealth",
+          "min_output_strength": 0.5,
+          "min_path_score": 0.7,
+          "min_ablation_sensitivity": 0.9,
+          "required_node_labels": ["酉:hour_branch"]
+        }
+      ],
+      "temporal_state": {
+        "timing_layer": "luck_year",
+        "weakened_nodes": ["酉:hour_branch"],
+        "rerouted_flows": ["flow.resource_backflow"],
+        "mechanism_shifts": {"output_to_wealth": 0.3},
+        "evidence_refs": ["timing.synthetic.luck_year.converter_removed_bridge_pressure"],
+        "confidence": 0.66
+      },
+      "expected_state_evolution": {
+        "mechanism": "output_to_wealth",
+        "domain": "wealth",
+        "trend": "volatile",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"timing_mechanism_shift": "negative"},
+        "required_suppressed_by": ["luck_year.weakened_nodes", "luck_year.rerouted_flow"]
+      },
+      "forbidden_flow_mechanisms": ["output_controls_pressure"]
+    },
+    {
+      "case_id": "matrix_month_command_dominant_without_bridge",
+      "source_case_id": "month_command_dominant_without_bridge",
+      "matrix_category": "month_command_can_rank_without_unconditional_control",
+      "expected_flow_states": [
+        {
+          "mechanism": "output_to_wealth",
+          "min_output_strength": 0.5,
+          "min_path_score": 0.6,
+          "min_ablation_sensitivity": 0.85,
+          "required_node_labels": ["午:month_branch"]
+        }
+      ],
+      "expected_state_evolution": {
+        "mechanism": "output_to_wealth",
+        "domain": "wealth",
+        "trend": "increasing",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"path_activation": "positive", "structural_sensitivity": "positive"}
+      },
+      "forbidden_flow_mechanisms": ["output_controls_pressure"]
+    },
+    {
+      "case_id": "matrix_day_branch_anchor_type",
+      "source_case_id": "day_branch_anchor_type",
+      "matrix_category": "anchor_baseline",
+      "expected_flow_states": [
+        {
+          "mechanism": "structural_baseline",
+          "min_output_strength": 0.35,
+          "min_path_score": 0.6,
+          "min_ablation_sensitivity": 0.7,
+          "required_node_labels": ["巳:day_branch", "丁:day_stem"]
+        }
+      ],
+      "expected_state_evolution": {
+        "mechanism": "structural_baseline",
+        "domain": "career",
+        "trend": "increasing",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"path_activation": "positive"}
+      },
+      "forbidden_flow_mechanisms": ["output_controls_pressure", "output_to_wealth"]
+    },
+    {
+      "case_id": "matrix_hidden_stem_dark_line_storage",
+      "source_case_id": "hidden_stem_dark_line_storage",
+      "matrix_category": "storage_buffer_baseline",
+      "expected_flow_states": [
+        {
+          "mechanism": "structural_baseline",
+          "min_output_strength": 0.35,
+          "min_path_score": 0.6,
+          "min_ablation_sensitivity": 0.85,
+          "required_node_labels": ["丑:month_branch", "丑:day_branch"]
+        }
+      ],
+      "forbidden_flow_mechanisms": ["output_controls_pressure", "output_to_wealth"]
+    },
+    {
+      "case_id": "matrix_complete_triple_combination_different_structure",
+      "source_case_id": "complete_triple_combination_different_structure",
+      "matrix_category": "different_structure_placeholder",
+      "expected_flow_states": [
+        {
+          "mechanism": "output_to_wealth",
+          "min_output_strength": 0.5,
+          "min_path_score": 0.55,
+          "min_ablation_sensitivity": 0.85,
+          "required_node_labels": ["子:month_branch", "甲:day_stem"]
+        }
+      ],
+      "expected_state_evolution": {
+        "mechanism": "output_to_wealth",
+        "domain": "wealth",
+        "trend": "increasing",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"structural_sensitivity": "positive"}
+      },
+      "forbidden_flow_mechanisms": ["output_controls_pressure", "structural_baseline"]
+    },
+    {
+      "case_id": "matrix_broken_combination_by_replacement",
+      "source_case_id": "broken_combination_by_replacement",
+      "matrix_category": "combination_broken_baseline",
+      "expected_flow_states": [
+        {
+          "mechanism": "structural_baseline",
+          "min_output_strength": 0.35,
+          "min_path_score": 0.65,
+          "min_ablation_sensitivity": 0.85,
+          "required_node_labels": ["丁:year_stem"]
+        }
+      ],
+      "expected_state_evolution": {
+        "mechanism": "structural_baseline",
+        "domain": "career",
+        "trend": "increasing",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"structural_sensitivity": "positive"}
+      },
+      "forbidden_flow_mechanisms": ["output_controls_pressure", "output_to_wealth"]
+    },
+    {
+      "case_id": "matrix_year_activation_placeholder",
+      "source_case_id": "year_activation_placeholder",
+      "matrix_category": "timing_placeholder_contract",
+      "expected_flow_states": [
+        {
+          "mechanism": "output_to_wealth",
+          "min_output_strength": 0.5,
+          "min_path_score": 0.6,
+          "min_ablation_sensitivity": 0.85,
+          "required_node_labels": ["申:month_branch", "亥:day_branch"]
+        }
+      ],
+      "temporal_state": {
+        "timing_layer": "year",
+        "activated_paths": ["path.synthetic.year.wealth_activation"],
+        "mechanism_shifts": {"output_to_wealth": 0.72},
+        "evidence_refs": ["timing.synthetic.year.activation_placeholder"],
+        "confidence": 0.64
+      },
+      "expected_state_evolution": {
+        "mechanism": "output_to_wealth",
+        "domain": "wealth",
+        "trend": "increasing",
+        "min_velocity": 0.1,
+        "required_delta_signs": {"timing_mechanism_shift": "positive"},
+        "required_activated_by": ["year.path_activation", "year.mechanism_shift"]
+      },
+      "forbidden_flow_mechanisms": ["output_controls_pressure"]
+    },
+    {
+      "case_id": "matrix_mixed_no_obvious_main_path",
+      "source_case_id": "mixed_no_obvious_main_path",
+      "matrix_category": "mixed_baseline_no_forced_mechanism",
+      "expected_flow_states": [
+        {
+          "mechanism": "structural_baseline",
+          "min_output_strength": 0.35,
+          "min_path_score": 0.65,
+          "min_ablation_sensitivity": 0.85,
+          "required_node_labels": ["酉:month_branch", "己:month_stem"]
+        }
+      ],
+      "forbidden_flow_mechanisms": ["output_controls_pressure", "output_to_wealth"]
+    }
+  ]
+}

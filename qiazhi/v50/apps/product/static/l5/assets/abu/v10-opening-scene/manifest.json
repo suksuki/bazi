@@ -1,0 +1,33 @@
+{
+  "asset_pack": "ABU Opening Scene",
+  "version": "v10",
+  "source": {
+    "filename": "来一段阿布开场动画，这次背景要是吉卜力风格，阿布，大概就是我.mp4",
+    "sha256": "6f8b4c7d40ad8ca50184e9f55c9043e23879f383263e20c7595f274738728930",
+    "designer_icon_removed": true
+  },
+  "delivery": {
+    "source_resolution": [
+      1280,
+      720
+    ],
+    "delivery_resolution": [
+      1920,
+      1080
+    ],
+    "fps": 24.0,
+    "source_frame_count": 240,
+    "written_frame_count": 240,
+    "duration_seconds": 10.0,
+    "video": "web/abu_opening_scene_v10.mp4",
+    "video_sha256": "2b83d644eb9284b31ba2260ff41bef2d9c5fca2050eaf26864c49f550f59b25d",
+    "poster": "posters/abu_opening_scene_v10.webp",
+    "poster_sha256": "a3e481d0e9b56cb256205b03b7db45e7264f4989e8379b06468f3a4c148494eb",
+    "quality_note": "1080p delivery enhanced from the approved 720p source; no synthetic detail claim."
+  },
+  "transition": {
+    "background": "transition/abu_opening_background_v10.webp",
+    "character": "transition/abu_opening_character_v10.png",
+    "destination": "#abuStage"
+  }
+}

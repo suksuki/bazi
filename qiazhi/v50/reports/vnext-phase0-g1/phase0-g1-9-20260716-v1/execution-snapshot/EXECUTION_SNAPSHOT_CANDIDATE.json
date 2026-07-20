@@ -1,0 +1,292 @@
+{
+  "version": "deepbazi.vnext_phase0.execution_snapshot.v1",
+  "status": "candidate_blocked",
+  "created_at": "2026-07-16T04:11:14.767277+00:00",
+  "git_commit": "88da895bb860c25fd6166ac4fa9717cf7102a1e8",
+  "git_state": {
+    "commit": "88da895bb860c25fd6166ac4fa9717cf7102a1e8",
+    "dirty_tree": true,
+    "v50_status": [
+      "?? qiazhi/v50/"
+    ],
+    "v50_snapshot_tracked": false
+  },
+  "scope": {
+    "purpose": "phase0_cognitive_benchmark_execution",
+    "file_count": 50,
+    "total_bytes": 570049,
+    "included_prefixes": [
+      "config/vnext_phase0_",
+      "data/validation/phase0/",
+      "packages/core/mingli_agent/",
+      "scripts/v50_prepare_vnext_phase0_",
+      "scripts/v50_run_vnext_phase0_",
+      "tests/test_v50_vnext_phase0_",
+      "docs/VNEXT_PHASE0_"
+    ],
+    "production_ui_or_media_included": false
+  },
+  "source_manifest_sha256": "917ce52b6fdaef5a9582e074b84985edae5e0cbdd294ed19e23bd67a4aefb893",
+  "files": [
+    {
+      "path": "config/vnext_phase0_dependencies_v1.txt",
+      "sha256": "6f2da1f3d2e0428e5d66a830edd5dc63032c9ad533ca5a7962dbd853f2103ca5",
+      "bytes": 419
+    },
+    {
+      "path": "config/vnext_phase0_expert_reference_authoring_policy_v1.json",
+      "sha256": "711918ffca1f64ab0ae9f01cd2f3ec8ba6743569b93f40598bee3b093967cdbe",
+      "bytes": 1622
+    },
+    {
+      "path": "config/vnext_phase0_frontier_candidates_v1.json",
+      "sha256": "ba16e1d6097b58f0281f3aa65ac2cfd86601ea6943b7cf9849aea819184ae7c7",
+      "bytes": 1237
+    },
+    {
+      "path": "config/vnext_phase0_frontier_policy_v1.json",
+      "sha256": "e16ea87b14ee2be62b7c461505e051e2687cd675931420b3f65568abd448ef2e",
+      "bytes": 974
+    },
+    {
+      "path": "config/vnext_phase0_go_no_go_v1.json",
+      "sha256": "55751e781e6922015351c7defb8d3aea06e7198d6070347fc2e26618cfa4bb5e",
+      "bytes": 2092
+    },
+    {
+      "path": "config/vnext_phase0_holistic_synthesis_policy_v1.json",
+      "sha256": "3ca57cce98465631d1d966d39869b72ff659098838b05e895527bdedbd7c0971",
+      "bytes": 2895
+    },
+    {
+      "path": "config/vnext_phase0_lane_policy_v1.json",
+      "sha256": "6a8e0eea63a8f144350d176500a7b41050b001a70e37cc67702ad869138a23ac",
+      "bytes": 5488
+    },
+    {
+      "path": "config/vnext_phase0_modality_policy_v1.json",
+      "sha256": "21185e9c5c4964f9d24e671eac113cc4fe4c3a90b2ff9b8f379a15742deea571",
+      "bytes": 593
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_development_fixture_pack_v1.json",
+      "sha256": "2c3f9e38aa9cff532827e10ffbada2e8b573bba7006ccb3c515533239670bdf0",
+      "bytes": 1448
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_development_set_v1.json",
+      "sha256": "dae5844103fdf9bb3004d2bbc5121237fe25ed29ee980a08acf43cea0597c3d5",
+      "bytes": 723
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_expert_reference_space_v1.json",
+      "sha256": "6522703ec5a7debfb12bff9dc716b19dc3c9fcef2e8b8cde2047492685bedd59",
+      "bytes": 8950
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_model_policy_selection_fixture_pack_v1.json",
+      "sha256": "3d2fc2878f2f129fc89e2a272e6fb57e7f576c50110bdbfe11036bda98cb2dab",
+      "bytes": 3209
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_model_policy_selection_set_v1.json",
+      "sha256": "82b5fcd18bf463edd73d8ac9c2c84f9a4ace3f5ebd8c7433b258d476e4379bf3",
+      "bytes": 1301
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_reality_evidence_v1.json",
+      "sha256": "a14c89e2cd5fb71784d21e7847e3a4727f8a70b2f368945cc71d0a86a75dcd0e",
+      "bytes": 2488
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_sealed_formal_manifest_v1.json",
+      "sha256": "659977f5f438af78b3a6c6480e56ea5f161743c93368c7f844900b5d44c0f434",
+      "bytes": 2726
+    },
+    {
+      "path": "docs/VNEXT_PHASE0_COGNITIVE_AUTHORITY_BLIND_BENCHMARK_RUNBOOK_V1.md",
+      "sha256": "e34dba0486f78adb38a1da465c0c2a380f8e92ae18e4181a92b0765680dd8325",
+      "bytes": 7343
+    },
+    {
+      "path": "docs/VNEXT_PHASE0_P0_G1_5_HOLISTIC_BASELINE_AND_PREFLIGHT_LONG_TASK_V1.md",
+      "sha256": "3f781fbefd6f4924b1e5a1d7c6167f5bba21358ddbd1619258e6079723b61dc3",
+      "bytes": 6308
+    },
+    {
+      "path": "docs/VNEXT_PHASE0_P0_G1_6_EVIDENCE_GATE_CLOSURE_LONG_TASK_V1.md",
+      "sha256": "fb593ebabe62cc15ce785b947b2acbfff9097d2fa492bbe1966eb005614ef38a",
+      "bytes": 4154
+    },
+    {
+      "path": "docs/VNEXT_PHASE0_P0_G1_7_HUMAN_REFERENCE_FRONTIER_FORMAL_LOCK_FREEZE_V1.md",
+      "sha256": "2a9097d5d27fcf0ee77e9f2bcd873b596f8d110e26ecc182a389e3beabbb7a4c",
+      "bytes": 2190
+    },
+    {
+      "path": "docs/VNEXT_PHASE0_P0_G1_8_EXTERNAL_FREEZE_WORKBENCH_LONG_TASK_V1.md",
+      "sha256": "a2174b86a01b911c1d103bebee1449c9827e5cc892cc606bac77bdfa2de85015",
+      "bytes": 1988
+    },
+    {
+      "path": "docs/VNEXT_PHASE0_P0_G1_9_PROFESSIONAL_FACT_INTEGRITY_AUTHORITY_CONVERGENCE_V1.md",
+      "sha256": "97f5ee6b4500db5b5f533afdfa2edbd10bed3dd9da72c85344e2c56c2bd22ab1",
+      "bytes": 3472
+    },
+    {
+      "path": "docs/VNEXT_PHASE0_P0_G1_FORMAL_EXPERIMENT_LOCK_PLAN_V1.md",
+      "sha256": "2f399692ab1fac3044b11a43998ca39e6a964e612ca0dc02275388e98d57acee",
+      "bytes": 4766
+    },
+    {
+      "path": "packages/core/mingli_agent/__init__.py",
+      "sha256": "5d02fb5ec174ea6ab3aa3c70b26abb9fb3bd0dec1c5e858f1ab77bef234a2bb9",
+      "bytes": 2267
+    },
+    {
+      "path": "packages/core/mingli_agent/benchmark.py",
+      "sha256": "aab7c21270b67444d07af7cd028d7258df84d70a1a1f440359aee14486a30669",
+      "bytes": 11308
+    },
+    {
+      "path": "packages/core/mingli_agent/context.py",
+      "sha256": "a1fbaaea965cf6a75ce9662550288ce24df9ede1b950590db3555f8a35c8b536",
+      "bytes": 16429
+    },
+    {
+      "path": "packages/core/mingli_agent/contracts.py",
+      "sha256": "ecc8244c8537309808e2ac83452f1b1ac3d739d499ef213b2affe1b22fb29a3c",
+      "bytes": 10574
+    },
+    {
+      "path": "packages/core/mingli_agent/deliberation.py",
+      "sha256": "c10ad1c7f0f23ce6b9a9c81cb7091493905ead99056aee851e7e6dccd9da029b",
+      "bytes": 24319
+    },
+    {
+      "path": "packages/core/mingli_agent/fact_review.py",
+      "sha256": "6a910ffb8ca9c6197f218a1c7c6465662df99fe487b7b462e9d4ca385f3b3a7a",
+      "bytes": 30369
+    },
+    {
+      "path": "packages/core/mingli_agent/model_policy.py",
+      "sha256": "5ebf8ce46c4bccf22a939c13c842e6f33f39f7a27155b9b70fa17d8744674efd",
+      "bytes": 3518
+    },
+    {
+      "path": "packages/core/mingli_agent/orchestrator.py",
+      "sha256": "6668dab2f9f4f1e660f7382481bc954430e092b9953f2fd870504ae215dc77c2",
+      "bytes": 3717
+    },
+    {
+      "path": "packages/core/mingli_agent/phase0_governance.py",
+      "sha256": "a7055bf7a6fa50e7c558fd687ceafa723be6dbc84ca251c4b2c94738224f79b4",
+      "bytes": 12583
+    },
+    {
+      "path": "packages/core/mingli_agent/probe.py",
+      "sha256": "278880e17a321fdd77e3512d4aab905f969e02dac5da1fab21e7e197bb1f0881",
+      "bytes": 15473
+    },
+    {
+      "path": "packages/core/mingli_agent/quality.py",
+      "sha256": "5900396bccbb01f03f45dd9def2f5b40fa81350e8cd150706cec90a650801122",
+      "bytes": 14930
+    },
+    {
+      "path": "packages/core/mingli_agent/reasoner.py",
+      "sha256": "f06639cce68db44bdfd32fe0217132188b670326bc510d4e0834ce354a64558d",
+      "bytes": 110590
+    },
+    {
+      "path": "packages/core/mingli_agent/workspace.py",
+      "sha256": "32a1b230933b16d8eceffa3fa5f46b0d39e20eef16cf83b7a57a103a6d5c7dbd",
+      "bytes": 12394
+    },
+    {
+      "path": "packages/core/mingli_agent/world.py",
+      "sha256": "d86f7622c4e488dfe07c4ad945b0b9ae0d5a4d21359f7bd7109ea13c88dec497",
+      "bytes": 20972
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_expert_reference_workspace.py",
+      "sha256": "de9c043f3f3ef1b142508cd88adbab41b4dc4ec15d46787aca0b16b470414e25",
+      "bytes": 17247
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_frontier_selection.py",
+      "sha256": "3f6839c16d8e3f093ef39a2a1f1b7b556d38d65d21a63834744192c16e67ad7c",
+      "bytes": 14834
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1.py",
+      "sha256": "fb4a4df2133f7d5577248023d3bffc2612408532af052cdf35ccf6c98ce08d22",
+      "bytes": 13466
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_6.py",
+      "sha256": "3228f9188a2e1ad8e234e928447b578705ab8eaae50bc86418072eee493d691c",
+      "bytes": 25786
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_7.py",
+      "sha256": "b2ca9a7dcf9471b30c2730dc913b25d616fb0e25ed58fb0ae037375415ff96fc",
+      "bytes": 19442
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_8.py",
+      "sha256": "24ae488561d9b95ff3b34e3c95834a66d4d458e8a7f7663001ec167e82de0481",
+      "bytes": 8424
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_9.py",
+      "sha256": "b492a0e0775f26be4fbdb6de580defe424476106bf3774a912ccba915363485a",
+      "bytes": 19760
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_snapshot.py",
+      "sha256": "4d13e6d6db649c7e950c8bf801260521784b492bfa3a2effdb5fc573b71a97b0",
+      "bytes": 5509
+    },
+    {
+      "path": "scripts/v50_run_vnext_phase0_benchmark.py",
+      "sha256": "bd586664de8c36d94adc7b1c696ecb9be1e36fdd900d4d822474ce3eb354538b",
+      "bytes": 55646
+    },
+    {
+      "path": "tests/test_v50_vnext_phase0_benchmark.py",
+      "sha256": "80e5435927f8323278d5523aa8e83fcb7e99d9fd7fe788ac21d0ff0e719a018c",
+      "bytes": 11664
+    },
+    {
+      "path": "tests/test_v50_vnext_phase0_g1_6.py",
+      "sha256": "2e72a2d7e145c177480d8ec03f59916a2d896787d769dd6b52acc7c2d8950336",
+      "bytes": 4316
+    },
+    {
+      "path": "tests/test_v50_vnext_phase0_g1_7.py",
+      "sha256": "a17a2e4e79cae0c264fbdc3991b8ac123d75f28caf06f3630f937680acd12b99",
+      "bytes": 3039
+    },
+    {
+      "path": "tests/test_v50_vnext_phase0_g1_8.py",
+      "sha256": "cd5dfc5c578cb31b3ff3f6b33be0eae2cd361357135a071bcf2a75e47de42c00",
+      "bytes": 9385
+    },
+    {
+      "path": "tests/test_v50_vnext_phase0_g1_9.py",
+      "sha256": "204e14e4366f5056423a7869417d9baa405945054580a8517c956a7b99b99cf5",
+      "bytes": 5702
+    }
+  ],
+  "blockers": [
+    "v50_code_snapshot_not_committed",
+    "v50_snapshot_scope_not_clean"
+  ],
+  "boundaries": {
+    "formal_execution_allowed": false,
+    "working_tree_snapshot_accepted_as_committed": false,
+    "automatic_git_commit_performed": false,
+    "unrelated_worktree_changes_modified": false
+  }
+}

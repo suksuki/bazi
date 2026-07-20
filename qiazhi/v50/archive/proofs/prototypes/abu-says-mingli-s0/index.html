@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f6f2e8">
+  <title>阿布说命 · S0 内部小剧场</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="theater" id="theater" data-scene="1" data-stage="original">
+    <header class="theater-header">
+      <a href="/" class="brand" aria-label="返回 DeepBazi">
+        <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi">
+      </a>
+      <div class="prototype-mark"><span></span>内部 Animatic · Eric 临时声线</div>
+      <a class="xiangfa-link" href="/experience-static/prototypes/xiangfa-s0-a/index.html">进入象法场景</a>
+    </header>
+
+    <main class="stage" id="stage" aria-live="polite">
+      <div class="scene-backdrop" aria-hidden="true"></div>
+      <div class="scene-wash" aria-hidden="true"></div>
+
+      <section class="opening-copy" id="openingCopy">
+        <p class="scene-number" id="sceneNumber">01 · 序</p>
+        <h1 id="sceneTitle">命理不是一份宿命宣判。</h1>
+        <p id="sceneLead">它更像人生剧本的底稿。</p>
+      </section>
+
+      <section class="onecanvas" id="oneCanvas" aria-label="候选 A 六柱 OneCanvas">
+        <div class="canvas-heading">
+          <div>
+            <p>ONECANVAS · 同一命局</p>
+            <h2 id="canvasTitle">原局四柱、大运与流年</h2>
+          </div>
+          <span class="stage-chip" id="stageChip">原局</span>
+        </div>
+        <div class="pillars" id="pillars"></div>
+        <svg class="path-svg" id="pathSvg" aria-hidden="true">
+          <defs>
+            <linearGradient id="approvedPathGradient" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0" stop-color="#4f8c67"></stop>
+              <stop offset="0.52" stop-color="#d8784f"></stop>
+              <stop offset="1" stop-color="#708494"></stop>
+            </linearGradient>
+            <marker id="arrowApproved" markerWidth="7" markerHeight="7" refX="6" refY="3.5" orient="auto">
+              <path d="M0 0 L7 3.5 L0 7 Z" fill="#c9714d"></path>
+            </marker>
+          </defs>
+          <path id="approvedPathLine" class="approved-path-line"></path>
+          <path id="temporalEffectLine" class="temporal-effect-line"></path>
+        </svg>
+        <button class="structure-node" id="metalStructure" data-semantic-ref="node-metal-structure" type="button">
+          <span>金结构</span><small>候选结构边界</small>
+        </button>
+        <div class="path-caption" id="pathCaption">正式主路径正在展开</div>
+      </section>
+
+      <section class="xiangfa-scene" id="xiangfaScene" aria-label="候选 A 象法映射">
+        <div class="xiangfa-image" aria-hidden="true"></div>
+        <svg class="xiangfa-path" viewBox="0 0 1000 560" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M120,435 C260,475 360,410 495,400 S735,390 872,310"></path>
+        </svg>
+        <div class="xiangfa-anchor wood-anchor"><strong>乙木</strong><span>生发主体</span></div>
+        <div class="xiangfa-anchor fire-anchor"><strong>丁火</strong><span>转化中心</span></div>
+        <div class="xiangfa-anchor metal-anchor"><strong>金结构</strong><span>结构边界</span></div>
+        <div class="geng-pressure" aria-hidden="true"><span>庚</span></div>
+        <div class="bing-support" aria-hidden="true"><span>丙</span></div>
+      </section>
+
+      <div class="brand-finale" id="brandFinale">
+        <p>阿布说命</p>
+        <h2>看见命局，也看见自己</h2>
+        <span>读懂人生剧本，做出更清醒的选择</span>
+      </div>
+
+      <div class="abu-actor" id="abuActor">
+        <img id="abuImage" src="/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" alt="阿布">
+        <span class="abu-role" id="abuRole">你的命理解释伙伴</span>
+      </div>
+
+      <div class="caption-card" id="captionCard">
+        <p id="subtitle">很多人把命理，当成对未来的预测。</p>
+      </div>
+    </main>
+
+    <footer class="transport" id="transport">
+      <button class="play-button" id="playButton" type="button" aria-label="播放">▶</button>
+      <div class="progress-wrap">
+        <div class="progress-copy"><strong id="transportTitle">第一幕 · 命理与选择</strong><span id="timeLabel">0:00 / 0:47</span></div>
+        <input id="progress" type="range" min="0" max="470" value="0" aria-label="播放进度">
+      </div>
+      <button class="icon-button" id="muteButton" type="button" aria-label="静音">音</button>
+      <button class="icon-button" id="restartButton" type="button" aria-label="重新播放">↺</button>
+      <ol class="scene-rail" id="sceneRail" aria-label="七幕进度"></ol>
+    </footer>
+
+    <audio id="narrationAudio" preload="auto" src="/experience-static/prototypes/s0-shared/assets/s0-eric-temp-v1.wav"></audio>
+  </div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

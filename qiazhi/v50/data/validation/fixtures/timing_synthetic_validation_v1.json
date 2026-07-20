@@ -1,0 +1,285 @@
+{
+  "group": "timing_synthetic_validation_v1",
+  "version": "v50.timing_synthetic_validation_fixture_group.v1",
+  "description": "Synthetic timing fixtures for validating TimingModelCandidate -> TemporalState -> StateEvolution behavior. These fixtures do not activate runtime timing policy.",
+  "fixtures": [
+    {
+      "fixture_id": "timing_synthetic.luck_perturbation_reroutes_output_control.001",
+      "candidate_model_id": "timing.luck.perturbation_source.v1",
+      "reading_id": "reading.timing.synthetic.001",
+      "domain": "career",
+      "current_flow_state": {
+        "mechanism": "output_controls_pressure",
+        "output_strength": 0.82,
+        "path_score": 0.81,
+        "ablation_sensitivity": 0.95,
+        "path_refs": ["path.output_controls_pressure.001"],
+        "node_refs": ["node.ding", "node.you"],
+        "mechanism_refs": ["mechanism.output_controls_pressure"],
+        "evidence_refs": ["graph.synthetic.001"]
+      },
+      "previous_flow_state": {
+        "mechanism": "output_controls_pressure",
+        "output_strength": 0.82,
+        "path_score": 0.81,
+        "ablation_sensitivity": 0.95,
+        "path_refs": ["path.output_controls_pressure.001"],
+        "node_refs": ["node.ding", "node.you"],
+        "mechanism_refs": ["mechanism.output_controls_pressure"],
+        "evidence_refs": ["graph.synthetic.001.previous"]
+      },
+      "temporal_state": {
+        "timing_layer": "luck",
+        "activated_paths": ["path.resource_backflow.001"],
+        "weakened_nodes": ["node.ding"],
+        "rerouted_flows": ["flow.resource_backflow"],
+        "mechanism_shifts": {
+          "output_controls_pressure": 0.42
+        },
+        "state_delta_refs": ["timing.synthetic.luck.001"],
+        "evidence_refs": ["timing.luck.gengzi.001"],
+        "confidence": 0.7
+      },
+      "expected": {
+        "candidate_outputs": ["state_delta", "rerouted_flow", "weakened_nodes", "activated_paths"],
+        "delta_keys": ["timing_mechanism_shift", "timing_activation", "timing_pressure", "flow_reroute"],
+        "trend": "volatile",
+        "activated_by": ["luck.path_activation", "luck.mechanism_shift"],
+        "suppressed_by": ["luck.weakened_nodes", "luck.rerouted_flow"],
+        "reason_codes": ["state_delta.timing.activated_paths", "state_delta.timing.weakened_nodes", "state_delta.timing.rerouted_flows", "state_delta.timing.mechanism_shift"],
+        "must_not_change": ["natal_immutable_facts", "original_structure_existence", "birth_input"]
+      }
+    },
+    {
+      "fixture_id": "timing_synthetic.year_activation_amplifies_wealth_path.001",
+      "candidate_model_id": "timing.year.activation_event.v1",
+      "reading_id": "reading.timing.synthetic.002",
+      "domain": "wealth",
+      "current_flow_state": {
+        "mechanism": "output_to_wealth",
+        "output_strength": 0.72,
+        "path_score": 0.7,
+        "ablation_sensitivity": 0.68,
+        "path_refs": ["path.output_to_wealth.001"],
+        "node_refs": ["node.output", "node.wealth"],
+        "mechanism_refs": ["mechanism.output_to_wealth"],
+        "evidence_refs": ["graph.synthetic.002"]
+      },
+      "previous_flow_state": {
+        "mechanism": "output_to_wealth",
+        "output_strength": 0.72,
+        "path_score": 0.7,
+        "ablation_sensitivity": 0.68,
+        "path_refs": ["path.output_to_wealth.001"],
+        "node_refs": ["node.output", "node.wealth"],
+        "mechanism_refs": ["mechanism.output_to_wealth"],
+        "evidence_refs": ["graph.synthetic.002.previous"]
+      },
+      "temporal_state": {
+        "timing_layer": "year",
+        "activated_paths": ["path.output_to_wealth.001"],
+        "weakened_nodes": [],
+        "rerouted_flows": [],
+        "mechanism_shifts": {
+          "output_to_wealth": 0.92
+        },
+        "state_delta_refs": ["timing.synthetic.year.001"],
+        "evidence_refs": ["timing.year.activation.001"],
+        "confidence": 0.73
+      },
+      "expected": {
+        "candidate_outputs": ["activated_paths", "topic_timing_signal", "event_pressure_score", "mechanism_shift"],
+        "delta_keys": ["timing_mechanism_shift", "timing_activation"],
+        "trend": "increasing",
+        "activated_by": ["year.path_activation", "year.mechanism_shift"],
+        "suppressed_by": [],
+        "reason_codes": ["state_delta.timing.activated_paths", "state_delta.timing.mechanism_shift"],
+        "must_not_change": ["natal_immutable_facts", "original_structure_existence", "birth_input"]
+      }
+    },
+    {
+      "fixture_id": "timing_synthetic.year_structure_completion_activates_competition.001",
+      "candidate_model_id": "timing.year.structure_completion.v1",
+      "reading_id": "reading.timing.synthetic.003",
+      "domain": "wealth",
+      "current_flow_state": {
+        "mechanism": "peer_competes_for_wealth",
+        "output_strength": 0.58,
+        "path_score": 0.61,
+        "ablation_sensitivity": 0.62,
+        "path_refs": ["path.peer_competes_for_wealth.001"],
+        "node_refs": ["node.peer", "node.wealth"],
+        "mechanism_refs": ["mechanism.peer_competes_for_wealth"],
+        "evidence_refs": ["graph.synthetic.003"]
+      },
+      "previous_flow_state": {
+        "mechanism": "peer_competes_for_wealth",
+        "output_strength": 0.58,
+        "path_score": 0.61,
+        "ablation_sensitivity": 0.62,
+        "path_refs": ["path.peer_competes_for_wealth.001"],
+        "node_refs": ["node.peer", "node.wealth"],
+        "mechanism_refs": ["mechanism.peer_competes_for_wealth"],
+        "evidence_refs": ["graph.synthetic.003.previous"]
+      },
+      "temporal_state": {
+        "timing_layer": "year",
+        "activated_paths": ["path.peer_competes_for_wealth.001"],
+        "weakened_nodes": [],
+        "rerouted_flows": [],
+        "mechanism_shifts": {},
+        "state_delta_refs": ["timing.synthetic.year.002"],
+        "evidence_refs": ["timing.year.structure_completion.001"],
+        "confidence": 0.65
+      },
+      "expected": {
+        "candidate_outputs": ["completed_paths", "broken_paths", "mechanism_shift"],
+        "delta_keys": ["timing_activation"],
+        "trend": "increasing",
+        "activated_by": ["year.path_activation"],
+        "suppressed_by": [],
+        "reason_codes": ["state_delta.timing.activated_paths"],
+        "must_not_change": ["natal_immutable_facts", "original_structure_existence", "birth_input"]
+      }
+    },
+    {
+      "fixture_id": "timing_synthetic.luck_long_term_field_suppresses_pressure.001",
+      "candidate_model_id": "timing.luck.long_term_field.v1",
+      "reading_id": "reading.timing.synthetic.004",
+      "domain": "career",
+      "current_flow_state": {
+        "mechanism": "output_controls_pressure",
+        "output_strength": 0.66,
+        "path_score": 0.64,
+        "ablation_sensitivity": 0.7,
+        "path_refs": ["path.output_controls_pressure.004"],
+        "node_refs": ["node.output", "node.officer_pressure"],
+        "mechanism_refs": ["mechanism.output_controls_pressure"],
+        "evidence_refs": ["graph.synthetic.004"]
+      },
+      "previous_flow_state": {
+        "mechanism": "output_controls_pressure",
+        "output_strength": 0.66,
+        "path_score": 0.64,
+        "ablation_sensitivity": 0.7,
+        "path_refs": ["path.output_controls_pressure.004"],
+        "node_refs": ["node.output", "node.officer_pressure"],
+        "mechanism_refs": ["mechanism.output_controls_pressure"],
+        "evidence_refs": ["graph.synthetic.004.previous"]
+      },
+      "temporal_state": {
+        "timing_layer": "luck",
+        "activated_paths": [],
+        "weakened_nodes": ["node.officer_pressure"],
+        "rerouted_flows": [],
+        "mechanism_shifts": {
+          "output_controls_pressure": 0.48
+        },
+        "state_delta_refs": ["timing.synthetic.luck.002"],
+        "evidence_refs": ["timing.luck.long_term_field.001"],
+        "confidence": 0.62
+      },
+      "expected": {
+        "candidate_outputs": ["field_delta", "state_delta", "mechanism_shift"],
+        "delta_keys": ["timing_mechanism_shift", "timing_pressure"],
+        "trend": "decreasing",
+        "activated_by": ["luck.mechanism_shift"],
+        "suppressed_by": ["luck.weakened_nodes"],
+        "reason_codes": ["state_delta.timing.weakened_nodes", "state_delta.timing.mechanism_shift"],
+        "must_not_change": ["natal_immutable_facts", "original_structure_existence", "birth_input"]
+      }
+    },
+    {
+      "fixture_id": "timing_synthetic.month_event_window_focuses_existing_path.001",
+      "candidate_model_id": "timing.month.event_window.v1",
+      "reading_id": "reading.timing.synthetic.005",
+      "domain": "career",
+      "current_flow_state": {
+        "mechanism": "output_controls_pressure",
+        "output_strength": 0.7,
+        "path_score": 0.74,
+        "ablation_sensitivity": 0.7,
+        "path_refs": ["path.output_controls_pressure.005"],
+        "node_refs": ["node.output", "node.officer_pressure"],
+        "mechanism_refs": ["mechanism.output_controls_pressure"],
+        "evidence_refs": ["graph.synthetic.005"]
+      },
+      "previous_flow_state": {
+        "mechanism": "output_controls_pressure",
+        "output_strength": 0.7,
+        "path_score": 0.74,
+        "ablation_sensitivity": 0.7,
+        "path_refs": ["path.output_controls_pressure.005"],
+        "node_refs": ["node.output", "node.officer_pressure"],
+        "mechanism_refs": ["mechanism.output_controls_pressure"],
+        "evidence_refs": ["graph.synthetic.005.previous"]
+      },
+      "temporal_state": {
+        "timing_layer": "month",
+        "activated_paths": ["path.output_controls_pressure.005"],
+        "weakened_nodes": [],
+        "rerouted_flows": [],
+        "mechanism_shifts": {},
+        "state_delta_refs": ["timing.synthetic.month.001"],
+        "evidence_refs": ["timing.month.event_window.001"],
+        "confidence": 0.61
+      },
+      "expected": {
+        "candidate_outputs": ["event_window_score", "timing_precision_score"],
+        "delta_keys": ["timing_activation"],
+        "trend": "increasing",
+        "activated_by": ["month.path_activation"],
+        "suppressed_by": [],
+        "reason_codes": ["state_delta.timing.activated_paths"],
+        "must_not_change": ["natal_immutable_facts", "original_structure_existence", "birth_input"]
+      }
+    },
+    {
+      "fixture_id": "timing_synthetic.month_micro_completion_breaks_short_path.001",
+      "candidate_model_id": "timing.month.micro_structure_completion.v1",
+      "reading_id": "reading.timing.synthetic.006",
+      "domain": "wealth",
+      "current_flow_state": {
+        "mechanism": "output_to_wealth",
+        "output_strength": 0.63,
+        "path_score": 0.62,
+        "ablation_sensitivity": 0.58,
+        "path_refs": ["path.output_to_wealth.006"],
+        "node_refs": ["node.output", "node.wealth"],
+        "mechanism_refs": ["mechanism.output_to_wealth"],
+        "evidence_refs": ["graph.synthetic.006"]
+      },
+      "previous_flow_state": {
+        "mechanism": "output_to_wealth",
+        "output_strength": 0.63,
+        "path_score": 0.62,
+        "ablation_sensitivity": 0.58,
+        "path_refs": ["path.output_to_wealth.006"],
+        "node_refs": ["node.output", "node.wealth"],
+        "mechanism_refs": ["mechanism.output_to_wealth"],
+        "evidence_refs": ["graph.synthetic.006.previous"]
+      },
+      "temporal_state": {
+        "timing_layer": "month",
+        "activated_paths": [],
+        "weakened_nodes": ["node.wealth"],
+        "rerouted_flows": ["flow.output_to_wealth.blocked"],
+        "mechanism_shifts": {
+          "output_to_wealth": 0.44
+        },
+        "state_delta_refs": ["timing.synthetic.month.002"],
+        "evidence_refs": ["timing.month.micro_completion.001"],
+        "confidence": 0.5
+      },
+      "expected": {
+        "candidate_outputs": ["completed_paths", "broken_paths", "event_window_score"],
+        "delta_keys": ["timing_mechanism_shift", "timing_pressure", "flow_reroute"],
+        "trend": "volatile",
+        "activated_by": ["month.mechanism_shift"],
+        "suppressed_by": ["month.weakened_nodes", "month.rerouted_flow"],
+        "reason_codes": ["state_delta.timing.weakened_nodes", "state_delta.timing.rerouted_flows", "state_delta.timing.mechanism_shift"],
+        "must_not_change": ["natal_immutable_facts", "original_structure_existence", "birth_input"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,100 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.theater_event.v1",
+      "default": "deepbazi.theater_event.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "event_id": {
+      "title": "Event Id",
+      "type": "string"
+    },
+    "session_id": {
+      "title": "Session Id",
+      "type": "string"
+    },
+    "sequence": {
+      "minimum": 1,
+      "title": "Sequence",
+      "type": "integer"
+    },
+    "event_type": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Event Type",
+      "type": "string"
+    },
+    "scope": {
+      "enum": [
+        "public",
+        "participant_private",
+        "operator"
+      ],
+      "title": "Scope",
+      "type": "string"
+    },
+    "participant_run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Participant Run Id"
+    },
+    "node_id": {
+      "default": "",
+      "title": "Node Id",
+      "type": "string"
+    },
+    "cue_instance_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cue Instance Id"
+    },
+    "cue_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Cue Hash"
+    },
+    "payload": {
+      "additionalProperties": true,
+      "title": "Payload",
+      "type": "object"
+    },
+    "occurred_at": {
+      "format": "date-time",
+      "title": "Occurred At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "event_id",
+    "session_id",
+    "sequence",
+    "event_type",
+    "scope",
+    "occurred_at"
+  ],
+  "title": "TheaterEvent",
+  "type": "object"
+}

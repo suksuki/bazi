@@ -1,0 +1,737 @@
+{
+  "schema_version": "deepbazi.active_route_inventory.v1",
+  "generated_at": "2026-07-19T17:44:30.311747+00:00",
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/manifest",
+      "module": "apps/product/agent_api.py",
+      "handler": "manifest",
+      "line": 510
+    },
+    {
+      "method": "GET",
+      "path": "/abu/capabilities",
+      "module": "apps/product/agent_api.py",
+      "handler": "abu_capabilities",
+      "line": 538
+    },
+    {
+      "method": "POST",
+      "path": "/abu/resolve",
+      "module": "apps/product/agent_api.py",
+      "handler": "resolve_abu",
+      "line": 542
+    },
+    {
+      "method": "POST",
+      "path": "/intake",
+      "module": "apps/product/agent_api.py",
+      "handler": "parse_intake",
+      "line": 558
+    },
+    {
+      "method": "POST",
+      "path": "/cases",
+      "module": "apps/product/agent_api.py",
+      "handler": "start_case",
+      "line": 566
+    },
+    {
+      "method": "GET",
+      "path": "/jobs/{job_id}",
+      "module": "apps/product/agent_api.py",
+      "handler": "get_job",
+      "line": 718
+    },
+    {
+      "method": "GET",
+      "path": "/cases",
+      "module": "apps/product/agent_api.py",
+      "handler": "list_cases",
+      "line": 734
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}",
+      "module": "apps/product/agent_api.py",
+      "handler": "get_case",
+      "line": 750
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/deliberation",
+      "module": "apps/product/agent_api.py",
+      "handler": "get_case_deliberation",
+      "line": 804
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/deliberation/select",
+      "module": "apps/product/agent_api.py",
+      "handler": "select_case_deliberation",
+      "line": 829
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/deliberation/undo",
+      "module": "apps/product/agent_api.py",
+      "handler": "undo_case_deliberation",
+      "line": 881
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/domains/{domain}",
+      "module": "apps/product/agent_api.py",
+      "handler": "explore_case_domain",
+      "line": 1139
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/turn",
+      "module": "apps/product/agent_api.py",
+      "handler": "continue_case",
+      "line": 1184
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/probe-plan",
+      "module": "apps/product/agent_api.py",
+      "handler": "get_probe_plan",
+      "line": 1224
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/probe-respond",
+      "module": "apps/product/agent_api.py",
+      "handler": "respond_to_probe",
+      "line": 1245
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/temporal/select",
+      "module": "apps/product/agent_api.py",
+      "handler": "select_case_period",
+      "line": 1395
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/reality-evidence",
+      "module": "apps/product/agent_api.py",
+      "handler": "list_case_reality_evidence",
+      "line": 1446
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/reality-evidence",
+      "module": "apps/product/agent_api.py",
+      "handler": "record_case_reality_evidence",
+      "line": 1467
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/monthly-review",
+      "module": "apps/product/agent_api.py",
+      "handler": "review_case_month",
+      "line": 1519
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/case-revisions/commit",
+      "module": "apps/product/agent_api.py",
+      "handler": "commit_case_revision_candidate",
+      "line": 1548
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/claim",
+      "module": "apps/product/agent_api.py",
+      "handler": "claim_case",
+      "line": 1580
+    },
+    {
+      "method": "GET",
+      "path": "/",
+      "module": "apps/product/app.py",
+      "handler": "product_index",
+      "line": 150
+    },
+    {
+      "method": "GET",
+      "path": "/app",
+      "module": "apps/product/app.py",
+      "handler": "product_index",
+      "line": 150
+    },
+    {
+      "method": "GET",
+      "path": "/experience",
+      "module": "apps/product/app.py",
+      "handler": "experience_index",
+      "line": 155
+    },
+    {
+      "method": "GET",
+      "path": "/experience/",
+      "module": "apps/product/app.py",
+      "handler": "experience_index",
+      "line": 155
+    },
+    {
+      "method": "GET",
+      "path": "/theater",
+      "module": "apps/product/app.py",
+      "handler": "theater_index",
+      "line": 160
+    },
+    {
+      "method": "GET",
+      "path": "/theater/studio",
+      "module": "apps/product/app.py",
+      "handler": "theater_index",
+      "line": 160
+    },
+    {
+      "method": "GET",
+      "path": "/visual-alpha",
+      "module": "apps/product/app.py",
+      "handler": "retired_visual_alpha_route",
+      "line": 164
+    },
+    {
+      "method": "GET",
+      "path": "/app.js",
+      "module": "apps/product/app.py",
+      "handler": "product_javascript",
+      "line": 168
+    },
+    {
+      "method": "GET",
+      "path": "/styles.css",
+      "module": "apps/product/app.py",
+      "handler": "product_styles",
+      "line": 172
+    },
+    {
+      "method": "GET",
+      "path": "/theater.js",
+      "module": "apps/product/app.py",
+      "handler": "theater_javascript",
+      "line": 176
+    },
+    {
+      "method": "GET",
+      "path": "/theater.css",
+      "module": "apps/product/app.py",
+      "handler": "theater_styles",
+      "line": 180
+    },
+    {
+      "method": "GET",
+      "path": "/favicon.ico",
+      "module": "apps/product/app.py",
+      "handler": "product_favicon",
+      "line": 184
+    },
+    {
+      "method": "GET",
+      "path": "/health",
+      "module": "apps/product/app.py",
+      "handler": "product_health",
+      "line": 188
+    },
+    {
+      "method": "GET",
+      "path": "f'{PRODUCT_API_PREFIX}/manifest'",
+      "module": "apps/product/app.py",
+      "handler": "product_manifest",
+      "line": 197
+    },
+    {
+      "method": "POST",
+      "path": "f'{PRODUCT_API_PREFIX}/auth/register'",
+      "module": "apps/product/app.py",
+      "handler": "register",
+      "line": 226
+    },
+    {
+      "method": "POST",
+      "path": "f'{PRODUCT_API_PREFIX}/auth/login'",
+      "module": "apps/product/app.py",
+      "handler": "login",
+      "line": 241
+    },
+    {
+      "method": "GET",
+      "path": "f'{PRODUCT_API_PREFIX}/auth/me'",
+      "module": "apps/product/app.py",
+      "handler": "current_account",
+      "line": 249
+    },
+    {
+      "method": "POST",
+      "path": "f'{PRODUCT_API_PREFIX}/auth/logout'",
+      "module": "apps/product/app.py",
+      "handler": "logout",
+      "line": 253
+    },
+    {
+      "method": "GET",
+      "path": "f'{PRODUCT_API_PREFIX}/profiles'",
+      "module": "apps/product/app.py",
+      "handler": "list_profiles",
+      "line": 261
+    },
+    {
+      "method": "POST",
+      "path": "f'{PRODUCT_API_PREFIX}/profiles'",
+      "module": "apps/product/app.py",
+      "handler": "create_profile",
+      "line": 266
+    },
+    {
+      "method": "GET",
+      "path": "f'{PRODUCT_API_PREFIX}/profiles/{{profile_id}}'",
+      "module": "apps/product/app.py",
+      "handler": "get_profile",
+      "line": 273
+    },
+    {
+      "method": "PUT",
+      "path": "f'{PRODUCT_API_PREFIX}/profiles/{{profile_id}}'",
+      "module": "apps/product/app.py",
+      "handler": "update_profile",
+      "line": 281
+    },
+    {
+      "method": "DELETE",
+      "path": "f'{PRODUCT_API_PREFIX}/profiles/{{profile_id}}'",
+      "module": "apps/product/app.py",
+      "handler": "delete_profile",
+      "line": 307
+    },
+    {
+      "method": "GET",
+      "path": "/cases",
+      "module": "apps/product/experience_api.py",
+      "handler": "list_experience_cases",
+      "line": 77
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/baseline",
+      "module": "apps/product/experience_api.py",
+      "handler": "baseline_experience",
+      "line": 124
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/canvas",
+      "module": "apps/product/experience_api.py",
+      "handler": "read_only_canvas",
+      "line": 145
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/canvas/context",
+      "module": "apps/product/experience_api.py",
+      "handler": "read_only_canvas_context",
+      "line": 159
+    },
+    {
+      "method": "GET",
+      "path": "/onecanvas/selection-catalog",
+      "module": "apps/product/experience_api.py",
+      "handler": "onecanvas_selection_catalog",
+      "line": 188
+    },
+    {
+      "method": "POST",
+      "path": "/onecanvas/structural-compile",
+      "module": "apps/product/experience_api.py",
+      "handler": "onecanvas_structural_compile",
+      "line": 198
+    },
+    {
+      "method": "POST",
+      "path": "/onecanvas/target-compile",
+      "module": "apps/product/experience_api.py",
+      "handler": "onecanvas_target_compile",
+      "line": 216
+    },
+    {
+      "method": "GET",
+      "path": "/admin/legacy-usage",
+      "module": "apps/product/experience_api.py",
+      "handler": "legacy_usage_report",
+      "line": 234
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/baseline",
+      "module": "apps/product/narration_api.py",
+      "handler": "baseline_manifest",
+      "line": 45
+    },
+    {
+      "method": "POST",
+      "path": "/cases/{case_id}/baseline/segments/{segment_id}",
+      "module": "apps/product/narration_api.py",
+      "handler": "prepare_segment",
+      "line": 57
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/audio/{speech_asset_id}",
+      "module": "apps/product/narration_api.py",
+      "handler": "narration_audio",
+      "line": 78
+    },
+    {
+      "method": "GET",
+      "path": "/cases/{case_id}/audio/{speech_asset_id}/opus",
+      "module": "apps/product/narration_api.py",
+      "handler": "narration_audio_opus",
+      "line": 99
+    },
+    {
+      "method": "GET",
+      "path": "/topics",
+      "module": "apps/product/theater_api.py",
+      "handler": "list_topics",
+      "line": 133
+    },
+    {
+      "method": "POST",
+      "path": "/sessions",
+      "module": "apps/product/theater_api.py",
+      "handler": "create_session",
+      "line": 137
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/join",
+      "module": "apps/product/theater_api.py",
+      "handler": "join_session",
+      "line": 152
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/{session_id}",
+      "module": "apps/product/theater_api.py",
+      "handler": "session_snapshot",
+      "line": 187
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/participant/complete",
+      "module": "apps/product/theater_api.py",
+      "handler": "complete_private",
+      "line": 207
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/participant/advance",
+      "module": "apps/product/theater_api.py",
+      "handler": "participant_advance",
+      "line": 224
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/{session_id}/participant/experiment",
+      "module": "apps/product/theater_api.py",
+      "handler": "load_experiment",
+      "line": 242
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/participant/experiment/predict",
+      "module": "apps/product/theater_api.py",
+      "handler": "predict_experiment_node",
+      "line": 262
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/participant/experiment/ablate",
+      "module": "apps/product/theater_api.py",
+      "handler": "ablate_experiment_node",
+      "line": 282
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/participant/experiment/restore",
+      "module": "apps/product/theater_api.py",
+      "handler": "restore_experiment",
+      "line": 302
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/participant/experiment/save",
+      "module": "apps/product/theater_api.py",
+      "handler": "save_experiment",
+      "line": 321
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/director/advance",
+      "module": "apps/product/theater_api.py",
+      "handler": "director_advance",
+      "line": 342
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/director/rejoin",
+      "module": "apps/product/theater_api.py",
+      "handler": "director_rejoin",
+      "line": 351
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/director/reveal",
+      "module": "apps/product/theater_api.py",
+      "handler": "director_reveal",
+      "line": 360
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/director/{action}",
+      "module": "apps/product/theater_api.py",
+      "handler": "director_pause_resume",
+      "line": 369
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/{session_id}/replay",
+      "module": "apps/product/theater_api.py",
+      "handler": "replay_session",
+      "line": 375
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/cues/{cue_instance_id}/performance",
+      "module": "apps/product/theater_api.py",
+      "handler": "prepare_performance",
+      "line": 390
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/{session_id}/performance/{package_id}/audio",
+      "module": "apps/product/theater_api.py",
+      "handler": "performance_audio",
+      "line": 425
+    },
+    {
+      "method": "WEBSOCKET",
+      "path": "/sessions/{session_id}/stream",
+      "module": "apps/product/theater_api.py",
+      "handler": "stream_session",
+      "line": 454
+    },
+    {
+      "method": "POST",
+      "path": "/sessions",
+      "module": "apps/product/voice_validation_api.py",
+      "handler": "start_session",
+      "line": 69
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/events",
+      "module": "apps/product/voice_validation_api.py",
+      "handler": "append_event",
+      "line": 109
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/comprehension",
+      "module": "apps/product/voice_validation_api.py",
+      "handler": "submit_comprehension",
+      "line": 122
+    },
+    {
+      "method": "GET",
+      "path": "/sessions/{session_id}",
+      "module": "apps/product/voice_validation_api.py",
+      "handler": "get_session",
+      "line": 139
+    },
+    {
+      "method": "POST",
+      "path": "/sessions/{session_id}/analyst-review",
+      "module": "apps/product/voice_validation_api.py",
+      "handler": "save_analyst_review",
+      "line": 144
+    },
+    {
+      "method": "GET",
+      "path": "/summary",
+      "module": "apps/product/voice_validation_api.py",
+      "handler": "validation_summary",
+      "line": 159
+    },
+    {
+      "method": "GET",
+      "path": "/review-packet",
+      "module": "apps/product/voice_validation_api.py",
+      "handler": "blinded_review_packet",
+      "line": 170
+    }
+  ],
+  "prototypes": [
+    {
+      "id": "abu-motion-gallery-v1",
+      "path": "apps/product/static/experience/prototypes/abu-motion-gallery-v1",
+      "classification": "ADAPT",
+      "state": "internal_tool",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 3,
+      "size_bytes": 9923,
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py"
+      ]
+    },
+    {
+      "id": "abu-says-mingli-s0",
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0",
+      "classification": "RETIRE",
+      "state": "superseded_theater_prototype",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 5,
+      "size_bytes": 11813665,
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_s0_g1_candidate_a_professional_review.py",
+        "tests/test_v50_s0_g1_final_manifest.py",
+        "tests/test_v50_s0_g1_source_lock.py",
+        "tests/test_v50_s0_g2_visible_prototypes.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "id": "abu-says-mingli-s0-v11",
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0-v11",
+      "classification": "RETIRE",
+      "state": "superseded_theater_prototype",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 3,
+      "size_bytes": 31468,
+      "test_owners": [
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "id": "abu-says-mingli-s0-v12",
+      "path": "apps/product/static/experience/prototypes/abu-says-mingli-s0-v12",
+      "classification": "ADAPT",
+      "state": "locked_internal_milestone",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 3,
+      "size_bytes": 45491,
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "id": "mingli-lab-c2a",
+      "path": "apps/product/static/experience/prototypes/mingli-lab-c2a",
+      "classification": "RETIRE",
+      "state": "frozen_functional_fixture",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 4,
+      "size_bytes": 414359,
+      "test_owners": [
+        "tests/test_v50_mingli_lab_c2a_prototype.py",
+        "tests/test_v50_mingli_scene_c1r_prototype.py"
+      ]
+    },
+    {
+      "id": "mingli-onecanvas-c2ar",
+      "path": "apps/product/static/experience/prototypes/mingli-onecanvas-c2ar",
+      "classification": "PRESERVE",
+      "state": "active_product_candidate",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 15,
+      "size_bytes": 3087488,
+      "test_owners": [
+        "tests/test_v50_c2ar_mingli_onecanvas.py",
+        "tests/test_v50_c2ar_three_state_onecanvas.py",
+        "tests/test_v50_lean_inventory.py",
+        "tests/test_v50_onecanvas_pillar_selection_v2.py",
+        "tests/test_v50_onecanvas_r1_authority.py"
+      ]
+    },
+    {
+      "id": "mingli-scene-c1r",
+      "path": "apps/product/static/experience/prototypes/mingli-scene-c1r",
+      "classification": "RETIRE",
+      "state": "frozen_semantic_proof",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 4,
+      "size_bytes": 60001,
+      "test_owners": [
+        "tests/test_v50_mingli_scene_c1r_prototype.py"
+      ]
+    },
+    {
+      "id": "s0-shared",
+      "path": "apps/product/static/experience/prototypes/s0-shared",
+      "classification": "RETIRE",
+      "state": "superseded_scene_assets",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 7,
+      "size_bytes": 7329164,
+      "test_owners": [
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "id": "s0-v11-shared",
+      "path": "apps/product/static/experience/prototypes/s0-v11-shared",
+      "classification": "ADAPT",
+      "state": "shared_locked_scene_assets",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 8,
+      "size_bytes": 16826874,
+      "test_owners": [
+        "tests/test_v50_abu_actor_pass_v1.py",
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    },
+    {
+      "id": "xiangfa-s0-a",
+      "path": "apps/product/static/experience/prototypes/xiangfa-s0-a",
+      "classification": "RETIRE",
+      "state": "superseded_xiangfa_prototype",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 3,
+      "size_bytes": 27086,
+      "test_owners": [
+        "tests/test_v50_s0_g2_visible_prototypes.py"
+      ]
+    },
+    {
+      "id": "xiangfa-s0-v1",
+      "path": "apps/product/static/experience/prototypes/xiangfa-s0-v1",
+      "classification": "ADAPT",
+      "state": "isolated_product_validation",
+      "surface": "legacy-runtime",
+      "runtime_exposed": true,
+      "file_count": 3,
+      "size_bytes": 28538,
+      "test_owners": [
+        "tests/test_v50_s0_v11_creative_delivery.py"
+      ]
+    }
+  ]
+}

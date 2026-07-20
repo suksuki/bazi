@@ -1,0 +1,54 @@
+{
+  "schema_version": "deepbazi.v50_lean_before_after.v1",
+  "scope": "L0_and_L1_only",
+  "generated_at": "2026-07-20",
+  "metrics": {
+    "repository_bytes": {"before": 1558363161, "after": 445823001, "removed": 1112540160, "reduction_percent": 71.39},
+    "repository_files": {"before": 3750, "after": 1131, "removed": 2619, "reduction_percent": 69.84},
+    "artifact_bytes": {"before": 1310326438, "after": 197037198, "removed": 1113289240, "reduction_percent": 84.96},
+    "runtime_static_bytes": {"before": 179601676, "after": 159925933, "removed": 19675743, "reduction_percent": 10.96},
+    "experience_static_bytes": {"before": 39753473, "after": 20077730, "removed": 19675743, "reduction_percent": 49.49},
+    "main_experience_bundle_bytes": {"before": 79264, "after": 79264, "change": 0},
+    "active_product_routes": {"before": 1, "after": 1},
+    "isolated_validation_routes": {"before": 1, "after": 1},
+    "runtime_exposed_prototypes": {"before": 11, "after": 5},
+    "archived_prototypes": {"before": 0, "after": 6},
+    "exact_duplicate_media_bytes_in_runtime_inventory": {"before": 309700981, "after": 0},
+    "candidate_unreferenced_assets": {"before": 2707, "after": 158},
+    "python_dependency_edges": {"before": 1210, "after": 1210},
+    "frontend_dependency_edges": {"before": 29, "after": 22},
+    "http_routes": {"before": 82, "after": 82},
+    "visible_current_authority_documents": {"before": 11, "after": 5},
+    "full_regression": {
+      "before": {"passed": 408, "failed": 1},
+      "after": {"passed": 413, "failed": 0}
+    },
+    "application_build_probe_ms": {
+      "before": null,
+      "after_median": 21.74,
+      "after_p95": 32.31,
+      "note": "The pre-cleanup probe was not captured; this is the honest baseline for L2."
+    }
+  },
+  "physical_actions": {
+    "active_surface": [
+      "apps/product/static/experience/active/onecanvas-r1",
+      "apps/product/static/experience/active/xiangfa-generation-v1"
+    ],
+    "internal_and_shared_surface": [
+      "apps/product/static/experience/internal-tools/abu-motion-gallery-v1",
+      "apps/product/static/experience/internal-tools/abu-says-mingli-s0-v12",
+      "apps/product/static/experience/shared/s0-v12-shared"
+    ],
+    "archived_prototype_count": 6,
+    "deleted_regenerable_file_count": 2632,
+    "retention_manifest": "config/v50_lean_l1_manifest_v1.json"
+  },
+  "boundaries": {
+    "mingli_behavior_changed": false,
+    "runtime_reasoner_or_lifecase_changed": false,
+    "formal_state_changed": false,
+    "production_deployed": false,
+    "l2_started": false
+  }
+}

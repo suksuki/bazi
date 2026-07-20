@@ -1,0 +1,125 @@
+{
+  "schema_version": "deepbazi.s0_source_manifest.v2",
+  "manifest_id": "s0-source-manifest-final-v1",
+  "manifest_version": "1.0.0",
+  "manifest_status": "LOCKED_FOR_INTERNAL_G2",
+  "content_hash": "51c5f2841bdabd7be74e6b819f2e613538ae8f18432e64c98bdd892106d3a1fc",
+  "content_hash_scope": "sha256 of s0_candidate_a_approved_teaching_projection_v1.json",
+  "source_mode": "approved_anonymous_teaching_fixture",
+  "selected_fixture_id": "s0-fixture-candidate-a",
+  "professional_content_approved": true,
+  "professional_confidence": "medium",
+  "professional_decision_ref": "reports/abu-says-mingli-s0/g1/S0_G1_CANDIDATE_A_PROFESSIONAL_DECISION_LOCK_V1.json",
+  "professional_decision_hash": "399b39bffaa5659299b0702cd15fa6f3608e45eb232ce2a8f569eaa91fc249b6",
+  "approved_projection_ref": "reports/abu-says-mingli-s0/g1/s0_candidate_a_approved_teaching_projection_v1.json",
+  "source_chart_version": "chart-temporal-c0-v1",
+  "source_world_ref": "world-temporal-c0-v1",
+  "source_fixture_ref": "packages/experience/fixtures/temporal_sandbox_c0_v1.json",
+  "source_fixture_hash": "4d7c5cb1bd332b26024494247c8627687946ed519fea93a0899347a428435c5c",
+  "source_scene_state": "reports/abu-says-mingli-s0/g1/sources/s0-fixture-candidate-a.json",
+  "onecanvas_snapshot_hash": "d70880bfb440ecee9a9614c501aade2b37e3ca4b3cc33beeaf83e362a9df56ed",
+  "source_life_case_projection": "life-case-temporal-c0-v1",
+  "source_life_case_class": "contract_fixture_not_real_user_life_case",
+  "disclosure_role": "public_demo_content_used_only_in_internal_g2",
+  "pillar_refs": [
+    "slot-natal-year",
+    "slot-natal-month",
+    "slot-natal-day",
+    "slot-natal-hour",
+    "slot-luck-gengzi",
+    "slot-year-bingwu"
+  ],
+  "approved_node_refs": [
+    "node-stem-day-yi",
+    "node-stem-year-ding",
+    "node-metal-structure",
+    "node-luck-geng",
+    "node-luck-zi",
+    "node-year-bing",
+    "node-year-wu"
+  ],
+  "approved_relation_refs": [
+    "relation-yi-generates-ding",
+    "relation-ding-acts-on-metal",
+    "relation-luck-geng-controls-yi",
+    "relation-year-bing-supports-ding"
+  ],
+  "approved_committed_path_refs": [
+    "path-committed-output-pressure"
+  ],
+  "approved_temporal_refs": [
+    "snapshot-luck-gengzi-v1",
+    "snapshot-year-bingwu-v1"
+  ],
+  "approved_discrete_changes": [
+    {
+      "temporal_ref": "snapshot-luck-gengzi-v1",
+      "path_ref": "path-committed-output-pressure",
+      "change": "weakened",
+      "relative_to": "original_chart",
+      "must_not_render_as": "blocked"
+    },
+    {
+      "temporal_ref": "snapshot-year-bingwu-v1",
+      "path_ref": "path-committed-output-pressure",
+      "change": "reinforced",
+      "relative_to": "luck_stage",
+      "must_not_render_as": "fully_restored_or_above_natal_baseline"
+    }
+  ],
+  "approved_animation_cue_refs": [
+    "s0-cue-natal-path-reveal",
+    "s0-cue-luck-source-constrained",
+    "s0-cue-year-fire-supported"
+  ],
+  "approved_minimal_copy": [
+    "原局：路径成立",
+    "庚子：源端受制",
+    "丙午：火侧得助"
+  ],
+  "uncertainty_and_scope": [
+    "金结构不表示巳酉丑无条件完全合化。",
+    "正式主路径是本教学场景批准采用的主叙事，不是算法唯一最优路径。",
+    "庚子 weakened 只依据庚作用乙木源端，不包含子水独立作用。",
+    "丙午 reinforced 只依据丙支持丁火节点，不包含午支独立作用。",
+    "reinforced 只相对庚子阶段，不表示超过原局基线。",
+    "本投影不作整体吉凶或现实事件推断。"
+  ],
+  "blocked_animation_effects": [
+    "Zi-to-Ding effect arrow",
+    "Zi-caused metal-pressure increase",
+    "Wu-to-Ding effect arrow",
+    "Zi-Wu clash animation",
+    "Si-Wu fire-association animation",
+    "complete path break during Gengzi",
+    "full restoration or natal-baseline overtake during Bingwu",
+    "percentage probability or energy meter",
+    "real-life event reenactment"
+  ],
+  "narration_script_ref": "reports/abu-says-mingli-s0/g1/s0_locked_copy_v1.json",
+  "narration_script_hash": "69fb0b2e6e55b013c309da4f762180e0e9ef03c89b5dd5b06719bb239fc445cf",
+  "forbidden_claims_ref": "reports/abu-says-mingli-s0/g1/s0_locked_copy_v1.json#forbidden_claims",
+  "xiangfa_scene_spec_hash": null,
+  "speech_asset_hash": null,
+  "abu_asset_refs": [],
+  "brand_asset_refs": [],
+  "release_scope": "internal_static_storyboard_and_low_fidelity_animatic",
+  "s0_g1_status": "PASS_WITH_CONDITIONS",
+  "s0_g2_authorized": true,
+  "s0_g3_authorized": false,
+  "final_master_authorized": false,
+  "website_release_authorized": false,
+  "public_release_authorized": false,
+  "g2_allowed": [
+    "static storyboard",
+    "internal low-fidelity animatic",
+    "Eric internal audition",
+    "16:9 and 9:16 composition validation"
+  ],
+  "g2_may_not": [
+    "add semantic objects outside this manifest",
+    "invent or infer new temporal effects",
+    "promote the fixture to a real user case",
+    "publish or deploy the result"
+  ]
+}

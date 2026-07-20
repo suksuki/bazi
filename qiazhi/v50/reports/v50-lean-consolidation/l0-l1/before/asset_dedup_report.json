@@ -1,0 +1,1730 @@
+{
+  "schema_version": "deepbazi.asset_dedup_report.v1",
+  "asset_count": 2819,
+  "asset_bytes": 1519064550,
+  "duplicate_group_count": 148,
+  "duplicate_bytes": 309700981,
+  "candidate_unreferenced_count": 2707,
+  "duplicate_groups": [
+    {
+      "sha256": "422d9aead8fa9ac4716e0d016383bc5f6bf0f13f08bfe38075d9a7bba4f0f529",
+      "size_bytes": 18071903,
+      "copies": 2,
+      "reclaimable_bytes": 18071903,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/face-change-transition/web/abu_face_change_transition_v1.webm",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/face-change-transition/web/abu_face_change_transition_v1.webm"
+      ]
+    },
+    {
+      "sha256": "ec5ca5fbebbf3182ae335f1398a4d08dc1553e36a5ad67da2e325a0aeefdbe34",
+      "size_bytes": 9747296,
+      "copies": 2,
+      "reclaimable_bytes": 9747296,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/face-change-transition/web/abu_face_change_transition_v1.webp",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/face-change-transition/web/abu_face_change_transition_v1.webp"
+      ]
+    },
+    {
+      "sha256": "983383bbf938ec6d10d1073b67bafc1106c46558d22493c1cc8888e9cbbdfb86",
+      "size_bytes": 9189170,
+      "copies": 2,
+      "reclaimable_bytes": 9189170,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/DeepBazi_Abu_S0_V1.2_voiced.mp4",
+        "artifacts/s0-v12/video/DeepBazi_Abu_S0_V1.2_voiced.mp4"
+      ]
+    },
+    {
+      "sha256": "9cc48e638aa16d6b02a7415770d96deffbfaf43ed21182c40d71a27e81ee62d2",
+      "size_bytes": 8547950,
+      "copies": 3,
+      "reclaimable_bytes": 17095900,
+      "paths": [
+        "apps/product/static/experience/prototypes/s0-v11-shared/assets/s0-v11-eric-mix.wav",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/experience-static/prototypes/s0-v11-shared/assets/s0-v11-eric-mix.wav",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/experience-static/prototypes/s0-v11-shared/assets/s0-v11-eric-mix.wav"
+      ]
+    },
+    {
+      "sha256": "122ad424b3400e7203461ccd35cb8ee26012277b5162108879deb9d55aba4467",
+      "size_bytes": 8092286,
+      "copies": 2,
+      "reclaimable_bytes": 8092286,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/DeepBazi_Abu_S0_V1.2_silent_subtitled.mp4",
+        "artifacts/s0-v12/video/DeepBazi_Abu_S0_V1.2_silent_subtitled.mp4"
+      ]
+    },
+    {
+      "sha256": "d5eae02eb2eed1f62a5678c004c66abc6c00ab36b8084e8517a38747531acda5",
+      "size_bytes": 7221376,
+      "copies": 2,
+      "reclaimable_bytes": 7221376,
+      "paths": [
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/videos/DeepBazi_Abu_S0_V1.1_voiced.mp4",
+        "artifacts/s0-v11/video/DeepBazi_Abu_S0_V1.1_voiced.mp4"
+      ]
+    },
+    {
+      "sha256": "9cfd140948400e703f3dbdabfc4c75368ae00bd5cc4d42f6f7256e46927804ed",
+      "size_bytes": 6192169,
+      "copies": 2,
+      "reclaimable_bytes": 6192169,
+      "paths": [
+        "apps/product/static/experience/prototypes/abu-says-mingli-s0/assets/abu-says-mingli-s0-v1.mp4",
+        "reports/abu-says-mingli-s0/g2/video/abu-says-mingli-s0-v1.mp4"
+      ]
+    },
+    {
+      "sha256": "30c078651592f757a22f9c4247b1951e80ecad0fd910cecfbc14b5d541baa620",
+      "size_bytes": 6128750,
+      "copies": 2,
+      "reclaimable_bytes": 6128750,
+      "paths": [
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/videos/DeepBazi_Abu_S0_V1.1_silent_subtitled.mp4",
+        "artifacts/s0-v11/video/DeepBazi_Abu_S0_V1.1_silent_subtitled.mp4"
+      ]
+    },
+    {
+      "sha256": "854e48a834b1a5b579199713abf5d19b853e20acc0d91db843befe8d9c6c3d02",
+      "size_bytes": 5680913,
+      "copies": 2,
+      "reclaimable_bytes": 5680913,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/enter-and-notice/web/abu_enter_and_notice_v1.webm",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/enter-and-notice/web/abu_enter_and_notice_v1.webm"
+      ]
+    },
+    {
+      "sha256": "3c2aee8e27f8094726fa52e999d2f9f463a70806e55fc44755f4c9369cc98435",
+      "size_bytes": 5586864,
+      "copies": 2,
+      "reclaimable_bytes": 5586864,
+      "paths": [
+        "apps/product/static/experience/prototypes/abu-says-mingli-s0/assets/abu-says-mingli-s0-v1-silent.mp4",
+        "reports/abu-says-mingli-s0/g2/video/abu-says-mingli-s0-v1-silent.mp4"
+      ]
+    },
+    {
+      "sha256": "645b7e1451fb3d9aec0a0c25dac7f57f427841060f18a331f44f77008be29890",
+      "size_bytes": 4049642,
+      "copies": 2,
+      "reclaimable_bytes": 4049642,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-right/web/abu_stand_point_up_right_v1.webm",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-right/web/abu_stand_point_up_right_v1.webm"
+      ]
+    },
+    {
+      "sha256": "6492c68042a49bad03bb9b4b7dc40366258629025f896143387fd2bb9aff2eac",
+      "size_bytes": 4039907,
+      "copies": 2,
+      "reclaimable_bytes": 4039907,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-left/web/abu_stand_point_up_left_v1.webm",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-left/web/abu_stand_point_up_left_v1.webm"
+      ]
+    },
+    {
+      "sha256": "0f460eba3fca7299a2204387b6efd0135f206f52cb5cfc4018081d69b0f334a8",
+      "size_bytes": 3944014,
+      "copies": 2,
+      "reclaimable_bytes": 3944014,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/enter-and-notice/web/abu_enter_and_notice_v1.webp",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/enter-and-notice/web/abu_enter_and_notice_v1.webp"
+      ]
+    },
+    {
+      "sha256": "18ad499f0308a4bcdebfbfb96b465d2bf091e66a3f279f44855558d39757f739",
+      "size_bytes": 3121865,
+      "copies": 2,
+      "reclaimable_bytes": 3121865,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/notice-tension/web/abu_notice_tension_v1.webm",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/notice-tension/web/abu_notice_tension_v1.webm"
+      ]
+    },
+    {
+      "sha256": "fc6c426f61c543f34aa483ca13acadedc8ed95f402cf4d7ae0a31296e6ce8950",
+      "size_bytes": 2848288,
+      "copies": 3,
+      "reclaimable_bytes": 5696576,
+      "paths": [
+        "apps/product/static/experience/prototypes/s0-v11-shared/assets/xiangfa-anonymous-case-wide-v1.png",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/experience-static/prototypes/s0-v11-shared/assets/xiangfa-anonymous-case-wide-v1.png",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/experience-static/prototypes/s0-v11-shared/assets/xiangfa-anonymous-case-wide-v1.png"
+      ]
+    },
+    {
+      "sha256": "829f4b58c71e9b6ab5a87f4b0bd9dba015f81650fe0662bc3745bf7d41ee1295",
+      "size_bytes": 2716019,
+      "copies": 3,
+      "reclaimable_bytes": 5432038,
+      "paths": [
+        "apps/product/static/experience/prototypes/s0-v11-shared/assets/xiangfa-anonymous-case-portrait-v1.png",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/experience-static/prototypes/s0-v11-shared/assets/xiangfa-anonymous-case-portrait-v1.png",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/experience-static/prototypes/s0-v11-shared/assets/xiangfa-anonymous-case-portrait-v1.png"
+      ]
+    },
+    {
+      "sha256": "d88ba8c9103180295e8ab202b888a9577a8e74c49a4ebfa6ed127cf5ea68ac25",
+      "size_bytes": 2619947,
+      "copies": 3,
+      "reclaimable_bytes": 5239894,
+      "paths": [
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/screenshots/xiangfa-v1-portrait-1080x1920.png",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/screenshots/xiangfa-v1-portrait-1080x1920.png",
+        "artifacts/s0-v11/screenshots/xiangfa-v1-portrait-1080x1920.png"
+      ]
+    },
+    {
+      "sha256": "cde3dcc0427bd5413e26751539979090783a2803ffaff57d659f7ccb04591bf6",
+      "size_bytes": 2399278,
+      "copies": 3,
+      "reclaimable_bytes": 4798556,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp"
+      ]
+    },
+    {
+      "sha256": "f7b3ffe71dcc77cd786e7a42469bf856cdd150fc19326701df743ee562b1a578",
+      "size_bytes": 2314023,
+      "copies": 2,
+      "reclaimable_bytes": 2314023,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/turn-and-point/web/abu_turn_and_point_v1.webm",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/turn-and-point/web/abu_turn_and_point_v1.webm"
+      ]
+    },
+    {
+      "sha256": "6a8a606fac3e667291e148dba812a1378359ca3079abae80a0bffa2d1c607ed4",
+      "size_bytes": 2058168,
+      "copies": 3,
+      "reclaimable_bytes": 4116336,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp"
+      ]
+    },
+    {
+      "sha256": "0d950237199b559fddc4cf871081ee334d13d1deb0ab9216d2189a06ac76dddf",
+      "size_bytes": 1909542,
+      "copies": 2,
+      "reclaimable_bytes": 1909542,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-left/web/abu_stand_point_up_left_v1.webp",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-left/web/abu_stand_point_up_left_v1.webp"
+      ]
+    },
+    {
+      "sha256": "46ca31f6dd21f09326cc9f1cefd845f64e7449d00714b793121312c52df16f5e",
+      "size_bytes": 1908218,
+      "copies": 2,
+      "reclaimable_bytes": 1908218,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-right/web/abu_stand_point_up_right_v1.webp",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-right/web/abu_stand_point_up_right_v1.webp"
+      ]
+    },
+    {
+      "sha256": "637e11e3d5c4d0f8af979ed39ac85dd3524c2d6ab26df8581df0a95a2e3b3367",
+      "size_bytes": 1783334,
+      "copies": 2,
+      "reclaimable_bytes": 1783334,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/notice-tension/web/abu_notice_tension_v1.webp",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/notice-tension/web/abu_notice_tension_v1.webp"
+      ]
+    },
+    {
+      "sha256": "8973568840b009f4ad79d0b20f69795d3734595338a75352085ccf7bef31c31b",
+      "size_bytes": 1759289,
+      "copies": 3,
+      "reclaimable_bytes": 3518578,
+      "paths": [
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/screenshots/xiangfa-v1-desktop-1440x900.png",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/screenshots/xiangfa-v1-desktop-1440x900.png",
+        "artifacts/s0-v11/screenshots/xiangfa-v1-desktop-1440x900.png"
+      ]
+    },
+    {
+      "sha256": "bd1190fdfc026f2b66cf09f42f0dcc2e45416d2369b1cf20b87e175a03444c7b",
+      "size_bytes": 1668094,
+      "copies": 3,
+      "reclaimable_bytes": 3336188,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp"
+      ]
+    },
+    {
+      "sha256": "e098552d75b3501f212928b7a46848c5fe5fc7f9f3345eebbfd9ae4d477f4971",
+      "size_bytes": 1533588,
+      "copies": 2,
+      "reclaimable_bytes": 1533588,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/turn-and-point/web/abu_turn_and_point_v1.webp",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/turn-and-point/web/abu_turn_and_point_v1.webp"
+      ]
+    },
+    {
+      "sha256": "2ff3837d57224a1d949fe910b89cb507ed7a17673f1280e9b59bdafa32488263",
+      "size_bytes": 1518200,
+      "copies": 3,
+      "reclaimable_bytes": 3036400,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v4-video-derived/web/abu_caution_ears_v4.webp",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/assets/abu/v4-video-derived/web/abu_caution_ears_v4.webp",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/assets/abu/v4-video-derived/web/abu_caution_ears_v4.webp"
+      ]
+    },
+    {
+      "sha256": "cea9ac6c10e5ab012de5b8af9d58a8c20590ab7a29e4a3395a8146e80f4ff3fe",
+      "size_bytes": 1286015,
+      "copies": 2,
+      "reclaimable_bytes": 1286015,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/qa/gallery-desktop-v15.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/gallery/gallery-desktop-1280.png"
+      ]
+    },
+    {
+      "sha256": "2f13210571495d5b5e93e319f45feff5c14ad8cc60c47e5b450dd900f7acbc3a",
+      "size_bytes": 755687,
+      "copies": 2,
+      "reclaimable_bytes": 755687,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/Abu_Actor_Pass_V1_contact_sheet.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/Abu_Actor_Pass_V1_contact_sheet.png"
+      ]
+    },
+    {
+      "sha256": "5fe42800a8f7ad9eb60155954f8de900bc43988b6d1c36d30e85e54c61bbd1bc",
+      "size_bytes": 706763,
+      "copies": 5,
+      "reclaimable_bytes": 2827052,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00512.jpg",
+        "artifacts/s0-v11/frames/frame-00514.jpg",
+        "artifacts/s0-v11/frames/frame-00515.jpg",
+        "artifacts/s0-v11/frames/frame-00521.jpg",
+        "artifacts/s0-v11/frames/frame-00530.jpg"
+      ]
+    },
+    {
+      "sha256": "ba77afbd6cdab373236fe2f2652b632a60cabd64edb4f0557de127131c8dfd00",
+      "size_bytes": 705563,
+      "copies": 2,
+      "reclaimable_bytes": 705563,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00956.jpg",
+        "artifacts/s0-v12/frames/frame-00957.jpg"
+      ]
+    },
+    {
+      "sha256": "f6266c6b2f89f1ffbc0b4248e713469e8589e6525a9b2ced5fa8975fa0e20a15",
+      "size_bytes": 705438,
+      "copies": 3,
+      "reclaimable_bytes": 1410876,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00505.jpg",
+        "artifacts/s0-v11/keyframes/07-xiangfa-finale.jpg",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/keyframes/07-xiangfa-finale.jpg"
+      ]
+    },
+    {
+      "sha256": "cc46bfbf3bd7143c7733ea16376cd75c1a7285e8b8f88d76fc7238a8e6269c0c",
+      "size_bytes": 705274,
+      "copies": 2,
+      "reclaimable_bytes": 705274,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00958.jpg",
+        "artifacts/s0-v12/frames/frame-00959.jpg"
+      ]
+    },
+    {
+      "sha256": "3c3d74796179fe74347108f2f1aa2f12092e7c2e5a3e64a67eaf5777cf6eb899",
+      "size_bytes": 704861,
+      "copies": 2,
+      "reclaimable_bytes": 704861,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00961.jpg",
+        "artifacts/s0-v12/frames/frame-00962.jpg"
+      ]
+    },
+    {
+      "sha256": "7adf9fbad2358f81040e049ba6b708c508757e37b6f22f7b7268a2e39725ff40",
+      "size_bytes": 703395,
+      "copies": 2,
+      "reclaimable_bytes": 703395,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00951.jpg",
+        "artifacts/s0-v12/frames/frame-00952.jpg"
+      ]
+    },
+    {
+      "sha256": "21542b6f01f5cde28055c1f6b806d5196ecc718f732cda5bae6feb2e9f89a6c4",
+      "size_bytes": 702429,
+      "copies": 83,
+      "reclaimable_bytes": 57599178,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/06-xiangfa.jpg",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/s0-v12-desktop-transition.jpg",
+        "artifacts/s0-v12/frames/frame-00965.jpg",
+        "artifacts/s0-v12/frames/frame-00966.jpg",
+        "artifacts/s0-v12/frames/frame-00967.jpg",
+        "artifacts/s0-v12/frames/frame-00968.jpg",
+        "artifacts/s0-v12/frames/frame-00969.jpg",
+        "artifacts/s0-v12/frames/frame-00970.jpg",
+        "artifacts/s0-v12/frames/frame-00971.jpg",
+        "artifacts/s0-v12/frames/frame-00972.jpg",
+        "artifacts/s0-v12/frames/frame-00973.jpg",
+        "artifacts/s0-v12/frames/frame-00974.jpg",
+        "artifacts/s0-v12/frames/frame-00975.jpg",
+        "artifacts/s0-v12/frames/frame-00976.jpg",
+        "artifacts/s0-v12/frames/frame-00977.jpg",
+        "artifacts/s0-v12/frames/frame-00978.jpg",
+        "artifacts/s0-v12/frames/frame-00979.jpg",
+        "artifacts/s0-v12/frames/frame-00980.jpg",
+        "artifacts/s0-v12/frames/frame-00981.jpg",
+        "artifacts/s0-v12/frames/frame-00982.jpg",
+        "artifacts/s0-v12/frames/frame-00983.jpg",
+        "artifacts/s0-v12/frames/frame-00984.jpg",
+        "artifacts/s0-v12/frames/frame-00985.jpg",
+        "artifacts/s0-v12/frames/frame-00986.jpg",
+        "artifacts/s0-v12/frames/frame-00987.jpg",
+        "artifacts/s0-v12/frames/frame-00988.jpg",
+        "artifacts/s0-v12/frames/frame-00989.jpg",
+        "artifacts/s0-v12/frames/frame-00990.jpg",
+        "artifacts/s0-v12/frames/frame-00991.jpg",
+        "artifacts/s0-v12/frames/frame-00992.jpg",
+        "artifacts/s0-v12/frames/frame-00993.jpg",
+        "artifacts/s0-v12/frames/frame-00994.jpg",
+        "artifacts/s0-v12/frames/frame-00995.jpg",
+        "artifacts/s0-v12/frames/frame-00996.jpg",
+        "artifacts/s0-v12/frames/frame-00997.jpg",
+        "artifacts/s0-v12/frames/frame-00998.jpg",
+        "artifacts/s0-v12/frames/frame-00999.jpg",
+        "artifacts/s0-v12/frames/frame-01000.jpg",
+        "artifacts/s0-v12/frames/frame-01001.jpg",
+        "artifacts/s0-v12/frames/frame-01002.jpg",
+        "artifacts/s0-v12/frames/frame-01003.jpg",
+        "artifacts/s0-v12/frames/frame-01004.jpg",
+        "artifacts/s0-v12/frames/frame-01005.jpg",
+        "artifacts/s0-v12/frames/frame-01006.jpg",
+        "artifacts/s0-v12/frames/frame-01007.jpg",
+        "artifacts/s0-v12/frames/frame-01008.jpg",
+        "artifacts/s0-v12/frames/frame-01009.jpg",
+        "artifacts/s0-v12/frames/frame-01010.jpg",
+        "artifacts/s0-v12/frames/frame-01011.jpg",
+        "artifacts/s0-v12/frames/frame-01012.jpg",
+        "artifacts/s0-v12/frames/frame-01013.jpg",
+        "artifacts/s0-v12/frames/frame-01014.jpg",
+        "artifacts/s0-v12/frames/frame-01015.jpg",
+        "artifacts/s0-v12/frames/frame-01016.jpg",
+        "artifacts/s0-v12/frames/frame-01017.jpg",
+        "artifacts/s0-v12/frames/frame-01018.jpg",
+        "artifacts/s0-v12/frames/frame-01019.jpg",
+        "artifacts/s0-v12/frames/frame-01020.jpg",
+        "artifacts/s0-v12/frames/frame-01021.jpg",
+        "artifacts/s0-v12/frames/frame-01022.jpg",
+        "artifacts/s0-v12/frames/frame-01023.jpg",
+        "artifacts/s0-v12/frames/frame-01024.jpg",
+        "artifacts/s0-v12/frames/frame-01025.jpg",
+        "artifacts/s0-v12/frames/frame-01026.jpg",
+        "artifacts/s0-v12/frames/frame-01027.jpg",
+        "artifacts/s0-v12/frames/frame-01028.jpg",
+        "artifacts/s0-v12/frames/frame-01029.jpg",
+        "artifacts/s0-v12/frames/frame-01030.jpg",
+        "artifacts/s0-v12/frames/frame-01031.jpg",
+        "artifacts/s0-v12/frames/frame-01032.jpg",
+        "artifacts/s0-v12/frames/frame-01033.jpg",
+        "artifacts/s0-v12/frames/frame-01034.jpg",
+        "artifacts/s0-v12/frames/frame-01035.jpg",
+        "artifacts/s0-v12/frames/frame-01036.jpg",
+        "artifacts/s0-v12/frames/frame-01037.jpg",
+        "artifacts/s0-v12/frames/frame-01038.jpg",
+        "artifacts/s0-v12/frames/frame-01039.jpg",
+        "artifacts/s0-v12/frames/frame-01040.jpg",
+        "artifacts/s0-v12/frames/frame-01041.jpg",
+        "artifacts/s0-v12/frames/frame-01042.jpg",
+        "artifacts/s0-v12/frames/frame-01043.jpg",
+        "artifacts/s0-v12/frames/frame-01044.jpg",
+        "artifacts/s0-v12/keyframes/06-xiangfa.jpg"
+      ]
+    },
+    {
+      "sha256": "349b416e13fe245c95c253c9372ff52081e6d42ec47b5d679b6b408832c73f30",
+      "size_bytes": 699837,
+      "copies": 2,
+      "reclaimable_bytes": 699837,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00492.jpg",
+        "artifacts/s0-v11/frames/frame-00495.jpg"
+      ]
+    },
+    {
+      "sha256": "a3ceee07e1394431caa416a080573727628424f6449e343c9a017196346ed13d",
+      "size_bytes": 699784,
+      "copies": 5,
+      "reclaimable_bytes": 2799136,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00481.jpg",
+        "artifacts/s0-v11/frames/frame-00483.jpg",
+        "artifacts/s0-v11/frames/frame-00484.jpg",
+        "artifacts/s0-v11/frames/frame-00485.jpg",
+        "artifacts/s0-v11/frames/frame-00488.jpg"
+      ]
+    },
+    {
+      "sha256": "cb9c8e2f471a8182b41f72631bae669659675a5a8655250de7b1b48955bf7f7b",
+      "size_bytes": 699735,
+      "copies": 2,
+      "reclaimable_bytes": 699735,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00482.jpg",
+        "artifacts/s0-v11/frames/frame-00486.jpg"
+      ]
+    },
+    {
+      "sha256": "02e9526acac88afd69cc991e5c1f6b211a9402f0a637271b8630ca0dfc0a3b72",
+      "size_bytes": 698605,
+      "copies": 2,
+      "reclaimable_bytes": 698605,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00947.jpg",
+        "artifacts/s0-v12/frames/frame-00948.jpg"
+      ]
+    },
+    {
+      "sha256": "95c41676c78d02fe56b279d8ac3fa27f6ae0abaa992cfcc28d6b3ec5106ff588",
+      "size_bytes": 697794,
+      "copies": 2,
+      "reclaimable_bytes": 697794,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00942.jpg",
+        "artifacts/s0-v12/frames/frame-00943.jpg"
+      ]
+    },
+    {
+      "sha256": "cf36251d0baffba3b67ed2c443657465af458a5ac8ddc1c396374c04ccbe2de0",
+      "size_bytes": 697647,
+      "copies": 2,
+      "reclaimable_bytes": 697647,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00933.jpg",
+        "artifacts/s0-v12/frames/frame-00934.jpg"
+      ]
+    },
+    {
+      "sha256": "774530b4db1463bc156f9bb88209c49e567112a6b888679b0e82813643c09eb4",
+      "size_bytes": 696272,
+      "copies": 2,
+      "reclaimable_bytes": 696272,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00938.jpg",
+        "artifacts/s0-v12/frames/frame-00939.jpg"
+      ]
+    },
+    {
+      "sha256": "f7e31f50f3a7c80515af0e39808c2d2c306f972f039c05199ab22303e4b2faea",
+      "size_bytes": 636958,
+      "copies": 2,
+      "reclaimable_bytes": 636958,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/stand-point-detail.png",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/stand-point/pointing_detail.png"
+      ]
+    },
+    {
+      "sha256": "b18ae3f8e0d3f22931b2f790220d09ca33283b3b8586ec347fe922a0beb025f8",
+      "size_bytes": 599729,
+      "copies": 3,
+      "reclaimable_bytes": 1199458,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/07-finale.jpg",
+        "artifacts/s0-v12/frames/frame-01057.jpg",
+        "artifacts/s0-v12/keyframes/07-finale.jpg"
+      ]
+    },
+    {
+      "sha256": "fa08e60b57527ceddaa67a1f4cdc757cc843e58cbe9ac3750da8d34521d60405",
+      "size_bytes": 519179,
+      "copies": 2,
+      "reclaimable_bytes": 519179,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/stand-point-overview.png",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/stand-point/source_overview.png"
+      ]
+    },
+    {
+      "sha256": "9de47647cdf21b63fd12ec3b100661f566f6f373a92b940cf13f0669cbc9a600",
+      "size_bytes": 486865,
+      "copies": 37,
+      "reclaimable_bytes": 17527140,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00096.jpg",
+        "artifacts/s0-v12/frames/frame-00097.jpg",
+        "artifacts/s0-v12/frames/frame-00098.jpg",
+        "artifacts/s0-v12/frames/frame-00099.jpg",
+        "artifacts/s0-v12/frames/frame-00100.jpg",
+        "artifacts/s0-v12/frames/frame-00101.jpg",
+        "artifacts/s0-v12/frames/frame-00102.jpg",
+        "artifacts/s0-v12/frames/frame-00103.jpg",
+        "artifacts/s0-v12/frames/frame-00104.jpg",
+        "artifacts/s0-v12/frames/frame-00105.jpg",
+        "artifacts/s0-v12/frames/frame-00106.jpg",
+        "artifacts/s0-v12/frames/frame-00107.jpg",
+        "artifacts/s0-v12/frames/frame-00108.jpg",
+        "artifacts/s0-v12/frames/frame-00109.jpg",
+        "artifacts/s0-v12/frames/frame-00110.jpg",
+        "artifacts/s0-v12/frames/frame-00111.jpg",
+        "artifacts/s0-v12/frames/frame-00112.jpg",
+        "artifacts/s0-v12/frames/frame-00113.jpg",
+        "artifacts/s0-v12/frames/frame-00114.jpg",
+        "artifacts/s0-v12/frames/frame-00115.jpg",
+        "artifacts/s0-v12/frames/frame-00116.jpg",
+        "artifacts/s0-v12/frames/frame-00117.jpg",
+        "artifacts/s0-v12/frames/frame-00118.jpg",
+        "artifacts/s0-v12/frames/frame-00119.jpg",
+        "artifacts/s0-v12/frames/frame-00120.jpg",
+        "artifacts/s0-v12/frames/frame-00121.jpg",
+        "artifacts/s0-v12/frames/frame-00122.jpg",
+        "artifacts/s0-v12/frames/frame-00123.jpg",
+        "artifacts/s0-v12/frames/frame-00124.jpg",
+        "artifacts/s0-v12/frames/frame-00125.jpg",
+        "artifacts/s0-v12/frames/frame-00126.jpg",
+        "artifacts/s0-v12/frames/frame-00127.jpg",
+        "artifacts/s0-v12/frames/frame-00128.jpg",
+        "artifacts/s0-v12/frames/frame-00129.jpg",
+        "artifacts/s0-v12/frames/frame-00130.jpg",
+        "artifacts/s0-v12/frames/frame-00131.jpg",
+        "artifacts/s0-v12/frames/frame-00132.jpg"
+      ]
+    },
+    {
+      "sha256": "c226097efdad6ef9e2be38e4c15fc948636a6aea6da2d95c99b85f8ba70fb0d0",
+      "size_bytes": 485018,
+      "copies": 2,
+      "reclaimable_bytes": 485018,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00068.jpg",
+        "artifacts/s0-v12/frames/frame-00069.jpg"
+      ]
+    },
+    {
+      "sha256": "374a5fc54209cfe23fa81afe8e7b0fc86d08816f60ee2ee4bf267de86bad0453",
+      "size_bytes": 484896,
+      "copies": 27,
+      "reclaimable_bytes": 12607296,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/01-opening.jpg",
+        "artifacts/s0-v12/frames/frame-00071.jpg",
+        "artifacts/s0-v12/frames/frame-00072.jpg",
+        "artifacts/s0-v12/frames/frame-00073.jpg",
+        "artifacts/s0-v12/frames/frame-00074.jpg",
+        "artifacts/s0-v12/frames/frame-00075.jpg",
+        "artifacts/s0-v12/frames/frame-00076.jpg",
+        "artifacts/s0-v12/frames/frame-00077.jpg",
+        "artifacts/s0-v12/frames/frame-00078.jpg",
+        "artifacts/s0-v12/frames/frame-00079.jpg",
+        "artifacts/s0-v12/frames/frame-00080.jpg",
+        "artifacts/s0-v12/frames/frame-00081.jpg",
+        "artifacts/s0-v12/frames/frame-00082.jpg",
+        "artifacts/s0-v12/frames/frame-00083.jpg",
+        "artifacts/s0-v12/frames/frame-00084.jpg",
+        "artifacts/s0-v12/frames/frame-00085.jpg",
+        "artifacts/s0-v12/frames/frame-00086.jpg",
+        "artifacts/s0-v12/frames/frame-00087.jpg",
+        "artifacts/s0-v12/frames/frame-00088.jpg",
+        "artifacts/s0-v12/frames/frame-00089.jpg",
+        "artifacts/s0-v12/frames/frame-00090.jpg",
+        "artifacts/s0-v12/frames/frame-00091.jpg",
+        "artifacts/s0-v12/frames/frame-00092.jpg",
+        "artifacts/s0-v12/frames/frame-00093.jpg",
+        "artifacts/s0-v12/frames/frame-00094.jpg",
+        "artifacts/s0-v12/frames/frame-00095.jpg",
+        "artifacts/s0-v12/keyframes/01-opening.jpg"
+      ]
+    },
+    {
+      "sha256": "77256da4c2d08c7b5731ab1a7beb538251db968380196b9a575c3972e17d2370",
+      "size_bytes": 484854,
+      "copies": 2,
+      "reclaimable_bytes": 484854,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00065.jpg",
+        "artifacts/s0-v12/frames/frame-00066.jpg"
+      ]
+    },
+    {
+      "sha256": "eac5265a4c763dfa31e1a90ee417c20bea2f17ca5ffa885da4ab3ff87b913503",
+      "size_bytes": 484683,
+      "copies": 3,
+      "reclaimable_bytes": 969366,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00062.jpg",
+        "artifacts/s0-v12/frames/frame-00063.jpg",
+        "artifacts/s0-v12/frames/frame-00064.jpg"
+      ]
+    },
+    {
+      "sha256": "7fa0144dff14ba961b50fc7028b5e1e8ead81c75226014ba89e55f533c57a1fd",
+      "size_bytes": 484339,
+      "copies": 2,
+      "reclaimable_bytes": 484339,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00059.jpg",
+        "artifacts/s0-v12/frames/frame-00060.jpg"
+      ]
+    },
+    {
+      "sha256": "9317bc23939e1a724ddb2001352c39e75ef16a68d61642bbb0f9d72968160e59",
+      "size_bytes": 483888,
+      "copies": 2,
+      "reclaimable_bytes": 483888,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00049.jpg",
+        "artifacts/s0-v12/frames/frame-00050.jpg"
+      ]
+    },
+    {
+      "sha256": "26cb47ee5ad0a69e4516041c13d194f6ef453403c9329b85fb7aabe6e3f77c22",
+      "size_bytes": 483713,
+      "copies": 2,
+      "reclaimable_bytes": 483713,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00046.jpg",
+        "artifacts/s0-v12/frames/frame-00047.jpg"
+      ]
+    },
+    {
+      "sha256": "aac8fd917f1fabadf51c443493a6cd3b588871f0abc10c67c4a176d9ac68e9b5",
+      "size_bytes": 483342,
+      "copies": 2,
+      "reclaimable_bytes": 483342,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00051.jpg",
+        "artifacts/s0-v12/frames/frame-00052.jpg"
+      ]
+    },
+    {
+      "sha256": "7796ae7e04514b36d307497d96b348fc27f4b3bf3cd8b0a7b3af92b75b86ab77",
+      "size_bytes": 482973,
+      "copies": 2,
+      "reclaimable_bytes": 482973,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00057.jpg",
+        "artifacts/s0-v12/frames/frame-00058.jpg"
+      ]
+    },
+    {
+      "sha256": "4a8dc8ef2a62ed5bb63bca79fc87dfb9cca66e60f007230e823da1e4a1e45cba",
+      "size_bytes": 482783,
+      "copies": 2,
+      "reclaimable_bytes": 482783,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00043.jpg",
+        "artifacts/s0-v12/frames/frame-00044.jpg"
+      ]
+    },
+    {
+      "sha256": "0c5c93e57bfc9685018a0190dfdfdb5a76e152a556079c05a390b59feaf49522",
+      "size_bytes": 482777,
+      "copies": 2,
+      "reclaimable_bytes": 482777,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00038.jpg",
+        "artifacts/s0-v12/frames/frame-00039.jpg"
+      ]
+    },
+    {
+      "sha256": "cd8d9355330b673a8cc1556dead3b081e74f2b5bda8e895e6c1e07ce834881b4",
+      "size_bytes": 482520,
+      "copies": 2,
+      "reclaimable_bytes": 482520,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00040.jpg",
+        "artifacts/s0-v12/frames/frame-00041.jpg"
+      ]
+    },
+    {
+      "sha256": "a70ffcc779c33ffeeed249f8742f2150636e94bbf33a305cb93bcdde834c3ed4",
+      "size_bytes": 481775,
+      "copies": 2,
+      "reclaimable_bytes": 481775,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00054.jpg",
+        "artifacts/s0-v11/frames/frame-00059.jpg"
+      ]
+    },
+    {
+      "sha256": "66ff0096fec43e340e1643b407b0407806e8a3db97e89cddf437577f5e7149e9",
+      "size_bytes": 481756,
+      "copies": 6,
+      "reclaimable_bytes": 2408780,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00029.jpg",
+        "artifacts/s0-v11/frames/frame-00031.jpg",
+        "artifacts/s0-v11/frames/frame-00033.jpg",
+        "artifacts/s0-v11/frames/frame-00035.jpg",
+        "artifacts/s0-v11/keyframes/01-opening.jpg",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/keyframes/01-opening.jpg"
+      ]
+    },
+    {
+      "sha256": "cde37d229d0a94ef691c79732db430788da95b1a681251927a216c19733e6b52",
+      "size_bytes": 481737,
+      "copies": 5,
+      "reclaimable_bytes": 1926948,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00048.jpg",
+        "artifacts/s0-v11/frames/frame-00049.jpg",
+        "artifacts/s0-v11/frames/frame-00050.jpg",
+        "artifacts/s0-v11/frames/frame-00056.jpg",
+        "artifacts/s0-v11/frames/frame-00064.jpg"
+      ]
+    },
+    {
+      "sha256": "f449a6b1a9f4d764961b869050dd582212f942cb228348402f1edce11c738e56",
+      "size_bytes": 481736,
+      "copies": 8,
+      "reclaimable_bytes": 3372152,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00038.jpg",
+        "artifacts/s0-v11/frames/frame-00042.jpg",
+        "artifacts/s0-v11/frames/frame-00044.jpg",
+        "artifacts/s0-v11/frames/frame-00046.jpg",
+        "artifacts/s0-v11/frames/frame-00057.jpg",
+        "artifacts/s0-v11/frames/frame-00058.jpg",
+        "artifacts/s0-v11/frames/frame-00061.jpg",
+        "artifacts/s0-v11/frames/frame-00065.jpg"
+      ]
+    },
+    {
+      "sha256": "efdd4a51aa6e4b10e2ae7337efc81631764b602a50a1c017733c7e810d8ea060",
+      "size_bytes": 481729,
+      "copies": 2,
+      "reclaimable_bytes": 481729,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00027.jpg",
+        "artifacts/s0-v11/frames/frame-00037.jpg"
+      ]
+    },
+    {
+      "sha256": "f60b79ef359648b4d033dbbf44eca708cbf6036c100c5ddb485ab92ef581a9ea",
+      "size_bytes": 481722,
+      "copies": 2,
+      "reclaimable_bytes": 481722,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00053.jpg",
+        "artifacts/s0-v11/frames/frame-00062.jpg"
+      ]
+    },
+    {
+      "sha256": "aedaf7294283c93916f0cef4fa72a69769c575a7fcfbad7591016c8e5993b529",
+      "size_bytes": 481694,
+      "copies": 2,
+      "reclaimable_bytes": 481694,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00030.jpg",
+        "artifacts/s0-v11/frames/frame-00036.jpg"
+      ]
+    },
+    {
+      "sha256": "c95a8a65ab69ccc3233ad9ef6375dab27983cf433b31dffb544a7eeeaae67da4",
+      "size_bytes": 480182,
+      "copies": 2,
+      "reclaimable_bytes": 480182,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00054.jpg",
+        "artifacts/s0-v12/frames/frame-00055.jpg"
+      ]
+    },
+    {
+      "sha256": "b6a56306581732c92be27648f5b14239b46cc6f29f578bfb78632927959278be",
+      "size_bytes": 410324,
+      "copies": 2,
+      "reclaimable_bytes": 410324,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-right/posters/abu_stand_point_up_right_v1.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-right/posters/abu_stand_point_up_right_v1.png"
+      ]
+    },
+    {
+      "sha256": "aca74247ba0c692b0626006b191964f5702e0e91a2a40c07275d082b959d7e56",
+      "size_bytes": 410032,
+      "copies": 2,
+      "reclaimable_bytes": 410032,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-left/posters/abu_stand_point_up_left_v1.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-left/posters/abu_stand_point_up_left_v1.png"
+      ]
+    },
+    {
+      "sha256": "9966136f308821b2e82ee3b8024ab72cd26c1c41b26992bc153fef8536cbbb1c",
+      "size_bytes": 333963,
+      "copies": 2,
+      "reclaimable_bytes": 333963,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/screenshots/portrait-render-settled/frame-00001.jpg",
+        "artifacts/abu-actor-pass-v1/screenshots/s0-v12-portrait-1080x1920.jpg"
+      ]
+    },
+    {
+      "sha256": "637f36d07bfcb187db2f3142ea8bcc456b77e731cc87cde88b1f94e15bb24b10",
+      "size_bytes": 312949,
+      "copies": 3,
+      "reclaimable_bytes": 625898,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/04-geng-yin.jpg",
+        "artifacts/s0-v12/frames/frame-00649.jpg",
+        "artifacts/s0-v12/keyframes/04-geng-yin.jpg"
+      ]
+    },
+    {
+      "sha256": "de62c5cfa4199fa1f1e9e3a721bbf4b9c9d35de16463cd084756560a9fe34c23",
+      "size_bytes": 310762,
+      "copies": 3,
+      "reclaimable_bytes": 621524,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/05-bing-wu.jpg",
+        "artifacts/s0-v12/frames/frame-00841.jpg",
+        "artifacts/s0-v12/keyframes/05-bing-wu.jpg"
+      ]
+    },
+    {
+      "sha256": "7593be0a1d48e43da3d40096b5fe23d87ca6a833ec300d8fdcb26d5c30c92c33",
+      "size_bytes": 305432,
+      "copies": 4,
+      "reclaimable_bytes": 916296,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/02-path-guide.jpg",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/s0-v12-desktop-path-guide.jpg",
+        "artifacts/s0-v12/frames/frame-00349.jpg",
+        "artifacts/s0-v12/keyframes/02-path-guide.jpg"
+      ]
+    },
+    {
+      "sha256": "7d4a55585a0e8419482c139d5abce7227e74b2bfd9919649c953e1a654771445",
+      "size_bytes": 300877,
+      "copies": 3,
+      "reclaimable_bytes": 601754,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/03-tension.jpg",
+        "artifacts/s0-v12/frames/frame-00481.jpg",
+        "artifacts/s0-v12/keyframes/03-tension.jpg"
+      ]
+    },
+    {
+      "sha256": "e989c9901d027febff727342f9104754532d252418d48617d7414bf0403072af",
+      "size_bytes": 289940,
+      "copies": 2,
+      "reclaimable_bytes": 289940,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/turn-and-point/contact-sheets/abu_turn_and_point_v1_contact_sheet.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/turn-and-point/contact-sheets/abu_turn_and_point_v1_contact_sheet.png"
+      ]
+    },
+    {
+      "sha256": "46c49ea83d6fdb6d9f7a14c41ff2e3b0bbf0e828f1dbcdb4050c1afcd5e02ade",
+      "size_bytes": 289285,
+      "copies": 2,
+      "reclaimable_bytes": 289285,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/notice-tension/contact-sheets/abu_notice_tension_v1_contact_sheet.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/notice-tension/contact-sheets/abu_notice_tension_v1_contact_sheet.png"
+      ]
+    },
+    {
+      "sha256": "f651311edc5cb46f268dba8489f0de39735cac800d90ccc8acfc2989713dd73f",
+      "size_bytes": 283663,
+      "copies": 3,
+      "reclaimable_bytes": 567326,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00200.jpg",
+        "artifacts/s0-v12/frames/frame-00239.jpg",
+        "artifacts/s0-v12/frames/frame-00240.jpg"
+      ]
+    },
+    {
+      "sha256": "36353db5bb572e8a7190117c864f82980e6960b7818b904ec1075a9ee450fc00",
+      "size_bytes": 283654,
+      "copies": 2,
+      "reclaimable_bytes": 283654,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00208.jpg",
+        "artifacts/s0-v12/frames/frame-00247.jpg"
+      ]
+    },
+    {
+      "sha256": "b9f0e35a5d8ac0d258ac298b1377a8ee22f65b396898b4f4429b6bffb51435ad",
+      "size_bytes": 283649,
+      "copies": 2,
+      "reclaimable_bytes": 283649,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00204.jpg",
+        "artifacts/s0-v12/frames/frame-00243.jpg"
+      ]
+    },
+    {
+      "sha256": "ad97690b7f3a46023e692e4da5d480f61335589d73d2e356c2d62954c6fd1d72",
+      "size_bytes": 283630,
+      "copies": 2,
+      "reclaimable_bytes": 283630,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00203.jpg",
+        "artifacts/s0-v12/frames/frame-00242.jpg"
+      ]
+    },
+    {
+      "sha256": "3cb96a5dd82bdeb485c52c264f2ecfb2356fe7f03a0de02d85b174814f2a7412",
+      "size_bytes": 283627,
+      "copies": 3,
+      "reclaimable_bytes": 567254,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00206.jpg",
+        "artifacts/s0-v12/frames/frame-00207.jpg",
+        "artifacts/s0-v12/frames/frame-00246.jpg"
+      ]
+    },
+    {
+      "sha256": "5de1bb0b04fc852c7a47a3bdfacbad3c70340dc04eb0943db69f17cd89361b85",
+      "size_bytes": 283624,
+      "copies": 3,
+      "reclaimable_bytes": 567248,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00201.jpg",
+        "artifacts/s0-v12/frames/frame-00202.jpg",
+        "artifacts/s0-v12/frames/frame-00241.jpg"
+      ]
+    },
+    {
+      "sha256": "9302e80864f3b395883edbae5f395b3616201fc64d22a9a89c33421a643c09b3",
+      "size_bytes": 283623,
+      "copies": 3,
+      "reclaimable_bytes": 567246,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00205.jpg",
+        "artifacts/s0-v12/frames/frame-00244.jpg",
+        "artifacts/s0-v12/frames/frame-00245.jpg"
+      ]
+    },
+    {
+      "sha256": "4d55bc8839e09c7c312ee4cc24b78062f56a92de17167de75aafc7211e0f6d33",
+      "size_bytes": 283606,
+      "copies": 2,
+      "reclaimable_bytes": 283606,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00198.jpg",
+        "artifacts/s0-v12/frames/frame-00237.jpg"
+      ]
+    },
+    {
+      "sha256": "21d2e01c4006fe13cbdfce9c25a045b171bb555015ee9831bed84afce4326066",
+      "size_bytes": 283589,
+      "copies": 2,
+      "reclaimable_bytes": 283589,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00209.jpg",
+        "artifacts/s0-v12/frames/frame-00248.jpg"
+      ]
+    },
+    {
+      "sha256": "1c459c0c55b558c972168697b8f19e345839f9584d9b1890adeb12ef08fe1e38",
+      "size_bytes": 283531,
+      "copies": 2,
+      "reclaimable_bytes": 283531,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00199.jpg",
+        "artifacts/s0-v12/frames/frame-00238.jpg"
+      ]
+    },
+    {
+      "sha256": "c21953d907ad79205e41973629ab56f3e63576a1886f7132988cc4535c410adc",
+      "size_bytes": 283527,
+      "copies": 2,
+      "reclaimable_bytes": 283527,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00192.jpg",
+        "artifacts/s0-v12/frames/frame-00231.jpg"
+      ]
+    },
+    {
+      "sha256": "27f84b1b66eea4295f8711a57eca278b929e95786f5bcc0bd5db84218234ef77",
+      "size_bytes": 283516,
+      "copies": 2,
+      "reclaimable_bytes": 283516,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00195.jpg",
+        "artifacts/s0-v12/frames/frame-00235.jpg"
+      ]
+    },
+    {
+      "sha256": "72eae014b7eb11f59af65c857e64fe908e4c9745fd52370fb1393d4795ada099",
+      "size_bytes": 283516,
+      "copies": 3,
+      "reclaimable_bytes": 567032,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00196.jpg",
+        "artifacts/s0-v12/frames/frame-00197.jpg",
+        "artifacts/s0-v12/frames/frame-00236.jpg"
+      ]
+    },
+    {
+      "sha256": "34dbde7c1be32791afc797ef8a257d4b3f0988883926a9592f1ae6f09720214a",
+      "size_bytes": 283489,
+      "copies": 2,
+      "reclaimable_bytes": 283489,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00177.jpg",
+        "artifacts/s0-v12/frames/frame-00217.jpg"
+      ]
+    },
+    {
+      "sha256": "f965e8dd0b0703ddec3a9920e95bf3af07d0ad664c4ef9e0279b0ce7bfcbd7ce",
+      "size_bytes": 283466,
+      "copies": 4,
+      "reclaimable_bytes": 850398,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00173.jpg",
+        "artifacts/s0-v12/frames/frame-00174.jpg",
+        "artifacts/s0-v12/frames/frame-00213.jpg",
+        "artifacts/s0-v12/frames/frame-00252.jpg"
+      ]
+    },
+    {
+      "sha256": "92b61b79ad5b702a6ba349fce3c0e34ce248ae214184e652689631589afdab73",
+      "size_bytes": 283465,
+      "copies": 3,
+      "reclaimable_bytes": 566930,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00188.jpg",
+        "artifacts/s0-v12/frames/frame-00227.jpg",
+        "artifacts/s0-v12/frames/frame-00228.jpg"
+      ]
+    },
+    {
+      "sha256": "3c4ae161edd48d4c4a7cbd14d6b353635894935660eae546765b2f408ace99f5",
+      "size_bytes": 283442,
+      "copies": 3,
+      "reclaimable_bytes": 566884,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00193.jpg",
+        "artifacts/s0-v12/frames/frame-00232.jpg",
+        "artifacts/s0-v12/frames/frame-00233.jpg"
+      ]
+    },
+    {
+      "sha256": "3ad0a0efe7c7146fe477b7cc46d34dbf05c8293181a5db8abf11f4185350af7d",
+      "size_bytes": 283434,
+      "copies": 3,
+      "reclaimable_bytes": 566868,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00176.jpg",
+        "artifacts/s0-v12/frames/frame-00215.jpg",
+        "artifacts/s0-v12/frames/frame-00216.jpg"
+      ]
+    },
+    {
+      "sha256": "734098e6c4b976f72059e09ea603d06a92d1947fcd05729e02c125374ccd71af",
+      "size_bytes": 283431,
+      "copies": 2,
+      "reclaimable_bytes": 283431,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00194.jpg",
+        "artifacts/s0-v12/frames/frame-00234.jpg"
+      ]
+    },
+    {
+      "sha256": "fd1cc854c17755b08eeec004cd54bdcc8de7e06451b70d6596b923a1ea2a3a3d",
+      "size_bytes": 283417,
+      "copies": 2,
+      "reclaimable_bytes": 283417,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00175.jpg",
+        "artifacts/s0-v12/frames/frame-00214.jpg"
+      ]
+    },
+    {
+      "sha256": "3ba11551450cc8d82b51f913cf08c22d011ad1f0233b3c9bea2ddc29983137e5",
+      "size_bytes": 283416,
+      "copies": 2,
+      "reclaimable_bytes": 283416,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00178.jpg",
+        "artifacts/s0-v12/frames/frame-00218.jpg"
+      ]
+    },
+    {
+      "sha256": "e3d02abe8de96cf3bc1bff2aa63df4093e78a0c1938bbc55a66d65e6e4b32540",
+      "size_bytes": 283359,
+      "copies": 3,
+      "reclaimable_bytes": 566718,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00189.jpg",
+        "artifacts/s0-v12/frames/frame-00190.jpg",
+        "artifacts/s0-v12/frames/frame-00229.jpg"
+      ]
+    },
+    {
+      "sha256": "7f6d0e095ec3234390878bbc756a9786d7313ce34111f91300131f860f277525",
+      "size_bytes": 283344,
+      "copies": 2,
+      "reclaimable_bytes": 283344,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00191.jpg",
+        "artifacts/s0-v12/frames/frame-00230.jpg"
+      ]
+    },
+    {
+      "sha256": "2cc069d6acebee4df7eb78764b978ba8920b501ec4db282d3db6a19046c59d47",
+      "size_bytes": 283322,
+      "copies": 3,
+      "reclaimable_bytes": 566644,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00185.jpg",
+        "artifacts/s0-v12/frames/frame-00186.jpg",
+        "artifacts/s0-v12/frames/frame-00225.jpg"
+      ]
+    },
+    {
+      "sha256": "478861a7dea194efefcbedd9e94636fdef053f494b5792512dbacb498f2aebf4",
+      "size_bytes": 283297,
+      "copies": 2,
+      "reclaimable_bytes": 283297,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00187.jpg",
+        "artifacts/s0-v12/frames/frame-00226.jpg"
+      ]
+    },
+    {
+      "sha256": "85a5000c260323e0979f4db746b2fbdd7227b597c08430ce3fc89a1fe10ea217",
+      "size_bytes": 283259,
+      "copies": 3,
+      "reclaimable_bytes": 566518,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00179.jpg",
+        "artifacts/s0-v12/frames/frame-00180.jpg",
+        "artifacts/s0-v12/frames/frame-00219.jpg"
+      ]
+    },
+    {
+      "sha256": "4541bd668e52be33b32edaae94c49e0e88d66b625c1167e9b57faf40378f8de8",
+      "size_bytes": 283247,
+      "copies": 4,
+      "reclaimable_bytes": 849741,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00210.jpg",
+        "artifacts/s0-v12/frames/frame-00211.jpg",
+        "artifacts/s0-v12/frames/frame-00249.jpg",
+        "artifacts/s0-v12/frames/frame-00250.jpg"
+      ]
+    },
+    {
+      "sha256": "e17d593b1ea7efc2214b4b749f13cb7ab5129c946ae29d9133a72df1a29425ea",
+      "size_bytes": 283131,
+      "copies": 2,
+      "reclaimable_bytes": 283131,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00184.jpg",
+        "artifacts/s0-v12/frames/frame-00224.jpg"
+      ]
+    },
+    {
+      "sha256": "89ba767ae9c2c12b1d718bfe7ab4621397254227beb19d2242e65d91eb4241ef",
+      "size_bytes": 283059,
+      "copies": 2,
+      "reclaimable_bytes": 283059,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00183.jpg",
+        "artifacts/s0-v12/frames/frame-00223.jpg"
+      ]
+    },
+    {
+      "sha256": "322b1715e5914de99f124057d1bd29da44dd551fb2b1ef3f7ec260e7c5f7fe55",
+      "size_bytes": 283051,
+      "copies": 2,
+      "reclaimable_bytes": 283051,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00181.jpg",
+        "artifacts/s0-v12/frames/frame-00220.jpg"
+      ]
+    },
+    {
+      "sha256": "4f8f9d79a0dbb2cd0ebfa8d43b5f059b0ca8aa39b42559c3830d2b01d3f11508",
+      "size_bytes": 283028,
+      "copies": 2,
+      "reclaimable_bytes": 283028,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00212.jpg",
+        "artifacts/s0-v12/frames/frame-00251.jpg"
+      ]
+    },
+    {
+      "sha256": "1e138ec133951dbe3a67ca70c208da41cff1eb5fbfa7dd2431c3ef58cc9f80b0",
+      "size_bytes": 283019,
+      "copies": 3,
+      "reclaimable_bytes": 566038,
+      "paths": [
+        "artifacts/s0-v12/frames/frame-00182.jpg",
+        "artifacts/s0-v12/frames/frame-00221.jpg",
+        "artifacts/s0-v12/frames/frame-00222.jpg"
+      ]
+    },
+    {
+      "sha256": "0b6c4132d80fcba5f6a74735249a962a87acc5b4555bbc599f1c6259d1544f16",
+      "size_bytes": 277133,
+      "copies": 2,
+      "reclaimable_bytes": 277133,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/turn-and-point/posters/abu_turn_and_point_v1.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/turn-and-point/posters/abu_turn_and_point_v1.png"
+      ]
+    },
+    {
+      "sha256": "fda21c24c76d05b5341980cb75dd75d3d07bc726573fe627da444cdf00395191",
+      "size_bytes": 277114,
+      "copies": 2,
+      "reclaimable_bytes": 277114,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/notice-tension/posters/abu_notice_tension_v1.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/notice-tension/posters/abu_notice_tension_v1.png"
+      ]
+    },
+    {
+      "sha256": "867f5797a089f9c72fc1454804207ec5726e606782098ffca79cb5ccb41cd00f",
+      "size_bytes": 274093,
+      "copies": 2,
+      "reclaimable_bytes": 274093,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-left/contact-sheets/abu_stand_point_up_left_v1_contact_sheet.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-left/contact-sheets/abu_stand_point_up_left_v1_contact_sheet.png"
+      ]
+    },
+    {
+      "sha256": "41a250a3cf73e6233cf284c77cf192496ad1733300f9edd6d61e7a9e2ee4bbbe",
+      "size_bytes": 273994,
+      "copies": 3,
+      "reclaimable_bytes": 547988,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00421.jpg",
+        "artifacts/s0-v11/keyframes/06-year-support.jpg",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/keyframes/06-year-support.jpg"
+      ]
+    },
+    {
+      "sha256": "9e41b21fbe008c14b4c5eb2cced420f089b34d3e39451c2ab8f174dc7c1ca541",
+      "size_bytes": 273136,
+      "copies": 2,
+      "reclaimable_bytes": 273136,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/stand-point-up-right/contact-sheets/abu_stand_point_up_right_v1_contact_sheet.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/stand-point-up-right/contact-sheets/abu_stand_point_up_right_v1_contact_sheet.png"
+      ]
+    },
+    {
+      "sha256": "5fcba4fee72d242618f04a13fcb6c3e219ad4664c9e6a08cf8c811d00a9fa9e6",
+      "size_bytes": 272817,
+      "copies": 3,
+      "reclaimable_bytes": 545634,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00331.jpg",
+        "artifacts/s0-v11/keyframes/05-luck-context.jpg",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/keyframes/05-luck-context.jpg"
+      ]
+    },
+    {
+      "sha256": "33f4a8f23a5bb22639bcd4f738f2397162cd4557c0b8eb83496ce5a9a3ab2c06",
+      "size_bytes": 261117,
+      "copies": 3,
+      "reclaimable_bytes": 522234,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00253.jpg",
+        "artifacts/s0-v11/keyframes/04-structural-tension.jpg",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/keyframes/04-structural-tension.jpg"
+      ]
+    },
+    {
+      "sha256": "2b2cfa6c1371f65a3df9b3af326ac9ae0f2ff8f07538345fe3cf29b8fecd3880",
+      "size_bytes": 252330,
+      "copies": 3,
+      "reclaimable_bytes": 504660,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00169.jpg",
+        "artifacts/s0-v11/keyframes/03-observed-path.jpg",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/keyframes/03-observed-path.jpg"
+      ]
+    },
+    {
+      "sha256": "be397b944edec8affef4d5702a6328bcedc8c56c1879d1b0fa78469a666e14ee",
+      "size_bytes": 243995,
+      "copies": 7,
+      "reclaimable_bytes": 1463970,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00093.jpg",
+        "artifacts/s0-v11/frames/frame-00101.jpg",
+        "artifacts/s0-v11/frames/frame-00103.jpg",
+        "artifacts/s0-v11/frames/frame-00108.jpg",
+        "artifacts/s0-v11/frames/frame-00110.jpg",
+        "artifacts/s0-v11/frames/frame-00118.jpg",
+        "artifacts/s0-v11/frames/frame-00121.jpg"
+      ]
+    },
+    {
+      "sha256": "93913de0d483d417943d1bc3015fe1b839effc4a4f5ef2945cc63f129b3b7625",
+      "size_bytes": 243993,
+      "copies": 31,
+      "reclaimable_bytes": 7319790,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00083.jpg",
+        "artifacts/s0-v11/frames/frame-00085.jpg",
+        "artifacts/s0-v11/frames/frame-00087.jpg",
+        "artifacts/s0-v11/frames/frame-00089.jpg",
+        "artifacts/s0-v11/frames/frame-00091.jpg",
+        "artifacts/s0-v11/frames/frame-00095.jpg",
+        "artifacts/s0-v11/frames/frame-00097.jpg",
+        "artifacts/s0-v11/frames/frame-00099.jpg",
+        "artifacts/s0-v11/frames/frame-00100.jpg",
+        "artifacts/s0-v11/frames/frame-00102.jpg",
+        "artifacts/s0-v11/frames/frame-00104.jpg",
+        "artifacts/s0-v11/frames/frame-00105.jpg",
+        "artifacts/s0-v11/frames/frame-00106.jpg",
+        "artifacts/s0-v11/frames/frame-00107.jpg",
+        "artifacts/s0-v11/frames/frame-00109.jpg",
+        "artifacts/s0-v11/frames/frame-00111.jpg",
+        "artifacts/s0-v11/frames/frame-00112.jpg",
+        "artifacts/s0-v11/frames/frame-00113.jpg",
+        "artifacts/s0-v11/frames/frame-00114.jpg",
+        "artifacts/s0-v11/frames/frame-00115.jpg",
+        "artifacts/s0-v11/frames/frame-00116.jpg",
+        "artifacts/s0-v11/frames/frame-00117.jpg",
+        "artifacts/s0-v11/frames/frame-00119.jpg",
+        "artifacts/s0-v11/frames/frame-00120.jpg",
+        "artifacts/s0-v11/frames/frame-00122.jpg",
+        "artifacts/s0-v11/frames/frame-00123.jpg",
+        "artifacts/s0-v11/frames/frame-00124.jpg",
+        "artifacts/s0-v11/frames/frame-00125.jpg",
+        "artifacts/s0-v11/frames/frame-00126.jpg",
+        "artifacts/s0-v11/keyframes/02-pillars-unfold.jpg",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/keyframes/02-pillars-unfold.jpg"
+      ]
+    },
+    {
+      "sha256": "9c2565399a7b67b58a86e27f9562c1fd1edfab307b376fa8a2825e1b383db7a6",
+      "size_bytes": 243953,
+      "copies": 9,
+      "reclaimable_bytes": 1951624,
+      "paths": [
+        "artifacts/s0-v11/frames/frame-00082.jpg",
+        "artifacts/s0-v11/frames/frame-00084.jpg",
+        "artifacts/s0-v11/frames/frame-00086.jpg",
+        "artifacts/s0-v11/frames/frame-00088.jpg",
+        "artifacts/s0-v11/frames/frame-00090.jpg",
+        "artifacts/s0-v11/frames/frame-00092.jpg",
+        "artifacts/s0-v11/frames/frame-00094.jpg",
+        "artifacts/s0-v11/frames/frame-00096.jpg",
+        "artifacts/s0-v11/frames/frame-00098.jpg"
+      ]
+    },
+    {
+      "sha256": "5bacf20d773ba9b697053c95d17e34cb6dcf574bcf2638c8cc978591683f4a2f",
+      "size_bytes": 232838,
+      "copies": 2,
+      "reclaimable_bytes": 232838,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/enter-and-notice/posters/abu_enter_and_notice_v1.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/enter-and-notice/posters/abu_enter_and_notice_v1.png"
+      ]
+    },
+    {
+      "sha256": "72fb1325ba3b4dc03742ef650ca53064a398a73eb84f66aaee956e0db8efe62d",
+      "size_bytes": 211648,
+      "copies": 3,
+      "reclaimable_bytes": 423296,
+      "paths": [
+        "apps/product/static/l5/assets/deepbazi_logo_horizontal.png",
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/assets/deepbazi_logo_horizontal.png",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/assets/deepbazi_logo_horizontal.png"
+      ]
+    },
+    {
+      "sha256": "02ff431a983e41bb1c545b14afff58aec4c3daac651ea3b1dc0bba47b27f1419",
+      "size_bytes": 203816,
+      "copies": 2,
+      "reclaimable_bytes": 203816,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/face-change-transition/posters/abu_face_change_transition_v1.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/face-change-transition/posters/abu_face_change_transition_v1.png"
+      ]
+    },
+    {
+      "sha256": "d885b8483816c9ed9f10b3ab6212af05bd24164979a52e62d7665cda58c27f05",
+      "size_bytes": 188118,
+      "copies": 2,
+      "reclaimable_bytes": 188118,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/face-change-transition/contact-sheets/abu_face_change_transition_v1_contact_sheet.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/face-change-transition/contact-sheets/abu_face_change_transition_v1_contact_sheet.png"
+      ]
+    },
+    {
+      "sha256": "b047cfc331f1b5f4522644269d3ab8120c81f3ee59f25b793d063e73ad8a092f",
+      "size_bytes": 155368,
+      "copies": 2,
+      "reclaimable_bytes": 155368,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/motion-qa/mobile-face-change.jpg",
+        "artifacts/s0-v12/qa-morph-mobile-v2/frame-00001.jpg"
+      ]
+    },
+    {
+      "sha256": "9abdd5e1fe3681662c8ed582f9d0df2ba02a02dc27345835515636e05fc07dae",
+      "size_bytes": 127802,
+      "copies": 2,
+      "reclaimable_bytes": 127802,
+      "paths": [
+        "apps/product/static/l5/assets/abu/v12-actor-pass/enter-and-notice/contact-sheets/abu_enter_and_notice_v1_contact_sheet.png",
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/enter-and-notice/contact-sheets/abu_enter_and_notice_v1_contact_sheet.png"
+      ]
+    },
+    {
+      "sha256": "b5f063320b93a0d43133a70941a7314b0743a3c34b0231aa6c9805f1e0815039",
+      "size_bytes": 116274,
+      "copies": 2,
+      "reclaimable_bytes": 116274,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/motion-qa/mobile-opening-run.jpg",
+        "artifacts/s0-v12/qa-mobile-opening-final/frame-00001.jpg"
+      ]
+    },
+    {
+      "sha256": "c049d6478ec03fef924c4f13cb7312973ab9e9f654d14e46ae894327f5bdf1d3",
+      "size_bytes": 107972,
+      "copies": 2,
+      "reclaimable_bytes": 107972,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/motion-qa/desktop-run-stop-point-sequence.jpg",
+        "artifacts/s0-v12/qa-transition-turn-v2/contact-sheet.jpg"
+      ]
+    },
+    {
+      "sha256": "a23f22ccc61cb326fb10a1df76b22b75a2608d2d854326a9f3242f19d185f159",
+      "size_bytes": 100741,
+      "copies": 2,
+      "reclaimable_bytes": 100741,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/opening.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/opening.jpg"
+      ]
+    },
+    {
+      "sha256": "ae72633ffa49a542b8fcc54e3e33956f033b9e8cbaa687111375b9e29ad23d36",
+      "size_bytes": 99760,
+      "copies": 2,
+      "reclaimable_bytes": 99760,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/opening-4-8-detail.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/opening-4-8-detail.jpg"
+      ]
+    },
+    {
+      "sha256": "a202fdeb2643854a354ddfb30a25c96ea9ee12a659eb6d25fa8a941ddc7c63bd",
+      "size_bytes": 89503,
+      "copies": 2,
+      "reclaimable_bytes": 89503,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/keyframes/S0_V1.2_keyframes_contact_sheet.jpg",
+        "artifacts/s0-v12/keyframes/S0_V1.2_keyframes_contact_sheet.jpg"
+      ]
+    },
+    {
+      "sha256": "aa16afdfa7d05a223c9d32f433fdc7723f26e4301cb73afbc088df5586ac9742",
+      "size_bytes": 88949,
+      "copies": 2,
+      "reclaimable_bytes": 88949,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/micro-motion.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/micro-motion.jpg"
+      ]
+    },
+    {
+      "sha256": "09bf8e2af76084773a2f2e8116bac98622becbc905868feb4295da78744c3c69",
+      "size_bytes": 81618,
+      "copies": 2,
+      "reclaimable_bytes": 81618,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/mist-head.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/mist-head.jpg"
+      ]
+    },
+    {
+      "sha256": "0582a7829edb5360f277f545676c4e90331f56b1c7d791270707ea88ef17fbfe",
+      "size_bytes": 65706,
+      "copies": 2,
+      "reclaimable_bytes": 65706,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/s0-v12/motion-qa/mobile-full-body-point.jpg",
+        "artifacts/s0-v12/qa-mobile-point-final/frame-00001.jpg"
+      ]
+    },
+    {
+      "sha256": "da0f8b33eac4c60c71f9831529c1c8215005f2d06300052783b964366b6c157b",
+      "size_bytes": 61105,
+      "copies": 2,
+      "reclaimable_bytes": 61105,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/screenshots/mobile-render-settled/frame-00001.jpg",
+        "artifacts/abu-actor-pass-v1/screenshots/s0-v12-mobile-390.jpg"
+      ]
+    },
+    {
+      "sha256": "73a65a31ab55929f2b39e8d10e8814a89cd67e64817fb5e1bb68a634d6dbdd91",
+      "size_bytes": 55907,
+      "copies": 3,
+      "reclaimable_bytes": 111814,
+      "paths": [
+        "artifacts/s0-v11/package-staging-v1/S0_V1.1_and_Xiangfa_V1_Review_Pack/screenshots/xiangfa-v1-mobile-390x844.png",
+        "artifacts/s0-v11/package-staging-v1/Xiangfa_V1_Analyst_Pack/screenshots/xiangfa-v1-mobile-390x844.png",
+        "artifacts/s0-v11/screenshots/xiangfa-v1-mobile-390x844.png"
+      ]
+    },
+    {
+      "sha256": "36da3f0fa98d7516f0329c9d8629a7bc8c71690ade891dfe05ff838b21a1d15a",
+      "size_bytes": 52023,
+      "copies": 2,
+      "reclaimable_bytes": 52023,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/sad.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/sad.jpg"
+      ]
+    },
+    {
+      "sha256": "44164ce071601a355d25b67599e01dcd790137fe0d4ae5717b4cfac517d98f17",
+      "size_bytes": 42903,
+      "copies": 2,
+      "reclaimable_bytes": 42903,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/taoist.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/taoist.jpg"
+      ]
+    },
+    {
+      "sha256": "e19b7816d70b2c56733e005e46342d2ac0f017ad44eb61273933d90aa18016c0",
+      "size_bytes": 42827,
+      "copies": 2,
+      "reclaimable_bytes": 42827,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/butterfly.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/butterfly.jpg"
+      ]
+    },
+    {
+      "sha256": "193a1900a408b7849a157ac7932ef8b1f426ab05bfb9e58db5a2c35521b10313",
+      "size_bytes": 38838,
+      "copies": 2,
+      "reclaimable_bytes": 38838,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/unknown-detail.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/unknown-detail.jpg"
+      ]
+    },
+    {
+      "sha256": "fbe2311be2221200269148f6b79a64040f040c08231b8f65faa1cfda2171a065",
+      "size_bytes": 37643,
+      "copies": 2,
+      "reclaimable_bytes": 37643,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/runjump-detail.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/runjump-detail.jpg"
+      ]
+    },
+    {
+      "sha256": "c4a998f9ae87aee7b2822130fc05078389f3ef0f7fb01ab6c6ad0e379bac5629",
+      "size_bytes": 37333,
+      "copies": 2,
+      "reclaimable_bytes": 37333,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/unknown.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/unknown.jpg"
+      ]
+    },
+    {
+      "sha256": "c1131dbaf337708ee987c6e4ef99410accca9f19b39e9b450b10cb7b17a555a9",
+      "size_bytes": 36592,
+      "copies": 2,
+      "reclaimable_bytes": 36592,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/transparent-dog.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/transparent-dog.jpg"
+      ]
+    },
+    {
+      "sha256": "b91912434e3d8951c9b9020c6370dffc347427224c3480dd8ff679909e025cc4",
+      "size_bytes": 36303,
+      "copies": 2,
+      "reclaimable_bytes": 36303,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/transparent-detail.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/transparent-detail.jpg"
+      ]
+    },
+    {
+      "sha256": "976e0028041a8b2626b7659b7649b5446ddce7c9a91607dc71e455ee322f0ada",
+      "size_bytes": 35893,
+      "copies": 2,
+      "reclaimable_bytes": 35893,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/sleep.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/sleep.jpg"
+      ]
+    },
+    {
+      "sha256": "8eabf76b4bd9879ea295f606cf5fe62aea04fa5f9f211893730a2895aa0578d7",
+      "size_bytes": 35803,
+      "copies": 2,
+      "reclaimable_bytes": 35803,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/run-jump.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/run-jump.jpg"
+      ]
+    },
+    {
+      "sha256": "74836efb2d91f7dc8ec92ffeaa2329542e57e11248eedb585812869a6a1d3ba1",
+      "size_bytes": 35708,
+      "copies": 2,
+      "reclaimable_bytes": 35708,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/runjump-6-95-detail.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/runjump-6-95-detail.jpg"
+      ]
+    },
+    {
+      "sha256": "5e4f99a563bd66cc2ed8c644ea4eab6dfab5ba2e2b4c8ec29725e218b723671d",
+      "size_bytes": 35660,
+      "copies": 2,
+      "reclaimable_bytes": 35660,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/divination.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/divination.jpg"
+      ]
+    },
+    {
+      "sha256": "65e3f909b0fc50f3d72807f9e099f4af5164dcb5b8e8dde04ba7d26ce87d8539",
+      "size_bytes": 35334,
+      "copies": 2,
+      "reclaimable_bytes": 35334,
+      "paths": [
+        "artifacts/abu-actor-pass-v1/review-pack/DeepBazi_Abu_Actor_Pass_V1/actions/source-review/breakdance.jpg",
+        "artifacts/abu-actor-pass-v1/source-contact-sheets/breakdance.jpg"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": "deepbazi.onecanvas_r1_review_targets.v1",
+  "contains_personal_identity": false,
+  "targets": {
+    "4": {
+      "target_draft_id": "r1-review-task-4",
+      "target_draft": {
+        "year": {"pillar": "丁巳"},
+        "month": {"branch": "巳"},
+        "day": {"stem": "乙"},
+        "hour": {"branch": "酉"}
+      }
+    },
+    "5": {
+      "target_draft_id": "r1-review-task-5",
+      "target_draft": {
+        "year": {"pillar": "丁巳"},
+        "month": {"pillar": "丙寅"},
+        "day": {"pillar": "乙丑"},
+        "hour": {"branch": "酉"}
+      }
+    }
+  }
+}

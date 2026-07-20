@@ -1,0 +1,137 @@
+{
+  "version": "deepbazi.vnext_phase0.lane_policy.v1",
+  "status": "frozen_for_formal_run",
+  "formal_lanes": [
+    {
+      "lane_id": "direct_same_model",
+      "display_name": "Direct Same Model",
+      "purpose": "Measure what the same cognitive model can do without DeepBazi facts, knowledge, tools, or review.",
+      "model_role": "same_as_vnext",
+      "context_policy": "pillars_gender_and_strong_direct_power_user_request_only",
+      "deepbazi_facts_allowed": false,
+      "deepbazi_knowledge_allowed": false,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false
+    },
+    {
+      "lane_id": "direct_frontier",
+      "display_name": "Direct Frontier",
+      "purpose": "Represent a frozen strong general model a user could realistically ask directly.",
+      "model_role": "true_external_frontier",
+      "context_policy": "pillars_gender_and_strong_direct_power_user_request_only",
+      "deepbazi_facts_allowed": false,
+      "deepbazi_knowledge_allowed": false,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false
+    },
+    {
+      "lane_id": "current_v50",
+      "display_name": "Current Production V50",
+      "purpose": "Measure the frozen current tool-anchored cognition chain without temporary fixes.",
+      "model_role": "same_as_vnext",
+      "context_policy": "ranked_graph_path_role_sensitivity_first_look",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": true,
+      "deepbazi_tools_allowed": true,
+      "review_allowed": true
+    },
+    {
+      "lane_id": "fact_only_deepbazi",
+      "display_name": "Fact-only LLM",
+      "purpose": "Measure the value of trusted facts and neutral relations without a Mingli synthesis protocol or ranked legacy tools.",
+      "model_role": "same_as_vnext",
+      "context_policy": "trusted_fact_ledger_and_neutral_relations_only",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": false,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false
+    },
+    {
+      "lane_id": "holistic_synthesis",
+      "display_name": "Holistic Synthesis Baseline",
+      "purpose": "Measure the increment from a frozen whole-chart Mingli synthesis protocol over trusted facts alone.",
+      "model_role": "same_as_vnext",
+      "context_policy": "trusted_facts_neutral_relations_and_frozen_holistic_synthesis_policy",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": true,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false,
+      "challenge_pack_allowed": false,
+      "legacy_ranked_tool_outputs_allowed": false,
+      "preselected_primary_hypothesis_allowed": false,
+      "reality_evidence_allowed": false
+    },
+    {
+      "lane_id": "vnext",
+      "display_name": "VNext Cognitive Slice",
+      "purpose": "Test independent first look, challenge tools, relevant knowledge, comparative reasoning, and epistemic review.",
+      "model_role": "same_as_direct_same_model",
+      "context_policy": "independent_first_look_then_challenge_and_relevant_knowledge",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": true,
+      "deepbazi_tools_allowed": true,
+      "review_allowed": true
+    }
+  ],
+  "same_model_policy": {
+    "provider": "ollama",
+    "model": "qwen3.5:35b",
+    "reasoning_mode": "enabled_when_supported",
+    "temperature": 0.2,
+    "token_budget": 4200,
+    "context_window": 32768,
+    "timeout_seconds": 360,
+    "structured_output_policy": "CognitiveBenchmarkReading",
+    "schema_mechanical_repair_limit": 1
+  },
+  "optional_nonformal_lanes": [
+    {
+      "lane_id": "historical_v30",
+      "display_name": "Historical V30",
+      "required_for_formal_run": false,
+      "status": "unavailable",
+      "use": "excluded",
+      "representative_of_historical_v30_agent": false,
+      "reason": "Real historical code, model, prompt, context package, parameters, inputs, and immutable outputs are not jointly available."
+    },
+    {
+      "lane_id": "v30_runtime_archaeology",
+      "display_name": "Repository V30 Runtime Archaeology",
+      "required_for_formal_run": false,
+      "status": "reproducible_but_not_representative",
+      "use": "retrospective_reference",
+      "representative_of_historical_v30_agent": false
+    },
+    {
+      "lane_id": "local_open_stress",
+      "display_name": "Local Open Model Stress Baseline",
+      "model": "qwen3.6:27b",
+      "formal_direct_frontier_eligible": false,
+      "reason": "Useful for schema, latency, and failure analysis; not representative of the strongest general model available to users."
+    }
+  ],
+  "shared_output_contract": "CognitiveBenchmarkReading",
+  "direct_prompt_policy": "strong_direct_power_user_one_shot_v1",
+  "execution_policy": {
+    "temperature": 0.2,
+    "reasoning_mode": "enabled_when_supported",
+    "token_budget": 4200,
+    "context_window": 32768,
+    "timeout_seconds": 360,
+    "repeats": 3,
+    "network_retry_limit": 1,
+    "timeout_retry_limit": 1,
+    "schema_mechanical_repair_limit": 1,
+    "semantic_repair_allowed": false,
+    "raw_cognitive_output_immutable": true,
+    "review_annotations_separate": true,
+    "manual_best_of_n_selection_allowed": false,
+    "fact_hallucination_retry_allowed": false
+  },
+  "boundaries": {
+    "prompt_changes_during_formal_run_allowed": false,
+    "context_changes_during_formal_run_allowed": false,
+    "model_changes_during_formal_run_allowed": false,
+    "review_policy_changes_during_formal_run_allowed": false
+  }
+}

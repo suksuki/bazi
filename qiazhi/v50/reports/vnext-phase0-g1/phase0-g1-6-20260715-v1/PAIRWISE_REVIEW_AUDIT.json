@@ -1,0 +1,33 @@
+{
+  "version": "deepbazi.vnext_phase0.pairwise_review_audit.v1",
+  "status": "passed",
+  "required_comparisons": [
+    [
+      "vnext",
+      "current_v50"
+    ],
+    [
+      "vnext",
+      "direct_frontier"
+    ],
+    [
+      "vnext",
+      "holistic_synthesis"
+    ],
+    [
+      "vnext",
+      "fact_only_deepbazi"
+    ],
+    [
+      "holistic_synthesis",
+      "fact_only_deepbazi"
+    ],
+    [
+      "direct_same_model",
+      "fact_only_deepbazi"
+    ]
+  ],
+  "anonymous_packet_uses_lane_group_codes": true,
+  "operator_lane_map_separate": true,
+  "freeform_additional_comparisons_allowed": true
+}

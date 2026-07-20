@@ -1,0 +1,197 @@
+{
+  "$defs": {
+    "ActorCue": {
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "default": "attentive",
+          "maxLength": 80,
+          "title": "Expression",
+          "type": "string"
+        },
+        "motion_asset": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Motion Asset",
+          "type": "string"
+        },
+        "loop": {
+          "default": false,
+          "title": "Loop",
+          "type": "boolean"
+        }
+      },
+      "title": "ActorCue",
+      "type": "object"
+    },
+    "StageCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "enum": [
+            "set_background",
+            "highlight_visual_anchor",
+            "show_chart_facts",
+            "show_group_trace",
+            "show_capsule",
+            "clear_stage"
+          ],
+          "title": "Command",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "maxLength": 240,
+          "title": "Source",
+          "type": "string"
+        },
+        "asset_ref": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Asset Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "title": "StageCommand",
+      "type": "object"
+    },
+    "SubtitleCue": {
+      "additionalProperties": false,
+      "properties": {
+        "style": {
+          "default": "default",
+          "maxLength": 80,
+          "title": "Style",
+          "type": "string"
+        }
+      },
+      "title": "SubtitleCue",
+      "type": "object"
+    },
+    "VoiceCue": {
+      "additionalProperties": false,
+      "properties": {
+        "profile": {
+          "default": "abu-main",
+          "maxLength": 100,
+          "title": "Profile",
+          "type": "string"
+        },
+        "mode": {
+          "default": "companion",
+          "maxLength": 80,
+          "title": "Mode",
+          "type": "string"
+        },
+        "emotion": {
+          "default": "calm",
+          "maxLength": 80,
+          "title": "Emotion",
+          "type": "string"
+        },
+        "speed": {
+          "default": 1.0,
+          "maximum": 1.5,
+          "minimum": 0.5,
+          "title": "Speed",
+          "type": "number"
+        },
+        "audio_asset": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Audio Asset",
+          "type": "string"
+        }
+      },
+      "title": "VoiceCue",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "template_id": {
+      "maxLength": 160,
+      "minLength": 1,
+      "title": "Template Id",
+      "type": "string"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "participant_private"
+      ],
+      "title": "Visibility",
+      "type": "string"
+    },
+    "semantic_intent": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Semantic Intent",
+      "type": "string"
+    },
+    "required_claim_category": {
+      "default": "",
+      "maxLength": 100,
+      "title": "Required Claim Category",
+      "type": "string"
+    },
+    "dialogue_template": {
+      "maxLength": 2400,
+      "minLength": 1,
+      "title": "Dialogue Template",
+      "type": "string"
+    },
+    "subtitle_template": {
+      "maxLength": 2400,
+      "minLength": 1,
+      "title": "Subtitle Template",
+      "type": "string"
+    },
+    "phrase_policy": {
+      "default": "cautious_professional",
+      "maxLength": 100,
+      "title": "Phrase Policy",
+      "type": "string"
+    },
+    "voice": {
+      "$ref": "#/$defs/VoiceCue"
+    },
+    "actor": {
+      "$ref": "#/$defs/ActorCue"
+    },
+    "stage": {
+      "items": {
+        "$ref": "#/$defs/StageCommand"
+      },
+      "title": "Stage",
+      "type": "array"
+    },
+    "subtitle": {
+      "$ref": "#/$defs/SubtitleCue"
+    },
+    "fallback_template_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Fallback Template Id"
+    }
+  },
+  "required": [
+    "template_id",
+    "visibility",
+    "semantic_intent",
+    "dialogue_template",
+    "subtitle_template"
+  ],
+  "title": "CueTemplate",
+  "type": "object"
+}

@@ -1,0 +1,12 @@
+:root {
+  --element-wood: #34795a;
+  --element-fire: #b94f3b;
+  --element-earth: #94703a;
+  --element-metal: #687785;
+  --element-water: #2f5b73;
+  --wood: var(--element-wood);
+  --fire: var(--element-fire);
+  --earth: var(--element-earth);
+  --metal: var(--element-metal);
+  --water: var(--element-water);
+}

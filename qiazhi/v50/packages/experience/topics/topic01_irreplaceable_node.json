@@ -1,0 +1,145 @@
+{
+  "schema_version": "deepbazi.topic_package.v1",
+  "topic": {
+    "topic_id": "topic-01-irreplaceable-node",
+    "version": "1.0.0",
+    "title": "阿布说命 01｜谁是命局里不可替代的节点？",
+    "purpose": "让参与者在受控沙盒中亲手拿开一个节点，比较已批准路径的结构变化。",
+    "audience": ["member", "practitioner", "research_master"],
+    "supported_modes": ["solo", "time_shift", "replay"],
+    "required_experience_capabilities": [
+      "approved_reasoning_path",
+      "mingli_mechanism_snapshot",
+      "single_node_ablation",
+      "topic_exploration"
+    ],
+    "knowledge_refs": ["approved-cognitive-record", "deterministic-graph", "structural-ablation"]
+  },
+  "entry_node": "experiment_entry",
+  "fallback_entry_nodes": {
+    "personal_ready": "experiment_entry",
+    "chart_facts_only": "experiment_entry",
+    "observer": "experiment_entry"
+  },
+  "scene_nodes": [
+    {
+      "node_id": "experiment_entry",
+      "act": "structural-ablation-intro",
+      "dramatic_purpose": "先说明实验边界，再由参与者主动进入私人命盘沙盒。",
+      "visibility": "public",
+      "expected_duration_seconds": 18,
+      "cue_template_ids": [],
+      "interaction": {
+        "kind": "ready_barrier",
+        "prompt": "准备好后，进入你的命局结构实验。",
+        "required": false
+      },
+      "data_bindings": [],
+      "transitions": [
+        {"event": "next", "target": "experiment_private"}
+      ],
+      "timeout_behavior": "wait"
+    },
+    {
+      "node_id": "experiment_private",
+      "act": "single-node-structural-ablation",
+      "dramatic_purpose": "猜测关键节点、执行单节点消融、比较路径变化并恢复原局。",
+      "visibility": "participant_private",
+      "expected_duration_seconds": 240,
+      "cue_template_ids": ["experiment-private-opening"],
+      "interaction": {
+        "kind": "mingli_experiment",
+        "prompt": "先猜一个你认为不可替代的节点，再亲手把它暂时拿开。",
+        "required": false
+      },
+      "data_bindings": [
+        "envelope.allowed_chart_facts",
+        "envelope.approved_claims",
+        "envelope.approved_reasoning_steps",
+        "envelope.competing_hypotheses"
+      ],
+      "transitions": [
+        {"event": "complete", "target": "experiment_close"}
+      ],
+      "timeout_behavior": "fallback",
+      "fallback_node": "experiment_close",
+      "rejoin_node": "experiment_close"
+    },
+    {
+      "node_id": "experiment_close",
+      "act": "structural-ablation-close",
+      "dramatic_purpose": "确认原局已恢复，并把观察保存在当前专题探索中。",
+      "visibility": "public",
+      "expected_duration_seconds": 12,
+      "cue_template_ids": [],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [],
+      "timeout_behavior": "wait"
+    }
+  ],
+  "cue_templates": [
+    {
+      "template_id": "experiment-private-opening",
+      "visibility": "participant_private",
+      "semantic_intent": "introduce_structural_ablation_without_new_judgment",
+      "required_claim_category": "baseline",
+      "dialogue_template": "一张命盘里，出现次数最多的字，不一定最关键。真正值得看的，是把一个节点暂时拿开以后，原来的路径还剩下多少。今天我们只做结构实验，不改你的原命盘，也不替现实含义补答案。",
+      "subtitle_template": "实验分支：只比较结构变化，不修改原命盘。",
+      "phrase_policy": "deterministic_structure_only",
+      "voice": {
+        "profile": "abu-main",
+        "mode": "performer",
+        "emotion": "curious-professional",
+        "speed": 0.96
+      },
+      "actor": {
+        "expression": "curious",
+        "motion_asset": "abu-head-tilt",
+        "loop": true
+      },
+      "stage": [
+        {"command": "set_background", "asset_ref": "valley-dawn"},
+        {"command": "show_chart_facts", "source": "envelope.allowed_chart_facts"}
+      ],
+      "subtitle": {"style": "mingli-experiment"}
+    }
+  ],
+  "director_script": {
+    "temporary_dialogue": {},
+    "timing_notes": {
+      "experiment-private-opening": "The deterministic experiment UI owns all structural changes after the opening cue."
+    }
+  },
+  "asset_manifest": {
+    "assets": [
+      {
+        "asset_id": "abu-head-tilt",
+        "kind": "abu_motion",
+        "uri": "/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp"
+      },
+      {
+        "asset_id": "abu-divination",
+        "kind": "abu_motion",
+        "uri": "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp"
+      },
+      {
+        "asset_id": "valley-dawn",
+        "kind": "background",
+        "uri": "/assets/abu/v10-opening-scene/transition/abu_opening_background_v10.webp"
+      }
+    ]
+  },
+  "policies": {
+    "privacy": "private_by_default",
+    "aggregation_minimum": 3,
+    "personal_scene": "envelope_only",
+    "temporal_message": "explicit_consent",
+    "failure_behavior": "fallback_without_invention"
+  },
+  "release": {
+    "status": "draft",
+    "approved_by": "",
+    "package_hash": ""
+  }
+}

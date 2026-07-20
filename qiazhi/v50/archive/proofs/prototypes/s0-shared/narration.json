@@ -1,0 +1,74 @@
+{
+  "schema_version": "deepbazi.s0_locked_copy.v1",
+  "lock_status": "frozen_by_analyst_s0_g0",
+  "language": "zh-CN",
+  "public_brand": "DeepBazi · Life Intelligence",
+  "experience_name": "阿布说命",
+  "main_slogan": "看见命局，也看见自己。",
+  "life_script_term": "人生剧本的底稿",
+  "path_public_term": "正式主路径",
+  "voice_status": "Eric internal audition only",
+  "narration_text": "很多人把命理，当成对未来的预测。\n\n但命理不该被简化为迷信，\n也不该被用来宣判一个注定的人生。\n\n它更像人生剧本的底稿：\n让你看见自己的角色、关系、节奏，\n以及可能出现的转折。\n\n所以，我们正在把原局四柱、大运与流年，\n展开成一张可以看见、操作和比较的六柱互动图。\n\n你可以看见关系怎样形成，时间怎样引动，\n一条路径为什么成立、变化，或被阻断。\n\n阿布不替你决定命运。\n它陪你读懂底稿，更清醒地认识自己，\n也更主动地写下下一章。\n\n阿布说命。\n看见命局，也看见自己。",
+  "segments": [
+    {
+      "segment_id": "s0-copy-01",
+      "narration": "很多人把命理，当成对未来的预测。",
+      "subtitle": "很多人把命理，当成对未来的预测。"
+    },
+    {
+      "segment_id": "s0-copy-02",
+      "narration": "但命理不该被简化为迷信，也不该被用来宣判一个注定的人生。",
+      "subtitle": "但命理不该被简化为迷信，也不该被用来宣判一个注定的人生。"
+    },
+    {
+      "segment_id": "s0-copy-03",
+      "narration": "它更像人生剧本的底稿：让你看见自己的角色、关系、节奏，以及可能出现的转折。",
+      "subtitle": "它更像人生剧本的底稿：让你看见自己的角色、关系、节奏，以及可能出现的转折。"
+    },
+    {
+      "segment_id": "s0-copy-04",
+      "narration": "所以，我们正在把原局四柱、大运与流年，展开成一张可以看见、操作和比较的六柱互动图。",
+      "subtitle": "所以，我们正在把原局四柱、大运与流年，展开成一张可以看见、操作和比较的六柱互动图。"
+    },
+    {
+      "segment_id": "s0-copy-05",
+      "narration": "你可以看见关系怎样形成，时间怎样引动，一条路径为什么成立、变化，或被阻断。",
+      "subtitle": "你可以看见关系怎样形成，时间怎样引动，一条路径为什么成立、变化，或被阻断。"
+    },
+    {
+      "segment_id": "s0-copy-06",
+      "narration": "阿布不替你决定命运。它陪你读懂底稿，更清醒地认识自己，也更主动地写下下一章。",
+      "subtitle": "阿布不替你决定命运。它陪你读懂底稿，更清醒地认识自己，也更主动地写下下一章。"
+    },
+    {
+      "segment_id": "s0-copy-07",
+      "narration": "阿布说命。看见命局，也看见自己。",
+      "subtitle": "阿布说命。看见命局，也看见自己。"
+    }
+  ],
+  "wording_locks": {
+    "mingli_boundary": "命理不该被简化为迷信，也不该被用来宣判一个注定的人生。",
+    "life_script": "人生剧本的底稿",
+    "onecanvas_progress": "我们正在把原局四柱、大运与流年，展开成一张可以看见、操作和比较的六柱互动图。",
+    "human_agency": "阿布不替你决定命运。",
+    "path_authority": "正式主路径"
+  },
+  "forbidden_claims": [
+    "命理就是迷信",
+    "命理完全不是预测",
+    "人生已经写好",
+    "人生注定如此",
+    "阿布替你决定命运",
+    "系统最优路径",
+    "候选路径已经成为正式结论",
+    "没有 typed temporal effect 时宣称路径已被激活、增强、减弱或阻断",
+    "OneCanvas、Xiangfa 或 Theater 已正式上线",
+    "Eric 已是正式品牌声线",
+    "S0 已获准公开发布",
+    "由象法画面反推或新增命理事实"
+  ],
+  "derivatives": {
+    "thirty_second_version": "not_locked_not_authorized",
+    "translation": "not_locked_not_authorized"
+  }
+}

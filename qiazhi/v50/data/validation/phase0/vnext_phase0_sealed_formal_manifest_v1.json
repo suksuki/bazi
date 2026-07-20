@@ -1,0 +1,70 @@
+{
+  "version": "deepbazi.vnext_phase0.sealed_formal_manifest.v1",
+  "purpose": "sealed_ten_chart_architecture_promotion_benchmark",
+  "status": "selected_not_yet_executed",
+  "round1_reality_evidence_allowed": false,
+  "cases": [
+    {
+      "case_id": "c2.output_controls_pressure.01",
+      "benchmark_role": "anchor",
+      "selection_reason": "Familiar output-pressure structure without making it the default world."
+    },
+    {
+      "case_id": "c2.climate_regulation_dominant.01",
+      "benchmark_role": "anchor",
+      "selection_reason": "Tests whether climate regulation can outrank a convenient mechanism label."
+    },
+    {
+      "case_id": "c2.complete_triple_combination.01",
+      "benchmark_role": "anchor",
+      "selection_reason": "Tests whole-pattern attention on a complete combination."
+    },
+    {
+      "case_id": "c2.broken_triple_combination.01",
+      "benchmark_role": "contrast",
+      "selection_reason": "Contrasts a broken structure with a complete combination."
+    },
+    {
+      "case_id": "c2.resource_disrupts_output.01",
+      "benchmark_role": "contrast",
+      "selection_reason": "Tests whether similar vocabulary yields a distinct causal center."
+    },
+    {
+      "case_id": "c2.wealth_generates_officer.01",
+      "benchmark_role": "contrast",
+      "selection_reason": "Adds a wealth-officer causal alternative not used during harness development."
+    },
+    {
+      "case_id": "c2.mixed_officer_killing_with_control.01",
+      "benchmark_role": "ambiguous",
+      "selection_reason": "Requires genuine competition between plausible whole-chart hypotheses."
+    },
+    {
+      "case_id": "c2.mediation_path.01",
+      "benchmark_role": "ambiguous",
+      "selection_reason": "Tests mediation and conditional bridge reasoning on a previously unrun chart."
+    },
+    {
+      "case_id": "c2.month_command_dominant.01",
+      "benchmark_role": "ordinary_control",
+      "selection_reason": "Checks whether an ordinary month-command chart is overcomplicated."
+    },
+    {
+      "case_id": "c2.timing_insufficient.01",
+      "benchmark_role": "negative_control",
+      "selection_reason": "Checks restraint when timing evidence is insufficient."
+    }
+  ],
+  "references": {
+    "round1_expert_reference": "data/validation/phase0/vnext_phase0_expert_reference_space_v1.json",
+    "round2_reality_evidence": "data/validation/phase0/vnext_phase0_reality_evidence_v1.json"
+  },
+  "boundaries": {
+    "development_case_overlap_allowed": false,
+    "model_selection_case_overlap_allowed": false,
+    "expected_contract_visible_to_model": false,
+    "expert_reference_visible_to_model": false,
+    "reality_evidence_visible_in_round1": false,
+    "weight_training_allowed": false
+  }
+}

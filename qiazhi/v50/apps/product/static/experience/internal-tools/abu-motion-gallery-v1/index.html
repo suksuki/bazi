@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102d27">
+  <title>Abu Motion Library · Actor Pass V1</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <header class="gallery-header">
+    <a href="/app" class="brand" aria-label="返回 DeepBazi">
+      <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi">
+    </a>
+    <div class="heading">
+      <p>ABU MOTION LIBRARY</p>
+      <h1>Actor Pass V1</h1>
+    </div>
+    <fieldset class="background-switch" aria-label="预览背景">
+      <label title="山谷背景"><input type="radio" name="background" value="valley" checked><i class="valley"></i></label>
+      <label title="浅色背景"><input type="radio" name="background" value="ivory"><i class="ivory"></i></label>
+      <label title="透明检查"><input type="radio" name="background" value="checker"><i class="checker"></i></label>
+    </fieldset>
+  </header>
+
+  <main class="gallery" id="gallery" data-background="valley" aria-live="polite"></main>
+
+  <template id="motionCardTemplate">
+    <article class="motion-card">
+      <div class="motion-stage">
+        <video muted playsinline preload="auto" loop></video>
+        <span class="anchor-mark" aria-hidden="true"></span>
+      </div>
+      <footer>
+        <div>
+          <p class="family"></p>
+          <h2 class="motion-label"></h2>
+          <code class="action-id"></code>
+          <p class="description"></p>
+          <span class="metadata"></span>
+          <span class="product-role"></span>
+        </div>
+        <div class="motion-actions">
+          <button type="button" data-command="toggle" title="播放或暂停" aria-label="播放或暂停">Ⅱ</button>
+          <button type="button" data-command="restart" title="重新播放" aria-label="重新播放">↻</button>
+        </div>
+      </footer>
+    </article>
+  </template>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

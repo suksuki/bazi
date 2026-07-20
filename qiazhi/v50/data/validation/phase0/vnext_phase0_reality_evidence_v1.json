@@ -1,0 +1,23 @@
+{
+  "version": "deepbazi.vnext_phase0.reality_evidence.v1",
+  "round": "round2_controlled_feedback",
+  "status": "pending_human_freeze",
+  "packets": [
+    {"chart_id": "c2.output_controls_pressure.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.climate_regulation_dominant.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.complete_triple_combination.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.broken_triple_combination.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.resource_disrupts_output.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.wealth_generates_officer.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.mixed_officer_killing_with_control.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.mediation_path.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.month_command_dominant.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""},
+    {"chart_id": "c2.timing_insufficient.01", "status": "pending_human_freeze", "reality_observations": [], "historical_years": [], "probe_answers": [], "source_provenance": [], "author": "", "frozen_at": ""}
+  ],
+  "boundaries": {
+    "available_to_round1": false,
+    "fabricated_feedback_allowed": false,
+    "global_theory_mutation_allowed": false,
+    "case_level_revision_only": true
+  }
+}

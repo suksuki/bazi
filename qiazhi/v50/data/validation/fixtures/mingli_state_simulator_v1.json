@@ -1,0 +1,46 @@
+{
+  "group": "mingli_state_simulator_v1",
+  "description": "Graph + state simulation fixture for 丁巳 乙巳 乙丑 乙酉. The goal is to verify structural criticality instead of mechanical month-command dominance.",
+  "cases": [
+    {
+      "case_id": "ding_si_yi_si_yi_chou_yi_you_node_importance",
+      "reading_id": "reading.v50.simulator.ding_si",
+      "birth_input": {
+        "birth_input_id": "birth.v50.simulator.ding_si",
+        "name": "simulator_fixture",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-05-01",
+        "birth_time": "酉时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳",
+        "month_pillar": "乙巳",
+        "day_pillar": "乙丑",
+        "hour_pillar": "乙酉",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_top_nodes": [
+        {"label": "酉", "position": "hour_branch", "reason": "structural bridge of 巳酉丑 metal formation"},
+        {"label": "丁", "position": "year_stem", "reason": "output converter connecting wood to fire-to-metal control path"},
+        {"label": "巳", "position": "month_branch", "reason": "month environment and activation source, not necessarily final dominant node"}
+      ],
+      "expected_active_flow": "flow.output_controls_pressure",
+      "expected_path_hints": [
+        "mechanism_hint.output_controls_pressure",
+        "mechanism_hint.combination_bridge"
+      ],
+      "expected_roles": {
+        "酉:hour_branch": ["bridge_node", "single_failure_node"],
+        "丁:year_stem": ["converter_node", "single_failure_node"],
+        "巳:month_branch": ["environment_node", "activation_node"]
+      },
+      "expected_ablation_order": ["酉", "丁", "巳"],
+      "must_not": [
+        "produce_brain_verdict",
+        "call_llm",
+        "create_user_report"
+      ]
+    }
+  ]
+}

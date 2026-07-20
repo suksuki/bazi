@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f5f0e5">
+  <title>阿布说命 · 候选 A 象法</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="xiangfa-app" id="xiangfaApp" data-mode="xiangfa" data-stage="original">
+    <header class="site-header">
+      <a class="brand" href="/" aria-label="返回 DeepBazi">
+        <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi">
+      </a>
+      <div class="header-context">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span>匿名教学场景</span>
+      </div>
+      <a class="theater-link" href="/experience-static/prototypes/abu-says-mingli-s0/index.html">
+        <span aria-hidden="true">▶</span> 看阿布讲这一幕
+      </a>
+    </header>
+
+    <main>
+      <section class="scene-shell" aria-labelledby="pageTitle">
+        <div class="scene-toolbar">
+          <div class="scene-title">
+            <p>阿布说命 · 象法 V0</p>
+            <h1 id="pageTitle">同一命局，三种看法</h1>
+          </div>
+          <div class="mode-switch" role="group" aria-label="查看方式">
+            <button type="button" data-mode-value="xiangfa" aria-pressed="true">象法</button>
+            <button type="button" data-mode-value="skeleton" aria-pressed="false">结构骨架</button>
+            <button type="button" data-mode-value="overlay" aria-pressed="false">叠加</button>
+          </div>
+        </div>
+
+        <div class="scene-viewport" id="sceneViewport">
+          <div class="scene-image" aria-hidden="true"></div>
+          <div class="stage-atmosphere" aria-hidden="true"></div>
+
+          <svg class="structure-layer" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-label="正式主路径骨架">
+            <defs>
+              <linearGradient id="pathColor" x1="0" y1="0" x2="1" y2="0">
+                <stop offset="0" stop-color="#4f8c67"></stop>
+                <stop offset=".5" stop-color="#d8784f"></stop>
+                <stop offset="1" stop-color="#7b8992"></stop>
+              </linearGradient>
+              <marker id="pathArrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto">
+                <path d="M0 0 L9 4.5 L0 9 Z" fill="#ce744d"></path>
+              </marker>
+            </defs>
+            <path class="main-path-line" d="M235 650 C420 765 625 734 790 632 S1190 600 1395 454"></path>
+            <path class="temporal-line geng-line" d="M346 250 C275 350 254 460 235 635"></path>
+            <path class="temporal-line bing-line" d="M795 235 C792 360 790 470 790 610"></path>
+            <g class="semantic-node node-wood" transform="translate(235 650)">
+              <circle r="34"></circle><text y="9">乙</text>
+            </g>
+            <g class="semantic-node node-fire" transform="translate(790 632)">
+              <circle r="34"></circle><text y="9">丁</text>
+            </g>
+            <g class="semantic-node node-metal" transform="translate(1395 454)">
+              <circle r="42"></circle><text y="9">金</text>
+            </g>
+            <g class="temporal-node geng-node" transform="translate(346 250)">
+              <circle r="30"></circle><text y="9">庚</text>
+            </g>
+            <g class="temporal-node bing-node" transform="translate(795 235)">
+              <circle r="30"></circle><text y="9">丙</text>
+            </g>
+          </svg>
+
+          <div class="source-pressure" aria-hidden="true"></div>
+          <div class="fire-support" aria-hidden="true"></div>
+
+          <button class="hotspot hotspot-wood" type="button" data-semantic-ref="node-stem-day-yi" aria-label="查看乙木路径源端">
+            <span></span><strong>乙木</strong><small>生发主体</small>
+          </button>
+          <button class="hotspot hotspot-fire" type="button" data-semantic-ref="node-stem-year-ding" aria-label="查看丁火转化中心">
+            <span></span><strong>丁火</strong><small>转化中心</small>
+          </button>
+          <button class="hotspot hotspot-metal" type="button" data-semantic-ref="node-metal-structure" aria-label="查看金结构边界">
+            <span></span><strong>金结构</strong><small>作用边界</small>
+          </button>
+          <button class="hotspot hotspot-path" type="button" data-semantic-ref="path-committed-output-pressure" aria-label="查看正式主路径">
+            <span></span><strong>正式主路径</strong><small>乙木 → 丁火 → 金结构</small>
+          </button>
+          <button class="hotspot hotspot-geng" type="button" data-semantic-ref="relation-luck-geng-controls-yi" aria-label="查看庚对子路径源端的作用">
+            <span></span><strong>庚</strong><small>作用于源端</small>
+          </button>
+          <button class="hotspot hotspot-bing" type="button" data-semantic-ref="relation-year-bing-supports-ding" aria-label="查看丙对丁火节点的支持">
+            <span></span><strong>丙</strong><small>支持丁火</small>
+          </button>
+
+          <div class="scene-note" aria-live="polite">
+            <span id="stageEyebrow">原局</span>
+            <strong id="stageHeadline">路径成立</strong>
+          </div>
+        </div>
+
+        <nav class="stage-switch" aria-label="时间阶段">
+          <button type="button" data-stage-value="original" aria-current="true">
+            <span>01</span><strong>原局</strong><small>路径成立</small>
+          </button>
+          <button type="button" data-stage-value="luck" aria-current="false">
+            <span>02</span><strong>庚子</strong><small>源端受制</small>
+          </button>
+          <button type="button" data-stage-value="year" aria-current="false">
+            <span>03</span><strong>丙午</strong><small>火侧得助</small>
+          </button>
+        </nav>
+      </section>
+
+      <section class="meaning-band" aria-labelledby="selectionTitle">
+        <div class="selection-index" aria-hidden="true">象</div>
+        <div class="selection-copy">
+          <p id="selectionKind">正式主路径 · analyst approved teaching projection</p>
+          <h2 id="selectionTitle">乙木生丁火，丁火进一步作用于金结构。</h2>
+          <p id="selectionExplanation">这幅画与结构骨架使用同一组语义对象；象法只改变表达，不增加命理关系。</p>
+          <div class="semantic-ref" id="semanticRef">path-committed-output-pressure</div>
+        </div>
+        <div class="abu-guide">
+          <img src="/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp" alt="阿布">
+          <p id="abuLine">点一下画面里的主体、灯火或路径，我只解释你正在看的对象。</p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="page-footer">
+      <span>内部单场景生产原型</span>
+      <strong>看见命局，也看见自己</strong>
+      <span>不写回正式案例</span>
+    </footer>
+  </div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+{
+  "version": "deepbazi.vnext_phase0.expert_reference_authoring_policy.v1",
+  "status": "frozen_for_human_authoring",
+  "required_semantic_fields": [
+    "must_notice",
+    "acceptable_primary_hypotheses",
+    "strongest_alternatives",
+    "unacceptable_or_unsupported_hypotheses",
+    "critical_relations",
+    "critical_node_candidates",
+    "plausible_work_paths",
+    "blocked_or_failed_paths",
+    "conditional_useful_roles",
+    "conditional_harmful_roles",
+    "unresolved_role_disputes",
+    "required_portrait_distinctions",
+    "required_domain_distinctions",
+    "career_prior_expectations",
+    "wealth_prior_expectations",
+    "unsupported_claims",
+    "known_theory_disagreements",
+    "unresolved_disagreements",
+    "unresolved_questions"
+  ],
+  "semantic_item_contract": {
+    "required_fields": [
+      "statement",
+      "reason",
+      "evidence_basis",
+      "source_refs"
+    ],
+    "evidence_basis_enum": [
+      "structural",
+      "theory_hypothesis",
+      "exploratory"
+    ]
+  },
+  "forbidden_recursive_fields": [
+    "known_reality_evidence",
+    "reality_observations",
+    "historical_years",
+    "probe_answers",
+    "model_output",
+    "lane_output",
+    "review_score",
+    "actual_career",
+    "actual_income",
+    "actual_event"
+  ],
+  "freeze_requirements": {
+    "human_author_required": true,
+    "human_signature_required": true,
+    "frozen_at_required": true,
+    "chart_fact_hash_required": true,
+    "all_semantic_fields_nonempty": true,
+    "llm_semantic_authorship_allowed": false,
+    "silent_post_freeze_edit_allowed": false,
+    "erratum_requires_new_version": true
+  }
+}

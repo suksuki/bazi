@@ -1,0 +1,1033 @@
+{
+  "coverage_scores": {
+    "Bazi Foundation Coverage": {
+      "high_risk_missing": [
+        "合冲刑害破",
+        "三合 / 三会 / 六合",
+        "墓库",
+        "旺衰 / 得令 / 通根 / 透干"
+      ],
+      "item_count": 12,
+      "score": 0.646,
+      "status_counts": {
+        "implemented": 1,
+        "missing": 2,
+        "partial": 4,
+        "tested": 5
+      }
+    },
+    "Bazi Luck-Year Coverage": {
+      "high_risk_missing": [
+        "大运介入",
+        "流年触发",
+        "冲合引动",
+        "运年叠加",
+        "阶段主题变化",
+        "远近 / 宫位 / 原局优先级",
+        "原局、大运、流年三层证据关系"
+      ],
+      "item_count": 7,
+      "score": 0.0,
+      "status_counts": {
+        "missing": 7
+      }
+    },
+    "Bazi Mechanism Coverage": {
+      "high_risk_missing": [
+        "杀印相生",
+        "财官相生",
+        "伤官见官",
+        "官杀混杂",
+        "财星入库",
+        "身弱财旺",
+        "身旺财弱",
+        "调候",
+        "做功流通",
+        "体用",
+        "主线条 / 轨迹"
+      ],
+      "item_count": 18,
+      "score": 0.222,
+      "status_counts": {
+        "missing": 13,
+        "partial": 2,
+        "tested": 3
+      }
+    },
+    "Bazi Topic Mapping Coverage": {
+      "high_risk_missing": [
+        "感情",
+        "健康"
+      ],
+      "item_count": 9,
+      "score": 0.389,
+      "status_counts": {
+        "missing": 4,
+        "partial": 3,
+        "tested": 2
+      }
+    },
+    "Evidence Coverage": {
+      "high_risk_missing": [],
+      "item_count": 6,
+      "score": 1.0,
+      "status_counts": {
+        "tested": 6
+      }
+    },
+    "Fusion Coverage": {
+      "high_risk_missing": [
+        "八字关系结构 vs 紫微夫妻宫"
+      ],
+      "item_count": 6,
+      "score": 0.917,
+      "status_counts": {
+        "partial": 1,
+        "tested": 5
+      }
+    },
+    "Ziwei Foundation Coverage": {
+      "high_risk_missing": [
+        "宫干"
+      ],
+      "item_count": 10,
+      "score": 0.725,
+      "status_counts": {
+        "implemented": 3,
+        "missing": 2,
+        "tested": 5
+      }
+    },
+    "Ziwei Mechanism Coverage": {
+      "high_risk_missing": [],
+      "item_count": 11,
+      "score": 0.591,
+      "status_counts": {
+        "missing": 3,
+        "partial": 3,
+        "tested": 5
+      }
+    },
+    "Ziwei Time Coverage": {
+      "high_risk_missing": [],
+      "item_count": 3,
+      "score": 0.833,
+      "status_counts": {
+        "partial": 1,
+        "tested": 2
+      }
+    }
+  },
+  "final_conclusion": {
+    "allowed_topics": [
+      "wealth",
+      "career"
+    ],
+    "blocked_topics": [
+      "relationship",
+      "health",
+      "family",
+      "education"
+    ],
+    "must_fill_knowledge_gaps": [
+      "合冲刑害破",
+      "三合 / 三会 / 六合",
+      "墓库",
+      "旺衰 / 得令 / 通根 / 透干",
+      "杀印相生",
+      "财官相生",
+      "伤官见官",
+      "官杀混杂",
+      "财星入库",
+      "身弱财旺",
+      "身旺财弱",
+      "调候",
+      "做功流通",
+      "体用",
+      "主线条 / 轨迹",
+      "大运介入",
+      "流年触发",
+      "冲合引动"
+    ],
+    "next_recommended_phase": "LLM Synthetic Validation v1 with topic restrictions and visible blocked-topic reporting.",
+    "ready_for_llm_synthetic_validation": "partial",
+    "risk_note": "LLM Synthetic Validation can start only for currently supported wealth / career slices. It must be used to expose missing knowledge, not to compensate for missing knowledge.",
+    "score_drivers": {
+      "bazi_mechanism": 0.222,
+      "bazi_topic_mapping": 0.389,
+      "evidence": 1.0,
+      "fusion": 0.917,
+      "ziwei_mechanism": 0.591
+    }
+  },
+  "hard_boundary": {
+    "audit_only": true,
+    "llm_used": false,
+    "production_write": false,
+    "rules_added": false,
+    "weights_modified": false
+  },
+  "items": [
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "天干",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "地支",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "藏干",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "十神",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/bazi/material_engine.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "五行",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "阴阳",
+      "recommended_action": "Add fixture assertions for polarity-sensitive rules.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "implemented",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "生克制化",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "合冲刑害破",
+      "recommended_action": "Only six clash / six harmony baseline exists; add 刑害破 coverage before relation-heavy judgments.",
+      "risk_level": "high",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "三合 / 三会 / 六合",
+      "recommended_action": "六合 baseline exists; 三合 / 三会 are missing from runtime.",
+      "risk_level": "high",
+      "source_file": "packages/core/engines/bazi/knowledge.py",
+      "status": "partial",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "空亡",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "墓库",
+      "recommended_action": "Required before 财星入库 and storage-related wealth judgments.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Foundation Coverage",
+      "knowledge_item": "旺衰 / 得令 / 通根 / 透干",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "high",
+      "source_file": "packages/core/engines/bazi/material_engine.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "食伤生财",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/flows/model.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "食伤制杀",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/flows/model.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "杀印相生",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "财官相生",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "伤官见官",
+      "recommended_action": "Current output_controls_pressure can approximate pressure; it is not a dedicated 伤官见官 rule.",
+      "risk_level": "high",
+      "source_file": "packages/core/flows/model.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "官杀混杂",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "比劫夺财",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/flows/model.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "财星入库",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "印旺身强",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "身弱财旺",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "身旺财弱",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "羊刃驾杀",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "从格 / 假从",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "调候",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "做功流通",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "high",
+      "source_file": "packages/core/cognitive/mechanism_model.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "体用",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "家里 / 家外",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Mechanism Coverage",
+      "knowledge_item": "主线条 / 轨迹",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Luck-Year Coverage",
+      "knowledge_item": "大运介入",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Luck-Year Coverage",
+      "knowledge_item": "流年触发",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Luck-Year Coverage",
+      "knowledge_item": "冲合引动",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Luck-Year Coverage",
+      "knowledge_item": "运年叠加",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Luck-Year Coverage",
+      "knowledge_item": "阶段主题变化",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Luck-Year Coverage",
+      "knowledge_item": "远近 / 宫位 / 原局优先级",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Luck-Year Coverage",
+      "knowledge_item": "原局、大运、流年三层证据关系",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "事业",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/cognitive/domain_mapping_model.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "财富",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/cognitive/domain_mapping_model.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "感情",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "健康",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "学业",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "家庭",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "性格画像",
+      "recommended_action": "Portrait exists as a boundary layer but is not driven by current Brain outputs in validation.",
+      "risk_level": "medium",
+      "source_file": "packages/core/portrait",
+      "status": "partial",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "风险",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "medium",
+      "source_file": "packages/core/cognitive/domain_mapping_model.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Bazi Topic Mapping Coverage",
+      "knowledge_item": "阶段建议",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "medium",
+      "source_file": "packages/core/expression/experience_layer.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "十二宫",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/ziwei/chart_builder.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "主星",
+      "recommended_action": "Add validation fixture coverage.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/knowledge.py",
+      "status": "implemented",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "辅星",
+      "recommended_action": "Add validation fixture coverage.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/knowledge.py",
+      "status": "implemented",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "四化",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/ziwei/knowledge.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "三方四正",
+      "recommended_action": "Add validation fixture coverage.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/chart_builder.py",
+      "status": "implemented",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "宫干",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "high",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "命身宫",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/ziwei/material_engine.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "大限",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/chart_builder.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "流年",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/chart_builder.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Foundation Coverage",
+      "knowledge_item": "流月",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "命宫画像",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/material_engine.py",
+      "status": "partial",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "官禄事业",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "财帛财富",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "夫妻关系",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "疾厄健康",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "迁移外部机会",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "福德心理状态",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "田宅资产",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "父母 / 子女 / 兄弟",
+      "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
+      "risk_level": "medium",
+      "source_file": "",
+      "status": "missing",
+      "used_by_pipeline": false
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "大限主题",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Ziwei Mechanism Coverage",
+      "knowledge_item": "流年触发",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Ziwei Time Coverage",
+      "knowledge_item": "紫微短期压力",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Ziwei Time Coverage",
+      "knowledge_item": "紫微主题激活",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Ziwei Time Coverage",
+      "knowledge_item": "紫微大限/流年并看",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "medium",
+      "source_file": "packages/core/engines/ziwei/dynamic_evidence.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Fusion Coverage",
+      "knowledge_item": "八字长期结构 vs 紫微阶段压力",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/brain/decision_policy.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Fusion Coverage",
+      "knowledge_item": "八字财富路径 vs 紫微财帛宫",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/brain/decision_policy.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Fusion Coverage",
+      "knowledge_item": "八字事业压力 vs 紫微官禄宫",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/brain/decision_policy.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Fusion Coverage",
+      "knowledge_item": "八字关系结构 vs 紫微夫妻宫",
+      "recommended_action": "Complete runtime semantics and add focused fixtures.",
+      "risk_level": "high",
+      "source_file": "packages/core/brain/decision_policy.py",
+      "status": "partial",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Fusion Coverage",
+      "knowledge_item": "冲突时如何保留双证据",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/brain/decision_policy.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Fusion Coverage",
+      "knowledge_item": "一致时如何提升 confidence",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/brain/decision_policy.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Evidence Coverage",
+      "knowledge_item": "material_refs",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/contracts/reasoning.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Evidence Coverage",
+      "knowledge_item": "structure_refs",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/contracts/reasoning.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Evidence Coverage",
+      "knowledge_item": "flow_refs",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/contracts/reasoning.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": true,
+      "domain": "Evidence Coverage",
+      "knowledge_item": "evidence_refs",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/cognitive/contracts.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Evidence Coverage",
+      "knowledge_item": "must_not_say",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/judgment/model.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    },
+    {
+      "covered_by_fixture": false,
+      "domain": "Evidence Coverage",
+      "knowledge_item": "user-facing verifier",
+      "recommended_action": "Keep covered by regression.",
+      "risk_level": "low",
+      "source_file": "packages/core/expression/verifier.py",
+      "status": "tested",
+      "used_by_pipeline": true
+    }
+  ],
+  "scope": [
+    "Bazi Engine",
+    "Ziwei Engine",
+    "Fusion / Cross-engine mapping",
+    "Topic mapping",
+    "Evidence rule coverage"
+  ],
+  "summary": {
+    "fixture_covered_items": 21,
+    "high_risk_gaps": [
+      "合冲刑害破",
+      "三合 / 三会 / 六合",
+      "墓库",
+      "旺衰 / 得令 / 通根 / 透干",
+      "杀印相生",
+      "财官相生",
+      "伤官见官",
+      "官杀混杂",
+      "财星入库",
+      "身弱财旺",
+      "身旺财弱",
+      "调候",
+      "做功流通",
+      "体用",
+      "主线条 / 轨迹",
+      "大运介入",
+      "流年触发",
+      "冲合引动",
+      "运年叠加",
+      "阶段主题变化"
+    ],
+    "runtime_used_items": 48,
+    "status_counts": {
+      "implemented": 4,
+      "missing": 31,
+      "partial": 14,
+      "tested": 33
+    },
+    "total_items": 82
+  },
+  "version": "v50.knowledge_coverage_audit.v1"
+}

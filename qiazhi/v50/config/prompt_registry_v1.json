@@ -1,0 +1,18 @@
+{
+  "schema_version": "deepbazi.prompt_registry.v1",
+  "frozen_at": "2026-07-18",
+  "active_prompts": [
+    {
+      "prompt_id": "mingli-cognitive-reasoner",
+      "source": "packages/core/mingli_agent/reasoner.py",
+      "sha256": "67c6d022e8c001c14c462a90a29da0b9a192a819c2eeba6c4f45217057121e4f",
+      "authority": "production cognition",
+      "may_create_claims": true
+    }
+  ],
+  "experience_policy": {
+    "may_call_reasoner": false,
+    "may_create_claims": false,
+    "allowed_source": "MingliExperienceEnvelope"
+  }
+}

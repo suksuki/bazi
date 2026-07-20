@@ -1,0 +1,64 @@
+{
+  "version": "v50.abu.designer_motion.v5",
+  "status": "production",
+  "motion": "welcome_wave",
+  "source": {
+    "filename": "刚才那个ABU小狗动画，能否做一个纯小狗，透明背景的动画？.mp4",
+    "sha256": "cd8ddfe46839cbc7082daf9f0a0be93372e01141546adf3189f532b937c00e1d",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      6.65,
+      9.05
+    ]
+  },
+  "canvas": [
+    720,
+    720
+  ],
+  "anchor": [
+    0.5,
+    0.9722222222222222
+  ],
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    408,
+    76,
+    958,
+    679
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 9.0,
+    "high": 29.0
+  },
+  "webp": {
+    "quality": 93,
+    "method": 6
+  },
+  "animation": "web/abu_welcome_wave_v5.webp",
+  "poster": "posters/abu_welcome_wave_v5.png",
+  "frame_count": 37,
+  "duration_ms": 2467,
+  "bytes": 2399278,
+  "usage": [
+    "first_visit",
+    "new_exploration_welcome"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "version": "deepbazi.vnext_phase0.modality_policy.v1",
+  "status": "frozen_for_phase0",
+  "modalities": [
+    "asserted_natal_fact",
+    "derived_natal_claim",
+    "hypothesis",
+    "counterfactual",
+    "timing_condition",
+    "question",
+    "quoted_claim"
+  ],
+  "natal_fact_conflict_eligible": [
+    "asserted_natal_fact",
+    "derived_natal_claim"
+  ],
+  "boundaries": {
+    "natural_language_parser_expansion_allowed": false,
+    "question_as_asserted_fact_allowed": false,
+    "timing_condition_as_natal_fact_allowed": false,
+    "counterfactual_as_natal_fact_allowed": false
+  }
+}

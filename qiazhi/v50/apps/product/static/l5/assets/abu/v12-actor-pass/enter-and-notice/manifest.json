@@ -1,0 +1,92 @@
+{
+  "version": "v50.abu.designer_motion.v1",
+  "status": "production",
+  "motion": "enter_and_notice",
+  "action_id": "abu_enter_and_notice_v1",
+  "action_family": "entrance",
+  "source_type": "extracted_video",
+  "source": {
+    "filename": "来一个阿布奔跑跳跃的视频.mp4",
+    "sha256": "ce349b8ce06fcebc695dd325775a21e530a756fa74fd9fac27fc8595d70a22b1",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      5.5,
+      9.4
+    ]
+  },
+  "canvas": [
+    960,
+    640
+  ],
+  "anchor": [
+    0.5,
+    0.96875
+  ],
+  "actor_contract": {
+    "facing": "right",
+    "gaze_target": "semantic_object",
+    "safe_crop": "full_body",
+    "background": "transparent",
+    "flip_horizontal": false,
+    "loop_mode": "one_shot",
+    "recommended_contexts": [
+      "opening_discovery",
+      "life_script_entry"
+    ]
+  },
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    70,
+    20,
+    1030,
+    700
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 36.0,
+    "high": 64.0
+  },
+  "webp": {
+    "quality": 92,
+    "method": 3,
+    "loop_count": 1
+  },
+  "runtime_display": {
+    "scale": 1.42,
+    "stage_profile": "standard",
+    "playback": "one_shot",
+    "category": "guidance"
+  },
+  "animation": "web/abu_enter_and_notice_v1.webp",
+  "video": "web/abu_enter_and_notice_v1.webm",
+  "poster": "posters/abu_enter_and_notice_v1.png",
+  "contact_sheet": "contact-sheets/abu_enter_and_notice_v1_contact_sheet.png",
+  "frame_count": 60,
+  "duration_ms": 4000,
+  "bytes": 3944014,
+  "delivery_bytes": {
+    "webp": 3944014,
+    "webm": 5680913
+  },
+  "usage": [
+    "opening_discovery",
+    "life_script_entry"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

@@ -1,0 +1,1923 @@
+{
+  "version": "v50.knowledge_graph_seed.v1",
+  "source": "data/knowledge/canon/knowledge_cards_v1.jsonl",
+  "node_count": 97,
+  "edge_count": 259,
+  "edge_types": [
+    "has_runtime_status",
+    "maps_to_topic",
+    "related_to",
+    "runtime_candidate_for",
+    "same_school_as"
+  ],
+  "nodes": [
+    {
+      "id": "bazi.foundation.wang_shuai_root_transparent",
+      "node_type": "knowledge_card",
+      "label": "旺衰 / 得令 / 通根 / 透干",
+      "domain": "bazi",
+      "category": "foundation",
+      "runtime_status": "partial",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "bazi.mechanism.cai_guan_xiang_sheng",
+      "node_type": "knowledge_card",
+      "label": "财官相生",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "bazi.mechanism.guan_sha_mixed",
+      "node_type": "knowledge_card",
+      "label": "官杀混杂",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.mechanism.output_controls_pressure",
+      "node_type": "knowledge_card",
+      "label": "食伤制杀",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.mechanism.output_to_wealth",
+      "node_type": "knowledge_card",
+      "label": "食伤生财",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "bazi.mechanism.peer_competes_for_wealth",
+      "node_type": "knowledge_card",
+      "label": "比劫夺财",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "bazi.mechanism.sha_yin_xiang_sheng",
+      "node_type": "knowledge_card",
+      "label": "杀印相生",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "bazi.mechanism.shangguan_jian_guan",
+      "node_type": "knowledge_card",
+      "label": "伤官见官",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "partial",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.mechanism.strong_body_weak_wealth",
+      "node_type": "knowledge_card",
+      "label": "身旺财弱",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.mechanism.weak_body_strong_wealth",
+      "node_type": "knowledge_card",
+      "label": "身弱财旺",
+      "domain": "bazi",
+      "category": "mechanism",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.model.flow_mainline",
+      "node_type": "knowledge_card",
+      "label": "做功流通 / 主线条",
+      "domain": "bazi",
+      "category": "model",
+      "runtime_status": "partial",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.model.ti_yong",
+      "node_type": "knowledge_card",
+      "label": "体用",
+      "domain": "bazi",
+      "category": "model",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "low"
+    },
+    {
+      "id": "bazi.model.tiao_hou",
+      "node_type": "knowledge_card",
+      "label": "调候",
+      "domain": "bazi",
+      "category": "model",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.relation.chong_he_xing_hai_po",
+      "node_type": "knowledge_card",
+      "label": "合冲刑害破",
+      "domain": "bazi",
+      "category": "foundation",
+      "runtime_status": "partial",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "bazi.relation.sanhe_sanhui_liuhe",
+      "node_type": "knowledge_card",
+      "label": "三合 / 三会 / 六合",
+      "domain": "bazi",
+      "category": "foundation",
+      "runtime_status": "partial",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "bazi.storage.mu_ku",
+      "node_type": "knowledge_card",
+      "label": "墓库",
+      "domain": "bazi",
+      "category": "foundation",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "bazi.timing.luck_year_activation",
+      "node_type": "knowledge_card",
+      "label": "大运介入 / 流年触发",
+      "domain": "bazi",
+      "category": "timing",
+      "runtime_status": "missing",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "concept.07a7f48362",
+      "node_type": "concept",
+      "label": "阶段主题变化"
+    },
+    {
+      "id": "concept.1a1a99d7ad",
+      "node_type": "concept",
+      "label": "Probe"
+    },
+    {
+      "id": "concept.1b8db8f9cf",
+      "node_type": "concept",
+      "label": "身弱财旺"
+    },
+    {
+      "id": "concept.21984698f0",
+      "node_type": "concept",
+      "label": "官禄宫"
+    },
+    {
+      "id": "concept.282076e173",
+      "node_type": "concept",
+      "label": "四化"
+    },
+    {
+      "id": "concept.32f5f62921",
+      "node_type": "concept",
+      "label": "官杀混杂"
+    },
+    {
+      "id": "concept.3c169a79d1",
+      "node_type": "concept",
+      "label": "流年触发"
+    },
+    {
+      "id": "concept.43dde4bb59",
+      "node_type": "concept",
+      "label": "十二宫"
+    },
+    {
+      "id": "concept.50fc7e39f8",
+      "node_type": "concept",
+      "label": "财帛宫"
+    },
+    {
+      "id": "concept.53537045df",
+      "node_type": "concept",
+      "label": "主题宫"
+    },
+    {
+      "id": "concept.5847ca64e4",
+      "node_type": "concept",
+      "label": "三合三会六合"
+    },
+    {
+      "id": "concept.61ad358479",
+      "node_type": "concept",
+      "label": "大限主题"
+    },
+    {
+      "id": "concept.64943fd004",
+      "node_type": "concept",
+      "label": "大运介入"
+    },
+    {
+      "id": "concept.6851f64ea8",
+      "node_type": "concept",
+      "label": "体用"
+    },
+    {
+      "id": "concept.6895c4c000",
+      "node_type": "concept",
+      "label": "五行气候"
+    },
+    {
+      "id": "concept.6f43bff54c",
+      "node_type": "concept",
+      "label": "比劫夺财"
+    },
+    {
+      "id": "concept.711a32cfd6",
+      "node_type": "concept",
+      "label": "命身宫"
+    },
+    {
+      "id": "concept.72cf6ccd98",
+      "node_type": "concept",
+      "label": "伤官见官"
+    },
+    {
+      "id": "concept.72edb686ff",
+      "node_type": "concept",
+      "label": "煞曜"
+    },
+    {
+      "id": "concept.73089569ca",
+      "node_type": "concept",
+      "label": "合冲刑害破"
+    },
+    {
+      "id": "concept.769ccabcfd",
+      "node_type": "concept",
+      "label": "身旺财弱"
+    },
+    {
+      "id": "concept.824a0b1b86",
+      "node_type": "concept",
+      "label": "印旺身强"
+    },
+    {
+      "id": "concept.84bb1cb4f5",
+      "node_type": "concept",
+      "label": "调候"
+    },
+    {
+      "id": "concept.8ce8ef4c49",
+      "node_type": "concept",
+      "label": "DecisionPolicy"
+    },
+    {
+      "id": "concept.96f7b5c6af",
+      "node_type": "concept",
+      "label": "食伤生财"
+    },
+    {
+      "id": "concept.9c5bb32102",
+      "node_type": "concept",
+      "label": "夫妻宫"
+    },
+    {
+      "id": "concept.a0e25615e1",
+      "node_type": "concept",
+      "label": "大运流年"
+    },
+    {
+      "id": "concept.a5c0fce49d",
+      "node_type": "concept",
+      "label": "大限流年"
+    },
+    {
+      "id": "concept.a6326f0ee1",
+      "node_type": "concept",
+      "label": "做功流通"
+    },
+    {
+      "id": "concept.af81b935a0",
+      "node_type": "concept",
+      "label": "财星入库"
+    },
+    {
+      "id": "concept.bbe3eebca9",
+      "node_type": "concept",
+      "label": "田宅宫"
+    },
+    {
+      "id": "concept.c5a8e591f8",
+      "node_type": "concept",
+      "label": "辅星"
+    },
+    {
+      "id": "concept.ca042b9eef",
+      "node_type": "concept",
+      "label": "Expert Orchestration"
+    },
+    {
+      "id": "concept.cb9d26130e",
+      "node_type": "concept",
+      "label": "财官相生"
+    },
+    {
+      "id": "concept.d428c374cd",
+      "node_type": "concept",
+      "label": "主线条"
+    },
+    {
+      "id": "concept.d5591fbb89",
+      "node_type": "concept",
+      "label": "印星化伤"
+    },
+    {
+      "id": "concept.d858f54178",
+      "node_type": "concept",
+      "label": "三方四正"
+    },
+    {
+      "id": "concept.dc604bbcc0",
+      "node_type": "concept",
+      "label": "旺衰"
+    },
+    {
+      "id": "concept.de5a56ddab",
+      "node_type": "concept",
+      "label": "合作边界"
+    },
+    {
+      "id": "concept.df39e9a8e5",
+      "node_type": "concept",
+      "label": "冲合引动"
+    },
+    {
+      "id": "concept.e752211c28",
+      "node_type": "concept",
+      "label": "食伤制杀"
+    },
+    {
+      "id": "concept.e93d9c0cb2",
+      "node_type": "concept",
+      "label": "运年叠加"
+    },
+    {
+      "id": "concept.ec47ed5a82",
+      "node_type": "concept",
+      "label": "对宫"
+    },
+    {
+      "id": "concept.f0c02997c5",
+      "node_type": "concept",
+      "label": "八字食伤生财"
+    },
+    {
+      "id": "concept.f42a72a7b6",
+      "node_type": "concept",
+      "label": "杀印相生"
+    },
+    {
+      "id": "concept.f7115c5b7e",
+      "node_type": "concept",
+      "label": "迁移宫"
+    },
+    {
+      "id": "fusion.bazi_structure_ziwei_timing",
+      "node_type": "knowledge_card",
+      "label": "八字长期结构 vs 紫微阶段压力",
+      "domain": "fusion",
+      "category": "cross_engine",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "medium"
+    },
+    {
+      "id": "runtime_priority.P0",
+      "node_type": "runtime_priority",
+      "label": "P0"
+    },
+    {
+      "id": "runtime_status.implemented",
+      "node_type": "runtime_status",
+      "label": "implemented"
+    },
+    {
+      "id": "runtime_status.missing",
+      "node_type": "runtime_status",
+      "label": "missing"
+    },
+    {
+      "id": "runtime_status.partial",
+      "node_type": "runtime_status",
+      "label": "partial"
+    },
+    {
+      "id": "runtime_status.tested",
+      "node_type": "runtime_status",
+      "label": "tested"
+    },
+    {
+      "id": "school.000f1b2a7f",
+      "node_type": "school",
+      "label": "子平"
+    },
+    {
+      "id": "school.628304df0d",
+      "node_type": "school",
+      "label": "格局派"
+    },
+    {
+      "id": "school.72e31c83ad",
+      "node_type": "school",
+      "label": "紫微斗数"
+    },
+    {
+      "id": "school.96ff99847d",
+      "node_type": "school",
+      "label": "调候派"
+    },
+    {
+      "id": "school.b02d0b6a43",
+      "node_type": "school",
+      "label": "DeepBeing Fusion"
+    },
+    {
+      "id": "school.b38cd49080",
+      "node_type": "school",
+      "label": "盲派"
+    },
+    {
+      "id": "school.e1eae1c3d5",
+      "node_type": "school",
+      "label": "扶抑派"
+    },
+    {
+      "id": "topic.authority",
+      "node_type": "topic",
+      "label": "authority"
+    },
+    {
+      "id": "topic.career",
+      "node_type": "topic",
+      "label": "career"
+    },
+    {
+      "id": "topic.competition",
+      "node_type": "topic",
+      "label": "competition"
+    },
+    {
+      "id": "topic.cooperation",
+      "node_type": "topic",
+      "label": "cooperation"
+    },
+    {
+      "id": "topic.family",
+      "node_type": "topic",
+      "label": "family"
+    },
+    {
+      "id": "topic.health",
+      "node_type": "topic",
+      "label": "health"
+    },
+    {
+      "id": "topic.portrait",
+      "node_type": "topic",
+      "label": "portrait"
+    },
+    {
+      "id": "topic.relationship",
+      "node_type": "topic",
+      "label": "relationship"
+    },
+    {
+      "id": "topic.risk",
+      "node_type": "topic",
+      "label": "risk"
+    },
+    {
+      "id": "topic.status",
+      "node_type": "topic",
+      "label": "status"
+    },
+    {
+      "id": "topic.study",
+      "node_type": "topic",
+      "label": "study"
+    },
+    {
+      "id": "topic.theme",
+      "node_type": "topic",
+      "label": "theme"
+    },
+    {
+      "id": "topic.timing",
+      "node_type": "topic",
+      "label": "timing"
+    },
+    {
+      "id": "topic.wealth",
+      "node_type": "topic",
+      "label": "wealth"
+    },
+    {
+      "id": "ziwei.foundation.four_transformations",
+      "node_type": "knowledge_card",
+      "label": "四化",
+      "domain": "ziwei",
+      "category": "foundation",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "ziwei.foundation.major_stars_14",
+      "node_type": "knowledge_card",
+      "label": "十四主星",
+      "domain": "ziwei",
+      "category": "foundation",
+      "runtime_status": "implemented",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "ziwei.foundation.san_fang_si_zheng",
+      "node_type": "knowledge_card",
+      "label": "三方四正",
+      "domain": "ziwei",
+      "category": "foundation",
+      "runtime_status": "implemented",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "ziwei.foundation.twelve_palaces",
+      "node_type": "knowledge_card",
+      "label": "十二宫",
+      "domain": "ziwei",
+      "category": "foundation",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "ziwei.timing.major_annual_cycle",
+      "node_type": "knowledge_card",
+      "label": "大限 / 流年",
+      "domain": "ziwei",
+      "category": "timing",
+      "runtime_status": "partial",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "ziwei.topic.career_official_palace",
+      "node_type": "knowledge_card",
+      "label": "官禄宫事业",
+      "domain": "ziwei",
+      "category": "topic_mapping",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    },
+    {
+      "id": "ziwei.topic.wealth_property_palace",
+      "node_type": "knowledge_card",
+      "label": "财帛宫财富",
+      "domain": "ziwei",
+      "category": "topic_mapping",
+      "runtime_status": "tested",
+      "runtime_priority": "P0",
+      "consensus_level": "high"
+    }
+  ],
+  "edges": [
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "runtime_status.partial",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "topic.health",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "concept.6851f64ea8",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "concept.84bb1cb4f5",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "concept.a6326f0ee1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.foundation.wang_shuai_root_transparent",
+      "target": "school.e1eae1c3d5",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "topic.status",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "concept.1b8db8f9cf",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "concept.32f5f62921",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "concept.af81b935a0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.cai_guan_xiang_sheng",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "topic.risk",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "concept.72cf6ccd98",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "concept.e752211c28",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "concept.f42a72a7b6",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.guan_sha_mixed",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "topic.competition",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "topic.risk",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "concept.32f5f62921",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "concept.72cf6ccd98",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "concept.f42a72a7b6",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.output_controls_pressure",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "concept.6f43bff54c",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "concept.769ccabcfd",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "concept.a6326f0ee1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.output_to_wealth",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "topic.competition",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "topic.cooperation",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "concept.769ccabcfd",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "concept.af81b935a0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "concept.de5a56ddab",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.peer_competes_for_wealth",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "topic.authority",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "topic.study",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "concept.32f5f62921",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "concept.824a0b1b86",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "concept.e752211c28",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.sha_yin_xiang_sheng",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "runtime_status.partial",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "topic.risk",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "concept.32f5f62921",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "concept.d5591fbb89",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "concept.e752211c28",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.shangguan_jian_guan",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "concept.64943fd004",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "concept.6f43bff54c",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "concept.96f7b5c6af",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.strong_body_weak_wealth",
+      "target": "school.e1eae1c3d5",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "topic.risk",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "concept.6f43bff54c",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "concept.769ccabcfd",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "concept.cb9d26130e",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.mechanism.weak_body_strong_wealth",
+      "target": "school.e1eae1c3d5",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "runtime_status.partial",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "topic.theme",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "concept.96f7b5c6af",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "concept.cb9d26130e",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "concept.f42a72a7b6",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.model.flow_mainline",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "topic.portrait",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "concept.84bb1cb4f5",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "concept.a6326f0ee1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "concept.d428c374cd",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.model.ti_yong",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "topic.health",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "topic.portrait",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "concept.6851f64ea8",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "concept.6895c4c000",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "concept.dc604bbcc0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.model.tiao_hou",
+      "target": "school.96ff99847d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "runtime_status.partial",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "topic.risk",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "concept.5847ca64e4",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "concept.a0e25615e1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "concept.df39e9a8e5",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.relation.chong_he_xing_hai_po",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "runtime_status.partial",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "topic.timing",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "concept.73089569ca",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "concept.a0e25615e1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "concept.a6326f0ee1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.relation.sanhe_sanhui_liuhe",
+      "target": "school.628304df0d",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "topic.family",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "topic.risk",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "concept.a0e25615e1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "concept.af81b935a0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "concept.df39e9a8e5",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.storage.mu_ku",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "runtime_status.missing",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "topic.timing",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "concept.07a7f48362",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "concept.df39e9a8e5",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "concept.e93d9c0cb2",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "school.000f1b2a7f",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "bazi.timing.luck_year_activation",
+      "target": "school.b38cd49080",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "topic.timing",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "concept.1a1a99d7ad",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "concept.8ce8ef4c49",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "concept.ca042b9eef",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "fusion.bazi_structure_ziwei_timing",
+      "target": "school.b02d0b6a43",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "topic.risk",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "topic.timing",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "concept.21984698f0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "concept.3c169a79d1",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "concept.50fc7e39f8",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "concept.61ad358479",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "ziwei.foundation.four_transformations",
+      "target": "school.72e31c83ad",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "runtime_status.implemented",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "topic.portrait",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "concept.282076e173",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "concept.72edb686ff",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "concept.c5a8e591f8",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "concept.d858f54178",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "ziwei.foundation.major_stars_14",
+      "target": "school.72e31c83ad",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "runtime_status.implemented",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "topic.health",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "concept.282076e173",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "concept.43dde4bb59",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "concept.53537045df",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "concept.ec47ed5a82",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "ziwei.foundation.san_fang_si_zheng",
+      "target": "school.72e31c83ad",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "topic.family",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "topic.health",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "concept.21984698f0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "concept.50fc7e39f8",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "concept.711a32cfd6",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "concept.9c5bb32102",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "ziwei.foundation.twelve_palaces",
+      "target": "school.72e31c83ad",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "runtime_status.partial",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "topic.health",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "topic.relationship",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "topic.timing",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "concept.21984698f0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "concept.282076e173",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "concept.50fc7e39f8",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "concept.d858f54178",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "ziwei.timing.major_annual_cycle",
+      "target": "school.72e31c83ad",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "topic.career",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "concept.282076e173",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "concept.50fc7e39f8",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "concept.a5c0fce49d",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "concept.f7115c5b7e",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "ziwei.topic.career_official_palace",
+      "target": "school.72e31c83ad",
+      "edge_type": "same_school_as"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "runtime_status.tested",
+      "edge_type": "has_runtime_status"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "topic.wealth",
+      "edge_type": "maps_to_topic"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "concept.21984698f0",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "concept.282076e173",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "concept.bbe3eebca9",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "concept.f0c02997c5",
+      "edge_type": "related_to"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "runtime_priority.P0",
+      "edge_type": "runtime_candidate_for"
+    },
+    {
+      "source": "ziwei.topic.wealth_property_palace",
+      "target": "school.72e31c83ad",
+      "edge_type": "same_school_as"
+    }
+  ],
+  "boundary": "knowledge_graph_seed_is_index_only_not_runtime_judgment"
+}

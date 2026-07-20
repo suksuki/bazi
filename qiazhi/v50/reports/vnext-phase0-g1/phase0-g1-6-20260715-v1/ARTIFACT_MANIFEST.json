@@ -1,0 +1,58 @@
+{
+  "version": "deepbazi.vnext_phase0.g1_6_artifact_manifest.v1",
+  "run_id": "phase0-g1-6-20260715-v1",
+  "files": [
+    {
+      "path": "ANALYST_REVIEW_PACKET.md",
+      "sha256": "5c9370131541d879db31a672809a35da371aad16561f0896c308cf37ab35860d"
+    },
+    {
+      "path": "ARTIFACT_MANIFEST.json",
+      "sha256": "ed0f2dbf203b92be8dddacc689ac35a77c0ca0fd689f265f847273797b8cd41a"
+    },
+    {
+      "path": "EXPERT_REFERENCE_HUMAN_FREEZE_PACKET.md",
+      "sha256": "0ab9bf9dc26bb71010f3242450b9090ce963786b141810840488389d46c7f58d"
+    },
+    {
+      "path": "FACT_CONFLICT_AUDIT.json",
+      "sha256": "9e627a20868038d6c6ec04856fe25a1d4e55d80272e600c2d09d0de4e2b9a3cf"
+    },
+    {
+      "path": "FACT_CONFLICT_AUDIT.md",
+      "sha256": "6088bf23d1e5e95a3312bc918b47a43a52d4728b6a9dde1e16d32d0db6385bf7"
+    },
+    {
+      "path": "FRONTIER_POLICY_SELECTION_CONTRACT.md",
+      "sha256": "e510777bee21198e287816b3f95db3f7208e3cc0b9cb4e01868f10944d212cca"
+    },
+    {
+      "path": "LANE_ISOLATION_AUDIT.json",
+      "sha256": "b24be9c7aed73a74a25b295a2f2410aa7b119b4995e7c9393badf556a72ab543"
+    },
+    {
+      "path": "MASTER_AUDIT_REPORT.json",
+      "sha256": "d911261f462e98aa4adf3aaf5413e459101426bd7b595399c33131f1d37bf638"
+    },
+    {
+      "path": "MASTER_AUDIT_REPORT.md",
+      "sha256": "131e4d29419f0ec664a216eb90defeb46ec6f2be26e27be83cd0a6b807874719"
+    },
+    {
+      "path": "PAIRWISE_REVIEW_AUDIT.json",
+      "sha256": "51b969836ff6be06eb815242786584f833b0992a450058a99aee395538d863f8"
+    },
+    {
+      "path": "PRODUCT_CONSTITUTION_ALIGNMENT.md",
+      "sha256": "0d87a47ee9092984888e9d5ced72b93ebe6012548a95e0eaa5a58adf206f93f0"
+    },
+    {
+      "path": "REPAIR_SCOPE_AUDIT.json",
+      "sha256": "40ce5b82d48b9701b0ffb27cd98e8b9d42f9b5ccb335985f4decb3d6b5218a6e"
+    },
+    {
+      "path": "SEALED_NON_ACCESS_AUDIT.json",
+      "sha256": "2ed4ef1cecb2b5b8b549916a3c77283a4c96588703c115b57f9cddc7b7ff8700"
+    }
+  ]
+}

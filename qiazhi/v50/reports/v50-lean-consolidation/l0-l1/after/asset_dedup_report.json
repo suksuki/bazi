@@ -1,0 +1,9 @@
+{
+  "schema_version": "deepbazi.asset_dedup_report.v1",
+  "asset_count": 227,
+  "asset_bytes": 386953863,
+  "duplicate_group_count": 0,
+  "duplicate_bytes": 0,
+  "candidate_unreferenced_count": 158,
+  "duplicate_groups": []
+}

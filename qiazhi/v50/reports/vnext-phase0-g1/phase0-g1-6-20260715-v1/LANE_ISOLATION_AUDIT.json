@@ -1,0 +1,15 @@
+{
+  "version": "deepbazi.vnext_phase0.lane_isolation_audit.v1",
+  "status": "analyst_decision_required",
+  "declared_lane_contract_passed": true,
+  "effective_direct_prompt_matches_plain_user_request": false,
+  "method_tokens_found_in_direct_prompt": [
+    "主假设",
+    "替代假设",
+    "主做功",
+    "体用",
+    "用忌"
+  ],
+  "finding": "Direct Same Model and Direct Frontier receive no DeepBazi facts or tools, but the shared prompt currently supplies a seven-step professional synthesis protocol. The analyst must decide whether this remains a fair task contract or is method leakage relative to the frozen plain-request policy.",
+  "prompt_modified": false
+}

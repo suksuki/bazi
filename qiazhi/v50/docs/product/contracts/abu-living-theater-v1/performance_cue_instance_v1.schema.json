@@ -1,0 +1,214 @@
+{
+  "$defs": {
+    "FinalActorCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "expression": {
+          "title": "Expression",
+          "type": "string"
+        },
+        "motion_asset": {
+          "default": "",
+          "title": "Motion Asset",
+          "type": "string"
+        },
+        "loop": {
+          "default": false,
+          "title": "Loop",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "expression"
+      ],
+      "title": "FinalActorCommand",
+      "type": "object"
+    },
+    "StageCommand": {
+      "additionalProperties": false,
+      "properties": {
+        "command": {
+          "enum": [
+            "set_background",
+            "highlight_visual_anchor",
+            "show_chart_facts",
+            "show_group_trace",
+            "show_capsule",
+            "clear_stage"
+          ],
+          "title": "Command",
+          "type": "string"
+        },
+        "source": {
+          "default": "",
+          "maxLength": 240,
+          "title": "Source",
+          "type": "string"
+        },
+        "asset_ref": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Asset Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "command"
+      ],
+      "title": "StageCommand",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.performance_cue_instance.v1",
+      "default": "deepbazi.performance_cue_instance.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "cue_instance_id": {
+      "title": "Cue Instance Id",
+      "type": "string"
+    },
+    "template_id": {
+      "title": "Template Id",
+      "type": "string"
+    },
+    "participant_run_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Participant Run Id"
+    },
+    "visibility": {
+      "enum": [
+        "public",
+        "participant_private"
+      ],
+      "title": "Visibility",
+      "type": "string"
+    },
+    "final_dialogue": {
+      "title": "Final Dialogue",
+      "type": "string"
+    },
+    "final_ssml": {
+      "default": "",
+      "title": "Final Ssml",
+      "type": "string"
+    },
+    "final_subtitle": {
+      "title": "Final Subtitle",
+      "type": "string"
+    },
+    "subtitle_timing": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Subtitle Timing",
+      "type": "array"
+    },
+    "final_actor_commands": {
+      "items": {
+        "$ref": "#/$defs/FinalActorCommand"
+      },
+      "title": "Final Actor Commands",
+      "type": "array"
+    },
+    "final_stage_commands": {
+      "items": {
+        "$ref": "#/$defs/StageCommand"
+      },
+      "title": "Final Stage Commands",
+      "type": "array"
+    },
+    "final_audio_asset": {
+      "default": "",
+      "title": "Final Audio Asset",
+      "type": "string"
+    },
+    "claim_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Claim Refs",
+      "type": "array"
+    },
+    "envelope_id": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Envelope Id"
+    },
+    "envelope_hash": {
+      "anyOf": [
+        {
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Envelope Hash"
+    },
+    "generator_version": {
+      "default": "deterministic-cue-renderer.v1",
+      "title": "Generator Version",
+      "type": "string"
+    },
+    "model_version": {
+      "default": "none",
+      "title": "Model Version",
+      "type": "string"
+    },
+    "phrase_policy_version": {
+      "default": "cautious_professional.v1",
+      "title": "Phrase Policy Version",
+      "type": "string"
+    },
+    "review_status": {
+      "default": "validated",
+      "enum": [
+        "validated",
+        "rejected"
+      ],
+      "title": "Review Status",
+      "type": "string"
+    },
+    "frozen_at": {
+      "format": "date-time",
+      "title": "Frozen At",
+      "type": "string"
+    },
+    "cue_hash": {
+      "title": "Cue Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "cue_instance_id",
+    "template_id",
+    "visibility",
+    "final_dialogue",
+    "final_subtitle",
+    "frozen_at",
+    "cue_hash"
+  ],
+  "title": "PerformanceCueInstance",
+  "type": "object"
+}

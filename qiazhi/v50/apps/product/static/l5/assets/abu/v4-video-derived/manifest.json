@@ -1,0 +1,77 @@
+{
+  "version": "v50.abu.video_derived_animation_pack.v4",
+  "status": "production_candidate",
+  "source_frame_count": 150,
+  "source_fps": 15,
+  "canvas": [
+    640,
+    640
+  ],
+  "anchor": [
+    0.5,
+    0.96875
+  ],
+  "webp": {
+    "quality": 92,
+    "method": 5
+  },
+  "transparent_background": true,
+  "watermark_removed": true,
+  "watermark_removal_method": "fixed character isolation before alpha extraction",
+  "crop_box": [
+    408,
+    76,
+    958,
+    679
+  ],
+  "assets": {
+    "idle_blink": {
+      "animation": "web/abu_idle_blink_v4.webp",
+      "poster": "posters/abu_idle_blink_v4.png",
+      "start_seconds": 0.0,
+      "end_seconds": 2.05,
+      "frame_count": 32,
+      "duration_ms": 2133,
+      "bytes": 1668094
+    },
+    "head_tilt": {
+      "animation": "web/abu_head_tilt_v4.webp",
+      "poster": "posters/abu_head_tilt_v4.png",
+      "start_seconds": 2.0,
+      "end_seconds": 4.7,
+      "frame_count": 41,
+      "duration_ms": 2733,
+      "bytes": 2058168
+    },
+    "caution_ears": {
+      "animation": "web/abu_caution_ears_v4.webp",
+      "poster": "posters/abu_caution_ears_v4.png",
+      "start_seconds": 4.65,
+      "end_seconds": 6.7,
+      "frame_count": 31,
+      "duration_ms": 2067,
+      "bytes": 1518200
+    },
+    "happy_tail": {
+      "animation": "web/abu_happy_tail_v4.webp",
+      "poster": "posters/abu_happy_tail_v4.png",
+      "start_seconds": 6.65,
+      "end_seconds": 9.05,
+      "frame_count": 37,
+      "duration_ms": 2467,
+      "bytes": 1982198
+    }
+  },
+  "state_mapping": {
+    "idle": "idle_blink",
+    "thinking": "head_tilt",
+    "caution": "caution_ears",
+    "wave": "happy_tail",
+    "confidence_up": "happy_tail"
+  },
+  "boundaries": {
+    "creates_mingli_claim": false,
+    "changes_case_state": false,
+    "calls_llm": false
+  }
+}

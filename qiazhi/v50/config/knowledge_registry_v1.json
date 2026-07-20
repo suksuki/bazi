@@ -1,0 +1,13 @@
+{
+  "schema_version": "deepbazi.knowledge_registry.v1",
+  "frozen_at": "2026-07-18",
+  "sources": [
+    {
+      "knowledge_id": "canonical-knowledge-cards-v1",
+      "source": "data/knowledge/canon/knowledge_cards_v1.jsonl",
+      "sha256": "324dc94c8e99d286bf069d1ce0a4fd28c955e849e33596f701acae7bf358ddf6",
+      "runtime_role": "reasoner retrieval context",
+      "experience_direct_access": false
+    }
+  ]
+}

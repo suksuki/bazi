@@ -1,0 +1,537 @@
+{
+  "version": "deepbazi.cognitive_expert_review_queue.v1",
+  "created_at": "2026-07-12T15:47:18.785605+00:00",
+  "purpose": "Human expert labels for attention, hypothesis coverage, causal reasoning, and review calibration.",
+  "model_access_allowed": false,
+  "expected_contract_included": false,
+  "items": [
+    {
+      "case_id": "c2.complete_triple_combination.01",
+      "family_id": "archetype.complete_triple_combination",
+      "chart": "庚申 戊子 甲辰 己卯",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.complete_triple_combination.02",
+      "family_id": "archetype.complete_triple_combination",
+      "chart": "庚申 戊子 甲辰 庚辰",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.complete_triple_combination.03",
+      "family_id": "archetype.complete_triple_combination",
+      "chart": "庚申 戊子 甲辰 辛巳",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.broken_triple_combination.01",
+      "family_id": "archetype.broken_triple_combination",
+      "chart": "丁巳 乙巳 乙卯 壬午",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.broken_triple_combination.02",
+      "family_id": "archetype.broken_triple_combination",
+      "chart": "丁巳 乙巳 乙卯 癸未",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.broken_triple_combination.03",
+      "family_id": "archetype.broken_triple_combination",
+      "chart": "丁巳 乙巳 乙卯 甲申",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.clash_breaks_main_path.01",
+      "family_id": "archetype.clash_breaks_main_path",
+      "chart": "丁巳 壬子 乙丑 乙酉",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.clash_breaks_main_path.02",
+      "family_id": "archetype.clash_breaks_main_path",
+      "chart": "丁巳 壬子 乙丑 丙戌",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.clash_breaks_main_path.03",
+      "family_id": "archetype.clash_breaks_main_path",
+      "chart": "丁巳 壬子 乙丑 丁亥",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.half_triple_combination.01",
+      "family_id": "archetype.half_triple_combination",
+      "chart": "丁巳 乙酉 甲寅 乙卯",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.half_triple_combination.02",
+      "family_id": "archetype.half_triple_combination",
+      "chart": "丁巳 乙酉 甲寅 丙辰",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.half_triple_combination.03",
+      "family_id": "archetype.half_triple_combination",
+      "chart": "丁巳 乙酉 甲寅 丁巳",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.resource_peer_overload_output_blocked.01",
+      "family_id": "archetype.resource_peer_overload_output_blocked",
+      "chart": "壬子 癸亥 甲寅 戊午",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.resource_peer_overload_output_blocked.02",
+      "family_id": "archetype.resource_peer_overload_output_blocked",
+      "chart": "壬子 癸亥 甲寅 己未",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.resource_peer_overload_output_blocked.03",
+      "family_id": "archetype.resource_peer_overload_output_blocked",
+      "chart": "壬子 癸亥 甲寅 庚申",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.climate_regulation_dominant.01",
+      "family_id": "archetype.climate_regulation_dominant",
+      "chart": "癸丑 乙丑 丁亥 辛酉",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.climate_regulation_dominant.02",
+      "family_id": "archetype.climate_regulation_dominant",
+      "chart": "癸丑 乙丑 丁亥 壬戌",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.climate_regulation_dominant.03",
+      "family_id": "archetype.climate_regulation_dominant",
+      "chart": "癸丑 乙丑 丁亥 癸亥",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.mediation_path.01",
+      "family_id": "archetype.mediation_path",
+      "chart": "庚申 壬子 甲寅 甲子",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.mediation_path.02",
+      "family_id": "archetype.mediation_path",
+      "chart": "庚申 壬子 甲寅 乙丑",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.mediation_path.03",
+      "family_id": "archetype.mediation_path",
+      "chart": "庚申 壬子 甲寅 丙寅",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.month_risk_pulse.01",
+      "family_id": "archetype.month_risk_pulse",
+      "chart": "戊午 庚申 乙亥 丁卯",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.month_risk_pulse.02",
+      "family_id": "archetype.month_risk_pulse",
+      "chart": "戊午 庚申 乙亥 戊辰",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    },
+    {
+      "case_id": "c2.month_risk_pulse.03",
+      "family_id": "archetype.month_risk_pulse",
+      "chart": "戊午 庚申 乙亥 己巳",
+      "review_status": "unreviewed",
+      "labels": {
+        "first_look_attention_refs": [],
+        "critical_omission_refs": [],
+        "minimum_hypothesis_set": [],
+        "strongest_alternative": "",
+        "selected_hypothesis": "",
+        "causal_path": {
+          "source": [],
+          "transformations": [],
+          "target": []
+        },
+        "counter_evidence": [],
+        "unresolved_questions": [],
+        "reviewer_confidence": "",
+        "reviewer_rationale": ""
+      }
+    }
+  ]
+}

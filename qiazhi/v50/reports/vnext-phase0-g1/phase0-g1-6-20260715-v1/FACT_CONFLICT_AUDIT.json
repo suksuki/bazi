@@ -1,0 +1,88 @@
+{
+  "version": "deepbazi.vnext_phase0.fact_conflict_audit.v1",
+  "status": "classified",
+  "records": [
+    {
+      "run_ref": "reports/vnext-phase0-preflight/p0-g1-5-live-five-lane-20260714-v1/vnext_phase0_raw_outputs_v1.jsonl",
+      "chart_ref": "c2.output_to_wealth.01",
+      "lane": "holistic_synthesis",
+      "pillars": [
+        "丙辰",
+        "戊戌",
+        "甲子",
+        "戊子"
+      ],
+      "original_claim_fragments": [
+        "甲木生于戌月，土旺金相火余气。日主坐子水正印，时柱戊子偏财配正印。年干丙食神透出，但被双子水印星克制（F009, F014）。全局土势极重（四土：辰、戌、月干戊、时干戊），木根仅存于辰中乙木余气（F007）及日主自坐之根。水虽有两支，但被厚土围困，且子午冲在流年可能引发动荡。整体呈现身弱财旺印绶受制或需调候的复杂结构。",
+        "子水是否被午火冲破？",
+        "从财格：因有印根存在，强行论从易致判断失误，仅在特定流年（如午年冲子）可能短暂应验。",
+        "子水被彻底冲克（如流年午火），日主无根。",
+        "若子水印星被彻底冲毁或受制失效（如逢午火冲、戌土合绊），日主无根可依，则可能构成‘从财格’。此时喜行食伤生财或财运，忌印比帮身。但鉴于辰中藏乙木余气及双子水长生之地，真从可能性较低，更倾向于假从或身弱需扶抑的混合状态。"
+      ],
+      "original_detector_output": [
+        "地支关系冲突:盘中不存在子午冲所需地支",
+        "地支关系冲突:盘中不存在午辰冲所需地支"
+      ],
+      "context_supplied_to_model": {
+        "natal_pillars": [
+          "丙辰",
+          "戊戌",
+          "甲子",
+          "戊子"
+        ],
+        "relation_fact_refs": [
+          "F008"
+        ],
+        "relation_facts": [
+          {
+            "fact_id": "F008",
+            "kind": "fact",
+            "category": "branch_relations",
+            "statement": "branch_relations: {\"relations\": [{\"branch_a\": \"辰\", \"branch_b\": \"戌\", \"slot_a\": \"year\", \"slot_b\": \"month\", \"type\": \"clash\"}]}",
+            "payload": {
+              "relations": [
+                {
+                  "type": "clash",
+                  "slot_a": "year",
+                  "branch_a": "辰",
+                  "slot_b": "month",
+                  "branch_b": "戌"
+                }
+              ]
+            },
+            "source_refs": [
+              "fact:material:8",
+              "material:g1-6-conflict-audit:c2.output_to_wealth.01:bazi:branch_relations",
+              "birth.c2.output_to_wealth.01",
+              "material:g1-6-conflict-audit:c2.output_to_wealth.01:bazi:chart:pillars",
+              "bazi.six_clash",
+              "bazi.six_harmony",
+              "bazi.material_engine.branch_relations"
+            ],
+            "authority": "deterministic_fact"
+          }
+        ],
+        "reality_evidence": "not supplied"
+      },
+      "parser_output_after_scope_fix": [],
+      "classification": "parser_failure",
+      "classification_confidence": 0.98,
+      "alternative_classifications": [
+        {
+          "classification": "model_cognitive_failure",
+          "confidence": 0.02
+        },
+        {
+          "classification": "context_failure",
+          "confidence": 0.0
+        },
+        {
+          "classification": "epistemic_disagreement",
+          "confidence": 0.0
+        }
+      ],
+      "resolution": "Do not count timing, counterfactual, or interrogative relations as claims that both branches exist in the natal chart.",
+      "formal_run_impact": "full nonsealed preflight must be rerun under a new run id before FormalRunLock freeze"
+    }
+  ]
+}

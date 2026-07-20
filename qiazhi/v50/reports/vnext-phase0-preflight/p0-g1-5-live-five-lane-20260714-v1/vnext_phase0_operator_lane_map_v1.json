@@ -1,0 +1,82 @@
+{
+  "BR-60B4251FE74E": {
+    "case_id": "c2.output_to_wealth.01",
+    "lane": "direct_same_model",
+    "lane_group_code": "LG-765A406FC2",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-F592A48DFE9E": {
+    "case_id": "c2.output_to_wealth.01",
+    "lane": "fact_only_deepbazi",
+    "lane_group_code": "LG-5C9C310231",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-5C4E6F948384": {
+    "case_id": "c2.output_to_wealth.01",
+    "lane": "vnext",
+    "lane_group_code": "LG-CFD02B1F32",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-E836F7852A0B": {
+    "case_id": "c2.output_to_wealth.01",
+    "lane": "current_v50",
+    "lane_group_code": "LG-8EA1D14DC9",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-5858FD7398AB": {
+    "case_id": "c2.mixed_no_obvious_main_path.01",
+    "lane": "current_v50",
+    "lane_group_code": "LG-AC389D261C",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-EAA48F1DEE77": {
+    "case_id": "c2.mixed_no_obvious_main_path.01",
+    "lane": "holistic_synthesis",
+    "lane_group_code": "LG-753BD2E4EA",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-8C43F9C3B9AF": {
+    "case_id": "c2.output_to_wealth.01",
+    "lane": "holistic_synthesis",
+    "lane_group_code": "LG-82DBB47D5D",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-1BF5BB59898D": {
+    "case_id": "c2.mixed_no_obvious_main_path.01",
+    "lane": "direct_same_model",
+    "lane_group_code": "LG-8FB8116B37",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-FB59FD27A411": {
+    "case_id": "c2.mixed_no_obvious_main_path.01",
+    "lane": "fact_only_deepbazi",
+    "lane_group_code": "LG-FF4606C863",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  },
+  "BR-B02CA6657923": {
+    "case_id": "c2.mixed_no_obvious_main_path.01",
+    "lane": "vnext",
+    "lane_group_code": "LG-5CF12D5F16",
+    "model": "qwen3.5:35b",
+    "repeat": 1,
+    "round": "prior"
+  }
+}

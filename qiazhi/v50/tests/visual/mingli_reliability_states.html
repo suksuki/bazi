@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Mingli Reliability States</title>
+  <link rel="stylesheet" href="http://127.0.0.1:8053/styles.css?v=20260716-reliability-gate-v1">
+  <style>
+    body { margin: 0; background: #f6f3eb; color: #173f36; }
+    .fixture-shell { min-height: 100vh; }
+    .fixture-brand { display: flex; align-items: center; justify-content: space-between; padding: 20px clamp(22px, 5vw, 72px); background: #fff; border-bottom: 1px solid rgba(23,63,54,.12); }
+    .fixture-brand strong { font: 700 22px/1 var(--font-ui); }
+    .fixture-brand span { color: #718078; font: 600 12px/1.4 var(--font-ui); }
+    .fixture-canvas { width: min(100%, 1120px); margin: auto; padding: clamp(28px, 6vw, 72px); }
+    .fixture-heading { max-width: 760px; margin-bottom: 30px; }
+    .fixture-heading h1 { margin: 8px 0 12px; font: 600 clamp(34px, 5vw, 62px)/1.18 var(--font-display); letter-spacing: 0; }
+    .fixture-heading p { max-width: 680px; font-size: 17px; line-height: 1.75; }
+    .state-panel { display: none; }
+    .state-panel.active { display: block; }
+    .reliable-reading { padding: clamp(30px, 5vw, 64px); background: #fffdf7; border-top: 3px solid #cc694a; }
+    .reliable-reading h2 { max-width: 720px; margin: 12px 0; font: 600 clamp(28px, 4vw, 46px)/1.35 var(--font-display); letter-spacing: 0; }
+    .condition-pair { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 1px; margin-top: 28px; background: rgba(23,63,54,.14); }
+    .condition-pair article { padding: 22px; background: #f7f5ee; }
+    .condition-pair small { display: block; color: #b75c42; font-weight: 700; margin-bottom: 8px; }
+    .blocked-facts { margin-top: 28px; padding: 24px; background: rgba(255,255,255,.08); }
+    .blocked-facts .pillars { display: grid; grid-template-columns: repeat(4,1fr); gap: 10px; margin-top: 18px; }
+    .blocked-facts .pillars div { padding: 16px 8px; text-align: center; border: 1px solid rgba(255,255,255,.28); }
+    .blocked-facts b { display: block; font: 600 26px/1.3 var(--font-display); }
+    .blocked-facts small { color: rgba(255,250,240,.65); }
+    @media (max-width: 720px) {
+      .fixture-canvas { padding: 24px 16px 48px; }
+      .condition-pair { grid-template-columns: 1fr; }
+      .competing-explanation-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="fixture-shell">
+    <header class="fixture-brand"><strong>DeepBazi</strong><span>命理可靠性状态</span></header>
+    <div class="fixture-canvas">
+      <section class="state-panel" data-state="reliable">
+        <div class="fixture-heading"><p class="eyebrow">已形成可靠判断</p><h1>先看输出如何承接外部压力</h1><p>当前主线、成立条件与反证已经对齐，可以进入长期案例，并沿同一基线继续探索事业与财富。</p></div>
+        <article class="reliable-reading">
+          <p class="eyebrow">整盘重心</p>
+          <h2>能力不是问题，关键在于输出能否被现实结构承接。</h2>
+          <p>这条路径成立时，复杂问题会转化为方法、成果与影响力；如果承载不足，同样的高投入会先表现为消耗。</p>
+          <div class="condition-pair"><article><small>更容易成立</small><p>有明确成果出口，也保留独立判断空间。</p></article><article><small>可能失效</small><p>长期高强度输出，却缺少资源、边界或恢复条件。</p></article></div>
+        </article>
+      </section>
+
+      <section class="state-panel" data-state="competing">
+        <div class="fixture-heading"><p class="eyebrow">存在竞争解释</p><h1>两条命局路径都还有依据</h1><p>系统不会为了给出一个答案而过早定格。当前分歧与下一步观察条件会被完整保留。</p></div>
+        <section class="artifact-section reliability-state competing">
+          <p class="eyebrow">当前存在竞争解释</p><h3>Abu 还没有足够依据只保留一种答案</h3>
+          <div class="competing-explanation-grid"><article><small>解释 A</small><strong>以输出处理压力</strong><p>可见输出能够形成方法，并对外部规则产生实际作用。</p></article><article><small>解释 B</small><strong>承载不足导致消耗</strong><p>如果现实长期缺少承接，高输出也可能先转化为内耗。</p></article></div>
+          <p class="boundary-copy">这些内容只作为未决理解保存，没有写成正式案例结论。</p>
+        </section>
+      </section>
+
+      <section class="state-panel" data-state="blocked">
+        <div class="fixture-heading"><p class="eyebrow">当前无法形成可靠判断</p><h1>这次没有提交整盘结论</h1><p>本轮草稿与确定性命盘事实冲突。命盘档案和四柱仍然保留，你可以重新独立分析。</p></div>
+        <section class="artifact-section reliability-state blocked">
+          <p class="eyebrow">一致性检查未通过</p><h3>Abu 没有用通用性格描述补成一份报告。</h3>
+          <p class="boundary-copy">失败草稿不会进入 Life Case，也不会更新当前案例认知。</p>
+          <div class="blocked-facts"><small>已确认的四柱仍然保留</small><div class="pillars"><div><b>丁</b><b>巳</b><small>年柱</small></div><div><b>乙</b><b>巳</b><small>月柱</small></div><div><b>乙</b><b>丑</b><small>日柱</small></div><div><b>辛</b><b>卯</b><small>时柱</small></div></div></div>
+        </section>
+      </section>
+    </div>
+  </main>
+  <script>
+    const requested = new URLSearchParams(location.search).get("state") || "reliable";
+    document.querySelector(`[data-state="${requested}"]`)?.classList.add("active");
+  </script>
+</body>
+</html>

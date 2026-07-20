@@ -1,0 +1,62 @@
+{
+  "schema_version": "deepbazi.legacy_register.v1",
+  "frozen_at": "2026-07-18",
+  "entries": [
+    {
+      "id": "legacy-shell",
+      "paths": ["/", "/app", "/app.js", "/styles.css", "/visual-alpha"],
+      "state": "active_retiring",
+      "replacement": "/experience",
+      "runtime_usage_tracked": true
+    },
+    {
+      "id": "legacy-agent-reading-api",
+      "paths": ["/api/v50/agent/**"],
+      "state": "migration_source",
+      "replacement": "/api/v50/experience/** for reads",
+      "runtime_usage_tracked": true
+    },
+    {
+      "id": "role-reading-projection",
+      "paths": ["apps/product/reading_projection.py"],
+      "state": "legacy_read_only",
+      "replacement": "MingliExperienceEnvelope"
+    },
+    {
+      "id": "workspace-alias",
+      "paths": ["AgentCaseStore.workspace"],
+      "state": "derived_read_only",
+      "replacement": "case_belief_state + LifeCase.reality_evidence"
+    },
+    {
+      "id": "retired-formal-write-shapes",
+      "paths": ["report", "report_json", "first_reading", "probe_history", "review_json", "run_record", "conversation_memory"],
+      "state": "write_blocked",
+      "replacement": "LifeCase and WorkspaceState canonical contracts"
+    },
+    {
+      "id": "c1-read-only-canvas",
+      "paths": ["docs/archive/proofs/V50_C1_READ_ONLY_SIX_PILLAR_CANVAS.md"],
+      "state": "historical_contract_only",
+      "replacement": "canonical Scene Compiler Inspector projection"
+    },
+    {
+      "id": "c1r-shared-scene",
+      "paths": ["archive/proofs/prototypes/mingli-scene-c1r"],
+      "state": "frozen_semantic_proof",
+      "replacement": "canonical Scene Compiler render profiles"
+    },
+    {
+      "id": "c2a-mingli-lab",
+      "paths": ["archive/proofs/prototypes/mingli-lab-c2a"],
+      "state": "frozen_functional_fixture",
+      "replacement": "OneCanvas R1 and future canonical Scene Compiler"
+    },
+    {
+      "id": "c2ar-onecanvas",
+      "paths": ["apps/product/static/experience/active/onecanvas-r1"],
+      "state": "active_product_candidate",
+      "replacement": "future canonical OneCanvas product route after human gate"
+    }
+  ]
+}

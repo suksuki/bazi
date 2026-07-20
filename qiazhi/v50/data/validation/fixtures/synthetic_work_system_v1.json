@@ -1,0 +1,308 @@
+{
+  "group": "synthetic_work_system_v1",
+  "description": "Synthetic Chart Lab v1. These cases validate path/role/importance/ablation behavior, not final fortune-telling.",
+  "cases": [
+    {
+      "case_id": "bridge_node_si_you_chou_complete",
+      "structural_variable": "complete si-you-chou bridge should identify 酉 as bridge and 丁 as converter",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.001",
+        "name": "bridge_node_type",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-05-01",
+        "birth_time": "酉时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳",
+        "month_pillar": "乙巳",
+        "day_pillar": "乙丑",
+        "hour_pillar": "乙酉",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "酉:hour_branch": ["bridge_node", "single_failure_node"],
+        "丁:year_stem": ["converter_node"],
+        "巳:month_branch": ["environment_node", "activation_node"]
+      },
+      "expected_path_hints": ["mechanism_hint.output_controls_pressure", "mechanism_hint.combination_bridge"],
+      "expected_critical_nodes": ["酉:hour_branch", "丁:year_stem"],
+      "expected_ablation_prefix": ["酉:hour_branch", "丁:year_stem"],
+      "must_not_roles": {
+        "巳:month_branch": ["unconditional_master_controller"]
+      }
+    },
+    {
+      "case_id": "bridge_removed_no_you",
+      "structural_variable": "remove 酉; si-you-chou bridge must disappear and 酉 must not be expected",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.002",
+        "name": "bridge_removed",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-05-01",
+        "birth_time": "未时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳",
+        "month_pillar": "乙巳",
+        "day_pillar": "乙丑",
+        "hour_pillar": "乙未",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "丁:year_stem": ["converter_node"],
+        "巳:month_branch": ["environment_node", "activation_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["丁:year_stem"],
+      "expected_ablation_prefix": ["丁:year_stem"],
+      "must_not_roles": {
+        "未:hour_branch": ["bridge_node"],
+        "巳:month_branch": ["unconditional_master_controller"]
+      }
+    },
+    {
+      "case_id": "converter_removed_no_ding",
+      "structural_variable": "replace 丁 with 癸; converter role should not attach to year stem",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.003",
+        "name": "converter_removed",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-05-01",
+        "birth_time": "酉时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "癸巳",
+        "month_pillar": "乙巳",
+        "day_pillar": "乙丑",
+        "hour_pillar": "乙酉",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "酉:hour_branch": ["bridge_node", "single_failure_node"],
+        "巳:month_branch": ["environment_node", "activation_node"]
+      },
+      "expected_path_hints": ["mechanism_hint.combination_bridge"],
+      "expected_critical_nodes": ["酉:hour_branch"],
+      "expected_ablation_prefix": ["酉:hour_branch"],
+      "must_not_roles": {
+        "癸:year_stem": ["converter_node"],
+        "巳:month_branch": ["unconditional_master_controller"]
+      }
+    },
+    {
+      "case_id": "month_command_dominant_without_bridge",
+      "structural_variable": "strong month environment without structural bridge or visible output converter can rank high as environment",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.004",
+        "name": "month_command_dominant",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-06-01",
+        "birth_time": "辰时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午",
+        "month_pillar": "己午",
+        "day_pillar": "乙卯",
+        "hour_pillar": "庚辰",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "午:month_branch": ["environment_node", "activation_node"],
+        "乙:day_stem": ["anchor_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["午:month_branch"],
+      "expected_ablation_prefix": ["午:month_branch"],
+      "must_not_roles": {
+        "午:month_branch": ["unconditional_master_controller"],
+        "卯:day_branch": ["bridge_node"]
+      }
+    },
+    {
+      "case_id": "day_branch_anchor_type",
+      "structural_variable": "day branch with same-element root should hold anchor and single-failure roles in a non-combination structure",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.005",
+        "name": "day_branch_anchor",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-03-01",
+        "birth_time": "申时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲子",
+        "month_pillar": "癸卯",
+        "day_pillar": "丁巳",
+        "hour_pillar": "庚申",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "丁:day_stem": ["anchor_node"],
+        "巳:day_branch": ["anchor_node", "single_failure_node"],
+        "卯:month_branch": ["environment_node", "activation_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["巳:day_branch", "丁:day_stem"],
+      "expected_ablation_prefix": ["巳:day_branch"],
+      "must_not_roles": {
+        "申:hour_branch": ["bridge_node"]
+      }
+    },
+    {
+      "case_id": "hidden_stem_dark_line_storage",
+      "structural_variable": "storage branch should become buffer while hidden line remains non-user-facing",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.006",
+        "name": "hidden_stem_dark_line",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-01-01",
+        "birth_time": "辰时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子",
+        "month_pillar": "癸丑",
+        "day_pillar": "丁丑",
+        "hour_pillar": "甲辰",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "丑:day_branch": ["anchor_node", "buffer_node"],
+        "丑:month_branch": ["environment_node", "activation_node", "buffer_node"],
+        "丁:day_stem": ["anchor_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["丑:day_branch"],
+      "expected_ablation_prefix": [],
+      "must_not_roles": {
+        "辰:hour_branch": ["bridge_node"]
+      }
+    },
+    {
+      "case_id": "complete_triple_combination_different_structure",
+      "structural_variable": "shen-zi-chen style water structure placeholder should not be treated as si-you-chou metal bridge in v1",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.007",
+        "name": "different_triple_combination",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-11-01",
+        "birth_time": "辰时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申",
+        "month_pillar": "戊子",
+        "day_pillar": "甲辰",
+        "hour_pillar": "壬辰",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "子:month_branch": ["environment_node", "activation_node"],
+        "甲:day_stem": ["anchor_node"],
+        "辰:day_branch": ["anchor_node", "buffer_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["子:month_branch"],
+      "expected_ablation_prefix": [],
+      "must_not_roles": {
+        "申:year_branch": ["bridge_node"],
+        "辰:day_branch": ["bridge_node"]
+      }
+    },
+    {
+      "case_id": "broken_combination_by_replacement",
+      "structural_variable": "preserve fire month but break bridge by replacing 丑 with 卯",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.008",
+        "name": "broken_combination",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-05-01",
+        "birth_time": "酉时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳",
+        "month_pillar": "乙巳",
+        "day_pillar": "乙卯",
+        "hour_pillar": "乙酉",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "丁:year_stem": ["converter_node"],
+        "卯:day_branch": ["anchor_node"],
+        "巳:month_branch": ["environment_node", "activation_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["丁:year_stem"],
+      "expected_ablation_prefix": ["丁:year_stem"],
+      "must_not_roles": {
+        "酉:hour_branch": ["bridge_node"],
+        "巳:month_branch": ["unconditional_master_controller"]
+      }
+    },
+    {
+      "case_id": "year_activation_placeholder",
+      "structural_variable": "year activation placeholder remains natal-only in v1 but contract reserves activation comparison",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.009",
+        "name": "year_activation_placeholder",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-08-01",
+        "birth_time": "酉时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午",
+        "month_pillar": "庚申",
+        "day_pillar": "乙亥",
+        "hour_pillar": "辛酉",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "申:month_branch": ["environment_node", "activation_node"],
+        "乙:day_stem": ["anchor_node"],
+        "亥:day_branch": ["anchor_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["申:month_branch"],
+      "expected_ablation_prefix": [],
+      "must_not_roles": {
+        "酉:hour_branch": ["bridge_node"]
+      }
+    },
+    {
+      "case_id": "mixed_no_obvious_main_path",
+      "structural_variable": "mixed branches should not force bridge or converter dominance",
+      "birth_input": {
+        "birth_input_id": "birth.synthetic.work.010",
+        "name": "mixed_structure",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-09-01",
+        "birth_time": "亥时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲戌",
+        "month_pillar": "己酉",
+        "day_pillar": "丙寅",
+        "hour_pillar": "癸亥",
+        "input_quality": "explicit_pillars"
+      },
+      "expected_roles": {
+        "酉:month_branch": ["environment_node", "activation_node"],
+        "丙:day_stem": ["anchor_node"],
+        "寅:day_branch": ["anchor_node"]
+      },
+      "expected_path_hints": [],
+      "expected_critical_nodes": ["酉:month_branch"],
+      "expected_ablation_prefix": [],
+      "must_not_roles": {
+        "酉:month_branch": ["bridge_node", "unconditional_master_controller"]
+      }
+    }
+  ]
+}

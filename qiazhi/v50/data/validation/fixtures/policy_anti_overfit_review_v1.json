@@ -1,0 +1,273 @@
+{
+  "group": "policy_anti_overfit_review_v1",
+  "description": "Anti-overfit review for node_importance_policy_v2 and path_score_policy_v2. These cases are intentionally not derived from 丁巳 乙巳 乙丑 乙酉.",
+  "base_chart_family_excluded": "丁巳 乙巳 乙丑 乙酉",
+  "cases": [
+    {
+      "case_id": "anti_month_fire_dominant",
+      "structural_family": "month_command_dominant",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.001",
+        "name": "anti_month_fire_dominant",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-06-01",
+        "birth_time": "辰时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午",
+        "month_pillar": "己午",
+        "day_pillar": "乙卯",
+        "hour_pillar": "庚辰",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_day_anchor_fire",
+      "structural_family": "day_branch_anchor",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.002",
+        "name": "anti_day_anchor_fire",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-03-01",
+        "birth_time": "申时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲子",
+        "month_pillar": "癸卯",
+        "day_pillar": "丁巳",
+        "hour_pillar": "庚申",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_storage_buffer_water",
+      "structural_family": "storage_buffer",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.003",
+        "name": "anti_storage_buffer_water",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-01-01",
+        "birth_time": "辰时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子",
+        "month_pillar": "癸丑",
+        "day_pillar": "丁丑",
+        "hour_pillar": "甲辰",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_water_month_wood_day",
+      "structural_family": "water_month_with_storage_anchor",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.004",
+        "name": "anti_water_month_wood_day",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-11-01",
+        "birth_time": "辰时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申",
+        "month_pillar": "戊子",
+        "day_pillar": "甲辰",
+        "hour_pillar": "壬辰",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_year_activation_metal",
+      "structural_family": "metal_month_with_day_anchor",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.005",
+        "name": "anti_year_activation_metal",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-08-01",
+        "birth_time": "酉时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午",
+        "month_pillar": "庚申",
+        "day_pillar": "乙亥",
+        "hour_pillar": "辛酉",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_mixed_metal_month",
+      "structural_family": "mixed_no_obvious_path",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.006",
+        "name": "anti_mixed_metal_month",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-09-01",
+        "birth_time": "亥时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲戌",
+        "month_pillar": "己酉",
+        "day_pillar": "丙寅",
+        "hour_pillar": "癸亥",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_wood_anchor_spring",
+      "structural_family": "visible_converter_spring_wood",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.007",
+        "name": "anti_wood_anchor_spring",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-03-11",
+        "birth_time": "巳时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲寅",
+        "month_pillar": "丁卯",
+        "day_pillar": "甲寅",
+        "hour_pillar": "己巳",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_earth_storage_heavy",
+      "structural_family": "day_branch_storage_anchor",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.008",
+        "name": "anti_earth_storage_heavy",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-07-01",
+        "birth_time": "丑时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊辰",
+        "month_pillar": "己未",
+        "day_pillar": "戊戌",
+        "hour_pillar": "癸丑",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_water_resource_winter",
+      "structural_family": "visible_converter_winter_resource",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.009",
+        "name": "anti_water_resource_winter",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-12-01",
+        "birth_time": "子时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子",
+        "month_pillar": "癸亥",
+        "day_pillar": "乙亥",
+        "hour_pillar": "丙子",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_metal_pressure_autumn",
+      "structural_family": "visible_converter_autumn_pressure",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.010",
+        "name": "anti_metal_pressure_autumn",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-09-20",
+        "birth_time": "卯时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申",
+        "month_pillar": "辛酉",
+        "day_pillar": "甲寅",
+        "hour_pillar": "丁卯",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_converter_visible_no_bridge",
+      "structural_family": "dual_converter_no_bridge",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.011",
+        "name": "anti_converter_visible_no_bridge",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-06-20",
+        "birth_time": "巳时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁卯",
+        "month_pillar": "丙午",
+        "day_pillar": "乙未",
+        "hour_pillar": "辛巳",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_wealth_path_earth",
+      "structural_family": "visible_converter_earth_path",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.012",
+        "name": "anti_wealth_path_earth",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-10-01",
+        "birth_time": "巳时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丙辰",
+        "month_pillar": "戊戌",
+        "day_pillar": "甲子",
+        "hour_pillar": "己巳",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_anchor_rooted_no_month",
+      "structural_family": "rooted_day_branch_anchor",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.013",
+        "name": "anti_anchor_rooted_no_month",
+        "gender": "male",
+        "calendar_type": "solar",
+        "birth_date": "1980-12-15",
+        "birth_time": "巳时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "癸酉",
+        "month_pillar": "甲子",
+        "day_pillar": "丙午",
+        "hour_pillar": "丁巳",
+        "input_quality": "explicit_pillars"
+      }
+    },
+    {
+      "case_id": "anti_wood_fire_no_obvious",
+      "structural_family": "balanced_no_obvious_single_winner",
+      "birth_input": {
+        "birth_input_id": "birth.anti_overfit.014",
+        "name": "anti_wood_fire_no_obvious",
+        "gender": "female",
+        "calendar_type": "solar",
+        "birth_date": "1980-04-01",
+        "birth_time": "午时",
+        "birth_location": "Shanghai",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "乙卯",
+        "month_pillar": "丙辰",
+        "day_pillar": "丁巳",
+        "hour_pillar": "戊午",
+        "input_quality": "explicit_pillars"
+      }
+    }
+  ]
+}

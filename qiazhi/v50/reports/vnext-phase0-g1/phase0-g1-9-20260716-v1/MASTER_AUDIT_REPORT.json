@@ -1,0 +1,572 @@
+{
+  "version": "deepbazi.vnext_phase0.g1_9_professional_fact_integrity_authority_convergence.v1",
+  "run_id": "phase0-g1-9-20260716-v1",
+  "generated_at": "2026-07-16T04:11:14.768007+00:00",
+  "status": "OPERATIONAL_EXTERNAL_GATES_BLOCKED",
+  "ready_for_p0_g2": false,
+  "formal_run_started": false,
+  "machine_gates": {
+    "professional_fact_integrity": true,
+    "raw_cognition_immutable": true,
+    "production_authority_manifest": true,
+    "independent_first_look_isolated": true,
+    "challenge_material_authority_tagged": true,
+    "guest_member_projection_isolated": true,
+    "public_capability_boundary": true,
+    "six_lane_nonsealed_preflight": true,
+    "checkpoint_resume": true,
+    "sealed_set_non_access": true
+  },
+  "external_gates": {
+    "human_expert_reference": false,
+    "true_frontier_candidate": false,
+    "clean_reproducible_snapshot": false
+  },
+  "policy_gates": {
+    "direct_frontier_lane_policy_frozen": true,
+    "direct_frontier_candidate_selected": false
+  },
+  "observed_data": {
+    "professional_fact_integrity": {
+      "status": "PROVEN",
+      "raw_cognition_immutable": true,
+      "raw_sha256_before": "e89e53f388401d4b6906400bda507b8cd33c4b5a8b57eb8c21f1da1215296833",
+      "raw_sha256_after": "e89e53f388401d4b6906400bda507b8cd33c4b5a8b57eb8c21f1da1215296833",
+      "regressions": [
+        {
+          "text": "金克火",
+          "should_flag": true,
+          "issues": [
+            {
+              "issue_id": "pfi:5e329215a0b82238",
+              "claim_ref": "regression:1",
+              "issue_type": "five_element_control_direction",
+              "original_text": "金克火",
+              "canonical_fact_ref": "canonical:five_elements:金克木",
+              "modality": "asserted_natal_fact",
+              "severity": "hard",
+              "disposition": "suppress_from_projection"
+            }
+          ],
+          "passed": true
+        },
+        {
+          "text": "火克金",
+          "should_flag": false,
+          "issues": [],
+          "passed": true
+        },
+        {
+          "text": "若流年子来，则可能形成子午冲",
+          "should_flag": false,
+          "issues": [],
+          "passed": true
+        },
+        {
+          "text": "是否可能出现午辰冲？",
+          "should_flag": false,
+          "issues": [],
+          "passed": true
+        },
+        {
+          "text": "假设存在某关系",
+          "should_flag": false,
+          "issues": [],
+          "passed": true
+        },
+        {
+          "text": "甲为阴木",
+          "should_flag": true,
+          "issues": [
+            {
+              "issue_id": "pfi:9d0c3061d33b8088",
+              "claim_ref": "regression:6",
+              "issue_type": "stem_polarity_or_element_conflict",
+              "original_text": "甲为阴木",
+              "canonical_fact_ref": "canonical:stem:甲:阳木",
+              "modality": "asserted_natal_fact",
+              "severity": "hard",
+              "disposition": "suppress_from_projection"
+            }
+          ],
+          "passed": true
+        },
+        {
+          "text": "子藏甲",
+          "should_flag": true,
+          "issues": [
+            {
+              "issue_id": "pfi:e09cacbdd7d6c2d4",
+              "claim_ref": "regression:7",
+              "issue_type": "hidden_stem_conflict",
+              "original_text": "子藏甲",
+              "canonical_fact_ref": "canonical:hidden_stems:子:癸",
+              "modality": "asserted_natal_fact",
+              "severity": "hard",
+              "disposition": "suppress_from_projection"
+            }
+          ],
+          "passed": true
+        },
+        {
+          "text": "甲为正官",
+          "should_flag": true,
+          "issues": [
+            {
+              "issue_id": "pfi:8e7595f33fd15684",
+              "claim_ref": "regression:8",
+              "issue_type": "ten_god_mapping_conflict",
+              "original_text": "甲为正官",
+              "canonical_fact_ref": "canonical:ten_god:甲:甲:比肩",
+              "modality": "asserted_natal_fact",
+              "severity": "hard",
+              "disposition": "suppress_from_projection"
+            }
+          ],
+          "passed": true
+        },
+        {
+          "text": "年柱为戊戌",
+          "should_flag": true,
+          "issues": [
+            {
+              "issue_id": "pfi:fc259bfb5720ce76",
+              "claim_ref": "regression:9",
+              "issue_type": "pillar_reference_conflict",
+              "original_text": "年柱为戊戌",
+              "canonical_fact_ref": "world:pillar:年柱:丙辰",
+              "modality": "asserted_natal_fact",
+              "severity": "hard",
+              "disposition": "suppress_from_projection"
+            }
+          ],
+          "passed": true
+        }
+      ]
+    },
+    "authority_manifest": {
+      "version": "deepbazi.runtime_authority_audit.v1.1",
+      "generated_at": "2026-07-16T04:11:14.634293+00:00",
+      "status": "passed",
+      "observed_data": {
+        "production_file_count": 21,
+        "forbidden_research_imports": [],
+        "synthetic_answer_leakage_tokens": [],
+        "production_authoritative": {
+          "fact_and_calendar": [
+            "core.contracts",
+            "core.engines"
+          ],
+          "cognitive_system": [
+            "core.mingli_agent"
+          ],
+          "interaction_and_memory": [
+            "core.abu_runtime",
+            "product"
+          ]
+        },
+        "experimental_advisory_tools": {
+          "graph_v1": {
+            "modules": [
+              "core.graph"
+            ],
+            "authority": "experimental_tool_observation"
+          },
+          "path_v1": {
+            "modules": [
+              "core.graph",
+              "core.simulation"
+            ],
+            "authority": "experimental_candidate_generator"
+          },
+          "role_v1": {
+            "modules": [
+              "core.graph"
+            ],
+            "authority": "experimental_role_annotation"
+          },
+          "ablation_v1": {
+            "modules": [
+              "core.simulation"
+            ],
+            "authority": "estimated_sensitivity"
+          }
+        },
+        "research_projection_authority": {
+          "mechanism": "research_projection",
+          "unified_state": "research_projection",
+          "theme": "research_projection",
+          "decision_confidence": "uncalibrated_research_indicator"
+        },
+        "research_only": [
+          "core.mechanism",
+          "core.state",
+          "core.timing"
+        ],
+        "retired_capabilities": [
+          "alpha_session_runtime",
+          "deterministic_brain_reading",
+          "template_product_projection"
+        ],
+        "production_authority_manifest": {
+          "version": "deepbazi.production_authority_manifest.v1",
+          "allowed_statuses": [
+            "production",
+            "experimental",
+            "research",
+            "deprecated",
+            "archived"
+          ],
+          "authorities": {
+            "calendar_and_chart_facts": {
+              "status": "production",
+              "modules": [
+                "core.contracts",
+                "core.engines"
+              ],
+              "authority_role": "deterministic_fact_authority",
+              "evidence_status": "OPERATIONAL"
+            },
+            "ziwei_fact_bridge": {
+              "status": "production",
+              "modules": [
+                "core.ziwei"
+              ],
+              "authority_role": "supporting_fact_authority",
+              "evidence_status": "PROVISIONAL"
+            },
+            "mingli_llm_reasoner": {
+              "status": "production",
+              "modules": [
+                "core.mingli_agent.reasoner",
+                "core.mingli_agent.orchestrator"
+              ],
+              "authority_role": "cognitive_reasoner_candidate",
+              "evidence_status": "UNVALIDATED"
+            },
+            "epistemic_review": {
+              "status": "production",
+              "modules": [
+                "core.mingli_agent.fact_review",
+                "core.mingli_agent.quality"
+              ],
+              "authority_role": "annotation_and_projection_gate",
+              "evidence_status": "BLOCKED"
+            },
+            "graph_v1": {
+              "status": "experimental",
+              "modules": [
+                "core.graph"
+              ],
+              "authority_role": "challenge_observation_only",
+              "evidence_status": "PROVISIONAL"
+            },
+            "path_v1": {
+              "status": "experimental",
+              "modules": [
+                "core.graph",
+                "core.simulation"
+              ],
+              "authority_role": "challenge_candidate_generator",
+              "evidence_status": "PROVISIONAL"
+            },
+            "role_v1": {
+              "status": "experimental",
+              "modules": [
+                "core.graph"
+              ],
+              "authority_role": "challenge_annotation_only",
+              "evidence_status": "PROVISIONAL"
+            },
+            "ablation_v1": {
+              "status": "experimental",
+              "modules": [
+                "core.simulation"
+              ],
+              "authority_role": "estimated_sensitivity_not_counterfactual_truth",
+              "evidence_status": "PROVISIONAL"
+            },
+            "mechanism_ast": {
+              "status": "research",
+              "modules": [
+                "core.mechanism"
+              ],
+              "authority_role": "research_projection",
+              "evidence_status": "RESEARCH_ONLY"
+            },
+            "unified_state": {
+              "status": "research",
+              "modules": [
+                "core.state"
+              ],
+              "authority_role": "research_projection",
+              "evidence_status": "RESEARCH_ONLY"
+            },
+            "theme": {
+              "status": "research",
+              "modules": [
+                "core.state.theme_discovery"
+              ],
+              "authority_role": "research_projection",
+              "evidence_status": "RESEARCH_ONLY"
+            },
+            "legacy_confidence": {
+              "status": "research",
+              "modules": [
+                "core.state.decision_confidence"
+              ],
+              "authority_role": "uncalibrated_research_indicator",
+              "evidence_status": "RESEARCH_ONLY"
+            },
+            "life_case": {
+              "status": "production",
+              "modules": [
+                "core.life_case"
+              ],
+              "authority_role": "case_memory_candidate",
+              "evidence_status": "PROVISIONAL"
+            },
+            "role_projection": {
+              "status": "production",
+              "modules": [
+                "apps.product.reading_projection"
+              ],
+              "authority_role": "visibility_and_density_only",
+              "evidence_status": "OPERATIONAL"
+            },
+            "abu_runtime": {
+              "status": "production",
+              "modules": [
+                "core.abu_runtime"
+              ],
+              "authority_role": "navigation_not_mingli_judgment",
+              "evidence_status": "OPERATIONAL"
+            },
+            "deterministic_brain_reading": {
+              "status": "deprecated",
+              "modules": [],
+              "authority_role": "none",
+              "evidence_status": "ARCHIVED"
+            },
+            "template_product_projection": {
+              "status": "archived",
+              "modules": [],
+              "authority_role": "none",
+              "evidence_status": "ARCHIVED"
+            }
+          },
+          "rules": {
+            "independent_first_look_allowed_statuses": [
+              "production"
+            ],
+            "challenge_pack_allowed_statuses": [
+              "production",
+              "experimental"
+            ],
+            "guest_member_forbidden_statuses": [
+              "experimental",
+              "research",
+              "deprecated",
+              "archived"
+            ],
+            "raw_cognition_may_be_rewritten_by_review": false,
+            "review_may_annotate": true,
+            "review_may_suppress_high_risk_projection": true
+          },
+          "guest_member_forbidden_fields": [
+            "mechanism_ast",
+            "unified_state",
+            "theme_bundle",
+            "decision_confidence_profile",
+            "theory_refs",
+            "context_manifest",
+            "stage_receipts"
+          ]
+        },
+        "invalid_authority_statuses": [],
+        "guest_member_public_base_fields": [
+          "confidence",
+          "domain_explorations",
+          "dual_lens",
+          "experience_mode",
+          "first_look",
+          "latest_revision",
+          "lenses_available",
+          "life_domains",
+          "pillars",
+          "portrait",
+          "prior_predictions",
+          "probe_plan",
+          "revision_count",
+          "version",
+          "whole_chart_thesis",
+          "workspace",
+          "ziwei_profile"
+        ],
+        "guest_member_forbidden_projection_fields": []
+      },
+      "interpretation": "Production uses deterministic modules as fact authorities; Graph/Path/Role/Ablation remain experimental advisory observations, and the validated LLM policy is the only whole-chart cognitive reasoner.",
+      "boundary_status": {
+        "runtime_rules_modified": false,
+        "mingli_algorithm_modified": false,
+        "research_modules_promoted": false,
+        "retired_brain_restored": false
+      }
+    },
+    "context_authority": {
+      "independent_first_look_status": "PROVEN",
+      "challenge_pack_status": "PROVEN",
+      "rows": [
+        {
+          "world_id": "world:p0-g1-9:c2.output_to_wealth.01",
+          "independent_experimental_refs": [],
+          "independent_nonproduction_facts": [],
+          "challenge_experimental_refs": [
+            "O046",
+            "O047",
+            "O064",
+            "O045",
+            "O051",
+            "O055",
+            "O063",
+            "O052",
+            "O067",
+            "O056",
+            "O057",
+            "O065",
+            "O058",
+            "O037",
+            "O038",
+            "O039",
+            "O040",
+            "O041"
+          ],
+          "challenge_experimental_facts_tagged": true
+        },
+        {
+          "world_id": "world:p0-g1-9:c2.mixed_no_obvious_main_path.01",
+          "independent_experimental_refs": [],
+          "independent_nonproduction_facts": [],
+          "challenge_experimental_refs": [
+            "O049",
+            "O050",
+            "O064",
+            "O048",
+            "O051",
+            "O053",
+            "O055",
+            "O056",
+            "O063",
+            "O057",
+            "O058",
+            "O065",
+            "O066",
+            "O037",
+            "O038",
+            "O039",
+            "O040",
+            "O041"
+          ],
+          "challenge_experimental_facts_tagged": true
+        }
+      ]
+    },
+    "capability_registry": {
+      "status": "PROVEN",
+      "public_guest_member": [
+        "career",
+        "wealth",
+        "whole_chart"
+      ],
+      "closed_guest_member": [
+        "children_legacy",
+        "family",
+        "health_vitality",
+        "life_timing",
+        "migration_environment",
+        "relationship",
+        "self",
+        "social_network",
+        "talent_learning"
+      ],
+      "professional_access_policy_separate": true
+    },
+    "guest_member_projection": {
+      "status": "PROVEN",
+      "forbidden_field_hits": {
+        "guest": [],
+        "member": []
+      }
+    },
+    "nonsealed_preflight": {
+      "status": "PROVEN",
+      "six_lanes": [
+        "direct_same_model",
+        "direct_frontier",
+        "current_v50",
+        "fact_only_deepbazi",
+        "holistic_synthesis",
+        "vnext"
+      ],
+      "case_count": 2,
+      "planned_count": 12,
+      "checkpoint_resume_status": "PROVEN",
+      "resource_access": {
+        "active_manifest": "data/validation/phase0/vnext_phase0_development_set_v1.json",
+        "fixture_pack": "data/validation/phase0/vnext_phase0_development_fixture_pack_v1.json",
+        "full_taxonomy_accessed": false,
+        "formal_manifest_accessed": false,
+        "model_selection_manifest_accessed": false,
+        "expert_reference_accessed": false,
+        "reality_evidence_accessed": false
+      },
+      "sealed_formal_access_count": 0,
+      "live_model_calls": 0,
+      "formal_outputs_generated": false
+    },
+    "execution_snapshot": {
+      "status": "candidate_blocked",
+      "blockers": [
+        "v50_code_snapshot_not_committed",
+        "v50_snapshot_scope_not_clean"
+      ],
+      "source_manifest_sha256": "917ce52b6fdaef5a9582e074b84985edae5e0cbdd294ed19e23bd67a4aefb893"
+    }
+  },
+  "evidence_status": {
+    "mingli_first_product_constitution": "FROZEN",
+    "bazi_fact_layer": "OPERATIONAL",
+    "ziwei_supporting_lens": "PROVISIONAL",
+    "llm_cognitive_reasoner": "IMPLEMENTED_UNVALIDATED",
+    "pattern_work_path_useful_god": "GENERATED_PROFESSIONALLY_UNVALIDATED",
+    "professional_peer_review": "BLOCKED",
+    "role_projection": "OPERATIONAL",
+    "abu_navigation": "OPERATIONAL",
+    "abu_intelligent_guidance": "RESEARCH_NOT_STARTED",
+    "living_mingli": "CONTRACT_ONLY",
+    "discovery_lab": "ARCHAEOLOGY_ONLY"
+  },
+  "blockers": [
+    "human_expert_reference",
+    "true_frontier_candidate",
+    "clean_reproducible_snapshot"
+  ],
+  "recommended_next_slice": "Complete human Expert Reference, configure and human-select a true Frontier candidate, and freeze a clean reproducible snapshot; then request explicit P0-G2 approval.",
+  "boundary_status": {
+    "training_performed": false,
+    "weights_modified": false,
+    "cognitive_prompt_modified": false,
+    "pattern_hypothesis_protocol_modified": false,
+    "mingli_algorithm_modified": false,
+    "theory_modified": false,
+    "ui_modified": false,
+    "raw_cognition_modified_by_review": false,
+    "expert_reference_authored_by_machine": false,
+    "frontier_candidate_fabricated": false,
+    "automatic_git_commit_performed": false,
+    "live_model_calls_performed": false,
+    "sealed_formal_set_access_count": 0,
+    "sealed_formal_charts_executed": false,
+    "p0_g2_started": false
+  }
+}

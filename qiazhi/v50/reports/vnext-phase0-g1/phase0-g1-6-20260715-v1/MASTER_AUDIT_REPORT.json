@@ -1,0 +1,236 @@
+{
+  "version": "deepbazi.vnext_phase0.g1_6_evidence_gate.v1",
+  "run_id": "phase0-g1-6-20260715-v1",
+  "generated_at": "2026-07-15T13:28:55.441139+00:00",
+  "status": "conditional_pass",
+  "ready_for_p0_g2": false,
+  "professional_cognition_evaluated": false,
+  "observed_data": {
+    "retained_fact_conflict": {
+      "version": "deepbazi.vnext_phase0.fact_conflict_audit.v1",
+      "status": "classified",
+      "records": [
+        {
+          "run_ref": "reports/vnext-phase0-preflight/p0-g1-5-live-five-lane-20260714-v1/vnext_phase0_raw_outputs_v1.jsonl",
+          "chart_ref": "c2.output_to_wealth.01",
+          "lane": "holistic_synthesis",
+          "pillars": [
+            "丙辰",
+            "戊戌",
+            "甲子",
+            "戊子"
+          ],
+          "original_claim_fragments": [
+            "甲木生于戌月，土旺金相火余气。日主坐子水正印，时柱戊子偏财配正印。年干丙食神透出，但被双子水印星克制（F009, F014）。全局土势极重（四土：辰、戌、月干戊、时干戊），木根仅存于辰中乙木余气（F007）及日主自坐之根。水虽有两支，但被厚土围困，且子午冲在流年可能引发动荡。整体呈现身弱财旺印绶受制或需调候的复杂结构。",
+            "子水是否被午火冲破？",
+            "从财格：因有印根存在，强行论从易致判断失误，仅在特定流年（如午年冲子）可能短暂应验。",
+            "子水被彻底冲克（如流年午火），日主无根。",
+            "若子水印星被彻底冲毁或受制失效（如逢午火冲、戌土合绊），日主无根可依，则可能构成‘从财格’。此时喜行食伤生财或财运，忌印比帮身。但鉴于辰中藏乙木余气及双子水长生之地，真从可能性较低，更倾向于假从或身弱需扶抑的混合状态。"
+          ],
+          "original_detector_output": [
+            "地支关系冲突:盘中不存在子午冲所需地支",
+            "地支关系冲突:盘中不存在午辰冲所需地支"
+          ],
+          "context_supplied_to_model": {
+            "natal_pillars": [
+              "丙辰",
+              "戊戌",
+              "甲子",
+              "戊子"
+            ],
+            "relation_fact_refs": [
+              "F008"
+            ],
+            "relation_facts": [
+              {
+                "fact_id": "F008",
+                "kind": "fact",
+                "category": "branch_relations",
+                "statement": "branch_relations: {\"relations\": [{\"branch_a\": \"辰\", \"branch_b\": \"戌\", \"slot_a\": \"year\", \"slot_b\": \"month\", \"type\": \"clash\"}]}",
+                "payload": {
+                  "relations": [
+                    {
+                      "type": "clash",
+                      "slot_a": "year",
+                      "branch_a": "辰",
+                      "slot_b": "month",
+                      "branch_b": "戌"
+                    }
+                  ]
+                },
+                "source_refs": [
+                  "fact:material:8",
+                  "material:g1-6-conflict-audit:c2.output_to_wealth.01:bazi:branch_relations",
+                  "birth.c2.output_to_wealth.01",
+                  "material:g1-6-conflict-audit:c2.output_to_wealth.01:bazi:chart:pillars",
+                  "bazi.six_clash",
+                  "bazi.six_harmony",
+                  "bazi.material_engine.branch_relations"
+                ],
+                "authority": "deterministic_fact"
+              }
+            ],
+            "reality_evidence": "not supplied"
+          },
+          "parser_output_after_scope_fix": [],
+          "classification": "parser_failure",
+          "classification_confidence": 0.98,
+          "alternative_classifications": [
+            {
+              "classification": "model_cognitive_failure",
+              "confidence": 0.02
+            },
+            {
+              "classification": "context_failure",
+              "confidence": 0.0
+            },
+            {
+              "classification": "epistemic_disagreement",
+              "confidence": 0.0
+            }
+          ],
+          "resolution": "Do not count timing, counterfactual, or interrogative relations as claims that both branches exist in the natal chart.",
+          "formal_run_impact": "full nonsealed preflight must be rerun under a new run id before FormalRunLock freeze"
+        }
+      ]
+    },
+    "lane_isolation": {
+      "version": "deepbazi.vnext_phase0.lane_isolation_audit.v1",
+      "status": "analyst_decision_required",
+      "declared_lane_contract_passed": true,
+      "effective_direct_prompt_matches_plain_user_request": false,
+      "method_tokens_found_in_direct_prompt": [
+        "主假设",
+        "替代假设",
+        "主做功",
+        "体用",
+        "用忌"
+      ],
+      "finding": "Direct Same Model and Direct Frontier receive no DeepBazi facts or tools, but the shared prompt currently supplies a seven-step professional synthesis protocol. The analyst must decide whether this remains a fair task contract or is method leakage relative to the frozen plain-request policy.",
+      "prompt_modified": false
+    },
+    "sealed_non_access": {
+      "version": "deepbazi.vnext_phase0.sealed_non_access_audit.v1",
+      "status": "passed",
+      "resource_access": {
+        "active_manifest": "data/validation/phase0/vnext_phase0_development_set_v1.json",
+        "fixture_pack": "data/validation/phase0/vnext_phase0_development_fixture_pack_v1.json",
+        "full_taxonomy_accessed": false,
+        "formal_manifest_accessed": false,
+        "expert_reference_accessed": false,
+        "reality_evidence_accessed": false
+      },
+      "development_fixture_pack_case_count": 2,
+      "formal_case_ids_loaded": [],
+      "model_calls_performed": 0
+    },
+    "repair_scope": {
+      "version": "deepbazi.vnext_phase0.repair_scope_audit.v1",
+      "status": "analyst_decision_required",
+      "schema_mechanical_repair_limit": 1,
+      "substantive_fields_modified_by_current_fact_repair": [
+        "whole_chart_thesis",
+        "hypotheses",
+        "work_path",
+        "useful_god_reasoning",
+        "portrait",
+        "career",
+        "wealth"
+      ],
+      "repair_examples": [
+        "辰戌合是整盘主轴 -> 辰戌相冲是整盘主轴",
+        "辰戌合格 -> 辰戌相冲格",
+        "辰戌合后财势成立 -> 辰戌相冲后财势成立",
+        "以辰戌合完成主做功 -> 以辰戌相冲完成主做功",
+        "辰戌合 -> 辰戌相冲",
+        "辰戌合可通关 -> 辰戌相冲可通关",
+        "辰戌合使人稳定 -> 辰戌相冲使人稳定",
+        "辰戌合带来职业路径 -> 辰戌相冲带来职业路径",
+        "辰戌合带来财富路径 -> 辰戌相冲带来财富路径"
+      ],
+      "finding": "Current deterministic fact repair can rewrite text inside a selected hypothesis, whole-chart thesis, work path, useful-god reasoning, portrait, and domains. It does not select a new hypothesis, but it exceeds a strict JSON/field-name-only repair definition and must be explicitly approved or changed to audit-only for Phase 0.",
+      "production_repair_modified": false
+    },
+    "pairwise_contract": {
+      "version": "deepbazi.vnext_phase0.pairwise_review_audit.v1",
+      "status": "passed",
+      "required_comparisons": [
+        [
+          "vnext",
+          "current_v50"
+        ],
+        [
+          "vnext",
+          "direct_frontier"
+        ],
+        [
+          "vnext",
+          "holistic_synthesis"
+        ],
+        [
+          "vnext",
+          "fact_only_deepbazi"
+        ],
+        [
+          "holistic_synthesis",
+          "fact_only_deepbazi"
+        ],
+        [
+          "direct_same_model",
+          "fact_only_deepbazi"
+        ]
+      ],
+      "anonymous_packet_uses_lane_group_codes": true,
+      "operator_lane_map_separate": true,
+      "freeform_additional_comparisons_allowed": true
+    },
+    "formal_lock_status": "candidate_blocked",
+    "formal_lock_blockers": [
+      "round1_expert_reference_not_human_frozen",
+      "true_frontier_policy_not_frozen",
+      "v50_code_snapshot_not_committed"
+    ]
+  },
+  "interpretation": {
+    "observed": "The retained Holistic conflict is a natal-fact-detector scope failure: all cited 午 relations were timing, counterfactual, or interrogative statements rather than claims that 午 exists in the natal chart.",
+    "inference": "Non-sealed input access and required pairwise scheduling can be made auditable, but the effective direct-lane prompt and VNext deterministic repair scope still require explicit analyst approval or revision.",
+    "recommendation": "Human-freeze Expert Reference, run a true Frontier policy selection on the isolated five-chart set, freeze a clean execution snapshot, and adjudicate the two remaining policy mismatches before any P0-G2 output is generated."
+  },
+  "product_constitution_alignment": {
+    "mingli_first": true,
+    "baseline_cognition_maps_to": "LifeCase.BaselineInsight after validation and commit",
+    "career_and_wealth_in_phase0": "diagnostic benchmark fields, not first-run production precomputation",
+    "life_case_or_abu_visible_to_model": false,
+    "ui_or_narrative_scored_as_professional_cognition": false,
+    "post_p0_projection": "accepted whole-chart cognition -> on-demand domain -> role projection -> Abu explanation"
+  },
+  "blockers": [
+    "lane_effective_prompt_boundary_not_approved",
+    "repair_scope_exceeds_mechanical_only_policy",
+    "round1_expert_reference_not_human_frozen",
+    "true_frontier_policy_not_frozen",
+    "v50_code_snapshot_not_committed"
+  ],
+  "next_human_actions": [
+    "Complete and sign the ten-chart Expert Reference Space without Reality Evidence or Lane outputs.",
+    "Provide at least one reproducible user-accessible Frontier candidate policy for the five-chart selection run.",
+    "Decide whether Direct Same/Frontier receive a plain user request or the current seven-step synthesis protocol.",
+    "Decide whether deterministic fact rewriting inside hypotheses/work paths is permitted or must become audit-only.",
+    "Create a clean committed V50 snapshot and freeze the final environment/model policy only after the above decisions."
+  ],
+  "boundary_status": {
+    "training_performed": false,
+    "weights_modified": false,
+    "production_runtime_rules_modified": false,
+    "brain_logic_modified": false,
+    "mingli_algorithm_modified": false,
+    "theory_modified": false,
+    "product_runtime_modified": false,
+    "ui_modified": false,
+    "sealed_formal_outputs_generated": false,
+    "expert_reference_authored_by_llm": false,
+    "frontier_policy_fabricated": false,
+    "professional_winner_claimed": false,
+    "p0_g2_started": false
+  }
+}

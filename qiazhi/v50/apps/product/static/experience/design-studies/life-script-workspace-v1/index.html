@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#f4f1e9">
+    <title>人生剧本工作台 · DeepBazi</title>
+    <link rel="icon" href="/assets/deepbazi_symbol.png" type="image/png">
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+    <link rel="stylesheet" href="./styles.css?v=20260720-6">
+  </head>
+  <body>
+    <div class="workspace" id="workspace" data-mode="overview" data-stage="original" data-role="admin" data-abu="peek">
+      <header class="workspace-header">
+        <a class="brand" href="/experience" aria-label="返回 DeepBazi">
+          <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence">
+        </a>
+
+        <div class="case-identity" aria-label="当前案例">
+          <span class="case-dot" aria-hidden="true"></span>
+          <span>
+            <strong>匿名教学命盘</strong>
+            <small id="caseMeta">乾造 · 庚辰 丁亥 甲戌 戊辰</small>
+          </span>
+        </div>
+
+        <div class="header-actions">
+          <span class="case-version">教学 Scene · 不写正式案例</span>
+          <label class="role-switch" title="管理员测试角色披露">
+            <i class="role-icon" data-lucide="user-round" aria-hidden="true"></i>
+            <span>视角</span>
+            <select id="roleSelect" aria-label="切换测试角色">
+              <option value="member">普通用户</option>
+              <option value="practitioner">命理师</option>
+              <option value="researcher">研究者</option>
+              <option value="admin" selected>Admin</option>
+            </select>
+          </label>
+        </div>
+      </header>
+
+      <nav class="mode-nav desktop-mode-nav" aria-label="人生剧本工作台模式">
+        <button type="button" data-mode-target="overview" aria-pressed="true"><i data-lucide="home"></i><span>概览</span></button>
+        <button type="button" data-mode-target="onecanvas" aria-pressed="false"><i data-lucide="orbit"></i><span>命局</span></button>
+        <button type="button" data-mode-target="xiangfa" aria-pressed="false"><i data-lucide="image"></i><span>象法</span></button>
+        <button type="button" data-mode-target="theater" aria-pressed="false"><i data-lucide="play"></i><span>时间</span></button>
+        <button type="button" data-mode-target="lab" aria-pressed="false"><i data-lucide="flask-conical"></i><span>实验室</span></button>
+      </nav>
+
+      <main class="workspace-main">
+        <section class="mode-surface overview-surface is-active" data-mode-panel="overview" aria-labelledby="overviewTitle">
+          <div class="overview-hero">
+            <div class="overview-copy">
+              <p class="eyebrow">我的人生剧本 · 当前命局</p>
+              <h1 id="overviewTitle">先看见命局如何运行，<br>再讨论它意味着什么。</h1>
+              <p class="overview-lede" id="overviewPathText">甲木生丁火，丁火进一步作用于庚金。</p>
+              <div class="overview-actions">
+                <button class="primary-action" type="button" data-mode-target="onecanvas">
+                  <i data-lucide="orbit"></i><span>看见这条结构</span>
+                </button>
+                <button class="secondary-action" type="button" id="overviewAskAbu">
+                  <i data-lucide="message-circle"></i><span>让阿布解释</span>
+                </button>
+              </div>
+            </div>
+            <div class="overview-stage" aria-label="命局观察路径">
+              <div class="overview-path" data-select-ref="path-observed-jia-ding-geng" tabindex="0" role="button">
+                <span class="path-node wood" data-select-ref="node-stem-day-jia">甲<small>生发</small></span>
+                <span class="path-link"><b>→</b><small>生</small></span>
+                <span class="path-node fire" data-select-ref="node-stem-month-ding">丁<small>转化</small></span>
+                <span class="path-link"><b>→</b><small>作用</small></span>
+                <span class="path-node metal" data-select-ref="node-stem-year-geng">庚<small>边界</small></span>
+              </div>
+              <p>结构观察主线，不代表唯一格局或完整人生结论。</p>
+            </div>
+          </div>
+
+          <div class="overview-summary" aria-label="当前案例摘要">
+            <article>
+              <span>当前所见</span>
+              <strong>一条结构观察主线</strong>
+              <p>先从确定关系理解盘面，不急着包装成人生定论。</p>
+            </article>
+            <article>
+              <span>时间位置</span>
+              <strong id="overviewTimeTitle">原局</strong>
+              <p id="overviewTimeCopy">观察主线展开，尚未加入大运与流年。</p>
+            </article>
+            <article>
+              <span>仍需保留</span>
+              <strong>整盘专业结论未提交</strong>
+              <p>本案例只用于验证同一 Scene 的多种表达。</p>
+            </article>
+          </div>
+        </section>
+
+        <section class="mode-surface onecanvas-surface" data-mode-panel="onecanvas" aria-labelledby="onecanvasTitle" hidden>
+          <header class="surface-heading">
+            <div>
+              <p class="eyebrow">理 · 精确结构</p>
+              <h1 id="onecanvasTitle">同一命局，始终是这十二个对象</h1>
+            </div>
+            <div class="stage-switch" role="group" aria-label="时间阶段">
+              <button type="button" data-stage-target="original" aria-pressed="true">原局</button>
+              <button type="button" data-stage-target="luck" aria-pressed="false">庚寅</button>
+              <button type="button" data-stage-target="year" aria-pressed="false">丙午</button>
+            </div>
+          </header>
+          <div class="onecanvas-scene" id="onecanvasScene" aria-label="六柱命局结构"></div>
+          <div class="selection-strip">
+            <span>当前选择</span>
+            <strong data-selected-label>结构观察主线</strong>
+            <p data-selected-summary>甲木生丁火，丁火进一步作用于庚金。</p>
+            <button type="button" data-open-abu><i data-lucide="message-circle"></i><span>问阿布</span></button>
+          </div>
+        </section>
+
+        <section class="mode-surface xiangfa-surface" data-mode-panel="xiangfa" aria-labelledby="xiangfaTitle" hidden>
+          <header class="surface-heading xiangfa-heading">
+            <div>
+              <p class="eyebrow">象 · 同一结构的意境表达</p>
+              <h1 id="xiangfaTitle">结构没有改变，只是换一种方式被看见</h1>
+            </div>
+            <div class="stage-switch" role="group" aria-label="象法时间阶段">
+              <button type="button" data-stage-target="original" aria-pressed="true">原局</button>
+              <button type="button" data-stage-target="luck" aria-pressed="false">庚寅</button>
+              <button type="button" data-stage-target="year" aria-pressed="false">丙午</button>
+            </div>
+          </header>
+          <div class="xiangfa-frame-wrap">
+            <iframe id="xiangfaFrame" title="同一命局的象法场景" src="../../active/xiangfa-generation-v1/index.html?embed=theater&stage=original&mode=xiangfa&workspace=20260720-1"></iframe>
+          </div>
+        </section>
+
+        <section class="mode-surface theater-surface" data-mode-panel="theater" aria-labelledby="theaterTitle" hidden>
+          <div class="theater-copy">
+            <p class="eyebrow">时 · 看见结构怎样进入时间</p>
+            <h1 id="theaterTitle">原局、大运和流年，<br>在同一条路径上展开。</h1>
+            <p id="theaterStageCopy">原局：观察主线展开。</p>
+            <div class="theater-actions">
+              <button class="primary-action" type="button" id="openTheater">
+                <i data-lucide="play"></i><span>进入阿布小剧场</span>
+              </button>
+              <button class="secondary-action" type="button" data-open-abu>
+                <i data-lucide="message-circle"></i><span>先听阿布说明</span>
+              </button>
+            </div>
+          </div>
+          <div class="time-world" aria-label="时间阶段演化">
+            <div class="time-path" id="timePath">
+              <button type="button" class="time-point is-active" data-stage-target="original"><b>原局</b><small>观察主线展开</small></button>
+              <span aria-hidden="true"></span>
+              <button type="button" class="time-point" data-stage-target="luck"><b>庚寅</b><small>压力与根气并见</small></button>
+              <span aria-hidden="true"></span>
+              <button type="button" class="time-point" data-stage-target="year"><b>丙午</b><small>火侧获得支持</small></button>
+            </div>
+            <div class="time-visual" id="timeVisual">
+              <span class="time-subject wood" data-select-ref="node-stem-day-jia">甲</span>
+              <span class="time-flow"></span>
+              <span class="time-subject fire" data-select-ref="node-stem-month-ding">丁</span>
+              <span class="time-flow"></span>
+              <span class="time-subject metal" data-select-ref="node-stem-year-geng">庚</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="mode-surface lab-surface" data-mode-panel="lab" aria-labelledby="labTitle" hidden>
+          <header class="surface-heading">
+            <div>
+              <p class="eyebrow">实验室 · Sandbox</p>
+              <h1 id="labTitle">比较假设，不改写正式命局</h1>
+            </div>
+            <span class="sandbox-badge"><i data-lucide="shield-check"></i>实验状态</span>
+          </header>
+          <div class="lab-gate" id="labGate">
+            <i data-lucide="lock-keyhole"></i>
+            <h2>当前视角不开放完整实验室</h2>
+            <p>普通用户只进入引导式实验；命理师、研究者与 Admin 可查看更完整的关系、路径和来源。</p>
+          </div>
+          <div class="lab-workspace" id="labWorkspace" hidden>
+            <div class="variant-rail" aria-label="实验版本">
+              <button type="button" class="variant is-active" data-variant="formal"><span>正式盘</span><small>只读基线</small></button>
+              <button type="button" class="variant" data-variant="experiment"><span>实验 A</span><small>尚未保存</small></button>
+              <button type="button" class="add-variant" id="addVariant" title="新增实验版本" aria-label="新增实验版本"><i data-lucide="plus"></i></button>
+            </div>
+            <div class="lab-stage">
+              <div class="lab-chart" id="labChart"></div>
+              <aside class="lab-inspector">
+                <span>当前对象</span>
+                <h2 data-selected-label>结构观察主线</h2>
+                <p data-selected-summary>甲木生丁火，丁火进一步作用于庚金。</p>
+                <dl>
+                  <div><dt>来源</dt><dd>匿名教学 Scene</dd></div>
+                  <div><dt>状态</dt><dd>结构观察，不是专业提交</dd></div>
+                  <div><dt>写入正式案例</dt><dd>不允许</dd></div>
+                </dl>
+              </aside>
+            </div>
+          </div>
+        </section>
+      </main>
+
+      <aside class="abu-companion" aria-label="阿布命理伙伴">
+        <button class="abu-avatar" type="button" id="abuToggle" aria-label="打开阿布" aria-expanded="false">
+          <img src="/assets/abu/v12-actor-pass/turn-and-point/web/abu_turn_and_point_v1.webp" alt="阿布">
+        </button>
+        <div class="abu-peek" id="abuPeek">我在这里。你看到的，始终是同一张命盘。</div>
+        <section class="abu-sheet" id="abuSheet" aria-labelledby="abuTitle" hidden>
+          <header>
+            <div><span>当前案例伙伴</span><h2 id="abuTitle">阿布</h2></div>
+            <button type="button" id="abuClose" title="收起阿布" aria-label="收起阿布"><i data-lucide="x"></i></button>
+          </header>
+          <div class="abu-context">
+            <span id="abuMode">概览 · 原局</span>
+            <strong id="abuSelection">结构观察主线</strong>
+          </div>
+          <p id="abuMessage">这条观察链从甲木开始，经丁火转化，再作用于庚金。它帮助我们看关系，但还不是完整命局结论。</p>
+          <div class="abu-suggestions">
+            <button type="button" data-abu-action="locate">在当前页面指出它</button>
+            <button type="button" data-abu-action="time">看看时间如何改变它</button>
+          </div>
+        </section>
+      </aside>
+
+      <nav class="mode-nav mobile-mode-nav" aria-label="移动端工作台模式">
+        <button type="button" data-mode-target="overview" aria-pressed="true"><i data-lucide="home"></i><span>概览</span></button>
+        <button type="button" data-mode-target="onecanvas" aria-pressed="false"><i data-lucide="orbit"></i><span>命局</span></button>
+        <button type="button" data-mode-target="xiangfa" aria-pressed="false"><i data-lucide="image"></i><span>象法</span></button>
+        <button type="button" data-mode-target="theater" aria-pressed="false"><i data-lucide="play"></i><span>时间</span></button>
+        <button type="button" data-mode-target="lab" aria-pressed="false"><i data-lucide="flask-conical"></i><span>实验</span></button>
+      </nav>
+    </div>
+    <script type="module" src="./app.js?v=20260720-7"></script>
+  </body>
+</html>

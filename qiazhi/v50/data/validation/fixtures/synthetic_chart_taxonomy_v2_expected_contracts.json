@@ -1,0 +1,3029 @@
+{
+  "contracts": [
+    {
+      "chart_seed_id": "c2.month_command_dominant.01",
+      "contract_id": "contract.c2.month_command_dominant.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "午:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "strong_month_environment",
+          "no_structural_bridge",
+          "no_unique_visible_converter"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "bridge_node_forced",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.month_command_dominant.02",
+      "contract_id": "contract.c2.month_command_dominant.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "午:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "strong_month_environment",
+          "no_structural_bridge",
+          "no_unique_visible_converter"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "bridge_node_forced",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.month_command_dominant.03",
+      "contract_id": "contract.c2.month_command_dominant.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "午:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "strong_month_environment",
+          "no_structural_bridge",
+          "no_unique_visible_converter"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "bridge_node_forced",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.bridge_node_dominant.01",
+      "contract_id": "contract.c2.bridge_node_dominant.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "complete_si_you_chou_bridge",
+          "visible_output_converter",
+          "metal_pressure_target"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge",
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.bridge_node_dominant.02",
+      "contract_id": "contract.c2.bridge_node_dominant.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "complete_si_you_chou_bridge",
+          "visible_output_converter",
+          "metal_pressure_target"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge",
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.bridge_node_dominant.03",
+      "contract_id": "contract.c2.bridge_node_dominant.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "complete_si_you_chou_bridge",
+          "visible_output_converter",
+          "metal_pressure_target"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge",
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.converter_dominant.01",
+      "contract_id": "contract.c2.converter_dominant.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem",
+          "丙:month_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "visible_output_converter",
+          "no_complete_triple_combination",
+          "converter_tie_possible"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "output_path"
+        ],
+        "must_not": [
+          "all_output_stems_are_first",
+          "fake_relationship_judgment",
+          "forced_bridge_node",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.converter_dominant.02",
+      "contract_id": "contract.c2.converter_dominant.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem",
+          "丙:month_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "visible_output_converter",
+          "no_complete_triple_combination",
+          "converter_tie_possible"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "output_path"
+        ],
+        "must_not": [
+          "all_output_stems_are_first",
+          "fake_relationship_judgment",
+          "forced_bridge_node",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.converter_dominant.03",
+      "contract_id": "contract.c2.converter_dominant.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem",
+          "丙:month_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "visible_output_converter",
+          "no_complete_triple_combination",
+          "converter_tie_possible"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "output_path"
+        ],
+        "must_not": [
+          "all_output_stems_are_first",
+          "fake_relationship_judgment",
+          "forced_bridge_node",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.day_branch_anchor.01",
+      "contract_id": "contract.c2.day_branch_anchor.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "巳:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "day_branch_anchor",
+          "same_pillar_root",
+          "no_complete_bridge"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "anchor_path"
+        ],
+        "must_not": [
+          "day_branch_always_anchor_first",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.day_branch_anchor.02",
+      "contract_id": "contract.c2.day_branch_anchor.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "巳:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "day_branch_anchor",
+          "same_pillar_root",
+          "no_complete_bridge"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "anchor_path"
+        ],
+        "must_not": [
+          "day_branch_always_anchor_first",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.day_branch_anchor.03",
+      "contract_id": "contract.c2.day_branch_anchor.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "巳:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "day_branch_anchor",
+          "same_pillar_root",
+          "no_complete_bridge"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "anchor_path"
+        ],
+        "must_not": [
+          "day_branch_always_anchor_first",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.hidden_stem_dark_line.01",
+      "contract_id": "contract.c2.hidden_stem_dark_line.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch",
+          "丑:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "storage_buffer",
+          "hidden_stem_dark_line",
+          "damp_earth_context"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "storage_path",
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "hidden_line_fortune_claim",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.hidden_stem_dark_line.02",
+      "contract_id": "contract.c2.hidden_stem_dark_line.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch",
+          "丑:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "storage_buffer",
+          "hidden_stem_dark_line",
+          "damp_earth_context"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "storage_path",
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "hidden_line_fortune_claim",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.hidden_stem_dark_line.03",
+      "contract_id": "contract.c2.hidden_stem_dark_line.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch",
+          "丑:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "storage_buffer",
+          "hidden_stem_dark_line",
+          "damp_earth_context"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "storage_path",
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "hidden_line_fortune_claim",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.complete_triple_combination.01",
+      "contract_id": "contract.c2.complete_triple_combination.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "shen_zi_chen_water_structure",
+          "triple_combination_future_scope",
+          "month_environment_visible"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_future_scope"
+        ],
+        "must_not": [
+          "fake_metal_bridge",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "si_you_chou_only_bias"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.complete_triple_combination.02",
+      "contract_id": "contract.c2.complete_triple_combination.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "shen_zi_chen_water_structure",
+          "triple_combination_future_scope",
+          "month_environment_visible"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_future_scope"
+        ],
+        "must_not": [
+          "fake_metal_bridge",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "si_you_chou_only_bias"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.complete_triple_combination.03",
+      "contract_id": "contract.c2.complete_triple_combination.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "shen_zi_chen_water_structure",
+          "triple_combination_future_scope",
+          "month_environment_visible"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_future_scope"
+        ],
+        "must_not": [
+          "fake_metal_bridge",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "si_you_chou_only_bias"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.broken_triple_combination.01",
+      "contract_id": "contract.c2.broken_triple_combination.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "broken_si_you_chou",
+          "visible_converter_remains",
+          "bridge_removed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "structural_baseline"
+        ],
+        "must_not": [
+          "bridge_role_survives_after_required_node_removed",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "output_controls_pressure_forced"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.broken_triple_combination.02",
+      "contract_id": "contract.c2.broken_triple_combination.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "broken_si_you_chou",
+          "visible_converter_remains",
+          "bridge_removed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "structural_baseline"
+        ],
+        "must_not": [
+          "bridge_role_survives_after_required_node_removed",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "output_controls_pressure_forced"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.broken_triple_combination.03",
+      "contract_id": "contract.c2.broken_triple_combination.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "broken_si_you_chou",
+          "visible_converter_remains",
+          "bridge_removed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "structural_baseline"
+        ],
+        "must_not": [
+          "bridge_role_survives_after_required_node_removed",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "output_controls_pressure_forced"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.clash_breaks_main_path.01",
+      "contract_id": "contract.c2.clash_breaks_main_path.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_branch_clash_pressure",
+          "bridge_pressure_under_clash",
+          "output_converter_weakened_context"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "clash_pressure_path",
+          "bridge_under_pressure"
+        ],
+        "must_not": [
+          "clash_always_bad",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_original_bridge",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.clash_breaks_main_path.02",
+      "contract_id": "contract.c2.clash_breaks_main_path.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_branch_clash_pressure",
+          "bridge_pressure_under_clash",
+          "output_converter_weakened_context"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "clash_pressure_path",
+          "bridge_under_pressure"
+        ],
+        "must_not": [
+          "clash_always_bad",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_original_bridge",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.clash_breaks_main_path.03",
+      "contract_id": "contract.c2.clash_breaks_main_path.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_branch_clash_pressure",
+          "bridge_pressure_under_clash",
+          "output_converter_weakened_context"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "clash_pressure_path",
+          "bridge_under_pressure"
+        ],
+        "must_not": [
+          "clash_always_bad",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_original_bridge",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.output_to_wealth.01",
+      "contract_id": "contract.c2.output_to_wealth.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:year_stem",
+          "戌:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "visible_output",
+          "earth_wealth_target",
+          "wealth_path_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_to_wealth"
+        ],
+        "must_not": [
+          "any_earth_equals_wealth_success",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.output_to_wealth.02",
+      "contract_id": "contract.c2.output_to_wealth.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:year_stem",
+          "戌:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "visible_output",
+          "earth_wealth_target",
+          "wealth_path_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_to_wealth"
+        ],
+        "must_not": [
+          "any_earth_equals_wealth_success",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.output_to_wealth.03",
+      "contract_id": "contract.c2.output_to_wealth.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:year_stem",
+          "戌:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "visible_output",
+          "earth_wealth_target",
+          "wealth_path_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_to_wealth"
+        ],
+        "must_not": [
+          "any_earth_equals_wealth_success",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.output_controls_pressure.01",
+      "contract_id": "contract.c2.output_controls_pressure.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "output_converter",
+          "metal_pressure_target",
+          "combination_bridge"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "any_output_plus_metal_equals_control",
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.output_controls_pressure.02",
+      "contract_id": "contract.c2.output_controls_pressure.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "output_converter",
+          "metal_pressure_target",
+          "combination_bridge"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "any_output_plus_metal_equals_control",
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.output_controls_pressure.03",
+      "contract_id": "contract.c2.output_controls_pressure.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "output_converter",
+          "metal_pressure_target",
+          "combination_bridge"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "any_output_plus_metal_equals_control",
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mixed_officer_killing_with_control.01",
+      "contract_id": "contract.c2.mixed_officer_killing_with_control.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:hour_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "metal_pressure_visible",
+          "output_converter_visible",
+          "mixed_pressure_with_control_candidate"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure",
+          "pressure_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "guan_sha_mixed_always_bad",
+          "hard_filled_mechanism_ast",
+          "ignore_output_converter",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mixed_officer_killing_with_control.02",
+      "contract_id": "contract.c2.mixed_officer_killing_with_control.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:hour_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "metal_pressure_visible",
+          "output_converter_visible",
+          "mixed_pressure_with_control_candidate"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure",
+          "pressure_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "guan_sha_mixed_always_bad",
+          "hard_filled_mechanism_ast",
+          "ignore_output_converter",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mixed_officer_killing_with_control.03",
+      "contract_id": "contract.c2.mixed_officer_killing_with_control.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:hour_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "metal_pressure_visible",
+          "output_converter_visible",
+          "mixed_pressure_with_control_candidate"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure",
+          "pressure_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "guan_sha_mixed_always_bad",
+          "hard_filled_mechanism_ast",
+          "ignore_output_converter",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.resource_disrupts_output.01",
+      "contract_id": "contract.c2.resource_disrupts_output.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:hour_stem",
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_heavy",
+          "visible_output_converter_under_resource_context",
+          "possible_output_reroute"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_to_body",
+          "output_path_under_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_output_reroute",
+          "month_command_unconditional_master",
+          "resource_always_good"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.resource_disrupts_output.02",
+      "contract_id": "contract.c2.resource_disrupts_output.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:hour_stem",
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_heavy",
+          "visible_output_converter_under_resource_context",
+          "possible_output_reroute"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_to_body",
+          "output_path_under_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_output_reroute",
+          "month_command_unconditional_master",
+          "resource_always_good"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.resource_disrupts_output.03",
+      "contract_id": "contract.c2.resource_disrupts_output.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:hour_stem",
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_heavy",
+          "visible_output_converter_under_resource_context",
+          "possible_output_reroute"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_to_body",
+          "output_path_under_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_output_reroute",
+          "month_command_unconditional_master",
+          "resource_always_good"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.wealth_generates_officer.01",
+      "contract_id": "contract.c2.wealth_generates_officer.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "未:month_branch",
+          "辛:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "wealth_node_visible",
+          "officer_node_visible",
+          "wealth_to_officer_pressure_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "wealth_generates_officer"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "wealth_star_always_money"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.wealth_generates_officer.02",
+      "contract_id": "contract.c2.wealth_generates_officer.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "未:month_branch",
+          "辛:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "wealth_node_visible",
+          "officer_node_visible",
+          "wealth_to_officer_pressure_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "wealth_generates_officer"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "wealth_star_always_money"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.wealth_generates_officer.03",
+      "contract_id": "contract.c2.wealth_generates_officer.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "未:month_branch",
+          "辛:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "wealth_node_visible",
+          "officer_node_visible",
+          "wealth_to_officer_pressure_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "wealth_generates_officer"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "wealth_star_always_money"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.peer_competes_for_wealth.01",
+      "contract_id": "contract.c2.peer_competes_for_wealth.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "卯:month_branch",
+          "甲:day_stem",
+          "戊:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "peer_nodes_visible",
+          "wealth_target_visible",
+          "competition_for_wealth_path"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "peer_competes_for_wealth"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "peer_always_bad",
+          "wealth_success_claim"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.peer_competes_for_wealth.02",
+      "contract_id": "contract.c2.peer_competes_for_wealth.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "卯:month_branch",
+          "甲:day_stem",
+          "戊:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "peer_nodes_visible",
+          "wealth_target_visible",
+          "competition_for_wealth_path"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "peer_competes_for_wealth"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "peer_always_bad",
+          "wealth_success_claim"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.peer_competes_for_wealth.03",
+      "contract_id": "contract.c2.peer_competes_for_wealth.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "卯:month_branch",
+          "甲:day_stem",
+          "戊:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "peer_nodes_visible",
+          "wealth_target_visible",
+          "competition_for_wealth_path"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "peer_competes_for_wealth"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "peer_always_bad",
+          "wealth_success_claim"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mixed_no_obvious_main_path.01",
+      "contract_id": "contract.c2.mixed_no_obvious_main_path.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "己:month_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mixed_structure",
+          "no_single_forced_mechanism",
+          "baseline_allowed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "structural_baseline"
+        ],
+        "must_not": [
+          "always_name_a_mechanism",
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mixed_no_obvious_main_path.02",
+      "contract_id": "contract.c2.mixed_no_obvious_main_path.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "己:month_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mixed_structure",
+          "no_single_forced_mechanism",
+          "baseline_allowed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "structural_baseline"
+        ],
+        "must_not": [
+          "always_name_a_mechanism",
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mixed_no_obvious_main_path.03",
+      "contract_id": "contract.c2.mixed_no_obvious_main_path.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "己:month_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mixed_structure",
+          "no_single_forced_mechanism",
+          "baseline_allowed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "structural_baseline"
+        ],
+        "must_not": [
+          "always_name_a_mechanism",
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.luck_changes_main_path.01",
+      "contract_id": "contract.c2.luck_changes_main_path.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_output_control",
+          "luck_overlay_can_shift_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "natal_output_controls_pressure",
+          "timing_resource_reroute_candidate"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "luck_is_second_month_command_by_default",
+          "month_command_unconditional_master",
+          "year_or_luck_rewrites_natal_structure"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.luck_changes_main_path.02",
+      "contract_id": "contract.c2.luck_changes_main_path.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_output_control",
+          "luck_overlay_can_shift_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "natal_output_controls_pressure",
+          "timing_resource_reroute_candidate"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "luck_is_second_month_command_by_default",
+          "month_command_unconditional_master",
+          "year_or_luck_rewrites_natal_structure"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.luck_changes_main_path.03",
+      "contract_id": "contract.c2.luck_changes_main_path.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_output_control",
+          "luck_overlay_can_shift_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "natal_output_controls_pressure",
+          "timing_resource_reroute_candidate"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "luck_is_second_month_command_by_default",
+          "month_command_unconditional_master",
+          "year_or_luck_rewrites_natal_structure"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.year_activates_key_node.01",
+      "contract_id": "contract.c2.year_activates_key_node.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch",
+          "亥:day_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_metal_pressure",
+          "year_activation_of_existing_node"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "year_activation_existing_node"
+        ],
+        "must_not": [
+          "annual_fortune_claim",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "year_rewrites_natal_structure"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.year_activates_key_node.02",
+      "contract_id": "contract.c2.year_activates_key_node.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch",
+          "亥:day_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_metal_pressure",
+          "year_activation_of_existing_node"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "year_activation_existing_node"
+        ],
+        "must_not": [
+          "annual_fortune_claim",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "year_rewrites_natal_structure"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.year_activates_key_node.03",
+      "contract_id": "contract.c2.year_activates_key_node.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch",
+          "亥:day_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_metal_pressure",
+          "year_activation_of_existing_node"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "year_activation_existing_node"
+        ],
+        "must_not": [
+          "annual_fortune_claim",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "year_rewrites_natal_structure"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.half_triple_combination.01",
+      "contract_id": "contract.c2.half_triple_combination.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "half_triple_combination"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.half_triple_combination.02",
+      "contract_id": "contract.c2.half_triple_combination.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "half_triple_combination"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.half_triple_combination.03",
+      "contract_id": "contract.c2.half_triple_combination.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "half_triple_combination"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.resource_peer_overload_output_blocked.01",
+      "contract_id": "contract.c2.resource_peer_overload_output_blocked.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_peer_overload_output_blocked"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.resource_peer_overload_output_blocked.02",
+      "contract_id": "contract.c2.resource_peer_overload_output_blocked.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_peer_overload_output_blocked"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.resource_peer_overload_output_blocked.03",
+      "contract_id": "contract.c2.resource_peer_overload_output_blocked.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_peer_overload_output_blocked"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.climate_regulation_dominant.01",
+      "contract_id": "contract.c2.climate_regulation_dominant.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "climate_regulation_dominant"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.climate_regulation_dominant.02",
+      "contract_id": "contract.c2.climate_regulation_dominant.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "climate_regulation_dominant"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.climate_regulation_dominant.03",
+      "contract_id": "contract.c2.climate_regulation_dominant.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "climate_regulation_dominant"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mediation_path.01",
+      "contract_id": "contract.c2.mediation_path.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mediation_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mediation_path.02",
+      "contract_id": "contract.c2.mediation_path.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mediation_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.mediation_path.03",
+      "contract_id": "contract.c2.mediation_path.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mediation_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.month_risk_pulse.01",
+      "contract_id": "contract.c2.month_risk_pulse.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_risk_pulse"
+        ],
+        "expected_theme_type": "risk_control",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "activation_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.month_risk_pulse.02",
+      "contract_id": "contract.c2.month_risk_pulse.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_risk_pulse"
+        ],
+        "expected_theme_type": "risk_control",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "activation_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.month_risk_pulse.03",
+      "contract_id": "contract.c2.month_risk_pulse.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_risk_pulse"
+        ],
+        "expected_theme_type": "risk_control",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "activation_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.timing_insufficient.01",
+      "contract_id": "contract.c2.timing_insufficient.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "寅:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "timing_insufficient"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "insufficient",
+        "expected_top_paths": [
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.timing_insufficient.02",
+      "contract_id": "contract.c2.timing_insufficient.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "寅:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "timing_insufficient"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "insufficient",
+        "expected_top_paths": [
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.timing_insufficient.03",
+      "contract_id": "contract.c2.timing_insufficient.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "寅:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "timing_insufficient"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "insufficient",
+        "expected_top_paths": [
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.unsupported_relationship_domain.01",
+      "contract_id": "contract.c2.unsupported_relationship_domain.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_relationship_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.unsupported_relationship_domain.02",
+      "contract_id": "contract.c2.unsupported_relationship_domain.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_relationship_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.unsupported_relationship_domain.03",
+      "contract_id": "contract.c2.unsupported_relationship_domain.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_relationship_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.unsupported_health_domain.01",
+      "contract_id": "contract.c2.unsupported_health_domain.01",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_health_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.unsupported_health_domain.02",
+      "contract_id": "contract.c2.unsupported_health_domain.02",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_health_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    },
+    {
+      "chart_seed_id": "c2.unsupported_health_domain.03",
+      "contract_id": "contract.c2.unsupported_health_domain.03",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_health_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "review_status": "candidate_pending_review"
+    }
+  ],
+  "version": "v50.synthetic_expected_contracts.v2"
+}

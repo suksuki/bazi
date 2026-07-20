@@ -1,0 +1,82 @@
+schema_version: v1
+updated_at: 2026-07-20
+
+product:
+  canonical_product_target: Life Script Case Workspace
+  current_product_surface: legacy_l5_plus_experience_shell
+  case_workspace_status: ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED
+  product_definition: one_case_workspace
+  world_definition: one_canonical_mingli_world
+  experience_modes:
+    - overview
+    - onecanvas
+    - xiangfa
+    - theater
+    - mingli_lab
+  companion: Abu
+
+principles:
+  - one_fact_one_authority
+  - one_professional_judgment_one_provenance_chain
+  - one_scene_multiple_projections
+  - user_intent_never_directly_mutates_mingli_fact
+
+gates:
+  lean_l0_inventory: COMPLETE
+  lean_l1_physical_slimming: COMPLETE
+  lean_l2_authority_consolidation: CLOSED_PASS
+  r1_machine_gate: PASS
+  r1_review_build: V6_HASH_LOCKED
+  r1_human_product_gate: READY_PENDING_EXECUTION
+  architecture_consolidation_gate: NOT_PASSED
+  professional_blind_gate: PENDING
+  public_professional_release: BLOCKED
+
+receipts:
+  full_regression: 446_PASSED
+  r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
+  r1_human_review: NOT_EXECUTED
+  analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
+
+supersedes:
+  - manually_maintained_current_status_blocks
+
+authorized_now:
+  - id: R1_HUMAN_REVIEW
+    kind: human_product_gate
+    scope: execute_hash_locked_v6_review_only
+  - id: CASE_WORKSPACE_IA
+    kind: product_design
+    scope: information_architecture_and_isolated_clickable_prototype
+  - id: MINGLI_LAB_BLUEPRINT
+    kind: product_design
+    scope: roles_tasks_permissions_and_scene_requirements
+
+next_architecture_slice:
+  id: ARCHITECTURE_CONSOLIDATION_SLICE_2
+  authorized_when:
+    - r1_human_product_gate_pass
+  scope:
+    - canonical_scene_identity
+    - projection_adapters
+    - schema_registry_generated_typescript_pilot
+    - typed_path_survival_fixtures
+    - module_ownership_manifest
+
+blocked:
+  - relation_atlas_ra1
+  - relation_core_v2_implementation
+  - path_core_v2_implementation
+  - mingli_lab_engineering
+  - production_workspace_migration
+  - frontend_framework_migration
+  - legacy_l5_redesign
+  - public_release
+
+protected_boundaries:
+  reasoner_role: whole_chart_professional_synthesis
+  lifecase_role: formal_case_cognition_authority
+  scene_role: projection_only
+  renderer_role: layout_color_animation_only
+  abu_role: explanation_navigation_and_approved_actions
+  lab_role: sandbox_only

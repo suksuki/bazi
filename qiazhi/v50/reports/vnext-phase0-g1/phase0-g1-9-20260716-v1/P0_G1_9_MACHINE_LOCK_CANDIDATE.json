@@ -1,0 +1,70 @@
+{
+  "version": "deepbazi.vnext_phase0.g1_9_machine_lock_candidate.v1",
+  "run_id": "phase0-g1-9-20260716-v1",
+  "status": "CANDIDATE_NOT_FORMAL_LOCK",
+  "formal_run_authorized": false,
+  "sealed_assets_hashed_or_accessed": false,
+  "assets": [
+    {
+      "path": "config/production_authority_manifest_v1.json",
+      "sha256": "3e8be0adaf5d90ab406c64a168487b13f15ac9ec4e14d04f93397ed8d45c9319"
+    },
+    {
+      "path": "config/runtime_authority_v1.json",
+      "sha256": "688dc2d61795152c0f2d6ad192b136b90212ab568ff9365e71b210e970d6a789"
+    },
+    {
+      "path": "config/vnext_phase0_lane_policy_v1.json",
+      "sha256": "6a8e0eea63a8f144350d176500a7b41050b001a70e37cc67702ad869138a23ac"
+    },
+    {
+      "path": "packages/core/life_domains.py",
+      "sha256": "8fbb38822d0cf872be0ecc9b1d824810f635393e87c717e0c7fa70626679f6a5"
+    },
+    {
+      "path": "packages/core/mingli_agent/contracts.py",
+      "sha256": "ecc8244c8537309808e2ac83452f1b1ac3d739d499ef213b2affe1b22fb29a3c"
+    },
+    {
+      "path": "packages/core/mingli_agent/context.py",
+      "sha256": "a1fbaaea965cf6a75ce9662550288ce24df9ede1b950590db3555f8a35c8b536"
+    },
+    {
+      "path": "packages/core/mingli_agent/fact_review.py",
+      "sha256": "6a910ffb8ca9c6197f218a1c7c6465662df99fe487b7b462e9d4ca385f3b3a7a"
+    },
+    {
+      "path": "packages/core/mingli_agent/reasoner.py",
+      "sha256": "f06639cce68db44bdfd32fe0217132188b670326bc510d4e0834ce354a64558d"
+    },
+    {
+      "path": "apps/product/agent_api.py",
+      "sha256": "a200e7fcaf4814703f23a28304b2bd40d6cb9e788a61ed715cd8358acd2f3492"
+    },
+    {
+      "path": "apps/product/reading_projection.py",
+      "sha256": "b3ed2e2bdc6f1a5b943c878e9f3a024e8d3690aa5cdaf9b5ff926b8e1a544030"
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_development_set_v1.json",
+      "sha256": "dae5844103fdf9bb3004d2bbc5121237fe25ed29ee980a08acf43cea0597c3d5"
+    },
+    {
+      "path": "data/validation/phase0/vnext_phase0_development_fixture_pack_v1.json",
+      "sha256": "2c3f9e38aa9cff532827e10ffbada2e8b573bba7006ccb3c515533239670bdf0"
+    },
+    {
+      "path": "scripts/v50_run_vnext_phase0_benchmark.py",
+      "sha256": "bd586664de8c36d94adc7b1c696ecb9be1e36fdd900d4d822474ce3eb354538b"
+    },
+    {
+      "path": "scripts/v50_prepare_vnext_phase0_g1_9.py",
+      "sha256": "b492a0e0775f26be4fbdb6de580defe424476106bf3774a912ccba915363485a"
+    }
+  ],
+  "blockers": [
+    "human_expert_reference",
+    "true_frontier_candidate",
+    "clean_reproducible_snapshot"
+  ]
+}

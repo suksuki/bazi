@@ -1,0 +1,59 @@
+{
+  "schema_version": "deepbazi.s0_v11_narration.v1",
+  "language": "zh-CN",
+  "public_brand": "DeepBazi · Life Intelligence",
+  "experience_name": "阿布说命",
+  "main_slogan": "看见命局，也看见自己。",
+  "voice_status": "Eric internal audition only",
+  "segments": [
+    {
+      "segment_id": "s0-v11-copy-01",
+      "start": 0,
+      "end": 5.5,
+      "narration": "命理不该成为宿命的宣判。来，跟阿布看一张匿名命盘。",
+      "subtitle": "命理不该成为宿命的宣判。"
+    },
+    {
+      "segment_id": "s0-v11-copy-02",
+      "start": 5.5,
+      "end": 10.5,
+      "narration": "四柱落定，真正值得看的，是力量怎样相遇。",
+      "subtitle": "真正值得看的，是力量怎样相遇。"
+    },
+    {
+      "segment_id": "s0-v11-copy-03",
+      "start": 10.5,
+      "end": 18,
+      "narration": "这里，甲木生丁火，丁火继续作用于庚金，形成一条清楚的观察主线。",
+      "subtitle": "①甲木 → ②丁火 → ③庚金"
+    },
+    {
+      "segment_id": "s0-v11-copy-04",
+      "start": 18,
+      "end": 24,
+      "narration": "地支里，两处辰与戌相冲，让整张盘带着明显的结构张力。",
+      "subtitle": "两处辰戌冲 · 结构并不静止"
+    },
+    {
+      "segment_id": "s0-v11-copy-05",
+      "start": 24,
+      "end": 31.5,
+      "narration": "庚寅进入。庚带来压力，寅也给甲木添根；同一阶段，作用并不只有一个方向。",
+      "subtitle": "庚寅 · 压力与根气同时进入"
+    },
+    {
+      "segment_id": "s0-v11-copy-06",
+      "start": 31.5,
+      "end": 38.5,
+      "narration": "再到丙午，火侧得到支持，原来的路径重新亮起。但这不是成败宣判，只是结构发生了变化。",
+      "subtitle": "丙午 · 火侧得到额外支持"
+    },
+    {
+      "segment_id": "s0-v11-copy-07",
+      "start": 38.5,
+      "end": 44.5,
+      "narration": "从理到象，我们看见的是同一张图。阿布陪你读懂底稿，下一章仍由你来写。",
+      "subtitle": "看见命局，也看见自己。"
+    }
+  ]
+}

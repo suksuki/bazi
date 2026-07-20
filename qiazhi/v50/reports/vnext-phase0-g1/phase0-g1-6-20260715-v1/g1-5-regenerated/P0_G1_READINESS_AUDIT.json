@@ -1,0 +1,48 @@
+{
+  "version": "deepbazi.vnext_phase0.g1_5_readiness_audit.v1",
+  "run_id": "phase0-g1-6-20260715-v1-lock-candidate",
+  "status": "passed_machine_preparation",
+  "decision": "g1_ready_for_human_and_external_freeze",
+  "ready_for_formal_run": false,
+  "observed_data": {
+    "development_case_count": 2,
+    "model_selection_case_count": 5,
+    "sealed_formal_case_count": 10,
+    "sets_are_disjoint": true,
+    "expert_reference_frozen": false,
+    "reality_evidence_frozen": false,
+    "formal_lock_status": "candidate_blocked",
+    "formal_lock_blockers": [
+      "round1_expert_reference_not_human_frozen",
+      "true_frontier_policy_not_frozen",
+      "v50_code_snapshot_not_committed"
+    ],
+    "formal_lane_ids": [
+      "direct_same_model",
+      "direct_frontier",
+      "current_v50",
+      "fact_only_deepbazi",
+      "holistic_synthesis",
+      "vnext"
+    ],
+    "historical_v30_required": false
+  },
+  "interpretation": {
+    "observed": "Phase 0 development, model-selection, and formal sets are isolated and hashable.",
+    "inference": "The machine-side G1 assets are ready, but no professional cognition result has been established.",
+    "recommendation": "Human-freeze the Round 1 reference space, configure and select a true Frontier policy on the selection set, and commit an immutable V50 snapshot before formal execution. Historical V30 is optional and does not block P0-G2."
+  },
+  "boundary_status": {
+    "training_performed": false,
+    "weights_modified": false,
+    "production_runtime_rules_modified": false,
+    "brain_logic_modified": false,
+    "mingli_algorithm_modified": false,
+    "theory_modified": false,
+    "ui_modified": false,
+    "formal_outputs_generated": false,
+    "expert_gold_fabricated": false,
+    "professional_winner_claimed": false,
+    "phase0_g1_governance_only": true
+  }
+}

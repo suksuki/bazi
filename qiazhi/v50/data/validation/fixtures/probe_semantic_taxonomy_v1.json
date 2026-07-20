@@ -1,0 +1,263 @@
+{
+  "llm_used": false,
+  "signature_count": 17,
+  "signatures": [
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "self_recognition"
+      ],
+      "primary_intent": "self_recognition",
+      "product_mode": "guest_trust",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "guest_trust.self_recognition"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "career_mode_clarification"
+      ],
+      "primary_intent": "career_mode_clarification",
+      "product_mode": "guest_trust",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "guest_trust.career_mode_clarification"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "current_stage_clarification"
+      ],
+      "primary_intent": "current_stage_clarification",
+      "product_mode": "guest_trust",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "guest_trust.current_stage_clarification"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "unsupported_domain_boundary"
+      ],
+      "primary_intent": "unsupported_domain_boundary",
+      "product_mode": "guest_trust",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "guest_trust.unsupported_domain_boundary"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "current_stage_clarification"
+      ],
+      "primary_intent": "current_stage_clarification",
+      "product_mode": "member_decision",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "member_decision.current_stage_clarification"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "timing_readiness"
+      ],
+      "primary_intent": "timing_readiness",
+      "product_mode": "member_decision",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "member_decision.timing_readiness"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "risk_tolerance"
+      ],
+      "primary_intent": "risk_tolerance",
+      "product_mode": "member_decision",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "member_decision.risk_tolerance"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "action_preference"
+      ],
+      "primary_intent": "action_preference",
+      "product_mode": "member_decision",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "member_decision.action_preference"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "wealth_pressure"
+      ],
+      "primary_intent": "wealth_pressure",
+      "product_mode": "member_decision",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "member_decision.wealth_pressure"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "practitioner_client_context"
+      ],
+      "primary_intent": "practitioner_client_context",
+      "product_mode": "practitioner_workbench",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "practitioner_workbench.practitioner_client_context"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "mechanism_priority"
+      ],
+      "primary_intent": "mechanism_priority",
+      "product_mode": "practitioner_workbench",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "practitioner_workbench.mechanism_priority"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "reality_context_gap"
+      ],
+      "primary_intent": "reality_context_gap",
+      "product_mode": "practitioner_workbench",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "practitioner_workbench.reality_context_gap"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "batch_triage_focus"
+      ],
+      "primary_intent": "batch_triage_focus",
+      "product_mode": "practitioner_workbench",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "practitioner_workbench.batch_triage_focus"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "theory_evidence_classification"
+      ],
+      "primary_intent": "theory_evidence_classification",
+      "product_mode": "research_evidence",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "research_evidence.theory_evidence_classification"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "counter_evidence_classification"
+      ],
+      "primary_intent": "counter_evidence_classification",
+      "product_mode": "research_evidence",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "research_evidence.counter_evidence_classification"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "validation_status_annotation"
+      ],
+      "primary_intent": "validation_status_annotation",
+      "product_mode": "research_evidence",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "research_evidence.validation_status_annotation"
+    },
+    {
+      "confidence_targets": [
+        "evidence_trust"
+      ],
+      "domain": "mode_specific",
+      "expected_information_gain_band": "medium",
+      "hidden_attribute_targets": [
+        "contribution_readiness"
+      ],
+      "primary_intent": "contribution_readiness",
+      "product_mode": "research_evidence",
+      "response_shape": "single_choice",
+      "sensitivity_level": "low",
+      "signature_id": "research_evidence.contribution_readiness"
+    }
+  ],
+  "training_performed": false,
+  "version": "v50.probe_semantic_taxonomy.v1"
+}

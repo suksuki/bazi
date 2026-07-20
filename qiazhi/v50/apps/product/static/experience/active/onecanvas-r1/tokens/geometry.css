@@ -1,0 +1,8 @@
+:root {
+  --canvas-max: 1320px;
+  --semantic-node-width: 96px;
+  --semantic-node-height: 108px;
+  --touch-target-min: 44px;
+  --overlay-radius: 6px;
+  --overlay-shadow: 0 24px 60px rgba(8, 37, 31, .2);
+}

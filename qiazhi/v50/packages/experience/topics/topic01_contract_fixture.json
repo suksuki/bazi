@@ -1,0 +1,132 @@
+{
+  "schema_version": "deepbazi.topic_package.v1",
+  "topic": {
+    "topic_id": "topic-01-contract-fixture",
+    "version": "1.0.0",
+    "title": "第二专题合同夹具",
+    "purpose": "证明第二个场景图无需专题专属运行时代码。",
+    "audience": ["internal"],
+    "supported_modes": ["live", "time_shift", "solo", "replay"],
+    "required_experience_capabilities": ["private_scene", "barrier"],
+    "knowledge_refs": []
+  },
+  "entry_node": "fixture_open",
+  "fallback_entry_nodes": {
+    "personal_ready": "fixture_open",
+    "chart_facts_only": "fixture_open",
+    "observer": "fixture_open"
+  },
+  "scene_nodes": [
+    {
+      "node_id": "fixture_open",
+      "act": "fixture-1",
+      "dramatic_purpose": "公共开场。",
+      "visibility": "public",
+      "expected_duration_seconds": 5,
+      "cue_template_ids": ["fixture-open-cue"],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [{"event": "next", "target": "fixture_private"}],
+      "timeout_behavior": "advance"
+    },
+    {
+      "node_id": "fixture_private",
+      "act": "fixture-2",
+      "dramatic_purpose": "不读取命理内容的私人选择。",
+      "visibility": "participant_private",
+      "expected_duration_seconds": 5,
+      "cue_template_ids": ["fixture-private-cue"],
+      "interaction": {"kind": "choice", "prompt": "选择一个方向", "options": ["左", "右"], "required": true},
+      "data_bindings": [],
+      "transitions": [{"event": "complete", "target": "fixture_rejoin"}],
+      "timeout_behavior": "fallback",
+      "fallback_node": "fixture_rejoin",
+      "rejoin_node": "fixture_rejoin"
+    },
+    {
+      "node_id": "fixture_rejoin",
+      "act": "fixture-3",
+      "dramatic_purpose": "公共汇合。",
+      "visibility": "public",
+      "expected_duration_seconds": 5,
+      "cue_template_ids": ["fixture-rejoin-cue"],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [{"event": "next", "target": "fixture_close"}],
+      "timeout_behavior": "advance"
+    },
+    {
+      "node_id": "fixture_close",
+      "act": "fixture-3",
+      "dramatic_purpose": "第二个公共节点并结束。",
+      "visibility": "public",
+      "expected_duration_seconds": 5,
+      "cue_template_ids": ["fixture-close-cue"],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [],
+      "timeout_behavior": "wait"
+    }
+  ],
+  "cue_templates": [
+    {
+      "template_id": "fixture-open-cue",
+      "visibility": "public",
+      "semantic_intent": "fixture_open",
+      "dialogue_template": "第二专题开始。",
+      "subtitle_template": "第二专题开始。",
+      "voice": {"profile": "abu-main", "mode": "host", "emotion": "calm", "speed": 1.0},
+      "actor": {"expression": "attentive", "motion_asset": "fixture-idle", "loop": true},
+      "stage": [{"command": "set_background", "asset_ref": "fixture-background"}],
+      "subtitle": {"style": "default"}
+    },
+    {
+      "template_id": "fixture-private-cue",
+      "visibility": "participant_private",
+      "semantic_intent": "fixture_private",
+      "dialogue_template": "这是你的私人选择。",
+      "subtitle_template": "这是你的私人选择。",
+      "voice": {"profile": "abu-main", "mode": "companion", "emotion": "curious", "speed": 1.0},
+      "actor": {"expression": "curious", "motion_asset": "fixture-idle", "loop": true},
+      "stage": [],
+      "subtitle": {"style": "default"}
+    },
+    {
+      "template_id": "fixture-rejoin-cue",
+      "visibility": "public",
+      "semantic_intent": "fixture_rejoin",
+      "dialogue_template": "我们重新汇合。",
+      "subtitle_template": "我们重新汇合。",
+      "voice": {"profile": "abu-main", "mode": "host", "emotion": "warm", "speed": 1.0},
+      "actor": {"expression": "happy", "motion_asset": "fixture-idle", "loop": true},
+      "stage": [],
+      "subtitle": {"style": "default"}
+    },
+    {
+      "template_id": "fixture-close-cue",
+      "visibility": "public",
+      "semantic_intent": "fixture_close",
+      "dialogue_template": "第二专题结束。",
+      "subtitle_template": "第二专题结束。",
+      "voice": {"profile": "abu-main", "mode": "host", "emotion": "calm", "speed": 1.0},
+      "actor": {"expression": "attentive", "motion_asset": "fixture-idle", "loop": true},
+      "stage": [],
+      "subtitle": {"style": "default"}
+    }
+  ],
+  "director_script": {"temporary_dialogue": {}, "timing_notes": {}},
+  "asset_manifest": {
+    "assets": [
+      {"asset_id": "fixture-idle", "kind": "abu_motion", "uri": "/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp"},
+      {"asset_id": "fixture-background", "kind": "background", "uri": "/assets/valley_sunrise.jpg"}
+    ]
+  },
+  "policies": {
+    "privacy": "private_by_default",
+    "aggregation_minimum": 3,
+    "personal_scene": "envelope_only",
+    "temporal_message": "explicit_consent",
+    "failure_behavior": "fallback_without_invention"
+  },
+  "release": {"status": "draft", "approved_by": "", "package_hash": ""}
+}

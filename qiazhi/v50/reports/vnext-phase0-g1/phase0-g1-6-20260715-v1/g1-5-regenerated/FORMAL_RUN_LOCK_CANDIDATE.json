@@ -1,0 +1,202 @@
+{
+  "version": "deepbazi.vnext_phase0.formal_run_lock.v1",
+  "run_id": "phase0-g1-6-20260715-v1-lock-candidate",
+  "status": "candidate_blocked",
+  "created_at": "2026-07-15T13:28:55.439000+00:00",
+  "git_commit": "88da895bb860c25fd6166ac4fa9717cf7102a1e8",
+  "dirty_tree": true,
+  "git_state": {
+    "commit": "88da895bb860c25fd6166ac4fa9717cf7102a1e8",
+    "dirty_tree": true,
+    "v50_status": [
+      "?? qiazhi/v50/"
+    ],
+    "v50_snapshot_tracked": false
+  },
+  "asset_hashes": {
+    "benchmark_contract": "a7f31ee7a7153c4972e17335c51bc20f64f1553cb6a71a1e7230bc25f884109d",
+    "benchmark_runner": "158e7b3a37b74b135b0f481b2bb62aa15c3c6dd05a3c45438a2bea871699904d",
+    "cognitive_reasoner": "15391dfcfec5b3fe9501228d4404a2b93f5f3b8fc9caadd090e1362f66e6096d",
+    "context_compiler": "7f606987bf67105c707f345c396e0df8030b7467a508d7cc88fc5aa302fff360",
+    "dependency_lock": "6f2da1f3d2e0428e5d66a830edd5dc63032c9ad533ca5a7962dbd853f2103ca5",
+    "development_fixture_pack": "2c3f9e38aa9cff532827e10ffbada2e8b573bba7006ccb3c515533239670bdf0",
+    "development_set": "dae5844103fdf9bb3004d2bbc5121237fe25ed29ee980a08acf43cea0597c3d5",
+    "expert_reference": "6522703ec5a7debfb12bff9dc716b19dc3c9fcef2e8b8cde2047492685bedd59",
+    "fact_engine": "d86f7622c4e488dfe07c4ad945b0b9ae0d5a4d21359f7bd7109ea13c88dec497",
+    "formal_manifest": "659977f5f438af78b3a6c6480e56ea5f161743c93368c7f844900b5d44c0f434",
+    "frontier_policy": "e16ea87b14ee2be62b7c461505e051e2687cd675931420b3f65568abd448ef2e",
+    "go_no_go": "55751e781e6922015351c7defb8d3aea06e7198d6070347fc2e26618cfa4bb5e",
+    "holistic_synthesis_policy": "3ca57cce98465631d1d966d39869b72ff659098838b05e895527bdedbd7c0971",
+    "lane_policy": "2b150b2b65a1f4b294a1a55d1e9f4f3f0b2ade36940334058c7d6d273afd995d",
+    "model_selection_fixture_pack": "3d2fc2878f2f129fc89e2a272e6fb57e7f576c50110bdbfe11036bda98cb2dab",
+    "model_selection_set": "82b5fcd18bf463edd73d8ac9c2c84f9a4ace3f5ebd8c7433b258d476e4379bf3",
+    "reality_evidence": "a14c89e2cd5fb71784d21e7847e3a4727f8a70b2f368945cc71d0a86a75dcd0e"
+  },
+  "benchmark_manifest_hash": "659977f5f438af78b3a6c6480e56ea5f161743c93368c7f844900b5d44c0f434",
+  "expert_reference_hash": "6522703ec5a7debfb12bff9dc716b19dc3c9fcef2e8b8cde2047492685bedd59",
+  "reality_evidence_hash": "a14c89e2cd5fb71784d21e7847e3a4727f8a70b2f368945cc71d0a86a75dcd0e",
+  "lane_policy_hash": "2b150b2b65a1f4b294a1a55d1e9f4f3f0b2ade36940334058c7d6d273afd995d",
+  "frontier_policy_hash": "e16ea87b14ee2be62b7c461505e051e2687cd675931420b3f65568abd448ef2e",
+  "dependency_lock_hash": "6f2da1f3d2e0428e5d66a830edd5dc63032c9ad533ca5a7962dbd853f2103ca5",
+  "chart_fact_hashes": {
+    "c2.broken_triple_combination.01": "359b39b5a721ad57c9775ce4cb3e2428a4bf3667adfb00f0df3c676924a053af",
+    "c2.climate_regulation_dominant.01": "f244b49bab138e080ca27ea71c7027b2ee8d667f94e9861daf871ad32ae070de",
+    "c2.complete_triple_combination.01": "cddaed6a15ec781c6288aeee2872f7d03a18401a9cad68c945243c558235c383",
+    "c2.mediation_path.01": "c9062c6b7ca042bbd465b3a276985f569479bb3d651ba0ed6e3755332bbb99c9",
+    "c2.mixed_officer_killing_with_control.01": "b320e0ce74daa8ef9fff77d737a3fe99e1f219dd123b69558ed117cb7d604424",
+    "c2.month_command_dominant.01": "24667b7c2605326401399a17a23670085b74aee8ad0621a3c6a78d7479502894",
+    "c2.output_controls_pressure.01": "930dee937e98a8a4335aebc487f7f8b5372cdf11c2976de20ee90fff14887afd",
+    "c2.resource_disrupts_output.01": "e52b8d3dad8cf197c880dce48df2741bfc69b7e3250e5c7ec23fa5c08664db47",
+    "c2.timing_insufficient.01": "e696b3c505bb0b439ec3d0ae545d94a1698beed583b7cc27b1bff3e0695699b9",
+    "c2.wealth_generates_officer.01": "15ec8e53fc2d3243cbef02f88762079cb70e5bbfbd63b59d53525615c2817a0a"
+  },
+  "lane_definitions": [
+    {
+      "lane_id": "direct_same_model",
+      "display_name": "Direct Same Model",
+      "purpose": "Measure what the same cognitive model can do without DeepBazi facts, knowledge, tools, or review.",
+      "model_role": "same_as_vnext",
+      "context_policy": "pillars_gender_and_plain_professional_request_only",
+      "deepbazi_facts_allowed": false,
+      "deepbazi_knowledge_allowed": false,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false
+    },
+    {
+      "lane_id": "direct_frontier",
+      "display_name": "Direct Frontier",
+      "purpose": "Represent a frozen strong general model a user could realistically ask directly.",
+      "model_role": "true_external_frontier",
+      "context_policy": "pillars_gender_and_plain_professional_request_only",
+      "deepbazi_facts_allowed": false,
+      "deepbazi_knowledge_allowed": false,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false
+    },
+    {
+      "lane_id": "current_v50",
+      "display_name": "Current Production V50",
+      "purpose": "Measure the frozen current tool-anchored cognition chain without temporary fixes.",
+      "model_role": "same_as_vnext",
+      "context_policy": "ranked_graph_path_role_sensitivity_first_look",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": true,
+      "deepbazi_tools_allowed": true,
+      "review_allowed": true
+    },
+    {
+      "lane_id": "fact_only_deepbazi",
+      "display_name": "Fact-only LLM",
+      "purpose": "Measure the value of trusted facts and neutral relations without a Mingli synthesis protocol or ranked legacy tools.",
+      "model_role": "same_as_vnext",
+      "context_policy": "trusted_fact_ledger_and_neutral_relations_only",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": false,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false
+    },
+    {
+      "lane_id": "holistic_synthesis",
+      "display_name": "Holistic Synthesis Baseline",
+      "purpose": "Measure the increment from a frozen whole-chart Mingli synthesis protocol over trusted facts alone.",
+      "model_role": "same_as_vnext",
+      "context_policy": "trusted_facts_neutral_relations_and_frozen_holistic_synthesis_policy",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": true,
+      "deepbazi_tools_allowed": false,
+      "review_allowed": false,
+      "challenge_pack_allowed": false,
+      "legacy_ranked_tool_outputs_allowed": false,
+      "preselected_primary_hypothesis_allowed": false,
+      "reality_evidence_allowed": false
+    },
+    {
+      "lane_id": "vnext",
+      "display_name": "VNext Cognitive Slice",
+      "purpose": "Test independent first look, challenge tools, relevant knowledge, comparative reasoning, and epistemic review.",
+      "model_role": "same_as_direct_same_model",
+      "context_policy": "independent_first_look_then_challenge_and_relevant_knowledge",
+      "deepbazi_facts_allowed": true,
+      "deepbazi_knowledge_allowed": true,
+      "deepbazi_tools_allowed": true,
+      "review_allowed": true
+    }
+  ],
+  "model_policy": {
+    "same_model": {
+      "provider": "ollama",
+      "model": "qwen3.5:35b",
+      "reasoning_mode": "enabled_when_supported",
+      "temperature": 0.2,
+      "token_budget": 4200,
+      "context_window": 32768,
+      "timeout_seconds": 360,
+      "structured_output_policy": "CognitiveBenchmarkReading",
+      "schema_mechanical_repair_limit": 1
+    },
+    "frontier": null
+  },
+  "model_policy_hashes": {
+    "same_model_and_lane_policy": "2b150b2b65a1f4b294a1a55d1e9f4f3f0b2ade36940334058c7d6d273afd995d",
+    "frontier_policy": "e16ea87b14ee2be62b7c461505e051e2687cd675931420b3f65568abd448ef2e"
+  },
+  "prompt_hashes": {
+    "shared_benchmark_prompt_and_schema": "a7f31ee7a7153c4972e17335c51bc20f64f1553cb6a71a1e7230bc25f884109d",
+    "vnext_context_compiler": "7f606987bf67105c707f345c396e0df8030b7467a508d7cc88fc5aa302fff360"
+  },
+  "context_policy_hashes": {
+    "lane_policy": "2b150b2b65a1f4b294a1a55d1e9f4f3f0b2ade36940334058c7d6d273afd995d",
+    "holistic_synthesis_policy": "3ca57cce98465631d1d966d39869b72ff659098838b05e895527bdedbd7c0971",
+    "vnext_context_compiler": "7f606987bf67105c707f345c396e0df8030b7467a508d7cc88fc5aa302fff360"
+  },
+  "review_policy_hashes": {
+    "deterministic_review_and_repair": "15391dfcfec5b3fe9501228d4404a2b93f5f3b8fc9caadd090e1362f66e6096d",
+    "promotion_gates": "55751e781e6922015351c7defb8d3aea06e7198d6070347fc2e26618cfa4bb5e"
+  },
+  "execution_policy": {
+    "temperature": 0.2,
+    "reasoning_mode": "enabled_when_supported",
+    "token_budget": 4200,
+    "context_window": 32768,
+    "timeout_seconds": 360,
+    "repeats": 3,
+    "network_retry_limit": 1,
+    "timeout_retry_limit": 1,
+    "schema_mechanical_repair_limit": 1,
+    "manual_best_of_n_selection_allowed": false,
+    "fact_hallucination_retry_allowed": false
+  },
+  "retry_policy": {
+    "network_retry_limit": 1,
+    "timeout_retry_limit": 1,
+    "schema_mechanical_repair_limit": 1,
+    "manual_best_of_n_selection_allowed": false,
+    "fact_hallucination_retry_allowed": false
+  },
+  "fact_engine_version": "chart_world_sha256:d86f7622c4e488dfe07c",
+  "review_policy": {
+    "round1_all_outputs": "compact_blind_expert_scoring",
+    "round2_per_chart": "pairwise_lane_preference_after_repeat_aggregation",
+    "single_expert_label_required_when_applicable": true,
+    "allowed_final_decisions": [
+      "prefer",
+      "revise",
+      "reject",
+      "insufficient"
+    ]
+  },
+  "promotion_gates_hash": "55751e781e6922015351c7defb8d3aea06e7198d6070347fc2e26618cfa4bb5e",
+  "blockers": [
+    "round1_expert_reference_not_human_frozen",
+    "true_frontier_policy_not_frozen",
+    "v50_code_snapshot_not_committed"
+  ],
+  "boundaries": {
+    "formal_execution_allowed": false,
+    "training_performed": false,
+    "weights_modified": false,
+    "production_runtime_rules_modified": false,
+    "theory_modified": false,
+    "professional_winner_claimed": false
+  }
+}

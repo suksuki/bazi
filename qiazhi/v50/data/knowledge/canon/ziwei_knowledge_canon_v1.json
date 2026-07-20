@@ -1,0 +1,27 @@
+{
+  "version": "v50.ziwei_knowledge_canon.v1",
+  "status": "seed_canon",
+  "purpose": "Structured Ziwei knowledge canon for Dynamic Evidence Engine review. This file does not create Runtime rules.",
+  "card_source": "data/knowledge/canon/knowledge_cards_v1.jsonl",
+  "domains": {
+    "foundation": [
+      "ziwei.foundation.twelve_palaces",
+      "ziwei.foundation.major_stars_14",
+      "ziwei.foundation.four_transformations",
+      "ziwei.foundation.san_fang_si_zheng"
+    ],
+    "timing": [
+      "ziwei.timing.major_annual_cycle"
+    ],
+    "topic_mapping": [
+      "ziwei.topic.career_official_palace",
+      "ziwei.topic.wealth_property_palace"
+    ],
+    "fusion": [
+      "fusion.bazi_structure_ziwei_timing"
+    ]
+  },
+  "source_policy": "Every P0 card must carry at least three traceable public sources before Runtime promotion.",
+  "runtime_boundary": "Ziwei cards produce dynamic evidence only. They must not become a second user-facing report."
+}
+

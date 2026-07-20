@@ -1,0 +1,40 @@
+DeepBazi S0 Analyst Media Pack
+Generated: 2026-07-19
+
+01_video
+- abu-says-mingli-s0-v1.mp4
+  47-second 1920x1080 internal Animatic with Eric temporary narration.
+- abu-says-mingli-s0-v1-silent.mp4
+  Silent subtitled version for visual and content review.
+
+02_audio
+- s0-eric-temp-v1.wav
+  Eric temporary narration source used by the Animatic.
+
+03_xiangfa
+- xiangfa-scene-base-v1.png
+  Candidate A unified Xiangfa master scene.
+
+04_keyframes
+- s0-keyframe-01.png ... s0-keyframe-07.png
+  Seven frozen storyboard keyframes, ordered by scene.
+
+05_previews
+- xiangfa-s0-a-desktop-1440x1000.png
+  Desktop Xiangfa page preview.
+- xiangfa-s0-a-mobile-390.png
+  390px mobile Xiangfa page preview.
+- s0-portrait-preview-1080x1920.png
+  Vertical composition preview.
+
+06_abu_animations
+- abu_welcome_wave_v5.webp
+- abu_idle_blink_v4.webp
+- abu_taoist_divination_v9.webp
+- abu_head_tilt_v4.webp
+- abu_caution_ears_v4.webp
+  Animated transparent WebP assets used by the current Abu experience.
+
+Scope note
+This package is an anonymous internal teaching fixture for analyst review. It is
+not a real-user LifeCase and is not approved for public release.

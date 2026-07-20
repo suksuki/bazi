@@ -1,0 +1,26 @@
+{
+  "version": "deepbazi.vnext_phase0.frontier_policy.v1",
+  "status": "pending_true_frontier_configuration",
+  "selection_set": "data/validation/phase0/vnext_phase0_model_policy_selection_set_v1.json",
+  "selected_policy": null,
+  "eligibility_requirements": {
+    "strong_general_model_realistically_accessible_to_users": true,
+    "provider_and_model_version_pinnable": true,
+    "temperature_and_reasoning_mode_pinnable": true,
+    "token_budget_and_timeout_pinnable": true,
+    "raw_output_retainable_for_audit": true,
+    "selection_completed_before_formal_manifest_execution": true
+  },
+  "local_observation": {
+    "model": "qwen3.6:27b",
+    "classification": "local_open_stress_baseline",
+    "direct_frontier_eligible": false,
+    "observed_dry_run_issue": "schema_and_timeout_reliability_failed_under_the_common_contract"
+  },
+  "candidate_policies": [],
+  "freeze_metadata": {
+    "selected_at": "",
+    "selected_by": "",
+    "selection_report_hash": ""
+  }
+}

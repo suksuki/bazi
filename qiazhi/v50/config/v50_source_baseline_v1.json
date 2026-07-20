@@ -1,0 +1,68 @@
+{
+  "version": "deepbazi.v50.source-baseline.v1",
+  "base_head": "88da895bb860c25fd6166ac4fa9717cf7102a1e8",
+  "branch": "codex/v50-source-baseline",
+  "policy": {
+    "controlled_import_only": true,
+    "bulk_git_add_forbidden": true,
+    "real_case_material_allowed": false,
+    "secrets_allowed": false,
+    "generated_outputs_allowed": false
+  },
+  "source_roots": [
+    "apps",
+    "config",
+    "data",
+    "deploy",
+    "docs",
+    "packages",
+    "scripts",
+    "tests",
+    "tools"
+  ],
+  "retained_legacy_proofs": [
+    "archive/proofs"
+  ],
+  "retained_media_sources": [
+    "artifacts/abu-actor-pass-v1/source-videos",
+    "artifacts/abu-actor-pass-v1/source-contact-sheets/ninja/variant-review.json"
+  ],
+  "excluded_private_material": [
+    "data/validation/fixtures/v40_admin_case_inventory_v1.json",
+    "apps/product/static/experience/active/onecanvas-r1/fixture.json",
+    "archive/proofs/prototypes/mingli-lab-c2a/fixture.json",
+    "reports/abu-says-mingli-s0/g1"
+  ],
+  "retained_governance_contracts": [
+    "data/validation/phase0/vnext_phase0_expert_reference_space_v1.json",
+    "data/validation/phase0/vnext_phase0_reality_evidence_v1.json"
+  ],
+  "retained_product_evidence": [
+    "reports/abu-says-mingli-s0/g2",
+    "reports/abu-says-mingli-s0/mobile-social-v1",
+    "reports/abu-voice-review-v1",
+    "reports/architecture-purification-p0-slice1",
+    "reports/cognitive-authority-baseline/20260713-cognitive-authority-final-acceptance-v2",
+    "reports/cognitive-authority-baseline/20260713-cognitive-authority-final-live-v1",
+    "reports/mingli-canvas-c0",
+    "reports/mingli-onecanvas-r1/review-v5-preparation",
+    "reports/qwen-tts-capacity-v1",
+    "reports/qwen-tts-capacity-v2",
+    "reports/v50-lean-consolidation/l0-l1",
+    "reports/v50-lean-consolidation/l2",
+    "reports/vnext-phase0-g1/phase0-g1-6-20260715-v1",
+    "reports/vnext-phase0-g1/phase0-g1-9-20260716-v1",
+    "reports/vnext-phase0-preflight/p0-g1-5-live-five-lane-20260714-v1"
+  ],
+  "r1_regression_baseline": {
+    "manifest": "reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256",
+    "manifest_sha256": "267a172054bd9cb6ca31a1254f9a51506370034bc8900bc5c4dadc065c2b9b1e",
+    "locked_file_count": 20,
+    "immutable": true,
+    "private_fixture_retained_local_only": true
+  },
+  "constitution": {
+    "path": "docs/product/V50_PRODUCT_KERNEL_CONSTITUTION_V1.md",
+    "sha256": "4908c2865e98ba9e35f12358329fffd0b503ce9edc33cac3cf9d736e2e3caeff"
+  }
+}

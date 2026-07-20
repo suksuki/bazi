@@ -1,0 +1,192 @@
+{
+  "schema_version": "deepbazi.topic_package.v1",
+  "topic": {
+    "topic_id": "topic-00-performance-proof-01",
+    "version": "1.0.0",
+    "title": "阿布打开我的命盘",
+    "purpose": "用一段冻结的声音表演，让参与者看见自己的四柱、已批准主线与仍未解决的条件。",
+    "audience": ["member", "practitioner"],
+    "supported_modes": ["solo", "time_shift", "replay"],
+    "required_experience_capabilities": [
+      "private_scene",
+      "frozen_cue",
+      "performance_package",
+      "audio_clock"
+    ],
+    "knowledge_refs": ["life-case-approved-baseline", "approved-reasoning-path", "chart-facts"]
+  },
+  "entry_node": "proof_entry",
+  "fallback_entry_nodes": {
+    "personal_ready": "proof_entry",
+    "chart_facts_only": "proof_entry",
+    "observer": "proof_entry"
+  },
+  "scene_nodes": [
+    {
+      "node_id": "proof_entry",
+      "act": "performance-proof",
+      "dramatic_purpose": "在读取私人命盘前，由参与者主动开始一次有声表演。",
+      "visibility": "public",
+      "expected_duration_seconds": 8,
+      "cue_template_ids": [],
+      "interaction": {
+        "kind": "ready_barrier",
+        "prompt": "准备好后，让阿布打开这份命盘。",
+        "required": false
+      },
+      "data_bindings": [],
+      "transitions": [
+        {"event": "next", "target": "proof_private"}
+      ],
+      "timeout_behavior": "wait"
+    },
+    {
+      "node_id": "proof_private",
+      "act": "performance-proof",
+      "dramatic_purpose": "以声音为主时钟，表演四柱、获批主线、推理路径与未决条件。",
+      "visibility": "participant_private",
+      "expected_duration_seconds": 90,
+      "cue_template_ids": ["proof-personal-performance"],
+      "interaction": {
+        "kind": "choice",
+        "prompt": "你想先从哪里继续？",
+        "options": [
+          "看看这条力量如何运行",
+          "看看现在什么正在被激活",
+          "看看为什么还存在另一种解释"
+        ],
+        "required": true
+      },
+      "data_bindings": [
+        "envelope.allowed_chart_facts",
+        "envelope.approved_claims",
+        "envelope.approved_reasoning_steps",
+        "envelope.competing_hypotheses",
+        "envelope.uncertainty"
+      ],
+      "transitions": [
+        {"event": "complete", "target": "proof_close"}
+      ],
+      "timeout_behavior": "fallback",
+      "fallback_node": "proof_close",
+      "rejoin_node": "proof_close"
+    },
+    {
+      "node_id": "proof_close",
+      "act": "performance-proof",
+      "dramatic_purpose": "保留用户选择并结束本次证明镜头。",
+      "visibility": "public",
+      "expected_duration_seconds": 8,
+      "cue_template_ids": [],
+      "interaction": {"kind": "none"},
+      "data_bindings": [],
+      "transitions": [],
+      "timeout_behavior": "wait"
+    }
+  ],
+  "cue_templates": [
+    {
+      "template_id": "proof-personal-performance",
+      "visibility": "participant_private",
+      "semantic_intent": "perform_approved_chart_cognition",
+      "required_claim_category": "baseline",
+      "dialogue_template": "你可能以为，我接下来要开始算你的命。但先别急着把你的一生一次说完。这是你的命盘：{{four_pillars}}。我们目前已经看见的是：{{approved_claim_spoken}}。但{{unresolved_condition}}，现在还没有足够依据。我不会替你把答案补出来。你想先从哪里继续？",
+      "subtitle_template": "已确认主线：{{approved_claim_subtitle}}。仍待确认：{{unresolved_condition}}。",
+      "phrase_policy": "approved_cognition_only",
+      "voice": {
+        "profile": "abu-main",
+        "mode": "performer",
+        "emotion": "warm-professional",
+        "speed": 0.94
+      },
+      "actor": {
+        "expression": "welcoming",
+        "motion_asset": "abu-taoist",
+        "loop": true
+      },
+      "stage": [
+        {"command": "set_background", "asset_ref": "valley-dawn"},
+        {"command": "show_chart_facts", "source": "envelope.allowed_chart_facts"},
+        {"command": "highlight_visual_anchor", "source": "approved_claim.visual_anchors"}
+      ],
+      "subtitle": {"style": "performance-proof"},
+      "fallback_template_id": "proof-chart-facts-fallback"
+    },
+    {
+      "template_id": "proof-chart-facts-fallback",
+      "visibility": "participant_private",
+      "semantic_intent": "performance_unavailable_without_approved_cognition",
+      "dialogue_template": "我目前能可靠确认的是：{{four_pillars}}。更深的整盘认知还没有正式形成，所以这一场不会替你补出一条好听的答案。等认知形成后，我再从这里继续。",
+      "subtitle_template": "四柱已经确认；正式整盘认知尚未形成。",
+      "phrase_policy": "facts_only_without_invention",
+      "voice": {
+        "profile": "abu-main",
+        "mode": "performer",
+        "emotion": "calm",
+        "speed": 0.94
+      },
+      "actor": {
+        "expression": "serious",
+        "motion_asset": "abu-divination",
+        "loop": true
+      },
+      "stage": [
+        {"command": "set_background", "asset_ref": "valley-dawn"},
+        {"command": "show_chart_facts", "source": "envelope.allowed_chart_facts"}
+      ],
+      "subtitle": {"style": "performance-fallback"}
+    }
+  ],
+  "director_script": {
+    "temporary_dialogue": {},
+    "timing_notes": {
+      "proof-personal-performance": "Audio clock owns subtitle, actor, stage, camera and interaction reveal."
+    }
+  },
+  "asset_manifest": {
+    "assets": [
+      {
+        "asset_id": "abu-welcome",
+        "kind": "abu_motion",
+        "uri": "/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp"
+      },
+      {
+        "asset_id": "abu-idle",
+        "kind": "abu_motion",
+        "uri": "/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp"
+      },
+      {
+        "asset_id": "abu-head-tilt",
+        "kind": "abu_motion",
+        "uri": "/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp"
+      },
+      {
+        "asset_id": "abu-divination",
+        "kind": "abu_motion",
+        "uri": "/assets/abu/v8-designer-divination/web/abu_divination_v8.webp"
+      },
+      {
+        "asset_id": "abu-taoist",
+        "kind": "abu_motion",
+        "uri": "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp"
+      },
+      {
+        "asset_id": "valley-dawn",
+        "kind": "background",
+        "uri": "/assets/abu/v10-opening-scene/transition/abu_opening_background_v10.webp"
+      }
+    ]
+  },
+  "policies": {
+    "privacy": "private_by_default",
+    "aggregation_minimum": 3,
+    "personal_scene": "envelope_only",
+    "temporal_message": "explicit_consent",
+    "failure_behavior": "fallback_without_invention"
+  },
+  "release": {
+    "status": "draft",
+    "approved_by": "",
+    "package_hash": ""
+  }
+}

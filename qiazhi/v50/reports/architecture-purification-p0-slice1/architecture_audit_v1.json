@@ -1,0 +1,64 @@
+{
+  "schema_version": "deepbazi.architecture_purification_audit.v1",
+  "generated_at": "2026-07-18T03:36:56.369242+00:00",
+  "passed": true,
+  "checks": [
+    {
+      "check": "registry:data_authority_v1.json",
+      "passed": true,
+      "path": "config/data_authority_v1.json"
+    },
+    {
+      "check": "registry:legacy_register_v1.json",
+      "passed": true,
+      "path": "config/legacy_register_v1.json"
+    },
+    {
+      "check": "registry:prompt_registry_v1.json",
+      "passed": true,
+      "path": "config/prompt_registry_v1.json"
+    },
+    {
+      "check": "registry:knowledge_registry_v1.json",
+      "passed": true,
+      "path": "config/knowledge_registry_v1.json"
+    },
+    {
+      "check": "registry:media_asset_registry_v1.json",
+      "passed": true,
+      "path": "config/media_asset_registry_v1.json"
+    },
+    {
+      "check": "registry:frontend_state_authority_v1.json",
+      "passed": true,
+      "path": "config/frontend_state_authority_v1.json"
+    },
+    {
+      "check": "experience_package_has_no_product_or_cognitive_core_dependency",
+      "passed": true,
+      "violations": []
+    },
+    {
+      "check": "new_frontend_does_not_read_legacy_authorities",
+      "passed": true,
+      "violations": []
+    },
+    {
+      "check": "visualization_does_not_call_reasoner",
+      "passed": true,
+      "violations": []
+    },
+    {
+      "check": "independent_experience_bundle_exists",
+      "passed": true,
+      "path": "apps/product/static/experience/app.js"
+    }
+  ],
+  "boundary_status": {
+    "runtime_rules_modified": false,
+    "brain_logic_modified": false,
+    "mingli_algorithm_modified": false,
+    "new_experience_reasoner_access": false,
+    "legacy_formal_writes_allowed": false
+  }
+}

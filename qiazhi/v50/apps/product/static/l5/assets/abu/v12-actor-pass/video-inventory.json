@@ -1,0 +1,170 @@
+{
+  "version": "v50.abu.video_asset_inventory.v1",
+  "status": "internal_asset_review",
+  "source_contract": {
+    "resolution": [1280, 720],
+    "fps": 24,
+    "duration_seconds": 10.005,
+    "copyright_status": "designer_provided_for_deepbazi_internal_product_use",
+    "public_redistribution": false
+  },
+  "sources": [
+    {
+      "source_id": "micro_motion",
+      "filename": "这是图片吧，没问题做一系列小动画呢？晃脑袋，眨眼睛，摇尾巴.mp4",
+      "sha256": "c81a3a3b071e9c08b1e44c8ccef3df933acb7f0fc7f3609bad81aa567dba54a5",
+      "background": "painted_scene",
+      "actions": ["blink", "head_tilt", "tail_wag"],
+      "quality": "usable_with_background_separation"
+    },
+    {
+      "source_id": "transparent_companion",
+      "filename": "刚才那个ABU小狗动画，能否做一个纯小狗，透明背景的动画？.mp4",
+      "sha256": "cd8ddfe46839cbc7082daf9f0a0be93372e01141546adf3189f532b937c00e1d",
+      "background": "black_key",
+      "actions": ["head_tilt", "ears_lower", "smile", "wave"],
+      "selected_ranges": [{"seconds": [4.55, 6.55], "action_id": "abu_notice_tension_v1"}],
+      "quality": "selected"
+    },
+    {
+      "source_id": "butterfly_play",
+      "filename": "不错，再来阿布嬉戏扑蝴蝶视频.mp4",
+      "sha256": "59b5064310d0b9b3689c0c8a695059dd302f1881a730c8044110b0295ce78515",
+      "background": "black_key",
+      "actions": ["notice", "pounce", "follow", "return_idle"],
+      "quality": "production_existing"
+    },
+    {
+      "source_id": "run_jump",
+      "filename": "来一个阿布奔跑跳跃的视频.mp4",
+      "sha256": "ce349b8ce06fcebc695dd325775a21e530a756fa74fd9fac27fc8595d70a22b1",
+      "background": "black_key",
+      "actions": ["run", "jump", "slow", "stop", "sit"],
+      "selected_ranges": [{"seconds": [5.5, 9.4], "action_id": "abu_enter_and_notice_v1"}],
+      "quality": "selected"
+    },
+    {
+      "source_id": "sleep",
+      "filename": "赶紧给我生成一个新的阿布睡觉的视频，五秒钟.mp4",
+      "sha256": "76333476f95210a0c807b7fa4dbe0f3c6c04f944b05eb856af096a9f7d658526",
+      "background": "black_key",
+      "actions": ["drowsy", "lie_down", "sleep_breathe", "wake"],
+      "quality": "production_existing"
+    },
+    {
+      "source_id": "breakdance",
+      "filename": "来一个阿布挑霹雳舞的视频～.mp4",
+      "sha256": "04adff7578bf784582aa2285888870414c2aee528a650b5f3e97943df1c6e6d7",
+      "background": "black_key",
+      "actions": ["dance_setup", "spin", "freeze", "return_idle"],
+      "quality": "production_existing"
+    },
+    {
+      "source_id": "classic_divination",
+      "filename": "很棒，再来一个，阿布成了算命师，闭眼，假模假样掐指一算，口中.mp4",
+      "sha256": "2dd91480c1efab682751f0ffae8df56d270cf165bdda56aadeea4fbe046ca3ee",
+      "background": "black_key",
+      "actions": ["focus", "paw_count", "release"],
+      "quality": "restricted_by_brand_role"
+    },
+    {
+      "source_id": "taoist_divination",
+      "filename": "再来一个阿布扮作算命道士打扮，口中念念有词，算命的视频.mp4",
+      "sha256": "a626bba26e911443c8a211642fc2e254e9453006ec858f3c8dbd1b894da84783",
+      "background": "black_key",
+      "actions": ["table_gesture", "chant", "crystal_gaze"],
+      "quality": "excluded_from_s0_brand_expression"
+    },
+    {
+      "source_id": "sad_tears",
+      "filename": "来一个阿布伤心掉泪的视频，透明背景，需要看到阿布伤心的内心戏.mp4",
+      "sha256": "69655a4f4bd04b6d7a3a95fdc0f2b8bd54e55ad72330c7daf501b6d78b899ed4",
+      "background": "black_key",
+      "actions": ["notice_failure", "tear", "wipe_tear"],
+      "quality": "production_existing_restricted_context"
+    },
+    {
+      "source_id": "opening_scene",
+      "filename": "来一段阿布开场动画，这次背景要是吉卜力风格，阿布，大概就是我.mp4",
+      "sha256": "6f8b4c7d40ad8ca50184e9f55c9043e23879f383263e20c7595f274738728930",
+      "background": "painted_scene",
+      "actions": ["jump_down", "walk", "turn", "point", "sit"],
+      "quality": "high_value_requires_background_separation"
+    },
+    {
+      "source_id": "mist_observation",
+      "filename": "我想让图片当中的小狗偶尔动一下脑袋，然后云雾缭绕的动画，你能.mp4",
+      "sha256": "f922814a65994a19697a517c3adebedd295e0da2283ddeef48571f55685f034b",
+      "background": "painted_scene",
+      "actions": ["look_forward", "look_back", "mist_idle"],
+      "quality": "high_value_requires_background_separation"
+    },
+    {
+      "source_id": "companion_gestures",
+      "filename": "你赶紧生成里面的视频.mp4",
+      "sha256": "2e379f33437fffa32e5b7e5a0d8f662f6b692d3db1b77679d5a78843c94318e0",
+      "background": "black_key",
+      "actions": ["wave", "blink", "head_tilt", "turn_and_point", "return_idle"],
+      "selected_ranges": [{"seconds": [5.45, 7.35], "action_id": "abu_turn_and_point_v1"}],
+      "quality": "selected"
+    },
+    {
+      "source_id": "face_change_transition",
+      "filename": "来一段会变脸戏法的阿布视频.mp4",
+      "sha256": "e1a48c022adc17d18d56642bc4fa225908d7c8664527ad33c3eca413751b3113",
+      "background": "black_key",
+      "actions": ["mask_reveal", "red_mask", "blue_mask", "scarf_sweep", "return_idle"],
+      "selected_ranges": [{"seconds": [0.4, 9.4], "action_id": "abu_face_change_transition_v1"}],
+      "quality": "selected"
+    },
+    {
+      "source_id": "stand_point_blackboard",
+      "filename": "再来一个，阿布站立，抬起手指向左上方，同时脑袋也转向左边，，.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_stand_point_blackboard_source.mp4",
+      "sha256": "b7fa6d2a4b91d18453f72454e706b9cffec960ef6ca2e4e89735a429f5ef0fac",
+      "background": "black_key",
+      "actions": ["stand", "raise_paw", "turn_head", "point_upper_left", "point_left", "scarf_transition", "return_idle"],
+      "selected_ranges": [
+        {"seconds": [1.05, 2.4], "action_id": "abu_stand_point_up_left_v1"},
+        {"seconds": [1.05, 2.4], "action_id": "abu_stand_point_up_right_v1", "derivative": "horizontal_mirror"}
+      ],
+      "quality": "selected_closeup",
+      "limitations": ["source framing crops the lower body during the pointing action"],
+      "removed_regions": ["right_side_sparkle_mark"]
+    },
+    {
+      "source_id": "ninja_sitting_full_body_start",
+      "filename": "对不起，应该是初始帧为阿布坐立的全身像.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_ninja_sitting_start_source.mp4",
+      "sha256": "cfaf404ed9e7441d6aa9c9bd5737e5288dacc08e8e4fff3bc0d83f0ff678effb",
+      "background": "black_key",
+      "actions": ["sitting_start", "ninja_transform", "disappear", "shuriken_throw", "return_idle"],
+      "selected_ranges": [{"seconds": [0.0, 10.0], "action_id": "abu_ninja_disappear_throw_v1"}],
+      "quality": "selected_full_body_seated",
+      "notes": ["selected over the biped standing start to preserve Abu's familiar cute silhouette"],
+      "removed_regions": ["lower_right_sparkle_mark"]
+    },
+    {
+      "source_id": "ninja_standing_full_body_start",
+      "filename": "不错，但是有个问题，初始帧的阿布，站着的阿布改为站立全身像.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_ninja_standing_start_source.mp4",
+      "sha256": "dfdbb220211e2d79557a762e636160a7fe4afce270a7dafe6adfaf05923c9fcf",
+      "background": "black_key",
+      "actions": ["standing_start", "ninja_transform", "disappear", "shuriken_throw", "return_idle"],
+      "quality": "candidate_pose_hold",
+      "limitations": ["biped standing start feels abrupt and intimidating in the quiet theater finale"],
+      "removed_regions": ["lower_right_sparkle_mark_in_candidate_derivative"]
+    },
+    {
+      "source_id": "ninja_half_body_start",
+      "filename": "来一段阿布忍者形象的视频，设计为忍者消失，扔飞镖，记得视频开.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_ninja_half_body_start_source.mp4",
+      "sha256": "253eb763a8ab40c970da366081cdbd2eafa75ef1b0a321d4d485a36f560c18e6",
+      "background": "black_key",
+      "actions": ["half_body_start", "ninja_transform", "disappear", "shuriken_throw", "return_idle"],
+      "quality": "candidate_framing_hold",
+      "limitations": ["opening half-body framing cannot join the full-body finale actor without a visible scale jump"],
+      "removed_regions": ["lower_right_sparkle_mark_in_production_derivative"]
+    }
+  ]
+}

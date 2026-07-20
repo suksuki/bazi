@@ -1,0 +1,40 @@
+{
+  "version": "deepbazi.vnext_phase0.frontier_candidates.v1",
+  "status": "pending_candidate_configuration",
+  "selection_repeats": 3,
+  "selection_set": "data/validation/phase0/vnext_phase0_model_policy_selection_set_v1.json",
+  "fixture_pack": "data/validation/phase0/vnext_phase0_model_policy_selection_fixture_pack_v1.json",
+  "candidates": [],
+  "candidate_contract": {
+    "required_fields": [
+      "candidate_id",
+      "provider",
+      "base_url",
+      "model",
+      "provider_model_version",
+      "frontier_kind",
+      "reasoning_mode",
+      "temperature",
+      "top_p",
+      "token_budget",
+      "context_window",
+      "timeout_seconds",
+      "structured_output_policy",
+      "mechanical_repair_policy",
+      "raw_output_retention",
+      "response_metadata_retention",
+      "access_attestation"
+    ],
+    "supported_provider": "ollama_generate",
+    "frontier_kind_required": "true_frontier"
+  },
+  "boundaries": {
+    "formal_cases_allowed": false,
+    "development_cases_allowed": false,
+    "expert_reference_allowed": false,
+    "reality_evidence_allowed": false,
+    "deepbazi_internal_protocol_allowed": false,
+    "automatic_winner_selection_allowed": false,
+    "human_selection_required": true
+  }
+}

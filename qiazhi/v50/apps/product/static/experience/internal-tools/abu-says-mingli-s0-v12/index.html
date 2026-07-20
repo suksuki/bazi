@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#132c27">
+  <title>阿布说命 · DeepBazi</title>
+  <link rel="stylesheet" href="./styles.css?v=20260720-entry2">
+</head>
+<body>
+  <div class="theater" id="theater" data-scene="opening" data-stage="original" data-started="false" data-sound="on">
+    <header class="topbar">
+      <a class="brand" href="/app" aria-label="进入 DeepBazi">
+        <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi">
+      </a>
+      <p><span></span>阿布说命 · 命局序章</p>
+      <a class="scene-link" href="/app">进入 DeepBazi</a>
+    </header>
+
+    <main class="stage" aria-live="polite">
+      <div class="painted-world" aria-hidden="true"></div>
+      <div class="world-grade" aria-hidden="true"></div>
+      <div class="faint-script" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+      <section class="opening" id="opening">
+        <p>阿布说命 · 序</p>
+        <h1>命理不该成为<br>宿命的宣判</h1>
+        <span>它更像一份可以被理解的人生底稿。</span>
+      </section>
+
+      <section class="canvas" id="canvas" aria-label="匿名教学命盘六柱结构">
+        <div class="canvas-meta">
+          <p>ONECANVAS</p>
+          <strong id="canvasHeadline">四柱落定，结构随之展开</strong>
+          <span id="canvasStageLabel">原局</span>
+        </div>
+
+        <div class="pillars" id="pillars"></div>
+
+        <div class="mobile-chart" id="mobileChart" aria-label="手机版六柱与结构路径">
+          <section class="mobile-chart-section mobile-natal-section" aria-label="原局四柱">
+            <header><strong>原局</strong><span>四柱</span></header>
+            <div class="mobile-pillar-grid" id="mobileNatalPillars"></div>
+          </section>
+
+          <section class="mobile-chart-section mobile-time-section" aria-label="大运与流年">
+            <header><strong>时间进入</strong><span id="mobileTimeLabel">尚未加入</span></header>
+            <div class="mobile-time-flow" id="mobileTemporalPillars"></div>
+          </section>
+
+          <section class="mobile-path" aria-label="结构观察主线：甲木生丁火，丁火进一步作用于庚金">
+            <header><strong>观察主线</strong><span>同一结构 · 分段看见</span></header>
+            <div class="mobile-path-flow">
+              <span class="mobile-path-node wood" data-ref="node-stem-day-jia"><b>甲</b><small>源端</small></span>
+              <span class="mobile-path-link source-link">
+                <svg viewBox="0 0 56 24" aria-hidden="true">
+                  <path d="M3 12 H48 M40 5 L49 12 L40 19"></path>
+                  <circle class="flow-pulse" cx="7" cy="12" r="3"></circle>
+                </svg>
+                <small>生</small>
+              </span>
+              <span class="mobile-path-node fire" data-ref="node-stem-month-ding"><b>丁</b><small>转化</small></span>
+              <span class="mobile-path-link result-link">
+                <svg viewBox="0 0 56 24" aria-hidden="true">
+                  <path d="M3 12 H48 M40 5 L49 12 L40 19"></path>
+                  <circle class="flow-pulse" cx="7" cy="12" r="3"></circle>
+                </svg>
+                <small>作用</small>
+              </span>
+              <span class="mobile-path-node metal" data-ref="node-stem-year-geng"><b>庚</b><small>边界</small></span>
+            </div>
+            <p class="mobile-path-state">
+              <span data-mobile-path-state="original">甲木生丁火，丁火进一步作用于庚金</span>
+              <span data-mobile-path-state="tension">两处辰戌冲，使结构中出现张力</span>
+              <span data-mobile-path-state="luck">庚寅进入：源端受制，但路径没有中断</span>
+              <span data-mobile-path-state="year">丙午进入：火侧得助，路径重新明亮</span>
+            </p>
+          </section>
+        </div>
+
+        <svg class="relation-layer" viewBox="0 0 1200 620" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="pathGradient" x1="1" y1="0" x2="0" y2="0">
+              <stop offset="0" stop-color="#4d956d"></stop>
+              <stop offset=".5" stop-color="#e59257"></stop>
+              <stop offset="1" stop-color="#d6c39b"></stop>
+            </linearGradient>
+            <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="6" result="blur"></feGaussianBlur>
+              <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+            </filter>
+            <marker id="pathArrow" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto">
+              <path d="M0 0 L5 2.5 L0 5 Z" fill="#df8757"></path>
+            </marker>
+          </defs>
+          <path class="main-path segment-a" d="M660 168 C590 136 520 136 450 168" marker-end="url(#pathArrow)"></path>
+          <path class="main-path segment-b" d="M450 168 C380 136 310 136 240 168" marker-end="url(#pathArrow)"></path>
+          <circle class="flow-dot dot-a" r="8"></circle>
+          <circle class="flow-dot dot-b" r="8"></circle>
+          <path class="clash clash-a" d="M230 445 C410 590 585 590 660 445"></path>
+          <path class="clash clash-b" d="M870 445 C775 552 710 552 660 445"></path>
+          <path class="luck-pressure" d="M1010 168 C900 66 785 85 660 168" marker-end="url(#pathArrow)"></path>
+          <path class="luck-root" d="M1010 445 C890 525 780 510 660 168"></path>
+          <path class="year-support" d="M1120 168 C900 18 620 18 450 168" marker-end="url(#pathArrow)"></path>
+        </svg>
+
+        <div class="path-step step-jia" data-ref="node-stem-day-jia"><b>①</b><span>甲</span><small>生</small></div>
+        <div class="path-step step-ding" data-ref="node-stem-month-ding"><b>②</b><span>丁</span><small>作用</small></div>
+        <div class="path-step step-geng" data-ref="node-stem-year-geng"><b>③</b><span>庚</span><small>结构边界</small></div>
+
+        <div class="effect-label pressure-label">庚作用甲木</div>
+        <div class="effect-label root-label">寅为甲木添根</div>
+        <div class="effect-label fire-label">丙支持丁火</div>
+        <div class="effect-label clash-label">两处辰戌冲 · 结构张力</div>
+
+        <nav class="stage-control" aria-label="时间阶段">
+          <button type="button" data-stage-button="original">原局</button>
+          <button type="button" data-stage-button="luck">庚寅</button>
+          <button type="button" data-stage-button="year">丙午</button>
+          <i id="stageCursor" aria-hidden="true"></i>
+        </nav>
+      </section>
+
+      <section class="morph-scene" id="morphScene" aria-label="结构转化为象法">
+        <svg viewBox="0 0 1000 580" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M150 420 C310 470 390 335 512 334 S730 345 860 265"></path>
+        </svg>
+        <div class="morph-anchor wood"><span>甲</span><small>生发主体</small></div>
+        <div class="morph-anchor fire"><span>丁</span><small>暖光中心</small></div>
+        <div class="morph-anchor metal"><span>庚</span><small>结构边界</small></div>
+      </section>
+
+      <section class="xiangfa-handoff" id="xiangfaHandoff" aria-label="可交互象法场景" aria-hidden="true">
+        <iframe
+          id="xiangfaFrame"
+          title="阿布说命可交互象法场景"
+          src="../../active/xiangfa-generation-v1/index.html?embed=theater&stage=year&mode=xiangfa&v=20260720-abu-wake1"
+          loading="eager"
+          tabindex="-1"
+        ></iframe>
+      </section>
+
+      <a class="abu-actor" id="abuActor" href="/app" aria-label="跟阿布进入 DeepBazi">
+        <video id="abuVideo" muted playsinline preload="auto" aria-hidden="true"></video>
+        <img id="abuImage" src="/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp" alt="" aria-hidden="true">
+        <span class="gaze-line" aria-hidden="true"></span>
+      </a>
+
+      <section class="finale" id="finale">
+        <p>阿布说命</p>
+        <h2>看见命局，也看见自己</h2>
+        <span>读懂底稿，下一章仍由你来写。</span>
+        <span class="finale-hint">最后一帧已经接入象法：点击光点，或切换结构骨架。</span>
+        <a class="finale-link" href="/app">开始探索我的命局</a>
+      </section>
+
+      <section class="theater-entry" id="theaterEntry" aria-labelledby="theaterEntryTitle">
+        <div class="theater-entry-copy">
+          <p>阿布说命 · 约 45 秒</p>
+          <h2 id="theaterEntryTitle">一起看见<br>这张命盘</h2>
+          <div class="theater-entry-actions">
+            <button class="entry-sound" id="startSoundButton" type="button">▶&nbsp; 有声播放</button>
+            <button class="entry-muted" id="startMutedButton" type="button">静音观看</button>
+            <a class="entry-system" href="/app">直接进入 DeepBazi</a>
+          </div>
+        </div>
+      </section>
+
+      <div class="subtitle" id="subtitle" aria-live="polite">
+        <span class="subtitle-speaker">阿布</span>
+        <span class="subtitle-text" id="subtitleText"></span>
+      </div>
+    </main>
+
+    <footer class="transport">
+      <button class="play" id="playButton" type="button" aria-label="播放"><span id="playGlyph" aria-hidden="true">▶</span></button>
+      <input id="progress" type="range" min="0" max="445" value="0" aria-label="播放进度">
+      <span id="timeLabel">0:00 / 0:44</span>
+      <button class="mute" id="muteButton" type="button" aria-label="关闭声音" aria-pressed="true">
+        <span class="sound-switch" aria-hidden="true"><i></i></span>
+        <span id="soundLabel">声音开</span>
+      </button>
+    </footer>
+
+    <audio id="audio" preload="auto" src="../../shared/s0-v12-shared/assets/s0-v11-eric-mix.wav"></audio>
+  </div>
+  <script type="module" src="./app.js?v=20260720-ipad-alpha1"></script>
+</body>
+</html>

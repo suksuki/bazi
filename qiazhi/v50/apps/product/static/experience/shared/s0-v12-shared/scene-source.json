@@ -1,0 +1,113 @@
+{
+  "schema_version": "deepbazi.s0_anonymous_public_source_teaching_scene.v1",
+  "projection_id": "s0-v11-anonymous-public-source-case-01",
+  "source_mode": "anonymized_public_source_teaching_case",
+  "approval_scope": "internal_creative_prototype",
+  "professional_confidence": "fact_grounded_path_hypothesis",
+  "identity_boundary": {
+    "anonymous_in_product": true,
+    "public_figure_name_included": false,
+    "birth_datetime_included": false,
+    "birth_location_included": false,
+    "reality_feedback_included": false,
+    "biographical_event_included": false,
+    "event_prediction_authorized": false
+  },
+  "chart": {
+    "chart_type": "乾造",
+    "semantic_slots": [
+      {"slot_ref": "slot-natal-year", "label": "年柱", "pillar": "庚辰"},
+      {"slot_ref": "slot-natal-month", "label": "月柱", "pillar": "丁亥"},
+      {"slot_ref": "slot-natal-day", "label": "日柱", "pillar": "甲戌"},
+      {"slot_ref": "slot-natal-hour", "label": "时柱", "pillar": "戊辰"}
+    ]
+  },
+  "observed_natal_path": {
+    "path_ref": "path-observed-jia-ding-geng",
+    "public_label": "结构观察主线",
+    "professional_expression": "甲木生丁火，丁火进一步作用于庚金",
+    "node_refs": [
+      "node-stem-day-jia",
+      "node-stem-month-ding",
+      "node-stem-year-geng"
+    ],
+    "relation_refs": [
+      "relation-jia-generates-ding",
+      "relation-ding-controls-geng"
+    ],
+    "epistemic_status": "derived_relation_chain_not_professional_commitment",
+    "public_limit": "这是一条由确定性五行关系组成的观察主线，不表示唯一格局、唯一做功或完整人生结论。"
+  },
+  "structural_tensions": [
+    {
+      "relation_ref": "relation-year-chen-clashes-day-xu",
+      "from_ref": "node-branch-year-chen",
+      "to_ref": "node-branch-day-xu",
+      "public_label": "辰戌冲",
+      "epistemic_status": "canonical"
+    },
+    {
+      "relation_ref": "relation-hour-chen-clashes-day-xu",
+      "from_ref": "node-branch-hour-chen",
+      "to_ref": "node-branch-day-xu",
+      "public_label": "辰戌冲",
+      "epistemic_status": "canonical"
+    }
+  ],
+  "temporal_stages": [
+    {
+      "stage_id": "s0-v11-stage-luck-gengyin",
+      "temporal_ref": "snapshot-luck-gengyin",
+      "pillar_slot_ref": "slot-luck-gengyin",
+      "pillar": "庚寅",
+      "display_node_refs": ["node-luck-geng", "node-luck-yin"],
+      "relation_refs": [
+        "relation-luck-geng-controls-jia",
+        "relation-luck-yin-roots-jia"
+      ],
+      "path_ref": "path-observed-jia-ding-geng",
+      "discrete_change": "mixed_context_introduced",
+      "display_label": "压力与根气同时进入",
+      "explanation": "庚对甲木形成压力；寅又为甲木提供根气。同一阶段同时出现两种作用，不在本剧场中合并成单一吉凶结论。",
+      "forbidden_inferences": [
+        "整体增强",
+        "整体减弱",
+        "路径必然中断",
+        "现实事件对应"
+      ]
+    },
+    {
+      "stage_id": "s0-v11-stage-year-bingwu",
+      "temporal_ref": "snapshot-year-bingwu",
+      "pillar_slot_ref": "slot-year-bingwu",
+      "pillar": "丙午",
+      "display_node_refs": ["node-year-bing", "node-year-wu"],
+      "relation_refs": ["relation-year-bing-supports-ding"],
+      "path_ref": "path-observed-jia-ding-geng",
+      "discrete_change": "fire_context_supported",
+      "display_label": "火侧得到额外支持",
+      "explanation": "丙火进入后支持原局丁火节点；这里只展示火侧获得额外支持，不推演为成败、事件或整盘逆转。",
+      "forbidden_inferences": [
+        "午支独立作用",
+        "超过原局基线",
+        "整盘全面逆转",
+        "现实事件对应"
+      ]
+    }
+  ],
+  "presentation_copy": {
+    "original": "原局：观察主线展开",
+    "luck": "庚寅：压力与根气并见",
+    "year": "丙午：火侧得到支持"
+  },
+  "global_forbidden_claims": [
+    "系统最佳路径",
+    "算法唯一最优路径",
+    "已获专业格局定论",
+    "命主身份或出生资料",
+    "人物现实事件",
+    "整体吉凶",
+    "必然人生结局"
+  ],
+  "formal_state_write": false
+}

@@ -1,0 +1,131 @@
+{
+  "version": "deepbazi.production_authority_manifest.v1",
+  "allowed_statuses": [
+    "production",
+    "experimental",
+    "research",
+    "deprecated",
+    "archived"
+  ],
+  "authorities": {
+    "calendar_and_chart_facts": {
+      "status": "production",
+      "modules": ["core.contracts", "core.engines"],
+      "authority_role": "deterministic_fact_authority",
+      "evidence_status": "OPERATIONAL"
+    },
+    "ziwei_fact_bridge": {
+      "status": "production",
+      "modules": ["core.ziwei"],
+      "authority_role": "supporting_fact_authority",
+      "evidence_status": "PROVISIONAL"
+    },
+    "mingli_llm_reasoner": {
+      "status": "production",
+      "modules": ["core.mingli_agent.reasoner", "core.mingli_agent.orchestrator"],
+      "authority_role": "cognitive_reasoner_candidate",
+      "evidence_status": "UNVALIDATED"
+    },
+    "epistemic_review": {
+      "status": "production",
+      "modules": ["core.mingli_agent.fact_review", "core.mingli_agent.quality"],
+      "authority_role": "annotation_and_projection_gate",
+      "evidence_status": "BLOCKED"
+    },
+    "graph_v1": {
+      "status": "experimental",
+      "modules": ["core.graph"],
+      "authority_role": "challenge_observation_only",
+      "evidence_status": "PROVISIONAL"
+    },
+    "path_v1": {
+      "status": "experimental",
+      "modules": ["core.graph", "core.simulation"],
+      "authority_role": "challenge_candidate_generator",
+      "evidence_status": "PROVISIONAL"
+    },
+    "role_v1": {
+      "status": "experimental",
+      "modules": ["core.graph"],
+      "authority_role": "challenge_annotation_only",
+      "evidence_status": "PROVISIONAL"
+    },
+    "ablation_v1": {
+      "status": "experimental",
+      "modules": ["core.simulation"],
+      "authority_role": "estimated_sensitivity_not_counterfactual_truth",
+      "evidence_status": "PROVISIONAL"
+    },
+    "mechanism_ast": {
+      "status": "research",
+      "modules": ["core.mechanism"],
+      "authority_role": "research_projection",
+      "evidence_status": "RESEARCH_ONLY"
+    },
+    "unified_state": {
+      "status": "research",
+      "modules": ["core.state"],
+      "authority_role": "research_projection",
+      "evidence_status": "RESEARCH_ONLY"
+    },
+    "theme": {
+      "status": "research",
+      "modules": ["core.state.theme_discovery"],
+      "authority_role": "research_projection",
+      "evidence_status": "RESEARCH_ONLY"
+    },
+    "legacy_confidence": {
+      "status": "research",
+      "modules": ["core.state.decision_confidence"],
+      "authority_role": "uncalibrated_research_indicator",
+      "evidence_status": "RESEARCH_ONLY"
+    },
+    "life_case": {
+      "status": "production",
+      "modules": ["core.life_case"],
+      "authority_role": "case_memory_candidate",
+      "evidence_status": "PROVISIONAL"
+    },
+    "role_projection": {
+      "status": "production",
+      "modules": ["apps.product.reading_projection"],
+      "authority_role": "visibility_and_density_only",
+      "evidence_status": "OPERATIONAL"
+    },
+    "abu_runtime": {
+      "status": "production",
+      "modules": ["core.abu_runtime"],
+      "authority_role": "navigation_not_mingli_judgment",
+      "evidence_status": "OPERATIONAL"
+    },
+    "deterministic_brain_reading": {
+      "status": "deprecated",
+      "modules": [],
+      "authority_role": "none",
+      "evidence_status": "ARCHIVED"
+    },
+    "template_product_projection": {
+      "status": "archived",
+      "modules": [],
+      "authority_role": "none",
+      "evidence_status": "ARCHIVED"
+    }
+  },
+  "rules": {
+    "independent_first_look_allowed_statuses": ["production"],
+    "challenge_pack_allowed_statuses": ["production", "experimental"],
+    "guest_member_forbidden_statuses": ["experimental", "research", "deprecated", "archived"],
+    "raw_cognition_may_be_rewritten_by_review": false,
+    "review_may_annotate": true,
+    "review_may_suppress_high_risk_projection": true
+  },
+  "guest_member_forbidden_fields": [
+    "mechanism_ast",
+    "unified_state",
+    "theme_bundle",
+    "decision_confidence_profile",
+    "theory_refs",
+    "context_manifest",
+    "stage_receipts"
+  ]
+}

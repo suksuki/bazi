@@ -1,0 +1,64 @@
+{
+  "version": "v50.abu.designer_motion.v7",
+  "status": "production",
+  "motion": "run_jump",
+  "source": {
+    "filename": "来一个阿布奔跑跳跃的视频.mp4",
+    "sha256": "ce349b8ce06fcebc695dd325775a21e530a756fa74fd9fac27fc8595d70a22b1",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      1.6,
+      8.7
+    ]
+  },
+  "canvas": [
+    960,
+    640
+  ],
+  "anchor": [
+    0.5,
+    0.96875
+  ],
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    70,
+    20,
+    1030,
+    700
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 36.0,
+    "high": 64.0
+  },
+  "webp": {
+    "quality": 94,
+    "method": 6
+  },
+  "animation": "web/abu_run_jump_v7.webp",
+  "poster": "posters/abu_run_jump_v7.png",
+  "frame_count": 107,
+  "duration_ms": 7133,
+  "bytes": 7069392,
+  "usage": [
+    "awake_idle_random",
+    "ambient_companion_moment"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

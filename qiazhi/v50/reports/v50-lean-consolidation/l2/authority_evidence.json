@@ -1,0 +1,49 @@
+{
+  "schema_version": "deepbazi.v50_l2_authority_evidence.v1",
+  "generated_at": "2026-07-20",
+  "status": "PASS",
+  "scope": "L2_Authority_Consolidation",
+  "authority_metrics": {
+    "canonical_chart_constraint_solver_count": 1,
+    "canonical_temporal_service_count": 1,
+    "production_private_fixture_imports": 0,
+    "browser_side_mingli_derivation": 0,
+    "duplicate_dayun_direction_implementations": 0,
+    "order_dependent_chart_results": 0,
+    "malformed_supplied_pillars_accepted": 0,
+    "stale_temporal_results_reused": 0,
+    "sandbox_formal_writes": 0
+  },
+  "machine_gates": {
+    "L2_A_pillar_fact_authority": "PASS",
+    "L2_B_global_chart_constraint_solver": "PASS",
+    "L2_C_canonical_temporal_service": "PASS",
+    "L2_D_consumer_migration": "PASS",
+    "R1_v5_machine_gate": "PASS",
+    "R1_human_product_gate": "PENDING_EXECUTION"
+  },
+  "verification": {
+    "focused_authority_and_onecanvas": {
+      "passed": 67,
+      "failed": 0,
+      "duration_seconds": 2.78
+    },
+    "full_regression": {
+      "passed": 434,
+      "failed": 0,
+      "duration_seconds": 24.51
+    },
+    "commands": [
+      "PYTHONPATH=packages:apps:tests .runtime/venv/bin/python -m pytest -q tests/test_v50_l2_authority_consolidation.py tests/test_v50_l2_authority_audit.py tests/test_v50_birth_calendar.py tests/test_v50_c2ar_mingli_onecanvas.py tests/test_v50_c2ar_three_state_onecanvas.py tests/test_v50_onecanvas_pillar_selection_v2.py tests/test_v50_onecanvas_r1_authority.py",
+      "PYTHONPATH=packages:apps:tests .runtime/venv/bin/python -m pytest -q"
+    ]
+  },
+  "boundaries": {
+    "reasoner_changed": false,
+    "life_case_write_contract_changed": false,
+    "relation_or_path_core_changed": false,
+    "frontend_framework_migrated": false,
+    "production_deployed": false,
+    "RA1_authorized": false
+  }
+}

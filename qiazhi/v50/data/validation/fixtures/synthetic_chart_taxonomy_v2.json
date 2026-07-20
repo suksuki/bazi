@@ -1,0 +1,4686 @@
+{
+  "archetype_count": 25,
+  "case_count": 75,
+  "cases": [
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.month_command_dominant.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "male",
+        "hour_pillar": "甲子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己午",
+        "name": "c2.month_command_dominant.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.month_command_dominant.01",
+      "case_type": "month_command_dominant",
+      "chart": "戊午 己午 乙卯 甲子",
+      "chart_seed_id": "c2.month_command_dominant.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "午:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "strong_month_environment",
+          "no_structural_bridge",
+          "no_unique_visible_converter"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "bridge_node_forced",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.month_command_dominant.01",
+      "structure_archetype_id": "archetype.month_command_dominant",
+      "timing_variant_id": "timing.month.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.month_command_dominant.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "female",
+        "hour_pillar": "乙丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己午",
+        "name": "c2.month_command_dominant.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.month_command_dominant.02",
+      "case_type": "month_command_dominant",
+      "chart": "戊午 己午 乙卯 乙丑",
+      "chart_seed_id": "c2.month_command_dominant.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "午:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "strong_month_environment",
+          "no_structural_bridge",
+          "no_unique_visible_converter"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "bridge_node_forced",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.month_command_dominant.02",
+      "structure_archetype_id": "archetype.month_command_dominant",
+      "timing_variant_id": "timing.month.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.month_command_dominant.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "male",
+        "hour_pillar": "丙寅",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己午",
+        "name": "c2.month_command_dominant.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.month_command_dominant.03",
+      "case_type": "month_command_dominant",
+      "chart": "戊午 己午 乙卯 丙寅",
+      "chart_seed_id": "c2.month_command_dominant.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "午:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "strong_month_environment",
+          "no_structural_bridge",
+          "no_unique_visible_converter"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "bridge_node_forced",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.month_command_dominant.03",
+      "structure_archetype_id": "archetype.month_command_dominant",
+      "timing_variant_id": "timing.month.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.bridge_node_dominant.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "丁卯",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.bridge_node_dominant.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.bridge_node_dominant.01",
+      "case_type": "bridge_node_dominant",
+      "chart": "丁巳 乙巳 乙丑 丁卯",
+      "chart_seed_id": "c2.bridge_node_dominant.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "complete_si_you_chou_bridge",
+          "visible_output_converter",
+          "metal_pressure_target"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge",
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.bridge_node_dominant.01",
+      "structure_archetype_id": "archetype.bridge_node_dominant",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.bridge_node_dominant.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "male",
+        "hour_pillar": "戊辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.bridge_node_dominant.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.bridge_node_dominant.02",
+      "case_type": "bridge_node_dominant",
+      "chart": "丁巳 乙巳 乙丑 戊辰",
+      "chart_seed_id": "c2.bridge_node_dominant.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "complete_si_you_chou_bridge",
+          "visible_output_converter",
+          "metal_pressure_target"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge",
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.bridge_node_dominant.02",
+      "structure_archetype_id": "archetype.bridge_node_dominant",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.bridge_node_dominant.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "己巳",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.bridge_node_dominant.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.bridge_node_dominant.03",
+      "case_type": "bridge_node_dominant",
+      "chart": "丁巳 乙巳 乙丑 己巳",
+      "chart_seed_id": "c2.bridge_node_dominant.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "complete_si_you_chou_bridge",
+          "visible_output_converter",
+          "metal_pressure_target"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge",
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.bridge_node_dominant.03",
+      "structure_archetype_id": "archetype.bridge_node_dominant",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.converter_dominant.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙未",
+        "gender": "male",
+        "hour_pillar": "庚午",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丙午",
+        "name": "c2.converter_dominant.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁卯"
+      },
+      "case_id": "c2.converter_dominant.01",
+      "case_type": "converter_dominant",
+      "chart": "丁卯 丙午 乙未 庚午",
+      "chart_seed_id": "c2.converter_dominant.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem",
+          "丙:month_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "visible_output_converter",
+          "no_complete_triple_combination",
+          "converter_tie_possible"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "output_path"
+        ],
+        "must_not": [
+          "all_output_stems_are_first",
+          "fake_relationship_judgment",
+          "forced_bridge_node",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.converter_dominant.01",
+      "structure_archetype_id": "archetype.converter_dominant",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.converter_dominant.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙未",
+        "gender": "female",
+        "hour_pillar": "辛未",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丙午",
+        "name": "c2.converter_dominant.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁卯"
+      },
+      "case_id": "c2.converter_dominant.02",
+      "case_type": "converter_dominant",
+      "chart": "丁卯 丙午 乙未 辛未",
+      "chart_seed_id": "c2.converter_dominant.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem",
+          "丙:month_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "visible_output_converter",
+          "no_complete_triple_combination",
+          "converter_tie_possible"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "output_path"
+        ],
+        "must_not": [
+          "all_output_stems_are_first",
+          "fake_relationship_judgment",
+          "forced_bridge_node",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.converter_dominant.02",
+      "structure_archetype_id": "archetype.converter_dominant",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.converter_dominant.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙未",
+        "gender": "male",
+        "hour_pillar": "壬申",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丙午",
+        "name": "c2.converter_dominant.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁卯"
+      },
+      "case_id": "c2.converter_dominant.03",
+      "case_type": "converter_dominant",
+      "chart": "丁卯 丙午 乙未 壬申",
+      "chart_seed_id": "c2.converter_dominant.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem",
+          "丙:month_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "visible_output_converter",
+          "no_complete_triple_combination",
+          "converter_tie_possible"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "output_path"
+        ],
+        "must_not": [
+          "all_output_stems_are_first",
+          "fake_relationship_judgment",
+          "forced_bridge_node",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.converter_dominant.03",
+      "structure_archetype_id": "archetype.converter_dominant",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.day_branch_anchor.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁巳",
+        "gender": "female",
+        "hour_pillar": "癸酉",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸卯",
+        "name": "c2.day_branch_anchor.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲子"
+      },
+      "case_id": "c2.day_branch_anchor.01",
+      "case_type": "day_branch_anchor",
+      "chart": "甲子 癸卯 丁巳 癸酉",
+      "chart_seed_id": "c2.day_branch_anchor.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "巳:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "day_branch_anchor",
+          "same_pillar_root",
+          "no_complete_bridge"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "anchor_path"
+        ],
+        "must_not": [
+          "day_branch_always_anchor_first",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.day_branch_anchor.01",
+      "structure_archetype_id": "archetype.day_branch_anchor",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.day_branch_anchor.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁巳",
+        "gender": "male",
+        "hour_pillar": "甲戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸卯",
+        "name": "c2.day_branch_anchor.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲子"
+      },
+      "case_id": "c2.day_branch_anchor.02",
+      "case_type": "day_branch_anchor",
+      "chart": "甲子 癸卯 丁巳 甲戌",
+      "chart_seed_id": "c2.day_branch_anchor.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "巳:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "day_branch_anchor",
+          "same_pillar_root",
+          "no_complete_bridge"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "anchor_path"
+        ],
+        "must_not": [
+          "day_branch_always_anchor_first",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.day_branch_anchor.02",
+      "structure_archetype_id": "archetype.day_branch_anchor",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.day_branch_anchor.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁巳",
+        "gender": "female",
+        "hour_pillar": "乙亥",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸卯",
+        "name": "c2.day_branch_anchor.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲子"
+      },
+      "case_id": "c2.day_branch_anchor.03",
+      "case_type": "day_branch_anchor",
+      "chart": "甲子 癸卯 丁巳 乙亥",
+      "chart_seed_id": "c2.day_branch_anchor.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "巳:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "day_branch_anchor",
+          "same_pillar_root",
+          "no_complete_bridge"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "anchor_path"
+        ],
+        "must_not": [
+          "day_branch_always_anchor_first",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_first",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.day_branch_anchor.03",
+      "structure_archetype_id": "archetype.day_branch_anchor",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.hidden_stem_dark_line.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁丑",
+        "gender": "male",
+        "hour_pillar": "丙子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸丑",
+        "name": "c2.hidden_stem_dark_line.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.hidden_stem_dark_line.01",
+      "case_type": "hidden_stem_dark_line",
+      "chart": "壬子 癸丑 丁丑 丙子",
+      "chart_seed_id": "c2.hidden_stem_dark_line.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch",
+          "丑:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "storage_buffer",
+          "hidden_stem_dark_line",
+          "damp_earth_context"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "storage_path",
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "hidden_line_fortune_claim",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.hidden_stem_dark_line.01",
+      "structure_archetype_id": "archetype.hidden_stem_dark_line",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.hidden_stem_dark_line.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁丑",
+        "gender": "female",
+        "hour_pillar": "丁丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸丑",
+        "name": "c2.hidden_stem_dark_line.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.hidden_stem_dark_line.02",
+      "case_type": "hidden_stem_dark_line",
+      "chart": "壬子 癸丑 丁丑 丁丑",
+      "chart_seed_id": "c2.hidden_stem_dark_line.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch",
+          "丑:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "storage_buffer",
+          "hidden_stem_dark_line",
+          "damp_earth_context"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "storage_path",
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "hidden_line_fortune_claim",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.hidden_stem_dark_line.02",
+      "structure_archetype_id": "archetype.hidden_stem_dark_line",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.hidden_stem_dark_line.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁丑",
+        "gender": "male",
+        "hour_pillar": "戊寅",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸丑",
+        "name": "c2.hidden_stem_dark_line.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.hidden_stem_dark_line.03",
+      "case_type": "hidden_stem_dark_line",
+      "chart": "壬子 癸丑 丁丑 戊寅",
+      "chart_seed_id": "c2.hidden_stem_dark_line.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch",
+          "丑:day_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "anchor_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "storage_buffer",
+          "hidden_stem_dark_line",
+          "damp_earth_context"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "storage_path",
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "hidden_line_fortune_claim",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.hidden_stem_dark_line.03",
+      "structure_archetype_id": "archetype.hidden_stem_dark_line",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.complete_triple_combination.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲辰",
+        "gender": "female",
+        "hour_pillar": "己卯",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊子",
+        "name": "c2.complete_triple_combination.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.complete_triple_combination.01",
+      "case_type": "complete_triple_combination",
+      "chart": "庚申 戊子 甲辰 己卯",
+      "chart_seed_id": "c2.complete_triple_combination.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "shen_zi_chen_water_structure",
+          "triple_combination_future_scope",
+          "month_environment_visible"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_future_scope"
+        ],
+        "must_not": [
+          "fake_metal_bridge",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "si_you_chou_only_bias"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.complete_triple_combination.01",
+      "structure_archetype_id": "archetype.complete_triple_combination",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.complete_triple_combination.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲辰",
+        "gender": "male",
+        "hour_pillar": "庚辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊子",
+        "name": "c2.complete_triple_combination.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.complete_triple_combination.02",
+      "case_type": "complete_triple_combination",
+      "chart": "庚申 戊子 甲辰 庚辰",
+      "chart_seed_id": "c2.complete_triple_combination.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "shen_zi_chen_water_structure",
+          "triple_combination_future_scope",
+          "month_environment_visible"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_future_scope"
+        ],
+        "must_not": [
+          "fake_metal_bridge",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "si_you_chou_only_bias"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.complete_triple_combination.02",
+      "structure_archetype_id": "archetype.complete_triple_combination",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.complete_triple_combination.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲辰",
+        "gender": "female",
+        "hour_pillar": "辛巳",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊子",
+        "name": "c2.complete_triple_combination.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.complete_triple_combination.03",
+      "case_type": "complete_triple_combination",
+      "chart": "庚申 戊子 甲辰 辛巳",
+      "chart_seed_id": "c2.complete_triple_combination.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "shen_zi_chen_water_structure",
+          "triple_combination_future_scope",
+          "month_environment_visible"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_future_scope"
+        ],
+        "must_not": [
+          "fake_metal_bridge",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "si_you_chou_only_bias"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.complete_triple_combination.03",
+      "structure_archetype_id": "archetype.complete_triple_combination",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.broken_triple_combination.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "male",
+        "hour_pillar": "壬午",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.broken_triple_combination.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.broken_triple_combination.01",
+      "case_type": "broken_triple_combination",
+      "chart": "丁巳 乙巳 乙卯 壬午",
+      "chart_seed_id": "c2.broken_triple_combination.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "broken_si_you_chou",
+          "visible_converter_remains",
+          "bridge_removed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "structural_baseline"
+        ],
+        "must_not": [
+          "bridge_role_survives_after_required_node_removed",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "output_controls_pressure_forced"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.broken_triple_combination.01",
+      "structure_archetype_id": "archetype.broken_triple_combination",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.broken_triple_combination.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "female",
+        "hour_pillar": "癸未",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.broken_triple_combination.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.broken_triple_combination.02",
+      "case_type": "broken_triple_combination",
+      "chart": "丁巳 乙巳 乙卯 癸未",
+      "chart_seed_id": "c2.broken_triple_combination.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "broken_si_you_chou",
+          "visible_converter_remains",
+          "bridge_removed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "structural_baseline"
+        ],
+        "must_not": [
+          "bridge_role_survives_after_required_node_removed",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "output_controls_pressure_forced"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.broken_triple_combination.02",
+      "structure_archetype_id": "archetype.broken_triple_combination",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.broken_triple_combination.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "male",
+        "hour_pillar": "甲申",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.broken_triple_combination.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.broken_triple_combination.03",
+      "case_type": "broken_triple_combination",
+      "chart": "丁巳 乙巳 乙卯 甲申",
+      "chart_seed_id": "c2.broken_triple_combination.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "broken_si_you_chou",
+          "visible_converter_remains",
+          "bridge_removed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "converter_path",
+          "structural_baseline"
+        ],
+        "must_not": [
+          "bridge_role_survives_after_required_node_removed",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "output_controls_pressure_forced"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.broken_triple_combination.03",
+      "structure_archetype_id": "archetype.broken_triple_combination",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.clash_breaks_main_path.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "乙酉",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "壬子",
+        "name": "c2.clash_breaks_main_path.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.clash_breaks_main_path.01",
+      "case_type": "clash_breaks_main_path",
+      "chart": "丁巳 壬子 乙丑 乙酉",
+      "chart_seed_id": "c2.clash_breaks_main_path.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_branch_clash_pressure",
+          "bridge_pressure_under_clash",
+          "output_converter_weakened_context"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "clash_pressure_path",
+          "bridge_under_pressure"
+        ],
+        "must_not": [
+          "clash_always_bad",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_original_bridge",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.clash_breaks_main_path.01",
+      "structure_archetype_id": "archetype.clash_breaks_main_path",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.clash_breaks_main_path.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "male",
+        "hour_pillar": "丙戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "壬子",
+        "name": "c2.clash_breaks_main_path.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.clash_breaks_main_path.02",
+      "case_type": "clash_breaks_main_path",
+      "chart": "丁巳 壬子 乙丑 丙戌",
+      "chart_seed_id": "c2.clash_breaks_main_path.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_branch_clash_pressure",
+          "bridge_pressure_under_clash",
+          "output_converter_weakened_context"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "clash_pressure_path",
+          "bridge_under_pressure"
+        ],
+        "must_not": [
+          "clash_always_bad",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_original_bridge",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.clash_breaks_main_path.02",
+      "structure_archetype_id": "archetype.clash_breaks_main_path",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.clash_breaks_main_path.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "丁亥",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "壬子",
+        "name": "c2.clash_breaks_main_path.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.clash_breaks_main_path.03",
+      "case_type": "clash_breaks_main_path",
+      "chart": "丁巳 壬子 乙丑 丁亥",
+      "chart_seed_id": "c2.clash_breaks_main_path.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_branch_clash_pressure",
+          "bridge_pressure_under_clash",
+          "output_converter_weakened_context"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "clash_pressure_path",
+          "bridge_under_pressure"
+        ],
+        "must_not": [
+          "clash_always_bad",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_original_bridge",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.clash_breaks_main_path.03",
+      "structure_archetype_id": "archetype.clash_breaks_main_path",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.output_to_wealth.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲子",
+        "gender": "male",
+        "hour_pillar": "戊子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊戌",
+        "name": "c2.output_to_wealth.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丙辰"
+      },
+      "case_id": "c2.output_to_wealth.01",
+      "case_type": "output_to_wealth",
+      "chart": "丙辰 戊戌 甲子 戊子",
+      "chart_seed_id": "c2.output_to_wealth.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:year_stem",
+          "戌:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "visible_output",
+          "earth_wealth_target",
+          "wealth_path_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_to_wealth"
+        ],
+        "must_not": [
+          "any_earth_equals_wealth_success",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.output_to_wealth.01",
+      "structure_archetype_id": "archetype.output_to_wealth",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.output_to_wealth.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲子",
+        "gender": "female",
+        "hour_pillar": "己丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊戌",
+        "name": "c2.output_to_wealth.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丙辰"
+      },
+      "case_id": "c2.output_to_wealth.02",
+      "case_type": "output_to_wealth",
+      "chart": "丙辰 戊戌 甲子 己丑",
+      "chart_seed_id": "c2.output_to_wealth.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:year_stem",
+          "戌:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "visible_output",
+          "earth_wealth_target",
+          "wealth_path_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_to_wealth"
+        ],
+        "must_not": [
+          "any_earth_equals_wealth_success",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.output_to_wealth.02",
+      "structure_archetype_id": "archetype.output_to_wealth",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.output_to_wealth.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲子",
+        "gender": "male",
+        "hour_pillar": "庚寅",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊戌",
+        "name": "c2.output_to_wealth.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丙辰"
+      },
+      "case_id": "c2.output_to_wealth.03",
+      "case_type": "output_to_wealth",
+      "chart": "丙辰 戊戌 甲子 庚寅",
+      "chart_seed_id": "c2.output_to_wealth.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:year_stem",
+          "戌:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "visible_output",
+          "earth_wealth_target",
+          "wealth_path_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_to_wealth"
+        ],
+        "must_not": [
+          "any_earth_equals_wealth_success",
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.output_to_wealth.03",
+      "structure_archetype_id": "archetype.output_to_wealth",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.output_controls_pressure.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "辛卯",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.output_controls_pressure.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.output_controls_pressure.01",
+      "case_type": "output_controls_pressure",
+      "chart": "丁巳 乙巳 乙丑 辛卯",
+      "chart_seed_id": "c2.output_controls_pressure.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "output_converter",
+          "metal_pressure_target",
+          "combination_bridge"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "any_output_plus_metal_equals_control",
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.output_controls_pressure.01",
+      "structure_archetype_id": "archetype.output_controls_pressure",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.output_controls_pressure.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "male",
+        "hour_pillar": "壬辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.output_controls_pressure.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.output_controls_pressure.02",
+      "case_type": "output_controls_pressure",
+      "chart": "丁巳 乙巳 乙丑 壬辰",
+      "chart_seed_id": "c2.output_controls_pressure.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "output_converter",
+          "metal_pressure_target",
+          "combination_bridge"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "any_output_plus_metal_equals_control",
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.output_controls_pressure.02",
+      "structure_archetype_id": "archetype.output_controls_pressure",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.output_controls_pressure.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "癸巳",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.output_controls_pressure.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.output_controls_pressure.03",
+      "case_type": "output_controls_pressure",
+      "chart": "丁巳 乙巳 乙丑 癸巳",
+      "chart_seed_id": "c2.output_controls_pressure.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "output_converter",
+          "metal_pressure_target",
+          "combination_bridge"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure"
+        ],
+        "must_not": [
+          "any_output_plus_metal_equals_control",
+          "fake_relationship_judgment",
+          "generic_fire_wang_conclusion",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.output_controls_pressure.03",
+      "structure_archetype_id": "archetype.output_controls_pressure",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mixed_officer_killing_with_control.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "甲午",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "辛酉",
+        "name": "c2.mixed_officer_killing_with_control.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.mixed_officer_killing_with_control.01",
+      "case_type": "mixed_officer_killing_with_control",
+      "chart": "庚申 辛酉 甲寅 甲午",
+      "chart_seed_id": "c2.mixed_officer_killing_with_control.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:hour_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "metal_pressure_visible",
+          "output_converter_visible",
+          "mixed_pressure_with_control_candidate"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure",
+          "pressure_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "guan_sha_mixed_always_bad",
+          "hard_filled_mechanism_ast",
+          "ignore_output_converter",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mixed_officer_killing_with_control.01",
+      "structure_archetype_id": "archetype.mixed_officer_killing_with_control",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mixed_officer_killing_with_control.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "female",
+        "hour_pillar": "乙未",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "辛酉",
+        "name": "c2.mixed_officer_killing_with_control.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.mixed_officer_killing_with_control.02",
+      "case_type": "mixed_officer_killing_with_control",
+      "chart": "庚申 辛酉 甲寅 乙未",
+      "chart_seed_id": "c2.mixed_officer_killing_with_control.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:hour_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "metal_pressure_visible",
+          "output_converter_visible",
+          "mixed_pressure_with_control_candidate"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure",
+          "pressure_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "guan_sha_mixed_always_bad",
+          "hard_filled_mechanism_ast",
+          "ignore_output_converter",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mixed_officer_killing_with_control.02",
+      "structure_archetype_id": "archetype.mixed_officer_killing_with_control",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mixed_officer_killing_with_control.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "丙申",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "辛酉",
+        "name": "c2.mixed_officer_killing_with_control.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.mixed_officer_killing_with_control.03",
+      "case_type": "mixed_officer_killing_with_control",
+      "chart": "庚申 辛酉 甲寅 丙申",
+      "chart_seed_id": "c2.mixed_officer_killing_with_control.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丁:hour_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "metal_pressure_visible",
+          "output_converter_visible",
+          "mixed_pressure_with_control_candidate"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "output_controls_pressure",
+          "pressure_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "guan_sha_mixed_always_bad",
+          "hard_filled_mechanism_ast",
+          "ignore_output_converter",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mixed_officer_killing_with_control.03",
+      "structure_archetype_id": "archetype.mixed_officer_killing_with_control",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.resource_disrupts_output.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "female",
+        "hour_pillar": "丁酉",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸亥",
+        "name": "c2.resource_disrupts_output.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.resource_disrupts_output.01",
+      "case_type": "resource_disrupts_output",
+      "chart": "壬子 癸亥 乙亥 丁酉",
+      "chart_seed_id": "c2.resource_disrupts_output.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:hour_stem",
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_heavy",
+          "visible_output_converter_under_resource_context",
+          "possible_output_reroute"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_to_body",
+          "output_path_under_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_output_reroute",
+          "month_command_unconditional_master",
+          "resource_always_good"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.resource_disrupts_output.01",
+      "structure_archetype_id": "archetype.resource_disrupts_output",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.resource_disrupts_output.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "male",
+        "hour_pillar": "戊戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸亥",
+        "name": "c2.resource_disrupts_output.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.resource_disrupts_output.02",
+      "case_type": "resource_disrupts_output",
+      "chart": "壬子 癸亥 乙亥 戊戌",
+      "chart_seed_id": "c2.resource_disrupts_output.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:hour_stem",
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_heavy",
+          "visible_output_converter_under_resource_context",
+          "possible_output_reroute"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_to_body",
+          "output_path_under_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_output_reroute",
+          "month_command_unconditional_master",
+          "resource_always_good"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.resource_disrupts_output.02",
+      "structure_archetype_id": "archetype.resource_disrupts_output",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.resource_disrupts_output.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "female",
+        "hour_pillar": "己亥",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸亥",
+        "name": "c2.resource_disrupts_output.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.resource_disrupts_output.03",
+      "case_type": "resource_disrupts_output",
+      "chart": "壬子 癸亥 乙亥 己亥",
+      "chart_seed_id": "c2.resource_disrupts_output.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丙:hour_stem",
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_heavy",
+          "visible_output_converter_under_resource_context",
+          "possible_output_reroute"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_to_body",
+          "output_path_under_pressure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "ignore_output_reroute",
+          "month_command_unconditional_master",
+          "resource_always_good"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.resource_disrupts_output.03",
+      "structure_archetype_id": "archetype.resource_disrupts_output",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.wealth_generates_officer.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "庚子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己未",
+        "name": "c2.wealth_generates_officer.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊辰"
+      },
+      "case_id": "c2.wealth_generates_officer.01",
+      "case_type": "wealth_generates_officer",
+      "chart": "戊辰 己未 甲寅 庚子",
+      "chart_seed_id": "c2.wealth_generates_officer.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "未:month_branch",
+          "辛:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "wealth_node_visible",
+          "officer_node_visible",
+          "wealth_to_officer_pressure_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "wealth_generates_officer"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "wealth_star_always_money"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.wealth_generates_officer.01",
+      "structure_archetype_id": "archetype.wealth_generates_officer",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.wealth_generates_officer.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "female",
+        "hour_pillar": "辛丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己未",
+        "name": "c2.wealth_generates_officer.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊辰"
+      },
+      "case_id": "c2.wealth_generates_officer.02",
+      "case_type": "wealth_generates_officer",
+      "chart": "戊辰 己未 甲寅 辛丑",
+      "chart_seed_id": "c2.wealth_generates_officer.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "未:month_branch",
+          "辛:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "wealth_node_visible",
+          "officer_node_visible",
+          "wealth_to_officer_pressure_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "wealth_generates_officer"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "wealth_star_always_money"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.wealth_generates_officer.02",
+      "structure_archetype_id": "archetype.wealth_generates_officer",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.wealth_generates_officer.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "壬寅",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己未",
+        "name": "c2.wealth_generates_officer.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊辰"
+      },
+      "case_id": "c2.wealth_generates_officer.03",
+      "case_type": "wealth_generates_officer",
+      "chart": "戊辰 己未 甲寅 壬寅",
+      "chart_seed_id": "c2.wealth_generates_officer.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "未:month_branch",
+          "辛:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "wealth_node_visible",
+          "officer_node_visible",
+          "wealth_to_officer_pressure_candidate"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "wealth_generates_officer"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "fortune_claim",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "wealth_star_always_money"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.wealth_generates_officer.03",
+      "structure_archetype_id": "archetype.wealth_generates_officer",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.peer_competes_for_wealth.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲辰",
+        "gender": "female",
+        "hour_pillar": "癸卯",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙卯",
+        "name": "c2.peer_competes_for_wealth.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲寅"
+      },
+      "case_id": "c2.peer_competes_for_wealth.01",
+      "case_type": "peer_competes_for_wealth",
+      "chart": "甲寅 乙卯 甲辰 癸卯",
+      "chart_seed_id": "c2.peer_competes_for_wealth.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "卯:month_branch",
+          "甲:day_stem",
+          "戊:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "peer_nodes_visible",
+          "wealth_target_visible",
+          "competition_for_wealth_path"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "peer_competes_for_wealth"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "peer_always_bad",
+          "wealth_success_claim"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.peer_competes_for_wealth.01",
+      "structure_archetype_id": "archetype.peer_competes_for_wealth",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.peer_competes_for_wealth.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲辰",
+        "gender": "male",
+        "hour_pillar": "甲辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙卯",
+        "name": "c2.peer_competes_for_wealth.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲寅"
+      },
+      "case_id": "c2.peer_competes_for_wealth.02",
+      "case_type": "peer_competes_for_wealth",
+      "chart": "甲寅 乙卯 甲辰 甲辰",
+      "chart_seed_id": "c2.peer_competes_for_wealth.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "卯:month_branch",
+          "甲:day_stem",
+          "戊:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "peer_nodes_visible",
+          "wealth_target_visible",
+          "competition_for_wealth_path"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "peer_competes_for_wealth"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "peer_always_bad",
+          "wealth_success_claim"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.peer_competes_for_wealth.02",
+      "structure_archetype_id": "archetype.peer_competes_for_wealth",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.peer_competes_for_wealth.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲辰",
+        "gender": "female",
+        "hour_pillar": "乙巳",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙卯",
+        "name": "c2.peer_competes_for_wealth.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲寅"
+      },
+      "case_id": "c2.peer_competes_for_wealth.03",
+      "case_type": "peer_competes_for_wealth",
+      "chart": "甲寅 乙卯 甲辰 乙巳",
+      "chart_seed_id": "c2.peer_competes_for_wealth.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "wealth",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "卯:month_branch",
+          "甲:day_stem",
+          "戊:hour_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "wealth_path",
+          "accumulation_capacity"
+        ],
+        "expected_structure": [
+          "peer_nodes_visible",
+          "wealth_target_visible",
+          "competition_for_wealth_path"
+        ],
+        "expected_theme_type": "accumulation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "peer_competes_for_wealth"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "peer_always_bad",
+          "wealth_success_claim"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.peer_competes_for_wealth.03",
+      "structure_archetype_id": "archetype.peer_competes_for_wealth",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mixed_no_obvious_main_path.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丙寅",
+        "gender": "male",
+        "hour_pillar": "丙午",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己酉",
+        "name": "c2.mixed_no_obvious_main_path.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲戌"
+      },
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "case_type": "mixed_no_obvious_main_path",
+      "chart": "甲戌 己酉 丙寅 丙午",
+      "chart_seed_id": "c2.mixed_no_obvious_main_path.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "己:month_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mixed_structure",
+          "no_single_forced_mechanism",
+          "baseline_allowed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "structural_baseline"
+        ],
+        "must_not": [
+          "always_name_a_mechanism",
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mixed_no_obvious_main_path.01",
+      "structure_archetype_id": "archetype.mixed_no_obvious_main_path",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mixed_no_obvious_main_path.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丙寅",
+        "gender": "female",
+        "hour_pillar": "丁未",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己酉",
+        "name": "c2.mixed_no_obvious_main_path.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲戌"
+      },
+      "case_id": "c2.mixed_no_obvious_main_path.02",
+      "case_type": "mixed_no_obvious_main_path",
+      "chart": "甲戌 己酉 丙寅 丁未",
+      "chart_seed_id": "c2.mixed_no_obvious_main_path.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "己:month_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mixed_structure",
+          "no_single_forced_mechanism",
+          "baseline_allowed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "structural_baseline"
+        ],
+        "must_not": [
+          "always_name_a_mechanism",
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mixed_no_obvious_main_path.02",
+      "structure_archetype_id": "archetype.mixed_no_obvious_main_path",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mixed_no_obvious_main_path.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丙寅",
+        "gender": "male",
+        "hour_pillar": "戊申",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "己酉",
+        "name": "c2.mixed_no_obvious_main_path.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲戌"
+      },
+      "case_id": "c2.mixed_no_obvious_main_path.03",
+      "case_type": "mixed_no_obvious_main_path",
+      "chart": "甲戌 己酉 丙寅 戊申",
+      "chart_seed_id": "c2.mixed_no_obvious_main_path.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "己:month_stem",
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mixed_structure",
+          "no_single_forced_mechanism",
+          "baseline_allowed"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "structural_baseline"
+        ],
+        "must_not": [
+          "always_name_a_mechanism",
+          "fake_relationship_judgment",
+          "forced_output_controls_pressure",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mixed_no_obvious_main_path.03",
+      "structure_archetype_id": "archetype.mixed_no_obvious_main_path",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.luck_changes_main_path.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "己酉",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.luck_changes_main_path.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.luck_changes_main_path.01",
+      "case_type": "luck_changes_main_path",
+      "chart": "丁巳 乙巳 乙丑 己酉",
+      "chart_seed_id": "c2.luck_changes_main_path.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_output_control",
+          "luck_overlay_can_shift_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "natal_output_controls_pressure",
+          "timing_resource_reroute_candidate"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "luck_is_second_month_command_by_default",
+          "month_command_unconditional_master",
+          "year_or_luck_rewrites_natal_structure"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.luck_changes_main_path.01",
+      "structure_archetype_id": "archetype.luck_changes_main_path",
+      "timing_variant_id": "timing.luck.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.luck_changes_main_path.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "male",
+        "hour_pillar": "庚戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.luck_changes_main_path.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.luck_changes_main_path.02",
+      "case_type": "luck_changes_main_path",
+      "chart": "丁巳 乙巳 乙丑 庚戌",
+      "chart_seed_id": "c2.luck_changes_main_path.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_output_control",
+          "luck_overlay_can_shift_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "natal_output_controls_pressure",
+          "timing_resource_reroute_candidate"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "luck_is_second_month_command_by_default",
+          "month_command_unconditional_master",
+          "year_or_luck_rewrites_natal_structure"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.luck_changes_main_path.02",
+      "structure_archetype_id": "archetype.luck_changes_main_path",
+      "timing_variant_id": "timing.luck.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.luck_changes_main_path.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "female",
+        "hour_pillar": "辛亥",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.luck_changes_main_path.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.luck_changes_main_path.03",
+      "case_type": "luck_changes_main_path",
+      "chart": "丁巳 乙巳 乙丑 辛亥",
+      "chart_seed_id": "c2.luck_changes_main_path.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:hour_branch",
+          "丁:year_stem"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "converter_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_output_control",
+          "luck_overlay_can_shift_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "natal_output_controls_pressure",
+          "timing_resource_reroute_candidate"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "luck_is_second_month_command_by_default",
+          "month_command_unconditional_master",
+          "year_or_luck_rewrites_natal_structure"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.luck_changes_main_path.03",
+      "structure_archetype_id": "archetype.luck_changes_main_path",
+      "timing_variant_id": "timing.luck.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.year_activates_key_node.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "male",
+        "hour_pillar": "壬子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "庚申",
+        "name": "c2.year_activates_key_node.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.year_activates_key_node.01",
+      "case_type": "year_activates_key_node",
+      "chart": "戊午 庚申 乙亥 壬子",
+      "chart_seed_id": "c2.year_activates_key_node.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch",
+          "亥:day_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_metal_pressure",
+          "year_activation_of_existing_node"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "year_activation_existing_node"
+        ],
+        "must_not": [
+          "annual_fortune_claim",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "year_rewrites_natal_structure"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.year_activates_key_node.01",
+      "structure_archetype_id": "archetype.year_activates_key_node",
+      "timing_variant_id": "timing.year.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.year_activates_key_node.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "female",
+        "hour_pillar": "癸丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "庚申",
+        "name": "c2.year_activates_key_node.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.year_activates_key_node.02",
+      "case_type": "year_activates_key_node",
+      "chart": "戊午 庚申 乙亥 癸丑",
+      "chart_seed_id": "c2.year_activates_key_node.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch",
+          "亥:day_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_metal_pressure",
+          "year_activation_of_existing_node"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "year_activation_existing_node"
+        ],
+        "must_not": [
+          "annual_fortune_claim",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "year_rewrites_natal_structure"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.year_activates_key_node.02",
+      "structure_archetype_id": "archetype.year_activates_key_node",
+      "timing_variant_id": "timing.year.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.year_activates_key_node.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "male",
+        "hour_pillar": "甲寅",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "庚申",
+        "name": "c2.year_activates_key_node.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.year_activates_key_node.03",
+      "case_type": "year_activates_key_node",
+      "chart": "戊午 庚申 乙亥 甲寅",
+      "chart_seed_id": "c2.year_activates_key_node.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch",
+          "亥:day_branch",
+          "酉:hour_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "natal_metal_pressure",
+          "year_activation_of_existing_node"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "year_activation_existing_node"
+        ],
+        "must_not": [
+          "annual_fortune_claim",
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master",
+          "year_rewrites_natal_structure"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.year_activates_key_node.03",
+      "structure_archetype_id": "archetype.year_activates_key_node",
+      "timing_variant_id": "timing.year.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.half_triple_combination.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "female",
+        "hour_pillar": "乙卯",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙酉",
+        "name": "c2.half_triple_combination.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.half_triple_combination.01",
+      "case_type": "half_triple_combination",
+      "chart": "丁巳 乙酉 甲寅 乙卯",
+      "chart_seed_id": "c2.half_triple_combination.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "half_triple_combination"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.half_triple_combination.01",
+      "structure_archetype_id": "archetype.half_triple_combination",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.half_triple_combination.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "丙辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙酉",
+        "name": "c2.half_triple_combination.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.half_triple_combination.02",
+      "case_type": "half_triple_combination",
+      "chart": "丁巳 乙酉 甲寅 丙辰",
+      "chart_seed_id": "c2.half_triple_combination.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "half_triple_combination"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.half_triple_combination.02",
+      "structure_archetype_id": "archetype.half_triple_combination",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.half_triple_combination.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "female",
+        "hour_pillar": "丁巳",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙酉",
+        "name": "c2.half_triple_combination.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      },
+      "case_id": "c2.half_triple_combination.03",
+      "case_type": "half_triple_combination",
+      "chart": "丁巳 乙酉 甲寅 丁巳",
+      "chart_seed_id": "c2.half_triple_combination.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [
+          "bridge_node"
+        ],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "half_triple_combination"
+        ],
+        "expected_theme_type": "mobility",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "combination_bridge"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.half_triple_combination.03",
+      "structure_archetype_id": "archetype.half_triple_combination",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.resource_peer_overload_output_blocked.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "戊午",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸亥",
+        "name": "c2.resource_peer_overload_output_blocked.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.resource_peer_overload_output_blocked.01",
+      "case_type": "resource_peer_overload_output_blocked",
+      "chart": "壬子 癸亥 甲寅 戊午",
+      "chart_seed_id": "c2.resource_peer_overload_output_blocked.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_peer_overload_output_blocked"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.resource_peer_overload_output_blocked.01",
+      "structure_archetype_id": "archetype.resource_peer_overload_output_blocked",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.resource_peer_overload_output_blocked.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "female",
+        "hour_pillar": "己未",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸亥",
+        "name": "c2.resource_peer_overload_output_blocked.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.resource_peer_overload_output_blocked.02",
+      "case_type": "resource_peer_overload_output_blocked",
+      "chart": "壬子 癸亥 甲寅 己未",
+      "chart_seed_id": "c2.resource_peer_overload_output_blocked.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_peer_overload_output_blocked"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.resource_peer_overload_output_blocked.02",
+      "structure_archetype_id": "archetype.resource_peer_overload_output_blocked",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.resource_peer_overload_output_blocked.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "庚申",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸亥",
+        "name": "c2.resource_peer_overload_output_blocked.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      },
+      "case_id": "c2.resource_peer_overload_output_blocked.03",
+      "case_type": "resource_peer_overload_output_blocked",
+      "chart": "壬子 癸亥 甲寅 庚申",
+      "chart_seed_id": "c2.resource_peer_overload_output_blocked.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "亥:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "resource_peer_overload_output_blocked"
+        ],
+        "expected_theme_type": "resource_support",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.resource_peer_overload_output_blocked.03",
+      "structure_archetype_id": "archetype.resource_peer_overload_output_blocked",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.climate_regulation_dominant.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁亥",
+        "gender": "female",
+        "hour_pillar": "辛酉",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙丑",
+        "name": "c2.climate_regulation_dominant.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "癸丑"
+      },
+      "case_id": "c2.climate_regulation_dominant.01",
+      "case_type": "climate_regulation_dominant",
+      "chart": "癸丑 乙丑 丁亥 辛酉",
+      "chart_seed_id": "c2.climate_regulation_dominant.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "climate_regulation_dominant"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.climate_regulation_dominant.01",
+      "structure_archetype_id": "archetype.climate_regulation_dominant",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.climate_regulation_dominant.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁亥",
+        "gender": "male",
+        "hour_pillar": "壬戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙丑",
+        "name": "c2.climate_regulation_dominant.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "癸丑"
+      },
+      "case_id": "c2.climate_regulation_dominant.02",
+      "case_type": "climate_regulation_dominant",
+      "chart": "癸丑 乙丑 丁亥 壬戌",
+      "chart_seed_id": "c2.climate_regulation_dominant.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "climate_regulation_dominant"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.climate_regulation_dominant.02",
+      "structure_archetype_id": "archetype.climate_regulation_dominant",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.climate_regulation_dominant.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁亥",
+        "gender": "female",
+        "hour_pillar": "癸亥",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙丑",
+        "name": "c2.climate_regulation_dominant.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "癸丑"
+      },
+      "case_id": "c2.climate_regulation_dominant.03",
+      "case_type": "climate_regulation_dominant",
+      "chart": "癸丑 乙丑 丁亥 癸亥",
+      "chart_seed_id": "c2.climate_regulation_dominant.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "丑:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "climate_regulation_dominant"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "environment_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.climate_regulation_dominant.03",
+      "structure_archetype_id": "archetype.climate_regulation_dominant",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mediation_path.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "甲子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "壬子",
+        "name": "c2.mediation_path.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.mediation_path.01",
+      "case_type": "mediation_path",
+      "chart": "庚申 壬子 甲寅 甲子",
+      "chart_seed_id": "c2.mediation_path.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mediation_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mediation_path.01",
+      "structure_archetype_id": "archetype.mediation_path",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mediation_path.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "female",
+        "hour_pillar": "乙丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "壬子",
+        "name": "c2.mediation_path.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.mediation_path.02",
+      "case_type": "mediation_path",
+      "chart": "庚申 壬子 甲寅 乙丑",
+      "chart_seed_id": "c2.mediation_path.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mediation_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mediation_path.02",
+      "structure_archetype_id": "archetype.mediation_path",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.mediation_path.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲寅",
+        "gender": "male",
+        "hour_pillar": "丙寅",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "壬子",
+        "name": "c2.mediation_path.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "庚申"
+      },
+      "case_id": "c2.mediation_path.03",
+      "case_type": "mediation_path",
+      "chart": "庚申 壬子 甲寅 丙寅",
+      "chart_seed_id": "c2.mediation_path.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "子:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "mediation_path"
+        ],
+        "expected_theme_type": "pressure_transformation",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "resource_support"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.mediation_path.03",
+      "structure_archetype_id": "archetype.mediation_path",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.month_risk_pulse.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "female",
+        "hour_pillar": "丁卯",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "庚申",
+        "name": "c2.month_risk_pulse.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.month_risk_pulse.01",
+      "case_type": "month_risk_pulse",
+      "chart": "戊午 庚申 乙亥 丁卯",
+      "chart_seed_id": "c2.month_risk_pulse.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_risk_pulse"
+        ],
+        "expected_theme_type": "risk_control",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "activation_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.month_risk_pulse.01",
+      "structure_archetype_id": "archetype.month_risk_pulse",
+      "timing_variant_id": "timing.month.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.month_risk_pulse.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "male",
+        "hour_pillar": "戊辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "庚申",
+        "name": "c2.month_risk_pulse.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.month_risk_pulse.02",
+      "case_type": "month_risk_pulse",
+      "chart": "戊午 庚申 乙亥 戊辰",
+      "chart_seed_id": "c2.month_risk_pulse.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_risk_pulse"
+        ],
+        "expected_theme_type": "risk_control",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "activation_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.month_risk_pulse.02",
+      "structure_archetype_id": "archetype.month_risk_pulse",
+      "timing_variant_id": "timing.month.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.month_risk_pulse.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙亥",
+        "gender": "female",
+        "hour_pillar": "己巳",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "庚申",
+        "name": "c2.month_risk_pulse.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "戊午"
+      },
+      "case_id": "c2.month_risk_pulse.03",
+      "case_type": "month_risk_pulse",
+      "chart": "戊午 庚申 乙亥 己巳",
+      "chart_seed_id": "c2.month_risk_pulse.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "month_risk_pulse"
+        ],
+        "expected_theme_type": "risk_control",
+        "expected_timing_effect": "activation_expected",
+        "expected_top_paths": [
+          "activation_path"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.month_risk_pulse.03",
+      "structure_archetype_id": "archetype.month_risk_pulse",
+      "timing_variant_id": "timing.month.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.timing_insufficient.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "戊午",
+        "gender": "male",
+        "hour_pillar": "庚午",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丙寅",
+        "name": "c2.timing_insufficient.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲辰"
+      },
+      "case_id": "c2.timing_insufficient.01",
+      "case_type": "timing_insufficient",
+      "chart": "甲辰 丙寅 戊午 庚午",
+      "chart_seed_id": "c2.timing_insufficient.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "寅:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "timing_insufficient"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "insufficient",
+        "expected_top_paths": [
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.timing_insufficient.01",
+      "structure_archetype_id": "archetype.timing_insufficient",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.timing_insufficient.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "戊午",
+        "gender": "female",
+        "hour_pillar": "辛未",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丙寅",
+        "name": "c2.timing_insufficient.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲辰"
+      },
+      "case_id": "c2.timing_insufficient.02",
+      "case_type": "timing_insufficient",
+      "chart": "甲辰 丙寅 戊午 辛未",
+      "chart_seed_id": "c2.timing_insufficient.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "寅:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "timing_insufficient"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "insufficient",
+        "expected_top_paths": [
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.timing_insufficient.02",
+      "structure_archetype_id": "archetype.timing_insufficient",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.timing_insufficient.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "戊午",
+        "gender": "male",
+        "hour_pillar": "壬申",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丙寅",
+        "name": "c2.timing_insufficient.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲辰"
+      },
+      "case_id": "c2.timing_insufficient.03",
+      "case_type": "timing_insufficient",
+      "chart": "甲辰 丙寅 戊午 壬申",
+      "chart_seed_id": "c2.timing_insufficient.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "career",
+      "expected_contract": {
+        "expected_decision_confidence_band": "low_or_medium",
+        "expected_key_nodes": [
+          "寅:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation",
+          "output_drive",
+          "pressure_handling"
+        ],
+        "expected_structure": [
+          "timing_insufficient"
+        ],
+        "expected_theme_type": "stability",
+        "expected_timing_effect": "insufficient",
+        "expected_top_paths": [
+          "baseline_structure"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.timing_insufficient.03",
+      "structure_archetype_id": "archetype.timing_insufficient",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.unsupported_relationship_domain.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "female",
+        "hour_pillar": "癸酉",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丁酉",
+        "name": "c2.unsupported_relationship_domain.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "辛酉"
+      },
+      "case_id": "c2.unsupported_relationship_domain.01",
+      "case_type": "unsupported_relationship_domain",
+      "chart": "辛酉 丁酉 乙卯 癸酉",
+      "chart_seed_id": "c2.unsupported_relationship_domain.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "unsupported",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_relationship_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.unsupported_relationship_domain.01",
+      "structure_archetype_id": "archetype.unsupported_relationship_domain",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.unsupported_relationship_domain.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "male",
+        "hour_pillar": "甲戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丁酉",
+        "name": "c2.unsupported_relationship_domain.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "辛酉"
+      },
+      "case_id": "c2.unsupported_relationship_domain.02",
+      "case_type": "unsupported_relationship_domain",
+      "chart": "辛酉 丁酉 乙卯 甲戌",
+      "chart_seed_id": "c2.unsupported_relationship_domain.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "unsupported",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_relationship_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.unsupported_relationship_domain.02",
+      "structure_archetype_id": "archetype.unsupported_relationship_domain",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.unsupported_relationship_domain.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙卯",
+        "gender": "female",
+        "hour_pillar": "乙亥",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "丁酉",
+        "name": "c2.unsupported_relationship_domain.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "辛酉"
+      },
+      "case_id": "c2.unsupported_relationship_domain.03",
+      "case_type": "unsupported_relationship_domain",
+      "chart": "辛酉 丁酉 乙卯 乙亥",
+      "chart_seed_id": "c2.unsupported_relationship_domain.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "unsupported",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "酉:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_relationship_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.unsupported_relationship_domain.03",
+      "structure_archetype_id": "archetype.unsupported_relationship_domain",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.unsupported_health_domain.01",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丙午",
+        "gender": "male",
+        "hour_pillar": "丙子",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊申",
+        "name": "c2.unsupported_health_domain.01",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬辰"
+      },
+      "case_id": "c2.unsupported_health_domain.01",
+      "case_type": "unsupported_health_domain",
+      "chart": "壬辰 戊申 丙午 丙子",
+      "chart_seed_id": "c2.unsupported_health_domain.01",
+      "contract_status": "candidate_pending_review",
+      "domain": "unsupported",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_health_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.unsupported_health_domain.01",
+      "structure_archetype_id": "archetype.unsupported_health_domain",
+      "timing_variant_id": "timing.natal.variant_1",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.unsupported_health_domain.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丙午",
+        "gender": "female",
+        "hour_pillar": "丁丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊申",
+        "name": "c2.unsupported_health_domain.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬辰"
+      },
+      "case_id": "c2.unsupported_health_domain.02",
+      "case_type": "unsupported_health_domain",
+      "chart": "壬辰 戊申 丙午 丁丑",
+      "chart_seed_id": "c2.unsupported_health_domain.02",
+      "contract_status": "candidate_pending_review",
+      "domain": "unsupported",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_health_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.unsupported_health_domain.02",
+      "structure_archetype_id": "archetype.unsupported_health_domain",
+      "timing_variant_id": "timing.natal.variant_2",
+      "variation_axis": "hour_pillar_controlled_variant"
+    },
+    {
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.unsupported_health_domain.03",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丙午",
+        "gender": "male",
+        "hour_pillar": "戊寅",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "戊申",
+        "name": "c2.unsupported_health_domain.03",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬辰"
+      },
+      "case_id": "c2.unsupported_health_domain.03",
+      "case_type": "unsupported_health_domain",
+      "chart": "壬辰 戊申 丙午 戊寅",
+      "chart_seed_id": "c2.unsupported_health_domain.03",
+      "contract_status": "candidate_pending_review",
+      "domain": "unsupported",
+      "expected_contract": {
+        "expected_decision_confidence_band": "not_available",
+        "expected_key_nodes": [
+          "申:month_branch"
+        ],
+        "expected_mechanism_ast_shape": [
+          "source",
+          "path",
+          "target",
+          "state_delta"
+        ],
+        "expected_node_roles": [],
+        "expected_state_dimensions": [
+          "timing_activation"
+        ],
+        "expected_structure": [
+          "unsupported_health_domain"
+        ],
+        "expected_theme_type": "unsupported",
+        "expected_timing_effect": "baseline_or_overlay",
+        "expected_top_paths": [
+          "unsupported_domain"
+        ],
+        "must_not": [
+          "fake_relationship_judgment",
+          "hard_filled_mechanism_ast",
+          "month_command_unconditional_master"
+        ]
+      },
+      "expected_contract_ref": "contract.c2.unsupported_health_domain.03",
+      "structure_archetype_id": "archetype.unsupported_health_domain",
+      "timing_variant_id": "timing.natal.variant_3",
+      "variation_axis": "hour_pillar_controlled_variant"
+    }
+  ],
+  "independent_seed_definition": "unique four-pillar chart plus archetype and expected contract",
+  "status": "candidate_pending_review",
+  "theory_modified": false,
+  "training_performed": false,
+  "unique_chart_count": 75,
+  "version": "v50.synthetic_chart_taxonomy.v2"
+}

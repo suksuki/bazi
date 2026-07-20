@@ -1,0 +1,15 @@
+{
+  "version": "deepbazi.vnext_phase0.sealed_non_access_audit.v1",
+  "status": "passed",
+  "resource_access": {
+    "active_manifest": "data/validation/phase0/vnext_phase0_development_set_v1.json",
+    "fixture_pack": "data/validation/phase0/vnext_phase0_development_fixture_pack_v1.json",
+    "full_taxonomy_accessed": false,
+    "formal_manifest_accessed": false,
+    "expert_reference_accessed": false,
+    "reality_evidence_accessed": false
+  },
+  "development_fixture_pack_case_count": 2,
+  "formal_case_ids_loaded": [],
+  "model_calls_performed": 0
+}

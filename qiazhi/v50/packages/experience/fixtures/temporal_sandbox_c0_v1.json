@@ -1,0 +1,207 @@
+{
+  "schema_version": "deepbazi.mingli_canvas_compile_input.v1",
+  "compiler_version": "mingli-canvas-compiler.c0.v1",
+  "compiled_at": "2026-07-18T00:00:00Z",
+  "chart": {
+    "chart_version_id": "chart-temporal-c0-v1",
+    "world_id": "world-temporal-c0-v1",
+    "slots": [
+      {
+        "slot_ref": "slot-natal-year",
+        "slot_type": "natal_year",
+        "label": "年柱",
+        "stem": "丁",
+        "branch": "巳",
+        "hidden_stems": ["丙", "戊", "庚"],
+        "immutable": true,
+        "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:year-pillar"], "disclosure": "public"}
+      },
+      {
+        "slot_ref": "slot-natal-month",
+        "slot_type": "natal_month",
+        "label": "月柱",
+        "stem": "乙",
+        "branch": "巳",
+        "hidden_stems": ["丙", "戊", "庚"],
+        "immutable": true,
+        "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:month-pillar"], "disclosure": "public"}
+      },
+      {
+        "slot_ref": "slot-natal-day",
+        "slot_type": "natal_day",
+        "label": "日柱",
+        "stem": "乙",
+        "branch": "丑",
+        "hidden_stems": ["己", "癸", "辛"],
+        "immutable": true,
+        "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:day-pillar"], "disclosure": "public"}
+      },
+      {
+        "slot_ref": "slot-natal-hour",
+        "slot_type": "natal_hour",
+        "label": "时柱",
+        "stem": "乙",
+        "branch": "酉",
+        "hidden_stems": ["辛"],
+        "immutable": true,
+        "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:hour-pillar"], "disclosure": "public"}
+      }
+    ],
+    "nodes": [
+      {"node_ref": "node-stem-year-ding", "label": "丁", "node_type": "stem", "semantic_slot_ref": "slot-natal-year", "element": "fire", "polarity": "yin", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:year-stem"], "disclosure": "public"}},
+      {"node_ref": "node-stem-day-yi", "label": "乙", "node_type": "day_master", "semantic_slot_ref": "slot-natal-day", "element": "wood", "polarity": "yin", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:day-stem"], "disclosure": "public"}},
+      {"node_ref": "node-branch-year-si", "label": "巳", "node_type": "branch", "semantic_slot_ref": "slot-natal-year", "element": "fire", "polarity": "yin", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:year-branch"], "disclosure": "public"}},
+      {"node_ref": "node-branch-month-si", "label": "巳", "node_type": "branch", "semantic_slot_ref": "slot-natal-month", "element": "fire", "polarity": "yin", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:month-branch"], "disclosure": "public"}},
+      {"node_ref": "node-branch-day-chou", "label": "丑", "node_type": "branch", "semantic_slot_ref": "slot-natal-day", "element": "earth", "polarity": "yin", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:day-branch"], "disclosure": "public"}},
+      {"node_ref": "node-branch-hour-you", "label": "酉", "node_type": "branch", "semantic_slot_ref": "slot-natal-hour", "element": "metal", "polarity": "yin", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["chart:hour-branch"], "disclosure": "public"}},
+      {"node_ref": "node-metal-structure", "label": "LifeCase 金结构节点", "node_type": "committed_path_node", "element": "metal", "trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["world:relation-si-you-chou", "formal-insight:baseline-v1"], "uncertainty": ["节点名称来自已提交路径，不等于所有结构候选均成立"], "disclosure": "member"}}
+    ],
+    "relations": [
+      {
+        "relation_ref": "relation-yi-generates-ding",
+        "from_node_ref": "node-stem-day-yi",
+        "to_node_ref": "node-stem-year-ding",
+        "relation_type": "generates",
+        "label": "乙木生丁火",
+        "semantic_state": "active",
+        "trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["world:five-element-generation"], "disclosure": "member"},
+        "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["world:natal-relation-state"], "disclosure": "member"},
+        "change_reason_refs": ["reason:natal-output-link"]
+      },
+      {
+        "relation_ref": "relation-ding-acts-on-metal",
+        "from_node_ref": "node-stem-year-ding",
+        "to_node_ref": "node-metal-structure",
+        "relation_type": "controls",
+        "label": "丁火作用于金结构候选",
+        "semantic_state": "active",
+        "trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["world:candidate-path-output-to-metal", "formal-insight:baseline-v1"], "uncertainty": ["关系只在已提交路径范围内披露"], "disclosure": "member"},
+        "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["world:candidate-path-output-to-metal", "formal-insight:baseline-v1"], "disclosure": "member"},
+        "change_reason_refs": ["reason:natal-candidate-link"]
+      },
+      {
+        "relation_ref": "relation-yi-acts-on-chou",
+        "from_node_ref": "node-stem-day-yi",
+        "to_node_ref": "node-branch-day-chou",
+        "relation_type": "controls",
+        "label": "乙木作用于丑土",
+        "semantic_state": "latent",
+        "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["world:candidate-direct-earth-path"], "disclosure": "practitioner"},
+        "state_trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["world:candidate-direct-earth-path"], "disclosure": "practitioner"},
+        "change_reason_refs": ["reason:candidate-direct-earth"]
+      }
+    ],
+    "clusters": [
+      {
+        "cluster_ref": "cluster-si-you-chou",
+        "label": "巳酉丑结构候选",
+        "node_refs": ["node-branch-year-si", "node-branch-day-chou", "node-branch-hour-you"],
+        "relation_refs": [],
+        "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["world:relation-si-you-chou"], "uncertainty": ["候选结构不等于已经成局"], "disclosure": "practitioner"}
+      }
+    ]
+  },
+  "life_case": {
+    "life_case_id": "life-case-temporal-c0-v1",
+    "life_case_version": "v1",
+    "paths": [
+      {
+        "path_ref": "path-committed-output-pressure",
+        "label": "输出路径承接结构压力",
+        "node_refs": ["node-stem-day-yi", "node-stem-year-ding", "node-metal-structure"],
+        "relation_refs": ["relation-yi-generates-ding", "relation-ding-acts-on-metal"],
+        "required_refs": ["node-stem-year-ding"],
+        "semantic_state": "active",
+        "trace": {"source_mode": "committed", "epistemic_status": "committed", "source_refs": ["life-case:baseline-path"], "commitment_refs": ["formal-insight:baseline-v1"], "disclosure": "member"},
+        "state_trace": {"source_mode": "committed", "epistemic_status": "committed", "source_refs": ["life-case:baseline-path-state"], "commitment_refs": ["formal-insight:baseline-v1"], "disclosure": "member"},
+        "change_reason_refs": ["formal-insight:baseline-v1"]
+      },
+      {
+        "path_ref": "path-candidate-direct-earth",
+        "label": "直接作用于丑土的竞争路径",
+        "node_refs": ["node-stem-day-yi", "node-branch-day-chou"],
+        "relation_refs": ["relation-yi-acts-on-chou"],
+        "semantic_state": "latent",
+        "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["life-case:competing-path"], "uncertainty": ["尚未成为正式主路径"], "disclosure": "practitioner"},
+        "state_trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["life-case:competing-path-state"], "disclosure": "practitioner"},
+        "change_reason_refs": ["reason:competing-path"]
+      },
+      {
+        "path_ref": "path-blocked-template-reading",
+        "label": "已被专业审阅阻止的模板解释",
+        "node_refs": ["node-stem-day-yi", "node-branch-day-chou"],
+        "relation_refs": ["relation-yi-acts-on-chou"],
+        "semantic_state": "blocked",
+        "trace": {"source_mode": "derived", "epistemic_status": "blocked", "source_refs": ["review:blocked-hypothesis"], "rejection_or_block_reasons": ["缺少完整做功闭合依据"], "disclosure": "research"},
+        "state_trace": {"source_mode": "derived", "epistemic_status": "blocked", "source_refs": ["review:blocked-hypothesis-state"], "rejection_or_block_reasons": ["不能作为正式路径"], "disclosure": "research"},
+        "change_reason_refs": ["review:blocked-hypothesis"]
+      }
+    ],
+    "uncertainty": ["Temporal Sandbox 只表达结构变化，不直接预测现实事件"],
+    "must_not_say": ["不得把假设流年说成命主真实经历", "不得把路径变化说成确定事件"]
+  },
+  "temporal_layers": [
+    {
+      "layer_id": "luck-gengzi-official",
+      "layer_type": "luck",
+      "layer_mode": "official",
+      "temporal_snapshot_id": "snapshot-luck-gengzi-v1",
+      "slot": {"slot_ref": "slot-luck-gengzi", "slot_type": "luck", "label": "大运", "stem": "庚", "branch": "子", "hidden_stems": ["癸"], "immutable": false, "trace": {"source_mode": "derived", "epistemic_status": "fact", "source_refs": ["temporal:snapshot-luck-gengzi"], "disclosure": "member"}},
+      "nodes": [
+        {"node_ref": "node-luck-geng", "label": "庚", "node_type": "luck_stem", "semantic_slot_ref": "slot-luck-gengzi", "element": "metal", "polarity": "yang", "trace": {"source_mode": "derived", "epistemic_status": "fact", "source_refs": ["temporal:luck-stem-geng"], "disclosure": "member"}},
+        {"node_ref": "node-luck-zi", "label": "子", "node_type": "luck_branch", "semantic_slot_ref": "slot-luck-gengzi", "element": "water", "polarity": "yang", "trace": {"source_mode": "derived", "epistemic_status": "fact", "source_refs": ["temporal:luck-branch-zi"], "disclosure": "member"}}
+      ],
+      "relations": [
+        {"relation_ref": "relation-luck-geng-controls-yi", "from_node_ref": "node-luck-geng", "to_node_ref": "node-stem-day-yi", "relation_type": "controls", "label": "庚金作用于乙木", "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["temporal:relation-geng-yi"], "disclosure": "member"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["temporal:luck-relation-state"], "disclosure": "member"}, "change_reason_refs": ["reason:luck-geng-introduced"]}
+      ],
+      "clusters": [],
+      "paths": [],
+      "path_updates": [
+        {"path_ref": "path-committed-output-pressure", "semantic_state": "weakened", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["temporal:luck-path-review"], "disclosure": "member"}, "change_reason_refs": ["reason:luck-geng-acts-on-path-source"]}
+      ],
+      "removals": [],
+      "source_refs": ["temporal:snapshot-luck-gengzi"]
+    },
+    {
+      "layer_id": "year-bingwu-official",
+      "layer_type": "year",
+      "layer_mode": "official",
+      "temporal_snapshot_id": "snapshot-year-bingwu-v1",
+      "slot": {"slot_ref": "slot-year-bingwu", "slot_type": "year", "label": "流年", "stem": "丙", "branch": "午", "hidden_stems": ["丁", "己"], "immutable": false, "trace": {"source_mode": "derived", "epistemic_status": "fact", "source_refs": ["temporal:snapshot-year-bingwu"], "disclosure": "member"}},
+      "nodes": [
+        {"node_ref": "node-year-bing", "label": "丙", "node_type": "year_stem", "semantic_slot_ref": "slot-year-bingwu", "element": "fire", "polarity": "yang", "trace": {"source_mode": "derived", "epistemic_status": "fact", "source_refs": ["temporal:year-stem-bing"], "disclosure": "member"}},
+        {"node_ref": "node-year-wu", "label": "午", "node_type": "year_branch", "semantic_slot_ref": "slot-year-bingwu", "element": "fire", "polarity": "yang", "trace": {"source_mode": "derived", "epistemic_status": "fact", "source_refs": ["temporal:year-branch-wu"], "disclosure": "member"}}
+      ],
+      "relations": [
+        {"relation_ref": "relation-year-bing-supports-ding", "from_node_ref": "node-year-bing", "to_node_ref": "node-stem-year-ding", "relation_type": "supports", "label": "流年火节点支持原局丁火", "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["temporal:relation-bing-ding"], "disclosure": "member"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["temporal:year-relation-state"], "disclosure": "member"}, "change_reason_refs": ["reason:year-fire-support"]}
+      ],
+      "clusters": [],
+      "paths": [],
+      "path_updates": [
+        {"path_ref": "path-committed-output-pressure", "semantic_state": "reinforced", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["temporal:year-path-review"], "disclosure": "member"}, "change_reason_refs": ["reason:year-fire-reinforces-path-node"]}
+      ],
+      "removals": [],
+      "source_refs": ["temporal:snapshot-year-bingwu"]
+    },
+    {
+      "layer_id": "year-guimao-hypothetical",
+      "layer_type": "year",
+      "layer_mode": "hypothetical",
+      "slot": {"slot_ref": "slot-year-guimao-hyp", "slot_type": "year", "label": "假设流年", "stem": "癸", "branch": "卯", "hidden_stems": ["乙"], "immutable": false, "trace": {"source_mode": "hypothetical", "epistemic_status": "hypothetical", "source_refs": ["sandbox:hypothetical-year-guimao"], "disclosure": "member"}},
+      "nodes": [
+        {"node_ref": "node-year-gui-hyp", "label": "癸", "node_type": "year_stem", "semantic_slot_ref": "slot-year-guimao-hyp", "element": "water", "polarity": "yin", "trace": {"source_mode": "hypothetical", "epistemic_status": "hypothetical", "source_refs": ["sandbox:hyp-year-stem-gui"], "disclosure": "member"}},
+        {"node_ref": "node-year-mao-hyp", "label": "卯", "node_type": "year_branch", "semantic_slot_ref": "slot-year-guimao-hyp", "element": "wood", "polarity": "yin", "trace": {"source_mode": "hypothetical", "epistemic_status": "hypothetical", "source_refs": ["sandbox:hyp-year-branch-mao"], "disclosure": "member"}}
+      ],
+      "relations": [
+        {"relation_ref": "relation-hyp-gui-controls-ding", "from_node_ref": "node-year-gui-hyp", "to_node_ref": "node-stem-year-ding", "relation_type": "controls", "label": "假设癸水作用于丁火", "semantic_state": "active", "trace": {"source_mode": "hypothetical", "epistemic_status": "hypothetical", "source_refs": ["sandbox:hyp-relation-gui-ding"], "disclosure": "member"}, "state_trace": {"source_mode": "hypothetical", "epistemic_status": "hypothetical", "source_refs": ["sandbox:hyp-relation-state"], "disclosure": "member"}, "change_reason_refs": ["reason:hyp-gui-controls-required-node"]}
+      ],
+      "clusters": [],
+      "paths": [],
+      "path_updates": [
+        {"path_ref": "path-committed-output-pressure", "semantic_state": "blocked", "state_trace": {"source_mode": "hypothetical", "epistemic_status": "hypothetical", "source_refs": ["sandbox:hyp-path-state"], "disclosure": "member"}, "change_reason_refs": ["reason:hyp-gui-controls-required-node", "dependency:path-requires-ding"]}
+      ],
+      "removals": [],
+      "source_refs": ["sandbox:hypothetical-year-guimao"]
+    }
+  ]
+}

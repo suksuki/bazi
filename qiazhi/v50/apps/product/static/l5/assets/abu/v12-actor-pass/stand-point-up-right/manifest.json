@@ -1,0 +1,94 @@
+{
+  "version": "v50.abu.designer_motion.v1",
+  "status": "production",
+  "motion": "stand_point_up_right",
+  "action_id": "abu_stand_point_up_right_v1",
+  "action_family": "guide",
+  "source_type": "extracted_video",
+  "source": {
+    "filename": "再来一个，阿布站立，抬起手指向左上方，同时脑袋也转向左边，，.mp4",
+    "sha256": "b7fa6d2a4b91d18453f72454e706b9cffec960ef6ca2e4e89735a429f5ef0fac",
+    "frame_count": 150,
+    "fps": 15,
+    "segment_seconds": [
+      1.05,
+      2.4
+    ]
+  },
+  "canvas": [
+    960,
+    720
+  ],
+  "anchor": [
+    0.5,
+    0.9861111111111112
+  ],
+  "actor_contract": {
+    "facing": "right",
+    "gaze_target": "semantic_object",
+    "safe_crop": "source_half_body",
+    "background": "transparent",
+    "flip_horizontal": true,
+    "loop_mode": "one_shot",
+    "recommended_contexts": [
+      "onecanvas_blackboard_guide",
+      "relation_path_explanation",
+      "theater_semantic_focus"
+    ]
+  },
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    110,
+    0,
+    1060,
+    720
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_right_side_color_mark",
+      "method": "excluded_before_alpha_extraction"
+    }
+  ],
+  "alpha_matte": {
+    "low": 10.0,
+    "high": 30.0
+  },
+  "webp": {
+    "quality": 92,
+    "method": 3,
+    "loop_count": 1
+  },
+  "runtime_display": {
+    "scale": 1.12,
+    "stage_profile": "cinematic_closeup",
+    "playback": "one_shot",
+    "category": "guidance"
+  },
+  "animation": "web/abu_stand_point_up_right_v1.webp",
+  "video": "web/abu_stand_point_up_right_v1.webm",
+  "poster": "posters/abu_stand_point_up_right_v1.png",
+  "contact_sheet": "contact-sheets/abu_stand_point_up_right_v1_contact_sheet.png",
+  "frame_count": 21,
+  "duration_ms": 1400,
+  "bytes": 1908218,
+  "delivery_bytes": {
+    "webp": 1908218,
+    "webm": 4049642
+  },
+  "usage": [
+    "onecanvas_blackboard_guide",
+    "relation_path_explanation",
+    "theater_semantic_focus"
+  ],
+  "boundaries": {
+    "emotion_tracks_workflow_not_fate": true,
+    "creates_mingli_claim": false,
+    "changes_case_state": false
+  }
+}

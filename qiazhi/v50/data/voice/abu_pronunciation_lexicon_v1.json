@@ -1,0 +1,19 @@
+{
+  "schema_version": "deepbazi.abu_pronunciation_lexicon.v1",
+  "lexicon_version": "mingli-zh.v1",
+  "status": "candidate_pending_human_review",
+  "entries": [
+    {"term": "甲乙丙丁", "read_as": "甲、乙、丙、丁", "category": "heavenly_stems"},
+    {"term": "子丑寅卯", "read_as": "子、丑、寅、卯", "category": "earthly_branches"},
+    {"term": "巳酉丑", "read_as": "巳、酉、丑", "category": "branch_combination"},
+    {"term": "食伤制杀", "read_as": "食伤制杀", "category": "mechanism"},
+    {"term": "调候", "read_as": "调候", "category": "theory"},
+    {"term": "扶抑", "read_as": "扶抑", "category": "theory"},
+    {"term": "做功", "read_as": "做功", "category": "theory"},
+    {"term": "大运", "read_as": "大运", "category": "timing"},
+    {"term": "流年", "read_as": "流年", "category": "timing"},
+    {"term": "流月", "read_as": "流月", "category": "timing"},
+    {"term": "藏干", "read_as": "藏干", "category": "chart_fact"},
+    {"term": "十神", "read_as": "十神", "category": "chart_fact"}
+  ]
+}

@@ -1,0 +1,169 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b2b25">
+  <title>阿布生命剧场 · DeepBazi</title>
+  <link rel="stylesheet" href="/theater.css?v=20260718-topic01b">
+</head>
+<body>
+  <header class="theater-header">
+    <a class="brand" href="/app" aria-label="返回 DeepBazi">
+      <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi">
+    </a>
+    <div class="program-mark">
+      <span class="live-dot" aria-hidden="true"></span>
+      <span id="programMode">阿布生命剧场</span>
+    </div>
+    <nav class="header-actions" aria-label="页面导航">
+      <button class="icon-link hidden" id="leaveSession" type="button" title="离开本场" aria-label="离开本场">↩</button>
+      <a class="icon-link" href="/app" title="返回命理探索" aria-label="返回命理探索">⌂</a>
+      <button class="icon-link hidden" id="studioToggle" type="button" title="导演控制" aria-label="导演控制">◉</button>
+    </nav>
+  </header>
+
+  <main class="theater-shell" id="theaterShell" data-act="act-1-seen">
+    <div class="stage-background" aria-hidden="true"></div>
+    <div class="stage-haze" aria-hidden="true"></div>
+
+    <section class="lobby" id="lobby" aria-labelledby="lobbyTitle">
+      <div class="lobby-copy">
+        <p class="eyebrow">ABU · YOUR PRIVATE MINGLI SCENE</p>
+        <h1 id="lobbyTitle">亲手看见一条命局路径如何断开。</h1>
+        <p class="lobby-intro" id="lobbyIntro">先猜哪一个节点最关键，再把它暂时从结构模型中拿开。原命盘不会改变，阿布只带你看确定的结构差异。</p>
+        <div class="program-choice">
+          <label for="programSelect">本场节目</label>
+          <select id="programSelect">
+            <option
+              value="topic-01-irreplaceable-node"
+              data-experience="mingli_experiment"
+              data-requires-case="true"
+              data-title="亲手看见一条命局路径如何断开。"
+              data-intro="先猜哪一个节点最关键，再把它暂时从结构模型中拿开。原命盘不会改变，阿布只带你看确定的结构差异。"
+              selected
+            >阿布说命 01 · 不可替代的节点</option>
+            <option
+              value="topic-00-performance-proof-01"
+              data-experience="performance"
+              data-requires-case="false"
+              data-title="让阿布亲自讲这份命盘。"
+              data-intro="不是再打开一份长报告。阿布会用声音带你看见四柱、已经确认的主线，以及现在仍不应该替你确定的部分。"
+            >阿布打开我的命盘 · 有声表演</option>
+          </select>
+        </div>
+        <div class="case-choice" id="caseChoice">
+          <label for="caseSelect">本场使用</label>
+          <select id="caseSelect">
+            <option value="">旁听体验，不读取命盘</option>
+          </select>
+          <p id="caseHint">登录且已有正式案例时，可进入只属于你的私人镜头。</p>
+        </div>
+        <div class="lobby-actions">
+          <button class="primary-action" id="enterSolo" type="button">进入个人场 <span>→</span></button>
+          <button class="secondary-action hidden" id="createLive" type="button">创建同场 Live</button>
+        </div>
+        <div class="join-live">
+          <label for="sessionCode">已有现场编号</label>
+          <div class="join-row">
+            <input id="sessionCode" autocomplete="off" placeholder="theater-...">
+            <button id="joinLive" type="button">加入</button>
+          </div>
+        </div>
+      </div>
+      <div class="lobby-abu" aria-hidden="true">
+        <span class="moon-ring"></span>
+        <img src="/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" alt="">
+      </div>
+    </section>
+
+    <section class="performance hidden" id="performance" aria-live="polite">
+      <div class="performance-topline">
+        <div>
+          <p class="eyebrow" id="topicEyebrow">TOPIC 00 · LIVE</p>
+          <h1 id="topicTitle">阿布第一次真正看见我</h1>
+        </div>
+        <div class="audience-state">
+          <span id="connectionState">连接中</span>
+          <strong id="participantCount">1</strong><small>人在场</small>
+        </div>
+      </div>
+
+      <ol class="act-rail" id="actRail" aria-label="节目进度">
+        <li data-act="act-1-seen"><span>01</span>它真的看见了我</li>
+        <li data-act="act-2-not-casual"><span>02</span>它不是随口说的</li>
+        <li data-act="act-3-continues"><span>03</span>这场对话会继续</li>
+      </ol>
+
+      <div class="stage" id="stage">
+        <div class="cue-space">
+          <p class="scene-label" id="sceneLabel">第一幕</p>
+          <blockquote class="abu-dialogue" id="abuDialogue">阿布正在准备今晚的第一句话。</blockquote>
+          <p class="subtitle" id="subtitle">请稍候。</p>
+          <div class="mingli-stage hidden" id="mingliStage" aria-label="命盘表演舞台">
+            <div class="report-ghost" id="reportGhost" aria-hidden="true">一次说完的人生报告</div>
+            <div class="pillar-stage" id="pillarStage" aria-label="四柱"></div>
+            <div class="reasoning-stage" id="reasoningStage" aria-label="已批准判断路径"></div>
+            <div class="unresolved-stage hidden" id="unresolvedStage"></div>
+          </div>
+          <section class="mingli-experiment hidden" id="mingliExperiment" aria-label="命局结构实验"></section>
+          <div class="group-trace hidden" id="groupTrace"></div>
+        </div>
+        <div class="abu-actor">
+          <span class="actor-glow" aria-hidden="true"></span>
+          <img id="abuActor" src="/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp" alt="阿布">
+          <span class="actor-state" id="actorState">在听</span>
+        </div>
+      </div>
+
+      <section class="performance-transport hidden" id="performanceTransport" aria-label="表演播放控制">
+        <p class="live-caption" id="liveCaption">声音准备好后，阿布会从这里开始讲。</p>
+        <div class="transport-primary">
+          <button class="transport-icon" id="playPauseButton" type="button" aria-label="播放" title="播放">▶</button>
+          <div class="transport-progress">
+            <div class="transport-copy">
+              <strong id="performanceStatus">阿布正在准备声音</strong>
+              <span><span id="elapsedTime">0:00</span> / <span id="durationTime">0:00</span></span>
+            </div>
+            <input id="performanceProgress" type="range" min="0" max="1000" value="0" aria-label="表演进度">
+          </div>
+          <button class="transport-icon" id="muteButton" type="button" aria-label="静音" title="静音">音</button>
+          <button class="transport-icon" id="transportReplayButton" type="button" aria-label="重播这一幕" title="重播这一幕">↺</button>
+        </div>
+        <div class="transport-secondary">
+          <button id="textFallbackButton" type="button">改看完整文字</button>
+          <details id="timelineDetails">
+            <summary>查看表演时间线</summary>
+            <ol id="timelineList"></ol>
+          </details>
+        </div>
+      </section>
+
+      <section class="interaction-sheet" id="interactionSheet">
+        <div class="interaction-copy">
+          <p class="interaction-kicker" id="interactionKicker">下一步</p>
+          <h2 id="interactionPrompt">准备好时继续</h2>
+          <p id="interactionPrivacy">你的私人回答不会出现在公共事件流中。</p>
+        </div>
+        <div class="interaction-controls" id="interactionControls">
+          <button class="primary-action" id="continueButton" type="button">继续 <span>→</span></button>
+        </div>
+      </section>
+
+      <section class="director-dock hidden" id="directorDock" aria-label="导演控制台">
+        <span>导演台</span>
+        <button type="button" data-director="advance">下一场</button>
+        <button type="button" data-director="rejoin">重新汇合</button>
+        <button type="button" data-director="reveal">揭示群体痕迹</button>
+        <button type="button" data-director="pause">暂停</button>
+        <button type="button" data-director="resume">继续</button>
+      </section>
+
+      <button class="replay-action hidden" id="replayButton" type="button">重看这场真实记录</button>
+    </section>
+
+    <div class="toast hidden" id="toast" role="status"></div>
+  </main>
+  <script src="/theater.js?v=20260718-topic01b" defer></script>
+</body>
+</html>

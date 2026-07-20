@@ -1,0 +1,37 @@
+{
+  "version": "deepbazi.vnext_phase0.model_policy_selection_set.v1",
+  "purpose": "select_and_freeze_direct_frontier_policy_before_formal_evaluation",
+  "sealed_evaluation_eligible": false,
+  "cases": [
+    {
+      "case_id": "c2.bridge_node_dominant.02",
+      "selection_role": "complex_structure",
+      "reason": "Tests whether a policy can sustain a structured whole-chart comparison."
+    },
+    {
+      "case_id": "c2.day_branch_anchor.02",
+      "selection_role": "ordinary_anchor",
+      "reason": "Tests clarity and restraint on a less exotic chart."
+    },
+    {
+      "case_id": "c2.hidden_stem_dark_line.02",
+      "selection_role": "ambiguous_hidden_relation",
+      "reason": "Tests uncertainty, alternatives, and schema completion."
+    },
+    {
+      "case_id": "c2.peer_competes_for_wealth.02",
+      "selection_role": "domain_specificity",
+      "reason": "Tests whether wealth reasoning remains causal rather than generic."
+    },
+    {
+      "case_id": "c2.clash_breaks_main_path.02",
+      "selection_role": "counter_structure",
+      "reason": "Tests whether the policy notices a blocked or broken path."
+    }
+  ],
+  "boundaries": {
+    "formal_score_allowed": false,
+    "formal_chart_overlap_allowed": false,
+    "policy_selection_must_finish_before_formal_run": true
+  }
+}

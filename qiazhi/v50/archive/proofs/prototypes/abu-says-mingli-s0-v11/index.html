@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#132c27">
+  <title>阿布说命 · 匿名教学命盘</title>
+  <link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+  <div class="theater" id="theater" data-scene="opening" data-stage="original">
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="返回 DeepBazi">
+        <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi">
+      </a>
+      <p><span></span>匿名教学命盘 · Creative Prototype</p>
+      <a class="scene-link" href="../xiangfa-s0-v1/index.html">操作象法场景</a>
+    </header>
+
+    <main class="stage" aria-live="polite">
+      <div class="painted-world" aria-hidden="true"></div>
+      <div class="world-grade" aria-hidden="true"></div>
+      <div class="faint-script" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
+
+      <section class="opening" id="opening">
+        <p>阿布说命 · 序</p>
+        <h1>命理不该成为<br>宿命的宣判</h1>
+        <span>它更像一份可以被理解的人生底稿。</span>
+      </section>
+
+      <section class="canvas" id="canvas" aria-label="匿名教学命盘六柱结构">
+        <div class="canvas-meta">
+          <p>ONECANVAS</p>
+          <strong id="canvasHeadline">四柱落定，结构随之展开</strong>
+          <span id="canvasStageLabel">原局</span>
+        </div>
+
+        <div class="pillars" id="pillars"></div>
+
+        <svg class="relation-layer" viewBox="0 0 1200 620" preserveAspectRatio="none" aria-hidden="true">
+          <defs>
+            <linearGradient id="pathGradient" x1="1" y1="0" x2="0" y2="0">
+              <stop offset="0" stop-color="#4d956d"></stop>
+              <stop offset=".5" stop-color="#e59257"></stop>
+              <stop offset="1" stop-color="#d6c39b"></stop>
+            </linearGradient>
+            <filter id="softGlow" x="-40%" y="-40%" width="180%" height="180%">
+              <feGaussianBlur stdDeviation="6" result="blur"></feGaussianBlur>
+              <feMerge><feMergeNode in="blur"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge>
+            </filter>
+            <marker id="pathArrow" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto">
+              <path d="M0 0 L5 2.5 L0 5 Z" fill="#df8757"></path>
+            </marker>
+          </defs>
+          <path class="main-path segment-a" d="M660 168 C590 136 520 136 450 168" marker-end="url(#pathArrow)"></path>
+          <path class="main-path segment-b" d="M450 168 C380 136 310 136 240 168" marker-end="url(#pathArrow)"></path>
+          <circle class="flow-dot dot-a" r="8"></circle>
+          <circle class="flow-dot dot-b" r="8"></circle>
+          <path class="clash clash-a" d="M230 445 C410 590 585 590 660 445"></path>
+          <path class="clash clash-b" d="M870 445 C775 552 710 552 660 445"></path>
+          <path class="luck-pressure" d="M1010 168 C900 66 785 85 660 168" marker-end="url(#pathArrow)"></path>
+          <path class="luck-root" d="M1010 445 C890 525 780 510 660 168"></path>
+          <path class="year-support" d="M1120 168 C900 18 620 18 450 168" marker-end="url(#pathArrow)"></path>
+        </svg>
+
+        <div class="path-step step-jia" data-ref="node-stem-day-jia"><b>①</b><span>甲</span><small>生</small></div>
+        <div class="path-step step-ding" data-ref="node-stem-month-ding"><b>②</b><span>丁</span><small>作用</small></div>
+        <div class="path-step step-geng" data-ref="node-stem-year-geng"><b>③</b><span>庚</span><small>结构边界</small></div>
+
+        <div class="effect-label pressure-label">庚作用甲木</div>
+        <div class="effect-label root-label">寅为甲木添根</div>
+        <div class="effect-label fire-label">丙支持丁火</div>
+        <div class="effect-label clash-label">两处辰戌冲 · 结构张力</div>
+
+        <nav class="stage-control" aria-label="时间阶段">
+          <button type="button" data-stage-button="original">原局</button>
+          <button type="button" data-stage-button="luck">庚寅</button>
+          <button type="button" data-stage-button="year">丙午</button>
+          <i id="stageCursor" aria-hidden="true"></i>
+        </nav>
+      </section>
+
+      <section class="morph-scene" id="morphScene" aria-label="结构转化为象法">
+        <svg viewBox="0 0 1000 580" preserveAspectRatio="none" aria-hidden="true">
+          <path d="M150 420 C310 470 390 335 512 334 S730 345 860 265"></path>
+        </svg>
+        <div class="morph-anchor wood"><span>甲</span><small>生发主体</small></div>
+        <div class="morph-anchor fire"><span>丁</span><small>暖光中心</small></div>
+        <div class="morph-anchor metal"><span>庚</span><small>结构边界</small></div>
+      </section>
+
+      <div class="abu-actor" id="abuActor">
+        <img id="abuImage" src="/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" alt="阿布正在引导你看见命局">
+        <span class="gaze-line" aria-hidden="true"></span>
+      </div>
+
+      <section class="finale" id="finale">
+        <p>阿布说命</p>
+        <h2>看见命局，也看见自己</h2>
+        <span>读懂底稿，下一章仍由你来写。</span>
+      </section>
+
+      <div class="subtitle" id="subtitle"><span></span></div>
+    </main>
+
+    <footer class="transport">
+      <button class="play" id="playButton" type="button" aria-label="播放或暂停">▶</button>
+      <input id="progress" type="range" min="0" max="445" value="0" aria-label="播放进度">
+      <span id="timeLabel">0:00 / 0:44</span>
+      <button class="mute" id="muteButton" type="button" aria-label="静音或恢复声音">声音</button>
+    </footer>
+
+    <audio id="audio" preload="auto" src="../s0-v11-shared/assets/s0-v11-eric-mix.wav"></audio>
+  </div>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

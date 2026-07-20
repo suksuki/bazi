@@ -1,0 +1,8 @@
+{
+  "name": "deepbazi-ziwei-chart-bridge",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "iztro": "2.5.8"
+  }
+}

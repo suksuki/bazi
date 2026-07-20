@@ -1,0 +1,7 @@
+:root {
+  --serif: "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", serif;
+  --sans: Inter, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --type-node: 39px;
+  --type-label: 10px;
+  --type-meta: 9px;
+}

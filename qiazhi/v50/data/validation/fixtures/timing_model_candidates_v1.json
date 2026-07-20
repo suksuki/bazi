@@ -1,0 +1,612 @@
+{
+  "group": "timing_model_candidates_v1",
+  "description": "Competing timing models for luck/year/month. They are research policy candidates, not runtime truth.",
+  "runtime_active": false,
+  "llm_used": false,
+  "brain_used": false,
+  "training_performed": false,
+  "candidates": [
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.luck.second_month_command.v1",
+      "timing_layer": "luck",
+      "model_family": "second_month_command",
+      "current_confidence": 0.42,
+      "changes": [
+        "node_energy",
+        "edge_strength",
+        "path_activation",
+        "mechanism_ranking"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "overlay",
+        "suppress",
+        "amplify"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "state_delta",
+        "strengthened_nodes",
+        "weakened_nodes",
+        "mechanism_shift"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "may overpower natal structure and recreate month-command bias"
+      ],
+      "source_refs": [
+        "docs/research/timing/F001_WHAT_IS_LUCK.md#second-month-command-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.luck.long_term_field.v1",
+      "timing_layer": "luck",
+      "model_family": "long_term_field",
+      "current_confidence": 0.62,
+      "changes": [
+        "node_energy",
+        "path_cost",
+        "topic_timing"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "overlay",
+        "amplify",
+        "neutralize",
+        "suppress"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "field_delta",
+        "state_delta",
+        "mechanism_shift"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "may under-detect decade-level reroutes if used alone"
+      ],
+      "source_refs": [
+        "docs/research/timing/F001_WHAT_IS_LUCK.md#long-term-field-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.luck.perturbation_source.v1",
+      "timing_layer": "luck",
+      "model_family": "perturbation_source",
+      "current_confidence": 0.68,
+      "changes": [
+        "path_activation",
+        "path_cost",
+        "mechanism_ranking"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "reroute",
+        "break",
+        "complete"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "state_delta",
+        "rerouted_flow",
+        "weakened_nodes",
+        "activated_paths"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "requires synthetic reroute fixtures before runtime promotion"
+      ],
+      "source_refs": [
+        "docs/research/timing/F001_WHAT_IS_LUCK.md#perturbation-source-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.luck.stage_dominant_variable.v1",
+      "timing_layer": "luck",
+      "model_family": "stage_dominant_variable",
+      "current_confidence": 0.58,
+      "changes": [
+        "topic_priority",
+        "mechanism_ranking",
+        "topic_timing"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "overlay",
+        "focus"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "topic_timing_signal",
+        "mechanism_shift"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "can become topic-label bias without path evidence"
+      ],
+      "source_refs": [
+        "docs/research/timing/F001_WHAT_IS_LUCK.md#stage-dominant-variable-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.year.trigger.v1",
+      "timing_layer": "year",
+      "model_family": "trigger",
+      "current_confidence": 0.55,
+      "changes": [
+        "path_activation",
+        "topic_timing"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "activate",
+        "trigger"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "activated_paths",
+        "topic_timing_signal",
+        "event_window_score"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "may understate years that complete missing structures"
+      ],
+      "source_refs": [
+        "docs/research/timing/F002_WHAT_IS_YEAR.md#trigger-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.year.short_term_field.v1",
+      "timing_layer": "year",
+      "model_family": "short_term_field",
+      "current_confidence": 0.52,
+      "changes": [
+        "node_energy",
+        "edge_strength",
+        "path_cost"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "overlay",
+        "suppress",
+        "amplify",
+        "neutralize"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "state_delta",
+        "strengthened_nodes",
+        "weakened_nodes",
+        "mechanism_shift"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "can overwrite decade field if not traced against luck layer"
+      ],
+      "source_refs": [
+        "docs/research/timing/F002_WHAT_IS_YEAR.md#short-term-field-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.year.activation_event.v1",
+      "timing_layer": "year",
+      "model_family": "activation_event",
+      "current_confidence": 0.66,
+      "changes": [
+        "path_activation",
+        "topic_timing",
+        "mechanism_ranking"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "activate",
+        "focus"
+      ],
+      "relation_to_other_timing_layers": [
+        "trigger",
+        "amplify",
+        "conflict"
+      ],
+      "simulator_outputs": [
+        "activated_paths",
+        "topic_timing_signal",
+        "event_pressure_score",
+        "mechanism_shift"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "needs topic gate validation"
+      ],
+      "source_refs": [
+        "docs/research/timing/F002_WHAT_IS_YEAR.md#activation-event-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.year.structure_completion.v1",
+      "timing_layer": "year",
+      "model_family": "structure_completion",
+      "current_confidence": 0.6,
+      "changes": [
+        "path_activation",
+        "edge_strength"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "complete",
+        "break",
+        "activate"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "completed_paths",
+        "broken_paths",
+        "mechanism_shift"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "must not rewrite natal original completeness"
+      ],
+      "source_refs": [
+        "docs/research/timing/F002_WHAT_IS_YEAR.md#structure-completion-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.month.fine_grained_trigger.v1",
+      "timing_layer": "month",
+      "model_family": "fine_grained_trigger",
+      "current_confidence": 0.55,
+      "changes": [
+        "event_window",
+        "path_activation",
+        "topic_timing"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "activate",
+        "focus"
+      ],
+      "relation_to_other_timing_layers": [
+        "trigger",
+        "focus"
+      ],
+      "simulator_outputs": [
+        "event_window_score",
+        "timing_precision_score",
+        "activated_paths"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "false precision without annual support"
+      ],
+      "source_refs": [
+        "docs/research/timing/F003_WHAT_IS_MONTH.md#fine-grained-trigger-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.month.short_pulse_field.v1",
+      "timing_layer": "month",
+      "model_family": "short_pulse_field",
+      "current_confidence": 0.44,
+      "changes": [
+        "node_energy",
+        "edge_strength",
+        "path_cost"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "overlay",
+        "amplify",
+        "neutralize"
+      ],
+      "relation_to_other_timing_layers": [
+        "cooperate",
+        "conflict",
+        "amplify",
+        "neutralize"
+      ],
+      "simulator_outputs": [
+        "state_delta",
+        "strengthened_nodes",
+        "weakened_nodes"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "highest false precision risk among month models"
+      ],
+      "source_refs": [
+        "docs/research/timing/F003_WHAT_IS_MONTH.md#short-pulse-field-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.month.event_window.v1",
+      "timing_layer": "month",
+      "model_family": "event_window",
+      "current_confidence": 0.61,
+      "changes": [
+        "event_window",
+        "topic_timing"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "focus",
+        "activate"
+      ],
+      "relation_to_other_timing_layers": [
+        "focus",
+        "trigger"
+      ],
+      "simulator_outputs": [
+        "event_window_score",
+        "timing_precision_score"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "does not create event alone"
+      ],
+      "source_refs": [
+        "docs/research/timing/F003_WHAT_IS_MONTH.md#event-window-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    },
+    {
+      "version": "v50.timing_model_candidate.v1",
+      "model_id": "timing.month.micro_structure_completion.v1",
+      "timing_layer": "month",
+      "model_family": "micro_structure_completion",
+      "current_confidence": 0.5,
+      "changes": [
+        "path_activation",
+        "edge_strength",
+        "event_window"
+      ],
+      "does_not_change": [
+        "natal_immutable_facts",
+        "original_structure_existence",
+        "birth_input"
+      ],
+      "relation_to_natal": [
+        "complete",
+        "break",
+        "trigger"
+      ],
+      "relation_to_other_timing_layers": [
+        "amplify",
+        "conflict"
+      ],
+      "simulator_outputs": [
+        "completed_paths",
+        "broken_paths",
+        "event_window_score"
+      ],
+      "validation_plan": [
+        "synthetic_cases",
+        "counter_examples",
+        "state_delta_diff",
+        "must_not_rewrite_natal_structure"
+      ],
+      "risk_notes": [
+        "should remain low confidence without luck/year support"
+      ],
+      "source_refs": [
+        "docs/research/timing/F003_WHAT_IS_MONTH.md#micro-structure-completion-model"
+      ],
+      "runtime_active": false,
+      "creates_judgment": false,
+      "calls_brain": false,
+      "calls_llm": false,
+      "mutates_natal_structure": false,
+      "boundary": "timing_model_candidate_is_research_policy_not_runtime_truth"
+    }
+  ]
+}

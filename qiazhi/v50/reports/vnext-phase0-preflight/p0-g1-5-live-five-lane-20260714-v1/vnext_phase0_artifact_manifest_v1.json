@@ -1,0 +1,15 @@
+{
+  "version": "deepbazi.vnext_phase0.artifact_manifest.v1",
+  "run_id": "p0-g1-5-live-five-lane-20260714-v1",
+  "raw_outputs_sha256": "1f0ff84bb7fcf26956bf7ebfaa660fac3d1dd6c3e2dc5ae08d2a379b58d57eb8",
+  "raw_output_count": 10,
+  "files": [
+    "vnext_phase0_benchmark_report_v1.json",
+    "vnext_phase0_benchmark_report_v1.md",
+    "vnext_phase0_blind_review_packet_v1.md",
+    "vnext_phase0_pairwise_review_packet_v1.md",
+    "vnext_phase0_operator_lane_map_v1.json",
+    "vnext_phase0_expert_reference_freeze_packet_v1.md",
+    "vnext_phase0_raw_outputs_v1.jsonl"
+  ]
+}

@@ -1,0 +1,62 @@
+{
+  "version": "deepbazi.cognitive_authority_baseline_manifest.v1",
+  "source_taxonomy": "synthetic_chart_taxonomy_v2.json",
+  "expected_contract_visible_to_model": false,
+  "development": [
+    "c2.month_command_dominant.01",
+    "c2.bridge_node_dominant.01",
+    "c2.converter_dominant.01",
+    "c2.output_controls_pressure.01",
+    "c2.mixed_no_obvious_main_path.01"
+  ],
+  "acceptance": [
+    "c2.month_command_dominant.02",
+    "c2.bridge_node_dominant.02",
+    "c2.converter_dominant.02",
+    "c2.day_branch_anchor.02",
+    "c2.hidden_stem_dark_line.02",
+    "c2.output_to_wealth.02",
+    "c2.output_controls_pressure.02",
+    "c2.resource_disrupts_output.02",
+    "c2.mixed_officer_killing_with_control.02",
+    "c2.wealth_generates_officer.02",
+    "c2.peer_competes_for_wealth.02",
+    "c2.mixed_no_obvious_main_path.02",
+    "c2.complete_triple_combination.02",
+    "c2.broken_triple_combination.02",
+    "c2.clash_breaks_main_path.02",
+    "c2.half_triple_combination.02",
+    "c2.resource_peer_overload_output_blocked.02",
+    "c2.climate_regulation_dominant.02",
+    "c2.mediation_path.02",
+    "c2.luck_changes_main_path.02",
+    "c2.year_activates_key_node.02",
+    "c2.timing_insufficient.02",
+    "c2.unsupported_relationship_domain.02",
+    "c2.unsupported_health_domain.02"
+  ],
+  "blind": [
+    "c2.complete_triple_combination.03",
+    "c2.broken_triple_combination.03",
+    "c2.climate_regulation_dominant.03",
+    "c2.timing_insufficient.03",
+    "c2.unsupported_relationship_domain.03",
+    "c2.unsupported_health_domain.03"
+  ],
+  "blind_policy": {
+    "prompt_may_receive_expected_contract": false,
+    "self_generated_output_counts_as_gold": false,
+    "expert_review_required": true,
+    "weight_training_allowed": false
+  },
+  "human_rubric": [
+    "盘面重心是否抓对",
+    "主假设是否优于竞争假设",
+    "做功因果是否闭合",
+    "用神角色是否有条件而非固定标签",
+    "是否有这张盘专属的可验证断言",
+    "是否遗漏关键反证",
+    "是否出现跨盘模板语言",
+    "事实计算是否可靠"
+  ]
+}

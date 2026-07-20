@@ -1,0 +1,11 @@
+:root {
+  --state-formal: #205f50;
+  --state-derived: #8c7441;
+  --state-candidate: #a6783f;
+  --state-hypothetical: #b75c42;
+  --state-user-draft: #355f7d;
+  --state-blocked: #a94840;
+  --state-selected: #c85f40;
+  --state-unavailable: #747d79;
+  --state-recalculating: #6c7d74;
+}

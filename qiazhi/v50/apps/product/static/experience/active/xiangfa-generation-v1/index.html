@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#102c27">
+  <title>阿布说命 · 象法 V1</title>
+  <link rel="stylesheet" href="./styles.css?v=20260720-workspace-embed1">
+</head>
+<body>
+  <main class="xiangfa" id="xiangfa" data-mode="xiangfa" data-stage="original">
+    <picture class="scene-art" aria-hidden="true">
+      <source media="(max-width: 620px), (orientation: portrait)" srcset="../../shared/s0-v12-shared/assets/xiangfa-anonymous-case-portrait-v1.png">
+      <img src="../../shared/s0-v12-shared/assets/xiangfa-anonymous-case-wide-v1.png" alt="">
+    </picture>
+    <div class="scene-grade" aria-hidden="true"></div>
+    <div class="stage-effects" aria-hidden="true">
+      <span class="geng-pressure"></span>
+      <span class="yin-root"></span>
+      <span class="bing-support"></span>
+    </div>
+
+    <header class="header">
+      <a class="brand" href="/app" aria-label="返回 DeepBazi">
+        <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi">
+      </a>
+      <div class="title-block"><small>匿名教学命盘</small><strong>同一结构的另一种看法</strong></div>
+      <a class="theater-link" href="../../internal-tools/abu-says-mingli-s0-v12/index.html">观看阿布讲解</a>
+    </header>
+
+    <section class="scene" aria-label="可交互象法场景">
+      <svg class="structure-overlay desktop-overlay" viewBox="0 0 1000 562" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="mainPathDesktop" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0" stop-color="#65aa7a"></stop>
+            <stop offset=".5" stop-color="#f0a15e"></stop>
+            <stop offset="1" stop-color="#d6d7cf"></stop>
+          </linearGradient>
+          <filter id="glowDesktop" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="4" result="b"></feGaussianBlur><feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter>
+          <marker id="arrowDesktop" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5 Z" fill="#eda05f"></path></marker>
+        </defs>
+        <path class="main-path path-a" d="M170 395 C290 445 405 372 505 326" marker-end="url(#arrowDesktop)"></path>
+        <path class="main-path path-b" d="M505 326 C645 310 735 270 840 218" marker-end="url(#arrowDesktop)"></path>
+        <circle class="path-light light-a" r="7"></circle>
+        <circle class="path-light light-b" r="7"></circle>
+        <path class="pressure-line" d="M820 150 C650 80 395 170 170 395"></path>
+        <path class="root-line" d="M710 490 C520 540 320 495 170 395"></path>
+        <path class="support-line" d="M750 82 C665 112 575 214 505 326"></path>
+      </svg>
+
+      <svg class="structure-overlay portrait-overlay" viewBox="0 0 390 844" preserveAspectRatio="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="mainPathPortrait" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#65aa7a"></stop><stop offset=".5" stop-color="#f0a15e"></stop><stop offset="1" stop-color="#d6d7cf"></stop></linearGradient>
+          <filter id="glowPortrait" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="3" result="b"></feGaussianBlur><feMerge><feMergeNode in="b"></feMergeNode><feMergeNode in="SourceGraphic"></feMergeNode></feMerge></filter>
+          <marker id="arrowPortrait" markerWidth="5" markerHeight="5" refX="4.5" refY="2.5" orient="auto"><path d="M0 0 L5 2.5 L0 5 Z" fill="#eda05f"></path></marker>
+        </defs>
+        <path class="main-path path-a" d="M78 565 C96 510 160 486 216 470" marker-end="url(#arrowPortrait)"></path>
+        <path class="main-path path-b" d="M216 470 C278 430 304 358 320 300" marker-end="url(#arrowPortrait)"></path>
+        <circle class="path-light light-a" r="6"></circle>
+        <circle class="path-light light-b" r="6"></circle>
+        <path class="pressure-line" d="M334 220 C256 260 160 396 78 565"></path>
+        <path class="root-line" d="M60 700 C52 646 59 602 78 565"></path>
+        <path class="support-line" d="M92 330 C140 346 184 398 216 470"></path>
+      </svg>
+
+      <div class="semantic-label label-wood"><b>甲木</b><span>生发主体</span></div>
+      <div class="semantic-label label-fire"><b>丁火</b><span>转化中心</span></div>
+      <div class="semantic-label label-metal"><b>庚金</b><span>结构边界</span></div>
+
+      <button class="hotspot hotspot-wood" type="button" data-semantic-ref="node-stem-day-jia" aria-label="查看甲木主体"><span></span></button>
+      <button class="hotspot hotspot-fire" type="button" data-semantic-ref="node-stem-month-ding" aria-label="查看丁火中心"><span></span></button>
+      <button class="hotspot hotspot-metal" type="button" data-semantic-ref="node-stem-year-geng" aria-label="查看庚金结构边界"><span></span></button>
+      <button class="hotspot hotspot-path" type="button" data-semantic-ref="path-observed-jia-ding-geng" aria-label="查看结构观察主线"><span></span></button>
+      <button class="hotspot hotspot-time" type="button" data-semantic-ref="current-time-effect" aria-label="查看当前时间作用"><span></span></button>
+    </section>
+
+    <p class="interaction-hint" id="interactionHint"><i aria-hidden="true"></i><span>轻触光点查看</span></p>
+
+    <section class="mode-switch" aria-label="查看状态">
+      <button type="button" data-mode-button="xiangfa" aria-current="true">象法</button>
+      <button type="button" data-mode-button="skeleton">结构骨架</button>
+      <button type="button" data-mode-button="overlay">叠加</button>
+    </section>
+
+    <section class="inspector is-closed" id="inspector" aria-live="polite">
+      <button class="close-inspector" type="button" aria-label="关闭解释">×</button>
+      <small id="inspectorStatus">正式结构 · 原局</small>
+      <h1 id="inspectorTitle">一张场景，三种观察方式</h1>
+      <p id="inspectorBody">拖动下方时间线，观察同一批命理对象如何随时间变化。点击场景中的光点，可以查看对象与正式语义的对应。</p>
+      <code id="inspectorRef">scene-source:s0-v11-anonymous-public-source-case-01</code>
+    </section>
+
+    <div class="abu-guide" aria-hidden="true"><img src="/assets/abu/v4-video-derived/web/abu_head_tilt_v4.webp" alt=""></div>
+
+    <section class="time-dock" aria-label="时间阶段控制">
+      <div class="stage-copy"><small id="stageEyebrow">原局</small><strong id="stageTitle">观察主线展开</strong></div>
+      <div class="timeline">
+        <input id="stageRange" type="range" min="0" max="2" step="1" value="0" aria-label="选择原局、大运或流年">
+        <div class="timeline-labels">
+          <button type="button" data-stage-button="original" aria-current="true"><span>原局</span><small>结构</small></button>
+          <button type="button" data-stage-button="luck"><span>庚寅</span><small>大运</small></button>
+          <button type="button" data-stage-button="year"><span>丙午</span><small>流年</small></button>
+        </div>
+      </div>
+    </section>
+  </main>
+  <script type="module" src="./app.js?v=20260720-abu-wake1&workspace-sync=3"></script>
+</body>
+</html>

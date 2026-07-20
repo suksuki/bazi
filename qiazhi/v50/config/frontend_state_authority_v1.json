@@ -1,0 +1,23 @@
+{
+  "schema_version": "deepbazi.frontend_state_authority.v1",
+  "frozen_at": "2026-07-18",
+  "new_experience_groups": {
+    "case_projection": ["envelope", "narrationManifest", "narrationAssets"],
+    "workspace_state": ["selectedAnchor", "expandedSections", "activeCaseId"],
+    "narration_state": ["narrationStatus", "narrationIndex", "abuMessage"],
+    "shell_state": ["account", "cases", "abuExpanded"],
+    "sandbox_state": [],
+    "theater_state": []
+  },
+  "rules": [
+    "case_projection is read-only server data",
+    "workspace and narration state cannot become formal cognition",
+    "new experience source cannot import or call the legacy agent reading API",
+    "formal cognition is never restored from localStorage"
+  ],
+  "legacy_shell_classification": {
+    "source": "apps/product/static/l5/app.js",
+    "status": "active_retiring",
+    "migration_note": "Fields remain for legacy shell only and must not be copied into the new Experience Shell."
+  }
+}

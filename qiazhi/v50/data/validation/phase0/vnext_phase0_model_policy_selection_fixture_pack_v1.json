@@ -1,0 +1,101 @@
+{
+  "version": "deepbazi.vnext_phase0.model_policy_selection_fixture_pack.v1",
+  "purpose": "self_contained_frontier_policy_selection_inputs",
+  "cases": [
+    {
+      "case_id": "c2.bridge_node_dominant.02",
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.bridge_node_dominant.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "male",
+        "hour_pillar": "戊辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙巳",
+        "name": "c2.bridge_node_dominant.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      }
+    },
+    {
+      "case_id": "c2.day_branch_anchor.02",
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.day_branch_anchor.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁巳",
+        "gender": "male",
+        "hour_pillar": "甲戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸卯",
+        "name": "c2.day_branch_anchor.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲子"
+      }
+    },
+    {
+      "case_id": "c2.hidden_stem_dark_line.02",
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.hidden_stem_dark_line.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "丁丑",
+        "gender": "female",
+        "hour_pillar": "丁丑",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "癸丑",
+        "name": "c2.hidden_stem_dark_line.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "壬子"
+      }
+    },
+    {
+      "case_id": "c2.peer_competes_for_wealth.02",
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.peer_competes_for_wealth.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "甲辰",
+        "gender": "male",
+        "hour_pillar": "甲辰",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "乙卯",
+        "name": "c2.peer_competes_for_wealth.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "甲寅"
+      }
+    },
+    {
+      "case_id": "c2.clash_breaks_main_path.02",
+      "birth_input": {
+        "birth_date": "1980-06-01",
+        "birth_input_id": "birth.c2.clash_breaks_main_path.02",
+        "birth_location": "Shanghai",
+        "birth_time": "explicit",
+        "calendar_type": "solar",
+        "day_pillar": "乙丑",
+        "gender": "male",
+        "hour_pillar": "丙戌",
+        "input_quality": "explicit_pillars",
+        "month_pillar": "壬子",
+        "name": "c2.clash_breaks_main_path.02",
+        "timezone": "Asia/Shanghai",
+        "year_pillar": "丁巳"
+      }
+    }
+  ],
+  "boundaries": {
+    "contains_formal_cases": false,
+    "contains_development_cases": false,
+    "formal_score_allowed": false
+  }
+}

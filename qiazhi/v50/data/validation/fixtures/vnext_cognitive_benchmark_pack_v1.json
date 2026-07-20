@@ -1,0 +1,98 @@
+{
+  "version": "deepbazi.vnext_cognitive_benchmark_pack.v1",
+  "source_taxonomy": "synthetic_chart_taxonomy_v2.json",
+  "purpose": "harness_and_expert_reference_freeze_not_professional_gold",
+  "expected_contract_visible_to_model": false,
+  "formal_run_requires_expert_reference_freeze": true,
+  "cases": [
+    {
+      "case_id": "c2.output_controls_pressure.01",
+      "category": "anchor_candidate",
+      "selection_reason": "熟悉结构候选，但不得成为默认世界",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.climate_regulation_dominant.01",
+      "category": "anchor_candidate",
+      "selection_reason": "调候优先级候选，防止只围绕做功标签",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.complete_triple_combination.01",
+      "category": "anchor_candidate",
+      "selection_reason": "完整组合结构候选，检查整体结构注意力",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.output_to_wealth.01",
+      "category": "contrastive_candidate",
+      "selection_reason": "与食伤制杀类表面输出结构对照",
+      "contrast_with": "c2.output_controls_pressure.01",
+      "dry_run": true,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.broken_triple_combination.01",
+      "category": "contrastive_candidate",
+      "selection_reason": "与完整三合结构对照，检查该变与不该变",
+      "contrast_with": "c2.complete_triple_combination.01",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.resource_disrupts_output.01",
+      "category": "contrastive_candidate",
+      "selection_reason": "检查相同资源/输出词汇下的主轴区分",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.mixed_officer_killing_with_control.01",
+      "category": "ambiguous_candidate",
+      "selection_reason": "允许多个竞争假设，检查替代假设质量",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.mixed_no_obvious_main_path.01",
+      "category": "ambiguous_candidate",
+      "selection_reason": "没有明显主路径时检查克制、假设竞争和未知",
+      "dry_run": true,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.month_command_dominant.01",
+      "category": "ordinary_control_candidate",
+      "selection_reason": "检查系统是否把常见月令结构过度复杂化",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    },
+    {
+      "case_id": "c2.timing_insufficient.01",
+      "category": "negative_control_candidate",
+      "selection_reason": "检查信息不足时是否虚构时序和复杂事件",
+      "dry_run": false,
+      "expert_reference": {"status": "pending_human_freeze", "must_notice": [], "acceptable_primary_hypotheses": [], "strongest_alternative": "", "critical_nodes_or_relations": [], "plausible_work_paths": [], "conditional_useful_harmful_roles": [], "required_domain_distinctions": [], "forbidden_or_unsupported_claims": [], "known_reality_evidence": [], "unresolved_disagreements": []},
+      "controlled_feedback": []
+    }
+  ],
+  "boundaries": {
+    "synthetic_cases_are_real_world_gold": false,
+    "expert_reference_fabrication_allowed": false,
+    "controlled_feedback_fabrication_allowed": false,
+    "formal_comparison_allowed_before_expert_freeze": false,
+    "weight_training_allowed": false
+  }
+}

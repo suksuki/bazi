@@ -1,0 +1,55 @@
+{
+  "version": "deepbazi.vnext_phase0.go_no_go.v1",
+  "status": "frozen_before_formal_outputs",
+  "scope": "architecture_promotion_gate_not_statistical_proof",
+  "gates": {
+    "factual_and_operational_reliability": {
+      "vnext_deterministic_fact_conflicts_max": 0,
+      "all_failures_in_reliability_denominator": true,
+      "manual_hidden_reruns_allowed": false
+    },
+    "relative_to_current_v50": {
+      "vnext_professionally_preferred_min_charts": 8,
+      "chart_count": 10
+    },
+    "relative_to_holistic_synthesis": {
+      "vnext_not_weaker_min_charts": 8,
+      "vnext_clear_advantage_min_charts": 5,
+      "purpose": "Test whether VNext orchestration, tools, challenge, and review justify their added complexity."
+    },
+    "relative_to_direct_frontier": {
+      "vnext_professionally_preferred_min_charts": 6,
+      "deepbazi_increment_present_min_charts": 7
+    },
+    "three_run_stability": {
+      "primary_hypothesis_unexplained_reversal_max_charts": 0,
+      "main_work_path_unexplained_reversal_max_charts": 0,
+      "useful_harmful_role_unexplained_reversal_max_charts": 0,
+      "wording_variation_allowed": true
+    },
+    "specificity": {
+      "chart_specific_center_required": true,
+      "explicit_main_work_path_required": true,
+      "evidence_based_exclusion_required": true,
+      "prior_predictions_min": 2,
+      "prior_predictions_max": 3,
+      "discriminating_probe_required": true,
+      "unchanged_cross_chart_template_is_failure": true
+    }
+  },
+  "historical_v30": {
+    "required_for_formal_run": false,
+    "status": "unavailable",
+    "use": "excluded_until_real_assets_are_reproducible"
+  },
+  "review_policy": {
+    "round1_all_outputs": "compact_blind_expert_scoring",
+    "round2_per_chart": "pairwise_lane_preference_after_repeat_aggregation",
+    "single_expert_label_required_when_applicable": true,
+    "allowed_final_decisions": ["prefer", "revise", "reject", "insufficient"]
+  },
+  "boundaries": {
+    "threshold_changes_after_formal_output_allowed": false,
+    "automatic_safety_metric_can_claim_professional_quality": false
+  }
+}

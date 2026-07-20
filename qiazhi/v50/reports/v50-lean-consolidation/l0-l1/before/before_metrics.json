@@ -1,0 +1,69 @@
+{
+  "schema_version": "deepbazi.lean_metrics.v1",
+  "phase": "before",
+  "generated_at": "2026-07-19T17:44:30.311747+00:00",
+  "roots": {
+    "apps": {
+      "file_count": 173,
+      "size_bytes": 180051811
+    },
+    "packages": {
+      "file_count": 85,
+      "size_bytes": 953295
+    },
+    "docs": {
+      "file_count": 95,
+      "size_bytes": 747129
+    },
+    "tests": {
+      "file_count": 86,
+      "size_bytes": 516426
+    },
+    "scripts": {
+      "file_count": 54,
+      "size_bytes": 600627
+    },
+    "tools": {
+      "file_count": 9,
+      "size_bytes": 43468
+    },
+    "config": {
+      "file_count": 18,
+      "size_bytes": 32592
+    },
+    "data": {
+      "file_count": 42,
+      "size_bytes": 744113
+    },
+    "reports": {
+      "file_count": 490,
+      "size_bytes": 64297645
+    },
+    "artifacts": {
+      "file_count": 2687,
+      "size_bytes": 1310326438
+    }
+  },
+  "repository": {
+    "file_count": 3750,
+    "size_bytes": 1558363161
+  },
+  "python_dependency_count": 1210,
+  "frontend_dependency_count": 29,
+  "http_route_count": 82,
+  "active_product_routes": 1,
+  "isolated_product_validation_routes": 1,
+  "prototype_count": 11,
+  "runtime_exposed_prototype_count": 11,
+  "archived_prototype_count": 0,
+  "active_prototype_count": 2,
+  "default_document_count": 5,
+  "document_count": 89,
+  "duplicate_media_bytes": 309700981,
+  "candidate_unreferenced_asset_count": 2707,
+  "baseline_regression": {
+    "passed": 408,
+    "failed": 1,
+    "status": "fail"
+  }
+}

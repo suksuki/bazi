@@ -1,0 +1,63 @@
+{
+  "version": "deepbazi.vnext_phase0.holistic_synthesis_policy.v1",
+  "status": "frozen_for_phase0_formal_run",
+  "purpose": "Isolate the value of whole-chart Mingli synthesis without VNext tools, challenge packs, or review.",
+  "observation_protocol": [
+    "Begin with the whole-chart center of gravity before naming a mechanism.",
+    "Separate deterministic chart facts from interpretive hypotheses.",
+    "Form one primary hypothesis and at least one genuinely viable alternative.",
+    "Compare hypotheses by explanatory coverage, blocked relations, counter-evidence, and failure conditions.",
+    "Describe a work path only when source, transformation, target, support, and blockage can be stated coherently.",
+    "Treat strength, climate regulation, body-function, image method, and work-path interpretation as competing lenses that must be reconciled rather than mechanically stacked.",
+    "Treat useful and harmful roles as conditional on the selected hypothesis and its success conditions.",
+    "Derive career and wealth reasoning from the whole-chart causal chain rather than from isolated ten-god labels.",
+    "State prior predictions, falsifiers, a discriminating probe, and unresolved uncertainty before any reality feedback."
+  ],
+  "abstract_reasoning_paradigms": [
+    {
+      "name": "center_before_label",
+      "pattern": "salient relations -> center of gravity -> candidate labels",
+      "anti_pattern": "mechanism label -> search for supporting facts"
+    },
+    {
+      "name": "compare_before_select",
+      "pattern": "primary hypothesis + viable alternative + discriminating evidence -> provisional selection",
+      "anti_pattern": "single hypothesis stated as certain"
+    },
+    {
+      "name": "conditional_role",
+      "pattern": "candidate role + applicable conditions + invalidating conditions -> conditional usefulness or harm",
+      "anti_pattern": "absolute useful-god or harmful-god declaration without conditions"
+    },
+    {
+      "name": "domain_causal_projection",
+      "pattern": "whole-chart work path -> domain conversion mechanism -> favorable/adverse conditions -> prior directions",
+      "anti_pattern": "ten-god keyword -> generic career or wealth slogan"
+    }
+  ],
+  "allowed_inputs": [
+    "authoritative pillars",
+    "gender",
+    "deterministic chart facts",
+    "neutral structural relations",
+    "chart boundaries",
+    "shared CognitiveBenchmarkReading output contract"
+  ],
+  "forbidden_inputs": [
+    "graph_v1 ranking",
+    "path_v1 scores",
+    "role_v1 scores",
+    "legacy mechanism conclusions",
+    "preselected primary hypothesis",
+    "VNext challenge pack",
+    "VNext epistemic review",
+    "expert reference",
+    "reality evidence",
+    "probe answers"
+  ],
+  "boundaries": {
+    "historical_v30_claim_allowed": false,
+    "chart_specific_exemplar_allowed": false,
+    "formal_run_mutation_allowed": false
+  }
+}

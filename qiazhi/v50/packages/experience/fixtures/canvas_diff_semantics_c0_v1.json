@@ -1,0 +1,65 @@
+{
+  "schema_version": "deepbazi.mingli_canvas_compile_input.v1",
+  "compiler_version": "mingli-canvas-compiler.c0.v1",
+  "compiled_at": "2026-07-18T00:00:00Z",
+  "chart": {
+    "chart_version_id": "chart-diff-contract-v1",
+    "world_id": "world-diff-contract-v1",
+    "slots": [
+      {"slot_ref": "slot-natal-year", "slot_type": "natal_year", "label": "年柱", "stem": "甲", "branch": "子", "immutable": true, "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["fixture:year"], "disclosure": "public"}},
+      {"slot_ref": "slot-natal-month", "slot_type": "natal_month", "label": "月柱", "stem": "乙", "branch": "丑", "immutable": true, "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["fixture:month"], "disclosure": "public"}},
+      {"slot_ref": "slot-natal-day", "slot_type": "natal_day", "label": "日柱", "stem": "丙", "branch": "寅", "immutable": true, "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["fixture:day"], "disclosure": "public"}},
+      {"slot_ref": "slot-natal-hour", "slot_type": "natal_hour", "label": "时柱", "stem": "丁", "branch": "卯", "immutable": true, "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["fixture:hour"], "disclosure": "public"}}
+    ],
+    "nodes": [
+      {"node_ref": "node-a", "label": "A", "node_type": "contract_fixture", "semantic_slot_ref": "slot-natal-day", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["fixture:node-a"], "disclosure": "practitioner"}},
+      {"node_ref": "node-b", "label": "B", "node_type": "contract_fixture", "semantic_slot_ref": "slot-natal-hour", "trace": {"source_mode": "canonical", "epistemic_status": "fact", "source_refs": ["fixture:node-b"], "disclosure": "practitioner"}}
+    ],
+    "relations": [
+      {"relation_ref": "relation-a-b", "from_node_ref": "node-a", "to_node_ref": "node-b", "relation_type": "contract_link", "label": "合同关系", "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:relation"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:relation-state"], "disclosure": "practitioner"}, "change_reason_refs": ["fixture:relation-reason"]}
+    ],
+    "clusters": []
+  },
+  "life_case": {
+    "life_case_id": "life-case-diff-contract-v1",
+    "life_case_version": "v1",
+    "paths": [
+      {"path_ref": "path-removed", "label": "Removed", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-removed"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-removed-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:removed"]},
+      {"path_ref": "path-activated", "label": "Activated", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "latent", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-activated"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-activated-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:activated-base"]},
+      {"path_ref": "path-reinforced", "label": "Reinforced", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-reinforced"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-reinforced-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:reinforced-base"]},
+      {"path_ref": "path-weakened", "label": "Weakened", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-weakened"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-weakened-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:weakened-base"]},
+      {"path_ref": "path-blocked", "label": "Blocked", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-blocked"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-blocked-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:blocked-base"]},
+      {"path_ref": "path-reopened", "label": "Reopened", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "blocked", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-reopened"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-reopened-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:reopened-base"]},
+      {"path_ref": "path-unchanged", "label": "Unchanged", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-unchanged"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-unchanged-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:unchanged"]}
+    ],
+    "uncertainty": ["本文件仅验证 Diff 合同，不代表专业命例"],
+    "must_not_say": ["不得把合同夹具解释成人生判断"]
+  },
+  "temporal_layers": [
+    {
+      "layer_id": "luck-diff-contract",
+      "layer_type": "luck",
+      "layer_mode": "official",
+      "temporal_snapshot_id": "snapshot-diff-contract-v1",
+      "slot": {"slot_ref": "slot-luck-diff", "slot_type": "luck", "label": "大运合同夹具", "stem": "戊", "branch": "辰", "immutable": false, "trace": {"source_mode": "derived", "epistemic_status": "fact", "source_refs": ["fixture:luck-slot"], "disclosure": "practitioner"}},
+      "nodes": [],
+      "relations": [],
+      "clusters": [],
+      "paths": [
+        {"path_ref": "path-introduced", "label": "Introduced", "node_refs": ["node-a", "node-b"], "relation_refs": ["relation-a-b"], "semantic_state": "active", "trace": {"source_mode": "derived", "epistemic_status": "candidate", "source_refs": ["fixture:path-introduced"], "disclosure": "practitioner"}, "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:path-introduced-state"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:introduced"]}
+      ],
+      "path_updates": [
+        {"path_ref": "path-activated", "semantic_state": "active", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:update-activated"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:activated"]},
+        {"path_ref": "path-reinforced", "semantic_state": "reinforced", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:update-reinforced"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:reinforced"]},
+        {"path_ref": "path-weakened", "semantic_state": "weakened", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:update-weakened"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:weakened"]},
+        {"path_ref": "path-blocked", "semantic_state": "blocked", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:update-blocked"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:blocked"]},
+        {"path_ref": "path-reopened", "semantic_state": "active", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:update-reopened"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:reopened"]},
+        {"path_ref": "path-unchanged", "semantic_state": "active", "state_trace": {"source_mode": "derived", "epistemic_status": "derived", "source_refs": ["fixture:update-unchanged"], "disclosure": "practitioner"}, "change_reason_refs": ["reason:unchanged"]}
+      ],
+      "removals": [
+        {"object_type": "path", "target_ref": "path-removed", "reason_refs": ["reason:removed"], "source_refs": ["fixture:remove-path"], "source_mode": "derived"}
+      ],
+      "source_refs": ["fixture:diff-layer"]
+    }
+  ]
+}

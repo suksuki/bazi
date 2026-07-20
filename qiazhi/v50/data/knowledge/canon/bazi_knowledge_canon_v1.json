@@ -1,0 +1,36 @@
+{
+  "version": "v50.bazi_knowledge_canon.v1",
+  "status": "seed_canon",
+  "purpose": "Structured Bazi knowledge canon for future Runtime card review. This file does not create Runtime rules.",
+  "card_source": "data/knowledge/canon/knowledge_cards_v1.jsonl",
+  "domains": {
+    "foundation": [
+      "bazi.foundation.wang_shuai_root_transparent",
+      "bazi.relation.chong_he_xing_hai_po",
+      "bazi.relation.sanhe_sanhui_liuhe",
+      "bazi.storage.mu_ku"
+    ],
+    "timing": [
+      "bazi.timing.luck_year_activation"
+    ],
+    "mechanism": [
+      "bazi.mechanism.output_to_wealth",
+      "bazi.mechanism.output_controls_pressure",
+      "bazi.mechanism.peer_competes_for_wealth",
+      "bazi.mechanism.shangguan_jian_guan",
+      "bazi.mechanism.guan_sha_mixed",
+      "bazi.mechanism.sha_yin_xiang_sheng",
+      "bazi.mechanism.cai_guan_xiang_sheng",
+      "bazi.mechanism.weak_body_strong_wealth",
+      "bazi.mechanism.strong_body_weak_wealth"
+    ],
+    "model": [
+      "bazi.model.tiao_hou",
+      "bazi.model.ti_yong",
+      "bazi.model.flow_mainline"
+    ]
+  },
+  "source_policy": "Every P0 card must carry at least three traceable public sources before Runtime promotion.",
+  "runtime_boundary": "Canon cards are research assets only until reviewed, modeled, fixture-tested, and activated by Brain validation."
+}
+

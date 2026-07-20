@@ -1,0 +1,25 @@
+{
+  "schema_version": "deepbazi.media_asset_registry.v1",
+  "frozen_at": "2026-07-18",
+  "brand": [
+    {
+      "asset_id": "deepbazi-horizontal-logo",
+      "source": "apps/product/static/l5/assets/deepbazi_logo_horizontal.png",
+      "sha256": "72fb1325ba3b4dc03742ef650ca53064a398a73eb84f66aaee956e0db8efe62d"
+    },
+    {
+      "asset_id": "valley-sunrise",
+      "source": "apps/product/static/l5/assets/valley_sunrise.jpg",
+      "sha256": "97b0e84354a94c62f29f4c1ba1b2b0625169f3d13f5b54080bafe11170f99f17"
+    }
+  ],
+  "abu_motion": {
+    "registry": "apps/product/static/l5/assets/abu/motion-registry.js",
+    "sha256": "0f94a3db535d9c77b1ddb4cafd552543830a65bcd4c160455355e81ecc780a40",
+    "new_experience_assets": [
+      "abu_idle_blink_v4.webp",
+      "abu_taoist_divination_v9.webp",
+      "abu_sad_tears_v11.webp"
+    ]
+  }
+}
