@@ -1,6 +1,6 @@
 # V50 CAG-03 Canonical Scene Closeout V1
 
-Status: `CLOSED / PASS`
+Status: `CLOSED / PASS / AUTHORITY HARDENED`
 Date: `2026-07-20`
 
 ## Decision
@@ -28,7 +28,12 @@ create Mingli facts, promote a candidate, infer a missing relation, or write
 - A projection can reference only semantic objects disclosed by its Scene.
 - Legacy `record` data cannot alter Canonical Scene identity or content.
 - Theater delegates to `CanonicalSceneOwner` through a compatibility adapter.
-- Read-only OneCanvas verifies and carries the same Canonical Scene identity.
+- The compatibility envelope defaults to member-safe disclosure; professional
+  premises, evidence refs and hypotheses cannot leak through its fallback.
+- Read-only OneCanvas requests only its `onecanvas` projection from that owner.
+- Abu narration and voice validation consume only the `abu` projection.
+- Abu narration no longer reads `record` or calls `formal_projection_record`.
+- A single-projection request no longer compiles all five projection payloads.
 - Static S0 and Xiangfa prototypes remain isolated presentation fixtures.
 
 ## Deliberately Deferred
@@ -41,15 +46,29 @@ create Mingli facts, promote a candidate, infer a missing relation, or write
 ## Machine Evidence
 
 ```text
-CAG-03 targeted regression: 42 passed
-V50 full regression: 456 passed
+CAG-03 targeted regression: 49 passed
+V50 full regression: 458 passed
 R1 V6 locked assets: 20/20 OK
 Constitution SHA-256:
 4908c2865e98ba9e35f12358329fffd0b503ce9edc33cac3cf9d736e2e3caeff
 ```
 
+## Slimming Evidence
+
+- Narrated Workspace legacy `record` fallback readers: `1 -> 0`.
+- Narration case-store reads per manifest request: `2 -> 1`, protected by regression.
+- Requested projection compilation: `5 -> 1` for Canvas, Abu and direct API consumers.
+- Local 500-iteration mean: single projection `0.4590 ms`, five-projection bundle
+  `0.5276 ms` (`0.87x`); this is a regression probe, not a production SLA.
+- New application modules in this hardening pass: `0`.
+- The phase retains the L0/L1 physical reduction baseline: repository bytes
+  `-71.39%`, files `-69.84%`, runtime duplicate media `309700981 -> 0` bytes.
+
+The retained Theater `chart_facts_only` path is explicitly non-formal and cannot
+claim Canonical Scene identity. It remains a compatibility boundary, not a
+second Scene owner.
+
 ## Next Slice
 
-`CAG-04 Formal Relation and Path Provenance` is now authorized. It must add
-stable relation/path identity and historical adapters without silently
-rewriting committed LifeCase cognition.
+`CAG-04 Formal Relation and Path Provenance` is the next architecture slice but
+was not started by this task. It requires an explicit next-task authorization.

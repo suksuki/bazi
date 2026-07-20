@@ -1037,6 +1037,43 @@ evidence:
   - reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
 ```
 
+### DR-033 — V50 Consolidation & Slimming Owns the Current Stage
+
+```yaml
+decision_id: DR-033
+date: 2026-07-20
+status: active
+stage: V50_Consolidation_and_Slimming
+execution_order:
+  - V50_Git_Source_Baseline
+  - CAG_03_Canonical_Scene
+  - CAG_04_Relation_Path_Provenance
+  - CAG_05_Schema_Module_Ownership
+  - Architecture_Gate
+current_task_boundary: Source_Baseline_and_CAG_03_only
+validation_principles:
+  - self_healing
+  - high_velocity_iteration
+  - synthetic_validation
+validation_principles_create_new_subsystem: false
+required_convergence:
+  - LifeCase_is_formal_case_authority
+  - CanonicalSceneOwner_is_single_scene_owner
+  - projections_do_not_own_facts
+  - client_cannot_override_formal_chart_facts
+  - every_new_module_must_replace_or_remove_existing_complexity
+blocked:
+  - CAG_04_in_current_task
+  - RA1_to_RA3
+  - Workspace_production_adoption
+  - new_product_UI_animation_or_interaction
+  - new_Mingli_algorithm
+  - Theater_or_Xiangfa_expansion
+  - Self_Healing_platform
+R1_V6: immutable_20_file_regression_reference
+V40_changes: forbidden
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

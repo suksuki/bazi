@@ -17,17 +17,19 @@ V50 Lean & Consolidation
 → L0 inventory CLOSED
 → L1 physical slimming CLOSED
 → L2 chart and temporal authority CLOSED
-→ R1 zero/one/many projection CLOSED
-→ R1 v5 unguided human review READY
-→ Architecture Consolidation Gates D / E / F
+→ V50 Git Source Baseline CLOSED
+→ R1 V6 retained as 20-file regression reference
+→ CAG-03 Canonical Scene CLOSED / HARDENED
+→ CAG-04 then CAG-05 then Architecture Gate
 ```
 
 R1 v5's machine gate is green. The v6 review build now exposes the Solver's
-zero/one/many outcomes and is hash-locked. The human review is ready but has not
-yet been executed. RA1 and production remain blocked.
+zero/one/many outcomes and is hash-locked. The previously assumed human review
+was never scheduled and is not an engineering prerequisite. RA1, Workspace
+production adoption and production release remain blocked.
 
 Xiangfa Generation V1 remains as an isolated proof route, but parallel feature
-work is paused while R1 is open. It does not own Mingli relations, paths,
+work is paused during consolidation. It does not own Mingli relations, paths,
 LifeCase cognition, or formal state.
 
 ## Historical Material

@@ -87,6 +87,7 @@ class CanonicalSceneIdentity(ExperienceModel):
     world_id: str = Field(min_length=1, max_length=180)
     life_case_id: str = Field(min_length=1, max_length=180)
     life_case_version: str = Field(min_length=1, max_length=120)
+    source_updated_at: datetime
     source_hash: str = Field(min_length=64, max_length=64)
 
 
@@ -217,6 +218,7 @@ def compile_canonical_scene(
         world_id=source.world_id,
         life_case_id=source.life_case_id,
         life_case_version=source.life_case_version,
+        source_updated_at=source.source_updated_at,
         source_hash=source_hash,
     )
     facts = list(source.chart_facts)
@@ -231,7 +233,19 @@ def compile_canonical_scene(
         if role == "member"
         else []
     )
-    reasoning = list(source.approved_reasoning_steps) if professional else []
+    reasoning = (
+        list(source.approved_reasoning_steps)
+        if professional
+        else [
+            item.model_copy(update={
+                "premise": "当前角色不披露专业推理前提。",
+                "source_refs": [],
+            })
+            for item in source.approved_reasoning_steps
+        ]
+        if role == "member"
+        else []
+    )
     hypotheses = list(source.competing_hypotheses) if professional else []
     temporal_refs = list(source.temporal_state.temporal_snapshot_refs)
     temporal_state = (
@@ -311,7 +325,7 @@ def compile_canonical_scene(
 
 def compile_canonical_scene_bundle(scene: CanonicalScene) -> CanonicalSceneBundle:
     projections = {
-        kind: _compile_projection(scene=scene, kind=kind)
+        kind: compile_canonical_projection(scene=scene, kind=kind)
         for kind in CANONICAL_PROJECTION_KINDS
     }
     return CanonicalSceneBundle(
@@ -332,7 +346,7 @@ def compile_canonical_scene_bundle(scene: CanonicalScene) -> CanonicalSceneBundl
     )
 
 
-def _compile_projection(
+def compile_canonical_projection(
     *,
     scene: CanonicalScene,
     kind: CanonicalProjectionKind,

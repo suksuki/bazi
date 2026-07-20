@@ -5,7 +5,7 @@ DeepBazi V50 是一个由 Abu 引导、以 LLM 为命理认知核心的八字与
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `8c9ff5c62093` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `7ec6f741db1f` · Updated `2026-07-20`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -17,17 +17,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 456_PASSED_CAG03
+full_regression: 458_PASSED_CAG03_HARDENED
 ```
 
 Authorized now:
 
-- `CAG_04_FORMAL_RELATION_PATH_PROVENANCE`: stable_relation_and_path_identity_provenance_and_historical_adapters
-- `SYNTHETIC_VALIDATION_LOOP`: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
+- `CAG_03_CANONICAL_SCENE_CLOSEOUT`: canonical_scene_single_owner_projection_adapter_slimming_and_verification_only
 
-Next architecture slice: `CAG_05_SCHEMA_AND_MODULE_OWNERSHIP` after `cag_04_formal_relation_path_provenance_pass`.
+Next architecture slice: `CAG_04_FORMAL_RELATION_PATH_PROVENANCE` after `explicit_next_task_after_cag_03_closeout`.
 
-Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `public_release`.
+Blocked: `cag_04_implementation_in_current_task`, `cag_05_implementation_in_current_task`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 主链

@@ -4,6 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
 from product.agent_case_store import AgentCaseStore
+from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 from product.narrated_workspace import NarratedWorkspaceError, NarratedWorkspaceService
 from product.product_store import ProductStore
 from product.theater_performance import TheaterPerformanceError
@@ -21,25 +22,40 @@ def create_narration_router(
 ) -> APIRouter:
     router = APIRouter(prefix=NARRATION_API_PREFIX, tags=["abu-narrated-workspace"])
     service = service or NarratedWorkspaceService.from_environment()
+    scene_owner = CanonicalSceneOwner(case_store=case_store)
 
-    def load_authorized_case(case_id: str, request: Request) -> dict[str, object]:
+    def authenticated_account(request: Request) -> dict[str, object]:
         token = request.cookies.get(session_cookie, "")
         account = product_store.account_for_token(token) if token else None
-        account_id = str(account["user_id"]) if account else None
+        if not account:
+            raise HTTPException(status_code=404, detail="mingli_case_not_found")
+        return account
+
+    def authorize_case(case_id: str, request: Request) -> dict[str, object]:
+        account = authenticated_account(request)
+        account_id = str(account["user_id"])
         row = case_store.get(case_id=case_id, user_id=account_id)
         if row is None:
             raise HTTPException(status_code=404, detail="mingli_case_not_found")
         owner_id = str(row.get("user_id") or "")
-        if owner_id and owner_id != (account_id or ""):
+        if owner_id and owner_id != account_id:
             raise HTTPException(status_code=404, detail="mingli_case_not_found")
-        return row
+        return account
 
     def manifest_for(case_id: str, request: Request):
-        row = load_authorized_case(case_id, request)
+        account = authenticated_account(request)
         try:
-            return service.compile_manifest(row)
-        except NarratedWorkspaceError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
+            projection = scene_owner.issue_projection(
+                case_id=case_id,
+                participant_id=str(account["user_id"]),
+                account_role=str(account.get("account_role") or "member"),
+                projection_kind="abu",
+            )
+            return service.compile_manifest(projection)
+        except (CanonicalSceneUnavailable, NarratedWorkspaceError) as exc:
+            detail = str(exc)
+            status = 404 if detail == "canonical_scene_case_not_found" else 409
+            raise HTTPException(status_code=status, detail=detail) from exc
 
     @router.get("/cases/{case_id}/baseline")
     def baseline_manifest(case_id: str, request: Request) -> dict[str, object]:
@@ -80,7 +96,7 @@ def create_narration_router(
         speech_asset_id: str,
         request: Request,
     ) -> FileResponse:
-        load_authorized_case(case_id, request)
+        authorize_case(case_id, request)
         try:
             asset = service.repository.get(speech_asset_id)
         except NarratedWorkspaceError as exc:
@@ -101,7 +117,7 @@ def create_narration_router(
         speech_asset_id: str,
         request: Request,
     ) -> FileResponse:
-        load_authorized_case(case_id, request)
+        authorize_case(case_id, request)
         try:
             asset = service.repository.get(speech_asset_id)
         except NarratedWorkspaceError as exc:

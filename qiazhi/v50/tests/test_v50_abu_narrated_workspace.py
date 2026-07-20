@@ -3,11 +3,13 @@ from __future__ import annotations
 import io
 import wave
 from pathlib import Path
+from unittest.mock import patch
 
 from fastapi.testclient import TestClient
 
 from product.agent_case_store import MemoryAgentCaseStore
 from product.app import create_product_app
+from product.canonical_scene import CanonicalSceneOwner
 from product.narrated_workspace import NarratedWorkspaceService, SpeechAssetRepository
 from product.product_store import MemoryProductStore
 from product.theater_performance import SynthesizedSpeech
@@ -71,6 +73,23 @@ def _narrated_case(tmp_path: Path):
     return app, client, case_store, service, tts, started.json()["case_id"]
 
 
+def _manifest(
+    *,
+    service: NarratedWorkspaceService,
+    case_store: MemoryAgentCaseStore,
+    case_id: str,
+):
+    row = case_store.get(case_id=case_id)
+    assert row is not None
+    projection = CanonicalSceneOwner(case_store=case_store).issue_projection(
+        case_id=case_id,
+        participant_id=str(row["user_id"]),
+        account_role="member",
+        projection_kind="abu",
+    )
+    return service.compile_manifest(projection)
+
+
 def test_manifest_is_a_silent_projection_of_committed_life_case(tmp_path: Path) -> None:
     _, client, case_store, _, tts, case_id = _narrated_case(tmp_path)
 
@@ -90,6 +109,37 @@ def test_manifest_is_a_silent_projection_of_committed_life_case(tmp_path: Path) 
     assert [item["kind"] for item in manifest["segments"]][:2] == ["thesis", "work_path"]
     assert all(item["source_claim_refs"] == [baseline["insight_id"]] for item in manifest["segments"])
     assert "baseline-summary" in manifest["segments"][0]["visual_anchor_ids"]
+
+
+def test_manifest_reads_the_case_once_through_canonical_scene_owner(tmp_path: Path) -> None:
+    _, client, case_store, _, _, case_id = _narrated_case(tmp_path)
+
+    with patch.object(case_store, "get", wraps=case_store.get) as get_case:
+        response = client.get(f"/api/v50/narration/cases/{case_id}/baseline")
+
+    assert response.status_code == 200, response.text
+    assert get_case.call_count == 1
+
+
+def test_manifest_ignores_legacy_record_and_uses_canonical_abu_projection(
+    tmp_path: Path,
+) -> None:
+    _, client, case_store, _, _, case_id = _narrated_case(tmp_path)
+    before = client.get(f"/api/v50/narration/cases/{case_id}/baseline")
+    row = case_store.get(case_id=case_id)
+    assert row is not None
+    row["record"] = {"legacy_claim": "THIS MUST NOT BECOME ABU NARRATION"}
+    case_store.save(
+        case_id=case_id,
+        user_id=str(row["user_id"]),
+        profile_id=row.get("profile_id"),
+        payload=row,
+    )
+    after = client.get(f"/api/v50/narration/cases/{case_id}/baseline")
+
+    assert before.status_code == after.status_code == 200
+    assert before.json()["manifest"] == after.json()["manifest"]
+    assert "THIS MUST NOT" not in str(after.json())
 
 
 def test_segment_generation_is_immutable_cached_and_private(tmp_path: Path) -> None:
@@ -122,7 +172,7 @@ def test_segment_generation_is_immutable_cached_and_private(tmp_path: Path) -> N
 
 def test_voice_version_changes_the_manifest_and_speech_asset_key(tmp_path: Path) -> None:
     _, client, case_store, service, _, case_id = _narrated_case(tmp_path)
-    first_manifest = service.compile_manifest(case_store.get(case_id=case_id))
+    first_manifest = _manifest(service=service, case_store=case_store, case_id=case_id)
     first_asset, _ = service.prepare_segment(
         manifest=first_manifest,
         segment_id=first_manifest.segments[0].segment_id,
@@ -132,7 +182,7 @@ def test_voice_version_changes_the_manifest_and_speech_asset_key(tmp_path: Path)
         repository=service.repository,
         tts=replacement_tts,
     )
-    second_manifest = replacement.compile_manifest(case_store.get(case_id=case_id))
+    second_manifest = _manifest(service=replacement, case_store=case_store, case_id=case_id)
     second_asset, cache_hit = replacement.prepare_segment(
         manifest=second_manifest,
         segment_id=second_manifest.segments[0].segment_id,
@@ -179,7 +229,7 @@ def test_new_speech_asset_exposes_private_opus_playback_variant(tmp_path: Path) 
         tts=tts,
         opus_transcoder=_FakeOpusTranscoder(),
     )
-    manifest = opus_service.compile_manifest(case_store.get(case_id=case_id))
+    manifest = _manifest(service=opus_service, case_store=case_store, case_id=case_id)
     asset, cache_hit = opus_service.prepare_segment(
         manifest=manifest,
         segment_id=manifest.segments[0].segment_id,

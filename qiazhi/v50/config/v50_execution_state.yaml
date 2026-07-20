@@ -2,8 +2,8 @@ schema_version: v2
 updated_at: 2026-07-20
 
 phase:
-  name: ARCHITECTURE_CONSOLIDATION_EXECUTION
-  default_mode: high_velocity_iteration
+  name: V50_CONSOLIDATION_AND_SLIMMING
+  default_mode: authority_convergence
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
 
@@ -26,8 +26,8 @@ principles:
   - one_professional_judgment_one_provenance_chain
   - one_scene_multiple_projections
   - user_intent_never_directly_mutates_mingli_fact
-  - self_healing_with_risk_based_promotion
-  - synthetic_validation_is_the_default_engineering_loop
+  - consolidation_must_replace_or_remove_existing_authority
+  - validation_principles_do_not_authorize_new_subsystems
 
 gates:
   source_integrity_review: PASS
@@ -38,19 +38,19 @@ gates:
   r1_machine_gate: PASS
   r1_review_build: V6_HASH_LOCKED_REGRESSION_REFERENCE
   r1_human_product_gate: CANCELED_NO_SCHEDULE
-  cag_03_canonical_scene: CLOSED_PASS
+  cag_03_canonical_scene: CLOSED_PASS_HARDENED
   architecture_consolidation_gate: IN_PROGRESS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 456_PASSED_CAG03
+  full_regression: 458_PASSED_CAG03_HARDENED
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
   cag_03_owner: product.canonical_scene.CanonicalSceneOwner
-  cag_03_regression: 456_PASSED
+  cag_03_regression: 458_PASSED
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -59,30 +59,30 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: CAG_04_FORMAL_RELATION_PATH_PROVENANCE
+  - id: CAG_03_CANONICAL_SCENE_CLOSEOUT
     kind: architecture_consolidation
-    scope: stable_relation_and_path_identity_provenance_and_historical_adapters
-  - id: SYNTHETIC_VALIDATION_LOOP
-    kind: system_evolution
-    scope: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
+    scope: canonical_scene_single_owner_projection_adapter_slimming_and_verification_only
 
 next_architecture_slice:
-  id: CAG_05_SCHEMA_AND_MODULE_OWNERSHIP
+  id: CAG_04_FORMAL_RELATION_PATH_PROVENANCE
   authorized_when:
-    - cag_04_formal_relation_path_provenance_pass
+    - explicit_next_task_after_cag_03_closeout
   scope:
-    - generated_schema_contracts
-    - module_ownership_enforcement
-    - legacy_retirement_manifest
-    - architecture_gate_evidence
+    - stable_relation_and_path_identity
+    - provenance_and_historical_adapters
+    - no_graph_or_path_semantic_expansion
 
 blocked:
+  - cag_04_implementation_in_current_task
+  - cag_05_implementation_in_current_task
   - relation_atlas_ra1
   - relation_core_v2_implementation
   - path_core_v2_implementation
   - mingli_lab_production_engineering
   - production_workspace_migration
   - frontend_framework_migration
+  - self_healing_platform_or_product_subsystem
+  - new_product_ui_animation_or_interaction
   - public_release
 
 protected_boundaries:
@@ -94,19 +94,10 @@ protected_boundaries:
   lab_role: sandbox_only
   r1_role: immutable_regression_reference_not_global_freeze
 
-self_healing_loop:
-  stages:
-    - synthetic_case
-    - runtime
-    - verifier
-    - failure_cluster
-    - repair_candidate
-    - counterfactual_ablation_regression
-    - evidence_ledger
-    - risk_based_promotion_or_rejection
-    - rollback_ready_release
-  promotion:
-    deterministic_bug: automatic_after_required_regression
-    prompt_or_projection: synthetic_ab_and_semantic_consistency
-    graph_path_or_timing: controlled_risk_gate
-    core_mingli_theory: theory_candidate_only
+validation_policy:
+  role: engineering_evidence_only
+  self_healing: isolated_repair_and_rollback_discipline
+  high_velocity_iteration: artifact_scoped_iteration_only
+  synthetic_validation: regression_and_counterfactual_evidence
+  new_platform_or_product_subsystem: FORBIDDEN
+  silent_formal_theory_mutation: FORBIDDEN

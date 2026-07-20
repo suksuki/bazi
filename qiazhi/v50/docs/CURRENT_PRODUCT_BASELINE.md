@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `8c9ff5c62093` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `7ec6f741db1f` · Updated `2026-07-20`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,17 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 456_PASSED_CAG03
+full_regression: 458_PASSED_CAG03_HARDENED
 ```
 
 Authorized now:
 
-- `CAG_04_FORMAL_RELATION_PATH_PROVENANCE`: stable_relation_and_path_identity_provenance_and_historical_adapters
-- `SYNTHETIC_VALIDATION_LOOP`: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
+- `CAG_03_CANONICAL_SCENE_CLOSEOUT`: canonical_scene_single_owner_projection_adapter_slimming_and_verification_only
 
-Next architecture slice: `CAG_05_SCHEMA_AND_MODULE_OWNERSHIP` after `cag_04_formal_relation_path_provenance_pass`.
+Next architecture slice: `CAG_04_FORMAL_RELATION_PATH_PROVENANCE` after `explicit_next_task_after_cag_03_closeout`.
 
-Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `public_release`.
+Blocked: `cag_04_implementation_in_current_task`, `cag_05_implementation_in_current_task`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product
@@ -187,8 +186,10 @@ Closed by L1/L2:
 - malformed formal pillars and stale temporal derivations are rejected.
 - CAG-03 provides one Canonical Scene identity and role-filtered projection
   envelopes for OneCanvas, Abu, Theater, Xiangfa and Workspace;
-- Theater and read-only OneCanvas are bound to that Scene owner without
-  changing Graph or Path semantics.
+- Theater, read-only OneCanvas and Abu narration consume that Scene owner;
+- Abu narration no longer accepts legacy `record` fallback content;
+- Graph and Path semantics remain unchanged and isolated behind the declared
+  CAG-04 transitional adapter.
 
 ## 8. Product Non-Goals
 
@@ -208,11 +209,15 @@ The main execution line is now:
 ```text
 1. keep L0/L1/L2 and the V50 Git Source Baseline closed;
 2. retain R1 V6 as a hash-locked regression reference;
-3. keep CAG-03 closed and consume its Canonical Scene contract;
-4. execute CAG-04 then CAG-05;
-5. pass the Architecture Gate before RA1-RA3 and Workspace migration;
-6. run synthetic validation and risk-based promotion continuously.
+3. close CAG-03 with one Scene owner and thinner projection adapters;
+4. stop this task before CAG-04;
+5. execute CAG-04 and CAG-05 only as later explicit slices;
+6. pass the Architecture Gate before RA1-RA3 and Workspace migration.
 ```
+
+Self-healing, high-velocity iteration and synthetic validation are validation
+principles for those slices. They do not authorize a new subsystem, UI, product
+feature or Mingli algorithm.
 
 S0 V1.2 is locked as an internal stage milestone. Do not start S0 V1.3 or add
 features, documents, or visual polish to the first film. Its two non-blocking

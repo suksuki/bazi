@@ -124,6 +124,8 @@ The target layers above are partially implemented. The following current-state d
 - the legacy L5 shell still serves `/` and `/app` and is `active_retiring`.
 - `/experience` is the new Experience Shell.
 - production deployment of OneCanvas and Relation Atlas is blocked.
+- `CanonicalSceneOwner` is the only formal case-to-scene application owner;
+  OneCanvas, Abu, Theater, Xiangfa and Workspace are projections, not facts.
 
 Known consolidation defects and their gates are defined in
 `V50_ARCHITECTURE_CONSOLIDATION_AUDIT_V2.md`. L2 has since closed the Chart and
@@ -131,12 +133,9 @@ Temporal authority defects: the server-owned global Solver returns zero, one
 or many legal variants; `CanonicalTemporalService` owns application DaYun
 facts; and browser-side Mingli derivation has been removed.
 
-The remaining R1 gap is presentation and interaction, not a second chart
-algorithm. The current OneCanvas wrapper submits complete targets and only
-projects a selected single variant. Before unguided human review, it must expose
-the existing `multiple_solutions` and `no_solution` contracts, including
-candidate choice, conflicts and releasable constraints, without reconstructing
-them in the browser.
+R1 V6 already exposes the existing `single_solution`, `multiple_solutions` and
+`no_solution` contracts without reconstructing them in the browser. Its 20 files
+remain immutable regression evidence; no human-review prerequisite is active.
 
 ## 7. OneCanvas Architecture
 
@@ -159,8 +158,9 @@ Formal chart and Sandbox experiment are separate. DaYun is derived and never fre
 
 ## 8. Relation and Path Direction
 
-Relation Core V2 and Path Core V2 remain blocked until the R1 human gate and
-Architecture Consolidation Gates D/E/F pass.
+Relation Core V2 and Path Core V2 remain blocked until CAG-03 through CAG-05 and
+the Architecture Consolidation Gate pass. CAG-04 has not started in the current
+task.
 
 ```text
 Relation Core V2

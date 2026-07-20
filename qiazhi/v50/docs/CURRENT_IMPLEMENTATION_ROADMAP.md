@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `8c9ff5c62093` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `7ec6f741db1f` · Updated `2026-07-20`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,17 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 456_PASSED_CAG03
+full_regression: 458_PASSED_CAG03_HARDENED
 ```
 
 Authorized now:
 
-- `CAG_04_FORMAL_RELATION_PATH_PROVENANCE`: stable_relation_and_path_identity_provenance_and_historical_adapters
-- `SYNTHETIC_VALIDATION_LOOP`: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
+- `CAG_03_CANONICAL_SCENE_CLOSEOUT`: canonical_scene_single_owner_projection_adapter_slimming_and_verification_only
 
-Next architecture slice: `CAG_05_SCHEMA_AND_MODULE_OWNERSHIP` after `cag_04_formal_relation_path_provenance_pass`.
+Next architecture slice: `CAG_04_FORMAL_RELATION_PATH_PROVENANCE` after `explicit_next_task_after_cag_03_closeout`.
 
-Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `public_release`.
+Blocked: `cag_04_implementation_in_current_task`, `cag_05_implementation_in_current_task`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 0. Rule
@@ -47,13 +46,13 @@ machine proof
 Consolidation is also closed. R1 truthfully exposes the Solver's zero, one and
 many outcomes; its 20-file V6 manifest remains an immutable regression
 reference. The previously assumed seven-person review does not exist and is no
-longer an engineering prerequisite. Development now follows artifact-scoped
-locks, high-velocity iteration and synthetic validation rather than a global
-product freeze.
+longer an engineering prerequisite. The current phase is limited to integration,
+cleanup, slimming and authority convergence. Self-healing and synthetic
+validation are evidence disciplines here, not new product or platform work.
 
 ## 1. Closed — L0 + L1 Closeout
 
-Status: `CLOSED / PASS`
+Status: `CLOSED / PASS / AUTHORITY HARDENED`
 
 Required closeout:
 
@@ -191,13 +190,17 @@ The canonical Scene Compiler projects one formal case source into:
 `CanonicalSceneOwner` accepts only a server-owned case identity, reads
 `ChartWorldInstance + committed LifeCase`, applies role disclosure before
 serialization, and issues one shared Scene identity plus projection envelopes.
-Theater delegates to this owner; read-only OneCanvas is bound to its identity
-while its Graph/Path logic remains a transitional CAG-04 adapter.
+Theater delegates to this owner; read-only OneCanvas requests its projection
+from the same owner; Abu narration no longer reads `record` or invokes a legacy
+formal-projection fallback. Canvas Graph/Path assembly remains an explicitly
+transitional CAG-04 adapter.
 
 Exit condition: one semantic identity model, no Renderer inference, no client
 formal-fact override, and tested compatibility paths for current contracts.
 
 ### CAG-04 — Formal Relation and Path Provenance
+
+Status: `NEXT / NOT STARTED IN THIS TASK`
 
 Define versioned identifiers and historical adapters before changing Graph behavior.
 

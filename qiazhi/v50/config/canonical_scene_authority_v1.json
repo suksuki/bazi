@@ -22,15 +22,16 @@
     "workspace"
   ],
   "integrated_adapters": {
-    "theater": "ProductExperienceEnvelopePort delegates to CanonicalSceneOwner",
-    "onecanvas": "ReadOnlySixPillarCanvasService binds its transitional renderer payload to the canonical scene identity",
-    "abu": "canonical Abu projection envelope",
+    "theater": "ProductExperienceEnvelopePort delegates to CanonicalSceneOwner and defaults compatibility disclosure to member-safe content",
+    "onecanvas": "ReadOnlySixPillarCanvasService requests only the canonical onecanvas projection; transitional relation and path compilation cannot replace its identity",
+    "abu": "NarratedWorkspaceService consumes only the canonical Abu projection; legacy record fallback is removed",
     "xiangfa": "canonical semantic-binding projection envelope",
     "workspace": "canonical case-workspace projection envelope"
   },
   "transitional_boundaries": {
     "read_only_canvas_graph_path_adapter": "retained without semantic changes until CAG-04",
-    "legacy_routes": "retained as read-only compatibility adapters",
+    "legacy_routes": "retained as read-only compatibility adapters and may not claim Canonical Scene identity",
+    "theater_chart_facts_only": "explicit non-formal compatibility mode when no committed LifeCase scene exists",
     "static_s0_scene": "isolated presentation fixture, never formal case authority"
   },
   "forbidden": [
@@ -41,5 +42,6 @@
     "role-hidden content reintroduced by fallback",
     "scene writes to ChartVersion or LifeCase"
   ],
-  "next_gate": "CAG-04 formal relation and path provenance"
+  "current_task_boundary": "CAG-03 closeout only; CAG-04 not started",
+  "next_gate": "CAG-04 formal relation and path provenance after explicit next-task authorization"
 }

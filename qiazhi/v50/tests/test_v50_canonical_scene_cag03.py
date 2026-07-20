@@ -140,7 +140,12 @@ def test_member_disclosure_removes_professional_reasoning_before_serialization()
 
     assert member.scene.identity == practitioner.scene.identity
     assert member.scene.role_disclosure.disclosure_hash != practitioner.scene.role_disclosure.disclosure_hash
-    assert member.scene.approved_reasoning_steps == []
+    assert member.scene.approved_reasoning_steps
+    assert all(
+        item.premise == "当前角色不披露专业推理前提。"
+        for item in member.scene.approved_reasoning_steps
+    )
+    assert all(not item.source_refs for item in member.scene.approved_reasoning_steps)
     assert member.scene.competing_hypotheses == []
     assert member.scene.approved_claims[0].evidence_refs == []
     assert "CAG03-ONLY-PROFESSIONAL" not in member_json
@@ -249,12 +254,12 @@ def test_canonical_scene_api_enforces_case_ownership_and_projection_identity() -
 
 
 def test_theater_compatibility_envelope_consumes_the_same_canonical_source() -> None:
-    store, _ = _saved_case()
+    store, _ = _saved_case(professional_markers=True)
     owner = CanonicalSceneOwner(case_store=store)
     scene = owner.issue(
         case_id="case-cag03",
         participant_id="user-cag03",
-        account_role="practitioner",
+        account_role="member",
     )
     envelope = ProductExperienceEnvelopePort(case_store=store).issue_envelope(
         participant_id="user-cag03",
@@ -273,6 +278,10 @@ def test_theater_compatibility_envelope_consumes_the_same_canonical_source() -> 
     assert [item.claim_ref for item in envelope.approved_claims] == [
         item.claim_ref for item in scene.scene.approved_claims
     ]
+    assert "CAG03-ONLY-PROFESSIONAL" not in json.dumps(
+        envelope.model_dump(mode="json"),
+        ensure_ascii=False,
+    )
 
 
 def test_read_only_onecanvas_is_bound_to_the_canonical_scene_projection() -> None:

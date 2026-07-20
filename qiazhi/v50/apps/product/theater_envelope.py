@@ -20,6 +20,7 @@ class ProductExperienceEnvelopePort:
         disclosure_level: str,
         case_id: str | None = None,
         permitted_capabilities: list[str] | None = None,
+        account_role: str = "member",
     ) -> MingliExperienceEnvelope:
         return self._scene_owner.issue_experience_envelope(
             participant_id=participant_id,
@@ -28,4 +29,5 @@ class ProductExperienceEnvelopePort:
             disclosure_level=disclosure_level,
             case_id=case_id,
             permitted_capabilities=permitted_capabilities,
+            account_role=account_role,
         )

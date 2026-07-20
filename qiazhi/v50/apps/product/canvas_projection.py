@@ -232,15 +232,16 @@ class ReadOnlySixPillarCanvasService:
         if row is None:
             raise ReadOnlyCanvasUnavailable("experience_case_not_found")
         try:
-            canonical = self.scene_owner.issue(
+            canonical_projection = self.scene_owner.issue_projection(
                 case_id=case_id,
                 participant_id=participant_id,
                 account_role=role,
+                projection_kind="onecanvas",
             )
         except CanonicalSceneUnavailable as exc:
             raise ReadOnlyCanvasUnavailable(str(exc)) from exc
         source, metadata = _compile_input_from_case_row(case_id=case_id, row=row)
-        identity = canonical.scene.identity
+        identity = canonical_projection.scene_identity
         if (
             metadata["source"]["chart_version_id"] != identity.chart_version_id
             or metadata["source"]["life_case_id"] != identity.life_case_id
@@ -280,7 +281,7 @@ class ReadOnlySixPillarCanvasService:
             "specs": specs,
             "diffs": diffs,
             "canonical_scene": identity.model_dump(mode="json"),
-            "projection_envelope": canonical.projections["onecanvas"].model_dump(mode="json"),
+            "projection_envelope": canonical_projection.model_dump(mode="json"),
         }
 
 

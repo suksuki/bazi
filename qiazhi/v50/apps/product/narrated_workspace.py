@@ -10,9 +10,9 @@ import wave
 from datetime import datetime, timezone
 from pathlib import Path
 
-from core.life_case import LifeCase, formal_projection_record
-from core.mingli_agent import MingliCognitiveRecord
+from experience.canonical_scene import CanonicalProjectionEnvelope
 from experience.compiler import canonical_hash
+from experience.contracts import ApprovedClaim, ApprovedReasoningStep, EnvelopeUncertainty
 from experience.experiments import MingliVisualCue
 from experience.narration import (
     NarrationManifest,
@@ -186,39 +186,58 @@ class NarratedWorkspaceService:
             opus_transcoder=transcoder,
         )
 
-    def compile_manifest(self, row: dict[str, object]) -> NarrationManifest:
-        life_case_payload = row.get("life_case")
-        record_payload = row.get("record")
-        if not isinstance(life_case_payload, dict) or not isinstance(record_payload, dict):
-            raise NarratedWorkspaceError("formal_life_case_not_available")
-        life_case = LifeCase.model_validate(life_case_payload)
-        if life_case.status != "active" or not life_case.chart_version.active:
-            raise NarratedWorkspaceError("life_case_read_only")
-        baseline = life_case.baseline_insight
-        if baseline.status != "committed" or baseline.epistemic_state == "blocked":
-            raise NarratedWorkspaceError("baseline_not_committed_for_narration")
-        fallback_record = MingliCognitiveRecord.model_validate(record_payload)
-        record = formal_projection_record(life_case=life_case, fallback_record=fallback_record)
-        segments = _compile_segments(life_case=life_case, record=record)
+    def compile_manifest(
+        self,
+        projection: CanonicalProjectionEnvelope,
+    ) -> NarrationManifest:
+        if projection.projection_kind != "abu":
+            raise NarratedWorkspaceError("canonical_abu_projection_required")
+        try:
+            claims = [
+                ApprovedClaim.model_validate(item)
+                for item in projection.payload.get("approved_claims") or []
+            ]
+            reasoning_steps = [
+                ApprovedReasoningStep.model_validate(item)
+                for item in projection.payload.get("approved_reasoning_steps") or []
+            ]
+            uncertainty = EnvelopeUncertainty.model_validate(
+                projection.payload.get("uncertainty") or {}
+            )
+        except Exception as exc:  # noqa: BLE001 - projection boundary rejects malformed data.
+            raise NarratedWorkspaceError("canonical_abu_projection_invalid") from exc
+        baseline = next((item for item in claims if item.category == "baseline"), None)
+        if baseline is None:
+            raise NarratedWorkspaceError("canonical_baseline_claim_not_available")
+        segments = _compile_segments(
+            baseline=baseline,
+            reasoning_steps=reasoning_steps,
+            uncertainty=uncertainty,
+        )
         if not segments:
             raise NarratedWorkspaceError("narration_has_no_approved_segments")
+        identity = projection.scene_identity
         stable = {
             "scope": "participant_private",
-            "case_id": life_case.case_id,
-            "chart_version": life_case.chart_version.version_id,
-            "life_case_version": life_case.case_version,
-            "formal_insight_id": baseline.insight_id,
+            "case_id": identity.case_ref,
+            "chart_version": identity.chart_version_id,
+            "life_case_version": identity.life_case_version,
+            "formal_insight_id": baseline.claim_ref,
             "narration_script_version": NARRATION_SCRIPT_VERSION,
             "mode": "standard",
             "language": "zh-CN",
             "voice_id": self.tts.voice_id,
             "voice_version": self.tts.voice_version,
             "segments": [item.model_dump(mode="json") for item in segments],
-            "compiled_at": life_case.updated_at,
+            "compiled_at": identity.source_updated_at.isoformat(),
             "autoplay": False,
             "page_available_without_audio": True,
         }
-        manifest_hash = canonical_hash(stable)
+        manifest_hash = canonical_hash({
+            "scene_id": identity.scene_id,
+            "projection_hash": projection.projection_hash,
+            "manifest": stable,
+        })
         return NarrationManifest(
             manifest_id=f"narration-{manifest_hash[:24]}",
             manifest_hash=manifest_hash,
@@ -349,16 +368,14 @@ class NarratedWorkspaceService:
 
 def _compile_segments(
     *,
-    life_case: LifeCase,
-    record: MingliCognitiveRecord,
+    baseline: ApprovedClaim,
+    reasoning_steps: list[ApprovedReasoningStep],
+    uncertainty: EnvelopeUncertainty,
 ) -> list[NarrationSegment]:
-    baseline = life_case.baseline_insight
     common_refs = _unique(
         [
-            *baseline.basis.chart_fact_refs,
-            *baseline.basis.holistic_belief_refs,
-            *baseline.basis.temporal_activation_refs,
-            *(ref for step in baseline.reasoning_path for ref in step.source_refs),
+            *baseline.evidence_refs,
+            *(ref for step in reasoning_steps for ref in step.source_refs),
         ]
     )
     segments: list[NarrationSegment] = []
@@ -383,7 +400,7 @@ def _compile_segments(
                 kind=kind,
                 title=title,
                 text=cleaned,
-                source_claim_refs=[baseline.insight_id],
+                source_claim_refs=[baseline.claim_ref],
                 source_refs=_unique(source_refs),
                 visual_anchor_ids=[anchor],
                 visual_cues=cues,
@@ -394,7 +411,7 @@ def _compile_segments(
     add(
         kind="thesis",
         title="整盘重心",
-        text=f"先看整盘重心。{baseline.claim}",
+        text=f"先看整盘重心。{baseline.approved_meaning}",
         anchor="baseline-summary",
         source_refs=common_refs,
         cues=[
@@ -405,14 +422,19 @@ def _compile_segments(
             MingliVisualCue(at_ms=1550, action="reveal", target="baseline-pillar-3"),
         ],
     )
-    work_path = record.cognition.work_path
-    if work_path.path_statement and work_path.path_statement.strip() != baseline.claim.strip():
+    baseline_reasoning = [
+        item
+        for item in reasoning_steps
+        if item.step_ref.startswith(f"{baseline.claim_ref}.reasoning.")
+    ]
+    work_path = baseline_reasoning[-1] if baseline_reasoning else None
+    if work_path and work_path.conclusion.strip() != baseline.approved_meaning.strip():
         add(
             kind="work_path",
             title="主路径",
-            text=f"再看这张盘怎么运行。{work_path.path_statement}",
+            text=f"再看这张盘怎么运行。{work_path.conclusion}",
             anchor="baseline-work-path",
-            source_refs=[*common_refs, *work_path.evidence_refs],
+            source_refs=[*common_refs, *work_path.source_refs],
             cues=[MingliVisualCue(at_ms=0, action="flow", target="baseline-work-path")],
         )
     if baseline.conditions:
@@ -424,11 +446,11 @@ def _compile_segments(
             source_refs=common_refs,
             cues=[MingliVisualCue(at_ms=0, action="focus", target="baseline-condition")],
         )
-    if baseline.uncertainty.reasons:
+    if uncertainty.reasons:
         add(
             kind="uncertainty",
             title="仍未写满",
-            text=f"还有一处我不会替你写满：{baseline.uncertainty.reasons[0]}",
+            text=f"还有一处我不会替你写满：{uncertainty.reasons[0]}",
             anchor="baseline-uncertainty",
             source_refs=common_refs,
             cues=[MingliVisualCue(at_ms=0, action="pulse", target="baseline-uncertainty")],

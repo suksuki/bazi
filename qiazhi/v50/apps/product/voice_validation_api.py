@@ -14,6 +14,7 @@ from experience.voice_validation import (
     VoiceValidationSession,
 )
 from product.agent_case_store import AgentCaseStore
+from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 from product.narrated_workspace import NarratedWorkspaceError, NarratedWorkspaceService
 from product.product_store import ProductStore
 from product.voice_validation_store import VoiceValidationStore
@@ -48,6 +49,16 @@ def create_voice_validation_router(
     validation_store: VoiceValidationStore,
 ) -> APIRouter:
     router = APIRouter(prefix=VOICE_VALIDATION_PREFIX, tags=["abu-voice-validation"])
+    scene_owner = CanonicalSceneOwner(case_store=case_store)
+
+    def narration_manifest(case_id: str, participant_ref: str):
+        projection = scene_owner.issue_projection(
+            case_id=case_id,
+            participant_id=participant_ref,
+            account_role="member",
+            projection_kind="abu",
+        )
+        return narration_service.compile_manifest(projection)
 
     def account_for(request: Request) -> dict[str, object]:
         token = request.cookies.get(session_cookie, "")
@@ -69,13 +80,12 @@ def create_voice_validation_router(
     def start_session(payload: StartVoiceValidationRequest, request: Request) -> dict[str, object]:
         account = account_for(request)
         participant_ref = str(account["user_id"])
-        row = case_store.get(case_id=payload.case_id, user_id=participant_ref)
-        if row is None:
-            raise HTTPException(status_code=404, detail="mingli_case_not_found")
         try:
-            manifest = narration_service.compile_manifest(row)
-        except NarratedWorkspaceError as exc:
-            raise HTTPException(status_code=409, detail=str(exc)) from exc
+            manifest = narration_manifest(payload.case_id, participant_ref)
+        except (CanonicalSceneUnavailable, NarratedWorkspaceError) as exc:
+            detail = str(exc)
+            status = 404 if detail == "canonical_scene_case_not_found" else 409
+            raise HTTPException(status_code=status, detail=detail) from exc
         assignment_hash = hashlib.sha256(
             f"abu-voice-comprehension.v1:{participant_ref}:{payload.case_id}".encode("utf-8")
         ).hexdigest()
@@ -175,12 +185,9 @@ def create_voice_validation_router(
         for session in validation_store.list_sessions():
             if not session.comprehension:
                 continue
-            row = case_store.get(case_id=session.case_id, user_id=session.participant_ref)
-            if row is None:
-                continue
             try:
-                manifest = narration_service.compile_manifest(row)
-            except NarratedWorkspaceError:
+                manifest = narration_manifest(session.case_id, session.participant_ref)
+            except (CanonicalSceneUnavailable, NarratedWorkspaceError):
                 continue
             cases.append(
                 {

@@ -11,10 +11,12 @@ from core.mingli_agent.contracts import ChartWorldInstance
 from experience.canonical_scene import (
     CanonicalProjectionEnvelope,
     CanonicalProjectionKind,
+    CanonicalScene,
     CanonicalSceneBundle,
     CanonicalSceneRole,
     CanonicalSceneSource,
     CanonicalTemporalState,
+    compile_canonical_projection,
     compile_canonical_scene,
     compile_canonical_scene_bundle,
 )
@@ -72,12 +74,25 @@ class CanonicalSceneOwner:
         participant_id: str,
         account_role: str,
     ) -> CanonicalSceneBundle:
+        scene = self.issue_scene(
+            case_id=case_id,
+            participant_id=participant_id,
+            account_role=account_role,
+        )
+        return compile_canonical_scene_bundle(scene)
+
+    def issue_scene(
+        self,
+        *,
+        case_id: str,
+        participant_id: str,
+        account_role: str,
+    ) -> CanonicalScene:
         row = self.case_store.get(case_id=case_id, user_id=participant_id)
         if row is None:
             raise CanonicalSceneUnavailable("canonical_scene_case_not_found")
         source = canonical_scene_source_from_case_row(case_id=case_id, row=row)
-        scene = compile_canonical_scene(source=source, role=canonical_scene_role(account_role))
-        return compile_canonical_scene_bundle(scene)
+        return compile_canonical_scene(source=source, role=canonical_scene_role(account_role))
 
     def issue_projection(
         self,
@@ -87,11 +102,12 @@ class CanonicalSceneOwner:
         account_role: str,
         projection_kind: CanonicalProjectionKind,
     ) -> CanonicalProjectionEnvelope:
-        return self.issue(
+        scene = self.issue_scene(
             case_id=case_id,
             participant_id=participant_id,
             account_role=account_role,
-        ).projections[projection_kind]
+        )
+        return compile_canonical_projection(scene=scene, kind=projection_kind)
 
     def issue_experience_envelope(
         self,
@@ -102,6 +118,7 @@ class CanonicalSceneOwner:
         disclosure_level: str,
         case_id: str | None = None,
         permitted_capabilities: list[str] | None = None,
+        account_role: str = "member",
     ) -> MingliExperienceEnvelope:
         """Compatibility projection for the existing Theater runtime contract."""
 
@@ -118,10 +135,10 @@ class CanonicalSceneOwner:
         if row is not None and requested == "approved_insights":
             try:
                 source = canonical_scene_source_from_case_row(case_id=str(case_id), row=row)
-                # The legacy envelope is a server-side performance context. It
-                # retains approved reasoning while the public CAG-03 endpoint
-                # applies the actual account-role disclosure policy.
-                scene = compile_canonical_scene(source=source, role="practitioner")
+                scene = compile_canonical_scene(
+                    source=source,
+                    role=canonical_scene_role(account_role),
+                )
             except CanonicalSceneUnavailable:
                 scene = None
 
