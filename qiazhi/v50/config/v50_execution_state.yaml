@@ -1,5 +1,11 @@
-schema_version: v1
+schema_version: v2
 updated_at: 2026-07-20
+
+phase:
+  name: ARCHITECTURE_CONSOLIDATION_EXECUTION
+  default_mode: high_velocity_iteration
+  global_product_freeze: LIFTED
+  freeze_scope: artifact_specific_only
 
 product:
   canonical_product_target: Life Script Case Workspace
@@ -20,63 +26,87 @@ principles:
   - one_professional_judgment_one_provenance_chain
   - one_scene_multiple_projections
   - user_intent_never_directly_mutates_mingli_fact
+  - self_healing_with_risk_based_promotion
+  - synthetic_validation_is_the_default_engineering_loop
 
 gates:
+  source_integrity_review: PASS
+  git_source_baseline: PASS
   lean_l0_inventory: COMPLETE
   lean_l1_physical_slimming: COMPLETE
   lean_l2_authority_consolidation: CLOSED_PASS
   r1_machine_gate: PASS
-  r1_review_build: V6_HASH_LOCKED
-  r1_human_product_gate: READY_PENDING_EXECUTION
-  architecture_consolidation_gate: NOT_PASSED
+  r1_review_build: V6_HASH_LOCKED_REGRESSION_REFERENCE
+  r1_human_product_gate: CANCELED_NO_SCHEDULE
+  cag_03_canonical_scene: CLOSED_PASS
+  architecture_consolidation_gate: IN_PROGRESS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
-  full_regression: 446_PASSED
+  source_baseline_commit: af6eb755
+  full_regression: 456_PASSED_CAG03
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
-  r1_human_review: NOT_EXECUTED
+  r1_locked_assets: 20_OF_20_OK
+  r1_human_review: CANCELED_NO_SCHEDULE
+  cag_03_owner: product.canonical_scene.CanonicalSceneOwner
+  cag_03_regression: 456_PASSED
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
+  - global_product_validation_freeze
+  - r1_human_review_as_engineering_prerequisite
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: R1_HUMAN_REVIEW
-    kind: human_product_gate
-    scope: execute_hash_locked_v6_review_only
-  - id: CASE_WORKSPACE_IA
-    kind: product_design
-    scope: information_architecture_and_isolated_clickable_prototype
-  - id: MINGLI_LAB_BLUEPRINT
-    kind: product_design
-    scope: roles_tasks_permissions_and_scene_requirements
+  - id: CAG_04_FORMAL_RELATION_PATH_PROVENANCE
+    kind: architecture_consolidation
+    scope: stable_relation_and_path_identity_provenance_and_historical_adapters
+  - id: SYNTHETIC_VALIDATION_LOOP
+    kind: system_evolution
+    scope: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
 
 next_architecture_slice:
-  id: ARCHITECTURE_CONSOLIDATION_SLICE_2
+  id: CAG_05_SCHEMA_AND_MODULE_OWNERSHIP
   authorized_when:
-    - r1_human_product_gate_pass
+    - cag_04_formal_relation_path_provenance_pass
   scope:
-    - canonical_scene_identity
-    - projection_adapters
-    - schema_registry_generated_typescript_pilot
-    - typed_path_survival_fixtures
-    - module_ownership_manifest
+    - generated_schema_contracts
+    - module_ownership_enforcement
+    - legacy_retirement_manifest
+    - architecture_gate_evidence
 
 blocked:
   - relation_atlas_ra1
   - relation_core_v2_implementation
   - path_core_v2_implementation
-  - mingli_lab_engineering
+  - mingli_lab_production_engineering
   - production_workspace_migration
   - frontend_framework_migration
-  - legacy_l5_redesign
   - public_release
 
 protected_boundaries:
   reasoner_role: whole_chart_professional_synthesis
   lifecase_role: formal_case_cognition_authority
-  scene_role: projection_only
+  scene_role: single_projection_owner_no_new_mingli_semantics
   renderer_role: layout_color_animation_only
   abu_role: explanation_navigation_and_approved_actions
   lab_role: sandbox_only
+  r1_role: immutable_regression_reference_not_global_freeze
+
+self_healing_loop:
+  stages:
+    - synthetic_case
+    - runtime
+    - verifier
+    - failure_cluster
+    - repair_candidate
+    - counterfactual_ablation_regression
+    - evidence_ledger
+    - risk_based_promotion_or_rejection
+    - rollback_ready_release
+  promotion:
+    deterministic_bug: automatic_after_required_regression
+    prompt_or_projection: synthetic_ab_and_semantic_consistency
+    graph_path_or_timing: controlled_risk_gate
+    core_mingli_theory: theory_candidate_only

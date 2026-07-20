@@ -83,8 +83,14 @@
     "life_case": {
       "status": "production",
       "modules": ["core.life_case"],
-      "authority_role": "case_memory_candidate",
+      "authority_role": "formal_case_cognition_authority",
       "evidence_status": "PROVISIONAL"
+    },
+    "canonical_scene": {
+      "status": "production",
+      "modules": ["experience.canonical_scene", "product.canonical_scene"],
+      "authority_role": "single_case_scene_projection_owner",
+      "evidence_status": "OPERATIONAL"
     },
     "role_projection": {
       "status": "production",

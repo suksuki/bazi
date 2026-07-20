@@ -26,11 +26,17 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["product"]["case_workspace_status"] == (
         "ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED"
     )
-    assert state["gates"]["r1_human_product_gate"] == "READY_PENDING_EXECUTION"
-    assert state["gates"]["architecture_consolidation_gate"] == "NOT_PASSED"
+    assert state["phase"]["global_product_freeze"] == "LIFTED"
+    assert state["gates"]["git_source_baseline"] == "PASS"
+    assert state["gates"]["r1_human_product_gate"] == "CANCELED_NO_SCHEDULE"
+    assert state["gates"]["architecture_consolidation_gate"] == "IN_PROGRESS"
+    assert state["gates"]["cag_03_canonical_scene"] == "CLOSED_PASS"
     assert state["gates"]["public_professional_release"] == "BLOCKED"
+    assert state["protected_boundaries"]["r1_role"] == (
+        "immutable_regression_reference_not_global_freeze"
+    )
     assert "production_workspace_migration" in state["blocked"]
-    assert "mingli_lab_engineering" in state["blocked"]
+    assert "mingli_lab_production_engineering" in state["blocked"]
 
 
 def test_machine_execution_state_markdown_is_in_sync() -> None:

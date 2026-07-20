@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `2ea6c66d5b97` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `8c9ff5c62093` · Updated `2026-07-20`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -15,22 +15,21 @@ current_product_surface: legacy_l5_plus_experience_shell
 case_workspace_status: ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED
 product_model: one_case_workspace
 mingli_world: one_canonical_mingli_world
-r1_human_product_gate: READY_PENDING_EXECUTION
-architecture_consolidation_gate: NOT_PASSED
+r1_human_product_gate: CANCELED_NO_SCHEDULE
+architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 446_PASSED
+full_regression: 456_PASSED_CAG03
 ```
 
 Authorized now:
 
-- `R1_HUMAN_REVIEW`: execute_hash_locked_v6_review_only
-- `CASE_WORKSPACE_IA`: information_architecture_and_isolated_clickable_prototype
-- `MINGLI_LAB_BLUEPRINT`: roles_tasks_permissions_and_scene_requirements
+- `CAG_04_FORMAL_RELATION_PATH_PROVENANCE`: stable_relation_and_path_identity_provenance_and_historical_adapters
+- `SYNTHETIC_VALIDATION_LOOP`: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
 
-Next architecture slice: `ARCHITECTURE_CONSOLIDATION_SLICE_2` after `r1_human_product_gate_pass`.
+Next architecture slice: `CAG_05_SCHEMA_AND_MODULE_OWNERSHIP` after `cag_04_formal_relation_path_provenance_pass`.
 
-Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `legacy_l5_redesign`, `public_release`.
+Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 0. Rule
@@ -45,10 +44,12 @@ machine proof
 ```
 
 `Abu Actor Pass V1` is `CLOSED / PASS`, and `S0 V1.2` is locked. L2 Authority
-Consolidation is also closed. R1 now truthfully exposes the Solver's zero, one
-and many outcomes, and the review build is hash-locked. The only active task is
-the v5 unguided human review. Existing visual prototypes are retained but
-receive no parallel feature work during this gate.
+Consolidation is also closed. R1 truthfully exposes the Solver's zero, one and
+many outcomes; its 20-file V6 manifest remains an immutable regression
+reference. The previously assumed seven-person review does not exist and is no
+longer an engineering prerequisite. Development now follows artifact-scoped
+locks, high-velocity iteration and synthetic validation rather than a global
+product freeze.
 
 ## 1. Closed — L0 + L1 Closeout
 
@@ -83,33 +84,23 @@ This slice closed one-owner authority for:
 It was admitted only after the L0/L1 closeout and was closed with failing
 fixtures, focused regression and a full authority audit.
 
-## 3. Frozen — Xiangfa Generation V1
+## 3. Retained — Xiangfa Generation V1
 
-Status: `RETAINED ISOLATED ROUTE / WORK PAUSED`
+Status: `RETAINED ISOLATED ROUTE / NON-AUTHORITATIVE`
 
-The existing route and evidence are retained. No new Xiangfa work is active
-before the R1 human gate. It may never reopen S0, add a Reasoner, create
-relations or paths, or write LifeCase state.
+The existing route and evidence are retained. It may not reopen S0, add a
+Reasoner, create relations or paths, or write LifeCase state. Future Xiangfa
+work must consume the Canonical Scene projection envelope.
 
-## 4. Now — R1 v5 Unguided Human Product Review
+## 4. Retained — R1 V6 Regression Reference
 
-Status: `V5 MACHINE PASS / REVIEW BUILD HASH-LOCKED / HUMAN REVIEW PENDING`
+Status: `MACHINE PASS / 20 FILES HASH-LOCKED / HUMAN GATE CANCELED`
 
-Do not execute the superseded v1 protocol. The target-draft, global Chart
-Constraint Solver and canonical Temporal / DaYun service pass the machine gate.
-Use `product/V50_ONECANVAS_R1_V5_UNGUIDED_REVIEW_PROTOCOL.md` for the human
-review against the hash-locked build recorded under
-`reports/mingli-onecanvas-r1/review-v6-ready/`.
-
-Review only:
-
-- formal versus Sandbox authority;
-- legal pillar selection and linked choices;
-- gender and DaYun direction;
-- changed, unchanged, and unresolved DaYun states;
-- Gregorian annual observation only; annual Jiazi is derived;
-- undo, redo, reset;
-- desktop and 390px mobile completion.
+The target-draft, global Chart Constraint Solver and canonical Temporal / DaYun
+service pass the machine gate. The hash-locked build under
+`reports/mingli-onecanvas-r1/review-v6-ready/` remains unchanged and is rerun as
+a behavioral baseline after architecture work. No R1-A01 through R1-U05
+sessions are scheduled or awaited.
 
 The order-dependent pillar cascade has been replaced by the global target-draft
 solver. The product projection now preserves all three server-owned outcomes:
@@ -121,10 +112,8 @@ solver. The product projection now preserves all three server-owned outcomes:
 
 No outcome is ranked professionally, the first candidate is never selected
 silently, cancellation preserves the current chart, and the browser still owns
-no legality rule. The former preparation blocker is closed; professional
-analysts and first-time users have not yet executed the human gate.
-
-Do not add Relation Atlas, assisted path drawing, Theater, Xiangfa, or new Mingli modules to R1.
+no legality rule. R1 is evidence, not a global stop signal; Relation Atlas still
+waits for CAG-03 through CAG-05 and the Architecture Gate.
 
 ## 5. Architecture Consolidation Gate
 
@@ -187,16 +176,26 @@ Exit condition:
   remain distinct;
 - no Sandbox action writes ChartVersion or LifeCase.
 
-### CAG-03 — Scene Contract Convergence Design
+### CAG-03 — Canonical Scene Contract Convergence
 
-Freeze a canonical Scene Compiler contract that can project:
+Status: `CLOSED / PASS`
 
-- C1 Inspector view;
-- OneCanvas interactive view;
-- role-filtered Context Pack;
-- later Theater and Xiangfa views.
+The canonical Scene Compiler projects one formal case source into:
 
-Exit condition: one semantic identity model, no Renderer inference, and a tested adapter path for both current contracts.
+- OneCanvas;
+- Abu;
+- Theater;
+- Xiangfa;
+- Workspace.
+
+`CanonicalSceneOwner` accepts only a server-owned case identity, reads
+`ChartWorldInstance + committed LifeCase`, applies role disclosure before
+serialization, and issues one shared Scene identity plus projection envelopes.
+Theater delegates to this owner; read-only OneCanvas is bound to its identity
+while its Graph/Path logic remains a transitional CAG-04 adapter.
+
+Exit condition: one semantic identity model, no Renderer inference, no client
+formal-fact override, and tested compatibility paths for current contracts.
 
 ### CAG-04 — Formal Relation and Path Provenance
 
@@ -225,7 +224,7 @@ Relation Atlas, Path Core V2, route retirement, or production deployment.
 
 ## 6. Core V2 Workstream
 
-Blocked until R1 Product Gate and Architecture Consolidation Gate pass.
+Blocked until the Architecture Consolidation Gate passes.
 
 ### RA1 — Relation Ontology and Fixtures
 
@@ -340,8 +339,10 @@ R1_legacy_machine_gate: SUPERSEDED
 R1_review_build: V6_HASH_LOCKED
 R1_projection_regression: 30_PASSED
 R1_full_regression: 438_PASSED
-R1_human_product_gate: READY_PENDING_EXECUTION
-R1_human_product_blocker: NONE
+R1_human_product_gate: CANCELED_NO_SCHEDULE
+R1_regression_reference: 20_OF_20_HASH_LOCKED
+git_source_baseline: PASS
+CAG_03_canonical_scene: CLOSED_PASS
 architecture_audit: COMPLETE
 architecture_consolidation_gate: NOT_PASSED
 RA1: BLOCKED

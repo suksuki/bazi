@@ -38,6 +38,7 @@ from experience.canvas import (
     project_canvas_spec_for_role,
 )
 from product.agent_case_store import AgentCaseStore
+from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 
 
 CanvasRole = Literal["guest", "member", "practitioner", "research", "admin"]
@@ -114,6 +115,7 @@ class ReadOnlySixPillarCanvasService:
 
     def __init__(self, *, case_store: AgentCaseStore) -> None:
         self.case_store = case_store
+        self.scene_owner = CanonicalSceneOwner(case_store=case_store)
 
     def issue(
         self,
@@ -162,6 +164,8 @@ class ReadOnlySixPillarCanvasService:
             "stage_order": ["natal", "luck", "year"],
             "default_stage": "natal",
             "source": source,
+            "canonical_scene": compiled["canonical_scene"],
+            "projection_envelope": compiled["projection_envelope"],
             "path_availability": compiled["path_availability"],
             "stages": stages,
             "renderer_policy": {
@@ -227,7 +231,22 @@ class ReadOnlySixPillarCanvasService:
         row = self.case_store.get(case_id=case_id, user_id=participant_id)
         if row is None:
             raise ReadOnlyCanvasUnavailable("experience_case_not_found")
+        try:
+            canonical = self.scene_owner.issue(
+                case_id=case_id,
+                participant_id=participant_id,
+                account_role=role,
+            )
+        except CanonicalSceneUnavailable as exc:
+            raise ReadOnlyCanvasUnavailable(str(exc)) from exc
         source, metadata = _compile_input_from_case_row(case_id=case_id, row=row)
+        identity = canonical.scene.identity
+        if (
+            metadata["source"]["chart_version_id"] != identity.chart_version_id
+            or metadata["source"]["life_case_id"] != identity.life_case_id
+            or metadata["source"]["life_case_version"] != identity.life_case_version
+        ):
+            raise ReadOnlyCanvasUnavailable("canvas_canonical_scene_identity_mismatch")
         layer_ids = {item.layer_type: item.layer_id for item in source.temporal_layers}
         if "luck" not in layer_ids or "year" not in layer_ids:
             raise ReadOnlyCanvasUnavailable("canvas_official_timing_required")
@@ -260,6 +279,8 @@ class ReadOnlySixPillarCanvasService:
             "path_availability": metadata["path_availability"],
             "specs": specs,
             "diffs": diffs,
+            "canonical_scene": identity.model_dump(mode="json"),
+            "projection_envelope": canonical.projections["onecanvas"].model_dump(mode="json"),
         }
 
 

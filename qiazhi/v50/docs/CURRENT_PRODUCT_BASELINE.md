@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `2ea6c66d5b97` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `8c9ff5c62093` · Updated `2026-07-20`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -15,22 +15,21 @@ current_product_surface: legacy_l5_plus_experience_shell
 case_workspace_status: ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED
 product_model: one_case_workspace
 mingli_world: one_canonical_mingli_world
-r1_human_product_gate: READY_PENDING_EXECUTION
-architecture_consolidation_gate: NOT_PASSED
+r1_human_product_gate: CANCELED_NO_SCHEDULE
+architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 446_PASSED
+full_regression: 456_PASSED_CAG03
 ```
 
 Authorized now:
 
-- `R1_HUMAN_REVIEW`: execute_hash_locked_v6_review_only
-- `CASE_WORKSPACE_IA`: information_architecture_and_isolated_clickable_prototype
-- `MINGLI_LAB_BLUEPRINT`: roles_tasks_permissions_and_scene_requirements
+- `CAG_04_FORMAL_RELATION_PATH_PROVENANCE`: stable_relation_and_path_identity_provenance_and_historical_adapters
+- `SYNTHETIC_VALIDATION_LOOP`: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
 
-Next architecture slice: `ARCHITECTURE_CONSOLIDATION_SLICE_2` after `r1_human_product_gate_pass`.
+Next architecture slice: `CAG_05_SCHEMA_AND_MODULE_OWNERSHIP` after `cag_04_formal_relation_path_provenance_pass`.
 
-Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `legacy_l5_redesign`, `public_release`.
+Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product
@@ -59,7 +58,7 @@ Abu guides, explains, speaks, and operates approved product actions. Pages displ
 | C1 read-only Canvas | contract proof only | no runtime product route |
 | C1R Li-Xiang-Time prototype | archived technical proof | no runtime or product authority |
 | old C2A lab | archived functional fixture | no runtime or product authority |
-| R1 OneCanvas | sole user-side Canvas candidate | `experience/active/onecanvas-r1`; human gate pending |
+| R1 OneCanvas | sole user-side Canvas candidate | `experience/active/onecanvas-r1`; 20-file regression reference |
 | Life Script Case Workspace V1 | isolated clickable design study | IA and projection proof only; no production or Mingli authority |
 | Abu Narrated Workspace | internal v1 established | narration of formal insight |
 | Abu Living Theater | controlled product direction | no independent cognition |
@@ -79,6 +78,7 @@ abu_guided_interaction: ACTIVE
 narrated_workspace: INTERNAL_V1
 abu_s0_opening_theater: ACCEPTED_INTERNAL_STAGE_MILESTONE_LOCKED
 onecanvas_r1: V5_MACHINE_PASS_V6_REVIEW_BUILD_READY_HUMAN_PENDING
+canonical_scene_cag03: CLOSED_PASS
 relation_atlas_ra1: NOT_STARTED
 lean_and_consolidation_l0: COMPLETE
 lean_and_consolidation_l1: CLOSED_PASS
@@ -146,16 +146,16 @@ archive/proofs/prototypes = retired proofs and fixtures
 
 These identities are frozen. Older prototypes must not receive new independent product features.
 
-## 6. Human and Professional Gates
+## 6. Validation and Professional Gates
 
-### R1 Product Gate
+### R1 Regression Reference
 
 The v5 target-draft, global Solver and temporal authority are machine-verified.
 The v6 review build exposes zero/one/many outcomes without silent reduction and
-is hash-locked. Human execution is now authorized and remains the only open R1
-gate. It tests authority comprehension, legal target composition, explicit
-candidate choice, constraint release, linked choices, DaYun behavior,
-Gregorian annual selection, and restoration on desktop and mobile.
+its 20 files remain hash-locked. The previously assumed seven-person review was
+never scheduled and has been canceled as an engineering prerequisite. R1 now
+serves as an immutable behavioral regression reference while architecture work
+continues.
 
 ### Professional Cognition Gate
 
@@ -166,16 +166,17 @@ Pending blinded adjudication of committed and blocked LifeCase baselines. It sep
 - false-release versus over-blocking behavior;
 - ordinary-user expression fidelity.
 
-Machine regressions do not replace either gate.
+Machine regressions do not replace professional cognition validation or
+asynchronous Reality Evidence.
 
 ## 7. Release Blockers
 
 Current release blockers:
 
-1. R1 human product gate not completed.
-2. Professional blind adjudication not completed.
-3. C1 and OneCanvas use parallel scene contracts.
-4. formal path provenance is not yet versioned independently from Graph v1 rebuilds.
+1. Professional blind adjudication not completed.
+2. CAG-04 formal path provenance is not yet versioned independently from Graph v1 rebuilds.
+3. CAG-05 schema and module ownership consolidation is not complete.
+4. Architecture Consolidation Gate has not passed.
 
 Closed by L1/L2:
 
@@ -184,6 +185,10 @@ Closed by L1/L2:
 - Jiazi, pillar legality, global chart constraints, annual Ganzhi and DaYun
   have one deterministic application owner;
 - malformed formal pillars and stale temporal derivations are rejected.
+- CAG-03 provides one Canonical Scene identity and role-filtered projection
+  envelopes for OneCanvas, Abu, Theater, Xiangfa and Workspace;
+- Theater and read-only OneCanvas are bound to that Scene owner without
+  changing Graph or Path semantics.
 
 ## 8. Product Non-Goals
 
@@ -201,11 +206,12 @@ Closed by L1/L2:
 The main execution line is now:
 
 ```text
-1. keep L0/L1/L2 closed;
-2. execute R1 v5 unguided human review on the hash-locked v6 build;
-3. keep Xiangfa Generation V1 frozen and non-authoritative;
-4. after R1 human PASS, complete Architecture Consolidation Gates D/E/F;
-5. keep RA1 and production blocked until the full consolidation gate passes.
+1. keep L0/L1/L2 and the V50 Git Source Baseline closed;
+2. retain R1 V6 as a hash-locked regression reference;
+3. keep CAG-03 closed and consume its Canonical Scene contract;
+4. execute CAG-04 then CAG-05;
+5. pass the Architecture Gate before RA1-RA3 and Workspace migration;
+6. run synthetic validation and risk-based promotion continuously.
 ```
 
 S0 V1.2 is locked as an internal stage milestone. Do not start S0 V1.3 or add

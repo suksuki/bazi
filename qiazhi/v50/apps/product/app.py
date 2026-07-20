@@ -14,6 +14,7 @@ from pydantic import BaseModel, Field
 from product.agent_api import create_agent_router
 from product.agent_case_store import AgentCaseStore, build_agent_case_store
 from product.agent_job_store import AgentJobStore
+from product.canonical_scene_api import create_canonical_scene_router
 from product.experience_api import create_experience_router
 from product.legacy_usage import LegacyUsageStore, build_legacy_usage_store, legacy_route_key
 from product.narration_api import create_narration_router
@@ -125,6 +126,13 @@ def create_product_app(
             session_cookie=PRODUCT_SESSION_COOKIE,
             case_store=resolved_case_store,
             legacy_usage_store=resolved_legacy_usage_store,
+        )
+    )
+    app.include_router(
+        create_canonical_scene_router(
+            product_store=store,
+            session_cookie=PRODUCT_SESSION_COOKIE,
+            case_store=resolved_case_store,
         )
     )
 

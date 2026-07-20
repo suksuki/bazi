@@ -1,0 +1,45 @@
+{
+  "schema_version": "deepbazi.canonical_scene_authority.v1",
+  "status": "production_contract",
+  "owner": {
+    "contract": "experience.canonical_scene",
+    "application_service": "product.canonical_scene.CanonicalSceneOwner",
+    "api": "product.canonical_scene_api",
+    "compiler_version": "canonical-scene-compiler.cag03.v1"
+  },
+  "formal_source_chain": [
+    "ChartWorldInstance",
+    "LifeCase.chart_version",
+    "LifeCase committed insights",
+    "CanonicalSceneCompiler",
+    "CanonicalProjectionEnvelope"
+  ],
+  "projection_kinds": [
+    "onecanvas",
+    "abu",
+    "theater",
+    "xiangfa",
+    "workspace"
+  ],
+  "integrated_adapters": {
+    "theater": "ProductExperienceEnvelopePort delegates to CanonicalSceneOwner",
+    "onecanvas": "ReadOnlySixPillarCanvasService binds its transitional renderer payload to the canonical scene identity",
+    "abu": "canonical Abu projection envelope",
+    "xiangfa": "canonical semantic-binding projection envelope",
+    "workspace": "canonical case-workspace projection envelope"
+  },
+  "transitional_boundaries": {
+    "read_only_canvas_graph_path_adapter": "retained without semantic changes until CAG-04",
+    "legacy_routes": "retained as read-only compatibility adapters",
+    "static_s0_scene": "isolated presentation fixture, never formal case authority"
+  },
+  "forbidden": [
+    "client-provided formal chart facts",
+    "legacy record as canonical scene source",
+    "renderer-created Mingli facts or claims",
+    "projection-specific scene identity",
+    "role-hidden content reintroduced by fallback",
+    "scene writes to ChartVersion or LifeCase"
+  ],
+  "next_gate": "CAG-04 formal relation and path provenance"
+}

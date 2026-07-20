@@ -1,25 +1,25 @@
 {
   "schema_version": "deepbazi.data_authority.v1",
-  "frozen_at": "2026-07-18",
+  "frozen_at": "2026-07-20",
   "principle": "Each formal concept has one authority; compatibility views are derived and never written back.",
   "authorities": [
     {
       "concept": "chart_facts",
       "authority": "ChartWorldInstance + LifeCase.chart_version",
       "write_owner": "deterministic chart compilation",
-      "experience_projection": "MingliExperienceEnvelope.allowed_chart_facts"
+      "experience_projection": "CanonicalScene.chart_facts -> CanonicalProjectionEnvelope"
     },
     {
       "concept": "whole_chart_cognition",
       "authority": "LifeCase.baseline_insight",
       "write_owner": "commit_baseline_life_case after Reliability Gate",
-      "experience_projection": "MingliExperienceEnvelope.approved_claims"
+      "experience_projection": "CanonicalScene.approved_claims -> CanonicalProjectionEnvelope"
     },
     {
       "concept": "domain_cognition",
       "authority": "LifeCase.domain_insights",
       "write_owner": "commit_domain_insight after Reliability Gate",
-      "experience_projection": "future topic-scoped MingliExperienceEnvelope"
+      "experience_projection": "CanonicalScene.approved_claims scoped by role and projection"
     },
     {
       "concept": "reality_feedback",
@@ -31,13 +31,19 @@
       "concept": "temporal_state",
       "authority": "LifeCase.temporal_snapshots",
       "write_owner": "TemporalSnapshot application service",
-      "experience_projection": "future temporal envelope"
+      "experience_projection": "CanonicalScene.temporal_state -> CanonicalProjectionEnvelope"
     },
     {
       "concept": "workspace_ui_state",
       "authority": "WorkspaceState",
       "write_owner": "workspace application service",
       "experience_projection": "client UI state only; never formal cognition"
+    },
+    {
+      "concept": "canonical_scene",
+      "authority": "CanonicalSceneCompiler",
+      "write_owner": "CanonicalSceneOwner reads ChartWorldInstance and committed LifeCase only",
+      "experience_projection": "OneCanvas, Abu, Theater, Xiangfa and Workspace adapters"
     }
   ],
   "forbidden_formal_authorities": [
@@ -45,6 +51,8 @@
     "legacy page Store",
     "RunRecord restoration",
     "conversation transcript",
-    "frontend state"
+    "frontend state",
+    "legacy record restoration",
+    "projection-specific scene assembly"
   ]
 }

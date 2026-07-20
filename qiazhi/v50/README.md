@@ -5,7 +5,7 @@ DeepBazi V50 是一个由 Abu 引导、以 LLM 为命理认知核心的八字与
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `2ea6c66d5b97` · Updated `2026-07-20`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `8c9ff5c62093` · Updated `2026-07-20`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -13,22 +13,21 @@ current_product_surface: legacy_l5_plus_experience_shell
 case_workspace_status: ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED
 product_model: one_case_workspace
 mingli_world: one_canonical_mingli_world
-r1_human_product_gate: READY_PENDING_EXECUTION
-architecture_consolidation_gate: NOT_PASSED
+r1_human_product_gate: CANCELED_NO_SCHEDULE
+architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 446_PASSED
+full_regression: 456_PASSED_CAG03
 ```
 
 Authorized now:
 
-- `R1_HUMAN_REVIEW`: execute_hash_locked_v6_review_only
-- `CASE_WORKSPACE_IA`: information_architecture_and_isolated_clickable_prototype
-- `MINGLI_LAB_BLUEPRINT`: roles_tasks_permissions_and_scene_requirements
+- `CAG_04_FORMAL_RELATION_PATH_PROVENANCE`: stable_relation_and_path_identity_provenance_and_historical_adapters
+- `SYNTHETIC_VALIDATION_LOOP`: isolated_repair_candidates_evidence_ledger_and_risk_based_promotion
 
-Next architecture slice: `ARCHITECTURE_CONSOLIDATION_SLICE_2` after `r1_human_product_gate_pass`.
+Next architecture slice: `CAG_05_SCHEMA_AND_MODULE_OWNERSHIP` after `cag_04_formal_relation_path_provenance_pass`.
 
-Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `legacy_l5_redesign`, `public_release`.
+Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 主链
