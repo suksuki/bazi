@@ -15,7 +15,7 @@ def audit_mingli_lab_foundation() -> dict[str, Any]:
     temporal_sandbox = _read("packages/experience/canvas_sandbox.py")
     mechanism_sandbox = _read("packages/experience/experiments.py")
     theater_experiment = _read("apps/product/theater_experiment.py")
-    theater_api = _read("apps/product/theater_api.py")
+    theater_performance_api = _read("apps/product/theater_performance_api.py")
     experience_contracts = _read("packages/experience/contracts.py")
 
     implementations = [
@@ -128,12 +128,12 @@ def audit_mingli_lab_foundation() -> dict[str, Any]:
             "lab_has_no_llm_or_reasoner_execution",
             '"llm_used": False' in theater_experiment
             and '"reasoner_used": False' in theater_experiment
-            and '"llm_used": False' in theater_api
-            and '"reasoner_used": False' in theater_api,
+            and '"llm_used": False' in theater_performance_api
+            and '"reasoner_used": False' in theater_performance_api,
         ),
         _check(
             "lab_has_no_production_route_or_formal_write",
-            "mingli-lab" not in theater_api
+            "mingli-lab" not in theater_performance_api
             and all(not item["formal_write"] for item in implementations),
         ),
     ]
