@@ -7,26 +7,26 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `24d2e434add8` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `8f5d542efce9` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
-current_product_surface: legacy_l5_plus_experience_shell
-case_workspace_status: CONTRACT_CONVERGED_PRODUCTION_NOT_STARTED
+current_product_surface: legacy_l5_plus_case_workspace_experience
+case_workspace_status: CANONICAL_PROJECTION_ALIGNED_REVIEW_READY_PRODUCTION_NOT_MIGRATED
 product_model: one_case_workspace
 mingli_world: one_canonical_mingli_world
 r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 578_PASSED_FRAMEWORK_AND_LAB_CONVERGENCE_FINAL
+full_regression: 582_PASSED_WORKSPACE_ALIGNMENT_FINAL
 ```
 
 Authorized now:
 
-- `WORKSPACE_PROJECTION_ALIGNMENT`: align_latest_case_workspace_reference_to_canonical_scene_without_production_migration
+- `WORKSPACE_REVIEW_BUILD`: local_and_internal_review_only_without_production_migration
 
-Next architecture slice: `WORKSPACE_UI_INTERACTION_ALIGNMENT` after `workspace_projection_alignment_pass`.
+Next architecture slice: `PRODUCTION_WORKSPACE_MIGRATION_DECISION` after `owner_approves_production_migration`.
 
 Blocked: `legacy_unvalidated_path_metrics_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
@@ -53,12 +53,12 @@ Abu guides, explains, speaks, and operates approved product actions. Pages displ
 | Surface | Current status | Authority |
 |---|---|---|
 | `/` and `/app` legacy L5 shell | active retiring; still public root | product shell only, not case authority |
-| `/experience` Experience Shell | active new shell | read projection of formal state |
+| `/experience` Case Workspace review build | active review shell; production entry not migrated | role-filtered read projection of formal state |
 | C1 read-only Canvas | contract proof only | no runtime product route |
 | C1R Li-Xiang-Time prototype | archived technical proof | no runtime or product authority |
 | old C2A lab | archived functional fixture | no runtime or product authority |
 | R1 OneCanvas | sole user-side Canvas candidate | `experience/active/onecanvas-r1`; 20-file regression reference |
-| Life Script Case Workspace V1 | isolated clickable design study | IA and projection proof only; no production or Mingli authority |
+| Life Script Case Workspace V1 | reference absorbed into `/experience`; study retained as proof | UI state only; no Mingli authority |
 | Abu Narrated Workspace | internal v1 established | narration of formal insight |
 | Abu Living Theater | controlled product direction | no independent cognition |
 | Abu Says Mingli S0 V1.2 | locked internal stage milestone | `experience/internal-tools`; no public release authority |
@@ -175,10 +175,7 @@ asynchronous Reality Evidence.
 Current release blockers:
 
 1. Professional blind adjudication not completed.
-2. CAG-04 architecture review has not signed the machine-complete provenance slice.
-3. CAG-05 schema and module ownership consolidation is not complete.
-4. `CAL-01 Late-Zi Five-Rats Consistency` is unresolved or not explicitly isolated.
-5. Architecture Consolidation Gate has not passed.
+2. Production entry-route and data rollout have not been authorized.
 
 Closed by L1/L2:
 

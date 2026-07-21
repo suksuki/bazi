@@ -22,19 +22,21 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     state = yaml.safe_load(read(EXECUTION_STATE))
 
     assert state["product"]["canonical_product_target"] == "Life Script Case Workspace"
-    assert state["product"]["current_product_surface"] == "legacy_l5_plus_experience_shell"
+    assert state["product"]["current_product_surface"] == (
+        "legacy_l5_plus_case_workspace_experience"
+    )
     assert state["product"]["case_workspace_status"] == (
-        "ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED"
+        "CANONICAL_PROJECTION_ALIGNED_REVIEW_READY_PRODUCTION_NOT_MIGRATED"
     )
     assert state["phase"]["global_product_freeze"] == "LIFTED"
-    assert state["phase"]["name"] == "V50_FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE"
+    assert state["phase"]["name"] == "V50_MAINLINE_CONVERGENCE_COMPLETE"
     assert state["gates"]["git_source_baseline"] == "PASS"
     assert state["gates"]["r1_human_product_gate"] == "CANCELED_NO_SCHEDULE"
     assert state["gates"]["architecture_consolidation_gate"] == "CLOSED_PASS"
-    assert state["gates"]["next_framework_alignment"] == "BASELINE_PASS"
-    assert state["gates"]["mingli_lab_foundation"] == (
-        "BASELINE_PASS_WITH_EXPLICIT_GAPS"
-    )
+    assert state["gates"]["next_framework_alignment"] == "CLOSED_PASS"
+    assert state["gates"]["mingli_lab_foundation"] == "CLOSED_PASS"
+    assert state["gates"]["workspace_projection_alignment"] == "CLOSED_PASS"
+    assert state["gates"]["workspace_ui_interaction_alignment"] == "CLOSED_PASS"
     assert state["gates"]["six_pillar_relation_coverage"] == (
         "RA3_PATH_EVIDENCE_PASS"
     )
@@ -52,10 +54,10 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["gates"]["cag_05_schema_module_ownership"] == "CLOSED_PASS"
     assert state["gates"]["cal_01_late_zi_five_rats_consistency"] == "CLOSED_PASS"
     assert [item["id"] for item in state["authorized_now"]] == [
-        "FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE"
+        "WORKSPACE_REVIEW_BUILD"
     ]
     assert state["next_architecture_slice"]["id"] == (
-        "WORKSPACE_PROJECTION_ALIGNMENT"
+        "PRODUCTION_WORKSPACE_MIGRATION_DECISION"
     )
     assert state["validation_policy"]["new_platform_or_product_subsystem"] == "FORBIDDEN"
     assert "self_healing_loop" not in state

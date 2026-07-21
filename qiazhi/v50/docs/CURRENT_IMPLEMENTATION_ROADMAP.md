@@ -7,26 +7,26 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `24d2e434add8` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `8f5d542efce9` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
-current_product_surface: legacy_l5_plus_experience_shell
-case_workspace_status: CONTRACT_CONVERGED_PRODUCTION_NOT_STARTED
+current_product_surface: legacy_l5_plus_case_workspace_experience
+case_workspace_status: CANONICAL_PROJECTION_ALIGNED_REVIEW_READY_PRODUCTION_NOT_MIGRATED
 product_model: one_case_workspace
 mingli_world: one_canonical_mingli_world
 r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 578_PASSED_FRAMEWORK_AND_LAB_CONVERGENCE_FINAL
+full_regression: 582_PASSED_WORKSPACE_ALIGNMENT_FINAL
 ```
 
 Authorized now:
 
-- `WORKSPACE_PROJECTION_ALIGNMENT`: align_latest_case_workspace_reference_to_canonical_scene_without_production_migration
+- `WORKSPACE_REVIEW_BUILD`: local_and_internal_review_only_without_production_migration
 
-Next architecture slice: `WORKSPACE_UI_INTERACTION_ALIGNMENT` after `workspace_projection_alignment_pass`.
+Next architecture slice: `PRODUCTION_WORKSPACE_MIGRATION_DECISION` after `owner_approves_production_migration`.
 
 Blocked: `legacy_unvalidated_path_metrics_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
@@ -372,8 +372,9 @@ RA3_path_evidence: CLOSED_PASS
 synthetic_validation_training_alignment: CLOSED_PASS
 framework_alignment: CLOSED_PASS
 mingli_lab_foundation: CLOSED_PASS
-workspace_projection_alignment: ACTIVE
+workspace_projection_alignment: CLOSED_PASS
+workspace_ui_interaction_alignment: CLOSED_PASS
 RA4_to_RA7: NOT_AUTOMATICALLY_AUTHORIZED
 professional_blind_gate: PENDING
-production_release: BLOCKED
+production_release: BLOCKED_PENDING_MIGRATION_AND_PROFESSIONAL_GATE
 ```

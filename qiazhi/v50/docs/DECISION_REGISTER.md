@@ -1492,6 +1492,29 @@ r1_manifest: 20_of_20_ok
 next: Workspace_Projection_Alignment
 ```
 
+### DR-050 — The Product Shell Consumes One Case Workspace
+
+```yaml
+decision_id: DR-050
+date: 2026-07-21
+status: closed_pass
+workspace_endpoint: /api/v50/scenes/cases/{case_id}/workspace
+workspace_owner: experience.workspace.CaseWorkspaceState
+scene_owner: product.canonical_scene.CanonicalSceneOwner
+case_bound_product_surfaces:
+  - overview
+  - onecanvas
+  - theater
+anonymous_demo_as_personal_result: forbidden
+initial_case_requests: 4_in_parallel
+duplicate_page_chapter_navigation: removed
+client_mingli_inference: false
+production_migration: false
+focused_regression: 25_passed
+full_regression: 582_passed
+next: Production_Workspace_Migration_Decision
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

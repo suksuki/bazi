@@ -59,6 +59,11 @@ llm_used: false
 
 ## Next
 
-The next active slice is Workspace Projection Alignment: connect the latest Case Workspace
-reference to the shared Canonical Scene and existing product shell without production data
-migration or a frontend framework migration.
+Workspace Projection and UI Alignment has now closed. `/experience` consumes one
+role-filtered `CaseWorkspaceEnvelope`, loads the Case projections in parallel, and exposes
+only the three currently case-bound surfaces: overview, OneCanvas structure and Abu
+narration. Anonymous Xiangfa and Theater fixtures are not presented as personal results.
+
+The remaining boundary is a production migration decision: which entry route adopts this
+review build, with an explicit rollback path. No production data or entry route changed in
+this closeout.

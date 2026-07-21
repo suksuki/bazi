@@ -2,15 +2,15 @@ schema_version: v2
 updated_at: 2026-07-21
 
 phase:
-  name: V50_WORKSPACE_PROJECTION_ALIGNMENT
-  default_mode: authority_convergence
+  name: V50_MAINLINE_CONVERGENCE_COMPLETE
+  default_mode: review_and_migration_decision
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
 
 product:
   canonical_product_target: Life Script Case Workspace
-  current_product_surface: legacy_l5_plus_experience_shell
-  case_workspace_status: CONTRACT_CONVERGED_PRODUCTION_NOT_STARTED
+  current_product_surface: legacy_l5_plus_case_workspace_experience
+  case_workspace_status: CANONICAL_PROJECTION_ALIGNED_REVIEW_READY_PRODUCTION_NOT_MIGRATED
   product_definition: one_case_workspace
   world_definition: one_canonical_mingli_world
   experience_modes:
@@ -48,12 +48,14 @@ gates:
   mingli_lab_foundation: CLOSED_PASS
   six_pillar_relation_coverage: RA3_PATH_EVIDENCE_PASS
   synthetic_validation_training_alignment: CLOSED_PASS
+  workspace_projection_alignment: CLOSED_PASS
+  workspace_ui_interaction_alignment: CLOSED_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 578_PASSED_FRAMEWORK_AND_LAB_CONVERGENCE_FINAL
+  full_regression: 582_PASSED_WORKSPACE_ALIGNMENT_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -115,6 +117,13 @@ receipts:
   framework_lab_full_regression: 578_PASSED
   framework_lab_r1_manifest: 20_OF_20_OK
   framework_lab_typescript: STRICT_PASS
+  workspace_projection_endpoint: /api/v50/scenes/cases/{case_id}/workspace
+  workspace_case_bound_surfaces: 3_OVERVIEW_ONECANVAS_ABU_NARRATION
+  workspace_parallel_initial_requests: 4
+  workspace_targeted_regression: 25_PASSED
+  workspace_full_regression: 582_PASSED
+  workspace_typescript: STRICT_PASS
+  workspace_browser_review: DESKTOP_AND_390PX_PASS_NO_CONSOLE_ERRORS
   six_pillar_declared_relations: 13
   six_pillar_emitted_relations: 13
   six_pillar_unemitted_relations: 0
@@ -168,18 +177,18 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: WORKSPACE_PROJECTION_ALIGNMENT
-    kind: product_projection_convergence
-    scope: align_latest_case_workspace_reference_to_canonical_scene_without_production_migration
+  - id: WORKSPACE_REVIEW_BUILD
+    kind: validation
+    scope: local_and_internal_review_only_without_production_migration
 
 next_architecture_slice:
-  id: WORKSPACE_UI_INTERACTION_ALIGNMENT
+  id: PRODUCTION_WORKSPACE_MIGRATION_DECISION
   authorized_when:
-    - workspace_projection_alignment_pass
+    - owner_approves_production_migration
   scope:
-    - align_existing_workspace_ui_to_latest_product_reference
-    - preserve_case_scene_and_source_identity
-    - avoid_new_product_features_or_framework_migration
+    - choose_entry_route_and_rollout_strategy
+    - preserve_legacy_rollback
+    - keep_professional_release_separate
 
 blocked:
   - legacy_unvalidated_path_metrics_promotion
