@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `204a6abfa5dd` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `21dc630615b5` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,16 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 566_PASSED_RA2_PATH_QUALIFICATION_FINAL
+full_regression: 570_PASSED_RA3_PATH_EVIDENCE_FINAL
 ```
 
 Authorized now:
 
-- `RA3_PATH_EVIDENCE_CALIBRATION`: replace_uncalibrated_numeric_path_claims_with_evidence_backed_discrete_states
+- `SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT`: align_synthetic_validation_and_training_candidates_with_formal_relation_path_evidence
 
-Next architecture slice: `SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT` after `ra3_path_evidence_calibration_pass`.
+Next architecture slice: `FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE` after `synthetic_validation_and_training_alignment_pass`.
 
-Blocked: `ra3_uncalibrated_path_scoring_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `legacy_unvalidated_path_metrics_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product
@@ -78,7 +78,9 @@ narrated_workspace: INTERNAL_V1
 abu_s0_opening_theater: ACCEPTED_INTERNAL_STAGE_MILESTONE_LOCKED
 onecanvas_r1: V5_MACHINE_PASS_V6_REVIEW_BUILD_READY_HUMAN_PENDING
 canonical_scene_cag03: CLOSED_PASS
-relation_atlas_ra1: NOT_STARTED
+relation_atlas_ra1: CLOSED_PASS
+path_qualification_ra2: CLOSED_PASS
+path_evidence_ra3: CLOSED_PASS_NO_NUMERIC_PROFESSIONAL_RANKING
 lean_and_consolidation_l0: COMPLETE
 lean_and_consolidation_l1: CLOSED_PASS
 lean_and_consolidation_l2: CLOSED_PASS
@@ -219,10 +221,10 @@ The main execution line is now:
 ```text
 1. keep L0/L1/L2 and the V50 Git Source Baseline closed;
 2. retain R1 V6 as a hash-locked regression reference;
-3. keep CAG-03 closed with one Scene owner and thinner projection adapters;
-4. review the machine-complete CAG-04 stable identity and provenance slice;
-5. authorize CAG-05 only after that explicit architecture review;
-6. pass the Architecture Gate before RA1-RA3 and Workspace migration.
+3. keep CAG-03 through CAG-05 and the Architecture Gate closed;
+4. keep RA1 relations, RA2 qualification and RA3 evidence under one source chain;
+5. align synthetic validation and training candidates without granting formal authority;
+6. converge the new framework, Mingli Lab and Workspace projections without production migration.
 ```
 
 Self-healing, high-velocity iteration and synthetic validation are validation
@@ -234,4 +236,4 @@ features, documents, or visual polish to the first film. Its two non-blocking
 observations are public-release backlog only: mobile guidance-shot occlusion and
 the brand use of the full face-change action.
 
-RA1 and production deployment remain blocked.
+Production deployment and public professional release remain blocked.

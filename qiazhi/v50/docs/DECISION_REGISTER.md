@@ -1421,6 +1421,31 @@ r1_manifest: 20_of_20_ok
 next: RA3_Path_Evidence_Calibration
 ```
 
+### DR-047 — RA3 Removes Numeric Path Authority From Product and Reasoner Inputs
+
+```yaml
+decision_id: DR-047
+date: 2026-07-21
+status: closed_pass
+implementation_commit: e1e8b384
+path_evidence_owner: core.graph.path_qualification
+path_evidence_version: deepbazi.path_evidence_vector.ra3.v1
+temporal_update_version: deepbazi.temporal-path-update.ra3.v1
+candidate_order: deterministic_evidence_order_not_professional_ranking
+public_path_scores: removed
+legacy_numeric_metrics: isolated_for_regression_compatibility_only
+temporal_updates:
+  - reinforced
+  - weakened
+mixed_support_and_restraint: preserve_current_state_with_uncertainty
+automatic_path_promotion: false
+automatic_path_blocking: false
+formal_life_case_mutation: false
+full_regression: 570_passed
+r1_manifest: 20_of_20_ok
+next: Synthetic_Validation_and_Training_Alignment
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

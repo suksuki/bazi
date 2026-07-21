@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `204a6abfa5dd` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `21dc630615b5` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,16 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 566_PASSED_RA2_PATH_QUALIFICATION_FINAL
+full_regression: 570_PASSED_RA3_PATH_EVIDENCE_FINAL
 ```
 
 Authorized now:
 
-- `RA3_PATH_EVIDENCE_CALIBRATION`: replace_uncalibrated_numeric_path_claims_with_evidence_backed_discrete_states
+- `SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT`: align_synthetic_validation_and_training_candidates_with_formal_relation_path_evidence
 
-Next architecture slice: `SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT` after `ra3_path_evidence_calibration_pass`.
+Next architecture slice: `FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE` after `synthetic_validation_and_training_alignment_pass`.
 
-Blocked: `ra3_uncalibrated_path_scoring_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `legacy_unvalidated_path_metrics_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 0. Rule
@@ -247,41 +247,35 @@ The current cleanup and large-file policy is recorded in
 `V50_DEEP_CLEANUP_AND_LARGE_FILE_GOVERNANCE_V1.md`. It does not authorize
 Relation Atlas, Path Core V2, route retirement, or production deployment.
 
-## 6. Core V2 Workstream
+## 6. Closed — Relation and Path Core RA1–RA3
 
-Blocked until the Architecture Consolidation Gate passes.
+Status: `CLOSED / PASS / NO PROFESSIONAL RANKING CLAIM`
 
-### RA1 — Relation Ontology and Fixtures
+### RA1 — One deterministic relation core
 
-Implement only:
+All 13 declared relation types are emitted from
+`core.engines.bazi.material_engine` for natal, luck and year states. Duplicate
+Graph generators and unused relation/node types were removed. N-ary relations
+remain n-ary and time layers do not promote formal cognition.
 
-- RelationDefinition;
-- BinaryRelation and HyperRelation;
-- ContextModifier and TemporalActivation;
-- school profile and semantic definitions bound to the existing CAG-04 keys
-  and assertion provenance;
-- no second relation or path identity system;
-- positive, negative, missing-condition, temporal, and coexistence fixtures.
+### RA2 — One path qualification owner
 
-No new ordinary-user UI.
+`core.graph.path_qualification` owns segment eligibility and whole-path
+continuity. Root and position links are evidence, not path segments. Conflict
+relations remain unqualified until explicit positive and negative evidence
+supports admission.
 
-### RA2 — Temporal Relation Activation
+### RA3 — Discrete path evidence and conservative time updates
 
-Model how DaYun and annual states introduce, activate, reinforce, weaken, block, reopen, or leave relations unchanged. Preserve discrete semantics and reasons; do not create pseudo-precise percentages.
+Public path scores and normalized contribution ranking were removed. Candidate
+order is deterministic but explicitly not professional ranking. Path evidence
+uses discrete segment, direction, provenance, root, blocker and closure states.
+Official luck/year relations may mark a committed path reinforced or weakened,
+but cannot create, promote, block or rewrite LifeCase cognition.
 
-### RA3 — Path Core V2
-
-Implement:
-
-- PathCandidate semantics and extensions to the existing `PathAssertion`;
-- ordered PathSegment references;
-- segment eligibility;
-- whole-path continuity and blockers;
-- typed evidence/counter-evidence;
-- temporal path state;
-- versioned provenance.
-
-LLM comparative reasoning remains the professional synthesis authority.
+Machine evidence: `570` full tests passed; R1 remains `20/20`; TypeScript strict
+checking and the Architecture Gate remain green. Implementation commit:
+`e1e8b384`.
 
 ## 7. Migration and Authority Workstream
 

@@ -2,7 +2,7 @@ schema_version: v2
 updated_at: 2026-07-21
 
 phase:
-  name: V50_RELATION_ATLAS_RA3
+  name: V50_SYNTHETIC_VALIDATION_ALIGNMENT
   default_mode: authority_convergence
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
@@ -46,13 +46,13 @@ gates:
   architecture_consolidation_gate: CLOSED_PASS
   next_framework_alignment: BASELINE_PASS
   mingli_lab_foundation: BASELINE_PASS_WITH_EXPLICIT_GAPS
-  six_pillar_relation_coverage: RA2_PATH_QUALIFICATION_PASS
+  six_pillar_relation_coverage: RA3_PATH_EVIDENCE_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 566_PASSED_RA2_PATH_QUALIFICATION_FINAL
+  full_regression: 570_PASSED_RA3_PATH_EVIDENCE_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -135,6 +135,15 @@ receipts:
   ra2_r1_manifest: 20_OF_20_OK
   ra2_legacy_path_whitelists_removed: 2
   ra2_position_and_root_edges: EVIDENCE_ONLY_NOT_PATH_EDGES
+  ra3_implementation_commit: e1e8b384
+  ra3_path_evidence_policy: deepbazi.path_evidence_vector.ra3.v1
+  ra3_temporal_path_update_policy: deepbazi.temporal-path-update.ra3.v1
+  ra3_candidate_order_policy: path_candidate_evidence_order_v1_NOT_PROFESSIONAL_RANKING
+  ra3_targeted_regression: 46_CORE_PLUS_6_VALIDATION_PASSED
+  ra3_full_regression: 570_PASSED
+  ra3_r1_manifest: 20_OF_20_OK
+  ra3_public_numeric_path_scores: 0
+  ra3_formal_life_case_mutations: 0
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -143,21 +152,21 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: RA3_PATH_EVIDENCE_CALIBRATION
-    kind: controlled_path_evidence_implementation
-    scope: replace_uncalibrated_numeric_path_claims_with_evidence_backed_discrete_states
+  - id: SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT
+    kind: evidence_pipeline_convergence
+    scope: align_synthetic_validation_and_training_candidates_with_formal_relation_path_evidence
 
 next_architecture_slice:
-  id: SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT
+  id: FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE
   authorized_when:
-    - ra3_path_evidence_calibration_pass
+    - synthetic_validation_and_training_alignment_pass
   scope:
-    - align_synthetic_evidence_with_formal_relation_and_path_contracts
-    - isolate_training_candidates_from_formal_authority
-    - preserve_workspace_and_projection_boundaries
+    - align_new_framework_to_one_case_one_scene_one_source_chain
+    - isolate_mingli_lab_research_state_from_formal_lifecase
+    - prepare_workspace_projection_without_production_migration
 
 blocked:
-  - ra3_uncalibrated_path_scoring_promotion
+  - legacy_unvalidated_path_metrics_promotion
   - mingli_lab_public_release
   - production_workspace_migration
   - frontend_framework_migration
