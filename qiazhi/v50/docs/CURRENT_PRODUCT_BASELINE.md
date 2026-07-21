@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `21dc630615b5` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `afe8a08a2ceb` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,14 +19,14 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 570_PASSED_RA3_PATH_EVIDENCE_FINAL
+full_regression: 572_PASSED_SYNTHETIC_TRAINING_ALIGNMENT_FINAL
 ```
 
 Authorized now:
 
-- `SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT`: align_synthetic_validation_and_training_candidates_with_formal_relation_path_evidence
+- `FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE`: converge_case_workspace_scene_source_chain_and_isolate_lab_research_state
 
-Next architecture slice: `FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE` after `synthetic_validation_and_training_alignment_pass`.
+Next architecture slice: `WORKSPACE_PROJECTION_ALIGNMENT` after `framework_and_mingli_lab_convergence_pass`.
 
 Blocked: `legacy_unvalidated_path_metrics_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->

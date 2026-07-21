@@ -2,7 +2,7 @@ schema_version: v2
 updated_at: 2026-07-21
 
 phase:
-  name: V50_SYNTHETIC_VALIDATION_ALIGNMENT
+  name: V50_FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE
   default_mode: authority_convergence
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
@@ -47,12 +47,13 @@ gates:
   next_framework_alignment: BASELINE_PASS
   mingli_lab_foundation: BASELINE_PASS_WITH_EXPLICIT_GAPS
   six_pillar_relation_coverage: RA3_PATH_EVIDENCE_PASS
+  synthetic_validation_training_alignment: CLOSED_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 570_PASSED_RA3_PATH_EVIDENCE_FINAL
+  full_regression: 572_PASSED_SYNTHETIC_TRAINING_ALIGNMENT_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -144,6 +145,17 @@ receipts:
   ra3_r1_manifest: 20_OF_20_OK
   ra3_public_numeric_path_scores: 0
   ra3_formal_life_case_mutations: 0
+  synthetic_alignment_implementation_commit: bbb067ea
+  synthetic_alignment_checks: 9_OF_9_PASS
+  synthetic_alignment_manifest_suites: 7
+  synthetic_alignment_active_cases: 27
+  synthetic_alignment_candidate_contracts: 75_RESEARCH_ONLY
+  synthetic_alignment_training_review_candidates: 24_NOT_GOLD
+  synthetic_alignment_static_queue_removed_lines: 537
+  synthetic_alignment_net_lines: MINUS_251
+  synthetic_alignment_formal_state_writes: 0
+  synthetic_alignment_full_regression: 572_PASSED
+  synthetic_alignment_r1_manifest: 20_OF_20_OK
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -152,18 +164,18 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT
-    kind: evidence_pipeline_convergence
-    scope: align_synthetic_validation_and_training_candidates_with_formal_relation_path_evidence
+  - id: FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE
+    kind: product_framework_convergence
+    scope: converge_case_workspace_scene_source_chain_and_isolate_lab_research_state
 
 next_architecture_slice:
-  id: FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE
+  id: WORKSPACE_PROJECTION_ALIGNMENT
   authorized_when:
-    - synthetic_validation_and_training_alignment_pass
+    - framework_and_mingli_lab_convergence_pass
   scope:
-    - align_new_framework_to_one_case_one_scene_one_source_chain
-    - isolate_mingli_lab_research_state_from_formal_lifecase
-    - prepare_workspace_projection_without_production_migration
+    - align_workspace_projection_to_latest_product_reference
+    - preserve_one_case_one_scene_one_source_chain
+    - avoid_production_migration
 
 blocked:
   - legacy_unvalidated_path_metrics_promotion

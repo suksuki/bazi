@@ -1446,6 +1446,28 @@ r1_manifest: 20_of_20_ok
 next: Synthetic_Validation_and_Training_Alignment
 ```
 
+### DR-048 — Synthetic Evidence Is Classified Before It Can Influence Training or Authority
+
+```yaml
+decision_id: DR-048
+date: 2026-07-21
+status: closed_pass
+implementation_commit: bbb067ea
+active_engineering_cases: 27
+research_candidate_contracts: 75
+expert_review_candidates: 24
+expert_gold: 0
+formal_state_writes: 0
+automatic_theory_promotion: false
+weight_training: blocked
+legacy_numeric_suites: compatibility_observation_only
+static_review_queue: removed_and_replaced_by_deterministic_generation
+net_lines: -251
+full_regression: 572_passed
+r1_manifest: 20_of_20_ok
+next: Framework_and_Mingli_Lab_Convergence
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。
