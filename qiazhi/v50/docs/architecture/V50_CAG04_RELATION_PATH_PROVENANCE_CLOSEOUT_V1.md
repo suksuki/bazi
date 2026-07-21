@@ -1,8 +1,9 @@
 # V50 CAG-04 Relation and Path Provenance Closeout V1
 
-Status: `IMPLEMENTATION COMPLETE / MACHINE PASS / ARCHITECTURE REVIEW PENDING`
+Status: `CONDITIONAL PASS / PROVENANCE RECONCILED / MACHINE PASS`
 Date: `2026-07-21`
-Implementation commits: `42072034`, `c0502ed9`
+Implementation commits: `1190a873`, `0225aa1a`
+Source commits: `42072034`, `c0502ed9`
 
 ## Decision Boundary
 
@@ -25,15 +26,23 @@ ChartWorldInstance
 af6eb755  V50 source baseline
     -> 8b0178ee  CAG-03 Canonical Scene implementation
     -> 34cc5b17  CAG-03 closeout
-    -> 42072034  CAG-04 relation/path provenance implementation
-    -> 092f146b  initial CAG-04 machine closeout
-    -> f4c5527c / ae1f0856  controlled RA0 integration and boundary receipt
-    -> c0502ed9  CAG-04 lifecycle/provenance hardening
+    -> e6cfc76e  RA0 payload (source 2ac55900; same patch as f4c5527c)
+    -> 1190a873  CAG-04 implementation (source 42072034)
+    -> 32a0a0fe  initial machine closeout (source 092f146b)
+    -> da0aff4c  RA0 / CAL-01 boundary receipt (source ae1f0856)
+    -> 0225aa1a  lifecycle/provenance hardening (source c0502ed9)
+    -> efbe9115  replayed closeout (source 4d12ce4d)
 ```
 
-The final documentation closeout commit follows `c0502ed9`; CAG-05 is not part
-of this chain and is not authorized by this record. RA0 remains an independent
-audit payload and does not change CAG-04 semantics.
+The lineage receipt commit follows `efbe9115`; CAG-05 is not part of this chain
+and is not authorized by this record. RA0 is now an ancestor of the CAG-04
+implementation while remaining an independent audit payload that does not
+change CAG-04 semantics. The original branch remains untouched.
+
+The earlier `092f146b` count of `467` was a pre-RA0 snapshot. RA0 introduced
+one test module with ten tests, producing `477`; lifecycle hardening added two
+more tests, producing the reconciled final count of `479`. No RA0 test was
+deleted, renamed, moved or excluded from discovery.
 
 ## Formal Contracts and Owner
 
@@ -114,7 +123,8 @@ The last line is an explicit audit boundary, not a zero count.
 
 ## Slimming and Code Delta
 
-Implementation commits `42072034` and `c0502ed9` changed the same 17-file
+Source commits `42072034` and `c0502ed9`, replayed as `1190a873` and
+`0225aa1a`, changed the same 17-file
 CAG-04 surface:
 
 ```text
@@ -160,9 +170,21 @@ interpreter, fixture and machine. Medians across three 200-call rounds:
 The lifecycle validation therefore introduces no measured production-path
 regression.
 
+The reconciled branch was measured again against `34cc5b17` on the same
+machine and interpreter, using three 200-call rounds:
+
+| Production path | `34cc5b17` | Reconciled CAG-04 | Change |
+|---|---:|---:|---:|
+| Canonical projection, persistent owner | 0.3968 ms | 0.0521 ms | -86.9% |
+| Canvas issue, persistent service | 29.1239 ms | 4.1222 ms | -85.8% |
+
+The persistent-service performance improvement therefore remains present
+after lineage reconstruction.
+
 ## Machine Evidence
 
 ```text
+RA0 focused realizability tests: 10 passed
 CAG-04 focused relation/path tests: 11 passed
 V50 full regression: 479 passed
 R1 V6 locked assets: 20/20 OK

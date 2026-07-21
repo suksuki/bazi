@@ -1080,9 +1080,14 @@ V40_changes: forbidden
 decision_id: DR-034
 date: 2026-07-21
 status: implementation_complete_machine_pass_architecture_review_pending
+lineage_status: conditional_pass_provenance_reconciled_machine_pass
 implementation_commits:
+  - 1190a873
+  - 0225aa1a
+source_commits:
   - 42072034
   - c0502ed9
+replayed_closeout_commit: efbe9115
 authority:
   candidate_observation: Graph_and_Path_v1
   formal_assertion_owner: LifeCase
@@ -1132,7 +1137,9 @@ source:
   branch: codex/ra0-518k-audit-v1
   commit: 2ac55900fb5885649ba7fca7935e57005070406b
   merge_base: 34cc5b17a86683ed4575d93e15134f0f26bc6687
-  controlled_integration_commit: f4c5527c
+  previous_controlled_integration_commit: f4c5527c
+  controlled_integration_commit: e6cfc76e
+  boundary_commit: da0aff4c
 legacy_finding:
   v30_518k_identity: Legacy_Validation_Target_Contract
   entity_four_pillar_corpus_found: false

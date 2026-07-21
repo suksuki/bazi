@@ -5,7 +5,7 @@ DeepBazi V50 是一个由 Abu 引导、以 LLM 为命理认知核心的八字与
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `2ac9f2ea5608` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `26b1b185cff0` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace

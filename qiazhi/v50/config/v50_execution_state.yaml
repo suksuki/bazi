@@ -39,7 +39,7 @@ gates:
   r1_review_build: V6_HASH_LOCKED_REGRESSION_REFERENCE
   r1_human_product_gate: CANCELED_NO_SCHEDULE
   cag_03_canonical_scene: CLOSED_PASS_HARDENED
-  cag_04_relation_path_provenance: IMPLEMENTATION_COMPLETE_MACHINE_PASS_ARCHITECTURE_REVIEW_PENDING
+  cag_04_relation_path_provenance: CONDITIONAL_PASS_PROVENANCE_RECONCILED_MACHINE_PASS
   ra0_518k_chart_realizability: PASS_WITH_BOUNDARY_FINDING
   cal_01_late_zi_five_rats_consistency: OPEN_BLOCKS_ARCHITECTURE_GATE
   architecture_consolidation_gate: IN_PROGRESS
@@ -54,8 +54,13 @@ receipts:
   r1_human_review: CANCELED_NO_SCHEDULE
   cag_03_owner: product.canonical_scene.CanonicalSceneOwner
   cag_03_regression: 458_PASSED
-  cag_04_implementation_commit: 42072034
-  cag_04_lifecycle_hardening_commit: c0502ed9
+  cag_04_source_implementation_commit: 42072034
+  cag_04_implementation_commit: 1190a873
+  cag_04_source_machine_closeout_commit: 092f146b
+  cag_04_machine_closeout_commit: 32a0a0fe
+  cag_04_source_lifecycle_hardening_commit: c0502ed9
+  cag_04_lifecycle_hardening_commit: 0225aa1a
+  cag_04_replayed_closeout_commit: efbe9115
   cag_04_identity_owner: core.life_case.LifeCase
   cag_04_focused_regression: 11_PASSED
   cag_04_regression: 479_PASSED
@@ -64,7 +69,9 @@ receipts:
   ra0_source_branch: codex/ra0-518k-audit-v1
   ra0_source_commit: 2ac55900fb5885649ba7fca7935e57005070406b
   ra0_merge_base: 34cc5b17a86683ed4575d93e15134f0f26bc6687
-  ra0_controlled_integration_commit: f4c5527c
+  ra0_previous_controlled_integration_commit: f4c5527c
+  ra0_controlled_integration_commit: e6cfc76e
+  ra0_boundary_commit: da0aff4c
   ra0_universe_content_sha256: 05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c
   ra0_temporal_policy_sha256: 3d7af5b188bd444649ff0f2d693d498162ca4e331407554d16a6906326365215
   ra0_structural_universe: 518400_OF_518400_VALID_UNIQUE
