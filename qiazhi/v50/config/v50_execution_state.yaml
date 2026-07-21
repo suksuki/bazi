@@ -42,14 +42,14 @@ gates:
   cag_04_relation_path_provenance: CLOSED_PASS_RECONCILED
   cag_05_schema_module_ownership: CLOSED_PASS
   ra0_518k_chart_realizability: PASS_WITH_BOUNDARY_FINDING
-  cal_01_late_zi_five_rats_consistency: OPEN_BLOCKS_ARCHITECTURE_GATE
+  cal_01_late_zi_five_rats_consistency: CLOSED_PASS
   architecture_consolidation_gate: IN_PROGRESS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 483_PASSED_CAG05_FINAL
+  full_regression: 489_PASSED_CAL01_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -86,6 +86,12 @@ receipts:
   ra0_four_jiazi_realizability: 518400_OF_518400_WITNESSED
   ra0_focused_regression: 10_PASSED
   cal_01_late_zi_rejected_timestamps: 4019
+  cal_01_implementation_commit: 8cfef1fe
+  cal_01_product_range_days: 73414
+  cal_01_dependency_mismatches: 73414
+  cal_01_formal_invalid_outputs: 0
+  cal_01_scan_sha256: f5ab084b15b01ab8633260c88df9cfcd64ebefb313a95b02ec6d706027d61850
+  cal_01_regression: 489_PASSED
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -94,21 +100,20 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY
-    kind: temporal_policy_consistency
-    scope: preserve_midnight_rollover_and_align_late_zi_hour_stem_with_formal_day_stem
+  - id: ARCHITECTURE_CONSOLIDATION_GATE
+    kind: executable_architecture_audit
+    scope: prove_single_authority_source_chain_schema_owner_and_client_write_boundaries
 
 next_architecture_slice:
-  id: CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY
+  id: ARCHITECTURE_CONSOLIDATION_GATE
   authorized_when:
-    - cag_05_closed_pass
+    - cal_01_closed_pass
   scope:
-    - dependency_semantics_audit
-    - late_zi_consistency_fix
-    - no_temporal_policy_change
+    - authority_gate
+    - source_chain_gate
+    - regression_and_rollback_evidence
 
 blocked:
-  - architecture_gate_until_cal_01_resolved_or_explicitly_isolated
   - relation_atlas_ra1
   - relation_core_v2_implementation
   - path_core_v2_implementation
@@ -128,7 +133,7 @@ protected_boundaries:
   lab_role: sandbox_only
   r1_role: immutable_regression_reference_not_global_freeze
   ra0_518k_role: deterministic_structural_chart_universe_generator_not_entity_database
-  cal_01_role: retained_boundary_evidence_no_silent_normalization
+  cal_01_role: formal_midnight_policy_with_five_rats_hour_from_formal_day
 
 validation_policy:
   role: engineering_evidence_only

@@ -42,11 +42,12 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert "production_workspace_migration" in state["blocked"]
     assert "mingli_lab_production_engineering" in state["blocked"]
     assert state["gates"]["cag_05_schema_module_ownership"] == "CLOSED_PASS"
+    assert state["gates"]["cal_01_late_zi_five_rats_consistency"] == "CLOSED_PASS"
     assert [item["id"] for item in state["authorized_now"]] == [
-        "CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY"
+        "ARCHITECTURE_CONSOLIDATION_GATE"
     ]
     assert state["next_architecture_slice"]["id"] == (
-        "CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY"
+        "ARCHITECTURE_CONSOLIDATION_GATE"
     )
     assert state["validation_policy"]["new_platform_or_product_subsystem"] == "FORBIDDEN"
     assert "self_healing_loop" not in state

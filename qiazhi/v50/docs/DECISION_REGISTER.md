@@ -1206,6 +1206,24 @@ verification:
 next: CAL_01_then_Architecture_Gate
 ```
 
+### DR-037 — CAL-01 Aligns Late-Zi Hour Stem With Formal Day Policy
+
+```yaml
+decision_id: DR-037
+date: 2026-07-21
+status: closed_pass
+implementation_commit: 8cfef1fe
+day_rollover: midnight_unchanged
+calendar_profile: lunar_python.sect2.v1
+formal_hour_rule: v50.five_rats.formal_day.v1
+product_range_days: 73414
+dependency_mismatches: 73414
+formal_invalid_outputs: 0
+retained_ra0_mismatch_evidence: 4019
+universe_sha256: 05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c
+next: Architecture_Consolidation_Gate
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

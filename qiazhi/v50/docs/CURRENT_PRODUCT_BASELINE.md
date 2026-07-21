@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `26137748000a` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `ebaa6cf641dd` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,16 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 483_PASSED_CAG05_FINAL
+full_regression: 489_PASSED_CAL01_FINAL
 ```
 
 Authorized now:
 
-- `CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY`: preserve_midnight_rollover_and_align_late_zi_hour_stem_with_formal_day_stem
+- `ARCHITECTURE_CONSOLIDATION_GATE`: prove_single_authority_source_chain_schema_owner_and_client_write_boundaries
 
-Next architecture slice: `CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY` after `cag_05_closed_pass`.
+Next architecture slice: `ARCHITECTURE_CONSOLIDATION_GATE` after `cal_01_closed_pass`.
 
-Blocked: `architecture_gate_until_cal_01_resolved_or_explicitly_isolated`, `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_production_engineering`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product

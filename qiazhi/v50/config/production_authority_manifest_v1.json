@@ -79,7 +79,7 @@
     "json_schema_projection": "docs/product/contracts/abu-living-theater-v1/*.schema.json",
     "typescript_projection": "apps/product/experience_shell/src/contracts.generated.ts",
     "typescript_handwritten_contract_owner": false,
-    "api_validation": "FastAPI response_model uses the same Pydantic models",
+    "api_validation": "FastAPI response_model or service-boundary validation uses the same Pydantic models",
     "drift_command": "PYTHONPATH=packages:apps python scripts/v50_export_experience_schemas.py"
   },
   "projection_rules": {
