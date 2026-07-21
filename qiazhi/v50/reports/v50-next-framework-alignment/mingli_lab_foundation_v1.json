@@ -1,0 +1,103 @@
+{
+  "authorized_next": "six_pillar_relation_coverage_audit",
+  "counts": {
+    "formal_write_paths": 0,
+    "gaps": 4,
+    "implementations": 3,
+    "invariants_passed": 8,
+    "runtime_implementations": 1
+  },
+  "formal_authority": "LifeCase",
+  "formal_state_modified": false,
+  "gaps": [
+    {
+      "finding": "Temporal and mechanism sandboxes have separate lifecycle identities and no shared experiment envelope.",
+      "gap_id": "LAB-F01",
+      "risk": "future Lab modes could duplicate session, source, and evidence bookkeeping"
+    },
+    {
+      "finding": "TemporalSandboxState has no persisted TopicExploration ledger path.",
+      "gap_id": "LAB-F02",
+      "risk": "temporal experiments cannot yet enter the same evidence lifecycle as ablation"
+    },
+    {
+      "finding": "Archived C2A fixture generation helpers still live under the product namespace.",
+      "gap_id": "LAB-F03",
+      "risk": "legacy evidence can be mistaken for a production Lab owner"
+    },
+    {
+      "finding": "Theater ablation reconstructs its snapshot from a case row instead of consuming a CanonicalScene projection.",
+      "gap_id": "LAB-F04",
+      "risk": "role disclosure and projection identity are enforced by parallel checks rather than the canonical scene envelope"
+    }
+  ],
+  "implementations": [
+    {
+      "classification": "legacy_evidence",
+      "disposition": "retain only while archived OneCanvas fixtures depend on its helpers",
+      "formal_write": false,
+      "implementation_id": "archived_c2a_fixture",
+      "owner": "product.mingli_lab_fixture_builder",
+      "runtime_route": false,
+      "source_chain": "LifeCase -> ReadOnlySixPillarCanvasService -> anonymized fixture"
+    },
+    {
+      "classification": "contract_proof",
+      "disposition": "input to future Lab temporal experiment mode",
+      "formal_write": false,
+      "implementation_id": "temporal_canvas_sandbox",
+      "owner": "experience.canvas.TemporalSandboxState",
+      "runtime_route": false,
+      "source_chain": "Canvas compile input -> hypothetical temporal mutation -> Spec/Diff"
+    },
+    {
+      "classification": "internal_runtime",
+      "disposition": "retain as the current experiment ledger proof",
+      "formal_write": false,
+      "implementation_id": "theater_structural_ablation",
+      "owner": "product.theater_experiment.ProductMingliExperimentPort",
+      "runtime_route": true,
+      "source_chain": "approved LifeCase row -> mechanism snapshot -> private event -> TopicExploration"
+    }
+  ],
+  "invariants": [
+    {
+      "check": "archived_fixture_has_no_product_route",
+      "passed": true
+    },
+    {
+      "check": "temporal_sandbox_forbids_formal_writes",
+      "passed": true
+    },
+    {
+      "check": "mechanism_sandbox_forbids_life_case_write",
+      "passed": true
+    },
+    {
+      "check": "saved_exploration_forbids_life_case_write",
+      "passed": true
+    },
+    {
+      "check": "runtime_experiment_requires_approved_cognition",
+      "passed": true
+    },
+    {
+      "check": "runtime_experiment_events_are_participant_private",
+      "passed": true
+    },
+    {
+      "check": "runtime_experiment_explicitly_prohibits_life_case_mutation",
+      "passed": true
+    },
+    {
+      "check": "lab_has_no_llm_or_reasoner_execution",
+      "passed": true
+    }
+  ],
+  "lab_role": "non-authoritative experiment and evidence workspace mode",
+  "llm_used": false,
+  "production_lab_authorized": false,
+  "scene_authority": "CanonicalSceneOwner",
+  "schema_version": "deepbazi.mingli_lab_foundation_audit.v1",
+  "status": "FOUNDATION_READY_WITH_GAPS"
+}

@@ -5,7 +5,7 @@ DeepBazi V50 是一个由 Abu 引导、以 LLM 为命理认知核心的八字与
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `9e26d9221957` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `e61d99d48d48` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -22,9 +22,9 @@ full_regression: 491_PASSED_ARCHITECTURE_GATE_FINAL
 
 Authorized now:
 
-- `MINGLI_LAB_FOUNDATION_AUDIT`: classify_existing_lab_and_sandbox_paths_without_creating_a_second_reasoner_or_formal_owner
+- `SIX_PILLAR_RELATION_COVERAGE_AUDIT`: measure_existing_relation_semantics_fixtures_and_temporal_coverage_without_changing_algorithms
 
-Next architecture slice: `SIX_PILLAR_RELATION_COVERAGE_AUDIT` after `mingli_lab_foundation_baseline`.
+Next architecture slice: `RA1_RELATION_CORE_PREPARATION` after `six_pillar_relation_coverage_baseline`.
 
 Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->

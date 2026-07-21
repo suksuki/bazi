@@ -1263,6 +1263,25 @@ explicit_gaps:
 next: Mingli_Lab_Foundation_Audit
 ```
 
+### DR-040 — Mingli Lab Foundation Is Safe but Not Yet Unified
+
+```yaml
+decision_id: DR-040
+date: 2026-07-21
+status: baseline_pass_with_explicit_gaps
+implementations_audited: 3
+runtime_implementations: 1
+formal_write_paths: 0
+invariants: 8_of_8_pass
+gaps:
+  - LAB-F01_shared_experiment_envelope
+  - LAB-F02_temporal_exploration_ledger
+  - LAB-F03_archived_builder_product_namespace
+  - LAB-F04_theater_direct_case_row_source
+production_lab_authorized: false
+next: Six_Pillar_Relation_Coverage_Audit
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

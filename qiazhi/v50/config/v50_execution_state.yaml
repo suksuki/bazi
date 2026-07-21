@@ -45,6 +45,7 @@ gates:
   cal_01_late_zi_five_rats_consistency: CLOSED_PASS
   architecture_consolidation_gate: CLOSED_PASS
   next_framework_alignment: BASELINE_PASS
+  mingli_lab_foundation: BASELINE_PASS_WITH_EXPLICIT_GAPS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
@@ -103,6 +104,11 @@ receipts:
   next_framework_alignment_invariants: 8_OF_8_PASS
   next_framework_alignment_gaps: 3_EXPLICIT
   next_framework_alignment_report_sha256: 663916b0ad6e3bbc0e46736059261f14bab742ddfb9b930af4db668655121187
+  mingli_lab_foundation_implementations: 3_AUDITED_1_RUNTIME
+  mingli_lab_foundation_formal_write_paths: 0
+  mingli_lab_foundation_invariants: 8_OF_8_PASS
+  mingli_lab_foundation_gaps: 4_EXPLICIT
+  mingli_lab_foundation_report_sha256: f7a695107c48f782cac1a3164fac2532769731af0b6b6d1ed86f7c911f05a3a1
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -111,18 +117,18 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: MINGLI_LAB_FOUNDATION_AUDIT
-    kind: executable_sandbox_and_evidence_audit
-    scope: classify_existing_lab_and_sandbox_paths_without_creating_a_second_reasoner_or_formal_owner
+  - id: SIX_PILLAR_RELATION_COVERAGE_AUDIT
+    kind: deterministic_relation_inventory
+    scope: measure_existing_relation_semantics_fixtures_and_temporal_coverage_without_changing_algorithms
 
 next_architecture_slice:
-  id: SIX_PILLAR_RELATION_COVERAGE_AUDIT
+  id: RA1_RELATION_CORE_PREPARATION
   authorized_when:
-    - mingli_lab_foundation_baseline
+    - six_pillar_relation_coverage_baseline
   scope:
-    - relation_type_inventory
-    - positional_and_temporal_coverage
-    - fixture_gap_classification
+    - approved_relation_definitions
+    - minimal_positive_and_negative_fixtures
+    - stable_provenance_integration
 
 blocked:
   - relation_atlas_ra1
