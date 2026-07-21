@@ -1,0 +1,96 @@
+from __future__ import annotations
+
+from typing import Any
+
+from product.agent_case_store_contracts import LegacyFormalWriteBlocked
+
+
+FORBIDDEN_LEGACY_FORMAL_WRITE_KEYS = frozenset({
+    "conversation_history",
+    "conversation_memory",
+    "first_reading",
+    "legacy_report",
+    "old_workspace",
+    "probe_history",
+    "report",
+    "report_json",
+    "review_json",
+    "run_record",
+})
+
+
+def canonical_case_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """Accept canonical case state and cut retired representations from writes."""
+
+    canonical = dict(payload)
+    forbidden = sorted(
+        key
+        for key in FORBIDDEN_LEGACY_FORMAL_WRITE_KEYS
+        if canonical.get(key) is not None and canonical.get(key) != ""
+    )
+    if forbidden:
+        raise LegacyFormalWriteBlocked(f"legacy_formal_write_blocked:{','.join(forbidden)}")
+    if "case_belief_state" not in canonical and isinstance(canonical.get("workspace"), dict):
+        canonical["case_belief_state"] = canonical["workspace"]
+    if isinstance(canonical.get("case_belief_state"), dict):
+        belief_state = dict(canonical["case_belief_state"])
+        belief_state.pop("probe_history", None)
+        canonical["case_belief_state"] = belief_state
+    canonical.pop("workspace", None)
+    return canonical
+
+
+def compatibility_case_row(payload: dict[str, Any]) -> dict[str, Any]:
+    """Project the old workspace alias for remaining read-only callers.
+
+    Callers: MemoryAgentCaseStore and PostgresAgentCaseStore read methods.
+    Retirement: remove after every Workspace reader consumes case_belief_state.
+    Deadline: Legacy retirement, after Workspace canonical-read migration.
+    """
+
+    row = dict(payload)
+    if "workspace" not in row and isinstance(row.get("case_belief_state"), dict):
+        workspace = dict(row["case_belief_state"])
+        if not workspace.get("probe_history"):
+            workspace["probe_history"] = derived_probe_history(row.get("life_case"))
+        row["workspace"] = workspace
+    return row
+
+
+def derived_probe_history(life_case: Any) -> list[dict[str, Any]]:
+    """Rebuild the legacy probe view from canonical RealityEvidence on reads."""
+
+    if not isinstance(life_case, dict):
+        return []
+    derived: list[dict[str, Any]] = []
+    for evidence in life_case.get("reality_evidence") or []:
+        if not isinstance(evidence, dict) or evidence.get("source") != "probe":
+            continue
+        details = evidence.get("structured_payload") or {}
+        if not isinstance(details, dict):
+            details = {}
+        source = details.get("reported_by") or "user_reported"
+        if source not in {"user_reported", "practitioner_reported", "research_observation"}:
+            source = "user_reported"
+        derived.append({
+            "evidence_id": str(evidence.get("evidence_id") or ""),
+            "plan_id": str(details.get("plan_id") or "legacy-derived"),
+            "source_probe_id": str(details.get("source_probe_id") or evidence.get("source_ref") or ""),
+            "option_id": str(details.get("option_id") or "legacy-derived"),
+            "option_label": str(details.get("option_label") or evidence.get("summary") or "已记录"),
+            "recorded_at": str(evidence.get("recorded_at") or ""),
+            "evidence_kind": str(evidence.get("kind") or "behavior"),
+            "scenario": str(details.get("scenario") or "recognition"),
+            "domain": str(evidence.get("domain") or "whole_chart"),
+            "hidden_attribute_observations": details.get("hidden_attribute_observations") or {},
+            "evidence_strength": str(details.get("evidence_strength") or "medium"),
+            "reliability": float(details.get("reliability") or 0.55),
+            "relevance": float(details.get("relevance") or 0.8),
+            "year_value": details.get("year_value"),
+            "event_note": str(evidence.get("summary") or ""),
+            "recurrence_count": details.get("recurrence_count"),
+            "hypothesis_updates": details.get("hypothesis_updates") or {},
+            "assertion_updates": details.get("assertion_updates") or {},
+            "source": source,
+        })
+    return derived
