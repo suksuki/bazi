@@ -1,0 +1,32 @@
+{
+  "schema_version": "v50.cal01_late_zi_fixture.v1",
+  "formal_policy": {
+    "calendar_profile": "lunar_python.sect2.v1",
+    "day_rollover": "midnight",
+    "hour_rule": "v50.five_rats.formal_day.v1"
+  },
+  "ordinary_positive": {
+    "timestamp": "1987-05-12T22:30:00",
+    "expected_day_pillar": "辛酉",
+    "expected_hour_pillar": "己亥"
+  },
+  "boundary_positive": {
+    "timestamp": "1987-05-12T23:30:00",
+    "expected_day_pillar": "辛酉",
+    "expected_hour_pillar": "戊子"
+  },
+  "after_midnight_positive": {
+    "timestamp": "1987-05-13T00:30:00",
+    "expected_day_pillar": "壬戌",
+    "expected_hour_pillar": "庚子"
+  },
+  "dependency_negative": {
+    "timestamp": "1987-05-12T23:30:00",
+    "raw_pillars": ["丁卯", "乙巳", "辛酉", "庚子"],
+    "expected_invalid_reason": "hour_pillar_not_legal_for_day"
+  },
+  "retained_ra0_evidence": {
+    "late_zi_dependency_mismatch_count": 4019,
+    "universe_sha256": "05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c"
+  }
+}

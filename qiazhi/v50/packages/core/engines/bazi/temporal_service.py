@@ -173,6 +173,13 @@ class CanonicalTemporalService:
             for solar in Solar.fromBaZi(*normalized_pillars, sect=2, base_year=birth_year_anchor)
             if solar.getYear() == birth_year_anchor
         ]
+        if normalized_pillars[3][1] == "子":
+            matches = self._include_late_zi_witnesses(
+                matches=matches,
+                pillars=normalized_pillars,
+                birth_year_anchor=birth_year_anchor,
+                timezone=timezone,
+            )
         candidates = [
             {
                 "candidate_ref": self._candidate_ref(solar.toYmdHms()),
@@ -191,6 +198,51 @@ class CanonicalTemporalService:
             "method": "four_pillars_reverse_lookup_sect_2",
             "formal_birth_record_modified": False,
         }
+
+    @staticmethod
+    def _include_late_zi_witnesses(
+        *,
+        matches: list[Any],
+        pillars: list[str],
+        birth_year_anchor: int,
+        timezone: str,
+    ) -> list[Any]:
+        from core.engines.birth_calendar import resolve_birth_input_pillars
+
+        candidates = {solar.toYmdHms(): solar for solar in matches}
+        for solar in tuple(matches):
+            late_zi = Solar.fromYmdHms(
+                solar.getYear(),
+                solar.getMonth(),
+                solar.getDay(),
+                23,
+                0,
+                0,
+            )
+            if late_zi.getYear() != birth_year_anchor:
+                continue
+            resolved = resolve_birth_input_pillars(
+                BirthInputCanonical(
+                    birth_input_id=f"temporal-late-zi:{late_zi.toYmdHms()}",
+                    gender=Gender.UNKNOWN,
+                    calendar_type=CalendarType.SOLAR,
+                    birth_date=(
+                        f"{late_zi.getYear():04d}-{late_zi.getMonth():02d}-{late_zi.getDay():02d}"
+                    ),
+                    birth_time="23:00",
+                    timezone=timezone,
+                    input_quality="calendar_candidate_verification",
+                )
+            )
+            resolved_pillars = [
+                resolved.year_pillar,
+                resolved.month_pillar,
+                resolved.day_pillar,
+                resolved.hour_pillar,
+            ]
+            if resolved_pillars == pillars:
+                candidates[late_zi.toYmdHms()] = late_zi
+        return [candidates[key] for key in sorted(candidates)]
 
     def resolve_from_birth_year(
         self,

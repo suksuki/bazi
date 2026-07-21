@@ -18,14 +18,14 @@ from core.audit.chart_universe import (
     structural_invalid_reasons,
 )
 from core.contracts import BirthInputCanonical
-from core.engines import BirthCalendarResolutionError, resolve_birth_input_pillars
+from core.engines import resolve_birth_input_pillars
 from core.engines.bazi.pillar_cycle import BIRTH_YEAR_MAX, BIRTH_YEAR_MIN
 from core.engines.bazi.temporal_service import (
     DEFAULT_CALENDAR_PROFILE,
     TEMPORAL_SERVICE_VERSION,
     CanonicalTemporalService,
 )
-from core.engines.birth_calendar import BIRTH_PILLAR_ENGINE_VERSION
+from core.engines.birth_calendar import BIRTH_PILLAR_ENGINE_VERSION, FORMAL_HOUR_RULE_VERSION
 
 
 JIE_NAMES = (
@@ -167,35 +167,30 @@ class CanonicalCalendarReader:
             true_solar_time_policy="not_applied",
             input_quality="ra0_calendar_realizability_audit",
         )
-        try:
-            resolved = resolve_birth_input_pillars(birth)
-            pillars = (
-                resolved.year_pillar,
-                resolved.month_pillar,
-                resolved.day_pillar,
-                resolved.hour_pillar,
-            )
-        except BirthCalendarResolutionError as exc:
-            if str(exc) != "birth_calendar_returned_invalid_pillars" or at.hour != 23:
-                raise
+        resolved = resolve_birth_input_pillars(birth)
+        pillars = (
+            resolved.year_pillar,
+            resolved.month_pillar,
+            resolved.day_pillar,
+            resolved.hour_pillar,
+        )
+        if at.hour == 23:
             raw = self._raw_pillars(at, sect=2)
             raw_reasons = structural_invalid_reasons(raw)
-            if not raw_reasons:
-                raise
-            pillars = (raw[0], raw[1], raw[2], hour_options_for(raw[2])[0])
-            is_new_timestamp = at not in self._canonical_raw_late_zi_invalid_timestamps
-            self._canonical_raw_late_zi_invalid_timestamps.add(at)
-            self.canonical_raw_late_zi_invalid_count = len(
-                self._canonical_raw_late_zi_invalid_timestamps
-            )
-            if is_new_timestamp and len(self.canonical_raw_late_zi_invalid_samples) < 12:
-                self.canonical_raw_late_zi_invalid_samples.append({
-                    "timestamp": at.isoformat(),
-                    "raw_chart_key": chart_key(raw),
-                    "raw_invalid_reasons": list(raw_reasons),
-                    "audit_normalized_chart_key": chart_key(pillars),
-                    "normalization_source": "formal_five_rats_for_formal_sect_2_day_pillar",
-                })
+            if raw_reasons:
+                is_new_timestamp = at not in self._canonical_raw_late_zi_invalid_timestamps
+                self._canonical_raw_late_zi_invalid_timestamps.add(at)
+                self.canonical_raw_late_zi_invalid_count = len(
+                    self._canonical_raw_late_zi_invalid_timestamps
+                )
+                if is_new_timestamp and len(self.canonical_raw_late_zi_invalid_samples) < 12:
+                    self.canonical_raw_late_zi_invalid_samples.append({
+                        "timestamp": at.isoformat(),
+                        "raw_chart_key": chart_key(raw),
+                        "raw_invalid_reasons": list(raw_reasons),
+                        "audit_normalized_chart_key": chart_key(pillars),
+                        "normalization_source": FORMAL_HOUR_RULE_VERSION,
+                    })
         reasons = structural_invalid_reasons(pillars)
         if reasons:
             raise ValueError(f"canonical_timestamp_returned_invalid_chart:{','.join(reasons)}")
@@ -235,13 +230,14 @@ class CanonicalCalendarReader:
         return {
             "temporal_service_version": TEMPORAL_SERVICE_VERSION,
             "birth_pillar_engine_version": BIRTH_PILLAR_ENGINE_VERSION,
+            "formal_hour_rule_version": FORMAL_HOUR_RULE_VERSION,
             "calendar_profile": DEFAULT_CALENDAR_PROFILE,
             "calendar_dependency": f"lunar_python.{version('lunar_python')}",
             "year_boundary": "lichun_exact_backend_effective_at_first_supported_minute",
             "month_boundary": "twelve_jie_exact_backend_effective_at_first_supported_minute",
             "day_rollover_formal": "midnight_lunar_python_sect_2",
             "day_rollover_sensitivity": "late_zi_lunar_python_sect_1_read_only_comparison",
-            "late_zi_audit_normalization": "when canonical raw sect_2 day and hour stem disagree, retain rejection evidence and derive Zi hour from the formal day pillar using existing Five Rats rules",
+            "late_zi_audit_normalization": "formal birth engine derives the hour pillar from the formal Sect 2 day pillar and dependency hour branch using existing Five Rats rules; the dependency mismatch remains audit evidence",
             "input_precision": "minute",
             "timezone": self.timezone,
             "timezone_application": "validated_label_local_civil_time_not_converted_by_birth_pillar_engine",
@@ -249,7 +245,7 @@ class CanonicalCalendarReader:
             "historical_dst": "not_normalized_by_birth_pillar_engine_local_civil_input_used_as_supplied",
             "product_birth_year_support": [BIRTH_YEAR_MIN, BIRTH_YEAR_MAX],
             "llm_used": False,
-            "formal_algorithm_modified": False,
+            "formal_algorithm_modified": "CAL-01_late_zi_consistency_only",
         }
 
 

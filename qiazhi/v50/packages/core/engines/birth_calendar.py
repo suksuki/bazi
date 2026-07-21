@@ -5,9 +5,11 @@ from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from core.contracts import BirthInputCanonical, CalendarType
 from core.engines.bazi.chart_constraints import validate_four_pillars
+from core.engines.bazi.pillar_cycle import linked_hour_pillar
 
 
-BIRTH_PILLAR_ENGINE_VERSION = "v50.birth_pillar_engine.v1"
+BIRTH_PILLAR_ENGINE_VERSION = "v50.birth_pillar_engine.v2"
+FORMAL_HOUR_RULE_VERSION = "v50.five_rats.formal_day.v1"
 
 
 class BirthCalendarResolutionError(ValueError):
@@ -99,11 +101,16 @@ def _calendar_pillars(birth_input: BirthInputCanonical) -> tuple[str, str, str, 
             )
         eight_char = lunar.getEightChar()
         eight_char.setSect(2)
+        day_pillar = eight_char.getDay()
+        dependency_hour = eight_char.getTime()
         pillars: tuple[str, str, str, str] = (
             eight_char.getYear(),
             eight_char.getMonth(),
-            eight_char.getDay(),
-            eight_char.getTime(),
+            day_pillar,
+            linked_hour_pillar(
+                day_pillar=day_pillar,
+                hour_branch=dependency_hour[1],
+            ),
         )
     except Exception as exc:
         raise BirthCalendarResolutionError("birth_calendar_resolution_failed") from exc

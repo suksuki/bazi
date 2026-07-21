@@ -1,0 +1,257 @@
+{
+  "counts": {
+    "calendar_days": 73414,
+    "dependency_late_zi_mismatches": 73414,
+    "formal_invalid_outputs": 0
+  },
+  "formal_policy": {
+    "birth_pillar_engine_version": "v50.birth_pillar_engine.v2",
+    "calendar_profile": "lunar_python.sect2.v1",
+    "day_rollover": "midnight",
+    "hour_rule_version": "v50.five_rats.formal_day.v1"
+  },
+  "llm_used": false,
+  "range": {
+    "end_exclusive": "2101-01-01",
+    "start_inclusive": "1900-01-01"
+  },
+  "representative_dependency_mismatches": [
+    {
+      "date": "1900-01-01",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丙子",
+        "甲戌",
+        "丙子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丙子",
+        "甲戌",
+        "甲子"
+      ]
+    },
+    {
+      "date": "1900-01-02",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丙子",
+        "乙亥",
+        "戊子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丙子",
+        "乙亥",
+        "丙子"
+      ]
+    },
+    {
+      "date": "1900-01-03",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丙子",
+        "丙子",
+        "庚子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丙子",
+        "丙子",
+        "戊子"
+      ]
+    },
+    {
+      "date": "1900-01-04",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丙子",
+        "丁丑",
+        "壬子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丙子",
+        "丁丑",
+        "庚子"
+      ]
+    },
+    {
+      "date": "1900-01-05",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丙子",
+        "戊寅",
+        "甲子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丙子",
+        "戊寅",
+        "壬子"
+      ]
+    },
+    {
+      "date": "1900-01-06",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丁丑",
+        "己卯",
+        "丙子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丁丑",
+        "己卯",
+        "甲子"
+      ]
+    },
+    {
+      "date": "1900-01-07",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丁丑",
+        "庚辰",
+        "戊子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丁丑",
+        "庚辰",
+        "丙子"
+      ]
+    },
+    {
+      "date": "1900-01-08",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丁丑",
+        "辛巳",
+        "庚子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丁丑",
+        "辛巳",
+        "戊子"
+      ]
+    },
+    {
+      "date": "1900-01-09",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丁丑",
+        "壬午",
+        "壬子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丁丑",
+        "壬午",
+        "庚子"
+      ]
+    },
+    {
+      "date": "1900-01-10",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丁丑",
+        "癸未",
+        "甲子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丁丑",
+        "癸未",
+        "壬子"
+      ]
+    },
+    {
+      "date": "1900-01-11",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丁丑",
+        "甲申",
+        "丙子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丁丑",
+        "甲申",
+        "甲子"
+      ]
+    },
+    {
+      "date": "1900-01-12",
+      "dependency_invalid_reasons": [
+        "hour_pillar_not_legal_for_day"
+      ],
+      "dependency_pillars": [
+        "己亥",
+        "丁丑",
+        "乙酉",
+        "戊子"
+      ],
+      "formal_invalid_reasons": [],
+      "formal_pillars": [
+        "己亥",
+        "丁丑",
+        "乙酉",
+        "丙子"
+      ]
+    }
+  ],
+  "retained_ra0_evidence": {
+    "historical_artifact_modified": false,
+    "universe_sha256": "05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c",
+    "visited_late_zi_dependency_mismatches": 4019
+  },
+  "scan_sha256": "f5ab084b15b01ab8633260c88df9cfcd64ebefb313a95b02ec6d706027d61850",
+  "schema_version": "v50.cal01_late_zi_audit.v1",
+  "status": "PASS",
+  "temporal_policy_changed": false
+}
