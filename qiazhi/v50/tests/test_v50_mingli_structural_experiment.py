@@ -188,6 +188,20 @@ def _case_payload(case_id: str) -> dict[str, object]:
     }
 
 
+def _qualified_path_evidence() -> dict[str, object]:
+    return {
+        "segment_validity": "complete",
+        "direction_coherence": "coherent",
+        "temporal_coherence": "not_evaluated",
+        "root_support": "not_evaluated",
+        "reveal_support": "not_evaluated",
+        "blocking": "none_detected",
+        "closure": "closed",
+        "provenance_quality": "high",
+        "reason_refs": ["fixture:path-evidence"],
+    }
+
+
 def test_single_node_ablation_invalidates_only_incident_edges_and_paths() -> None:
     now = datetime.now(timezone.utc)
     nodes = [
@@ -195,9 +209,9 @@ def test_single_node_ablation_invalidates_only_incident_edges_and_paths() -> Non
         for node_id in ("a", "b", "c", "d")
     ]
     edges = [
-        MechanismEdge(edge_id="ab", from_node_id="a", to_node_id="b", relation_type="generates", strength=0.7),
-        MechanismEdge(edge_id="bc", from_node_id="b", to_node_id="c", relation_type="controls", strength=0.7),
-        MechanismEdge(edge_id="ad", from_node_id="a", to_node_id="d", relation_type="generates", strength=0.6),
+        MechanismEdge(edge_id="ab", from_node_id="a", to_node_id="b", relation_type="generates", path_eligibility="eligible", eligibility_reason_refs=["fixture:eligible"]),
+        MechanismEdge(edge_id="bc", from_node_id="b", to_node_id="c", relation_type="controls", path_eligibility="eligible", eligibility_reason_refs=["fixture:eligible"]),
+        MechanismEdge(edge_id="ad", from_node_id="a", to_node_id="d", relation_type="generates", path_eligibility="eligible", eligibility_reason_refs=["fixture:eligible"]),
     ]
     pillars = [
         PillarVisual(
@@ -218,6 +232,8 @@ def test_single_node_ablation_invalidates_only_incident_edges_and_paths() -> Non
         node_ids=["a", "b", "c"],
         edge_ids=["ab", "bc"],
         relation_types=["generates", "controls"],
+        validation_state="qualified",
+        evidence=_qualified_path_evidence(),
         claim_refs=["claim-1"],
     )
     competing = MechanismPath(
@@ -227,6 +243,8 @@ def test_single_node_ablation_invalidates_only_incident_edges_and_paths() -> Non
         node_ids=["a", "d"],
         edge_ids=["ad"],
         relation_types=["generates"],
+        validation_state="qualified",
+        evidence=_qualified_path_evidence(),
     )
     snapshot = issue_mechanism_snapshot(
         snapshot_id="snapshot-1",

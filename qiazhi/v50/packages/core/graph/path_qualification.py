@@ -5,7 +5,17 @@ from dataclasses import dataclass
 from core.graph.contracts import (
     MingliGraph,
     MingliGraphEdgeType,
+    MingliStateLayer,
+    PathBlockingState,
+    PathClosureState,
+    PathDirectionCoherence,
+    PathEvidencePresence,
+    PathEvidenceVector,
     PathEligibility,
+    PathProvenanceQuality,
+    PathSegmentValidity,
+    PathTemporalCoherence,
+    PathValidationState,
 )
 from core.graph.provenance import RelationDirectionality
 
@@ -23,6 +33,13 @@ _ELIGIBLE_RELATIONS = {
 _EVIDENCE_ONLY_RELATIONS = {
     MingliGraphEdgeType.ROOTS,
     MingliGraphEdgeType.POSITION_LINK,
+}
+
+_POTENTIAL_BLOCKING_RELATIONS = {
+    MingliGraphEdgeType.CLASHES,
+    MingliGraphEdgeType.HARMS,
+    MingliGraphEdgeType.BREAKS,
+    MingliGraphEdgeType.PUNISHES,
 }
 
 
@@ -91,3 +108,102 @@ def validate_whole_path_candidate(
             reasons.append(f"path.directed_edge_reversed_or_disconnected:{edge_id}")
 
     return WholePathValidation(not reasons, tuple(dict.fromkeys(reasons)))
+
+
+def build_path_evidence_vector(
+    graph: MingliGraph,
+    *,
+    node_ids: tuple[str, ...] | list[str],
+    edge_ids: tuple[str, ...] | list[str],
+    state_layer: MingliStateLayer,
+) -> tuple[PathValidationState, PathEvidenceVector]:
+    validation = validate_whole_path_candidate(
+        graph,
+        node_ids=node_ids,
+        edge_ids=edge_ids,
+    )
+    node_set = set(node_ids)
+    path_edges = [edge for edge in graph.edges if edge.edge_id in set(edge_ids)]
+    root_edges = [
+        edge
+        for edge in graph.edges
+        if edge.edge_type == MingliGraphEdgeType.ROOTS
+        and node_set.intersection(edge.participant_node_ids)
+    ]
+    potential_blockers = [
+        edge
+        for edge in graph.edges
+        if edge.edge_type in _POTENTIAL_BLOCKING_RELATIONS
+        and node_set.intersection(edge.participant_node_ids)
+    ]
+    every_object_has_provenance = all(
+        item.evidence_refs and item.material_refs
+        for item in [
+            *[node for node in graph.nodes if node.node_id in node_set],
+            *path_edges,
+        ]
+    )
+    any_object_has_provenance = any(
+        item.evidence_refs or item.material_refs
+        for item in [
+            *[node for node in graph.nodes if node.node_id in node_set],
+            *path_edges,
+        ]
+    )
+    provenance_quality = (
+        PathProvenanceQuality.HIGH
+        if every_object_has_provenance
+        else PathProvenanceQuality.MEDIUM
+        if any_object_has_provenance
+        else PathProvenanceQuality.LOW
+    )
+    validation_state = (
+        PathValidationState.BROKEN
+        if not validation.passed
+        else PathValidationState.QUALIFIED_WITH_CONDITIONS
+        if potential_blockers
+        else PathValidationState.QUALIFIED
+    )
+    reason_refs = [
+        PATH_QUALIFICATION_POLICY_VERSION,
+        *validation.reason_codes,
+        *(f"path.segment:{edge.relation_key}" for edge in path_edges),
+        *(f"path.root_evidence:{edge.relation_key}" for edge in root_edges),
+        *(f"path.potential_blocker:{edge.relation_key}" for edge in potential_blockers),
+        f"path.provenance:{provenance_quality.value}",
+    ]
+    return validation_state, PathEvidenceVector(
+        segment_validity=(
+            PathSegmentValidity.COMPLETE
+            if validation.passed
+            else PathSegmentValidity.BROKEN
+        ),
+        direction_coherence=(
+            PathDirectionCoherence.COHERENT
+            if validation.passed
+            else PathDirectionCoherence.INVALID
+        ),
+        temporal_coherence=(
+            PathTemporalCoherence.NOT_EVALUATED
+        ),
+        root_support=(
+            PathEvidencePresence.PRESENT_UNGRADED
+            if root_edges
+            else PathEvidencePresence.ABSENT
+        ),
+        reveal_support=PathEvidencePresence.NOT_EVALUATED,
+        blocking=(
+            PathBlockingState.POTENTIAL
+            if potential_blockers
+            else PathBlockingState.NONE_DETECTED
+        ),
+        closure=(
+            PathClosureState.CLOSED
+            if validation.passed
+            else PathClosureState.INTERRUPTED
+        ),
+        provenance_quality=provenance_quality,
+        supporting_relation_refs=[edge.relation_key for edge in path_edges],
+        blocking_relation_refs=[edge.relation_key for edge in potential_blockers],
+        reason_refs=list(dict.fromkeys(reason_refs)),
+    )

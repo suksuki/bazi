@@ -36,11 +36,12 @@ def run_cross_axis_suite() -> dict[str, Any]:
         ),
         _result(
             test_id="hour_branch_break_removes_triple_path",
-            passed=_has_path_relation(base_world, "forms_triple_combination") and not _has_path_relation(break_world, "forms_triple_combination"),
-            expectation="Replacing the 酉 hour branch with 亥 removes the 巳酉丑 triple-combination path signal.",
+            passed=_has_graph_relation(base_world, "forms_triple_combination")
+            and not _has_graph_relation(break_world, "forms_triple_combination"),
+            expectation="Replacing the 酉 hour branch with 亥 removes the 巳酉丑 triple-combination relation without relying on candidate-path ordering.",
             observed={
-                "base_relations": _path_relations(base_world),
-                "variant_relations": _path_relations(break_world),
+                "base_relations": _graph_relations(base_world),
+                "variant_relations": _graph_relations(break_world),
             },
         ),
         _result(
@@ -153,6 +154,9 @@ def _without_identity_metadata(value: Any) -> Any:
                 "candidate_relation_key",
                 "candidate_path_key",
                 "node_id",
+                "supporting_relation_refs",
+                "blocking_relation_refs",
+                "reason_refs",
             }
         }
     if isinstance(value, list):
@@ -166,6 +170,18 @@ def _path_relations(world: Any) -> list[list[str]]:
 
 def _has_path_relation(world: Any, relation: str) -> bool:
     return any(relation in relations for relations in _path_relations(world))
+
+
+def _graph_relations(world: Any) -> list[str]:
+    return [
+        str(fact.payload.get("relation") or "")
+        for fact in world.facts
+        if fact.category == "graph_relation"
+    ]
+
+
+def _has_graph_relation(world: Any, relation: str) -> bool:
+    return relation in _graph_relations(world)
 
 
 def _ledger_relations(

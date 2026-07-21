@@ -277,7 +277,7 @@ def _attention_features(*, item: WorldFact, stage: ContextStage) -> tuple[Attent
     signal = 0.0
     reasons: list[str] = []
     numeric_keys = {
-        "candidate_path": ("tool_score",),
+        "candidate_path": (),
         "candidate_node_role": ("confidence",),
         "estimated_sensitivity": ("state_delta",),
         "tool_salience": ("tool_score", "bridge", "criticality", "season"),
@@ -292,7 +292,10 @@ def _attention_features(*, item: WorldFact, stage: ContextStage) -> tuple[Attent
     if item.category == "estimated_sensitivity":
         reasons.extend(["estimated_not_true_ablation", "experimental_tool_observation"])
     if item.category == "candidate_path":
-        reasons.append("candidate_causal_path")
+        reasons.extend([
+            "candidate_causal_path",
+            f"path_validation:{payload.get('validation_status', 'unresolved')}",
+        ])
     if item.category == "timing_material":
         signal = 0.75
         reasons.append("domain_timing_context")

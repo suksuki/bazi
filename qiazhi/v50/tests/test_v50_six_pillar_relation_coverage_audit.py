@@ -5,10 +5,10 @@ from scripts.v50_audit_six_pillar_relation_coverage import (
 )
 
 
-def test_six_pillar_relation_audit_tracks_ra1_progress_without_overstating_it() -> None:
+def test_six_pillar_relation_audit_tracks_ra3_completion_without_overstating_it() -> None:
     result = audit_six_pillar_relation_coverage()
 
-    assert result["status"] == "RA1_IN_PROGRESS"
+    assert result["status"] == "RA3_COMPLETE"
     assert result["counts"] == {
         "declared_relation_types": 13,
         "builder_emitted_relation_types": 13,

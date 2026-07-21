@@ -22,7 +22,7 @@ def test_v50_synthetic_fixture_matrix_validates_flow_state_and_state_delta_chain
     assert summary["brain_used"] is False
     assert summary["training_performed"] is False
     assert summary["node_importance_policy_version"] == "node_importance_policy_v2"
-    assert summary["path_score_policy_version"] == "path_score_policy_v2"
+    assert summary["legacy_unvalidated_path_score_policy_version"] == "path_score_policy_v2"
     assert summary["checks"]["flow_state_adapter"] is True
     assert summary["checks"]["state_delta"] is True
 
@@ -52,7 +52,7 @@ def test_v50_synthetic_fixture_matrix_v2_covers_taxonomy_without_tuning_weights(
     assert summary["brain_used"] is False
     assert summary["training_performed"] is False
     assert summary["node_importance_policy_version"] == "node_importance_policy_v2"
-    assert summary["path_score_policy_version"] == "path_score_policy_v2"
+    assert summary["legacy_unvalidated_path_score_policy_version"] == "path_score_policy_v2"
     assert summary["expected_gap_count"] == 9
 
     cases_by_id = {result["case_id"]: result for result in summary["results"]}

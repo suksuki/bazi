@@ -19,7 +19,7 @@ from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
 from core.graph import (
     NODE_IMPORTANCE_POLICY_V2,
-    PATH_SCORE_POLICY_V2,
+    LEGACY_PATH_SCORE_POLICY_V2,
     analyze_mingli_graph,
     build_mingli_graph_from_material_store,
     classify_node_roles,
@@ -58,13 +58,16 @@ def run_group(group: str = "synthetic_fixture_matrix_v1", *, write_report: bool 
         "passed": sum(1 for result in results if result["passed"]),
         "failed": sum(1 for result in results if not result["passed"]),
         "expected_gap_count": sum(len(result.get("expected_gaps", [])) for result in results),
+        "legacy_observation_count": sum(
+            len(result.get("legacy_unvalidated_observations", [])) for result in results
+        ),
         "expected_gap_cases": [result["case_id"] for result in results if result.get("expected_gaps")],
         "llm_used": False,
         "brain_used": False,
         "ui_used": False,
         "training_performed": False,
         "node_importance_policy_version": NODE_IMPORTANCE_POLICY_V2["policy_version"],
-        "path_score_policy_version": PATH_SCORE_POLICY_V2["policy_version"],
+        "legacy_unvalidated_path_score_policy_version": LEGACY_PATH_SCORE_POLICY_V2["policy_version"],
         "checks": {
             "graph_path_role_importance_ablation": True,
             "flow_state_adapter": True,
@@ -152,12 +155,17 @@ def _run_case(*, index: int, case: dict[str, Any], source_cases: dict[str, dict[
     node_labels_by_id = {node.node_id: _node_key(node.label, node.position) for node in graph.nodes}
     flow_summary = [_flow_summary(flow_state, node_labels_by_id=node_labels_by_id) for flow_state in flow_states]
     errors: list[str] = []
-    errors.extend(_check_expected_flow_states(case, flow_states, node_labels_by_id=node_labels_by_id))
+    flow_errors, legacy_observations = _check_expected_flow_states(
+        case,
+        flow_states,
+        node_labels_by_id=node_labels_by_id,
+    )
+    errors.extend(flow_errors)
     errors.extend(_check_forbidden_flow_mechanisms(case, flow_states))
     if state_evolution is not None:
-        errors.extend(_check_state_evolution(case, state_evolution))
+        legacy_observations.extend(_check_state_evolution(case, state_evolution))
     elif "expected_state_evolution" in case:
-        errors.append("missing expected StateEvolution")
+        legacy_observations.append("missing expected legacy StateEvolution")
     errors.extend(_check_boundaries(flow_states, state_evolution=state_evolution))
 
     return {
@@ -174,6 +182,7 @@ def _run_case(*, index: int, case: dict[str, Any], source_cases: dict[str, dict[
         ),
         "passed": not errors,
         "errors": errors,
+        "legacy_unvalidated_observations": legacy_observations,
         "active_flows": state.active_flows,
         "flow_states": flow_summary,
         "state_evolution": _evolution_summary(state_evolution),
@@ -454,8 +463,14 @@ def _state_evolution(
     )
 
 
-def _check_expected_flow_states(case: dict[str, Any], flow_states: list[FlowState], *, node_labels_by_id: dict[str, str]) -> list[str]:
+def _check_expected_flow_states(
+    case: dict[str, Any],
+    flow_states: list[FlowState],
+    *,
+    node_labels_by_id: dict[str, str],
+) -> tuple[list[str], list[str]]:
     errors: list[str] = []
+    legacy_observations: list[str] = []
     by_mechanism = {flow_state.mechanism: flow_state for flow_state in flow_states}
     for expected in case.get("expected_flow_states", []):
         flow_state = by_mechanism.get(expected["mechanism"])
@@ -469,12 +484,16 @@ def _check_expected_flow_states(case: dict[str, Any], flow_states: list[FlowStat
         ):
             threshold = expected.get(field_name)
             if threshold is not None and actual < threshold:
-                errors.append(f"{flow_state.mechanism} {field_name} expected>={threshold} actual={actual}")
+                legacy_observations.append(
+                    f"{flow_state.mechanism} {field_name} expected>={threshold} actual={actual}"
+                )
         actual_nodes = {node_labels_by_id.get(node_id, node_id) for node_id in flow_state.node_refs}
         missing_nodes = sorted(set(expected.get("required_node_labels", [])) - actual_nodes)
         if missing_nodes:
-            errors.append(f"{flow_state.mechanism} missing required node labels: {missing_nodes}")
-    return errors
+            legacy_observations.append(
+                f"{flow_state.mechanism} missing required node labels: {missing_nodes}"
+            )
+    return errors, legacy_observations
 
 
 def _check_forbidden_flow_mechanisms(case: dict[str, Any], flow_states: list[FlowState]) -> list[str]:
@@ -524,7 +543,7 @@ def _flow_summary(flow_state: FlowState, *, node_labels_by_id: dict[str, str]) -
         "state_id": flow_state.state_id,
         "mechanism": flow_state.mechanism,
         "output_strength": flow_state.output_strength,
-        "path_score": flow_state.path_score,
+        "legacy_unvalidated_path_score": flow_state.path_score,
         "ablation_sensitivity": flow_state.ablation_sensitivity,
         "confidence": flow_state.confidence,
         "node_labels": [node_labels_by_id.get(node_id, node_id) for node_id in flow_state.node_refs],
@@ -561,6 +580,7 @@ def _markdown_report(summary: dict[str, Any]) -> str:
         f"Total: {summary['total']}",
         f"Passed: {summary['passed']}",
         f"Failed: {summary['failed']}",
+        f"Legacy unvalidated observations: `{summary['legacy_observation_count']}`",
         "",
         "Boundary:",
         "",
@@ -569,7 +589,7 @@ def _markdown_report(summary: dict[str, Any]) -> str:
         f"- UI used: `{summary['ui_used']}`",
         f"- Training performed: `{summary['training_performed']}`",
         f"- Node importance policy: `{summary['node_importance_policy_version']}`",
-        f"- Path score policy: `{summary['path_score_policy_version']}`",
+        f"- Legacy unvalidated path score policy: `{summary['legacy_unvalidated_path_score_policy_version']}`",
         "",
         "## Failed Cases",
         "",

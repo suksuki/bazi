@@ -49,7 +49,6 @@ def analyze_mingli_graph(
     month_element = month_branch.element if month_branch else ""
     degree_scores = _degree_scores(graph)
     duplicate_scores = _duplicate_label_scores(graph)
-    path_contribution = path_result.node_path_contribution if path_result else {}
     roles_by_node = role_result.roles_by_node_id if role_result else {}
     metrics: list[NodeImportanceMetric] = []
     for node in graph.nodes:
@@ -60,7 +59,7 @@ def analyze_mingli_graph(
         centrality_score = degree_scores.get(node.node_id, 0.0)
         bridge_score = max(_bridge_score(node, graph), _role_bridge_score(roles))
         criticality_score = max(_criticality_score(node, graph), _role_criticality_score(roles))
-        flow_contribution = max(_flow_contribution(node, graph), path_contribution.get(node.node_id, 0.0))
+        flow_contribution = _flow_contribution(node, graph)
         perturbation_sensitivity = max(_perturbation_sensitivity(node, graph), _role_perturbation_score(roles))
         redundancy_score = duplicate_scores.get(node.label, 0.0)
         final_importance = _importance(

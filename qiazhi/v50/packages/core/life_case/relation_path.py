@@ -422,7 +422,7 @@ def _assertions_from_path_fact(
         relation_keys=relation_keys,
         scope="natal",
     )
-    return assertions, [PathAssertion(
+    return _dedupe_assertions_by_id(assertions), [PathAssertion(
         path_key=path_key,
         assertion_version=f"{case_version}:baseline",
         status=AssertionLifecycle.COMMITTED,
@@ -508,7 +508,7 @@ def _assertions_from_relation_chain(
         relation_keys=relation_keys,
         scope="natal",
     )
-    return assertions, [PathAssertion(
+    return _dedupe_assertions_by_id(assertions), [PathAssertion(
         path_key=path_key,
         assertion_version=f"{case_version}:baseline",
         status=AssertionLifecycle.COMMITTED,
@@ -520,6 +520,18 @@ def _assertions_from_relation_chain(
         ),
         statement=_path_statement(insight=insight, record=record),
     )]
+
+
+def _dedupe_assertions_by_id(
+    assertions: list[RelationAssertion],
+) -> list[RelationAssertion]:
+    output: dict[str, RelationAssertion] = {}
+    for assertion in assertions:
+        existing = output.get(assertion.assertion_id)
+        if existing is not None and existing != assertion:
+            raise ValueError("relation_assertion_identity_collision")
+        output[assertion.assertion_id] = assertion
+    return list(output.values())
 
 
 def _insight_source_refs(insight: FormalInsight) -> list[str]:

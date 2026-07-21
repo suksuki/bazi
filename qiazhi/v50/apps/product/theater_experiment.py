@@ -467,7 +467,8 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
                 to_node_id=node_refs[edge.to_node_id],
                 relation_type=edge.edge_type.value,
                 relation_label=edge.relation_label,
-                strength=edge.strength,
+                path_eligibility=edge.path_eligibility.value,
+                eligibility_reason_refs=list(edge.eligibility_reason_refs),
                 source_refs=[*edge.material_refs, *edge.evidence_refs],
             )
             for edge in graph_edges
@@ -612,7 +613,18 @@ def _mechanism_path(
         node_ids=[node_refs[item] for item in path.node_ids],
         edge_ids=[relation_refs[item] for item in path.edge_ids],
         relation_types=path.relation_types,
-        tool_score=path.path_score,
+        validation_state=path.validation_state.value,
+        evidence={
+            "segment_validity": path.evidence_vector.segment_validity.value,
+            "direction_coherence": path.evidence_vector.direction_coherence.value,
+            "temporal_coherence": path.evidence_vector.temporal_coherence.value,
+            "root_support": path.evidence_vector.root_support.value,
+            "reveal_support": path.evidence_vector.reveal_support.value,
+            "blocking": path.evidence_vector.blocking.value,
+            "closure": path.evidence_vector.closure.value,
+            "provenance_quality": path.evidence_vector.provenance_quality.value,
+            "reason_refs": list(path.evidence_vector.reason_refs),
+        },
         claim_refs=claim_refs,
         source_refs=[ref, path_ref, path.path_id, *path.graph_refs, *path.evidence_refs],
     )

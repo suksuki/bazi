@@ -18,6 +18,7 @@ from test_v50_mingli_structural_experiment import _case_payload
 
 
 ROOT = Path(__file__).resolve().parents[1]
+TEMPORAL_POLICY_REASON = "deepbazi.temporal-path-update.ra3.v1"
 
 
 def _typed_real_case(case_id: str) -> tuple[dict[str, object], str]:
@@ -26,35 +27,32 @@ def _typed_real_case(case_id: str) -> tuple[dict[str, object], str]:
     record = payload["record"]
     assert isinstance(world, dict)
     assert isinstance(record, dict)
-    facts = [
-        item for item in world["facts"]
-        if item["category"] == "graph_relation"
-    ]
-    chain: tuple[dict[str, object], dict[str, object]] | None = None
-    for first in facts:
-        for second in facts:
-            if first is second:
-                continue
-            left = first["payload"]
-            right = second["payload"]
-            if left["to_position"] == right["from_position"] and left["to"] == right["from"]:
-                chain = (first, second)
-                break
-        if chain:
-            break
-    assert chain is not None
-    work_path = record["cognition"]["work_path"]
-    work_path["evidence_refs"] = [chain[0]["fact_id"], chain[1]["fact_id"]]
-    work_path["candidate_path_refs"] = []
-    work_path["path_statement"] = "结构化证据已经形成一条可定位的正式主路径。"
-
-    committed_fact_refs = set(
-        payload["life_case"]["baseline_insight"]["basis"]["chart_fact_refs"]
-    )
-    candidate_fact = next(
+    path_facts = [
         item for item in world["facts"]
         if item["category"] == "candidate_path"
-        and item["fact_id"] not in committed_fact_refs
+    ]
+    committed_fact = next(
+        item
+        for item in path_facts
+        if [
+            descriptor["position"]
+            for descriptor in item["payload"]["node_descriptors"]
+        ] == ["year_stem", "hour_branch", "day_stem"]
+        and item["payload"]["labels"] == ["丁", "酉", "乙"]
+    )
+    committed_ref = next(
+        item for item in committed_fact["source_refs"] if item.startswith("path:")
+    )
+    work_path = record["cognition"]["work_path"]
+    work_path["evidence_refs"] = [committed_fact["fact_id"]]
+    work_path["candidate_path_refs"] = [committed_ref]
+    work_path["path_statement"] = "结构化证据已经形成一条可定位的正式主路径。"
+
+    payload["life_case"]["baseline_insight"]["basis"]["chart_fact_refs"] = [
+        committed_fact["fact_id"]
+    ]
+    candidate_fact = next(
+        item for item in path_facts if item["fact_id"] != committed_fact["fact_id"]
     )
     candidate_ref = next(item for item in candidate_fact["source_refs"] if item.startswith("path:"))
     work_path["competing_path_refs"] = [candidate_ref]
@@ -90,14 +88,15 @@ def test_real_life_case_projects_read_only_four_five_six_pillar_stages() -> None
     assert payload["stages"]["natal"]["spec"]["paths"][0]["trace"]["epistemic_status"] == "committed"
     assert len(payload["stages"]["luck"]["diff"]["added_nodes"]) == 2
     assert len(payload["stages"]["year"]["diff"]["added_nodes"]) == 2
-    assert payload["stages"]["luck"]["diff"]["unchanged_paths"][0]["change_type"] == "unchanged"
+    assert payload["stages"]["luck"]["diff"]["weakened_paths"][0]["change_type"] == "weakened"
+    assert payload["stages"]["year"]["diff"]["reinforced_paths"][0]["change_type"] == "reinforced"
     assert payload["llm_used"] is False
     assert payload["formal_state_writes"] is False
     assert payload["sandbox_mutations"] is False
     assert store.get(case_id=case_id, user_id=user_id) == before
 
 
-def test_official_luck_and_year_compile_same_level_relations_without_promoting_paths() -> None:
+def test_official_luck_and_year_update_committed_paths_without_promoting_candidates() -> None:
     store, user_id, case_id, _ = _saved_case()
     service = ReadOnlySixPillarCanvasService(case_store=store)
 
@@ -109,6 +108,10 @@ def test_official_luck_and_year_compile_same_level_relations_without_promoting_p
     expected_types = {
         "luck": {"controls", "forms_triple_combination"},
         "year": {"generates", "same_element_support", "harms"},
+    }
+    expected_path_change = {
+        "luck": "weakened_paths",
+        "year": "reinforced_paths",
     }
     for stage in ("luck", "year"):
         spec = first["stages"][stage]["spec"]
@@ -139,10 +142,10 @@ def test_official_luck_and_year_compile_same_level_relations_without_promoting_p
             assert len(levels) == 1
         assert not diff["introduced_paths"]
         assert not diff["activated_paths"]
-        assert not diff["reinforced_paths"]
-        assert not diff["weakened_paths"]
         assert not diff["blocked_paths"]
-        assert diff["unchanged_paths"]
+        assert len(diff[expected_path_change[stage]]) == 1
+        assert diff[expected_path_change[stage]][0]["target_ref"].startswith("path:")
+        assert TEMPORAL_POLICY_REASON in diff[expected_path_change[stage]][0]["reason_refs"]
 
 
 def test_member_projection_removes_practitioner_path_before_serialization() -> None:

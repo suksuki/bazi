@@ -19,7 +19,7 @@ from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
 from core.graph import (
     NODE_IMPORTANCE_POLICY_V2,
-    PATH_SCORE_POLICY_V2,
+    LEGACY_PATH_SCORE_POLICY_V2,
     analyze_mingli_graph,
     build_mingli_graph_from_material_store,
     classify_node_roles,
@@ -42,12 +42,15 @@ def run_group(group: str = "synthetic_work_system_v1", *, write_report: bool = F
         "total": len(results),
         "passed": sum(1 for result in results if result["passed"]),
         "failed": sum(1 for result in results if not result["passed"]),
+        "legacy_observation_count": sum(
+            len(result["legacy_unvalidated_observations"]) for result in results
+        ),
         "llm_used": False,
         "brain_used": False,
         "ui_used": False,
         "training_performed": False,
         "node_importance_policy_version": NODE_IMPORTANCE_POLICY_V2["policy_version"],
-        "path_score_policy_version": PATH_SCORE_POLICY_V2["policy_version"],
+        "legacy_unvalidated_path_score_policy_version": LEGACY_PATH_SCORE_POLICY_V2["policy_version"],
         "results": results,
     }
     if write_report:
@@ -72,15 +75,17 @@ def _run_case(*, index: int, case: dict[str, Any]) -> dict[str, Any]:
     ablation = run_ablation_simulation(state, target_node_ids=[metric.node_id for metric in analysis.node_metrics[:5]])
 
     role_map = _role_map(roles.assignments)
-    top_path_hints = sorted({hint for path in paths.paths[:10] for hint in path.mechanism_hints})
+    candidate_path_hints = sorted(
+        {hint for path in paths.paths for hint in path.mechanism_hints}
+    )
     critical_nodes = [_node_key(metric.label, metric.position) for metric in analysis.node_metrics[:5]]
     ablation_order = [_node_key(result.target_label, result.target_position) for result in ablation.ablation_results]
     errors: list[str] = []
     errors.extend(_check_expected_roles(case, role_map))
     errors.extend(_check_must_not_roles(case, role_map))
-    errors.extend(_check_expected_hints(case, top_path_hints))
+    errors.extend(_check_expected_hints(case, candidate_path_hints))
     errors.extend(_check_expected_critical_nodes(case, critical_nodes))
-    errors.extend(_check_ablation_prefix(case, ablation_order))
+    legacy_observations = _check_ablation_prefix(case, ablation_order)
 
     return {
         "case_id": case["case_id"],
@@ -95,10 +100,13 @@ def _run_case(*, index: int, case: dict[str, Any]) -> dict[str, Any]:
         ),
         "passed": not errors,
         "errors": errors,
+        "legacy_unvalidated_observations": legacy_observations,
         "top_paths": [
             {
                 "path_id": path.path_id,
-                "path_score": path.path_score,
+                "legacy_unvalidated_path_score": path.legacy_unvalidated_metrics.path_score,
+                "validation_state": path.validation_state.value,
+                "evidence_vector": path.evidence_vector.model_dump(mode="json"),
                 "node_labels": [_label_for_node(graph, node_id) for node_id in path.node_ids],
                 "mechanism_hints": path.mechanism_hints,
             }
@@ -184,8 +192,9 @@ def _markdown_report(summary: dict[str, Any]) -> str:
         f"Total: {summary['total']}",
         f"Passed: {summary['passed']}",
         f"Failed: {summary['failed']}",
+        f"Legacy unvalidated observations: {summary['legacy_observation_count']}",
         f"Node importance policy: `{summary['node_importance_policy_version']}`",
-        f"Path score policy: `{summary['path_score_policy_version']}`",
+        f"Legacy unvalidated path score policy: `{summary['legacy_unvalidated_path_score_policy_version']}`",
         "",
         "## Failed Cases",
         "",

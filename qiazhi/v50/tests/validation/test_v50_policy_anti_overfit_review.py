@@ -31,7 +31,10 @@ def test_v50_policy_anti_overfit_review_requires_principle_reasons_and_category_
     counts = summary["category_counts_v2"]
 
     assert all(change["mingli_principle_reason"] for change in summary["node_weight_changes"])
-    assert all(change["mingli_principle_reason"] for change in summary["path_weight_changes"])
+    assert all(
+        change["mingli_principle_reason"]
+        for change in summary["legacy_unvalidated_path_weight_changes"]
+    )
     assert summary["max_category_share_v2"] <= 0.5
     assert summary["converter_bridge_share_v2"] <= 0.55
     assert counts["month_command_first"] >= 3

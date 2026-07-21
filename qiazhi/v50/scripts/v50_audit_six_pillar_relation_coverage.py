@@ -174,14 +174,10 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
         ),
         _check(
             "temporal_layers_use_shared_relation_derivation",
-            all(
-                token in temporal_block
-                for token in (
-                    "relations=_temporal_relations",
-                    "derive_element_relations",
-                    "derive_branch_relations",
-                )
-            ),
+            "relations = _temporal_relations(" in temporal_block
+            and "def _temporal_relations(" in temporal_source
+            and "derive_element_relations(stems)" in temporal_source
+            and "derive_branch_relations(branches)" in temporal_source,
         ),
         _check(
             "temporal_relations_are_same_level_only",
@@ -192,7 +188,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
 
     return {
         "schema_version": "deepbazi.six_pillar_relation_coverage_audit.v1",
-        "status": "RA1_IN_PROGRESS"
+        "status": "RA3_COMPLETE"
         if all(item["passed"] for item in checks)
         else "AUDIT_FAILED",
         "counts": {
@@ -247,15 +243,17 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
         ],
         "findings": findings,
         "checks": checks,
-        "ra1_completed": [
+        "relation_path_core_completed": [
             "consume existing deterministic branch-relation materials",
             "replace sample-specialized combinations with complete relation definitions",
             "compile official luck and year relations through the same deterministic relation derivation",
+            "qualify path-participating relations through explicit positive and negative fixtures",
+            "replace public path scores with evidence-backed discrete states",
+            "apply conservative official luck and year path-state updates without mutating LifeCase",
         ],
-        "ra1_entry_order": [
-            "qualify relation types for path participation with explicit positive and negative fixtures",
-            "replace uncalibrated path strengths with evidence-backed discrete support states",
-            "only then admit temporal path updates",
+        "remaining_findings": [
+            "qualify dense cross-level natal element edges by position and layer",
+            "retire isolated legacy unvalidated strengths after downstream compatibility migration",
         ],
         "relation_semantics_modified": False,
         "relation_projection_modified": True,

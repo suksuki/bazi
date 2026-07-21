@@ -46,6 +46,56 @@ class PathEligibility(str, Enum):
     NOT_YET_QUALIFIED = "not_yet_qualified"
 
 
+class PathValidationState(str, Enum):
+    QUALIFIED = "qualified"
+    QUALIFIED_WITH_CONDITIONS = "qualified_with_conditions"
+    BROKEN = "broken"
+    UNRESOLVED = "unresolved"
+
+
+class PathSegmentValidity(str, Enum):
+    COMPLETE = "complete"
+    PARTIAL = "partial"
+    BROKEN = "broken"
+
+
+class PathDirectionCoherence(str, Enum):
+    COHERENT = "coherent"
+    MIXED = "mixed"
+    INVALID = "invalid"
+
+
+class PathTemporalCoherence(str, Enum):
+    ACTIVE = "active"
+    PARTIAL = "partial"
+    INACTIVE = "inactive"
+    NOT_EVALUATED = "not_evaluated"
+
+
+class PathEvidencePresence(str, Enum):
+    PRESENT_UNGRADED = "present_ungraded"
+    ABSENT = "absent"
+    NOT_EVALUATED = "not_evaluated"
+
+
+class PathBlockingState(str, Enum):
+    NONE_DETECTED = "none_detected"
+    POTENTIAL = "potential"
+    CONFIRMED = "confirmed"
+
+
+class PathClosureState(str, Enum):
+    CLOSED = "closed"
+    OPEN = "open"
+    INTERRUPTED = "interrupted"
+
+
+class PathProvenanceQuality(str, Enum):
+    HIGH = "high"
+    MEDIUM = "medium"
+    LOW = "low"
+
+
 class MingliStateLayer(str, Enum):
     NATAL = "natal_state"
     LUCK = "luck_state"
@@ -110,7 +160,7 @@ class MingliGraphEdge(V50Model):
     participant_node_ids: list[str] = Field(default_factory=list)
     directionality: RelationDirectionality | None = None
     ontology_version: str = RELATION_ONTOLOGY_VERSION
-    strength: float = Field(default=0.0, ge=0.0, le=1.0)
+    legacy_unvalidated_strength: float = Field(default=0.0, ge=0.0, le=1.0)
     relation_label: str = ""
     path_eligibility: PathEligibility = PathEligibility.NOT_YET_QUALIFIED
     eligibility_reason_refs: list[str] = Field(default_factory=list)
@@ -183,18 +233,53 @@ class MingliPath(V50Model):
     edge_ids: list[str] = Field(default_factory=list)
     relation_keys: list[str] = Field(default_factory=list)
     relation_types: list[str] = Field(default_factory=list)
-    source_strength: float = Field(default=0.0, ge=0.0, le=1.0)
-    edge_strength: float = Field(default=0.0, ge=0.0, le=1.0)
-    season_bias: float = Field(default=0.0, ge=0.0, le=1.0)
-    root_support: float = Field(default=0.0, ge=0.0, le=1.0)
-    converter_capacity: float = Field(default=0.0, ge=0.0, le=1.0)
-    bridge_stability: float = Field(default=0.0, ge=0.0, le=1.0)
-    target_receptivity: float = Field(default=0.0, ge=0.0, le=1.0)
-    path_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    validation_state: PathValidationState
+    evidence_vector: "PathEvidenceVector"
+    legacy_unvalidated_metrics: "LegacyUnvalidatedPathMetrics"
     mechanism_hints: list[str] = Field(default_factory=list)
     graph_refs: list[str] = Field(default_factory=list)
     evidence_refs: list[str] = Field(default_factory=list)
     boundary: str = "mingli_path_is_explored_computational_evidence_not_verdict"
+
+    @model_validator(mode="before")
+    @classmethod
+    def _migrate_legacy_metrics(cls, value: object) -> object:
+        if not isinstance(value, dict):
+            return value
+        payload = dict(value)
+        metric_names = (
+            "source_strength",
+            "edge_strength",
+            "season_bias",
+            "root_support",
+            "converter_capacity",
+            "bridge_stability",
+            "target_receptivity",
+            "path_score",
+        )
+        if "legacy_unvalidated_metrics" not in payload and any(
+            name in payload for name in metric_names
+        ):
+            payload["legacy_unvalidated_metrics"] = {
+                name: payload.pop(name, 0.0) for name in metric_names
+            }
+        payload.setdefault("validation_state", PathValidationState.UNRESOLVED.value)
+        payload.setdefault(
+            "evidence_vector",
+            {
+                "segment_validity": PathSegmentValidity.PARTIAL.value,
+                "direction_coherence": PathDirectionCoherence.MIXED.value,
+                "temporal_coherence": PathTemporalCoherence.NOT_EVALUATED.value,
+                "root_support": PathEvidencePresence.NOT_EVALUATED.value,
+                "reveal_support": PathEvidencePresence.NOT_EVALUATED.value,
+                "blocking": PathBlockingState.NONE_DETECTED.value,
+                "closure": PathClosureState.OPEN.value,
+                "provenance_quality": PathProvenanceQuality.LOW.value,
+                "reason_refs": ["path.evidence.legacy_migration_unresolved"],
+            },
+        )
+        payload.setdefault("legacy_unvalidated_metrics", {})
+        return payload
 
     @model_validator(mode="after")
     def _boundary(self) -> "MingliPath":
@@ -222,6 +307,45 @@ class MingliPath(V50Model):
         return self
 
 
+class PathEvidenceVector(V50Model):
+    version: str = "deepbazi.path_evidence_vector.ra3.v1"
+    segment_validity: PathSegmentValidity
+    direction_coherence: PathDirectionCoherence
+    temporal_coherence: PathTemporalCoherence
+    root_support: PathEvidencePresence
+    reveal_support: PathEvidencePresence
+    blocking: PathBlockingState
+    closure: PathClosureState
+    provenance_quality: PathProvenanceQuality
+    supporting_relation_refs: list[str] = Field(default_factory=list)
+    blocking_relation_refs: list[str] = Field(default_factory=list)
+    reason_refs: list[str] = Field(default_factory=list)
+    boundary: str = "discrete_path_evidence_does_not_imply_probability_or_energy_percentage"
+
+    @model_validator(mode="after")
+    def _boundary(self) -> "PathEvidenceVector":
+        require_refs(self.reason_refs, "path_evidence_vector reason_refs")
+        return self
+
+
+class LegacyUnvalidatedPathMetrics(V50Model):
+    version: str = "deepbazi.legacy_unvalidated_path_metrics.v1"
+    status: str = "legacy_unvalidated_not_for_projection_or_professional_ranking"
+    policy_version: str = "path_score_policy_v2"
+    source_strength: float = Field(default=0.0, ge=0.0, le=1.0)
+    edge_strength: float = Field(default=0.0, ge=0.0, le=1.0)
+    season_bias: float = Field(default=0.0, ge=0.0, le=1.0)
+    root_support: float = Field(default=0.0, ge=0.0, le=1.0)
+    converter_capacity: float = Field(default=0.0, ge=0.0, le=1.0)
+    bridge_stability: float = Field(default=0.0, ge=0.0, le=1.0)
+    target_receptivity: float = Field(default=0.0, ge=0.0, le=1.0)
+    path_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    boundary: str = "retained_only_for_regression_compatibility_until_downstream_state_migration"
+
+
+MingliPath.model_rebuild()
+
+
 class PathExplorationResult(V50Model):
     version: str = "v50.path_exploration_result.v1"
     exploration_id: str
@@ -229,8 +353,9 @@ class PathExplorationResult(V50Model):
     graph_id: str
     state_layer: MingliStateLayer = MingliStateLayer.NATAL
     paths: list[MingliPath] = Field(default_factory=list)
-    ranked_path_ids: list[str] = Field(default_factory=list)
-    node_path_contribution: dict[str, float] = Field(default_factory=dict)
+    ordered_candidate_path_ids: list[str] = Field(default_factory=list)
+    ordering_policy: str = "deterministic_evidence_order_not_professional_ranking"
+    node_path_membership: dict[str, list[str]] = Field(default_factory=dict)
     creates_judgment: bool = False
     calls_brain: bool = False
     calls_llm: bool = False

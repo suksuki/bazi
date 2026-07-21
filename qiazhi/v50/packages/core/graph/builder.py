@@ -68,7 +68,7 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                 from_node_id=stem_node_id,
                 to_node_id=branch_node_id,
                 edge_type=MingliGraphEdgeType.POSITION_LINK,
-                strength=0.72,
+                legacy_unvalidated_strength=0.72,
                 relation_label="same_pillar_position",
                 material_refs=[chart_material_ref],
                 attributes={"slot": position},
@@ -98,7 +98,7 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                     from_node_id=branch_node_id,
                     to_node_id=hidden_id,
                     edge_type=MingliGraphEdgeType.STORES,
-                    strength=0.64,
+                    legacy_unvalidated_strength=0.64,
                     relation_label="branch_stores_hidden_stem",
                     material_refs=[chart_material_ref],
                     attributes={"branch": branch, "hidden_stem": hidden_stem},
@@ -147,7 +147,7 @@ def _edge(
     from_node_id: str,
     to_node_id: str,
     edge_type: MingliGraphEdgeType,
-    strength: float,
+    legacy_unvalidated_strength: float,
     relation_label: str,
     material_refs: list[str],
     evidence_refs: list[str] | None = None,
@@ -162,7 +162,7 @@ def _edge(
         to_node_id=to_node_id,
         edge_type=edge_type,
         participant_node_ids=participant_node_ids or [],
-        strength=strength,
+        legacy_unvalidated_strength=legacy_unvalidated_strength,
         relation_label=relation_label,
         path_eligibility=path_eligibility,
         eligibility_reason_refs=eligibility_reason_refs,
@@ -221,7 +221,7 @@ def _element_edge(
     source: MingliGraphNode,
     target: MingliGraphNode,
     edge_type: MingliGraphEdgeType,
-    strength: float,
+    legacy_unvalidated_strength: float,
     chart_material_ref: str,
 ) -> MingliGraphEdge:
     return _edge(
@@ -230,7 +230,7 @@ def _element_edge(
         from_node_id=source.node_id,
         to_node_id=target.node_id,
         edge_type=edge_type,
-        strength=strength,
+        legacy_unvalidated_strength=legacy_unvalidated_strength,
         relation_label=edge_type.value,
         material_refs=[chart_material_ref],
         attributes={"from_element": source.element, "to_element": target.element},
@@ -323,7 +323,7 @@ def _material_relation_edges(
                         to_node_id=bridge_node.node_id,
                         edge_type=edge_type,
                         participant_node_ids=[node.node_id for node in participants],
-                        strength=0.92 if is_harmony else material.confidence,
+                        legacy_unvalidated_strength=0.92 if is_harmony else material.confidence,
                         relation_label=relation_id,
                         material_refs=[material.material_id],
                         evidence_refs=source_refs,
@@ -368,7 +368,7 @@ def _material_relation_edges(
                     from_node_id=first.node_id,
                     to_node_id=second.node_id,
                     edge_type=edge_type,
-                    strength=(
+                    legacy_unvalidated_strength=(
                         0.66
                         if relation_name == "half_triple_harmony"
                         else material.confidence
@@ -462,7 +462,7 @@ def _material_root_edges(
                     from_node_id=branch_node.node_id,
                     to_node_id=day_stem_node.node_id,
                     edge_type=MingliGraphEdgeType.ROOTS,
-                    strength=material.confidence,
+                    legacy_unvalidated_strength=material.confidence,
                     relation_label="day_master_root",
                     material_refs=[material.material_id],
                     evidence_refs=source_refs,

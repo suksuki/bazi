@@ -333,13 +333,17 @@ def _path_observations(*, paths, nodes: dict[str, Any], edges: dict[str, Any]) -
                 fact_id=f"observation:path:{path.path_id}",
                 kind="derived_observation",
                 category="candidate_path",
-                statement=f"工具发现候选路径 {' → '.join(labels)}；关系 {' / '.join(path.relation_types)}；工具分数 {path.path_score:.3f}",
+                statement=(
+                    f"工具发现候选路径 {' → '.join(labels)}；"
+                    f"关系 {' / '.join(path.relation_types)}；"
+                    f"证据状态 {path.validation_state.value}"
+                ),
                 payload={
                     "labels": labels,
                     "relations": list(path.relation_types),
-                    "tool_score": path.path_score,
                     "mechanism_hints": list(path.mechanism_hints),
-                    "validation_status": "experimental",
+                    "validation_status": path.validation_state.value,
+                    "evidence_vector": path.evidence_vector.model_dump(mode="json"),
                     "candidate_path_key": path.path_key,
                     "node_descriptors": [
                         _graph_node_descriptor(nodes[node_id])

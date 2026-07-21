@@ -45,8 +45,21 @@ class MechanismEdge(ExperienceModel):
     to_node_id: str = Field(min_length=1, max_length=260)
     relation_type: str = Field(min_length=1, max_length=100)
     relation_label: str = Field(default="", max_length=120)
-    strength: float = Field(ge=0.0, le=1.0)
+    path_eligibility: Literal["eligible", "evidence_only", "not_yet_qualified"]
+    eligibility_reason_refs: list[str] = Field(min_length=1)
     source_refs: list[str] = Field(default_factory=list)
+
+
+class MechanismPathEvidence(ExperienceModel):
+    segment_validity: Literal["complete", "partial", "broken"]
+    direction_coherence: Literal["coherent", "mixed", "invalid"]
+    temporal_coherence: Literal["active", "partial", "inactive", "not_evaluated"]
+    root_support: Literal["present_ungraded", "absent", "not_evaluated"]
+    reveal_support: Literal["present_ungraded", "absent", "not_evaluated"]
+    blocking: Literal["none_detected", "potential", "confirmed"]
+    closure: Literal["closed", "open", "interrupted"]
+    provenance_quality: Literal["high", "medium", "low"]
+    reason_refs: list[str] = Field(min_length=1)
 
 
 class MechanismPath(ExperienceModel):
@@ -56,7 +69,13 @@ class MechanismPath(ExperienceModel):
     node_ids: list[str] = Field(min_length=2)
     edge_ids: list[str] = Field(min_length=1)
     relation_types: list[str] = Field(min_length=1)
-    tool_score: float = Field(default=0.0, ge=0.0, le=1.0)
+    validation_state: Literal[
+        "qualified",
+        "qualified_with_conditions",
+        "broken",
+        "unresolved",
+    ]
+    evidence: MechanismPathEvidence
     claim_refs: list[str] = Field(default_factory=list)
     source_refs: list[str] = Field(default_factory=list)
 

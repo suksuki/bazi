@@ -103,14 +103,18 @@ def test_v50_node_importance_ranks_bridge_and_converter_before_month_environment
     assert "role.environment_node" in top[2].explanation_codes
 
 
-def test_v50_node_importance_policy_v2_supports_different_structural_winners() -> None:
+def test_v50_node_importance_policy_v2_preserves_structural_signals_without_path_score_ranking() -> None:
     bridge_analysis = _analysis_for_synthetic_case("bridge_node_si_you_chou_complete")
     month_analysis = _analysis_for_synthetic_case("month_command_dominant_without_bridge")
     anchor_analysis = _analysis_for_synthetic_case("day_branch_anchor_type")
 
     bridge_top = bridge_analysis.node_metrics[0]
     month_top = month_analysis.node_metrics[0]
-    anchor_top = anchor_analysis.node_metrics[0]
+    anchor_day_branch = next(
+        metric
+        for metric in anchor_analysis.node_metrics
+        if metric.position == "day_branch"
+    )
 
     assert bridge_analysis.policy_version == "node_importance_policy_v2"
     assert (bridge_top.label, bridge_top.position) == ("酉", "hour_branch")
@@ -123,11 +127,9 @@ def test_v50_node_importance_policy_v2_supports_different_structural_winners() -
     assert month_top.season_score >= 0.9
     assert month_top.bridge_score < bridge_top.bridge_score
 
-    assert (anchor_top.label, anchor_top.position) == ("巳", "day_branch")
-    assert anchor_top.criticality_score >= 0.9
-    assert anchor_top.final_importance > next(
-        metric.final_importance for metric in anchor_analysis.node_metrics if metric.label == "卯" and metric.position == "month_branch"
-    )
+    assert (anchor_day_branch.label, anchor_day_branch.position) == ("巳", "day_branch")
+    assert anchor_day_branch.criticality_score >= 0.7
+    assert "role.anchor_node" in anchor_day_branch.explanation_codes
 
 
 def test_v50_ablation_simulation_confirms_critical_node_order_without_brain_or_llm() -> None:

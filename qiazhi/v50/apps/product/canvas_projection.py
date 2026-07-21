@@ -18,7 +18,8 @@ from core.engines.bazi.knowledge import (
 )
 from core.engines.bazi.material_engine import resolve_ten_god
 from core.graph import NodeRef, RelationKey, build_mingli_graph_from_material_store, canonical_scene_scope_ref, explore_mingli_paths
-from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphNode, MingliPath
+from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliPath, PathEligibility
+from core.graph.path_qualification import qualify_relation_for_path
 from core.graph.provenance import relation_directionality
 from core.life_case import (
     LifeCase,
@@ -36,6 +37,7 @@ from experience.canvas import (
     CanvasLifeCaseSource,
     CanvasNode,
     CanvasPath,
+    CanvasPathStateUpdate,
     CanvasRelation,
     CanvasSemanticSlot,
     CanvasTemporalLayer,
@@ -117,6 +119,7 @@ CHANGE_GROUPS = (
     ("reopened", "重新打开"),
     ("unchanged", "保持不变"),
 )
+TEMPORAL_PATH_UPDATE_POLICY_VERSION = "deepbazi.temporal-path-update.ra3.v1"
 
 
 class ReadOnlyCanvasUnavailable(ValueError):
@@ -493,6 +496,7 @@ def _compile_input_from_case_row(
         life_case=life_case,
         day_stem=birth.day_pillar[0],
         natal_relation_nodes=natal_relation_nodes,
+        tracked_paths=committed_paths,
     )
     compiled_at = _parse_datetime(life_case.updated_at)
     source = MingliCanvasCompileInput(
@@ -809,6 +813,7 @@ def _temporal_layers(
     life_case: LifeCase,
     day_stem: str,
     natal_relation_nodes: list[tuple[CanvasNode, NodeRef]],
+    tracked_paths: list[CanvasPath],
 ) -> list[CanvasTemporalLayer]:
     refs = _refs(
         [str(item) for item in timing.get("calculation_refs") or []],
@@ -816,6 +821,7 @@ def _temporal_layers(
     )
     output: list[CanvasTemporalLayer] = []
     relation_nodes = list(natal_relation_nodes)
+    current_paths = {item.path_ref: item for item in tracked_paths}
     luck_pillar = str(timing.get("luck_pillar") or "")
     if len(luck_pillar) >= 2:
         luck_range = timing.get("luck_year_range") if isinstance(timing.get("luck_year_range"), list) else []
@@ -829,9 +835,11 @@ def _temporal_layers(
             day_stem=day_stem,
             source_refs=refs,
             relation_nodes=relation_nodes,
+            tracked_paths=list(current_paths.values()),
         )
         output.append(layer)
         relation_nodes.extend(layer_nodes)
+        current_paths = _apply_temporal_path_updates(current_paths, layer.path_updates)
     annual_pillar = str(timing.get("annual_pillar") or "")
     if len(annual_pillar) >= 2:
         layer, layer_nodes = _temporal_layer(
@@ -843,9 +851,11 @@ def _temporal_layers(
             day_stem=day_stem,
             source_refs=refs,
             relation_nodes=relation_nodes,
+            tracked_paths=list(current_paths.values()),
         )
         output.append(layer)
         relation_nodes.extend(layer_nodes)
+        current_paths = _apply_temporal_path_updates(current_paths, layer.path_updates)
     return output
 
 
@@ -859,6 +869,7 @@ def _temporal_layer(
     day_stem: str,
     source_refs: list[str],
     relation_nodes: list[tuple[CanvasNode, NodeRef]],
+    tracked_paths: list[CanvasPath],
 ) -> tuple[CanvasTemporalLayer, list[tuple[CanvasNode, NodeRef]]]:
     stem, branch = pillar[0], pillar[1]
     layer_id = f"{layer_type}:{world.world_id}:{pillar}:{snapshot_suffix}"
@@ -924,6 +935,13 @@ def _temporal_layer(
         (temporal_nodes[0], temporal_node_models["stem"]),
         (temporal_nodes[1], temporal_node_models["branch"]),
     ]
+    relations = _temporal_relations(
+        layer_type=layer_type,
+        existing_nodes=relation_nodes,
+        current_nodes=current_relation_nodes,
+        scene_ref=scene_ref,
+        source_refs=source_refs,
+    )
     layer = CanvasTemporalLayer(
         layer_id=layer_id,
         layer_type=layer_type,
@@ -940,16 +958,112 @@ def _temporal_layer(
             trace=trace,
         ),
         nodes=temporal_nodes,
-        relations=_temporal_relations(
+        relations=relations,
+        path_updates=_temporal_path_updates(
+            tracked_paths=tracked_paths,
+            relations=relations,
+            temporal_node_refs={item.node_ref for item, _ in current_relation_nodes},
             layer_type=layer_type,
-            existing_nodes=relation_nodes,
-            current_nodes=current_relation_nodes,
-            scene_ref=scene_ref,
-            source_refs=source_refs,
         ),
         source_refs=source_refs,
     )
     return layer, current_relation_nodes
+
+
+def _apply_temporal_path_updates(
+    current_paths: dict[str, CanvasPath],
+    updates: list[CanvasPathStateUpdate],
+) -> dict[str, CanvasPath]:
+    output = dict(current_paths)
+    for update in updates:
+        path = output.get(update.path_ref)
+        if path is None:
+            continue
+        output[update.path_ref] = path.model_copy(
+            update={
+                "semantic_state": update.semantic_state,
+                "state_trace": update.state_trace,
+                "change_reason_refs": update.change_reason_refs,
+            }
+        )
+    return output
+
+
+def _temporal_path_updates(
+    *,
+    tracked_paths: list[CanvasPath],
+    relations: list[CanvasRelation],
+    temporal_node_refs: set[str],
+    layer_type: Literal["luck", "year"],
+) -> list[CanvasPathStateUpdate]:
+    updates: list[CanvasPathStateUpdate] = []
+    for path in tracked_paths:
+        required_refs = set(path.required_refs or path.node_refs)
+        support_refs: list[str] = []
+        restraint_refs: list[str] = []
+        for relation in relations:
+            try:
+                relation_type = MingliGraphEdgeType(relation.relation_type)
+            except ValueError:
+                continue
+            eligibility, _ = qualify_relation_for_path(relation_type)
+            if eligibility != PathEligibility.ELIGIBLE:
+                continue
+            if relation_type == MingliGraphEdgeType.GENERATES:
+                if (
+                    relation.from_node_ref in temporal_node_refs
+                    and relation.to_node_ref in required_refs
+                ):
+                    support_refs.append(relation.relation_ref)
+            elif relation_type == MingliGraphEdgeType.SAME_ELEMENT_SUPPORT:
+                participants = set(relation.participant_node_refs) or {
+                    relation.from_node_ref,
+                    relation.to_node_ref,
+                }
+                if participants.intersection(temporal_node_refs) and participants.intersection(required_refs):
+                    support_refs.append(relation.relation_ref)
+            elif relation_type == MingliGraphEdgeType.CONTROLS:
+                if (
+                    relation.from_node_ref in temporal_node_refs
+                    and relation.to_node_ref in required_refs
+                ):
+                    restraint_refs.append(relation.relation_ref)
+
+        if not support_refs and not restraint_refs:
+            continue
+        if support_refs and restraint_refs:
+            semantic_state = path.semantic_state
+            uncertainty = ["时间层同时出现支持与制约，当前不做强弱排序，保留原路径状态。"]
+            reason_code = "temporal_path.support_and_restraint_unranked"
+        elif support_refs:
+            semantic_state = "reinforced"
+            uncertainty = ["时间层提供离散结构支持；这不表示精确能量增幅或现实事件。"]
+            reason_code = "temporal_path.reinforced_by_qualified_relation"
+        else:
+            semantic_state = "weakened"
+            uncertainty = ["时间层对路径必要节点形成制约；路径仍存在，未判定为阻断。"]
+            reason_code = "temporal_path.weakened_by_qualified_relation"
+        reason_refs = list(dict.fromkeys([
+            TEMPORAL_PATH_UPDATE_POLICY_VERSION,
+            reason_code,
+            *support_refs,
+            *restraint_refs,
+        ]))
+        updates.append(
+            CanvasPathStateUpdate(
+                path_ref=path.path_ref,
+                semantic_state=semantic_state,
+                state_trace=CanvasTrace(
+                    source_mode="derived",
+                    epistemic_status="derived",
+                    source_refs=reason_refs,
+                    uncertainty=uncertainty,
+                    disclosure=path.trace.disclosure,
+                ),
+                change_reason_refs=reason_refs,
+            )
+        )
+    return updates
 
 
 def _temporal_relations(

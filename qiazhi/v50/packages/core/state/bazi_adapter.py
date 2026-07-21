@@ -48,7 +48,10 @@ def build_bazi_flow_states(
         )
         mechanism_key = f"mechanism.{mechanism}"
         mechanism_score = state.mechanism_scores.get(mechanism_key, 0.0)
-        path_score = max((path.path_score for path in matching_paths), default=mechanism_score)
+        path_score = max(
+            (_legacy_unvalidated_path_score(path) for path in matching_paths),
+            default=mechanism_score,
+        )
         ablation_sensitivity = _ablation_sensitivity(active_flow, simulation_report)
         confidence = round(max(mechanism_score, min(1.0, (path_score + ablation_sensitivity) / 2)), 3)
         flow_states.append(
@@ -67,6 +70,12 @@ def build_bazi_flow_states(
             )
         )
     return flow_states
+
+
+def _legacy_unvalidated_path_score(path: MingliPath) -> float:
+    """Compatibility bridge for downstream state models not yet migrated to RA3 evidence."""
+
+    return path.legacy_unvalidated_metrics.path_score
 
 
 def _assert_same_reading(*reading_ids: str) -> None:

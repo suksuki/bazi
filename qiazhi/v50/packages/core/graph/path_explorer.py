@@ -11,14 +11,21 @@ from core.graph.contracts import (
     MingliGraphNode,
     MingliPath,
     MingliStateLayer,
+    LegacyUnvalidatedPathMetrics,
+    PathBlockingState,
     PathEligibility,
     PathExplorationResult,
+    PathProvenanceQuality,
+    PathValidationState,
 )
-from core.graph.path_qualification import validate_whole_path_candidate
+from core.graph.path_qualification import (
+    build_path_evidence_vector,
+    validate_whole_path_candidate,
+)
 from core.graph.provenance import RelationDirectionality, stable_candidate_path_key
 
 
-PATH_SCORE_POLICY_V2 = {
+LEGACY_PATH_SCORE_POLICY_V2 = {
     "policy_version": "path_score_policy_v2",
     "source_weight": 0.10,
     "edge_weight": 0.16,
@@ -27,6 +34,19 @@ PATH_SCORE_POLICY_V2 = {
     "converter_weight": 0.22,
     "bridge_weight": 0.22,
     "target_weight": 0.10,
+}
+
+PATH_CANDIDATE_ORDER_POLICY_V1 = {
+    "policy_version": "path_candidate_evidence_order_v1",
+    "professional_ranking": False,
+    "dimensions": [
+        "validation_state",
+        "blocking_state",
+        "provenance_quality",
+        "mechanism_family",
+        "relation_sequence",
+        "structural_node_sequence",
+    ],
 }
 
 
@@ -65,18 +85,33 @@ def explore_mingli_paths(
             edge_ids=draft.edge_ids,
         ).passed
     ]
-    paths = [_build_path(graph=graph, state_layer=state_layer, nodes_by_id=nodes_by_id, edges_by_id=edges_by_id, draft=draft) for draft in qualified_drafts]
-    paths = sorted(paths, key=lambda path: path.path_score, reverse=True)[:limit]
-    paths = [_attach_candidate_path_key(path, edges_by_id=edges_by_id) for path in paths]
-    contribution = _node_path_contribution(paths)
+    paths = [
+        _attach_candidate_path_key(
+            _build_path(
+                graph=graph,
+                state_layer=state_layer,
+                nodes_by_id=nodes_by_id,
+                edges_by_id=edges_by_id,
+                draft=draft,
+            ),
+            edges_by_id=edges_by_id,
+        )
+        for draft in qualified_drafts
+    ]
+    paths = sorted(
+        paths,
+        key=lambda path: _candidate_order_key(path, nodes_by_id=nodes_by_id),
+    )[:limit]
+    membership = _node_path_membership(paths)
     return PathExplorationResult(
         exploration_id=f"path_exploration:{graph.reading_id}:{state_layer.value}",
         reading_id=graph.reading_id,
         graph_id=graph.graph_id,
         state_layer=state_layer,
         paths=paths,
-        ranked_path_ids=[path.path_id for path in paths],
-        node_path_contribution=contribution,
+        ordered_candidate_path_ids=[path.path_id for path in paths],
+        ordering_policy=PATH_CANDIDATE_ORDER_POLICY_V1["policy_version"],
+        node_path_membership=membership,
     )
 
 
@@ -170,21 +205,15 @@ def _build_path(
 ) -> MingliPath:
     nodes = [nodes_by_id[node_id] for node_id in draft.node_ids]
     edges = [edges_by_id[edge_id] for edge_id in draft.edge_ids]
-    source_strength = _source_strength(nodes[0])
-    edge_strength = _edge_strength(edges)
-    season_bias = _season_bias(nodes)
-    root_support = _root_support(nodes, edges)
-    converter_capacity = _converter_capacity(nodes)
-    bridge_stability = _bridge_stability(nodes, edges)
-    target_receptivity = _target_receptivity(nodes[-1], edges[-1])
-    path_score = _path_score(
-        source_strength=source_strength,
-        edge_strength=edge_strength,
-        season_bias=season_bias,
-        root_support=root_support,
-        converter_capacity=converter_capacity,
-        bridge_stability=bridge_stability,
-        target_receptivity=target_receptivity,
+    legacy_metrics = _legacy_unvalidated_metrics(
+        nodes=nodes,
+        edges=edges,
+    )
+    validation_state, evidence_vector = build_path_evidence_vector(
+        graph,
+        node_ids=draft.node_ids,
+        edge_ids=draft.edge_ids,
+        state_layer=state_layer,
     )
     relation_types = [edge.edge_type.value for edge in edges]
     signature = hashlib.sha256(
@@ -198,21 +227,16 @@ def _build_path(
         node_ids=list(draft.node_ids),
         edge_ids=list(draft.edge_ids),
         relation_types=relation_types,
-        source_strength=source_strength,
-        edge_strength=edge_strength,
-        season_bias=season_bias,
-        root_support=root_support,
-        converter_capacity=converter_capacity,
-        bridge_stability=bridge_stability,
-        target_receptivity=target_receptivity,
-        path_score=path_score,
+        validation_state=validation_state,
+        evidence_vector=evidence_vector,
+        legacy_unvalidated_metrics=legacy_metrics,
         mechanism_hints=_mechanism_hints(nodes, edges),
         graph_refs=[graph.graph_id],
         evidence_refs=[graph.graph_id, *[ref for node in nodes for ref in node.evidence_refs], *[ref for edge in edges for ref in edge.evidence_refs]],
     )
 
 
-def _source_strength(node: MingliGraphNode) -> float:
+def _legacy_source_strength(node: MingliGraphNode) -> float:
     if node.position == "month_branch":
         return 0.90
     if node.position == "day_stem":
@@ -228,13 +252,13 @@ def _source_strength(node: MingliGraphNode) -> float:
     return 0.42
 
 
-def _edge_strength(edges: list[MingliGraphEdge]) -> float:
+def _legacy_edge_strength(edges: list[MingliGraphEdge]) -> float:
     if not edges:
         return 0.0
-    return round(sum(edge.strength for edge in edges) / len(edges), 3)
+    return round(sum(edge.legacy_unvalidated_strength for edge in edges) / len(edges), 3)
 
 
-def _season_bias(nodes: list[MingliGraphNode]) -> float:
+def _legacy_season_bias(nodes: list[MingliGraphNode]) -> float:
     scores = []
     for node in nodes:
         if node.position == "month_branch":
@@ -250,7 +274,7 @@ def _season_bias(nodes: list[MingliGraphNode]) -> float:
     return round(sum(scores) / len(scores), 3)
 
 
-def _root_support(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge]) -> float:
+def _legacy_root_support(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge]) -> float:
     score = 0.35
     if any(edge.edge_type == MingliGraphEdgeType.STORES for edge in edges):
         score += 0.22
@@ -261,7 +285,7 @@ def _root_support(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge]) ->
     return round(min(1.0, score), 3)
 
 
-def _converter_capacity(nodes: list[MingliGraphNode]) -> float:
+def _legacy_converter_capacity(nodes: list[MingliGraphNode]) -> float:
     if any(node.attributes.get("output_converter") for node in nodes):
         return 0.90
     if any(node.ten_god in {"shi_shen", "shang_guan"} for node in nodes):
@@ -269,7 +293,7 @@ def _converter_capacity(nodes: list[MingliGraphNode]) -> float:
     return 0.35
 
 
-def _bridge_stability(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge]) -> float:
+def _legacy_bridge_stability(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge]) -> float:
     if any(node.attributes.get("triple_combination_bridge") for node in nodes):
         return 0.94
     if any(edge.edge_type in {MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION, MingliGraphEdgeType.FORMS_HALF_COMBINATION} for edge in edges):
@@ -277,7 +301,7 @@ def _bridge_stability(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge]
     return 0.36
 
 
-def _target_receptivity(node: MingliGraphNode, last_edge: MingliGraphEdge) -> float:
+def _legacy_target_receptivity(node: MingliGraphNode, last_edge: MingliGraphEdge) -> float:
     if node.attributes.get("triple_combination_bridge"):
         return 0.88
     if last_edge.edge_type == MingliGraphEdgeType.CONTROLS and node.element == "metal":
@@ -289,7 +313,7 @@ def _target_receptivity(node: MingliGraphNode, last_edge: MingliGraphEdge) -> fl
     return 0.58
 
 
-def _path_score(
+def _legacy_path_score(
     *,
     source_strength: float,
     edge_strength: float,
@@ -300,15 +324,48 @@ def _path_score(
     target_receptivity: float,
 ) -> float:
     score = (
-        source_strength * PATH_SCORE_POLICY_V2["source_weight"]
-        + edge_strength * PATH_SCORE_POLICY_V2["edge_weight"]
-        + season_bias * PATH_SCORE_POLICY_V2["season_weight"]
-        + root_support * PATH_SCORE_POLICY_V2["root_weight"]
-        + converter_capacity * PATH_SCORE_POLICY_V2["converter_weight"]
-        + bridge_stability * PATH_SCORE_POLICY_V2["bridge_weight"]
-        + target_receptivity * PATH_SCORE_POLICY_V2["target_weight"]
+        source_strength * LEGACY_PATH_SCORE_POLICY_V2["source_weight"]
+        + edge_strength * LEGACY_PATH_SCORE_POLICY_V2["edge_weight"]
+        + season_bias * LEGACY_PATH_SCORE_POLICY_V2["season_weight"]
+        + root_support * LEGACY_PATH_SCORE_POLICY_V2["root_weight"]
+        + converter_capacity * LEGACY_PATH_SCORE_POLICY_V2["converter_weight"]
+        + bridge_stability * LEGACY_PATH_SCORE_POLICY_V2["bridge_weight"]
+        + target_receptivity * LEGACY_PATH_SCORE_POLICY_V2["target_weight"]
     )
     return round(max(0.0, min(1.0, score)), 3)
+
+
+def _legacy_unvalidated_metrics(
+    *,
+    nodes: list[MingliGraphNode],
+    edges: list[MingliGraphEdge],
+) -> LegacyUnvalidatedPathMetrics:
+    source_strength = _legacy_source_strength(nodes[0])
+    edge_strength = _legacy_edge_strength(edges)
+    season_bias = _legacy_season_bias(nodes)
+    root_support = _legacy_root_support(nodes, edges)
+    converter_capacity = _legacy_converter_capacity(nodes)
+    bridge_stability = _legacy_bridge_stability(nodes, edges)
+    target_receptivity = _legacy_target_receptivity(nodes[-1], edges[-1])
+    return LegacyUnvalidatedPathMetrics(
+        policy_version=LEGACY_PATH_SCORE_POLICY_V2["policy_version"],
+        source_strength=source_strength,
+        edge_strength=edge_strength,
+        season_bias=season_bias,
+        root_support=root_support,
+        converter_capacity=converter_capacity,
+        bridge_stability=bridge_stability,
+        target_receptivity=target_receptivity,
+        path_score=_legacy_path_score(
+            source_strength=source_strength,
+            edge_strength=edge_strength,
+            season_bias=season_bias,
+            root_support=root_support,
+            converter_capacity=converter_capacity,
+            bridge_stability=bridge_stability,
+            target_receptivity=target_receptivity,
+        ),
+    )
 
 
 def _mechanism_hints(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge]) -> list[str]:
@@ -344,11 +401,58 @@ def _mechanism_hints(nodes: list[MingliGraphNode], edges: list[MingliGraphEdge])
     return hints or ["mechanism_hint.structural_path"]
 
 
-def _node_path_contribution(paths: list[MingliPath]) -> dict[str, float]:
-    contribution: defaultdict[str, float] = defaultdict(float)
+def _candidate_order_key(
+    path: MingliPath,
+    *,
+    nodes_by_id: dict[str, MingliGraphNode],
+) -> tuple[object, ...]:
+    validation_order = {
+        PathValidationState.QUALIFIED: 0,
+        PathValidationState.QUALIFIED_WITH_CONDITIONS: 1,
+        PathValidationState.UNRESOLVED: 2,
+        PathValidationState.BROKEN: 3,
+    }
+    blocking_order = {
+        PathBlockingState.NONE_DETECTED: 0,
+        PathBlockingState.POTENTIAL: 1,
+        PathBlockingState.CONFIRMED: 2,
+    }
+    provenance_order = {
+        PathProvenanceQuality.HIGH: 0,
+        PathProvenanceQuality.MEDIUM: 1,
+        PathProvenanceQuality.LOW: 2,
+    }
+    mechanism_order = {
+        "mechanism_hint.output_controls_pressure": 0,
+        "mechanism_hint.output_to_wealth": 1,
+        "mechanism_hint.combination_bridge": 2,
+        "mechanism_hint.structural_path": 3,
+    }
+    mechanism_priority = min(
+        (mechanism_order.get(hint, 99) for hint in path.mechanism_hints),
+        default=99,
+    )
+    structural_path_key = tuple(
+        (
+            nodes_by_id[node_id].position,
+            nodes_by_id[node_id].node_type.value,
+            nodes_by_id[node_id].label,
+        )
+        for node_id in path.node_ids
+    )
+    return (
+        validation_order[path.validation_state],
+        blocking_order[path.evidence_vector.blocking],
+        provenance_order[path.evidence_vector.provenance_quality],
+        mechanism_priority,
+        tuple(path.relation_types),
+        structural_path_key,
+    )
+
+
+def _node_path_membership(paths: list[MingliPath]) -> dict[str, list[str]]:
+    membership: defaultdict[str, list[str]] = defaultdict(list)
     for path in paths:
-        share = path.path_score / max(1, len(path.node_ids))
         for node_id in path.node_ids:
-            contribution[node_id] += share
-    max_value = max(contribution.values() or [1.0])
-    return {node_id: round(value / max_value, 3) for node_id, value in contribution.items()}
+            membership[node_id].append(path.path_id)
+    return dict(membership)

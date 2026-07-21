@@ -18,7 +18,7 @@ for path in (PACKAGES_ROOT, APPS_ROOT, V50_ROOT):
 from core.contracts import BirthInputCanonical
 from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
-from core.graph import NODE_IMPORTANCE_POLICY_V2, PATH_SCORE_POLICY_V2, analyze_mingli_graph, build_mingli_graph_from_material_store, classify_node_roles, explore_mingli_paths
+from core.graph import LEGACY_PATH_SCORE_POLICY_V2, NODE_IMPORTANCE_POLICY_V2, analyze_mingli_graph, build_mingli_graph_from_material_store, classify_node_roles, explore_mingli_paths
 from core.graph.contracts import NodeImportanceMetric
 
 
@@ -90,9 +90,9 @@ def run_review(*, write_report: bool = False) -> dict[str, Any]:
         "node_importance_policy_v1_reference": NODE_IMPORTANCE_POLICY_V1_REFERENCE,
         "node_importance_policy_v2": NODE_IMPORTANCE_POLICY_V2,
         "path_score_policy_v1_reference": PATH_SCORE_POLICY_V1_REFERENCE,
-        "path_score_policy_v2": PATH_SCORE_POLICY_V2,
+        "legacy_unvalidated_path_score_policy_v2": LEGACY_PATH_SCORE_POLICY_V2,
         "node_weight_changes": _weight_changes(NODE_IMPORTANCE_POLICY_V1_REFERENCE, NODE_IMPORTANCE_POLICY_V2, NODE_WEIGHT_REASONS),
-        "path_weight_changes": _weight_changes(PATH_SCORE_POLICY_V1_REFERENCE, PATH_SCORE_POLICY_V2, PATH_WEIGHT_REASONS),
+        "legacy_unvalidated_path_weight_changes": _weight_changes(PATH_SCORE_POLICY_V1_REFERENCE, LEGACY_PATH_SCORE_POLICY_V2, PATH_WEIGHT_REASONS),
         "category_counts_v1_counterfactual": dict(sorted(v1_category_counts.items())),
         "category_counts_v2": dict(sorted(category_counts.items())),
         "max_category_share_v2": round(max_category_share, 3),
@@ -155,7 +155,8 @@ def _run_case(*, index: int, case: dict[str, Any]) -> dict[str, Any]:
         "top_explanation_codes_v2": v2_top.explanation_codes,
         "top_paths": [
             {
-                "path_score": path.path_score,
+                "legacy_unvalidated_path_score": path.legacy_unvalidated_metrics.path_score,
+                "validation_state": path.validation_state.value,
                 "mechanism_hints": path.mechanism_hints,
             }
             for path in path_result.paths[:3]
@@ -255,8 +256,8 @@ def _markdown_report(summary: dict[str, Any]) -> str:
     for item in summary["node_weight_changes"]:
         lines.append(f"- `{item['weight']}`: `{item['v1']}` -> `{item['v2']}` ({item['delta']:+.3f})")
         lines.append(f"  Reason: {item['mingli_principle_reason']}")
-    lines.extend(["", "### Path Score", ""])
-    for item in summary["path_weight_changes"]:
+    lines.extend(["", "### Legacy Unvalidated Path Score", ""])
+    for item in summary["legacy_unvalidated_path_weight_changes"]:
         lines.append(f"- `{item['weight']}`: `{item['v1']}` -> `{item['v2']}` ({item['delta']:+.3f})")
         lines.append(f"  Reason: {item['mingli_principle_reason']}")
     lines.extend(

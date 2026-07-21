@@ -40,6 +40,6 @@ def test_v50_synthetic_work_system_runner_validates_path_role_importance_ablatio
     assert summary["ui_used"] is False
     assert summary["training_performed"] is False
     assert summary["node_importance_policy_version"] == "node_importance_policy_v2"
-    assert summary["path_score_policy_version"] == "path_score_policy_v2"
+    assert summary["legacy_unvalidated_path_score_policy_version"] == "path_score_policy_v2"
     assert all(result["checks"]["paths_explored"] > 0 for result in summary["results"])
     assert all(result["checks"]["roles_assigned"] > 0 for result in summary["results"])
