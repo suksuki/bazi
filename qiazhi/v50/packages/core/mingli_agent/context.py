@@ -336,7 +336,7 @@ def _authority_status(item: WorldFact) -> Literal["production", "experimental", 
 
 def _public_birth_location(value: Any) -> str:
     text = str(value or "")
-    if any(token in text.lower() for token in ("v20", "v30", "v40", "import", "导入")):
+    if any(token in text.lower() for token in ("v20", "v30", "legacy", "import", "导入")):
         return "未记录"
     return text
 
