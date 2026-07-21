@@ -167,8 +167,8 @@ def test_service_restart_only_rechecks_schema(monkeypatch) -> None:
 def test_runtime_stores_only_call_read_only_checker() -> None:
     root = database_schema.ROOT
     for name in (
-        "product_store.py",
-        "agent_case_store.py",
+        "product_store_postgres.py",
+        "agent_case_store_postgres.py",
         "agent_job_store.py",
         "theater_store.py",
         "voice_validation_store.py",

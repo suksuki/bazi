@@ -20,7 +20,12 @@ def project_canonical_timing(
     source_ref_transform: RefTransform | None = None,
     observation_ref_factory: ObservationRefFactory | None = None,
 ) -> dict[str, Any]:
-    """Adapt canonical temporal facts to the stable OneCanvas display contract."""
+    """Adapt canonical temporal facts to the stable OneCanvas display contract.
+
+    Callers: onecanvas_structural and the retained R1 fixture builder. Retire
+    after OneCanvas consumes the canonical TemporalSnapshot projection directly,
+    at final Workspace integration.
+    """
     baseline = baseline_timing or {}
     transform = source_ref_transform or (lambda value: value)
     calculation_refs = [

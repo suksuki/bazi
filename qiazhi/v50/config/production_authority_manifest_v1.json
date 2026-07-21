@@ -120,6 +120,38 @@
     ],
     "new_transitional_layers_allowed": false
   },
+  "transitional_adapters": [
+    {
+      "adapter": "product.theater_envelope.ProductExperienceEnvelopePort",
+      "callers": ["product.theater_api", "product.experience_api"],
+      "retirement_condition": "Theater and Experience consume CanonicalProjectionEnvelope directly",
+      "deadline_stage": "Workspace canonical projection migration"
+    },
+    {
+      "adapter": "product.onecanvas_timing_adapter.project_canonical_timing",
+      "callers": ["product.onecanvas_structural", "tools.fixtures.onecanvas_r1"],
+      "retirement_condition": "OneCanvas consumes the canonical TemporalSnapshot projection directly and R1 evidence is retained",
+      "deadline_stage": "Workspace final integration"
+    },
+    {
+      "adapter": "core.state.bazi_adapter.build_bazi_flow_states",
+      "callers": ["synthetic validation scripts", "mechanism research tests"],
+      "retirement_condition": "Lab consumes stable Relation and Path assertions directly and Unified State v1 evidence is archived",
+      "deadline_stage": "RA3 research projection consolidation"
+    },
+    {
+      "adapter": "product.agent_case_payload.compatibility_case_row",
+      "callers": ["MemoryAgentCaseStore reads", "PostgresAgentCaseStore reads"],
+      "retirement_condition": "All Agent and Workspace readers consume case_belief_state and RealityEvidence without the workspace alias",
+      "deadline_stage": "Legacy read retirement"
+    },
+    {
+      "adapter": "core.life_case.projection_service.formal_projection_record",
+      "callers": ["product.agent_api", "product.agent_reading_projection"],
+      "retirement_condition": "All retained cases have committed record projections and Agent APIs consume formal Case projections directly",
+      "deadline_stage": "Legacy read retirement"
+    }
+  ],
   "authorities": {
     "calendar_and_chart_facts": {
       "status": "production",

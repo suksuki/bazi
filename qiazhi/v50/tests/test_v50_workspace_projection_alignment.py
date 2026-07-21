@@ -11,13 +11,14 @@ STATIC = ROOT / "apps/product/static/experience"
 def test_experience_shell_consumes_workspace_and_loads_case_surfaces_in_parallel() -> None:
     api = (SHELL / "api.ts").read_text(encoding="utf-8")
     main = (SHELL / "main.ts").read_text(encoding="utf-8")
+    data = (SHELL / "experience_data.ts").read_text(encoding="utf-8")
 
     assert "/api/v50/scenes/cases/${encodeURIComponent(caseId)}/workspace" in api
-    assert "Promise.allSettled" in main
-    assert "loadCaseWorkspace(caseId)" in main
+    assert "Promise.allSettled" in data
+    assert "loadCaseWorkspace(caseId)" in data
     assert "availableSurfaces.includes(surface)" in main
-    assert "surface === \"onecanvas\"" in main
-    assert "surface === \"theater\"" in main
+    assert "surface === \"onecanvas\"" in data
+    assert "surface === \"theater\"" in data
 
 
 def test_personal_workspace_exposes_only_case_bound_surfaces() -> None:

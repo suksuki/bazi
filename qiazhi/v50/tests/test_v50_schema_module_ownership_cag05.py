@@ -45,8 +45,8 @@ def test_postgres_schema_has_one_ddl_owner_and_all_stores_delegate_to_it() -> No
     assert len(product_schema_hash()) == 64
 
     store_paths = [
-        "product_store.py",
-        "agent_case_store.py",
+        "product_store_postgres.py",
+        "agent_case_store_postgres.py",
         "agent_job_store.py",
         "theater_store.py",
         "voice_validation_store.py",

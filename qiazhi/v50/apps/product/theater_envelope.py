@@ -6,7 +6,12 @@ from experience.contracts import MingliExperienceEnvelope
 
 
 class ProductExperienceEnvelopePort:
-    """Compatibility adapter from Canonical Scene to the Theater envelope."""
+    """Compatibility adapter from Canonical Scene to the Theater envelope.
+
+    Callers: theater_api and experience_api. Retire when both consume the
+    canonical projection envelope directly, no later than Workspace canonical
+    projection migration.
+    """
 
     def __init__(
         self,

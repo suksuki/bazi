@@ -13,7 +13,12 @@ def build_bazi_flow_states(
     simulation_report: SimulationReport | None = None,
     include_secondary_mechanisms: bool = False,
 ) -> list[FlowState]:
-    """Convert Bazi graph/simulation evidence into Unified State language."""
+    """Convert Bazi graph/simulation evidence into Unified State language.
+
+    This research-only bridge is called by synthetic/mechanism tooling. Retire
+    after Lab consumes stable Relation/Path assertions directly and Unified
+    State v1 evidence is archived, during RA3 research projection consolidation.
+    """
 
     _assert_same_reading(analysis.reading_id, path_result.reading_id, state.reading_id)
     if simulation_report is not None:

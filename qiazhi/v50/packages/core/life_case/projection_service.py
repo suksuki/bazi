@@ -63,7 +63,9 @@ def formal_projection_record(
 
     Legacy cases may not yet contain a projection payload, so they retain a
     read-only fallback. New cases never need RunRecord conclusions for page
-    restoration.
+    restoration. Callers are agent_api and agent_reading_projection. Retire
+    after all retained cases have committed record projections and Agent reads
+    consume formal Case projections directly, during Legacy read retirement.
     """
 
     payload = life_case.baseline_insight.projection_payload.get("record_projection")

@@ -55,6 +55,6 @@ def test_designer_motion_builder_is_reusable_for_followup_deliveries() -> None:
 
 
 def test_product_server_registers_webp_content_type_for_ubuntu() -> None:
-    product_app = (ROOT / "apps/product/app.py").read_text(encoding="utf-8")
+    product_surface = (ROOT / "apps/product/product_surface.py").read_text(encoding="utf-8")
 
-    assert 'mimetypes.add_type("image/webp", ".webp")' in product_app
+    assert 'mimetypes.add_type("image/webp", ".webp")' in product_surface

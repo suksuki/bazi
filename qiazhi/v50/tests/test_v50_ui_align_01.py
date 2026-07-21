@@ -25,12 +25,13 @@ def test_deepbeing_has_one_product_shell_and_workbench_owns_internal_surfaces() 
 
 def test_area_switching_reuses_one_case_load_and_one_server_projection() -> None:
     main = (SHELL / "main.ts").read_text(encoding="utf-8")
+    data = (SHELL / "experience_data.ts").read_text(encoding="utf-8")
     api = (SHELL / "api.ts").read_text(encoding="utf-8")
-    combined = main + api
+    combined = main + data + api
 
-    assert main.count("loadCaseWorkspace(caseId)") == 1
-    assert main.count("loadEnvelope(caseId)") == 1
-    assert main.count("loadReadOnlyCanvas(caseId)") == 1
+    assert data.count("loadCaseWorkspace(caseId)") == 1
+    assert data.count("loadEnvelope(caseId)") == 1
+    assert data.count("loadReadOnlyCanvas(caseId)") == 1
     assert 'data-product-area' in (STATIC / "app.js").read_text(encoding="utf-8")
     assert "relation.relation_type ===" not in combined
     assert "writes_life_case" not in combined
@@ -38,10 +39,10 @@ def test_area_switching_reuses_one_case_load_and_one_server_projection() -> None
 
 
 def test_lab_is_role_disclosed_and_only_reads_canvas_relation_state() -> None:
-    main = (SHELL / "main.ts").read_text(encoding="utf-8")
+    data = (SHELL / "experience_data.ts").read_text(encoding="utf-8")
     components = (SHELL / "components.ts").read_text(encoding="utf-8")
 
-    assert 'workspace.allowed_surfaces.includes("mingli_lab")' in main
+    assert 'workspace.allowed_surfaces.includes("mingli_lab")' in data
     assert 'item.relation_state === "potential"' in components
     assert 'item.relation_state !== "potential"' in components
     assert "researchLens" in components
@@ -51,10 +52,10 @@ def test_lab_is_role_disclosed_and_only_reads_canvas_relation_state() -> None:
 
 
 def test_frozen_experience_api_role_alias_is_derived_from_canonical_account_role() -> None:
-    store = (ROOT / "apps/product/product_store.py").read_text(encoding="utf-8")
+    account = (ROOT / "apps/product/product_account.py").read_text(encoding="utf-8")
 
-    assert 'projected["role"] = str(projected.get("account_role") or "")' in store
-    assert '"role": role' not in store
+    assert 'projected["role"] = str(projected.get("account_role") or "")' in account
+    assert '"role": role' not in account
 
 
 def test_responsive_shell_has_desktop_sidebar_mobile_bottom_nav_and_390_safe_pillars() -> None:
