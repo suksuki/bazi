@@ -72,4 +72,3 @@ systemctl reload nginx
 echo "DeepBazi V50 is active at https://dblife.com/"
 echo "DeepBazi V50 Next experience is active at https://dblife.com/experience"
 echo "Qwen TTS is active through ${TTS_BASE_URL:-not-configured}"
-echo "V40 remains available at https://dblife.com/v40/ui"
