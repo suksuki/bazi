@@ -1,6 +1,6 @@
 -- DeepBeing V50 clean-room database schema.
 -- V50 must use V50_DATABASE_URL and v50_* tables only.
--- Do not import or share V30/V40 schema.
+-- Do not import or share retired product schemas.
 
 CREATE TABLE IF NOT EXISTS v50_schema_version (
     id TEXT PRIMARY KEY,
