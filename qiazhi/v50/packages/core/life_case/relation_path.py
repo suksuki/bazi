@@ -13,6 +13,7 @@ from core.graph.provenance import (
     RelationKey,
     canonical_scene_scope_ref,
     relation_directionality,
+    validate_assertion_history,
 )
 from core.life_case.contracts import ChartVersionRef, FormalInsight, LifeCase
 from core.mingli_agent.contracts import ChartWorldInstance, MingliCognitiveRecord, WorldFact
@@ -260,7 +261,9 @@ def _append_assertion(history: list[Any], assertion: Any) -> list[Any]:
         return history
     if assertion.supersedes and assertion.supersedes not in existing:
         raise ValueError("assertion_supersedes_unknown_history")
-    return [*history, assertion]
+    updated = [*history, assertion]
+    validate_assertion_history(updated)
+    return updated
 
 
 def _assertions_from_record(

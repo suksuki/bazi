@@ -177,6 +177,80 @@ def test_assertion_history_is_append_only_and_key_survives_producer_upgrade() ->
     assert active_path_assertions(path_history) == [new_path]
 
 
+def test_candidate_provenance_cannot_masquerade_as_formal_assertion() -> None:
+    relation_key = _relation_key(
+        directionality=RelationDirectionality.DIRECTED,
+        participants=[_node("甲"), _node("丁", slot="month")],
+    )
+    graph_candidate = ProvenanceRecord(
+        source="graph_candidate",
+        producer_id="graph-v1",
+        producer_version="graph-v1",
+        evidence_refs=["fact-1"],
+        source_refs=["graph-1"],
+        created_at="2026-07-21T00:00:00+00:00",
+    )
+
+    with pytest.raises(ValueError, match="graph_candidate_provenance_requires_candidate_status"):
+        RelationAssertion(
+            relation_key=relation_key,
+            assertion_version="case-v1:baseline",
+            status=AssertionLifecycle.COMMITTED,
+            provenance=graph_candidate,
+        )
+    with pytest.raises(ValueError, match="candidate_assertion_requires_graph_candidate_provenance"):
+        PathAssertion(
+            path_key=PathKey(
+                scene_ref="scene-scope:test",
+                node_refs=relation_key.participant_refs,
+                relation_keys=[relation_key],
+            ),
+            assertion_version="case-v1:candidate",
+            status=AssertionLifecycle.CANDIDATE,
+            provenance=_provenance(producer_version="reasoner-v1"),
+        )
+
+
+def test_life_case_rejects_dangling_or_out_of_order_assertion_history() -> None:
+    payload = _case_payload("case-cag04-invalid-history")
+    world = ChartWorldInstance.model_validate(payload["world"])
+    legacy_case = LifeCase.model_validate(payload["life_case"])
+    committed, _ = commit_baseline_life_case(
+        insight=legacy_case.baseline_insight,
+        world=world,
+        profile_id=None,
+    )
+    old = committed.relation_assertions[0]
+    dangling = RelationAssertion(
+        relation_key=old.relation_key,
+        assertion_version="case-v2:baseline",
+        status=AssertionLifecycle.COMMITTED,
+        provenance=_provenance(producer_version="reasoner-v2"),
+        supersedes="missing-assertion",
+    )
+    invalid = committed.model_dump(mode="json")
+    invalid["relation_assertions"] = [
+        old.model_dump(mode="json"),
+        dangling.model_dump(mode="json"),
+    ]
+    with pytest.raises(ValueError, match="assertion_supersedes_unknown_history"):
+        LifeCase.model_validate(invalid)
+
+    replacement = RelationAssertion(
+        relation_key=old.relation_key,
+        assertion_version="case-v2:baseline",
+        status=AssertionLifecycle.COMMITTED,
+        provenance=_provenance(producer_version="reasoner-v2"),
+        supersedes=old.assertion_id,
+    )
+    invalid["relation_assertions"] = [
+        replacement.model_dump(mode="json"),
+        old.model_dump(mode="json"),
+    ]
+    with pytest.raises(ValueError, match="assertion_supersedes_non_prior_history"):
+        LifeCase.model_validate(invalid)
+
+
 def test_life_case_rejects_candidate_assertion_and_commit_owns_formal_assertions() -> None:
     payload = _case_payload("case-cag04-commit")
     world = ChartWorldInstance.model_validate(payload["world"])
@@ -193,10 +267,19 @@ def test_life_case_rejects_candidate_assertion_and_commit_owns_formal_assertions
     assert all(item.status == AssertionLifecycle.COMMITTED for item in committed.relation_assertions)
     assert all(item.status == AssertionLifecycle.COMMITTED for item in committed.path_assertions)
 
-    candidate = committed.relation_assertions[0].model_copy(update={
-        "assertion_id": "",
-        "status": AssertionLifecycle.CANDIDATE,
-    })
+    candidate = RelationAssertion(
+        relation_key=committed.relation_assertions[0].relation_key,
+        assertion_version="case-v1:candidate",
+        status=AssertionLifecycle.CANDIDATE,
+        provenance=ProvenanceRecord(
+            source="graph_candidate",
+            producer_id="graph-v1",
+            producer_version="graph-v1",
+            evidence_refs=["fact-1"],
+            source_refs=["graph-1"],
+            created_at="2026-07-21T00:00:00+00:00",
+        ),
+    )
     invalid = committed.model_dump(mode="json")
     invalid["relation_assertions"] = [candidate.model_dump(mode="json")]
     with pytest.raises(ValueError, match="life_case_cannot_own_candidate_relation"):
