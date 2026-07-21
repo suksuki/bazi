@@ -2,7 +2,7 @@ schema_version: v2
 updated_at: 2026-07-21
 
 phase:
-  name: V50_CONSOLIDATION_AND_SLIMMING
+  name: V50_FRAMEWORK_ALIGNMENT_AND_MINGLI_LAB
   default_mode: authority_convergence
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
@@ -43,13 +43,13 @@ gates:
   cag_05_schema_module_ownership: CLOSED_PASS
   ra0_518k_chart_realizability: PASS_WITH_BOUNDARY_FINDING
   cal_01_late_zi_five_rats_consistency: CLOSED_PASS
-  architecture_consolidation_gate: IN_PROGRESS
+  architecture_consolidation_gate: CLOSED_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 489_PASSED_CAL01_FINAL
+  full_regression: 491_PASSED_ARCHITECTURE_GATE_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -92,6 +92,12 @@ receipts:
   cal_01_formal_invalid_outputs: 0
   cal_01_scan_sha256: f5ab084b15b01ab8633260c88df9cfcd64ebefb313a95b02ec6d706027d61850
   cal_01_regression: 489_PASSED
+  architecture_gate_implementation_commit: a8f3398f
+  architecture_gate_checks: 17_OF_17_PASS
+  architecture_gate_report_sha256: d6cf44dcfa4fb8dcd8a7b81093690be2dfdef669c244f821741bcd8bb433ea8a
+  architecture_gate_regression: 491_PASSED
+  architecture_gate_typescript: STRICT_PASS_AND_BYTE_IDENTICAL_BUNDLE
+  architecture_gate_startup: HEALTH_APP_EXPERIENCE_THEATER_AND_ONECANVAS_PASS
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -100,24 +106,24 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: ARCHITECTURE_CONSOLIDATION_GATE
-    kind: executable_architecture_audit
-    scope: prove_single_authority_source_chain_schema_owner_and_client_write_boundaries
+  - id: NEXT_FRAMEWORK_ALIGNMENT
+    kind: executable_design_and_contract_alignment
+    scope: align_case_workspace_mingli_lab_and_onecanvas_with_the_closed_single_authority_chain
 
 next_architecture_slice:
-  id: ARCHITECTURE_CONSOLIDATION_GATE
+  id: MINGLI_LAB_FOUNDATION_AUDIT
   authorized_when:
-    - cal_01_closed_pass
+    - next_framework_alignment_baseline
   scope:
-    - authority_gate
-    - source_chain_gate
-    - regression_and_rollback_evidence
+    - sandbox_authority
+    - synthetic_case_lifecycle
+    - evidence_and_promotion_boundaries
 
 blocked:
   - relation_atlas_ra1
   - relation_core_v2_implementation
   - path_core_v2_implementation
-  - mingli_lab_production_engineering
+  - mingli_lab_public_release
   - production_workspace_migration
   - frontend_framework_migration
   - self_healing_platform_or_product_subsystem

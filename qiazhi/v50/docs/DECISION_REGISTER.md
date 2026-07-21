@@ -1224,6 +1224,28 @@ universe_sha256: 05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454
 next: Architecture_Consolidation_Gate
 ```
 
+### DR-038 — V50 Architecture Consolidation Gate Passes
+
+```yaml
+decision_id: DR-038
+date: 2026-07-21
+status: closed_pass
+implementation_commit: a8f3398f
+checks: 17_of_17_pass
+full_regression: 491_passed
+r1_manifest: 20_of_20_ok
+typescript: strict_pass
+experience_bundle: byte_identical
+v40_commit_diff: zero
+authority_chain:
+  - ChartWorldInstance
+  - Reasoner_candidate_cognition
+  - LifeCase_committed_cognition
+  - CanonicalSceneOwner
+  - role_filtered_projection
+next: Next_Framework_Alignment_and_Mingli_Lab_Foundation_Audit
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

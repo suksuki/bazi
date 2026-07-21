@@ -1,0 +1,94 @@
+{
+  "authority_chain": [
+    "ChartWorldInstance",
+    "Reasoner candidate cognition",
+    "LifeCase committed cognition",
+    "CanonicalSceneOwner",
+    "role-filtered Projection"
+  ],
+  "cal01_scan_sha256": "f5ab084b15b01ab8633260c88df9cfcd64ebefb313a95b02ec6d706027d61850",
+  "checks": [
+    {
+      "check": "one_formal_case_owner",
+      "passed": true
+    },
+    {
+      "check": "one_canonical_scene_owner",
+      "passed": true
+    },
+    {
+      "check": "one_authority_registry",
+      "passed": true
+    },
+    {
+      "check": "one_database_ddl_owner",
+      "passed": true
+    },
+    {
+      "check": "one_baseline_command_owner",
+      "passed": true
+    },
+    {
+      "check": "one_schema_source",
+      "passed": true
+    },
+    {
+      "check": "stable_relation_path_identity",
+      "passed": true
+    },
+    {
+      "check": "projection_never_owns_facts",
+      "passed": true
+    },
+    {
+      "check": "client_cannot_write_formal_facts",
+      "passed": true
+    },
+    {
+      "check": "role_filter_cannot_fallback",
+      "passed": true
+    },
+    {
+      "check": "runtime_authority_audit",
+      "passed": true
+    },
+    {
+      "check": "architecture_purification_audit",
+      "passed": true
+    },
+    {
+      "check": "cal01_closed",
+      "passed": true
+    },
+    {
+      "check": "ra0_universe_retained",
+      "passed": true
+    },
+    {
+      "check": "r1_regression_reference",
+      "passed": true
+    },
+    {
+      "check": "no_new_transitional_layer",
+      "passed": true
+    },
+    {
+      "check": "repeatable_validation_assets",
+      "passed": true
+    }
+  ],
+  "llm_used": false,
+  "production_migration_performed": false,
+  "r1_locked_assets": 20,
+  "schema_version": "v50.architecture_consolidation_gate.v1",
+  "source_hashes": {
+    "apps/product/canonical_scene.py": "b33b3cc28f52c51cc625688034f99b81448c2c12d9b26863f391673ab9220ff0",
+    "config/production_authority_manifest_v1.json": "8c72250ea419e98e05a34fcbc2d764239dff8f1504a29908fd789192b26c7476",
+    "deploy/postgres_v50_schema.sql": "3c16568bf3ab83f6c8206784fe53e6853b01e49f07e5743f0d845dd9d77a61a1",
+    "packages/core/engines/birth_calendar.py": "71b249024bbcb93d1e9dceefb4195be02008ecfb44af9ae5d3fb53924bbaefa5",
+    "packages/core/graph/provenance.py": "8e3e277330e4f00f7f94c10c6cc0ca2b08ee6a4d61cd39ac933f217c7c976eba",
+    "packages/core/life_case/contracts.py": "3c829d1ed36a5757f9d7e7638e77a6d8f207a6ab55ab7d125a4ab97b6784da32"
+  },
+  "status": "PASS",
+  "universe_sha256": "05c97a1518ff840ef3d4955f92dd0a22de9c4729ef7ff2ec8601efbcb14a454c"
+}

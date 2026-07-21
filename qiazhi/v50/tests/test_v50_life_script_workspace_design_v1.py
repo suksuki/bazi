@@ -27,10 +27,10 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
         "ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED"
     )
     assert state["phase"]["global_product_freeze"] == "LIFTED"
-    assert state["phase"]["name"] == "V50_CONSOLIDATION_AND_SLIMMING"
+    assert state["phase"]["name"] == "V50_FRAMEWORK_ALIGNMENT_AND_MINGLI_LAB"
     assert state["gates"]["git_source_baseline"] == "PASS"
     assert state["gates"]["r1_human_product_gate"] == "CANCELED_NO_SCHEDULE"
-    assert state["gates"]["architecture_consolidation_gate"] == "IN_PROGRESS"
+    assert state["gates"]["architecture_consolidation_gate"] == "CLOSED_PASS"
     assert state["gates"]["cag_03_canonical_scene"] == "CLOSED_PASS_HARDENED"
     assert state["gates"]["cag_04_relation_path_provenance"] == (
         "CLOSED_PASS_RECONCILED"
@@ -40,14 +40,14 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
         "immutable_regression_reference_not_global_freeze"
     )
     assert "production_workspace_migration" in state["blocked"]
-    assert "mingli_lab_production_engineering" in state["blocked"]
+    assert "mingli_lab_public_release" in state["blocked"]
     assert state["gates"]["cag_05_schema_module_ownership"] == "CLOSED_PASS"
     assert state["gates"]["cal_01_late_zi_five_rats_consistency"] == "CLOSED_PASS"
     assert [item["id"] for item in state["authorized_now"]] == [
-        "ARCHITECTURE_CONSOLIDATION_GATE"
+        "NEXT_FRAMEWORK_ALIGNMENT"
     ]
     assert state["next_architecture_slice"]["id"] == (
-        "ARCHITECTURE_CONSOLIDATION_GATE"
+        "MINGLI_LAB_FOUNDATION_AUDIT"
     )
     assert state["validation_policy"]["new_platform_or_product_subsystem"] == "FORBIDDEN"
     assert "self_healing_loop" not in state
