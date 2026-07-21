@@ -1,6 +1,7 @@
 import type {
   ApprovedClaim,
   ApprovedReasoningStep,
+  CaseWorkspaceEnvelope,
   CanvasContextPack,
   CanvasNode,
   CanvasRelation,
@@ -10,15 +11,16 @@ import type {
   NarrationManifest,
   ReadOnlySixPillarCanvas,
 } from "./contracts";
-import type { UiState } from "./state";
-import type { WorkspaceSurface } from "./state";
+import type { ProductArea, UiState, WorkspaceSurface } from "./state";
 
 export interface ExperienceViewModel {
   accountName: string;
   accountRole: string;
   cases: ExperienceCaseSummary[];
   activeCaseId: string;
+  availableAreas: ProductArea[];
   availableSurfaces: WorkspaceSurface[];
+  workspace: CaseWorkspaceEnvelope;
   envelope: MingliExperienceEnvelope;
   narrationManifest: NarrationManifest | null;
   canvas: ReadOnlySixPillarCanvas | null;
@@ -39,6 +41,29 @@ const polarityLabel: Record<string, string> = { yin: "阴", yang: "阳" };
 export function renderExperience(view: ExperienceViewModel): string {
   const claim = view.envelope.approved_claims[0];
   const steps = view.envelope.approved_reasoning_steps;
+  const fullThesis = claim?.approved_meaning || "命盘事实已经确认，正式整盘认知尚未提交。";
+  const thesis = firstSentence(fullThesis);
+  const pathSummary = steps[steps.length - 1]?.conclusion || "正式主路径仍在形成。";
+  const condition = claim?.conditions[0] || "当前还没有足够依据写下成立条件。";
+  const uncertainty = view.envelope.uncertainty.reasons[0] || "当前没有额外未决项。";
+  return `<div class="deepbeing-shell" data-product-area-current="${escapeAttr(view.ui.productArea)}">
+    ${renderProductSidebar(view)}
+    <div class="deepbeing-stage">
+      ${renderMobileHeader(view)}
+      <main class="product-main">
+        ${view.ui.productArea === "world" ? renderLifeWorld(view, thesis, fullThesis, pathSummary, condition, uncertainty) : ""}
+        ${view.ui.productArea === "workbench" ? renderWorkbench(view) : ""}
+        ${view.ui.productArea === "lab" ? renderMingliLab(view) : ""}
+      </main>
+    </div>
+    ${renderMobileNavigation(view)}
+    ${renderAbuDock(view)}
+  </div>`;
+}
+
+function renderWorkbench(view: ExperienceViewModel): string {
+  const claim = view.envelope.approved_claims[0];
+  const steps = view.envelope.approved_reasoning_steps;
   const condition = claim?.conditions[0] || "当前还没有足够依据写下成立条件。";
   const uncertainty = view.envelope.uncertainty.reasons[0] || "当前没有额外未决项。";
   const pathSummary = steps[steps.length - 1]?.conclusion || "正式主路径仍在形成。";
@@ -46,23 +71,9 @@ export function renderExperience(view: ExperienceViewModel): string {
   const thesis = firstSentence(fullThesis);
 
   return `
-    <header class="site-header">
-      <a class="brand" href="/experience" aria-label="DeepBazi 看见命局">
-        <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence">
-      </a>
-      <div class="case-context">
-        ${renderCaseSelector(view.cases, view.activeCaseId)}
-        <span class="case-version">${escapeHtml(view.envelope.source.life_case_version || "仅命盘事实")}</span>
-      </div>
-      <div class="account-context">
-        <span>${escapeHtml(view.accountName)}</span>
-        <a href="/app" title="返回当前档案与阿布入口">档案</a>
-      </div>
-    </header>
-
     ${renderWorkspaceNavigation(view)}
 
-    <main data-workspace-current-surface="${escapeAttr(view.ui.workspaceSurface)}">
+    <div class="workbench-surface" data-workspace-current-surface="${escapeAttr(view.ui.workspaceSurface)}">
       ${view.ui.workspaceSurface === "overview" ? `<section class="opening-band" id="baseline-summary" data-anchor="baseline-summary">
         <div class="opening-copy">
           <p class="section-kicker">看见命局 · 当前基线</p>
@@ -115,11 +126,7 @@ export function renderExperience(view: ExperienceViewModel): string {
         body: renderBoundaries(claim, view.envelope, view.ui.selectedAnchor),
       })}` : ""}
 
-      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderSurfaceIntro(
-        "命局结构",
-        "同一份正式命盘，沿原局、大运和流年逐层展开。",
-        "先看结构如何成立，再看时间加入后，哪些关系被引动、加强或受阻。",
-      )}${renderCollapsibleSection({
+      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderCollapsibleSection({
         id: "canvas",
         anchor: "temporal-canvas",
         tone: "canvas",
@@ -127,7 +134,7 @@ export function renderExperience(view: ExperienceViewModel): string {
         title: "看结构怎样进入当前时间",
         summary: `${view.canvas.source.luck_pillar}大运 · ${view.canvas.source.analysis_year || "当前"}${view.canvas.source.annual_pillar}流年`,
         expanded: view.ui.expandedSections.canvas ?? true,
-        body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext),
+        body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, false),
       })}` : ""}
 
       ${view.ui.workspaceSurface === "theater" ? renderNarrationWorkspace(view, thesis) : ""}
@@ -136,9 +143,7 @@ export function renderExperience(view: ExperienceViewModel): string {
         <p>知命，而后知己</p>
         <span>只说已经有充分依据的部分，也保留仍需验证的地方。</span>
       </section>
-    </main>
-
-    ${renderAbuDock(view)}
+    </div>
   `;
 }
 
@@ -148,13 +153,119 @@ function renderWorkspaceNavigation(view: ExperienceViewModel): string {
     onecanvas: "结构",
     theater: "阿布讲解",
   };
-  return `<nav class="workspace-navigation" aria-label="当前命局的查看方式">
-    <div class="workspace-tabs">${view.availableSurfaces.map((surface) => `<button type="button" data-workspace-surface="${surface}" aria-pressed="${surface === view.ui.workspaceSurface}" class="${surface === view.ui.workspaceSurface ? "active" : ""}">${labels[surface]}</button>`).join("")}</div>
-  </nav>`;
+  const detail = view.ui.workspaceSurface === "onecanvas"
+    ? "原局、大运与流年沿同一组语义对象展开"
+    : view.ui.workspaceSurface === "theater"
+      ? "文字先到，阿布沿同一份正式认知讲解"
+      : "先看整盘重心，再按需展开结构与边界";
+  return `<header class="workbench-header">
+    <div><p>命盘工作台 · ${escapeHtml(activeCaseName(view))}</p><h1>${labels[view.ui.workspaceSurface]}</h1><span>${detail}</span></div>
+    <nav class="workspace-navigation" aria-label="命盘工作台视图">
+      <div class="workspace-tabs">${view.availableSurfaces.map((surface) => `<button type="button" data-workspace-surface="${surface}" aria-pressed="${surface === view.ui.workspaceSurface}" class="${surface === view.ui.workspaceSurface ? "active" : ""}">${labels[surface]}</button>`).join("")}</div>
+    </nav>
+  </header>`;
 }
 
-function renderSurfaceIntro(kicker: string, title: string, detail: string): string {
-  return `<section class="workspace-surface-intro"><p>${escapeHtml(kicker)}</p><h1>${escapeHtml(title)}</h1><span>${escapeHtml(detail)}</span></section>`;
+function renderLifeWorld(
+  view: ExperienceViewModel,
+  thesis: string,
+  fullThesis: string,
+  pathSummary: string,
+  condition: string,
+  uncertainty: string,
+): string {
+  const pillars = view.envelope.allowed_chart_facts
+    .filter((item) => item.fact_type === "pillar")
+    .map((item) => item.stem + item.branch)
+    .join(" · ");
+  return `<div class="life-world">
+    <section class="world-hero" data-anchor="baseline-summary">
+      <div class="world-copy">
+        <p class="section-kicker">我的生命世界 · ${escapeHtml(activeCaseName(view))}</p>
+        <h1>${escapeHtml(thesis)}</h1>
+        <p>${escapeHtml(firstSentence(pathSummary))}</p>
+        <div class="world-actions">
+          <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "暂停阿布" : "听阿布讲"}</button>
+          <button class="text-command" type="button" data-product-area="workbench">打开命盘</button>
+        </div>
+      </div>
+      <div class="life-tree" aria-label="命、事、人的生命脉络">
+        <span class="tree-line tree-line-left" aria-hidden="true"></span>
+        <span class="tree-line tree-line-right" aria-hidden="true"></span>
+        <button type="button" class="tree-node tree-nature" data-product-area="workbench">
+          <small>命</small><strong>${escapeHtml(pillars || "四柱待确认")}</strong><span>先天底图</span>
+        </button>
+        <button type="button" class="tree-node tree-events" data-select-anchor="baseline-work-path" data-message="${escapeAttr(pathSummary)}">
+          <small>事</small><strong>${escapeHtml(firstSentence(pathSummary))}</strong><span>${escapeHtml(view.workspace.state.selected_period)}</span>
+        </button>
+        <button type="button" class="tree-node tree-growth" data-command="toggle-abu">
+          <small>人</small><strong>${escapeHtml(firstSentence(condition))}</strong><span>当前行动条件</span>
+        </button>
+        <div class="tree-trunk" aria-hidden="true"><i></i><i></i><i></i></div>
+        <img src="/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" alt="阿布在生命树旁等待">
+      </div>
+    </section>
+    <section class="world-ledger" aria-label="生命记录">
+      <header><p>生命记录</p><h2>命是起点，现实让理解继续生长</h2></header>
+      <div class="world-ledger-flow">
+        <button type="button" data-product-area="workbench"><span>命盘基线</span><strong>${escapeHtml(pillars || "等待建档")}</strong><small>${escapeHtml(view.envelope.source.life_case_version || "命盘事实")}</small></button>
+        <button type="button" data-select-anchor="baseline-work-path" data-message="${escapeAttr(fullThesis)}"><span>当前认知</span><strong>${escapeHtml(thesis)}</strong><small>来自正式 LifeCase</small></button>
+        <button type="button" data-command="toggle-abu"><span>继续观察</span><strong>${escapeHtml(firstSentence(uncertainty))}</strong><small>与阿布一起验证</small></button>
+      </div>
+    </section>
+  </div>`;
+}
+
+function renderMingliLab(view: ExperienceViewModel): string {
+  if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>这份命盘尚未形成可研究的结构投影</h1></section>`;
+  const stage = view.canvas.stages[view.ui.canvasStage];
+  const potentialCount = stage.spec.relations.filter((item) => item.relation_state === "potential").length;
+  const sourceCount = new Set(stage.spec.relations.flatMap((item) => item.trace.source_refs)).size;
+  const hiddenCount = stage.spec.nodes.filter((item) => item.node_type.includes("hidden")).length;
+  return `<div class="mingli-lab">
+    <header class="lab-header">
+      <div><p>Mingli Lab · ${escapeHtml(activeCaseName(view))}</p><h1>同一命局的研究镜头</h1><span>候选关系与证据留在研究层；正式 Case 不在这里被改写。</span></div>
+      <code>${escapeHtml(view.workspace.state.scene_source_hash.slice(0, 18))}</code>
+    </header>
+    <div class="lab-evidence-rail" aria-label="当前研究范围">
+      <span><small>潜在关系</small><strong>${potentialCount}</strong></span>
+      <span><small>藏干节点</small><strong>${hiddenCount}</strong></span>
+      <span><small>来源引用</small><strong>${sourceCount}</strong></span>
+      <span><small>正式写入</small><strong>关闭</strong></span>
+    </div>
+    <section class="lab-canvas"><p class="lab-lens-label">命理师 Lens · 潜在关系场</p>${renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, true)}</section>
+  </div>`;
+}
+
+function renderProductSidebar(view: ExperienceViewModel): string {
+  return `<aside class="product-sidebar">
+    <a class="brand" href="/experience" aria-label="DeepBeing 首页"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
+    ${renderProductNavigation(view, "sidebar")}
+    <div class="sidebar-context">${renderCaseSelector(view.cases, view.activeCaseId)}<small>${escapeHtml(view.envelope.source.life_case_version || "命盘事实")}</small></div>
+    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app">档案</a></div>
+  </aside>`;
+}
+
+function renderMobileHeader(view: ExperienceViewModel): string {
+  const labels: Record<ProductArea, string> = { world: "我的生命世界", workbench: "命盘工作台", lab: "Mingli Lab" };
+  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong>${renderCaseSelector(view.cases, view.activeCaseId)}</header>`;
+}
+
+function renderMobileNavigation(view: ExperienceViewModel): string {
+  return `<nav class="mobile-product-navigation" aria-label="DeepBeing 主要区域">${renderProductNavigation(view, "mobile")}</nav>`;
+}
+
+function renderProductNavigation(view: ExperienceViewModel, placement: "sidebar" | "mobile"): string {
+  const items: Array<{ area: ProductArea; index: string; label: string; detail: string }> = [
+    { area: "world", index: "01", label: "我的生命世界", detail: "生命树与现实记录" },
+    { area: "workbench", index: "02", label: "命盘工作台", detail: "概览、结构与阿布" },
+    { area: "lab", index: "03", label: "Mingli Lab", detail: "候选、反例与证据" },
+  ];
+  return `<div class="product-navigation is-${placement}">${items.filter((item) => view.availableAreas.includes(item.area)).map((item) => `<button type="button" data-product-area="${item.area}" aria-current="${view.ui.productArea === item.area ? "page" : "false"}" class="${view.ui.productArea === item.area ? "active" : ""}"><i>${item.index}</i><span><strong>${item.label}</strong><small>${item.detail}</small></span></button>`).join("")}</div>`;
+}
+
+function activeCaseName(view: ExperienceViewModel): string {
+  return view.cases.find((item) => item.case_id === view.activeCaseId)?.display_name || "当前命盘";
 }
 
 function renderNarrationWorkspace(view: ExperienceViewModel, thesis: string): string {
@@ -173,15 +284,25 @@ function renderReadOnlyCanvas(
   canvas: ReadOnlySixPillarCanvas,
   ui: UiState,
   context: CanvasContextPack | null,
+  researchLens: boolean,
 ): string {
   const stage = canvas.stages[ui.canvasStage];
-  const layer = stage.layers.find((item) => item.layer_id === ui.canvasLayer)
-    || stage.layers.find((item) => item.layer_id === stage.default_layer_id)
-    || stage.layers[0];
+  const exposedRelations = researchLens
+    ? stage.spec.relations
+    : stage.spec.relations.filter((item) => item.relation_state !== "potential");
+  const exposedRelationRefs = new Set(exposedRelations.map((item) => item.relation_ref));
+  const displayLayers = stage.layers.map((item) => {
+    const relationRefs = item.relation_refs.filter((ref) => exposedRelationRefs.has(ref));
+    return { ...item, relation_refs: relationRefs, count: relationRefs.length, available: relationRefs.length > 0 };
+  });
+  const layer = displayLayers.find((item) => item.layer_id === ui.canvasLayer && item.available)
+    || displayLayers.find((item) => item.layer_id === stage.default_layer_id && item.available)
+    || displayLayers.find((item) => item.available)
+    || displayLayers[0];
   const visibleRelations = new Set(layer?.relation_refs || []);
   const nodesByRef = new Map(stage.spec.nodes.map((item) => [item.node_ref, item]));
   const selected = ui.selectedCanvasObject || stage.spec.semantic_slots[0]?.slot_ref || "";
-  const activeRelations = stage.spec.relations.filter((item) => visibleRelations.has(item.relation_ref));
+  const activeRelations = exposedRelations.filter((item) => visibleRelations.has(item.relation_ref));
   const range = canvas.source.luck_year_range.length === 2
     ? `${canvas.source.luck_year_range[0]}–${canvas.source.luck_year_range[1]}`
     : "当前阶段";
@@ -203,7 +324,7 @@ function renderReadOnlyCanvas(
     </div>
 
     <div class="layer-switch" role="tablist" aria-label="关系图层">
-      ${stage.layers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available ? "" : " disabled"}>
+      ${displayLayers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available ? "" : " disabled"}>
         <span>${escapeHtml(item.label)}</span><small>${item.count}</small>
       </button>`).join("")}
     </div>
@@ -211,7 +332,7 @@ function renderReadOnlyCanvas(
     <div class="canvas-board" data-layer="${escapeAttr(layer?.layer_id || "")}">
       <div class="six-pillar-scroll">
         <div class="six-pillar-rail" style="--pillar-count:${stage.spec.semantic_slots.length}">
-          ${stage.spec.semantic_slots.map((slot) => renderCanvasPillar(slot, nodesByRef, selected)).join("")}
+          ${stage.spec.semantic_slots.map((slot) => renderCanvasPillar(slot, nodesByRef, selected, researchLens)).join("")}
         </div>
         ${renderCanvasRelations(stage.spec.semantic_slots, stage.spec.nodes, activeRelations, stage.spec.paths.flatMap((item) => item.relation_refs), selected)}
       </div>
@@ -235,6 +356,7 @@ function renderCanvasPillar(
   slot: CanvasSemanticSlot,
   nodesByRef: Map<string, CanvasNode>,
   selected: string,
+  showHiddenStems: boolean,
 ): string {
   const nodes = [...nodesByRef.values()].filter((item) => item.semantic_slot_ref === slot.slot_ref);
   const stemNode = nodes.find((item) => item.node_type.includes("stem") && !item.node_type.includes("hidden"));
@@ -242,14 +364,14 @@ function renderCanvasPillar(
   const temporal = slot.slot_type === "luck" || slot.slot_type === "year";
   return `<article class="canvas-pillar${temporal ? " is-temporal" : ""}${selected === slot.slot_ref ? " is-selected" : ""}" data-slot-type="${escapeAttr(slot.slot_type)}">
     <button type="button" class="canvas-pillar-label" data-canvas-object="${escapeAttr(slot.slot_ref)}"><span>${escapeHtml(slot.label)}</span>${slot.immutable ? "<small>原局</small>" : "<small>时间</small>"}</button>
-    <button type="button" class="canvas-character element-${escapeAttr(stemNode?.element || "")}${selected === stemNode?.node_ref ? " is-selected" : ""}" data-canvas-object="${escapeAttr(stemNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}天干${slot.stem}`)}">
+    <button type="button" class="canvas-character element-${escapeAttr(stemNode?.element || "")}${selected === stemNode?.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(stemNode?.polarity || "")}" data-canvas-object="${escapeAttr(stemNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}天干${slot.stem}`)}">
       <small>${escapeHtml(stemNode?.ten_god === "day_master" ? "日主" : tenGodLabel(stemNode?.ten_god || "天干"))}</small><strong>${escapeHtml(slot.stem)}</strong>
     </button>
     <i aria-hidden="true"></i>
-    <button type="button" class="canvas-character element-${escapeAttr(branchNode?.element || "")}${selected === branchNode?.node_ref ? " is-selected" : ""}" data-canvas-object="${escapeAttr(branchNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}地支${slot.branch}`)}">
+    <button type="button" class="canvas-character element-${escapeAttr(branchNode?.element || "")}${selected === branchNode?.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(branchNode?.polarity || "")}" data-canvas-object="${escapeAttr(branchNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}地支${slot.branch}`)}">
       <small>地支</small><strong>${escapeHtml(slot.branch)}</strong>
     </button>
-    <div class="canvas-hidden-stems"><span>藏干</span>${slot.hidden_stems.map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "<em>无</em>"}</div>
+    ${showHiddenStems ? `<div class="canvas-hidden-stems"><span>藏干</span>${slot.hidden_stems.map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "<em>无</em>"}</div>` : ""}
   </article>`;
 }
 

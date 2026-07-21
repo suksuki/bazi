@@ -153,29 +153,37 @@ var polarityLabel = { yin: "\u9634", yang: "\u9633" };
 function renderExperience(view) {
   const claim = view.envelope.approved_claims[0];
   const steps = view.envelope.approved_reasoning_steps;
+  const fullThesis = claim?.approved_meaning || "\u547D\u76D8\u4E8B\u5B9E\u5DF2\u7ECF\u786E\u8BA4\uFF0C\u6B63\u5F0F\u6574\u76D8\u8BA4\u77E5\u5C1A\u672A\u63D0\u4EA4\u3002";
+  const thesis = firstSentence(fullThesis);
+  const pathSummary = steps[steps.length - 1]?.conclusion || "\u6B63\u5F0F\u4E3B\u8DEF\u5F84\u4ECD\u5728\u5F62\u6210\u3002";
+  const condition = claim?.conditions[0] || "\u5F53\u524D\u8FD8\u6CA1\u6709\u8DB3\u591F\u4F9D\u636E\u5199\u4E0B\u6210\u7ACB\u6761\u4EF6\u3002";
+  const uncertainty = view.envelope.uncertainty.reasons[0] || "\u5F53\u524D\u6CA1\u6709\u989D\u5916\u672A\u51B3\u9879\u3002";
+  return `<div class="deepbeing-shell" data-product-area-current="${escapeAttr(view.ui.productArea)}">
+    ${renderProductSidebar(view)}
+    <div class="deepbeing-stage">
+      ${renderMobileHeader(view)}
+      <main class="product-main">
+        ${view.ui.productArea === "world" ? renderLifeWorld(view, thesis, fullThesis, pathSummary, condition, uncertainty) : ""}
+        ${view.ui.productArea === "workbench" ? renderWorkbench(view) : ""}
+        ${view.ui.productArea === "lab" ? renderMingliLab(view) : ""}
+      </main>
+    </div>
+    ${renderMobileNavigation(view)}
+    ${renderAbuDock(view)}
+  </div>`;
+}
+function renderWorkbench(view) {
+  const claim = view.envelope.approved_claims[0];
+  const steps = view.envelope.approved_reasoning_steps;
   const condition = claim?.conditions[0] || "\u5F53\u524D\u8FD8\u6CA1\u6709\u8DB3\u591F\u4F9D\u636E\u5199\u4E0B\u6210\u7ACB\u6761\u4EF6\u3002";
   const uncertainty = view.envelope.uncertainty.reasons[0] || "\u5F53\u524D\u6CA1\u6709\u989D\u5916\u672A\u51B3\u9879\u3002";
   const pathSummary = steps[steps.length - 1]?.conclusion || "\u6B63\u5F0F\u4E3B\u8DEF\u5F84\u4ECD\u5728\u5F62\u6210\u3002";
   const fullThesis = claim?.approved_meaning || "\u547D\u76D8\u4E8B\u5B9E\u5DF2\u7ECF\u786E\u8BA4\uFF0C\u6B63\u5F0F\u6574\u76D8\u8BA4\u77E5\u5C1A\u672A\u63D0\u4EA4\u3002";
   const thesis = firstSentence(fullThesis);
   return `
-    <header class="site-header">
-      <a class="brand" href="/experience" aria-label="DeepBazi \u770B\u89C1\u547D\u5C40">
-        <img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence">
-      </a>
-      <div class="case-context">
-        ${renderCaseSelector(view.cases, view.activeCaseId)}
-        <span class="case-version">${escapeHtml(view.envelope.source.life_case_version || "\u4EC5\u547D\u76D8\u4E8B\u5B9E")}</span>
-      </div>
-      <div class="account-context">
-        <span>${escapeHtml(view.accountName)}</span>
-        <a href="/app" title="\u8FD4\u56DE\u5F53\u524D\u6863\u6848\u4E0E\u963F\u5E03\u5165\u53E3">\u6863\u6848</a>
-      </div>
-    </header>
-
     ${renderWorkspaceNavigation(view)}
 
-    <main data-workspace-current-surface="${escapeAttr(view.ui.workspaceSurface)}">
+    <div class="workbench-surface" data-workspace-current-surface="${escapeAttr(view.ui.workspaceSurface)}">
       ${view.ui.workspaceSurface === "overview" ? `<section class="opening-band" id="baseline-summary" data-anchor="baseline-summary">
         <div class="opening-copy">
           <p class="section-kicker">\u770B\u89C1\u547D\u5C40 \xB7 \u5F53\u524D\u57FA\u7EBF</p>
@@ -228,11 +236,7 @@ function renderExperience(view) {
     body: renderBoundaries(claim, view.envelope, view.ui.selectedAnchor)
   })}` : ""}
 
-      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderSurfaceIntro(
-    "\u547D\u5C40\u7ED3\u6784",
-    "\u540C\u4E00\u4EFD\u6B63\u5F0F\u547D\u76D8\uFF0C\u6CBF\u539F\u5C40\u3001\u5927\u8FD0\u548C\u6D41\u5E74\u9010\u5C42\u5C55\u5F00\u3002",
-    "\u5148\u770B\u7ED3\u6784\u5982\u4F55\u6210\u7ACB\uFF0C\u518D\u770B\u65F6\u95F4\u52A0\u5165\u540E\uFF0C\u54EA\u4E9B\u5173\u7CFB\u88AB\u5F15\u52A8\u3001\u52A0\u5F3A\u6216\u53D7\u963B\u3002"
-  )}${renderCollapsibleSection({
+      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderCollapsibleSection({
     id: "canvas",
     anchor: "temporal-canvas",
     tone: "canvas",
@@ -240,7 +244,7 @@ function renderExperience(view) {
     title: "\u770B\u7ED3\u6784\u600E\u6837\u8FDB\u5165\u5F53\u524D\u65F6\u95F4",
     summary: `${view.canvas.source.luck_pillar}\u5927\u8FD0 \xB7 ${view.canvas.source.analysis_year || "\u5F53\u524D"}${view.canvas.source.annual_pillar}\u6D41\u5E74`,
     expanded: view.ui.expandedSections.canvas ?? true,
-    body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext)
+    body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, false)
   })}` : ""}
 
       ${view.ui.workspaceSurface === "theater" ? renderNarrationWorkspace(view, thesis) : ""}
@@ -249,9 +253,7 @@ function renderExperience(view) {
         <p>\u77E5\u547D\uFF0C\u800C\u540E\u77E5\u5DF1</p>
         <span>\u53EA\u8BF4\u5DF2\u7ECF\u6709\u5145\u5206\u4F9D\u636E\u7684\u90E8\u5206\uFF0C\u4E5F\u4FDD\u7559\u4ECD\u9700\u9A8C\u8BC1\u7684\u5730\u65B9\u3002</span>
       </section>
-    </main>
-
-    ${renderAbuDock(view)}
+    </div>
   `;
 }
 function renderWorkspaceNavigation(view) {
@@ -260,12 +262,98 @@ function renderWorkspaceNavigation(view) {
     onecanvas: "\u7ED3\u6784",
     theater: "\u963F\u5E03\u8BB2\u89E3"
   };
-  return `<nav class="workspace-navigation" aria-label="\u5F53\u524D\u547D\u5C40\u7684\u67E5\u770B\u65B9\u5F0F">
-    <div class="workspace-tabs">${view.availableSurfaces.map((surface) => `<button type="button" data-workspace-surface="${surface}" aria-pressed="${surface === view.ui.workspaceSurface}" class="${surface === view.ui.workspaceSurface ? "active" : ""}">${labels[surface]}</button>`).join("")}</div>
-  </nav>`;
+  const detail = view.ui.workspaceSurface === "onecanvas" ? "\u539F\u5C40\u3001\u5927\u8FD0\u4E0E\u6D41\u5E74\u6CBF\u540C\u4E00\u7EC4\u8BED\u4E49\u5BF9\u8C61\u5C55\u5F00" : view.ui.workspaceSurface === "theater" ? "\u6587\u5B57\u5148\u5230\uFF0C\u963F\u5E03\u6CBF\u540C\u4E00\u4EFD\u6B63\u5F0F\u8BA4\u77E5\u8BB2\u89E3" : "\u5148\u770B\u6574\u76D8\u91CD\u5FC3\uFF0C\u518D\u6309\u9700\u5C55\u5F00\u7ED3\u6784\u4E0E\u8FB9\u754C";
+  return `<header class="workbench-header">
+    <div><p>\u547D\u76D8\u5DE5\u4F5C\u53F0 \xB7 ${escapeHtml(activeCaseName(view))}</p><h1>${labels[view.ui.workspaceSurface]}</h1><span>${detail}</span></div>
+    <nav class="workspace-navigation" aria-label="\u547D\u76D8\u5DE5\u4F5C\u53F0\u89C6\u56FE">
+      <div class="workspace-tabs">${view.availableSurfaces.map((surface) => `<button type="button" data-workspace-surface="${surface}" aria-pressed="${surface === view.ui.workspaceSurface}" class="${surface === view.ui.workspaceSurface ? "active" : ""}">${labels[surface]}</button>`).join("")}</div>
+    </nav>
+  </header>`;
 }
-function renderSurfaceIntro(kicker, title, detail) {
-  return `<section class="workspace-surface-intro"><p>${escapeHtml(kicker)}</p><h1>${escapeHtml(title)}</h1><span>${escapeHtml(detail)}</span></section>`;
+function renderLifeWorld(view, thesis, fullThesis, pathSummary, condition, uncertainty) {
+  const pillars = view.envelope.allowed_chart_facts.filter((item) => item.fact_type === "pillar").map((item) => item.stem + item.branch).join(" \xB7 ");
+  return `<div class="life-world">
+    <section class="world-hero" data-anchor="baseline-summary">
+      <div class="world-copy">
+        <p class="section-kicker">\u6211\u7684\u751F\u547D\u4E16\u754C \xB7 ${escapeHtml(activeCaseName(view))}</p>
+        <h1>${escapeHtml(thesis)}</h1>
+        <p>${escapeHtml(firstSentence(pathSummary))}</p>
+        <div class="world-actions">
+          <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "\u6682\u505C\u963F\u5E03" : "\u542C\u963F\u5E03\u8BB2"}</button>
+          <button class="text-command" type="button" data-product-area="workbench">\u6253\u5F00\u547D\u76D8</button>
+        </div>
+      </div>
+      <div class="life-tree" aria-label="\u547D\u3001\u4E8B\u3001\u4EBA\u7684\u751F\u547D\u8109\u7EDC">
+        <span class="tree-line tree-line-left" aria-hidden="true"></span>
+        <span class="tree-line tree-line-right" aria-hidden="true"></span>
+        <button type="button" class="tree-node tree-nature" data-product-area="workbench">
+          <small>\u547D</small><strong>${escapeHtml(pillars || "\u56DB\u67F1\u5F85\u786E\u8BA4")}</strong><span>\u5148\u5929\u5E95\u56FE</span>
+        </button>
+        <button type="button" class="tree-node tree-events" data-select-anchor="baseline-work-path" data-message="${escapeAttr(pathSummary)}">
+          <small>\u4E8B</small><strong>${escapeHtml(firstSentence(pathSummary))}</strong><span>${escapeHtml(view.workspace.state.selected_period)}</span>
+        </button>
+        <button type="button" class="tree-node tree-growth" data-command="toggle-abu">
+          <small>\u4EBA</small><strong>${escapeHtml(firstSentence(condition))}</strong><span>\u5F53\u524D\u884C\u52A8\u6761\u4EF6</span>
+        </button>
+        <div class="tree-trunk" aria-hidden="true"><i></i><i></i><i></i></div>
+        <img src="/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" alt="\u963F\u5E03\u5728\u751F\u547D\u6811\u65C1\u7B49\u5F85">
+      </div>
+    </section>
+    <section class="world-ledger" aria-label="\u751F\u547D\u8BB0\u5F55">
+      <header><p>\u751F\u547D\u8BB0\u5F55</p><h2>\u547D\u662F\u8D77\u70B9\uFF0C\u73B0\u5B9E\u8BA9\u7406\u89E3\u7EE7\u7EED\u751F\u957F</h2></header>
+      <div class="world-ledger-flow">
+        <button type="button" data-product-area="workbench"><span>\u547D\u76D8\u57FA\u7EBF</span><strong>${escapeHtml(pillars || "\u7B49\u5F85\u5EFA\u6863")}</strong><small>${escapeHtml(view.envelope.source.life_case_version || "\u547D\u76D8\u4E8B\u5B9E")}</small></button>
+        <button type="button" data-select-anchor="baseline-work-path" data-message="${escapeAttr(fullThesis)}"><span>\u5F53\u524D\u8BA4\u77E5</span><strong>${escapeHtml(thesis)}</strong><small>\u6765\u81EA\u6B63\u5F0F LifeCase</small></button>
+        <button type="button" data-command="toggle-abu"><span>\u7EE7\u7EED\u89C2\u5BDF</span><strong>${escapeHtml(firstSentence(uncertainty))}</strong><small>\u4E0E\u963F\u5E03\u4E00\u8D77\u9A8C\u8BC1</small></button>
+      </div>
+    </section>
+  </div>`;
+}
+function renderMingliLab(view) {
+  if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>\u8FD9\u4EFD\u547D\u76D8\u5C1A\u672A\u5F62\u6210\u53EF\u7814\u7A76\u7684\u7ED3\u6784\u6295\u5F71</h1></section>`;
+  const stage = view.canvas.stages[view.ui.canvasStage];
+  const potentialCount = stage.spec.relations.filter((item) => item.relation_state === "potential").length;
+  const sourceCount = new Set(stage.spec.relations.flatMap((item) => item.trace.source_refs)).size;
+  const hiddenCount = stage.spec.nodes.filter((item) => item.node_type.includes("hidden")).length;
+  return `<div class="mingli-lab">
+    <header class="lab-header">
+      <div><p>Mingli Lab \xB7 ${escapeHtml(activeCaseName(view))}</p><h1>\u540C\u4E00\u547D\u5C40\u7684\u7814\u7A76\u955C\u5934</h1><span>\u5019\u9009\u5173\u7CFB\u4E0E\u8BC1\u636E\u7559\u5728\u7814\u7A76\u5C42\uFF1B\u6B63\u5F0F Case \u4E0D\u5728\u8FD9\u91CC\u88AB\u6539\u5199\u3002</span></div>
+      <code>${escapeHtml(view.workspace.state.scene_source_hash.slice(0, 18))}</code>
+    </header>
+    <div class="lab-evidence-rail" aria-label="\u5F53\u524D\u7814\u7A76\u8303\u56F4">
+      <span><small>\u6F5C\u5728\u5173\u7CFB</small><strong>${potentialCount}</strong></span>
+      <span><small>\u85CF\u5E72\u8282\u70B9</small><strong>${hiddenCount}</strong></span>
+      <span><small>\u6765\u6E90\u5F15\u7528</small><strong>${sourceCount}</strong></span>
+      <span><small>\u6B63\u5F0F\u5199\u5165</small><strong>\u5173\u95ED</strong></span>
+    </div>
+    <section class="lab-canvas"><p class="lab-lens-label">\u547D\u7406\u5E08 Lens \xB7 \u6F5C\u5728\u5173\u7CFB\u573A</p>${renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, true)}</section>
+  </div>`;
+}
+function renderProductSidebar(view) {
+  return `<aside class="product-sidebar">
+    <a class="brand" href="/experience" aria-label="DeepBeing \u9996\u9875"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
+    ${renderProductNavigation(view, "sidebar")}
+    <div class="sidebar-context">${renderCaseSelector(view.cases, view.activeCaseId)}<small>${escapeHtml(view.envelope.source.life_case_version || "\u547D\u76D8\u4E8B\u5B9E")}</small></div>
+    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app">\u6863\u6848</a></div>
+  </aside>`;
+}
+function renderMobileHeader(view) {
+  const labels = { world: "\u6211\u7684\u751F\u547D\u4E16\u754C", workbench: "\u547D\u76D8\u5DE5\u4F5C\u53F0", lab: "Mingli Lab" };
+  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong>${renderCaseSelector(view.cases, view.activeCaseId)}</header>`;
+}
+function renderMobileNavigation(view) {
+  return `<nav class="mobile-product-navigation" aria-label="DeepBeing \u4E3B\u8981\u533A\u57DF">${renderProductNavigation(view, "mobile")}</nav>`;
+}
+function renderProductNavigation(view, placement) {
+  const items = [
+    { area: "world", index: "01", label: "\u6211\u7684\u751F\u547D\u4E16\u754C", detail: "\u751F\u547D\u6811\u4E0E\u73B0\u5B9E\u8BB0\u5F55" },
+    { area: "workbench", index: "02", label: "\u547D\u76D8\u5DE5\u4F5C\u53F0", detail: "\u6982\u89C8\u3001\u7ED3\u6784\u4E0E\u963F\u5E03" },
+    { area: "lab", index: "03", label: "Mingli Lab", detail: "\u5019\u9009\u3001\u53CD\u4F8B\u4E0E\u8BC1\u636E" }
+  ];
+  return `<div class="product-navigation is-${placement}">${items.filter((item) => view.availableAreas.includes(item.area)).map((item) => `<button type="button" data-product-area="${item.area}" aria-current="${view.ui.productArea === item.area ? "page" : "false"}" class="${view.ui.productArea === item.area ? "active" : ""}"><i>${item.index}</i><span><strong>${item.label}</strong><small>${item.detail}</small></span></button>`).join("")}</div>`;
+}
+function activeCaseName(view) {
+  return view.cases.find((item) => item.case_id === view.activeCaseId)?.display_name || "\u5F53\u524D\u547D\u76D8";
 }
 function renderNarrationWorkspace(view, thesis) {
   const segments = view.narrationManifest?.segments || [];
@@ -278,13 +366,19 @@ function renderNarrationWorkspace(view, thesis) {
     <ol>${segments.map((item, index) => `<li><button type="button" data-play-segment="${index}"${view.ui.narrationIndex === index ? ' class="active"' : ""}><small>${String(index + 1).padStart(2, "0")}</small><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span><b aria-hidden="true">\u25B6</b></button></li>`).join("")}</ol>
   </section>`;
 }
-function renderReadOnlyCanvas(canvas2, ui2, context) {
+function renderReadOnlyCanvas(canvas2, ui2, context, researchLens) {
   const stage = canvas2.stages[ui2.canvasStage];
-  const layer = stage.layers.find((item) => item.layer_id === ui2.canvasLayer) || stage.layers.find((item) => item.layer_id === stage.default_layer_id) || stage.layers[0];
+  const exposedRelations = researchLens ? stage.spec.relations : stage.spec.relations.filter((item) => item.relation_state !== "potential");
+  const exposedRelationRefs = new Set(exposedRelations.map((item) => item.relation_ref));
+  const displayLayers = stage.layers.map((item) => {
+    const relationRefs = item.relation_refs.filter((ref) => exposedRelationRefs.has(ref));
+    return { ...item, relation_refs: relationRefs, count: relationRefs.length, available: relationRefs.length > 0 };
+  });
+  const layer = displayLayers.find((item) => item.layer_id === ui2.canvasLayer && item.available) || displayLayers.find((item) => item.layer_id === stage.default_layer_id && item.available) || displayLayers.find((item) => item.available) || displayLayers[0];
   const visibleRelations = new Set(layer?.relation_refs || []);
   const nodesByRef = new Map(stage.spec.nodes.map((item) => [item.node_ref, item]));
   const selected = ui2.selectedCanvasObject || stage.spec.semantic_slots[0]?.slot_ref || "";
-  const activeRelations = stage.spec.relations.filter((item) => visibleRelations.has(item.relation_ref));
+  const activeRelations = exposedRelations.filter((item) => visibleRelations.has(item.relation_ref));
   const range = canvas2.source.luck_year_range.length === 2 ? `${canvas2.source.luck_year_range[0]}\u2013${canvas2.source.luck_year_range[1]}` : "\u5F53\u524D\u9636\u6BB5";
   return `<div class="temporal-viewer" data-canvas-stage-root="${escapeAttr(ui2.canvasStage)}">
     <div class="temporal-toolbar">
@@ -303,7 +397,7 @@ function renderReadOnlyCanvas(canvas2, ui2, context) {
     </div>
 
     <div class="layer-switch" role="tablist" aria-label="\u5173\u7CFB\u56FE\u5C42">
-      ${stage.layers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available ? "" : " disabled"}>
+      ${displayLayers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available ? "" : " disabled"}>
         <span>${escapeHtml(item.label)}</span><small>${item.count}</small>
       </button>`).join("")}
     </div>
@@ -311,7 +405,7 @@ function renderReadOnlyCanvas(canvas2, ui2, context) {
     <div class="canvas-board" data-layer="${escapeAttr(layer?.layer_id || "")}">
       <div class="six-pillar-scroll">
         <div class="six-pillar-rail" style="--pillar-count:${stage.spec.semantic_slots.length}">
-          ${stage.spec.semantic_slots.map((slot) => renderCanvasPillar(slot, nodesByRef, selected)).join("")}
+          ${stage.spec.semantic_slots.map((slot) => renderCanvasPillar(slot, nodesByRef, selected, researchLens)).join("")}
         </div>
         ${renderCanvasRelations(stage.spec.semantic_slots, stage.spec.nodes, activeRelations, stage.spec.paths.flatMap((item) => item.relation_refs), selected)}
       </div>
@@ -330,21 +424,21 @@ function renderReadOnlyCanvas(canvas2, ui2, context) {
     </div>
   </div>`;
 }
-function renderCanvasPillar(slot, nodesByRef, selected) {
+function renderCanvasPillar(slot, nodesByRef, selected, showHiddenStems) {
   const nodes = [...nodesByRef.values()].filter((item) => item.semantic_slot_ref === slot.slot_ref);
   const stemNode = nodes.find((item) => item.node_type.includes("stem") && !item.node_type.includes("hidden"));
   const branchNode = nodes.find((item) => item.node_type.includes("branch"));
   const temporal = slot.slot_type === "luck" || slot.slot_type === "year";
   return `<article class="canvas-pillar${temporal ? " is-temporal" : ""}${selected === slot.slot_ref ? " is-selected" : ""}" data-slot-type="${escapeAttr(slot.slot_type)}">
     <button type="button" class="canvas-pillar-label" data-canvas-object="${escapeAttr(slot.slot_ref)}"><span>${escapeHtml(slot.label)}</span>${slot.immutable ? "<small>\u539F\u5C40</small>" : "<small>\u65F6\u95F4</small>"}</button>
-    <button type="button" class="canvas-character element-${escapeAttr(stemNode?.element || "")}${selected === stemNode?.node_ref ? " is-selected" : ""}" data-canvas-object="${escapeAttr(stemNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}\u5929\u5E72${slot.stem}`)}">
+    <button type="button" class="canvas-character element-${escapeAttr(stemNode?.element || "")}${selected === stemNode?.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(stemNode?.polarity || "")}" data-canvas-object="${escapeAttr(stemNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}\u5929\u5E72${slot.stem}`)}">
       <small>${escapeHtml(stemNode?.ten_god === "day_master" ? "\u65E5\u4E3B" : tenGodLabel(stemNode?.ten_god || "\u5929\u5E72"))}</small><strong>${escapeHtml(slot.stem)}</strong>
     </button>
     <i aria-hidden="true"></i>
-    <button type="button" class="canvas-character element-${escapeAttr(branchNode?.element || "")}${selected === branchNode?.node_ref ? " is-selected" : ""}" data-canvas-object="${escapeAttr(branchNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}\u5730\u652F${slot.branch}`)}">
+    <button type="button" class="canvas-character element-${escapeAttr(branchNode?.element || "")}${selected === branchNode?.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(branchNode?.polarity || "")}" data-canvas-object="${escapeAttr(branchNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}\u5730\u652F${slot.branch}`)}">
       <small>\u5730\u652F</small><strong>${escapeHtml(slot.branch)}</strong>
     </button>
-    <div class="canvas-hidden-stems"><span>\u85CF\u5E72</span>${slot.hidden_stems.map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "<em>\u65E0</em>"}</div>
+    ${showHiddenStems ? `<div class="canvas-hidden-stems"><span>\u85CF\u5E72</span>${slot.hidden_stems.map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "<em>\u65E0</em>"}</div>` : ""}
   </article>`;
 }
 function renderCanvasRelations(slots, nodes, relations, pathRelationRefs, selected) {
@@ -565,6 +659,7 @@ function escapeAttr(value) {
 
 // apps/product/experience_shell/src/state.ts
 var initialUiState = {
+  productArea: "world",
   workspaceSurface: "overview",
   selectedAnchor: "baseline-summary",
   expandedSections: {
@@ -585,6 +680,8 @@ var initialUiState = {
 };
 function reduceUi(state, action) {
   switch (action.type) {
+    case "product-area":
+      return { ...state, productArea: action.area };
     case "workspace-surface":
       return { ...state, workspaceSurface: action.surface };
     case "select":
@@ -636,6 +733,7 @@ var cases = [];
 var activeCaseId = "";
 var workspace = null;
 var availableSurfaces = ["overview"];
+var availableAreas = ["world", "workbench"];
 var envelope = null;
 var canvas = null;
 var canvasContext = null;
@@ -708,12 +806,21 @@ async function openCase(caseId) {
     narrationAssets = {};
   }
   availableSurfaces = workspace.allowed_surfaces.filter((surface) => surface === "overview" || surface === "onecanvas" && canvas !== null || surface === "theater" && narrationManifest !== null);
-  const requestedSurface = new URLSearchParams(location.search).get("surface");
+  availableAreas = workspace.allowed_surfaces.includes("mingli_lab") ? ["world", "workbench", "lab"] : ["world", "workbench"];
+  const params = new URLSearchParams(location.search);
+  const requestedSurface = params.get("surface");
   const preferredSurface = requestedSurface || workspace.state.current_surface;
   ui = reduceUi(ui, {
     type: "workspace-surface",
     surface: supportedSurface(preferredSurface) ? preferredSurface : "overview"
   });
+  const requestedArea = params.get("area");
+  const preferredArea = requestedArea || (requestedSurface || preferredSurface !== "overview" ? "workbench" : "world");
+  ui = reduceUi(ui, {
+    type: "product-area",
+    area: supportedArea(preferredArea) ? preferredArea : "world"
+  });
+  if (ui.productArea === "lab") selectLabLayer();
   timeline = narrationManifest ? createTimeline(caseId, narrationManifest, narrationAssets) : null;
   updateLocation();
   render();
@@ -748,7 +855,9 @@ function render() {
     accountRole: account.role,
     cases,
     activeCaseId,
+    availableAreas,
     availableSurfaces,
+    workspace,
     envelope,
     narrationManifest,
     canvas,
@@ -759,6 +868,16 @@ function render() {
   requestAnimationFrame(() => applyActiveAnchor(ui.selectedAnchor));
 }
 function bindInteractions() {
+  root.querySelectorAll("[data-product-area]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const area = button.dataset.productArea;
+      if (!supportedArea(area)) return;
+      ui = reduceUi(ui, { type: "product-area", area });
+      if (area === "lab") selectLabLayer();
+      updateLocation();
+      render();
+    });
+  });
   root.querySelectorAll("[data-workspace-surface]").forEach((button) => {
     button.addEventListener("click", () => {
       const surface = button.dataset.workspaceSurface;
@@ -867,9 +986,21 @@ async function handleCommand(command) {
 function supportedSurface(surface) {
   return availableSurfaces.includes(surface);
 }
+function supportedArea(area) {
+  return availableAreas.includes(area);
+}
+function selectLabLayer() {
+  if (!canvas) return;
+  const projection = canvas.stages[ui.canvasStage];
+  const layer = projection.layers.find((item) => item.layer_id === "generation_control" && item.available);
+  if (layer) ui = reduceUi(ui, { type: "canvas-layer", layer: layer.layer_id });
+}
 function updateLocation() {
   const params = new URLSearchParams({ case: activeCaseId });
-  if (ui.workspaceSurface !== "overview") params.set("surface", ui.workspaceSurface);
+  if (ui.productArea !== "world") params.set("area", ui.productArea);
+  if (ui.productArea === "workbench" && ui.workspaceSurface !== "overview") {
+    params.set("surface", ui.workspaceSurface);
+  }
   history.replaceState({}, "", `/experience?${params.toString()}`);
 }
 function dispatch(action) {

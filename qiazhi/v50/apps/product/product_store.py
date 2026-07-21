@@ -177,7 +177,7 @@ class PostgresProductStore:
                     )
         except errors.UniqueViolation as exc:
             raise ProductStoreError("email_already_registered") from exc
-        return account
+        return _strip_password(account)
 
     def authenticate(self, *, email: str, password: str) -> dict[str, object] | None:
         from psycopg.rows import dict_row
@@ -194,7 +194,7 @@ class PostgresProductStore:
                 row = cur.fetchone()
         if not row or not _verify_password(password, row["password_salt"], row["password_hash"]):
             return None
-        return dict(row["account_json"])
+        return _strip_password(dict(row["account_json"]))
 
     def ensure_admin_account(self, *, email: str, password: str, display_name: str) -> dict[str, object]:
         from psycopg.rows import dict_row
@@ -243,7 +243,7 @@ class PostgresProductStore:
                     """,
                     (user_id, clean_email, clean_name, password_hash, salt, Jsonb(account)),
                 )
-        return account
+        return _strip_password(account)
 
     def create_session(self, *, user_id: str) -> str:
         token = secrets.token_urlsafe(36)
@@ -275,7 +275,7 @@ class PostgresProductStore:
                     (_token_hash(token),),
                 )
                 row = cur.fetchone()
-        return dict(row["account_json"]) if row else None
+        return _strip_password(dict(row["account_json"])) if row else None
 
     def revoke_session(self, token: str) -> None:
         with self._connect() as conn:
@@ -478,7 +478,13 @@ def _token_hash(token: str) -> str:
 def _strip_password(account: dict[str, object] | None) -> dict[str, object]:
     if not account:
         return {}
-    return {key: value for key, value in account.items() if key not in {"password_hash", "password_salt"}}
+    projected = {
+        key: value
+        for key, value in account.items()
+        if key not in {"password_hash", "password_salt"}
+    }
+    projected["role"] = str(projected.get("account_role") or "")
+    return projected
 
 
 def _account_profile_payload(

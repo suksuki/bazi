@@ -20,7 +20,13 @@ import type {
   NarrationStatus,
   ReadOnlySixPillarCanvas,
 } from "./contracts";
-import { initialUiState, reduceUi, type UiState, type WorkspaceSurface } from "./state";
+import {
+  initialUiState,
+  reduceUi,
+  type ProductArea,
+  type UiState,
+  type WorkspaceSurface,
+} from "./state";
 
 const rootElement = document.querySelector<HTMLElement>("#experienceRoot");
 if (!rootElement) throw new Error("experience_root_missing");
@@ -31,6 +37,7 @@ let cases: ExperienceCaseSummary[] = [];
 let activeCaseId = "";
 let workspace: CaseWorkspaceEnvelope | null = null;
 let availableSurfaces: WorkspaceSurface[] = ["overview"];
+let availableAreas: ProductArea[] = ["world", "workbench"];
 let envelope: MingliExperienceEnvelope | null = null;
 let canvas: ReadOnlySixPillarCanvas | null = null;
 let canvasContext: CanvasContextPack | null = null;
@@ -111,12 +118,24 @@ async function openCase(caseId: string): Promise<void> {
     || (surface === "onecanvas" && canvas !== null)
     || (surface === "theater" && narrationManifest !== null)
   ));
-  const requestedSurface = new URLSearchParams(location.search).get("surface") as WorkspaceSurface | null;
+  availableAreas = workspace.allowed_surfaces.includes("mingli_lab")
+    ? ["world", "workbench", "lab"]
+    : ["world", "workbench"];
+  const params = new URLSearchParams(location.search);
+  const requestedSurface = params.get("surface") as WorkspaceSurface | null;
   const preferredSurface = requestedSurface || workspace.state.current_surface;
   ui = reduceUi(ui, {
     type: "workspace-surface",
     surface: supportedSurface(preferredSurface) ? preferredSurface : "overview",
   });
+  const requestedArea = params.get("area") as ProductArea | null;
+  const preferredArea = requestedArea
+    || (requestedSurface || preferredSurface !== "overview" ? "workbench" : "world");
+  ui = reduceUi(ui, {
+    type: "product-area",
+    area: supportedArea(preferredArea) ? preferredArea : "world",
+  });
+  if (ui.productArea === "lab") selectLabLayer();
   timeline = narrationManifest ? createTimeline(caseId, narrationManifest, narrationAssets) : null;
   updateLocation();
   render();
@@ -157,7 +176,9 @@ function render(): void {
     accountRole: account.role,
     cases,
     activeCaseId,
+    availableAreas,
     availableSurfaces,
+    workspace,
     envelope,
     narrationManifest,
     canvas,
@@ -169,6 +190,16 @@ function render(): void {
 }
 
 function bindInteractions(): void {
+  root.querySelectorAll<HTMLButtonElement>("[data-product-area]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const area = button.dataset.productArea as ProductArea;
+      if (!supportedArea(area)) return;
+      ui = reduceUi(ui, { type: "product-area", area });
+      if (area === "lab") selectLabLayer();
+      updateLocation();
+      render();
+    });
+  });
   root.querySelectorAll<HTMLButtonElement>("[data-workspace-surface]").forEach((button) => {
     button.addEventListener("click", () => {
       const surface = button.dataset.workspaceSurface as WorkspaceSurface;
@@ -281,9 +312,25 @@ function supportedSurface(surface: WorkspaceSurface): boolean {
   return availableSurfaces.includes(surface);
 }
 
+function supportedArea(area: ProductArea): boolean {
+  return availableAreas.includes(area);
+}
+
+function selectLabLayer(): void {
+  if (!canvas) return;
+  const projection = canvas.stages[ui.canvasStage];
+  const layer = projection.layers.find((item) => (
+    item.layer_id === "generation_control" && item.available
+  ));
+  if (layer) ui = reduceUi(ui, { type: "canvas-layer", layer: layer.layer_id });
+}
+
 function updateLocation(): void {
   const params = new URLSearchParams({ case: activeCaseId });
-  if (ui.workspaceSurface !== "overview") params.set("surface", ui.workspaceSurface);
+  if (ui.productArea !== "world") params.set("area", ui.productArea);
+  if (ui.productArea === "workbench" && ui.workspaceSurface !== "overview") {
+    params.set("surface", ui.workspaceSurface);
+  }
   history.replaceState({}, "", `/experience?${params.toString()}`);
 }
 

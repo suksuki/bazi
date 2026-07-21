@@ -8,6 +8,7 @@ import type {
 } from "./contracts";
 
 export type WorkspaceSurface = CaseWorkspaceState["current_surface"];
+export type ProductArea = "world" | "workbench" | "lab";
 
 export interface ServerState {
   envelope: MingliExperienceEnvelope | null;
@@ -16,6 +17,7 @@ export interface ServerState {
 }
 
 export interface UiState {
+  productArea: ProductArea;
   workspaceSurface: WorkspaceSurface;
   selectedAnchor: string;
   expandedSections: Record<string, boolean>;
@@ -30,6 +32,7 @@ export interface UiState {
 }
 
 export const initialUiState: UiState = {
+  productArea: "world",
   workspaceSurface: "overview",
   selectedAnchor: "baseline-summary",
   expandedSections: {
@@ -50,6 +53,7 @@ export const initialUiState: UiState = {
 };
 
 type UiAction =
+  | { type: "product-area"; area: ProductArea }
   | { type: "workspace-surface"; surface: WorkspaceSurface }
   | { type: "select"; anchor: string; message: string }
   | { type: "toggle-section"; section: string }
@@ -62,6 +66,8 @@ type UiAction =
 
 export function reduceUi(state: UiState, action: UiAction): UiState {
   switch (action.type) {
+    case "product-area":
+      return { ...state, productArea: action.area };
     case "workspace-surface":
       return { ...state, workspaceSurface: action.surface };
     case "select":
