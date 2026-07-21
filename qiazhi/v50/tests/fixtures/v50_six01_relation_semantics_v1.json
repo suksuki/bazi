@@ -1,0 +1,59 @@
+{
+  "schema_version": "deepbazi.six01_relation_semantics_fixture.v1",
+  "authority_boundary": "audit expectations only; this file is not a runtime relation authority",
+  "reference_candidates": {
+    "stem_five_combinations": [
+      {"participants": ["甲", "己"], "candidate_element": "earth"},
+      {"participants": ["乙", "庚"], "candidate_element": "metal"},
+      {"participants": ["丙", "辛"], "candidate_element": "water"},
+      {"participants": ["丁", "壬"], "candidate_element": "wood"},
+      {"participants": ["戊", "癸"], "candidate_element": "fire"}
+    ],
+    "branch_three_meetings": [
+      {"participants": ["寅", "卯", "辰"], "candidate_element": "wood"},
+      {"participants": ["巳", "午", "未"], "candidate_element": "fire"},
+      {"participants": ["申", "酉", "戌"], "candidate_element": "metal"},
+      {"participants": ["亥", "子", "丑"], "candidate_element": "water"}
+    ],
+    "stem_clash": {
+      "status": "school_dependent_unfrozen",
+      "participants": []
+    },
+    "combination_transformation": {
+      "status": "conditions_unfrozen",
+      "note": "A structural combination must not be promoted to transformation without explicit conditions."
+    }
+  },
+  "positive": [
+    {"fixture_id": "stem-generates", "domain": "stem_pair", "participants": ["甲", "丙"], "expect": ["generates"]},
+    {"fixture_id": "stem-controls", "domain": "stem_pair", "participants": ["甲", "戊"], "expect": ["controls"]},
+    {"fixture_id": "stem-same-element", "domain": "stem_pair", "participants": ["甲", "乙"], "expect": ["same_element_support"]},
+    {"fixture_id": "branch-clash", "domain": "branch_pair", "participants": ["子", "午"], "expect": ["clash"]},
+    {"fixture_id": "branch-harmony", "domain": "branch_pair", "participants": ["子", "丑"], "expect": ["harmony"]},
+    {"fixture_id": "branch-harm", "domain": "branch_pair", "participants": ["子", "未"], "expect": ["harm"]},
+    {"fixture_id": "branch-break", "domain": "branch_pair", "participants": ["子", "酉"], "expect": ["break"]},
+    {"fixture_id": "branch-pair-punishment", "domain": "branch_pair", "participants": ["子", "卯"], "expect": ["punishment"]},
+    {"fixture_id": "branch-self-punishment", "domain": "branch_pair", "participants": ["辰", "辰"], "expect": ["self_punishment"]},
+    {"fixture_id": "branch-half-triple", "domain": "branch_pair", "participants": ["申", "子"], "expect": ["half_triple_harmony"]},
+    {"fixture_id": "branch-triple-harmony", "domain": "branch_nary", "participants": ["巳", "酉", "丑"], "expect": ["triple_harmony"]},
+    {"fixture_id": "branch-triple-punishment", "domain": "branch_nary", "participants": ["寅", "巳", "申"], "expect": ["triple_punishment"]},
+    {"fixture_id": "stem-branch-generates", "domain": "stem_branch", "participants": ["甲", "巳"], "expect": ["generates"]},
+    {"fixture_id": "stem-branch-root-candidate", "domain": "stem_branch", "participants": ["丙", "午"], "expect": ["day_master_root_candidate"]}
+  ],
+  "negative": [
+    {"fixture_id": "stem-combination-not-runtime", "domain": "stem_pair", "participants": ["甲", "己"], "forbid": ["harmonizes"]},
+    {"fixture_id": "branch-unrelated-pair", "domain": "branch_pair", "participants": ["子", "寅"], "forbid": ["clash", "harmony", "harm", "break", "punishment", "self_punishment", "half_triple_harmony"]},
+    {"fixture_id": "half-triple-not-full", "domain": "branch_nary", "participants": ["巳", "酉"], "forbid": ["triple_harmony"]},
+    {"fixture_id": "partial-punishment-not-full", "domain": "branch_nary", "participants": ["寅", "巳"], "forbid": ["triple_punishment"]},
+    {"fixture_id": "three-meeting-not-runtime", "domain": "branch_nary", "participants": ["寅", "卯", "辰"], "forbid": ["three_meeting"]},
+    {"fixture_id": "ordinary-repeat-not-self-punishment", "domain": "branch_pair", "participants": ["子", "子"], "forbid": ["self_punishment"]},
+    {"fixture_id": "stem-branch-no-root", "domain": "stem_branch", "participants": ["辛", "午"], "forbid": ["day_master_root_candidate"]}
+  ],
+  "boundary": [
+    {"fixture_id": "pair-may-carry-multiple-relations", "domain": "branch_pair", "participants": ["寅", "亥"], "expect": ["harmony", "break"]},
+    {"fixture_id": "triple-relation-keeps-arity", "domain": "branch_nary", "participants": ["申", "子", "辰"], "expect": ["triple_harmony"]},
+    {"fixture_id": "temporal-node-identity-distinct", "domain": "scope_identity", "participants": ["natal_year", "annual"], "expect": ["distinct_node_identity"]},
+    {"fixture_id": "structural-is-not-activation", "domain": "catalog", "participants": ["harmonizes"], "expect": ["structural_not_activation"]},
+    {"fixture_id": "same-element-needs-distinct-nodes", "domain": "stem_pair", "participants": ["甲", "甲"], "expect": ["same_element_support"]}
+  ]
+}
