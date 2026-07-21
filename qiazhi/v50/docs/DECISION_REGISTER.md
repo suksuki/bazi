@@ -1282,6 +1282,25 @@ production_lab_authorized: false
 next: Six_Pillar_Relation_Coverage_Audit
 ```
 
+### DR-041 — Six-Pillar Relation Coverage Exposes the Real RA1 Starting Point
+
+```yaml
+decision_id: DR-041
+date: 2026-07-21
+status: audit_complete_ra1_required
+declared_relation_types: 12
+builder_emitted_relation_types: 6
+declared_but_unemitted: 6
+canvas_only_relation_types: 3
+configured_triple_combinations: 1
+temporal_relation_builders: 0
+critical_findings:
+  - clash_and_harmony_materials_not_consumed_by_graph
+  - luck_and_year_nodes_have_no_relations
+  - triple_combination_is_sample_specialized_and_binary
+next: RA1_Relation_Core_Preparation
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

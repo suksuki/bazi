@@ -2,7 +2,7 @@ schema_version: v2
 updated_at: 2026-07-21
 
 phase:
-  name: V50_FRAMEWORK_ALIGNMENT_AND_MINGLI_LAB
+  name: V50_RELATION_ATLAS_RA1
   default_mode: authority_convergence
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
@@ -46,6 +46,7 @@ gates:
   architecture_consolidation_gate: CLOSED_PASS
   next_framework_alignment: BASELINE_PASS
   mingli_lab_foundation: BASELINE_PASS_WITH_EXPLICIT_GAPS
+  six_pillar_relation_coverage: AUDIT_COMPLETE_RA1_REQUIRED
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
@@ -109,6 +110,13 @@ receipts:
   mingli_lab_foundation_invariants: 8_OF_8_PASS
   mingli_lab_foundation_gaps: 4_EXPLICIT
   mingli_lab_foundation_report_sha256: f7a695107c48f782cac1a3164fac2532769731af0b6b6d1ed86f7c911f05a3a1
+  six_pillar_declared_relations: 12
+  six_pillar_emitted_relations: 6
+  six_pillar_unemitted_relations: 6
+  six_pillar_canvas_only_relations: 3
+  six_pillar_temporal_relation_builders: 0
+  six_pillar_findings: 8
+  six_pillar_relation_report_sha256: f6574817fc7cb14b8ce0af0be7626356853012a177e7096d7bdf903a8433f2bd
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -117,22 +125,20 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: SIX_PILLAR_RELATION_COVERAGE_AUDIT
-    kind: deterministic_relation_inventory
-    scope: measure_existing_relation_semantics_fixtures_and_temporal_coverage_without_changing_algorithms
+  - id: RA1_RELATION_CORE_PREPARATION
+    kind: controlled_relation_core_implementation
+    scope: connect_approved_deterministic_relations_to_stable_identity_with_positive_negative_and_temporal_fixtures
 
 next_architecture_slice:
-  id: RA1_RELATION_CORE_PREPARATION
+  id: RA2_PATH_QUALIFICATION
   authorized_when:
-    - six_pillar_relation_coverage_baseline
+    - ra1_relation_core_pass
   scope:
-    - approved_relation_definitions
-    - minimal_positive_and_negative_fixtures
-    - stable_provenance_integration
+    - relation_path_eligibility
+    - whole_path_validation
+    - candidate_and_committed_separation
 
 blocked:
-  - relation_atlas_ra1
-  - relation_core_v2_implementation
   - path_core_v2_implementation
   - mingli_lab_public_release
   - production_workspace_migration

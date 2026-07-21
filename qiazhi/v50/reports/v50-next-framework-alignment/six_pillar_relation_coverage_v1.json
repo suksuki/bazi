@@ -1,0 +1,334 @@
+{
+  "builder_emitted_relation_types": [
+    "controls",
+    "forms_triple_combination",
+    "generates",
+    "position_link",
+    "same_element_support",
+    "stores"
+  ],
+  "canvas_only_relation_types": [
+    "breaks",
+    "harms",
+    "punishes"
+  ],
+  "checks": [
+    {
+      "check": "declared_relation_types_counted",
+      "passed": true
+    },
+    {
+      "check": "builder_emission_types_counted",
+      "passed": true
+    },
+    {
+      "check": "material_clash_gap_reproduced",
+      "passed": true
+    },
+    {
+      "check": "material_harmony_gap_reproduced",
+      "passed": true
+    },
+    {
+      "check": "sample_specialized_triple_reproduced",
+      "passed": true
+    },
+    {
+      "check": "triple_output_is_not_nary",
+      "passed": true
+    },
+    {
+      "check": "canvas_only_relation_types_identified",
+      "passed": true
+    },
+    {
+      "check": "temporal_layer_has_no_relation_computation",
+      "passed": true
+    },
+    {
+      "check": "structural_variant_appends_temporal_nodes_without_relations",
+      "passed": true
+    },
+    {
+      "check": "luck_and_year_node_types_declared_but_not_built",
+      "passed": true
+    }
+  ],
+  "counts": {
+    "builder_emitted_relation_types": 6,
+    "canvas_advertised_relation_types": 11,
+    "canvas_only_relation_types": 3,
+    "configured_triple_combinations": 1,
+    "declared_but_unemitted": 6,
+    "declared_relation_types": 12,
+    "findings": 8,
+    "six_clash_pairs_in_knowledge": 6,
+    "six_harmony_pairs_in_knowledge": 6,
+    "temporal_relation_builders": 0
+  },
+  "declared_but_unemitted": [
+    "activates",
+    "bridges",
+    "clashes",
+    "forms_half_combination",
+    "harmonizes",
+    "roots"
+  ],
+  "declared_relation_types": [
+    "activates",
+    "bridges",
+    "clashes",
+    "controls",
+    "forms_half_combination",
+    "forms_triple_combination",
+    "generates",
+    "harmonizes",
+    "position_link",
+    "roots",
+    "same_element_support",
+    "stores"
+  ],
+  "findings": [
+    {
+      "finding": "Material Engine emits six-clash and six-harmony evidence, but Graph Builder does not consume BAZI_COMBINATION materials.",
+      "finding_id": "REL-A01",
+      "severity": "critical"
+    },
+    {
+      "finding": "Luck and annual pillars are rendered as nodes without relation, cluster, path, or path-update computation.",
+      "finding_id": "REL-A02",
+      "severity": "critical"
+    },
+    {
+      "finding": "The only configured triple combination is Si-You-Chou; the builder is sample-specialized.",
+      "finding_id": "REL-A03",
+      "severity": "high"
+    },
+    {
+      "finding": "Triple combination output uses binary edges even though stable relation identity supports n-ary participants.",
+      "finding_id": "REL-A04",
+      "severity": "high"
+    },
+    {
+      "finding": "Canvas advertises punish, harm, and break relation layers that do not exist in the Graph relation enum.",
+      "finding_id": "REL-A05",
+      "severity": "high"
+    },
+    {
+      "finding": "Six declared Graph relation types have no builder emission path.",
+      "finding_id": "REL-A06",
+      "severity": "high"
+    },
+    {
+      "finding": "Element edges connect every visible stem/branch pair without a position or layer qualification contract.",
+      "finding_id": "REL-A07",
+      "severity": "medium"
+    },
+    {
+      "finding": "Relation strengths are fixed policy constants and are not calibrated measurements.",
+      "finding_id": "REL-A08",
+      "severity": "medium"
+    }
+  ],
+  "formal_state_modified": false,
+  "llm_used": false,
+  "ra1_entry_order": [
+    "consume existing deterministic branch-relation materials",
+    "replace sample-specialized combinations with approved relation definitions",
+    "emit true n-ary assertions for n-ary structures",
+    "add explicit luck/year cross-layer relation compilation",
+    "add minimal positive, negative, missing-member, and temporal fixtures",
+    "only then admit relations to path qualification"
+  ],
+  "relation_matrix": [
+    {
+      "advertised_by_canvas": false,
+      "declared": true,
+      "emitted_by_graph_builder": false,
+      "relation_type": "activates",
+      "test_file_references": 3
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": false,
+      "emitted_by_graph_builder": false,
+      "relation_type": "breaks",
+      "test_file_references": 2
+    },
+    {
+      "advertised_by_canvas": false,
+      "declared": true,
+      "emitted_by_graph_builder": false,
+      "relation_type": "bridges",
+      "test_file_references": 1
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": false,
+      "relation_type": "clashes",
+      "test_file_references": 3
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": true,
+      "relation_type": "controls",
+      "test_file_references": 22
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": false,
+      "relation_type": "forms_half_combination",
+      "test_file_references": 1
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": true,
+      "relation_type": "forms_triple_combination",
+      "test_file_references": 1
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": true,
+      "relation_type": "generates",
+      "test_file_references": 8
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": false,
+      "relation_type": "harmonizes",
+      "test_file_references": 1
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": false,
+      "emitted_by_graph_builder": false,
+      "relation_type": "harms",
+      "test_file_references": 1
+    },
+    {
+      "advertised_by_canvas": false,
+      "declared": true,
+      "emitted_by_graph_builder": true,
+      "relation_type": "position_link",
+      "test_file_references": 0
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": false,
+      "emitted_by_graph_builder": false,
+      "relation_type": "punishes",
+      "test_file_references": 1
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": false,
+      "relation_type": "roots",
+      "test_file_references": 3
+    },
+    {
+      "advertised_by_canvas": true,
+      "declared": true,
+      "emitted_by_graph_builder": true,
+      "relation_type": "same_element_support",
+      "test_file_references": 0
+    },
+    {
+      "advertised_by_canvas": false,
+      "declared": true,
+      "emitted_by_graph_builder": true,
+      "relation_type": "stores",
+      "test_file_references": 2
+    }
+  ],
+  "relation_semantics_modified": false,
+  "schema_version": "deepbazi.six_pillar_relation_coverage_audit.v1",
+  "status": "AUDIT_COMPLETE_RA1_REQUIRED",
+  "witnesses": {
+    "clash": {
+      "graph_relation_types": [
+        "controls",
+        "generates",
+        "position_link",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [
+        "clash",
+        "clash"
+      ],
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "甲子",
+        "丙寅",
+        "甲午",
+        "甲子"
+      ],
+      "triple_edge_count": 0
+    },
+    "configured_triple": {
+      "graph_relation_types": [
+        "controls",
+        "forms_triple_combination",
+        "generates",
+        "position_link",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [],
+      "max_triple_participant_arity": 2,
+      "pillars": [
+        "丁巳",
+        "乙巳",
+        "乙丑",
+        "乙酉"
+      ],
+      "triple_edge_count": 3
+    },
+    "harmony": {
+      "graph_relation_types": [
+        "controls",
+        "generates",
+        "position_link",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [
+        "harmony",
+        "harmony"
+      ],
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "甲子",
+        "丁卯",
+        "乙丑",
+        "丙子"
+      ],
+      "triple_edge_count": 0
+    },
+    "unconfigured_triple": {
+      "graph_relation_types": [
+        "controls",
+        "generates",
+        "position_link",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [],
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "甲申",
+        "丙子",
+        "壬辰",
+        "庚子"
+      ],
+      "triple_edge_count": 0
+    }
+  }
+}

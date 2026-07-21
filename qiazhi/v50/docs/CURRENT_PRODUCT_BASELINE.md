@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `e61d99d48d48` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `ad323bb76e29` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -24,11 +24,11 @@ full_regression: 491_PASSED_ARCHITECTURE_GATE_FINAL
 
 Authorized now:
 
-- `SIX_PILLAR_RELATION_COVERAGE_AUDIT`: measure_existing_relation_semantics_fixtures_and_temporal_coverage_without_changing_algorithms
+- `RA1_RELATION_CORE_PREPARATION`: connect_approved_deterministic_relations_to_stable_identity_with_positive_negative_and_temporal_fixtures
 
-Next architecture slice: `RA1_RELATION_CORE_PREPARATION` after `six_pillar_relation_coverage_baseline`.
+Next architecture slice: `RA2_PATH_QUALIFICATION` after `ra1_relation_core_pass`.
 
-Blocked: `relation_atlas_ra1`, `relation_core_v2_implementation`, `path_core_v2_implementation`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `path_core_v2_implementation`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product
