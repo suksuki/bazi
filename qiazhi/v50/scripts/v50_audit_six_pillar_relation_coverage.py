@@ -30,7 +30,7 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def audit_six_pillar_relation_coverage() -> dict[str, Any]:
     builder_source = _read("packages/core/graph/builder.py")
-    temporal_source = _read("apps/product/canvas_projection.py")
+    temporal_source = _read("apps/product/canvas_projection_temporal.py")
     declared = {item.value for item in MingliGraphEdgeType}
     emitted = {
         MingliGraphEdgeType[name].value
@@ -94,9 +94,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
         ),
     }
 
-    temporal_block = temporal_source.split("def _temporal_layer(", 1)[1].split(
-        "def _layer_catalog(", 1
-    )[0]
+    temporal_block = temporal_source.split("def temporal_layer(", 1)[1]
     relation_matrix = [
         {
             "relation_type": relation_type,
@@ -174,8 +172,8 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
         ),
         _check(
             "temporal_layers_use_shared_relation_derivation",
-            "relations = _temporal_relations(" in temporal_block
-            and "def _temporal_relations(" in temporal_source
+            "relations = temporal_relations(" in temporal_block
+            and "def temporal_relations(" in temporal_source
             and "derive_element_relations(stems)" in temporal_source
             and "derive_branch_relations(branches)" in temporal_source,
         ),
