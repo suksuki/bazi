@@ -1,0 +1,64 @@
+{
+  "version": "deepbazi.synthetic_evidence_manifest.v1",
+  "authority_scope": "validation_classification_only",
+  "formal_mingli_authority_owner": "none",
+  "path_evidence_policy": "deepbazi.path_evidence_vector.ra3.v1",
+  "rules": {
+    "synthetic_contract_is_professional_gold": false,
+    "legacy_numeric_metric_may_gate_formal_promotion": false,
+    "training_candidate_may_write_lifecase": false,
+    "training_candidate_may_modify_reasoner_policy": false,
+    "weight_training_requires_expert_gold_and_sealed_blind_set": true
+  },
+  "suites": [
+    {
+      "suite_id": "synthetic_work_system_v1",
+      "asset": "data/validation/fixtures/synthetic_work_system_v1.json",
+      "classification": "active_engineering_regression",
+      "hard_gate_scope": "deterministic_structure_relation_path_contract",
+      "formal_promotion_allowed": false
+    },
+    {
+      "suite_id": "synthetic_fixture_matrix_v2",
+      "asset": "data/validation/fixtures/synthetic_fixture_matrix_v2.json",
+      "classification": "active_engineering_regression",
+      "hard_gate_scope": "candidate_contract_gap_detection",
+      "formal_promotion_allowed": false
+    },
+    {
+      "suite_id": "synthetic_chart_taxonomy_v2",
+      "asset": "data/validation/fixtures/synthetic_chart_taxonomy_v2.json",
+      "classification": "research_candidate_contract",
+      "hard_gate_scope": "shape_and_isolation_only",
+      "formal_promotion_allowed": false
+    },
+    {
+      "suite_id": "timing_synthetic_validation_v1",
+      "asset": "data/validation/fixtures/timing_synthetic_validation_v1.json",
+      "classification": "legacy_unvalidated_numeric_compatibility",
+      "hard_gate_scope": "candidate_state_delta_runtime_isolation_only",
+      "formal_promotion_allowed": false
+    },
+    {
+      "suite_id": "synthetic_fixture_matrix_v1",
+      "asset": "data/validation/fixtures/synthetic_fixture_matrix_v1.json",
+      "classification": "legacy_unvalidated_numeric_compatibility",
+      "hard_gate_scope": "compatibility_observation_only",
+      "formal_promotion_allowed": false
+    },
+    {
+      "suite_id": "policy_anti_overfit_review_v1",
+      "asset": "data/validation/fixtures/policy_anti_overfit_review_v1.json",
+      "classification": "legacy_unvalidated_numeric_observation",
+      "hard_gate_scope": "none",
+      "formal_promotion_allowed": false
+    },
+    {
+      "suite_id": "ra0_518k_structural_universe",
+      "asset": "data/validation/fixtures/ra0_518k_realizability_v1.json",
+      "classification": "deterministic_structural_universe",
+      "hard_gate_scope": "chart_realizability_only",
+      "formal_promotion_allowed": false
+    }
+  ]
+}
