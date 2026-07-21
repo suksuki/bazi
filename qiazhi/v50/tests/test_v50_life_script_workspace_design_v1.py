@@ -36,7 +36,7 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
         "BASELINE_PASS_WITH_EXPLICIT_GAPS"
     )
     assert state["gates"]["six_pillar_relation_coverage"] == (
-        "RA1_IN_PROGRESS_FOUNDATION_RELATIONS_PASS"
+        "RA1_IN_PROGRESS_BRANCH_CONFLICT_RELATIONS_PASS"
     )
     assert state["gates"]["cag_03_canonical_scene"] == "CLOSED_PASS_HARDENED"
     assert state["gates"]["cag_04_relation_path_provenance"] == (
@@ -51,7 +51,7 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["gates"]["cag_05_schema_module_ownership"] == "CLOSED_PASS"
     assert state["gates"]["cal_01_late_zi_five_rats_consistency"] == "CLOSED_PASS"
     assert [item["id"] for item in state["authorized_now"]] == [
-        "RA1_BRANCH_CONFLICT_RELATIONS"
+        "RA1_TEMPORAL_RELATION_COMPILATION"
     ]
     assert state["next_architecture_slice"]["id"] == (
         "RA2_PATH_QUALIFICATION"

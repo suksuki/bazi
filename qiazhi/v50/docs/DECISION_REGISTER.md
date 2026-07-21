@@ -1337,6 +1337,27 @@ focused_regression: 42_passed
 next: RA1_Branch_Conflict_Relations
 ```
 
+### DR-044 — RA1 Consolidates Harm, Break, and Conservative Punishment Relations
+
+```yaml
+decision_id: DR-044
+date: 2026-07-21
+status: closed_pass
+core_relation_definitions:
+  six_harm: 6
+  six_break: 6
+  pair_punishment: 1
+  self_punishment: 4
+  complete_triple_punishment: 2
+multiple_relation_types_on_same_pair: preserved
+partial_triple_punishment_promotion: forbidden
+path_eligibility: not_yet_qualified
+formal_life_case_mutation: false
+focused_regression: 32_passed
+resolved_finding: REL-A05
+next: RA1_Temporal_Relation_Compilation
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

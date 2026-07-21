@@ -9,7 +9,16 @@ from typing import Any
 from core.contracts import BirthInputCanonical
 from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
-from core.engines.bazi.knowledge import HALF_TRIPLE_HARMONY, SIX_CLASH, SIX_HARMONY
+from core.engines.bazi.knowledge import (
+    HALF_TRIPLE_HARMONY,
+    PAIR_PUNISHMENT,
+    SELF_PUNISHMENT,
+    SIX_BREAK,
+    SIX_CLASH,
+    SIX_HARM,
+    SIX_HARMONY,
+    TRIPLE_PUNISHMENT,
+)
 from core.graph import build_mingli_graph_from_material_store
 from core.graph.builder import TRIPLE_COMBINATIONS
 from core.graph.contracts import MingliGraphEdgeType, MingliGraphNodeType
@@ -64,6 +73,26 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             "arch-not-half",
             ["甲申", "戊辰", "甲寅", "丙寅"],
         ),
+        "harm": _witness(
+            "six-harm",
+            ["甲子", "辛未", "甲寅", "丙寅"],
+        ),
+        "break": _witness(
+            "six-break",
+            ["乙巳", "壬申", "甲寅", "丙寅"],
+        ),
+        "pair_punishment": _witness(
+            "pair-punishment",
+            ["甲子", "丁卯", "甲寅", "丙寅"],
+        ),
+        "triple_punishment": _witness(
+            "triple-punishment",
+            ["丙寅", "己巳", "壬申", "甲寅"],
+        ),
+        "partial_triple_punishment": _witness(
+            "partial-triple-punishment",
+            ["丙寅", "己巳", "甲寅", "丁巳"],
+        ),
     }
 
     temporal_block = temporal_source.split("def _temporal_layer(", 1)[1].split(
@@ -87,11 +116,6 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             "finding": "Luck and annual pillars are rendered as nodes without relation, cluster, path, or path-update computation.",
         },
         {
-            "finding_id": "REL-A05",
-            "severity": "high",
-            "finding": "Canvas advertises punish, harm, and break relation layers that do not exist in the Graph relation enum.",
-        },
-        {
             "finding_id": "REL-A06",
             "severity": "high",
             "finding": "Two declared Graph relation types still have no builder emission path.",
@@ -109,8 +133,8 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
     ]
 
     checks = [
-        _check("declared_relation_types_counted", len(declared) == 12),
-        _check("builder_emission_types_counted", len(emitted) == 10),
+        _check("declared_relation_types_counted", len(declared) == 15),
+        _check("builder_emission_types_counted", len(emitted) == 13),
         _check(
             "material_clash_projection_closed",
             "clash" in witnesses["clash"]["material_relation_types"]
@@ -148,8 +172,16 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             and len(HALF_TRIPLE_HARMONY) == 8,
         ),
         _check(
+            "harm_break_and_punishment_are_core_relations",
+            "harms" in witnesses["harm"]["graph_relation_types"]
+            and "breaks" in witnesses["break"]["graph_relation_types"]
+            and "punishes" in witnesses["pair_punishment"]["graph_relation_types"]
+            and witnesses["triple_punishment"]["max_punishment_participant_arity"] == 3
+            and witnesses["partial_triple_punishment"]["max_punishment_participant_arity"] == 0,
+        ),
+        _check(
             "canvas_only_relation_types_identified",
-            advertised - declared == {"punishes", "harms", "breaks"},
+            advertised - declared == set(),
         ),
         _check(
             "temporal_layer_has_no_relation_computation",
@@ -184,6 +216,11 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             "configured_half_triple_combinations": len(HALF_TRIPLE_HARMONY),
             "six_clash_pairs_in_knowledge": len(SIX_CLASH),
             "six_harmony_pairs_in_knowledge": len(SIX_HARMONY),
+            "six_harm_pairs_in_knowledge": len(SIX_HARM),
+            "six_break_pairs_in_knowledge": len(SIX_BREAK),
+            "pair_punishment_definitions": len(PAIR_PUNISHMENT),
+            "self_punishment_definitions": len(SELF_PUNISHMENT),
+            "triple_punishment_definitions": len(TRIPLE_PUNISHMENT),
             "temporal_relation_builders": 0,
             "findings": len(findings),
         },
@@ -205,6 +242,10 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             {
                 "finding_id": "REL-A04",
                 "resolution": "Each triple-harmony instance now has one stable relation identity with three participant node references.",
+            },
+            {
+                "finding_id": "REL-A05",
+                "resolution": "Harm, break, pair/self punishment, and complete triple punishment now have core relation identities and conservative fixtures.",
             },
         ],
         "findings": findings,
@@ -255,6 +296,11 @@ def _witness(reading_id: str, pillars: list[str]) -> dict[str, Any]:
         for edge in graph.edges
         if edge.edge_type == MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION
     ]
+    punishments = [
+        edge
+        for edge in graph.edges
+        if edge.edge_type == MingliGraphEdgeType.PUNISHES
+    ]
     return {
         "pillars": pillars,
         "material_relation_types": sorted(
@@ -264,6 +310,10 @@ def _witness(reading_id: str, pillars: list[str]) -> dict[str, Any]:
         "triple_edge_count": len(triples),
         "max_triple_participant_arity": max(
             (len(edge.participant_node_ids) for edge in triples),
+            default=0,
+        ),
+        "max_punishment_participant_arity": max(
+            (len(edge.participant_node_ids) for edge in punishments),
             default=0,
         ),
     }

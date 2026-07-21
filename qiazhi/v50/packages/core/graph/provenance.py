@@ -322,6 +322,9 @@ def relation_directionality(relation_type: str) -> RelationDirectionality:
         "forms_triple_combination",
         "clashes",
         "harmonizes",
+        "harms",
+        "breaks",
+        "punishes",
         "position_link",
     }:
         return RelationDirectionality.SYMMETRIC

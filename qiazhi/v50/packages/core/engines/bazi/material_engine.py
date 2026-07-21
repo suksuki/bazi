@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections import Counter
-from itertools import combinations
+from itertools import combinations, product
 
 from core.contracts.base import SourceEngine, Topic
 from core.contracts.birth import BirthInputCanonical, CalendarNormalizationResult
@@ -11,10 +11,15 @@ from core.engines.bazi.knowledge import (
     CONTROLS,
     GENERATES,
     HIDDEN_STEMS,
+    PAIR_PUNISHMENT,
+    SELF_PUNISHMENT,
+    SIX_BREAK,
     SIX_CLASH,
+    SIX_HARM,
     SIX_HARMONY,
     STEM_ELEMENTS,
     STEM_POLARITY,
+    TRIPLE_PUNISHMENT,
 )
 
 
@@ -214,6 +219,42 @@ def _branch_relation_materials(*, reading_id: str, birth_input: BirthInputCanoni
             relations.append({"type": "clash", "slot_a": slot_a, "branch_a": branch_a, "slot_b": slot_b, "branch_b": branch_b})
         if pair in SIX_HARMONY:
             relations.append({"type": "harmony", "slot_a": slot_a, "branch_a": branch_a, "slot_b": slot_b, "branch_b": branch_b})
+        if pair in SIX_HARM:
+            relations.append({"type": "harm", "slot_a": slot_a, "branch_a": branch_a, "slot_b": slot_b, "branch_b": branch_b})
+        if pair in SIX_BREAK:
+            relations.append({"type": "break", "slot_a": slot_a, "branch_a": branch_a, "slot_b": slot_b, "branch_b": branch_b})
+        if pair in PAIR_PUNISHMENT:
+            relations.append({
+                "type": "punishment",
+                "relation_id": PAIR_PUNISHMENT[pair],
+                "slot_a": slot_a,
+                "branch_a": branch_a,
+                "slot_b": slot_b,
+                "branch_b": branch_b,
+            })
+        if branch_a == branch_b and branch_a in SELF_PUNISHMENT:
+            relations.append({
+                "type": "self_punishment",
+                "relation_id": SELF_PUNISHMENT[branch_a],
+                "slot_a": slot_a,
+                "branch_a": branch_a,
+                "slot_b": slot_b,
+                "branch_b": branch_b,
+            })
+    for required_set, (relation_id, required_order) in TRIPLE_PUNISHMENT.items():
+        slots_by_branch = {
+            branch: [(slot, observed) for slot, observed in branches if observed == branch]
+            for branch in required_order
+        }
+        if not required_set.issubset({branch for _, branch in branches}):
+            continue
+        for selected in product(*(slots_by_branch[branch] for branch in required_order)):
+            relations.append({
+                "type": "triple_punishment",
+                "relation_id": relation_id,
+                "slots": [slot for slot, _ in selected],
+                "branches": [branch for _, branch in selected],
+            })
     return [
         MingliMaterial(
             material_id=f"material:{reading_id}:bazi:branch_relations",
@@ -222,13 +263,26 @@ def _branch_relation_materials(*, reading_id: str, birth_input: BirthInputCanoni
             material_type=MaterialType.BAZI_COMBINATION,
             topic=Topic.STRUCTURE,
             raw_value={"relations": relations},
-            normalized_value=";".join(f"{row['type']}:{row['branch_a']}{row['branch_b']}" for row in relations) or "none",
+            normalized_value=";".join(_normalized_branch_relation(row) for row in relations) or "none",
             evidence_refs=[birth_input.birth_input_id, f"material:{reading_id}:bazi:chart:pillars"],
-            knowledge_refs=["bazi.six_clash", "bazi.six_harmony"],
+            knowledge_refs=[
+                "bazi.six_clash",
+                "bazi.six_harmony",
+                "bazi.six_harm",
+                "bazi.six_break",
+                "bazi.punishment.conservative_complete_set_v1",
+            ],
             rule_refs=["bazi.material_engine.branch_relations"],
             confidence=0.68,
         )
     ]
+
+
+def _normalized_branch_relation(row: dict[str, object]) -> str:
+    branches = row.get("branches")
+    if isinstance(branches, list):
+        return f"{row['type']}:{''.join(str(branch) for branch in branches)}"
+    return f"{row['type']}:{row.get('branch_a', '')}{row.get('branch_b', '')}"
 
 
 def resolve_ten_god(*, day_stem: str, other_stem: str) -> str:

@@ -106,6 +106,46 @@ SIX_HARMONY = {
     frozenset(("午", "未")),
 }
 
+SIX_HARM = {
+    frozenset(("子", "未")),
+    frozenset(("丑", "午")),
+    frozenset(("寅", "巳")),
+    frozenset(("卯", "辰")),
+    frozenset(("申", "亥")),
+    frozenset(("酉", "戌")),
+}
+
+SIX_BREAK = {
+    frozenset(("子", "酉")),
+    frozenset(("丑", "辰")),
+    frozenset(("寅", "亥")),
+    frozenset(("卯", "午")),
+    frozenset(("巳", "申")),
+    frozenset(("未", "戌")),
+}
+
+PAIR_PUNISHMENT = {
+    frozenset(("子", "卯")): "zi_mao_discourtesy_punishment",
+}
+
+SELF_PUNISHMENT = {
+    "辰": "chen_self_punishment",
+    "午": "wu_self_punishment",
+    "酉": "you_self_punishment",
+    "亥": "hai_self_punishment",
+}
+
+TRIPLE_PUNISHMENT = {
+    frozenset(("寅", "巳", "申")): (
+        "yin_si_shen_ungrateful_punishment",
+        ("寅", "巳", "申"),
+    ),
+    frozenset(("丑", "未", "戌")): (
+        "chou_wei_xu_bullying_punishment",
+        ("丑", "未", "戌"),
+    ),
+}
+
 TRIPLE_HARMONY = {
     frozenset(("申", "子", "辰")): ("shen_zi_chen_water", "water", "子"),
     frozenset(("亥", "卯", "未")): ("hai_mao_wei_wood", "wood", "卯"),

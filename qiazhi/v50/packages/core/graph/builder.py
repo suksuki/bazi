@@ -251,6 +251,16 @@ def _material_relation_edges(
     relation_types = {
         "clash": MingliGraphEdgeType.CLASHES,
         "harmony": MingliGraphEdgeType.HARMONIZES,
+        "harm": MingliGraphEdgeType.HARMS,
+        "break": MingliGraphEdgeType.BREAKS,
+        "punishment": MingliGraphEdgeType.PUNISHES,
+        "self_punishment": MingliGraphEdgeType.PUNISHES,
+    }
+    relation_labels = {
+        "clash": "six_clash",
+        "harmony": "six_harmony",
+        "harm": "six_harm",
+        "break": "six_break",
     }
     edges: list[MingliGraphEdge] = []
     for material in store.materials:
@@ -263,6 +273,50 @@ def _material_relation_edges(
             if not isinstance(relation, dict):
                 continue
             relation_name = str(relation.get("type", ""))
+            if relation_name == "triple_punishment":
+                slots = relation.get("slots")
+                branches = relation.get("branches")
+                if not isinstance(slots, list) or not isinstance(branches, list):
+                    continue
+                if len(slots) != 3 or len(branches) != 3:
+                    continue
+                participant_nodes = [branch_nodes.get(str(slot)) for slot in slots]
+                if any(node is None for node in participant_nodes):
+                    continue
+                participants = sorted(
+                    (node for node in participant_nodes if node is not None),
+                    key=lambda node: POSITION_ORDER.index(str(node.attributes["slot"])),
+                )
+                if [node.label for node in participant_nodes if node is not None] != [str(branch) for branch in branches]:
+                    continue
+                source_refs = list(dict.fromkeys([material.material_id, *material.evidence_refs]))
+                relation_id = str(relation.get("relation_id", "triple_punishment"))
+                member_key = ":".join(
+                    f"{node.attributes['slot']}:{node.label}"
+                    for node in participants
+                )
+                edges.append(
+                    _edge(
+                        store=store,
+                        edge_id=f"edge:{store.reading_id}:punishes:{relation_id}:{member_key}",
+                        from_node_id=participants[0].node_id,
+                        to_node_id=participants[1].node_id,
+                        edge_type=MingliGraphEdgeType.PUNISHES,
+                        participant_node_ids=[node.node_id for node in participants],
+                        strength=material.confidence,
+                        relation_label=relation_id,
+                        material_refs=[material.material_id],
+                        evidence_refs=source_refs,
+                        attributes={
+                            "source_material_type": material.material_type.value,
+                            "relation_family": "branch_hyperrelation",
+                            "path_eligibility": "not_yet_qualified",
+                            "school_profile": "conservative_complete_set_v1",
+                            "punishment_kind": "triple_complete",
+                        },
+                    )
+                )
+                continue
             edge_type = relation_types.get(relation_name)
             slot_a = str(relation.get("slot_a", ""))
             slot_b = str(relation.get("slot_b", ""))
@@ -289,13 +343,25 @@ def _material_relation_edges(
                     to_node_id=second.node_id,
                     edge_type=edge_type,
                     strength=material.confidence,
-                    relation_label=f"six_{relation_name}",
+                    relation_label=str(
+                        relation.get("relation_id")
+                        or relation_labels.get(relation_name)
+                        or relation_name
+                    ),
                     material_refs=[material.material_id],
                     evidence_refs=source_refs,
                     attributes={
                         "source_material_type": material.material_type.value,
                         "relation_family": "branch_pair",
                         "path_eligibility": "not_yet_qualified",
+                        "school_profile": (
+                            "conservative_complete_set_v1"
+                            if relation_name in {"punishment", "self_punishment"}
+                            else "shared_structural_v1"
+                        ),
+                        "punishment_kind": (
+                            relation_name if relation_name in {"punishment", "self_punishment"} else ""
+                        ),
                         "slots": [first.attributes["slot"], second.attributes["slot"]],
                         "branches": [first.label, second.label],
                     },

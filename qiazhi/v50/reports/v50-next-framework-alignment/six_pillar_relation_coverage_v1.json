@@ -1,21 +1,20 @@
 {
   "builder_emitted_relation_types": [
+    "breaks",
     "clashes",
     "controls",
     "forms_half_combination",
     "forms_triple_combination",
     "generates",
     "harmonizes",
+    "harms",
     "position_link",
+    "punishes",
     "roots",
     "same_element_support",
     "stores"
   ],
-  "canvas_only_relation_types": [
-    "breaks",
-    "harms",
-    "punishes"
-  ],
+  "canvas_only_relation_types": [],
   "checks": [
     {
       "check": "declared_relation_types_counted",
@@ -54,6 +53,10 @@
       "passed": true
     },
     {
+      "check": "harm_break_and_punishment_are_core_relations",
+      "passed": true
+    },
+    {
       "check": "canvas_only_relation_types_identified",
       "passed": true
     },
@@ -71,17 +74,22 @@
     }
   ],
   "counts": {
-    "builder_emitted_relation_types": 10,
+    "builder_emitted_relation_types": 13,
     "canvas_advertised_relation_types": 11,
-    "canvas_only_relation_types": 3,
+    "canvas_only_relation_types": 0,
     "configured_half_triple_combinations": 8,
     "configured_triple_combinations": 4,
     "declared_but_unemitted": 2,
-    "declared_relation_types": 12,
-    "findings": 5,
+    "declared_relation_types": 15,
+    "findings": 4,
+    "pair_punishment_definitions": 1,
+    "self_punishment_definitions": 4,
+    "six_break_pairs_in_knowledge": 6,
     "six_clash_pairs_in_knowledge": 6,
+    "six_harm_pairs_in_knowledge": 6,
     "six_harmony_pairs_in_knowledge": 6,
-    "temporal_relation_builders": 0
+    "temporal_relation_builders": 0,
+    "triple_punishment_definitions": 2
   },
   "declared_but_unemitted": [
     "activates",
@@ -89,6 +97,7 @@
   ],
   "declared_relation_types": [
     "activates",
+    "breaks",
     "bridges",
     "clashes",
     "controls",
@@ -96,7 +105,9 @@
     "forms_triple_combination",
     "generates",
     "harmonizes",
+    "harms",
     "position_link",
+    "punishes",
     "roots",
     "same_element_support",
     "stores"
@@ -106,11 +117,6 @@
       "finding": "Luck and annual pillars are rendered as nodes without relation, cluster, path, or path-update computation.",
       "finding_id": "REL-A02",
       "severity": "critical"
-    },
-    {
-      "finding": "Canvas advertises punish, harm, and break relation layers that do not exist in the Graph relation enum.",
-      "finding_id": "REL-A05",
-      "severity": "high"
     },
     {
       "finding": "Two declared Graph relation types still have no builder emission path.",
@@ -149,8 +155,8 @@
     },
     {
       "advertised_by_canvas": true,
-      "declared": false,
-      "emitted_by_graph_builder": false,
+      "declared": true,
+      "emitted_by_graph_builder": true,
       "relation_type": "breaks",
       "test_file_references": 2
     },
@@ -205,8 +211,8 @@
     },
     {
       "advertised_by_canvas": true,
-      "declared": false,
-      "emitted_by_graph_builder": false,
+      "declared": true,
+      "emitted_by_graph_builder": true,
       "relation_type": "harms",
       "test_file_references": 1
     },
@@ -219,10 +225,10 @@
     },
     {
       "advertised_by_canvas": true,
-      "declared": false,
-      "emitted_by_graph_builder": false,
+      "declared": true,
+      "emitted_by_graph_builder": true,
       "relation_type": "punishes",
-      "test_file_references": 1
+      "test_file_references": 0
     },
     {
       "advertised_by_canvas": true,
@@ -260,6 +266,10 @@
     {
       "finding_id": "REL-A04",
       "resolution": "Each triple-harmony instance now has one stable relation identity with three participant node references."
+    },
+    {
+      "finding_id": "REL-A05",
+      "resolution": "Harm, break, pair/self punishment, and complete triple punishment now have core relation identities and conservative fixtures."
     }
   ],
   "schema_version": "deepbazi.six_pillar_relation_coverage_audit.v1",
@@ -279,10 +289,45 @@
         "clash",
         "clash"
       ],
+      "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
       "pillars": [
         "甲申",
         "戊辰",
+        "甲寅",
+        "丙寅"
+      ],
+      "triple_edge_count": 0
+    },
+    "break": {
+      "graph_relation_types": [
+        "breaks",
+        "clashes",
+        "controls",
+        "generates",
+        "harmonizes",
+        "harms",
+        "position_link",
+        "punishes",
+        "roots",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [
+        "break",
+        "clash",
+        "clash",
+        "harm",
+        "harm",
+        "harmony",
+        "triple_punishment",
+        "triple_punishment"
+      ],
+      "max_punishment_participant_arity": 3,
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "乙巳",
+        "壬申",
         "甲寅",
         "丙寅"
       ],
@@ -303,6 +348,7 @@
         "clash",
         "clash"
       ],
+      "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
       "pillars": [
         "甲子",
@@ -323,6 +369,7 @@
         "stores"
       ],
       "material_relation_types": [],
+      "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 3,
       "pillars": [
         "丁巳",
@@ -347,10 +394,34 @@
         "clash",
         "clash"
       ],
+      "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
       "pillars": [
         "甲申",
         "丙子",
+        "甲寅",
+        "丙寅"
+      ],
+      "triple_edge_count": 0
+    },
+    "harm": {
+      "graph_relation_types": [
+        "controls",
+        "generates",
+        "harms",
+        "position_link",
+        "roots",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [
+        "harm"
+      ],
+      "max_punishment_participant_arity": 0,
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "甲子",
+        "辛未",
         "甲寅",
         "丙寅"
       ],
@@ -362,14 +433,18 @@
         "generates",
         "harmonizes",
         "position_link",
+        "punishes",
         "roots",
         "same_element_support",
         "stores"
       ],
       "material_relation_types": [
         "harmony",
-        "harmony"
+        "harmony",
+        "punishment",
+        "punishment"
       ],
+      "max_punishment_participant_arity": 2,
       "max_triple_participant_arity": 0,
       "pillars": [
         "甲子",
@@ -394,6 +469,7 @@
         "clash",
         "clash"
       ],
+      "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
       "pillars": [
         "甲申",
@@ -403,16 +479,71 @@
       ],
       "triple_edge_count": 0
     },
-    "root": {
+    "pair_punishment": {
       "graph_relation_types": [
         "controls",
         "generates",
+        "position_link",
+        "punishes",
+        "roots",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [
+        "punishment"
+      ],
+      "max_punishment_participant_arity": 2,
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "甲子",
+        "丁卯",
+        "甲寅",
+        "丙寅"
+      ],
+      "triple_edge_count": 0
+    },
+    "partial_triple_punishment": {
+      "graph_relation_types": [
+        "controls",
+        "generates",
+        "harms",
         "position_link",
         "roots",
         "same_element_support",
         "stores"
       ],
-      "material_relation_types": [],
+      "material_relation_types": [
+        "harm",
+        "harm",
+        "harm",
+        "harm"
+      ],
+      "max_punishment_participant_arity": 0,
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "丙寅",
+        "己巳",
+        "甲寅",
+        "丁巳"
+      ],
+      "triple_edge_count": 0
+    },
+    "root": {
+      "graph_relation_types": [
+        "breaks",
+        "controls",
+        "generates",
+        "harms",
+        "position_link",
+        "roots",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [
+        "break",
+        "harm"
+      ],
+      "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
       "pillars": [
         "壬辰",
@@ -434,6 +565,7 @@
         "stores"
       ],
       "material_relation_types": [],
+      "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 3,
       "pillars": [
         "甲申",
@@ -442,6 +574,40 @@
         "庚子"
       ],
       "triple_edge_count": 2
+    },
+    "triple_punishment": {
+      "graph_relation_types": [
+        "breaks",
+        "clashes",
+        "controls",
+        "generates",
+        "harmonizes",
+        "harms",
+        "position_link",
+        "punishes",
+        "roots",
+        "same_element_support",
+        "stores"
+      ],
+      "material_relation_types": [
+        "break",
+        "clash",
+        "clash",
+        "harm",
+        "harm",
+        "harmony",
+        "triple_punishment",
+        "triple_punishment"
+      ],
+      "max_punishment_participant_arity": 3,
+      "max_triple_participant_arity": 0,
+      "pillars": [
+        "丙寅",
+        "己巳",
+        "壬申",
+        "甲寅"
+      ],
+      "triple_edge_count": 0
     }
   }
 }

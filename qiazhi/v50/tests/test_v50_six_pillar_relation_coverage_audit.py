@@ -10,28 +10,34 @@ def test_six_pillar_relation_audit_tracks_ra1_progress_without_overstating_it() 
 
     assert result["status"] == "RA1_IN_PROGRESS"
     assert result["counts"] == {
-        "declared_relation_types": 12,
-        "builder_emitted_relation_types": 10,
+        "declared_relation_types": 15,
+        "builder_emitted_relation_types": 13,
         "declared_but_unemitted": 2,
         "canvas_advertised_relation_types": 11,
-        "canvas_only_relation_types": 3,
+        "canvas_only_relation_types": 0,
         "configured_triple_combinations": 4,
         "configured_half_triple_combinations": 8,
         "six_clash_pairs_in_knowledge": 6,
         "six_harmony_pairs_in_knowledge": 6,
+        "six_harm_pairs_in_knowledge": 6,
+        "six_break_pairs_in_knowledge": 6,
+        "pair_punishment_definitions": 1,
+        "self_punishment_definitions": 4,
+        "triple_punishment_definitions": 2,
         "temporal_relation_builders": 0,
-        "findings": 5,
+        "findings": 4,
     }
     assert result["declared_but_unemitted"] == [
         "activates",
         "bridges",
     ]
-    assert result["canvas_only_relation_types"] == ["breaks", "harms", "punishes"]
+    assert result["canvas_only_relation_types"] == []
     assert all(item["passed"] for item in result["checks"])
     assert [item["finding_id"] for item in result["resolved_findings"]] == [
         "REL-A01",
         "REL-A03",
         "REL-A04",
+        "REL-A05",
     ]
     assert result["relation_semantics_modified"] is False
     assert result["relation_projection_modified"] is True
