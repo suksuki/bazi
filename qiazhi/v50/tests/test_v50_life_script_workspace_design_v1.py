@@ -33,7 +33,7 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["gates"]["architecture_consolidation_gate"] == "IN_PROGRESS"
     assert state["gates"]["cag_03_canonical_scene"] == "CLOSED_PASS_HARDENED"
     assert state["gates"]["cag_04_relation_path_provenance"] == (
-        "IMPLEMENTATION_COMPLETE_MACHINE_PASS_REVIEW_PENDING"
+        "IMPLEMENTATION_COMPLETE_MACHINE_PASS_ARCHITECTURE_REVIEW_PENDING"
     )
     assert state["gates"]["public_professional_release"] == "BLOCKED"
     assert state["protected_boundaries"]["r1_role"] == (

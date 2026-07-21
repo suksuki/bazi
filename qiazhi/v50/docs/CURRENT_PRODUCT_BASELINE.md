@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `398f189c6757` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `2ac9f2ea5608` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,7 +19,7 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 477_PASSED_RA0_INTEGRATED
+full_regression: 479_PASSED_CAG04_FINAL
 ```
 
 Authorized now:
@@ -195,6 +195,9 @@ Closed by L1/L2:
   assertions, exact provenance and explicit `legacy_unresolved` handling;
 - Canvas and Theater no longer invent anonymous committed IDs or reconnect old
   paths by labels, signatures or score proximity.
+- Candidate Graph provenance cannot be labeled committed, and dangling or
+  out-of-order Relation/Path supersession history cannot enter LifeCase or
+  Canonical Scene.
 - RA0 reclassifies historical `518K` as a deterministic structural universe,
   not a persisted entity database; no structurally valid ChartKey is deleted.
 

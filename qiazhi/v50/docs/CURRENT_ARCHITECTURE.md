@@ -198,6 +198,11 @@ not overwrite an earlier committed assertion. A historical path without exact
 structured references remains `legacy_unresolved`; no label, score or nearby
 Graph path may be used to guess a replacement.
 
+Lifecycle and provenance are bound: a `graph_candidate` source can only produce
+a candidate assertion and cannot masquerade as committed. Persisted
+supersession links must point backward to an assertion in the same history;
+dangling and out-of-order chains are rejected by LifeCase and Canonical Scene.
+
 ```text
 Relation Core V2
 → typed binary and hyper relations

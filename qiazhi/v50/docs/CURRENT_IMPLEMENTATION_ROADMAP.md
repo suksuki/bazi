@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `398f189c6757` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `2ac9f2ea5608` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,7 +19,7 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: IN_PROGRESS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 477_PASSED_RA0_INTEGRATED
+full_regression: 479_PASSED_CAG04_FINAL
 ```
 
 Authorized now:
@@ -219,8 +219,11 @@ Exit condition:
 - historical cognition is readable without silent rewriting;
 - candidate, committed, blocked, and user-draft paths remain distinct.
 
-Machine evidence: `467 passed`; R1 remains `20/20`; V40 is unchanged. The
-implementation is frozen at commit `42072034` pending architecture review.
+Machine evidence: `11` focused and `479` full tests passed; R1 remains `20/20`;
+V40 is unchanged. The implementation is frozen at commits `42072034` and
+`c0502ed9` pending architecture review. Candidate provenance cannot masquerade
+as formal status, and invalid supersession history is rejected at the formal
+source and projection boundaries.
 
 ### CAG-05 — Legacy and Documentation Ownership
 
