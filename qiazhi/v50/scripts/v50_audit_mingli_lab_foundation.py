@@ -12,7 +12,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def audit_mingli_lab_foundation() -> dict[str, Any]:
     fixture_builder = _read("tools/fixtures/mingli_lab_c2a.py")
     lab_session = _read("packages/experience/lab.py")
-    temporal_sandbox = _read("packages/experience/canvas.py")
+    temporal_sandbox = _read("packages/experience/canvas_sandbox.py")
     mechanism_sandbox = _read("packages/experience/experiments.py")
     theater_experiment = _read("apps/product/theater_experiment.py")
     theater_api = _read("apps/product/theater_api.py")

@@ -56,7 +56,7 @@ def test_transport_failure_is_not_replayed_as_an_expensive_schema_retry(monkeypa
         calls += 1
         raise urllib.error.URLError("offline")
 
-    monkeypatch.setattr("core.mingli_agent.reasoner.urllib.request.urlopen", fail)
+    monkeypatch.setattr("core.mingli_agent.model_client.urllib.request.urlopen", fail)
 
     with pytest.raises(ValueError, match="model_generation_failed"):
         _model().generate(prompt="extract", schema=BirthIntakeDraft)
@@ -76,7 +76,7 @@ def test_invalid_schema_is_not_replayed_as_a_second_expensive_model_call(monkeyp
         calls += 1
         return next(responses)
 
-    monkeypatch.setattr("core.mingli_agent.reasoner.urllib.request.urlopen", respond)
+    monkeypatch.setattr("core.mingli_agent.model_client.urllib.request.urlopen", respond)
 
     model = _model()
     with pytest.raises(ValueError, match="model_generation_failed"):
@@ -114,7 +114,7 @@ def test_streaming_transport_emits_text_without_a_second_model_call(monkeypatch)
         requests.append(json.loads(request.data.decode("utf-8")))
         return response
 
-    monkeypatch.setattr("core.mingli_agent.reasoner.urllib.request.urlopen", respond)
+    monkeypatch.setattr("core.mingli_agent.model_client.urllib.request.urlopen", respond)
     chunks: list[str] = []
     result = _model().generate(
         prompt="extract",

@@ -17,7 +17,7 @@ def audit_framework_alignment() -> dict[str, Any]:
     canonical_scene = _read("packages/experience/canonical_scene.py")
     narration = _read("apps/product/abu_narration.py")
     mechanism_sandbox = _read("packages/experience/experiments.py")
-    temporal_sandbox = _read("packages/experience/canvas.py")
+    temporal_sandbox = _read("packages/experience/canvas_sandbox.py")
     belief_state = _read("packages/core/mingli_agent/workspace.py")
     workspace = _read("packages/experience/workspace.py")
     lab = _read("packages/experience/lab.py")
