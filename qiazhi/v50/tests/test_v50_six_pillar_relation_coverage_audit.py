@@ -10,9 +10,9 @@ def test_six_pillar_relation_audit_tracks_ra1_progress_without_overstating_it() 
 
     assert result["status"] == "RA1_IN_PROGRESS"
     assert result["counts"] == {
-        "declared_relation_types": 15,
+        "declared_relation_types": 13,
         "builder_emitted_relation_types": 13,
-        "declared_but_unemitted": 2,
+        "declared_but_unemitted": 0,
         "canvas_advertised_relation_types": 11,
         "canvas_only_relation_types": 0,
         "configured_triple_combinations": 4,
@@ -24,20 +24,19 @@ def test_six_pillar_relation_audit_tracks_ra1_progress_without_overstating_it() 
         "pair_punishment_definitions": 1,
         "self_punishment_definitions": 4,
         "triple_punishment_definitions": 2,
-        "temporal_relation_builders": 0,
-        "findings": 4,
+        "temporal_relation_builders": 1,
+        "findings": 2,
     }
-    assert result["declared_but_unemitted"] == [
-        "activates",
-        "bridges",
-    ]
+    assert result["declared_but_unemitted"] == []
     assert result["canvas_only_relation_types"] == []
     assert all(item["passed"] for item in result["checks"])
     assert [item["finding_id"] for item in result["resolved_findings"]] == [
         "REL-A01",
+        "REL-A02",
         "REL-A03",
         "REL-A04",
         "REL-A05",
+        "REL-A06",
     ]
     assert result["relation_semantics_modified"] is False
     assert result["relation_projection_modified"] is True

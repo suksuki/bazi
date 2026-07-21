@@ -10,6 +10,7 @@ from core.engines.bazi.knowledge import (
     BRANCH_ELEMENTS,
     CONTROLS,
     GENERATES,
+    HALF_TRIPLE_HARMONY,
     HIDDEN_STEMS,
     PAIR_PUNISHMENT,
     SELF_PUNISHMENT,
@@ -20,6 +21,7 @@ from core.engines.bazi.knowledge import (
     STEM_ELEMENTS,
     STEM_POLARITY,
     TRIPLE_PUNISHMENT,
+    TRIPLE_HARMONY,
 )
 
 
@@ -212,7 +214,64 @@ def _strength_materials(*, reading_id: str, birth_input: BirthInputCanonical, pi
 
 def _branch_relation_materials(*, reading_id: str, birth_input: BirthInputCanonical, pillars: dict[str, str]) -> list[MingliMaterial]:
     branches = [(slot, pillar[1]) for slot, pillar in pillars.items()]
+    relations = derive_branch_relations(branches)
+    return [
+        MingliMaterial(
+            material_id=f"material:{reading_id}:bazi:branch_relations",
+            reading_id=reading_id,
+            source_engine=SourceEngine.BAZI,
+            material_type=MaterialType.BAZI_COMBINATION,
+            topic=Topic.STRUCTURE,
+            raw_value={"relations": relations},
+            normalized_value=";".join(_normalized_branch_relation(row) for row in relations) or "none",
+            evidence_refs=[birth_input.birth_input_id, f"material:{reading_id}:bazi:chart:pillars"],
+            knowledge_refs=[
+                "bazi.six_clash",
+                "bazi.six_harmony",
+                "bazi.six_harm",
+                "bazi.six_break",
+                "bazi.half_triple_harmony",
+                "bazi.triple_harmony",
+                "bazi.punishment.conservative_complete_set_v1",
+            ],
+            rule_refs=["bazi.material_engine.branch_relations"],
+            confidence=0.68,
+        )
+    ]
+
+
+def derive_element_relations(
+    participants: list[tuple[str, str]],
+) -> list[dict[str, str]]:
+    """Return deterministic element relations for caller-owned participant refs."""
+
     relations: list[dict[str, str]] = []
+    for (ref_a, element_a), (ref_b, element_b) in combinations(participants, 2):
+        if not element_a or not element_b:
+            continue
+        if GENERATES.get(element_a) == element_b:
+            relations.append({"type": "generates", "source_ref": ref_a, "target_ref": ref_b})
+        elif GENERATES.get(element_b) == element_a:
+            relations.append({"type": "generates", "source_ref": ref_b, "target_ref": ref_a})
+        if CONTROLS.get(element_a) == element_b:
+            relations.append({"type": "controls", "source_ref": ref_a, "target_ref": ref_b})
+        elif CONTROLS.get(element_b) == element_a:
+            relations.append({"type": "controls", "source_ref": ref_b, "target_ref": ref_a})
+        if element_a == element_b and ref_a != ref_b:
+            relations.append({"type": "same_element_support", "source_ref": ref_a, "target_ref": ref_b})
+    return relations
+
+
+def derive_branch_relations(
+    branches: list[tuple[str, str]],
+) -> list[dict[str, object]]:
+    """Compile branch relations once for natal, luck, year, and sandbox callers.
+
+    The first tuple value is an opaque participant ref. It may be a natal slot or
+    a stable temporal NodeRef; this function never interprets positions.
+    """
+
+    relations: list[dict[str, object]] = []
     for (slot_a, branch_a), (slot_b, branch_b) in combinations(branches, 2):
         pair = frozenset((branch_a, branch_b))
         if pair in SIX_CLASH:
@@ -241,6 +300,36 @@ def _branch_relation_materials(*, reading_id: str, birth_input: BirthInputCanoni
                 "slot_b": slot_b,
                 "branch_b": branch_b,
             })
+        half = HALF_TRIPLE_HARMONY.get(pair)
+        if half is not None:
+            relation_id, element, bridge_branch = half
+            relations.append({
+                "type": "half_triple_harmony",
+                "relation_id": relation_id,
+                "element": element,
+                "bridge_branch": bridge_branch,
+                "slot_a": slot_a,
+                "branch_a": branch_a,
+                "slot_b": slot_b,
+                "branch_b": branch_b,
+            })
+    for required_set, (relation_id, element, bridge_branch) in TRIPLE_HARMONY.items():
+        required_order = tuple(sorted(required_set))
+        slots_by_branch = {
+            branch: [(slot, observed) for slot, observed in branches if observed == branch]
+            for branch in required_order
+        }
+        if not required_set.issubset({branch for _, branch in branches}):
+            continue
+        for selected in product(*(slots_by_branch[branch] for branch in required_order)):
+            relations.append({
+                "type": "triple_harmony",
+                "relation_id": relation_id,
+                "element": element,
+                "bridge_branch": bridge_branch,
+                "slots": [slot for slot, _ in selected],
+                "branches": [branch for _, branch in selected],
+            })
     for required_set, (relation_id, required_order) in TRIPLE_PUNISHMENT.items():
         slots_by_branch = {
             branch: [(slot, observed) for slot, observed in branches if observed == branch]
@@ -255,27 +344,7 @@ def _branch_relation_materials(*, reading_id: str, birth_input: BirthInputCanoni
                 "slots": [slot for slot, _ in selected],
                 "branches": [branch for _, branch in selected],
             })
-    return [
-        MingliMaterial(
-            material_id=f"material:{reading_id}:bazi:branch_relations",
-            reading_id=reading_id,
-            source_engine=SourceEngine.BAZI,
-            material_type=MaterialType.BAZI_COMBINATION,
-            topic=Topic.STRUCTURE,
-            raw_value={"relations": relations},
-            normalized_value=";".join(_normalized_branch_relation(row) for row in relations) or "none",
-            evidence_refs=[birth_input.birth_input_id, f"material:{reading_id}:bazi:chart:pillars"],
-            knowledge_refs=[
-                "bazi.six_clash",
-                "bazi.six_harmony",
-                "bazi.six_harm",
-                "bazi.six_break",
-                "bazi.punishment.conservative_complete_set_v1",
-            ],
-            rule_refs=["bazi.material_engine.branch_relations"],
-            confidence=0.68,
-        )
-    ]
+    return relations
 
 
 def _normalized_branch_relation(row: dict[str, object]) -> str:

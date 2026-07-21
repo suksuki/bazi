@@ -1,18 +1,14 @@
 from __future__ import annotations
 
-from itertools import combinations, product
 from typing import Any
 
 from core.contracts.material import MaterialType, MingliMaterial, UnifiedMingliMaterialStore
-from core.engines.bazi.knowledge import BRANCH_ELEMENTS, CONTROLS, GENERATES, HALF_TRIPLE_HARMONY, HIDDEN_STEMS, STEM_ELEMENTS, STEM_POLARITY, TRIPLE_HARMONY
-from core.engines.bazi.material_engine import resolve_ten_god
+from core.engines.bazi.knowledge import BRANCH_ELEMENTS, HIDDEN_STEMS, STEM_ELEMENTS, STEM_POLARITY, TRIPLE_HARMONY
+from core.engines.bazi.material_engine import derive_element_relations, resolve_ten_god
 from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliGraphNodeType
 
 
 POSITION_ORDER = ("year", "month", "day", "hour")
-
-TRIPLE_COMBINATIONS = TRIPLE_HARMONY
-
 
 def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) -> MingliGraph:
     pillars = _extract_pillars(store)
@@ -112,8 +108,6 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
     edges.extend(_element_edges(store=store, nodes=nodes, chart_material_ref=chart_material_ref))
     edges.extend(_material_relation_edges(store=store, nodes=nodes))
     edges.extend(_material_root_edges(store=store, nodes=nodes))
-    edges.extend(_half_combination_edges(store=store, nodes=nodes, chart_material_ref=chart_material_ref))
-    edges.extend(_combination_edges(store=store, nodes=nodes, pillars=pillars, chart_material_ref=chart_material_ref))
 
     return MingliGraph(
         graph_id=f"graph:{store.reading_id}:bazi",
@@ -181,7 +175,7 @@ def _mark_structural_attributes(nodes: list[MingliGraphNode], *, pillars: dict[s
     for node in nodes:
         attrs: dict[str, Any] = dict(node.attributes)
         if node.node_type == MingliGraphNodeType.BRANCH:
-            for combination, (combo_id, combo_element, bridge_label) in TRIPLE_COMBINATIONS.items():
+            for combination, (combo_id, combo_element, bridge_label) in TRIPLE_HARMONY.items():
                 if combination.issubset(present_branches):
                     if node.label in combination:
                         attrs["triple_combination"] = combo_id
@@ -195,24 +189,27 @@ def _mark_structural_attributes(nodes: list[MingliGraphNode], *, pillars: dict[s
 
 
 def _element_edges(*, store: UnifiedMingliMaterialStore, nodes: list[MingliGraphNode], chart_material_ref: str) -> list[MingliGraphEdge]:
-    edges: list[MingliGraphEdge] = []
     visible_nodes = [node for node in nodes if node.node_type in {MingliGraphNodeType.STEM, MingliGraphNodeType.BRANCH}]
-    for source, target in combinations(visible_nodes, 2):
-        source_element = source.element
-        target_element = target.element
-        if not source_element or not target_element:
-            continue
-        if GENERATES.get(source_element) == target_element:
-            edges.append(_element_edge(store, source, target, MingliGraphEdgeType.GENERATES, 0.7, chart_material_ref))
-        elif GENERATES.get(target_element) == source_element:
-            edges.append(_element_edge(store, target, source, MingliGraphEdgeType.GENERATES, 0.7, chart_material_ref))
-        if CONTROLS.get(source_element) == target_element:
-            edges.append(_element_edge(store, source, target, MingliGraphEdgeType.CONTROLS, 0.68, chart_material_ref))
-        elif CONTROLS.get(target_element) == source_element:
-            edges.append(_element_edge(store, target, source, MingliGraphEdgeType.CONTROLS, 0.68, chart_material_ref))
-        if source_element == target_element and source.node_id != target.node_id:
-            edges.append(_element_edge(store, source, target, MingliGraphEdgeType.SAME_ELEMENT_SUPPORT, 0.58, chart_material_ref))
-    return edges
+    nodes_by_id = {node.node_id: node for node in visible_nodes}
+    strengths = {
+        MingliGraphEdgeType.GENERATES: 0.70,
+        MingliGraphEdgeType.CONTROLS: 0.68,
+        MingliGraphEdgeType.SAME_ELEMENT_SUPPORT: 0.58,
+    }
+    output: list[MingliGraphEdge] = []
+    for relation in derive_element_relations([
+        (node.node_id, node.element) for node in visible_nodes
+    ]):
+        edge_type = MingliGraphEdgeType(relation["type"])
+        output.append(_element_edge(
+            store,
+            nodes_by_id[relation["source_ref"]],
+            nodes_by_id[relation["target_ref"]],
+            edge_type,
+            strengths[edge_type],
+            chart_material_ref,
+        ))
+    return output
 
 
 def _element_edge(
@@ -248,13 +245,14 @@ def _material_relation_edges(
         for node in nodes
         if node.node_type == MingliGraphNodeType.BRANCH
     }
-    relation_types = {
+    pair_relation_types = {
         "clash": MingliGraphEdgeType.CLASHES,
         "harmony": MingliGraphEdgeType.HARMONIZES,
         "harm": MingliGraphEdgeType.HARMS,
         "break": MingliGraphEdgeType.BREAKS,
         "punishment": MingliGraphEdgeType.PUNISHES,
         "self_punishment": MingliGraphEdgeType.PUNISHES,
+        "half_triple_harmony": MingliGraphEdgeType.FORMS_HALF_COMBINATION,
     }
     relation_labels = {
         "clash": "six_clash",
@@ -273,7 +271,7 @@ def _material_relation_edges(
             if not isinstance(relation, dict):
                 continue
             relation_name = str(relation.get("type", ""))
-            if relation_name == "triple_punishment":
+            if relation_name in {"triple_harmony", "triple_punishment"}:
                 slots = relation.get("slots")
                 branches = relation.get("branches")
                 if not isinstance(slots, list) or not isinstance(branches, list):
@@ -290,34 +288,59 @@ def _material_relation_edges(
                 if [node.label for node in participant_nodes if node is not None] != [str(branch) for branch in branches]:
                     continue
                 source_refs = list(dict.fromkeys([material.material_id, *material.evidence_refs]))
-                relation_id = str(relation.get("relation_id", "triple_punishment"))
+                relation_id = str(relation.get("relation_id", relation_name))
                 member_key = ":".join(
                     f"{node.attributes['slot']}:{node.label}"
                     for node in participants
                 )
+                is_harmony = relation_name == "triple_harmony"
+                edge_type = (
+                    MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION
+                    if is_harmony
+                    else MingliGraphEdgeType.PUNISHES
+                )
+                bridge_branch = str(relation.get("bridge_branch", ""))
+                bridge_node = next(
+                    (node for node in participants if node.label == bridge_branch),
+                    participants[1],
+                )
+                source_node = next(
+                    (node for node in participants if node.node_id != bridge_node.node_id),
+                    participants[0],
+                )
                 edges.append(
                     _edge(
                         store=store,
-                        edge_id=f"edge:{store.reading_id}:punishes:{relation_id}:{member_key}",
-                        from_node_id=participants[0].node_id,
-                        to_node_id=participants[1].node_id,
-                        edge_type=MingliGraphEdgeType.PUNISHES,
+                        edge_id=(
+                            f"edge:{store.reading_id}:"
+                            f"{'triple' if is_harmony else 'punishes'}:{relation_id}:{member_key}"
+                        ),
+                        from_node_id=source_node.node_id,
+                        to_node_id=bridge_node.node_id,
+                        edge_type=edge_type,
                         participant_node_ids=[node.node_id for node in participants],
-                        strength=material.confidence,
+                        strength=0.92 if is_harmony else material.confidence,
                         relation_label=relation_id,
                         material_refs=[material.material_id],
                         evidence_refs=source_refs,
                         attributes={
                             "source_material_type": material.material_type.value,
                             "relation_family": "branch_hyperrelation",
-                            "path_eligibility": "not_yet_qualified",
-                            "school_profile": "conservative_complete_set_v1",
-                            "punishment_kind": "triple_complete",
+                            **({
+                                "combination": relation_id,
+                                "element": str(relation.get("element", "")),
+                                "bridge_node_id": bridge_node.node_id,
+                                "required_branches": sorted(str(item) for item in branches),
+                            } if is_harmony else {
+                                "path_eligibility": "not_yet_qualified",
+                                "school_profile": "conservative_complete_set_v1",
+                                "punishment_kind": "triple_complete",
+                            }),
                         },
                     )
                 )
                 continue
-            edge_type = relation_types.get(relation_name)
+            edge_type = pair_relation_types.get(relation_name)
             slot_a = str(relation.get("slot_a", ""))
             slot_b = str(relation.get("slot_b", ""))
             node_a = branch_nodes.get(slot_a)
@@ -342,7 +365,11 @@ def _material_relation_edges(
                     from_node_id=first.node_id,
                     to_node_id=second.node_id,
                     edge_type=edge_type,
-                    strength=material.confidence,
+                    strength=(
+                        0.66
+                        if relation_name == "half_triple_harmony"
+                        else material.confidence
+                    ),
                     relation_label=str(
                         relation.get("relation_id")
                         or relation_labels.get(relation_name)
@@ -352,7 +379,11 @@ def _material_relation_edges(
                     evidence_refs=source_refs,
                     attributes={
                         "source_material_type": material.material_type.value,
-                        "relation_family": "branch_pair",
+                        "relation_family": (
+                            "branch_pair_candidate"
+                            if relation_name == "half_triple_harmony"
+                            else "branch_pair"
+                        ),
                         "path_eligibility": "not_yet_qualified",
                         "school_profile": (
                             "conservative_complete_set_v1"
@@ -364,6 +395,17 @@ def _material_relation_edges(
                         ),
                         "slots": [first.attributes["slot"], second.attributes["slot"]],
                         "branches": [first.label, second.label],
+                        **({
+                            "element": str(relation.get("element", "")),
+                            "bridge_branch": str(relation.get("bridge_branch", "")),
+                            "completion_state": "incomplete",
+                            "required_full_relation": next(
+                                combo_id
+                                for _, (combo_id, combo_element, combo_bridge) in TRIPLE_HARMONY.items()
+                                if combo_element == relation.get("element")
+                                and combo_bridge == relation.get("bridge_branch")
+                            ),
+                        } if relation_name == "half_triple_harmony" else {}),
                     },
                 )
             )
@@ -430,112 +472,6 @@ def _material_root_edges(
                         "branch": branch,
                         "hidden_stems": str(root_source.get("hidden_stems", "")),
                         "rooted_stem": day_stem_node.label,
-                    },
-                )
-            )
-    return edges
-
-
-def _half_combination_edges(
-    *,
-    store: UnifiedMingliMaterialStore,
-    nodes: list[MingliGraphNode],
-    chart_material_ref: str,
-) -> list[MingliGraphEdge]:
-    branch_nodes = [
-        node
-        for node in nodes
-        if node.node_type == MingliGraphNodeType.BRANCH
-    ]
-    edges: list[MingliGraphEdge] = []
-    for first, second in combinations(branch_nodes, 2):
-        definition = HALF_TRIPLE_HARMONY.get(frozenset((first.label, second.label)))
-        if definition is None:
-            continue
-        relation_id, element, bridge_branch = definition
-        participants = sorted(
-            (first, second),
-            key=lambda node: POSITION_ORDER.index(str(node.attributes["slot"])),
-        )
-        edges.append(
-            _edge(
-                store=store,
-                edge_id=(
-                    f"edge:{store.reading_id}:half_triple:{relation_id}:"
-                    f"{participants[0].attributes['slot']}:{participants[0].label}:"
-                    f"{participants[1].attributes['slot']}:{participants[1].label}"
-                ),
-                from_node_id=participants[0].node_id,
-                to_node_id=participants[1].node_id,
-                edge_type=MingliGraphEdgeType.FORMS_HALF_COMBINATION,
-                strength=0.66,
-                relation_label=relation_id,
-                material_refs=[chart_material_ref],
-                attributes={
-                    "relation_family": "branch_pair_candidate",
-                    "path_eligibility": "not_yet_qualified",
-                    "element": element,
-                    "bridge_branch": bridge_branch,
-                    "completion_state": "incomplete",
-                    "required_full_relation": next(
-                        combo_id
-                        for _, (combo_id, combo_element, combo_bridge) in TRIPLE_HARMONY.items()
-                        if combo_element == element and combo_bridge == bridge_branch
-                    ),
-                },
-            )
-        )
-    return edges
-
-
-def _combination_edges(
-    *,
-    store: UnifiedMingliMaterialStore,
-    nodes: list[MingliGraphNode],
-    pillars: dict[str, str],
-    chart_material_ref: str,
-) -> list[MingliGraphEdge]:
-    edges: list[MingliGraphEdge] = []
-    branch_nodes = {node.position: node for node in nodes if node.node_type == MingliGraphNodeType.BRANCH}
-    present_branches = {pillar[1] for pillar in pillars.values()}
-    for combination, (combo_id, combo_element, bridge_label) in TRIPLE_COMBINATIONS.items():
-        if not combination.issubset(present_branches):
-            continue
-        nodes_by_label = {
-            label: sorted(
-                (node for node in branch_nodes.values() if node.label == label),
-                key=lambda node: POSITION_ORDER.index(str(node.attributes["slot"])),
-            )
-            for label in sorted(combination)
-        }
-        for selected_nodes in product(*(nodes_by_label[label] for label in sorted(combination))):
-            participants = sorted(
-                selected_nodes,
-                key=lambda node: POSITION_ORDER.index(str(node.attributes["slot"])),
-            )
-            bridge_node = next(node for node in participants if node.label == bridge_label)
-            source_node = next(node for node in participants if node.node_id != bridge_node.node_id)
-            member_key = ":".join(
-                f"{node.attributes['slot']}:{node.label}"
-                for node in participants
-            )
-            edges.append(
-                _edge(
-                    store=store,
-                    edge_id=f"edge:{store.reading_id}:triple:{combo_id}:{member_key}",
-                    from_node_id=source_node.node_id,
-                    to_node_id=bridge_node.node_id,
-                    edge_type=MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION,
-                    participant_node_ids=[node.node_id for node in participants],
-                    strength=0.92,
-                    relation_label=combo_id,
-                    material_refs=[chart_material_ref],
-                    attributes={
-                        "combination": combo_id,
-                        "element": combo_element,
-                        "bridge_node_id": bridge_node.node_id,
-                        "relation_family": "branch_hyperrelation",
-                        "required_branches": sorted(combination),
                     },
                 )
             )

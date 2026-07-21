@@ -28,8 +28,6 @@ RELATION_LABELS = {
     "forms_triple_combination": "三合",
     "clashes": "相冲",
     "harmonizes": "相合",
-    "activates": "引动",
-    "bridges": "通关",
     "position_link": "同柱",
 }
 

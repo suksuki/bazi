@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `f9b3afceb830` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `c71426a67806` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -19,16 +19,16 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 558_PASSED_RA1_BRANCH_CONFLICT_FINAL
+full_regression: 559_PASSED_RA1_RELATION_CORE_FINAL
 ```
 
 Authorized now:
 
-- `RA1_TEMPORAL_RELATION_COMPILATION`: compile_luck_and_year_relations_from_the_same_core_without_client_inference_or_path_promotion
+- `RA2_PATH_QUALIFICATION`: qualify_existing_relations_for_paths_with_explicit_evidence_without_changing_relation_existence
 
-Next architecture slice: `RA2_PATH_QUALIFICATION` after `ra1_relation_core_pass`.
+Next architecture slice: `RA3_PATH_EVIDENCE_CALIBRATION` after `ra2_path_qualification_pass`.
 
-Blocked: `path_core_v2_implementation`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
+Blocked: `ra3_uncalibrated_path_scoring_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
 
 ## 1. Current Product

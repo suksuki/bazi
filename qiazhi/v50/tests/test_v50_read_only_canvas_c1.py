@@ -97,6 +97,54 @@ def test_real_life_case_projects_read_only_four_five_six_pillar_stages() -> None
     assert store.get(case_id=case_id, user_id=user_id) == before
 
 
+def test_official_luck_and_year_compile_same_level_relations_without_promoting_paths() -> None:
+    store, user_id, case_id, _ = _saved_case()
+    service = ReadOnlySixPillarCanvasService(case_store=store)
+
+    first = service.issue(case_id=case_id, participant_id=user_id, account_role="member")
+    second = service.issue(case_id=case_id, participant_id=user_id, account_role="member")
+
+    assert first["stages"]["luck"]["spec"] == second["stages"]["luck"]["spec"]
+    assert first["stages"]["year"]["spec"] == second["stages"]["year"]["spec"]
+    expected_types = {
+        "luck": {"controls", "forms_triple_combination"},
+        "year": {"generates", "same_element_support", "harms"},
+    }
+    for stage in ("luck", "year"):
+        spec = first["stages"][stage]["spec"]
+        diff = first["stages"][stage]["diff"]
+        nodes = {item["node_ref"]: item for item in spec["nodes"]}
+        temporal_slot = spec["semantic_slots"][-1]["slot_ref"]
+        temporal_refs = {
+            item["node_ref"]
+            for item in spec["nodes"]
+            if item["semantic_slot_ref"] == temporal_slot
+        }
+        added_refs = {item["target_ref"] for item in diff["added_relations"]}
+        added = [
+            item for item in spec["relations"]
+            if item["relation_ref"] in added_refs
+        ]
+
+        assert added
+        assert expected_types[stage].issubset({item["relation_type"] for item in added})
+        assert all(temporal_refs.intersection(item["participant_node_refs"]) for item in added)
+        assert all(item["trace"]["epistemic_status"] == "derived" for item in added)
+        assert all("做功路径" in item["trace"]["uncertainty"][0] for item in added)
+        for relation in added:
+            levels = {
+                "stem" if nodes[ref]["node_type"].endswith("stem") else "branch"
+                for ref in relation["participant_node_refs"]
+            }
+            assert len(levels) == 1
+        assert not diff["introduced_paths"]
+        assert not diff["activated_paths"]
+        assert not diff["reinforced_paths"]
+        assert not diff["weakened_paths"]
+        assert not diff["blocked_paths"]
+        assert diff["unchanged_paths"]
+
+
 def test_member_projection_removes_practitioner_path_before_serialization() -> None:
     store, user_id, case_id, candidate_ref = _saved_case()
     service = ReadOnlySixPillarCanvasService(case_store=store)

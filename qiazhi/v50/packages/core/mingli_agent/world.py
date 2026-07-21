@@ -49,7 +49,6 @@ RELATION_LABELS = {
     "forms_triple_combination": "三合",
     "clashes": "冲",
     "harmonizes": "合",
-    "bridges": "桥接",
     "position_link": "同柱",
 }
 

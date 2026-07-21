@@ -61,15 +61,11 @@
       "passed": true
     },
     {
-      "check": "temporal_layer_has_no_relation_computation",
+      "check": "temporal_layers_use_shared_relation_derivation",
       "passed": true
     },
     {
-      "check": "structural_variant_appends_temporal_nodes_without_relations",
-      "passed": true
-    },
-    {
-      "check": "luck_and_year_node_types_declared_but_not_built",
+      "check": "temporal_relations_are_same_level_only",
       "passed": true
     }
   ],
@@ -79,26 +75,21 @@
     "canvas_only_relation_types": 0,
     "configured_half_triple_combinations": 8,
     "configured_triple_combinations": 4,
-    "declared_but_unemitted": 2,
-    "declared_relation_types": 15,
-    "findings": 4,
+    "declared_but_unemitted": 0,
+    "declared_relation_types": 13,
+    "findings": 2,
     "pair_punishment_definitions": 1,
     "self_punishment_definitions": 4,
     "six_break_pairs_in_knowledge": 6,
     "six_clash_pairs_in_knowledge": 6,
     "six_harm_pairs_in_knowledge": 6,
     "six_harmony_pairs_in_knowledge": 6,
-    "temporal_relation_builders": 0,
+    "temporal_relation_builders": 1,
     "triple_punishment_definitions": 2
   },
-  "declared_but_unemitted": [
-    "activates",
-    "bridges"
-  ],
+  "declared_but_unemitted": [],
   "declared_relation_types": [
-    "activates",
     "breaks",
-    "bridges",
     "clashes",
     "controls",
     "forms_half_combination",
@@ -114,16 +105,6 @@
   ],
   "findings": [
     {
-      "finding": "Luck and annual pillars are rendered as nodes without relation, cluster, path, or path-update computation.",
-      "finding_id": "REL-A02",
-      "severity": "critical"
-    },
-    {
-      "finding": "Two declared Graph relation types still have no builder emission path.",
-      "finding_id": "REL-A06",
-      "severity": "high"
-    },
-    {
       "finding": "Element edges connect every visible stem/branch pair without a position or layer qualification contract.",
       "finding_id": "REL-A07",
       "severity": "medium"
@@ -138,34 +119,21 @@
   "llm_used": false,
   "ra1_completed": [
     "consume existing deterministic branch-relation materials",
-    "replace sample-specialized combinations with complete relation definitions"
+    "replace sample-specialized combinations with complete relation definitions",
+    "compile official luck and year relations through the same deterministic relation derivation"
   ],
   "ra1_entry_order": [
-    "add explicit luck/year cross-layer relation compilation",
-    "add minimal positive, negative, missing-member, and temporal fixtures",
-    "only then admit relations to path qualification"
+    "qualify relation types for path participation with explicit positive and negative fixtures",
+    "replace uncalibrated path strengths with evidence-backed discrete support states",
+    "only then admit temporal path updates"
   ],
   "relation_matrix": [
-    {
-      "advertised_by_canvas": false,
-      "declared": true,
-      "emitted_by_graph_builder": false,
-      "relation_type": "activates",
-      "test_file_references": 3
-    },
     {
       "advertised_by_canvas": true,
       "declared": true,
       "emitted_by_graph_builder": true,
       "relation_type": "breaks",
       "test_file_references": 2
-    },
-    {
-      "advertised_by_canvas": false,
-      "declared": true,
-      "emitted_by_graph_builder": false,
-      "relation_type": "bridges",
-      "test_file_references": 1
     },
     {
       "advertised_by_canvas": true,
@@ -179,7 +147,7 @@
       "declared": true,
       "emitted_by_graph_builder": true,
       "relation_type": "controls",
-      "test_file_references": 22
+      "test_file_references": 23
     },
     {
       "advertised_by_canvas": true,
@@ -193,14 +161,14 @@
       "declared": true,
       "emitted_by_graph_builder": true,
       "relation_type": "forms_triple_combination",
-      "test_file_references": 1
+      "test_file_references": 2
     },
     {
       "advertised_by_canvas": true,
       "declared": true,
       "emitted_by_graph_builder": true,
       "relation_type": "generates",
-      "test_file_references": 8
+      "test_file_references": 9
     },
     {
       "advertised_by_canvas": true,
@@ -214,7 +182,7 @@
       "declared": true,
       "emitted_by_graph_builder": true,
       "relation_type": "harms",
-      "test_file_references": 1
+      "test_file_references": 2
     },
     {
       "advertised_by_canvas": false,
@@ -242,7 +210,7 @@
       "declared": true,
       "emitted_by_graph_builder": true,
       "relation_type": "same_element_support",
-      "test_file_references": 0
+      "test_file_references": 1
     },
     {
       "advertised_by_canvas": false,
@@ -260,6 +228,10 @@
       "resolution": "Graph Builder now consumes the existing deterministic six-clash and six-harmony materials without granting path eligibility."
     },
     {
+      "finding_id": "REL-A02",
+      "resolution": "Official luck and year layers now compile same-level stem and branch relations through the shared deterministic relation derivation before Canvas diffing."
+    },
+    {
       "finding_id": "REL-A03",
       "resolution": "All four standard triple-harmony definitions now share one knowledge source and positive/missing-member fixtures."
     },
@@ -270,6 +242,10 @@
     {
       "finding_id": "REL-A05",
       "resolution": "Harm, break, pair/self punishment, and complete triple punishment now have core relation identities and conservative fixtures."
+    },
+    {
+      "finding_id": "REL-A06",
+      "resolution": "Unused activates and bridges Graph types were removed; activation remains a temporal diff state and bridge remains a path interpretation, not an unproven primitive relation."
     }
   ],
   "schema_version": "deepbazi.six_pillar_relation_coverage_audit.v1",
@@ -346,7 +322,8 @@
       ],
       "material_relation_types": [
         "clash",
-        "clash"
+        "clash",
+        "half_triple_harmony"
       ],
       "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
@@ -368,7 +345,13 @@
         "same_element_support",
         "stores"
       ],
-      "material_relation_types": [],
+      "material_relation_types": [
+        "half_triple_harmony",
+        "half_triple_harmony",
+        "half_triple_harmony",
+        "triple_harmony",
+        "triple_harmony"
+      ],
       "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 3,
       "pillars": [
@@ -392,7 +375,8 @@
       ],
       "material_relation_types": [
         "clash",
-        "clash"
+        "clash",
+        "half_triple_harmony"
       ],
       "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
@@ -467,7 +451,8 @@
       ],
       "material_relation_types": [
         "clash",
-        "clash"
+        "clash",
+        "half_triple_harmony"
       ],
       "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 0,
@@ -564,7 +549,14 @@
         "same_element_support",
         "stores"
       ],
-      "material_relation_types": [],
+      "material_relation_types": [
+        "half_triple_harmony",
+        "half_triple_harmony",
+        "half_triple_harmony",
+        "half_triple_harmony",
+        "triple_harmony",
+        "triple_harmony"
+      ],
       "max_punishment_participant_arity": 0,
       "max_triple_participant_arity": 3,
       "pillars": [

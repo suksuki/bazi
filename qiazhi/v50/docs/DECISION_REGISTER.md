@@ -1358,6 +1358,35 @@ resolved_finding: REL-A05
 next: RA1_Temporal_Relation_Compilation
 ```
 
+### DR-045 — RA1 Uses One Relation Derivation Across Natal and Time
+
+```yaml
+decision_id: DR-045
+date: 2026-07-21
+status: closed_pass
+relation_derivation_owner: core.engines.bazi.material_engine
+declared_relation_types: 13
+emitted_relation_types: 13
+unused_graph_relation_types_removed:
+  - activates
+  - bridges
+unused_graph_temporal_node_types_removed:
+  - luck
+  - year
+duplicate_generators_removed:
+  - graph_half_triple_generator
+  - graph_triple_harmony_generator
+official_temporal_relation_builders: 1
+temporal_relation_policy: same_level_stem_to_stem_and_branch_to_branch
+temporal_path_promotion: false
+resolved_findings:
+  - REL-A02
+  - REL-A06
+focused_regression: 73_passed
+full_regression: 559_passed
+next: RA2_Path_Qualification
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

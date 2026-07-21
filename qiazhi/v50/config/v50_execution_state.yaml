@@ -2,7 +2,7 @@ schema_version: v2
 updated_at: 2026-07-21
 
 phase:
-  name: V50_RELATION_ATLAS_RA1
+  name: V50_RELATION_ATLAS_RA2
   default_mode: authority_convergence
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
@@ -46,13 +46,13 @@ gates:
   architecture_consolidation_gate: CLOSED_PASS
   next_framework_alignment: BASELINE_PASS
   mingli_lab_foundation: BASELINE_PASS_WITH_EXPLICIT_GAPS
-  six_pillar_relation_coverage: RA1_IN_PROGRESS_BRANCH_CONFLICT_RELATIONS_PASS
+  six_pillar_relation_coverage: RA1_RELATION_CORE_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 558_PASSED_RA1_BRANCH_CONFLICT_FINAL
+  full_regression: 559_PASSED_RA1_RELATION_CORE_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -110,20 +110,23 @@ receipts:
   mingli_lab_foundation_invariants: 8_OF_8_PASS
   mingli_lab_foundation_gaps: 4_EXPLICIT
   mingli_lab_foundation_report_sha256: f7a695107c48f782cac1a3164fac2532769731af0b6b6d1ed86f7c911f05a3a1
-  six_pillar_declared_relations: 15
+  six_pillar_declared_relations: 13
   six_pillar_emitted_relations: 13
-  six_pillar_unemitted_relations: 2
+  six_pillar_unemitted_relations: 0
   six_pillar_canvas_only_relations: 0
-  six_pillar_temporal_relation_builders: 0
+  six_pillar_temporal_relation_builders: 1
   six_pillar_configured_triple_combinations: 4
   six_pillar_configured_half_triple_combinations: 8
-  six_pillar_findings: 4
-  six_pillar_resolved_findings: 4
-  six_pillar_relation_report_sha256: 5587b892250dd6761b8bb60fa99f73406c4e41882e30e260d539e185d56f803a
+  six_pillar_findings: 2
+  six_pillar_resolved_findings: 6
+  six_pillar_relation_report_sha256: f13f6f34e5ebe05a65aa526c9d67993f98918dcc6dfd638abfddddc22413ae2e
   ra1_relation_foundation_fixtures: 42_PASSED
   ra1_relation_foundation_regression: 535_PASSED
   ra1_branch_conflict_fixtures: 32_PASSED
   ra1_branch_conflict_regression: 558_PASSED
+  ra1_temporal_relation_fixtures: 73_PASSED
+  ra1_relation_core_regression: 559_PASSED
+  ra1_relation_derivation_owner: core.engines.bazi.material_engine
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -132,21 +135,21 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: RA1_TEMPORAL_RELATION_COMPILATION
-    kind: controlled_relation_core_implementation
-    scope: compile_luck_and_year_relations_from_the_same_core_without_client_inference_or_path_promotion
+  - id: RA2_PATH_QUALIFICATION
+    kind: controlled_path_core_implementation
+    scope: qualify_existing_relations_for_paths_with_explicit_evidence_without_changing_relation_existence
 
 next_architecture_slice:
-  id: RA2_PATH_QUALIFICATION
+  id: RA3_PATH_EVIDENCE_CALIBRATION
   authorized_when:
-    - ra1_relation_core_pass
+    - ra2_path_qualification_pass
   scope:
-    - relation_path_eligibility
-    - whole_path_validation
-    - candidate_and_committed_separation
+    - remove_uncalibrated_strength_claims
+    - evidence_backed_discrete_support_states
+    - temporal_path_state_updates
 
 blocked:
-  - path_core_v2_implementation
+  - ra3_uncalibrated_path_scoring_promotion
   - mingli_lab_public_release
   - production_workspace_migration
   - frontend_framework_migration

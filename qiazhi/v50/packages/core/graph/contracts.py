@@ -19,8 +19,6 @@ class MingliGraphNodeType(str, Enum):
     STEM = "stem"
     BRANCH = "branch"
     HIDDEN_STEM = "hidden_stem"
-    LUCK = "luck"
-    YEAR = "year"
     ZIWEI_PALACE = "ziwei_palace"
     ZIWEI_STAR = "ziwei_star"
     TWIN_EVIDENCE = "twin_evidence"
@@ -39,8 +37,6 @@ class MingliGraphEdgeType(str, Enum):
     HARMS = "harms"
     BREAKS = "breaks"
     PUNISHES = "punishes"
-    ACTIVATES = "activates"
-    BRIDGES = "bridges"
     POSITION_LINK = "position_link"
 
 

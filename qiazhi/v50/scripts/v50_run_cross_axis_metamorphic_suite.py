@@ -45,11 +45,14 @@ def run_cross_axis_suite() -> dict[str, Any]:
         ),
         _result(
             test_id="hour_branch_break_adds_observable_clash",
-            passed=not _ledger_relations(base_world) and len(_ledger_relations(break_world)) >= 2,
+            passed=(
+                not _ledger_relations(base_world, relation_type="clash")
+                and len(_ledger_relations(break_world, relation_type="clash")) >= 2
+            ),
             expectation="The controlled 亥 variant adds explicit 巳亥 clashes instead of silently collapsing to the base structure.",
             observed={
-                "base": _ledger_relations(base_world),
-                "variant": _ledger_relations(break_world),
+                "base": _ledger_relations(base_world, relation_type="clash"),
+                "variant": _ledger_relations(break_world, relation_type="clash"),
             },
         ),
         _result(
@@ -165,8 +168,19 @@ def _has_path_relation(world: Any, relation: str) -> bool:
     return any(relation in relations for relations in _path_relations(world))
 
 
-def _ledger_relations(world: Any) -> list[dict[str, Any]]:
-    return list(next(fact.payload for fact in world.facts if fact.category == "branch_relations").get("relations") or [])
+def _ledger_relations(
+    world: Any,
+    *,
+    relation_type: str | None = None,
+) -> list[dict[str, Any]]:
+    relations = list(
+        next(fact.payload for fact in world.facts if fact.category == "branch_relations")
+        .get("relations")
+        or []
+    )
+    if relation_type is None:
+        return relations
+    return [item for item in relations if item.get("type") == relation_type]
 
 
 def _write(report: dict[str, Any], output_dir: Path) -> tuple[Path, Path]:

@@ -18,8 +18,6 @@ VALID_PATH_EDGE_TYPES = {
     MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION,
     MingliGraphEdgeType.CLASHES,
     MingliGraphEdgeType.HARMONIZES,
-    MingliGraphEdgeType.ACTIVATES,
-    MingliGraphEdgeType.BRIDGES,
     MingliGraphEdgeType.POSITION_LINK,
 }
 

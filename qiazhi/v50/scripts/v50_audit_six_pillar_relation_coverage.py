@@ -18,10 +18,10 @@ from core.engines.bazi.knowledge import (
     SIX_HARM,
     SIX_HARMONY,
     TRIPLE_PUNISHMENT,
+    TRIPLE_HARMONY,
 )
 from core.graph import build_mingli_graph_from_material_store
-from core.graph.builder import TRIPLE_COMBINATIONS
-from core.graph.contracts import MingliGraphEdgeType, MingliGraphNodeType
+from core.graph.contracts import MingliGraphEdgeType
 from product.canvas_projection import LAYER_DEFINITIONS
 
 
@@ -31,7 +31,6 @@ ROOT = Path(__file__).resolve().parents[1]
 def audit_six_pillar_relation_coverage() -> dict[str, Any]:
     builder_source = _read("packages/core/graph/builder.py")
     temporal_source = _read("apps/product/canvas_projection.py")
-    variant_source = _read("apps/product/structural_variant_compiler.py")
     declared = {item.value for item in MingliGraphEdgeType}
     emitted = {
         MingliGraphEdgeType[name].value
@@ -111,16 +110,6 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
 
     findings = [
         {
-            "finding_id": "REL-A02",
-            "severity": "critical",
-            "finding": "Luck and annual pillars are rendered as nodes without relation, cluster, path, or path-update computation.",
-        },
-        {
-            "finding_id": "REL-A06",
-            "severity": "high",
-            "finding": "Two declared Graph relation types still have no builder emission path.",
-        },
-        {
             "finding_id": "REL-A07",
             "severity": "medium",
             "finding": "Element edges connect every visible stem/branch pair without a position or layer qualification contract.",
@@ -133,7 +122,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
     ]
 
     checks = [
-        _check("declared_relation_types_counted", len(declared) == 15),
+        _check("declared_relation_types_counted", len(declared) == 13),
         _check("builder_emission_types_counted", len(emitted) == 13),
         _check(
             "material_clash_projection_closed",
@@ -147,7 +136,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
         ),
         _check(
             "all_triple_definitions_reproduced",
-            len(TRIPLE_COMBINATIONS) == 4
+            len(TRIPLE_HARMONY) == 4
             and witnesses["configured_triple"]["triple_edge_count"] > 0
             and witnesses["second_configured_triple"]["triple_edge_count"] > 0,
         ),
@@ -184,20 +173,20 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             advertised - declared == set(),
         ),
         _check(
-            "temporal_layer_has_no_relation_computation",
-            all(token not in temporal_block for token in ("relations=", "paths=", "path_updates=")),
-        ),
-        _check(
-            "structural_variant_appends_temporal_nodes_without_relations",
-            'candidate["nodes"].extend' in variant_source
-            and 'candidate["relations"].extend' not in variant_source,
-        ),
-        _check(
-            "luck_and_year_node_types_declared_but_not_built",
+            "temporal_layers_use_shared_relation_derivation",
             all(
-                f"MingliGraphNodeType.{name}" not in builder_source
-                for name in ("LUCK", "YEAR")
+                token in temporal_block
+                for token in (
+                    "relations=_temporal_relations",
+                    "derive_element_relations",
+                    "derive_branch_relations",
+                )
             ),
+        ),
+        _check(
+            "temporal_relations_are_same_level_only",
+            'model.level == "stem"' in temporal_block
+            and 'model.level == "branch"' in temporal_block,
         ),
     ]
 
@@ -212,7 +201,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             "declared_but_unemitted": len(declared - emitted),
             "canvas_advertised_relation_types": len(advertised),
             "canvas_only_relation_types": len(advertised - declared),
-            "configured_triple_combinations": len(TRIPLE_COMBINATIONS),
+            "configured_triple_combinations": len(TRIPLE_HARMONY),
             "configured_half_triple_combinations": len(HALF_TRIPLE_HARMONY),
             "six_clash_pairs_in_knowledge": len(SIX_CLASH),
             "six_harmony_pairs_in_knowledge": len(SIX_HARMONY),
@@ -221,7 +210,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             "pair_punishment_definitions": len(PAIR_PUNISHMENT),
             "self_punishment_definitions": len(SELF_PUNISHMENT),
             "triple_punishment_definitions": len(TRIPLE_PUNISHMENT),
-            "temporal_relation_builders": 0,
+            "temporal_relation_builders": 1,
             "findings": len(findings),
         },
         "declared_relation_types": sorted(declared),
@@ -236,6 +225,10 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
                 "resolution": "Graph Builder now consumes the existing deterministic six-clash and six-harmony materials without granting path eligibility.",
             },
             {
+                "finding_id": "REL-A02",
+                "resolution": "Official luck and year layers now compile same-level stem and branch relations through the shared deterministic relation derivation before Canvas diffing.",
+            },
+            {
                 "finding_id": "REL-A03",
                 "resolution": "All four standard triple-harmony definitions now share one knowledge source and positive/missing-member fixtures.",
             },
@@ -247,17 +240,22 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
                 "finding_id": "REL-A05",
                 "resolution": "Harm, break, pair/self punishment, and complete triple punishment now have core relation identities and conservative fixtures.",
             },
+            {
+                "finding_id": "REL-A06",
+                "resolution": "Unused activates and bridges Graph types were removed; activation remains a temporal diff state and bridge remains a path interpretation, not an unproven primitive relation.",
+            },
         ],
         "findings": findings,
         "checks": checks,
         "ra1_completed": [
             "consume existing deterministic branch-relation materials",
             "replace sample-specialized combinations with complete relation definitions",
+            "compile official luck and year relations through the same deterministic relation derivation",
         ],
         "ra1_entry_order": [
-            "add explicit luck/year cross-layer relation compilation",
-            "add minimal positive, negative, missing-member, and temporal fixtures",
-            "only then admit relations to path qualification",
+            "qualify relation types for path participation with explicit positive and negative fixtures",
+            "replace uncalibrated path strengths with evidence-backed discrete support states",
+            "only then admit temporal path updates",
         ],
         "relation_semantics_modified": False,
         "relation_projection_modified": True,

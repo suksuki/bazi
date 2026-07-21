@@ -5,7 +5,11 @@ from typing import Any, Literal
 
 from core.contracts import BirthInputCanonical
 from core.engines import normalize_birth_input
-from core.engines.bazi import build_bazi_material_store
+from core.engines.bazi import (
+    build_bazi_material_store,
+    derive_branch_relations,
+    derive_element_relations,
+)
 from core.engines.bazi.knowledge import (
     BRANCH_ELEMENTS,
     HIDDEN_STEMS,
@@ -13,8 +17,9 @@ from core.engines.bazi.knowledge import (
     STEM_POLARITY,
 )
 from core.engines.bazi.material_engine import resolve_ten_god
-from core.graph import NodeRef, build_mingli_graph_from_material_store, canonical_scene_scope_ref, explore_mingli_paths
+from core.graph import NodeRef, RelationKey, build_mingli_graph_from_material_store, canonical_scene_scope_ref, explore_mingli_paths
 from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphNode, MingliPath
+from core.graph.provenance import relation_directionality
 from core.life_case import (
     LifeCase,
     node_ref_for_graph_node,
@@ -80,8 +85,6 @@ RELATION_LABELS = {
     "harms": "相害",
     "breaks": "相破",
     "punishes": "相刑",
-    "activates": "引动",
-    "bridges": "通关",
     "position_link": "同柱",
 }
 LAYER_DEFINITIONS = (
@@ -477,11 +480,19 @@ def _compile_input_from_case_row(
         ],
     )
     timing = world.get("timing_context") if isinstance(world.get("timing_context"), dict) else {}
+    canvas_nodes_by_ref = {item.node_ref: item for item in chart_source.nodes}
+    natal_relation_nodes = [
+        (canvas_nodes_by_ref[node_ref.node_ref], node_ref)
+        for node_id, node_ref in node_ref_models.items()
+        if node_ref.node_ref in canvas_nodes_by_ref
+        and nodes_by_id[node_id].node_type.value in {"stem", "branch"}
+    ]
     temporal_layers = _temporal_layers(
         timing=timing,
         world=world_model,
         life_case=life_case,
         day_stem=birth.day_pillar[0],
+        natal_relation_nodes=natal_relation_nodes,
     )
     compiled_at = _parse_datetime(life_case.updated_at)
     source = MingliCanvasCompileInput(
@@ -797,17 +808,19 @@ def _temporal_layers(
     world: ChartWorldInstance,
     life_case: LifeCase,
     day_stem: str,
+    natal_relation_nodes: list[tuple[CanvasNode, NodeRef]],
 ) -> list[CanvasTemporalLayer]:
     refs = _refs(
         [str(item) for item in timing.get("calculation_refs") or []],
         fallback=f"world:{world.world_id}:timing-context",
     )
     output: list[CanvasTemporalLayer] = []
+    relation_nodes = list(natal_relation_nodes)
     luck_pillar = str(timing.get("luck_pillar") or "")
     if len(luck_pillar) >= 2:
         luck_range = timing.get("luck_year_range") if isinstance(timing.get("luck_year_range"), list) else []
         suffix = "-".join(str(item) for item in luck_range) or "current"
-        output.append(_temporal_layer(
+        layer, layer_nodes = _temporal_layer(
             layer_type="luck",
             pillar=luck_pillar,
             world=world,
@@ -815,10 +828,13 @@ def _temporal_layers(
             snapshot_suffix=suffix,
             day_stem=day_stem,
             source_refs=refs,
-        ))
+            relation_nodes=relation_nodes,
+        )
+        output.append(layer)
+        relation_nodes.extend(layer_nodes)
     annual_pillar = str(timing.get("annual_pillar") or "")
     if len(annual_pillar) >= 2:
-        output.append(_temporal_layer(
+        layer, layer_nodes = _temporal_layer(
             layer_type="year",
             pillar=annual_pillar,
             world=world,
@@ -826,7 +842,10 @@ def _temporal_layers(
             snapshot_suffix=str(timing.get("analysis_year") or "current"),
             day_stem=day_stem,
             source_refs=refs,
-        ))
+            relation_nodes=relation_nodes,
+        )
+        output.append(layer)
+        relation_nodes.extend(layer_nodes)
     return output
 
 
@@ -839,7 +858,8 @@ def _temporal_layer(
     snapshot_suffix: str,
     day_stem: str,
     source_refs: list[str],
-) -> CanvasTemporalLayer:
+    relation_nodes: list[tuple[CanvasNode, NodeRef]],
+) -> tuple[CanvasTemporalLayer, list[tuple[CanvasNode, NodeRef]]]:
     stem, branch = pillar[0], pillar[1]
     layer_id = f"{layer_type}:{world.world_id}:{pillar}:{snapshot_suffix}"
     slot_ref = f"slot-{layer_type}-{world.world_id}-{pillar}"
@@ -848,7 +868,7 @@ def _temporal_layer(
         life_case_id=life_case.life_case_id,
         chart_version_id=life_case.chart_version.version_id,
     )
-    temporal_node_refs = {
+    temporal_node_models = {
         "stem": NodeRef(
             scene_ref=scene_ref,
             life_case_id=life_case.life_case_id,
@@ -859,7 +879,7 @@ def _temporal_layer(
             level="stem",
             component=stem,
             temporal_snapshot_ref=temporal_snapshot_ref,
-        ).node_ref,
+        ),
         "branch": NodeRef(
             scene_ref=scene_ref,
             life_case_id=life_case.life_case_id,
@@ -870,7 +890,7 @@ def _temporal_layer(
             level="branch",
             component=branch,
             temporal_snapshot_ref=temporal_snapshot_ref,
-        ).node_ref,
+        ),
     }
     trace = CanvasTrace(
         source_mode="derived",
@@ -879,7 +899,32 @@ def _temporal_layer(
         uncertainty=["时间柱已完成历法计算；其现实作用仍需正式命理认知"],
         disclosure="member",
     )
-    return CanvasTemporalLayer(
+    temporal_nodes = [
+        CanvasNode(
+            node_ref=temporal_node_models["stem"].node_ref,
+            label=stem,
+            node_type=f"{layer_type}_stem",
+            semantic_slot_ref=slot_ref,
+            element=STEM_ELEMENTS.get(stem, ""),
+            polarity=STEM_POLARITY.get(stem, ""),
+            ten_god=resolve_ten_god(day_stem=day_stem, other_stem=stem),
+            trace=trace,
+        ),
+        CanvasNode(
+            node_ref=temporal_node_models["branch"].node_ref,
+            label=branch,
+            node_type=f"{layer_type}_branch",
+            semantic_slot_ref=slot_ref,
+            element=BRANCH_ELEMENTS.get(branch, ""),
+            polarity=BRANCH_POLARITY.get(branch, ""),
+            trace=trace,
+        ),
+    ]
+    current_relation_nodes = [
+        (temporal_nodes[0], temporal_node_models["stem"]),
+        (temporal_nodes[1], temporal_node_models["branch"]),
+    ]
+    layer = CanvasTemporalLayer(
         layer_id=layer_id,
         layer_type=layer_type,
         layer_mode="official",
@@ -894,29 +939,144 @@ def _temporal_layer(
             immutable=False,
             trace=trace,
         ),
-        nodes=[
-            CanvasNode(
-                node_ref=temporal_node_refs["stem"],
-                label=stem,
-                node_type=f"{layer_type}_stem",
-                semantic_slot_ref=slot_ref,
-                element=STEM_ELEMENTS.get(stem, ""),
-                polarity=STEM_POLARITY.get(stem, ""),
-                ten_god=resolve_ten_god(day_stem=day_stem, other_stem=stem),
-                trace=trace,
-            ),
-            CanvasNode(
-                node_ref=temporal_node_refs["branch"],
-                label=branch,
-                node_type=f"{layer_type}_branch",
-                semantic_slot_ref=slot_ref,
-                element=BRANCH_ELEMENTS.get(branch, ""),
-                polarity=BRANCH_POLARITY.get(branch, ""),
-                trace=trace,
-            ),
-        ],
+        nodes=temporal_nodes,
+        relations=_temporal_relations(
+            layer_type=layer_type,
+            existing_nodes=relation_nodes,
+            current_nodes=current_relation_nodes,
+            scene_ref=scene_ref,
+            source_refs=source_refs,
+        ),
         source_refs=source_refs,
     )
+    return layer, current_relation_nodes
+
+
+def _temporal_relations(
+    *,
+    layer_type: Literal["luck", "year"],
+    existing_nodes: list[tuple[CanvasNode, NodeRef]],
+    current_nodes: list[tuple[CanvasNode, NodeRef]],
+    scene_ref: str,
+    source_refs: list[str],
+) -> list[CanvasRelation]:
+    all_nodes = [*existing_nodes, *current_nodes]
+    nodes_by_ref = {node.node_ref: node for node, _ in all_nodes}
+    refs_by_ref = {model.node_ref: model for _, model in all_nodes}
+    current_refs = {node.node_ref for node, _ in current_nodes}
+    stems = [
+        (node.node_ref, node.element)
+        for node, model in all_nodes
+        if model.level == "stem"
+    ]
+    branches = [
+        (node.node_ref, node.label)
+        for node, model in all_nodes
+        if model.level == "branch"
+    ]
+    rows: list[dict[str, object]] = [
+        *derive_element_relations(stems),
+        *derive_branch_relations(branches),
+    ]
+    relations: dict[str, CanvasRelation] = {}
+    for row in rows:
+        participant_refs = _relation_participant_refs(row)
+        if len(participant_refs) < 2 or not current_refs.intersection(participant_refs):
+            continue
+        relation_type = _core_relation_type(str(row.get("type", "")))
+        if not relation_type or not set(participant_refs).issubset(nodes_by_ref):
+            continue
+        from_ref, to_ref = _relation_endpoints(
+            row=row,
+            relation_type=relation_type,
+            participant_refs=participant_refs,
+            nodes_by_ref=nodes_by_ref,
+        )
+        relation_key = RelationKey(
+            scene_ref=scene_ref,
+            relation_type=relation_type,
+            participant_refs=[refs_by_ref[item] for item in participant_refs],
+            directionality=relation_directionality(relation_type),
+            scope=layer_type,
+        )
+        refs = _refs(
+            [*source_refs, f"rule:bazi.branch_relation:{row.get('type', '')}"],
+            fallback=relation_key.relation_key,
+        )
+        trace = CanvasTrace(
+            source_mode="derived",
+            epistemic_status="derived",
+            source_refs=refs,
+            uncertainty=["结构关系存在不等于做功路径已经成立"],
+            disclosure="member",
+        )
+        label = (
+            " · ".join(nodes_by_ref[item].label for item in participant_refs)
+            + RELATION_LABELS.get(relation_type, relation_type)
+            if len(participant_refs) > 2
+            else (
+                f"{nodes_by_ref[from_ref].label}"
+                f"{RELATION_LABELS.get(relation_type, relation_type)}"
+                f"{nodes_by_ref[to_ref].label}"
+            )
+        )
+        relations[relation_key.relation_key] = CanvasRelation(
+            relation_ref=relation_key.relation_key,
+            from_node_ref=from_ref,
+            to_node_ref=to_ref,
+            participant_node_refs=participant_refs,
+            relation_type=relation_type,
+            label=label,
+            semantic_state="active",
+            trace=trace,
+            state_trace=trace,
+            change_reason_refs=refs,
+        )
+    return [relations[key] for key in sorted(relations)]
+
+
+def _relation_participant_refs(row: dict[str, object]) -> list[str]:
+    slots = row.get("slots")
+    if isinstance(slots, list):
+        return [str(item) for item in slots]
+    source_ref = str(row.get("source_ref") or row.get("slot_a") or "")
+    target_ref = str(row.get("target_ref") or row.get("slot_b") or "")
+    return [item for item in (source_ref, target_ref) if item]
+
+
+def _core_relation_type(raw_type: str) -> str:
+    return {
+        "generates": "generates",
+        "controls": "controls",
+        "same_element_support": "same_element_support",
+        "clash": "clashes",
+        "harmony": "harmonizes",
+        "harm": "harms",
+        "break": "breaks",
+        "punishment": "punishes",
+        "self_punishment": "punishes",
+        "half_triple_harmony": "forms_half_combination",
+        "triple_harmony": "forms_triple_combination",
+        "triple_punishment": "punishes",
+    }.get(raw_type, "")
+
+
+def _relation_endpoints(
+    *,
+    row: dict[str, object],
+    relation_type: str,
+    participant_refs: list[str],
+    nodes_by_ref: dict[str, CanvasNode],
+) -> tuple[str, str]:
+    if relation_type == "forms_triple_combination":
+        bridge = str(row.get("bridge_branch") or "")
+        target = next(
+            (ref for ref in participant_refs if nodes_by_ref[ref].label == bridge),
+            participant_refs[1],
+        )
+        source = next(ref for ref in participant_refs if ref != target)
+        return source, target
+    return participant_refs[0], participant_refs[1]
 
 
 def _layer_catalog(spec: MingliCanvasSpec) -> list[dict[str, Any]]:
