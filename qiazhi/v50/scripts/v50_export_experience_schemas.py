@@ -41,7 +41,7 @@ from experience.product_projection import (
     CanvasLayerProjection,
     CanvasStageProjection,
     ExperienceCaseSummary,
-    ExperienceCasesResponse,
+    ExperienceWorkspaceBootstrapResponse,
     NarrationManifestResponse,
     NarrationStatus,
     ReadOnlySixPillarCanvas,
@@ -81,7 +81,7 @@ CONTRACTS = {
 TYPESCRIPT_ROOTS: tuple[type[BaseModel], ...] = (
     MingliExperienceEnvelope,
     ExperienceCaseSummary,
-    ExperienceCasesResponse,
+    ExperienceWorkspaceBootstrapResponse,
     NarrationSegment,
     NarrationManifest,
     NarrationStatus,

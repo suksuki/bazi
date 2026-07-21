@@ -45,6 +45,8 @@ class MemoryAgentJobStore:
 
     def create(self, *, job_id: str, case_id: str, user_id: str | None, payload: dict[str, Any]) -> None:
         with self._lock:
+            if job_id in self._jobs:
+                raise KeyError(f"cognitive_job_already_exists:{job_id}")
             self._jobs[job_id] = {
                 **deepcopy(payload),
                 "job_id": job_id,

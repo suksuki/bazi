@@ -29,9 +29,10 @@ def test_area_switching_reuses_one_case_load_and_one_server_projection() -> None
     api = (SHELL / "api.ts").read_text(encoding="utf-8")
     combined = main + data + api
 
-    assert data.count("loadCaseWorkspace(caseId)") == 1
-    assert data.count("loadEnvelope(caseId)") == 1
-    assert data.count("loadReadOnlyCanvas(caseId)") == 1
+    assert data.count("loadWorkspaceBootstrap(selection)") == 1
+    assert "Promise.allSettled" not in data
+    assert main.count("loadReadOnlyCanvas(activeCaseId)") == 1
+    assert main.count("loadNarration(activeCaseId)") == 1
     assert 'data-product-area' in (STATIC / "app.js").read_text(encoding="utf-8")
     assert "relation.relation_type ===" not in combined
     assert "writes_life_case" not in combined
@@ -42,7 +43,7 @@ def test_lab_is_role_disclosed_and_only_reads_canvas_relation_state() -> None:
     data = (SHELL / "experience_data.ts").read_text(encoding="utf-8")
     components = (SHELL / "components.ts").read_text(encoding="utf-8")
 
-    assert 'workspace.allowed_surfaces.includes("mingli_lab")' in data
+    assert 'bootstrap.workspace?.allowed_surfaces.includes("mingli_lab")' in data
     assert 'item.relation_state === "potential"' in components
     assert 'item.relation_state !== "potential"' in components
     assert "researchLens" in components

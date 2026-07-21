@@ -8,17 +8,20 @@ SHELL = ROOT / "apps/product/experience_shell/src"
 STATIC = ROOT / "apps/product/static/experience"
 
 
-def test_experience_shell_consumes_workspace_and_loads_case_surfaces_in_parallel() -> None:
+def test_experience_shell_bootstraps_once_and_loads_heavy_surfaces_on_demand() -> None:
     api = (SHELL / "api.ts").read_text(encoding="utf-8")
     main = (SHELL / "main.ts").read_text(encoding="utf-8")
     data = (SHELL / "experience_data.ts").read_text(encoding="utf-8")
 
-    assert "/api/v50/scenes/cases/${encodeURIComponent(caseId)}/workspace" in api
-    assert "Promise.allSettled" in data
-    assert "loadCaseWorkspace(caseId)" in data
+    assert "/api/v50/experience/workspace/bootstrap" in api
+    assert "loadWorkspaceBootstrap(selection)" in data
+    assert "Promise.allSettled" not in data
+    assert "loadCaseWorkspace" not in data
+    assert "loadReadOnlyCanvas(activeCaseId)" in main
+    assert "loadNarration(activeCaseId)" in main
     assert "availableSurfaces.includes(surface)" in main
-    assert "surface === \"onecanvas\"" in data
-    assert "surface === \"theater\"" in data
+    assert 'ui.workspaceSurface === "onecanvas"' in main
+    assert 'ui.workspaceSurface === "theater"' in main
 
 
 def test_personal_workspace_exposes_only_case_bound_surfaces() -> None:

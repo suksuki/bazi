@@ -12,8 +12,9 @@ from experience.canvas import (
     MingliCanvasSpec,
 )
 from experience.canonical_scene import CanonicalProjectionEnvelope, CanonicalSceneIdentity
-from experience.contracts import ExperienceModel
+from experience.contracts import ExperienceModel, MingliExperienceEnvelope
 from experience.narration import NarrationManifest, SpeechAsset
+from experience.workspace import CaseWorkspaceEnvelope
 
 
 CanvasLayer = Literal["generation_control", "combination", "conflict", "work_path"]
@@ -36,14 +37,46 @@ class ExperienceCaseSummary(ExperienceModel):
     case_version: str
     status: str
     baseline_available: bool
+    chart_ready: bool = False
+    cognition_status: Literal["ready", "preparing", "chart_ready", "partial"] = "chart_ready"
     experience_url: str
 
 
-class ExperienceCasesResponse(ExperienceModel):
-    status: Literal["experience_cases_ready"]
+class WorkspaceAccountSummary(ExperienceModel):
+    display_name: str
+    role: str
+
+
+class WorkspaceCognitionState(ExperienceModel):
+    status: Literal["ready", "preparing", "chart_ready", "partial"]
+    message: str
+    cache_hit: bool
+    background_start_allowed: bool
+    background_job_id: str = ""
+    llm_calls_started_by_bootstrap: Literal[0] = 0
+    tts_calls_started_by_bootstrap: Literal[0] = 0
+
+
+class WorkspaceBootstrapBudget(ExperienceModel):
+    api_requests: Literal[1] = 1
+    llm_calls: Literal[0] = 0
+    tts_calls: Literal[0] = 0
+    domain_generations: Literal[0] = 0
+
+
+class ExperienceWorkspaceBootstrapResponse(ExperienceModel):
+    status: Literal["workspace_bootstrap_ready", "workspace_profile_required"]
+    account: WorkspaceAccountSummary
     cases: list[ExperienceCaseSummary]
-    cognition_source: Literal["LifeCase"]
-    legacy_report_used: Literal[False]
+    selected_case_id: str = ""
+    selected_profile_id: str = ""
+    envelope: MingliExperienceEnvelope | None = None
+    workspace: CaseWorkspaceEnvelope | None = None
+    cognition: WorkspaceCognitionState
+    request_budget: WorkspaceBootstrapBudget = Field(default_factory=WorkspaceBootstrapBudget)
+    cognition_source: Literal["LifeCase"] = "LifeCase"
+    chart_source: Literal["ChartWorldInstance"] = "ChartWorldInstance"
+    legacy_report_used: Literal[False] = False
 
 
 class NarrationStatus(ExperienceModel):

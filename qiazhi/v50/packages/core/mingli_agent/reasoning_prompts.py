@@ -6,10 +6,7 @@ from typing import Any
 from core.life_domains import LifeDomain, domain_definition, domain_reasoning_protocol
 from core.mingli_agent.contracts import (
     ChartWorldInstance,
-    DomainCausalReading,
     DualLensCognitionDraft,
-    EpistemicReviewReceipt,
-    MingliCognitiveDraft,
     MingliCognitiveRecord,
     PatternHypothesisDraft,
     PredictionProbeDraft,
@@ -477,60 +474,6 @@ def _probe_repair_prompt(*, world: ChartWorldInstance, whole: WholeChartCognitio
 
 盘面主做功：
 {json.dumps(whole.work_path.model_dump(mode='json'), ensure_ascii=False, separators=(',', ':'))}
-""".strip()
-
-def _single_domain_repair_prompt(
-    *,
-    world: ChartWorldInstance,
-    whole: WholeChartCognitionDraft,
-    domain_reading: DomainCausalReading,
-    receipt: EpistemicReviewReceipt,
-    context_payload: dict[str, Any] | None = None,
-) -> str:
-    return f"""
-整盘认知已经冻结，不允许重写。`{domain_reading.domain}` 领域推演中出现了事实、引用或边界问题。
-请只重写这个 DomainCausalReading，保留具体因果判断，不得改成套话，也不得生成另一个领域。
-
-评审问题：
-{json.dumps(receipt.model_dump(mode='json'), ensure_ascii=False)}
-
-命理世界与不可变账本：
-{json.dumps(context_payload or _reasoning_world_payload(world), ensure_ascii=False, separators=(',', ':'))}
-
-冻结的整盘认知：
-{json.dumps(whole.model_dump(mode='json'), ensure_ascii=False, separators=(',', ':'))}
-
-原领域推演：
-{json.dumps(domain_reading.model_dump(mode='json'), ensure_ascii=False, separators=(',', ':'))}
-
-修复引用、因果链和可证伪性。所有五行关系、十神关系和 timing 范围必须逐句回到账本；
-风险改写成结构条件与可观察行为，不写戏剧化事件。不得添加冻结整盘认知之外的新格局。
-""".strip()
-
-def _single_baseline_repair_prompt(
-    *,
-    world: ChartWorldInstance,
-    draft: MingliCognitiveDraft,
-    receipt: EpistemicReviewReceipt,
-    context_payload: dict[str, Any],
-) -> str:
-    return f"""
-这是一份整盘认知草稿的唯一一次完整性修复。不得更换命局主线，不得掩盖竞争假设，
-不得把事实冲突改写成听起来合理的文字。只修复评审指出的引用、条件、因果链、
-可证伪性或字段完整性问题，并返回完整 WholeChartCognitionDraft。
-
-如果原草稿缺少足够依据，不要编造依据；应降低 hypothesis confidence、保留 unresolved_questions，
-或把相关假设标为 unresolved。调候、扶抑、格局、制化、做功与当前时序必须分开表达，
-每条 UsefulGodReasoning 必须说明它回答的问题、适用范围、成立条件和失效条件。
-
-评审问题：
-{json.dumps(receipt.model_dump(mode='json'), ensure_ascii=False, separators=(',', ':'))}
-
-命理世界与不可变事实：
-{json.dumps(context_payload or _reasoning_world_payload(world), ensure_ascii=False, separators=(',', ':'))}
-
-原整盘草稿：
-{json.dumps(draft.model_dump(mode='json'), ensure_ascii=False, separators=(',', ':'))}
 """.strip()
 
 def _case_turn_prompt(*, world: ChartWorldInstance, record: MingliCognitiveRecord, user_message: str) -> str:

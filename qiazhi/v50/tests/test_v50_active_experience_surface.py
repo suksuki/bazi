@@ -98,7 +98,7 @@ def test_abu_theater_entry_can_continue_into_the_product_without_a_route_loop() 
     )
 
     assert theater.status_code == 200
-    assert 'href="/app" aria-label="进入 DeepBazi"' in theater.text
-    assert 'class="scene-link" href="/app">进入 DeepBazi</a>' in theater.text
-    assert 'class="entry-system" href="/app">直接进入 DeepBazi</a>' in theater.text
-    assert 'class="finale-link" href="/app">开始探索我的命局</a>' in theater.text
+    assert 'href="/experience" aria-label="进入 DeepBazi"' in theater.text
+    assert 'class="scene-link" href="/experience">进入 DeepBazi</a>' in theater.text
+    assert 'class="entry-system" href="/experience">直接进入 DeepBazi</a>' in theater.text
+    assert 'class="finale-link" href="/experience">开始探索我的命局</a>' in theater.text

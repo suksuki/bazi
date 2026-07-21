@@ -8,6 +8,7 @@ from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 from product.abu_narration import AbuNarrationError, AbuNarrationService
 from product.product_store import ProductStore
+from product.theater_envelope import ProductExperienceEnvelopePort
 from product.theater_performance import TheaterPerformanceError
 
 
@@ -24,6 +25,7 @@ def create_narration_router(
     router = APIRouter(prefix=NARRATION_API_PREFIX, tags=["abu-narrated-workspace"])
     service = service or AbuNarrationService.from_environment()
     scene_owner = CanonicalSceneOwner(case_store=case_store)
+    envelope_port = ProductExperienceEnvelopePort(scene_owner=scene_owner)
 
     def authenticated_account(request: Request) -> dict[str, object]:
         token = request.cookies.get(session_cookie, "")
@@ -53,10 +55,24 @@ def create_narration_router(
                 projection_kind="abu",
             )
             return service.compile_manifest(projection)
-        except (CanonicalSceneUnavailable, AbuNarrationError) as exc:
-            detail = str(exc)
-            status = 404 if detail == "canonical_scene_case_not_found" else 409
-            raise HTTPException(status_code=status, detail=detail) from exc
+        except CanonicalSceneUnavailable:
+            try:
+                envelope = envelope_port.issue_envelope(
+                    participant_id=str(account["user_id"]),
+                    topic_id="whole-chart-baseline",
+                    topic_version="chart-facts-narration-v1",
+                    disclosure_level="chart_facts",
+                    case_id=case_id,
+                    permitted_capabilities=["narrated_workspace", "four_pillar_stage"],
+                    account_role=str(account.get("account_role") or "member"),
+                )
+                return service.compile_chart_facts_manifest(envelope)
+            except (ValueError, AbuNarrationError) as exc:
+                detail = str(exc)
+                status = 404 if detail in {"canonical_scene_case_not_found", "experience_case_not_found"} else 409
+                raise HTTPException(status_code=status, detail=detail) from exc
+        except AbuNarrationError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
 
     @router.get("/cases/{case_id}/baseline", response_model=NarrationManifestResponse)
     def baseline_manifest(case_id: str, request: Request) -> dict[str, object]:

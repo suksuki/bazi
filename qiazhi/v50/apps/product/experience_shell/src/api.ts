@@ -1,7 +1,5 @@
 import type {
-  CaseWorkspaceEnvelope,
-  ExperienceCaseSummary,
-  MingliExperienceEnvelope,
+  ExperienceWorkspaceBootstrapResponse,
   NarrationManifest,
   NarrationStatus,
   CanvasContextPack,
@@ -24,26 +22,40 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export async function loadAccount(): Promise<{ display_name: string; role: string }> {
-  const payload = await requestJson<{ account: { display_name: string; role: string } }>(
-    "/api/v50/product/auth/me",
-  );
-  return payload.account;
+export function loadWorkspaceBootstrap(input: {
+  caseId?: string;
+  profileId?: string;
+} = {}): Promise<ExperienceWorkspaceBootstrapResponse> {
+  return requestJson("/api/v50/experience/workspace/bootstrap", {
+    method: "POST",
+    body: JSON.stringify({
+      case_id: input.caseId || "",
+      profile_id: input.profileId || "",
+    }),
+  });
 }
 
-export async function loadCases(): Promise<ExperienceCaseSummary[]> {
-  const payload = await requestJson<{ cases: ExperienceCaseSummary[] }>(
-    "/api/v50/experience/cases",
-  );
-  return payload.cases;
+export interface BaselineStartResponse {
+  status: "baseline_cache_reused" | "baseline_preparing" | "baseline_reconciled" | "baseline_partial" | "baseline_unavailable";
+  case_id: string;
+  job_id: string;
+  llm_calls_started: number;
+  isolated_assertion_count?: number;
 }
 
-export function loadEnvelope(caseId: string): Promise<MingliExperienceEnvelope> {
-  return requestJson(`/api/v50/experience/cases/${encodeURIComponent(caseId)}/baseline`);
+export function startMissingBaseline(caseId: string): Promise<BaselineStartResponse> {
+  return requestJson(`/api/v50/experience/workspace/cases/${encodeURIComponent(caseId)}/baseline`, {
+    method: "POST",
+    body: "{}",
+  });
 }
 
-export function loadCaseWorkspace(caseId: string): Promise<CaseWorkspaceEnvelope> {
-  return requestJson(`/api/v50/scenes/cases/${encodeURIComponent(caseId)}/workspace`);
+export function loadCognitiveJob(jobId: string): Promise<{
+  status: "queued" | "running" | "completed" | "failed";
+  job_id: string;
+  case_id: string;
+}> {
+  return requestJson(`/api/v50/experience/workspace/jobs/${encodeURIComponent(jobId)}`);
 }
 
 export function loadReadOnlyCanvas(caseId: string): Promise<ReadOnlySixPillarCanvas> {

@@ -9,7 +9,7 @@ from fastapi import HTTPException
 
 from core.contracts import BirthInputCanonical
 from core.life_domains import LifeDomain
-from core.mingli_agent import ProbePlanner
+from core.mingli_agent import ChartWorldInstance, ProbePlanner
 from product.agent_api_context import AgentApiContext
 from product.agent_command_service import BaselineCaseCommand, BaselineCaseCommandService
 from product.agent_reading_projection import public_reading_view, reliability_outcome_payload
@@ -49,6 +49,7 @@ class AgentJobRunner:
         profile: dict[str, object] | None,
         user_id: str | None,
         active_mode: str,
+        world: ChartWorldInstance | None = None,
     ) -> None:
         self._executor.submit(
             self._run_baseline,
@@ -59,6 +60,7 @@ class AgentJobRunner:
             profile=profile,
             user_id=user_id,
             active_mode=active_mode,
+            world=world,
         )
 
     def submit_domain(
@@ -87,6 +89,7 @@ class AgentJobRunner:
         profile: dict[str, object] | None,
         user_id: str | None,
         active_mode: str,
+        world: ChartWorldInstance | None,
     ) -> None:
         current_stage = "chart_compilation"
         try:
@@ -136,6 +139,7 @@ class AgentJobRunner:
                         profile_id=str(profile.get("profile_id")) if profile else None,
                         user_id=user_id,
                         active_mode=active_mode,
+                        world=world,
                     ),
                     on_event=on_command_event,
                 )
@@ -211,6 +215,11 @@ class AgentJobRunner:
                     "message": cognitive_failure_message(current_stage),
                 },
             )
+            self._mark_case_cognition_failed(
+                case_id=case_id,
+                user_id=user_id,
+                job_id=job_id,
+            )
 
     def _run_domain(
         self,
@@ -271,6 +280,32 @@ class AgentJobRunner:
                 job_status="failed",
             )
 
+    def _mark_case_cognition_failed(
+        self,
+        *,
+        case_id: str,
+        user_id: str | None,
+        job_id: str,
+    ) -> None:
+        row = self._context.case_store.get(case_id=case_id, user_id=user_id)
+        if row is None:
+            return
+        row.pop("workspace", None)
+        background = row.get("background_cognition")
+        background = background if isinstance(background, dict) else {}
+        row["background_cognition"] = {
+            **background,
+            "status": "failed",
+            "job_id": job_id,
+            "attempt_count": max(1, int(background.get("attempt_count") or 0)),
+        }
+        self._context.case_store.save(
+            case_id=case_id,
+            user_id=user_id,
+            profile_id=row.get("profile_id"),
+            payload=row,
+        )
+
 
 def cognitive_failure_message(stage: str) -> str:
     return {
@@ -283,5 +318,5 @@ def cognitive_failure_message(stage: str) -> str:
         "prior_probe": "整盘判断没有形成可验证的现实问题，因此本轮已经停止。",
         "career_domain": "事业专题没有通过事实与证据检查，因此不会输出不完整判断。",
         "wealth_domain": "财富专题没有通过事实与证据检查，因此不会输出不完整判断。",
-        "epistemic_review": "最终事实与证据检查没有通过，因此本轮结果不会作为完整测算展示。",
+        "epistemic_review": "命盘事实已经保留；本轮未被证据支持的判断不会进入正式命局。",
     }.get(stage, "本次深度认知没有完成。已经形成的阶段结果会保留，但不会冒充完整判断。")

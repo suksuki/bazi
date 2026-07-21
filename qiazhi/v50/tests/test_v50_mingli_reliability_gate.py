@@ -155,19 +155,24 @@ def test_hard_chart_fact_conflict_blocks_formal_commit() -> None:
         commit_baseline_life_case(insight=insight, world=world, profile_id=None)
 
 
-def test_production_baseline_does_not_rewrite_hard_fact_before_review() -> None:
+def test_production_baseline_isolates_one_hard_fact_without_rejecting_the_case() -> None:
     record = MingliAgent(HardFactBaselineModel()).first_baseline_reading(
         case_id="case.raw-hard-fact",
         world=_world("reading.raw-hard-fact"),
     )
 
-    assert record.review.disposition == "blocked"
-    assert record.review.commit_eligible is False
-    assert "火生金" in record.cognition.hypotheses[0].thesis
-    assert "mingli_fact_conflict" in record.review.hard_failure_codes
+    assert record.review.disposition == "competing"
+    assert record.review.commit_eligible is True
+    assert all("火生金" not in item.thesis for item in record.cognition.hypotheses)
+    isolated = next(
+        item for item in record.assertion_gate.decisions if item.assertion_ref == "h1"
+    )
+    assert isolated.disposition == "suppressed"
+    assert any(code.startswith("semantic:") for code in isolated.reason_codes)
+    assert record.assertion_gate.automatic_full_rerun_allowed is False
 
 
-def test_blocked_api_keeps_chart_facts_but_never_writes_life_case() -> None:
+def test_api_commits_safe_assertions_and_excludes_the_bad_assertion() -> None:
     store = MemoryAgentCaseStore()
     client = TestClient(create_product_app(
         product_store=MemoryProductStore(),
@@ -179,13 +184,14 @@ def test_blocked_api_keeps_chart_facts_but_never_writes_life_case() -> None:
     row = store.get(case_id=payload["case_id"])
 
     assert response.status_code == 200
-    assert payload["status"] == "baseline_blocked"
-    assert "reading" not in payload
-    assert payload["outcome"]["pillars"]
-    assert row["life_case"] is None
+    assert payload["status"] == "first_reading_ready"
+    assert payload["reading"]["pillars"]
+    assert row["life_case"] is not None
+    assert "火生金" not in str(row["life_case"])
+    assert row["record"]["assertion_gate"]["suppressed_count"] == 1
 
 
-def test_competing_api_exposes_both_explanations_without_formal_commit() -> None:
+def test_competing_api_preserves_both_explanations_in_formal_case() -> None:
     store = MemoryAgentCaseStore()
     client = TestClient(create_product_app(
         product_store=MemoryProductStore(),
@@ -197,34 +203,29 @@ def test_competing_api_exposes_both_explanations_without_formal_commit() -> None
     row = store.get(case_id=payload["case_id"])
 
     assert response.status_code == 200
-    assert payload["status"] == "baseline_competing"
+    assert payload["status"] == "first_reading_ready"
     assert payload["reading"]["reliability"]["state"] == "competing"
-    assert payload["outcome"]["primary_explanation"]
-    assert payload["outcome"]["competing_explanations"]
-    assert (
-        payload["outcome"]["primary_explanation"]["hypothesis_id"]
-        != payload["outcome"]["competing_explanations"][0]["hypothesis_id"]
-    )
-    assert row["life_case"] is None
+    assert row["life_case"] is not None
+    uncertainty = row["life_case"]["baseline_insight"]["uncertainty"]
+    assert uncertainty["competing_hypotheses"]
 
 
-def test_incomplete_reasoning_gets_exactly_one_targeted_repair() -> None:
+def test_incomplete_reasoning_is_locally_isolated_without_a_second_model_call() -> None:
     model = OneRepairModel()
     record = MingliAgent(model).first_baseline_reading(
         case_id="case.one-repair",
         world=_world("reading.one-repair"),
     )
 
-    assert model.baseline_calls == 2
-    assert [item["stage"] for item in record.stage_receipts] == [
-        "baseline_cognition",
-        "baseline_repair",
-    ]
-    assert record.review.repaired is True
+    assert model.baseline_calls == 1
+    assert [item["stage"] for item in record.stage_receipts] == ["baseline_cognition"]
+    assert record.assertion_gate.candidate_count == 1
+    assert record.cognition.useful_god_reasoning == []
+    assert record.assertion_gate.automatic_full_rerun_allowed is False
     assert record.review.disposition == "reliable"
 
 
-def test_competing_hypotheses_remain_visible_but_not_committable() -> None:
+def test_competing_hypotheses_remain_visible_and_committable_as_competing() -> None:
     world = _world("reading.competing")
     record = MingliAgent(FakeCognitiveModel()).first_baseline_reading(
         case_id="case.competing",
@@ -248,9 +249,8 @@ def test_competing_hypotheses_remain_visible_but_not_committable() -> None:
 
     assert review.passed is True
     assert review.disposition == "competing"
-    assert review.commit_eligible is False
-    assert validation.passed is False
-    assert "epistemic_state_not_committable:competing" in validation.errors
+    assert review.commit_eligible is True
+    assert validation.passed is True
 
 
 def test_strategy_dimensions_are_explicit_and_mixed_is_blocked() -> None:
@@ -284,7 +284,7 @@ def test_uncompared_alternative_is_competing_even_when_ranked_lower() -> None:
     review = review_cognition(draft=cognition, world=world, model="test")
 
     assert review.disposition == "competing"
-    assert review.commit_eligible is False
+    assert review.commit_eligible is True
 
 
 def test_domain_cache_requires_same_question_and_exact_baseline() -> None:

@@ -1405,6 +1405,104 @@ select:focus-visible,
 .lab-empty { min-height: 100vh; padding: 100px 50px; background: var(--mist); }
 .lab-empty p { color: var(--orange); font-size: 11px; font-weight: 800; }
 .lab-empty h1 { max-width: 700px; font-family: var(--serif); font-size: 32px; font-weight: 580; }
+.lab-empty span { display: block; max-width: 620px; margin-top: 14px; color: var(--muted); font-size: 13px; line-height: 1.8; }
+
+.cognition-progress {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: min(760px, 100%);
+  margin: 54px auto 0;
+  padding: 18px 0;
+  border-top: 1px solid rgba(20, 61, 52, 0.2);
+  border-bottom: 1px solid rgba(20, 61, 52, 0.2);
+}
+
+.cognition-progress > i,
+.narration-pending > i {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: var(--orange);
+  box-shadow: 0 0 0 7px rgba(204, 103, 70, 0.12);
+}
+
+.cognition-progress span,
+.cognition-progress strong,
+.cognition-progress small { display: block; }
+.cognition-progress strong { color: var(--forest); font-size: 13px; }
+.cognition-progress small { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+.deterministic-canvas-skeleton {
+  padding: 6px 0 18px;
+}
+
+.deterministic-canvas-skeleton > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 20px;
+  padding-bottom: 18px;
+  border-bottom: 1px solid var(--line);
+}
+
+.deterministic-canvas-skeleton > header span {
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.deterministic-canvas-skeleton > header strong {
+  color: var(--forest);
+  font-family: var(--serif);
+  font-size: 19px;
+  font-weight: 580;
+}
+
+.skeleton-pillar-rail {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin-top: 28px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.skeleton-pillar-rail article {
+  display: grid;
+  place-items: center;
+  min-width: 0;
+  min-height: 260px;
+  padding: 22px 10px;
+  border-right: 1px solid var(--line);
+}
+
+.skeleton-pillar-rail article:last-child { border-right: 0; }
+.skeleton-pillar-rail small { color: var(--muted); font-size: 11px; }
+.skeleton-pillar-rail b { font-family: var(--serif); font-size: 48px; font-weight: 560; }
+.skeleton-pillar-rail article > i { width: 1px; height: 20px; background: var(--line); }
+.skeleton-pillar-rail em { color: var(--muted); font-size: 10px; font-style: normal; }
+.deterministic-canvas-skeleton > p {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.deterministic-canvas-skeleton > p > i { width: 22px; height: 1px; background: var(--orange); }
+
+.narration-pending {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 760px;
+  margin-top: 28px;
+  padding: 22px 0;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.narration-pending p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.7; }
 
 /* Abu companion */
 .abu-dock {
@@ -2059,6 +2157,43 @@ select:focus-visible,
   .abu-panel {
     width: calc(100vw - 20px);
     max-height: 62vh;
+  }
+}
+
+@media (max-width: 620px) {
+  .cognition-progress {
+    align-items: flex-start;
+    margin-top: 34px;
+  }
+
+  .deterministic-canvas-skeleton > header {
+    display: block;
+  }
+
+  .deterministic-canvas-skeleton > header strong {
+    display: block;
+    margin-top: 6px;
+    font-size: 16px;
+  }
+
+  .skeleton-pillar-rail {
+    margin-top: 20px;
+  }
+
+  .skeleton-pillar-rail article {
+    min-height: 210px;
+    padding: 16px 4px;
+  }
+
+  .skeleton-pillar-rail b {
+    font-size: 36px;
+  }
+
+  .skeleton-pillar-rail em {
+    max-width: 64px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }
 

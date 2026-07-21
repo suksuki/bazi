@@ -989,7 +989,7 @@ def test_invalid_ziwei_review_observation_does_not_discard_the_generated_lens():
     assert event_types[-1] == "baseline_committed"
 
 
-def test_domain_fact_conflict_is_blocked_without_a_second_model_call():
+def test_domain_overstatement_is_softened_without_a_second_model_call():
     model = SelectiveDomainRepairModel()
     agent = MingliAgent(model)
     world = compile_chart_world(
@@ -1007,11 +1007,13 @@ def test_domain_fact_conflict_is_blocked_without_a_second_model_call():
     assert model.domain_calls.count("career") == 1
     assert model.domain_calls.count("wealth") == 1
     assert career.review.repaired is False
-    assert wealth.review.repaired is False
-    assert wealth.review.passed is False
-    assert wealth.review.disposition == "blocked"
-    assert wealth.review.commit_eligible is False
-    assert "mingli_fact_conflict" in wealth.review.hard_failure_codes
+    assert wealth.review.repaired is True
+    assert wealth.review.passed is True
+    assert wealth.review.disposition == "reliable"
+    assert wealth.review.commit_eligible is True
+    assert "必然" not in wealth.reading.assertions[0].claim
+    assert wealth.assertion_gate.repaired_count == 1
+    assert wealth.assertion_gate.automatic_full_rerun_allowed is False
 
 
 def test_domain_normalization_splits_four_newline_steps_without_rewriting_content():

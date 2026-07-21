@@ -406,13 +406,23 @@ export interface ExperienceCaseSummary {
   case_version: string;
   status: string;
   baseline_available: boolean;
+  chart_ready: boolean;
+  cognition_status: "ready" | "preparing" | "chart_ready" | "partial";
   experience_url: string;
 }
 
-export interface ExperienceCasesResponse {
-  status: "experience_cases_ready";
+export interface ExperienceWorkspaceBootstrapResponse {
+  status: "workspace_bootstrap_ready" | "workspace_profile_required";
+  account: WorkspaceAccountSummary;
   cases: Array<ExperienceCaseSummary>;
+  selected_case_id: string;
+  selected_profile_id: string;
+  envelope: MingliExperienceEnvelope | null;
+  workspace: CaseWorkspaceEnvelope | null;
+  cognition: WorkspaceCognitionState;
+  request_budget: WorkspaceBootstrapBudget;
   cognition_source: "LifeCase";
+  chart_source: "ChartWorldInstance";
   legacy_report_used: false;
 }
 
@@ -847,4 +857,26 @@ export interface TopicScope {
   topic_version: string;
   permitted_capabilities: Array<string>;
   prohibited_capabilities: Array<string>;
+}
+
+export interface WorkspaceAccountSummary {
+  display_name: string;
+  role: string;
+}
+
+export interface WorkspaceBootstrapBudget {
+  api_requests: 1;
+  llm_calls: 0;
+  tts_calls: 0;
+  domain_generations: 0;
+}
+
+export interface WorkspaceCognitionState {
+  status: "ready" | "preparing" | "chart_ready" | "partial";
+  message: string;
+  cache_hit: boolean;
+  background_start_allowed: boolean;
+  background_job_id: string;
+  llm_calls_started_by_bootstrap: 0;
+  tts_calls_started_by_bootstrap: 0;
 }

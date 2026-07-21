@@ -4,6 +4,7 @@ import json
 
 from core.life_domains import LifeDomain, domain_reasoning_protocol
 from core.mingli_agent.contracts import (
+    AssertionGateReceipt,
     ChartWorldInstance,
     DomainCausalReading,
     EpistemicReviewReceipt,
@@ -28,8 +29,23 @@ def review_cognition(
     world: ChartWorldInstance,
     model: str,
     repaired: bool = False,
+    assertion_gate: AssertionGateReceipt | None = None,
 ) -> EpistemicReviewReceipt:
     issues: list[ReviewIssue] = []
+    if assertion_gate is not None:
+        if not assertion_gate.whole_chart_claim_available:
+            issues.append(ReviewIssue(
+                code="whole_chart_claim_unavailable",
+                severity="error",
+                message="没有一条可追溯的整盘主张达到正式提交条件",
+            ))
+        isolated = assertion_gate.candidate_count + assertion_gate.suppressed_count
+        if isolated:
+            issues.append(ReviewIssue(
+                code="assertions_isolated",
+                severity="warning",
+                message=f"{isolated} 条局部断言已被隔离，其他有效内容继续处理",
+            ))
     allowed = set(world.allowed_evidence_refs)
     cited = _all_citations(draft)
     unknown = sorted(ref for ref in cited if not _citation_allowed(ref=ref, allowed=allowed))
@@ -38,9 +54,12 @@ def review_cognition(
     if len(draft.hypotheses) < 2:
         issues.append(ReviewIssue(code="insufficient_competing_hypotheses", severity="warning", message="本轮只保留一个事实安全的命局假设"))
     hypothesis_ids = {item.hypothesis_id for item in draft.hypotheses}
-    if draft.selected_hypothesis_id not in hypothesis_ids:
+    if draft.hypotheses and draft.selected_hypothesis_id not in hypothesis_ids:
         issues.append(ReviewIssue(code="selected_hypothesis_missing", severity="error", message=draft.selected_hypothesis_id))
-    if not any(item.status == "primary" and item.hypothesis_id == draft.selected_hypothesis_id for item in draft.hypotheses):
+    if draft.hypotheses and not any(
+        item.status == "primary" and item.hypothesis_id == draft.selected_hypothesis_id
+        for item in draft.hypotheses
+    ):
         issues.append(ReviewIssue(code="primary_status_mismatch", severity="error", message="主假设标记不一致"))
     if not draft.prior_predictions:
         issues.append(ReviewIssue(code="missing_prior_predictions", severity="warning", message="本轮没有保留可安全展示的先验判断"))
@@ -109,8 +128,23 @@ def review_domain_reading(
     repaired: bool = False,
     baseline_record: MingliCognitiveRecord | None = None,
     expected_domain: LifeDomain | None = None,
+    assertion_gate: AssertionGateReceipt | None = None,
 ) -> EpistemicReviewReceipt:
     issues: list[ReviewIssue] = []
+    if assertion_gate is not None:
+        if not assertion_gate.whole_chart_claim_available:
+            issues.append(ReviewIssue(
+                code="thin_domain_assertions",
+                severity="error",
+                message="本轮没有一条专题断言达到正式提交条件",
+            ))
+        isolated = assertion_gate.candidate_count + assertion_gate.suppressed_count
+        if isolated:
+            issues.append(ReviewIssue(
+                code="assertions_isolated",
+                severity="warning",
+                message=f"{isolated} 条专题断言已被局部隔离",
+            ))
     allowed = set(world.allowed_evidence_refs)
     if baseline_record is not None:
         allowed.update(_baseline_cognitive_reference_ids(baseline_record))
@@ -120,7 +154,7 @@ def review_domain_reading(
         issues.append(ReviewIssue(code="unknown_evidence_refs", severity="error", message=", ".join(unknown[:12])))
     if not 2 <= len(reading.causal_chain) <= 6:
         issues.append(ReviewIssue(code="invalid_causal_chain", severity="error", message="领域因果链需要保持可理解的完整路径"))
-    if not reading.assertions:
+    if not reading.assertions and assertion_gate is None:
         issues.append(ReviewIssue(code="thin_domain_assertions", severity="error", message="领域至少需要一条可证伪断言"))
     if any(item.domain != reading.domain for item in reading.assertions):
         issues.append(ReviewIssue(code="domain_scope_leakage", severity="error", message="领域断言越界"))
@@ -215,7 +249,7 @@ def _finalize_review(
         model=model,
         repaired=repaired,
         disposition=disposition,
-        commit_eligible=disposition == "reliable",
+        commit_eligible=not hard_failures,
         hard_failure_codes=_unique(hard_failures),
         repairable_issue_codes=_unique(repairable),
         gate_version="mingli_reliability_gate_v1",
@@ -248,6 +282,7 @@ def _classify_review_issue(issue: ReviewIssue) -> ReviewIssue:
         "invalid_causal_chain",
         "thin_domain_assertions",
         "invalid_domain_probe",
+        "whole_chart_claim_unavailable",
     }:
         category = "completeness"
         repairable = True
@@ -284,10 +319,6 @@ def _cognition_has_unresolved_competition(draft: MingliCognitiveDraft) -> bool:
         ):
             return True
     return False
-
-def _review_requires_one_repair(receipt: EpistemicReviewReceipt) -> bool:
-    blocking = [item for item in receipt.issues if item.blocks_commit]
-    return bool(blocking) and all(item.repairable for item in blocking)
 
 def _forbidden_domain_tokens(domain: LifeDomain) -> tuple[str, ...]:
     return {

@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from fastapi import FastAPI
 
+from core.mingli_agent import MingliAgent
 from product.abu_narration import AbuNarrationService
 from product.agent_api import create_agent_router
 from product.agent_case_store import AgentCaseStore, build_agent_case_store
-from product.agent_job_store import AgentJobStore
+from product.agent_job_store import AgentJobStore, build_agent_job_store
+from product.agent_runtime import build_agent_runtime
 from product.canonical_scene_api import create_canonical_scene_router
 from product.experience_api import create_experience_router
 from product.legacy_usage import LegacyUsageStore, build_legacy_usage_store
@@ -17,6 +19,7 @@ from product.theater_api import create_theater_router
 from product.theater_store import build_theater_store
 from product.voice_validation_api import create_voice_validation_router
 from product.voice_validation_store import VoiceValidationStore, build_voice_validation_store
+from product.workspace_api import create_workspace_router
 
 
 def create_product_app(
@@ -35,6 +38,15 @@ def create_product_app(
     app = FastAPI(title="DeepBazi", version="v50.mingli-product.v1")
     store = product_store or build_product_store()
     case_store = agent_case_store or build_agent_case_store()
+    job_store = agent_job_store or build_agent_job_store()
+    resolved_agent = mingli_agent or MingliAgent()
+    agent_runtime = build_agent_runtime(
+        product_store=store,
+        session_cookie=PRODUCT_SESSION_COOKIE,
+        agent=resolved_agent,
+        case_store=case_store,
+        job_store=job_store,
+    )
     narration_service = abu_narration_service or AbuNarrationService.from_environment()
     resolved_legacy_usage_store = legacy_usage_store or build_legacy_usage_store()
 
@@ -42,9 +54,11 @@ def create_product_app(
         create_agent_router(
             product_store=store,
             session_cookie=PRODUCT_SESSION_COOKIE,
-            agent=mingli_agent,
+            agent=resolved_agent,
             case_store=case_store,
-            job_store=agent_job_store,
+            job_store=job_store,
+            runtime=agent_runtime,
+            agent_injected=mingli_agent is not None,
         )
     )
     app.include_router(
@@ -73,12 +87,28 @@ def create_product_app(
             validation_store=voice_validation_store or build_voice_validation_store(),
         )
     )
+    experience_router = create_experience_router(
+        product_store=store,
+        session_cookie=PRODUCT_SESSION_COOKIE,
+        case_store=case_store,
+        legacy_usage_store=resolved_legacy_usage_store,
+    )
+    retired_entry_paths = {
+        "/api/v50/experience/cases",
+        "/api/v50/experience/cases/{case_id}/baseline",
+    }
+    experience_router.routes[:] = [
+        route
+        for route in experience_router.routes
+        if getattr(route, "path", "") not in retired_entry_paths
+    ]
+    app.include_router(experience_router)
     app.include_router(
-        create_experience_router(
+        create_workspace_router(
             product_store=store,
             session_cookie=PRODUCT_SESSION_COOKIE,
             case_store=case_store,
-            legacy_usage_store=resolved_legacy_usage_store,
+            agent_runtime=agent_runtime,
         )
     )
     app.include_router(

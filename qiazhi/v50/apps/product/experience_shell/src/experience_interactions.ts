@@ -12,7 +12,7 @@ export interface ExperienceInteractionHandlers {
   selectCanvasStage(stage: CanvasStage): void;
   selectCanvasLayer(layer: CanvasLayer): void;
   selectCanvasObject(selected: string): void;
-  selectCase(caseId: string): void;
+  selectProfile(profileId: string): void;
 }
 
 
@@ -66,7 +66,7 @@ export function bindExperienceInteractions(
       }
     });
   });
-  root.querySelector<HTMLSelectElement>("[data-case-select]")?.addEventListener("change", (event) => {
-    handlers.selectCase((event.currentTarget as HTMLSelectElement).value);
+  root.querySelector<HTMLSelectElement>("[data-profile-select]")?.addEventListener("change", (event) => {
+    handlers.selectProfile((event.currentTarget as HTMLSelectElement).value);
   });
 }

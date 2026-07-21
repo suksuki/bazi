@@ -1,4 +1,10 @@
-import { loadCanvasContext } from "./api";
+import {
+  loadCanvasContext,
+  loadCognitiveJob,
+  loadNarration,
+  loadReadOnlyCanvas,
+  startMissingBaseline,
+} from "./api";
 import { NarrationTimeline } from "./audio";
 import { renderExperience, renderLoading, renderUnavailable } from "./components";
 import type {
@@ -11,8 +17,9 @@ import type {
   NarrationManifest,
   NarrationStatus,
   ReadOnlySixPillarCanvas,
+  WorkspaceCognitionState,
 } from "./contracts";
-import { loadExperienceBootstrap, loadExperienceCase } from "./experience_data";
+import { loadExperienceCase } from "./experience_data";
 import { applyActiveAnchor, humanizeError, updateExperienceLocation } from "./experience_dom";
 import { bindExperienceInteractions } from "./experience_interactions";
 import { createNarrationTimeline } from "./experience_timeline";
@@ -33,7 +40,9 @@ const root: HTMLElement = rootElement;
 let account = { display_name: "", role: "member" };
 let cases: ExperienceCaseSummary[] = [];
 let activeCaseId = "";
+let activeProfileId = "";
 let workspace: CaseWorkspaceEnvelope | null = null;
+let cognition: WorkspaceCognitionState | null = null;
 let availableSurfaces: WorkspaceSurface[] = ["overview"];
 let availableAreas: ProductArea[] = ["world", "workbench"];
 let envelope: MingliExperienceEnvelope | null = null;
@@ -43,71 +52,97 @@ let narrationManifest: NarrationManifest | null = null;
 let narrationAssets: Record<string, NarrationStatus> = {};
 let timeline: NarrationTimeline | null = null;
 let ui: UiState = structuredClone(initialUiState);
+let canvasLoading = false;
+let narrationLoading = false;
+let cognitionEpoch = 0;
+let openCaseEpoch = 0;
+const localReconciliationAttempted = new Set<string>();
 
 void boot();
 
 
 async function boot(): Promise<void> {
-  root.innerHTML = renderLoading("正在取回你的正式命局认知");
+  root.innerHTML = renderLoading("正在打开你的命局");
   try {
-    ({ account, cases } = await loadExperienceBootstrap());
-    if (!cases.length) {
-      root.innerHTML = renderUnavailable(
-        "还没有可以阅读的命局",
-        "先让阿布帮你建立出生档案，并完成第一份整盘基线。",
-        "去找阿布建档",
-      );
-      return;
-    }
-    const requested = new URLSearchParams(location.search).get("case") || "";
-    const selected = cases.find((item) => item.case_id === requested)
-      || cases.find((item) => item.baseline_available)
-      || cases[0];
-    await openCase(selected.case_id);
+    const params = new URLSearchParams(location.search);
+    await openCase({
+      caseId: params.get("case") || "",
+      profileId: params.get("profile") || "",
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const unauthenticated = message.includes("authentication_required");
     root.innerHTML = renderUnavailable(
       unauthenticated ? "先和阿布打个招呼" : "这份命局暂时没有准备好",
-      unauthenticated ? "登录后，阿布会继续你已经建立的 LifeCase。" : humanizeError(message),
+      unauthenticated ? "登录后，阿布会继续你已经建立的档案。" : humanizeError(message),
       unauthenticated ? "登录或注册" : "返回阿布入口",
     );
   }
 }
 
 
-async function openCase(caseId: string): Promise<void> {
+async function openCase(
+  selection: { caseId?: string; profileId?: string },
+  preserveUi = false,
+): Promise<void> {
+  const requestEpoch = ++openCaseEpoch;
+  cognitionEpoch += 1;
+  const previousCaseId = activeCaseId;
+  const loaded = await loadExperienceCase(
+    selection,
+    new URLSearchParams(location.search),
+    preserveUi ? ui : undefined,
+  );
+  if (requestEpoch !== openCaseEpoch) return;
+  if (loaded.profileRequired || !loaded.envelope) {
+    account = loaded.account;
+    cases = loaded.cases;
+    root.innerHTML = renderUnavailable(
+      "先建立一份出生档案",
+      "保存四柱后会直接进入命局，不需要再经过一次“开始测算”。",
+      "建立档案",
+    );
+    return;
+  }
+  const caseChanged = Boolean(previousCaseId && previousCaseId !== loaded.selectedCaseId);
   timeline?.stop();
-  activeCaseId = caseId;
-  const loaded = await loadExperienceCase(caseId, new URLSearchParams(location.search));
+  if (caseChanged || preserveUi) {
+    canvas = null;
+    canvasContext = null;
+    narrationManifest = null;
+    narrationAssets = {};
+    timeline = null;
+  }
+  account = loaded.account;
+  cases = loaded.cases;
+  activeCaseId = loaded.selectedCaseId;
+  activeProfileId = loaded.selectedProfileId;
   workspace = loaded.workspace;
   envelope = loaded.envelope;
-  canvas = loaded.canvas;
-  canvasContext = loaded.canvasContext;
-  narrationManifest = loaded.narrationManifest;
-  narrationAssets = loaded.narrationAssets;
+  cognition = loaded.cognition;
   availableSurfaces = loaded.availableSurfaces;
   availableAreas = loaded.availableAreas;
   ui = loaded.ui;
-  timeline = narrationManifest
-    ? createNarrationTimeline(caseId, narrationManifest, narrationAssets, dispatch, focusAnchor, humanizeError)
-    : null;
   updateExperienceLocation(activeCaseId, ui);
   render();
+  void loadSelectedProjection();
+  scheduleBackgroundCognition();
 }
 
 
 function render(): void {
-  if (!envelope || !workspace) return;
+  if (!envelope || !cognition) return;
   root.innerHTML = renderExperience({
     accountName: account.display_name,
     accountRole: account.role,
     cases,
     activeCaseId,
+    activeProfileId,
     availableAreas,
     availableSurfaces,
     workspace,
     envelope,
+    cognition,
     narrationManifest,
     canvas,
     canvasContext,
@@ -127,16 +162,16 @@ function render(): void {
       void handleCommand(command);
     },
     playSegment(index) {
-      void timeline?.playSegment(index);
+      void playNarrationSegment(index);
     },
     selectCanvasStage,
     selectCanvasLayer,
     selectCanvasObject(selected) {
       void refreshCanvasContext(selected);
     },
-    selectCase(caseId) {
+    selectProfile(profileId) {
       root.innerHTML = renderLoading("正在切换命盘");
-      void openCase(caseId);
+      void openCase({ profileId });
     },
   });
   requestAnimationFrame(() => applyActiveAnchor(ui.selectedAnchor));
@@ -146,7 +181,10 @@ function render(): void {
 function selectArea(area: ProductArea): void {
   if (!availableAreas.includes(area)) return;
   ui = reduceUi(ui, { type: "product-area", area });
-  if (area === "lab") selectLabLayer();
+  if (area === "lab") {
+    selectLabLayer();
+    void ensureCanvas();
+  }
   updateExperienceLocation(activeCaseId, ui);
   render();
 }
@@ -157,6 +195,66 @@ function selectSurface(surface: WorkspaceSurface): void {
   ui = reduceUi(ui, { type: "workspace-surface", surface });
   updateExperienceLocation(activeCaseId, ui);
   render();
+  void loadSelectedProjection();
+}
+
+
+async function loadSelectedProjection(): Promise<void> {
+  if (ui.productArea === "lab" || ui.workspaceSurface === "onecanvas") await ensureCanvas();
+  if (ui.workspaceSurface === "theater") await ensureNarration();
+}
+
+
+async function ensureCanvas(): Promise<void> {
+  if (canvas || canvasLoading || !activeCaseId) return;
+  canvasLoading = true;
+  try {
+    canvas = await loadReadOnlyCanvas(activeCaseId);
+    const projection = canvas.stages[canvas.default_stage];
+    canvasContext = projection.context;
+    ui = reduceUi(ui, {
+      type: "canvas-stage",
+      stage: canvas.default_stage,
+      layer: projection.default_layer_id,
+      selected: projection.context.selected_object_refs[0] || projection.spec.semantic_slots[0]?.slot_ref || "",
+    });
+    if (ui.productArea === "lab") selectLabLayer();
+  } catch {
+    canvas = null;
+    canvasContext = null;
+  } finally {
+    canvasLoading = false;
+    render();
+  }
+}
+
+
+async function ensureNarration(): Promise<boolean> {
+  if (narrationManifest && timeline) return true;
+  if (narrationLoading || !activeCaseId) return false;
+  narrationLoading = true;
+  try {
+    const loaded = await loadNarration(activeCaseId);
+    narrationManifest = loaded.manifest;
+    narrationAssets = loaded.speechAssets;
+    timeline = createNarrationTimeline(
+      activeCaseId,
+      narrationManifest,
+      narrationAssets,
+      dispatch,
+      focusAnchor,
+      humanizeError,
+    );
+    return true;
+  } catch {
+    narrationManifest = null;
+    narrationAssets = {};
+    timeline = null;
+    return false;
+  } finally {
+    narrationLoading = false;
+    render();
+  }
 }
 
 
@@ -197,6 +295,11 @@ async function refreshCanvasContext(selected: string): Promise<void> {
 }
 
 
+async function playNarrationSegment(index: number): Promise<void> {
+  if (await ensureNarration()) await timeline?.playSegment(index);
+}
+
+
 async function handleCommand(command: string): Promise<void> {
   if (command === "toggle-abu") {
     dispatch({ type: "toggle-abu" });
@@ -204,8 +307,8 @@ async function handleCommand(command: string): Promise<void> {
   }
   if (command === "listen") {
     dispatch({ type: "toggle-abu", expanded: true });
-    if (!timeline) {
-      dispatch({ type: "narration", status: "error", message: "这份案例暂时没有可播放的正式讲解。" });
+    if (!(await ensureNarration()) || !timeline) {
+      dispatch({ type: "narration", status: "error", message: "四柱已经就绪，语音暂时没有连接上。" });
     } else if (ui.narrationStatus === "playing") {
       timeline.pause();
     } else {
@@ -231,6 +334,84 @@ function selectLabLayer(): void {
 }
 
 
+function scheduleBackgroundCognition(): void {
+  const epoch = ++cognitionEpoch;
+  requestAnimationFrame(() => void continueBackgroundCognition(epoch));
+}
+
+
+async function continueBackgroundCognition(epoch: number): Promise<void> {
+  if (epoch !== cognitionEpoch || !cognition || !activeCaseId) return;
+  if (cognition.status === "ready") return;
+  if (cognition.status === "preparing" && cognition.background_job_id) {
+    await pollCognitiveJob(cognition.background_job_id, epoch);
+    return;
+  }
+  const shouldReconcile = cognition.status === "partial"
+    && !localReconciliationAttempted.has(activeCaseId);
+  if (!cognition.background_start_allowed && !shouldReconcile) return;
+  if (shouldReconcile) localReconciliationAttempted.add(activeCaseId);
+  try {
+    const started = await startMissingBaseline(activeCaseId);
+    if (epoch !== cognitionEpoch) return;
+    if (started.status === "baseline_preparing" && started.job_id) {
+      cognition = {
+        ...cognition,
+        status: "preparing",
+        message: "四柱已经就绪，阿布正在梳理整盘主线。",
+        background_start_allowed: false,
+        background_job_id: started.job_id,
+      };
+      render();
+      await pollCognitiveJob(started.job_id, epoch);
+      return;
+    }
+    if (started.status === "baseline_reconciled" || started.status === "baseline_cache_reused") {
+      await refreshWorkspaceAfterCognition(epoch);
+      return;
+    }
+    cognition = {
+      ...cognition,
+      status: "partial",
+      message: "四柱与已确认内容都可以继续查看，其他部分暂时保留。",
+      background_start_allowed: false,
+    };
+    render();
+  } catch {
+    cognition = {
+      ...cognition,
+      status: "partial",
+      message: "四柱已经就绪，整盘主线稍后再继续整理。",
+      background_start_allowed: false,
+    };
+    render();
+  }
+}
+
+
+async function pollCognitiveJob(jobId: string, epoch: number): Promise<void> {
+  for (let attempt = 0; attempt < 90 && epoch === cognitionEpoch; attempt += 1) {
+    await delay(1500);
+    let job;
+    try {
+      job = await loadCognitiveJob(jobId);
+    } catch {
+      return;
+    }
+    if (job.status === "completed" || job.status === "failed") {
+      await refreshWorkspaceAfterCognition(epoch);
+      return;
+    }
+  }
+}
+
+
+async function refreshWorkspaceAfterCognition(epoch: number): Promise<void> {
+  if (epoch !== cognitionEpoch) return;
+  await openCase({ caseId: activeCaseId, profileId: activeProfileId }, true);
+}
+
+
 function dispatch(action: UiAction): void {
   ui = reduceUi(ui, action);
   render();
@@ -246,4 +427,9 @@ function focusAnchor(anchor: string, scroll = true): void {
       block: "center",
     });
   }
+}
+
+
+function delay(milliseconds: number): Promise<void> {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }

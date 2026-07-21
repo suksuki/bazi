@@ -12,7 +12,12 @@ from pathlib import Path
 
 from experience.canonical_scene import CanonicalProjectionEnvelope
 from experience.compiler import canonical_hash
-from experience.contracts import ApprovedClaim, ApprovedReasoningStep, EnvelopeUncertainty
+from experience.contracts import (
+    ApprovedClaim,
+    ApprovedReasoningStep,
+    EnvelopeUncertainty,
+    MingliExperienceEnvelope,
+)
 from experience.experiments import MingliVisualCue
 from experience.narration import (
     NarrationManifest,
@@ -236,6 +241,74 @@ class AbuNarrationService:
         manifest_hash = canonical_hash({
             "scene_id": identity.scene_id,
             "projection_hash": projection.projection_hash,
+            "manifest": stable,
+        })
+        return NarrationManifest(
+            manifest_id=f"narration-{manifest_hash[:24]}",
+            manifest_hash=manifest_hash,
+            **stable,
+        )
+
+    def compile_chart_facts_manifest(
+        self,
+        envelope: MingliExperienceEnvelope,
+    ) -> NarrationManifest:
+        """Narrate deterministic chart facts when no formal baseline exists yet."""
+
+        facts = [item for item in envelope.allowed_chart_facts if item.fact_type == "pillar"]
+        if len(facts) != 4 or envelope.source.case_ref is None:
+            raise AbuNarrationError("deterministic_four_pillars_not_available")
+        pillar_text = "，".join(
+            f"{item.pillar_label}是{item.stem}{item.branch}"
+            for item in facts
+        )
+        day = next((item for item in facts if item.pillar_slot == "day"), facts[2])
+        refs = [item.fact_ref for item in facts]
+        segments = [
+            NarrationSegment(
+                segment_id="chart-facts-four-pillars",
+                order=0,
+                kind="thesis",
+                title="先看四柱",
+                text=f"我们先看已经确定的命盘底图。{pillar_text}。",
+                source_claim_refs=["deterministic:four-pillars"],
+                source_refs=refs,
+                visual_anchor_ids=["four-pillars"],
+                estimated_duration_seconds=12,
+            ),
+            NarrationSegment(
+                segment_id="chart-facts-boundary",
+                order=1,
+                kind="uncertainty",
+                title="先守住事实边界",
+                text=(
+                    f"日主是{day.stem}。四柱、十神和藏干可以直接查看；"
+                    "整盘主线仍按每一条证据分别核验，我不会把未通过的判断说成结论。"
+                ),
+                source_claim_refs=["deterministic:chart-boundary"],
+                source_refs=[day.fact_ref],
+                visual_anchor_ids=["baseline-uncertainty"],
+                estimated_duration_seconds=14,
+            ),
+        ]
+        stable = {
+            "scope": "participant_private",
+            "case_id": envelope.source.case_ref,
+            "chart_version": envelope.source.chart_version,
+            "life_case_version": "chart-facts-only",
+            "formal_insight_id": "deterministic-chart-facts",
+            "narration_script_version": "chart-facts-narration.zh.v1",
+            "mode": "standard",
+            "language": "zh-CN",
+            "voice_id": self.tts.voice_id,
+            "voice_version": self.tts.voice_version,
+            "segments": [item.model_dump(mode="json") for item in segments],
+            "compiled_at": envelope.source.generated_at.isoformat(),
+            "autoplay": False,
+            "page_available_without_audio": True,
+        }
+        manifest_hash = canonical_hash({
+            "source_hash": envelope.source.source_hash,
             "manifest": stable,
         })
         return NarrationManifest(

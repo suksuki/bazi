@@ -19,6 +19,7 @@ from core.life_case.service_support import (
     _require_active_life_case,
     _unique,
 )
+from core.mingli_agent.assertion_gate import accepted_assertion_refs
 from core.mingli_agent.contracts import ChartWorldInstance, DomainExploration, MingliCognitiveRecord
 from core.mingli_agent.reliability import cognition_semantic_signature
 
@@ -32,13 +33,15 @@ def build_baseline_insight(
     cognition = record.cognition
     primary = next(
         (item for item in cognition.hypotheses if item.hypothesis_id == cognition.selected_hypothesis_id),
-        cognition.hypotheses[0],
+        cognition.hypotheses[0] if cognition.hypotheses else None,
     )
+    accepted_refs = accepted_assertion_refs(record.assertion_gate)
+    work_path_accepted = not record.assertion_gate.decisions or "baseline:work-path" in accepted_refs
     allowed_fact_ids = {item.fact_id for item in world.facts}
     cited = _unique([
         *cognition.evidence_refs,
         *(ref for item in cognition.salient_phenomena for ref in item.evidence_refs),
-        *primary.supporting_evidence_refs,
+        *(primary.supporting_evidence_refs if primary is not None else []),
         *cognition.work_path.evidence_refs,
         *(ref for item in cognition.portrait for ref in item.evidence_refs),
     ])
@@ -52,15 +55,34 @@ def build_baseline_insight(
             conclusion=phenomenon.why_it_matters,
             source_refs=[ref for ref in phenomenon.evidence_refs if ref in world.allowed_evidence_refs],
         ))
-    reasoning_path.append(ReasoningPathStep(
-        premise=" → ".join([
-            *cognition.work_path.source,
-            *cognition.work_path.transformations,
-            *cognition.work_path.target,
-        ]),
-        conclusion=cognition.work_path.path_statement,
-        source_refs=[ref for ref in cognition.work_path.evidence_refs if ref in world.allowed_evidence_refs],
-    ))
+    if work_path_accepted:
+        reasoning_path.append(ReasoningPathStep(
+            premise=" → ".join([
+                *cognition.work_path.source,
+                *cognition.work_path.transformations,
+                *cognition.work_path.target,
+            ]),
+            conclusion=cognition.work_path.path_statement,
+            source_refs=[ref for ref in cognition.work_path.evidence_refs if ref in world.allowed_evidence_refs],
+        ))
+    if (
+        not reasoning_path
+        and primary is not None
+        and (
+            not record.assertion_gate.decisions
+            or primary.hypothesis_id in accepted_refs
+        )
+    ):
+        primary_refs = [
+            ref
+            for ref in primary.supporting_evidence_refs
+            if ref in world.allowed_evidence_refs
+        ]
+        reasoning_path.append(ReasoningPathStep(
+            premise="、".join(primary_refs) or "已核验命盘事实",
+            conclusion=primary.thesis,
+            source_refs=primary_refs,
+        ))
     strategy_dimensions: dict[str, list[dict[str, Any]]] = {}
     for item in cognition.useful_god_reasoning:
         strategy_dimensions.setdefault(item.lens, []).append(item.model_dump(mode="json"))
@@ -70,6 +92,14 @@ def build_baseline_insight(
         else "reliable" if record.review.passed and not any(issue.severity == "error" for issue in record.review.issues)
         else "blocked"
     )
+    formal_assertion_gate = record.assertion_gate.model_copy(update={
+        "decisions": [
+            item.model_copy(update={"original_text": ""})
+            if item.disposition in {"candidate", "suppressed"}
+            else item
+            for item in record.assertion_gate.decisions
+        ],
+    })
     return FormalInsight(
         insight_id=f"insight-baseline-{uuid4().hex[:18]}",
         case_id=record.case_id,
@@ -82,14 +112,26 @@ def build_baseline_insight(
             holistic_belief_refs=[item.hypothesis_id for item in cognition.hypotheses],
         ),
         reasoning_path=reasoning_path,
-        conditions=_unique([*primary.success_conditions, *cognition.work_path.success_conditions]),
+        conditions=_unique([
+            *(primary.success_conditions if primary is not None else []),
+            *(cognition.work_path.success_conditions if work_path_accepted else []),
+        ]),
         expected_manifestations=[item.claim for item in cognition.prior_predictions],
-        counter_signals=_unique([*primary.failure_conditions, *cognition.work_path.failure_conditions]),
+        counter_signals=_unique([
+            *(primary.failure_conditions if primary is not None else []),
+            *(cognition.work_path.failure_conditions if work_path_accepted else []),
+        ]),
         uncertainty=InsightUncertainty(
-            level={"high": "low", "medium": "medium", "low": "high"}[primary.confidence],
+            level=(
+                {"high": "low", "medium": "medium", "low": "high"}[primary.confidence]
+                if primary is not None
+                else "high"
+            ),
             reasons=list(cognition.unresolved_questions),
             competing_hypotheses=[
-                item.thesis for item in cognition.hypotheses if item.hypothesis_id != primary.hypothesis_id
+                item.thesis
+                for item in cognition.hypotheses
+                if primary is None or item.hypothesis_id != primary.hypothesis_id
             ],
         ),
         next_action=InsightNextAction(
@@ -113,10 +155,12 @@ def build_baseline_insight(
         baseline_record_id=record.record_id,
         baseline_semantic_signature=record.reliability_signature or cognition_semantic_signature(cognition),
         projection_payload={
+            "assertion_gate": formal_assertion_gate.model_dump(mode="json"),
             "record_projection": record.model_copy(update={
                 "user_evidence": [],
                 "revisions": [],
                 "domain_explorations": {},
+                "assertion_gate": formal_assertion_gate,
             }).model_dump(mode="json"),
         },
     )
@@ -140,7 +184,7 @@ def validate_formal_insight(
         errors.append("reasoning_path_missing")
     if not insight.basis.chart_fact_refs:
         errors.append("chart_fact_basis_missing")
-    if insight.epistemic_state != "reliable":
+    if insight.epistemic_state not in {"reliable", "competing"}:
         errors.append(f"epistemic_state_not_committable:{insight.epistemic_state}")
     if "mixed" in insight.strategy_dimensions:
         errors.append("ambiguous_strategy_dimension:mixed")
@@ -350,4 +394,3 @@ def build_case_revision_insight(
             "preserved_baseline_insight_id": baseline.insight_id,
         },
     )
-

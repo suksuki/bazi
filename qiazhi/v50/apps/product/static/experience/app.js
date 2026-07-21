@@ -11,23 +11,23 @@ async function requestJson(url, init) {
   }
   return response.json();
 }
-async function loadAccount() {
-  const payload = await requestJson(
-    "/api/v50/product/auth/me"
-  );
-  return payload.account;
+function loadWorkspaceBootstrap(input = {}) {
+  return requestJson("/api/v50/experience/workspace/bootstrap", {
+    method: "POST",
+    body: JSON.stringify({
+      case_id: input.caseId || "",
+      profile_id: input.profileId || ""
+    })
+  });
 }
-async function loadCases() {
-  const payload = await requestJson(
-    "/api/v50/experience/cases"
-  );
-  return payload.cases;
+function startMissingBaseline(caseId) {
+  return requestJson(`/api/v50/experience/workspace/cases/${encodeURIComponent(caseId)}/baseline`, {
+    method: "POST",
+    body: "{}"
+  });
 }
-function loadEnvelope(caseId) {
-  return requestJson(`/api/v50/experience/cases/${encodeURIComponent(caseId)}/baseline`);
-}
-function loadCaseWorkspace(caseId) {
-  return requestJson(`/api/v50/scenes/cases/${encodeURIComponent(caseId)}/workspace`);
+function loadCognitiveJob(jobId) {
+  return requestJson(`/api/v50/experience/workspace/jobs/${encodeURIComponent(jobId)}`);
 }
 function loadReadOnlyCanvas(caseId) {
   return requestJson(`/api/v50/experience/cases/${encodeURIComponent(caseId)}/canvas`);
@@ -63,9 +63,9 @@ var polarityLabel = { yin: "\u9634", yang: "\u9633" };
 function renderExperience(view) {
   const claim = view.envelope.approved_claims[0];
   const steps = view.envelope.approved_reasoning_steps;
-  const fullThesis = claim?.approved_meaning || "\u547D\u76D8\u4E8B\u5B9E\u5DF2\u7ECF\u786E\u8BA4\uFF0C\u6B63\u5F0F\u6574\u76D8\u8BA4\u77E5\u5C1A\u672A\u63D0\u4EA4\u3002";
+  const fullThesis = claim?.approved_meaning || "\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA\uFF0C\u963F\u5E03\u6B63\u5728\u7406\u89E3\u6574\u76D8\u3002";
   const thesis = firstSentence(fullThesis);
-  const pathSummary = steps[steps.length - 1]?.conclusion || "\u6B63\u5F0F\u4E3B\u8DEF\u5F84\u4ECD\u5728\u5F62\u6210\u3002";
+  const pathSummary = steps[steps.length - 1]?.conclusion || "\u5148\u4ECE\u786E\u5B9A\u6027\u7684\u56DB\u67F1\u5F00\u59CB\u3002";
   const condition = claim?.conditions[0] || "\u5F53\u524D\u8FD8\u6CA1\u6709\u8DB3\u591F\u4F9D\u636E\u5199\u4E0B\u6210\u7ACB\u6761\u4EF6\u3002";
   const uncertainty = view.envelope.uncertainty.reasons[0] || "\u5F53\u524D\u6CA1\u6709\u989D\u5916\u672A\u51B3\u9879\u3002";
   return `<div class="deepbeing-shell" data-product-area-current="${escapeAttr(view.ui.productArea)}">
@@ -84,11 +84,12 @@ function renderExperience(view) {
 }
 function renderWorkbench(view) {
   const claim = view.envelope.approved_claims[0];
+  const hasFormalCognition = Boolean(claim);
   const steps = view.envelope.approved_reasoning_steps;
   const condition = claim?.conditions[0] || "\u5F53\u524D\u8FD8\u6CA1\u6709\u8DB3\u591F\u4F9D\u636E\u5199\u4E0B\u6210\u7ACB\u6761\u4EF6\u3002";
   const uncertainty = view.envelope.uncertainty.reasons[0] || "\u5F53\u524D\u6CA1\u6709\u989D\u5916\u672A\u51B3\u9879\u3002";
-  const pathSummary = steps[steps.length - 1]?.conclusion || "\u6B63\u5F0F\u4E3B\u8DEF\u5F84\u4ECD\u5728\u5F62\u6210\u3002";
-  const fullThesis = claim?.approved_meaning || "\u547D\u76D8\u4E8B\u5B9E\u5DF2\u7ECF\u786E\u8BA4\uFF0C\u6B63\u5F0F\u6574\u76D8\u8BA4\u77E5\u5C1A\u672A\u63D0\u4EA4\u3002";
+  const pathSummary = steps[steps.length - 1]?.conclusion || "\u5148\u4ECE\u786E\u5B9A\u6027\u7684\u56DB\u67F1\u5F00\u59CB\u3002";
+  const fullThesis = claim?.approved_meaning || "\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA\uFF0C\u963F\u5E03\u6B63\u5728\u7406\u89E3\u6574\u76D8\u3002";
   const thesis = firstSentence(fullThesis);
   return `
     ${renderWorkspaceNavigation(view)}
@@ -98,7 +99,7 @@ function renderWorkbench(view) {
         <div class="opening-copy">
           <p class="section-kicker">\u770B\u89C1\u547D\u5C40 \xB7 \u5F53\u524D\u57FA\u7EBF</p>
           <h1>${escapeHtml(thesis)}</h1>
-          <p class="opening-lede">\u5148\u770B\u6700\u91CD\u8981\u7684\u56DB\u4EF6\u4E8B\uFF0C\u4E0D\u628A\u6574\u4EFD\u547D\u5C40\u4E00\u6B21\u585E\u7ED9\u4F60\u3002</p>
+          <p class="opening-lede">${escapeHtml(view.cognition.message)}</p>
           <div class="opening-actions">
             <button class="primary-command" type="button" data-command="listen">
               ${view.ui.narrationStatus === "playing" ? "\u6682\u505C\u963F\u5E03" : "\u542C\u963F\u5E03\u8BB2"}
@@ -106,11 +107,11 @@ function renderWorkbench(view) {
             <button class="text-command" type="button" data-command="focus-pillars">\u5148\u770B\u56DB\u67F1</button>
           </div>
         </div>
-        <div class="scan-strip" aria-label="\u6574\u76D8\u5FEB\u901F\u6458\u8981">
+        ${hasFormalCognition ? `<div class="scan-strip" aria-label="\u6574\u76D8\u5FEB\u901F\u6458\u8981">
           ${summaryItem("\u4E3B\u8DEF\u5F84", pathSummary, "baseline-work-path")}
           ${summaryItem("\u6210\u7ACB\u6761\u4EF6", condition, "baseline-condition")}
           ${summaryItem("\u6700\u5927\u672A\u51B3", uncertainty, "baseline-uncertainty")}
-        </div>
+        </div>` : `<div class="cognition-progress" data-cognition-status="${escapeAttr(view.cognition.status)}"><i></i><span><strong>\u547D\u76D8\u5148\u5230\uFF0C\u8BA4\u77E5\u968F\u540E</strong><small>\u56DB\u67F1\u5DF2\u786E\u8BA4\uFF1B\u963F\u5E03\u53EA\u4F1A\u8865\u5145\u4F9D\u636E\u5145\u5206\u7684\u90E8\u5206\u3002</small></span></div>`}
       </section>
 
       ${renderCollapsibleSection({
@@ -124,7 +125,7 @@ function renderWorkbench(view) {
     body: renderPillars(view.envelope, view.ui.selectedAnchor)
   })}
 
-      ${renderCollapsibleSection({
+      ${hasFormalCognition ? `${renderCollapsibleSection({
     id: "path",
     anchor: "baseline-work-path",
     tone: "cognition",
@@ -145,16 +146,17 @@ function renderWorkbench(view) {
     expanded: view.ui.expandedSections.boundaries,
     body: renderBoundaries(claim, view.envelope, view.ui.selectedAnchor)
   })}` : ""}
+      ` : ""}
 
-      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderCollapsibleSection({
+      ${view.ui.workspaceSurface === "onecanvas" ? `${renderCollapsibleSection({
     id: "canvas",
     anchor: "temporal-canvas",
     tone: "canvas",
     eyebrow: "\u65F6\u95F4\u7ED3\u6784",
     title: "\u770B\u7ED3\u6784\u600E\u6837\u8FDB\u5165\u5F53\u524D\u65F6\u95F4",
-    summary: `${view.canvas.source.luck_pillar}\u5927\u8FD0 \xB7 ${view.canvas.source.analysis_year || "\u5F53\u524D"}${view.canvas.source.annual_pillar}\u6D41\u5E74`,
+    summary: view.canvas ? `${view.canvas.source.luck_pillar}\u5927\u8FD0 \xB7 ${view.canvas.source.analysis_year || "\u5F53\u524D"}${view.canvas.source.annual_pillar}\u6D41\u5E74` : "\u56DB\u67F1\u9AA8\u67B6\u5DF2\u7ECF\u5C31\u7EEA",
     expanded: view.ui.expandedSections.canvas ?? true,
-    body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, false)
+    body: view.canvas ? renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, false) : renderDeterministicCanvasSkeleton(view.envelope, view.cognition)
   })}` : ""}
 
       ${view.ui.workspaceSurface === "theater" ? renderNarrationWorkspace(view, thesis) : ""}
@@ -200,7 +202,7 @@ function renderLifeWorld(view, thesis, fullThesis, pathSummary, condition, uncer
           <small>\u547D</small><strong>${escapeHtml(pillars || "\u56DB\u67F1\u5F85\u786E\u8BA4")}</strong><span>\u5148\u5929\u5E95\u56FE</span>
         </button>
         <button type="button" class="tree-node tree-events" data-select-anchor="baseline-work-path" data-message="${escapeAttr(pathSummary)}">
-          <small>\u4E8B</small><strong>${escapeHtml(firstSentence(pathSummary))}</strong><span>${escapeHtml(view.workspace.state.selected_period)}</span>
+          <small>\u4E8B</small><strong>${escapeHtml(firstSentence(pathSummary))}</strong><span>${escapeHtml(view.workspace?.state.selected_period || "\u5F53\u524D\u9636\u6BB5")}</span>
         </button>
         <button type="button" class="tree-node tree-growth" data-command="toggle-abu">
           <small>\u4EBA</small><strong>${escapeHtml(firstSentence(condition))}</strong><span>\u5F53\u524D\u884C\u52A8\u6761\u4EF6</span>
@@ -220,7 +222,7 @@ function renderLifeWorld(view, thesis, fullThesis, pathSummary, condition, uncer
   </div>`;
 }
 function renderMingliLab(view) {
-  if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>\u8FD9\u4EFD\u547D\u76D8\u5C1A\u672A\u5F62\u6210\u53EF\u7814\u7A76\u7684\u7ED3\u6784\u6295\u5F71</h1></section>`;
+  if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA</h1><span>\u7814\u7A76\u955C\u5934\u53EA\u5728\u6B63\u5F0F\u5173\u7CFB\u6295\u5F71\u53EF\u7528\u65F6\u6309\u9700\u5C55\u5F00\uFF0C\u4E0D\u4F1A\u4E3A Lab \u53E6\u7B97\u4E00\u5957\u547D\u76D8\u3002</span></section>`;
   const stage = view.canvas.stages[view.ui.canvasStage];
   const potentialCount = stage.spec.relations.filter((item) => item.relation_state === "potential").length;
   const sourceCount = new Set(stage.spec.relations.flatMap((item) => item.trace.source_refs)).size;
@@ -228,7 +230,7 @@ function renderMingliLab(view) {
   return `<div class="mingli-lab">
     <header class="lab-header">
       <div><p>Mingli Lab \xB7 ${escapeHtml(activeCaseName(view))}</p><h1>\u540C\u4E00\u547D\u5C40\u7684\u7814\u7A76\u955C\u5934</h1><span>\u5019\u9009\u5173\u7CFB\u4E0E\u8BC1\u636E\u7559\u5728\u7814\u7A76\u5C42\uFF1B\u6B63\u5F0F Case \u4E0D\u5728\u8FD9\u91CC\u88AB\u6539\u5199\u3002</span></div>
-      <code>${escapeHtml(view.workspace.state.scene_source_hash.slice(0, 18))}</code>
+      <code>${escapeHtml((view.workspace?.state.scene_source_hash || view.envelope.source.source_hash).slice(0, 18))}</code>
     </header>
     <div class="lab-evidence-rail" aria-label="\u5F53\u524D\u7814\u7A76\u8303\u56F4">
       <span><small>\u6F5C\u5728\u5173\u7CFB</small><strong>${potentialCount}</strong></span>
@@ -243,13 +245,13 @@ function renderProductSidebar(view) {
   return `<aside class="product-sidebar">
     <a class="brand" href="/experience" aria-label="DeepBeing \u9996\u9875"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
     ${renderProductNavigation(view, "sidebar")}
-    <div class="sidebar-context">${renderCaseSelector(view.cases, view.activeCaseId)}<small>${escapeHtml(view.envelope.source.life_case_version || "\u547D\u76D8\u4E8B\u5B9E")}</small></div>
+    <div class="sidebar-context">${renderProfileSelector(view.cases, view.activeProfileId)}<small>${escapeHtml(view.envelope.source.life_case_version || "\u547D\u76D8\u4E8B\u5B9E")}</small></div>
     <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app">\u6863\u6848</a></div>
   </aside>`;
 }
 function renderMobileHeader(view) {
   const labels = { world: "\u6211\u7684\u751F\u547D\u4E16\u754C", workbench: "\u547D\u76D8\u5DE5\u4F5C\u53F0", lab: "Mingli Lab" };
-  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong>${renderCaseSelector(view.cases, view.activeCaseId)}</header>`;
+  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong>${renderProfileSelector(view.cases, view.activeProfileId)}</header>`;
 }
 function renderMobileNavigation(view) {
   return `<nav class="mobile-product-navigation" aria-label="DeepBeing \u4E3B\u8981\u533A\u57DF">${renderProductNavigation(view, "mobile")}</nav>`;
@@ -263,18 +265,32 @@ function renderProductNavigation(view, placement) {
   return `<div class="product-navigation is-${placement}">${items.filter((item) => view.availableAreas.includes(item.area)).map((item) => `<button type="button" data-product-area="${item.area}" aria-current="${view.ui.productArea === item.area ? "page" : "false"}" class="${view.ui.productArea === item.area ? "active" : ""}"><i>${item.index}</i><span><strong>${item.label}</strong><small>${item.detail}</small></span></button>`).join("")}</div>`;
 }
 function activeCaseName(view) {
-  return view.cases.find((item) => item.case_id === view.activeCaseId)?.display_name || "\u5F53\u524D\u547D\u76D8";
+  return view.cases.find((item) => item.profile_id === view.activeProfileId)?.display_name || "\u5F53\u524D\u547D\u76D8";
 }
 function renderNarrationWorkspace(view, thesis) {
   const segments = view.narrationManifest?.segments || [];
   return `<section class="narration-workspace" data-anchor="abu-narration">
-    <header><p>\u963F\u5E03\u8BB2\u89E3</p><h1>${escapeHtml(thesis)}</h1><span>\u4ECE\u6574\u76D8\u91CD\u5FC3\u5F00\u59CB\uFF0C\u6CBF\u56DB\u67F1\u3001\u8DEF\u5F84\u3001\u6761\u4EF6\u4E0E\u672A\u51B3\u9010\u6BB5\u5C55\u5F00\u3002</span></header>
+    <header><p>\u963F\u5E03\u8BB2\u89E3</p><h1>${escapeHtml(thesis)}</h1><span>${segments.length ? "\u4ECE\u6574\u76D8\u91CD\u5FC3\u5F00\u59CB\uFF0C\u6CBF\u56DB\u67F1\u3001\u8DEF\u5F84\u3001\u6761\u4EF6\u4E0E\u672A\u51B3\u9010\u6BB5\u5C55\u5F00\u3002" : "\u6587\u5B57\u5DF2\u7ECF\u53EF\u8BFB\uFF1B\u70B9\u64AD\u653E\u540E\u624D\u51C6\u5907\u58F0\u97F3\uFF0C\u4E0D\u963B\u585E\u5F53\u524D\u9875\u9762\u3002"}</span></header>
     <div class="narration-workspace-actions">
       <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "\u6682\u505C" : "\u4ECE\u5934\u542C"}</button>
       ${view.ui.narrationStatus !== "idle" ? '<button class="text-command" type="button" data-command="stop">\u505C\u6B62</button>' : ""}
     </div>
-    <ol>${segments.map((item, index) => `<li><button type="button" data-play-segment="${index}"${view.ui.narrationIndex === index ? ' class="active"' : ""}><small>${String(index + 1).padStart(2, "0")}</small><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span><b aria-hidden="true">\u25B6</b></button></li>`).join("")}</ol>
+    ${segments.length ? `<ol>${segments.map((item, index) => `<li><button type="button" data-play-segment="${index}"${view.ui.narrationIndex === index ? ' class="active"' : ""}><small>${String(index + 1).padStart(2, "0")}</small><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span><b aria-hidden="true">\u25B6</b></button></li>`).join("")}</ol>` : `<div class="narration-pending"><i></i><p>${escapeHtml(view.cognition.message)}</p></div>`}
   </section>`;
+}
+function renderDeterministicCanvasSkeleton(envelope2, cognition2) {
+  const pillars = envelope2.allowed_chart_facts.filter((item) => item.fact_type === "pillar");
+  return `<div class="deterministic-canvas-skeleton">
+    <header><span>\u786E\u5B9A\u6027\u547D\u76D8</span><strong>\u56DB\u67F1\u5148\u663E\u793A\uFF0C\u5173\u7CFB\u6309\u6B63\u5F0F\u6765\u6E90\u9010\u6B65\u8FDB\u5165</strong></header>
+    <div class="skeleton-pillar-rail">${pillars.map((pillar) => `<article>
+      <small>${escapeHtml(pillar.pillar_label)}</small>
+      <b class="element-${escapeAttr(pillar.stem_element)}" data-polarity="${escapeAttr(pillar.stem_polarity)}">${escapeHtml(pillar.stem)}</b>
+      <i></i>
+      <b class="element-${escapeAttr(pillar.branch_element)}" data-polarity="${escapeAttr(pillar.branch_polarity)}">${escapeHtml(pillar.branch)}</b>
+      <em>${escapeHtml(pillar.visible_ten_god || "\u547D\u76D8\u4E8B\u5B9E")}</em>
+    </article>`).join("")}</div>
+    <p><i></i>${escapeHtml(cognition2.message)}</p>
+  </div>`;
 }
 function renderReadOnlyCanvas(canvas2, ui2, context, researchLens) {
   const stage = canvas2.stages[ui2.canvasStage];
@@ -330,7 +346,7 @@ function renderReadOnlyCanvas(canvas2, ui2, context, researchLens) {
     <div class="canvas-boundary ${canvas2.path_availability.status === "available" ? "is-ready" : "is-limited"}">
       <span>${canvas2.path_availability.status === "available" ? "\u4E3B\u8DEF\u5F84\u5DF2\u5BF9\u9F50" : "\u4E3B\u8DEF\u5F84\u672A\u8865\u753B"}</span>
       <p>${escapeHtml(canvas2.path_availability.message)}</p>
-      <small>\u5F53\u524D\u67E5\u770B\u53EA\u8BFB\u53D6\u6B63\u5F0F\u6848\u4F8B\uFF0C\u4E0D\u4FEE\u6539\u539F\u5C40\uFF0C\u4E5F\u4E0D\u8C03\u7528 LLM\u3002</small>
+      <small>\u5F53\u524D\u53EA\u8BFB\u67E5\u770B\u6B63\u5F0F\u6848\u4F8B\uFF0C\u4E0D\u4FEE\u6539\u539F\u5C40\u3002</small>
     </div>
   </div>`;
 }
@@ -470,12 +486,12 @@ function renderUnavailable(title, detail, actionLabel) {
       <a class="primary-command" href="/app">${escapeHtml(actionLabel)}</a>
     </main>`;
 }
-function renderCaseSelector(cases2, activeCaseId2) {
+function renderProfileSelector(cases2, activeProfileId2) {
   if (cases2.length <= 1) {
-    const active = cases2.find((item) => item.case_id === activeCaseId2);
+    const active = cases2.find((item) => item.profile_id === activeProfileId2);
     return `<span class="active-case"><i></i>${escapeHtml(active?.display_name || "\u5F53\u524D\u547D\u76D8")}</span>`;
   }
-  return `<label class="case-select-label"><span>\u5F53\u524D\u547D\u76D8</span><select data-case-select>${cases2.map((item) => `<option value="${escapeAttr(item.case_id)}"${item.case_id === activeCaseId2 ? " selected" : ""}>${escapeHtml(item.display_name)}</option>`).join("")}</select></label>`;
+  return `<label class="case-select-label"><span>\u5F53\u524D\u547D\u76D8</span><select data-profile-select>${cases2.map((item) => `<option value="${escapeAttr(item.profile_id)}"${item.profile_id === activeProfileId2 ? " selected" : ""}>${escapeHtml(item.display_name)}</option>`).join("")}</select></label>`;
 }
 function summaryItem(label, value, anchor) {
   return `<button type="button" class="scan-item" data-select-anchor="${escapeAttr(anchor)}" data-message="${escapeAttr(value)}"><span>${escapeHtml(label)}</span><strong>${escapeHtml(value)}</strong></button>`;
@@ -635,64 +651,38 @@ function reduceUi(state, action) {
 }
 
 // apps/product/experience_shell/src/experience_data.ts
-async function loadExperienceBootstrap() {
-  const account2 = await loadAccount();
-  const cases2 = await loadCases();
-  return { account: account2, cases: cases2 };
-}
-async function loadExperienceCase(caseId, params) {
-  const [envelopeResult, workspaceResult, canvasResult, narrationResult] = await Promise.allSettled([
-    loadEnvelope(caseId),
-    loadCaseWorkspace(caseId),
-    loadReadOnlyCanvas(caseId),
-    loadNarration(caseId)
-  ]);
-  if (envelopeResult.status === "rejected") throw envelopeResult.reason;
-  if (workspaceResult.status === "rejected") throw workspaceResult.reason;
-  const envelope2 = envelopeResult.value;
-  const workspace2 = workspaceResult.value;
-  const canvas2 = canvasResult.status === "fulfilled" ? canvasResult.value : null;
-  const canvasContext2 = canvas2 ? canvas2.stages[canvas2.default_stage].context : null;
-  const narrationManifest2 = narrationResult.status === "fulfilled" ? narrationResult.value.manifest : null;
-  const narrationAssets2 = narrationResult.status === "fulfilled" ? narrationResult.value.speechAssets : {};
-  const availableSurfaces2 = workspace2.allowed_surfaces.filter((surface) => surface === "overview" || surface === "onecanvas" && canvas2 !== null || surface === "theater" && narrationManifest2 !== null);
-  const availableAreas2 = workspace2.allowed_surfaces.includes("mingli_lab") ? ["world", "workbench", "lab"] : ["world", "workbench"];
-  let ui2 = structuredClone(initialUiState);
-  if (canvas2) {
-    const initialProjection = canvas2.stages[canvas2.default_stage];
-    ui2 = reduceUi(ui2, {
-      type: "canvas-stage",
-      stage: canvas2.default_stage,
-      layer: initialProjection.default_layer_id,
-      selected: initialProjection.context.selected_object_refs[0] || initialProjection.spec.semantic_slots[0]?.slot_ref || ""
-    });
-  }
+async function loadExperienceCase(selection, params, previousUi) {
+  const bootstrap = await loadWorkspaceBootstrap(selection);
+  const role = bootstrap.account.role;
+  const profileRequired = bootstrap.status === "workspace_profile_required";
+  const availableSurfaces2 = profileRequired ? ["overview"] : ["overview", "onecanvas", "theater"];
+  const researchAllowed = bootstrap.workspace?.allowed_surfaces.includes("mingli_lab") || ["admin", "research", "research_master", "practitioner"].includes(role);
+  const availableAreas2 = researchAllowed ? ["world", "workbench", "lab"] : ["world", "workbench"];
+  let ui2 = previousUi ? structuredClone(previousUi) : structuredClone(initialUiState);
   const requestedSurface = params.get("surface");
-  const preferredSurface = requestedSurface || workspace2.state.current_surface;
+  const preferredSurface = requestedSurface || bootstrap.workspace?.state.current_surface || ui2.workspaceSurface;
   ui2 = reduceUi(ui2, {
     type: "workspace-surface",
     surface: availableSurfaces2.includes(preferredSurface) ? preferredSurface : "overview"
   });
   const requestedArea = params.get("area");
-  const preferredArea = requestedArea || (requestedSurface || preferredSurface !== "overview" ? "workbench" : "world");
+  const preferredArea = requestedArea || (requestedSurface || ui2.workspaceSurface !== "overview" ? "workbench" : ui2.productArea);
   ui2 = reduceUi(ui2, {
     type: "product-area",
     area: availableAreas2.includes(preferredArea) ? preferredArea : "world"
   });
-  if (ui2.productArea === "lab" && canvas2) {
-    const layer = canvas2.stages[ui2.canvasStage].layers.find((item) => item.layer_id === "generation_control" && item.available);
-    if (layer) ui2 = reduceUi(ui2, { type: "canvas-layer", layer: layer.layer_id });
-  }
   return {
-    workspace: workspace2,
-    envelope: envelope2,
-    canvas: canvas2,
-    canvasContext: canvasContext2,
-    narrationManifest: narrationManifest2,
-    narrationAssets: narrationAssets2,
+    account: bootstrap.account,
+    cases: bootstrap.cases,
+    selectedCaseId: bootstrap.selected_case_id,
+    selectedProfileId: bootstrap.selected_profile_id,
+    workspace: bootstrap.workspace,
+    envelope: bootstrap.envelope,
+    cognition: bootstrap.cognition,
     availableSurfaces: availableSurfaces2,
     availableAreas: availableAreas2,
-    ui: ui2
+    ui: ui2,
+    profileRequired
   };
 }
 
@@ -710,7 +700,7 @@ function updateExperienceLocation(activeCaseId2, ui2) {
   history.replaceState({}, "", `/experience?${params.toString()}`);
 }
 function humanizeError(message) {
-  return message.replace(/^formal_life_case_not_available$/, "\u6B63\u5F0F\u6574\u76D8\u8BA4\u77E5\u5C1A\u672A\u901A\u8FC7\u53EF\u9760\u6027\u95E8\u7981\u3002").replace(/^experience_case_not_found$/, "\u6CA1\u6709\u627E\u5230\u8FD9\u4EFD\u6848\u4F8B\uFF0C\u6216\u5B83\u4E0D\u5C5E\u4E8E\u5F53\u524D\u8D26\u6237\u3002").replace(/^canvas_official_timing_required$/, "\u8FD9\u4EFD\u6848\u4F8B\u8FD8\u6CA1\u6709\u5B8C\u6574\u7684\u5927\u8FD0\u4E0E\u6D41\u5E74\u8BA1\u7B97\u3002").replace(/_/g, " ");
+  return message.replace(/^formal_life_case_not_available$/, "\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA\uFF0C\u6574\u76D8\u4E3B\u7EBF\u8FD8\u5728\u6574\u7406\u4E2D\u3002").replace(/^experience_case_not_found$/, "\u6CA1\u6709\u627E\u5230\u8FD9\u4EFD\u6848\u4F8B\uFF0C\u6216\u5B83\u4E0D\u5C5E\u4E8E\u5F53\u524D\u8D26\u6237\u3002").replace(/^canvas_official_timing_required$/, "\u8FD9\u4EFD\u6848\u4F8B\u8FD8\u6CA1\u6709\u5B8C\u6574\u7684\u5927\u8FD0\u4E0E\u6D41\u5E74\u8BA1\u7B97\u3002").replace(/_/g, " ");
 }
 
 // apps/product/experience_shell/src/experience_interactions.ts
@@ -761,8 +751,8 @@ function bindExperienceInteractions(root2, handlers) {
       }
     });
   });
-  root2.querySelector("[data-case-select]")?.addEventListener("change", (event) => {
-    handlers.selectCase(event.currentTarget.value);
+  root2.querySelector("[data-profile-select]")?.addEventListener("change", (event) => {
+    handlers.selectProfile(event.currentTarget.value);
   });
 }
 
@@ -888,7 +878,9 @@ var root = rootElement;
 var account = { display_name: "", role: "member" };
 var cases = [];
 var activeCaseId = "";
+var activeProfileId = "";
 var workspace = null;
+var cognition = null;
 var availableSurfaces = ["overview"];
 var availableAreas = ["world", "workbench"];
 var envelope = null;
@@ -898,60 +890,87 @@ var narrationManifest = null;
 var narrationAssets = {};
 var timeline = null;
 var ui = structuredClone(initialUiState);
+var canvasLoading = false;
+var narrationLoading = false;
+var cognitionEpoch = 0;
+var openCaseEpoch = 0;
+var localReconciliationAttempted = /* @__PURE__ */ new Set();
 void boot();
 async function boot() {
-  root.innerHTML = renderLoading("\u6B63\u5728\u53D6\u56DE\u4F60\u7684\u6B63\u5F0F\u547D\u5C40\u8BA4\u77E5");
+  root.innerHTML = renderLoading("\u6B63\u5728\u6253\u5F00\u4F60\u7684\u547D\u5C40");
   try {
-    ({ account, cases } = await loadExperienceBootstrap());
-    if (!cases.length) {
-      root.innerHTML = renderUnavailable(
-        "\u8FD8\u6CA1\u6709\u53EF\u4EE5\u9605\u8BFB\u7684\u547D\u5C40",
-        "\u5148\u8BA9\u963F\u5E03\u5E2E\u4F60\u5EFA\u7ACB\u51FA\u751F\u6863\u6848\uFF0C\u5E76\u5B8C\u6210\u7B2C\u4E00\u4EFD\u6574\u76D8\u57FA\u7EBF\u3002",
-        "\u53BB\u627E\u963F\u5E03\u5EFA\u6863"
-      );
-      return;
-    }
-    const requested = new URLSearchParams(location.search).get("case") || "";
-    const selected = cases.find((item) => item.case_id === requested) || cases.find((item) => item.baseline_available) || cases[0];
-    await openCase(selected.case_id);
+    const params = new URLSearchParams(location.search);
+    await openCase({
+      caseId: params.get("case") || "",
+      profileId: params.get("profile") || ""
+    });
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const unauthenticated = message.includes("authentication_required");
     root.innerHTML = renderUnavailable(
       unauthenticated ? "\u5148\u548C\u963F\u5E03\u6253\u4E2A\u62DB\u547C" : "\u8FD9\u4EFD\u547D\u5C40\u6682\u65F6\u6CA1\u6709\u51C6\u5907\u597D",
-      unauthenticated ? "\u767B\u5F55\u540E\uFF0C\u963F\u5E03\u4F1A\u7EE7\u7EED\u4F60\u5DF2\u7ECF\u5EFA\u7ACB\u7684 LifeCase\u3002" : humanizeError(message),
+      unauthenticated ? "\u767B\u5F55\u540E\uFF0C\u963F\u5E03\u4F1A\u7EE7\u7EED\u4F60\u5DF2\u7ECF\u5EFA\u7ACB\u7684\u6863\u6848\u3002" : humanizeError(message),
       unauthenticated ? "\u767B\u5F55\u6216\u6CE8\u518C" : "\u8FD4\u56DE\u963F\u5E03\u5165\u53E3"
     );
   }
 }
-async function openCase(caseId) {
+async function openCase(selection, preserveUi = false) {
+  const requestEpoch = ++openCaseEpoch;
+  cognitionEpoch += 1;
+  const previousCaseId = activeCaseId;
+  const loaded = await loadExperienceCase(
+    selection,
+    new URLSearchParams(location.search),
+    preserveUi ? ui : void 0
+  );
+  if (requestEpoch !== openCaseEpoch) return;
+  if (loaded.profileRequired || !loaded.envelope) {
+    account = loaded.account;
+    cases = loaded.cases;
+    root.innerHTML = renderUnavailable(
+      "\u5148\u5EFA\u7ACB\u4E00\u4EFD\u51FA\u751F\u6863\u6848",
+      "\u4FDD\u5B58\u56DB\u67F1\u540E\u4F1A\u76F4\u63A5\u8FDB\u5165\u547D\u5C40\uFF0C\u4E0D\u9700\u8981\u518D\u7ECF\u8FC7\u4E00\u6B21\u201C\u5F00\u59CB\u6D4B\u7B97\u201D\u3002",
+      "\u5EFA\u7ACB\u6863\u6848"
+    );
+    return;
+  }
+  const caseChanged = Boolean(previousCaseId && previousCaseId !== loaded.selectedCaseId);
   timeline?.stop();
-  activeCaseId = caseId;
-  const loaded = await loadExperienceCase(caseId, new URLSearchParams(location.search));
+  if (caseChanged || preserveUi) {
+    canvas = null;
+    canvasContext = null;
+    narrationManifest = null;
+    narrationAssets = {};
+    timeline = null;
+  }
+  account = loaded.account;
+  cases = loaded.cases;
+  activeCaseId = loaded.selectedCaseId;
+  activeProfileId = loaded.selectedProfileId;
   workspace = loaded.workspace;
   envelope = loaded.envelope;
-  canvas = loaded.canvas;
-  canvasContext = loaded.canvasContext;
-  narrationManifest = loaded.narrationManifest;
-  narrationAssets = loaded.narrationAssets;
+  cognition = loaded.cognition;
   availableSurfaces = loaded.availableSurfaces;
   availableAreas = loaded.availableAreas;
   ui = loaded.ui;
-  timeline = narrationManifest ? createNarrationTimeline(caseId, narrationManifest, narrationAssets, dispatch, focusAnchor, humanizeError) : null;
   updateExperienceLocation(activeCaseId, ui);
   render();
+  void loadSelectedProjection();
+  scheduleBackgroundCognition();
 }
 function render() {
-  if (!envelope || !workspace) return;
+  if (!envelope || !cognition) return;
   root.innerHTML = renderExperience({
     accountName: account.display_name,
     accountRole: account.role,
     cases,
     activeCaseId,
+    activeProfileId,
     availableAreas,
     availableSurfaces,
     workspace,
     envelope,
+    cognition,
     narrationManifest,
     canvas,
     canvasContext,
@@ -971,16 +990,16 @@ function render() {
       void handleCommand(command);
     },
     playSegment(index) {
-      void timeline?.playSegment(index);
+      void playNarrationSegment(index);
     },
     selectCanvasStage,
     selectCanvasLayer,
     selectCanvasObject(selected) {
       void refreshCanvasContext(selected);
     },
-    selectCase(caseId) {
+    selectProfile(profileId) {
       root.innerHTML = renderLoading("\u6B63\u5728\u5207\u6362\u547D\u76D8");
-      void openCase(caseId);
+      void openCase({ profileId });
     }
   });
   requestAnimationFrame(() => applyActiveAnchor(ui.selectedAnchor));
@@ -988,7 +1007,10 @@ function render() {
 function selectArea(area) {
   if (!availableAreas.includes(area)) return;
   ui = reduceUi(ui, { type: "product-area", area });
-  if (area === "lab") selectLabLayer();
+  if (area === "lab") {
+    selectLabLayer();
+    void ensureCanvas();
+  }
   updateExperienceLocation(activeCaseId, ui);
   render();
 }
@@ -997,6 +1019,60 @@ function selectSurface(surface) {
   ui = reduceUi(ui, { type: "workspace-surface", surface });
   updateExperienceLocation(activeCaseId, ui);
   render();
+  void loadSelectedProjection();
+}
+async function loadSelectedProjection() {
+  if (ui.productArea === "lab" || ui.workspaceSurface === "onecanvas") await ensureCanvas();
+  if (ui.workspaceSurface === "theater") await ensureNarration();
+}
+async function ensureCanvas() {
+  if (canvas || canvasLoading || !activeCaseId) return;
+  canvasLoading = true;
+  try {
+    canvas = await loadReadOnlyCanvas(activeCaseId);
+    const projection = canvas.stages[canvas.default_stage];
+    canvasContext = projection.context;
+    ui = reduceUi(ui, {
+      type: "canvas-stage",
+      stage: canvas.default_stage,
+      layer: projection.default_layer_id,
+      selected: projection.context.selected_object_refs[0] || projection.spec.semantic_slots[0]?.slot_ref || ""
+    });
+    if (ui.productArea === "lab") selectLabLayer();
+  } catch {
+    canvas = null;
+    canvasContext = null;
+  } finally {
+    canvasLoading = false;
+    render();
+  }
+}
+async function ensureNarration() {
+  if (narrationManifest && timeline) return true;
+  if (narrationLoading || !activeCaseId) return false;
+  narrationLoading = true;
+  try {
+    const loaded = await loadNarration(activeCaseId);
+    narrationManifest = loaded.manifest;
+    narrationAssets = loaded.speechAssets;
+    timeline = createNarrationTimeline(
+      activeCaseId,
+      narrationManifest,
+      narrationAssets,
+      dispatch,
+      focusAnchor,
+      humanizeError
+    );
+    return true;
+  } catch {
+    narrationManifest = null;
+    narrationAssets = {};
+    timeline = null;
+    return false;
+  } finally {
+    narrationLoading = false;
+    render();
+  }
 }
 function selectCanvasStage(stage) {
   if (!canvas) return;
@@ -1029,6 +1105,9 @@ async function refreshCanvasContext(selected) {
   }
   render();
 }
+async function playNarrationSegment(index) {
+  if (await ensureNarration()) await timeline?.playSegment(index);
+}
 async function handleCommand(command) {
   if (command === "toggle-abu") {
     dispatch({ type: "toggle-abu" });
@@ -1036,8 +1115,8 @@ async function handleCommand(command) {
   }
   if (command === "listen") {
     dispatch({ type: "toggle-abu", expanded: true });
-    if (!timeline) {
-      dispatch({ type: "narration", status: "error", message: "\u8FD9\u4EFD\u6848\u4F8B\u6682\u65F6\u6CA1\u6709\u53EF\u64AD\u653E\u7684\u6B63\u5F0F\u8BB2\u89E3\u3002" });
+    if (!await ensureNarration() || !timeline) {
+      dispatch({ type: "narration", status: "error", message: "\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA\uFF0C\u8BED\u97F3\u6682\u65F6\u6CA1\u6709\u8FDE\u63A5\u4E0A\u3002" });
     } else if (ui.narrationStatus === "playing") {
       timeline.pause();
     } else {
@@ -1057,6 +1136,75 @@ function selectLabLayer() {
   const layer = canvas.stages[ui.canvasStage].layers.find((item) => item.layer_id === "generation_control" && item.available);
   if (layer) ui = reduceUi(ui, { type: "canvas-layer", layer: layer.layer_id });
 }
+function scheduleBackgroundCognition() {
+  const epoch = ++cognitionEpoch;
+  requestAnimationFrame(() => void continueBackgroundCognition(epoch));
+}
+async function continueBackgroundCognition(epoch) {
+  if (epoch !== cognitionEpoch || !cognition || !activeCaseId) return;
+  if (cognition.status === "ready") return;
+  if (cognition.status === "preparing" && cognition.background_job_id) {
+    await pollCognitiveJob(cognition.background_job_id, epoch);
+    return;
+  }
+  const shouldReconcile = cognition.status === "partial" && !localReconciliationAttempted.has(activeCaseId);
+  if (!cognition.background_start_allowed && !shouldReconcile) return;
+  if (shouldReconcile) localReconciliationAttempted.add(activeCaseId);
+  try {
+    const started = await startMissingBaseline(activeCaseId);
+    if (epoch !== cognitionEpoch) return;
+    if (started.status === "baseline_preparing" && started.job_id) {
+      cognition = {
+        ...cognition,
+        status: "preparing",
+        message: "\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA\uFF0C\u963F\u5E03\u6B63\u5728\u68B3\u7406\u6574\u76D8\u4E3B\u7EBF\u3002",
+        background_start_allowed: false,
+        background_job_id: started.job_id
+      };
+      render();
+      await pollCognitiveJob(started.job_id, epoch);
+      return;
+    }
+    if (started.status === "baseline_reconciled" || started.status === "baseline_cache_reused") {
+      await refreshWorkspaceAfterCognition(epoch);
+      return;
+    }
+    cognition = {
+      ...cognition,
+      status: "partial",
+      message: "\u56DB\u67F1\u4E0E\u5DF2\u786E\u8BA4\u5185\u5BB9\u90FD\u53EF\u4EE5\u7EE7\u7EED\u67E5\u770B\uFF0C\u5176\u4ED6\u90E8\u5206\u6682\u65F6\u4FDD\u7559\u3002",
+      background_start_allowed: false
+    };
+    render();
+  } catch {
+    cognition = {
+      ...cognition,
+      status: "partial",
+      message: "\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA\uFF0C\u6574\u76D8\u4E3B\u7EBF\u7A0D\u540E\u518D\u7EE7\u7EED\u6574\u7406\u3002",
+      background_start_allowed: false
+    };
+    render();
+  }
+}
+async function pollCognitiveJob(jobId, epoch) {
+  for (let attempt = 0; attempt < 90 && epoch === cognitionEpoch; attempt += 1) {
+    await delay(1500);
+    let job;
+    try {
+      job = await loadCognitiveJob(jobId);
+    } catch {
+      return;
+    }
+    if (job.status === "completed" || job.status === "failed") {
+      await refreshWorkspaceAfterCognition(epoch);
+      return;
+    }
+  }
+}
+async function refreshWorkspaceAfterCognition(epoch) {
+  if (epoch !== cognitionEpoch) return;
+  await openCase({ caseId: activeCaseId, profileId: activeProfileId }, true);
+}
 function dispatch(action) {
   ui = reduceUi(ui, action);
   render();
@@ -1070,4 +1218,7 @@ function focusAnchor(anchor, scroll = true) {
       block: "center"
     });
   }
+}
+function delay(milliseconds) {
+  return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
 }

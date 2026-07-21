@@ -21,7 +21,10 @@ from core.mingli_agent import (
     build_case_belief_state,
     compile_chart_world,
 )
+from core.mingli_agent.assertion_gate import isolate_cognition_assertions
 from core.mingli_agent.contracts import DomainExploration
+from core.mingli_agent.reasoning_review import review_cognition
+from core.mingli_agent.reliability import cognition_semantic_signature
 from experience.workspace import CaseWorkspaceState, build_case_workspace_state
 from product.agent_case_store import AgentCaseStore
 
@@ -45,6 +48,7 @@ class BaselineCaseCommand:
     profile_id: str | None
     user_id: str | None
     active_mode: str
+    world: ChartWorldInstance | None = None
 
 
 @dataclass(frozen=True)
@@ -73,7 +77,7 @@ class BaselineCaseCommandService:
         *,
         on_event: CommandEventSink | None = None,
     ) -> BaselineCaseResult:
-        world = compile_chart_world(
+        world = command.world or compile_chart_world(
             reading_id=command.reading_id,
             birth_input=command.birth_input,
         )
@@ -118,7 +122,21 @@ class BaselineCaseCommandService:
         else:
             validation = validate_formal_insight(insight=insight_draft, world=world)
 
+        previous = self._case_store.get(
+            case_id=command.case_id,
+            user_id=command.user_id,
+        ) or {}
+        invalidated_while_running = str(previous.get("status") or "") == "superseded"
+        stored_life_case = life_case
+        if invalidated_while_running and life_case is not None:
+            stored_life_case = life_case.model_copy(update={
+                "status": "superseded",
+                "chart_version": life_case.chart_version.model_copy(update={"active": False}),
+            })
+            life_case = None
+        previous.pop("workspace", None)
         row = {
+            **previous,
             "case_id": command.case_id,
             "profile_id": command.profile_id,
             "birth_input": command.birth_input.model_dump(mode="json"),
@@ -129,14 +147,41 @@ class BaselineCaseCommandService:
                 case_id=command.case_id,
                 active_mode=command.active_mode,
             ).model_dump(mode="json"),
-            "life_case": life_case.model_dump(mode="json") if life_case else None,
+            "life_case": stored_life_case.model_dump(mode="json") if stored_life_case else None,
             "insight_validation": validation.model_dump(mode="json"),
             "first_run": {
                 "protocol": "single_call_baseline_v1",
                 "blocking_core_llm_calls": len(record.stage_receipts),
                 "unselected_domains_precomputed": False,
             },
-            "status": "active" if life_case else record.review.disposition,
+            "background_cognition": {
+                **(
+                    previous.get("background_cognition")
+                    if isinstance(previous.get("background_cognition"), dict)
+                    else {}
+                ),
+                "status": (
+                    "superseded"
+                    if invalidated_while_running
+                    else "completed" if life_case else "completed_partial"
+                ),
+                "attempt_count": max(
+                    1,
+                    int(
+                        (
+                            previous.get("background_cognition")
+                            if isinstance(previous.get("background_cognition"), dict)
+                            else {}
+                        ).get("attempt_count")
+                        or 0
+                    ),
+                ),
+            },
+            "status": (
+                "superseded"
+                if invalidated_while_running
+                else "active" if life_case else record.review.disposition
+            ),
         }
         self._case_store.save(
             case_id=command.case_id,
@@ -150,6 +195,96 @@ class BaselineCaseCommandService:
             workspace=workspace,
             life_case=life_case,
             validation=validation,
+        )
+
+
+@dataclass(frozen=True)
+class LocalBaselineReconciliationResult:
+    row: dict[str, Any]
+    committed: bool
+    isolated_assertion_count: int
+
+
+class BaselineAssertionReconciliationService:
+    """Re-evaluate a stored draft locally without another model call."""
+
+    def reconcile(
+        self,
+        *,
+        row: dict[str, Any],
+        profile_id: str | None,
+    ) -> LocalBaselineReconciliationResult:
+        raw_record = row.get("record")
+        raw_world = row.get("world")
+        if not isinstance(raw_record, dict) or not isinstance(raw_world, dict):
+            return LocalBaselineReconciliationResult(
+                row=row,
+                committed=False,
+                isolated_assertion_count=0,
+            )
+        source_record = MingliCognitiveRecord.model_validate(raw_record)
+        world = ChartWorldInstance.model_validate(raw_world)
+        if source_record.assertion_gate.decisions:
+            cognition = source_record.cognition
+            assertion_gate = source_record.assertion_gate
+        else:
+            cognition, assertion_gate = isolate_cognition_assertions(
+                draft=source_record.cognition,
+                world=world,
+            )
+        review = review_cognition(
+            draft=cognition,
+            world=world,
+            model=source_record.model,
+            repaired=bool(assertion_gate.repaired_count),
+            assertion_gate=assertion_gate,
+        )
+        record = source_record.model_copy(update={
+            "cognition": cognition,
+            "review": review,
+            "assertion_gate": assertion_gate,
+            "reliability_disposition": review.disposition,
+            "reliability_signature": cognition_semantic_signature(cognition),
+        })
+        life_case: LifeCase | None = None
+        insight = build_baseline_insight(record=record, world=world)
+        validation = validate_formal_insight(
+            insight=insight,
+            world=world,
+        )
+        if review.commit_eligible and validation.passed:
+            life_case, validation = commit_baseline_life_case(
+                insight=insight,
+                world=world,
+                profile_id=profile_id,
+            )
+        background = row.get("background_cognition")
+        background = background if isinstance(background, dict) else {}
+        archives = row.get("record_archive")
+        archives = list(archives) if isinstance(archives, list) else []
+        if not any(
+            isinstance(item, dict) and item.get("record_id") == source_record.record_id
+            for item in archives
+        ):
+            archives.append(source_record.model_dump(mode="json"))
+        reconciled = {
+            **row,
+            "record": record.model_dump(mode="json"),
+            "record_archive": archives[-3:],
+            "life_case": life_case.model_dump(mode="json") if life_case else None,
+            "insight_validation": validation.model_dump(mode="json"),
+            "background_cognition": {
+                **background,
+                "status": "completed_local" if life_case else "completed_partial",
+                "attempt_count": max(1, int(background.get("attempt_count") or 0)),
+                "local_reconciliation": "assertion_gate_v1",
+            },
+            "status": "active" if life_case else review.disposition,
+        }
+        return LocalBaselineReconciliationResult(
+            row=reconciled,
+            committed=life_case is not None,
+            isolated_assertion_count=assertion_gate.candidate_count + assertion_gate.suppressed_count,
         )
 
 

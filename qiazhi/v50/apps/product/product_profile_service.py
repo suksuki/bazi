@@ -19,27 +19,39 @@ def supersede_profile_life_cases(
 ) -> int:
     changed = 0
     for row in case_store.list_for_user(user_id=user_id):
-        if str(row.get("profile_id") or "") != profile_id or not row.get("life_case"):
+        if str(row.get("profile_id") or "") != profile_id:
             continue
-        life_case = LifeCase.model_validate(row["life_case"])
-        if life_case.status != "active":
+        if str(row.get("status") or "") in {"superseded", "archived"}:
             continue
         now = datetime.now(timezone.utc).isoformat()
-        life_case = life_case.model_copy(update={
+        if row.get("life_case"):
+            life_case = LifeCase.model_validate(row["life_case"])
+            if life_case.status != "active":
+                continue
+            life_case = life_case.model_copy(update={
+                "status": "superseded",
+                "chart_version": life_case.chart_version.model_copy(update={"active": False}),
+                "revisions": [
+                    *life_case.revisions,
+                    LifeCaseRevision(
+                        revision_id=f"life-revision-{uuid4().hex[:16]}",
+                        kind="chart_version_changed",
+                        created_at=now,
+                        summary="出生资料已修改；旧命盘版本及其洞察保留审计，但不再作为当前认知。",
+                    ),
+                ],
+                "updated_at": now,
+            })
+            row["life_case"] = life_case.model_dump(mode="json")
+        background = row.get("background_cognition")
+        background = background if isinstance(background, dict) else {}
+        row["background_cognition"] = {
+            **background,
             "status": "superseded",
-            "chart_version": life_case.chart_version.model_copy(update={"active": False}),
-            "revisions": [
-                *life_case.revisions,
-                LifeCaseRevision(
-                    revision_id=f"life-revision-{uuid4().hex[:16]}",
-                    kind="chart_version_changed",
-                    created_at=now,
-                    summary="出生资料已修改；旧命盘版本及其洞察保留审计，但不再作为当前认知。",
-                ),
-            ],
-            "updated_at": now,
-        })
-        row["life_case"] = life_case.model_dump(mode="json")
+            "reason": "birth_profile_changed",
+        }
+        row["status"] = "superseded"
+        row["superseded_at"] = now
         case_store.save(
             case_id=str(row["case_id"]),
             user_id=user_id,

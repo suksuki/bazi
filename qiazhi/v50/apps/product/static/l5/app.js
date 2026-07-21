@@ -743,6 +743,11 @@ async function startDemoCase() {
 }
 
 async function startCase(payload) {
+  const workspaceProfileId = payload.profile_id || state.activeProfile?.profile_id || "";
+  if (state.account && workspaceProfileId) {
+    window.location.assign(`/experience?profile=${encodeURIComponent(workspaceProfileId)}`);
+    return;
+  }
   state.lastStartPayload = JSON.parse(JSON.stringify(payload));
   state.readOnlyCase = false;
   state.readOnlyReason = "";
@@ -2558,8 +2563,7 @@ async function useProfileForReading(profileId) {
   syncActiveProfile(profile);
   clearCurrentReading();
   el("casebookDialog").close();
-  addMessage("abu", `已经切换到${profile.display_name}。出生信息和四柱都已确认，我现在直接开始看盘。`, "Abu");
-  await startCase({ profile_id: profile.profile_id });
+  window.location.assign(`/experience?profile=${encodeURIComponent(profile.profile_id)}`);
 }
 
 function openProfileCreateDialog() {
@@ -3078,7 +3082,7 @@ function showCognitionFailure(payload = {}) {
     prior_probe: "现实验证问题没有可靠形成",
     career_domain: "事业专题没有通过检查",
     wealth_domain: "财富专题没有通过检查",
-    epistemic_review: "最终事实与证据检查没有通过",
+    epistemic_review: "未被证据支持的判断已经隔离",
     runtime_recovery: "上一次看盘被服务中断",
   };
   el("failureTitle").textContent = stageLabels[payload.failure_stage] || "这次没有形成可靠判断";

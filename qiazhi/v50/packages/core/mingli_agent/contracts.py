@@ -306,6 +306,29 @@ class EpistemicReviewReceipt(V50Model):
     gate_version: str = "legacy"
 
 
+class AssertionGateDecision(V50Model):
+    assertion_ref: str
+    assertion_kind: str
+    field_path: str
+    disposition: Literal["accepted", "repaired", "candidate", "suppressed"]
+    reason_codes: list[str] = Field(default_factory=list)
+    accepted_evidence_refs: list[str] = Field(default_factory=list)
+    rejected_evidence_refs: list[str] = Field(default_factory=list)
+    original_text: str = ""
+    projected_text: str = ""
+
+
+class AssertionGateReceipt(V50Model):
+    version: Literal["mingli_assertion_gate.v1"] = "mingli_assertion_gate.v1"
+    decisions: list[AssertionGateDecision] = Field(default_factory=list)
+    accepted_count: int = Field(default=0, ge=0)
+    repaired_count: int = Field(default=0, ge=0)
+    candidate_count: int = Field(default=0, ge=0)
+    suppressed_count: int = Field(default=0, ge=0)
+    whole_chart_claim_available: bool = False
+    automatic_full_rerun_allowed: Literal[False] = False
+
+
 class HypothesisComparisonReceipt(V50Model):
     passed: bool
     selected_hypothesis_id: str
@@ -322,6 +345,7 @@ class DomainExploration(V50Model):
     domain: LifeDomain
     reading: DomainCausalReading
     review: EpistemicReviewReceipt
+    assertion_gate: AssertionGateReceipt = Field(default_factory=AssertionGateReceipt)
     reasoning_protocol: dict[str, Any]
     context_manifest: dict[str, Any] = Field(default_factory=dict)
     generated_at: str
@@ -346,6 +370,7 @@ class MingliCognitiveRecord(V50Model):
     model: str
     cognition: MingliCognitiveDraft
     review: EpistemicReviewReceipt
+    assertion_gate: AssertionGateReceipt = Field(default_factory=AssertionGateReceipt)
     hypothesis_comparison: HypothesisComparisonReceipt | None = None
     stage_receipts: list[dict[str, Any]] = Field(default_factory=list)
     context_manifest: list[dict[str, Any]] = Field(default_factory=list)

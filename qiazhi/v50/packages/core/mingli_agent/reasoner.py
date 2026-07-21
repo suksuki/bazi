@@ -10,6 +10,7 @@ from uuid import uuid4
 from pydantic import BaseModel
 
 from core.life_domains import LifeDomain, domain_reasoning_protocol
+from core.mingli_agent.assertion_gate import isolate_cognition_assertions, isolate_domain_assertions
 from core.mingli_agent.context import ContextStage, MingliContextCompiler, ReasoningContextPack
 from core.mingli_agent.contracts import (
     BirthIntakeDraft,
@@ -80,9 +81,7 @@ from core.mingli_agent.reasoning_prompts import (
     _prediction_stage_prompt,
     _prediction_stage_repair_prompt,
     _probe_repair_prompt,
-    _single_baseline_repair_prompt,
     _single_domain_reasoning_prompt,
-    _single_domain_repair_prompt,
     _structural_repair_prompt,
     _whole_chart_prompt,
     _work_path_prompt,
@@ -96,7 +95,6 @@ from core.mingli_agent.reasoning_review import (
     _cognition_has_unresolved_competition,
     _finalize_review,
     _forbidden_domain_tokens,
-    _review_requires_one_repair,
     review_cognition,
     review_domain_reading,
 )
@@ -417,12 +415,14 @@ class MingliAgent:
                 world=world,
             )
         draft = MingliCognitiveDraft(**repaired_payload)
+        draft, assertion_gate = isolate_cognition_assertions(draft=draft, world=world)
         model_identity = f"pattern:{self.pattern_model.model}|whole:{self.model.model}"
         receipt = review_cognition(
             draft=draft,
             world=world,
             model=model_identity,
             repaired=bool(locked_fact_repairs),
+            assertion_gate=assertion_gate,
         )
         reliability_signature = cognition_semantic_signature(draft)
         _notify_stage(
@@ -444,6 +444,7 @@ class MingliAgent:
             model=model_identity,
             cognition=draft,
             review=receipt,
+            assertion_gate=assertion_gate,
             hypothesis_comparison=hypothesis_comparison,
             stage_receipts=[item.model_dump(mode="json") for item in self.orchestrator.receipt().stage_receipts],
             context_manifest=[
@@ -522,41 +523,24 @@ class MingliAgent:
             on_text_chunk=on_text_chunk,
         )
         draft, pattern, locked_fact_repairs = _normalize_baseline_cognition(whole=whole, world=world)
+        draft, assertion_gate = isolate_cognition_assertions(draft=draft, world=world)
+        pattern = PatternHypothesisDraft(
+            first_look=draft.first_look,
+            whole_chart_thesis=draft.whole_chart_thesis,
+            salient_phenomena=draft.salient_phenomena,
+            hypotheses=draft.hypotheses,
+            selected_hypothesis_id=draft.selected_hypothesis_id,
+            evidence_refs=draft.evidence_refs,
+        )
         model_identity = f"baseline:{self.model.model}"
         comparison = _review_hypothesis_space(pattern=pattern, context=context)
         receipt = review_cognition(
             draft=draft,
             world=world,
             model=model_identity,
-            repaired=bool(locked_fact_repairs),
+            repaired=bool(locked_fact_repairs or assertion_gate.repaired_count),
+            assertion_gate=assertion_gate,
         )
-        if _review_requires_one_repair(receipt):
-            repaired_whole = self._generate_stage(
-                task="baseline_cognition",
-                stage="baseline_repair",
-                context=context,
-                model=self.model,
-                prompt=_single_baseline_repair_prompt(
-                    world=world,
-                    draft=draft,
-                    receipt=receipt,
-                    context_payload=context.payload,
-                ),
-                schema=WholeChartCognitionDraft,
-                temperature=0.0,
-            )
-            draft, pattern, second_locked_repairs = _normalize_baseline_cognition(
-                whole=repaired_whole,
-                world=world,
-            )
-            locked_fact_repairs = [*locked_fact_repairs, *second_locked_repairs]
-            comparison = _review_hypothesis_space(pattern=pattern, context=context)
-            receipt = review_cognition(
-                draft=draft,
-                world=world,
-                model=model_identity,
-                repaired=True,
-            )
         reliability_signature = cognition_semantic_signature(draft)
         _notify_stage(
             on_stage,
@@ -568,6 +552,7 @@ class MingliAgent:
                 "primary_path": draft.work_path.path_statement,
                 "key_condition": (draft.work_path.success_conditions or [""])[0],
                 "uncertainty": (draft.unresolved_questions or [""])[0],
+                "assertion_gate": assertion_gate.model_dump(mode="json"),
             },
         )
         return MingliCognitiveRecord(
@@ -578,6 +563,7 @@ class MingliAgent:
             model=model_identity,
             cognition=draft,
             review=receipt,
+            assertion_gate=assertion_gate,
             hypothesis_comparison=comparison,
             stage_receipts=[item.model_dump(mode="json") for item in self.orchestrator.receipt().stage_receipts],
             context_manifest=[
@@ -768,42 +754,20 @@ class MingliAgent:
             reading = self.domain_model.generate(**generation_kwargs)
         reading = _normalize_domain_reading(reading, domain=domain)
         locked_fact_repairs: list[str] = []
+        reading, assertion_gate = isolate_domain_assertions(
+            reading=reading,
+            world=world,
+            baseline_record=record,
+        )
         review = review_domain_reading(
             reading=reading,
             world=world,
             model=self.domain_model.model,
-            repaired=bool(locked_fact_repairs),
+            repaired=bool(assertion_gate.repaired_count),
             baseline_record=record,
             expected_domain=domain,
+            assertion_gate=assertion_gate,
         )
-        repair_attempted = False
-        if _review_requires_one_repair(review):
-            repair_attempted = True
-            reading = self.domain_model.generate(
-                prompt=_single_domain_repair_prompt(
-                    world=world,
-                    whole=whole,
-                    domain_reading=reading,
-                    receipt=review,
-                    context_payload=domain_context_payload,
-                ),
-                schema=DomainCausalReading,
-                temperature=0.0,
-                thinking=route.thinking,
-                max_tokens=route.max_tokens,
-            )
-            reading = _normalize_domain_reading(
-                reading,
-                domain=domain,
-            )
-            review = review_domain_reading(
-                reading=reading,
-                world=world,
-                model=self.domain_model.model,
-                repaired=True,
-                baseline_record=record,
-                expected_domain=domain,
-            )
         override_reason = domain_baseline_override_reason(reading=reading, record=record)
         revision_candidate = (
             {
@@ -820,6 +784,7 @@ class MingliAgent:
             domain=domain,
             reading=reading,
             review=review,
+            assertion_gate=assertion_gate,
             reasoning_protocol=protocol.model_dump(mode="json"),
             context_manifest={
                 "stage": context.stage,
@@ -834,7 +799,8 @@ class MingliAgent:
                 "included_ziwei_palaces": list((domain_context_payload.get("ziwei_profile") or {}).get("palaces", {})),
                 "model_route": route.model_dump(mode="json"),
                 "locked_fact_repairs": locked_fact_repairs,
-                "semantic_repair_attempted": repair_attempted,
+                "semantic_repair_attempted": False,
+                "assertion_gate": assertion_gate.model_dump(mode="json"),
             },
             generated_at=datetime.now(timezone.utc).isoformat(),
             reliability_disposition=review.disposition,

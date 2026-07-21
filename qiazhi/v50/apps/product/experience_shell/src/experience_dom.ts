@@ -19,7 +19,7 @@ export function updateExperienceLocation(activeCaseId: string, ui: UiState): voi
 
 export function humanizeError(message: string): string {
   return message
-    .replace(/^formal_life_case_not_available$/, "正式整盘认知尚未通过可靠性门禁。")
+    .replace(/^formal_life_case_not_available$/, "四柱已经就绪，整盘主线还在整理中。")
     .replace(/^experience_case_not_found$/, "没有找到这份案例，或它不属于当前账户。")
     .replace(/^canvas_official_timing_required$/, "这份案例还没有完整的大运与流年计算。")
     .replace(/_/g, " ");

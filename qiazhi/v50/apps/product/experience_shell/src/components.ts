@@ -10,6 +10,7 @@ import type {
   MingliExperienceEnvelope,
   NarrationManifest,
   ReadOnlySixPillarCanvas,
+  WorkspaceCognitionState,
 } from "./contracts";
 import type { ProductArea, UiState, WorkspaceSurface } from "./state";
 
@@ -18,10 +19,12 @@ export interface ExperienceViewModel {
   accountRole: string;
   cases: ExperienceCaseSummary[];
   activeCaseId: string;
+  activeProfileId: string;
   availableAreas: ProductArea[];
   availableSurfaces: WorkspaceSurface[];
-  workspace: CaseWorkspaceEnvelope;
+  workspace: CaseWorkspaceEnvelope | null;
   envelope: MingliExperienceEnvelope;
+  cognition: WorkspaceCognitionState;
   narrationManifest: NarrationManifest | null;
   canvas: ReadOnlySixPillarCanvas | null;
   canvasContext: CanvasContextPack | null;
@@ -41,9 +44,9 @@ const polarityLabel: Record<string, string> = { yin: "阴", yang: "阳" };
 export function renderExperience(view: ExperienceViewModel): string {
   const claim = view.envelope.approved_claims[0];
   const steps = view.envelope.approved_reasoning_steps;
-  const fullThesis = claim?.approved_meaning || "命盘事实已经确认，正式整盘认知尚未提交。";
+  const fullThesis = claim?.approved_meaning || "四柱已经就绪，阿布正在理解整盘。";
   const thesis = firstSentence(fullThesis);
-  const pathSummary = steps[steps.length - 1]?.conclusion || "正式主路径仍在形成。";
+  const pathSummary = steps[steps.length - 1]?.conclusion || "先从确定性的四柱开始。";
   const condition = claim?.conditions[0] || "当前还没有足够依据写下成立条件。";
   const uncertainty = view.envelope.uncertainty.reasons[0] || "当前没有额外未决项。";
   return `<div class="deepbeing-shell" data-product-area-current="${escapeAttr(view.ui.productArea)}">
@@ -63,11 +66,12 @@ export function renderExperience(view: ExperienceViewModel): string {
 
 function renderWorkbench(view: ExperienceViewModel): string {
   const claim = view.envelope.approved_claims[0];
+  const hasFormalCognition = Boolean(claim);
   const steps = view.envelope.approved_reasoning_steps;
   const condition = claim?.conditions[0] || "当前还没有足够依据写下成立条件。";
   const uncertainty = view.envelope.uncertainty.reasons[0] || "当前没有额外未决项。";
-  const pathSummary = steps[steps.length - 1]?.conclusion || "正式主路径仍在形成。";
-  const fullThesis = claim?.approved_meaning || "命盘事实已经确认，正式整盘认知尚未提交。";
+  const pathSummary = steps[steps.length - 1]?.conclusion || "先从确定性的四柱开始。";
+  const fullThesis = claim?.approved_meaning || "四柱已经就绪，阿布正在理解整盘。";
   const thesis = firstSentence(fullThesis);
 
   return `
@@ -78,7 +82,7 @@ function renderWorkbench(view: ExperienceViewModel): string {
         <div class="opening-copy">
           <p class="section-kicker">看见命局 · 当前基线</p>
           <h1>${escapeHtml(thesis)}</h1>
-          <p class="opening-lede">先看最重要的四件事，不把整份命局一次塞给你。</p>
+          <p class="opening-lede">${escapeHtml(view.cognition.message)}</p>
           <div class="opening-actions">
             <button class="primary-command" type="button" data-command="listen">
               ${view.ui.narrationStatus === "playing" ? "暂停阿布" : "听阿布讲"}
@@ -86,11 +90,11 @@ function renderWorkbench(view: ExperienceViewModel): string {
             <button class="text-command" type="button" data-command="focus-pillars">先看四柱</button>
           </div>
         </div>
-        <div class="scan-strip" aria-label="整盘快速摘要">
+        ${hasFormalCognition ? `<div class="scan-strip" aria-label="整盘快速摘要">
           ${summaryItem("主路径", pathSummary, "baseline-work-path")}
           ${summaryItem("成立条件", condition, "baseline-condition")}
           ${summaryItem("最大未决", uncertainty, "baseline-uncertainty")}
-        </div>
+        </div>` : `<div class="cognition-progress" data-cognition-status="${escapeAttr(view.cognition.status)}"><i></i><span><strong>命盘先到，认知随后</strong><small>四柱已确认；阿布只会补充依据充分的部分。</small></span></div>`}
       </section>
 
       ${renderCollapsibleSection({
@@ -104,7 +108,7 @@ function renderWorkbench(view: ExperienceViewModel): string {
         body: renderPillars(view.envelope, view.ui.selectedAnchor),
       })}
 
-      ${renderCollapsibleSection({
+      ${hasFormalCognition ? `${renderCollapsibleSection({
         id: "path",
         anchor: "baseline-work-path",
         tone: "cognition",
@@ -125,16 +129,21 @@ function renderWorkbench(view: ExperienceViewModel): string {
         expanded: view.ui.expandedSections.boundaries,
         body: renderBoundaries(claim, view.envelope, view.ui.selectedAnchor),
       })}` : ""}
+      ` : ""}
 
-      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderCollapsibleSection({
+      ${view.ui.workspaceSurface === "onecanvas" ? `${renderCollapsibleSection({
         id: "canvas",
         anchor: "temporal-canvas",
         tone: "canvas",
         eyebrow: "时间结构",
         title: "看结构怎样进入当前时间",
-        summary: `${view.canvas.source.luck_pillar}大运 · ${view.canvas.source.analysis_year || "当前"}${view.canvas.source.annual_pillar}流年`,
+        summary: view.canvas
+          ? `${view.canvas.source.luck_pillar}大运 · ${view.canvas.source.analysis_year || "当前"}${view.canvas.source.annual_pillar}流年`
+          : "四柱骨架已经就绪",
         expanded: view.ui.expandedSections.canvas ?? true,
-        body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, false),
+        body: view.canvas
+          ? renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, false)
+          : renderDeterministicCanvasSkeleton(view.envelope, view.cognition),
       })}` : ""}
 
       ${view.ui.workspaceSurface === "theater" ? renderNarrationWorkspace(view, thesis) : ""}
@@ -196,7 +205,7 @@ function renderLifeWorld(
           <small>命</small><strong>${escapeHtml(pillars || "四柱待确认")}</strong><span>先天底图</span>
         </button>
         <button type="button" class="tree-node tree-events" data-select-anchor="baseline-work-path" data-message="${escapeAttr(pathSummary)}">
-          <small>事</small><strong>${escapeHtml(firstSentence(pathSummary))}</strong><span>${escapeHtml(view.workspace.state.selected_period)}</span>
+          <small>事</small><strong>${escapeHtml(firstSentence(pathSummary))}</strong><span>${escapeHtml(view.workspace?.state.selected_period || "当前阶段")}</span>
         </button>
         <button type="button" class="tree-node tree-growth" data-command="toggle-abu">
           <small>人</small><strong>${escapeHtml(firstSentence(condition))}</strong><span>当前行动条件</span>
@@ -217,7 +226,7 @@ function renderLifeWorld(
 }
 
 function renderMingliLab(view: ExperienceViewModel): string {
-  if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>这份命盘尚未形成可研究的结构投影</h1></section>`;
+  if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>四柱已经就绪</h1><span>研究镜头只在正式关系投影可用时按需展开，不会为 Lab 另算一套命盘。</span></section>`;
   const stage = view.canvas.stages[view.ui.canvasStage];
   const potentialCount = stage.spec.relations.filter((item) => item.relation_state === "potential").length;
   const sourceCount = new Set(stage.spec.relations.flatMap((item) => item.trace.source_refs)).size;
@@ -225,7 +234,7 @@ function renderMingliLab(view: ExperienceViewModel): string {
   return `<div class="mingli-lab">
     <header class="lab-header">
       <div><p>Mingli Lab · ${escapeHtml(activeCaseName(view))}</p><h1>同一命局的研究镜头</h1><span>候选关系与证据留在研究层；正式 Case 不在这里被改写。</span></div>
-      <code>${escapeHtml(view.workspace.state.scene_source_hash.slice(0, 18))}</code>
+      <code>${escapeHtml((view.workspace?.state.scene_source_hash || view.envelope.source.source_hash).slice(0, 18))}</code>
     </header>
     <div class="lab-evidence-rail" aria-label="当前研究范围">
       <span><small>潜在关系</small><strong>${potentialCount}</strong></span>
@@ -241,14 +250,14 @@ function renderProductSidebar(view: ExperienceViewModel): string {
   return `<aside class="product-sidebar">
     <a class="brand" href="/experience" aria-label="DeepBeing 首页"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
     ${renderProductNavigation(view, "sidebar")}
-    <div class="sidebar-context">${renderCaseSelector(view.cases, view.activeCaseId)}<small>${escapeHtml(view.envelope.source.life_case_version || "命盘事实")}</small></div>
+    <div class="sidebar-context">${renderProfileSelector(view.cases, view.activeProfileId)}<small>${escapeHtml(view.envelope.source.life_case_version || "命盘事实")}</small></div>
     <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app">档案</a></div>
   </aside>`;
 }
 
 function renderMobileHeader(view: ExperienceViewModel): string {
   const labels: Record<ProductArea, string> = { world: "我的生命世界", workbench: "命盘工作台", lab: "Mingli Lab" };
-  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong>${renderCaseSelector(view.cases, view.activeCaseId)}</header>`;
+  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong>${renderProfileSelector(view.cases, view.activeProfileId)}</header>`;
 }
 
 function renderMobileNavigation(view: ExperienceViewModel): string {
@@ -265,19 +274,37 @@ function renderProductNavigation(view: ExperienceViewModel, placement: "sidebar"
 }
 
 function activeCaseName(view: ExperienceViewModel): string {
-  return view.cases.find((item) => item.case_id === view.activeCaseId)?.display_name || "当前命盘";
+  return view.cases.find((item) => item.profile_id === view.activeProfileId)?.display_name || "当前命盘";
 }
 
 function renderNarrationWorkspace(view: ExperienceViewModel, thesis: string): string {
   const segments = view.narrationManifest?.segments || [];
   return `<section class="narration-workspace" data-anchor="abu-narration">
-    <header><p>阿布讲解</p><h1>${escapeHtml(thesis)}</h1><span>从整盘重心开始，沿四柱、路径、条件与未决逐段展开。</span></header>
+    <header><p>阿布讲解</p><h1>${escapeHtml(thesis)}</h1><span>${segments.length ? "从整盘重心开始，沿四柱、路径、条件与未决逐段展开。" : "文字已经可读；点播放后才准备声音，不阻塞当前页面。"}</span></header>
     <div class="narration-workspace-actions">
       <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "暂停" : "从头听"}</button>
       ${view.ui.narrationStatus !== "idle" ? '<button class="text-command" type="button" data-command="stop">停止</button>' : ""}
     </div>
-    <ol>${segments.map((item, index) => `<li><button type="button" data-play-segment="${index}"${view.ui.narrationIndex === index ? ' class="active"' : ""}><small>${String(index + 1).padStart(2, "0")}</small><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span><b aria-hidden="true">▶</b></button></li>`).join("")}</ol>
+    ${segments.length ? `<ol>${segments.map((item, index) => `<li><button type="button" data-play-segment="${index}"${view.ui.narrationIndex === index ? ' class="active"' : ""}><small>${String(index + 1).padStart(2, "0")}</small><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span><b aria-hidden="true">▶</b></button></li>`).join("")}</ol>` : `<div class="narration-pending"><i></i><p>${escapeHtml(view.cognition.message)}</p></div>`}
   </section>`;
+}
+
+function renderDeterministicCanvasSkeleton(
+  envelope: MingliExperienceEnvelope,
+  cognition: WorkspaceCognitionState,
+): string {
+  const pillars = envelope.allowed_chart_facts.filter((item) => item.fact_type === "pillar");
+  return `<div class="deterministic-canvas-skeleton">
+    <header><span>确定性命盘</span><strong>四柱先显示，关系按正式来源逐步进入</strong></header>
+    <div class="skeleton-pillar-rail">${pillars.map((pillar) => `<article>
+      <small>${escapeHtml(pillar.pillar_label)}</small>
+      <b class="element-${escapeAttr(pillar.stem_element)}" data-polarity="${escapeAttr(pillar.stem_polarity)}">${escapeHtml(pillar.stem)}</b>
+      <i></i>
+      <b class="element-${escapeAttr(pillar.branch_element)}" data-polarity="${escapeAttr(pillar.branch_polarity)}">${escapeHtml(pillar.branch)}</b>
+      <em>${escapeHtml(pillar.visible_ten_god || "命盘事实")}</em>
+    </article>`).join("")}</div>
+    <p><i></i>${escapeHtml(cognition.message)}</p>
+  </div>`;
 }
 
 function renderReadOnlyCanvas(
@@ -347,7 +374,7 @@ function renderReadOnlyCanvas(
     <div class="canvas-boundary ${canvas.path_availability.status === "available" ? "is-ready" : "is-limited"}">
       <span>${canvas.path_availability.status === "available" ? "主路径已对齐" : "主路径未补画"}</span>
       <p>${escapeHtml(canvas.path_availability.message)}</p>
-      <small>当前查看只读取正式案例，不修改原局，也不调用 LLM。</small>
+      <small>当前只读查看正式案例，不修改原局。</small>
     </div>
   </div>`;
 }
@@ -517,13 +544,13 @@ export function renderUnavailable(title: string, detail: string, actionLabel: st
     </main>`;
 }
 
-function renderCaseSelector(cases: ExperienceCaseSummary[], activeCaseId: string): string {
+function renderProfileSelector(cases: ExperienceCaseSummary[], activeProfileId: string): string {
   if (cases.length <= 1) {
-    const active = cases.find((item) => item.case_id === activeCaseId);
+    const active = cases.find((item) => item.profile_id === activeProfileId);
     return `<span class="active-case"><i></i>${escapeHtml(active?.display_name || "当前命盘")}</span>`;
   }
-  return `<label class="case-select-label"><span>当前命盘</span><select data-case-select>${cases
-    .map((item) => `<option value="${escapeAttr(item.case_id)}"${item.case_id === activeCaseId ? " selected" : ""}>${escapeHtml(item.display_name)}</option>`)
+  return `<label class="case-select-label"><span>当前命盘</span><select data-profile-select>${cases
+    .map((item) => `<option value="${escapeAttr(item.profile_id)}"${item.profile_id === activeProfileId ? " selected" : ""}>${escapeHtml(item.display_name)}</option>`)
     .join("")}</select></label>`;
 }
 

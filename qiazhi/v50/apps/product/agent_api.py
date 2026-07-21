@@ -28,14 +28,12 @@ from core.mingli_agent import (
     MingliAgent,
     MingliCognitiveRecord,
     OllamaCognitiveModel,
-    ProbePlanner,
     apply_deliberation_selection,
     apply_probe_response,
     build_deliberation_view,
     undo_deliberation_selection,
 )
 from experience.workspace import select_case_workspace_period
-from product.agent_api_context import AgentApiContext
 from product.agent_api_contracts import (
     AbuResolveRequest,
     CaseRevisionCommitRequest,
@@ -60,14 +58,12 @@ from product.agent_case_policy import (
 from product.agent_case_store import AgentCaseStore, build_agent_case_store
 from product.agent_command_service import (
     BaselineCaseCommand,
-    BaselineCaseCommandService,
     DomainExplorationCommand,
-    DomainExplorationCommandService,
     DomainInsightValidationError,
     DomainReasoningError,
 )
 from product.agent_job_store import AgentJobStore, build_agent_job_store
-from product.agent_jobs import AgentJobRunner
+from product.agent_runtime import AgentRuntimeServices, build_agent_runtime
 from product.agent_probe_support import (
     fallback_probe_revision as _fallback_probe_revision,
     probe_revision_request as _probe_revision_request,
@@ -91,18 +87,25 @@ def create_agent_router(
     agent: MingliAgent | None = None,
     case_store: AgentCaseStore | None = None,
     job_store: AgentJobStore | None = None,
+    runtime: AgentRuntimeServices | None = None,
+    agent_injected: bool | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix=AGENT_API_PREFIX, tags=["mingli-agent"])
-    injected_agent = agent is not None
-    agent = agent or MingliAgent()
-    case_store = case_store or build_agent_case_store()
-    job_store = job_store or build_agent_job_store()
-    context = AgentApiContext(
+    injected_agent = agent is not None if agent_injected is None else agent_injected
+    resolved_agent = runtime.agent if runtime is not None else agent or MingliAgent()
+    resolved_case_store = runtime.context.case_store if runtime is not None else case_store or build_agent_case_store()
+    resolved_job_store = runtime.context.job_store if runtime is not None else job_store or build_agent_job_store()
+    runtime = runtime or build_agent_runtime(
         product_store=product_store,
-        case_store=case_store,
-        job_store=job_store,
         session_cookie=session_cookie,
+        agent=resolved_agent,
+        case_store=resolved_case_store,
+        job_store=resolved_job_store,
     )
+    agent = runtime.agent
+    case_store = runtime.context.case_store
+    job_store = runtime.context.job_store
+    context = runtime.context
     account_for = context.account_for
     load_case = context.load_case
     mode_for = context.mode_for
@@ -118,14 +121,10 @@ def create_agent_router(
             num_ctx=8192,
         )
     )
-    probe_planner = ProbePlanner()
-    baseline_commands = BaselineCaseCommandService(agent=agent, case_store=case_store)
-    domain_commands = DomainExplorationCommandService(agent=agent, case_store=case_store)
-    jobs = AgentJobRunner(
-        context=context,
-        baseline_commands=baseline_commands,
-        probe_planner=probe_planner,
-    )
+    probe_planner = runtime.probe_planner
+    baseline_commands = runtime.baseline_commands
+    domain_commands = runtime.domain_commands
+    jobs = runtime.jobs
     recovered_interrupted_jobs = jobs.recovered_interrupted_jobs
     capability_registry = AbuCapabilityRegistry()
 
@@ -148,8 +147,9 @@ def create_agent_router(
             "probe_modes": ["guest", "member", "practitioner", "research"],
             "case_belief_updates_only": True,
             "progressive_cognition": True,
-            "production_first_run_protocol": "single_call_baseline_v1",
-            "first_run_blocking_core_llm_call_budget": 1,
+            "production_first_run_protocol": "workspace_bootstrap_then_background_baseline_v1",
+            "first_run_blocking_core_llm_call_budget": 0,
+            "missing_baseline_background_llm_call_budget": 1,
             "domain_reasoning": "on_demand_only",
             "domain_progressive_preview": True,
             "domain_exact_request_cache": True,
