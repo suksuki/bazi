@@ -50,7 +50,6 @@ reports/abu-says-mingli-s0/*
 !reports/abu-says-mingli-s0/mobile-social-v1/
 
 # Private or reality-derived calibration material must remain outside Git.
-data/validation/fixtures/v40_admin_case_inventory_v1.json
 
 # De-identified fixtures derived from real LifeCases remain local-only. Their
 # locked hashes can be verified locally without admitting the payload to Git.

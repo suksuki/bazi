@@ -164,7 +164,7 @@ Add reproducible attested candidates to `config/vnext_phase0_frontier_candidates
 
 ## Snapshot and preflight
 
-Commit a clean V50 snapshot without changing unrelated V40 work. Regenerate the snapshot with `--freeze`. Only after all three gates close may a human explicitly approve one non-sealed live preflight. P0-G2 does not start automatically.
+Commit a clean V50 snapshot without changing unrelated legacy work. Regenerate the snapshot with `--freeze`. Only after all three gates close may a human explicitly approve one non-sealed live preflight. P0-G2 does not start automatically.
 """
 
 
