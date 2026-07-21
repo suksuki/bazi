@@ -84,12 +84,19 @@ npm install --ignore-scripts
 ## 启动
 
 ```bash
+PYTHONPATH=packages:apps ../.venv312/bin/python scripts/v50_migrate_product_database.py check
 PYTHONPATH=packages:apps ../.venv312/bin/python scripts/v50_run_product.py
 ```
 
 打开：`http://127.0.0.1:8053/`
 
 默认使用本地 PostgreSQL：`postgresql:///qiazhi_v50?host=/tmp`。部署环境必须显式提供 `V50_DATABASE_URL`。
+
+应用启动只检查 Schema，不再创建或升级数据库。全新安装或版本不匹配时，先显式执行：
+
+```bash
+PYTHONPATH=packages:apps ../.venv312/bin/python scripts/v50_migrate_product_database.py apply
+```
 
 ## 验证
 

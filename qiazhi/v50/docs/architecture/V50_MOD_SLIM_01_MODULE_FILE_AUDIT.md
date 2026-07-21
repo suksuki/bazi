@@ -87,12 +87,11 @@ authority defect, so it follows the five core splits above.
 - Python Pydantic models are the Experience contract source; JSON Schema and
   TypeScript are generated projections.
 - `deploy/postgres_v50_schema.sql` is the only PostgreSQL DDL definition.
-- `product.database_schema.ensure_product_database_schema` is the only executor.
+- `product.database_schema.migrate_product_database_schema` is the only explicit executor.
 - No store-local DDL or second schema owner remains.
-- **Release boundary:** each PostgreSQL store calls the executor during process
-  construction. The operation is idempotent, but service startup can still
-  mutate the schema version. Schema application must be made an explicit
-  deployment step before the next production release.
+- Each PostgreSQL store calls the read-only version checker during process
+  construction. Schema changes require the explicit migration command; a
+  mismatch prevents service startup.
 
 ### Transitional adapters/read fallbacks
 

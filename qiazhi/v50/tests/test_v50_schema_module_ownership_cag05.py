@@ -54,7 +54,8 @@ def test_postgres_schema_has_one_ddl_owner_and_all_stores_delegate_to_it() -> No
     ]
     for name in store_paths:
         source = (ROOT / "apps/product" / name).read_text(encoding="utf-8")
-        assert "ensure_product_database_schema(database_url)" in source
+        assert "check_product_database_schema(database_url)" in source
+        assert "migrate_product_database_schema" not in source
         assert "CREATE TABLE" not in source
         assert "ALTER TABLE" not in source
 

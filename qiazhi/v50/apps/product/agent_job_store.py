@@ -6,7 +6,7 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
-from product.database_schema import ensure_product_database_schema
+from product.database_schema import check_product_database_schema
 
 
 class AgentJobStore(Protocol):
@@ -94,7 +94,7 @@ class PostgresAgentJobStore:
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        ensure_product_database_schema(database_url)
+        check_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg

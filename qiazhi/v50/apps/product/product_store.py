@@ -10,7 +10,7 @@ from typing import Protocol
 from uuid import uuid4
 
 from core.contracts import BirthInputCanonical
-from product.database_schema import ensure_product_database_schema
+from product.database_schema import check_product_database_schema
 
 
 ACCOUNT_ROLES = {"member", "practitioner", "research_master"}
@@ -149,7 +149,7 @@ class PostgresProductStore:
 
     def __init__(self, database_url: str) -> None:
         self._database_url = database_url
-        ensure_product_database_schema(database_url)
+        check_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg

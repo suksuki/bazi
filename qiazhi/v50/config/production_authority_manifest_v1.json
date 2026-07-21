@@ -67,7 +67,8 @@
   "module_ownership": {
     "baseline_command": "product.agent_command_service.BaselineCaseCommandService",
     "database_schema": "deploy/postgres_v50_schema.sql",
-    "database_schema_executor": "product.database_schema.ensure_product_database_schema",
+    "database_schema_checker": "product.database_schema.check_product_database_schema",
+    "database_schema_migration": "product.database_schema.migrate_product_database_schema",
     "experience_contracts": "Python Pydantic models under packages/experience",
     "typescript_contract_projection": "scripts/v50_export_experience_schemas.py",
     "canonical_scene": "product.canonical_scene.CanonicalSceneOwner",

@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 from typing import Any, Protocol
 
-from product.database_schema import ensure_product_database_schema
+from product.database_schema import check_product_database_schema
 
 
 FORBIDDEN_LEGACY_FORMAL_WRITE_KEYS = frozenset({
@@ -60,7 +60,7 @@ class PostgresAgentCaseStore:
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        ensure_product_database_schema(database_url)
+        check_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg

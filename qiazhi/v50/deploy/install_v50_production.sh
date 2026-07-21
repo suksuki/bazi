@@ -7,6 +7,7 @@ SERVICE_TARGET=/etc/systemd/system/qiazhi-v50.service
 STAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_DIR=/home/hlsystem/qiazhi-sync-backups/v50-nginx
 VENV_PIP=/home/hlsystem/bazi/qiazhi/.venv312/bin/pip
+VENV_PYTHON=/home/hlsystem/bazi/qiazhi/.venv312/bin/python
 PRODUCT_REQUIREMENTS=$V50_ROOT/requirements-product.txt
 
 if [[ ${EUID} -ne 0 ]]; then
@@ -21,6 +22,14 @@ test -f "$PRODUCT_REQUIREMENTS"
 test -x "$VENV_PIP"
 
 sudo -u hlsystem "$VENV_PIP" install --disable-pip-version-check -q -r "$PRODUCT_REQUIREMENTS"
+
+set -a
+source "$V50_ROOT/.env.v50.production"
+set +a
+sudo -u hlsystem env \
+  V50_DATABASE_URL="$V50_DATABASE_URL" \
+  PYTHONPATH="$V50_ROOT/packages:$V50_ROOT/apps" \
+  "$VENV_PYTHON" "$V50_ROOT/scripts/v50_migrate_product_database.py" check
 
 mkdir -p "$BACKUP_DIR"
 if [[ -f "$NGINX_TARGET" ]]; then

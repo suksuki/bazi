@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Protocol
 
-from product.database_schema import ensure_product_database_schema
+from product.database_schema import check_product_database_schema
 
 
 class LegacyUsageStore(Protocol):
@@ -53,7 +53,7 @@ class PostgresLegacyUsageStore:
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        ensure_product_database_schema(database_url)
+        check_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg
