@@ -14,9 +14,16 @@ from core.graph.contracts import (
     NodeRoleClassificationResult,
     NodeRoleType,
     PathExplorationResult,
+    PathEligibility,
 )
 from core.graph.path_explorer import explore_mingli_paths
 from core.graph.path_explorer import PATH_SCORE_POLICY_V2
+from core.graph.path_qualification import (
+    PATH_QUALIFICATION_POLICY_VERSION,
+    WholePathValidation,
+    qualify_relation_for_path,
+    validate_whole_path_candidate,
+)
 from core.graph.provenance import (
     AssertionLifecycle,
     NodeRef,
@@ -49,6 +56,7 @@ __all__ = [
     "NodeRoleClassificationResult",
     "NodeRoleType",
     "PathExplorationResult",
+    "PathEligibility",
     "PATH_SCORE_POLICY_V2",
     "PathAssertion",
     "PathKey",
@@ -62,4 +70,8 @@ __all__ = [
     "classify_node_roles",
     "explore_mingli_paths",
     "validate_assertion_history",
+    "PATH_QUALIFICATION_POLICY_VERSION",
+    "WholePathValidation",
+    "qualify_relation_for_path",
+    "validate_whole_path_candidate",
 ]

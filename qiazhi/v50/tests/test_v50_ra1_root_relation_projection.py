@@ -4,7 +4,7 @@ from core.contracts import BirthInputCanonical
 from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
 from core.graph import build_mingli_graph_from_material_store, explore_mingli_paths
-from core.graph.contracts import MingliGraphEdgeType
+from core.graph.contracts import MingliGraphEdgeType, PathEligibility
 
 
 def _birth(*, case_id: str, pillars: tuple[str, str, str, str]) -> BirthInputCanonical:
@@ -48,7 +48,8 @@ def test_ra1_projects_each_existing_day_master_root_with_material_provenance() -
     assert edge.relation_label == "day_master_root"
     assert edge.material_refs == ["material:ra1.root.fire:bazi:root_strength"]
     assert edge.attributes["hidden_stems"] == "丁"
-    assert edge.attributes["path_eligibility"] == "not_yet_qualified"
+    assert edge.path_eligibility == PathEligibility.EVIDENCE_ONLY
+    assert edge.eligibility_reason_refs
 
 
 def test_ra1_root_projection_does_not_invent_an_unrooted_day_master_relation() -> None:

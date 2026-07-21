@@ -6,6 +6,7 @@ from core.contracts.material import MaterialType, MingliMaterial, UnifiedMingliM
 from core.engines.bazi.knowledge import BRANCH_ELEMENTS, HIDDEN_STEMS, STEM_ELEMENTS, STEM_POLARITY, TRIPLE_HARMONY
 from core.engines.bazi.material_engine import derive_element_relations, resolve_ten_god
 from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliGraphNodeType
+from core.graph.path_qualification import qualify_relation_for_path
 
 
 POSITION_ORDER = ("year", "month", "day", "hour")
@@ -153,6 +154,7 @@ def _edge(
     participant_node_ids: list[str] | None = None,
     attributes: dict[str, object] | None = None,
 ) -> MingliGraphEdge:
+    path_eligibility, eligibility_reason_refs = qualify_relation_for_path(edge_type)
     return MingliGraphEdge(
         edge_id=edge_id,
         reading_id=store.reading_id,
@@ -162,6 +164,8 @@ def _edge(
         participant_node_ids=participant_node_ids or [],
         strength=strength,
         relation_label=relation_label,
+        path_eligibility=path_eligibility,
+        eligibility_reason_refs=eligibility_reason_refs,
         attributes=attributes or {},
         material_refs=material_refs,
         evidence_refs=evidence_refs or material_refs,
@@ -332,7 +336,6 @@ def _material_relation_edges(
                                 "bridge_node_id": bridge_node.node_id,
                                 "required_branches": sorted(str(item) for item in branches),
                             } if is_harmony else {
-                                "path_eligibility": "not_yet_qualified",
                                 "school_profile": "conservative_complete_set_v1",
                                 "punishment_kind": "triple_complete",
                             }),
@@ -384,7 +387,6 @@ def _material_relation_edges(
                             if relation_name == "half_triple_harmony"
                             else "branch_pair"
                         ),
-                        "path_eligibility": "not_yet_qualified",
                         "school_profile": (
                             "conservative_complete_set_v1"
                             if relation_name in {"punishment", "self_punishment"}
@@ -467,7 +469,6 @@ def _material_root_edges(
                     attributes={
                         "source_material_type": material.material_type.value,
                         "relation_family": "root_support",
-                        "path_eligibility": "not_yet_qualified",
                         "slot": slot,
                         "branch": branch,
                         "hidden_stems": str(root_source.get("hidden_stems", "")),

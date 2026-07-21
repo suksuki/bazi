@@ -33,7 +33,12 @@ def build_bazi_flow_states(
         matching_paths = _paths_for_mechanism(path_result.paths, mechanism)
         if not matching_paths and path_result.paths:
             matching_paths = path_result.paths[:1]
-        top_nodes = _top_node_refs(analysis, simulation_report=simulation_report, matching_paths=matching_paths)
+        top_nodes = _top_node_refs(
+            analysis,
+            mechanism=mechanism,
+            simulation_report=simulation_report,
+            matching_paths=matching_paths,
+        )
         evidence_refs = _evidence_refs(
             analysis=analysis,
             path_result=path_result,
@@ -130,12 +135,20 @@ def _secondary_active_flows(*, analysis: GraphAnalysisResult, path_result: PathE
 def _top_node_refs(
     analysis: GraphAnalysisResult,
     *,
+    mechanism: str,
     simulation_report: SimulationReport | None,
     matching_paths: list[MingliPath],
 ) -> list[str]:
     path_node_ids = [node_id for path in matching_paths for node_id in path.node_ids]
     ranked = simulation_report.ranked_critical_node_ids if simulation_report else analysis.ranked_node_ids
     refs = [node_id for node_id in ranked if node_id in path_node_ids]
+    if mechanism == "structural_baseline":
+        anchors = [
+            metric.node_id
+            for metric in analysis.node_metrics
+            if metric.position in {"day_stem", "day_branch"}
+        ]
+        refs = _dedupe([*anchors, *refs])
     if len(refs) < 2:
         refs.extend(node_id for node_id in ranked if node_id not in refs)
     if len(refs) < 2:

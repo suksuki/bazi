@@ -14,7 +14,7 @@ from core.engines.bazi.knowledge import (
 )
 from core.engines.bazi.pillar_cycle import BRANCHES, JIAZI
 from core.graph import build_mingli_graph_from_material_store, explore_mingli_paths
-from core.graph.contracts import MingliGraphEdgeType
+from core.graph.contracts import MingliGraphEdgeType, PathEligibility
 
 
 PILLAR_BY_BRANCH = {
@@ -54,7 +54,8 @@ def test_ra1_projects_all_six_harms_as_non_path_relations(pair: frozenset[str]) 
 
     assert len(edges) == 4
     assert all(edge.relation_label == "six_harm" for edge in edges)
-    assert all(edge.attributes["path_eligibility"] == "not_yet_qualified" for edge in edges)
+    assert all(edge.path_eligibility == PathEligibility.NOT_YET_QUALIFIED for edge in edges)
+    assert all(edge.eligibility_reason_refs for edge in edges)
     assert all(edge.material_refs for edge in edges)
 
 
@@ -66,7 +67,8 @@ def test_ra1_projects_all_six_breaks_as_non_path_relations(pair: frozenset[str])
 
     assert len(edges) == 4
     assert all(edge.relation_label == "six_break" for edge in edges)
-    assert all(edge.attributes["path_eligibility"] == "not_yet_qualified" for edge in edges)
+    assert all(edge.path_eligibility == PathEligibility.NOT_YET_QUALIFIED for edge in edges)
+    assert all(edge.eligibility_reason_refs for edge in edges)
 
 
 def test_ra1_preserves_multiple_relation_types_on_the_same_branch_pair() -> None:

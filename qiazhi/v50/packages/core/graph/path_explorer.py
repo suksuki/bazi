@@ -4,22 +4,19 @@ import hashlib
 from collections import defaultdict
 from dataclasses import dataclass
 
-from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliPath, MingliStateLayer, PathExplorationResult
-from core.graph.provenance import stable_candidate_path_key
+from core.graph.contracts import (
+    MingliGraph,
+    MingliGraphEdge,
+    MingliGraphEdgeType,
+    MingliGraphNode,
+    MingliPath,
+    MingliStateLayer,
+    PathEligibility,
+    PathExplorationResult,
+)
+from core.graph.path_qualification import validate_whole_path_candidate
+from core.graph.provenance import RelationDirectionality, stable_candidate_path_key
 
-
-VALID_PATH_EDGE_TYPES = {
-    MingliGraphEdgeType.GENERATES,
-    MingliGraphEdgeType.CONTROLS,
-    MingliGraphEdgeType.SAME_ELEMENT_SUPPORT,
-    MingliGraphEdgeType.STORES,
-    MingliGraphEdgeType.ROOTS,
-    MingliGraphEdgeType.FORMS_HALF_COMBINATION,
-    MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION,
-    MingliGraphEdgeType.CLASHES,
-    MingliGraphEdgeType.HARMONIZES,
-    MingliGraphEdgeType.POSITION_LINK,
-}
 
 PATH_SCORE_POLICY_V2 = {
     "policy_version": "path_score_policy_v2",
@@ -59,7 +56,16 @@ def explore_mingli_paths(
             drafts=drafts,
             max_edges=max_edges,
         )
-    paths = [_build_path(graph=graph, state_layer=state_layer, nodes_by_id=nodes_by_id, edges_by_id=edges_by_id, draft=draft) for draft in drafts.values()]
+    qualified_drafts = [
+        draft
+        for draft in drafts.values()
+        if validate_whole_path_candidate(
+            graph,
+            node_ids=draft.node_ids,
+            edge_ids=draft.edge_ids,
+        ).passed
+    ]
+    paths = [_build_path(graph=graph, state_layer=state_layer, nodes_by_id=nodes_by_id, edges_by_id=edges_by_id, draft=draft) for draft in qualified_drafts]
     paths = sorted(paths, key=lambda path: path.path_score, reverse=True)[:limit]
     paths = [_attach_candidate_path_key(path, edges_by_id=edges_by_id) for path in paths]
     contribution = _node_path_contribution(paths)
@@ -94,9 +100,7 @@ def _attach_candidate_path_key(
 def _adjacency(graph: MingliGraph) -> dict[str, list[MingliGraphEdge]]:
     adjacency: dict[str, list[MingliGraphEdge]] = defaultdict(list)
     for edge in graph.edges:
-        if edge.edge_type not in VALID_PATH_EDGE_TYPES:
-            continue
-        if edge.attributes.get("path_eligibility") == "not_yet_qualified":
+        if edge.path_eligibility != PathEligibility.ELIGIBLE:
             continue
         if (
             edge.edge_type == MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION
@@ -125,14 +129,7 @@ def _adjacency(graph: MingliGraph) -> dict[str, list[MingliGraphEdge]]:
                     )
                 continue
         adjacency[edge.from_node_id].append(edge)
-        if edge.edge_type in {
-            MingliGraphEdgeType.SAME_ELEMENT_SUPPORT,
-            MingliGraphEdgeType.FORMS_HALF_COMBINATION,
-            MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION,
-            MingliGraphEdgeType.CLASHES,
-            MingliGraphEdgeType.HARMONIZES,
-            MingliGraphEdgeType.POSITION_LINK,
-        }:
+        if edge.directionality == RelationDirectionality.SYMMETRIC:
             adjacency[edge.to_node_id].append(edge.model_copy(update={"from_node_id": edge.to_node_id, "to_node_id": edge.from_node_id}))
     return adjacency
 

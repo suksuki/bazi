@@ -1387,6 +1387,40 @@ full_regression: 559_passed
 next: RA2_Path_Qualification
 ```
 
+### DR-046 — RA2 Replaces Implicit Path Whitelists With One Qualification Contract
+
+```yaml
+decision_id: DR-046
+date: 2026-07-21
+status: closed_pass
+qualification_owner: core.graph.path_qualification
+policy_version: deepbazi.path-qualification.ra2.v1
+eligible_relations:
+  - generates
+  - controls
+  - same_element_support
+  - stores
+  - forms_triple_combination
+evidence_only_relations:
+  - roots
+  - position_link
+not_yet_qualified:
+  - forms_half_combination
+  - clashes
+  - harmonizes
+  - harms
+  - breaks
+  - punishes
+whole_path_validator: required_before_candidate_creation
+legacy_relation_whitelists_removed: 2
+structural_baseline_anchor_source: explicit_day_stem_and_day_branch_roles
+formal_life_case_mutation: false
+focused_regression: 81_passed
+full_regression: 566_passed
+r1_manifest: 20_of_20_ok
+next: RA3_Path_Evidence_Calibration
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

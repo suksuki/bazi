@@ -8,7 +8,7 @@ from core.engines.bazi import build_bazi_material_store
 from core.engines.bazi.knowledge import HALF_TRIPLE_HARMONY, TRIPLE_HARMONY
 from core.engines.bazi.pillar_cycle import BRANCHES, JIAZI
 from core.graph import build_mingli_graph_from_material_store, explore_mingli_paths
-from core.graph.contracts import MingliGraphEdgeType
+from core.graph.contracts import MingliGraphEdgeType, PathEligibility
 
 
 PILLAR_BY_BRANCH = {
@@ -68,7 +68,8 @@ def test_ra1_recognizes_only_defined_half_triple_pairs(
     assert all(edge.attributes["element"] == element for edge in edges)
     assert all(edge.attributes["bridge_branch"] == bridge for edge in edges)
     assert all(edge.attributes["completion_state"] == "incomplete" for edge in edges)
-    assert all(edge.attributes["path_eligibility"] == "not_yet_qualified" for edge in edges)
+    assert all(edge.path_eligibility == PathEligibility.NOT_YET_QUALIFIED for edge in edges)
+    assert all(edge.eligibility_reason_refs for edge in edges)
 
 
 @pytest.mark.parametrize(

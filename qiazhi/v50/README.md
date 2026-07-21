@@ -5,7 +5,7 @@ DeepBazi V50 是一个由 Abu 引导、以 LLM 为命理认知核心的八字与
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `c71426a67806` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `204a6abfa5dd` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -17,14 +17,14 @@ r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 559_PASSED_RA1_RELATION_CORE_FINAL
+full_regression: 566_PASSED_RA2_PATH_QUALIFICATION_FINAL
 ```
 
 Authorized now:
 
-- `RA2_PATH_QUALIFICATION`: qualify_existing_relations_for_paths_with_explicit_evidence_without_changing_relation_existence
+- `RA3_PATH_EVIDENCE_CALIBRATION`: replace_uncalibrated_numeric_path_claims_with_evidence_backed_discrete_states
 
-Next architecture slice: `RA3_PATH_EVIDENCE_CALIBRATION` after `ra2_path_qualification_pass`.
+Next architecture slice: `SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT` after `ra3_path_evidence_calibration_pass`.
 
 Blocked: `ra3_uncalibrated_path_scoring_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->

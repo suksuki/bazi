@@ -40,6 +40,12 @@ class MingliGraphEdgeType(str, Enum):
     POSITION_LINK = "position_link"
 
 
+class PathEligibility(str, Enum):
+    ELIGIBLE = "eligible"
+    EVIDENCE_ONLY = "evidence_only"
+    NOT_YET_QUALIFIED = "not_yet_qualified"
+
+
 class MingliStateLayer(str, Enum):
     NATAL = "natal_state"
     LUCK = "luck_state"
@@ -106,6 +112,8 @@ class MingliGraphEdge(V50Model):
     ontology_version: str = RELATION_ONTOLOGY_VERSION
     strength: float = Field(default=0.0, ge=0.0, le=1.0)
     relation_label: str = ""
+    path_eligibility: PathEligibility = PathEligibility.NOT_YET_QUALIFIED
+    eligibility_reason_refs: list[str] = Field(default_factory=list)
     attributes: dict[str, object] = Field(default_factory=dict)
     material_refs: list[str] = Field(default_factory=list)
     evidence_refs: list[str] = Field(default_factory=list)
@@ -132,6 +140,7 @@ class MingliGraphEdge(V50Model):
         object.__setattr__(self, "relation_key", expected)
         object.__setattr__(self, "participant_node_ids", participants)
         object.__setattr__(self, "directionality", directionality)
+        require_refs(self.eligibility_reason_refs, "eligibility_reason_refs")
         require_refs(self.material_refs, "material_refs")
         require_refs(self.evidence_refs, "evidence_refs")
         return self

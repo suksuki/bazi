@@ -8,7 +8,7 @@ from core.engines.bazi import build_bazi_material_store
 from core.engines.bazi.knowledge import SIX_CLASH, SIX_HARMONY
 from core.engines.bazi.pillar_cycle import BRANCHES, JIAZI
 from core.graph import build_mingli_graph_from_material_store
-from core.graph.contracts import MingliGraphEdgeType
+from core.graph.contracts import MingliGraphEdgeType, PathEligibility
 from core.graph.provenance import RelationDirectionality
 
 
@@ -86,7 +86,8 @@ def test_ra1_projects_all_six_clashes_from_material_authority(pair: frozenset[st
     assert edge.relation_label == "six_clash"
     assert edge.material_refs == [f"material:{store.reading_id}:bazi:branch_relations"]
     assert set(edge.attributes["branches"]) == pair
-    assert edge.attributes["path_eligibility"] == "not_yet_qualified"
+    assert edge.path_eligibility == PathEligibility.NOT_YET_QUALIFIED
+    assert edge.eligibility_reason_refs
     assert edge.boundary == "graph_edge_is_computational_relation_not_judgment"
 
 

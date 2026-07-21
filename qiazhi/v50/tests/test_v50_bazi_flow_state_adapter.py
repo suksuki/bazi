@@ -82,3 +82,50 @@ def test_v50_bazi_flow_state_adapter_rejects_mixed_readings() -> None:
         assert "cannot mix readings" in str(exc)
     else:
         raise AssertionError("expected mixed reading rejection")
+
+
+def test_v50_structural_baseline_uses_explicit_day_anchors_not_position_edges() -> None:
+    birth = BirthInputCanonical(
+        birth_input_id="birth.flow_state_adapter.anchor",
+        gender="unknown",
+        calendar_type="solar",
+        birth_date="2000-01-01",
+        birth_time="12:00",
+        timezone="Asia/Shanghai",
+        year_pillar="甲子",
+        month_pillar="癸卯",
+        day_pillar="丁巳",
+        hour_pillar="庚申",
+        input_quality="synthetic_fixture",
+        pillar_fact_source="structurally_legal_hypothetical",
+    )
+    calendar = normalize_birth_input(birth)
+    store = build_bazi_material_store(
+        reading_id="reading.flow_state_adapter.anchor",
+        birth_input=birth,
+        calendar=calendar,
+    )
+    graph = build_mingli_graph_from_material_store(store)
+    path_result = explore_mingli_paths(graph)
+    role_result = classify_node_roles(graph, path_result)
+    analysis = analyze_mingli_graph(graph, path_result=path_result, role_result=role_result)
+    state = build_mingli_state_from_graph_analysis(analysis)
+    simulation_report = run_ablation_simulation(state)
+
+    flow_states = build_bazi_flow_states(
+        analysis=analysis,
+        path_result=path_result,
+        state=state,
+        simulation_report=simulation_report,
+    )
+    baseline = next(item for item in flow_states if item.mechanism == "structural_baseline")
+
+    assert any(node_id.endswith(":day:stem:丁") for node_id in baseline.node_refs)
+    assert any(node_id.endswith(":day:branch:巳") for node_id in baseline.node_refs)
+    assert not any(
+        edge.edge_type.value == "position_link"
+        for path in path_result.paths
+        for edge_id in path.edge_ids
+        for edge in graph.edges
+        if edge.edge_id == edge_id
+    )

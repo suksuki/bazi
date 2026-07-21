@@ -2,7 +2,7 @@ schema_version: v2
 updated_at: 2026-07-21
 
 phase:
-  name: V50_RELATION_ATLAS_RA2
+  name: V50_RELATION_ATLAS_RA3
   default_mode: authority_convergence
   global_product_freeze: LIFTED
   freeze_scope: artifact_specific_only
@@ -46,13 +46,13 @@ gates:
   architecture_consolidation_gate: CLOSED_PASS
   next_framework_alignment: BASELINE_PASS
   mingli_lab_foundation: BASELINE_PASS_WITH_EXPLICIT_GAPS
-  six_pillar_relation_coverage: RA1_RELATION_CORE_PASS
+  six_pillar_relation_coverage: RA2_PATH_QUALIFICATION_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 559_PASSED_RA1_RELATION_CORE_FINAL
+  full_regression: 566_PASSED_RA2_PATH_QUALIFICATION_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -127,6 +127,14 @@ receipts:
   ra1_temporal_relation_fixtures: 73_PASSED
   ra1_relation_core_regression: 559_PASSED
   ra1_relation_derivation_owner: core.engines.bazi.material_engine
+  ra2_path_qualification_policy: deepbazi.path-qualification.ra2.v1
+  ra2_path_qualification_owner: core.graph.path_qualification
+  ra2_path_qualification_fixtures: 6_PASSED
+  ra2_focused_regression: 81_PASSED
+  ra2_full_regression: 566_PASSED
+  ra2_r1_manifest: 20_OF_20_OK
+  ra2_legacy_path_whitelists_removed: 2
+  ra2_position_and_root_edges: EVIDENCE_ONLY_NOT_PATH_EDGES
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -135,18 +143,18 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: RA2_PATH_QUALIFICATION
-    kind: controlled_path_core_implementation
-    scope: qualify_existing_relations_for_paths_with_explicit_evidence_without_changing_relation_existence
+  - id: RA3_PATH_EVIDENCE_CALIBRATION
+    kind: controlled_path_evidence_implementation
+    scope: replace_uncalibrated_numeric_path_claims_with_evidence_backed_discrete_states
 
 next_architecture_slice:
-  id: RA3_PATH_EVIDENCE_CALIBRATION
+  id: SYNTHETIC_VALIDATION_AND_TRAINING_ALIGNMENT
   authorized_when:
-    - ra2_path_qualification_pass
+    - ra3_path_evidence_calibration_pass
   scope:
-    - remove_uncalibrated_strength_claims
-    - evidence_backed_discrete_support_states
-    - temporal_path_state_updates
+    - align_synthetic_evidence_with_formal_relation_and_path_contracts
+    - isolate_training_candidates_from_formal_authority
+    - preserve_workspace_and_projection_boundaries
 
 blocked:
   - ra3_uncalibrated_path_scoring_promotion
