@@ -124,8 +124,11 @@ def _ddl_owners() -> list[str]:
 
 
 def _baseline_delegate_count() -> int:
-    source = (ROOT / "apps/product/agent_api.py").read_text(encoding="utf-8")
-    return source.count("baseline_commands.execute(")
+    sources = (
+        (ROOT / "apps/product/agent_api.py").read_text(encoding="utf-8"),
+        (ROOT / "apps/product/agent_jobs.py").read_text(encoding="utf-8"),
+    )
+    return sum(source.count("baseline_commands.execute(") for source in sources)
 
 
 def _provenance_contracts_present() -> bool:

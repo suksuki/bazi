@@ -75,12 +75,30 @@ def test_python_contracts_generate_json_schema_and_typescript_without_drift() ->
 
 def test_sync_and_progressive_baselines_share_one_command_owner() -> None:
     api_source = (ROOT / "apps/product/agent_api.py").read_text(encoding="utf-8")
+    jobs_source = (ROOT / "apps/product/agent_jobs.py").read_text(encoding="utf-8")
     service_source = (ROOT / "apps/product/agent_command_service.py").read_text(
         encoding="utf-8"
     )
 
-    assert api_source.count("baseline_commands.execute(") == 2
+    assert api_source.count("baseline_commands.execute(") == 1
+    assert jobs_source.count("self._baseline_commands.execute(") == 1
     assert "compile_chart_world(" not in api_source
+    assert "compile_chart_world(" not in jobs_source
     assert "commit_baseline_life_case(" not in api_source
+    assert "commit_baseline_life_case(" not in jobs_source
+    assert "case_store.save(" not in api_source
     assert "class BaselineCaseCommandService" in service_source
-    assert service_source.count("self._case_store.save(") == 1
+    assert service_source.count("self._case_store.save(") == 2
+
+
+def test_sync_and_progressive_domains_share_one_command_owner() -> None:
+    api_source = (ROOT / "apps/product/agent_api.py").read_text(encoding="utf-8")
+    service_source = (ROOT / "apps/product/agent_command_service.py").read_text(
+        encoding="utf-8"
+    )
+
+    assert api_source.count("domain_commands.execute(") == 1
+    assert "agent.explore_domain(" not in api_source
+    assert "commit_domain_insight(" not in api_source
+    assert "class DomainExplorationCommandService" in service_source
+    assert service_source.count("self._agent.explore_domain(") == 1
