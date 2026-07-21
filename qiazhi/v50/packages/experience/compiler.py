@@ -29,10 +29,25 @@ class FrozenDict(dict[str, Any]):
 
 
 def canonical_hash(value: Any) -> str:
-    if hasattr(value, "model_dump"):
-        value = value.model_dump(mode="json")
-    payload = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
+    payload = json.dumps(
+        _canonical_value(value),
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def _canonical_value(value: Any) -> Any:
+    if hasattr(value, "model_dump"):
+        return _canonical_value(value.model_dump(mode="json"))
+    if isinstance(value, dict):
+        return {str(key): _canonical_value(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_canonical_value(item) for item in value]
+    if isinstance(value, datetime):
+        return value.isoformat()
+    return value
 
 
 def load_topic_package(path: str | Path) -> TopicPackage:
