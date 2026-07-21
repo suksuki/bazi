@@ -6,6 +6,7 @@ const API = {
 };
 
 const VOICE_STUDY_ENABLED = new URLSearchParams(window.location.search).get("voice_study") === "1";
+const PROFILE_MANAGEMENT_MODE = new URLSearchParams(window.location.search).get("manage") === "1";
 
 const ABU_MOTION_ROOT = "/assets/abu/v4-video-derived";
 const ABU_MOTION_REGISTRY = window.DeepBaziAbuMotionRegistry || {
@@ -132,6 +133,10 @@ document.addEventListener("DOMContentLoaded", async () => {
   initializeOpeningScene();
   await restoreAccount();
   if (state.account) await refreshProfiles({ selectDefault: true });
+  if (state.account && state.activeProfile && !PROFILE_MANAGEMENT_MODE) {
+    window.location.replace(`/experience?profile=${encodeURIComponent(state.activeProfile.profile_id)}`);
+    return;
+  }
   let restored = false;
   if (state.jobId) {
     state.jobSequence = 0;

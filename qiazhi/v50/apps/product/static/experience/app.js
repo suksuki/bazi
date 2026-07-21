@@ -246,7 +246,7 @@ function renderProductSidebar(view) {
     <a class="brand" href="/experience" aria-label="DeepBeing \u9996\u9875"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
     ${renderProductNavigation(view, "sidebar")}
     <div class="sidebar-context">${renderProfileSelector(view.cases, view.activeProfileId)}<small>${escapeHtml(view.envelope.source.life_case_version || "\u547D\u76D8\u4E8B\u5B9E")}</small></div>
-    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app">\u6863\u6848</a></div>
+    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app?manage=1">\u6863\u6848</a></div>
   </aside>`;
 }
 function renderMobileHeader(view) {
@@ -483,7 +483,7 @@ function renderUnavailable(title, detail, actionLabel) {
       <p>\u963F\u5E03\u5728\u8FD9\u91CC</p>
       <h1>${escapeHtml(title)}</h1>
       <span>${escapeHtml(detail)}</span>
-      <a class="primary-command" href="/app">${escapeHtml(actionLabel)}</a>
+      <a class="primary-command" href="/app?manage=1">${escapeHtml(actionLabel)}</a>
     </main>`;
 }
 function renderProfileSelector(cases2, activeProfileId2) {

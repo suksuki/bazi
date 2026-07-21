@@ -301,4 +301,6 @@ def test_frontend_has_no_legacy_blocking_first_reading_chain() -> None:
     assert "void openCase({ profileId })" in main
     assert "data-profile-select" in (shell / "components.ts").read_text(encoding="utf-8")
     assert "window.location.assign(`/experience?profile=" in legacy
+    assert "window.location.replace(`/experience?profile=" in legacy
+    assert "PROFILE_MANAGEMENT_MODE" in legacy
     assert "最终事实与证据检查没有通过" not in legacy

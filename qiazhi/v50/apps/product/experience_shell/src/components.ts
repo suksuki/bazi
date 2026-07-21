@@ -251,7 +251,7 @@ function renderProductSidebar(view: ExperienceViewModel): string {
     <a class="brand" href="/experience" aria-label="DeepBeing 首页"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
     ${renderProductNavigation(view, "sidebar")}
     <div class="sidebar-context">${renderProfileSelector(view.cases, view.activeProfileId)}<small>${escapeHtml(view.envelope.source.life_case_version || "命盘事实")}</small></div>
-    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app">档案</a></div>
+    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app?manage=1">档案</a></div>
   </aside>`;
 }
 
@@ -540,7 +540,7 @@ export function renderUnavailable(title: string, detail: string, actionLabel: st
       <p>阿布在这里</p>
       <h1>${escapeHtml(title)}</h1>
       <span>${escapeHtml(detail)}</span>
-      <a class="primary-command" href="/app">${escapeHtml(actionLabel)}</a>
+      <a class="primary-command" href="/app?manage=1">${escapeHtml(actionLabel)}</a>
     </main>`;
 }
 
