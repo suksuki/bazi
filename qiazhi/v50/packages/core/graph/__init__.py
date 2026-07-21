@@ -27,6 +27,7 @@ from core.graph.provenance import (
     RelationDirectionality,
     RelationKey,
     canonical_scene_scope_ref,
+    validate_assertion_history,
 )
 from core.graph.role_classifier import classify_node_roles
 
@@ -60,4 +61,5 @@ __all__ = [
     "canonical_scene_scope_ref",
     "classify_node_roles",
     "explore_mingli_paths",
+    "validate_assertion_history",
 ]

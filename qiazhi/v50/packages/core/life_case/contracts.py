@@ -10,6 +10,7 @@ from core.graph.provenance import (
     PathAssertion,
     RelationAssertion,
     canonical_scene_scope_ref,
+    validate_assertion_history,
 )
 
 
@@ -344,6 +345,8 @@ class LifeCase(V50Model):
             raise ValueError("life_case_cannot_own_candidate_relation")
         if any(item.status == AssertionLifecycle.CANDIDATE for item in self.path_assertions):
             raise ValueError("life_case_cannot_own_candidate_path")
+        validate_assertion_history(self.relation_assertions)
+        validate_assertion_history(self.path_assertions)
         scene_ref = canonical_scene_scope_ref(
             life_case_id=self.life_case_id,
             chart_version_id=self.chart_version.version_id,

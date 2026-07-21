@@ -219,6 +219,7 @@ class RelationAssertion(V50Model):
     @model_validator(mode="after")
     def validate_identity(self) -> "RelationAssertion":
         require_non_empty(self.assertion_version, "assertion_version")
+        _validate_lifecycle_source(status=self.status, source=self.provenance.source)
         if self.status == AssertionLifecycle.SUPERSEDED and not self.supersedes:
             raise ValueError("superseded_assertion_requires_predecessor")
         expected = _stable_id("relation-assertion", {
@@ -249,6 +250,7 @@ class PathAssertion(V50Model):
     @model_validator(mode="after")
     def validate_identity(self) -> "PathAssertion":
         require_non_empty(self.assertion_version, "assertion_version")
+        _validate_lifecycle_source(status=self.status, source=self.provenance.source)
         if self.status == AssertionLifecycle.LEGACY_UNRESOLVED:
             if self.path_key is not None or not self.legacy_ref or not self.unresolved_reason:
                 raise ValueError("legacy_unresolved_path_contract_invalid")
@@ -268,6 +270,42 @@ class PathAssertion(V50Model):
             raise ValueError("path_assertion_identity_mismatch")
         object.__setattr__(self, "assertion_id", expected)
         return self
+
+
+def validate_assertion_history(
+    assertions: list[RelationAssertion] | list[PathAssertion],
+) -> None:
+    """Require persisted supersession links to point backward within one history."""
+
+    positions: dict[str, int] = {}
+    for index, assertion in enumerate(assertions):
+        if assertion.assertion_id in positions:
+            raise ValueError("assertion_history_duplicate_id")
+        positions[assertion.assertion_id] = index
+    for index, assertion in enumerate(assertions):
+        predecessor = assertion.supersedes
+        if not predecessor:
+            continue
+        predecessor_index = positions.get(predecessor)
+        if predecessor_index is None:
+            raise ValueError("assertion_supersedes_unknown_history")
+        if predecessor_index >= index:
+            raise ValueError("assertion_supersedes_non_prior_history")
+
+
+def _validate_lifecycle_source(
+    *,
+    status: AssertionLifecycle,
+    source: str,
+) -> None:
+    if source == "graph_candidate" and status != AssertionLifecycle.CANDIDATE:
+        raise ValueError("graph_candidate_provenance_requires_candidate_status")
+    if status == AssertionLifecycle.CANDIDATE and source != "graph_candidate":
+        raise ValueError("candidate_assertion_requires_graph_candidate_provenance")
+    if source == "legacy_unresolved" and status != AssertionLifecycle.LEGACY_UNRESOLVED:
+        raise ValueError("legacy_unresolved_provenance_requires_unresolved_status")
+    if status == AssertionLifecycle.LEGACY_UNRESOLVED and source != "legacy_unresolved":
+        raise ValueError("legacy_unresolved_assertion_requires_unresolved_provenance")
 
 
 def canonical_scene_scope_ref(*, life_case_id: str, chart_version_id: str) -> str:

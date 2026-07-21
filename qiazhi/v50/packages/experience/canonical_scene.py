@@ -9,6 +9,7 @@ from core.graph.provenance import (
     AssertionLifecycle,
     PathAssertion,
     RelationAssertion,
+    validate_assertion_history,
 )
 from experience.compiler import canonical_hash
 from experience.contracts import (
@@ -117,6 +118,8 @@ class CanonicalSceneSource(ExperienceModel):
             raise ValueError("canonical_scene_source_cannot_accept_candidate_relation")
         if any(item.status == AssertionLifecycle.CANDIDATE for item in self.path_assertions):
             raise ValueError("canonical_scene_source_cannot_accept_candidate_path")
+        validate_assertion_history(self.relation_assertions)
+        validate_assertion_history(self.path_assertions)
         slots = [item.pillar_slot for item in self.chart_facts]
         if slots != ["year", "month", "day", "hour"]:
             raise ValueError("canonical_scene_requires_ordered_four_pillars")
