@@ -574,10 +574,10 @@ def test_semantic_review_does_not_misread_a_negated_certainty_as_a_prediction():
     world = ChartWorldInstance.model_validate(store.get(case_id=case_id)["world"])
     errors = _semantic_text_errors(text="这个结构并非必然导致某个事件，也不代表一定会发生。", world=world)
     assert not any("过度确定断言" in item for item in errors)
-    assert any("内部工程信息泄漏:V40" in item for item in _semantic_text_errors(text="资料来自 V40 导入", world=world))
+    assert any("内部工程信息泄漏:runtime" in item for item in _semantic_text_errors(text="资料来自 runtime 导入", world=world))
     assert any("结构性崩塌" in item for item in _semantic_text_errors(text="这一阶段会结构性崩塌", world=world))
-    assert _public_birth_location("未记录（V40 导入）") == "未记录"
-    sanitized = sanitize_public_mingli_payload({"unknown": "出生时辰未记录（仅凭 V40 导入），会彻底改变判断。"})
+    assert _public_birth_location("未记录（旧系统导入）") == "未记录"
+    sanitized = sanitize_public_mingli_payload({"unknown": "出生时辰未记录（仅凭 V30 导入），会彻底改变判断。"})
     assert sanitized["unknown"] == "出生时辰资料未完整记录，需要重新评估判断。"
 
 
