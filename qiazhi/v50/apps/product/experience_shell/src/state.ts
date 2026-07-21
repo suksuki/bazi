@@ -52,7 +52,7 @@ export const initialUiState: UiState = {
   canvasContextStatus: "idle",
 };
 
-type UiAction =
+export type UiAction =
   | { type: "product-area"; area: ProductArea }
   | { type: "workspace-surface"; surface: WorkspaceSurface }
   | { type: "select"; anchor: string; message: string }

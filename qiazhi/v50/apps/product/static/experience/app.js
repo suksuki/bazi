@@ -51,96 +51,6 @@ async function prepareNarrationSegment(caseId, segmentId) {
   return payload.speech_asset;
 }
 
-// apps/product/experience_shell/src/audio.ts
-var NarrationTimeline = class {
-  constructor(caseId, manifest, statuses, events) {
-    this.caseId = caseId;
-    this.manifest = manifest;
-    this.statuses = statuses;
-    this.events = events;
-  }
-  audio = null;
-  index = -1;
-  cueTimers = [];
-  stopped = false;
-  async play() {
-    if (this.audio?.paused && this.index >= 0) {
-      await this.audio.play();
-      this.scheduleCues(this.manifest.segments[this.index]);
-      return;
-    }
-    this.stopped = false;
-    this.index = this.index >= 0 ? this.index : 0;
-    await this.playIndex(this.index);
-  }
-  pause() {
-    this.clearCues();
-    this.audio?.pause();
-    const segment = this.manifest.segments[this.index];
-    if (segment) this.events.onPaused(segment, this.index);
-  }
-  stop() {
-    this.stopped = true;
-    this.clearCues();
-    if (this.audio) {
-      this.audio.pause();
-      this.audio.currentTime = 0;
-    }
-    this.index = -1;
-  }
-  async playSegment(index) {
-    this.stop();
-    this.stopped = false;
-    this.index = index;
-    await this.playIndex(index);
-  }
-  async playIndex(index) {
-    const segment = this.manifest.segments[index];
-    if (!segment || this.stopped) {
-      this.events.onComplete();
-      return;
-    }
-    try {
-      this.events.onPreparing(segment, index);
-      const audioUrl = await this.resolveAudioUrl(segment);
-      if (this.stopped) return;
-      this.audio = new Audio(audioUrl);
-      this.audio.preload = "auto";
-      this.audio.addEventListener("play", () => {
-        this.events.onPlaying(segment, index);
-        this.scheduleCues(segment);
-      });
-      this.audio.addEventListener("ended", () => {
-        this.clearCues();
-        this.index = index + 1;
-        void this.playIndex(this.index);
-      });
-      this.audio.addEventListener("error", () => this.events.onError(new Error("audio_playback_failed")));
-      await this.audio.play();
-    } catch (error) {
-      this.events.onError(error instanceof Error ? error : new Error(String(error)));
-    }
-  }
-  async resolveAudioUrl(segment) {
-    const status = this.statuses[segment.segment_id];
-    if (status?.status === "ready" && status.audio_url) return status.audio_url;
-    const asset = await prepareNarrationSegment(this.caseId, segment.segment_id);
-    const opus = asset.media.playback_variants.find((item) => item.format === "opus");
-    return opus?.audio_url || asset.media.audio_url;
-  }
-  scheduleCues(segment) {
-    this.clearCues();
-    for (const cue of segment.visual_cues || []) {
-      const remaining = Math.max(0, cue.at_ms - Math.round((this.audio?.currentTime || 0) * 1e3));
-      this.cueTimers.push(window.setTimeout(() => this.events.onCue(cue.target), remaining));
-    }
-  }
-  clearCues() {
-    this.cueTimers.forEach((timer) => window.clearTimeout(timer));
-    this.cueTimers = [];
-  }
-};
-
 // apps/product/experience_shell/src/components.ts
 var elementLabel = {
   wood: "\u6728",
@@ -724,6 +634,253 @@ function reduceUi(state, action) {
   }
 }
 
+// apps/product/experience_shell/src/experience_data.ts
+async function loadExperienceBootstrap() {
+  const account2 = await loadAccount();
+  const cases2 = await loadCases();
+  return { account: account2, cases: cases2 };
+}
+async function loadExperienceCase(caseId, params) {
+  const [envelopeResult, workspaceResult, canvasResult, narrationResult] = await Promise.allSettled([
+    loadEnvelope(caseId),
+    loadCaseWorkspace(caseId),
+    loadReadOnlyCanvas(caseId),
+    loadNarration(caseId)
+  ]);
+  if (envelopeResult.status === "rejected") throw envelopeResult.reason;
+  if (workspaceResult.status === "rejected") throw workspaceResult.reason;
+  const envelope2 = envelopeResult.value;
+  const workspace2 = workspaceResult.value;
+  const canvas2 = canvasResult.status === "fulfilled" ? canvasResult.value : null;
+  const canvasContext2 = canvas2 ? canvas2.stages[canvas2.default_stage].context : null;
+  const narrationManifest2 = narrationResult.status === "fulfilled" ? narrationResult.value.manifest : null;
+  const narrationAssets2 = narrationResult.status === "fulfilled" ? narrationResult.value.speechAssets : {};
+  const availableSurfaces2 = workspace2.allowed_surfaces.filter((surface) => surface === "overview" || surface === "onecanvas" && canvas2 !== null || surface === "theater" && narrationManifest2 !== null);
+  const availableAreas2 = workspace2.allowed_surfaces.includes("mingli_lab") ? ["world", "workbench", "lab"] : ["world", "workbench"];
+  let ui2 = structuredClone(initialUiState);
+  if (canvas2) {
+    const initialProjection = canvas2.stages[canvas2.default_stage];
+    ui2 = reduceUi(ui2, {
+      type: "canvas-stage",
+      stage: canvas2.default_stage,
+      layer: initialProjection.default_layer_id,
+      selected: initialProjection.context.selected_object_refs[0] || initialProjection.spec.semantic_slots[0]?.slot_ref || ""
+    });
+  }
+  const requestedSurface = params.get("surface");
+  const preferredSurface = requestedSurface || workspace2.state.current_surface;
+  ui2 = reduceUi(ui2, {
+    type: "workspace-surface",
+    surface: availableSurfaces2.includes(preferredSurface) ? preferredSurface : "overview"
+  });
+  const requestedArea = params.get("area");
+  const preferredArea = requestedArea || (requestedSurface || preferredSurface !== "overview" ? "workbench" : "world");
+  ui2 = reduceUi(ui2, {
+    type: "product-area",
+    area: availableAreas2.includes(preferredArea) ? preferredArea : "world"
+  });
+  if (ui2.productArea === "lab" && canvas2) {
+    const layer = canvas2.stages[ui2.canvasStage].layers.find((item) => item.layer_id === "generation_control" && item.available);
+    if (layer) ui2 = reduceUi(ui2, { type: "canvas-layer", layer: layer.layer_id });
+  }
+  return {
+    workspace: workspace2,
+    envelope: envelope2,
+    canvas: canvas2,
+    canvasContext: canvasContext2,
+    narrationManifest: narrationManifest2,
+    narrationAssets: narrationAssets2,
+    availableSurfaces: availableSurfaces2,
+    availableAreas: availableAreas2,
+    ui: ui2
+  };
+}
+
+// apps/product/experience_shell/src/experience_dom.ts
+function applyActiveAnchor(anchor) {
+  document.querySelectorAll(".narration-active").forEach((element) => element.classList.remove("narration-active"));
+  document.querySelectorAll(`[data-anchor="${CSS.escape(anchor)}"], [data-select-anchor="${CSS.escape(anchor)}"]`).forEach((element) => element.classList.add("narration-active"));
+}
+function updateExperienceLocation(activeCaseId2, ui2) {
+  const params = new URLSearchParams({ case: activeCaseId2 });
+  if (ui2.productArea !== "world") params.set("area", ui2.productArea);
+  if (ui2.productArea === "workbench" && ui2.workspaceSurface !== "overview") {
+    params.set("surface", ui2.workspaceSurface);
+  }
+  history.replaceState({}, "", `/experience?${params.toString()}`);
+}
+function humanizeError(message) {
+  return message.replace(/^formal_life_case_not_available$/, "\u6B63\u5F0F\u6574\u76D8\u8BA4\u77E5\u5C1A\u672A\u901A\u8FC7\u53EF\u9760\u6027\u95E8\u7981\u3002").replace(/^experience_case_not_found$/, "\u6CA1\u6709\u627E\u5230\u8FD9\u4EFD\u6848\u4F8B\uFF0C\u6216\u5B83\u4E0D\u5C5E\u4E8E\u5F53\u524D\u8D26\u6237\u3002").replace(/^canvas_official_timing_required$/, "\u8FD9\u4EFD\u6848\u4F8B\u8FD8\u6CA1\u6709\u5B8C\u6574\u7684\u5927\u8FD0\u4E0E\u6D41\u5E74\u8BA1\u7B97\u3002").replace(/_/g, " ");
+}
+
+// apps/product/experience_shell/src/experience_interactions.ts
+function bindExperienceInteractions(root2, handlers) {
+  root2.querySelectorAll("[data-product-area]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectArea(button.dataset.productArea));
+  });
+  root2.querySelectorAll("[data-workspace-surface]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectSurface(button.dataset.workspaceSurface));
+  });
+  root2.querySelectorAll("[data-select-anchor]").forEach((element) => {
+    element.addEventListener("click", () => handlers.selectAnchor(
+      element.dataset.selectAnchor || "baseline-summary",
+      element.dataset.message || "\u8FD9\u4E00\u5904\u6765\u81EA\u6B63\u5F0F\u547D\u5C40\u8BA4\u77E5\u3002"
+    ));
+  });
+  root2.querySelectorAll("[data-toggle-section]").forEach((button) => {
+    button.addEventListener("click", () => handlers.toggleSection(button.dataset.toggleSection || "baseline"));
+  });
+  root2.querySelectorAll("[data-command]").forEach((button) => {
+    button.addEventListener("click", () => handlers.command(button.dataset.command || ""));
+  });
+  root2.querySelectorAll("[data-play-segment]").forEach((button) => {
+    button.addEventListener("click", () => handlers.playSegment(Number(button.dataset.playSegment || 0)));
+  });
+  root2.querySelectorAll("[data-canvas-stage]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectCanvasStage(
+      button.dataset.canvasStage || "natal"
+    ));
+  });
+  root2.querySelectorAll("[data-canvas-layer]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!button.disabled) handlers.selectCanvasLayer(
+        button.dataset.canvasLayer || "generation_control"
+      );
+    });
+  });
+  root2.querySelectorAll("[data-canvas-object]").forEach((element) => {
+    const select = () => {
+      const selected = element.getAttribute("data-canvas-object") || "";
+      if (selected) handlers.selectCanvasObject(selected);
+    };
+    element.addEventListener("click", select);
+    element.addEventListener("keydown", (event) => {
+      if (event instanceof KeyboardEvent && (event.key === "Enter" || event.key === " ")) {
+        event.preventDefault();
+        select();
+      }
+    });
+  });
+  root2.querySelector("[data-case-select]")?.addEventListener("change", (event) => {
+    handlers.selectCase(event.currentTarget.value);
+  });
+}
+
+// apps/product/experience_shell/src/audio.ts
+var NarrationTimeline = class {
+  constructor(caseId, manifest, statuses, events) {
+    this.caseId = caseId;
+    this.manifest = manifest;
+    this.statuses = statuses;
+    this.events = events;
+  }
+  audio = null;
+  index = -1;
+  cueTimers = [];
+  stopped = false;
+  async play() {
+    if (this.audio?.paused && this.index >= 0) {
+      await this.audio.play();
+      this.scheduleCues(this.manifest.segments[this.index]);
+      return;
+    }
+    this.stopped = false;
+    this.index = this.index >= 0 ? this.index : 0;
+    await this.playIndex(this.index);
+  }
+  pause() {
+    this.clearCues();
+    this.audio?.pause();
+    const segment = this.manifest.segments[this.index];
+    if (segment) this.events.onPaused(segment, this.index);
+  }
+  stop() {
+    this.stopped = true;
+    this.clearCues();
+    if (this.audio) {
+      this.audio.pause();
+      this.audio.currentTime = 0;
+    }
+    this.index = -1;
+  }
+  async playSegment(index) {
+    this.stop();
+    this.stopped = false;
+    this.index = index;
+    await this.playIndex(index);
+  }
+  async playIndex(index) {
+    const segment = this.manifest.segments[index];
+    if (!segment || this.stopped) {
+      this.events.onComplete();
+      return;
+    }
+    try {
+      this.events.onPreparing(segment, index);
+      const audioUrl = await this.resolveAudioUrl(segment);
+      if (this.stopped) return;
+      this.audio = new Audio(audioUrl);
+      this.audio.preload = "auto";
+      this.audio.addEventListener("play", () => {
+        this.events.onPlaying(segment, index);
+        this.scheduleCues(segment);
+      });
+      this.audio.addEventListener("ended", () => {
+        this.clearCues();
+        this.index = index + 1;
+        void this.playIndex(this.index);
+      });
+      this.audio.addEventListener("error", () => this.events.onError(new Error("audio_playback_failed")));
+      await this.audio.play();
+    } catch (error) {
+      this.events.onError(error instanceof Error ? error : new Error(String(error)));
+    }
+  }
+  async resolveAudioUrl(segment) {
+    const status = this.statuses[segment.segment_id];
+    if (status?.status === "ready" && status.audio_url) return status.audio_url;
+    const asset = await prepareNarrationSegment(this.caseId, segment.segment_id);
+    const opus = asset.media.playback_variants.find((item) => item.format === "opus");
+    return opus?.audio_url || asset.media.audio_url;
+  }
+  scheduleCues(segment) {
+    this.clearCues();
+    for (const cue of segment.visual_cues || []) {
+      const remaining = Math.max(0, cue.at_ms - Math.round((this.audio?.currentTime || 0) * 1e3));
+      this.cueTimers.push(window.setTimeout(() => this.events.onCue(cue.target), remaining));
+    }
+  }
+  clearCues() {
+    this.cueTimers.forEach((timer) => window.clearTimeout(timer));
+    this.cueTimers = [];
+  }
+};
+
+// apps/product/experience_shell/src/experience_timeline.ts
+function createNarrationTimeline(caseId, manifest, statuses, dispatch2, focusAnchor2, humanizeError2) {
+  return new NarrationTimeline(caseId, manifest, statuses, {
+    onPreparing(segment, index) {
+      dispatch2({ type: "narration", status: "preparing", index, message: `\u6211\u6B63\u5728\u51C6\u5907\u201C${segment.title}\u201D\u3002\u9875\u9762\u53EF\u4EE5\u5148\u770B\uFF0C\u4E0D\u7528\u7B49\u6211\u3002` });
+    },
+    onPlaying(segment, index) {
+      dispatch2({ type: "narration", status: "playing", index, message: segment.text });
+      focusAnchor2(segment.visual_anchor_ids[0] || "baseline-summary", false);
+    },
+    onPaused(segment, index) {
+      dispatch2({ type: "narration", status: "paused", index, message: `\u505C\u5728\u201C${segment.title}\u201D\u3002\u4F60\u53EF\u4EE5\u5148\u770B\u9875\u9762\uFF0C\u4E5F\u53EF\u4EE5\u7EE7\u7EED\u542C\u3002` });
+    },
+    onComplete() {
+      dispatch2({ type: "narration", status: "complete", index: -1, message: "\u8FD9\u6B21\u5148\u8BB2\u5230\u8FD9\u91CC\u3002\u4F60\u53EF\u4EE5\u70B9\u56DB\u67F1\u3001\u8DEF\u5F84\u6216\u672A\u51B3\u9879\u7EE7\u7EED\u95EE\u3002" });
+    },
+    onError(error) {
+      dispatch2({ type: "narration", status: "error", message: `\u58F0\u97F3\u6682\u65F6\u6CA1\u6709\u51C6\u5907\u597D\uFF1A${humanizeError2(error.message)}\u3002\u6587\u5B57\u5185\u5BB9\u4ECD\u7136\u5B8C\u6574\u53EF\u8BFB\u3002` });
+    },
+    onCue(anchor) {
+      focusAnchor2(anchor, false);
+    }
+  });
+}
+
 // apps/product/experience_shell/src/main.ts
 var rootElement = document.querySelector("#experienceRoot");
 if (!rootElement) throw new Error("experience_root_missing");
@@ -745,8 +902,7 @@ void boot();
 async function boot() {
   root.innerHTML = renderLoading("\u6B63\u5728\u53D6\u56DE\u4F60\u7684\u6B63\u5F0F\u547D\u5C40\u8BA4\u77E5");
   try {
-    account = await loadAccount();
-    cases = await loadCases();
+    ({ account, cases } = await loadExperienceBootstrap());
     if (!cases.length) {
       root.innerHTML = renderUnavailable(
         "\u8FD8\u6CA1\u6709\u53EF\u4EE5\u9605\u8BFB\u7684\u547D\u5C40",
@@ -771,82 +927,19 @@ async function boot() {
 async function openCase(caseId) {
   timeline?.stop();
   activeCaseId = caseId;
-  ui = structuredClone(initialUiState);
-  const [envelopeResult, workspaceResult, canvasResult, narrationResult] = await Promise.allSettled([
-    loadEnvelope(caseId),
-    loadCaseWorkspace(caseId),
-    loadReadOnlyCanvas(caseId),
-    loadNarration(caseId)
-  ]);
-  if (envelopeResult.status === "rejected") throw envelopeResult.reason;
-  if (workspaceResult.status === "rejected") throw workspaceResult.reason;
-  envelope = envelopeResult.value;
-  workspace = workspaceResult.value;
-  if (canvasResult.status === "fulfilled") {
-    canvas = canvasResult.value;
-    const initialStage = canvas.default_stage;
-    const initialProjection = canvas.stages[initialStage];
-    canvasContext = initialProjection.context;
-    ui = reduceUi(ui, {
-      type: "canvas-stage",
-      stage: initialStage,
-      layer: initialProjection.default_layer_id,
-      selected: initialProjection.context.selected_object_refs[0] || initialProjection.spec.semantic_slots[0]?.slot_ref || ""
-    });
-  } else {
-    canvas = null;
-    canvasContext = null;
-  }
-  if (narrationResult.status === "fulfilled") {
-    const narration = narrationResult.value;
-    narrationManifest = narration.manifest;
-    narrationAssets = narration.speechAssets;
-  } else {
-    narrationManifest = null;
-    narrationAssets = {};
-  }
-  availableSurfaces = workspace.allowed_surfaces.filter((surface) => surface === "overview" || surface === "onecanvas" && canvas !== null || surface === "theater" && narrationManifest !== null);
-  availableAreas = workspace.allowed_surfaces.includes("mingli_lab") ? ["world", "workbench", "lab"] : ["world", "workbench"];
-  const params = new URLSearchParams(location.search);
-  const requestedSurface = params.get("surface");
-  const preferredSurface = requestedSurface || workspace.state.current_surface;
-  ui = reduceUi(ui, {
-    type: "workspace-surface",
-    surface: supportedSurface(preferredSurface) ? preferredSurface : "overview"
-  });
-  const requestedArea = params.get("area");
-  const preferredArea = requestedArea || (requestedSurface || preferredSurface !== "overview" ? "workbench" : "world");
-  ui = reduceUi(ui, {
-    type: "product-area",
-    area: supportedArea(preferredArea) ? preferredArea : "world"
-  });
-  if (ui.productArea === "lab") selectLabLayer();
-  timeline = narrationManifest ? createTimeline(caseId, narrationManifest, narrationAssets) : null;
-  updateLocation();
+  const loaded = await loadExperienceCase(caseId, new URLSearchParams(location.search));
+  workspace = loaded.workspace;
+  envelope = loaded.envelope;
+  canvas = loaded.canvas;
+  canvasContext = loaded.canvasContext;
+  narrationManifest = loaded.narrationManifest;
+  narrationAssets = loaded.narrationAssets;
+  availableSurfaces = loaded.availableSurfaces;
+  availableAreas = loaded.availableAreas;
+  ui = loaded.ui;
+  timeline = narrationManifest ? createNarrationTimeline(caseId, narrationManifest, narrationAssets, dispatch, focusAnchor, humanizeError) : null;
+  updateExperienceLocation(activeCaseId, ui);
   render();
-}
-function createTimeline(caseId, manifest, statuses) {
-  return new NarrationTimeline(caseId, manifest, statuses, {
-    onPreparing(segment, index) {
-      dispatch({ type: "narration", status: "preparing", index, message: `\u6211\u6B63\u5728\u51C6\u5907\u201C${segment.title}\u201D\u3002\u9875\u9762\u53EF\u4EE5\u5148\u770B\uFF0C\u4E0D\u7528\u7B49\u6211\u3002` });
-    },
-    onPlaying(segment, index) {
-      dispatch({ type: "narration", status: "playing", index, message: segment.text });
-      focusAnchor(segment.visual_anchor_ids[0] || "baseline-summary", false);
-    },
-    onPaused(segment, index) {
-      dispatch({ type: "narration", status: "paused", index, message: `\u505C\u5728\u201C${segment.title}\u201D\u3002\u4F60\u53EF\u4EE5\u5148\u770B\u9875\u9762\uFF0C\u4E5F\u53EF\u4EE5\u7EE7\u7EED\u542C\u3002` });
-    },
-    onComplete() {
-      dispatch({ type: "narration", status: "complete", index: -1, message: "\u8FD9\u6B21\u5148\u8BB2\u5230\u8FD9\u91CC\u3002\u4F60\u53EF\u4EE5\u70B9\u56DB\u67F1\u3001\u8DEF\u5F84\u6216\u672A\u51B3\u9879\u7EE7\u7EED\u95EE\u3002" });
-    },
-    onError(error) {
-      dispatch({ type: "narration", status: "error", message: `\u58F0\u97F3\u6682\u65F6\u6CA1\u6709\u51C6\u5907\u597D\uFF1A${humanizeError(error.message)}\u3002\u6587\u5B57\u5185\u5BB9\u4ECD\u7136\u5B8C\u6574\u53EF\u8BFB\u3002` });
-    },
-    onCue(anchor) {
-      focusAnchor(anchor, false);
-    }
-  });
 }
 function render() {
   if (!envelope || !workspace) return;
@@ -864,88 +957,64 @@ function render() {
     canvasContext,
     ui
   });
-  bindInteractions();
-  requestAnimationFrame(() => applyActiveAnchor(ui.selectedAnchor));
-}
-function bindInteractions() {
-  root.querySelectorAll("[data-product-area]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const area = button.dataset.productArea;
-      if (!supportedArea(area)) return;
-      ui = reduceUi(ui, { type: "product-area", area });
-      if (area === "lab") selectLabLayer();
-      updateLocation();
-      render();
-    });
-  });
-  root.querySelectorAll("[data-workspace-surface]").forEach((button) => {
-    button.addEventListener("click", () => {
-      const surface = button.dataset.workspaceSurface;
-      if (!supportedSurface(surface)) return;
-      ui = reduceUi(ui, { type: "workspace-surface", surface });
-      updateLocation();
-      render();
-    });
-  });
-  root.querySelectorAll("[data-select-anchor]").forEach((element) => {
-    element.addEventListener("click", () => {
-      const anchor = element.dataset.selectAnchor || "baseline-summary";
-      const message = element.dataset.message || "\u8FD9\u4E00\u5904\u6765\u81EA\u6B63\u5F0F\u547D\u5C40\u8BA4\u77E5\u3002";
+  bindExperienceInteractions(root, {
+    selectArea,
+    selectSurface,
+    selectAnchor(anchor, message) {
       dispatch({ type: "select", anchor, message });
       focusAnchor(anchor);
-    });
+    },
+    toggleSection(section) {
+      dispatch({ type: "toggle-section", section });
+    },
+    command(command) {
+      void handleCommand(command);
+    },
+    playSegment(index) {
+      void timeline?.playSegment(index);
+    },
+    selectCanvasStage,
+    selectCanvasLayer,
+    selectCanvasObject(selected) {
+      void refreshCanvasContext(selected);
+    },
+    selectCase(caseId) {
+      root.innerHTML = renderLoading("\u6B63\u5728\u5207\u6362\u547D\u76D8");
+      void openCase(caseId);
+    }
   });
-  root.querySelectorAll("[data-toggle-section]").forEach((button) => {
-    button.addEventListener("click", () => dispatch({ type: "toggle-section", section: button.dataset.toggleSection || "baseline" }));
+  requestAnimationFrame(() => applyActiveAnchor(ui.selectedAnchor));
+}
+function selectArea(area) {
+  if (!availableAreas.includes(area)) return;
+  ui = reduceUi(ui, { type: "product-area", area });
+  if (area === "lab") selectLabLayer();
+  updateExperienceLocation(activeCaseId, ui);
+  render();
+}
+function selectSurface(surface) {
+  if (!availableSurfaces.includes(surface)) return;
+  ui = reduceUi(ui, { type: "workspace-surface", surface });
+  updateExperienceLocation(activeCaseId, ui);
+  render();
+}
+function selectCanvasStage(stage) {
+  if (!canvas) return;
+  const projection = canvas.stages[stage];
+  canvasContext = projection.context;
+  ui = reduceUi(ui, {
+    type: "canvas-stage",
+    stage,
+    layer: projection.default_layer_id,
+    selected: projection.context.selected_object_refs[0] || projection.spec.semantic_slots[0]?.slot_ref || ""
   });
-  root.querySelectorAll("[data-command]").forEach((button) => {
-    button.addEventListener("click", () => void handleCommand(button.dataset.command || ""));
-  });
-  root.querySelectorAll("[data-play-segment]").forEach((button) => {
-    button.addEventListener("click", () => void timeline?.playSegment(Number(button.dataset.playSegment || 0)));
-  });
-  root.querySelectorAll("[data-canvas-stage]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (!canvas) return;
-      const stage = button.dataset.canvasStage || "natal";
-      const projection = canvas.stages[stage];
-      canvasContext = projection.context;
-      ui = reduceUi(ui, {
-        type: "canvas-stage",
-        stage,
-        layer: projection.default_layer_id,
-        selected: projection.context.selected_object_refs[0] || projection.spec.semantic_slots[0]?.slot_ref || ""
-      });
-      render();
-    });
-  });
-  root.querySelectorAll("[data-canvas-layer]").forEach((button) => {
-    button.addEventListener("click", () => {
-      if (!canvas || button.disabled) return;
-      const layer = button.dataset.canvasLayer || "generation_control";
-      ui = reduceUi(ui, { type: "canvas-layer", layer });
-      render();
-      if (ui.selectedCanvasObject) void refreshCanvasContext(ui.selectedCanvasObject);
-    });
-  });
-  root.querySelectorAll("[data-canvas-object]").forEach((element) => {
-    element.addEventListener("click", () => {
-      const selected = element.getAttribute("data-canvas-object") || "";
-      if (selected) void refreshCanvasContext(selected);
-    });
-    element.addEventListener("keydown", (event) => {
-      if (event instanceof KeyboardEvent && (event.key === "Enter" || event.key === " ")) {
-        event.preventDefault();
-        const selected = element.getAttribute("data-canvas-object") || "";
-        if (selected) void refreshCanvasContext(selected);
-      }
-    });
-  });
-  root.querySelector("[data-case-select]")?.addEventListener("change", (event) => {
-    const select = event.currentTarget;
-    root.innerHTML = renderLoading("\u6B63\u5728\u5207\u6362\u547D\u76D8");
-    void openCase(select.value);
-  });
+  render();
+}
+function selectCanvasLayer(layer) {
+  if (!canvas) return;
+  ui = reduceUi(ui, { type: "canvas-layer", layer });
+  render();
+  if (ui.selectedCanvasObject) void refreshCanvasContext(ui.selectedCanvasObject);
 }
 async function refreshCanvasContext(selected) {
   if (!canvas) return;
@@ -983,25 +1052,10 @@ async function handleCommand(command) {
   }
   if (command === "focus-pillars") focusAnchor("four-pillars");
 }
-function supportedSurface(surface) {
-  return availableSurfaces.includes(surface);
-}
-function supportedArea(area) {
-  return availableAreas.includes(area);
-}
 function selectLabLayer() {
   if (!canvas) return;
-  const projection = canvas.stages[ui.canvasStage];
-  const layer = projection.layers.find((item) => item.layer_id === "generation_control" && item.available);
+  const layer = canvas.stages[ui.canvasStage].layers.find((item) => item.layer_id === "generation_control" && item.available);
   if (layer) ui = reduceUi(ui, { type: "canvas-layer", layer: layer.layer_id });
-}
-function updateLocation() {
-  const params = new URLSearchParams({ case: activeCaseId });
-  if (ui.productArea !== "world") params.set("area", ui.productArea);
-  if (ui.productArea === "workbench" && ui.workspaceSurface !== "overview") {
-    params.set("surface", ui.workspaceSurface);
-  }
-  history.replaceState({}, "", `/experience?${params.toString()}`);
 }
 function dispatch(action) {
   ui = reduceUi(ui, action);
@@ -1010,12 +1064,10 @@ function dispatch(action) {
 function focusAnchor(anchor, scroll = true) {
   ui = reduceUi(ui, { type: "select", anchor, message: ui.abuMessage });
   applyActiveAnchor(anchor);
-  if (scroll) document.querySelector(`[data-anchor="${CSS.escape(anchor)}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
-}
-function applyActiveAnchor(anchor) {
-  document.querySelectorAll(".narration-active").forEach((element) => element.classList.remove("narration-active"));
-  document.querySelectorAll(`[data-anchor="${CSS.escape(anchor)}"], [data-select-anchor="${CSS.escape(anchor)}"]`).forEach((element) => element.classList.add("narration-active"));
-}
-function humanizeError(message) {
-  return message.replace(/^formal_life_case_not_available$/, "\u6B63\u5F0F\u6574\u76D8\u8BA4\u77E5\u5C1A\u672A\u901A\u8FC7\u53EF\u9760\u6027\u95E8\u7981\u3002").replace(/^experience_case_not_found$/, "\u6CA1\u6709\u627E\u5230\u8FD9\u4EFD\u6848\u4F8B\uFF0C\u6216\u5B83\u4E0D\u5C5E\u4E8E\u5F53\u524D\u8D26\u6237\u3002").replace(/^canvas_official_timing_required$/, "\u8FD9\u4EFD\u6848\u4F8B\u8FD8\u6CA1\u6709\u5B8C\u6574\u7684\u5927\u8FD0\u4E0E\u6D41\u5E74\u8BA1\u7B97\u3002").replace(/_/g, " ");
+  if (scroll) {
+    document.querySelector(`[data-anchor="${CSS.escape(anchor)}"]`)?.scrollIntoView({
+      behavior: "smooth",
+      block: "center"
+    });
+  }
 }
