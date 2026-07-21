@@ -7,26 +7,26 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `afe8a08a2ceb` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `24d2e434add8` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
 current_product_surface: legacy_l5_plus_experience_shell
-case_workspace_status: ISOLATED_DESIGN_STUDY_IMPLEMENTED_PRODUCTION_NOT_STARTED
+case_workspace_status: CONTRACT_CONVERGED_PRODUCTION_NOT_STARTED
 product_model: one_case_workspace
 mingli_world: one_canonical_mingli_world
 r1_human_product_gate: CANCELED_NO_SCHEDULE
 architecture_consolidation_gate: CLOSED_PASS
 professional_blind_gate: PENDING
 public_professional_release: BLOCKED
-full_regression: 572_PASSED_SYNTHETIC_TRAINING_ALIGNMENT_FINAL
+full_regression: 578_PASSED_FRAMEWORK_AND_LAB_CONVERGENCE_FINAL
 ```
 
 Authorized now:
 
-- `FRAMEWORK_AND_MINGLI_LAB_CONVERGENCE`: converge_case_workspace_scene_source_chain_and_isolate_lab_research_state
+- `WORKSPACE_PROJECTION_ALIGNMENT`: align_latest_case_workspace_reference_to_canonical_scene_without_production_migration
 
-Next architecture slice: `WORKSPACE_PROJECTION_ALIGNMENT` after `framework_and_mingli_lab_convergence_pass`.
+Next architecture slice: `WORKSPACE_UI_INTERACTION_ALIGNMENT` after `workspace_projection_alignment_pass`.
 
 Blocked: `legacy_unvalidated_path_metrics_promotion`, `mingli_lab_public_release`, `production_workspace_migration`, `frontend_framework_migration`, `self_healing_platform_or_product_subsystem`, `new_product_ui_animation_or_interaction`, `public_release`.
 <!-- V50_EXECUTION_STATE:END -->
@@ -365,9 +365,15 @@ R1_regression_reference: 20_OF_20_HASH_LOCKED
 git_source_baseline: PASS
 CAG_03_canonical_scene: CLOSED_PASS
 architecture_audit: COMPLETE
-architecture_consolidation_gate: NOT_PASSED
-RA1: BLOCKED
-RA2_to_RA7: BLOCKED
+architecture_consolidation_gate: CLOSED_PASS
+RA1_relation_foundation: CLOSED_PASS
+RA2_path_qualification: CLOSED_PASS
+RA3_path_evidence: CLOSED_PASS
+synthetic_validation_training_alignment: CLOSED_PASS
+framework_alignment: CLOSED_PASS
+mingli_lab_foundation: CLOSED_PASS
+workspace_projection_alignment: ACTIVE
+RA4_to_RA7: NOT_AUTOMATICALLY_AUTHORIZED
 professional_blind_gate: PENDING
 production_release: BLOCKED
 ```

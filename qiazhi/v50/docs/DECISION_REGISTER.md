@@ -1468,6 +1468,30 @@ r1_manifest: 20_of_20_ok
 next: Framework_and_Mingli_Lab_Convergence
 ```
 
+### DR-049 — Workspace, Lab and Abu Have Separate Single Owners on One Scene
+
+```yaml
+decision_id: DR-049
+date: 2026-07-21
+status: closed_pass
+implementation_commit: 5468f856
+formal_case_owner: core.life_case.LifeCase
+scene_owner: product.canonical_scene.CanonicalSceneOwner
+cognitive_state_owner: core.mingli_agent.workspace.CaseBeliefState
+workspace_ui_owner: experience.workspace.CaseWorkspaceState
+lab_lifecycle_owner: experience.lab.MingliLabSession
+narration_owner: product.abu_narration.AbuNarrationService
+product_fixture_builders_removed: 2
+product_fixture_builder_lines_moved_off_runtime: 875
+legacy_theater_record_fallback: removed
+fuzzy_path_rematch: removed
+framework_gaps: 0
+lab_gaps: 0
+full_regression: 578_passed
+r1_manifest: 20_of_20_ok
+next: Workspace_Projection_Alignment
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。
