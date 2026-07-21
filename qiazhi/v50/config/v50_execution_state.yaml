@@ -40,6 +40,7 @@ gates:
   r1_human_product_gate: CANCELED_NO_SCHEDULE
   cag_03_canonical_scene: CLOSED_PASS_HARDENED
   cag_04_relation_path_provenance: CLOSED_PASS_RECONCILED
+  cag_05_schema_module_ownership: CLOSED_PASS
   ra0_518k_chart_realizability: PASS_WITH_BOUNDARY_FINDING
   cal_01_late_zi_five_rats_consistency: OPEN_BLOCKS_ARCHITECTURE_GATE
   architecture_consolidation_gate: IN_PROGRESS
@@ -48,7 +49,7 @@ gates:
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 479_PASSED_CAG04_FINAL
+  full_regression: 483_PASSED_CAG05_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
@@ -66,6 +67,13 @@ receipts:
   cag_04_regression: 479_PASSED
   cag_04_legacy_unresolved_tracked_cases: 0
   cag_04_legacy_unresolved_synthetic_negative_fixture: 1
+  cag_05_implementation_commit: 2078e3a1
+  cag_05_authority_registries: 1_CANONICAL_FROM_5
+  cag_05_database_ddl_owners: 1_CANONICAL_FROM_7
+  cag_05_baseline_command_owners: 1_CANONICAL_FROM_2
+  cag_05_typescript_handwritten_contracts: 0_FROM_28
+  cag_05_focused_regression: 10_PASSED
+  cag_05_regression: 483_PASSED
   ra0_source_branch: codex/ra0-518k-audit-v1
   ra0_source_commit: 2ac55900fb5885649ba7fca7935e57005070406b
   ra0_merge_base: 34cc5b17a86683ed4575d93e15134f0f26bc6687
@@ -86,18 +94,18 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: CAG_05_SCHEMA_MODULE_OWNERSHIP
-    kind: architecture_consolidation
-    scope: schema_module_database_agent_owner_convergence_and_slimming
+  - id: CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY
+    kind: temporal_policy_consistency
+    scope: preserve_midnight_rollover_and_align_late_zi_hour_stem_with_formal_day_stem
 
 next_architecture_slice:
-  id: CAG_05_SCHEMA_MODULE_OWNERSHIP
+  id: CAL_01_LATE_ZI_FIVE_RATS_CONSISTENCY
   authorized_when:
-    - explicit_gate_decision_after_cag_04_architecture_review
+    - cag_05_closed_pass
   scope:
-    - schema_single_source
-    - module_and_database_ownership
-    - no_relation_or_path_semantic_expansion
+    - dependency_semantics_audit
+    - late_zi_consistency_fix
+    - no_temporal_policy_change
 
 blocked:
   - architecture_gate_until_cal_01_resolved_or_explicitly_isolated

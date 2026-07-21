@@ -1181,6 +1181,31 @@ evidence:
   - reports/v50-lean-consolidation/ra0-518k-realizability-v1/ra0_518k_semantic_summary_v1.json
 ```
 
+### DR-036 — CAG-05 Consolidates Schema and Module Ownership
+
+```yaml
+decision_id: DR-036
+date: 2026-07-21
+status: closed_pass
+implementation_commit: 2078e3a1
+single_owners:
+  authority_registry: config/production_authority_manifest_v1.json
+  database_schema: deploy/postgres_v50_schema.sql
+  database_schema_executor: product.database_schema
+  baseline_command: product.agent_command_service.BaselineCaseCommandService
+  projection_contracts: Python_Pydantic_models
+removed:
+  authority_registries: 4
+  runtime_ddl_owners: 6
+  duplicate_baseline_execution_paths: 1
+  handwritten_typescript_contract_declarations: 28
+verification:
+  focused: 10_passed
+  full_regression: 483_passed
+  r1_manifest: 20_of_20_ok
+next: CAL_01_then_Architecture_Gate
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

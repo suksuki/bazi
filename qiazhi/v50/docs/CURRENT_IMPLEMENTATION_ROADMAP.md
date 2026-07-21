@@ -200,7 +200,7 @@ formal-fact override, and tested compatibility paths for current contracts.
 
 ### CAG-04 — Formal Relation and Path Provenance
 
-Status: `IMPLEMENTATION COMPLETE / MACHINE PASS / ARCHITECTURE REVIEW PENDING`
+Status: `CLOSED / PASS`
 
 Implemented without changing Graph or Path semantics:
 
@@ -220,26 +220,28 @@ Exit condition:
 - candidate, committed, blocked, and user-draft paths remain distinct.
 
 Machine evidence: `11` focused and `479` full tests passed; R1 remains `20/20`;
-V40 is unchanged. The implementation is frozen at commits `42072034` and
-`c0502ed9` pending architecture review. Candidate provenance cannot masquerade
-as formal status, and invalid supersession history is rejected at the formal
-source and projection boundaries.
+V40 is unchanged. Candidate provenance cannot masquerade as formal status, and
+invalid supersession history is rejected at the formal source and projection
+boundaries.
 
-### CAG-05 — Legacy and Documentation Ownership
+### CAG-05 — Schema and Module Ownership
 
-Status: `BLOCKED PENDING CAG-04 ARCHITECTURE REVIEW`
+Status: `CLOSED / PASS`
 
-- retain usage tracking for legacy routes and Agent APIs;
-- freeze prototype identities;
-- remove old docs from current-authority navigation;
-- assign owner and authority level to active modules.
-- classify the V30 `TARGET_CASE_COUNT=518400` implementation as a
-  `Legacy Validation Target Contract`, while retaining its 608 run records and
-  historical artifacts as evidence rather than an entity chart corpus.
+- one production authority manifest replaces four split registries;
+- one PostgreSQL schema file replaces six runtime DDL owners;
+- one command service executes both synchronous and progressive baselines;
+- Python response models generate JSON Schema and TypeScript contracts;
+- handwritten TypeScript contract declarations are retired;
+- Canonical, Transitional and Legacy ownership is frozen without adding a new
+  transitional layer.
 
-Exit condition: ownership consolidation is complete, and the Architecture Gate
-may be reviewed only after `CAL-01 Late-Zi Five-Rats Consistency` is resolved or
-explicitly isolated. CAG-05 does not silently adopt RA0 audit normalization.
+Machine evidence: `10` focused and `483` full tests passed; TypeScript typecheck
+and production bundle passed; the rebuilt bundle is byte-identical; R1 remains
+`20/20`. Implementation commit: `2078e3a1`.
+
+The Architecture Gate now waits only for `CAL-01 Late-Zi Five-Rats
+Consistency`; CAG-05 did not adopt RA0 audit normalization silently.
 
 The current cleanup and large-file policy is recorded in
 `V50_DEEP_CLEANUP_AND_LARGE_FILE_GOVERNANCE_V1.md`. It does not authorize
