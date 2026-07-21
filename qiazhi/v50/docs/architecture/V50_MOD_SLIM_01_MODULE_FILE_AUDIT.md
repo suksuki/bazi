@@ -1,8 +1,10 @@
 # V50 MOD-SLIM-01 Module and Large-file Audit
 
-Status: `INVENTORY COMPLETE / NO RUNTIME REFACTOR PERFORMED`
+Status: `INVENTORY CLOSED / MOD-SLIM-02 CLOSED_PASS`
 
 Baseline: `af9b8287`
+
+Closeout implementation: through `a2163569`
 
 Scope: tracked V50 Python, TypeScript, JavaScript and CSS source. Generated
 runtime data, caches, reports, archived evidence, tests and media are excluded.
@@ -33,6 +35,23 @@ explicit transitional adapters/read fallbacks   5
 The active-runtime count excludes offline scripts, generated Experience output,
 R1 locked assets, internal tools and design studies. It still includes the L5
 shell because `/` and `/app` currently serve it.
+
+### MOD-SLIM-02 closeout
+
+```text
+source files over 500 lines                  40 -> 37
+source files over 1,000 lines                14 ->  9
+active runtime files over 500 lines          27 -> 24
+active runtime files over 1,000 lines        10 ->  5
+high-confidence mixed-responsibility files    9 ->  0
+```
+
+All nine mixed-responsibility files were separated by authority boundary. The
+remaining active files over 1,000 lines are the HTTP-only Agent router, the
+presentation-only Experience stylesheet, and three L5/old-Theater legacy
+bundles. The legacy bundles remain intact because `/app` and `/theater` are
+still explicit rollback routes; they must be retired as units after route cut,
+not subdivided into another compatibility architecture.
 
 ## 2. Largest 20 Source Files
 
@@ -154,10 +173,11 @@ full regression and performance parity
 
 ## 6. Decision
 
-Large-file splitting is **not complete**. The inventory is now complete and the
-safe order is known. The next refactor should reduce responsibilities and old
-runtime at the same time; it must not add facades while retaining every former
-owner.
+The nine authoritative/runtime mixed-responsibility modules are now resolved.
+Their public facades preserve imports while validation, persistence,
+projection, transport and orchestration have separate owners. The remaining
+large legacy bundles are retirement work tied to route migration, not further
+split work.
 
 The deployed UI remains a unified Review Build shell. Life Tree, Abu Dream
 World and the complete Mingli Lab are not represented as final visual/product
