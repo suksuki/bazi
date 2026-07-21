@@ -62,7 +62,7 @@
     "temporal_state": "LifeCase.temporal_snapshots",
     "relation_path_assertions": "LifeCase relation/path assertion history",
     "canonical_scene": "CanonicalSceneOwner",
-    "workspace_ui_state": "WorkspaceState (non-cognitive)"
+    "workspace_ui_state": "experience.workspace.CaseWorkspaceState (non-cognitive)"
   },
   "module_ownership": {
     "baseline_command": "product.agent_command_service.BaselineCaseCommandService",
@@ -72,7 +72,12 @@
     "typescript_contract_projection": "scripts/v50_export_experience_schemas.py",
     "canonical_scene": "product.canonical_scene.CanonicalSceneOwner",
     "formal_relation_path": "core.life_case.LifeCase",
-    "candidate_relation_path": "core.graph + core.simulation"
+    "candidate_relation_path": "core.graph + core.simulation",
+    "case_belief_state": "core.mingli_agent.workspace.CaseBeliefState",
+    "workspace_ui_state": "experience.workspace.CaseWorkspaceState",
+    "mingli_lab_session": "experience.lab.MingliLabSession",
+    "abu_narration": "product.abu_narration.AbuNarrationService",
+    "offline_fixture_generation": "tools.fixtures (non-runtime)"
   },
   "schema_ownership": {
     "authoritative_source": "Python Pydantic models",
@@ -93,6 +98,10 @@
     "canonical": [
       "LifeCase formal cognition",
       "CanonicalSceneOwner",
+      "CaseBeliefState",
+      "CaseWorkspaceState",
+      "MingliLabSession",
+      "AbuNarrationService",
       "BaselineCaseCommandService",
       "postgres_v50_schema.sql",
       "Python Pydantic experience contracts",

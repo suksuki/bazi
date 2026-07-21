@@ -21,7 +21,7 @@ from core.contracts import BirthInputCanonical
 from core.engines import BirthCalendarResolutionError, resolve_birth_input_pillars
 from core.mingli_agent import (
     BirthIntakeDraft,
-    CaseCognitiveWorkspace,
+    CaseBeliefState,
     ChartWorldInstance,
     MingliAgent,
     MingliCognitiveRecord,
@@ -31,7 +31,7 @@ from core.mingli_agent import (
     apply_deliberation_selection,
     apply_probe_response,
     build_deliberation_view,
-    build_case_workspace,
+    build_case_belief_state,
     undo_deliberation_selection,
 )
 from core.life_domains import LifeDomain, domain_access_allowed, domain_definition, domain_manifest
@@ -40,7 +40,6 @@ from core.life_case import (
     build_case_revision_insight,
     build_domain_insight,
     build_reality_evidence,
-    build_workspace_state,
     commit_case_revision,
     commit_domain_insight,
     complete_monthly_review,
@@ -48,9 +47,12 @@ from core.life_case import (
     formal_projection_record,
     normalize_period_key,
     project_life_case,
-    select_workspace_period,
     upsert_reality_evidence,
-    WorkspaceState,
+)
+from experience.workspace import (
+    CaseWorkspaceState,
+    build_case_workspace_state,
+    select_case_workspace_period,
 )
 from core.mingli_agent.reasoner import sanitize_public_mingli_payload
 from core.mingli_agent.contracts import CaseTurnDraft
@@ -233,21 +235,21 @@ def create_agent_router(
             raise HTTPException(status_code=403, detail="product_mode_not_allowed")
         return selected
 
-    def workspace_for(row: dict[str, Any], record: MingliCognitiveRecord) -> CaseCognitiveWorkspace:
+    def workspace_for(row: dict[str, Any], record: MingliCognitiveRecord) -> CaseBeliefState:
         payload = row.get("case_belief_state") or row.get("workspace")
-        return CaseCognitiveWorkspace.model_validate(payload) if payload else build_case_workspace(record)
+        return CaseBeliefState.model_validate(payload) if payload else build_case_belief_state(record)
 
     def workspace_state_for(
         row: dict[str, Any],
         *,
         case_id: str,
         active_mode: str = "member",
-    ) -> WorkspaceState:
+    ) -> CaseWorkspaceState:
         payload = row.get("workspace_state")
         workspace_state = (
-            WorkspaceState.model_validate(payload)
+            CaseWorkspaceState.model_validate(payload)
             if payload
-            else build_workspace_state(case_id=case_id, active_mode=active_mode)
+            else build_case_workspace_state(case_id=case_id, active_mode=active_mode)
         )
         return (
             workspace_state.model_copy(update={"active_mode": active_mode})
@@ -1272,7 +1274,7 @@ def create_agent_router(
             period = normalize_period_key(payload.period_key)
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
-        workspace_state = select_workspace_period(
+        workspace_state = select_case_workspace_period(
             workspace=workspace_state_for(row, case_id=case_id, active_mode=active_mode),
             period_key=period,
         )
@@ -1472,11 +1474,11 @@ def _public_reading_view(
     *,
     world: ChartWorldInstance,
     record: MingliCognitiveRecord,
-    workspace: CaseCognitiveWorkspace,
+    workspace: CaseBeliefState,
     probe_plan: ProbePlan,
     active_domain: LifeDomain = LifeDomain.WHOLE_CHART,
     life_case: LifeCase | dict[str, Any] | None = None,
-    workspace_state: WorkspaceState | dict[str, Any] | None = None,
+    workspace_state: CaseWorkspaceState | dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     parsed_life_case = (
         life_case
@@ -1510,10 +1512,10 @@ def _public_reading_view(
     }
     parsed_workspace_state = (
         workspace_state
-        if isinstance(workspace_state, WorkspaceState)
-        else WorkspaceState.model_validate(workspace_state)
+        if isinstance(workspace_state, CaseWorkspaceState)
+        else CaseWorkspaceState.model_validate(workspace_state)
         if workspace_state is not None
-        else build_workspace_state(case_id=record.case_id, active_mode=probe_plan.role_mode)
+        else build_case_workspace_state(case_id=record.case_id, active_mode=probe_plan.role_mode)
     )
     selected_snapshot = (
         next(
@@ -1686,7 +1688,7 @@ def _reliability_outcome_payload(
     }
 
 
-def _probe_revision_request(*, plan: ProbePlan, option_label: str, evidence: dict[str, Any], workspace: CaseCognitiveWorkspace) -> str:
+def _probe_revision_request(*, plan: ProbePlan, option_label: str, evidence: dict[str, Any], workspace: CaseBeliefState) -> str:
     return f"""
 [结构化案例证据复审]
 这不是让你重新排盘，也不是让你迎合用户。请比较封存的先验命局认知与下面的新证据，只修正受影响的案例判断。

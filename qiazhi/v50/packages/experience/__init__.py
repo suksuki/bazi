@@ -1,8 +1,4 @@
-"""Abu Experience Runtime contracts and deterministic theater primitives.
-
-The package deliberately has no dependency on ``core.life_case``. Cognitive
-authority enters through an immutable ``MingliExperienceEnvelope`` only.
-"""
+"""Role-filtered projections, shared workspace state and Lab experiment contracts."""
 
 from experience.compiler import TopicCompileError, compile_topic, load_topic_package
 from experience.canvas import (
@@ -47,7 +43,20 @@ from experience.contracts import (
     TopicPackage,
 )
 from experience.cues import CueRenderError, freeze_performance_cue
+from experience.lab import (
+    MingliLabSession,
+    exploration_from_lab_session,
+    issue_lab_session,
+    update_lab_session,
+)
 from experience.performance import compile_performance_package
+from experience.workspace import (
+    CaseWorkspaceEnvelope,
+    CaseWorkspaceState,
+    build_case_workspace_state,
+    compile_case_workspace,
+    select_case_workspace_period,
+)
 
 __all__ = [
     "CompiledTopic",
@@ -65,7 +74,10 @@ __all__ = [
     "CanonicalTemporalState",
     "CueRenderError",
     "CueTemplate",
+    "CaseWorkspaceEnvelope",
+    "CaseWorkspaceState",
     "MingliExperienceEnvelope",
+    "MingliLabSession",
     "MingliCanvasCompileInput",
     "MingliCanvasSpec",
     "ParticipantRun",
@@ -84,11 +96,17 @@ __all__ = [
     "compile_canvas_spec",
     "compile_canonical_scene",
     "compile_canonical_scene_bundle",
+    "compile_case_workspace",
     "compile_performance_package",
     "freeze_performance_cue",
     "load_topic_package",
     "create_temporal_sandbox",
+    "build_case_workspace_state",
+    "exploration_from_lab_session",
+    "issue_lab_session",
     "load_canvas_compile_input",
     "project_canvas_spec_for_role",
     "restore_temporal_sandbox",
+    "select_case_workspace_period",
+    "update_lab_session",
 ]

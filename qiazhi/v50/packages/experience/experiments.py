@@ -6,9 +6,10 @@ from datetime import datetime, timezone
 from typing import Any, Literal
 from uuid import uuid4
 
-from pydantic import Field, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from experience.contracts import ExperienceModel
+from experience.lab import MingliLabSession, update_lab_session
 
 
 ExperimentAuthority = Literal["visual_only", "deterministic_structure", "reasoning_required"]
@@ -90,6 +91,9 @@ class MingliMechanismSnapshot(ExperienceModel):
     chart_version: str = Field(min_length=1, max_length=180)
     life_case_version: str = Field(min_length=1, max_length=180)
     cognitive_record_id: str = Field(min_length=1, max_length=180)
+    scene_id: str = Field(default="scene-unbound-fixture", min_length=1, max_length=180)
+    scene_source_hash: str = Field(default="0" * 64, min_length=64, max_length=64)
+    disclosure_hash: str = Field(default="0" * 64, min_length=64, max_length=64)
     pillars: list[PillarVisual] = Field(min_length=4, max_length=4)
     nodes: list[MechanismNode] = Field(min_length=2)
     edges: list[MechanismEdge] = Field(min_length=1)
@@ -170,21 +174,91 @@ class NodeAblationOperation(ExperienceModel):
     applied_at: datetime
 
 
-class MingliSandboxState(ExperienceModel):
-    schema_version: Literal["deepbazi.mingli_sandbox_state.v1"] = "deepbazi.mingli_sandbox_state.v1"
-    sandbox_id: str = Field(min_length=1, max_length=180)
-    participant_run_id: str = Field(min_length=1, max_length=180)
-    base_snapshot_hash: str = Field(min_length=64, max_length=64)
+class MechanismSandboxState(ExperienceModel):
+    schema_version: Literal[
+        "deepbazi.mingli_sandbox_state.v1",
+        "deepbazi.mechanism_sandbox_state.v2",
+    ] = "deepbazi.mechanism_sandbox_state.v2"
+    lab_session: MingliLabSession
     predicted_key_node_id: str | None = Field(default=None, max_length=260)
     selected_nodes: list[str] = Field(default_factory=list)
     ablation_operations: list[NodeAblationOperation] = Field(default_factory=list)
     temporal_overlay: str | None = Field(default=None, max_length=160)
     active_hypothesis: str | None = Field(default=None, max_length=260)
     comparison_mode: Literal["baseline", "baseline_modified"] = "baseline"
-    status: Literal["active", "modified", "restored", "saved"] = "active"
-    created_at: datetime
-    updated_at: datetime
-    writes_life_case: Literal[False] = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def upgrade_legacy_state(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        payload = dict(value)
+        if "lab_session" in payload:
+            for field in (
+                "sandbox_id",
+                "participant_run_id",
+                "base_snapshot_hash",
+                "status",
+                "created_at",
+                "updated_at",
+                "writes_life_case",
+            ):
+                payload.pop(field, None)
+            return payload
+        created_at = payload.pop("created_at", datetime(1970, 1, 1, tzinfo=timezone.utc))
+        updated_at = payload.pop("updated_at", created_at)
+        base_snapshot_hash = str(payload.pop("base_snapshot_hash"))
+        payload["lab_session"] = MingliLabSession(
+            session_id=str(payload.pop("sandbox_id")),
+            participant_run_id=str(payload.pop("participant_run_id")),
+            case_ref="legacy-unresolved",
+            scene_id="legacy-unresolved",
+            scene_source_hash=base_snapshot_hash,
+            disclosure_hash="0" * 64,
+            experiment_kind="mechanism_ablation",
+            base_snapshot_ref=base_snapshot_hash,
+            source_mode="legacy_unresolved",
+            status=payload.pop("status", "active"),
+            created_at=created_at,
+            updated_at=updated_at,
+        ).model_dump(mode="json")
+        payload.pop("writes_life_case", None)
+        return payload
+
+    @computed_field
+    @property
+    def sandbox_id(self) -> str:
+        return self.lab_session.session_id
+
+    @computed_field
+    @property
+    def participant_run_id(self) -> str:
+        return self.lab_session.participant_run_id
+
+    @computed_field
+    @property
+    def base_snapshot_hash(self) -> str:
+        return self.lab_session.base_snapshot_ref
+
+    @computed_field
+    @property
+    def status(self) -> str:
+        return self.lab_session.status
+
+    @computed_field
+    @property
+    def created_at(self) -> datetime:
+        return self.lab_session.created_at
+
+    @computed_field
+    @property
+    def updated_at(self) -> datetime:
+        return self.lab_session.updated_at
+
+    @computed_field
+    @property
+    def writes_life_case(self) -> Literal[False]:
+        return False
 
 
 class DeterministicChangeSet(ExperienceModel):
@@ -249,27 +323,39 @@ def create_sandbox_state(
     participant_run_id: str,
     snapshot: MingliMechanismSnapshot,
     predicted_key_node_id: str | None = None,
-) -> MingliSandboxState:
+) -> MechanismSandboxState:
     now = datetime.now(timezone.utc)
     if predicted_key_node_id is not None:
         _require_selectable_node(snapshot, predicted_key_node_id)
-    return MingliSandboxState(
-        sandbox_id=f"sandbox-{uuid4().hex[:20]}",
-        participant_run_id=participant_run_id,
-        base_snapshot_hash=snapshot.snapshot_hash,
+    return MechanismSandboxState(
+        lab_session=MingliLabSession(
+            session_id=f"lab-{uuid4().hex[:20]}",
+            participant_run_id=participant_run_id,
+            case_ref=snapshot.case_id,
+            scene_id=snapshot.scene_id,
+            scene_source_hash=snapshot.scene_source_hash,
+            disclosure_hash=snapshot.disclosure_hash,
+            experiment_kind="mechanism_ablation",
+            base_snapshot_ref=snapshot.snapshot_hash,
+            source_mode=(
+                "canonical_projection"
+                if not snapshot.scene_id.startswith("scene-unbound")
+                else "synthetic_fixture"
+            ),
+            created_at=now,
+            updated_at=now,
+        ),
         predicted_key_node_id=predicted_key_node_id,
         selected_nodes=[predicted_key_node_id] if predicted_key_node_id else [],
-        created_at=now,
-        updated_at=now,
     )
 
 
 def apply_single_node_ablation(
     *,
     snapshot: MingliMechanismSnapshot,
-    sandbox: MingliSandboxState,
+    sandbox: MechanismSandboxState,
     node_id: str,
-) -> tuple[MingliSandboxState, SandboxResult]:
+) -> tuple[MechanismSandboxState, SandboxResult]:
     if sandbox.base_snapshot_hash != snapshot.snapshot_hash:
         raise ValueError("sandbox_snapshot_hash_mismatch")
     if sandbox.ablation_operations:
@@ -331,25 +417,23 @@ def apply_single_node_ablation(
         created_at=now,
     )
     updated = sandbox.model_copy(update={
+        "lab_session": update_lab_session(sandbox.lab_session, status="modified", now=now),
         "selected_nodes": list(dict.fromkeys([*sandbox.selected_nodes, node_id])),
         "ablation_operations": [*sandbox.ablation_operations, operation],
         "comparison_mode": "baseline_modified",
-        "status": "modified",
-        "updated_at": now,
     })
     return updated, result
 
 
-def restore_sandbox(sandbox: MingliSandboxState) -> MingliSandboxState:
+def restore_sandbox(sandbox: MechanismSandboxState) -> MechanismSandboxState:
     if not sandbox.ablation_operations:
         raise ValueError("experiment_ablation_required_before_restore")
     if sandbox.status == "saved":
         raise ValueError("saved_experiment_cannot_be_restored")
     now = datetime.now(timezone.utc)
     return sandbox.model_copy(update={
+        "lab_session": update_lab_session(sandbox.lab_session, status="restored", now=now),
         "comparison_mode": "baseline",
-        "status": "restored",
-        "updated_at": now,
     })
 
 

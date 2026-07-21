@@ -14,11 +14,14 @@ MANIFEST = ROOT / "config/production_authority_manifest_v1.json"
 
 def audit_framework_alignment() -> dict[str, Any]:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    canonical_scene_source = _read("packages/experience/canonical_scene.py")
-    narration_source = _read("apps/product/narrated_workspace.py")
-    sandbox_source = _read("packages/experience/experiments.py")
-    workspace_source = _read("packages/core/mingli_agent/workspace.py")
-    life_case_source = _read("packages/core/life_case/contracts.py")
+    canonical_scene = _read("packages/experience/canonical_scene.py")
+    narration = _read("apps/product/abu_narration.py")
+    mechanism_sandbox = _read("packages/experience/experiments.py")
+    temporal_sandbox = _read("packages/experience/canvas.py")
+    belief_state = _read("packages/core/mingli_agent/workspace.py")
+    workspace = _read("packages/experience/workspace.py")
+    lab = _read("packages/experience/lab.py")
+    life_case = _read("packages/core/life_case/contracts.py")
 
     surfaces = [
         _surface(
@@ -52,34 +55,30 @@ def audit_framework_alignment() -> dict[str, Any]:
         _surface(
             "abu",
             "canonical_consumer",
-            "product.narrated_workspace.NarratedWorkspaceService",
-            ["apps/product/narrated_workspace.py"],
-            "explanation and narration from the Abu canonical projection",
+            manifest["module_ownership"]["abu_narration"],
+            ["apps/product/abu_narration.py"],
+            "explanation and narration from the Abu projection",
         ),
         _surface(
             "sandbox",
-            "transitional_scoped",
-            "experience.experiments.MingliSandboxState + experience.canvas.TemporalSandboxState",
+            "scoped_non_authoritative",
+            manifest["module_ownership"]["mingli_lab_session"],
             ["packages/experience/experiments.py", "packages/experience/canvas.py"],
-            "isolated mechanism ablation and temporal hypothesis scopes",
+            "mechanism and temporal experiments share one lifecycle identity",
         ),
         _surface(
             "lab",
-            "design_fixture",
-            "product.mingli_lab_fixture_builder",
-            ["apps/product/mingli_lab_fixture_builder.py"],
-            "internal fixture generation; no production authority",
+            "canonical_consumer",
+            manifest["module_ownership"]["mingli_lab_session"],
+            ["packages/experience/lab.py"],
+            "non-authoritative experiment and evidence lifecycle",
         ),
         _surface(
             "workspace",
-            "name_convergence_required",
-            "LifeCase WorkspaceState + CaseCognitiveWorkspace + NarratedWorkspaceService",
-            [
-                "packages/core/life_case/contracts.py",
-                "packages/core/mingli_agent/workspace.py",
-                "apps/product/narrated_workspace.py",
-            ],
-            "separate UI state, cognitive deliberation state, and narration service",
+            "canonical_consumer",
+            manifest["module_ownership"]["workspace_ui_state"],
+            ["packages/experience/workspace.py"],
+            "shared UI state bound to one canonical projection",
         ),
     ]
 
@@ -92,7 +91,7 @@ def audit_framework_alignment() -> dict[str, Any]:
         _check(
             "projection_contract_forbids_formal_writes",
             all(
-                token in canonical_scene_source
+                token in canonical_scene
                 for token in (
                     "creates_mingli_facts: Literal[False]",
                     "creates_mingli_claims: Literal[False]",
@@ -103,25 +102,51 @@ def audit_framework_alignment() -> dict[str, Any]:
         ),
         _check(
             "abu_requires_canonical_projection",
-            "canonical_abu_projection_required" in narration_source,
+            "canonical_abu_projection_required" in narration,
         ),
         _check(
-            "mechanism_sandbox_cannot_write_life_case",
-            "writes_life_case: Literal[False]" in sandbox_source,
+            "one_lab_session_owns_both_sandbox_lifecycles",
+            "lab_session: MingliLabSession" in mechanism_sandbox
+            and "lab_session: MingliLabSession" in temporal_sandbox,
         ),
         _check(
-            "cognitive_workspace_locks_chart_facts",
-            "chart_facts_locked: bool = True" in workspace_source,
+            "lab_session_cannot_write_or_promote",
+            all(
+                token in lab
+                for token in (
+                    "writes_chart: Literal[False]",
+                    "writes_life_case: Literal[False]",
+                    "promotes_candidate: Literal[False]",
+                )
+            ),
         ),
         _check(
-            "cognitive_workspace_forbids_global_update",
-            "global_update_allowed: bool = False" in workspace_source,
+            "belief_state_is_cognitive_and_locked",
+            manifest["module_ownership"]["case_belief_state"]
+            == "core.mingli_agent.workspace.CaseBeliefState"
+            and "class CaseBeliefState" in belief_state
+            and "chart_facts_locked: bool = True" in belief_state
+            and "global_update_allowed: bool = False" in belief_state,
         ),
         _check(
-            "life_case_workspace_is_non_cognitive_ui_state",
+            "workspace_state_has_one_non_cognitive_owner",
             manifest["formal_data_authority"]["workspace_ui_state"]
-            == "WorkspaceState (non-cognitive)"
-            and "class WorkspaceState" in life_case_source,
+            == "experience.workspace.CaseWorkspaceState (non-cognitive)"
+            and "class CaseWorkspaceState" in workspace
+            and "class CaseWorkspaceState" not in life_case,
+        ),
+        _check(
+            "workspace_is_bound_to_canonical_projection",
+            "projection: CanonicalProjectionEnvelope" in workspace
+            and "case_workspace_scene_identity_mismatch" in workspace
+            and "case_workspace_selection_not_disclosed" in workspace,
+        ),
+        _check(
+            "fixture_builders_are_outside_product_runtime",
+            not (ROOT / "apps/product/mingli_lab_fixture_builder.py").exists()
+            and not (ROOT / "apps/product/onecanvas_fixture_builder.py").exists()
+            and (ROOT / "tools/fixtures/mingli_lab_c2a.py").exists()
+            and (ROOT / "tools/fixtures/onecanvas_r1.py").exists(),
         ),
         _check(
             "mingli_lab_has_no_production_route",
@@ -129,49 +154,27 @@ def audit_framework_alignment() -> dict[str, Any]:
         ),
     ]
 
-    gaps = [
-        {
-            "gap_id": "FRAME-01",
-            "surface": "workspace",
-            "finding": "Three different responsibilities still use the Workspace name.",
-            "required_convergence": "Freeze distinct names and ownership without merging cognitive, UI, and narration state.",
-        },
-        {
-            "gap_id": "LAB-01",
-            "surface": "lab",
-            "finding": "Mingli Lab is an internal fixture builder, not a canonical scene consumer with a formal experiment ledger.",
-            "required_convergence": "Define the Lab experiment boundary and evidence lifecycle before production engineering.",
-        },
-        {
-            "gap_id": "LAB-02",
-            "surface": "sandbox",
-            "finding": "Mechanism ablation and temporal hypothesis sandboxes are intentionally separate but lack one shared session envelope.",
-            "required_convergence": "Introduce one non-authoritative session envelope only if it replaces duplicate lifecycle plumbing.",
-        },
-    ]
-
+    passed = all(item["passed"] for item in invariants)
     return {
-        "schema_version": "deepbazi.next_framework_alignment_audit.v1",
-        "status": "READY_WITH_GAPS" if all(item["passed"] for item in invariants) else "BLOCKED",
+        "schema_version": "deepbazi.next_framework_alignment_audit.v2",
+        "status": "CLOSED_PASS" if passed else "BLOCKED",
         "surfaces": surfaces,
         "invariants": invariants,
-        "gaps": gaps,
+        "gaps": [],
         "counts": {
             "surfaces": len(surfaces),
             "canonical_or_canonical_consumer": sum(
                 item["classification"] in {"canonical", "canonical_consumer"}
                 for item in surfaces
             ),
-            "transitional_or_design": sum(
-                item["classification"]
-                in {"transitional_scoped", "design_fixture", "name_convergence_required"}
+            "scoped_non_authoritative": sum(
+                item["classification"] == "scoped_non_authoritative"
                 for item in surfaces
             ),
             "invariants_passed": sum(item["passed"] for item in invariants),
-            "gaps": len(gaps),
+            "gaps": 0,
         },
         "next_sequence": [
-            "Mingli Lab foundation audit",
             "six-pillar relation coverage audit",
             "RA1-RA3 controlled implementation",
             "synthetic validation and training",

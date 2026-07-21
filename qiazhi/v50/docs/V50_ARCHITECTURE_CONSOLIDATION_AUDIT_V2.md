@@ -149,25 +149,24 @@ Current evidence:
 
 This correction must remain a permanent regression invariant. V2 does not reopen it.
 
-### F-02 — Production OneCanvas still depends on fixture-builder internals
+### F-02 — Production OneCanvas no longer depends on fixture-builder internals
 
-Severity: `P1 DEPENDENCY INVERSION`
+Status: `CLOSED`
 
-`apps/product/onecanvas_structural.py` imports private functions from `product.onecanvas_fixture_builder`:
-
-```text
-_onecanvas_structural_variant
-_timing_projection
-```
-
-This is more contained than the old direct script import, but the ownership remains reversed:
+The structural and timing logic now lives in the product services consumed by OneCanvas.
+The two fixture builders have moved to `tools/fixtures/` and are not importable as product
+runtime owners:
 
 ```text
-production structural service
-→ fixture builder private implementation
+product.onecanvas_structural
+product.structural_variant_compiler
+product.onecanvas_timing_adapter
+        ↑
+tools/fixtures/* (offline consumers only)
 ```
 
-The deterministic structural and timing projection logic must be extracted into canonical application/domain services. Both production and fixture builders should consume those services.
+No product module imports a fixture builder. Archived evidence remains reproducible without
+participating in the production module graph.
 
 ### F-03 — Local pillar stepping cannot guarantee a target four-pillar chart
 
@@ -1075,7 +1074,7 @@ Evidence inspected includes:
 - `packages/experience/canvas.py`;
 - `apps/product/canvas_projection.py`;
 - `apps/product/onecanvas_structural.py`;
-- `apps/product/onecanvas_fixture_builder.py`;
+- `tools/fixtures/onecanvas_r1.py`;
 - OneCanvas runtime, prototype, and component gallery;
 - Experience Shell contracts and schema export scripts;
 - current architecture, product baseline, roadmap, cleanup, Relation Atlas, and R1 review documents.

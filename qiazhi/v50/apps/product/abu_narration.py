@@ -33,7 +33,7 @@ SPEAKING_STYLE = "calm_companion"
 OPUS_CODEC_PROFILE_VERSION = "opus-voice-48k-v1"
 
 
-class NarratedWorkspaceError(RuntimeError):
+class AbuNarrationError(RuntimeError):
     pass
 
 
@@ -41,7 +41,7 @@ class FfmpegOpusTranscoder:
     def __init__(self, binary: str = "ffmpeg") -> None:
         resolved = shutil.which(binary)
         if not resolved:
-            raise NarratedWorkspaceError("ffmpeg_not_available_for_opus")
+            raise AbuNarrationError("ffmpeg_not_available_for_opus")
         self.binary = resolved
         self.profile_version = OPUS_CODEC_PROFILE_VERSION
 
@@ -79,7 +79,7 @@ class FfmpegOpusTranscoder:
         )
         if completed.returncode != 0 or not completed.stdout.startswith(b"OggS"):
             detail = completed.stderr.decode("utf-8", errors="replace")[-400:]
-            raise NarratedWorkspaceError(f"opus_transcode_failed:{detail}")
+            raise AbuNarrationError(f"opus_transcode_failed:{detail}")
         return completed.stdout
 
 
@@ -98,7 +98,7 @@ class SpeechAssetRepository:
 
     def variant_path(self, speech_asset_id: str, media_format: str) -> Path:
         if media_format != "opus":
-            raise NarratedWorkspaceError("unsupported_speech_asset_variant")
+            raise AbuNarrationError("unsupported_speech_asset_variant")
         return self.root / f"{_safe_id(speech_asset_id)}.opus"
 
     def get(self, speech_asset_id: str) -> SpeechAsset | None:
@@ -108,11 +108,11 @@ class SpeechAssetRepository:
         asset = SpeechAsset.model_validate_json(path.read_text(encoding="utf-8"))
         audio_path = self.audio_path(speech_asset_id)
         if not audio_path.exists() or _sha256(audio_path.read_bytes()) != asset.media.audio_hash:
-            raise NarratedWorkspaceError("speech_asset_audio_missing_or_corrupt")
+            raise AbuNarrationError("speech_asset_audio_missing_or_corrupt")
         for variant in asset.media.playback_variants:
             variant_path = self.variant_path(speech_asset_id, variant.format)
             if not variant_path.exists() or _sha256(variant_path.read_bytes()) != variant.audio_hash:
-                raise NarratedWorkspaceError("speech_asset_variant_missing_or_corrupt")
+                raise AbuNarrationError("speech_asset_variant_missing_or_corrupt")
         return asset
 
     def save(
@@ -128,7 +128,7 @@ class SpeechAssetRepository:
         if metadata_path.exists() or audio_path.exists():
             existing = self.get(asset.speech_asset_id)
             if not existing or existing != asset:
-                raise NarratedWorkspaceError("immutable_speech_asset_conflict")
+                raise AbuNarrationError("immutable_speech_asset_conflict")
             return
         audio_tmp = audio_path.with_suffix(".wav.tmp")
         metadata_tmp = metadata_path.with_suffix(".json.tmp")
@@ -137,7 +137,7 @@ class SpeechAssetRepository:
         for variant in asset.media.playback_variants:
             payload = variant_bytes.get(variant.format)
             if payload is None or _sha256(payload) != variant.audio_hash:
-                raise NarratedWorkspaceError("speech_asset_variant_payload_mismatch")
+                raise AbuNarrationError("speech_asset_variant_payload_mismatch")
             variant_path = self.variant_path(asset.speech_asset_id, variant.format)
             variant_tmp = variant_path.with_suffix(f".{variant.format}.tmp")
             variant_tmp.write_bytes(payload)
@@ -149,7 +149,7 @@ class SpeechAssetRepository:
         metadata_tmp.replace(metadata_path)
 
 
-class NarratedWorkspaceService:
+class AbuNarrationService:
     def __init__(
         self,
         *,
@@ -163,7 +163,7 @@ class NarratedWorkspaceService:
         self._generation_lock = threading.Lock()
 
     @classmethod
-    def from_environment(cls) -> "NarratedWorkspaceService":
+    def from_environment(cls) -> "AbuNarrationService":
         root = Path(
             os.getenv("V50_NARRATION_MEDIA_DIR", "/tmp/deepbazi-v50-narration")
         ).expanduser()
@@ -178,7 +178,7 @@ class NarratedWorkspaceService:
                 transcoder = FfmpegOpusTranscoder(
                     os.getenv("V50_FFMPEG_BINARY", "ffmpeg").strip() or "ffmpeg"
                 )
-            except NarratedWorkspaceError:
+            except AbuNarrationError:
                 transcoder = None
         return cls(
             repository=SpeechAssetRepository(root),
@@ -191,7 +191,7 @@ class NarratedWorkspaceService:
         projection: CanonicalProjectionEnvelope,
     ) -> NarrationManifest:
         if projection.projection_kind != "abu":
-            raise NarratedWorkspaceError("canonical_abu_projection_required")
+            raise AbuNarrationError("canonical_abu_projection_required")
         try:
             claims = [
                 ApprovedClaim.model_validate(item)
@@ -205,17 +205,17 @@ class NarratedWorkspaceService:
                 projection.payload.get("uncertainty") or {}
             )
         except Exception as exc:  # noqa: BLE001 - projection boundary rejects malformed data.
-            raise NarratedWorkspaceError("canonical_abu_projection_invalid") from exc
+            raise AbuNarrationError("canonical_abu_projection_invalid") from exc
         baseline = next((item for item in claims if item.category == "baseline"), None)
         if baseline is None:
-            raise NarratedWorkspaceError("canonical_baseline_claim_not_available")
+            raise AbuNarrationError("canonical_baseline_claim_not_available")
         segments = _compile_segments(
             baseline=baseline,
             reasoning_steps=reasoning_steps,
             uncertainty=uncertainty,
         )
         if not segments:
-            raise NarratedWorkspaceError("narration_has_no_approved_segments")
+            raise AbuNarrationError("narration_has_no_approved_segments")
         identity = projection.scene_identity
         stable = {
             "scope": "participant_private",
@@ -292,7 +292,7 @@ class NarratedWorkspaceService:
     ) -> tuple[SpeechAsset, bool]:
         segment = next((item for item in manifest.segments if item.segment_id == segment_id), None)
         if segment is None:
-            raise NarratedWorkspaceError("narration_segment_not_found")
+            raise AbuNarrationError("narration_segment_not_found")
         speech_asset_id = self.asset_id(manifest=manifest, segment=segment)
         existing = self.repository.get(speech_asset_id)
         if existing:
@@ -309,7 +309,7 @@ class NarratedWorkspaceService:
             if self.opus_transcoder is not None:
                 try:
                     opus_bytes = self.opus_transcoder.transcode(speech.wav_bytes)
-                except NarratedWorkspaceError:
+                except AbuNarrationError:
                     opus_bytes = b""
                 if opus_bytes:
                     variant_bytes["opus"] = opus_bytes
@@ -468,7 +468,7 @@ def _wav_metadata(wav_bytes: bytes) -> tuple[int, int]:
             sample_rate = reader.getframerate()
             duration_ms = max(1, round(reader.getnframes() / sample_rate * 1000))
     except (wave.Error, EOFError) as exc:
-        raise NarratedWorkspaceError("tts_response_is_not_valid_wav") from exc
+        raise AbuNarrationError("tts_response_is_not_valid_wav") from exc
     return sample_rate, duration_ms
 
 
@@ -477,7 +477,7 @@ def _safe_id(value: str) -> str:
         character not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
         for character in value
     ):
-        raise NarratedWorkspaceError("invalid_speech_asset_id")
+        raise AbuNarrationError("invalid_speech_asset_id")
     return value
 
 

@@ -97,7 +97,7 @@ def project_living_reading(payload: dict[str, Any], *, mode: ExperienceMode) -> 
     projected["projection_contract"] = {
         "name": contract,
         "mode": mode,
-        "source": "LifeCaseRevision+CaseBeliefState+WorkspaceState",
+        "source": "LifeCaseRevision+CaseBeliefState+CaseWorkspaceState",
         "new_mingli_claims_created": False,
         "server_side_enforced": True,
     }

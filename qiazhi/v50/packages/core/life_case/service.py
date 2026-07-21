@@ -24,7 +24,6 @@ from core.life_case.contracts import (
     RealityEvidenceRevision,
     ReasoningPathStep,
     TemporalSnapshot,
-    WorkspaceState,
 )
 from core.mingli_agent.contracts import ChartWorldInstance, DomainExploration, MingliCognitiveRecord
 from core.mingli_agent.reliability import cognition_semantic_signature
@@ -682,37 +681,6 @@ def ensure_temporal_snapshot(
         "updated_at": now,
     })
     return updated, snapshot, True
-
-
-def build_workspace_state(
-    *,
-    case_id: str,
-    selected_period: str | None = None,
-    active_mode: str = "member",
-    active_domain: str = "whole_chart",
-) -> WorkspaceState:
-    now = datetime.now(timezone.utc)
-    system_period = now.strftime("%Y-%m")
-    return WorkspaceState(
-        workspace_id=f"workspace-{uuid4().hex[:18]}",
-        case_id=case_id,
-        selected_period=normalize_period_key(selected_period or system_period),
-        system_period=system_period,
-        active_mode=active_mode,
-        active_domain=active_domain,
-        updated_at=now.isoformat(),
-    )
-
-
-def select_workspace_period(
-    *,
-    workspace: WorkspaceState,
-    period_key: str,
-) -> WorkspaceState:
-    return workspace.model_copy(update={
-        "selected_period": normalize_period_key(period_key),
-        "updated_at": datetime.now(timezone.utc).isoformat(),
-    })
 
 
 def complete_monthly_review(

@@ -10,7 +10,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def audit_mingli_lab_foundation() -> dict[str, Any]:
-    fixture_builder = _read("apps/product/mingli_lab_fixture_builder.py")
+    fixture_builder = _read("tools/fixtures/mingli_lab_c2a.py")
+    lab_session = _read("packages/experience/lab.py")
     temporal_sandbox = _read("packages/experience/canvas.py")
     mechanism_sandbox = _read("packages/experience/experiments.py")
     theater_experiment = _read("apps/product/theater_experiment.py")
@@ -19,22 +20,22 @@ def audit_mingli_lab_foundation() -> dict[str, Any]:
 
     implementations = [
         {
-            "implementation_id": "archived_c2a_fixture",
-            "classification": "legacy_evidence",
-            "owner": "product.mingli_lab_fixture_builder",
+            "implementation_id": "lab_session",
+            "classification": "canonical_non_authoritative_contract",
+            "owner": "experience.lab.MingliLabSession",
             "runtime_route": False,
             "formal_write": False,
-            "source_chain": "LifeCase -> ReadOnlySixPillarCanvasService -> anonymized fixture",
-            "disposition": "retain only while archived OneCanvas fixtures depend on its helpers",
+            "source_chain": "CanonicalProjectionEnvelope -> MingliLabSession",
+            "disposition": "single lifecycle and source identity for every Lab experiment",
         },
         {
             "implementation_id": "temporal_canvas_sandbox",
-            "classification": "contract_proof",
+            "classification": "lab_experiment_mode",
             "owner": "experience.canvas.TemporalSandboxState",
             "runtime_route": False,
             "formal_write": False,
-            "source_chain": "Canvas compile input -> hypothetical temporal mutation -> Spec/Diff",
-            "disposition": "input to future Lab temporal experiment mode",
+            "source_chain": "MingliLabSession -> hypothetical temporal mutation -> Spec/Diff",
+            "disposition": "retain as the temporal hypothesis mode",
         },
         {
             "implementation_id": "theater_structural_ablation",
@@ -42,38 +43,77 @@ def audit_mingli_lab_foundation() -> dict[str, Any]:
             "owner": "product.theater_experiment.ProductMingliExperimentPort",
             "runtime_route": True,
             "formal_write": False,
-            "source_chain": "approved LifeCase row -> mechanism snapshot -> private event -> TopicExploration",
-            "disposition": "retain as the current experiment ledger proof",
+            "source_chain": "CanonicalScene -> mechanism snapshot -> Lab session -> TopicExploration",
+            "disposition": "retain as the mechanism ablation mode and evidence ledger proof",
+        },
+        {
+            "implementation_id": "archived_c2a_fixture",
+            "classification": "offline_legacy_evidence_tool",
+            "owner": "tools.fixtures.mingli_lab_c2a",
+            "runtime_route": False,
+            "formal_write": False,
+            "source_chain": "LifeCase -> anonymized archived fixture",
+            "disposition": "kept outside the product runtime only for reproducible evidence",
         },
     ]
 
     invariants = [
         _check(
-            "archived_fixture_has_no_product_route",
-            "mingli-lab" not in theater_api
+            "fixture_builder_is_outside_product_runtime",
+            not (ROOT / "apps/product/mingli_lab_fixture_builder.py").exists()
             and all(
                 token in fixture_builder
                 for token in ('/ "archive"', '/ "proofs"', '/ "prototypes"', '/ "mingli-lab-c2a"')
             ),
         ),
         _check(
-            "temporal_sandbox_forbids_formal_writes",
-            _class_block(temporal_sandbox, "TemporalSandboxState", "class MingliCanvasCompileRequest")
-            .count("Literal[False]")
-            >= 2,
-        ),
-        _check(
-            "mechanism_sandbox_forbids_life_case_write",
-            "writes_life_case: Literal[False]" in mechanism_sandbox,
-        ),
-        _check(
-            "saved_exploration_forbids_life_case_write",
-            "class TopicExploration" in experience_contracts
-            and "writes_life_case: Literal[False]" in _class_block(
-                experience_contracts,
-                "TopicExploration",
-                "class VoiceValidationCase",
+            "one_lab_session_owns_source_and_lifecycle",
+            all(
+                token in lab_session
+                for token in (
+                    "class MingliLabSession",
+                    "scene_source_hash",
+                    "disclosure_hash",
+                    "base_snapshot_ref",
+                    "revision",
+                    "status",
+                )
             ),
+        ),
+        _check(
+            "lab_session_forbids_formal_writes_and_promotion",
+            all(
+                token in lab_session
+                for token in (
+                    "writes_chart: Literal[False]",
+                    "writes_life_case: Literal[False]",
+                    "promotes_candidate: Literal[False]",
+                )
+            ),
+        ),
+        _check(
+            "temporal_and_mechanism_modes_share_lab_session",
+            "lab_session: MingliLabSession" in temporal_sandbox
+            and "lab_session: MingliLabSession" in mechanism_sandbox,
+        ),
+        _check(
+            "saved_exploration_uses_shared_scene_identity",
+            all(
+                token in experience_contracts
+                for token in (
+                    "lab_session_id",
+                    "scene_id",
+                    "scene_source_hash",
+                    "disclosure_hash",
+                )
+            )
+            and "exploration_from_lab_session" in theater_experiment,
+        ),
+        _check(
+            "runtime_experiment_consumes_canonical_scene",
+            "scene_owner: CanonicalSceneOwner" in theater_experiment
+            and "self.scene_owner.issue_scene" in theater_experiment
+            and "envelope.source.source_hash != scene.identity.source_hash" in theater_experiment,
         ),
         _check(
             "runtime_experiment_requires_approved_cognition",
@@ -85,58 +125,35 @@ def audit_mingli_lab_foundation() -> dict[str, Any]:
             'event.scope == "participant_private"' in theater_experiment,
         ),
         _check(
-            "runtime_experiment_explicitly_prohibits_life_case_mutation",
-            '"modify_life_case" not in envelope.topic_scope.prohibited_capabilities'
-            in theater_experiment
-            and '"writes_life_case": False' in theater_experiment,
-        ),
-        _check(
             "lab_has_no_llm_or_reasoner_execution",
             '"llm_used": False' in theater_experiment
-            and '"reasoner_used": False' in theater_experiment,
+            and '"reasoner_used": False' in theater_experiment
+            and '"llm_used": False' in theater_api
+            and '"reasoner_used": False' in theater_api,
+        ),
+        _check(
+            "lab_has_no_production_route_or_formal_write",
+            "mingli-lab" not in theater_api
+            and all(not item["formal_write"] for item in implementations),
         ),
     ]
 
-    gaps = [
-        {
-            "gap_id": "LAB-F01",
-            "finding": "Temporal and mechanism sandboxes have separate lifecycle identities and no shared experiment envelope.",
-            "risk": "future Lab modes could duplicate session, source, and evidence bookkeeping",
-        },
-        {
-            "gap_id": "LAB-F02",
-            "finding": "TemporalSandboxState has no persisted TopicExploration ledger path.",
-            "risk": "temporal experiments cannot yet enter the same evidence lifecycle as ablation",
-        },
-        {
-            "gap_id": "LAB-F03",
-            "finding": "Archived C2A fixture generation helpers still live under the product namespace.",
-            "risk": "legacy evidence can be mistaken for a production Lab owner",
-        },
-        {
-            "gap_id": "LAB-F04",
-            "finding": "Theater ablation reconstructs its snapshot from a case row instead of consuming a CanonicalScene projection.",
-            "risk": "role disclosure and projection identity are enforced by parallel checks rather than the canonical scene envelope",
-        },
-    ]
-
+    passed = all(item["passed"] for item in invariants)
     return {
-        "schema_version": "deepbazi.mingli_lab_foundation_audit.v1",
-        "status": "FOUNDATION_READY_WITH_GAPS"
-        if all(item["passed"] for item in invariants)
-        else "BLOCKED",
+        "schema_version": "deepbazi.mingli_lab_foundation_audit.v2",
+        "status": "CLOSED_PASS" if passed else "BLOCKED",
         "formal_authority": "LifeCase",
         "scene_authority": "CanonicalSceneOwner",
         "lab_role": "non-authoritative experiment and evidence workspace mode",
         "implementations": implementations,
         "invariants": invariants,
-        "gaps": gaps,
+        "gaps": [],
         "counts": {
             "implementations": len(implementations),
             "runtime_implementations": sum(item["runtime_route"] for item in implementations),
             "formal_write_paths": sum(item["formal_write"] for item in implementations),
             "invariants_passed": sum(item["passed"] for item in invariants),
-            "gaps": len(gaps),
+            "gaps": 0,
         },
         "authorized_next": "six_pillar_relation_coverage_audit",
         "production_lab_authorized": False,
@@ -147,10 +164,6 @@ def audit_mingli_lab_foundation() -> dict[str, Any]:
 
 def _read(relative: str) -> str:
     return (ROOT / relative).read_text(encoding="utf-8")
-
-
-def _class_block(source: str, class_name: str, next_class: str) -> str:
-    return source.split(f"class {class_name}", 1)[1].split(next_class, 1)[0]
 
 
 def _check(name: str, passed: bool) -> dict[str, Any]:

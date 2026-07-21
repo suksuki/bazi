@@ -474,6 +474,11 @@ class TopicExploration(ExperienceModel):
     responses: dict[str, str] = Field(default_factory=dict)
     capsule_message: str = ""
     experiment_kind: str = Field(default="", max_length=120)
+    lab_session_id: str = Field(default="", max_length=180)
+    scene_id: str = Field(default="", max_length=180)
+    scene_source_hash: str = Field(default="", max_length=64)
+    disclosure_hash: str = Field(default="", max_length=64)
+    base_snapshot_ref: str = Field(default="", max_length=220)
     base_snapshot_hash: str = Field(default="", max_length=64)
     selected_node_ids: list[str] = Field(default_factory=list)
     sandbox_result_refs: list[str] = Field(default_factory=list)

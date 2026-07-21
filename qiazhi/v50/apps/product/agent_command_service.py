@@ -7,18 +7,18 @@ from core.contracts import BirthInputCanonical
 from core.life_case import (
     LifeCase,
     build_baseline_insight,
-    build_workspace_state,
     commit_baseline_life_case,
     validate_formal_insight,
 )
 from core.mingli_agent import (
-    CaseCognitiveWorkspace,
+    CaseBeliefState,
     ChartWorldInstance,
     MingliAgent,
     MingliCognitiveRecord,
-    build_case_workspace,
+    build_case_belief_state,
     compile_chart_world,
 )
+from experience.workspace import build_case_workspace_state
 from product.agent_case_store import AgentCaseStore
 
 
@@ -39,7 +39,7 @@ class BaselineCaseCommand:
 class BaselineCaseResult:
     world: ChartWorldInstance
     record: MingliCognitiveRecord
-    workspace: CaseCognitiveWorkspace
+    workspace: CaseBeliefState
     life_case: LifeCase | None
     validation: Any
 
@@ -90,7 +90,7 @@ class BaselineCaseCommandService:
             "claim": insight_draft.claim,
             "persisted": False,
         })
-        workspace = build_case_workspace(record)
+        workspace = build_case_belief_state(record)
         life_case: LifeCase | None = None
         if record.review.commit_eligible:
             life_case, validation = commit_baseline_life_case(
@@ -113,7 +113,7 @@ class BaselineCaseCommandService:
             "world": world.model_dump(mode="json"),
             "record": record.model_dump(mode="json"),
             "case_belief_state": workspace.model_dump(mode="json"),
-            "workspace_state": build_workspace_state(
+            "workspace_state": build_case_workspace_state(
                 case_id=command.case_id,
                 active_mode=command.active_mode,
             ).model_dump(mode="json"),

@@ -92,8 +92,10 @@ class CaseDeliberationRevision(V50Model):
     created_at: str
 
 
-class CaseCognitiveWorkspace(V50Model):
-    version: str = "deepbazi.case_cognitive_workspace.v3"
+class CaseBeliefState(V50Model):
+    """Case-local belief and deliberation state, never product layout state."""
+
+    version: str = "deepbazi.case_belief_state.v1"
     case_id: str
     active_hypothesis_id: str
     hypothesis_beliefs: list[HypothesisBelief]
@@ -124,7 +126,7 @@ class ProbeUpdateReceipt(V50Model):
     message: str
 
 
-def build_case_workspace(record: MingliCognitiveRecord) -> CaseCognitiveWorkspace:
+def build_case_belief_state(record: MingliCognitiveRecord) -> CaseBeliefState:
     assertions = [
         *record.cognition.portrait,
         *(
@@ -143,7 +145,7 @@ def build_case_workspace(record: MingliCognitiveRecord) -> CaseCognitiveWorkspac
             for assertion in exploration.reading.assertions
         ],
     ]
-    return CaseCognitiveWorkspace(
+    return CaseBeliefState(
         case_id=record.case_id,
         active_hypothesis_id=record.cognition.selected_hypothesis_id,
         hypothesis_beliefs=[
@@ -161,7 +163,7 @@ def build_case_workspace(record: MingliCognitiveRecord) -> CaseCognitiveWorkspac
 
 def apply_probe_response(
     *,
-    workspace: CaseCognitiveWorkspace,
+    workspace: CaseBeliefState,
     plan: ProbePlan,
     option_id: str,
     source: Literal["user_reported", "practitioner_reported", "research_observation"] = "user_reported",
@@ -171,7 +173,7 @@ def apply_probe_response(
     evidence_id: str | None = None,
     recorded_at: str | None = None,
     persist_legacy_history: bool = True,
-) -> tuple[CaseCognitiveWorkspace, ProbeUpdateReceipt]:
+) -> tuple[CaseBeliefState, ProbeUpdateReceipt]:
     option = next((item for item in plan.options if item.option_id == option_id), None)
     if option is None:
         raise ValueError("probe_option_not_found")

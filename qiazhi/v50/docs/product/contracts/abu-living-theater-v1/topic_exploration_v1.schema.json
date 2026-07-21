@@ -1,0 +1,151 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.topic_exploration.v1",
+      "default": "deepbazi.topic_exploration.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "exploration_id": {
+      "title": "Exploration Id",
+      "type": "string"
+    },
+    "participant_run_id": {
+      "title": "Participant Run Id",
+      "type": "string"
+    },
+    "topic_id": {
+      "title": "Topic Id",
+      "type": "string"
+    },
+    "responses": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "title": "Responses",
+      "type": "object"
+    },
+    "capsule_message": {
+      "default": "",
+      "title": "Capsule Message",
+      "type": "string"
+    },
+    "experiment_kind": {
+      "default": "",
+      "maxLength": 120,
+      "title": "Experiment Kind",
+      "type": "string"
+    },
+    "lab_session_id": {
+      "default": "",
+      "maxLength": 180,
+      "title": "Lab Session Id",
+      "type": "string"
+    },
+    "scene_id": {
+      "default": "",
+      "maxLength": 180,
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "scene_source_hash": {
+      "default": "",
+      "maxLength": 64,
+      "title": "Scene Source Hash",
+      "type": "string"
+    },
+    "disclosure_hash": {
+      "default": "",
+      "maxLength": 64,
+      "title": "Disclosure Hash",
+      "type": "string"
+    },
+    "base_snapshot_ref": {
+      "default": "",
+      "maxLength": 220,
+      "title": "Base Snapshot Ref",
+      "type": "string"
+    },
+    "base_snapshot_hash": {
+      "default": "",
+      "maxLength": 64,
+      "title": "Base Snapshot Hash",
+      "type": "string"
+    },
+    "selected_node_ids": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Selected Node Ids",
+      "type": "array"
+    },
+    "sandbox_result_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Sandbox Result Refs",
+      "type": "array"
+    },
+    "observations": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Observations",
+      "type": "array"
+    },
+    "open_question": {
+      "default": "",
+      "maxLength": 1200,
+      "title": "Open Question",
+      "type": "string"
+    },
+    "restored_original": {
+      "default": false,
+      "title": "Restored Original",
+      "type": "boolean"
+    },
+    "capability_trace": {
+      "items": {
+        "enum": [
+          "visual_only",
+          "deterministic_structure",
+          "reasoning_required"
+        ],
+        "type": "string"
+      },
+      "title": "Capability Trace",
+      "type": "array"
+    },
+    "life_case_version_observed": {
+      "default": "",
+      "maxLength": 180,
+      "title": "Life Case Version Observed",
+      "type": "string"
+    },
+    "case_local_only": {
+      "default": true,
+      "title": "Case Local Only",
+      "type": "boolean"
+    },
+    "writes_life_case": {
+      "const": false,
+      "default": false,
+      "title": "Writes Life Case",
+      "type": "boolean"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "exploration_id",
+    "participant_run_id",
+    "topic_id",
+    "created_at"
+  ],
+  "title": "TopicExploration",
+  "type": "object"
+}

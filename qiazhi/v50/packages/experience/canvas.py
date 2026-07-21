@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import json
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import Field, model_validator
+from pydantic import Field, computed_field, model_validator
 
 from experience.contracts import ExperienceModel
+from experience.lab import MingliLabSession, update_lab_session
 
 
 CanvasRole = Literal["guest", "member", "practitioner", "research", "admin"]
@@ -233,22 +234,89 @@ class CanvasAction(ExperienceModel):
 
 
 class TemporalSandboxState(ExperienceModel):
-    schema_version: Literal["deepbazi.temporal_sandbox_state.v1"] = (
-        "deepbazi.temporal_sandbox_state.v1"
-    )
-    sandbox_session_id: str = Field(min_length=1, max_length=180)
-    base_snapshot_id: str = Field(min_length=1, max_length=180)
+    schema_version: Literal[
+        "deepbazi.temporal_sandbox_state.v1",
+        "deepbazi.temporal_sandbox_state.v2",
+    ] = "deepbazi.temporal_sandbox_state.v2"
+    lab_session: MingliLabSession
     base_luck_layer_id: str = Field(default="", max_length=180)
     base_year_layer_id: str = Field(default="", max_length=180)
     selected_luck_layer_id: str = Field(default="", max_length=180)
     selected_year_layer_id: str = Field(default="", max_length=180)
-    revision: int = Field(default=0, ge=0)
     mutations: list[CanvasSandboxMutation] = Field(default_factory=list)
     current_canvas_spec_id: str = Field(default="", max_length=180)
     current_diff_spec_id: str = Field(default="", max_length=180)
-    status: Literal["active", "modified", "restored", "discarded", "saved_as_exploration"] = "active"
-    writes_chart: Literal[False] = False
-    writes_life_case: Literal[False] = False
+
+    @model_validator(mode="before")
+    @classmethod
+    def upgrade_legacy_state(cls, value: Any) -> Any:
+        if not isinstance(value, dict):
+            return value
+        payload = dict(value)
+        if "lab_session" in payload:
+            for field in (
+                "sandbox_session_id",
+                "base_snapshot_id",
+                "revision",
+                "status",
+                "writes_chart",
+                "writes_life_case",
+            ):
+                payload.pop(field, None)
+            return payload
+        base_snapshot_id = str(payload.pop("base_snapshot_id"))
+        session_id = str(payload.pop("sandbox_session_id"))
+        status = str(payload.pop("status", "active"))
+        if status == "saved_as_exploration":
+            status = "saved"
+        epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
+        payload["lab_session"] = MingliLabSession(
+            session_id=session_id,
+            case_ref="legacy-unresolved",
+            scene_id="legacy-unresolved",
+            scene_source_hash=_canonical_hash({"base_snapshot_id": base_snapshot_id}),
+            disclosure_hash="0" * 64,
+            experiment_kind="temporal_hypothesis",
+            base_snapshot_ref=base_snapshot_id,
+            source_mode="legacy_unresolved",
+            revision=int(payload.pop("revision", 0)),
+            status=status,
+            created_at=epoch,
+            updated_at=epoch,
+        ).model_dump(mode="json")
+        payload.pop("writes_chart", None)
+        payload.pop("writes_life_case", None)
+        return payload
+
+    @computed_field
+    @property
+    def sandbox_session_id(self) -> str:
+        return self.lab_session.session_id
+
+    @computed_field
+    @property
+    def base_snapshot_id(self) -> str:
+        return self.lab_session.base_snapshot_ref
+
+    @computed_field
+    @property
+    def revision(self) -> int:
+        return self.lab_session.revision
+
+    @computed_field
+    @property
+    def status(self) -> str:
+        return self.lab_session.status
+
+    @computed_field
+    @property
+    def writes_chart(self) -> Literal[False]:
+        return False
+
+    @computed_field
+    @property
+    def writes_life_case(self) -> Literal[False]:
+        return False
 
 
 class CanvasCompileRequest(ExperienceModel):
@@ -427,10 +495,22 @@ def create_temporal_sandbox(
     base_snapshot_id: str,
     luck_layer_id: str = "",
     year_layer_id: str = "",
+    lab_session: MingliLabSession | None = None,
 ) -> TemporalSandboxState:
+    epoch = datetime(1970, 1, 1, tzinfo=timezone.utc)
     return TemporalSandboxState(
-        sandbox_session_id=sandbox_session_id,
-        base_snapshot_id=base_snapshot_id,
+        lab_session=lab_session or MingliLabSession(
+            session_id=sandbox_session_id,
+            case_ref="synthetic-fixture",
+            scene_id=f"scene-fixture-{_canonical_hash({'base': base_snapshot_id})[:20]}",
+            scene_source_hash=_canonical_hash({"base_snapshot_id": base_snapshot_id}),
+            disclosure_hash="0" * 64,
+            experiment_kind="temporal_hypothesis",
+            base_snapshot_ref=base_snapshot_id,
+            source_mode="synthetic_fixture",
+            created_at=epoch,
+            updated_at=epoch,
+        ),
         base_luck_layer_id=luck_layer_id,
         base_year_layer_id=year_layer_id,
         selected_luck_layer_id=luck_layer_id,
@@ -474,9 +554,12 @@ def apply_canvas_action(
         source_refs=[action.source_ref, *(target.source_refs if target else [])],
     )
     updates: dict[str, Any] = {
-        "revision": sandbox.revision + 1,
+        "lab_session": update_lab_session(
+            sandbox.lab_session,
+            status="modified",
+            now=sandbox.lab_session.updated_at,
+        ),
         "mutations": [*sandbox.mutations, mutation],
-        "status": "modified",
         "current_canvas_spec_id": "",
         "current_diff_spec_id": "",
     }
@@ -491,10 +574,13 @@ def restore_temporal_sandbox(sandbox: TemporalSandboxState) -> TemporalSandboxSt
     if sandbox.status not in {"active", "modified"}:
         raise CanvasCompileError("sandbox_restore_requires_active_state")
     return sandbox.model_copy(update={
+        "lab_session": update_lab_session(
+            sandbox.lab_session,
+            status="restored",
+            now=sandbox.lab_session.updated_at,
+        ),
         "selected_luck_layer_id": sandbox.base_luck_layer_id,
         "selected_year_layer_id": sandbox.base_year_layer_id,
-        "revision": sandbox.revision + 1,
-        "status": "restored",
         "current_canvas_spec_id": "",
         "current_diff_spec_id": "",
     })

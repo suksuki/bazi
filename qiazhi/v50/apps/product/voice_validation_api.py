@@ -15,7 +15,7 @@ from experience.voice_validation import (
 )
 from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
-from product.narrated_workspace import NarratedWorkspaceError, NarratedWorkspaceService
+from product.abu_narration import AbuNarrationError, AbuNarrationService
 from product.product_store import ProductStore
 from product.voice_validation_store import VoiceValidationStore
 
@@ -45,7 +45,7 @@ def create_voice_validation_router(
     product_store: ProductStore,
     session_cookie: str,
     case_store: AgentCaseStore,
-    narration_service: NarratedWorkspaceService,
+    narration_service: AbuNarrationService,
     validation_store: VoiceValidationStore,
 ) -> APIRouter:
     router = APIRouter(prefix=VOICE_VALIDATION_PREFIX, tags=["abu-voice-validation"])
@@ -82,7 +82,7 @@ def create_voice_validation_router(
         participant_ref = str(account["user_id"])
         try:
             manifest = narration_manifest(payload.case_id, participant_ref)
-        except (CanonicalSceneUnavailable, NarratedWorkspaceError) as exc:
+        except (CanonicalSceneUnavailable, AbuNarrationError) as exc:
             detail = str(exc)
             status = 404 if detail == "canonical_scene_case_not_found" else 409
             raise HTTPException(status_code=status, detail=detail) from exc
@@ -187,7 +187,7 @@ def create_voice_validation_router(
                 continue
             try:
                 manifest = narration_manifest(session.case_id, session.participant_ref)
-            except (CanonicalSceneUnavailable, NarratedWorkspaceError):
+            except (CanonicalSceneUnavailable, AbuNarrationError):
                 continue
             cases.append(
                 {

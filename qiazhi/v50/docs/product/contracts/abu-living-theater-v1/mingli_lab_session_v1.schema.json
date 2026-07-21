@@ -1,0 +1,131 @@
+{
+  "additionalProperties": false,
+  "description": "Shared non-authoritative identity for every Mingli Lab experiment.",
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.mingli_lab_session.v1",
+      "default": "deepbazi.mingli_lab_session.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "session_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Session Id",
+      "type": "string"
+    },
+    "participant_run_id": {
+      "default": "",
+      "maxLength": 180,
+      "title": "Participant Run Id",
+      "type": "string"
+    },
+    "case_ref": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Case Ref",
+      "type": "string"
+    },
+    "scene_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "scene_source_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Scene Source Hash",
+      "type": "string"
+    },
+    "disclosure_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Disclosure Hash",
+      "type": "string"
+    },
+    "experiment_kind": {
+      "enum": [
+        "mechanism_ablation",
+        "temporal_hypothesis"
+      ],
+      "title": "Experiment Kind",
+      "type": "string"
+    },
+    "base_snapshot_ref": {
+      "maxLength": 220,
+      "minLength": 1,
+      "title": "Base Snapshot Ref",
+      "type": "string"
+    },
+    "source_mode": {
+      "enum": [
+        "canonical_projection",
+        "synthetic_fixture",
+        "legacy_unresolved"
+      ],
+      "title": "Source Mode",
+      "type": "string"
+    },
+    "revision": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "status": {
+      "default": "active",
+      "enum": [
+        "active",
+        "modified",
+        "restored",
+        "saved",
+        "discarded"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "updated_at": {
+      "format": "date-time",
+      "title": "Updated At",
+      "type": "string"
+    },
+    "writes_chart": {
+      "const": false,
+      "default": false,
+      "title": "Writes Chart",
+      "type": "boolean"
+    },
+    "writes_life_case": {
+      "const": false,
+      "default": false,
+      "title": "Writes Life Case",
+      "type": "boolean"
+    },
+    "promotes_candidate": {
+      "const": false,
+      "default": false,
+      "title": "Promotes Candidate",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "session_id",
+    "case_ref",
+    "scene_id",
+    "scene_source_hash",
+    "disclosure_hash",
+    "experiment_kind",
+    "base_snapshot_ref",
+    "source_mode",
+    "created_at",
+    "updated_at"
+  ],
+  "title": "MingliLabSession",
+  "type": "object"
+}

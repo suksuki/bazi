@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse
 from pydantic import BaseModel, Field
 
 from product.agent_case_store import AgentCaseStore
+from product.canonical_scene import CanonicalSceneOwner
 from product.product_store import ProductStore
 from product.theater_envelope import ProductExperienceEnvelopePort
 from product.theater_experiment import MingliExperimentUnavailable, ProductMingliExperimentPort
@@ -95,9 +96,11 @@ def create_theater_router(
     router = APIRouter(prefix=THEATER_API_PREFIX, tags=["abu-living-theater"])
     runtime = runtime or build_theater_runtime(store=theater_store)
     performance_service = performance_service or TheaterPerformanceService.from_environment()
-    envelope_port = ProductExperienceEnvelopePort(case_store=case_store)
+    scene_owner = CanonicalSceneOwner(case_store=case_store)
+    envelope_port = ProductExperienceEnvelopePort(scene_owner=scene_owner)
     experiment_port = ProductMingliExperimentPort(
         case_store=case_store,
+        scene_owner=scene_owner,
         theater_store=theater_store,
         runtime=runtime,
     )

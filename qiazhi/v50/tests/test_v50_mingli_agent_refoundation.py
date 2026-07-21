@@ -10,7 +10,7 @@ from product.agent_job_store import MemoryAgentJobStore
 from product.app import create_product_app
 from product.product_store import MemoryProductStore
 from core.contracts import BirthInputCanonical
-from core.mingli_agent import CaseCognitiveWorkspace, ChartWorldInstance, MingliAgent, MingliCognitiveRecord, MingliContextCompiler, ProbePlanner, apply_deliberation_selection, apply_probe_response, build_case_workspace, build_deliberation_view, compile_chart_world, undo_deliberation_selection
+from core.mingli_agent import CaseBeliefState, ChartWorldInstance, MingliAgent, MingliCognitiveRecord, MingliContextCompiler, ProbePlanner, apply_deliberation_selection, apply_probe_response, build_case_belief_state, build_deliberation_view, compile_chart_world, undo_deliberation_selection
 from core.life_domains import LifeDomain
 from core.life_case import build_baseline_insight, commit_baseline_life_case, commit_case_revision, commit_temporal_prior, validate_formal_insight
 from core.mingli_agent.probe import _project_option_label
@@ -499,7 +499,7 @@ def test_agent_vertical_slice_uses_llm_cognition_and_persists_case():
     assert response.json()["receipt"]["global_policy_modified"] is False
     stored = store.get(case_id=case_id)
     assert stored["world"] == before_world
-    assert CaseCognitiveWorkspace.model_validate(stored["workspace"]).revision_count == 1
+    assert CaseBeliefState.model_validate(stored["workspace"]).revision_count == 1
     assert sorted(stored["life_case"]["domain_insights"]) == ["career", "wealth"]
     assert stored["life_case"]["domain_insights"]["career"][0]["status"] == "committed"
     assert stored["life_case"]["reality_evidence"][0]["case_local_only"] is True
@@ -1136,7 +1136,7 @@ def test_probe_response_creates_case_local_hidden_attribute_revision_and_consume
     assert body["receipt"]["updated_hidden_attribute_ids"] == ["pressure_response_pattern"]
     stored = store.get(case_id=case_id)
     assert stored["world"] == before_world
-    workspace = CaseCognitiveWorkspace.model_validate(stored["workspace"])
+    workspace = CaseBeliefState.model_validate(stored["workspace"])
     assert workspace.hidden_attribute_beliefs[0].lifecycle == "candidate"
     assert workspace.probe_history[0].recurrence_count == 2
     assert stored["record"]["revisions"][-1]["kind"] == "probe_revision"
@@ -1153,7 +1153,7 @@ def test_timeline_probe_records_year_and_repeated_independent_evidence_can_stabi
     ))
     case_id = client.post("/api/v50/agent/cases", json={"birth_input": _birth_payload()}).json()["case_id"]
     record = MingliCognitiveRecord.model_validate(store.get(case_id=case_id)["record"])
-    workspace = build_case_workspace(record)
+    workspace = build_case_belief_state(record)
     planner = ProbePlanner()
     years = [2021, 2024, 2025]
     for index, year in enumerate(years, start=1):

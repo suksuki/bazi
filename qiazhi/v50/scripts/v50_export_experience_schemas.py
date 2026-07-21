@@ -7,15 +7,25 @@ from typing import Any, get_args
 
 from pydantic import BaseModel
 
-from experience.canvas import CanvasContextPack, CanvasDiffSpec, CanvasRole, CanvasStage, MingliCanvasSpec
+from experience.canvas import (
+    CanvasContextPack,
+    CanvasDiffSpec,
+    CanvasRole,
+    CanvasStage,
+    MingliCanvasSpec,
+    TemporalSandboxState,
+)
 from experience.contracts import (
     CompiledTopic,
     CueTemplate,
     MingliExperienceEnvelope,
     PerformanceCueInstance,
     TheaterEvent,
+    TopicExploration,
     TopicPackage,
 )
+from experience.experiments import MechanismSandboxState
+from experience.lab import MingliLabSession
 from experience.narration import NarrationManifest, NarrationSegment, SpeechAsset
 from experience.product_projection import (
     CanvasChangeGroup,
@@ -30,6 +40,7 @@ from experience.product_projection import (
     ReadOnlySixPillarCanvas,
     SpeechAssetResponse,
 )
+from experience.workspace import CaseWorkspaceEnvelope, CaseWorkspaceState
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +59,12 @@ CONTRACTS = {
     "narration_manifest_v1.schema.json": NarrationManifest,
     "speech_asset_v1.schema.json": SpeechAsset,
     "read_only_six_pillar_canvas_v1.schema.json": ReadOnlySixPillarCanvas,
+    "case_workspace_state_v2.schema.json": CaseWorkspaceState,
+    "case_workspace_envelope_v1.schema.json": CaseWorkspaceEnvelope,
+    "mingli_lab_session_v1.schema.json": MingliLabSession,
+    "temporal_sandbox_state_v2.schema.json": TemporalSandboxState,
+    "mechanism_sandbox_state_v2.schema.json": MechanismSandboxState,
+    "topic_exploration_v1.schema.json": TopicExploration,
 }
 TYPESCRIPT_ROOTS: tuple[type[BaseModel], ...] = (
     MingliExperienceEnvelope,
@@ -67,6 +84,12 @@ TYPESCRIPT_ROOTS: tuple[type[BaseModel], ...] = (
     CanvasStageProjection,
     ReadOnlySixPillarCanvas,
     CanvasContextResponse,
+    CaseWorkspaceState,
+    CaseWorkspaceEnvelope,
+    MingliLabSession,
+    TemporalSandboxState,
+    MechanismSandboxState,
+    TopicExploration,
 )
 TYPESCRIPT_ALIASES = {
     "CanvasRole": get_args(CanvasRole),

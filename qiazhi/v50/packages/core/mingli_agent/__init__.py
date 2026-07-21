@@ -21,7 +21,7 @@ from .orchestrator import CognitiveOrchestrator, CognitiveRunReceipt, CognitiveS
 from .probe import ProbeInformationValue, ProbePlan, ProbePlanner
 from .quality import CognitiveQualitySignals, ContrastiveDistinctionSignals, compare_cognitive_distinction, evaluate_cognitive_quality
 from .reasoner import MingliAgent, OllamaCognitiveModel
-from .workspace import CaseCognitiveWorkspace, CaseDeliberationRevision, CaseDeliberationSelection, HiddenAttributeBelief, ProbeUpdateReceipt, apply_probe_response, build_case_workspace
+from .workspace import CaseBeliefState, CaseDeliberationRevision, CaseDeliberationSelection, HiddenAttributeBelief, ProbeUpdateReceipt, apply_probe_response, build_case_belief_state
 from .world import compile_chart_world
 
 __all__ = [
@@ -33,7 +33,7 @@ __all__ = [
     "EpistemicReviewReceipt",
     "HypothesisComparisonReceipt",
     "PatternPreviewDraft",
-    "CaseCognitiveWorkspace",
+    "CaseBeliefState",
     "CaseDeliberationRevision",
     "CaseDeliberationSelection",
     "HiddenAttributeBelief",
@@ -59,7 +59,7 @@ __all__ = [
     "apply_probe_response",
     "apply_deliberation_selection",
     "build_deliberation_view",
-    "build_case_workspace",
+    "build_case_belief_state",
     "compile_chart_world",
     "compare_cognitive_distinction",
     "evaluate_cognitive_quality",

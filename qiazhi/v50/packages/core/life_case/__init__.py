@@ -13,7 +13,6 @@ from .contracts import (
     RealityEvidence,
     ReasoningPathStep,
     TemporalSnapshot,
-    WorkspaceState,
 )
 from .relation_path import (
     active_path_assertions,
@@ -31,7 +30,6 @@ from .service import (
     build_case_revision_insight,
     build_domain_insight,
     build_reality_evidence,
-    build_workspace_state,
     commit_baseline_life_case,
     commit_case_revision,
     commit_domain_insight,
@@ -42,7 +40,6 @@ from .service import (
     normalize_period_key,
     project_life_case,
     record_reality_evidence,
-    select_workspace_period,
     upsert_reality_evidence,
     validate_formal_insight,
 )
@@ -62,7 +59,6 @@ __all__ = [
     "RealityEvidence",
     "ReasoningPathStep",
     "TemporalSnapshot",
-    "WorkspaceState",
     "active_path_assertions",
     "active_relation_assertions",
     "append_path_assertion",
@@ -72,7 +68,6 @@ __all__ = [
     "build_committed_relation_path_assertions",
     "build_domain_insight",
     "build_reality_evidence",
-    "build_workspace_state",
     "commit_baseline_life_case",
     "commit_case_revision",
     "commit_domain_insight",
@@ -87,7 +82,6 @@ __all__ = [
     "record_reality_evidence",
     "relation_path_assertions_for_case",
     "relation_key_for_graph_edge",
-    "select_workspace_period",
     "upsert_reality_evidence",
     "validate_formal_insight",
 ]

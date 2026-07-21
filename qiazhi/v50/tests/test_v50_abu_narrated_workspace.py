@@ -10,7 +10,7 @@ from fastapi.testclient import TestClient
 from product.agent_case_store import MemoryAgentCaseStore
 from product.app import create_product_app
 from product.canonical_scene import CanonicalSceneOwner
-from product.narrated_workspace import NarratedWorkspaceService, SpeechAssetRepository
+from product.abu_narration import AbuNarrationService, SpeechAssetRepository
 from product.product_store import MemoryProductStore
 from product.theater_performance import SynthesizedSpeech
 from core.mingli_agent import MingliAgent
@@ -44,7 +44,7 @@ def _narrated_case(tmp_path: Path):
     product_store = MemoryProductStore()
     case_store = MemoryAgentCaseStore()
     tts = _FakeNarrationTTS()
-    service = NarratedWorkspaceService(
+    service = AbuNarrationService(
         repository=SpeechAssetRepository(tmp_path / "speech"),
         tts=tts,
     )
@@ -52,7 +52,7 @@ def _narrated_case(tmp_path: Path):
         product_store=product_store,
         mingli_agent=MingliAgent(FakeCognitiveModel()),
         agent_case_store=case_store,
-        narrated_workspace_service=service,
+        abu_narration_service=service,
     )
     client = TestClient(app)
     registered = client.post(
@@ -75,7 +75,7 @@ def _narrated_case(tmp_path: Path):
 
 def _manifest(
     *,
-    service: NarratedWorkspaceService,
+    service: AbuNarrationService,
     case_store: MemoryAgentCaseStore,
     case_id: str,
 ):
@@ -178,7 +178,7 @@ def test_voice_version_changes_the_manifest_and_speech_asset_key(tmp_path: Path)
         segment_id=first_manifest.segments[0].segment_id,
     )
     replacement_tts = _FakeNarrationTTS(version="fake-qwen-eric.v2")
-    replacement = NarratedWorkspaceService(
+    replacement = AbuNarrationService(
         repository=service.repository,
         tts=replacement_tts,
     )
@@ -224,7 +224,7 @@ class _FakeOpusTranscoder:
 
 def test_new_speech_asset_exposes_private_opus_playback_variant(tmp_path: Path) -> None:
     _, _, case_store, service, tts, case_id = _narrated_case(tmp_path)
-    opus_service = NarratedWorkspaceService(
+    opus_service = AbuNarrationService(
         repository=service.repository,
         tts=tts,
         opus_transcoder=_FakeOpusTranscoder(),

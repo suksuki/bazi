@@ -8,8 +8,18 @@ from experience.contracts import MingliExperienceEnvelope
 class ProductExperienceEnvelopePort:
     """Compatibility adapter from Canonical Scene to the Theater envelope."""
 
-    def __init__(self, *, case_store: AgentCaseStore) -> None:
-        self._scene_owner = CanonicalSceneOwner(case_store=case_store)
+    def __init__(
+        self,
+        *,
+        case_store: AgentCaseStore | None = None,
+        scene_owner: CanonicalSceneOwner | None = None,
+    ) -> None:
+        if scene_owner is not None:
+            self._scene_owner = scene_owner
+        elif case_store is not None:
+            self._scene_owner = CanonicalSceneOwner(case_store=case_store)
+        else:
+            raise ValueError("canonical_scene_owner_or_case_store_required")
 
     def issue_envelope(
         self,

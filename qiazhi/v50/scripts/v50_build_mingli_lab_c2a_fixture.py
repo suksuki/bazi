@@ -1,4 +1,4 @@
-from product.mingli_lab_fixture_builder import main
+from tools.fixtures.mingli_lab_c2a import main
 
 
 if __name__ == "__main__":

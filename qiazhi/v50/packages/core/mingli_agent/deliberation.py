@@ -10,7 +10,7 @@ from core.contracts.base import V50Model
 from core.life_domains import LifeDomain
 from core.mingli_agent.contracts import CaseAssertion, MingliCognitiveRecord
 from core.mingli_agent.workspace import (
-    CaseCognitiveWorkspace,
+    CaseBeliefState,
     CaseDeliberationRevision,
     CaseDeliberationSelection,
 )
@@ -78,7 +78,7 @@ class DeliberationReceipt(V50Model):
 def build_deliberation_view(
     *,
     record: MingliCognitiveRecord,
-    workspace: CaseCognitiveWorkspace,
+    workspace: CaseBeliefState,
     role_mode: Literal["practitioner", "research"],
     active_domain: LifeDomain = LifeDomain.WHOLE_CHART,
 ) -> DeliberationView:
@@ -107,7 +107,7 @@ def build_deliberation_view(
 def apply_deliberation_selection(
     *,
     record: MingliCognitiveRecord,
-    workspace: CaseCognitiveWorkspace,
+    workspace: CaseBeliefState,
     role_mode: Literal["practitioner", "research"],
     actor_id: str,
     stage_id: StageId,
@@ -115,7 +115,7 @@ def apply_deliberation_selection(
     action: SelectionAction,
     active_domain: LifeDomain = LifeDomain.WHOLE_CHART,
     rationale: str = "",
-) -> tuple[CaseCognitiveWorkspace, DeliberationReceipt]:
+) -> tuple[CaseBeliefState, DeliberationReceipt]:
     view = build_deliberation_view(record=record, workspace=workspace, role_mode=role_mode, active_domain=active_domain)
     stage = next((item for item in view.stages if item.stage_id == stage_id), None)
     if stage is None or stage.status == "unavailable":
@@ -179,11 +179,11 @@ def apply_deliberation_selection(
 def undo_deliberation_selection(
     *,
     record: MingliCognitiveRecord,
-    workspace: CaseCognitiveWorkspace,
+    workspace: CaseBeliefState,
     role_mode: Literal["practitioner", "research"],
     actor_id: str,
     active_domain: LifeDomain = LifeDomain.WHOLE_CHART,
-) -> tuple[CaseCognitiveWorkspace, DeliberationReceipt]:
+) -> tuple[CaseBeliefState, DeliberationReceipt]:
     target = next((item for item in reversed(workspace.deliberation_selections) if item.active), None)
     if target is None:
         raise ValueError("deliberation_nothing_to_undo")
@@ -219,7 +219,7 @@ def undo_deliberation_selection(
     return updated, DeliberationReceipt(applied=True, revision=revision, next_stage_id=next_stage)
 
 
-def _pattern_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveWorkspace, role_mode: str) -> DeliberationStage:
+def _pattern_stage(*, record: MingliCognitiveRecord, workspace: CaseBeliefState, role_mode: str) -> DeliberationStage:
     hypotheses = record.cognition.hypotheses
     raw_scores = [_hypothesis_raw_score(item.confidence, len(item.supporting_evidence_refs), len(item.counter_evidence_refs), _belief_direction(workspace, item.hypothesis_id)) for item in hypotheses]
     normalized = _normalize(raw_scores)
@@ -254,7 +254,7 @@ def _pattern_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveWor
     )
 
 
-def _useful_god_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveWorkspace, role_mode: str) -> DeliberationStage:
+def _useful_god_stage(*, record: MingliCognitiveRecord, workspace: CaseBeliefState, role_mode: str) -> DeliberationStage:
     options = []
     active = _active_selection(workspace, "useful_god")
     forks = _fork_ids(workspace, "useful_god")
@@ -288,7 +288,7 @@ def _useful_god_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitive
     )
 
 
-def _work_path_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveWorkspace, role_mode: str) -> DeliberationStage:
+def _work_path_stage(*, record: MingliCognitiveRecord, workspace: CaseBeliefState, role_mode: str) -> DeliberationStage:
     path = record.cognition.work_path
     support = {"closed": 82, "conditional": 64, "broken": 34, "uncertain": 44}[path.closure]
     support = max(15, min(90, support + min(8, len(path.evidence_refs) * 2) - min(12, len(path.failure_conditions) * 2)))
@@ -320,7 +320,7 @@ def _work_path_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveW
     )
 
 
-def _ziwei_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveWorkspace, role_mode: str) -> DeliberationStage:
+def _ziwei_stage(*, record: MingliCognitiveRecord, workspace: CaseBeliefState, role_mode: str) -> DeliberationStage:
     dual = record.cognition.dual_lens
     if dual is None or not dual.palace_observations:
         return DeliberationStage(
@@ -366,7 +366,7 @@ def _ziwei_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveWorks
     )
 
 
-def _domain_stage(*, record: MingliCognitiveRecord, workspace: CaseCognitiveWorkspace, role_mode: str, domain: LifeDomain) -> DeliberationStage:
+def _domain_stage(*, record: MingliCognitiveRecord, workspace: CaseBeliefState, role_mode: str, domain: LifeDomain) -> DeliberationStage:
     reading = None
     if domain in record.domain_explorations:
         reading = record.domain_explorations[domain].reading
@@ -429,7 +429,7 @@ def _stage(
     question: str,
     selection_type: Literal["exclusive", "attention", "assessment"],
     options: list[DeliberationOption],
-    workspace: CaseCognitiveWorkspace,
+    workspace: CaseBeliefState,
     role_mode: str,
     prerequisites: list[str] | None = None,
     stage_key: str | None = None,
@@ -456,15 +456,15 @@ def _stage(
     )
 
 
-def _active_selection(workspace: CaseCognitiveWorkspace, stage_key: str) -> CaseDeliberationSelection | None:
+def _active_selection(workspace: CaseBeliefState, stage_key: str) -> CaseDeliberationSelection | None:
     return next((item for item in reversed(workspace.deliberation_selections) if item.active and item.stage_key == stage_key and item.action != "research_fork"), None)
 
 
-def _fork_ids(workspace: CaseCognitiveWorkspace, stage_key: str) -> set[str]:
+def _fork_ids(workspace: CaseBeliefState, stage_key: str) -> set[str]:
     return {item.option_id for item in workspace.deliberation_selections if item.active and item.stage_key == stage_key and item.action == "research_fork"}
 
 
-def _belief_direction(workspace: CaseCognitiveWorkspace, hypothesis_id: str) -> str:
+def _belief_direction(workspace: CaseBeliefState, hypothesis_id: str) -> str:
     belief = next((item for item in workspace.hypothesis_beliefs if item.hypothesis_id == hypothesis_id), None)
     return belief.current_direction if belief else "unchanged"
 

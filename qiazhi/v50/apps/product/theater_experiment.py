@@ -2,9 +2,13 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 from typing import Any, Iterable
-from uuid import uuid4
 
 from product.agent_case_store import AgentCaseStore
+from product.canonical_scene import (
+    CanonicalSceneOwner,
+    CanonicalSceneUnavailable,
+    canonical_scene_source_from_case_row,
+)
 from core.contracts import BirthInputCanonical
 from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
@@ -12,20 +16,19 @@ from core.graph import build_mingli_graph_from_material_store, explore_mingli_pa
 from core.graph.contracts import MingliGraph, MingliGraphNode, MingliPath
 from core.life_case import (
     LifeCase,
-    active_path_assertions,
     node_ref_for_graph_node,
     path_key_for_graph_path,
     relation_key_for_graph_edge,
-    relation_path_assertions_for_case,
 )
-from core.mingli_agent.contracts import ChartWorldInstance, MingliCognitiveRecord
-from experience.contracts import ParticipantRun, TheaterEvent, TopicExploration
+from core.mingli_agent.contracts import ChartWorldInstance
+from experience.canonical_scene import CanonicalScene, compile_canonical_scene
+from experience.contracts import ParticipantRun, TheaterEvent
 from experience.experiments import (
     MechanismEdge,
     MechanismNode,
     MechanismPath,
     MingliMechanismSnapshot,
-    MingliSandboxState,
+    MechanismSandboxState,
     PillarVisual,
     SandboxResult,
     apply_single_node_ablation,
@@ -34,6 +37,7 @@ from experience.experiments import (
     issue_mechanism_snapshot,
     restore_sandbox,
 )
+from experience.lab import exploration_from_lab_session, update_lab_session
 from experience.runtime import TheaterRuntime
 from experience.store import TheaterStore
 
@@ -62,10 +66,12 @@ class ProductMingliExperimentPort:
         self,
         *,
         case_store: AgentCaseStore,
+        scene_owner: CanonicalSceneOwner,
         theater_store: TheaterStore,
         runtime: TheaterRuntime,
     ) -> None:
         self.case_store = case_store
+        self.scene_owner = scene_owner
         self.theater_store = theater_store
         self.runtime = runtime
 
@@ -112,9 +118,9 @@ class ProductMingliExperimentPort:
                 raise MingliExperimentUnavailable("prediction_locked_after_ablation")
             now = datetime.now(timezone.utc)
             state = current.model_copy(update={
+                "lab_session": update_lab_session(current.lab_session, status="active", now=now),
                 "predicted_key_node_id": node_id,
                 "selected_nodes": list(dict.fromkeys([*current.selected_nodes, node_id])),
-                "updated_at": now,
             })
         else:
             state = validated
@@ -206,27 +212,26 @@ class ProductMingliExperimentPort:
             f"暂时拿开{node.label}后，{len(result.deterministic_changes.invalidated_edges)}条关系消失，"
             f"{len(result.deterministic_changes.affected_paths)}条路径受到影响。"
         )
-        exploration = TopicExploration(
-            exploration_id=f"exploration-{uuid4().hex[:20]}",
-            participant_run_id=participant_run_id,
+        exploration = exploration_from_lab_session(
+            session=state.lab_session,
             topic_id=self._session_topic_id(session_id),
-            responses={
-                "predicted_key_node_id": state.predicted_key_node_id or "",
-                "ablated_node_id": removed,
-            },
-            experiment_kind="single_node_structural_ablation",
-            base_snapshot_hash=snapshot.snapshot_hash,
             selected_node_ids=state.selected_nodes,
-            sandbox_result_refs=[result.result_id],
+            result_refs=[result.result_id],
             observations=[observation.strip() or default_observation],
             open_question=open_question.strip(),
             restored_original=True,
-            capability_trace=["visual_only", "deterministic_structure", "reasoning_required"],
-            life_case_version_observed=snapshot.life_case_version,
-            created_at=datetime.now(timezone.utc),
         )
+        exploration = exploration.model_copy(update={
+            "responses": {
+                "predicted_key_node_id": state.predicted_key_node_id or "",
+                "ablated_node_id": removed,
+            },
+            "life_case_version_observed": snapshot.life_case_version,
+        })
         self.theater_store.save_exploration(exploration)
-        saved_state = state.model_copy(update={"status": "saved", "updated_at": datetime.now(timezone.utc)})
+        saved_state = state.model_copy(update={
+            "lab_session": update_lab_session(state.lab_session, status="saved"),
+        })
         self._record(
             run=run,
             event_type="mingli_experiment_exploration_saved",
@@ -263,19 +268,29 @@ class ProductMingliExperimentPort:
         row = self.case_store.get(case_id=case_id, user_id=run.participant_ref)
         if row is None:
             raise MingliExperimentUnavailable("experience_case_not_found")
-        return run, _snapshot_from_case_row(case_id=case_id, row=row)
+        try:
+            scene = self.scene_owner.issue_scene(
+                case_id=case_id,
+                participant_id=run.participant_ref,
+                account_role="member",
+            )
+        except CanonicalSceneUnavailable as exc:
+            raise MingliExperimentUnavailable("experiment_canonical_scene_required") from exc
+        if envelope.source.source_hash != scene.identity.source_hash:
+            raise MingliExperimentUnavailable("experiment_scene_source_changed")
+        return run, _snapshot_from_case_row(case_id=case_id, row=row, scene=scene)
 
     def _latest_state_and_result(
         self,
         run: ParticipantRun,
-    ) -> tuple[MingliSandboxState | None, SandboxResult | None]:
-        state: MingliSandboxState | None = None
+    ) -> tuple[MechanismSandboxState | None, SandboxResult | None]:
+        state: MechanismSandboxState | None = None
         result: SandboxResult | None = None
         for event in self._private_experiment_events(run):
             state_payload = event.payload.get("sandbox_state")
             result_payload = event.payload.get("sandbox_result")
             if isinstance(state_payload, dict):
-                state = MingliSandboxState.model_validate(state_payload)
+                state = MechanismSandboxState.model_validate(state_payload)
             if isinstance(result_payload, dict):
                 result = SandboxResult.model_validate(result_payload)
         return state, result
@@ -314,7 +329,7 @@ class ProductMingliExperimentPort:
     def _payload(
         *,
         snapshot: MingliMechanismSnapshot,
-        sandbox: MingliSandboxState,
+        sandbox: MechanismSandboxState,
         result: SandboxResult | None,
     ) -> dict[str, Any]:
         return {
@@ -330,36 +345,40 @@ class ProductMingliExperimentPort:
         }
 
 
-def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMechanismSnapshot:
+def _snapshot_from_case_row(
+    *,
+    case_id: str,
+    row: dict[str, Any],
+    scene: CanonicalScene | None = None,
+) -> MingliMechanismSnapshot:
     birth_payload = row.get("birth_input")
     world_payload = row.get("world")
     life_case_payload = row.get("life_case")
-    record_payload = row.get("record")
     if not isinstance(birth_payload, dict):
         raise MingliExperimentUnavailable("experiment_birth_input_missing")
-    if (
-        not isinstance(world_payload, dict)
-        or not isinstance(life_case_payload, dict)
-        or not isinstance(record_payload, dict)
-    ):
-        raise MingliExperimentUnavailable("approved_cognitive_record_required")
+    if not isinstance(world_payload, dict) or not isinstance(life_case_payload, dict):
+        raise MingliExperimentUnavailable("approved_life_case_required")
     birth_input = BirthInputCanonical.model_validate(birth_payload)
     world = ChartWorldInstance.model_validate(world_payload)
     life_case = LifeCase.model_validate(life_case_payload)
-    record = MingliCognitiveRecord.model_validate(record_payload)
     baseline = life_case.baseline_insight
     if (
         life_case.status != "active"
         or not life_case.chart_version.active
         or baseline.status != "committed"
         or baseline.epistemic_state not in {"reliable", "competing"}
-        or record.reliability_disposition not in {"reliable", "competing"}
-        or record.review.disposition not in {"reliable", "competing"}
     ):
         raise MingliExperimentUnavailable("approved_active_cognition_required")
-    source_record_id = baseline.provenance.source_record_id or baseline.baseline_record_id
-    if source_record_id and source_record_id != record.record_id:
-        raise MingliExperimentUnavailable("baseline_record_mismatch")
+    scene = scene or compile_canonical_scene(
+        source=canonical_scene_source_from_case_row(case_id=case_id, row=row),
+        role="member",
+    )
+    if (
+        scene.identity.case_ref != case_id
+        or scene.identity.chart_version_id != life_case.chart_version.version_id
+        or scene.identity.life_case_version != life_case.case_version
+    ):
+        raise MingliExperimentUnavailable("experiment_scene_identity_mismatch")
 
     graph, explored_paths = _rebuild_graph(case_id=case_id, birth_input=birth_input)
     nodes_by_id = {node.node_id: node for node in graph.nodes}
@@ -395,31 +414,19 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
         ).path_key
         for path in explored_paths.paths
     }
-    _, stored_path_assertions = relation_path_assertions_for_case(
-        life_case=life_case,
-        world=world,
-    )
-    approved = _match_asserted_paths(
-        assertions=active_path_assertions(stored_path_assertions),
+    approved = _match_scene_paths(
+        assertions=scene.path_assertions,
         paths=explored_paths.paths,
         path_refs=path_refs,
     )
-    competing_refs = record.cognition.work_path.competing_path_refs
     if not approved:
         raise MingliExperimentUnavailable("committed_path_not_exactly_available")
-    competing = _match_referenced_paths(
-        refs=competing_refs,
-        paths=explored_paths.paths,
-        path_refs=path_refs,
-    )[:1]
-    selected_paths = [approved[0], *[
-        item for item in competing if item[2] != approved[0][2]
-    ]]
+    selected_paths = [approved[0]]
     selected_node_ids = {
-        node_id for _, path, _ in selected_paths for node_id in path.node_ids
+        node_id for _, path, _, _ in selected_paths for node_id in path.node_ids
     }
     selected_edge_ids = {
-        edge_id for _, path, _ in selected_paths for edge_id in path.edge_ids
+        edge_id for _, path, _, _ in selected_paths for edge_id in path.edge_ids
     }
     for node in graph.nodes:
         if node.node_type.value in {"stem", "branch"}:
@@ -434,30 +441,26 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
             nodes_by_id=nodes_by_id,
             node_refs=node_refs,
             relation_refs=relation_refs,
-            path_kind="approved" if index == 0 else "competing",
-            display_label=(
-                record.cognition.work_path.path_statement
-                if index == 0
-                else f"竞争路径：{' → '.join(nodes_by_id[node_id].label for node_id in path.node_ids)}"
-            ),
-            claim_refs=[baseline.insight_id] if index == 0 else [],
+            path_kind="approved",
+            display_label=statement or baseline.claim,
+            claim_refs=[item.claim_ref for item in scene.approved_claims[:1]],
         )
-        for index, (source_ref, path, path_ref) in enumerate(selected_paths)
+        for source_ref, path, path_ref, statement in selected_paths
     ]
-    approved_key_nodes = list(dict.fromkeys(
-        node_ref
-        for reasoning in record.cognition.useful_god_reasoning
-        for node_ref in reasoning.node_refs
-        if node_ref in selected_node_ids
-    ))
-    approved_key_nodes = [node_refs[item] for item in approved_key_nodes]
-    issued_at = _parse_datetime(record.created_at) or _parse_datetime(life_case.updated_at) or datetime.now(timezone.utc)
+    source_record_id = (
+        baseline.provenance.source_record_id
+        or baseline.baseline_record_id
+        or baseline.insight_id
+    )
     return issue_mechanism_snapshot(
-        snapshot_id=f"mechanism-snapshot:{case_id}:{life_case.case_version}:{record.record_id}",
+        snapshot_id=f"mechanism-snapshot:{scene.identity.scene_id}",
         case_id=case_id,
         chart_version=life_case.chart_version.version_id,
         life_case_version=life_case.case_version,
-        cognitive_record_id=record.record_id,
+        cognitive_record_id=source_record_id,
+        scene_id=scene.identity.scene_id,
+        scene_source_hash=scene.identity.source_hash,
+        disclosure_hash=scene.role_disclosure.disclosure_hash,
         pillars=_pillar_visuals(birth_input=birth_input, graph=graph, node_refs=node_refs),
         nodes=[_mechanism_node(node, node_ref=node_refs[node.node_id]) for node in graph_nodes],
         edges=[
@@ -474,16 +477,15 @@ def _snapshot_from_case_row(*, case_id: str, row: dict[str, Any]) -> MingliMecha
             for edge in graph_edges
         ],
         approved_paths=[path_models[0]],
-        competing_paths=path_models[1:],
-        approved_key_nodes=approved_key_nodes,
+        competing_paths=[],
+        approved_key_nodes=[],
         unresolved_conditions=list(dict.fromkeys([
-            *baseline.conditions,
-            *baseline.uncertainty.reasons,
-            *record.cognition.unresolved_questions,
+            *(condition for claim in scene.approved_claims for condition in claim.conditions),
+            *scene.uncertainty.reasons,
         ]))[:8],
-        claim_refs=[baseline.insight_id],
+        claim_refs=[item.claim_ref for item in scene.approved_claims],
         visual_anchors={node_refs[node.node_id]: _visual_anchor(node) for node in graph_nodes},
-        issued_at=issued_at,
+        issued_at=scene.identity.source_updated_at,
     )
 
 
@@ -498,49 +500,24 @@ def _rebuild_graph(*, case_id: str, birth_input: BirthInputCanonical):
     return graph, explore_mingli_paths(graph)
 
 
-def _match_asserted_paths(
+def _match_scene_paths(
     *,
     assertions: Iterable[Any],
     paths: list[MingliPath],
     path_refs: dict[str, str],
-) -> list[tuple[str, MingliPath, str]]:
+) -> list[tuple[str, MingliPath, str, str]]:
     paths_by_ref = {
         path_refs[path.path_id]: path
         for path in paths
     }
-    output: list[tuple[str, MingliPath, str]] = []
+    output: list[tuple[str, MingliPath, str, str]] = []
     for assertion in assertions:
-        path_key = assertion.path_key
-        if path_key is None:
+        if assertion.status != "committed":
             continue
-        path = paths_by_ref.get(path_key.path_key)
+        path = paths_by_ref.get(assertion.path_ref)
         if path is not None:
-            output.append((assertion.assertion_id, path, path_key.path_key))
+            output.append((assertion.assertion_ref, path, assertion.path_ref, assertion.statement))
     return output
-
-
-def _match_referenced_paths(
-    *,
-    refs: Iterable[str],
-    paths: list[MingliPath],
-    path_refs: dict[str, str],
-) -> list[tuple[str, MingliPath, str]]:
-    paths_by_id = {
-        ref: path
-        for path in paths
-        for ref in (path.path_id, path.path_key)
-    }
-    matched: list[tuple[str, MingliPath, str]] = []
-    used: set[str] = set()
-    for raw_ref in refs:
-        ref = str(raw_ref).strip()
-        if not ref:
-            continue
-        path = paths_by_id.get(ref)
-        if path is not None and path.path_id not in used:
-            matched.append((ref, path, path_refs[path.path_id]))
-            used.add(path.path_id)
-    return matched
 
 
 def _pillar_visuals(
@@ -632,11 +609,3 @@ def _mechanism_path(
 
 def _visual_anchor(node: MingliGraphNode) -> str:
     return f"node-{node.position}-{node.node_type.value}-{node.label}"
-
-
-def _parse_datetime(value: str) -> datetime | None:
-    try:
-        parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
-    except ValueError:
-        return None

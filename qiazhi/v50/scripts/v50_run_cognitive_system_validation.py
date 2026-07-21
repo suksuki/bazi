@@ -6,7 +6,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from core.contracts import BirthInputCanonical
-from core.mingli_agent import MingliContextCompiler, ProbePlanner, apply_probe_response, build_case_workspace, compile_chart_world
+from core.mingli_agent import MingliContextCompiler, ProbePlanner, apply_probe_response, build_case_belief_state, compile_chart_world
 from core.mingli_agent.contracts import (
     CaseAssertion,
     CognitiveHypothesis,
@@ -47,7 +47,7 @@ def main() -> None:
     record = _record()
     planner = ProbePlanner()
     plans = {mode: planner.plan(record=record, role_mode=mode) for mode in ("guest", "member", "practitioner", "research")}
-    workspace = build_case_workspace(record)
+    workspace = build_case_belief_state(record)
     updated, update_receipt = apply_probe_response(
         workspace=workspace,
         plan=plans["member"],

@@ -191,21 +191,6 @@ class TemporalSnapshot(V50Model):
     status: Literal["active", "superseded"] = "active"
 
 
-class WorkspaceState(V50Model):
-    version: str = "deepbazi.workspace_state.v1"
-    workspace_id: str
-    case_id: str
-    selected_period: str
-    system_period: str
-    active_domain: str = "whole_chart"
-    active_mode: Literal["guest", "member", "practitioner", "research"] = "member"
-    language: str = "zh"
-    expanded_sections: list[str] = Field(default_factory=list)
-    conversation_focus: str = "overview"
-    draft_input: str = ""
-    updated_at: str
-
-
 MonthlyReviewVerdict = Literal[
     "supported",
     "partially_supported",

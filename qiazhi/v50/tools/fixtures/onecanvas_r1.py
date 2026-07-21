@@ -18,7 +18,7 @@ from core.engines.bazi.pillar_cycle import (
     month_pillar_options as _month_pillar_options,
 )
 from product.agent_case_store import PostgresAgentCaseStore
-from product.mingli_lab_fixture_builder import (
+from tools.fixtures.mingli_lab_c2a import (
     DEFAULT_DATABASE_URL,
     build_fixture as build_c2a_fixture,
 )

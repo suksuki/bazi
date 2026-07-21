@@ -1,0 +1,149 @@
+{
+  "additionalProperties": false,
+  "description": "Shared product selection state; it never owns Mingli cognition.",
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.case_workspace_state.v2",
+      "default": "deepbazi.case_workspace_state.v2",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "workspace_id": {
+      "title": "Workspace Id",
+      "type": "string"
+    },
+    "case_id": {
+      "title": "Case Id",
+      "type": "string"
+    },
+    "chart_version_id": {
+      "default": "",
+      "title": "Chart Version Id",
+      "type": "string"
+    },
+    "life_case_version": {
+      "default": "",
+      "title": "Life Case Version",
+      "type": "string"
+    },
+    "scene_id": {
+      "default": "",
+      "title": "Scene Id",
+      "type": "string"
+    },
+    "scene_source_hash": {
+      "default": "",
+      "title": "Scene Source Hash",
+      "type": "string"
+    },
+    "selected_period": {
+      "title": "Selected Period",
+      "type": "string"
+    },
+    "system_period": {
+      "title": "System Period",
+      "type": "string"
+    },
+    "active_domain": {
+      "default": "whole_chart",
+      "title": "Active Domain",
+      "type": "string"
+    },
+    "active_mode": {
+      "default": "member",
+      "enum": [
+        "guest",
+        "member",
+        "practitioner",
+        "research"
+      ],
+      "title": "Active Mode",
+      "type": "string"
+    },
+    "current_surface": {
+      "default": "overview",
+      "enum": [
+        "overview",
+        "onecanvas",
+        "xiangfa",
+        "theater",
+        "mingli_lab"
+      ],
+      "title": "Current Surface",
+      "type": "string"
+    },
+    "selected_semantic_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Selected Semantic Refs",
+      "type": "array"
+    },
+    "focused_path_ref": {
+      "default": "",
+      "title": "Focused Path Ref",
+      "type": "string"
+    },
+    "temporal_stage": {
+      "default": "natal",
+      "enum": [
+        "natal",
+        "luck",
+        "annual"
+      ],
+      "title": "Temporal Stage",
+      "type": "string"
+    },
+    "theater_timecode_ms": {
+      "default": 0,
+      "minimum": 0,
+      "title": "Theater Timecode Ms",
+      "type": "integer"
+    },
+    "lab_session_id": {
+      "default": "",
+      "title": "Lab Session Id",
+      "type": "string"
+    },
+    "lab_dirty": {
+      "default": false,
+      "title": "Lab Dirty",
+      "type": "boolean"
+    },
+    "language": {
+      "default": "zh",
+      "title": "Language",
+      "type": "string"
+    },
+    "expanded_sections": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Expanded Sections",
+      "type": "array"
+    },
+    "conversation_focus": {
+      "default": "overview",
+      "title": "Conversation Focus",
+      "type": "string"
+    },
+    "draft_input": {
+      "default": "",
+      "title": "Draft Input",
+      "type": "string"
+    },
+    "updated_at": {
+      "title": "Updated At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "workspace_id",
+    "case_id",
+    "selected_period",
+    "system_period",
+    "updated_at"
+  ],
+  "title": "CaseWorkspaceState",
+  "type": "object"
+}

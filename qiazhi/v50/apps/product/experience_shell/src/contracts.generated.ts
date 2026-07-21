@@ -332,6 +332,43 @@ export interface CanvasVisualAnchor {
   trace: CanvasTrace;
 }
 
+export interface CaseWorkspaceEnvelope {
+  schema_version: "deepbazi.case_workspace_envelope.v1";
+  state: CaseWorkspaceState;
+  projection: CanonicalProjectionEnvelope;
+  allowed_surfaces: Array<"overview" | "onecanvas" | "xiangfa" | "theater" | "mingli_lab">;
+  creates_mingli_facts: false;
+  creates_mingli_claims: false;
+  writes_chart: false;
+  writes_life_case: false;
+}
+
+export interface CaseWorkspaceState {
+  schema_version: "deepbazi.case_workspace_state.v2";
+  workspace_id: string;
+  case_id: string;
+  chart_version_id: string;
+  life_case_version: string;
+  scene_id: string;
+  scene_source_hash: string;
+  selected_period: string;
+  system_period: string;
+  active_domain: string;
+  active_mode: "guest" | "member" | "practitioner" | "research";
+  current_surface: "overview" | "onecanvas" | "xiangfa" | "theater" | "mingli_lab";
+  selected_semantic_refs: Array<string>;
+  focused_path_ref: string;
+  temporal_stage: "natal" | "luck" | "annual";
+  theater_timecode_ms: number;
+  lab_session_id: string;
+  lab_dirty: boolean;
+  language: string;
+  expanded_sections: Array<string>;
+  conversation_focus: string;
+  draft_input: string;
+  updated_at: string;
+}
+
 export interface CompetingHypothesis {
   hypothesis_ref: string;
   approved_meaning: string;
@@ -383,6 +420,17 @@ export interface HiddenStemFact {
   polarity: "yin" | "yang" | "";
 }
 
+export interface MechanismSandboxState {
+  schema_version: "deepbazi.mingli_sandbox_state.v1" | "deepbazi.mechanism_sandbox_state.v2";
+  lab_session: MingliLabSession;
+  predicted_key_node_id: string | null;
+  selected_nodes: Array<string>;
+  ablation_operations: Array<NodeAblationOperation>;
+  temporal_overlay: string | null;
+  active_hypothesis: string | null;
+  comparison_mode: "baseline" | "baseline_modified";
+}
+
 export interface MingliCanvasSpec {
   schema_version: "deepbazi.mingli_canvas_spec.v1";
   identity: CanvasIdentity;
@@ -411,6 +459,26 @@ export interface MingliExperienceEnvelope {
   uncertainty: EnvelopeUncertainty;
   must_not_say: Array<string>;
   fallback: EnvelopeFallback;
+}
+
+export interface MingliLabSession {
+  schema_version: "deepbazi.mingli_lab_session.v1";
+  session_id: string;
+  participant_run_id: string;
+  case_ref: string;
+  scene_id: string;
+  scene_source_hash: string;
+  disclosure_hash: string;
+  experiment_kind: "mechanism_ablation" | "temporal_hypothesis";
+  base_snapshot_ref: string;
+  source_mode: "canonical_projection" | "synthetic_fixture" | "legacy_unresolved";
+  revision: number;
+  status: "active" | "modified" | "restored" | "saved" | "discarded";
+  created_at: string;
+  updated_at: string;
+  writes_chart: false;
+  writes_life_case: false;
+  promotes_candidate: false;
 }
 
 export interface MingliVisualCue {
@@ -466,6 +534,14 @@ export interface NarrationStatus {
   speech_asset_id: string;
   audio_url: string;
   audio_format: string;
+}
+
+export interface NodeAblationOperation {
+  operation_id: string;
+  operation_type: "remove_node";
+  node_id: string;
+  authority: "deterministic_structure";
+  applied_at: string;
 }
 
 export interface ParticipantScope {
@@ -574,6 +650,44 @@ export interface SpeechSubtitleItem {
   start_ms: number;
   end_ms: number;
   text: string;
+}
+
+export interface TemporalSandboxState {
+  schema_version: "deepbazi.temporal_sandbox_state.v1" | "deepbazi.temporal_sandbox_state.v2";
+  lab_session: MingliLabSession;
+  base_luck_layer_id: string;
+  base_year_layer_id: string;
+  selected_luck_layer_id: string;
+  selected_year_layer_id: string;
+  mutations: Array<CanvasSandboxMutation>;
+  current_canvas_spec_id: string;
+  current_diff_spec_id: string;
+}
+
+export interface TopicExploration {
+  schema_version: "deepbazi.topic_exploration.v1";
+  exploration_id: string;
+  participant_run_id: string;
+  topic_id: string;
+  responses: Record<string, string>;
+  capsule_message: string;
+  experiment_kind: string;
+  lab_session_id: string;
+  scene_id: string;
+  scene_source_hash: string;
+  disclosure_hash: string;
+  base_snapshot_ref: string;
+  base_snapshot_hash: string;
+  selected_node_ids: Array<string>;
+  sandbox_result_refs: Array<string>;
+  observations: Array<string>;
+  open_question: string;
+  restored_original: boolean;
+  capability_trace: Array<"visual_only" | "deterministic_structure" | "reasoning_required">;
+  life_case_version_observed: string;
+  case_local_only: boolean;
+  writes_life_case: false;
+  created_at: string;
 }
 
 export interface TopicScope {

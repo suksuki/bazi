@@ -1,0 +1,258 @@
+{
+  "$defs": {
+    "MingliLabSession": {
+      "additionalProperties": false,
+      "description": "Shared non-authoritative identity for every Mingli Lab experiment.",
+      "properties": {
+        "schema_version": {
+          "const": "deepbazi.mingli_lab_session.v1",
+          "default": "deepbazi.mingli_lab_session.v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "session_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Session Id",
+          "type": "string"
+        },
+        "participant_run_id": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Participant Run Id",
+          "type": "string"
+        },
+        "case_ref": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Case Ref",
+          "type": "string"
+        },
+        "scene_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Scene Id",
+          "type": "string"
+        },
+        "scene_source_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Scene Source Hash",
+          "type": "string"
+        },
+        "disclosure_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Disclosure Hash",
+          "type": "string"
+        },
+        "experiment_kind": {
+          "enum": [
+            "mechanism_ablation",
+            "temporal_hypothesis"
+          ],
+          "title": "Experiment Kind",
+          "type": "string"
+        },
+        "base_snapshot_ref": {
+          "maxLength": 220,
+          "minLength": 1,
+          "title": "Base Snapshot Ref",
+          "type": "string"
+        },
+        "source_mode": {
+          "enum": [
+            "canonical_projection",
+            "synthetic_fixture",
+            "legacy_unresolved"
+          ],
+          "title": "Source Mode",
+          "type": "string"
+        },
+        "revision": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Revision",
+          "type": "integer"
+        },
+        "status": {
+          "default": "active",
+          "enum": [
+            "active",
+            "modified",
+            "restored",
+            "saved",
+            "discarded"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "created_at": {
+          "format": "date-time",
+          "title": "Created At",
+          "type": "string"
+        },
+        "updated_at": {
+          "format": "date-time",
+          "title": "Updated At",
+          "type": "string"
+        },
+        "writes_chart": {
+          "const": false,
+          "default": false,
+          "title": "Writes Chart",
+          "type": "boolean"
+        },
+        "writes_life_case": {
+          "const": false,
+          "default": false,
+          "title": "Writes Life Case",
+          "type": "boolean"
+        },
+        "promotes_candidate": {
+          "const": false,
+          "default": false,
+          "title": "Promotes Candidate",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "session_id",
+        "case_ref",
+        "scene_id",
+        "scene_source_hash",
+        "disclosure_hash",
+        "experiment_kind",
+        "base_snapshot_ref",
+        "source_mode",
+        "created_at",
+        "updated_at"
+      ],
+      "title": "MingliLabSession",
+      "type": "object"
+    },
+    "NodeAblationOperation": {
+      "additionalProperties": false,
+      "properties": {
+        "operation_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Operation Id",
+          "type": "string"
+        },
+        "operation_type": {
+          "const": "remove_node",
+          "default": "remove_node",
+          "title": "Operation Type",
+          "type": "string"
+        },
+        "node_id": {
+          "maxLength": 260,
+          "minLength": 1,
+          "title": "Node Id",
+          "type": "string"
+        },
+        "authority": {
+          "const": "deterministic_structure",
+          "default": "deterministic_structure",
+          "title": "Authority",
+          "type": "string"
+        },
+        "applied_at": {
+          "format": "date-time",
+          "title": "Applied At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "operation_id",
+        "node_id",
+        "applied_at"
+      ],
+      "title": "NodeAblationOperation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "default": "deepbazi.mechanism_sandbox_state.v2",
+      "enum": [
+        "deepbazi.mingli_sandbox_state.v1",
+        "deepbazi.mechanism_sandbox_state.v2"
+      ],
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "lab_session": {
+      "$ref": "#/$defs/MingliLabSession"
+    },
+    "predicted_key_node_id": {
+      "anyOf": [
+        {
+          "maxLength": 260,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Predicted Key Node Id"
+    },
+    "selected_nodes": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Selected Nodes",
+      "type": "array"
+    },
+    "ablation_operations": {
+      "items": {
+        "$ref": "#/$defs/NodeAblationOperation"
+      },
+      "title": "Ablation Operations",
+      "type": "array"
+    },
+    "temporal_overlay": {
+      "anyOf": [
+        {
+          "maxLength": 160,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Temporal Overlay"
+    },
+    "active_hypothesis": {
+      "anyOf": [
+        {
+          "maxLength": 260,
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Active Hypothesis"
+    },
+    "comparison_mode": {
+      "default": "baseline",
+      "enum": [
+        "baseline",
+        "baseline_modified"
+      ],
+      "title": "Comparison Mode",
+      "type": "string"
+    }
+  },
+  "required": [
+    "lab_session"
+  ],
+  "title": "MechanismSandboxState",
+  "type": "object"
+}

@@ -18,7 +18,7 @@ from product.canonical_scene_api import create_canonical_scene_router
 from product.experience_api import create_experience_router
 from product.legacy_usage import LegacyUsageStore, build_legacy_usage_store, legacy_route_key
 from product.narration_api import create_narration_router
-from product.narrated_workspace import NarratedWorkspaceService
+from product.abu_narration import AbuNarrationService
 from product.product_store import ProductStore, ProductStoreError, build_product_store
 from product.theater_api import create_theater_router
 from product.theater_store import build_theater_store
@@ -64,7 +64,7 @@ def create_product_app(
     agent_case_store: AgentCaseStore | None = None,
     agent_job_store: AgentJobStore | None = None,
     theater_performance_service=None,
-    narrated_workspace_service=None,
+    abu_narration_service=None,
     voice_validation_store: VoiceValidationStore | None = None,
     legacy_usage_store: LegacyUsageStore | None = None,
 ) -> FastAPI:
@@ -79,9 +79,9 @@ def create_product_app(
     resolved_case_store = agent_case_store or build_agent_case_store()
     theater_store = build_theater_store()
     resolved_narration_service = (
-        narrated_workspace_service
-        if narrated_workspace_service is not None
-        else NarratedWorkspaceService.from_environment()
+        abu_narration_service
+        if abu_narration_service is not None
+        else AbuNarrationService.from_environment()
     )
     resolved_voice_validation_store = voice_validation_store or build_voice_validation_store()
     resolved_legacy_usage_store = legacy_usage_store or build_legacy_usage_store()

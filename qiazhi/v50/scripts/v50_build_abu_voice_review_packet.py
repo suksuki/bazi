@@ -8,7 +8,7 @@ import wave
 from datetime import datetime, timezone
 from pathlib import Path
 
-from product.narrated_workspace import FfmpegOpusTranscoder
+from product.abu_narration import FfmpegOpusTranscoder
 from product.theater_performance import QwenTheaterTTS
 
 

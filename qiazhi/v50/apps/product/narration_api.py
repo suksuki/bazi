@@ -6,7 +6,7 @@ from fastapi.responses import FileResponse
 from experience.product_projection import NarrationManifestResponse, SpeechAssetResponse
 from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
-from product.narrated_workspace import NarratedWorkspaceError, NarratedWorkspaceService
+from product.abu_narration import AbuNarrationError, AbuNarrationService
 from product.product_store import ProductStore
 from product.theater_performance import TheaterPerformanceError
 
@@ -19,10 +19,10 @@ def create_narration_router(
     product_store: ProductStore,
     session_cookie: str,
     case_store: AgentCaseStore,
-    service: NarratedWorkspaceService | None = None,
+    service: AbuNarrationService | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix=NARRATION_API_PREFIX, tags=["abu-narrated-workspace"])
-    service = service or NarratedWorkspaceService.from_environment()
+    service = service or AbuNarrationService.from_environment()
     scene_owner = CanonicalSceneOwner(case_store=case_store)
 
     def authenticated_account(request: Request) -> dict[str, object]:
@@ -53,7 +53,7 @@ def create_narration_router(
                 projection_kind="abu",
             )
             return service.compile_manifest(projection)
-        except (CanonicalSceneUnavailable, NarratedWorkspaceError) as exc:
+        except (CanonicalSceneUnavailable, AbuNarrationError) as exc:
             detail = str(exc)
             status = 404 if detail == "canonical_scene_case_not_found" else 409
             raise HTTPException(status_code=status, detail=detail) from exc
@@ -81,7 +81,7 @@ def create_narration_router(
                 manifest=manifest,
                 segment_id=segment_id,
             )
-        except NarratedWorkspaceError as exc:
+        except AbuNarrationError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         except TheaterPerformanceError as exc:
             raise HTTPException(status_code=503, detail=str(exc)) from exc
@@ -103,7 +103,7 @@ def create_narration_router(
         authorize_case(case_id, request)
         try:
             asset = service.repository.get(speech_asset_id)
-        except NarratedWorkspaceError as exc:
+        except AbuNarrationError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         if asset is None or asset.source.case_id != case_id:
             raise HTTPException(status_code=404, detail="speech_asset_not_found")
@@ -124,7 +124,7 @@ def create_narration_router(
         authorize_case(case_id, request)
         try:
             asset = service.repository.get(speech_asset_id)
-        except NarratedWorkspaceError as exc:
+        except AbuNarrationError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
         variant = next(
             (item for item in (asset.media.playback_variants if asset else []) if item.format == "opus"),
