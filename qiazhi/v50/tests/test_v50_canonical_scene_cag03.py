@@ -253,6 +253,50 @@ def test_canonical_scene_api_enforces_case_ownership_and_projection_identity() -
     assert projection.json()["projection_kind"] == "xiangfa"
 
 
+def test_case_workspace_api_binds_role_filtered_scene_without_accepting_client_facts() -> None:
+    client, store, user_id = _registered_client(role="member")
+    payload = _case_payload("case-workspace-api")
+    payload.pop("record", None)
+    payload["workspace_state"] = {
+        "schema_version": "deepbazi.case_workspace_state.v2",
+        "workspace_id": "workspace-api",
+        "case_id": "forged-case",
+        "selected_period": "2026-07",
+        "system_period": "2026-07",
+        "active_domain": "whole_chart",
+        "active_mode": "member",
+        "current_surface": "mingli_lab",
+        "selected_semantic_refs": ["hidden:research-only"],
+        "updated_at": "2026-07-21T00:00:00+00:00",
+    }
+    store.save(
+        case_id="case-workspace-api",
+        user_id=user_id,
+        profile_id=None,
+        payload=payload,
+    )
+    path = "/api/v50/scenes/cases/case-workspace-api/workspace"
+
+    clean = client.get(path)
+    injected = client.request(
+        "GET",
+        path,
+        params={"current_surface": "mingli_lab", "year_pillar": "甲子"},
+        json={"state": {"current_surface": "mingli_lab"}},
+    )
+    denied_write = client.post(path, json={"state": {"current_surface": "onecanvas"}})
+
+    assert clean.status_code == 200, clean.text
+    assert clean.json() == injected.json()
+    assert denied_write.status_code == 405
+    assert clean.json()["state"]["case_id"] == "case-workspace-api"
+    assert clean.json()["state"]["current_surface"] == "overview"
+    assert clean.json()["state"]["selected_semantic_refs"] == []
+    assert "mingli_lab" not in clean.json()["allowed_surfaces"]
+    assert clean.json()["projection"]["projection_kind"] == "workspace"
+    assert clean.json()["writes_life_case"] is False
+
+
 def test_theater_compatibility_envelope_consumes_the_same_canonical_source() -> None:
     store, _ = _saved_case(professional_markers=True)
     owner = CanonicalSceneOwner(case_store=store)

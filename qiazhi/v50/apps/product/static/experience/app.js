@@ -26,6 +26,9 @@ async function loadCases() {
 function loadEnvelope(caseId) {
   return requestJson(`/api/v50/experience/cases/${encodeURIComponent(caseId)}/baseline`);
 }
+function loadCaseWorkspace(caseId) {
+  return requestJson(`/api/v50/scenes/cases/${encodeURIComponent(caseId)}/workspace`);
+}
 function loadReadOnlyCanvas(caseId) {
   return requestJson(`/api/v50/experience/cases/${encodeURIComponent(caseId)}/canvas`);
 }
@@ -170,15 +173,10 @@ function renderExperience(view) {
       </div>
     </header>
 
-    <main>
-      <section class="opening-band" id="baseline-summary" data-anchor="baseline-summary">
-        <nav class="journey-nav" aria-label="\u547D\u5C40\u9605\u8BFB\u7AE0\u8282">
-          <a href="#baseline-summary" class="active">\u6574\u76D8\u91CD\u5FC3</a>
-          <a href="#four-pillars">\u56DB\u67F1</a>
-          ${view.canvas ? '<a href="#temporal-canvas">\u65F6\u95F4\u7ED3\u6784</a>' : ""}
-          <a href="#baseline-work-path">\u8FD0\u884C\u8DEF\u5F84</a>
-          <a href="#baseline-condition">\u6761\u4EF6\u4E0E\u672A\u51B3</a>
-        </nav>
+    ${renderWorkspaceNavigation(view)}
+
+    <main data-workspace-current-surface="${escapeAttr(view.ui.workspaceSurface)}">
+      ${view.ui.workspaceSurface === "overview" ? `<section class="opening-band" id="baseline-summary" data-anchor="baseline-summary">
         <div class="opening-copy">
           <p class="section-kicker">\u770B\u89C1\u547D\u5C40 \xB7 \u5F53\u524D\u57FA\u7EBF</p>
           <h1>${escapeHtml(thesis)}</h1>
@@ -208,17 +206,6 @@ function renderExperience(view) {
     body: renderPillars(view.envelope, view.ui.selectedAnchor)
   })}
 
-      ${view.canvas ? renderCollapsibleSection({
-    id: "canvas",
-    anchor: "temporal-canvas",
-    tone: "canvas",
-    eyebrow: "\u64CD\u4F5C\u547D\u5C40 \xB7 \u53EA\u8BFB",
-    title: "\u770B\u7ED3\u6784\u600E\u6837\u8FDB\u5165\u5F53\u524D\u65F6\u95F4",
-    summary: `${view.canvas.source.luck_pillar}\u5927\u8FD0 \xB7 ${view.canvas.source.analysis_year || "\u5F53\u524D"}${view.canvas.source.annual_pillar}\u6D41\u5E74`,
-    expanded: view.ui.expandedSections.canvas ?? true,
-    body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext)
-  }) : ""}
-
       ${renderCollapsibleSection({
     id: "path",
     anchor: "baseline-work-path",
@@ -239,16 +226,57 @@ function renderExperience(view) {
     summary: condition,
     expanded: view.ui.expandedSections.boundaries,
     body: renderBoundaries(claim, view.envelope, view.ui.selectedAnchor)
-  })}
+  })}` : ""}
+
+      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderSurfaceIntro(
+    "\u547D\u5C40\u7ED3\u6784",
+    "\u540C\u4E00\u4EFD\u6B63\u5F0F\u547D\u76D8\uFF0C\u6CBF\u539F\u5C40\u3001\u5927\u8FD0\u548C\u6D41\u5E74\u9010\u5C42\u5C55\u5F00\u3002",
+    "\u5148\u770B\u7ED3\u6784\u5982\u4F55\u6210\u7ACB\uFF0C\u518D\u770B\u65F6\u95F4\u52A0\u5165\u540E\uFF0C\u54EA\u4E9B\u5173\u7CFB\u88AB\u5F15\u52A8\u3001\u52A0\u5F3A\u6216\u53D7\u963B\u3002"
+  )}${renderCollapsibleSection({
+    id: "canvas",
+    anchor: "temporal-canvas",
+    tone: "canvas",
+    eyebrow: "\u65F6\u95F4\u7ED3\u6784",
+    title: "\u770B\u7ED3\u6784\u600E\u6837\u8FDB\u5165\u5F53\u524D\u65F6\u95F4",
+    summary: `${view.canvas.source.luck_pillar}\u5927\u8FD0 \xB7 ${view.canvas.source.analysis_year || "\u5F53\u524D"}${view.canvas.source.annual_pillar}\u6D41\u5E74`,
+    expanded: view.ui.expandedSections.canvas ?? true,
+    body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext)
+  })}` : ""}
+
+      ${view.ui.workspaceSurface === "theater" ? renderNarrationWorkspace(view, thesis) : ""}
 
       <section class="closing-band">
         <p>\u77E5\u547D\uFF0C\u800C\u540E\u77E5\u5DF1</p>
-        <span>\u8FD9\u4EFD\u9875\u9762\u53EA\u663E\u793A\u5DF2\u7ECF\u8FDB\u5165 LifeCase \u7684\u6B63\u5F0F\u8BA4\u77E5\u3002</span>
+        <span>\u53EA\u8BF4\u5DF2\u7ECF\u6709\u5145\u5206\u4F9D\u636E\u7684\u90E8\u5206\uFF0C\u4E5F\u4FDD\u7559\u4ECD\u9700\u9A8C\u8BC1\u7684\u5730\u65B9\u3002</span>
       </section>
     </main>
 
     ${renderAbuDock(view)}
   `;
+}
+function renderWorkspaceNavigation(view) {
+  const labels = {
+    overview: "\u547D\u5C40\u6982\u89C8",
+    onecanvas: "\u7ED3\u6784",
+    theater: "\u963F\u5E03\u8BB2\u89E3"
+  };
+  return `<nav class="workspace-navigation" aria-label="\u5F53\u524D\u547D\u5C40\u7684\u67E5\u770B\u65B9\u5F0F">
+    <div class="workspace-tabs">${view.availableSurfaces.map((surface) => `<button type="button" data-workspace-surface="${surface}" aria-pressed="${surface === view.ui.workspaceSurface}" class="${surface === view.ui.workspaceSurface ? "active" : ""}">${labels[surface]}</button>`).join("")}</div>
+  </nav>`;
+}
+function renderSurfaceIntro(kicker, title, detail) {
+  return `<section class="workspace-surface-intro"><p>${escapeHtml(kicker)}</p><h1>${escapeHtml(title)}</h1><span>${escapeHtml(detail)}</span></section>`;
+}
+function renderNarrationWorkspace(view, thesis) {
+  const segments = view.narrationManifest?.segments || [];
+  return `<section class="narration-workspace" data-anchor="abu-narration">
+    <header><p>\u963F\u5E03\u8BB2\u89E3</p><h1>${escapeHtml(thesis)}</h1><span>\u4ECE\u6574\u76D8\u91CD\u5FC3\u5F00\u59CB\uFF0C\u6CBF\u56DB\u67F1\u3001\u8DEF\u5F84\u3001\u6761\u4EF6\u4E0E\u672A\u51B3\u9010\u6BB5\u5C55\u5F00\u3002</span></header>
+    <div class="narration-workspace-actions">
+      <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "\u6682\u505C" : "\u4ECE\u5934\u542C"}</button>
+      ${view.ui.narrationStatus !== "idle" ? '<button class="text-command" type="button" data-command="stop">\u505C\u6B62</button>' : ""}
+    </div>
+    <ol>${segments.map((item, index) => `<li><button type="button" data-play-segment="${index}"${view.ui.narrationIndex === index ? ' class="active"' : ""}><small>${String(index + 1).padStart(2, "0")}</small><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span><b aria-hidden="true">\u25B6</b></button></li>`).join("")}</ol>
+  </section>`;
 }
 function renderReadOnlyCanvas(canvas2, ui2, context) {
   const stage = canvas2.stages[ui2.canvasStage];
@@ -537,6 +565,7 @@ function escapeAttr(value) {
 
 // apps/product/experience_shell/src/state.ts
 var initialUiState = {
+  workspaceSurface: "overview",
   selectedAnchor: "baseline-summary",
   expandedSections: {
     baseline: true,
@@ -556,6 +585,8 @@ var initialUiState = {
 };
 function reduceUi(state, action) {
   switch (action.type) {
+    case "workspace-surface":
+      return { ...state, workspaceSurface: action.surface };
     case "select":
       return { ...state, selectedAnchor: action.anchor, abuMessage: action.message };
     case "toggle-section":
@@ -603,6 +634,8 @@ var root = rootElement;
 var account = { display_name: "", role: "member" };
 var cases = [];
 var activeCaseId = "";
+var workspace = null;
+var availableSurfaces = ["overview"];
 var envelope = null;
 var canvas = null;
 var canvasContext = null;
@@ -640,9 +673,19 @@ async function boot() {
 async function openCase(caseId) {
   timeline?.stop();
   activeCaseId = caseId;
-  envelope = await loadEnvelope(caseId);
-  try {
-    canvas = await loadReadOnlyCanvas(caseId);
+  ui = structuredClone(initialUiState);
+  const [envelopeResult, workspaceResult, canvasResult, narrationResult] = await Promise.allSettled([
+    loadEnvelope(caseId),
+    loadCaseWorkspace(caseId),
+    loadReadOnlyCanvas(caseId),
+    loadNarration(caseId)
+  ]);
+  if (envelopeResult.status === "rejected") throw envelopeResult.reason;
+  if (workspaceResult.status === "rejected") throw workspaceResult.reason;
+  envelope = envelopeResult.value;
+  workspace = workspaceResult.value;
+  if (canvasResult.status === "fulfilled") {
+    canvas = canvasResult.value;
     const initialStage = canvas.default_stage;
     const initialProjection = canvas.stages[initialStage];
     canvasContext = initialProjection.context;
@@ -652,20 +695,27 @@ async function openCase(caseId) {
       layer: initialProjection.default_layer_id,
       selected: initialProjection.context.selected_object_refs[0] || initialProjection.spec.semantic_slots[0]?.slot_ref || ""
     });
-  } catch {
+  } else {
     canvas = null;
     canvasContext = null;
   }
-  try {
-    const narration = await loadNarration(caseId);
+  if (narrationResult.status === "fulfilled") {
+    const narration = narrationResult.value;
     narrationManifest = narration.manifest;
     narrationAssets = narration.speechAssets;
-  } catch {
+  } else {
     narrationManifest = null;
     narrationAssets = {};
   }
+  availableSurfaces = workspace.allowed_surfaces.filter((surface) => surface === "overview" || surface === "onecanvas" && canvas !== null || surface === "theater" && narrationManifest !== null);
+  const requestedSurface = new URLSearchParams(location.search).get("surface");
+  const preferredSurface = requestedSurface || workspace.state.current_surface;
+  ui = reduceUi(ui, {
+    type: "workspace-surface",
+    surface: supportedSurface(preferredSurface) ? preferredSurface : "overview"
+  });
   timeline = narrationManifest ? createTimeline(caseId, narrationManifest, narrationAssets) : null;
-  history.replaceState({}, "", `/experience?case=${encodeURIComponent(caseId)}`);
+  updateLocation();
   render();
 }
 function createTimeline(caseId, manifest, statuses) {
@@ -692,12 +742,13 @@ function createTimeline(caseId, manifest, statuses) {
   });
 }
 function render() {
-  if (!envelope) return;
+  if (!envelope || !workspace) return;
   root.innerHTML = renderExperience({
     accountName: account.display_name,
     accountRole: account.role,
     cases,
     activeCaseId,
+    availableSurfaces,
     envelope,
     narrationManifest,
     canvas,
@@ -708,6 +759,15 @@ function render() {
   requestAnimationFrame(() => applyActiveAnchor(ui.selectedAnchor));
 }
 function bindInteractions() {
+  root.querySelectorAll("[data-workspace-surface]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const surface = button.dataset.workspaceSurface;
+      if (!supportedSurface(surface)) return;
+      ui = reduceUi(ui, { type: "workspace-surface", surface });
+      updateLocation();
+      render();
+    });
+  });
   root.querySelectorAll("[data-select-anchor]").forEach((element) => {
     element.addEventListener("click", () => {
       const anchor = element.dataset.selectAnchor || "baseline-summary";
@@ -803,6 +863,14 @@ async function handleCommand(command) {
     return;
   }
   if (command === "focus-pillars") focusAnchor("four-pillars");
+}
+function supportedSurface(surface) {
+  return availableSurfaces.includes(surface);
+}
+function updateLocation() {
+  const params = new URLSearchParams({ case: activeCaseId });
+  if (ui.workspaceSurface !== "overview") params.set("surface", ui.workspaceSurface);
+  history.replaceState({}, "", `/experience?${params.toString()}`);
 }
 function dispatch(action) {
   ui = reduceUi(ui, action);

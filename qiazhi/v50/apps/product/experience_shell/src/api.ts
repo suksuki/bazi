@@ -1,4 +1,5 @@
 import type {
+  CaseWorkspaceEnvelope,
   ExperienceCaseSummary,
   MingliExperienceEnvelope,
   NarrationManifest,
@@ -39,6 +40,10 @@ export async function loadCases(): Promise<ExperienceCaseSummary[]> {
 
 export function loadEnvelope(caseId: string): Promise<MingliExperienceEnvelope> {
   return requestJson(`/api/v50/experience/cases/${encodeURIComponent(caseId)}/baseline`);
+}
+
+export function loadCaseWorkspace(caseId: string): Promise<CaseWorkspaceEnvelope> {
+  return requestJson(`/api/v50/scenes/cases/${encodeURIComponent(caseId)}/workspace`);
 }
 
 export function loadReadOnlyCanvas(caseId: string): Promise<ReadOnlySixPillarCanvas> {

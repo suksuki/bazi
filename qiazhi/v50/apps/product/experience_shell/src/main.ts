@@ -1,4 +1,5 @@
 import {
+  loadCaseWorkspace,
   loadAccount,
   loadCanvasContext,
   loadCases,
@@ -9,6 +10,7 @@ import {
 import { NarrationTimeline } from "./audio";
 import { renderExperience, renderLoading, renderUnavailable } from "./components";
 import type {
+  CaseWorkspaceEnvelope,
   CanvasContextPack,
   CanvasLayer,
   CanvasStage,
@@ -18,7 +20,7 @@ import type {
   NarrationStatus,
   ReadOnlySixPillarCanvas,
 } from "./contracts";
-import { initialUiState, reduceUi, type UiState } from "./state";
+import { initialUiState, reduceUi, type UiState, type WorkspaceSurface } from "./state";
 
 const rootElement = document.querySelector<HTMLElement>("#experienceRoot");
 if (!rootElement) throw new Error("experience_root_missing");
@@ -27,6 +29,8 @@ const root: HTMLElement = rootElement;
 let account = { display_name: "", role: "member" };
 let cases: ExperienceCaseSummary[] = [];
 let activeCaseId = "";
+let workspace: CaseWorkspaceEnvelope | null = null;
+let availableSurfaces: WorkspaceSurface[] = ["overview"];
 let envelope: MingliExperienceEnvelope | null = null;
 let canvas: ReadOnlySixPillarCanvas | null = null;
 let canvasContext: CanvasContextPack | null = null;
@@ -67,9 +71,20 @@ async function boot(): Promise<void> {
 async function openCase(caseId: string): Promise<void> {
   timeline?.stop();
   activeCaseId = caseId;
-  envelope = await loadEnvelope(caseId);
-  try {
-    canvas = await loadReadOnlyCanvas(caseId);
+  ui = structuredClone(initialUiState);
+  const [envelopeResult, workspaceResult, canvasResult, narrationResult] = await Promise.allSettled([
+    loadEnvelope(caseId),
+    loadCaseWorkspace(caseId),
+    loadReadOnlyCanvas(caseId),
+    loadNarration(caseId),
+  ]);
+  if (envelopeResult.status === "rejected") throw envelopeResult.reason;
+  if (workspaceResult.status === "rejected") throw workspaceResult.reason;
+  envelope = envelopeResult.value;
+  workspace = workspaceResult.value;
+
+  if (canvasResult.status === "fulfilled") {
+    canvas = canvasResult.value;
     const initialStage = canvas.default_stage;
     const initialProjection = canvas.stages[initialStage];
     canvasContext = initialProjection.context;
@@ -79,20 +94,31 @@ async function openCase(caseId: string): Promise<void> {
       layer: initialProjection.default_layer_id,
       selected: initialProjection.context.selected_object_refs[0] || initialProjection.spec.semantic_slots[0]?.slot_ref || "",
     });
-  } catch {
+  } else {
     canvas = null;
     canvasContext = null;
   }
-  try {
-    const narration = await loadNarration(caseId);
+  if (narrationResult.status === "fulfilled") {
+    const narration = narrationResult.value;
     narrationManifest = narration.manifest;
     narrationAssets = narration.speechAssets;
-  } catch {
+  } else {
     narrationManifest = null;
     narrationAssets = {};
   }
+  availableSurfaces = workspace.allowed_surfaces.filter((surface) => (
+    surface === "overview"
+    || (surface === "onecanvas" && canvas !== null)
+    || (surface === "theater" && narrationManifest !== null)
+  ));
+  const requestedSurface = new URLSearchParams(location.search).get("surface") as WorkspaceSurface | null;
+  const preferredSurface = requestedSurface || workspace.state.current_surface;
+  ui = reduceUi(ui, {
+    type: "workspace-surface",
+    surface: supportedSurface(preferredSurface) ? preferredSurface : "overview",
+  });
   timeline = narrationManifest ? createTimeline(caseId, narrationManifest, narrationAssets) : null;
-  history.replaceState({}, "", `/experience?case=${encodeURIComponent(caseId)}`);
+  updateLocation();
   render();
 }
 
@@ -125,12 +151,13 @@ function createTimeline(
 }
 
 function render(): void {
-  if (!envelope) return;
+  if (!envelope || !workspace) return;
   root.innerHTML = renderExperience({
     accountName: account.display_name,
     accountRole: account.role,
     cases,
     activeCaseId,
+    availableSurfaces,
     envelope,
     narrationManifest,
     canvas,
@@ -142,6 +169,15 @@ function render(): void {
 }
 
 function bindInteractions(): void {
+  root.querySelectorAll<HTMLButtonElement>("[data-workspace-surface]").forEach((button) => {
+    button.addEventListener("click", () => {
+      const surface = button.dataset.workspaceSurface as WorkspaceSurface;
+      if (!supportedSurface(surface)) return;
+      ui = reduceUi(ui, { type: "workspace-surface", surface });
+      updateLocation();
+      render();
+    });
+  });
   root.querySelectorAll<HTMLElement>("[data-select-anchor]").forEach((element) => {
     element.addEventListener("click", () => {
       const anchor = element.dataset.selectAnchor || "baseline-summary";
@@ -239,6 +275,16 @@ async function handleCommand(command: string): Promise<void> {
     return;
   }
   if (command === "focus-pillars") focusAnchor("four-pillars");
+}
+
+function supportedSurface(surface: WorkspaceSurface): boolean {
+  return availableSurfaces.includes(surface);
+}
+
+function updateLocation(): void {
+  const params = new URLSearchParams({ case: activeCaseId });
+  if (ui.workspaceSurface !== "overview") params.set("surface", ui.workspaceSurface);
+  history.replaceState({}, "", `/experience?${params.toString()}`);
 }
 
 function dispatch(action: Parameters<typeof reduceUi>[1]): void {

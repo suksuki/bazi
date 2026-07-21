@@ -1,10 +1,13 @@
 import type {
+  CaseWorkspaceState,
   CanvasLayer,
   CanvasStage,
   MingliExperienceEnvelope,
   NarrationManifest,
   NarrationStatus,
 } from "./contracts";
+
+export type WorkspaceSurface = CaseWorkspaceState["current_surface"];
 
 export interface ServerState {
   envelope: MingliExperienceEnvelope | null;
@@ -13,6 +16,7 @@ export interface ServerState {
 }
 
 export interface UiState {
+  workspaceSurface: WorkspaceSurface;
   selectedAnchor: string;
   expandedSections: Record<string, boolean>;
   abuExpanded: boolean;
@@ -26,6 +30,7 @@ export interface UiState {
 }
 
 export const initialUiState: UiState = {
+  workspaceSurface: "overview",
   selectedAnchor: "baseline-summary",
   expandedSections: {
     baseline: true,
@@ -45,6 +50,7 @@ export const initialUiState: UiState = {
 };
 
 type UiAction =
+  | { type: "workspace-surface"; surface: WorkspaceSurface }
   | { type: "select"; anchor: string; message: string }
   | { type: "toggle-section"; section: string }
   | { type: "toggle-abu"; expanded?: boolean }
@@ -56,6 +62,8 @@ type UiAction =
 
 export function reduceUi(state: UiState, action: UiAction): UiState {
   switch (action.type) {
+    case "workspace-surface":
+      return { ...state, workspaceSurface: action.surface };
     case "select":
       return { ...state, selectedAnchor: action.anchor, abuMessage: action.message };
     case "toggle-section":

@@ -11,12 +11,14 @@ import type {
   ReadOnlySixPillarCanvas,
 } from "./contracts";
 import type { UiState } from "./state";
+import type { WorkspaceSurface } from "./state";
 
 export interface ExperienceViewModel {
   accountName: string;
   accountRole: string;
   cases: ExperienceCaseSummary[];
   activeCaseId: string;
+  availableSurfaces: WorkspaceSurface[];
   envelope: MingliExperienceEnvelope;
   narrationManifest: NarrationManifest | null;
   canvas: ReadOnlySixPillarCanvas | null;
@@ -58,15 +60,10 @@ export function renderExperience(view: ExperienceViewModel): string {
       </div>
     </header>
 
-    <main>
-      <section class="opening-band" id="baseline-summary" data-anchor="baseline-summary">
-        <nav class="journey-nav" aria-label="命局阅读章节">
-          <a href="#baseline-summary" class="active">整盘重心</a>
-          <a href="#four-pillars">四柱</a>
-          ${view.canvas ? '<a href="#temporal-canvas">时间结构</a>' : ""}
-          <a href="#baseline-work-path">运行路径</a>
-          <a href="#baseline-condition">条件与未决</a>
-        </nav>
+    ${renderWorkspaceNavigation(view)}
+
+    <main data-workspace-current-surface="${escapeAttr(view.ui.workspaceSurface)}">
+      ${view.ui.workspaceSurface === "overview" ? `<section class="opening-band" id="baseline-summary" data-anchor="baseline-summary">
         <div class="opening-copy">
           <p class="section-kicker">看见命局 · 当前基线</p>
           <h1>${escapeHtml(thesis)}</h1>
@@ -96,17 +93,6 @@ export function renderExperience(view: ExperienceViewModel): string {
         body: renderPillars(view.envelope, view.ui.selectedAnchor),
       })}
 
-      ${view.canvas ? renderCollapsibleSection({
-        id: "canvas",
-        anchor: "temporal-canvas",
-        tone: "canvas",
-        eyebrow: "操作命局 · 只读",
-        title: "看结构怎样进入当前时间",
-        summary: `${view.canvas.source.luck_pillar}大运 · ${view.canvas.source.analysis_year || "当前"}${view.canvas.source.annual_pillar}流年`,
-        expanded: view.ui.expandedSections.canvas ?? true,
-        body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext),
-      }) : ""}
-
       ${renderCollapsibleSection({
         id: "path",
         anchor: "baseline-work-path",
@@ -127,16 +113,60 @@ export function renderExperience(view: ExperienceViewModel): string {
         summary: condition,
         expanded: view.ui.expandedSections.boundaries,
         body: renderBoundaries(claim, view.envelope, view.ui.selectedAnchor),
-      })}
+      })}` : ""}
+
+      ${view.ui.workspaceSurface === "onecanvas" && view.canvas ? `${renderSurfaceIntro(
+        "命局结构",
+        "同一份正式命盘，沿原局、大运和流年逐层展开。",
+        "先看结构如何成立，再看时间加入后，哪些关系被引动、加强或受阻。",
+      )}${renderCollapsibleSection({
+        id: "canvas",
+        anchor: "temporal-canvas",
+        tone: "canvas",
+        eyebrow: "时间结构",
+        title: "看结构怎样进入当前时间",
+        summary: `${view.canvas.source.luck_pillar}大运 · ${view.canvas.source.analysis_year || "当前"}${view.canvas.source.annual_pillar}流年`,
+        expanded: view.ui.expandedSections.canvas ?? true,
+        body: renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext),
+      })}` : ""}
+
+      ${view.ui.workspaceSurface === "theater" ? renderNarrationWorkspace(view, thesis) : ""}
 
       <section class="closing-band">
         <p>知命，而后知己</p>
-        <span>这份页面只显示已经进入 LifeCase 的正式认知。</span>
+        <span>只说已经有充分依据的部分，也保留仍需验证的地方。</span>
       </section>
     </main>
 
     ${renderAbuDock(view)}
   `;
+}
+
+function renderWorkspaceNavigation(view: ExperienceViewModel): string {
+  const labels: Record<string, string> = {
+    overview: "命局概览",
+    onecanvas: "结构",
+    theater: "阿布讲解",
+  };
+  return `<nav class="workspace-navigation" aria-label="当前命局的查看方式">
+    <div class="workspace-tabs">${view.availableSurfaces.map((surface) => `<button type="button" data-workspace-surface="${surface}" aria-pressed="${surface === view.ui.workspaceSurface}" class="${surface === view.ui.workspaceSurface ? "active" : ""}">${labels[surface]}</button>`).join("")}</div>
+  </nav>`;
+}
+
+function renderSurfaceIntro(kicker: string, title: string, detail: string): string {
+  return `<section class="workspace-surface-intro"><p>${escapeHtml(kicker)}</p><h1>${escapeHtml(title)}</h1><span>${escapeHtml(detail)}</span></section>`;
+}
+
+function renderNarrationWorkspace(view: ExperienceViewModel, thesis: string): string {
+  const segments = view.narrationManifest?.segments || [];
+  return `<section class="narration-workspace" data-anchor="abu-narration">
+    <header><p>阿布讲解</p><h1>${escapeHtml(thesis)}</h1><span>从整盘重心开始，沿四柱、路径、条件与未决逐段展开。</span></header>
+    <div class="narration-workspace-actions">
+      <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "暂停" : "从头听"}</button>
+      ${view.ui.narrationStatus !== "idle" ? '<button class="text-command" type="button" data-command="stop">停止</button>' : ""}
+    </div>
+    <ol>${segments.map((item, index) => `<li><button type="button" data-play-segment="${index}"${view.ui.narrationIndex === index ? ' class="active"' : ""}><small>${String(index + 1).padStart(2, "0")}</small><span><strong>${escapeHtml(item.title)}</strong><em>${escapeHtml(item.text)}</em></span><b aria-hidden="true">▶</b></button></li>`).join("")}</ol>
+  </section>`;
 }
 
 function renderReadOnlyCanvas(
