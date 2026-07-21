@@ -271,6 +271,7 @@ export interface CanvasRelation {
   participant_node_refs: Array<string>;
   relation_type: string;
   label: string;
+  relation_state: "potential" | "structural" | "time_activated" | "effective";
   semantic_state: "latent" | "active" | "reinforced" | "weakened" | "blocked";
   trace: CanvasTrace;
   state_trace: CanvasTrace;

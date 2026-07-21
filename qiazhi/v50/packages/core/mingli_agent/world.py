@@ -288,6 +288,7 @@ def _graph_relation_facts(*, graph, nodes: dict[str, Any]) -> list[WorldFact]:
         edge
         for edge in graph.edges
         if edge.edge_type.value not in {"position_link", "stores"}
+        and edge.relation_state.value != "potential"
     ]
     priority_edges.sort(key=lambda edge: (edge.edge_type.value, edge.from_node_id, edge.to_node_id, edge.edge_id))
     for edge in priority_edges[:28]:
@@ -308,6 +309,7 @@ def _graph_relation_facts(*, graph, nodes: dict[str, Any]) -> list[WorldFact]:
                     "to": target.label,
                     "to_position": target.position,
                     "relation": edge.edge_type.value,
+                    "relation_state": edge.relation_state.value,
                     "candidate_relation_key": edge.relation_key,
                     "directionality": edge.directionality.value,
                     "ontology_version": edge.ontology_version,

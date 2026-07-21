@@ -31,8 +31,6 @@ def build_bazi_flow_states(
     for active_flow in active_flows:
         mechanism = _mechanism_from_flow(active_flow)
         matching_paths = _paths_for_mechanism(path_result.paths, mechanism)
-        if not matching_paths and path_result.paths:
-            matching_paths = path_result.paths[:1]
         top_nodes = _top_node_refs(
             analysis,
             mechanism=mechanism,

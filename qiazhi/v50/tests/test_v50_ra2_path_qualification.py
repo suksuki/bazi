@@ -102,7 +102,8 @@ def test_ra2_whole_path_validator_rejects_reversed_directed_relation() -> None:
     edge = next(
         edge
         for edge in graph.edges
-        if edge.edge_type in {MingliGraphEdgeType.GENERATES, MingliGraphEdgeType.CONTROLS}
+        if edge.path_eligibility == PathEligibility.ELIGIBLE
+        and edge.directionality.value == "directed"
     )
 
     validation = validate_whole_path_candidate(

@@ -26,6 +26,7 @@ CanvasEpistemicStatus = Literal[
 ]
 CanvasDisclosure = Literal["public", "member", "practitioner", "research"]
 CanvasSemanticState = Literal["latent", "active", "reinforced", "weakened", "blocked"]
+CanvasRelationState = Literal["potential", "structural", "time_activated", "effective"]
 CanvasChangeType = Literal[
     "introduced",
     "removed",
@@ -95,6 +96,7 @@ class CanvasRelation(ExperienceModel):
     participant_node_refs: list[str] = Field(default_factory=list, min_length=0)
     relation_type: str = Field(min_length=1, max_length=100)
     label: str = Field(min_length=1, max_length=140)
+    relation_state: CanvasRelationState = "structural"
     semantic_state: CanvasSemanticState = "active"
     trace: CanvasTrace
     state_trace: CanvasTrace
@@ -716,6 +718,8 @@ def compile_canvas_diff(
 
 def project_canvas_spec_for_role(spec: MingliCanvasSpec, role: CanvasRole) -> MingliCanvasSpec:
     slots = [item for item in spec.semantic_slots if _trace_visible(item.trace, role)]
+    if role in {"guest", "member"}:
+        slots = [item.model_copy(update={"hidden_stems": []}) for item in slots]
     nodes = [item for item in spec.nodes if _trace_visible(item.trace, role)]
     node_refs = {item.node_ref for item in nodes}
     relations = [

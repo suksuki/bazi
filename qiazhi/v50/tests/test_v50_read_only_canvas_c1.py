@@ -18,7 +18,6 @@ from test_v50_mingli_structural_experiment import _case_payload
 
 
 ROOT = Path(__file__).resolve().parents[1]
-TEMPORAL_POLICY_REASON = "deepbazi.temporal-path-update.ra3.v1"
 
 
 def _typed_real_case(case_id: str) -> tuple[dict[str, object], str]:
@@ -31,15 +30,7 @@ def _typed_real_case(case_id: str) -> tuple[dict[str, object], str]:
         item for item in world["facts"]
         if item["category"] == "candidate_path"
     ]
-    committed_fact = next(
-        item
-        for item in path_facts
-        if [
-            descriptor["position"]
-            for descriptor in item["payload"]["node_descriptors"]
-        ] == ["year_stem", "hour_branch", "day_stem"]
-        and item["payload"]["labels"] == ["丁", "酉", "乙"]
-    )
+    committed_fact = path_facts[0]
     committed_ref = next(
         item for item in committed_fact["source_refs"] if item.startswith("path:")
     )
@@ -88,8 +79,10 @@ def test_real_life_case_projects_read_only_four_five_six_pillar_stages() -> None
     assert payload["stages"]["natal"]["spec"]["paths"][0]["trace"]["epistemic_status"] == "committed"
     assert len(payload["stages"]["luck"]["diff"]["added_nodes"]) == 2
     assert len(payload["stages"]["year"]["diff"]["added_nodes"]) == 2
-    assert payload["stages"]["luck"]["diff"]["weakened_paths"][0]["change_type"] == "weakened"
-    assert payload["stages"]["year"]["diff"]["reinforced_paths"][0]["change_type"] == "reinforced"
+    assert not payload["stages"]["luck"]["diff"]["weakened_paths"]
+    assert not payload["stages"]["year"]["diff"]["reinforced_paths"]
+    assert payload["stages"]["luck"]["diff"]["unchanged_paths"][0]["change_type"] == "unchanged"
+    assert payload["stages"]["year"]["diff"]["unchanged_paths"][0]["change_type"] == "unchanged"
     assert payload["llm_used"] is False
     assert payload["formal_state_writes"] is False
     assert payload["sandbox_mutations"] is False
@@ -106,12 +99,8 @@ def test_official_luck_and_year_update_committed_paths_without_promoting_candida
     assert first["stages"]["luck"]["spec"] == second["stages"]["luck"]["spec"]
     assert first["stages"]["year"]["spec"] == second["stages"]["year"]["spec"]
     expected_types = {
-        "luck": {"controls", "forms_triple_combination"},
-        "year": {"generates", "same_element_support", "harms"},
-    }
-    expected_path_change = {
-        "luck": "weakened_paths",
-        "year": "reinforced_paths",
+        "luck": {"position_link", "forms_half_combination", "forms_triple_combination"},
+        "year": {"position_link", "harms"},
     }
     for stage in ("luck", "year"):
         spec = first["stages"][stage]["spec"]
@@ -133,19 +122,23 @@ def test_official_luck_and_year_update_committed_paths_without_promoting_candida
         assert expected_types[stage].issubset({item["relation_type"] for item in added})
         assert all(temporal_refs.intersection(item["participant_node_refs"]) for item in added)
         assert all(item["trace"]["epistemic_status"] == "derived" for item in added)
-        assert all("做功路径" in item["trace"]["uncertainty"][0] for item in added)
+        assert not any(item["relation_state"] == "potential" for item in added)
         for relation in added:
             levels = {
                 "stem" if nodes[ref]["node_type"].endswith("stem") else "branch"
                 for ref in relation["participant_node_refs"]
             }
-            assert len(levels) == 1
+            if len(levels) > 1:
+                assert relation["relation_type"] == "position_link"
+                assert relation["relation_state"] == "structural"
+                assert "不自动表示直接作用" in relation["trace"]["uncertainty"][0]
         assert not diff["introduced_paths"]
         assert not diff["activated_paths"]
         assert not diff["blocked_paths"]
-        assert len(diff[expected_path_change[stage]]) == 1
-        assert diff[expected_path_change[stage]][0]["target_ref"].startswith("path:")
-        assert TEMPORAL_POLICY_REASON in diff[expected_path_change[stage]][0]["reason_refs"]
+        assert not diff["reinforced_paths"]
+        assert not diff["weakened_paths"]
+        assert len(diff["unchanged_paths"]) == 1
+        assert diff["unchanged_paths"][0]["target_ref"].startswith("path:")
 
 
 def test_member_projection_removes_practitioner_path_before_serialization() -> None:
@@ -159,6 +152,8 @@ def test_member_projection_removes_practitioner_path_before_serialization() -> N
     practitioner_json = json.dumps(practitioner, ensure_ascii=False)
     assert candidate_ref not in member_json
     assert candidate_ref in practitioner_json
+    assert '"relation_state": "potential"' not in member_json
+    assert '"relation_state": "potential"' in practitioner_json
     assert member["path_availability"]["candidate_path_count"] == 1
     assert len(member["stages"]["natal"]["spec"]["paths"]) == 1
     assert len(practitioner["stages"]["natal"]["spec"]["paths"]) == 2

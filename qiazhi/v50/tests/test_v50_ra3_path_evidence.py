@@ -163,6 +163,7 @@ def _relation(
         participant_node_refs=[source, target],
         relation_type=relation_type,
         label=relation_type,
+        relation_state="time_activated",
         trace=trace,
         state_trace=trace,
         change_reason_refs=[relation_ref],

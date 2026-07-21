@@ -54,14 +54,15 @@ def test_v50_bazi_flow_state_adapter_turns_simulation_evidence_into_unified_stat
     assert output_control.creates_judgment is False
     assert output_control.calls_brain is False
     assert output_control.calls_llm is False
-    assert output_control.path_refs
+    assert output_control.path_refs == ["flow.output_controls_pressure"]
     assert output_control.node_refs
     assert output_control.evidence_refs
     assert output_control.output_strength > 0.8
     assert output_control.path_score > 0.0
     assert output_control.ablation_sensitivity >= 0.9
     assert output_control.confidence >= output_control.output_strength
-    assert {"酉", "丁"}.issubset(top_labels)
+    assert "酉" in top_labels
+    assert not any(ref.startswith("path:") for ref in output_control.path_refs)
 
 
 def test_v50_bazi_flow_state_adapter_rejects_mixed_readings() -> None:

@@ -18,7 +18,15 @@ from core.engines.bazi.knowledge import (
 )
 from core.engines.bazi.material_engine import resolve_ten_god
 from core.graph import NodeRef, RelationKey, build_mingli_graph_from_material_store, canonical_scene_scope_ref, explore_mingli_paths
-from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliPath, PathEligibility
+from core.graph.contracts import (
+    MingliGraph,
+    MingliGraphEdge,
+    MingliGraphEdgeType,
+    MingliGraphNode,
+    MingliPath,
+    MingliRelationState,
+    PathEligibility,
+)
 from core.graph.path_qualification import qualify_relation_for_path
 from core.graph.provenance import relation_directionality
 from core.life_case import (
@@ -603,7 +611,7 @@ def _canvas_node(node: MingliGraphNode, *, node_ref: str) -> CanvasNode:
             source_mode="canonical" if visible else "derived",
             epistemic_status="fact" if visible else "derived",
             source_refs=_refs([*node.material_refs, *node.evidence_refs], fallback=node.node_id),
-            disclosure="public" if visible else "member",
+            disclosure="public" if visible else "practitioner",
         ),
     )
 
@@ -621,6 +629,10 @@ def _canvas_relation(
     refs = _refs([*edge.material_refs, *edge.evidence_refs], fallback=edge.edge_id)
     label = f"{source.label}{RELATION_LABELS.get(edge.edge_type.value, edge.relation_label or edge.edge_type.value)}{target.label}"
     assertion_ref = str(assertion.get("assertion_ref")) if assertion else ""
+    if assertion_ref:
+        relation_state = MingliRelationState.EFFECTIVE
+    else:
+        relation_state = edge.relation_state
     trace = (
         CanvasTrace(
             source_mode="committed",
@@ -635,6 +647,14 @@ def _canvas_relation(
         if assertion_ref
         else CanvasTrace(
             source_mode="derived",
+            epistemic_status="candidate",
+            source_refs=refs,
+            uncertainty=["五行生克只表示潜在关系；需经具名机制后才能进入正式作用图。"],
+            disclosure="practitioner",
+        )
+        if relation_state == MingliRelationState.POTENTIAL
+        else CanvasTrace(
+            source_mode="derived",
             epistemic_status="derived",
             source_refs=refs,
             disclosure="member",
@@ -647,7 +667,12 @@ def _canvas_relation(
         participant_node_refs=[node_refs[item] for item in edge.participant_node_ids],
         relation_type=edge.edge_type.value,
         label=label,
-        semantic_state="active",
+        relation_state=relation_state.value,
+        semantic_state=(
+            "latent"
+            if relation_state == MingliRelationState.POTENTIAL
+            else "active"
+        ),
         trace=trace,
         state_trace=trace,
         change_reason_refs=refs,
@@ -1002,11 +1027,16 @@ def _temporal_path_updates(
         support_refs: list[str] = []
         restraint_refs: list[str] = []
         for relation in relations:
+            if relation.relation_state not in {"time_activated", "effective"}:
+                continue
             try:
                 relation_type = MingliGraphEdgeType(relation.relation_type)
             except ValueError:
                 continue
-            eligibility, _ = qualify_relation_for_path(relation_type)
+            eligibility, _ = qualify_relation_for_path(
+                relation_type,
+                relation_state=MingliRelationState(relation.relation_state),
+            )
             if eligibility != PathEligibility.ELIGIBLE:
                 continue
             if relation_type == MingliGraphEdgeType.GENERATES:
@@ -1091,6 +1121,11 @@ def _temporal_relations(
     rows: list[dict[str, object]] = [
         *derive_element_relations(stems),
         *derive_branch_relations(branches),
+        {
+            "type": "position_link",
+            "source_ref": current_nodes[0][0].node_ref,
+            "target_ref": current_nodes[1][0].node_ref,
+        },
     ]
     relations: dict[str, CanvasRelation] = {}
     for row in rows:
@@ -1117,13 +1152,33 @@ def _temporal_relations(
             [*source_refs, f"rule:bazi.branch_relation:{row.get('type', '')}"],
             fallback=relation_key.relation_key,
         )
-        trace = CanvasTrace(
-            source_mode="derived",
-            epistemic_status="derived",
-            source_refs=refs,
-            uncertainty=["结构关系存在不等于做功路径已经成立"],
-            disclosure="member",
-        )
+        if relation_type in {"generates", "controls", "same_element_support"}:
+            relation_state = MingliRelationState.POTENTIAL
+            trace = CanvasTrace(
+                source_mode="derived",
+                epistemic_status="candidate",
+                source_refs=refs,
+                uncertainty=["时间柱进入不会让普通五行生克自动成为直接作用。"],
+                disclosure="practitioner",
+            )
+        elif relation_type == "position_link":
+            relation_state = MingliRelationState.STRUCTURAL
+            trace = CanvasTrace(
+                source_mode="derived",
+                epistemic_status="derived",
+                source_refs=refs,
+                uncertainty=["同柱只表示承载与接近，不自动表示直接作用。"],
+                disclosure="member",
+            )
+        else:
+            relation_state = MingliRelationState.TIME_ACTIVATED
+            trace = CanvasTrace(
+                source_mode="derived",
+                epistemic_status="derived",
+                source_refs=refs,
+                uncertainty=["时间关系已激活；是否实际生效仍需正式命理认知。"],
+                disclosure="member",
+            )
         label = (
             " · ".join(nodes_by_ref[item].label for item in participant_refs)
             + RELATION_LABELS.get(relation_type, relation_type)
@@ -1141,7 +1196,12 @@ def _temporal_relations(
             participant_node_refs=participant_refs,
             relation_type=relation_type,
             label=label,
-            semantic_state="active",
+            relation_state=relation_state.value,
+            semantic_state=(
+                "latent"
+                if relation_state == MingliRelationState.POTENTIAL
+                else "active"
+            ),
             trace=trace,
             state_trace=trace,
             change_reason_refs=refs,
@@ -1172,6 +1232,7 @@ def _core_relation_type(raw_type: str) -> str:
         "half_triple_harmony": "forms_half_combination",
         "triple_harmony": "forms_triple_combination",
         "triple_punishment": "punishes",
+        "position_link": "position_link",
     }.get(raw_type, "")
 
 

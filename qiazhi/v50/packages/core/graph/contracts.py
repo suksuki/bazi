@@ -46,6 +46,13 @@ class PathEligibility(str, Enum):
     NOT_YET_QUALIFIED = "not_yet_qualified"
 
 
+class MingliRelationState(str, Enum):
+    POTENTIAL = "potential"
+    STRUCTURAL = "structural"
+    TIME_ACTIVATED = "time_activated"
+    EFFECTIVE = "effective"
+
+
 class PathValidationState(str, Enum):
     QUALIFIED = "qualified"
     QUALIFIED_WITH_CONDITIONS = "qualified_with_conditions"
@@ -150,7 +157,7 @@ class MingliGraphNode(V50Model):
 
 
 class MingliGraphEdge(V50Model):
-    version: str = "v50.mingli_graph_edge.v1"
+    version: str = "v50.mingli_graph_edge.v2"
     edge_id: str
     relation_key: str = ""
     reading_id: str
@@ -162,6 +169,7 @@ class MingliGraphEdge(V50Model):
     ontology_version: str = RELATION_ONTOLOGY_VERSION
     legacy_unvalidated_strength: float = Field(default=0.0, ge=0.0, le=1.0)
     relation_label: str = ""
+    relation_state: MingliRelationState = MingliRelationState.STRUCTURAL
     path_eligibility: PathEligibility = PathEligibility.NOT_YET_QUALIFIED
     eligibility_reason_refs: list[str] = Field(default_factory=list)
     attributes: dict[str, object] = Field(default_factory=dict)
@@ -190,6 +198,11 @@ class MingliGraphEdge(V50Model):
         object.__setattr__(self, "relation_key", expected)
         object.__setattr__(self, "participant_node_ids", participants)
         object.__setattr__(self, "directionality", directionality)
+        if (
+            self.relation_state == MingliRelationState.POTENTIAL
+            and self.path_eligibility != PathEligibility.NOT_YET_QUALIFIED
+        ):
+            raise ValueError("potential_relation_cannot_be_path_eligible")
         require_refs(self.eligibility_reason_refs, "eligibility_reason_refs")
         require_refs(self.material_refs, "material_refs")
         require_refs(self.evidence_refs, "evidence_refs")

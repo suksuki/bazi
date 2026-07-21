@@ -8,6 +8,7 @@ from core.graph.contracts import (
     MingliGraph,
     MingliGraphEdgeType,
     MingliGraphNode,
+    MingliRelationState,
     NodeImportanceMetric,
     NodeRoleClassificationResult,
     NodeRoleType,
@@ -122,6 +123,8 @@ def _month_branch_node(graph: MingliGraph) -> MingliGraphNode | None:
 def _degree_scores(graph: MingliGraph) -> dict[str, float]:
     degrees: Counter[str] = Counter()
     for edge in graph.edges:
+        if edge.relation_state == MingliRelationState.POTENTIAL:
+            continue
         degrees[edge.from_node_id] += 1
         degrees[edge.to_node_id] += 1
     max_degree = max(degrees.values() or [1])
@@ -230,7 +233,12 @@ def _role_perturbation_score(roles: set[NodeRoleType]) -> float:
 def _controls_pressure_target(node: MingliGraphNode, graph: MingliGraph) -> bool:
     if node.element != "metal":
         return False
-    return any(edge.edge_type == MingliGraphEdgeType.CONTROLS and edge.to_node_id == node.node_id for edge in graph.edges)
+    return any(
+        edge.edge_type == MingliGraphEdgeType.CONTROLS
+        and edge.relation_state != MingliRelationState.POTENTIAL
+        and edge.to_node_id == node.node_id
+        for edge in graph.edges
+    )
 
 
 def _importance(

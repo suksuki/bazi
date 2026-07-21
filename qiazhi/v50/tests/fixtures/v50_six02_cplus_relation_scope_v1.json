@@ -1,0 +1,40 @@
+{
+  "schema_version": "deepbazi.six02_cplus_relation_scope_fixture.v1",
+  "authority_boundary": "boss-approved SIX-02-01 C+ regression fixture; no unresolved relation semantics are added",
+  "relation_state_order": [
+    "potential",
+    "structural",
+    "time_activated",
+    "effective"
+  ],
+  "synthetic_groups": [
+    {
+      "fixture_id": "same-pillar-atomic-hidden-stems",
+      "pillars": ["甲戌", "丙寅", "庚辰", "壬午"],
+      "assertions": [
+        "no_visible_stem_to_whole_branch_element_edge",
+        "jia_xu_targets_wu_xin_ding_individually",
+        "same_pillar_is_proximity_not_direct_action"
+      ]
+    },
+    {
+      "fixture_id": "repeated-jia-xu-keeps-slot-identity",
+      "pillars": ["甲戌", "甲戌", "庚戌", "壬午"],
+      "assertions": [
+        "repeated_labels_keep_distinct_node_identity",
+        "potential_relation_keys_remain_deterministic",
+        "distance_does_not_promote_potential_to_action"
+      ]
+    },
+    {
+      "fixture_id": "temporal-entry-uses-shared-ontology",
+      "natal_pillar": "丁午",
+      "luck_pillar": "庚子",
+      "assertions": [
+        "stem_element_relation_remains_potential",
+        "branch_clash_is_time_activated",
+        "temporal_same_pillar_is_structural_only"
+      ]
+    }
+  ]
+}

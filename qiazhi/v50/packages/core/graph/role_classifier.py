@@ -5,6 +5,7 @@ from collections import defaultdict
 from core.graph.contracts import (
     MingliGraph,
     MingliGraphNode,
+    MingliRelationState,
     NodeRoleAssignment,
     NodeRoleClassificationResult,
     NodeRoleType,
@@ -87,7 +88,12 @@ def _is_engine_node(node: MingliGraphNode, graph: MingliGraph) -> bool:
         return True
     if node.attributes.get("output_converter"):
         return True
-    outgoing = [edge for edge in graph.edges if edge.from_node_id == node.node_id]
+    outgoing = [
+        edge
+        for edge in graph.edges
+        if edge.from_node_id == node.node_id
+        and edge.relation_state != MingliRelationState.POTENTIAL
+    ]
     return len(outgoing) >= 4
 
 

@@ -65,7 +65,9 @@ def test_v50_path_explorer_and_role_classifier_find_paths_before_importance_scor
     assert role_result.calls_brain is False
     assert role_result.calls_llm is False
     assert len(path_result.paths) > 10
-    assert set(case["expected_path_hints"]).issubset({hint for path in path_result.paths for hint in path.mechanism_hints})
+    hints = {hint for path in path_result.paths for hint in path.mechanism_hints}
+    assert "mechanism_hint.combination_bridge" in hints
+    assert "mechanism_hint.output_controls_pressure" not in hints
 
     roles_by_label_position = {}
     for assignment in role_result.assignments:

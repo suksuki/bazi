@@ -5,7 +5,14 @@ from typing import Any
 from core.contracts.material import MaterialType, MingliMaterial, UnifiedMingliMaterialStore
 from core.engines.bazi.knowledge import BRANCH_ELEMENTS, HIDDEN_STEMS, STEM_ELEMENTS, STEM_POLARITY, TRIPLE_HARMONY
 from core.engines.bazi.material_engine import derive_element_relations, resolve_ten_god
-from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliGraphNodeType
+from core.graph.contracts import (
+    MingliGraph,
+    MingliGraphEdge,
+    MingliGraphEdgeType,
+    MingliGraphNode,
+    MingliGraphNodeType,
+    MingliRelationState,
+)
 from core.graph.path_qualification import qualify_relation_for_path
 
 
@@ -71,7 +78,12 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                 legacy_unvalidated_strength=0.72,
                 relation_label="same_pillar_position",
                 material_refs=[chart_material_ref],
-                attributes={"slot": position},
+                attributes={
+                    "slot": position,
+                    "mechanism": "same_pillar_bearing",
+                    "proximity": "same_pillar",
+                    "direct_action": False,
+                },
             )
         )
         for hidden_stem in HIDDEN_STEMS.get(branch, []):
@@ -150,11 +162,15 @@ def _edge(
     legacy_unvalidated_strength: float,
     relation_label: str,
     material_refs: list[str],
+    relation_state: MingliRelationState = MingliRelationState.STRUCTURAL,
     evidence_refs: list[str] | None = None,
     participant_node_ids: list[str] | None = None,
     attributes: dict[str, object] | None = None,
 ) -> MingliGraphEdge:
-    path_eligibility, eligibility_reason_refs = qualify_relation_for_path(edge_type)
+    path_eligibility, eligibility_reason_refs = qualify_relation_for_path(
+        edge_type,
+        relation_state=relation_state,
+    )
     return MingliGraphEdge(
         edge_id=edge_id,
         reading_id=store.reading_id,
@@ -164,6 +180,7 @@ def _edge(
         participant_node_ids=participant_node_ids or [],
         legacy_unvalidated_strength=legacy_unvalidated_strength,
         relation_label=relation_label,
+        relation_state=relation_state,
         path_eligibility=path_eligibility,
         eligibility_reason_refs=eligibility_reason_refs,
         attributes=attributes or {},
@@ -193,8 +210,12 @@ def _mark_structural_attributes(nodes: list[MingliGraphNode], *, pillars: dict[s
 
 
 def _element_edges(*, store: UnifiedMingliMaterialStore, nodes: list[MingliGraphNode], chart_material_ref: str) -> list[MingliGraphEdge]:
-    visible_nodes = [node for node in nodes if node.node_type in {MingliGraphNodeType.STEM, MingliGraphNodeType.BRANCH}]
-    nodes_by_id = {node.node_id: node for node in visible_nodes}
+    atomic_nodes = [
+        node
+        for node in nodes
+        if node.node_type in {MingliGraphNodeType.STEM, MingliGraphNodeType.HIDDEN_STEM}
+    ]
+    nodes_by_id = {node.node_id: node for node in atomic_nodes}
     strengths = {
         MingliGraphEdgeType.GENERATES: 0.70,
         MingliGraphEdgeType.CONTROLS: 0.68,
@@ -202,7 +223,7 @@ def _element_edges(*, store: UnifiedMingliMaterialStore, nodes: list[MingliGraph
     }
     output: list[MingliGraphEdge] = []
     for relation in derive_element_relations([
-        (node.node_id, node.element) for node in visible_nodes
+        (node.node_id, node.element) for node in atomic_nodes
     ]):
         edge_type = MingliGraphEdgeType(relation["type"])
         output.append(_element_edge(
@@ -233,7 +254,18 @@ def _element_edge(
         legacy_unvalidated_strength=legacy_unvalidated_strength,
         relation_label=edge_type.value,
         material_refs=[chart_material_ref],
-        attributes={"from_element": source.element, "to_element": target.element},
+        relation_state=MingliRelationState.POTENTIAL,
+        attributes={
+            "from_element": source.element,
+            "to_element": target.element,
+            "from_level": source.node_type.value,
+            "to_level": target.node_type.value,
+            "relation_field": "five_element_potential",
+            "projection_scope": "practitioner_or_lab",
+            "mechanism_required": True,
+            "direct_action": False,
+            "same_pillar": source.attributes.get("slot") == target.attributes.get("slot"),
+        },
     )
 
 

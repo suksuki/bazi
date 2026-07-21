@@ -438,6 +438,17 @@
           "title": "Label",
           "type": "string"
         },
+        "relation_state": {
+          "default": "structural",
+          "enum": [
+            "potential",
+            "structural",
+            "time_activated",
+            "effective"
+          ],
+          "title": "Relation State",
+          "type": "string"
+        },
         "semantic_state": {
           "default": "active",
           "enum": [

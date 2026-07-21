@@ -5,6 +5,7 @@ from dataclasses import dataclass
 from core.graph.contracts import (
     MingliGraph,
     MingliGraphEdgeType,
+    MingliRelationState,
     MingliStateLayer,
     PathBlockingState,
     PathClosureState,
@@ -51,7 +52,15 @@ class WholePathValidation:
 
 def qualify_relation_for_path(
     relation_type: MingliGraphEdgeType,
+    *,
+    relation_state: MingliRelationState = MingliRelationState.STRUCTURAL,
 ) -> tuple[PathEligibility, list[str]]:
+    if relation_state == MingliRelationState.POTENTIAL:
+        return PathEligibility.NOT_YET_QUALIFIED, [
+            PATH_QUALIFICATION_POLICY_VERSION,
+            "path.relation.potential_requires_named_mechanism",
+            f"path.relation.state:{relation_state.value}",
+        ]
     if relation_type in _ELIGIBLE_RELATIONS:
         return PathEligibility.ELIGIBLE, [
             PATH_QUALIFICATION_POLICY_VERSION,

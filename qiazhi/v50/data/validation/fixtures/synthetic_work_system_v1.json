@@ -25,7 +25,7 @@
         "丁:year_stem": ["converter_node"],
         "巳:month_branch": ["environment_node", "activation_node"]
       },
-      "expected_path_hints": ["mechanism_hint.output_controls_pressure", "mechanism_hint.combination_bridge"],
+      "expected_path_hints": ["mechanism_hint.combination_bridge"],
       "expected_critical_nodes": ["酉:hour_branch", "丁:year_stem"],
       "expected_ablation_prefix": ["酉:hour_branch", "丁:year_stem"],
       "must_not_roles": {
