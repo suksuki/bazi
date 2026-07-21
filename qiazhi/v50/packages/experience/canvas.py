@@ -508,6 +508,7 @@ def create_temporal_sandbox(
             experiment_kind="temporal_hypothesis",
             base_snapshot_ref=base_snapshot_id,
             source_mode="synthetic_fixture",
+            synthetic_fixture_ref=base_snapshot_id,
             created_at=epoch,
             updated_at=epoch,
         ),

@@ -122,7 +122,13 @@
         "experiment_kind": {
           "enum": [
             "mechanism_ablation",
-            "temporal_hypothesis"
+            "temporal_hypothesis",
+            "relation_inspection",
+            "candidate_interpretation",
+            "competing_path_comparison",
+            "synthetic_case",
+            "counterexample_review",
+            "algorithm_change_validation"
           ],
           "title": "Experiment Kind",
           "type": "string"
@@ -140,6 +146,12 @@
             "legacy_unresolved"
           ],
           "title": "Source Mode",
+          "type": "string"
+        },
+        "synthetic_fixture_ref": {
+          "default": "",
+          "maxLength": 220,
+          "title": "Synthetic Fixture Ref",
           "type": "string"
         },
         "revision": {

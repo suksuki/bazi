@@ -342,6 +342,11 @@ def create_sandbox_state(
                 if not snapshot.scene_id.startswith("scene-unbound")
                 else "synthetic_fixture"
             ),
+            synthetic_fixture_ref=(
+                snapshot.snapshot_hash
+                if snapshot.scene_id.startswith("scene-unbound")
+                else ""
+            ),
             created_at=now,
             updated_at=now,
         ),

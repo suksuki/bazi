@@ -1,0 +1,61 @@
+{
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.lab_path_comparison.v1",
+      "default": "deepbazi.lab_path_comparison.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "comparison_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Comparison Id",
+      "type": "string"
+    },
+    "path_assertion_refs": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 2,
+      "title": "Path Assertion Refs",
+      "type": "array"
+    },
+    "selected_path_assertion_ref": {
+      "default": "",
+      "maxLength": 180,
+      "title": "Selected Path Assertion Ref",
+      "type": "string"
+    },
+    "status": {
+      "default": "open",
+      "enum": [
+        "open",
+        "needs_evidence",
+        "resolved",
+        "rejected"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "reason_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Reason Refs",
+      "type": "array"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    }
+  },
+  "required": [
+    "comparison_id",
+    "path_assertion_refs",
+    "created_at"
+  ],
+  "title": "LabPathComparison",
+  "type": "object"
+}

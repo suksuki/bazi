@@ -1,0 +1,490 @@
+{
+  "$defs": {
+    "AssertionLifecycle": {
+      "enum": [
+        "candidate",
+        "committed",
+        "superseded",
+        "rejected",
+        "legacy_unresolved"
+      ],
+      "title": "AssertionLifecycle",
+      "type": "string"
+    },
+    "NodeRef": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "deepbazi.node_ref.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "node_ref": {
+          "default": "",
+          "title": "Node Ref",
+          "type": "string"
+        },
+        "scene_ref": {
+          "title": "Scene Ref",
+          "type": "string"
+        },
+        "life_case_id": {
+          "title": "Life Case Id",
+          "type": "string"
+        },
+        "chart_version_id": {
+          "title": "Chart Version Id",
+          "type": "string"
+        },
+        "world_id": {
+          "title": "World Id",
+          "type": "string"
+        },
+        "scope": {
+          "enum": [
+            "natal",
+            "luck",
+            "year",
+            "month",
+            "other"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "slot": {
+          "title": "Slot",
+          "type": "string"
+        },
+        "level": {
+          "enum": [
+            "pillar",
+            "stem",
+            "branch",
+            "hidden_stem",
+            "other"
+          ],
+          "title": "Level",
+          "type": "string"
+        },
+        "component": {
+          "title": "Component",
+          "type": "string"
+        },
+        "temporal_snapshot_ref": {
+          "default": "",
+          "title": "Temporal Snapshot Ref",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scene_ref",
+        "life_case_id",
+        "chart_version_id",
+        "world_id",
+        "scope",
+        "slot",
+        "level",
+        "component"
+      ],
+      "title": "NodeRef",
+      "type": "object"
+    },
+    "PathAssertion": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "deepbazi.path_assertion.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "assertion_id": {
+          "default": "",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "path_key": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PathKey"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "assertion_version": {
+          "title": "Assertion Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AssertionLifecycle"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ProvenanceRecord"
+        },
+        "supersedes": {
+          "default": "",
+          "title": "Supersedes",
+          "type": "string"
+        },
+        "statement": {
+          "default": "",
+          "title": "Statement",
+          "type": "string"
+        },
+        "legacy_ref": {
+          "default": "",
+          "title": "Legacy Ref",
+          "type": "string"
+        },
+        "unresolved_reason": {
+          "default": "",
+          "title": "Unresolved Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "assertion_version",
+        "status",
+        "provenance"
+      ],
+      "title": "PathAssertion",
+      "type": "object"
+    },
+    "PathKey": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "deepbazi.path_key.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "path_key": {
+          "default": "",
+          "title": "Path Key",
+          "type": "string"
+        },
+        "scene_ref": {
+          "title": "Scene Ref",
+          "type": "string"
+        },
+        "ontology_version": {
+          "default": "deepbazi.relation-ontology.pre-ra1.v1",
+          "title": "Ontology Version",
+          "type": "string"
+        },
+        "node_refs": {
+          "items": {
+            "$ref": "#/$defs/NodeRef"
+          },
+          "minItems": 2,
+          "title": "Node Refs",
+          "type": "array"
+        },
+        "relation_keys": {
+          "items": {
+            "$ref": "#/$defs/RelationKey"
+          },
+          "minItems": 1,
+          "title": "Relation Keys",
+          "type": "array"
+        },
+        "scope": {
+          "default": "natal",
+          "enum": [
+            "natal",
+            "luck",
+            "year",
+            "month",
+            "other"
+          ],
+          "title": "Scope",
+          "type": "string"
+        },
+        "directed": {
+          "const": true,
+          "default": true,
+          "title": "Directed",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "scene_ref",
+        "node_refs",
+        "relation_keys"
+      ],
+      "title": "PathKey",
+      "type": "object"
+    },
+    "ProvenanceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "deepbazi.relation_path_provenance.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "provenance_id": {
+          "default": "",
+          "title": "Provenance Id",
+          "type": "string"
+        },
+        "source": {
+          "enum": [
+            "graph_candidate",
+            "reasoner_commit",
+            "legacy_exact_import",
+            "legacy_unresolved"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
+        "producer_id": {
+          "title": "Producer Id",
+          "type": "string"
+        },
+        "producer_version": {
+          "title": "Producer Version",
+          "type": "string"
+        },
+        "evidence_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence Refs",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "created_at": {
+          "title": "Created At",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "producer_id",
+        "producer_version",
+        "created_at"
+      ],
+      "title": "ProvenanceRecord",
+      "type": "object"
+    },
+    "RelationAssertion": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "deepbazi.relation_assertion.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "assertion_id": {
+          "default": "",
+          "title": "Assertion Id",
+          "type": "string"
+        },
+        "relation_key": {
+          "$ref": "#/$defs/RelationKey"
+        },
+        "assertion_version": {
+          "title": "Assertion Version",
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/$defs/AssertionLifecycle"
+        },
+        "provenance": {
+          "$ref": "#/$defs/ProvenanceRecord"
+        },
+        "supersedes": {
+          "default": "",
+          "title": "Supersedes",
+          "type": "string"
+        },
+        "statement": {
+          "default": "",
+          "title": "Statement",
+          "type": "string"
+        }
+      },
+      "required": [
+        "relation_key",
+        "assertion_version",
+        "status",
+        "provenance"
+      ],
+      "title": "RelationAssertion",
+      "type": "object"
+    },
+    "RelationDirectionality": {
+      "enum": [
+        "directed",
+        "symmetric"
+      ],
+      "title": "RelationDirectionality",
+      "type": "string"
+    },
+    "RelationKey": {
+      "additionalProperties": false,
+      "properties": {
+        "version": {
+          "default": "deepbazi.relation_key.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "relation_key": {
+          "default": "",
+          "title": "Relation Key",
+          "type": "string"
+        },
+        "scene_ref": {
+          "title": "Scene Ref",
+          "type": "string"
+        },
+        "ontology_version": {
+          "default": "deepbazi.relation-ontology.pre-ra1.v1",
+          "title": "Ontology Version",
+          "type": "string"
+        },
+        "relation_type": {
+          "title": "Relation Type",
+          "type": "string"
+        },
+        "participant_refs": {
+          "items": {
+            "$ref": "#/$defs/NodeRef"
+          },
+          "minItems": 2,
+          "title": "Participant Refs",
+          "type": "array"
+        },
+        "directionality": {
+          "$ref": "#/$defs/RelationDirectionality"
+        },
+        "arity": {
+          "default": 0,
+          "minimum": 2,
+          "title": "Arity",
+          "type": "integer"
+        },
+        "scope": {
+          "default": "natal",
+          "enum": [
+            "natal",
+            "luck",
+            "year",
+            "month",
+            "other"
+          ],
+          "title": "Scope",
+          "type": "string"
+        }
+      },
+      "required": [
+        "scene_ref",
+        "relation_type",
+        "participant_refs",
+        "directionality"
+      ],
+      "title": "RelationKey",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "description": "An isolated candidate revision; it is never a formal LifeCase assertion.",
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.lab_candidate_revision.v1",
+      "default": "deepbazi.lab_candidate_revision.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "revision_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Revision Id",
+      "type": "string"
+    },
+    "revision": {
+      "minimum": 1,
+      "title": "Revision",
+      "type": "integer"
+    },
+    "relation_assertions": {
+      "items": {
+        "$ref": "#/$defs/RelationAssertion"
+      },
+      "title": "Relation Assertions",
+      "type": "array"
+    },
+    "path_assertions": {
+      "items": {
+        "$ref": "#/$defs/PathAssertion"
+      },
+      "title": "Path Assertions",
+      "type": "array"
+    },
+    "interpretation": {
+      "default": "",
+      "maxLength": 2000,
+      "title": "Interpretation",
+      "type": "string"
+    },
+    "conditions": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Conditions",
+      "type": "array"
+    },
+    "counter_signals": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Counter Signals",
+      "type": "array"
+    },
+    "supersedes_revision_id": {
+      "default": "",
+      "maxLength": 180,
+      "title": "Supersedes Revision Id",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "writes_chart": {
+      "const": false,
+      "default": false,
+      "title": "Writes Chart",
+      "type": "boolean"
+    },
+    "writes_life_case": {
+      "const": false,
+      "default": false,
+      "title": "Writes Life Case",
+      "type": "boolean"
+    },
+    "commits_assertion": {
+      "const": false,
+      "default": false,
+      "title": "Commits Assertion",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "revision_id",
+    "revision",
+    "created_at"
+  ],
+  "title": "LabCandidateRevision",
+  "type": "object"
+}

@@ -44,9 +44,19 @@ from experience.contracts import (
 )
 from experience.cues import CueRenderError, freeze_performance_cue
 from experience.lab import (
+    LabCandidateRevision,
+    LabEvidenceSet,
+    LabPathComparison,
+    LabPromotionProposal,
+    MingliLabStudy,
     MingliLabSession,
+    append_lab_candidate_revision,
+    build_lab_promotion_proposal,
     exploration_from_lab_session,
     issue_lab_session,
+    open_lab_study,
+    record_lab_path_comparison,
+    update_lab_evidence,
     update_lab_session,
 )
 from experience.performance import compile_performance_package
@@ -77,6 +87,11 @@ __all__ = [
     "CaseWorkspaceEnvelope",
     "CaseWorkspaceState",
     "MingliExperienceEnvelope",
+    "LabCandidateRevision",
+    "LabEvidenceSet",
+    "LabPathComparison",
+    "LabPromotionProposal",
+    "MingliLabStudy",
     "MingliLabSession",
     "MingliCanvasCompileInput",
     "MingliCanvasSpec",
@@ -102,11 +117,16 @@ __all__ = [
     "load_topic_package",
     "create_temporal_sandbox",
     "build_case_workspace_state",
+    "append_lab_candidate_revision",
+    "build_lab_promotion_proposal",
     "exploration_from_lab_session",
     "issue_lab_session",
     "load_canvas_compile_input",
     "project_canvas_spec_for_role",
+    "open_lab_study",
+    "record_lab_path_comparison",
     "restore_temporal_sandbox",
     "select_case_workspace_period",
+    "update_lab_evidence",
     "update_lab_session",
 ]

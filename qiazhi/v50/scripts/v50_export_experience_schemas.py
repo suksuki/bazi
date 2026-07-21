@@ -25,7 +25,14 @@ from experience.contracts import (
     TopicPackage,
 )
 from experience.experiments import MechanismSandboxState
-from experience.lab import MingliLabSession
+from experience.lab import (
+    LabCandidateRevision,
+    LabEvidenceSet,
+    LabPathComparison,
+    LabPromotionProposal,
+    MingliLabSession,
+    MingliLabStudy,
+)
 from experience.narration import NarrationManifest, NarrationSegment, SpeechAsset
 from experience.product_projection import (
     CanvasChangeGroup,
@@ -62,6 +69,11 @@ CONTRACTS = {
     "case_workspace_state_v2.schema.json": CaseWorkspaceState,
     "case_workspace_envelope_v1.schema.json": CaseWorkspaceEnvelope,
     "mingli_lab_session_v1.schema.json": MingliLabSession,
+    "mingli_lab_study_v1.schema.json": MingliLabStudy,
+    "lab_candidate_revision_v1.schema.json": LabCandidateRevision,
+    "lab_evidence_set_v1.schema.json": LabEvidenceSet,
+    "lab_path_comparison_v1.schema.json": LabPathComparison,
+    "lab_promotion_proposal_v1.schema.json": LabPromotionProposal,
     "temporal_sandbox_state_v2.schema.json": TemporalSandboxState,
     "mechanism_sandbox_state_v2.schema.json": MechanismSandboxState,
     "topic_exploration_v1.schema.json": TopicExploration,
@@ -87,6 +99,11 @@ TYPESCRIPT_ROOTS: tuple[type[BaseModel], ...] = (
     CaseWorkspaceState,
     CaseWorkspaceEnvelope,
     MingliLabSession,
+    MingliLabStudy,
+    LabCandidateRevision,
+    LabEvidenceSet,
+    LabPathComparison,
+    LabPromotionProposal,
     TemporalSandboxState,
     MechanismSandboxState,
     TopicExploration,

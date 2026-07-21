@@ -1,0 +1,84 @@
+{
+  "additionalProperties": false,
+  "description": "A hand-off to a separate risk gate; this object cannot promote anything.",
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.lab_promotion_proposal.v1",
+      "default": "deepbazi.lab_promotion_proposal.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "proposal_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Proposal Id",
+      "type": "string"
+    },
+    "study_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Study Id",
+      "type": "string"
+    },
+    "candidate_revision_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Candidate Revision Id",
+      "type": "string"
+    },
+    "status": {
+      "enum": [
+        "blocked",
+        "ready_for_risk_gate"
+      ],
+      "title": "Status",
+      "type": "string"
+    },
+    "evidence_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Evidence Refs",
+      "type": "array"
+    },
+    "missing_requirements": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Missing Requirements",
+      "type": "array"
+    },
+    "requires_risk_gate": {
+      "const": true,
+      "default": true,
+      "title": "Requires Risk Gate",
+      "type": "boolean"
+    },
+    "writes_chart": {
+      "const": false,
+      "default": false,
+      "title": "Writes Chart",
+      "type": "boolean"
+    },
+    "writes_life_case": {
+      "const": false,
+      "default": false,
+      "title": "Writes Life Case",
+      "type": "boolean"
+    },
+    "performs_promotion": {
+      "const": false,
+      "default": false,
+      "title": "Performs Promotion",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "proposal_id",
+    "study_id",
+    "candidate_revision_id",
+    "status"
+  ],
+  "title": "LabPromotionProposal",
+  "type": "object"
+}

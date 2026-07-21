@@ -46,6 +46,8 @@ export interface ApprovedReasoningStep {
   visual_anchor: string;
 }
 
+export type AssertionLifecycle = "candidate" | "committed" | "superseded" | "rejected" | "legacy_unresolved";
+
 export interface CanonicalProjectionEnvelope {
   schema_version: "deepbazi.canonical_projection_envelope.v1";
   projection_id: string;
@@ -420,6 +422,57 @@ export interface HiddenStemFact {
   polarity: "yin" | "yang" | "";
 }
 
+export interface LabCandidateRevision {
+  schema_version: "deepbazi.lab_candidate_revision.v1";
+  revision_id: string;
+  revision: number;
+  relation_assertions: Array<RelationAssertion>;
+  path_assertions: Array<PathAssertion>;
+  interpretation: string;
+  conditions: Array<string>;
+  counter_signals: Array<string>;
+  supersedes_revision_id: string;
+  created_at: string;
+  writes_chart: false;
+  writes_life_case: false;
+  commits_assertion: false;
+}
+
+export interface LabEvidenceSet {
+  schema_version: "deepbazi.lab_evidence_set.v1";
+  positive_fixture_refs: Array<string>;
+  negative_fixture_refs: Array<string>;
+  boundary_fixture_refs: Array<string>;
+  synthetic_case_refs: Array<string>;
+  counterexample_refs: Array<string>;
+  resolved_counterexample_refs: Array<string>;
+  regression_refs: Array<string>;
+}
+
+export interface LabPathComparison {
+  schema_version: "deepbazi.lab_path_comparison.v1";
+  comparison_id: string;
+  path_assertion_refs: Array<string>;
+  selected_path_assertion_ref: string;
+  status: "open" | "needs_evidence" | "resolved" | "rejected";
+  reason_refs: Array<string>;
+  created_at: string;
+}
+
+export interface LabPromotionProposal {
+  schema_version: "deepbazi.lab_promotion_proposal.v1";
+  proposal_id: string;
+  study_id: string;
+  candidate_revision_id: string;
+  status: "blocked" | "ready_for_risk_gate";
+  evidence_refs: Array<string>;
+  missing_requirements: Array<string>;
+  requires_risk_gate: true;
+  writes_chart: false;
+  writes_life_case: false;
+  performs_promotion: false;
+}
+
 export interface MechanismSandboxState {
   schema_version: "deepbazi.mingli_sandbox_state.v1" | "deepbazi.mechanism_sandbox_state.v2";
   lab_session: MingliLabSession;
@@ -469,11 +522,35 @@ export interface MingliLabSession {
   scene_id: string;
   scene_source_hash: string;
   disclosure_hash: string;
-  experiment_kind: "mechanism_ablation" | "temporal_hypothesis";
+  experiment_kind: "mechanism_ablation" | "temporal_hypothesis" | "relation_inspection" | "candidate_interpretation" | "competing_path_comparison" | "synthetic_case" | "counterexample_review" | "algorithm_change_validation";
   base_snapshot_ref: string;
   source_mode: "canonical_projection" | "synthetic_fixture" | "legacy_unresolved";
+  synthetic_fixture_ref: string;
   revision: number;
   status: "active" | "modified" | "restored" | "saved" | "discarded";
+  created_at: string;
+  updated_at: string;
+  writes_chart: false;
+  writes_life_case: false;
+  promotes_candidate: false;
+}
+
+export interface MingliLabStudy {
+  schema_version: "deepbazi.mingli_lab_study.v1";
+  study_id: string;
+  session: MingliLabSession;
+  scene_identity: CanonicalSceneIdentity;
+  disclosure_hash: string;
+  relation_scene_ref: string;
+  disclosed_relation_assertion_refs: Array<string>;
+  disclosed_path_assertion_refs: Array<string>;
+  node_refs: Array<NodeRef>;
+  formal_relation_assertions: Array<RelationAssertion>;
+  formal_path_assertions: Array<PathAssertion>;
+  provenance_records: Array<ProvenanceRecord>;
+  candidate_revisions: Array<LabCandidateRevision>;
+  path_comparisons: Array<LabPathComparison>;
+  evidence: LabEvidenceSet;
   created_at: string;
   updated_at: string;
   writes_chart: false;
@@ -544,11 +621,60 @@ export interface NodeAblationOperation {
   applied_at: string;
 }
 
+export interface NodeRef {
+  version: string;
+  node_ref: string;
+  scene_ref: string;
+  life_case_id: string;
+  chart_version_id: string;
+  world_id: string;
+  scope: "natal" | "luck" | "year" | "month" | "other";
+  slot: string;
+  level: "pillar" | "stem" | "branch" | "hidden_stem" | "other";
+  component: string;
+  temporal_snapshot_ref: string;
+}
+
 export interface ParticipantScope {
   participant_ref: string;
   privacy_level: "anonymous" | "account" | "client_case";
   disclosure_level: "observer" | "chart_facts" | "approved_insights";
   language: string;
+}
+
+export interface PathAssertion {
+  version: string;
+  assertion_id: string;
+  path_key: PathKey | null;
+  assertion_version: string;
+  status: AssertionLifecycle;
+  provenance: ProvenanceRecord;
+  supersedes: string;
+  statement: string;
+  legacy_ref: string;
+  unresolved_reason: string;
+}
+
+export interface PathKey {
+  version: string;
+  path_key: string;
+  scene_ref: string;
+  ontology_version: string;
+  node_refs: Array<NodeRef>;
+  relation_keys: Array<RelationKey>;
+  scope: "natal" | "luck" | "year" | "month" | "other";
+  directed: true;
+}
+
+export interface ProvenanceRecord {
+  version: string;
+  provenance_id: string;
+  source: "graph_candidate" | "reasoner_commit" | "legacy_exact_import" | "legacy_unresolved";
+  producer_id: string;
+  producer_version: string;
+  evidence_refs: Array<string>;
+  source_refs: Array<string>;
+  created_at: string;
 }
 
 export interface ReadOnlyCanvasSource {
@@ -581,6 +707,31 @@ export interface ReadOnlySixPillarCanvas {
   llm_used: false;
   formal_state_writes: false;
   sandbox_mutations: false;
+}
+
+export interface RelationAssertion {
+  version: string;
+  assertion_id: string;
+  relation_key: RelationKey;
+  assertion_version: string;
+  status: AssertionLifecycle;
+  provenance: ProvenanceRecord;
+  supersedes: string;
+  statement: string;
+}
+
+export type RelationDirectionality = "directed" | "symmetric";
+
+export interface RelationKey {
+  version: string;
+  relation_key: string;
+  scene_ref: string;
+  ontology_version: string;
+  relation_type: string;
+  participant_refs: Array<NodeRef>;
+  directionality: RelationDirectionality;
+  arity: number;
+  scope: "natal" | "luck" | "year" | "month" | "other";
 }
 
 export interface SpeechAsset {

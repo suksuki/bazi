@@ -1,0 +1,63 @@
+{
+  "additionalProperties": false,
+  "description": "Evidence required before a Lab candidate may enter a separate risk gate.",
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.lab_evidence_set.v1",
+      "default": "deepbazi.lab_evidence_set.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "positive_fixture_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Positive Fixture Refs",
+      "type": "array"
+    },
+    "negative_fixture_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Negative Fixture Refs",
+      "type": "array"
+    },
+    "boundary_fixture_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Boundary Fixture Refs",
+      "type": "array"
+    },
+    "synthetic_case_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Synthetic Case Refs",
+      "type": "array"
+    },
+    "counterexample_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Counterexample Refs",
+      "type": "array"
+    },
+    "resolved_counterexample_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Resolved Counterexample Refs",
+      "type": "array"
+    },
+    "regression_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Regression Refs",
+      "type": "array"
+    }
+  },
+  "title": "LabEvidenceSet",
+  "type": "object"
+}
