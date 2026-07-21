@@ -33,7 +33,7 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["gates"]["architecture_consolidation_gate"] == "IN_PROGRESS"
     assert state["gates"]["cag_03_canonical_scene"] == "CLOSED_PASS_HARDENED"
     assert state["gates"]["cag_04_relation_path_provenance"] == (
-        "CONDITIONAL_PASS_PROVENANCE_RECONCILED_MACHINE_PASS"
+        "CLOSED_PASS_RECONCILED"
     )
     assert state["gates"]["public_professional_release"] == "BLOCKED"
     assert state["protected_boundaries"]["r1_role"] == (
@@ -42,7 +42,7 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert "production_workspace_migration" in state["blocked"]
     assert "mingli_lab_production_engineering" in state["blocked"]
     assert [item["id"] for item in state["authorized_now"]] == [
-        "CAG_04_ARCHITECTURE_REVIEW"
+        "CAG_05_SCHEMA_MODULE_OWNERSHIP"
     ]
     assert state["next_architecture_slice"]["id"] == (
         "CAG_05_SCHEMA_MODULE_OWNERSHIP"

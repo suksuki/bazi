@@ -1,6 +1,6 @@
 # V50 CAG-04 Relation and Path Provenance Closeout V1
 
-Status: `CONDITIONAL PASS / PROVENANCE RECONCILED / MACHINE PASS`
+Status: `CLOSED PASS / PROVENANCE RECONCILED / MACHINE PASS`
 Date: `2026-07-21`
 Implementation commits: `1190a873`, `0225aa1a`
 Source commits: `42072034`, `c0502ed9`
@@ -216,6 +216,5 @@ provenance/status binding and persisted history integrity.
 
 Machine recommendation: `PASS` for the CAG-04 implementation boundary.
 
-Required next decision: architecture review of this closeout. Until that review
-explicitly authorizes the next slice, CAG-05, RA1-RA3 and production deployment
-remain blocked.
+CAG-04 is closed after architecture review and lineage reconciliation. CAG-05
+is authorized; RA1-RA3 and production deployment remain outside this record.

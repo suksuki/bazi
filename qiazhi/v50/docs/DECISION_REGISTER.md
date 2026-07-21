@@ -1079,8 +1079,8 @@ V40_changes: forbidden
 ```yaml
 decision_id: DR-034
 date: 2026-07-21
-status: implementation_complete_machine_pass_architecture_review_pending
-lineage_status: conditional_pass_provenance_reconciled_machine_pass
+status: closed_pass
+lineage_status: provenance_reconciled_machine_pass
 implementation_commits:
   - 1190a873
   - 0225aa1a
@@ -1120,9 +1120,8 @@ verification:
   focused_relation_path_provenance: 11_passed
   full_regression: 479_passed
   r1_manifest: 20_of_20_ok
-next_gate: CAG_04_architecture_review
+next_gate: CAG_05_schema_module_ownership
 blocked:
-  - CAG_05_implementation
   - RA1_to_RA3
   - production_deployment
 ```
