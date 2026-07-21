@@ -1301,6 +1301,42 @@ critical_findings:
 next: RA1_Relation_Core_Preparation
 ```
 
+### DR-042 — RA1 Closes the Material-to-Graph Branch Relation Split
+
+```yaml
+decision_id: DR-042
+date: 2026-07-21
+status: closed_pass
+relations_added_to_graph_from_existing_material_authority:
+  - six_clash
+  - six_harmony
+resolved_finding: REL-A01
+path_eligibility: not_yet_qualified
+formal_life_case_mutation: false
+focused_regression: 18_passed
+full_regression: 511_passed
+remaining_findings: 7
+next: RA1_Composite_Relation_Fixtures
+```
+
+### DR-043 — RA1 Replaces the Sample Triple With Complete Composite Definitions
+
+```yaml
+decision_id: DR-043
+date: 2026-07-21
+status: closed_pass
+triple_harmony_definitions: 4
+half_triple_harmony_definitions: 8
+triple_identity: one_nary_relation_with_three_participants
+day_master_root_projection: material_backed
+resolved_findings:
+  - REL-A03
+  - REL-A04
+path_promotion: false
+focused_regression: 42_passed
+next: RA1_Branch_Conflict_Relations
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

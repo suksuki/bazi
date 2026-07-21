@@ -5,33 +5,36 @@ from scripts.v50_audit_six_pillar_relation_coverage import (
 )
 
 
-def test_six_pillar_relation_audit_exposes_current_coverage_without_fixing_it() -> None:
+def test_six_pillar_relation_audit_tracks_ra1_progress_without_overstating_it() -> None:
     result = audit_six_pillar_relation_coverage()
 
-    assert result["status"] == "AUDIT_COMPLETE_RA1_REQUIRED"
+    assert result["status"] == "RA1_IN_PROGRESS"
     assert result["counts"] == {
         "declared_relation_types": 12,
-        "builder_emitted_relation_types": 6,
-        "declared_but_unemitted": 6,
+        "builder_emitted_relation_types": 10,
+        "declared_but_unemitted": 2,
         "canvas_advertised_relation_types": 11,
         "canvas_only_relation_types": 3,
-        "configured_triple_combinations": 1,
+        "configured_triple_combinations": 4,
+        "configured_half_triple_combinations": 8,
         "six_clash_pairs_in_knowledge": 6,
         "six_harmony_pairs_in_knowledge": 6,
         "temporal_relation_builders": 0,
-        "findings": 8,
+        "findings": 5,
     }
     assert result["declared_but_unemitted"] == [
         "activates",
         "bridges",
-        "clashes",
-        "forms_half_combination",
-        "harmonizes",
-        "roots",
     ]
     assert result["canvas_only_relation_types"] == ["breaks", "harms", "punishes"]
     assert all(item["passed"] for item in result["checks"])
+    assert [item["finding_id"] for item in result["resolved_findings"]] == [
+        "REL-A01",
+        "REL-A03",
+        "REL-A04",
+    ]
     assert result["relation_semantics_modified"] is False
+    assert result["relation_projection_modified"] is True
     assert result["formal_state_modified"] is False
 
 

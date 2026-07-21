@@ -105,3 +105,21 @@ SIX_HARMONY = {
     frozenset(("巳", "申")),
     frozenset(("午", "未")),
 }
+
+TRIPLE_HARMONY = {
+    frozenset(("申", "子", "辰")): ("shen_zi_chen_water", "water", "子"),
+    frozenset(("亥", "卯", "未")): ("hai_mao_wei_wood", "wood", "卯"),
+    frozenset(("寅", "午", "戌")): ("yin_wu_xu_fire", "fire", "午"),
+    frozenset(("巳", "酉", "丑")): ("si_you_chou_metal", "metal", "酉"),
+}
+
+HALF_TRIPLE_HARMONY = {
+    frozenset(("申", "子")): ("shen_zi_half_water", "water", "子"),
+    frozenset(("子", "辰")): ("zi_chen_half_water", "water", "子"),
+    frozenset(("亥", "卯")): ("hai_mao_half_wood", "wood", "卯"),
+    frozenset(("卯", "未")): ("mao_wei_half_wood", "wood", "卯"),
+    frozenset(("寅", "午")): ("yin_wu_half_fire", "fire", "午"),
+    frozenset(("午", "戌")): ("wu_xu_half_fire", "fire", "午"),
+    frozenset(("巳", "酉")): ("si_you_half_metal", "metal", "酉"),
+    frozenset(("酉", "丑")): ("you_chou_half_metal", "metal", "酉"),
+}

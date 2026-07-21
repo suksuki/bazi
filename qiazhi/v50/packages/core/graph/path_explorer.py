@@ -98,6 +98,34 @@ def _adjacency(graph: MingliGraph) -> dict[str, list[MingliGraphEdge]]:
     for edge in graph.edges:
         if edge.edge_type not in VALID_PATH_EDGE_TYPES:
             continue
+        if edge.attributes.get("path_eligibility") == "not_yet_qualified":
+            continue
+        if (
+            edge.edge_type == MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION
+            and len(edge.participant_node_ids) > 2
+        ):
+            bridge_node_id = str(edge.attributes.get("bridge_node_id", ""))
+            if bridge_node_id in edge.participant_node_ids:
+                for participant_node_id in edge.participant_node_ids:
+                    if participant_node_id == bridge_node_id:
+                        continue
+                    adjacency[participant_node_id].append(
+                        edge.model_copy(
+                            update={
+                                "from_node_id": participant_node_id,
+                                "to_node_id": bridge_node_id,
+                            }
+                        )
+                    )
+                    adjacency[bridge_node_id].append(
+                        edge.model_copy(
+                            update={
+                                "from_node_id": bridge_node_id,
+                                "to_node_id": participant_node_id,
+                            }
+                        )
+                    )
+                continue
         adjacency[edge.from_node_id].append(edge)
         if edge.edge_type in {
             MingliGraphEdgeType.SAME_ELEMENT_SUPPORT,

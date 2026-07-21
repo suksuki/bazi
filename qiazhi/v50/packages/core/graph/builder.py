@@ -1,19 +1,17 @@
 from __future__ import annotations
 
-from itertools import combinations
+from itertools import combinations, product
 from typing import Any
 
 from core.contracts.material import MaterialType, MingliMaterial, UnifiedMingliMaterialStore
-from core.engines.bazi.knowledge import BRANCH_ELEMENTS, CONTROLS, GENERATES, HIDDEN_STEMS, STEM_ELEMENTS, STEM_POLARITY
+from core.engines.bazi.knowledge import BRANCH_ELEMENTS, CONTROLS, GENERATES, HALF_TRIPLE_HARMONY, HIDDEN_STEMS, STEM_ELEMENTS, STEM_POLARITY, TRIPLE_HARMONY
 from core.engines.bazi.material_engine import resolve_ten_god
 from core.graph.contracts import MingliGraph, MingliGraphEdge, MingliGraphEdgeType, MingliGraphNode, MingliGraphNodeType
 
 
 POSITION_ORDER = ("year", "month", "day", "hour")
 
-TRIPLE_COMBINATIONS: dict[frozenset[str], tuple[str, str, str]] = {
-    frozenset(("巳", "酉", "丑")): ("si_you_chou_metal", "metal", "酉"),
-}
+TRIPLE_COMBINATIONS = TRIPLE_HARMONY
 
 
 def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) -> MingliGraph:
@@ -112,6 +110,9 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
 
     nodes = _mark_structural_attributes(nodes, pillars=pillars)
     edges.extend(_element_edges(store=store, nodes=nodes, chart_material_ref=chart_material_ref))
+    edges.extend(_material_relation_edges(store=store, nodes=nodes))
+    edges.extend(_material_root_edges(store=store, nodes=nodes))
+    edges.extend(_half_combination_edges(store=store, nodes=nodes, chart_material_ref=chart_material_ref))
     edges.extend(_combination_edges(store=store, nodes=nodes, pillars=pillars, chart_material_ref=chart_material_ref))
 
     return MingliGraph(
@@ -154,6 +155,8 @@ def _edge(
     strength: float,
     relation_label: str,
     material_refs: list[str],
+    evidence_refs: list[str] | None = None,
+    participant_node_ids: list[str] | None = None,
     attributes: dict[str, object] | None = None,
 ) -> MingliGraphEdge:
     return MingliGraphEdge(
@@ -162,11 +165,12 @@ def _edge(
         from_node_id=from_node_id,
         to_node_id=to_node_id,
         edge_type=edge_type,
+        participant_node_ids=participant_node_ids or [],
         strength=strength,
         relation_label=relation_label,
         attributes=attributes or {},
         material_refs=material_refs,
-        evidence_refs=material_refs,
+        evidence_refs=evidence_refs or material_refs,
     )
 
 
@@ -232,6 +236,192 @@ def _element_edge(
     )
 
 
+def _material_relation_edges(
+    *,
+    store: UnifiedMingliMaterialStore,
+    nodes: list[MingliGraphNode],
+) -> list[MingliGraphEdge]:
+    """Project deterministic branch-relation materials into candidate graph edges."""
+
+    branch_nodes = {
+        str(node.attributes.get("slot", "")): node
+        for node in nodes
+        if node.node_type == MingliGraphNodeType.BRANCH
+    }
+    relation_types = {
+        "clash": MingliGraphEdgeType.CLASHES,
+        "harmony": MingliGraphEdgeType.HARMONIZES,
+    }
+    edges: list[MingliGraphEdge] = []
+    for material in store.materials:
+        if material.material_type != MaterialType.BAZI_COMBINATION:
+            continue
+        relations = material.raw_value.get("relations")
+        if not isinstance(relations, list):
+            continue
+        for relation in relations:
+            if not isinstance(relation, dict):
+                continue
+            relation_name = str(relation.get("type", ""))
+            edge_type = relation_types.get(relation_name)
+            slot_a = str(relation.get("slot_a", ""))
+            slot_b = str(relation.get("slot_b", ""))
+            node_a = branch_nodes.get(slot_a)
+            node_b = branch_nodes.get(slot_b)
+            if edge_type is None or node_a is None or node_b is None:
+                continue
+            if node_a.label != relation.get("branch_a") or node_b.label != relation.get("branch_b"):
+                continue
+            first, second = sorted(
+                (node_a, node_b),
+                key=lambda node: (POSITION_ORDER.index(str(node.attributes["slot"])), node.node_id),
+            )
+            source_refs = list(dict.fromkeys([material.material_id, *material.evidence_refs]))
+            edges.append(
+                _edge(
+                    store=store,
+                    edge_id=(
+                        f"edge:{store.reading_id}:branch_relation:{edge_type.value}:"
+                        f"{first.attributes['slot']}:{first.label}:"
+                        f"{second.attributes['slot']}:{second.label}"
+                    ),
+                    from_node_id=first.node_id,
+                    to_node_id=second.node_id,
+                    edge_type=edge_type,
+                    strength=material.confidence,
+                    relation_label=f"six_{relation_name}",
+                    material_refs=[material.material_id],
+                    evidence_refs=source_refs,
+                    attributes={
+                        "source_material_type": material.material_type.value,
+                        "relation_family": "branch_pair",
+                        "path_eligibility": "not_yet_qualified",
+                        "slots": [first.attributes["slot"], second.attributes["slot"]],
+                        "branches": [first.label, second.label],
+                    },
+                )
+            )
+    return edges
+
+
+def _material_root_edges(
+    *,
+    store: UnifiedMingliMaterialStore,
+    nodes: list[MingliGraphNode],
+) -> list[MingliGraphEdge]:
+    day_stem_node = next(
+        (
+            node
+            for node in nodes
+            if node.node_type == MingliGraphNodeType.STEM
+            and node.position == "day_stem"
+        ),
+        None,
+    )
+    branch_nodes = {
+        str(node.attributes.get("slot", "")): node
+        for node in nodes
+        if node.node_type == MingliGraphNodeType.BRANCH
+    }
+    if day_stem_node is None:
+        return []
+
+    edges: list[MingliGraphEdge] = []
+    for material in store.materials:
+        if material.material_type != MaterialType.BAZI_ROOT_STRENGTH:
+            continue
+        root_sources = material.raw_value.get("root_sources")
+        if not isinstance(root_sources, list):
+            continue
+        for root_source in root_sources:
+            if not isinstance(root_source, dict):
+                continue
+            slot = str(root_source.get("slot", ""))
+            branch = str(root_source.get("branch", ""))
+            branch_node = branch_nodes.get(slot)
+            if branch_node is None or branch_node.label != branch:
+                continue
+            source_refs = list(dict.fromkeys([material.material_id, *material.evidence_refs]))
+            edges.append(
+                _edge(
+                    store=store,
+                    edge_id=(
+                        f"edge:{store.reading_id}:roots:{slot}:{branch}:"
+                        f"day:{day_stem_node.label}"
+                    ),
+                    from_node_id=branch_node.node_id,
+                    to_node_id=day_stem_node.node_id,
+                    edge_type=MingliGraphEdgeType.ROOTS,
+                    strength=material.confidence,
+                    relation_label="day_master_root",
+                    material_refs=[material.material_id],
+                    evidence_refs=source_refs,
+                    attributes={
+                        "source_material_type": material.material_type.value,
+                        "relation_family": "root_support",
+                        "path_eligibility": "not_yet_qualified",
+                        "slot": slot,
+                        "branch": branch,
+                        "hidden_stems": str(root_source.get("hidden_stems", "")),
+                        "rooted_stem": day_stem_node.label,
+                    },
+                )
+            )
+    return edges
+
+
+def _half_combination_edges(
+    *,
+    store: UnifiedMingliMaterialStore,
+    nodes: list[MingliGraphNode],
+    chart_material_ref: str,
+) -> list[MingliGraphEdge]:
+    branch_nodes = [
+        node
+        for node in nodes
+        if node.node_type == MingliGraphNodeType.BRANCH
+    ]
+    edges: list[MingliGraphEdge] = []
+    for first, second in combinations(branch_nodes, 2):
+        definition = HALF_TRIPLE_HARMONY.get(frozenset((first.label, second.label)))
+        if definition is None:
+            continue
+        relation_id, element, bridge_branch = definition
+        participants = sorted(
+            (first, second),
+            key=lambda node: POSITION_ORDER.index(str(node.attributes["slot"])),
+        )
+        edges.append(
+            _edge(
+                store=store,
+                edge_id=(
+                    f"edge:{store.reading_id}:half_triple:{relation_id}:"
+                    f"{participants[0].attributes['slot']}:{participants[0].label}:"
+                    f"{participants[1].attributes['slot']}:{participants[1].label}"
+                ),
+                from_node_id=participants[0].node_id,
+                to_node_id=participants[1].node_id,
+                edge_type=MingliGraphEdgeType.FORMS_HALF_COMBINATION,
+                strength=0.66,
+                relation_label=relation_id,
+                material_refs=[chart_material_ref],
+                attributes={
+                    "relation_family": "branch_pair_candidate",
+                    "path_eligibility": "not_yet_qualified",
+                    "element": element,
+                    "bridge_branch": bridge_branch,
+                    "completion_state": "incomplete",
+                    "required_full_relation": next(
+                        combo_id
+                        for _, (combo_id, combo_element, combo_bridge) in TRIPLE_HARMONY.items()
+                        if combo_element == element and combo_bridge == bridge_branch
+                    ),
+                },
+            )
+        )
+    return edges
+
+
 def _combination_edges(
     *,
     store: UnifiedMingliMaterialStore,
@@ -245,24 +435,42 @@ def _combination_edges(
     for combination, (combo_id, combo_element, bridge_label) in TRIPLE_COMBINATIONS.items():
         if not combination.issubset(present_branches):
             continue
-        bridge_nodes = [node for node in branch_nodes.values() if node.label == bridge_label]
-        if not bridge_nodes:
-            continue
-        bridge_node = bridge_nodes[0]
-        for node in branch_nodes.values():
-            if node.label not in combination or node.node_id == bridge_node.node_id:
-                continue
+        nodes_by_label = {
+            label: sorted(
+                (node for node in branch_nodes.values() if node.label == label),
+                key=lambda node: POSITION_ORDER.index(str(node.attributes["slot"])),
+            )
+            for label in sorted(combination)
+        }
+        for selected_nodes in product(*(nodes_by_label[label] for label in sorted(combination))):
+            participants = sorted(
+                selected_nodes,
+                key=lambda node: POSITION_ORDER.index(str(node.attributes["slot"])),
+            )
+            bridge_node = next(node for node in participants if node.label == bridge_label)
+            source_node = next(node for node in participants if node.node_id != bridge_node.node_id)
+            member_key = ":".join(
+                f"{node.attributes['slot']}:{node.label}"
+                for node in participants
+            )
             edges.append(
                 _edge(
                     store=store,
-                    edge_id=f"edge:{store.reading_id}:triple:{combo_id}:{node.position}:{bridge_node.position}",
-                    from_node_id=node.node_id,
+                    edge_id=f"edge:{store.reading_id}:triple:{combo_id}:{member_key}",
+                    from_node_id=source_node.node_id,
                     to_node_id=bridge_node.node_id,
                     edge_type=MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION,
+                    participant_node_ids=[node.node_id for node in participants],
                     strength=0.92,
                     relation_label=combo_id,
                     material_refs=[chart_material_ref],
-                    attributes={"combination": combo_id, "element": combo_element, "bridge_node_id": bridge_node.node_id},
+                    attributes={
+                        "combination": combo_id,
+                        "element": combo_element,
+                        "bridge_node_id": bridge_node.node_id,
+                        "relation_family": "branch_hyperrelation",
+                        "required_branches": sorted(combination),
+                    },
                 )
             )
     return edges

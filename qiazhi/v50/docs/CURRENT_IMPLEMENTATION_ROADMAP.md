@@ -7,7 +7,7 @@
 <!-- V50_EXECUTION_STATE:START -->
 ## Machine-Synchronized Execution State
 
-> Source: `config/v50_execution_state.yaml` · SHA-256 `ad323bb76e29` · Updated `2026-07-21`
+> Source: `config/v50_execution_state.yaml` · SHA-256 `28e2b2286be4` · Updated `2026-07-21`
 
 ```yaml
 canonical_product_target: Life Script Case Workspace
@@ -24,7 +24,7 @@ full_regression: 491_PASSED_ARCHITECTURE_GATE_FINAL
 
 Authorized now:
 
-- `RA1_RELATION_CORE_PREPARATION`: connect_approved_deterministic_relations_to_stable_identity_with_positive_negative_and_temporal_fixtures
+- `RA1_BRANCH_CONFLICT_RELATIONS`: close_canvas_core_divergence_for_harm_break_and_conservative_punishment_relations_without_path_promotion
 
 Next architecture slice: `RA2_PATH_QUALIFICATION` after `ra1_relation_core_pass`.
 

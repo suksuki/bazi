@@ -53,7 +53,7 @@ def test_v50_synthetic_fixture_matrix_v2_covers_taxonomy_without_tuning_weights(
     assert summary["training_performed"] is False
     assert summary["node_importance_policy_version"] == "node_importance_policy_v2"
     assert summary["path_score_policy_version"] == "path_score_policy_v2"
-    assert summary["expected_gap_count"] == 10
+    assert summary["expected_gap_count"] == 9
 
     cases_by_id = {result["case_id"]: result for result in summary["results"]}
     assert set(cases_by_id) == {
@@ -82,7 +82,7 @@ def test_v50_synthetic_fixture_matrix_v2_covers_taxonomy_without_tuning_weights(
     assert bridge_case["top_nodes"][0]["node"] == "酉:hour_branch"
 
     complete_combination = cases_by_id["matrix_v2_complete_triple_combination"]
-    assert {gap["code"] for gap in complete_combination["expected_gaps"]} == {"path:combination_future_scope"}
+    assert complete_combination["expected_gaps"] == []
 
     timing_case = cases_by_id["matrix_v2_luck_changes_main_path"]
     assert {gap["code"] for gap in timing_case["expected_gaps"]} == {"path:timing_resource_reroute_candidate"}

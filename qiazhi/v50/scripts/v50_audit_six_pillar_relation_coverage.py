@@ -9,7 +9,7 @@ from typing import Any
 from core.contracts import BirthInputCanonical
 from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
-from core.engines.bazi.knowledge import SIX_CLASH, SIX_HARMONY
+from core.engines.bazi.knowledge import HALF_TRIPLE_HARMONY, SIX_CLASH, SIX_HARMONY
 from core.graph import build_mingli_graph_from_material_store
 from core.graph.builder import TRIPLE_COMBINATIONS
 from core.graph.contracts import MingliGraphEdgeType, MingliGraphNodeType
@@ -44,9 +44,25 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             "configured-triple",
             ["丁巳", "乙巳", "乙丑", "乙酉"],
         ),
-        "unconfigured_triple": _witness(
-            "unconfigured-triple",
+        "second_configured_triple": _witness(
+            "second-configured-triple",
             ["甲申", "丙子", "壬辰", "庚子"],
+        ),
+        "missing_triple_member": _witness(
+            "missing-triple-member",
+            ["甲申", "丙子", "甲寅", "丙寅"],
+        ),
+        "root": _witness(
+            "day-master-root",
+            ["壬辰", "戊申", "丙午", "丁丑"],
+        ),
+        "half_triple": _witness(
+            "half-triple",
+            ["甲申", "丙子", "甲寅", "丙寅"],
+        ),
+        "arch_not_half": _witness(
+            "arch-not-half",
+            ["甲申", "戊辰", "甲寅", "丙寅"],
         ),
     }
 
@@ -66,24 +82,9 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
 
     findings = [
         {
-            "finding_id": "REL-A01",
-            "severity": "critical",
-            "finding": "Material Engine emits six-clash and six-harmony evidence, but Graph Builder does not consume BAZI_COMBINATION materials.",
-        },
-        {
             "finding_id": "REL-A02",
             "severity": "critical",
             "finding": "Luck and annual pillars are rendered as nodes without relation, cluster, path, or path-update computation.",
-        },
-        {
-            "finding_id": "REL-A03",
-            "severity": "high",
-            "finding": "The only configured triple combination is Si-You-Chou; the builder is sample-specialized.",
-        },
-        {
-            "finding_id": "REL-A04",
-            "severity": "high",
-            "finding": "Triple combination output uses binary edges even though stable relation identity supports n-ary participants.",
         },
         {
             "finding_id": "REL-A05",
@@ -93,7 +94,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
         {
             "finding_id": "REL-A06",
             "severity": "high",
-            "finding": "Six declared Graph relation types have no builder emission path.",
+            "finding": "Two declared Graph relation types still have no builder emission path.",
         },
         {
             "finding_id": "REL-A07",
@@ -109,25 +110,42 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
 
     checks = [
         _check("declared_relation_types_counted", len(declared) == 12),
-        _check("builder_emission_types_counted", len(emitted) == 6),
+        _check("builder_emission_types_counted", len(emitted) == 10),
         _check(
-            "material_clash_gap_reproduced",
+            "material_clash_projection_closed",
             "clash" in witnesses["clash"]["material_relation_types"]
-            and "clashes" not in witnesses["clash"]["graph_relation_types"],
+            and "clashes" in witnesses["clash"]["graph_relation_types"],
         ),
         _check(
-            "material_harmony_gap_reproduced",
+            "material_harmony_projection_closed",
             "harmony" in witnesses["harmony"]["material_relation_types"]
-            and "harmonizes" not in witnesses["harmony"]["graph_relation_types"],
+            and "harmonizes" in witnesses["harmony"]["graph_relation_types"],
         ),
         _check(
-            "sample_specialized_triple_reproduced",
+            "all_triple_definitions_reproduced",
+            len(TRIPLE_COMBINATIONS) == 4
+            and witnesses["configured_triple"]["triple_edge_count"] > 0
+            and witnesses["second_configured_triple"]["triple_edge_count"] > 0,
+        ),
+        _check(
+            "triple_requires_all_members",
             witnesses["configured_triple"]["triple_edge_count"] > 0
-            and witnesses["unconfigured_triple"]["triple_edge_count"] == 0,
+            and witnesses["missing_triple_member"]["triple_edge_count"] == 0,
         ),
         _check(
-            "triple_output_is_not_nary",
-            witnesses["configured_triple"]["max_triple_participant_arity"] == 2,
+            "triple_output_is_nary",
+            witnesses["configured_triple"]["max_triple_participant_arity"] == 3
+            and witnesses["second_configured_triple"]["max_triple_participant_arity"] == 3,
+        ),
+        _check(
+            "day_master_root_material_is_projected",
+            "roots" in witnesses["root"]["graph_relation_types"],
+        ),
+        _check(
+            "half_triple_is_distinct_from_arch_pair",
+            "forms_half_combination" in witnesses["half_triple"]["graph_relation_types"]
+            and "forms_half_combination" not in witnesses["arch_not_half"]["graph_relation_types"]
+            and len(HALF_TRIPLE_HARMONY) == 8,
         ),
         _check(
             "canvas_only_relation_types_identified",
@@ -153,7 +171,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
 
     return {
         "schema_version": "deepbazi.six_pillar_relation_coverage_audit.v1",
-        "status": "AUDIT_COMPLETE_RA1_REQUIRED"
+        "status": "RA1_IN_PROGRESS"
         if all(item["passed"] for item in checks)
         else "AUDIT_FAILED",
         "counts": {
@@ -163,6 +181,7 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
             "canvas_advertised_relation_types": len(advertised),
             "canvas_only_relation_types": len(advertised - declared),
             "configured_triple_combinations": len(TRIPLE_COMBINATIONS),
+            "configured_half_triple_combinations": len(HALF_TRIPLE_HARMONY),
             "six_clash_pairs_in_knowledge": len(SIX_CLASH),
             "six_harmony_pairs_in_knowledge": len(SIX_HARMONY),
             "temporal_relation_builders": 0,
@@ -174,17 +193,33 @@ def audit_six_pillar_relation_coverage() -> dict[str, Any]:
         "canvas_only_relation_types": sorted(advertised - declared),
         "relation_matrix": relation_matrix,
         "witnesses": witnesses,
+        "resolved_findings": [
+            {
+                "finding_id": "REL-A01",
+                "resolution": "Graph Builder now consumes the existing deterministic six-clash and six-harmony materials without granting path eligibility.",
+            },
+            {
+                "finding_id": "REL-A03",
+                "resolution": "All four standard triple-harmony definitions now share one knowledge source and positive/missing-member fixtures.",
+            },
+            {
+                "finding_id": "REL-A04",
+                "resolution": "Each triple-harmony instance now has one stable relation identity with three participant node references.",
+            },
+        ],
         "findings": findings,
         "checks": checks,
-        "ra1_entry_order": [
+        "ra1_completed": [
             "consume existing deterministic branch-relation materials",
-            "replace sample-specialized combinations with approved relation definitions",
-            "emit true n-ary assertions for n-ary structures",
+            "replace sample-specialized combinations with complete relation definitions",
+        ],
+        "ra1_entry_order": [
             "add explicit luck/year cross-layer relation compilation",
             "add minimal positive, negative, missing-member, and temporal fixtures",
             "only then admit relations to path qualification",
         ],
         "relation_semantics_modified": False,
+        "relation_projection_modified": True,
         "formal_state_modified": False,
         "llm_used": False,
     }

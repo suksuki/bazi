@@ -159,11 +159,11 @@
         "hour_pillar": "壬辰",
         "input_quality": "explicit_pillars"
       },
-      "expected_structure": ["shen_zi_chen_water_structure", "triple_combination_future_scope", "month_environment_visible"],
+      "expected_structure": ["complete_shen_zi_chen_bridge", "month_environment_visible"],
       "expected_top_node": ["子:month_branch"],
-      "expected_path": ["combination_future_scope"],
+      "expected_path": ["combination_bridge"],
       "expected_ablation": ["remove_子:month_branch"],
-      "must_not": ["si_you_chou_only_bias", "fake_metal_bridge"]
+      "must_not": ["si_you_chou_only_bias"]
     },
     {
       "case_type": "broken_triple_combination",

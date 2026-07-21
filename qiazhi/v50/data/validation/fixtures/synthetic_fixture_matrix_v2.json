@@ -41,7 +41,7 @@
       "case_id": "matrix_v2_complete_triple_combination",
       "source_case_id": "tax_complete_triple_combination_001",
       "matrix_category": "complete_triple_combination",
-      "expected_gap_codes": ["path:combination_future_scope"]
+      "expected_gap_codes": []
     },
     {
       "case_id": "matrix_v2_broken_triple_combination",

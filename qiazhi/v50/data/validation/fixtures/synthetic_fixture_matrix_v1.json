@@ -166,14 +166,14 @@
     {
       "case_id": "matrix_complete_triple_combination_different_structure",
       "source_case_id": "complete_triple_combination_different_structure",
-      "matrix_category": "different_structure_placeholder",
+      "matrix_category": "complete_triple_combination",
       "expected_flow_states": [
         {
           "mechanism": "output_to_wealth",
           "min_output_strength": 0.5,
           "min_path_score": 0.55,
           "min_ablation_sensitivity": 0.85,
-          "required_node_labels": ["子:month_branch", "甲:day_stem"]
+          "required_node_labels": ["子:month_branch"]
         }
       ],
       "expected_state_evolution": {

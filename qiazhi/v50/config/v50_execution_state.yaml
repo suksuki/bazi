@@ -46,7 +46,7 @@ gates:
   architecture_consolidation_gate: CLOSED_PASS
   next_framework_alignment: BASELINE_PASS
   mingli_lab_foundation: BASELINE_PASS_WITH_EXPLICIT_GAPS
-  six_pillar_relation_coverage: AUDIT_COMPLETE_RA1_REQUIRED
+  six_pillar_relation_coverage: RA1_IN_PROGRESS_FOUNDATION_RELATIONS_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
@@ -111,12 +111,17 @@ receipts:
   mingli_lab_foundation_gaps: 4_EXPLICIT
   mingli_lab_foundation_report_sha256: f7a695107c48f782cac1a3164fac2532769731af0b6b6d1ed86f7c911f05a3a1
   six_pillar_declared_relations: 12
-  six_pillar_emitted_relations: 6
-  six_pillar_unemitted_relations: 6
+  six_pillar_emitted_relations: 10
+  six_pillar_unemitted_relations: 2
   six_pillar_canvas_only_relations: 3
   six_pillar_temporal_relation_builders: 0
-  six_pillar_findings: 8
-  six_pillar_relation_report_sha256: f6574817fc7cb14b8ce0af0be7626356853012a177e7096d7bdf903a8433f2bd
+  six_pillar_configured_triple_combinations: 4
+  six_pillar_configured_half_triple_combinations: 8
+  six_pillar_findings: 5
+  six_pillar_resolved_findings: 3
+  six_pillar_relation_report_sha256: 3c3a00d7d1bb16ece10e1a53a2b06c19b9b80e4f1aa15101d39ce86c2866d36f
+  ra1_relation_foundation_fixtures: 42_PASSED
+  ra1_relation_foundation_regression: 535_PASSED
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -125,9 +130,9 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: RA1_RELATION_CORE_PREPARATION
+  - id: RA1_BRANCH_CONFLICT_RELATIONS
     kind: controlled_relation_core_implementation
-    scope: connect_approved_deterministic_relations_to_stable_identity_with_positive_negative_and_temporal_fixtures
+    scope: close_canvas_core_divergence_for_harm_break_and_conservative_punishment_relations_without_path_promotion
 
 next_architecture_slice:
   id: RA2_PATH_QUALIFICATION
