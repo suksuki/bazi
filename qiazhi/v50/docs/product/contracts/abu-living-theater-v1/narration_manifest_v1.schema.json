@@ -1,0 +1,251 @@
+{
+  "$defs": {
+    "MingliVisualCue": {
+      "additionalProperties": false,
+      "properties": {
+        "at_ms": {
+          "minimum": 0,
+          "title": "At Ms",
+          "type": "integer"
+        },
+        "action": {
+          "enum": [
+            "reveal",
+            "focus",
+            "pulse",
+            "flow",
+            "split",
+            "dim",
+            "sever",
+            "ghost",
+            "restore",
+            "compare"
+          ],
+          "title": "Action",
+          "type": "string"
+        },
+        "target": {
+          "maxLength": 320,
+          "minLength": 1,
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "at_ms",
+        "action",
+        "target"
+      ],
+      "title": "MingliVisualCue",
+      "type": "object"
+    },
+    "NarrationSegment": {
+      "additionalProperties": false,
+      "properties": {
+        "segment_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "order": {
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "kind": {
+          "enum": [
+            "thesis",
+            "work_path",
+            "condition",
+            "uncertainty"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "title": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        },
+        "text": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        },
+        "source_claim_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Claim Refs",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "visual_anchor_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Visual Anchor Ids",
+          "type": "array"
+        },
+        "visual_cues": {
+          "items": {
+            "$ref": "#/$defs/MingliVisualCue"
+          },
+          "title": "Visual Cues",
+          "type": "array"
+        },
+        "estimated_duration_seconds": {
+          "maximum": 60,
+          "minimum": 1,
+          "title": "Estimated Duration Seconds",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "segment_id",
+        "order",
+        "kind",
+        "title",
+        "text",
+        "source_claim_refs",
+        "visual_anchor_ids",
+        "estimated_duration_seconds"
+      ],
+      "title": "NarrationSegment",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.narration_manifest.v1",
+      "default": "deepbazi.narration_manifest.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "manifest_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Manifest Id",
+      "type": "string"
+    },
+    "manifest_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Manifest Hash",
+      "type": "string"
+    },
+    "scope": {
+      "const": "participant_private",
+      "default": "participant_private",
+      "title": "Scope",
+      "type": "string"
+    },
+    "case_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Case Id",
+      "type": "string"
+    },
+    "chart_version": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Chart Version",
+      "type": "string"
+    },
+    "life_case_version": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Life Case Version",
+      "type": "string"
+    },
+    "formal_insight_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Formal Insight Id",
+      "type": "string"
+    },
+    "narration_script_version": {
+      "maxLength": 120,
+      "minLength": 1,
+      "title": "Narration Script Version",
+      "type": "string"
+    },
+    "mode": {
+      "const": "standard",
+      "default": "standard",
+      "title": "Mode",
+      "type": "string"
+    },
+    "language": {
+      "default": "zh-CN",
+      "maxLength": 20,
+      "minLength": 2,
+      "title": "Language",
+      "type": "string"
+    },
+    "voice_id": {
+      "maxLength": 100,
+      "minLength": 1,
+      "title": "Voice Id",
+      "type": "string"
+    },
+    "voice_version": {
+      "maxLength": 240,
+      "minLength": 1,
+      "title": "Voice Version",
+      "type": "string"
+    },
+    "segments": {
+      "items": {
+        "$ref": "#/$defs/NarrationSegment"
+      },
+      "minItems": 1,
+      "title": "Segments",
+      "type": "array"
+    },
+    "compiled_at": {
+      "format": "date-time",
+      "title": "Compiled At",
+      "type": "string"
+    },
+    "autoplay": {
+      "const": false,
+      "default": false,
+      "title": "Autoplay",
+      "type": "boolean"
+    },
+    "page_available_without_audio": {
+      "const": true,
+      "default": true,
+      "title": "Page Available Without Audio",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "manifest_id",
+    "manifest_hash",
+    "case_id",
+    "chart_version",
+    "life_case_version",
+    "formal_insight_id",
+    "narration_script_version",
+    "voice_id",
+    "voice_version",
+    "segments",
+    "compiled_at"
+  ],
+  "title": "NarrationManifest",
+  "type": "object"
+}

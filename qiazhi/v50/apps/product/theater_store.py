@@ -14,6 +14,7 @@ from experience.contracts import (
     TopicExploration,
 )
 from experience.store import MemoryTheaterStore, TheaterStore
+from product.database_schema import ensure_product_database_schema
 
 
 class PostgresTheaterStore:
@@ -22,75 +23,12 @@ class PostgresTheaterStore:
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        self.ensure_schema()
+        ensure_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg
 
         return psycopg.connect(self.database_url)
-
-    def ensure_schema(self) -> None:
-        statements = [
-            """
-            CREATE TABLE IF NOT EXISTS v50_theater_sessions (
-                session_id TEXT PRIMARY KEY,
-                session_json JSONB NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS v50_theater_envelopes (
-                envelope_id TEXT PRIMARY KEY,
-                source_hash TEXT NOT NULL,
-                envelope_json JSONB NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS v50_theater_participants (
-                participant_run_id TEXT PRIMARY KEY,
-                session_id TEXT NOT NULL REFERENCES v50_theater_sessions(session_id) ON DELETE CASCADE,
-                participant_json JSONB NOT NULL,
-                updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS v50_theater_cues (
-                cue_instance_id TEXT PRIMARY KEY,
-                session_id TEXT NOT NULL REFERENCES v50_theater_sessions(session_id) ON DELETE CASCADE,
-                cue_hash TEXT NOT NULL,
-                cue_json JSONB NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS v50_theater_events (
-                event_id TEXT UNIQUE NOT NULL,
-                session_id TEXT NOT NULL REFERENCES v50_theater_sessions(session_id) ON DELETE CASCADE,
-                sequence INTEGER NOT NULL,
-                scope TEXT NOT NULL,
-                participant_run_id TEXT NULL,
-                event_json JSONB NOT NULL,
-                occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                PRIMARY KEY (session_id, sequence)
-            )
-            """,
-            """
-            CREATE TABLE IF NOT EXISTS v50_topic_explorations (
-                exploration_id TEXT PRIMARY KEY,
-                participant_run_id TEXT NOT NULL,
-                exploration_json JSONB NOT NULL,
-                created_at TIMESTAMPTZ NOT NULL DEFAULT now()
-            )
-            """,
-            "CREATE INDEX IF NOT EXISTS idx_v50_theater_events_scope ON v50_theater_events (session_id, scope, sequence)",
-            "CREATE INDEX IF NOT EXISTS idx_v50_theater_participants_session ON v50_theater_participants (session_id)",
-        ]
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                for statement in statements:
-                    cur.execute(statement)
 
     def save_session(self, session: TheaterSession) -> None:
         with self._connect() as conn:

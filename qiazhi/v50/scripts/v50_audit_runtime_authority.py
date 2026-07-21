@@ -9,17 +9,16 @@ from typing import Any
 
 
 ROOT = Path(__file__).resolve().parents[1]
-MANIFEST = ROOT / "config/runtime_authority_v1.json"
-PRODUCTION_MANIFEST = ROOT / "config/production_authority_manifest_v1.json"
+MANIFEST = ROOT / "config/production_authority_manifest_v1.json"
 
 
 def audit_runtime_authority() -> dict[str, Any]:
     manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
-    production_manifest = json.loads(PRODUCTION_MANIFEST.read_text(encoding="utf-8"))
-    allowed_statuses = set(production_manifest["allowed_statuses"])
+    runtime = manifest["runtime_boundaries"]
+    allowed_statuses = set(manifest["allowed_statuses"])
     invalid_statuses = [
         {"authority": name, "status": item.get("status")}
-        for name, item in production_manifest["authorities"].items()
+        for name, item in manifest["authorities"].items()
         if item.get("status") not in allowed_statuses
     ]
     production_files = [
@@ -33,7 +32,7 @@ def audit_runtime_authority() -> dict[str, Any]:
     forbidden = []
     for source, names in imports.items():
         for name in names:
-            if any(name == prefix or name.startswith(f"{prefix}.") for prefix in manifest["research_only"]):
+            if any(name == prefix or name.startswith(f"{prefix}.") for prefix in runtime["research_only"]):
                 forbidden.append({"source": source, "import": name})
 
     reasoner = (ROOT / "packages/core/mingli_agent/reasoner.py").read_text(encoding="utf-8")
@@ -51,7 +50,7 @@ def audit_runtime_authority() -> dict[str, Any]:
     projection_source = (ROOT / "apps/product/reading_projection.py").read_text(encoding="utf-8")
     public_base = _assigned_string_set(projection_source, "_PUBLIC_BASE_FIELDS")
     forbidden_projection_fields = sorted(
-        set(production_manifest["guest_member_forbidden_fields"]) & public_base
+        set(manifest["guest_member_forbidden_fields"]) & public_base
     )
     graph_authority_violations = _graph_relation_authority_violations(
         ROOT / "packages/core/mingli_agent/world.py"
@@ -72,12 +71,12 @@ def audit_runtime_authority() -> dict[str, Any]:
             "production_file_count": len(production_files),
             "forbidden_research_imports": forbidden,
             "synthetic_answer_leakage_tokens": leakage_tokens,
-            "production_authoritative": manifest["production_authoritative"],
-            "experimental_advisory_tools": manifest["experimental_advisory_tools"],
-            "research_projection_authority": manifest["research_projection_authority"],
-            "research_only": manifest["research_only"],
-            "retired_capabilities": manifest["retired_capabilities"],
-            "production_authority_manifest": production_manifest,
+            "production_authoritative": runtime["production_authoritative"],
+            "experimental_advisory_tools": runtime["experimental_advisory_tools"],
+            "research_projection_authority": runtime["research_projection_authority"],
+            "research_only": runtime["research_only"],
+            "retired_capabilities": runtime["retired_capabilities"],
+            "production_authority_manifest": manifest,
             "invalid_authority_statuses": invalid_statuses,
             "guest_member_public_base_fields": sorted(public_base),
             "guest_member_forbidden_projection_fields": forbidden_projection_fields,

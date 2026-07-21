@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel, Field
 
 from product.agent_case_store import AgentCaseStore, build_agent_case_store
+from product.agent_command_service import BaselineCaseCommand, BaselineCaseCommandService
 from product.agent_job_store import AgentJobStore, build_agent_job_store
 from product.product_store import ProductStore, birth_input_from_profile
 from product.reading_projection import project_living_reading
@@ -31,18 +32,15 @@ from core.mingli_agent import (
     apply_probe_response,
     build_deliberation_view,
     build_case_workspace,
-    compile_chart_world,
     undo_deliberation_selection,
 )
 from core.life_domains import LifeDomain, domain_access_allowed, domain_definition, domain_manifest
 from core.life_case import (
     LifeCase,
-    build_baseline_insight,
     build_case_revision_insight,
     build_domain_insight,
     build_reality_evidence,
     build_workspace_state,
-    commit_baseline_life_case,
     commit_case_revision,
     commit_domain_insight,
     complete_monthly_review,
@@ -52,7 +50,6 @@ from core.life_case import (
     project_life_case,
     select_workspace_period,
     upsert_reality_evidence,
-    validate_formal_insight,
     WorkspaceState,
 )
 from core.mingli_agent.reasoner import sanitize_public_mingli_payload
@@ -201,6 +198,7 @@ def create_agent_router(
         )
     )
     probe_planner = ProbePlanner()
+    baseline_commands = BaselineCaseCommandService(agent=agent, case_store=case_store)
     capability_registry = AbuCapabilityRegistry()
 
     def account_for(request: Request) -> dict[str, object] | None:
@@ -311,29 +309,7 @@ def create_agent_router(
         current_stage = "chart_compilation"
         try:
             with progressive_lock:
-                world = compile_chart_world(reading_id=reading_id, birth_input=birth_input)
-                append_job_event(
-                    job_id=job_id,
-                    event_type="chart_ready",
-                    epistemic_status="accepted",
-                    job_status="running",
-                    payload={
-                        "pillars": world.pillars,
-                        "world_id": world.world_id,
-                        "profile_id": str(profile.get("profile_id")) if profile else None,
-                        "ziwei": {
-                            "status": world.ziwei_profile.get("status", "unavailable"),
-                            "reasoning_ready": bool(world.ziwei_profile.get("reasoning_ready")),
-                            "calculator": world.ziwei_profile.get("calculator"),
-                            "life_palace": world.ziwei_profile.get("life_palace"),
-                            "body_palace": world.ziwei_profile.get("body_palace"),
-                            "warnings": list(world.ziwei_profile.get("warnings") or []),
-                        },
-                    },
-                )
-                current_stage = "baseline_cognition"
-
-                def on_stage(event_type: str, stage_payload: dict[str, Any]) -> None:
+                def on_command_event(event_type: str, stage_payload: dict[str, Any]) -> None:
                     nonlocal current_stage
                     append_job_event(
                         job_id=job_id,
@@ -349,10 +325,13 @@ def create_agent_router(
                             else "accepted"
                         ),
                         payload=stage_payload,
+                        job_status="running" if event_type == "chart_ready" else None,
                     )
                     current_stage = {
+                        "chart_ready": "baseline_cognition",
                         "baseline_preview_ready": "baseline_cognition",
                         "baseline_draft_ready": "formal_insight_validation",
+                        "formal_insight_draft_ready": "formal_insight_validation",
                         "baseline_validated": "formal_insight_validation",
                         "pattern_preview_ready": "pattern_hypothesis",
                         "pattern_candidates_ready": "work_path",
@@ -364,120 +343,55 @@ def create_agent_router(
                         "whole_chart_ready": "epistemic_review",
                     }.get(event_type, current_stage)
 
-                record = agent.first_baseline_reading(case_id=case_id, world=world, on_stage=on_stage)
-                insight_draft = build_baseline_insight(record=record, world=world)
-                append_job_event(
-                    job_id=job_id,
-                    event_type="formal_insight_draft_ready",
-                    epistemic_status="provisional",
-                    payload={
-                        "status": "draft",
-                        "insight_id": insight_draft.insight_id,
-                        "claim": insight_draft.claim,
-                        "persisted": False,
-                    },
-                )
-                current_stage = "formal_insight_validation"
-                workspace = build_case_workspace(record)
-                if not record.review.commit_eligible:
-                    validation = validate_formal_insight(insight=insight_draft, world=world)
-                    row = {
-                        "case_id": case_id,
-                        "profile_id": str(profile.get("profile_id")) if profile else None,
-                        "birth_input": birth_input.model_dump(mode="json"),
-                        "world": world.model_dump(mode="json"),
-                        "record": record.model_dump(mode="json"),
-                        "case_belief_state": workspace.model_dump(mode="json"),
-                        "workspace_state": build_workspace_state(
-                            case_id=case_id,
-                            active_mode=active_mode,
-                        ).model_dump(mode="json"),
-                        "life_case": None,
-                        "insight_validation": validation.model_dump(mode="json"),
-                        "first_run": {
-                            "protocol": "single_call_baseline_v1",
-                            "blocking_core_llm_calls": len(record.stage_receipts),
-                            "unselected_domains_precomputed": False,
-                        },
-                        "status": record.review.disposition,
-                    }
-                    case_store.save(
+                result = baseline_commands.execute(
+                    BaselineCaseCommand(
                         case_id=case_id,
+                        reading_id=reading_id,
+                        birth_input=birth_input,
+                        profile_id=str(profile.get("profile_id")) if profile else None,
                         user_id=user_id,
-                        profile_id=row["profile_id"],
-                        payload=row,
-                    )
-                    outcome = _reliability_outcome_payload(world=world, record=record)
+                        active_mode=active_mode,
+                    ),
+                    on_event=on_command_event,
+                )
+                if not result.committed:
                     payload: dict[str, Any] = {
-                        "outcome": outcome,
-                        "validation": validation.model_dump(mode="json"),
+                        "outcome": _reliability_outcome_payload(
+                            world=result.world,
+                            record=result.record,
+                        ),
+                        "validation": result.validation.model_dump(mode="json"),
                         "persisted_as_formal_insight": False,
                     }
-                    if record.review.disposition == "competing":
+                    if result.record.review.disposition == "competing":
                         payload["reading"] = _public_reading_view(
-                            world=world,
-                            record=record,
-                            workspace=workspace,
-                            probe_plan=probe_planner.plan(record=record, role_mode=active_mode),
+                            world=result.world,
+                            record=result.record,
+                            workspace=result.workspace,
+                            probe_plan=probe_planner.plan(
+                                record=result.record,
+                                role_mode=active_mode,
+                            ),
                         )
                     append_job_event(
                         job_id=job_id,
                         event_type=(
                             "baseline_competing"
-                            if record.review.disposition == "competing"
+                            if result.record.review.disposition == "competing"
                             else "baseline_blocked"
                         ),
-                        epistemic_status=record.review.disposition,
+                        epistemic_status=result.record.review.disposition,
                         job_status="completed",
                         payload=payload,
                     )
                     return
-                life_case, validation = commit_baseline_life_case(
-                    insight=insight_draft,
-                    world=world,
-                    profile_id=str(profile.get("profile_id")) if profile else None,
-                )
-                append_job_event(
-                    job_id=job_id,
-                    event_type="baseline_validated",
-                    epistemic_status="accepted",
-                    payload={
-                        "status": "validated",
-                        "validation": validation.model_dump(mode="json"),
-                        "persisted": False,
-                    },
-                )
-                row = {
-                    "case_id": case_id,
-                    "profile_id": str(profile.get("profile_id")) if profile else None,
-                    "birth_input": birth_input.model_dump(mode="json"),
-                    "world": world.model_dump(mode="json"),
-                    "record": record.model_dump(mode="json"),
-                    "case_belief_state": workspace.model_dump(mode="json"),
-                    "workspace_state": build_workspace_state(
-                        case_id=case_id,
-                        active_mode=active_mode,
-                    ).model_dump(mode="json"),
-                    "life_case": life_case.model_dump(mode="json"),
-                    "insight_validation": validation.model_dump(mode="json"),
-                    "first_run": {
-                        "protocol": "single_call_baseline_v1",
-                        "blocking_core_llm_calls": len(record.stage_receipts),
-                        "unselected_domains_precomputed": False,
-                    },
-                    "status": "active",
-                }
-                case_store.save(
-                    case_id=case_id,
-                    user_id=user_id,
-                    profile_id=row["profile_id"],
-                    payload=row,
-                )
+                life_case = result.life_case
+                assert life_case is not None
                 reading = _public_reading_view(
-                    world=world,
-                    record=record,
-                    workspace=workspace,
-                    probe_plan=probe_planner.plan(record=record, role_mode=active_mode),
+                    world=result.world,
+                    record=result.record,
+                    workspace=result.workspace,
+                    probe_plan=probe_planner.plan(record=result.record, role_mode=active_mode),
                     life_case=life_case,
                 )
                 append_job_event(
@@ -489,7 +403,7 @@ def create_agent_router(
                         "reading": reading,
                         "life_case_id": life_case.life_case_id,
                         "insight_id": life_case.baseline_insight.insight_id,
-                        "blocking_core_llm_calls": len(record.stage_receipts),
+                        "blocking_core_llm_calls": len(result.record.stage_receipts),
                     },
                 )
         except Exception as exc:  # noqa: BLE001 - the partial cognition remains visible and recoverable.
@@ -620,96 +534,50 @@ def create_agent_router(
                 "profile": profile,
             }
         try:
-            world = compile_chart_world(reading_id=reading_id, birth_input=birth_input)
-            record = agent.first_baseline_reading(case_id=case_id, world=world)
+            result = baseline_commands.execute(BaselineCaseCommand(
+                case_id=case_id,
+                reading_id=reading_id,
+                birth_input=birth_input,
+                profile_id=str(profile.get("profile_id")) if profile else None,
+                user_id=str(account["user_id"]) if account else None,
+                active_mode=active_mode,
+            ))
         except Exception as exc:  # noqa: BLE001 - cognition failure must not become a template fallback.
             raise HTTPException(status_code=503, detail=f"mingli_cognition_failed:{type(exc).__name__}:{exc}") from exc
-        insight_draft = build_baseline_insight(record=record, world=world)
-        workspace = build_case_workspace(record)
-        if not record.review.commit_eligible:
-            validation = validate_formal_insight(insight=insight_draft, world=world)
-            row = {
-                "case_id": case_id,
-                "profile_id": str(profile.get("profile_id")) if profile else None,
-                "birth_input": birth_input.model_dump(mode="json"),
-                "world": world.model_dump(mode="json"),
-                "record": record.model_dump(mode="json"),
-                "case_belief_state": workspace.model_dump(mode="json"),
-                "workspace_state": build_workspace_state(
-                    case_id=case_id,
-                    active_mode=active_mode,
-                ).model_dump(mode="json"),
-                "life_case": None,
-                "insight_validation": validation.model_dump(mode="json"),
-                "first_run": {
-                    "protocol": "single_call_baseline_v1",
-                    "blocking_core_llm_calls": len(record.stage_receipts),
-                    "unselected_domains_precomputed": False,
-                },
-                "status": record.review.disposition,
-            }
-            case_store.save(
-                case_id=case_id,
-                user_id=str(account["user_id"]) if account else None,
-                profile_id=row["profile_id"],
-                payload=row,
-            )
+        if not result.committed:
             response: dict[str, Any] = {
-                "status": f"baseline_{record.review.disposition}",
+                "status": f"baseline_{result.record.review.disposition}",
                 "case_id": case_id,
                 "saved": account is not None,
                 "profile": profile,
-                "outcome": _reliability_outcome_payload(world=world, record=record),
+                "outcome": _reliability_outcome_payload(
+                    world=result.world,
+                    record=result.record,
+                ),
             }
-            if record.review.disposition == "competing":
+            if result.record.review.disposition == "competing":
                 response["reading"] = _public_reading_view(
-                    world=world,
-                    record=record,
-                    workspace=workspace,
-                    probe_plan=probe_planner.plan(record=record, role_mode=active_mode),
+                    world=result.world,
+                    record=result.record,
+                    workspace=result.workspace,
+                    probe_plan=probe_planner.plan(
+                        record=result.record,
+                        role_mode=active_mode,
+                    ),
                 )
             return response
-        life_case, validation = commit_baseline_life_case(
-            insight=insight_draft,
-            world=world,
-            profile_id=str(profile.get("profile_id")) if profile else None,
-        )
-        row = {
-            "case_id": case_id,
-            "profile_id": str(profile.get("profile_id")) if profile else None,
-            "birth_input": birth_input.model_dump(mode="json"),
-            "world": world.model_dump(mode="json"),
-            "record": record.model_dump(mode="json"),
-            "case_belief_state": workspace.model_dump(mode="json"),
-            "workspace_state": build_workspace_state(
-                case_id=case_id,
-                active_mode=active_mode,
-            ).model_dump(mode="json"),
-            "life_case": life_case.model_dump(mode="json"),
-            "insight_validation": validation.model_dump(mode="json"),
-            "first_run": {
-                "protocol": "single_call_baseline_v1",
-                "blocking_core_llm_calls": len(record.stage_receipts),
-                "unselected_domains_precomputed": False,
-            },
-            "status": "active",
-        }
-        case_store.save(
-            case_id=case_id,
-            user_id=str(account["user_id"]) if account else None,
-            profile_id=row["profile_id"],
-            payload=row,
-        )
+        life_case = result.life_case
+        assert life_case is not None
         return {
             "status": "first_reading_ready",
             "case_id": case_id,
             "saved": account is not None,
             "profile": profile,
             "reading": _public_reading_view(
-                world=world,
-                record=record,
-                workspace=workspace,
-                probe_plan=probe_planner.plan(record=record, role_mode=active_mode),
+                world=result.world,
+                record=result.record,
+                workspace=result.workspace,
+                probe_plan=probe_planner.plan(record=result.record, role_mode=active_mode),
                 life_case=life_case,
             ),
         }

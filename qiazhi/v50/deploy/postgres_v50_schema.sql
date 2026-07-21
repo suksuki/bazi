@@ -12,8 +12,8 @@ CREATE TABLE IF NOT EXISTS v50_schema_version (
 INSERT INTO v50_schema_version (id, version, boundary)
 VALUES (
     'v50.schema',
-    'v50.clean_room.001',
-    'v50_database_clean_room_isolation'
+    'v50.consolidated.002',
+    'v50_database_single_migration_owner'
 )
 ON CONFLICT (id) DO UPDATE
 SET version = EXCLUDED.version,
@@ -89,6 +89,115 @@ ON v50_bazi_profiles (identity_ref, is_default DESC, updated_at DESC);
 
 CREATE INDEX IF NOT EXISTS idx_v50_bazi_profiles_user
 ON v50_bazi_profiles (user_id, is_default DESC, updated_at DESC);
+
+-- Upgrade older clean-room installs through the same authoritative schema.
+ALTER TABLE IF EXISTS v50_bazi_profiles ALTER COLUMN identity_ref DROP NOT NULL;
+ALTER TABLE IF EXISTS v50_bazi_profiles
+    ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES v50_user_accounts(user_id);
+ALTER TABLE IF EXISTS v50_bazi_profiles
+    ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT false;
+
+CREATE TABLE IF NOT EXISTS v50_mingli_agent_cases (
+    case_id TEXT PRIMARY KEY,
+    user_id TEXT REFERENCES v50_user_accounts(user_id),
+    profile_id TEXT,
+    case_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_agent_cases_user
+ON v50_mingli_agent_cases (user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_mingli_cognitive_jobs (
+    job_id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL,
+    user_id TEXT REFERENCES v50_user_accounts(user_id),
+    job_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_cognitive_jobs_user
+ON v50_mingli_cognitive_jobs (user_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_voice_validation_sessions (
+    session_id TEXT PRIMARY KEY,
+    participant_ref TEXT NOT NULL REFERENCES v50_user_accounts(user_id),
+    case_id TEXT NOT NULL,
+    arm TEXT NOT NULL,
+    session_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_voice_validation_participant
+ON v50_voice_validation_sessions (participant_ref, created_at DESC);
+
+CREATE INDEX IF NOT EXISTS idx_v50_voice_validation_case
+ON v50_voice_validation_sessions (case_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_theater_sessions (
+    session_id TEXT PRIMARY KEY,
+    session_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v50_theater_envelopes (
+    envelope_id TEXT PRIMARY KEY,
+    source_hash TEXT NOT NULL,
+    envelope_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v50_theater_participants (
+    participant_run_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES v50_theater_sessions(session_id) ON DELETE CASCADE,
+    participant_json JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v50_theater_cues (
+    cue_instance_id TEXT PRIMARY KEY,
+    session_id TEXT NOT NULL REFERENCES v50_theater_sessions(session_id) ON DELETE CASCADE,
+    cue_hash TEXT NOT NULL,
+    cue_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v50_theater_events (
+    event_id TEXT UNIQUE NOT NULL,
+    session_id TEXT NOT NULL REFERENCES v50_theater_sessions(session_id) ON DELETE CASCADE,
+    sequence INTEGER NOT NULL,
+    scope TEXT NOT NULL,
+    participant_run_id TEXT,
+    event_json JSONB NOT NULL,
+    occurred_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (session_id, sequence)
+);
+
+CREATE TABLE IF NOT EXISTS v50_topic_explorations (
+    exploration_id TEXT PRIMARY KEY,
+    participant_run_id TEXT NOT NULL,
+    exploration_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_theater_events_scope
+ON v50_theater_events (session_id, scope, sequence);
+
+CREATE INDEX IF NOT EXISTS idx_v50_theater_participants_session
+ON v50_theater_participants (session_id);
+
+CREATE TABLE IF NOT EXISTS v50_legacy_runtime_usage (
+    route_key TEXT NOT NULL,
+    method TEXT NOT NULL,
+    request_count BIGINT NOT NULL DEFAULT 0,
+    first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (route_key, method)
+);
 
 CREATE TABLE IF NOT EXISTS v50_calendar_normalizations (
     normalization_id TEXT PRIMARY KEY,

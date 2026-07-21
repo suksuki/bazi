@@ -43,6 +43,7 @@ from experience.canvas import (
     project_canvas_spec_for_role,
 )
 from experience.compiler import canonical_hash
+from experience.product_projection import ReadOnlySixPillarCanvas
 from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 
@@ -163,7 +164,7 @@ class ReadOnlySixPillarCanvasService:
                 "change_groups": _change_groups(diff=diff, before_spec=specs[_previous_stage(stage)], after_spec=spec),
             }
 
-        return {
+        payload = {
             "schema_version": "deepbazi.read_only_six_pillar_canvas.v1",
             "status": "read_only_canvas_ready",
             "case_id": case_id,
@@ -197,6 +198,7 @@ class ReadOnlySixPillarCanvasService:
             "formal_state_writes": False,
             "sandbox_mutations": False,
         }
+        return ReadOnlySixPillarCanvas.model_validate(payload).model_dump(mode="json")
 
     def issue_context(
         self,

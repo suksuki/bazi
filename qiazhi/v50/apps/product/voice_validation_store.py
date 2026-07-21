@@ -13,6 +13,7 @@ from experience.voice_validation import (
     VoiceValidationInteractionEvent,
     VoiceValidationSession,
 )
+from product.database_schema import ensure_product_database_schema
 
 
 class VoiceValidationStore(Protocol):
@@ -106,37 +107,12 @@ class PostgresVoiceValidationStore:
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        self.ensure_schema()
+        ensure_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg
 
         return psycopg.connect(self.database_url)
-
-    def ensure_schema(self) -> None:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS v50_voice_validation_sessions (
-                        session_id TEXT PRIMARY KEY,
-                        participant_ref TEXT NOT NULL REFERENCES v50_user_accounts(user_id),
-                        case_id TEXT NOT NULL,
-                        arm TEXT NOT NULL,
-                        session_json JSONB NOT NULL,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-                    )
-                    """
-                )
-                cur.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_v50_voice_validation_participant "
-                    "ON v50_voice_validation_sessions (participant_ref, created_at DESC)"
-                )
-                cur.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_v50_voice_validation_case "
-                    "ON v50_voice_validation_sessions (case_id, created_at DESC)"
-                )
 
     def create(self, session: VoiceValidationSession) -> None:
         with self._connect() as conn:

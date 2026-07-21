@@ -238,8 +238,8 @@ The LLM compares and synthesizes professionally meaningful hypotheses. Relation/
 - `architecture/V50_CAG04_RELATION_PATH_PROVENANCE_CLOSEOUT_V1.md`
 - `../reports/v50-lean-consolidation/ra0-518k-realizability-v1/RA0_518K_CHART_REALIZABILITY_AUDIT_V1.md`
 - `DECISION_REGISTER.md`
-- `config/data_authority_v1.json`
-- `config/runtime_authority_v1.json`
+- `config/production_authority_manifest_v1.json` is the single data, runtime,
+  module, schema, projection, and database authority registry.
 - `config/legacy_register_v1.json`
 - `config/artifact_retention_v1.json`
 - `V50_DEEP_CLEANUP_AND_LARGE_FILE_GOVERNANCE_V1.md`

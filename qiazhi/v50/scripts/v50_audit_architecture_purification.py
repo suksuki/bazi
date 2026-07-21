@@ -9,12 +9,11 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 REQUIRED_REGISTRIES = [
-    "data_authority_v1.json",
+    "production_authority_manifest_v1.json",
     "legacy_register_v1.json",
     "prompt_registry_v1.json",
     "knowledge_registry_v1.json",
     "media_asset_registry_v1.json",
-    "frontend_state_authority_v1.json",
     "artifact_retention_v1.json",
 ]
 FORBIDDEN_FRONTEND_TOKENS = [

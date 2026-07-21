@@ -32,6 +32,95 @@
           "default": "participant_private",
           "title": "Visibility",
           "type": "string"
+        },
+        "pillar_slot": {
+          "default": "",
+          "enum": [
+            "year",
+            "month",
+            "day",
+            "hour",
+            ""
+          ],
+          "title": "Pillar Slot",
+          "type": "string"
+        },
+        "pillar_label": {
+          "default": "",
+          "maxLength": 20,
+          "title": "Pillar Label",
+          "type": "string"
+        },
+        "stem": {
+          "default": "",
+          "maxLength": 4,
+          "title": "Stem",
+          "type": "string"
+        },
+        "branch": {
+          "default": "",
+          "maxLength": 4,
+          "title": "Branch",
+          "type": "string"
+        },
+        "stem_element": {
+          "default": "",
+          "enum": [
+            "wood",
+            "fire",
+            "earth",
+            "metal",
+            "water",
+            ""
+          ],
+          "title": "Stem Element",
+          "type": "string"
+        },
+        "stem_polarity": {
+          "default": "",
+          "enum": [
+            "yin",
+            "yang",
+            ""
+          ],
+          "title": "Stem Polarity",
+          "type": "string"
+        },
+        "branch_element": {
+          "default": "",
+          "enum": [
+            "wood",
+            "fire",
+            "earth",
+            "metal",
+            "water",
+            ""
+          ],
+          "title": "Branch Element",
+          "type": "string"
+        },
+        "branch_polarity": {
+          "default": "",
+          "enum": [
+            "yin",
+            "yang",
+            ""
+          ],
+          "title": "Branch Polarity",
+          "type": "string"
+        },
+        "visible_ten_god": {
+          "default": "",
+          "maxLength": 40,
+          "title": "Visible Ten God",
+          "type": "string"
+        },
+        "hidden_stems": {
+          "items": {
+            "$ref": "#/$defs/HiddenStemFact"
+          },
+          "title": "Hidden Stems",
+          "type": "array"
         }
       },
       "required": [
@@ -61,6 +150,18 @@
           "maxLength": 1200,
           "minLength": 1,
           "title": "Approved Meaning",
+          "type": "string"
+        },
+        "spoken_summary": {
+          "default": "",
+          "maxLength": 1200,
+          "title": "Spoken Summary",
+          "type": "string"
+        },
+        "subtitle_summary": {
+          "default": "",
+          "maxLength": 1200,
+          "title": "Subtitle Summary",
           "type": "string"
         },
         "certainty": {
@@ -121,6 +222,50 @@
         "certainty"
       ],
       "title": "ApprovedClaim",
+      "type": "object"
+    },
+    "ApprovedReasoningStep": {
+      "additionalProperties": false,
+      "properties": {
+        "step_ref": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Step Ref",
+          "type": "string"
+        },
+        "premise": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Premise",
+          "type": "string"
+        },
+        "conclusion": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Conclusion",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "visual_anchor": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Visual Anchor",
+          "type": "string"
+        }
+      },
+      "required": [
+        "step_ref",
+        "premise",
+        "conclusion",
+        "visual_anchor"
+      ],
+      "title": "ApprovedReasoningStep",
       "type": "object"
     },
     "CompetingHypothesis": {
@@ -206,6 +351,19 @@
           "default": null,
           "title": "Life Case Version"
         },
+        "case_ref": {
+          "anyOf": [
+            {
+              "maxLength": 180,
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Case Ref"
+        },
         "temporal_snapshot_version": {
           "anyOf": [
             {
@@ -267,6 +425,51 @@
         }
       },
       "title": "EnvelopeUncertainty",
+      "type": "object"
+    },
+    "HiddenStemFact": {
+      "additionalProperties": false,
+      "properties": {
+        "stem": {
+          "maxLength": 4,
+          "minLength": 1,
+          "title": "Stem",
+          "type": "string"
+        },
+        "ten_god": {
+          "default": "",
+          "maxLength": 40,
+          "title": "Ten God",
+          "type": "string"
+        },
+        "element": {
+          "default": "",
+          "enum": [
+            "wood",
+            "fire",
+            "earth",
+            "metal",
+            "water",
+            ""
+          ],
+          "title": "Element",
+          "type": "string"
+        },
+        "polarity": {
+          "default": "",
+          "enum": [
+            "yin",
+            "yang",
+            ""
+          ],
+          "title": "Polarity",
+          "type": "string"
+        }
+      },
+      "required": [
+        "stem"
+      ],
+      "title": "HiddenStemFact",
       "type": "object"
     },
     "ParticipantScope": {
@@ -394,6 +597,13 @@
         "$ref": "#/$defs/ApprovedClaim"
       },
       "title": "Approved Claims",
+      "type": "array"
+    },
+    "approved_reasoning_steps": {
+      "items": {
+        "$ref": "#/$defs/ApprovedReasoningStep"
+      },
+      "title": "Approved Reasoning Steps",
       "type": "array"
     },
     "competing_hypotheses": {

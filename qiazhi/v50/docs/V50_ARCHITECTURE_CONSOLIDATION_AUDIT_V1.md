@@ -116,7 +116,7 @@ Severity: `P0 AUTHORITY DEFECT`
 
 Evidence:
 
-- `config/runtime_authority_v1.json` defines Graph v1 as `experimental_tool_observation` and forbids experimental tools from the independent first look.
+- `config/production_authority_manifest_v1.json` defines Graph v1 as `experimental_tool_observation` and forbids experimental tools from the independent first look.
 - `packages/core/mingli_agent/world.py` emits Graph edges as `graph_relation` facts with `authority="neutral_relation"`.
 - `packages/core/mingli_agent/context.py` maps only `experimental_tool_observation` and `research_prior` away from production; every other authority becomes `production`.
 

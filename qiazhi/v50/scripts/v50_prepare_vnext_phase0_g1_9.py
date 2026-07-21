@@ -354,7 +354,6 @@ def _nonsealed_preflight(*, run_id: str, output_dir: Path) -> dict[str, Any]:
 def _machine_lock_candidate(*, run_id: str) -> dict[str, Any]:
     relative_paths = [
         "config/production_authority_manifest_v1.json",
-        "config/runtime_authority_v1.json",
         "config/vnext_phase0_lane_policy_v1.json",
         "packages/core/life_domains.py",
         "packages/core/mingli_agent/contracts.py",

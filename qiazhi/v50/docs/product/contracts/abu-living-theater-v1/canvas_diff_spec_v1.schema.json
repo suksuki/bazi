@@ -1,0 +1,350 @@
+{
+  "$defs": {
+    "CanvasEpistemicDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "object_type": {
+          "enum": [
+            "node",
+            "relation",
+            "cluster",
+            "path"
+          ],
+          "title": "Object Type",
+          "type": "string"
+        },
+        "target_ref": {
+          "maxLength": 260,
+          "minLength": 1,
+          "title": "Target Ref",
+          "type": "string"
+        },
+        "status_scope": {
+          "enum": [
+            "object",
+            "state"
+          ],
+          "title": "Status Scope",
+          "type": "string"
+        },
+        "before_status": {
+          "enum": [
+            "fact",
+            "derived",
+            "candidate",
+            "committed",
+            "blocked",
+            "hypothetical",
+            "presentation_only"
+          ],
+          "title": "Before Status",
+          "type": "string"
+        },
+        "after_status": {
+          "enum": [
+            "fact",
+            "derived",
+            "candidate",
+            "committed",
+            "blocked",
+            "hypothetical",
+            "presentation_only"
+          ],
+          "title": "After Status",
+          "type": "string"
+        },
+        "reason_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Reason Refs",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "object_type",
+        "target_ref",
+        "status_scope",
+        "before_status",
+        "after_status",
+        "reason_refs",
+        "source_refs"
+      ],
+      "title": "CanvasEpistemicDelta",
+      "type": "object"
+    },
+    "CanvasObjectDelta": {
+      "additionalProperties": false,
+      "properties": {
+        "object_type": {
+          "enum": [
+            "node",
+            "relation",
+            "cluster",
+            "path"
+          ],
+          "title": "Object Type",
+          "type": "string"
+        },
+        "target_ref": {
+          "maxLength": 260,
+          "minLength": 1,
+          "title": "Target Ref",
+          "type": "string"
+        },
+        "change_type": {
+          "enum": [
+            "introduced",
+            "removed",
+            "activated",
+            "reinforced",
+            "weakened",
+            "blocked",
+            "reopened",
+            "unchanged"
+          ],
+          "title": "Change Type",
+          "type": "string"
+        },
+        "before_state": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Before State",
+          "type": "string"
+        },
+        "after_state": {
+          "default": "",
+          "maxLength": 80,
+          "title": "After State",
+          "type": "string"
+        },
+        "reason_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Reason Refs",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "object_type",
+        "target_ref",
+        "change_type",
+        "reason_refs",
+        "source_refs"
+      ],
+      "title": "CanvasObjectDelta",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.canvas_diff_spec.v1",
+      "default": "deepbazi.canvas_diff_spec.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "diff_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Diff Id",
+      "type": "string"
+    },
+    "from_spec_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "From Spec Id",
+      "type": "string"
+    },
+    "to_spec_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "To Spec Id",
+      "type": "string"
+    },
+    "source_action_ref": {
+      "maxLength": 220,
+      "minLength": 1,
+      "title": "Source Action Ref",
+      "type": "string"
+    },
+    "added_nodes": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Added Nodes",
+      "type": "array"
+    },
+    "removed_nodes": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Removed Nodes",
+      "type": "array"
+    },
+    "added_relations": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Added Relations",
+      "type": "array"
+    },
+    "removed_relations": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Removed Relations",
+      "type": "array"
+    },
+    "changed_relations": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Changed Relations",
+      "type": "array"
+    },
+    "added_clusters": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Added Clusters",
+      "type": "array"
+    },
+    "removed_clusters": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Removed Clusters",
+      "type": "array"
+    },
+    "introduced_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Introduced Paths",
+      "type": "array"
+    },
+    "removed_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Removed Paths",
+      "type": "array"
+    },
+    "activated_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Activated Paths",
+      "type": "array"
+    },
+    "blocked_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Blocked Paths",
+      "type": "array"
+    },
+    "reopened_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Reopened Paths",
+      "type": "array"
+    },
+    "reinforced_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Reinforced Paths",
+      "type": "array"
+    },
+    "weakened_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Weakened Paths",
+      "type": "array"
+    },
+    "unchanged_paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasObjectDelta"
+      },
+      "title": "Unchanged Paths",
+      "type": "array"
+    },
+    "changed_epistemic_status": {
+      "items": {
+        "$ref": "#/$defs/CanvasEpistemicDelta"
+      },
+      "title": "Changed Epistemic Status",
+      "type": "array"
+    },
+    "explanation_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Explanation Refs",
+      "type": "array"
+    },
+    "uncertainty": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Uncertainty",
+      "type": "array"
+    },
+    "content_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Content Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "diff_id",
+    "from_spec_id",
+    "to_spec_id",
+    "source_action_ref",
+    "added_nodes",
+    "removed_nodes",
+    "added_relations",
+    "removed_relations",
+    "changed_relations",
+    "added_clusters",
+    "removed_clusters",
+    "introduced_paths",
+    "removed_paths",
+    "activated_paths",
+    "blocked_paths",
+    "reopened_paths",
+    "reinforced_paths",
+    "weakened_paths",
+    "unchanged_paths",
+    "changed_epistemic_status",
+    "explanation_refs",
+    "uncertainty",
+    "content_hash"
+  ],
+  "title": "CanvasDiffSpec",
+  "type": "object"
+}

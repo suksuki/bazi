@@ -6,6 +6,8 @@ from datetime import datetime, timezone
 from threading import Lock
 from typing import Protocol
 
+from product.database_schema import ensure_product_database_schema
+
 
 class LegacyUsageStore(Protocol):
     persistent: bool
@@ -51,28 +53,12 @@ class PostgresLegacyUsageStore:
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        self.ensure_schema()
+        ensure_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg
 
         return psycopg.connect(self.database_url)
-
-    def ensure_schema(self) -> None:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS v50_legacy_runtime_usage (
-                        route_key TEXT NOT NULL,
-                        method TEXT NOT NULL,
-                        request_count BIGINT NOT NULL DEFAULT 0,
-                        first_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        PRIMARY KEY (route_key, method)
-                    )
-                    """
-                )
 
     def record(self, *, route_key: str, method: str) -> None:
         with self._connect() as conn:

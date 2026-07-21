@@ -37,4 +37,4 @@ Birth input
 4. Probe feedback updates the current case belief state, not natal facts or global theory.
 5. A module becoming importable does not make it production-authoritative.
 
-The executable source of truth is `config/runtime_authority_v1.json`; `scripts/v50_audit_runtime_authority.py` enforces the current production boundary.
+The executable source of truth is `config/production_authority_manifest_v1.json`; `scripts/v50_audit_runtime_authority.py` enforces the current production boundary.

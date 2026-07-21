@@ -1,0 +1,339 @@
+{
+  "$defs": {
+    "SpeechAssetMedia": {
+      "additionalProperties": false,
+      "properties": {
+        "audio_url": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Audio Url",
+          "type": "string"
+        },
+        "audio_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Audio Hash",
+          "type": "string"
+        },
+        "duration_ms": {
+          "minimum": 1,
+          "title": "Duration Ms",
+          "type": "integer"
+        },
+        "sample_rate": {
+          "maximum": 192000,
+          "minimum": 8000,
+          "title": "Sample Rate",
+          "type": "integer"
+        },
+        "format": {
+          "const": "wav",
+          "default": "wav",
+          "title": "Format",
+          "type": "string"
+        },
+        "subtitle_track": {
+          "items": {
+            "$ref": "#/$defs/SpeechSubtitleItem"
+          },
+          "minItems": 1,
+          "title": "Subtitle Track",
+          "type": "array"
+        },
+        "size_bytes": {
+          "minimum": 1,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "playback_variants": {
+          "items": {
+            "$ref": "#/$defs/SpeechAssetMediaVariant"
+          },
+          "title": "Playback Variants",
+          "type": "array"
+        }
+      },
+      "required": [
+        "audio_url",
+        "audio_hash",
+        "duration_ms",
+        "sample_rate",
+        "subtitle_track",
+        "size_bytes"
+      ],
+      "title": "SpeechAssetMedia",
+      "type": "object"
+    },
+    "SpeechAssetMediaVariant": {
+      "additionalProperties": false,
+      "properties": {
+        "format": {
+          "const": "opus",
+          "default": "opus",
+          "title": "Format",
+          "type": "string"
+        },
+        "mime_type": {
+          "const": "audio/ogg; codecs=opus",
+          "default": "audio/ogg; codecs=opus",
+          "title": "Mime Type",
+          "type": "string"
+        },
+        "audio_url": {
+          "maxLength": 500,
+          "minLength": 1,
+          "title": "Audio Url",
+          "type": "string"
+        },
+        "audio_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Audio Hash",
+          "type": "string"
+        },
+        "size_bytes": {
+          "minimum": 1,
+          "title": "Size Bytes",
+          "type": "integer"
+        },
+        "codec_profile_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Codec Profile Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "audio_url",
+        "audio_hash",
+        "size_bytes",
+        "codec_profile_version"
+      ],
+      "title": "SpeechAssetMediaVariant",
+      "type": "object"
+    },
+    "SpeechAssetSource": {
+      "additionalProperties": false,
+      "properties": {
+        "case_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Case Id",
+          "type": "string"
+        },
+        "chart_version": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Chart Version",
+          "type": "string"
+        },
+        "life_case_version": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Life Case Version",
+          "type": "string"
+        },
+        "formal_insight_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Formal Insight Id",
+          "type": "string"
+        },
+        "segment_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Segment Id",
+          "type": "string"
+        },
+        "claim_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Claim Refs",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "narration_script_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Narration Script Version",
+          "type": "string"
+        },
+        "source_text_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Source Text Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "case_id",
+        "chart_version",
+        "life_case_version",
+        "formal_insight_id",
+        "segment_id",
+        "claim_refs",
+        "narration_script_version",
+        "source_text_hash"
+      ],
+      "title": "SpeechAssetSource",
+      "type": "object"
+    },
+    "SpeechAssetVoice": {
+      "additionalProperties": false,
+      "properties": {
+        "voice_id": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Voice Id",
+          "type": "string"
+        },
+        "voice_version": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Voice Version",
+          "type": "string"
+        },
+        "tts_model_version": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Tts Model Version",
+          "type": "string"
+        },
+        "language": {
+          "maxLength": 20,
+          "minLength": 2,
+          "title": "Language",
+          "type": "string"
+        },
+        "speaking_style": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Speaking Style",
+          "type": "string"
+        },
+        "speed": {
+          "default": 1.0,
+          "maximum": 1.5,
+          "minimum": 0.5,
+          "title": "Speed",
+          "type": "number"
+        },
+        "pronunciation_lexicon_version": {
+          "maxLength": 120,
+          "minLength": 1,
+          "title": "Pronunciation Lexicon Version",
+          "type": "string"
+        }
+      },
+      "required": [
+        "voice_id",
+        "voice_version",
+        "tts_model_version",
+        "language",
+        "speaking_style",
+        "pronunciation_lexicon_version"
+      ],
+      "title": "SpeechAssetVoice",
+      "type": "object"
+    },
+    "SpeechSubtitleItem": {
+      "additionalProperties": false,
+      "properties": {
+        "start_ms": {
+          "minimum": 0,
+          "title": "Start Ms",
+          "type": "integer"
+        },
+        "end_ms": {
+          "exclusiveMinimum": 0,
+          "title": "End Ms",
+          "type": "integer"
+        },
+        "text": {
+          "maxLength": 1200,
+          "minLength": 1,
+          "title": "Text",
+          "type": "string"
+        }
+      },
+      "required": [
+        "start_ms",
+        "end_ms",
+        "text"
+      ],
+      "title": "SpeechSubtitleItem",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.speech_asset.v1",
+      "default": "deepbazi.speech_asset.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "speech_asset_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Speech Asset Id",
+      "type": "string"
+    },
+    "scope": {
+      "const": "participant_private",
+      "default": "participant_private",
+      "title": "Scope",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/SpeechAssetSource"
+    },
+    "voice": {
+      "$ref": "#/$defs/SpeechAssetVoice"
+    },
+    "media": {
+      "$ref": "#/$defs/SpeechAssetMedia"
+    },
+    "status": {
+      "const": "ready",
+      "default": "ready",
+      "title": "Status",
+      "type": "string"
+    },
+    "generated_at": {
+      "format": "date-time",
+      "title": "Generated At",
+      "type": "string"
+    },
+    "generation_seconds": {
+      "anyOf": [
+        {
+          "minimum": 0.0,
+          "type": "number"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "title": "Generation Seconds"
+    }
+  },
+  "required": [
+    "speech_asset_id",
+    "source",
+    "voice",
+    "media",
+    "generated_at"
+  ],
+  "title": "SpeechAsset",
+  "type": "object"
+}

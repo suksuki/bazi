@@ -10,6 +10,7 @@ from typing import Protocol
 from uuid import uuid4
 
 from core.contracts import BirthInputCanonical
+from product.database_schema import ensure_product_database_schema
 
 
 ACCOUNT_ROLES = {"member", "practitioner", "research_master"}
@@ -148,58 +149,11 @@ class PostgresProductStore:
 
     def __init__(self, database_url: str) -> None:
         self._database_url = database_url
-        self.ensure_schema()
+        ensure_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg
         return psycopg.connect(self._database_url)
-
-    def ensure_schema(self) -> None:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS v50_user_accounts (
-                        user_id TEXT PRIMARY KEY,
-                        email TEXT NOT NULL UNIQUE,
-                        display_name TEXT NOT NULL,
-                        account_role TEXT NOT NULL,
-                        password_hash TEXT NOT NULL,
-                        password_salt TEXT NOT NULL,
-                        role_status TEXT NOT NULL DEFAULT 'self_declared',
-                        active BOOLEAN NOT NULL DEFAULT true,
-                        account_json JSONB NOT NULL,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-                    )
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE UNIQUE INDEX IF NOT EXISTS uq_v50_single_active_admin
-                    ON v50_user_accounts (account_role)
-                    WHERE account_role = 'admin' AND active = true
-                    """
-                )
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS v50_user_sessions (
-                        session_id TEXT PRIMARY KEY,
-                        user_id TEXT NOT NULL REFERENCES v50_user_accounts(user_id),
-                        token_hash TEXT NOT NULL UNIQUE,
-                        expires_at TIMESTAMPTZ NOT NULL,
-                        revoked BOOLEAN NOT NULL DEFAULT false,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-                    )
-                    """
-                )
-                cur.execute("ALTER TABLE v50_bazi_profiles ALTER COLUMN identity_ref DROP NOT NULL")
-                cur.execute("ALTER TABLE v50_bazi_profiles ADD COLUMN IF NOT EXISTS user_id TEXT REFERENCES v50_user_accounts(user_id)")
-                cur.execute("ALTER TABLE v50_bazi_profiles ADD COLUMN IF NOT EXISTS deleted BOOLEAN NOT NULL DEFAULT false")
-                cur.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_v50_bazi_profiles_user ON v50_bazi_profiles (user_id, is_default DESC, updated_at DESC)"
-                )
 
     def register_account(self, *, email: str, password: str, display_name: str, role: str) -> dict[str, object]:
         from psycopg import errors

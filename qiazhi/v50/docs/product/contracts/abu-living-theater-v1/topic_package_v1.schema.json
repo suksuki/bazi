@@ -203,7 +203,8 @@
             "choice",
             "text",
             "capsule",
-            "ready_barrier"
+            "ready_barrier",
+            "mingli_experiment"
           ],
           "title": "Kind",
           "type": "string"

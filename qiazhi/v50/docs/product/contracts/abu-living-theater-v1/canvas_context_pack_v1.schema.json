@@ -1,0 +1,219 @@
+{
+  "$defs": {
+    "CanvasSandboxMutation": {
+      "additionalProperties": false,
+      "properties": {
+        "mutation_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Mutation Id",
+          "type": "string"
+        },
+        "action_type": {
+          "enum": [
+            "set_luck",
+            "set_year",
+            "replace_year",
+            "clear_year"
+          ],
+          "title": "Action Type",
+          "type": "string"
+        },
+        "field_path": {
+          "enum": [
+            "temporal.luck",
+            "temporal.year"
+          ],
+          "title": "Field Path",
+          "type": "string"
+        },
+        "before_layer_id": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Before Layer Id",
+          "type": "string"
+        },
+        "after_layer_id": {
+          "default": "",
+          "maxLength": 180,
+          "title": "After Layer Id",
+          "type": "string"
+        },
+        "base_snapshot_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Base Snapshot Id",
+          "type": "string"
+        },
+        "source_mode": {
+          "enum": [
+            "derived",
+            "hypothetical"
+          ],
+          "title": "Source Mode",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "mutation_id",
+        "action_type",
+        "field_path",
+        "base_snapshot_id",
+        "source_mode",
+        "source_refs"
+      ],
+      "title": "CanvasSandboxMutation",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.canvas_context_pack.v1",
+      "default": "deepbazi.canvas_context_pack.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "context_pack_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Context Pack Id",
+      "type": "string"
+    },
+    "canvas_spec_id": {
+      "maxLength": 180,
+      "minLength": 1,
+      "title": "Canvas Spec Id",
+      "type": "string"
+    },
+    "diff_spec_id": {
+      "default": "",
+      "maxLength": 180,
+      "title": "Diff Spec Id",
+      "type": "string"
+    },
+    "role": {
+      "enum": [
+        "guest",
+        "member",
+        "practitioner",
+        "research",
+        "admin"
+      ],
+      "title": "Role",
+      "type": "string"
+    },
+    "current_stage": {
+      "enum": [
+        "natal",
+        "luck",
+        "year"
+      ],
+      "title": "Current Stage",
+      "type": "string"
+    },
+    "selected_object_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Selected Object Refs",
+      "type": "array"
+    },
+    "visible_layers": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Visible Layers",
+      "type": "array"
+    },
+    "committed_path_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Committed Path Refs",
+      "type": "array"
+    },
+    "candidate_path_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Candidate Path Refs",
+      "type": "array"
+    },
+    "blocked_path_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Blocked Path Refs",
+      "type": "array"
+    },
+    "hypothetical_mutations": {
+      "items": {
+        "$ref": "#/$defs/CanvasSandboxMutation"
+      },
+      "title": "Hypothetical Mutations",
+      "type": "array"
+    },
+    "diff_reason_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Diff Reason Refs",
+      "type": "array"
+    },
+    "uncertainty": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Uncertainty",
+      "type": "array"
+    },
+    "must_not_say": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Must Not Say",
+      "type": "array"
+    },
+    "disclosed_object_refs": {
+      "items": {
+        "type": "string"
+      },
+      "title": "Disclosed Object Refs",
+      "type": "array"
+    },
+    "content_hash": {
+      "maxLength": 64,
+      "minLength": 64,
+      "title": "Content Hash",
+      "type": "string"
+    }
+  },
+  "required": [
+    "context_pack_id",
+    "canvas_spec_id",
+    "role",
+    "current_stage",
+    "selected_object_refs",
+    "visible_layers",
+    "committed_path_refs",
+    "candidate_path_refs",
+    "blocked_path_refs",
+    "hypothetical_mutations",
+    "diff_reason_refs",
+    "uncertainty",
+    "must_not_say",
+    "disclosed_object_refs",
+    "content_hash"
+  ],
+  "title": "CanvasContextPack",
+  "type": "object"
+}

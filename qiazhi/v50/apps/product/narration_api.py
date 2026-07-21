@@ -3,6 +3,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import FileResponse
 
+from experience.product_projection import NarrationManifestResponse, SpeechAssetResponse
 from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 from product.narrated_workspace import NarratedWorkspaceError, NarratedWorkspaceService
@@ -57,7 +58,7 @@ def create_narration_router(
             status = 404 if detail == "canonical_scene_case_not_found" else 409
             raise HTTPException(status_code=status, detail=detail) from exc
 
-    @router.get("/cases/{case_id}/baseline")
+    @router.get("/cases/{case_id}/baseline", response_model=NarrationManifestResponse)
     def baseline_manifest(case_id: str, request: Request) -> dict[str, object]:
         manifest = manifest_for(case_id, request)
         return {
@@ -69,7 +70,10 @@ def create_narration_router(
             "reasoner_used": False,
         }
 
-    @router.post("/cases/{case_id}/baseline/segments/{segment_id}")
+    @router.post(
+        "/cases/{case_id}/baseline/segments/{segment_id}",
+        response_model=SpeechAssetResponse,
+    )
     def prepare_segment(case_id: str, segment_id: str, request: Request) -> dict[str, object]:
         manifest = manifest_for(case_id, request)
         try:

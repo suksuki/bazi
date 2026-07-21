@@ -6,6 +6,8 @@ from copy import deepcopy
 from datetime import datetime, timezone
 from typing import Any, Protocol
 
+from product.database_schema import ensure_product_database_schema
+
 
 class AgentJobStore(Protocol):
     persistent: bool
@@ -92,31 +94,12 @@ class PostgresAgentJobStore:
 
     def __init__(self, database_url: str) -> None:
         self.database_url = database_url
-        self.ensure_schema()
+        ensure_product_database_schema(database_url)
 
     def _connect(self):
         import psycopg
 
         return psycopg.connect(self.database_url)
-
-    def ensure_schema(self) -> None:
-        with self._connect() as conn:
-            with conn.cursor() as cur:
-                cur.execute(
-                    """
-                    CREATE TABLE IF NOT EXISTS v50_mingli_cognitive_jobs (
-                        job_id TEXT PRIMARY KEY,
-                        case_id TEXT NOT NULL,
-                        user_id TEXT NULL REFERENCES v50_user_accounts(user_id),
-                        job_json JSONB NOT NULL,
-                        created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
-                        updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
-                    )
-                    """
-                )
-                cur.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_v50_cognitive_jobs_user ON v50_mingli_cognitive_jobs (user_id, updated_at DESC)"
-                )
 
     def create(self, *, job_id: str, case_id: str, user_id: str | None, payload: dict[str, Any]) -> None:
         from psycopg.types.json import Jsonb

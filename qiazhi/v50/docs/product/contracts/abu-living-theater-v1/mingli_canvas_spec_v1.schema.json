@@ -1,0 +1,735 @@
+{
+  "$defs": {
+    "CanvasCluster": {
+      "additionalProperties": false,
+      "properties": {
+        "cluster_ref": {
+          "maxLength": 220,
+          "minLength": 1,
+          "title": "Cluster Ref",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 160,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "node_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Node Refs",
+          "type": "array"
+        },
+        "relation_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Relation Refs",
+          "type": "array"
+        },
+        "trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        }
+      },
+      "required": [
+        "cluster_ref",
+        "label",
+        "node_refs",
+        "trace"
+      ],
+      "title": "CanvasCluster",
+      "type": "object"
+    },
+    "CanvasEpistemology": {
+      "additionalProperties": false,
+      "properties": {
+        "epistemic_statuses": {
+          "items": {
+            "enum": [
+              "fact",
+              "derived",
+              "candidate",
+              "committed",
+              "blocked",
+              "hypothetical",
+              "presentation_only"
+            ],
+            "type": "string"
+          },
+          "title": "Epistemic Statuses",
+          "type": "array"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "commitment_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commitment Refs",
+          "type": "array"
+        },
+        "uncertainty": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uncertainty",
+          "type": "array"
+        },
+        "rejection_or_block_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rejection Or Block Reasons",
+          "type": "array"
+        },
+        "must_not_say": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Must Not Say",
+          "type": "array"
+        }
+      },
+      "required": [
+        "epistemic_statuses",
+        "source_refs",
+        "commitment_refs",
+        "uncertainty",
+        "rejection_or_block_reasons",
+        "must_not_say"
+      ],
+      "title": "CanvasEpistemology",
+      "type": "object"
+    },
+    "CanvasIdentity": {
+      "additionalProperties": false,
+      "properties": {
+        "canvas_spec_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Canvas Spec Id",
+          "type": "string"
+        },
+        "chart_version_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Chart Version Id",
+          "type": "string"
+        },
+        "temporal_snapshot_id": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Temporal Snapshot Id",
+          "type": "string"
+        },
+        "life_case_id": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Life Case Id",
+          "type": "string"
+        },
+        "sandbox_session_id": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Sandbox Session Id",
+          "type": "string"
+        },
+        "compiler_version": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Compiler Version",
+          "type": "string"
+        },
+        "compiled_at": {
+          "format": "date-time",
+          "title": "Compiled At",
+          "type": "string"
+        },
+        "audience_role": {
+          "anyOf": [
+            {
+              "enum": [
+                "guest",
+                "member",
+                "practitioner",
+                "research",
+                "admin"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Audience Role"
+        },
+        "content_hash": {
+          "maxLength": 64,
+          "minLength": 64,
+          "title": "Content Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "canvas_spec_id",
+        "chart_version_id",
+        "life_case_id",
+        "compiler_version",
+        "compiled_at",
+        "content_hash"
+      ],
+      "title": "CanvasIdentity",
+      "type": "object"
+    },
+    "CanvasInteractionPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "allowed_interactions": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Allowed Interactions",
+          "type": "array"
+        },
+        "immutable_slots": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Immutable Slots",
+          "type": "array"
+        },
+        "sandbox_mutations": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sandbox Mutations",
+          "type": "array"
+        }
+      },
+      "required": [
+        "allowed_interactions",
+        "immutable_slots",
+        "sandbox_mutations"
+      ],
+      "title": "CanvasInteractionPolicy",
+      "type": "object"
+    },
+    "CanvasNode": {
+      "additionalProperties": false,
+      "properties": {
+        "node_ref": {
+          "maxLength": 220,
+          "minLength": 1,
+          "title": "Node Ref",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "node_type": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Node Type",
+          "type": "string"
+        },
+        "semantic_slot_ref": {
+          "default": "",
+          "maxLength": 180,
+          "title": "Semantic Slot Ref",
+          "type": "string"
+        },
+        "element": {
+          "default": "",
+          "maxLength": 40,
+          "title": "Element",
+          "type": "string"
+        },
+        "polarity": {
+          "default": "",
+          "maxLength": 40,
+          "title": "Polarity",
+          "type": "string"
+        },
+        "ten_god": {
+          "default": "",
+          "maxLength": 80,
+          "title": "Ten God",
+          "type": "string"
+        },
+        "trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        }
+      },
+      "required": [
+        "node_ref",
+        "label",
+        "node_type",
+        "trace"
+      ],
+      "title": "CanvasNode",
+      "type": "object"
+    },
+    "CanvasPath": {
+      "additionalProperties": false,
+      "properties": {
+        "path_ref": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Path Ref",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 240,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "node_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 2,
+          "title": "Node Refs",
+          "type": "array"
+        },
+        "relation_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Relation Refs",
+          "type": "array"
+        },
+        "required_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Required Refs",
+          "type": "array"
+        },
+        "semantic_state": {
+          "enum": [
+            "latent",
+            "active",
+            "reinforced",
+            "weakened",
+            "blocked"
+          ],
+          "title": "Semantic State",
+          "type": "string"
+        },
+        "trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        },
+        "state_trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        },
+        "change_reason_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Change Reason Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "path_ref",
+        "label",
+        "node_refs",
+        "relation_refs",
+        "semantic_state",
+        "trace",
+        "state_trace"
+      ],
+      "title": "CanvasPath",
+      "type": "object"
+    },
+    "CanvasPresentation": {
+      "additionalProperties": false,
+      "properties": {
+        "visual_anchors": {
+          "items": {
+            "$ref": "#/$defs/CanvasVisualAnchor"
+          },
+          "title": "Visual Anchors",
+          "type": "array"
+        },
+        "layers": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Layers",
+          "type": "array"
+        },
+        "emphasis": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Emphasis",
+          "type": "array"
+        },
+        "narration_targets": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Narration Targets",
+          "type": "array"
+        }
+      },
+      "required": [
+        "visual_anchors",
+        "layers",
+        "emphasis",
+        "narration_targets"
+      ],
+      "title": "CanvasPresentation",
+      "type": "object"
+    },
+    "CanvasRelation": {
+      "additionalProperties": false,
+      "properties": {
+        "relation_ref": {
+          "maxLength": 260,
+          "minLength": 1,
+          "title": "Relation Ref",
+          "type": "string"
+        },
+        "from_node_ref": {
+          "maxLength": 220,
+          "minLength": 1,
+          "title": "From Node Ref",
+          "type": "string"
+        },
+        "to_node_ref": {
+          "maxLength": 220,
+          "minLength": 1,
+          "title": "To Node Ref",
+          "type": "string"
+        },
+        "participant_node_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 0,
+          "title": "Participant Node Refs",
+          "type": "array"
+        },
+        "relation_type": {
+          "maxLength": 100,
+          "minLength": 1,
+          "title": "Relation Type",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 140,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "semantic_state": {
+          "default": "active",
+          "enum": [
+            "latent",
+            "active",
+            "reinforced",
+            "weakened",
+            "blocked"
+          ],
+          "title": "Semantic State",
+          "type": "string"
+        },
+        "trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        },
+        "state_trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        },
+        "change_reason_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Change Reason Refs",
+          "type": "array"
+        }
+      },
+      "required": [
+        "relation_ref",
+        "from_node_ref",
+        "to_node_ref",
+        "relation_type",
+        "label",
+        "trace",
+        "state_trace"
+      ],
+      "title": "CanvasRelation",
+      "type": "object"
+    },
+    "CanvasSemanticSlot": {
+      "additionalProperties": false,
+      "properties": {
+        "slot_ref": {
+          "maxLength": 180,
+          "minLength": 1,
+          "title": "Slot Ref",
+          "type": "string"
+        },
+        "slot_type": {
+          "enum": [
+            "natal_year",
+            "natal_month",
+            "natal_day",
+            "natal_hour",
+            "luck",
+            "year"
+          ],
+          "title": "Slot Type",
+          "type": "string"
+        },
+        "label": {
+          "maxLength": 40,
+          "minLength": 1,
+          "title": "Label",
+          "type": "string"
+        },
+        "stem": {
+          "maxLength": 4,
+          "minLength": 1,
+          "title": "Stem",
+          "type": "string"
+        },
+        "branch": {
+          "maxLength": 4,
+          "minLength": 1,
+          "title": "Branch",
+          "type": "string"
+        },
+        "hidden_stems": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hidden Stems",
+          "type": "array"
+        },
+        "immutable": {
+          "title": "Immutable",
+          "type": "boolean"
+        },
+        "trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        }
+      },
+      "required": [
+        "slot_ref",
+        "slot_type",
+        "label",
+        "stem",
+        "branch",
+        "immutable",
+        "trace"
+      ],
+      "title": "CanvasSemanticSlot",
+      "type": "object"
+    },
+    "CanvasTrace": {
+      "additionalProperties": false,
+      "properties": {
+        "source_mode": {
+          "enum": [
+            "canonical",
+            "committed",
+            "derived",
+            "hypothetical",
+            "presentation"
+          ],
+          "title": "Source Mode",
+          "type": "string"
+        },
+        "epistemic_status": {
+          "enum": [
+            "fact",
+            "derived",
+            "candidate",
+            "committed",
+            "blocked",
+            "hypothetical",
+            "presentation_only"
+          ],
+          "title": "Epistemic Status",
+          "type": "string"
+        },
+        "source_refs": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Refs",
+          "type": "array"
+        },
+        "commitment_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Commitment Refs",
+          "type": "array"
+        },
+        "uncertainty": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Uncertainty",
+          "type": "array"
+        },
+        "rejection_or_block_reasons": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rejection Or Block Reasons",
+          "type": "array"
+        },
+        "disclosure": {
+          "default": "member",
+          "enum": [
+            "public",
+            "member",
+            "practitioner",
+            "research"
+          ],
+          "title": "Disclosure",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_mode",
+        "epistemic_status",
+        "source_refs"
+      ],
+      "title": "CanvasTrace",
+      "type": "object"
+    },
+    "CanvasVisualAnchor": {
+      "additionalProperties": false,
+      "properties": {
+        "anchor_ref": {
+          "maxLength": 220,
+          "minLength": 1,
+          "title": "Anchor Ref",
+          "type": "string"
+        },
+        "object_ref": {
+          "maxLength": 260,
+          "minLength": 1,
+          "title": "Object Ref",
+          "type": "string"
+        },
+        "group": {
+          "maxLength": 80,
+          "minLength": 1,
+          "title": "Group",
+          "type": "string"
+        },
+        "trace": {
+          "$ref": "#/$defs/CanvasTrace"
+        }
+      },
+      "required": [
+        "anchor_ref",
+        "object_ref",
+        "group",
+        "trace"
+      ],
+      "title": "CanvasVisualAnchor",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "deepbazi.mingli_canvas_spec.v1",
+      "default": "deepbazi.mingli_canvas_spec.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "identity": {
+      "$ref": "#/$defs/CanvasIdentity"
+    },
+    "stage": {
+      "enum": [
+        "natal",
+        "luck",
+        "year"
+      ],
+      "title": "Stage",
+      "type": "string"
+    },
+    "semantic_slots": {
+      "items": {
+        "$ref": "#/$defs/CanvasSemanticSlot"
+      },
+      "title": "Semantic Slots",
+      "type": "array"
+    },
+    "nodes": {
+      "items": {
+        "$ref": "#/$defs/CanvasNode"
+      },
+      "title": "Nodes",
+      "type": "array"
+    },
+    "relations": {
+      "items": {
+        "$ref": "#/$defs/CanvasRelation"
+      },
+      "title": "Relations",
+      "type": "array"
+    },
+    "clusters": {
+      "items": {
+        "$ref": "#/$defs/CanvasCluster"
+      },
+      "title": "Clusters",
+      "type": "array"
+    },
+    "paths": {
+      "items": {
+        "$ref": "#/$defs/CanvasPath"
+      },
+      "title": "Paths",
+      "type": "array"
+    },
+    "epistemology": {
+      "$ref": "#/$defs/CanvasEpistemology"
+    },
+    "interaction": {
+      "$ref": "#/$defs/CanvasInteractionPolicy"
+    },
+    "presentation": {
+      "$ref": "#/$defs/CanvasPresentation"
+    }
+  },
+  "required": [
+    "identity",
+    "stage",
+    "semantic_slots",
+    "nodes",
+    "relations",
+    "clusters",
+    "paths",
+    "epistemology",
+    "interaction",
+    "presentation"
+  ],
+  "title": "MingliCanvasSpec",
+  "type": "object"
+}
