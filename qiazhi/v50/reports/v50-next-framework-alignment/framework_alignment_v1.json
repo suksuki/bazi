@@ -1,0 +1,153 @@
+{
+  "counts": {
+    "canonical_or_canonical_consumer": 5,
+    "gaps": 3,
+    "invariants_passed": 8,
+    "surfaces": 8,
+    "transitional_or_design": 3
+  },
+  "formal_state_modified": false,
+  "gaps": [
+    {
+      "finding": "Three different responsibilities still use the Workspace name.",
+      "gap_id": "FRAME-01",
+      "required_convergence": "Freeze distinct names and ownership without merging cognitive, UI, and narration state.",
+      "surface": "workspace"
+    },
+    {
+      "finding": "Mingli Lab is an internal fixture builder, not a canonical scene consumer with a formal experiment ledger.",
+      "gap_id": "LAB-01",
+      "required_convergence": "Define the Lab experiment boundary and evidence lifecycle before production engineering.",
+      "surface": "lab"
+    },
+    {
+      "finding": "Mechanism ablation and temporal hypothesis sandboxes are intentionally separate but lack one shared session envelope.",
+      "gap_id": "LAB-02",
+      "required_convergence": "Introduce one non-authoritative session envelope only if it replaces duplicate lifecycle plumbing.",
+      "surface": "sandbox"
+    }
+  ],
+  "invariants": [
+    {
+      "check": "five_projection_kinds_share_one_scene_contract",
+      "passed": true
+    },
+    {
+      "check": "projection_contract_forbids_formal_writes",
+      "passed": true
+    },
+    {
+      "check": "abu_requires_canonical_projection",
+      "passed": true
+    },
+    {
+      "check": "mechanism_sandbox_cannot_write_life_case",
+      "passed": true
+    },
+    {
+      "check": "cognitive_workspace_locks_chart_facts",
+      "passed": true
+    },
+    {
+      "check": "cognitive_workspace_forbids_global_update",
+      "passed": true
+    },
+    {
+      "check": "life_case_workspace_is_non_cognitive_ui_state",
+      "passed": true
+    },
+    {
+      "check": "mingli_lab_has_no_production_route",
+      "passed": true
+    }
+  ],
+  "llm_used": false,
+  "next_sequence": [
+    "Mingli Lab foundation audit",
+    "six-pillar relation coverage audit",
+    "RA1-RA3 controlled implementation",
+    "synthetic validation and training",
+    "Workspace and UI alignment"
+  ],
+  "production_migration_performed": false,
+  "schema_version": "deepbazi.next_framework_alignment_audit.v1",
+  "status": "READY_WITH_GAPS",
+  "surfaces": [
+    {
+      "classification": "canonical",
+      "modules": [
+        "packages/core/life_case"
+      ],
+      "owner": "core.life_case.LifeCase",
+      "responsibility": "formal facts and committed cognition",
+      "surface": "case"
+    },
+    {
+      "classification": "canonical",
+      "modules": [
+        "packages/experience/canonical_scene.py",
+        "apps/product/canonical_scene.py"
+      ],
+      "owner": "product.canonical_scene.CanonicalSceneOwner",
+      "responsibility": "single role-filtered scene identity",
+      "surface": "scene"
+    },
+    {
+      "classification": "canonical",
+      "modules": [
+        "packages/experience/canonical_scene.py"
+      ],
+      "owner": "experience.canonical_scene.CanonicalProjectionEnvelope",
+      "responsibility": "presentation only; never owns facts",
+      "surface": "projection"
+    },
+    {
+      "classification": "canonical",
+      "modules": [
+        "packages/experience/canonical_scene.py"
+      ],
+      "owner": "experience.canonical_scene.CanonicalRoleDisclosure",
+      "responsibility": "server-side disclosure and density",
+      "surface": "role"
+    },
+    {
+      "classification": "canonical_consumer",
+      "modules": [
+        "apps/product/narrated_workspace.py"
+      ],
+      "owner": "product.narrated_workspace.NarratedWorkspaceService",
+      "responsibility": "explanation and narration from the Abu canonical projection",
+      "surface": "abu"
+    },
+    {
+      "classification": "transitional_scoped",
+      "modules": [
+        "packages/experience/experiments.py",
+        "packages/experience/canvas.py"
+      ],
+      "owner": "experience.experiments.MingliSandboxState + experience.canvas.TemporalSandboxState",
+      "responsibility": "isolated mechanism ablation and temporal hypothesis scopes",
+      "surface": "sandbox"
+    },
+    {
+      "classification": "design_fixture",
+      "modules": [
+        "apps/product/mingli_lab_fixture_builder.py"
+      ],
+      "owner": "product.mingli_lab_fixture_builder",
+      "responsibility": "internal fixture generation; no production authority",
+      "surface": "lab"
+    },
+    {
+      "classification": "name_convergence_required",
+      "modules": [
+        "packages/core/life_case/contracts.py",
+        "packages/core/mingli_agent/workspace.py",
+        "apps/product/narrated_workspace.py"
+      ],
+      "owner": "LifeCase WorkspaceState + CaseCognitiveWorkspace + NarratedWorkspaceService",
+      "responsibility": "separate UI state, cognitive deliberation state, and narration service",
+      "surface": "workspace"
+    }
+  ]
+}

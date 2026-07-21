@@ -31,6 +31,7 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["gates"]["git_source_baseline"] == "PASS"
     assert state["gates"]["r1_human_product_gate"] == "CANCELED_NO_SCHEDULE"
     assert state["gates"]["architecture_consolidation_gate"] == "CLOSED_PASS"
+    assert state["gates"]["next_framework_alignment"] == "BASELINE_PASS"
     assert state["gates"]["cag_03_canonical_scene"] == "CLOSED_PASS_HARDENED"
     assert state["gates"]["cag_04_relation_path_provenance"] == (
         "CLOSED_PASS_RECONCILED"
@@ -44,10 +45,10 @@ def test_execution_state_keeps_target_separate_from_current_product() -> None:
     assert state["gates"]["cag_05_schema_module_ownership"] == "CLOSED_PASS"
     assert state["gates"]["cal_01_late_zi_five_rats_consistency"] == "CLOSED_PASS"
     assert [item["id"] for item in state["authorized_now"]] == [
-        "NEXT_FRAMEWORK_ALIGNMENT"
+        "MINGLI_LAB_FOUNDATION_AUDIT"
     ]
     assert state["next_architecture_slice"]["id"] == (
-        "MINGLI_LAB_FOUNDATION_AUDIT"
+        "SIX_PILLAR_RELATION_COVERAGE_AUDIT"
     )
     assert state["validation_policy"]["new_platform_or_product_subsystem"] == "FORBIDDEN"
     assert "self_healing_loop" not in state

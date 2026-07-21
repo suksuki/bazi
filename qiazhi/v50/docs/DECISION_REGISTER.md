@@ -1246,6 +1246,23 @@ authority_chain:
 next: Next_Framework_Alignment_and_Mingli_Lab_Foundation_Audit
 ```
 
+### DR-039 — Next Framework Alignment Baseline Is Machine-Readable
+
+```yaml
+decision_id: DR-039
+date: 2026-07-21
+status: baseline_pass
+surfaces_audited: 8
+canonical_or_canonical_consumer: 5
+transitional_or_design: 3
+invariants: 8_of_8_pass
+explicit_gaps:
+  - FRAME-01_workspace_names
+  - LAB-01_fixture_only_lab
+  - LAB-02_split_sandbox_scopes
+next: Mingli_Lab_Foundation_Audit
+```
+
 ## Open Constitutional Conflict
 
 `PRODUCT_CONSTITUTION_V1_1.md` 将“生命小剧场”列为当时阶段不做。后续已分别批准严格受控的 `Abu Performance Proof 01` 与 `Topic 01 Structural Ablation`，但仍未批准全面转向内容剧场或弱化 Mingli First。

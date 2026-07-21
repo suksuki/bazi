@@ -44,6 +44,7 @@ gates:
   ra0_518k_chart_realizability: PASS_WITH_BOUNDARY_FINDING
   cal_01_late_zi_five_rats_consistency: CLOSED_PASS
   architecture_consolidation_gate: CLOSED_PASS
+  next_framework_alignment: BASELINE_PASS
   professional_blind_gate: PENDING
   public_professional_release: BLOCKED
 
@@ -98,6 +99,10 @@ receipts:
   architecture_gate_regression: 491_PASSED
   architecture_gate_typescript: STRICT_PASS_AND_BYTE_IDENTICAL_BUNDLE
   architecture_gate_startup: HEALTH_APP_EXPERIENCE_THEATER_AND_ONECANVAS_PASS
+  next_framework_alignment_surfaces: 8_AUDITED
+  next_framework_alignment_invariants: 8_OF_8_PASS
+  next_framework_alignment_gaps: 3_EXPLICIT
+  next_framework_alignment_report_sha256: 663916b0ad6e3bbc0e46736059261f14bab742ddfb9b930af4db668655121187
   analyst_baseline: unified_product_one_world_multiple_projections_2026_07_20
 
 supersedes:
@@ -106,18 +111,18 @@ supersedes:
   - manually_maintained_current_status_blocks
 
 authorized_now:
-  - id: NEXT_FRAMEWORK_ALIGNMENT
-    kind: executable_design_and_contract_alignment
-    scope: align_case_workspace_mingli_lab_and_onecanvas_with_the_closed_single_authority_chain
+  - id: MINGLI_LAB_FOUNDATION_AUDIT
+    kind: executable_sandbox_and_evidence_audit
+    scope: classify_existing_lab_and_sandbox_paths_without_creating_a_second_reasoner_or_formal_owner
 
 next_architecture_slice:
-  id: MINGLI_LAB_FOUNDATION_AUDIT
+  id: SIX_PILLAR_RELATION_COVERAGE_AUDIT
   authorized_when:
-    - next_framework_alignment_baseline
+    - mingli_lab_foundation_baseline
   scope:
-    - sandbox_authority
-    - synthetic_case_lifecycle
-    - evidence_and_promotion_boundaries
+    - relation_type_inventory
+    - positional_and_temporal_coverage
+    - fixture_gap_classification
 
 blocked:
   - relation_atlas_ra1
