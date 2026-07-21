@@ -1080,7 +1080,9 @@ V40_changes: forbidden
 decision_id: DR-034
 date: 2026-07-21
 status: implementation_complete_machine_pass_architecture_review_pending
-implementation_commit: 42072034
+implementation_commits:
+  - 42072034
+  - c0502ed9
 authority:
   candidate_observation: Graph_and_Path_v1
   formal_assertion_owner: LifeCase
@@ -1097,6 +1099,8 @@ historical_policy:
   fuzzy_reconnection: forbidden
   unmatched_history: legacy_unresolved
   committed_history_append_only: true
+  graph_candidate_cannot_masquerade_as_formal: true
+  dangling_or_non_prior_supersession_rejected: true
 removed:
   - Canvas_anonymous_committed_path_id
   - Canvas_relation_text_matching
@@ -1108,7 +1112,8 @@ unchanged:
   - R1_locked_20_files
   - V40
 verification:
-  full_regression: 467_passed
+  focused_relation_path_provenance: 11_passed
+  full_regression: 479_passed
   r1_manifest: 20_of_20_ok
 next_gate: CAG_04_architecture_review
 blocked:

@@ -2,7 +2,7 @@
 
 Status: `IMPLEMENTATION COMPLETE / MACHINE PASS / ARCHITECTURE REVIEW PENDING`
 Date: `2026-07-21`
-Implementation commit: `42072034`
+Implementation commits: `42072034`, `c0502ed9`
 
 ## Decision Boundary
 
@@ -26,10 +26,14 @@ af6eb755  V50 source baseline
     -> 8b0178ee  CAG-03 Canonical Scene implementation
     -> 34cc5b17  CAG-03 closeout
     -> 42072034  CAG-04 relation/path provenance implementation
+    -> 092f146b  initial CAG-04 machine closeout
+    -> f4c5527c / ae1f0856  controlled RA0 integration and boundary receipt
+    -> c0502ed9  CAG-04 lifecycle/provenance hardening
 ```
 
-The documentation closeout commit follows `42072034`; CAG-05 is not part of
-this chain and is not authorized by this record.
+The final documentation closeout commit follows `c0502ed9`; CAG-05 is not part
+of this chain and is not authorized by this record. RA0 remains an independent
+audit payload and does not change CAG-04 semantics.
 
 ## Formal Contracts and Owner
 
@@ -58,6 +62,10 @@ filter and project assertions but cannot create or rewrite them.
   algorithm does not mutate an already committed key.
 - A new judgment creates a new Assertion and may reference `supersedes`; it
   does not overwrite the earlier Assertion.
+- `graph_candidate` provenance is valid only for candidate Assertions; changing
+  the status field cannot promote it into LifeCase.
+- Persisted `supersedes` links must reference an earlier Assertion in the same
+  history. Dangling and out-of-order chains are rejected before projection.
 
 ## Historical Compatibility
 
@@ -106,12 +114,13 @@ The last line is an explicit audit boundary, not a zero count.
 
 ## Slimming and Code Delta
 
-Implementation commit `42072034` changed 17 files:
+Implementation commits `42072034` and `c0502ed9` changed the same 17-file
+CAG-04 surface:
 
 ```text
-all implementation and test code: +2370 / -213 lines
-production and support code:       +2034 / -212 lines
-tests:                               +336 /   -1 lines
+all implementation and test code: +2507 / -218 lines
+production and support code:       +2084 / -213 lines
+tests:                               +423 /   -5 lines
 new formal modules: 2
 new test modules: 1
 duplicate/fuzzy reconnection implementations removed: 2
@@ -140,11 +149,22 @@ legacy exact migration performs additional validation on first use. No cache
 may alter formal content: cache keys include the formal source revision and
 candidate selection revision.
 
+Final hardening was also measured against parent `ae1f0856` with the same
+interpreter, fixture and machine. Medians across three 200-call rounds:
+
+| Production path | `ae1f0856` | `c0502ed9` | Change |
+|---|---:|---:|---:|
+| Canonical projection, persistent owner | 0.0525 ms | 0.0509 ms | -3.0% |
+| Canvas issue, persistent service | 3.5694 ms | 3.5286 ms | -1.1% |
+
+The lifecycle validation therefore introduces no measured production-path
+regression.
+
 ## Machine Evidence
 
 ```text
-CAG-04 focused relation/path tests: 9 passed
-V50 full regression: 467 passed
+CAG-04 focused relation/path tests: 11 passed
+V50 full regression: 479 passed
 R1 V6 locked assets: 20/20 OK
 Constitution SHA-256:
 4908c2865e98ba9e35f12358329fffd0b503ce9edc33cac3cf9d736e2e3caeff
@@ -152,10 +172,11 @@ V40 worktree fingerprint:
 982d5f848ff1a5810cc3488f2158f72d0b9228492cc976593529c90d53cce579
 ```
 
-The nine focused tests cover symmetric and directed identity, hyperrelations,
+The eleven focused tests cover symmetric and directed identity, hyperrelations,
 temporal node separation, append-only supersession, candidate rejection,
 exact legacy migration, explicit unresolved history, cross-projection identity,
-cache invalidation on formal revision, role disclosure and client write rejection.
+cache invalidation on formal revision, role disclosure, client write rejection,
+provenance/status binding and persisted history integrity.
 
 ## Deliberately Unchanged
 

@@ -39,7 +39,7 @@ gates:
   r1_review_build: V6_HASH_LOCKED_REGRESSION_REFERENCE
   r1_human_product_gate: CANCELED_NO_SCHEDULE
   cag_03_canonical_scene: CLOSED_PASS_HARDENED
-  cag_04_relation_path_provenance: IMPLEMENTATION_COMPLETE_MACHINE_PASS_REVIEW_PENDING
+  cag_04_relation_path_provenance: IMPLEMENTATION_COMPLETE_MACHINE_PASS_ARCHITECTURE_REVIEW_PENDING
   ra0_518k_chart_realizability: PASS_WITH_BOUNDARY_FINDING
   cal_01_late_zi_five_rats_consistency: OPEN_BLOCKS_ARCHITECTURE_GATE
   architecture_consolidation_gate: IN_PROGRESS
@@ -48,15 +48,17 @@ gates:
 
 receipts:
   source_baseline_commit: af6eb755
-  full_regression: 477_PASSED_RA0_INTEGRATED
+  full_regression: 479_PASSED_CAG04_FINAL
   r1_review_build_hash: reports/mingli-onecanvas-r1/review-v6-ready/r1_v6_review_build.sha256
   r1_locked_assets: 20_OF_20_OK
   r1_human_review: CANCELED_NO_SCHEDULE
   cag_03_owner: product.canonical_scene.CanonicalSceneOwner
   cag_03_regression: 458_PASSED
   cag_04_implementation_commit: 42072034
+  cag_04_lifecycle_hardening_commit: c0502ed9
   cag_04_identity_owner: core.life_case.LifeCase
-  cag_04_regression: 467_PASSED
+  cag_04_focused_regression: 11_PASSED
+  cag_04_regression: 479_PASSED
   cag_04_legacy_unresolved_tracked_cases: 0
   cag_04_legacy_unresolved_synthetic_negative_fixture: 1
   ra0_source_branch: codex/ra0-518k-audit-v1
