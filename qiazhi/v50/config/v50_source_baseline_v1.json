@@ -28,7 +28,6 @@
     "artifacts/abu-actor-pass-v1/source-contact-sheets/ninja/variant-review.json"
   ],
   "excluded_private_material": [
-    "data/validation/fixtures/v40_admin_case_inventory_v1.json",
     "apps/product/static/experience/active/onecanvas-r1/fixture.json",
     "archive/proofs/prototypes/mingli-lab-c2a/fixture.json",
     "reports/abu-says-mingli-s0/g1"
