@@ -198,7 +198,16 @@ def test_qwen36_is_local_stress_baseline_not_direct_frontier() -> None:
 
 
 def test_g1_preparation_blocks_formal_run_without_human_and_external_freeze(tmp_path: Path) -> None:
-    report = prepare(run_id="unit-g1", output_dir=tmp_path)
+    report = prepare(
+        run_id="unit-g1",
+        output_dir=tmp_path,
+        git_state_override={
+            "commit": "test-dirty-snapshot",
+            "dirty_tree": True,
+            "v50_status": ["?? qiazhi/v50/example.py"],
+            "v50_snapshot_tracked": False,
+        },
+    )
     lock = json.loads((tmp_path / "FORMAL_RUN_LOCK_CANDIDATE.json").read_text(encoding="utf-8"))
 
     assert report["status"] == "passed_machine_preparation"

@@ -53,7 +53,16 @@ def test_external_freeze_status_is_not_fabricated() -> None:
 
 
 def test_g1_7_packet_stops_before_live_preflight_and_p0_g2(tmp_path: Path) -> None:
-    report = prepare_g1_7(run_id="g1-7-test", output_dir=tmp_path)
+    report = prepare_g1_7(
+        run_id="g1-7-test",
+        output_dir=tmp_path,
+        git_state_override={
+            "commit": "test-dirty-snapshot",
+            "dirty_tree": True,
+            "v50_status": ["?? qiazhi/v50/example.py"],
+            "v50_snapshot_tracked": False,
+        },
+    )
 
     assert report["status"] == "machine_preparation_passed_external_freeze_pending"
     assert all(report["machine_gates"].values())

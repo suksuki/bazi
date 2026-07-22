@@ -22,7 +22,12 @@ PHASE0 = ROOT / "data" / "validation" / "phase0"
 DEFAULT_OUTPUT = ROOT / "reports" / "vnext-phase0-g1" / "phase0-g1-7-freeze-v1"
 
 
-def prepare_g1_7(*, run_id: str, output_dir: Path) -> dict[str, Any]:
+def prepare_g1_7(
+    *,
+    run_id: str,
+    output_dir: Path,
+    git_state_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     direct = audit_direct_power_user_policy()
     repair = audit_p0_repair_authority()
@@ -33,7 +38,11 @@ def prepare_g1_7(*, run_id: str, output_dir: Path) -> dict[str, Any]:
     frontier = audit_frontier_policy_freeze()
 
     lock_dir = output_dir / "formal-lock-candidate"
-    prepare(run_id=f"{run_id}-lock-candidate", output_dir=lock_dir)
+    prepare(
+        run_id=f"{run_id}-lock-candidate",
+        output_dir=lock_dir,
+        git_state_override=git_state_override,
+    )
     lock = load_json(lock_dir / "FORMAL_RUN_LOCK_CANDIDATE.json")
     snapshot = {
         "status": "passed" if lock["git_state"]["v50_snapshot_tracked"] else "pending_clean_committed_snapshot",

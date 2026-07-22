@@ -186,17 +186,65 @@ def test_model_selection_mode_rejects_any_non_selection_manifest(tmp_path: Path)
 
 
 def test_snapshot_refuses_to_freeze_untracked_v50(tmp_path: Path) -> None:
-    candidate = prepare_snapshot(output_dir=tmp_path / "candidate", freeze=False)
+    dirty_git_state = {
+        "commit": "test-dirty-snapshot",
+        "dirty_tree": True,
+        "v50_status": ["?? qiazhi/v50/example.py"],
+        "v50_snapshot_tracked": False,
+    }
+    candidate = prepare_snapshot(
+        output_dir=tmp_path / "candidate",
+        freeze=False,
+        git_state_override=dirty_git_state,
+    )
 
     assert candidate["status"] == "candidate_blocked"
     assert "v50_code_snapshot_not_committed" in candidate["blockers"]
     assert candidate["boundaries"]["automatic_git_commit_performed"] is False
     with pytest.raises(ValueError, match="snapshot_freeze_rejected"):
-        prepare_snapshot(output_dir=tmp_path / "frozen", freeze=True)
+        prepare_snapshot(
+            output_dir=tmp_path / "frozen",
+            freeze=True,
+            git_state_override=dirty_git_state,
+        )
+
+
+def test_snapshot_can_freeze_clean_committed_v50(tmp_path: Path) -> None:
+    clean_git_state = {
+        "commit": "test-clean-snapshot",
+        "dirty_tree": False,
+        "v50_status": [],
+        "v50_snapshot_tracked": True,
+    }
+
+    candidate = prepare_snapshot(
+        output_dir=tmp_path / "candidate",
+        freeze=False,
+        git_state_override=clean_git_state,
+    )
+    frozen = prepare_snapshot(
+        output_dir=tmp_path / "frozen",
+        freeze=True,
+        git_state_override=clean_git_state,
+    )
+
+    assert candidate["status"] == "candidate_ready_to_freeze"
+    assert candidate["blockers"] == []
+    assert frozen["status"] == "frozen"
+    assert frozen["boundaries"]["formal_execution_allowed"] is True
 
 
 def test_g1_8_completes_machine_workbench_but_never_starts_g2(tmp_path: Path) -> None:
-    report = prepare_g1_8(run_id="g1-8-test", output_dir=tmp_path)
+    report = prepare_g1_8(
+        run_id="g1-8-test",
+        output_dir=tmp_path,
+        git_state_override={
+            "commit": "test-dirty-snapshot",
+            "dirty_tree": True,
+            "v50_status": ["?? qiazhi/v50/example.py"],
+            "v50_snapshot_tracked": False,
+        },
+    )
 
     assert report["status"] == "machine_workbench_complete_external_inputs_pending"
     assert all(report["machine_deliverables"].values())

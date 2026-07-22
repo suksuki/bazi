@@ -38,7 +38,12 @@ ASSET_PATHS = {
 }
 
 
-def prepare(*, run_id: str, output_dir: Path) -> dict[str, Any]:
+def prepare(
+    *,
+    run_id: str,
+    output_dir: Path,
+    git_state_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     validation = validate_phase0_assets(
         taxonomy_path=ROOT / "data" / "validation" / "fixtures" / "synthetic_chart_taxonomy_v2.json",
@@ -53,6 +58,7 @@ def prepare(*, run_id: str, output_dir: Path) -> dict[str, Any]:
         run_id=run_id,
         asset_paths=ASSET_PATHS,
         asset_validation=validation,
+        git_state_override=git_state_override,
     )
     report = {
         "version": "deepbazi.vnext_phase0.g1_5_readiness_audit.v1",

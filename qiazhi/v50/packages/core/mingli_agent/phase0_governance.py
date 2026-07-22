@@ -159,12 +159,13 @@ def build_formal_run_lock_candidate(
     run_id: str,
     asset_paths: dict[str, Path],
     asset_validation: dict[str, Any],
+    git_state_override: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     lane_policy = load_json(asset_paths["lane_policy"])
     frontier_policy = load_json(asset_paths["frontier_policy"])
     go_no_go = load_json(asset_paths["go_no_go"])
     holistic_policy = load_json(asset_paths["holistic_synthesis_policy"])
-    git_state = _git_state(root)
+    git_state = dict(git_state_override) if git_state_override is not None else _git_state(root)
     blockers: list[str] = []
     if not asset_validation["valid"]:
         blockers.append("phase0_asset_validation_failed")

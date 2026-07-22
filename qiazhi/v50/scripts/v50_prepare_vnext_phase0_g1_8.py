@@ -17,9 +17,18 @@ ROOT = Path(__file__).resolve().parents[1]
 DEFAULT_OUTPUT = ROOT / "reports" / "vnext-phase0-g1" / "phase0-g1-8-workbench-v1"
 
 
-def prepare_g1_8(*, run_id: str, output_dir: Path) -> dict[str, Any]:
+def prepare_g1_8(
+    *,
+    run_id: str,
+    output_dir: Path,
+    git_state_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
-    g1_7 = prepare_g1_7(run_id=f"{run_id}-g1-7-refresh", output_dir=output_dir / "g1-7-refresh")
+    g1_7 = prepare_g1_7(
+        run_id=f"{run_id}-g1-7-refresh",
+        output_dir=output_dir / "g1-7-refresh",
+        git_state_override=git_state_override,
+    )
     expert = prepare_workspace(output_dir=output_dir / "human-expert-reference")
     frontier = prepare_selection(
         policy_path=DEFAULT_POLICY,
@@ -27,7 +36,11 @@ def prepare_g1_8(*, run_id: str, output_dir: Path) -> dict[str, Any]:
         execute=False,
         run_id=f"{run_id}-frontier-selection",
     )
-    snapshot = prepare_snapshot(output_dir=output_dir / "execution-snapshot", freeze=False)
+    snapshot = prepare_snapshot(
+        output_dir=output_dir / "execution-snapshot",
+        freeze=False,
+        git_state_override=git_state_override,
+    )
 
     machine_deliverables = {
         "human_reference_authoring_workspace": expert["status"] == "workspace_ready_for_human_authoring",

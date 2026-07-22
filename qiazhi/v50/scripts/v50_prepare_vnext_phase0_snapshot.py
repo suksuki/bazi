@@ -25,7 +25,12 @@ INCLUDED_EXACT = {
 }
 
 
-def prepare_snapshot(*, output_dir: Path, freeze: bool) -> dict[str, Any]:
+def prepare_snapshot(
+    *,
+    output_dir: Path,
+    freeze: bool,
+    git_state_override: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     output_dir.mkdir(parents=True, exist_ok=True)
     files = _snapshot_files()
     manifest_rows = [
@@ -36,7 +41,7 @@ def prepare_snapshot(*, output_dir: Path, freeze: bool) -> dict[str, Any]:
         }
         for path in files
     ]
-    git = _git_state()
+    git = dict(git_state_override) if git_state_override is not None else _git_state()
     source_hash = sha256(
         json.dumps(manifest_rows, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     ).hexdigest()
