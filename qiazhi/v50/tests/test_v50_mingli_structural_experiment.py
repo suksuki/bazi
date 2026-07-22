@@ -9,6 +9,7 @@ from product.agent_case_store import MemoryAgentCaseStore
 from product.app import create_product_app
 from product.product_store import MemoryProductStore
 from core.contracts import BirthInputCanonical
+from core.contracts.professional_review import ProfessionalReviewOverlay
 from core.life_case.contracts import (
     ChartVersionRef,
     FormalInsight,
@@ -28,6 +29,7 @@ from core.mingli_agent.contracts import (
     SalientPhenomenon,
     WorkPathReasoning,
 )
+from core.mingli_agent.path_bridge import bind_structured_path_candidate
 from experience.experiments import (
     MechanismEdge,
     MechanismNode,
@@ -62,7 +64,6 @@ def _case_payload(case_id: str) -> dict[str, object]:
     birth = _birth()
     world = compile_chart_world(reading_id=case_id, birth_input=birth)
     path_fact = next(item for item in world.facts if item.category == "candidate_path")
-    path_ref = next(ref for ref in path_fact.source_refs if ref.startswith("path:"))
     now = datetime.now(timezone.utc).isoformat()
     record_id = "record-structural-experiment"
     probe = DiscriminatingProbe(
@@ -72,6 +73,22 @@ def _case_payload(case_id: str) -> dict[str, object]:
         distinguishes_hypothesis_refs=["h1"],
         options=["主动输出", "等待支持"],
         expected_updates={"主动输出": "strengthen", "等待支持": "weaken"},
+    )
+    work_path, _ = bind_structured_path_candidate(
+        work_path=WorkPathReasoning(
+            path_statement="已批准路径用于本次结构实验。",
+            source=["结构起点"],
+            transformations=["关系转换"],
+            target=["结构目标"],
+            body_function_relation="只作为已批准路径读取。",
+            closure="conditional",
+            success_conditions=["路径关系保留"],
+            failure_conditions=["关键关系断开"],
+            evidence_refs=[path_fact.fact_id],
+            origin="system_enumerated",
+            candidate_path_refs=[path_fact.fact_id],
+        ),
+        world=world,
     )
     cognition = MingliCognitiveDraft(
         first_look="先看丁火与巳酉丑之间的结构连接。",
@@ -96,19 +113,7 @@ def _case_payload(case_id: str) -> dict[str, object]:
             )
         ],
         selected_hypothesis_id="h1",
-        work_path=WorkPathReasoning(
-            path_statement="已批准路径用于本次结构实验。",
-            source=["结构起点"],
-            transformations=["关系转换"],
-            target=["结构目标"],
-            body_function_relation="只作为已批准路径读取。",
-            closure="conditional",
-            success_conditions=["路径关系保留"],
-            failure_conditions=["关键关系断开"],
-            evidence_refs=[path_fact.fact_id],
-            origin="system_enumerated",
-            candidate_path_refs=[path_ref],
-        ),
+        work_path=work_path,
         useful_god_reasoning=[],
         portrait=[],
         prior_predictions=[],
@@ -133,6 +138,17 @@ def _case_payload(case_id: str) -> dict[str, object]:
         cognition=cognition,
         review=review,
         reliability_disposition="reliable",
+    )
+    professional_overlay = ProfessionalReviewOverlay(
+        overlay_id=f"professional-review-fixture-{case_id}",
+        cognitive_record_ref=record_id,
+        assertions_hash="c" * 64,
+        raw_output_hash="d" * 64,
+        raw_source_kind="fixture_raw_payload",
+        persistence_status="persisted",
+        professional_release_status="passed",
+        reviewer="fixture-professional-review",
+        created_at=now,
     )
     insight = FormalInsight(
         insight_id="insight-structural-experiment",
@@ -164,6 +180,9 @@ def _case_payload(case_id: str) -> dict[str, object]:
         status="committed",
         epistemic_state="reliable",
         source_review_gate="fixture-gate.v1",
+        persistence_status="persisted",
+        professional_release_status="passed",
+        professional_review_overlay=professional_overlay,
     )
     life_case = LifeCase(
         life_case_id="life-case-structural-experiment",

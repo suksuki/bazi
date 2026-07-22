@@ -45,8 +45,9 @@ def test_lab_is_role_disclosed_and_only_reads_canvas_relation_state() -> None:
 
     assert 'bootstrap.workspace?.allowed_surfaces.includes("mingli_lab")' in data
     assert 'item.relation_state === "potential"' in components
-    assert 'item.relation_state !== "potential"' in components
-    assert "researchLens" in components
+    assert "item.formal_relation_refs" in components
+    assert "relation.relation_type ===" not in components
+    assert 'visibility === "lab_audit"' in components
     assert "正式 Case 不在这里被改写" in components
     assert "replace_year" not in components
     assert "sandbox" not in components.lower()

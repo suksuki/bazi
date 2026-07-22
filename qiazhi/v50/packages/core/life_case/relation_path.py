@@ -4,6 +4,7 @@ from typing import Any, Iterable, Literal
 
 from core.graph.provenance import (
     AssertionLifecycle,
+    MingliRelationState,
     NodeRef,
     PathAssertion,
     PathKey,
@@ -11,12 +12,19 @@ from core.graph.provenance import (
     RelationAssertion,
     RelationDirectionality,
     RelationKey,
+    RelationPositionContext,
     canonical_scene_scope_ref,
     relation_directionality,
     validate_assertion_history,
 )
 from core.life_case.contracts import ChartVersionRef, FormalInsight, LifeCase
-from core.mingli_agent.contracts import ChartWorldInstance, MingliCognitiveRecord, WorldFact
+from core.mingli_agent.contracts import (
+    ChartWorldInstance,
+    CognitivePathSegment,
+    MingliCognitiveRecord,
+    WorldFact,
+)
+from core.mingli_agent.path_bridge import validate_path_candidate_fact
 
 
 def build_committed_relation_path_assertions(
@@ -276,7 +284,11 @@ def _assertions_from_record(
     case_version: str,
     mode: Literal["commit", "legacy"],
 ) -> tuple[list[RelationAssertion], list[PathAssertion]]:
-    path_fact, path_error = _selected_path_fact(record=record, world=world)
+    path_fact, path_error = _selected_path_fact(
+        record=record,
+        world=world,
+        mode=mode,
+    )
     if path_fact is not None:
         resolved = _assertions_from_path_fact(
             insight=insight,
@@ -325,7 +337,30 @@ def _selected_path_fact(
     *,
     record: MingliCognitiveRecord,
     world: ChartWorldInstance,
+    mode: Literal["commit", "legacy"],
 ) -> tuple[WorldFact | None, str]:
+    if mode == "commit":
+        structured = record.cognition.work_path.structured_candidate
+        if structured is None:
+            return None, "committed_cognition_has_no_structured_path_candidate"
+        if structured.validation_status not in {"validated", "partial"}:
+            return None, "committed_cognition_path_candidate_not_validated"
+        matches = [
+            fact
+            for fact in world.facts
+            if fact.category == "candidate_path"
+            and fact.fact_id == structured.candidate_path_ref
+        ]
+        if len(matches) != 1:
+            return None, "structured_path_candidate_ref_not_unique"
+        rebuilt = validate_path_candidate_fact(fact=matches[0], world=world)
+        if rebuilt != structured:
+            return None, "structured_path_candidate_integrity_mismatch"
+        selected_refs = list(dict.fromkeys(record.cognition.work_path.candidate_path_refs))
+        if selected_refs != [structured.candidate_path_ref]:
+            return None, "structured_path_candidate_selection_mismatch"
+        return matches[0], ""
+
     path_refs = list(dict.fromkeys([
         *record.cognition.work_path.candidate_path_refs,
         *record.cognition.work_path.evidence_refs,
@@ -366,69 +401,220 @@ def _assertions_from_path_fact(
     relation_descriptors = fact.payload.get("relation_descriptors")
     if not isinstance(node_descriptors, list) or not isinstance(relation_descriptors, list):
         return None
+    candidate = validate_path_candidate_fact(fact=fact, world=world)
+    runs = _validated_segment_runs(candidate.segments)
+    if not runs:
+        return None
+    source = "reasoner_commit" if mode == "commit" else "legacy_exact_import"
+    relation_assertions: list[RelationAssertion] = []
+    path_assertions: list[PathAssertion] = []
+    rejected_refs = [
+        f"{fact.fact_id}:segment:{item.segment_index}"
+        for item in candidate.segments
+        if item.validation_status == "rejected"
+    ]
+    for run_index, run in enumerate(runs):
+        start = run[0].segment_index
+        end = run[-1].segment_index + 1
+        run_node_descriptors = node_descriptors[start:end + 1]
+        run_relation_descriptors = relation_descriptors[start:end]
+        try:
+            node_refs = [
+                _node_ref(
+                    descriptor=item,
+                    world=world,
+                    life_case_id=life_case_id,
+                    chart_version=chart_version,
+                )
+                for item in run_node_descriptors
+            ]
+            relation_keys = [
+                _relation_key(
+                    descriptor=item,
+                    world=world,
+                    life_case_id=life_case_id,
+                    chart_version=chart_version,
+                )
+                for item in run_relation_descriptors
+            ]
+        except (KeyError, TypeError, ValueError):
+            continue
+        if len(node_refs) < 2 or len(relation_keys) != len(node_refs) - 1:
+            continue
+        run_statement = _validated_run_statement(
+            node_descriptors=run_node_descriptors,
+            relation_descriptors=run_relation_descriptors,
+        )
+        run_relation_assertions: list[RelationAssertion] = []
+        for key, descriptor, segment in zip(
+            relation_keys,
+            run_relation_descriptors,
+            run,
+            strict=True,
+        ):
+            mechanism_ref = str(descriptor.get("mechanism_ref") or "")
+            if not mechanism_ref:
+                continue
+            run_relation_assertions.append(RelationAssertion(
+                relation_key=key,
+                assertion_version=f"{case_version}:baseline",
+                status=AssertionLifecycle.COMMITTED,
+                provenance=_provenance(
+                    insight=insight,
+                    source=source,
+                    evidence_refs=[fact.fact_id, segment.relation_ref],
+                    source_refs=[key.relation_key, *fact.source_refs],
+                ),
+                relation_state=MingliRelationState.EFFECTIVE,
+                mechanism_ref=mechanism_ref,
+                position_context=_formal_position_context(
+                    descriptor=descriptor,
+                    world=world,
+                    life_case_id=life_case_id,
+                    chart_version=chart_version,
+                ),
+                verification_refs=[
+                    "path_bridge.segment.validated",
+                    segment.relation_ref,
+                    segment.relation_key,
+                ],
+                statement=run_statement,
+            ))
+        if len(run_relation_assertions) != len(relation_keys):
+            continue
+        relation_assertions.extend(run_relation_assertions)
+        path_key = PathKey(
+            scene_ref=canonical_scene_scope_ref(
+                life_case_id=life_case_id,
+                chart_version_id=chart_version.version_id,
+            ),
+            node_refs=node_refs,
+            relation_keys=relation_keys,
+            scope="natal",
+        )
+        path_assertions.append(PathAssertion(
+            path_key=path_key,
+            assertion_version=f"{case_version}:baseline:{run_index}",
+            status=AssertionLifecycle.COMMITTED,
+            provenance=_provenance(
+                insight=insight,
+                source=source,
+                evidence_refs=[fact.fact_id, *[item.relation_ref for item in run]],
+                source_refs=[
+                    *fact.source_refs,
+                    str(fact.payload.get("candidate_path_key") or ""),
+                ],
+            ),
+            source_candidate_ref=fact.fact_id,
+            segment_validation_refs=[
+                f"{fact.fact_id}:segment:{item.segment_index}:validated"
+                for item in run
+            ],
+            rejected_segment_refs=rejected_refs,
+            statement=run_statement,
+        ))
+    if not path_assertions:
+        return None
+    return _dedupe_assertions_by_id(relation_assertions), path_assertions
+
+
+def _validated_segment_runs(
+    segments: list[CognitivePathSegment],
+) -> list[list[CognitivePathSegment]]:
+    runs: list[list[CognitivePathSegment]] = []
+    current: list[CognitivePathSegment] = []
+    previous_index: int | None = None
+    for segment in segments:
+        contiguous = previous_index is None or segment.segment_index == previous_index + 1
+        if segment.validation_status == "validated" and contiguous:
+            current.append(segment)
+        elif segment.validation_status == "validated":
+            if current:
+                runs.append(current)
+            current = [segment]
+        elif current:
+            runs.append(current)
+            current = []
+        previous_index = segment.segment_index
+    if current:
+        runs.append(current)
+    return runs
+
+
+def _validated_run_statement(
+    *,
+    node_descriptors: list[Any],
+    relation_descriptors: list[Any],
+) -> str:
+    relation_labels = {
+        "generates": "生",
+        "controls": "克",
+        "same_element_support": "同气",
+        "forms_triple_combination": "三合",
+    }
+    if not node_descriptors:
+        return "已验证结构路径"
+    first = node_descriptors[0] if isinstance(node_descriptors[0], dict) else {}
+    statement = _descriptor_label(first)
+    for relation, target in zip(
+        relation_descriptors,
+        node_descriptors[1:],
+        strict=True,
+    ):
+        relation = relation if isinstance(relation, dict) else {}
+        target = target if isinstance(target, dict) else {}
+        relation_type = str(relation.get("relation_type") or "关系")
+        statement += (
+            f" —{relation_labels.get(relation_type, relation_type)}→ "
+            f"{_descriptor_label(target)}"
+        )
+    return f"已验证路径：{statement}"
+
+
+def _descriptor_label(descriptor: dict[str, Any]) -> str:
+    label = str(descriptor.get("label") or "?")
+    position = str(descriptor.get("position") or "")
+    return f"{label}（{position}）" if position else label
+
+
+def _formal_position_context(
+    *,
+    descriptor: dict[str, Any],
+    world: ChartWorldInstance,
+    life_case_id: str,
+    chart_version: ChartVersionRef,
+) -> RelationPositionContext | None:
+    raw = descriptor.get("position_context")
+    if not isinstance(raw, dict):
+        return None
+    intervening = raw.get("intervening_nodes")
+    intervening = intervening if isinstance(intervening, list) else []
     try:
-        node_refs = [
+        intervening_refs = [
             _node_ref(
                 descriptor=item,
                 world=world,
                 life_case_id=life_case_id,
                 chart_version=chart_version,
-            )
-            for item in node_descriptors
+            ).node_ref
+            for item in intervening
         ]
-        relation_keys = [
-            _relation_key(
-                descriptor=item,
-                world=world,
-                life_case_id=life_case_id,
-                chart_version=chart_version,
-            )
-            for item in relation_descriptors
-        ]
+        return RelationPositionContext(
+            source_scope=str(raw.get("source_scope") or "natal"),
+            target_scope=str(raw.get("target_scope") or "natal"),
+            source_slot=str(raw.get("source_slot") or ""),
+            target_slot=str(raw.get("target_slot") or ""),
+            source_level=str(raw.get("source_level") or "other"),
+            target_level=str(raw.get("target_level") or "other"),
+            adjacent=bool(raw.get("adjacent")),
+            column_span=raw.get("column_span"),
+            intervening_node_refs=intervening_refs,
+            ref_namespace="node_ref",
+            direction=str(raw.get("direction") or "other"),
+            scene_layer=str(raw.get("scene_layer") or "natal_state"),
+        )
     except (KeyError, TypeError, ValueError):
         return None
-    if len(node_refs) < 2 or not relation_keys:
-        return None
-    provenance = _provenance(
-        insight=insight,
-        source="reasoner_commit" if mode == "commit" else "legacy_exact_import",
-        evidence_refs=[fact.fact_id],
-        source_refs=[
-            *fact.source_refs,
-            str(fact.payload.get("candidate_path_key") or ""),
-        ],
-    )
-    assertions = [
-        RelationAssertion(
-            relation_key=key,
-            assertion_version=f"{case_version}:baseline",
-            status=AssertionLifecycle.COMMITTED,
-            provenance=_provenance(
-                insight=insight,
-                source="reasoner_commit" if mode == "commit" else "legacy_exact_import",
-                evidence_refs=[fact.fact_id],
-                source_refs=[key.relation_key, *fact.source_refs],
-            ),
-            statement=_path_statement(insight=insight, record=record),
-        )
-        for key in relation_keys
-    ]
-    path_key = PathKey(
-        scene_ref=canonical_scene_scope_ref(
-            life_case_id=life_case_id,
-            chart_version_id=chart_version.version_id,
-        ),
-        node_refs=node_refs,
-        relation_keys=relation_keys,
-        scope="natal",
-    )
-    return _dedupe_assertions_by_id(assertions), [PathAssertion(
-        path_key=path_key,
-        assertion_version=f"{case_version}:baseline",
-        status=AssertionLifecycle.COMMITTED,
-        provenance=provenance,
-        statement=_path_statement(insight=insight, record=record),
-    )]
 
 
 def _exact_relation_facts(
@@ -461,6 +647,8 @@ def _assertions_from_relation_chain(
     relation_keys: list[RelationKey] = []
     ordered_nodes: list[NodeRef] = []
     for fact in facts:
+        if not _relation_fact_is_path_eligible(fact):
+            return None
         descriptor = _relation_descriptor_from_fact(fact)
         try:
             key = _relation_key(
@@ -495,6 +683,15 @@ def _assertions_from_relation_chain(
                 evidence_refs=[fact.fact_id],
                 source_refs=[*fact.source_refs, key.relation_key],
             ),
+            relation_state=MingliRelationState.EFFECTIVE,
+            mechanism_ref=str(fact.payload.get("mechanism_ref") or "legacy_exact_relation"),
+            position_context=_formal_position_context(
+                descriptor=_relation_descriptor_from_fact(fact),
+                world=world,
+                life_case_id=life_case_id,
+                chart_version=chart_version,
+            ),
+            verification_refs=["path_bridge.segment.validated", fact.fact_id],
             statement=fact.statement,
         )
         for key, fact in zip(relation_keys, facts, strict=True)
@@ -572,7 +769,21 @@ def _relation_descriptor_from_fact(fact: WorldFact) -> dict[str, Any]:
         "relation_type": fact.payload.get("relation"),
         "directionality": fact.payload.get("directionality"),
         "participants": participants,
+        "relation_state": fact.payload.get("relation_state"),
+        "path_eligibility": fact.payload.get("path_eligibility"),
+        "mechanism_ref": fact.payload.get("mechanism_ref"),
+        "position_context": fact.payload.get("position_context"),
     }
+
+
+def _relation_fact_is_path_eligible(fact: WorldFact) -> bool:
+    return (
+        fact.category == "graph_relation"
+        and fact.payload.get("relation_state")
+        in {"structural", "time_activated", "effective"}
+        and fact.payload.get("path_eligibility") == "eligible"
+        and bool(fact.payload.get("mechanism_ref"))
+    )
 
 
 def _relation_key(

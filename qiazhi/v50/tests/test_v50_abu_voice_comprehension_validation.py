@@ -124,16 +124,13 @@ def test_voice_validation_summary_waits_for_human_review() -> None:
     assert reviewed["ready_for_product_decision"] is False
 
 
-def test_voice_study_frontend_is_internal_only_and_instruments_core_actions() -> None:
+def test_voice_study_remains_api_only_after_legacy_frontend_retirement() -> None:
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    script = (root / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
-    styles = (root / "apps/product/static/l5/styles.css").read_text(encoding="utf-8")
+    surface = (root / "apps/product/product_surface.py").read_text(encoding="utf-8")
+    experience = (root / "apps/product/experience_shell/src/audio.ts").read_text(encoding="utf-8")
 
-    assert 'get("voice_study") === "1"' in script
-    assert "playback_started" in script
-    assert "chapter_replayed" in script
-    assert "comprehension_submitted" in script
-    assert "raw_birth_data_stored" not in script
-    assert '[data-voice-study-arm="text_only"]' in styles
+    assert 'FileResponse(MEDIA_DIR / "app.js"' not in surface
+    assert "prepareNarrationSegment" in experience
+    assert "raw_birth_data_stored" not in experience

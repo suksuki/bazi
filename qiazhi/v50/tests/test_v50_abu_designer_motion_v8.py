@@ -27,16 +27,11 @@ def test_divination_motion_is_high_definition_transparent_and_watermark_free() -
     assert poster.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
-def test_divination_motion_drives_real_reasoning_wait_states() -> None:
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
+def test_divination_motion_is_registered_but_workspace_uses_the_lighter_reasoning_motion() -> None:
     registry = (ROOT / "apps/product/static/l5/assets/abu/motion-registry.js").read_text(encoding="utf-8")
-    html = (ROOT / "apps/product/static/l5/index.html").read_text(encoding="utf-8")
+    components = (ROOT / "apps/product/experience_shell/src/components.ts").read_text(encoding="utf-8")
 
     assert 'divination_classic: Object.freeze({' in registry
     assert "/assets/abu/v8-designer-divination/web/abu_divination_v8.webp" in registry
     assert 'thinking: "taoist_divination"' in registry
-    assert 'setAbuState(label.includes("出生信息") ? "parsing" : "thinking", label)' in javascript
-    assert "function setAbuLoadingPeek" in javascript
-    assert 'id="abuMotionFrame"' in html
-    assert 'class="thinking-abu-loader"' not in html
-    assert 'data-abu-motion="divination_classic"' not in html
+    assert "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp" in components

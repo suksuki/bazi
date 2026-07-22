@@ -22,6 +22,105 @@ async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
+export type AuthMode = "login" | "register";
+
+export interface ProductAccount {
+  user_id: string;
+  email: string;
+  display_name: string;
+  account_role: string;
+  role: string;
+}
+
+export interface ProductProfile {
+  profile_id: string;
+  birth_input_id: string;
+  display_name: string;
+  gender: "male" | "female" | "unknown";
+  calendar_type: "solar" | "lunar" | "unknown";
+  birth_date: string;
+  birth_time: string;
+  birth_location: string;
+  timezone: string;
+  lunar_leap_month: boolean | null;
+  true_solar_time_policy: string;
+  input_quality: string;
+  warnings: string[];
+  pillars: string[];
+  is_default: boolean;
+}
+
+export interface BirthProfileInput {
+  birth_input_id: string;
+  name: string;
+  gender: ProductProfile["gender"];
+  calendar_type: ProductProfile["calendar_type"];
+  birth_date: string;
+  birth_time: string;
+  birth_location: string;
+  timezone: string;
+  true_solar_time_policy: string;
+  lunar_leap_month: boolean | null;
+  year_pillar: string;
+  month_pillar: string;
+  day_pillar: string;
+  hour_pillar: string;
+  input_quality: string;
+  warnings: string[];
+}
+
+export function authenticate(input: {
+  mode: AuthMode;
+  email: string;
+  password: string;
+  displayName?: string;
+  role?: string;
+}): Promise<{ account: ProductAccount }> {
+  const payload = input.mode === "register"
+    ? {
+        email: input.email,
+        password: input.password,
+        display_name: input.displayName || "DeepBazi 用户",
+        role: input.role || "member",
+      }
+    : { email: input.email, password: input.password };
+  return requestJson(`/api/v50/product/auth/${input.mode}`, {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function logout(): Promise<{ status: "logged_out" }> {
+  return requestJson("/api/v50/product/auth/logout", { method: "POST", body: "{}" });
+}
+
+export async function loadProfiles(): Promise<ProductProfile[]> {
+  const payload = await requestJson<{ profiles: ProductProfile[] }>("/api/v50/product/profiles");
+  return payload.profiles;
+}
+
+export async function saveProfile(
+  birthInput: BirthProfileInput,
+  profileId = "",
+): Promise<ProductProfile> {
+  const payload = await requestJson<{ profile: ProductProfile }>(
+    profileId
+      ? `/api/v50/product/profiles/${encodeURIComponent(profileId)}`
+      : "/api/v50/product/profiles",
+    {
+      method: profileId ? "PUT" : "POST",
+      body: JSON.stringify({ birth_input: birthInput }),
+    },
+  );
+  return payload.profile;
+}
+
+export function deleteProfile(profileId: string): Promise<{ status: "profile_deleted" }> {
+  return requestJson(`/api/v50/product/profiles/${encodeURIComponent(profileId)}`, {
+    method: "DELETE",
+  });
+}
+
 export function loadWorkspaceBootstrap(input: {
   caseId?: string;
   profileId?: string;

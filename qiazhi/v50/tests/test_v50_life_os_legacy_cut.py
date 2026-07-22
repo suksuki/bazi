@@ -55,7 +55,7 @@ def test_product_core_journey_survives_legacy_full_reading_cut(monkeypatch) -> N
     case_id = start_body["case_id"]
     stored = case_store.get(case_id=case_id)
     assert stored is not None
-    assert stored["first_run"]["protocol"] == "single_call_baseline_v1"
+    assert stored["first_run"]["protocol"] == "minimal_whole_chart_baseline_v1"
     assert stored["life_case"]["baseline_insight"]["status"] == "committed"
 
     abu_plan = client.post(

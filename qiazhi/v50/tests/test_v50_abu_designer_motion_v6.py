@@ -65,8 +65,7 @@ def test_sleep_and_butterfly_designer_motions_are_production_assets() -> None:
     assert play["webp"] == {"quality": 93, "method": 6}
 
 
-def test_product_runtime_uses_sleep_after_idle_and_play_as_a_random_awake_moment() -> None:
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
+def test_sleep_and_play_motions_remain_registered_for_future_scene_consumers() -> None:
     registry = (ROOT / "apps/product/static/l5/assets/abu/motion-registry.js").read_text(encoding="utf-8")
 
     assert 'sleep: "sleep_breathe"' in registry
@@ -74,17 +73,8 @@ def test_product_runtime_uses_sleep_after_idle_and_play_as_a_random_awake_moment
     assert 'adventure: "run_jump"' in registry
     assert 'celebration: "breakdance"' in registry
     assert 'completed: "happy_tail"' in registry
-    assert "const ABU_SLEEP_DELAY_MS = 120000" in javascript
-    assert "const ABU_PLAY_COOLDOWN_MS = 14000" in javascript
-    assert "const ABU_PLAY_DELAY_MIN_MS = 9000" in javascript
-    assert "const ABU_PLAY_DELAY_MAX_MS = 18000" in javascript
-    assert 'setAbuState("sleep", "安静等你回来")' in javascript
-    assert "function chooseAbuAmbientMoment()" in javascript
-    assert "moment.state !== state.abuLastAmbientState" in javascript
-    assert "state.abuLastAmbientState = moment.state" in javascript
     assert "/assets/abu/v6-designer-sleep/web/abu_sleep_breathe_v6.webp" in registry
     assert "/assets/abu/v6-designer-play/web/abu_butterfly_play_v6.webp" in registry
-    assert "duration - 40" in javascript
 
 
 def test_motion_builder_supports_usage_alpha_matte_and_manual_crop() -> None:

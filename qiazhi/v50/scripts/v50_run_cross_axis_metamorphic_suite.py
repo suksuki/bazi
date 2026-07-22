@@ -154,6 +154,7 @@ def _without_identity_metadata(value: Any) -> Any:
                 "candidate_relation_key",
                 "candidate_path_key",
                 "node_id",
+                "relation_source_ref",
                 "supporting_relation_refs",
                 "blocking_relation_refs",
                 "reason_refs",

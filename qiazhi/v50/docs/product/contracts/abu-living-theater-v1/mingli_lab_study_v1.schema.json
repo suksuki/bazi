@@ -442,6 +442,16 @@
       "title": "MingliLabSession",
       "type": "object"
     },
+    "MingliRelationState": {
+      "enum": [
+        "potential",
+        "structural",
+        "time_activated",
+        "effective"
+      ],
+      "title": "MingliRelationState",
+      "type": "string"
+    },
     "NodeRef": {
       "additionalProperties": false,
       "properties": {
@@ -553,6 +563,25 @@
         },
         "provenance": {
           "$ref": "#/$defs/ProvenanceRecord"
+        },
+        "source_candidate_ref": {
+          "default": "",
+          "title": "Source Candidate Ref",
+          "type": "string"
+        },
+        "segment_validation_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Segment Validation Refs",
+          "type": "array"
+        },
+        "rejected_segment_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Rejected Segment Refs",
+          "type": "array"
         },
         "supersedes": {
           "default": "",
@@ -733,6 +762,33 @@
         "provenance": {
           "$ref": "#/$defs/ProvenanceRecord"
         },
+        "relation_state": {
+          "$ref": "#/$defs/MingliRelationState",
+          "default": "effective"
+        },
+        "mechanism_ref": {
+          "default": "legacy_exact_relation",
+          "title": "Mechanism Ref",
+          "type": "string"
+        },
+        "position_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationPositionContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "verification_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Verification Refs",
+          "type": "array"
+        },
         "supersedes": {
           "default": "",
           "title": "Supersedes",
@@ -824,6 +880,140 @@
         "directionality"
       ],
       "title": "RelationKey",
+      "type": "object"
+    },
+    "RelationPositionContext": {
+      "additionalProperties": false,
+      "description": "Typed location evidence; it never decides strength or effectiveness.",
+      "properties": {
+        "version": {
+          "default": "deepbazi.relation_position_context.six02.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "source_scope": {
+          "enum": [
+            "natal",
+            "luck",
+            "year",
+            "month",
+            "other"
+          ],
+          "title": "Source Scope",
+          "type": "string"
+        },
+        "target_scope": {
+          "enum": [
+            "natal",
+            "luck",
+            "year",
+            "month",
+            "other"
+          ],
+          "title": "Target Scope",
+          "type": "string"
+        },
+        "source_slot": {
+          "title": "Source Slot",
+          "type": "string"
+        },
+        "target_slot": {
+          "title": "Target Slot",
+          "type": "string"
+        },
+        "source_level": {
+          "enum": [
+            "pillar",
+            "stem",
+            "branch",
+            "hidden_stem",
+            "other"
+          ],
+          "title": "Source Level",
+          "type": "string"
+        },
+        "target_level": {
+          "enum": [
+            "pillar",
+            "stem",
+            "branch",
+            "hidden_stem",
+            "other"
+          ],
+          "title": "Target Level",
+          "type": "string"
+        },
+        "adjacent": {
+          "default": false,
+          "title": "Adjacent",
+          "type": "boolean"
+        },
+        "column_span": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column Span"
+        },
+        "intervening_node_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Intervening Node Refs",
+          "type": "array"
+        },
+        "ref_namespace": {
+          "default": "node_ref",
+          "enum": [
+            "candidate_node_key",
+            "node_ref"
+          ],
+          "title": "Ref Namespace",
+          "type": "string"
+        },
+        "direction": {
+          "default": "other",
+          "enum": [
+            "same_column",
+            "left_to_right",
+            "right_to_left",
+            "symmetric",
+            "temporal_to_natal",
+            "natal_to_temporal",
+            "cross_temporal",
+            "other"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "scene_layer": {
+          "default": "natal_state",
+          "enum": [
+            "natal_state",
+            "luck_state",
+            "year_state",
+            "month_state",
+            "mixed_temporal"
+          ],
+          "title": "Scene Layer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_scope",
+        "target_scope",
+        "source_slot",
+        "target_slot",
+        "source_level",
+        "target_level"
+      ],
+      "title": "RelationPositionContext",
       "type": "object"
     }
   },

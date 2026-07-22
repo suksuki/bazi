@@ -310,6 +310,13 @@ def _graph_relation_facts(*, graph, nodes: dict[str, Any]) -> list[WorldFact]:
                     "to_position": target.position,
                     "relation": edge.edge_type.value,
                     "relation_state": edge.relation_state.value,
+                    "path_eligibility": edge.path_eligibility.value,
+                    "mechanism_ref": edge.mechanism_ref,
+                    "position_context": (
+                        _position_context_payload(edge=edge, nodes=nodes)
+                        if edge.position_context is not None
+                        else None
+                    ),
                     "candidate_relation_key": edge.relation_key,
                     "directionality": edge.directionality.value,
                     "ontology_version": edge.ontology_version,
@@ -328,7 +335,7 @@ def _graph_relation_facts(*, graph, nodes: dict[str, Any]) -> list[WorldFact]:
 
 def _path_observations(*, paths, nodes: dict[str, Any], edges: dict[str, Any]) -> list[WorldFact]:
     output: list[WorldFact] = []
-    for path in paths.paths[:8]:
+    for path in _diverse_path_candidates(paths=paths.paths, nodes=nodes, limit=16):
         labels = [nodes[node_id].label for node_id in path.node_ids if node_id in nodes]
         output.append(
             WorldFact(
@@ -347,6 +354,7 @@ def _path_observations(*, paths, nodes: dict[str, Any], edges: dict[str, Any]) -
                     "validation_status": path.validation_state.value,
                     "evidence_vector": path.evidence_vector.model_dump(mode="json"),
                     "candidate_path_key": path.path_key,
+                    "candidate_order_is_professional_ranking": False,
                     "node_descriptors": [
                         _graph_node_descriptor(nodes[node_id])
                         for node_id in path.node_ids
@@ -354,17 +362,27 @@ def _path_observations(*, paths, nodes: dict[str, Any], edges: dict[str, Any]) -
                     ],
                     "relation_descriptors": [
                         {
+                            "segment_index": index,
+                            "relation_source_ref": f"fact:edge:{edges[edge_id].edge_id}",
                             "relation_type": edges[edge_id].edge_type.value,
                             "candidate_relation_key": edges[edge_id].relation_key,
                             "directionality": edges[edge_id].directionality.value,
                             "ontology_version": edges[edge_id].ontology_version,
+                            "relation_state": edges[edge_id].relation_state.value,
+                            "path_eligibility": edges[edge_id].path_eligibility.value,
+                            "mechanism_ref": edges[edge_id].mechanism_ref,
+                            "position_context": (
+                                _position_context_payload(edge=edges[edge_id], nodes=nodes)
+                                if edges[edge_id].position_context is not None
+                                else None
+                            ),
                             "participants": [
                                 _graph_node_descriptor(nodes[node_id])
                                 for node_id in edges[edge_id].participant_node_ids
                                 if node_id in nodes
                             ],
                         }
-                        for edge_id in path.edge_ids
+                        for index, edge_id in enumerate(path.edge_ids)
                         if edge_id in edges
                     ],
                 },
@@ -375,6 +393,37 @@ def _path_observations(*, paths, nodes: dict[str, Any], edges: dict[str, Any]) -
     return output
 
 
+def _diverse_path_candidates(*, paths: list[Any], nodes: dict[str, Any], limit: int) -> list[Any]:
+    """Keep mechanism/level families visible without claiming a professional ranking."""
+
+    selected: list[Any] = []
+    selected_ids: set[str] = set()
+    seen_families: set[tuple[tuple[str, ...], tuple[str, ...]]] = set()
+    for path in paths:
+        family = (
+            tuple(path.relation_types),
+            tuple(
+                nodes[node_id].node_type.value
+                for node_id in path.node_ids
+                if node_id in nodes
+            ),
+        )
+        if family in seen_families:
+            continue
+        seen_families.add(family)
+        selected.append(path)
+        selected_ids.add(path.path_id)
+        if len(selected) >= limit:
+            return selected
+    for path in paths:
+        if path.path_id in selected_ids:
+            continue
+        selected.append(path)
+        if len(selected) >= limit:
+            break
+    return selected
+
+
 def _graph_node_descriptor(node: Any) -> dict[str, str]:
     return {
         "candidate_node_key": str(node.node_key),
@@ -383,6 +432,19 @@ def _graph_node_descriptor(node: Any) -> dict[str, str]:
         "node_type": str(node.node_type.value),
         "label": str(node.label),
     }
+
+
+def _position_context_payload(*, edge: Any, nodes: dict[str, Any]) -> dict[str, Any]:
+    payload = edge.position_context.model_dump(mode="json")
+    # Candidate keys identify one compiled world, not the structural position.
+    payload.pop("intervening_node_refs", None)
+    by_key = {str(node.node_key): node for node in nodes.values()}
+    payload["intervening_nodes"] = [
+        _graph_node_descriptor(by_key[ref])
+        for ref in edge.position_context.intervening_node_refs
+        if ref in by_key
+    ]
+    return payload
 
 
 def _role_observations(*, roles) -> list[WorldFact]:

@@ -77,6 +77,31 @@ class CognitiveHypothesis(V50Model):
     confidence: Literal["low", "medium", "high"]
 
 
+class CognitivePathSegment(V50Model):
+    """System-resolved segment references; the model cannot mint these IDs."""
+
+    segment_index: int = Field(ge=0)
+    source_node_ref: str
+    relation_ref: str
+    relation_key: str
+    target_node_ref: str
+    relation_type: str
+    relation_state: Literal["structural", "time_activated", "effective"]
+    mechanism_ref: str
+    validation_status: Literal["validated", "rejected"]
+    rejection_reasons: list[str] = Field(default_factory=list)
+
+
+class CognitivePathCandidate(V50Model):
+    """Cognitive selection bound to one system-enumerated path candidate."""
+
+    candidate_path_ref: str
+    candidate_path_key: str
+    segments: list[CognitivePathSegment] = Field(default_factory=list)
+    validation_status: Literal["validated", "partial", "rejected"]
+    rejection_reasons: list[str] = Field(default_factory=list)
+
+
 class WorkPathReasoning(V50Model):
     path_statement: str
     source: list[str]
@@ -91,6 +116,7 @@ class WorkPathReasoning(V50Model):
     candidate_path_refs: list[str] = Field(default_factory=list)
     competing_path_refs: list[str] = Field(default_factory=list)
     comparison_reasons: list[str] = Field(default_factory=list)
+    structured_candidate: CognitivePathCandidate | None = None
 
 
 class UsefulGodReasoning(V50Model):
@@ -202,6 +228,21 @@ class WholeChartCognitionDraft(V50Model):
     prior_predictions: list[PriorPrediction]
     next_probe: DiscriminatingProbe
     dual_lens: DualLensCognitionDraft | None = None
+    unresolved_questions: list[str]
+    evidence_refs: list[str]
+
+
+class BaselineCoreCognitionDraft(V50Model):
+    """Minimum sufficient whole-chart cognition for the product entry flow."""
+
+    first_look: str
+    whole_chart_thesis: str
+    salient_phenomena: list[SalientPhenomenon]
+    hypotheses: list[CognitiveHypothesis]
+    selected_hypothesis_id: str
+    work_path: WorkPathReasoning
+    useful_god_reasoning: list[UsefulGodReasoning]
+    next_probe: DiscriminatingProbe
     unresolved_questions: list[str]
     evidence_refs: list[str]
 

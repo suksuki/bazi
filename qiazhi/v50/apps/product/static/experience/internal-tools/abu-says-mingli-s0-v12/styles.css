@@ -138,6 +138,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .theater[data-scene="finale"] .abu-actor[data-finale-action="breakdance"] { width: clamp(250px, 19vw, 340px); }
 .theater[data-scene="finale"] .abu-actor[data-finale-action="faceChange"] { width: clamp(270px, 20vw, 360px); }
 .theater[data-scene="finale"] .abu-actor[data-finale-action="ninja"] { width: clamp(330px, 25vw, 460px); }
+.theater[data-scene="finale"] .abu-actor[data-finale-action="baseball"] { width: clamp(300px, 22vw, 400px); }
+.theater[data-scene="finale"] .abu-actor[data-finale-action="pachinko"] { width: clamp(390px, 29vw, 520px); }
 .theater[data-scene="finale"] .abu-actor[data-finale-action="sleep"] { width: clamp(190px, 15vw, 270px); }
 .theater[data-scene="canvas"] .abu-actor .gaze-line, .theater[data-scene="path"] .abu-actor .gaze-line, .theater[data-scene="tension"] .abu-actor .gaze-line { width: 120px; }
 
@@ -293,6 +295,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
   .theater[data-scene="finale"] .abu-actor[data-finale-action="breakdance"],
   .theater[data-scene="finale"] .abu-actor[data-finale-action="faceChange"] { width: 42vw; }
   .theater[data-scene="finale"] .abu-actor[data-finale-action="ninja"] { width: 58vw; }
+  .theater[data-scene="finale"] .abu-actor[data-finale-action="baseball"] { width: 48vw; }
+  .theater[data-scene="finale"] .abu-actor[data-finale-action="pachinko"] { width: 60vw; }
   .theater[data-scene="finale"] .abu-actor[data-finale-action="sleep"] { width: 34vw; }
   .morph-scene { inset: 70px 8px 80px; }
   .morph-anchor.wood { left: 8%; bottom: 28%; }.morph-anchor.fire { left: 44%; bottom: 47%; }.morph-anchor.metal { right: 6%; top: 22%; }

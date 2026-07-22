@@ -9,6 +9,7 @@ from core.graph.provenance import (
     AssertionLifecycle,
     PathAssertion,
     RelationAssertion,
+    RelationPositionContext,
     validate_assertion_history,
 )
 from experience.compiler import canonical_hash
@@ -50,6 +51,9 @@ class CanonicalRelationAssertionView(ExperienceModel):
     relation_ref: str = Field(min_length=1, max_length=180)
     relation_type: str = Field(min_length=1, max_length=100)
     participant_node_refs: list[str] = Field(min_length=2)
+    relation_state: Literal["effective"] = "effective"
+    mechanism_ref: str = Field(min_length=1, max_length=140)
+    position_context: RelationPositionContext | None = None
     status: Literal["committed", "superseded", "rejected", "legacy_unresolved"]
     supersedes: str = Field(default="", max_length=180)
     statement: str = Field(default="", max_length=500)
@@ -602,6 +606,9 @@ def _relation_assertion_view(
         participant_node_refs=[
             item.node_ref for item in assertion.relation_key.participant_refs
         ],
+        relation_state="effective",
+        mechanism_ref=assertion.mechanism_ref,
+        position_context=assertion.position_context,
         status=assertion.status.value,  # type: ignore[arg-type]
         supersedes=assertion.supersedes,
         statement=assertion.statement,

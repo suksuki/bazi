@@ -254,16 +254,24 @@ def create_agent_router(
             raise HTTPException(status_code=503, detail=f"mingli_cognition_failed:{type(exc).__name__}:{exc}") from exc
         if not result.committed:
             response: dict[str, Any] = {
-                "status": f"baseline_{result.record.review.disposition}",
+                "status": (
+                    "baseline_professional_blocked"
+                    if result.professional_review.overlay.professional_release_status == "blocked"
+                    else f"baseline_{result.record.review.disposition}"
+                ),
                 "case_id": case_id,
                 "saved": account is not None,
                 "profile": profile,
                 "outcome": _reliability_outcome_payload(
                     world=result.world,
                     record=result.record,
+                    professional_review=result.professional_review.overlay,
                 ),
             }
-            if result.record.review.disposition == "competing":
+            if (
+                result.record.review.disposition == "competing"
+                and result.professional_review.overlay.professional_release_status != "blocked"
+            ):
                 response["reading"] = _public_reading_view(
                     world=result.world,
                     record=result.record,

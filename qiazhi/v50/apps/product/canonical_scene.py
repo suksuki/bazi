@@ -92,10 +92,46 @@ class CanonicalSceneOwner:
         row = self.case_store.get(case_id=case_id, user_id=participant_id)
         if row is None:
             raise CanonicalSceneUnavailable("canonical_scene_case_not_found")
+        return self._issue_scene_from_row(
+            case_id=case_id,
+            viewer_scope=participant_id,
+            account_role=account_role,
+            row=row,
+        )
+
+    def issue_authorized_scene(
+        self,
+        *,
+        case_id: str,
+        authorization_ref: str,
+        account_role: str,
+    ) -> CanonicalScene:
+        """Issue a scene only after an external policy validates a projection grant."""
+
+        if not authorization_ref.strip():
+            raise CanonicalSceneUnavailable("canonical_scene_authorization_required")
+        row = self.case_store.get(case_id=case_id, user_id=None)
+        if row is None:
+            raise CanonicalSceneUnavailable("canonical_scene_case_not_found")
+        return self._issue_scene_from_row(
+            case_id=case_id,
+            viewer_scope=f"grant:{authorization_ref}",
+            account_role=account_role,
+            row=row,
+        )
+
+    def _issue_scene_from_row(
+        self,
+        *,
+        case_id: str,
+        viewer_scope: str,
+        account_role: str,
+        row: dict[str, Any],
+    ) -> CanonicalScene:
         role = canonical_scene_role(account_role)
         cache_key = (
             case_id,
-            participant_id,
+            viewer_scope,
             role,
             _canonical_source_revision_token(case_id=case_id, row=row),
         )
@@ -123,6 +159,21 @@ class CanonicalSceneOwner:
         scene = self.issue_scene(
             case_id=case_id,
             participant_id=participant_id,
+            account_role=account_role,
+        )
+        return compile_canonical_projection(scene=scene, kind=projection_kind)
+
+    def issue_authorized_projection(
+        self,
+        *,
+        case_id: str,
+        authorization_ref: str,
+        account_role: str,
+        projection_kind: CanonicalProjectionKind,
+    ) -> CanonicalProjectionEnvelope:
+        scene = self.issue_authorized_scene(
+            case_id=case_id,
+            authorization_ref=authorization_ref,
             account_role=account_role,
         )
         return compile_canonical_projection(scene=scene, kind=projection_kind)
@@ -280,6 +331,8 @@ def canonical_scene_source_from_case_row(
         or life_case.status != "active"
         or not life_case.chart_version.active
         or baseline.status != "committed"
+        or baseline.professional_review_overlay is None
+        or baseline.professional_release_status not in {"passed", "partially_blocked"}
         or baseline.epistemic_state not in {"reliable", "competing"}
     ):
         raise CanonicalSceneUnavailable("canonical_scene_formal_life_case_unavailable")
@@ -579,6 +632,10 @@ def _canonical_source_revision_token(*, case_id: str, row: dict[str, Any]) -> st
         "updated_at": life_case.get("updated_at"),
         "chart_version_id": chart_version.get("version_id"),
         "baseline_insight_id": baseline.get("insight_id"),
+        "baseline_professional_release_status": baseline.get("professional_release_status"),
+        "baseline_professional_review_overlay_id": (
+            baseline.get("professional_review_overlay") or {}
+        ).get("overlay_id"),
         "domain_insight_ids": {
             domain: [
                 item.get("insight_id")

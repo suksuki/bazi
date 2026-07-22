@@ -48,7 +48,7 @@ class ModelPolicyRouter:
         domain_ctx = int(os.getenv("V50_MINGLI_DOMAIN_NUM_CTX", "32768"))
         specs: dict[CognitiveTask, tuple[str, str, float, int, int]] = {
             "birth_intake": (intake_model, "intake", 0.0, 700, 8192),
-            "baseline_cognition": (whole_model, "whole_chart", 0.0, 5200, whole_ctx),
+            "baseline_cognition": (whole_model, "whole_chart", 0.0, 3200, whole_ctx),
             "pattern_preview": (pattern_model, "whole_chart", 0.0, 420, whole_ctx),
             "pattern_hypothesis": (pattern_model, "whole_chart", 0.0, 2600, whole_ctx),
             "work_path_portrait": (work_model, "whole_chart", 0.0, 2600, whole_ctx),

@@ -49,7 +49,7 @@
 | Bazi Foundation Coverage | 天干 | tested | yes | yes | low | packages/core/engines/bazi/knowledge.py | Keep covered by regression. |
 | Bazi Foundation Coverage | 地支 | tested | yes | yes | low | packages/core/engines/bazi/knowledge.py | Keep covered by regression. |
 | Bazi Foundation Coverage | 藏干 | tested | yes | yes | low | packages/core/engines/bazi/knowledge.py | Keep covered by regression. |
-| Bazi Foundation Coverage | 十神 | tested | yes | no | low | packages/core/engines/bazi/material_engine.py | Keep covered by regression. |
+| Bazi Foundation Coverage | 十神 | tested | yes | yes | low | packages/core/engines/bazi/material_engine.py | Keep covered by regression. |
 | Bazi Foundation Coverage | 五行 | tested | yes | no | low | packages/core/engines/bazi/knowledge.py | Keep covered by regression. |
 | Bazi Foundation Coverage | 阴阳 | implemented | yes | no | medium | packages/core/engines/bazi/knowledge.py | Add fixture assertions for polarity-sensitive rules. |
 | Bazi Foundation Coverage | 生克制化 | partial | yes | yes | medium | packages/core/engines/bazi/knowledge.py | Complete runtime semantics and add focused fixtures. |
@@ -86,7 +86,7 @@
 | Bazi Topic Mapping Coverage | 事业 | tested | yes | yes | low | packages/core/cognitive/domain_mapping_model.py | Keep covered by regression. |
 | Bazi Topic Mapping Coverage | 财富 | tested | yes | yes | low | packages/core/cognitive/domain_mapping_model.py | Keep covered by regression. |
 | Bazi Topic Mapping Coverage | 感情 | missing | no | no | high | - | Add knowledge model, runtime hook, and validation fixture before user-facing use. |
-| Bazi Topic Mapping Coverage | 健康 | missing | no | no | high | - | Add knowledge model, runtime hook, and validation fixture before user-facing use. |
+| Bazi Topic Mapping Coverage | 健康 | missing | no | yes | high | - | Add knowledge model, runtime hook, and validation fixture before user-facing use. |
 | Bazi Topic Mapping Coverage | 学业 | missing | no | no | medium | - | Add knowledge model, runtime hook, and validation fixture before user-facing use. |
 | Bazi Topic Mapping Coverage | 家庭 | missing | no | no | medium | - | Add knowledge model, runtime hook, and validation fixture before user-facing use. |
 | Bazi Topic Mapping Coverage | 性格画像 | partial | no | no | medium | packages/core/portrait | Portrait exists as a boundary layer but is not driven by current Brain outputs in validation. |

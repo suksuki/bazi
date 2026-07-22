@@ -26,6 +26,13 @@ class AssertionLifecycle(str, Enum):
     LEGACY_UNRESOLVED = "legacy_unresolved"
 
 
+class MingliRelationState(str, Enum):
+    POTENTIAL = "potential"
+    STRUCTURAL = "structural"
+    TIME_ACTIVATED = "time_activated"
+    EFFECTIVE = "effective"
+
+
 NodeScope = Literal["natal", "luck", "year", "month", "other"]
 NodeLevel = Literal["pillar", "stem", "branch", "hidden_stem", "other"]
 
@@ -74,6 +81,57 @@ class NodeRef(V50Model):
             "component": self.component,
             "temporal_snapshot_ref": self.temporal_snapshot_ref,
         }
+
+
+class RelationPositionContext(V50Model):
+    """Typed location evidence; it never decides strength or effectiveness."""
+
+    version: str = "deepbazi.relation_position_context.six02.v1"
+    source_scope: NodeScope
+    target_scope: NodeScope
+    source_slot: str
+    target_slot: str
+    source_level: NodeLevel
+    target_level: NodeLevel
+    adjacent: bool = False
+    column_span: int | None = Field(default=None, ge=0)
+    intervening_node_refs: list[str] = Field(default_factory=list)
+    ref_namespace: Literal["candidate_node_key", "node_ref"] = "node_ref"
+    direction: Literal[
+        "same_column",
+        "left_to_right",
+        "right_to_left",
+        "symmetric",
+        "temporal_to_natal",
+        "natal_to_temporal",
+        "cross_temporal",
+        "other",
+    ] = "other"
+    scene_layer: Literal[
+        "natal_state",
+        "luck_state",
+        "year_state",
+        "month_state",
+        "mixed_temporal",
+    ] = "natal_state"
+
+    @model_validator(mode="after")
+    def validate_position_context(self) -> "RelationPositionContext":
+        require_non_empty(self.source_slot, "source_slot")
+        require_non_empty(self.target_slot, "target_slot")
+        same_semantic_column = (
+            self.source_scope == self.target_scope
+            and self.source_slot == self.target_slot
+        )
+        if self.adjacent and self.column_span != 1:
+            raise ValueError("adjacent_relation_requires_one_column_span")
+        if self.column_span == 0 and not same_semantic_column:
+            raise ValueError("zero_column_span_requires_same_slot")
+        if same_semantic_column and self.column_span not in {0, None}:
+            raise ValueError("same_slot_relation_cannot_have_positive_column_span")
+        if len(self.intervening_node_refs) != len(set(self.intervening_node_refs)):
+            raise ValueError("relation_position_context_duplicate_intervening_ref")
+        return self
 
 
 class RelationKey(V50Model):
@@ -213,13 +271,43 @@ class RelationAssertion(V50Model):
     assertion_version: str
     status: AssertionLifecycle
     provenance: ProvenanceRecord
+    relation_state: MingliRelationState = MingliRelationState.EFFECTIVE
+    mechanism_ref: str = "legacy_exact_relation"
+    position_context: RelationPositionContext | None = None
+    verification_refs: list[str] = Field(default_factory=list)
     supersedes: str = ""
     statement: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def infer_legacy_relation_state(cls, value: Any) -> Any:
+        if not isinstance(value, dict) or value.get("relation_state"):
+            return value
+        payload = dict(value)
+        status = payload.get("status")
+        status_value = status.value if isinstance(status, AssertionLifecycle) else str(status or "")
+        payload["relation_state"] = (
+            MingliRelationState.STRUCTURAL.value
+            if status_value == AssertionLifecycle.CANDIDATE.value
+            else MingliRelationState.EFFECTIVE.value
+        )
+        return payload
 
     @model_validator(mode="after")
     def validate_identity(self) -> "RelationAssertion":
         require_non_empty(self.assertion_version, "assertion_version")
         _validate_lifecycle_source(status=self.status, source=self.provenance.source)
+        require_non_empty(self.mechanism_ref, "mechanism_ref")
+        if (
+            self.status == AssertionLifecycle.COMMITTED
+            and self.relation_state != MingliRelationState.EFFECTIVE
+        ):
+            raise ValueError("committed_relation_assertion_requires_effective_state")
+        if (
+            self.status == AssertionLifecycle.CANDIDATE
+            and self.relation_state == MingliRelationState.EFFECTIVE
+        ):
+            raise ValueError("candidate_relation_assertion_cannot_be_effective")
         if self.status == AssertionLifecycle.SUPERSEDED and not self.supersedes:
             raise ValueError("superseded_assertion_requires_predecessor")
         expected = _stable_id("relation-assertion", {
@@ -242,6 +330,9 @@ class PathAssertion(V50Model):
     assertion_version: str
     status: AssertionLifecycle
     provenance: ProvenanceRecord
+    source_candidate_ref: str = ""
+    segment_validation_refs: list[str] = Field(default_factory=list)
+    rejected_segment_refs: list[str] = Field(default_factory=list)
     supersedes: str = ""
     statement: str = ""
     legacy_ref: str = ""

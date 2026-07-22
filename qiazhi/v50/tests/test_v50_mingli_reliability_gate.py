@@ -15,7 +15,7 @@ from core.life_case import (
 )
 from core.life_domains import LifeDomain
 from core.mingli_agent import MingliAgent, compile_chart_world
-from core.mingli_agent.contracts import DomainCausalReading, WholeChartCognitionDraft
+from core.mingli_agent.contracts import BaselineCoreCognitionDraft, DomainCausalReading
 from core.mingli_agent.reasoner import review_cognition, review_domain_reading
 from core.mingli_agent.reliability import cognition_semantic_signature
 from product.agent_case_store import MemoryAgentCaseStore
@@ -48,7 +48,7 @@ class OneRepairModel(FakeCognitiveModel):
             thinking=thinking,
             max_tokens=max_tokens,
         )
-        if schema is WholeChartCognitionDraft:
+        if schema is BaselineCoreCognitionDraft:
             self.baseline_calls += 1
             if self.baseline_calls == 1:
                 broken = result.useful_god_reasoning[0].model_copy(
@@ -100,7 +100,7 @@ class HardFactBaselineModel(FakeCognitiveModel):
             thinking=thinking,
             max_tokens=max_tokens,
         )
-        if schema is WholeChartCognitionDraft:
+        if schema is BaselineCoreCognitionDraft:
             hypotheses = list(result.hypotheses)
             hypotheses[0] = hypotheses[0].model_copy(
                 update={"thesis": "火生金是这张盘已经成立的原局主路径。"}
@@ -118,7 +118,7 @@ class UncomparedBaselineModel(FakeCognitiveModel):
             thinking=thinking,
             max_tokens=max_tokens,
         )
-        if schema is WholeChartCognitionDraft:
+        if schema is BaselineCoreCognitionDraft:
             hypotheses = list(result.hypotheses)
             hypotheses[1] = hypotheses[1].model_copy(update={"rejection_reason": ""})
             return result.model_copy(update={"hypotheses": hypotheses})
@@ -172,7 +172,7 @@ def test_production_baseline_isolates_one_hard_fact_without_rejecting_the_case()
     assert record.assertion_gate.automatic_full_rerun_allowed is False
 
 
-def test_api_commits_safe_assertions_and_excludes_the_bad_assertion() -> None:
+def test_api_persists_raw_hard_error_but_blocks_professional_release() -> None:
     store = MemoryAgentCaseStore()
     client = TestClient(create_product_app(
         product_store=MemoryProductStore(),
@@ -184,10 +184,16 @@ def test_api_commits_safe_assertions_and_excludes_the_bad_assertion() -> None:
     row = store.get(case_id=payload["case_id"])
 
     assert response.status_code == 200
-    assert payload["status"] == "first_reading_ready"
-    assert payload["reading"]["pillars"]
-    assert row["life_case"] is not None
-    assert "火生金" not in str(row["life_case"])
+    assert payload["status"] == "baseline_professional_blocked"
+    assert payload["outcome"]["pillars"]
+    assert payload["outcome"]["primary_explanation"] is None
+    assert payload["outcome"]["professional_release"]["status"] == "blocked"
+    assert row["life_case"] is None
+    assert any(
+        "火生金" in item["source_text"]
+        for item in row["professional_assertions"]
+    )
+    assert row["professional_review_overlay"]["raw_output_modified"] is False
     assert row["record"]["assertion_gate"]["suppressed_count"] == 1
 
 

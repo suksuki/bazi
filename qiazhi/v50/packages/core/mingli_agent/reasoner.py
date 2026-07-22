@@ -13,6 +13,7 @@ from core.life_domains import LifeDomain, domain_reasoning_protocol
 from core.mingli_agent.assertion_gate import isolate_cognition_assertions, isolate_domain_assertions
 from core.mingli_agent.context import ContextStage, MingliContextCompiler, ReasoningContextPack
 from core.mingli_agent.contracts import (
+    BaselineCoreCognitionDraft,
     BirthIntakeDraft,
     CaseTurnDraft,
     ChartWorldInstance,
@@ -43,6 +44,7 @@ from core.mingli_agent.model_client import (
 )
 from core.mingli_agent.model_policy import CognitiveTask, ModelPolicyRouter
 from core.mingli_agent.orchestrator import CognitiveOrchestrator
+from core.mingli_agent.path_bridge import bind_structured_path_candidate
 from core.mingli_agent.reasoning_normalization import (
     _all_citations,
     _apply_scope_boundary,
@@ -311,6 +313,13 @@ class MingliAgent:
                 _filter_evidence_refs(_apply_scope_boundary(work), world=world),
                 world=world,
             )
+            bound_work_path, path_bridge = bind_structured_path_candidate(
+                work_path=work.work_path,
+                world=world,
+            )
+            work = work.model_copy(update={"work_path": bound_work_path})
+        else:
+            path_bridge = None
         work = _normalize_work_strategy_dimensions(work)
         work_errors = _work_stage_errors(work=work, world=world)
         _notify_stage(
@@ -319,6 +328,16 @@ class MingliAgent:
             {
                 **work.model_dump(mode="json"),
                 "soft_review": {"issues": work_errors},
+                "path_bridge": (
+                    {
+                        "selected_path_ref": path_bridge.selected_path_ref,
+                        "accepted_segment_count": path_bridge.accepted_segment_count,
+                        "rejected_segment_count": path_bridge.rejected_segment_count,
+                        "reason_codes": list(path_bridge.reason_codes),
+                    }
+                    if path_bridge is not None
+                    else {"status": "p0_audit_not_bound"}
+                ),
             },
         )
 
@@ -519,10 +538,15 @@ class MingliAgent:
             context=context,
             model=self.model,
             prompt=_baseline_cognition_prompt(world=world, context_payload=context.payload),
-            schema=WholeChartCognitionDraft,
+            schema=BaselineCoreCognitionDraft,
             on_text_chunk=on_text_chunk,
         )
         draft, pattern, locked_fact_repairs = _normalize_baseline_cognition(whole=whole, world=world)
+        bound_work_path, path_bridge = bind_structured_path_candidate(
+            work_path=draft.work_path,
+            world=world,
+        )
+        draft = draft.model_copy(update={"work_path": bound_work_path})
         draft, assertion_gate = isolate_cognition_assertions(draft=draft, world=world)
         pattern = PatternHypothesisDraft(
             first_look=draft.first_look,
@@ -553,6 +577,12 @@ class MingliAgent:
                 "key_condition": (draft.work_path.success_conditions or [""])[0],
                 "uncertainty": (draft.unresolved_questions or [""])[0],
                 "assertion_gate": assertion_gate.model_dump(mode="json"),
+                "path_bridge": {
+                    "selected_path_ref": path_bridge.selected_path_ref,
+                    "accepted_segment_count": path_bridge.accepted_segment_count,
+                    "rejected_segment_count": path_bridge.rejected_segment_count,
+                    "reason_codes": list(path_bridge.reason_codes),
+                },
             },
         )
         return MingliCognitiveRecord(

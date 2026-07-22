@@ -1,0 +1,213 @@
+{
+  "version": "deepbazi.professional_failure_corpus.v1",
+  "corpus_id": "professional-failure-corpus-v1",
+  "source_run_id": "20260722-local-gate-03-v1",
+  "source_manifest_sha256": "dda9340103dcccbb19a2f2e22ec31c303ad88d1b06e6e23a2828df53db9ceb2f",
+  "source_content_audit_sha256": "0be0aedc12f00ee21065fcf122232927984ea80eeb27e922a0608958306735b1",
+  "machine_committed_count": 5,
+  "human_safe_count": 0,
+  "case_count": 5,
+  "raw_outputs_embedded": false,
+  "cases": [
+    {
+      "case_id": "c2.output_controls_pressure.01",
+      "source_directory": "c2_output_controls_pressure_01",
+      "raw_model_output_sha256": "51258098c2002d34edea615fad2283556410b8de84ffd4c3acbceb64e4615c23",
+      "original_machine_status": "committed",
+      "human_verdict": "BLOCK_FROM_PROFESSIONAL_SUBMISSION",
+      "human_confidence": "high",
+      "issues": [
+        {
+          "issue_id": "c2_output_controls_pressure_01:work_path_transition_direction_error:1",
+          "issue_class": "work_path_transition_direction_error",
+          "expected_disposition": "hard_block",
+          "field_path": "work_path.path_statement",
+          "start": 27,
+          "end": 50,
+          "source_text": "辛金七杀（被制/转化） -> 丑土财星（得生）",
+          "source_field_hash": "0bf66dc0047c6ae8bf3db5256b0e89f8a845df7401c74342ceb09d5217f52d36",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_output_controls_pressure_01:invalid_branch_relation:2",
+          "issue_class": "invalid_branch_relation",
+          "expected_disposition": "suppress",
+          "field_path": "hypotheses.2.thesis",
+          "start": 14,
+          "end": 20,
+          "source_text": "巳丑半合金局",
+          "source_field_hash": "a0cff91e89855e194de258b9437ffa7d68eb5d259f34a26001b53c94c7aab69a",
+          "binding_status": "exact"
+        }
+      ]
+    },
+    {
+      "case_id": "c2.output_to_wealth.01",
+      "source_directory": "c2_output_to_wealth_01",
+      "raw_model_output_sha256": "427cf5a8459cb290bfa81a43429db630399ecb2d0354b936e1594a9cac851c9f",
+      "original_machine_status": "committed",
+      "human_verdict": "BLOCK_FROM_PROFESSIONAL_SUBMISSION",
+      "human_confidence": "high",
+      "issues": [
+        {
+          "issue_id": "c2_output_to_wealth_01:rooting_fact_error:1",
+          "issue_class": "rooting_fact_error",
+          "expected_disposition": "hard_block",
+          "field_path": "work_path.path_statement",
+          "start": 38,
+          "end": 46,
+          "source_text": "子水正印扎根时支",
+          "source_field_hash": "94c6ba72979063a25c87bd82fde165015ce6c100e17743d622c1008c02c42561",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_output_to_wealth_01:work_path_internal_contradiction:2",
+          "issue_class": "work_path_internal_contradiction",
+          "expected_disposition": "hard_block",
+          "field_path": "work_path.path_statement",
+          "start": 23,
+          "end": 34,
+          "source_text": "疏泄旺土之气并生助戊土",
+          "source_field_hash": "94c6ba72979063a25c87bd82fde165015ce6c100e17743d622c1008c02c42561",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_output_to_wealth_01:mechanism_required_role_missing:3",
+          "issue_class": "mechanism_required_role_missing",
+          "expected_disposition": "hard_block",
+          "field_path": "work_path.path_statement",
+          "start": 71,
+          "end": 82,
+          "source_text": "形成‘食神制杀/疏土’",
+          "source_field_hash": "94c6ba72979063a25c87bd82fde165015ce6c100e17743d622c1008c02c42561",
+          "binding_status": "exact"
+        }
+      ]
+    },
+    {
+      "case_id": "c2.month_command_dominant.01",
+      "source_directory": "c2_month_command_dominant_01",
+      "raw_model_output_sha256": "349049b720dfbfbb3a968a0abc3b542b9080b467581069e62ba9bdd94b4cac34",
+      "original_machine_status": "committed",
+      "human_verdict": "BLOCK_FROM_PROFESSIONAL_SUBMISSION",
+      "human_confidence": "high",
+      "issues": [
+        {
+          "issue_id": "c2_month_command_dominant_01:ontology_mechanism_role_conflict:1",
+          "issue_class": "ontology_mechanism_role_conflict",
+          "expected_disposition": "hard_block",
+          "field_path": "first_look",
+          "start": 47,
+          "end": 55,
+          "source_text": "双财生杀（食伤）",
+          "source_field_hash": "eecf1493560b289ab88405b1ece1ba04de1db3753ab250066905644e61c7f6d5",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_month_command_dominant_01:unopened_health_domain_projection:2",
+          "issue_class": "unopened_health_domain_projection",
+          "expected_disposition": "domain_block",
+          "field_path": "salient_phenomena.0.why_it_matters",
+          "start": 79,
+          "end": 96,
+          "source_text": "精神焦虑或健康隐患（心血管/眼目）",
+          "source_field_hash": "5af7442ca4f0c7a138b5a8cef3a02f738eb6dc0f8fe8015f0810c2eec38c2c3e",
+          "binding_status": "exact"
+        }
+      ]
+    },
+    {
+      "case_id": "c2.mixed_officer_killing_with_control.01",
+      "source_directory": "c2_mixed_officer_killing_with_control_01",
+      "raw_model_output_sha256": "d8fbca7e4a1650db024bb2117fa64558988e51bb19f59f92e6158ba414cd6d5a",
+      "original_machine_status": "committed",
+      "human_verdict": "BLOCK_FROM_PROFESSIONAL_SUBMISSION",
+      "human_confidence": "high",
+      "issues": [
+        {
+          "issue_id": "c2_mixed_officer_killing_with_control_01:natal_timing_scope_conflict:1",
+          "issue_class": "natal_timing_scope_conflict",
+          "expected_disposition": "hard_block",
+          "field_path": "first_look",
+          "start": 57,
+          "end": 67,
+          "source_text": "‘岁运并临’式的六冲",
+          "source_field_hash": "c5b068f475cf416eca003c0a41d73bf8f908145cb02828304e0b4911a2cb3f8d",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_mixed_officer_killing_with_control_01:invalid_branch_relation:2",
+          "issue_class": "invalid_branch_relation",
+          "expected_disposition": "hard_block",
+          "field_path": "first_look",
+          "start": 83,
+          "end": 98,
+          "source_text": "酉金与时支午火形成半合火局意向",
+          "source_field_hash": "c5b068f475cf416eca003c0a41d73bf8f908145cb02828304e0b4911a2cb3f8d",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_mixed_officer_killing_with_control_01:ten_god_mapping_error:3",
+          "issue_class": "ten_god_mapping_error",
+          "expected_disposition": "hard_block",
+          "field_path": "useful_god_reasoning.0.candidate",
+          "start": 0,
+          "end": 6,
+          "source_text": "午火（食神）",
+          "source_field_hash": "664cbb022a6f2276aaf0a1893a5957603340cbef00134460d290aa9913ce1c9c",
+          "binding_status": "exact"
+        }
+      ]
+    },
+    {
+      "case_id": "c2.climate_regulation_dominant.01",
+      "source_directory": "c2_climate_regulation_dominant_01",
+      "raw_model_output_sha256": "ca70c70113ec5ea6f77a7fec37d512a4663d2ef08c631694f264ef21b35fd87e",
+      "original_machine_status": "committed",
+      "human_verdict": "BLOCK_FROM_PROFESSIONAL_SUBMISSION",
+      "human_confidence": "high",
+      "issues": [
+        {
+          "issue_id": "c2_climate_regulation_dominant_01:five_element_relation_error:1",
+          "issue_class": "five_element_relation_error",
+          "expected_disposition": "hard_block",
+          "field_path": "first_look",
+          "start": 33,
+          "end": 39,
+          "source_text": "时干辛金生助",
+          "source_field_hash": "2494c6b71ba03a627d76ec9b21b6c4096ae50f1a9b66605cdab510160daebace",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_climate_regulation_dominant_01:five_element_control_direction_error:2",
+          "issue_class": "five_element_control_direction_error",
+          "expected_disposition": "suppress",
+          "field_path": "hypotheses.1.rejection_reason",
+          "start": 89,
+          "end": 103,
+          "source_text": "乙木偏印虽透干，但坐丑土受克",
+          "source_field_hash": "c816233fcada973cd9e328ba42110f2a3e05b8618ae91e30ef42c2f74b711cb8",
+          "binding_status": "exact"
+        },
+        {
+          "issue_id": "c2_climate_regulation_dominant_01:half_combination_overpromoted_to_transformation:3",
+          "issue_class": "half_combination_overpromoted_to_transformation",
+          "expected_disposition": "hard_block",
+          "field_path": "first_look",
+          "start": 91,
+          "end": 103,
+          "source_text": "将湿土之气彻底转化为强金",
+          "source_field_hash": "2494c6b71ba03a627d76ec9b21b6c4096ae50f1a9b66605cdab510160daebace",
+          "binding_status": "exact"
+        }
+      ]
+    }
+  ],
+  "boundaries": {
+    "purpose": "Regression evidence for professional release isolation",
+    "not_professional_gold": true,
+    "raw_output_is_immutable": true,
+    "semantic_auto_repair_allowed": false
+  },
+  "corpus_content_hash": "4c4925af7b5aea4cb3967419303837360b9688e4501cb32f6cc4e3d96be2bb8e"
+}

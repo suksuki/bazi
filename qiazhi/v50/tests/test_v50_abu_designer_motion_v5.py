@@ -30,16 +30,15 @@ def test_designer_welcome_wave_is_a_clean_production_asset() -> None:
     assert poster.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
-def test_welcome_state_uses_designer_motion_without_reusing_completion_motion() -> None:
+def test_welcome_motion_is_registered_and_used_by_the_unified_world() -> None:
     registry = (ROOT / "apps/product/static/l5/assets/abu/motion-registry.js").read_text(encoding="utf-8")
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
+    components = (ROOT / "apps/product/experience_shell/src/components.ts").read_text(encoding="utf-8")
 
     assert 'welcome: "welcome_wave"' in registry
     assert 'completed: "happy_tail"' in registry
     assert 'confidence_up: "happy_tail"' in registry
     assert "/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" in registry
-    assert 'return path.startsWith("/") ? path' in javascript
-    assert 'setAbuState("welcome", state.reading ? "又见面了" : "准备听你说")' in javascript
+    assert "/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" in components
 
 
 def test_designer_motion_builder_is_reusable_for_followup_deliveries() -> None:

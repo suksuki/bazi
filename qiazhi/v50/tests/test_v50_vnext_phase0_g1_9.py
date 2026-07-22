@@ -53,10 +53,19 @@ def test_first_look_is_production_only_and_challenge_tools_are_tagged() -> None:
     world = _development_world()
     compiler = MingliContextCompiler()
 
-    for stage in ("baseline", "pattern"):
-        pack = compiler.compile(world=world, stage=stage)
-        assert pack.experimental_tool_refs == []
-        assert {item["authority_status"] for item in pack.payload["facts"]} <= {"production"}
+    pattern = compiler.compile(world=world, stage="pattern")
+    assert pattern.reasoning_phase == "independent_observation"
+    assert pattern.experimental_tool_refs == []
+    assert {item["authority_status"] for item in pattern.payload["facts"]} <= {"production"}
+
+    baseline = compiler.compile(world=world, stage="baseline")
+    baseline_pool_refs = [
+        *[item["fact_ref"] for item in baseline.payload["allowed_relation_pool"]],
+        *[item["path_ref"] for item in baseline.payload["allowed_path_candidates"]],
+    ]
+    assert baseline.reasoning_phase == "tool_challenge"
+    assert baseline.experimental_tool_refs == list(dict.fromkeys(baseline_pool_refs))
+    assert {item["authority_status"] for item in baseline.payload["facts"]} <= {"production"}
 
     challenge = compiler.compile(world=world, stage="work_path")
     experimental = [item for item in challenge.payload["facts"] if item["authority_status"] == "experimental"]
@@ -71,8 +80,9 @@ def test_guest_member_capabilities_and_projection_are_server_bounded() -> None:
         LifeDomain.WHOLE_CHART,
         LifeDomain.CAREER,
         LifeDomain.WEALTH,
-        LifeDomain.LIFE_TIMING,
     }
+    assert domain_access_allowed(LifeDomain.LIFE_TIMING, role_mode="member") is False
+    assert domain_access_allowed(LifeDomain.LIFE_TIMING, role_mode="practitioner") is True
     assert domain_access_allowed(LifeDomain.RELATIONSHIP, role_mode="member") is False
     assert domain_access_allowed(LifeDomain.RELATIONSHIP, role_mode="practitioner") is True
 

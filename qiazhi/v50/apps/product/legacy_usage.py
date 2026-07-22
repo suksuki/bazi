@@ -102,17 +102,7 @@ def build_legacy_usage_store() -> LegacyUsageStore:
     return PostgresLegacyUsageStore(database_url) if database_url else MemoryLegacyUsageStore()
 
 
-_EXACT_LEGACY_ROUTES = {
-    "/app": "legacy-shell:index",
-    "/visual-alpha": "legacy-shell:retired-alias",
-    "/app.js": "legacy-shell:javascript",
-    "/styles.css": "legacy-shell:stylesheet",
-}
-
-
 def legacy_route_key(path: str) -> str | None:
-    if path in _EXACT_LEGACY_ROUTES:
-        return _EXACT_LEGACY_ROUTES[path]
     if path.startswith("/api/v50/agent"):
         normalized = re.sub(
             r"/cases/[^/]+",

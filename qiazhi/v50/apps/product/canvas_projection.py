@@ -31,6 +31,7 @@ from product.canvas_projection_presentation import (
     layer_catalog,
     object_refs,
     previous_stage,
+    scene_slot_catalog,
     stage_summary,
     stage_title,
 )
@@ -69,7 +70,39 @@ class ReadOnlySixPillarCanvasService:
         account_role: str,
     ) -> dict[str, Any]:
         role = canvas_role(account_role)
-        compiled = self._compile(case_id=case_id, participant_id=participant_id, role=role)
+        compiled = self._compile(
+            case_id=case_id,
+            participant_id=participant_id,
+            role=role,
+            authorization_ref="",
+        )
+        return self._issue_compiled(case_id=case_id, role=role, compiled=compiled)
+
+    def issue_authorized(
+        self,
+        *,
+        case_id: str,
+        authorization_ref: str,
+        account_role: str,
+    ) -> dict[str, Any]:
+        if not authorization_ref.strip():
+            raise ReadOnlyCanvasUnavailable("canvas_authorization_required")
+        role = canvas_role(account_role)
+        compiled = self._compile(
+            case_id=case_id,
+            participant_id="",
+            role=role,
+            authorization_ref=authorization_ref,
+        )
+        return self._issue_compiled(case_id=case_id, role=role, compiled=compiled)
+
+    def _issue_compiled(
+        self,
+        *,
+        case_id: str,
+        role: CanvasRole,
+        compiled: dict[str, Any],
+    ) -> dict[str, Any]:
         source = compiled["source"]
         specs: dict[str, MingliCanvasSpec] = compiled["specs"]
         diffs: dict[str, CanvasDiffSpec | None] = compiled["diffs"]
@@ -79,11 +112,7 @@ class ReadOnlySixPillarCanvasService:
             spec = specs[stage]
             diff = diffs[stage]
             layers = layer_catalog(spec)
-            default_layer = (
-                "work_path"
-                if any(item["layer_id"] == "work_path" and item["available"] for item in layers)
-                else "generation_control"
-            )
+            default_layer = "overview"
             default_selected = spec.semantic_slots[0].slot_ref
             context = compile_canvas_context(
                 spec=spec,
@@ -99,6 +128,10 @@ class ReadOnlySixPillarCanvasService:
                 "spec": spec.model_dump(mode="json"),
                 "diff": diff.model_dump(mode="json") if diff else None,
                 "context": context.model_dump(mode="json"),
+                "scene_slots": scene_slot_catalog(
+                    spec=spec,
+                    canonical_spec=specs["year"],
+                ),
                 "layers": layers,
                 "default_layer_id": default_layer,
                 "change_groups": change_groups(
@@ -108,6 +141,13 @@ class ReadOnlySixPillarCanvasService:
                 ),
             }
 
+        path_availability = _path_availability_for_role(
+            compiled["path_availability"],
+            role=role,
+        )
+        available_visibility_layers = ["formal", "focus"]
+        if role in {"practitioner", "research", "admin"}:
+            available_visibility_layers.append("lab_audit")
         payload = {
             "schema_version": "deepbazi.read_only_six_pillar_canvas.v1",
             "status": "read_only_canvas_ready",
@@ -118,11 +158,19 @@ class ReadOnlySixPillarCanvasService:
             "source": source,
             "canonical_scene": compiled["canonical_scene"],
             "projection_envelope": compiled["projection_envelope"],
-            "path_availability": compiled["path_availability"],
+            "path_availability": path_availability,
             "stages": stages,
             "renderer_policy": {
                 "read_only": True,
-                "allowed_interactions": ["set_stage", "toggle_layer", "select_object", "inspect_context"],
+                "available_visibility_layers": available_visibility_layers,
+                "default_visibility_layer": "formal",
+                "allowed_interactions": [
+                    "set_stage",
+                    "toggle_layer",
+                    "set_visibility_layer",
+                    "select_object",
+                    "inspect_context",
+                ],
                 "forbidden_interactions": [
                     "mutate_natal_pillar",
                     "replace_temporal_pillar",
@@ -157,7 +205,48 @@ class ReadOnlySixPillarCanvasService:
         if stage not in {"natal", "luck", "year"}:
             raise ReadOnlyCanvasUnavailable("canvas_stage_invalid")
         role = canvas_role(account_role)
-        compiled = self._compile(case_id=case_id, participant_id=participant_id, role=role)
+        compiled = self._compile(
+            case_id=case_id,
+            participant_id=participant_id,
+            role=role,
+            authorization_ref="",
+        )
+        spec: MingliCanvasSpec = compiled["specs"][stage]
+        diff: CanvasDiffSpec | None = compiled["diffs"][stage]
+        if selected_object_ref not in object_refs(spec):
+            raise ReadOnlyCanvasUnavailable("canvas_object_not_disclosed")
+        approved_layers = {item["layer_id"] for item in layer_catalog(spec)}
+        if visible_layer not in approved_layers:
+            raise ReadOnlyCanvasUnavailable("canvas_layer_invalid")
+        return compile_canvas_context(
+            spec=spec,
+            diff=diff,
+            role=role,
+            selected_object_refs=[selected_object_ref],
+            visible_layers=[visible_layer],
+        )
+
+    def issue_authorized_context(
+        self,
+        *,
+        case_id: str,
+        authorization_ref: str,
+        account_role: str,
+        stage: str,
+        selected_object_ref: str,
+        visible_layer: str,
+    ) -> CanvasContextPack:
+        if stage not in {"natal", "luck", "year"}:
+            raise ReadOnlyCanvasUnavailable("canvas_stage_invalid")
+        if not authorization_ref.strip():
+            raise ReadOnlyCanvasUnavailable("canvas_authorization_required")
+        role = canvas_role(account_role)
+        compiled = self._compile(
+            case_id=case_id,
+            participant_id="",
+            role=role,
+            authorization_ref=authorization_ref,
+        )
         spec: MingliCanvasSpec = compiled["specs"][stage]
         diff: CanvasDiffSpec | None = compiled["diffs"][stage]
         if selected_object_ref not in object_refs(spec):
@@ -179,22 +268,36 @@ class ReadOnlySixPillarCanvasService:
         case_id: str,
         participant_id: str,
         role: CanvasRole,
+        authorization_ref: str,
     ) -> dict[str, Any]:
-        row = self.case_store.get(case_id=case_id, user_id=participant_id)
+        row = self.case_store.get(
+            case_id=case_id,
+            user_id=None if authorization_ref else participant_id,
+        )
         if row is None:
             raise ReadOnlyCanvasUnavailable("experience_case_not_found")
         try:
-            canonical_projection = self.scene_owner.issue_projection(
-                case_id=case_id,
-                participant_id=participant_id,
-                account_role=role,
-                projection_kind="onecanvas",
+            canonical_projection = (
+                self.scene_owner.issue_authorized_projection(
+                    case_id=case_id,
+                    authorization_ref=authorization_ref,
+                    account_role=role,
+                    projection_kind="onecanvas",
+                )
+                if authorization_ref
+                else self.scene_owner.issue_projection(
+                    case_id=case_id,
+                    participant_id=participant_id,
+                    account_role=role,
+                    projection_kind="onecanvas",
+                )
             )
         except CanonicalSceneUnavailable as exc:
             raise ReadOnlyCanvasUnavailable(str(exc)) from exc
+        viewer_scope = f"grant:{authorization_ref}" if authorization_ref else participant_id
         cache_key = (
             case_id,
-            participant_id,
+            viewer_scope,
             role,
             canonical_projection.projection_hash,
             _candidate_selection_revision_token(row),
@@ -276,6 +379,90 @@ def _candidate_selection_revision_token(row: dict[str, Any]) -> str:
         "competing_path_refs": work_path.get("competing_path_refs"),
         "evidence_refs": work_path.get("evidence_refs"),
     })
+
+
+def _path_availability_for_role(
+    availability: dict[str, Any],
+    *,
+    role: CanvasRole,
+) -> dict[str, Any]:
+    projected = dict(availability)
+    diagnostic = (
+        dict(projected.get("diagnostic"))
+        if isinstance(projected.get("diagnostic"), dict)
+        else {}
+    )
+    reason = str(diagnostic.get("rejection_reason") or "no_cognitive_path")
+    status = str(projected.get("status") or "unavailable")
+    professional_status = _professional_path_status(status=status, reason=reason)
+
+    if role in {"guest", "member"}:
+        projected.update({
+            "message": (
+                "当前已有已确认的结构路径。"
+                if status == "available"
+                else "当前暂无已确认的结构路径。"
+            ),
+            "candidate_path_count": 0,
+            "legacy_unresolved_count": 0,
+            "disclosure_level": "public",
+            "professional_status": (
+                "confirmed" if status == "available" else "not_confirmed"
+            ),
+            "diagnostic": None,
+        })
+        return projected
+
+    if role == "practitioner":
+        projected.update({
+            "message": _practitioner_path_message(
+                status=status,
+                professional_status=professional_status,
+            ),
+            "disclosure_level": "professional",
+            "professional_status": professional_status,
+            "diagnostic": None,
+        })
+        return projected
+
+    projected.update({
+        "disclosure_level": "audit",
+        "professional_status": professional_status,
+        "diagnostic": diagnostic,
+    })
+    return projected
+
+
+def _professional_path_status(*, status: str, reason: str) -> str:
+    if status == "available":
+        return "confirmed"
+    if reason == "natural_language_only":
+        return "natural_language_unstructured"
+    if reason in {"candidate_not_committed", "relation_still_potential"}:
+        return "candidate_uncommitted"
+    if reason in {
+        "missing_path_ref",
+        "invalid_node_ref",
+        "invalid_relation_ref",
+        "timing_scope_mismatch",
+    }:
+        return "reference_unresolved"
+    if reason in {"authority_not_allowed", "role_visibility_filtered"}:
+        return "role_filtered"
+    return "not_available"
+
+
+def _practitioner_path_message(*, status: str, professional_status: str) -> str:
+    if status == "available":
+        return "当前已有已提交且引用闭合的结构化路径。"
+    return {
+        "natural_language_unstructured": (
+            "当前存在自然语言做功判断，但尚未提交为结构化 PathAssertion。"
+        ),
+        "candidate_uncommitted": "当前存在结构候选，但尚未提交为正式路径。",
+        "reference_unresolved": "当前路径引用尚未闭合，暂不进入正式投影。",
+        "role_filtered": "当前角色没有查看该正式路径的权限。",
+    }.get(professional_status, "当前尚未形成可投影的正式结构路径。")
 
 
 # Compatibility exports for audit tools and focused fixtures. The implementation

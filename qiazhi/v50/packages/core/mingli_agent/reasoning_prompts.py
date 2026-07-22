@@ -99,7 +99,9 @@ def _work_path_prompt(
 
 规则：
 - 此轮可以读取 experimental_tool_observation 作为 Challenge Pack，但它们不是答案，也不具备裁决权。
-- 比较系统枚举候选、知识检索候选和你基于事实组合的路径；工具没有表达的路径可以保留为 llm_composed，但每一步必须映射回事实。
+- 先独立判断命局，再比较 allowed_path_candidates。candidate_path_refs 只允许选择一个现有 path_ref；competing_path_refs 也只能引用现有 path_ref。
+- 若系统候选没有完整表达你的判断，candidate_path_refs 留空并保留认知未决；禁止自造 NodeRef、RelationKey 或把自然语言路径伪装成正式结构。
+- structured_candidate 留空，由系统逐段验证后生成。
 - 主做功必须写清 source -> transformation -> target；每个元素和十神角色唯一。
 - 五行只允许木生火、火生土、土生金、金生水、水生木；木克土、土克水、水克火、火克金、金克木。
 - 用神是让主路径成立的角色，不是缺什么补什么；最多 2 个候选。
@@ -339,15 +341,15 @@ def _baseline_cognition_prompt(
     world: ChartWorldInstance,
     context_payload: dict[str, Any],
 ) -> str:
-    ziwei_ready = bool(world.ziwei_profile.get("reasoning_ready"))
     return f"""
-你是 DeepBazi 的专业命理认知主体。请用一次完整推理形成这张命盘的整盘基线认知。
+你是 DeepBazi 的专业命理认知主体。请用一次推理形成最小充分的整盘主线。
 
-这不是事业、财富、关系或健康报告。只回答四件事：
+只回答五件事：
 1. 整盘最核心的结构重心是什么；
 2. 命局主要通过哪条路径运行，并比较至少一个竞争解释；
-3. 哪些条件会使主路径增强、受阻或转向；
-4. 当前有哪些不确定性，以及什么现实表现可以区分竞争假设。
+3. 主路径的枢纽、支撑点和失效条件是什么；
+4. 哪些条件会使主路径增强、受阻或转向；
+5. 当前有哪些不确定性，以及什么现实表现可以区分竞争假设。
 
 认知要求：
 - 先整体识别 Pattern，再比较 Hypothesis；不要把单一旺衰、十神标签或候选工具路径直接当结论。
@@ -356,12 +358,15 @@ def _baseline_cognition_prompt(
 - work_path 写命理解释链，不包装成现代科学因果。
 - useful_god_reasoning 必须是条件性的，并分别说明它在调候、扶抑、格局、制化、做功或当前岁运中回答什么问题；说明何时有用、何时反而有害。
 - useful_god_reasoning.lens 只能使用 climate、support_balance、structure、transformation、work_path、timing、domain；禁止 mixed，原局与当前阶段不得写成同一个结论。
-- prior_predictions 只保留 1 至 3 条可被现实反驳的整盘先验，不进入具体人生领域。
 - next_probe 只问一个真正能区分两个命局假设的现实问题。
 - 不写通用心理话术，不写“有机会也有挑战”“保持平衡”等任何盘都适用的话。
 - 每个重要判断引用当前上下文中存在的 evidence id；不知道时保留 unknown，不得补猜。
-- 紫微可用：{str(ziwei_ready).lower()}。只有可用时才填写 dual_lens，并只用它复核人生舞台，不覆盖八字主线。
-- 不预计算任何 domain，不输出具体疾病、投资收益、婚期或其他确定事件。
+- 先完成整盘假设，再从 allowed_path_candidates 中选择路径；candidate_path_refs 只能填写其中一个现有 path_ref，不得自造编号。
+- competing_path_refs 也只能引用 allowed_path_candidates 中存在的 path_ref。若没有完整匹配主判断的候选，两者留空；不得用自然语言冒充结构化路径。
+- structured_candidate 必须留空，由系统在逐段核对节点、关系、方向、机制和状态后写入。
+- 不生成 portrait、prior_predictions 或 dual_lens。
+- 不预计算任何 domain，不输出事业、财富、感情、健康、时序、疾病、投资收益、婚期或具体事件。
+- 不写长篇用户表达；这里只形成可被后续页面和专题复用的结构化认知。
 
 最小充分命理世界：
 {json.dumps(context_payload, ensure_ascii=False, separators=(',', ':'))}

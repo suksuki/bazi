@@ -60,6 +60,7 @@ class OllamaCognitiveModel:
         on_text_chunk: Callable[[str], None] | None = None,
     ) -> T:
         self._local.last_metrics = {}
+        self._local.last_raw_response = ""
         schema_json = json.dumps(schema.model_json_schema(), ensure_ascii=False, separators=(",", ":"))
         base_prompt = f"{prompt}\n\n输出必须是单个 JSON 对象，严格符合以下 JSON Schema，不要 Markdown：\n{schema_json}"
         last_error: Exception | None = None
@@ -114,6 +115,7 @@ class OllamaCognitiveModel:
                     schema_attempts=attempt + 1,
                     response_bytes=len(raw.encode("utf-8")),
                 )
+                self._local.last_raw_response = raw
                 try:
                     return _validate_model_json(raw=raw, schema=schema)
                 except (ValueError, TypeError) as exc:
@@ -127,11 +129,18 @@ class OllamaCognitiveModel:
             "schema_attempts": min(schema_attempts, attempt + 1),
             "response_bytes": len(raw.encode("utf-8")),
         }
+        self._local.last_raw_response = raw
         raise ValueError(f"model_generation_failed:{error_detail}:{raw[:1600]}") from last_error
 
     @property
     def last_metrics(self) -> dict[str, Any]:
         return dict(getattr(self._local, "last_metrics", {}))
+
+    @property
+    def last_raw_response(self) -> str:
+        """Expose the latest model payload for local audit; product storage never reads it."""
+
+        return str(getattr(self._local, "last_raw_response", ""))
 
 def _read_streaming_ollama_response(
     *,

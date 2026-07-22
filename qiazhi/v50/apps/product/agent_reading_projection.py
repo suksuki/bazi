@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from core.contracts.professional_review import ProfessionalReviewOverlay
 from core.life_case import LifeCase, formal_projection_record, project_life_case
 from core.life_domains import (
     LifeDomain,
@@ -240,7 +241,12 @@ def reliability_outcome_payload(
     *,
     world: ChartWorldInstance,
     record: MingliCognitiveRecord,
+    professional_review: ProfessionalReviewOverlay | None = None,
 ) -> dict[str, Any]:
+    professionally_blocked = bool(
+        professional_review is not None
+        and professional_review.professional_release_status == "blocked"
+    )
     primary = next(
         (
             item
@@ -265,7 +271,7 @@ def reliability_outcome_payload(
     ]
     return {
         "version": "deepbazi.mingli_reliability_outcome.v1",
-        "state": record.reliability_disposition,
+        "state": "professional_blocked" if professionally_blocked else record.reliability_disposition,
         "formal_insight_committed": False,
         "pillars": world.pillars,
         "world_id": world.world_id,
@@ -279,13 +285,26 @@ def reliability_outcome_payload(
                 "success_conditions": primary.success_conditions,
                 "failure_conditions": primary.failure_conditions,
             }
-            if primary
+            if primary and not professionally_blocked
             else None
         ),
         "competing_explanations": (
-            alternatives if record.reliability_disposition == "competing" else []
+            alternatives
+            if record.reliability_disposition == "competing" and not professionally_blocked
+            else []
         ),
-        "uncertainties": record.cognition.unresolved_questions,
+        "uncertainties": [] if professionally_blocked else record.cognition.unresolved_questions,
+        "professional_release": (
+            {
+                "status": professional_review.professional_release_status,
+                "review_version": professional_review.review_version,
+                "hard_error_count": professional_review.hard_error_count,
+                "major_error_count": professional_review.major_error_count,
+                "blocked_scopes": [item.scope for item in professional_review.scope_blocks],
+            }
+            if professional_review is not None
+            else {"status": "unreviewed"}
+        ),
         "review": {
             "gate_version": record.review.gate_version,
             "hard_failure_codes": record.review.hard_failure_codes,

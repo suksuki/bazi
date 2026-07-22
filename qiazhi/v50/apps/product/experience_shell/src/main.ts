@@ -1,10 +1,20 @@
 import {
+  authenticate,
+  deleteProfile as deleteProductProfile,
   loadCanvasContext,
   loadCognitiveJob,
   loadNarration,
+  loadProfiles,
   loadReadOnlyCanvas,
+  logout,
+  saveProfile,
   startMissingBaseline,
+  type AuthMode,
+  type BirthProfileInput,
+  type ProductProfile,
 } from "./api";
+import { renderAuthSurface, renderProfileManager, type ProfileEditorMode } from "./account_components";
+import { bindAccountInteractions } from "./account_interactions";
 import { NarrationTimeline } from "./audio";
 import { renderExperience, renderLoading, renderUnavailable } from "./components";
 import type {
@@ -12,6 +22,7 @@ import type {
   CanvasContextPack,
   CanvasLayer,
   CanvasStage,
+  CanvasVisibilityLayer,
   ExperienceCaseSummary,
   MingliExperienceEnvelope,
   NarrationManifest,
@@ -23,6 +34,15 @@ import { loadExperienceCase } from "./experience_data";
 import { applyActiveAnchor, humanizeError, updateExperienceLocation } from "./experience_dom";
 import { bindExperienceInteractions } from "./experience_interactions";
 import { createNarrationTimeline } from "./experience_timeline";
+import {
+  createDreamVisit,
+  enterDreamVisit,
+  grantDreamConsent,
+  loadDreamStatus,
+  withdrawDreamConsent,
+  type DreamFeatureStatus,
+} from "./dream_api";
+import { bootDreamExperience } from "./dream_runtime";
 import {
   initialUiState,
   reduceUi,
@@ -57,8 +77,16 @@ let narrationLoading = false;
 let cognitionEpoch = 0;
 let openCaseEpoch = 0;
 const localReconciliationAttempted = new Set<string>();
+let authMode: AuthMode = "login";
+let accountProfiles: ProductProfile[] = [];
+let profileEditorMode: ProfileEditorMode = "none";
+let editingProfileId = "";
+let accountBusy = false;
+let accountError = "";
+let dreamStatus: DreamFeatureStatus | null = null;
 
-void boot();
+if (location.pathname.startsWith("/experience/dream")) void bootDreamExperience(root);
+else void boot();
 
 
 async function boot(): Promise<void> {
@@ -69,13 +97,15 @@ async function boot(): Promise<void> {
       caseId: params.get("case") || "",
       profileId: params.get("profile") || "",
     });
+    if (params.get("manage") === "1" && envelope) await openProfileManager();
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     const unauthenticated = message.includes("authentication_required");
-    root.innerHTML = renderUnavailable(
-      unauthenticated ? "先和阿布打个招呼" : "这份命局暂时没有准备好",
-      unauthenticated ? "登录后，阿布会继续你已经建立的档案。" : humanizeError(message),
-      unauthenticated ? "登录或注册" : "返回阿布入口",
+    if (unauthenticated) showAuth();
+    else root.innerHTML = renderUnavailable(
+      "这份命局暂时没有准备好",
+      humanizeError(message),
+      "管理档案",
     );
   }
 }
@@ -97,11 +127,7 @@ async function openCase(
   if (loaded.profileRequired || !loaded.envelope) {
     account = loaded.account;
     cases = loaded.cases;
-    root.innerHTML = renderUnavailable(
-      "先建立一份出生档案",
-      "保存四柱后会直接进入命局，不需要再经过一次“开始测算”。",
-      "建立档案",
-    );
+    await openProfileManager("create");
     return;
   }
   const caseChanged = Boolean(previousCaseId && previousCaseId !== loaded.selectedCaseId);
@@ -126,6 +152,7 @@ async function openCase(
   updateExperienceLocation(activeCaseId, ui);
   render();
   void loadSelectedProjection();
+  void refreshDreamStatus();
   scheduleBackgroundCognition();
 }
 
@@ -147,6 +174,7 @@ function render(): void {
     canvas,
     canvasContext,
     ui,
+    dreamStatus,
   });
   bindExperienceInteractions(root, {
     selectArea,
@@ -166,6 +194,7 @@ function render(): void {
     },
     selectCanvasStage,
     selectCanvasLayer,
+    selectCanvasVisibility,
     selectCanvasObject(selected) {
       void refreshCanvasContext(selected);
     },
@@ -184,6 +213,8 @@ function selectArea(area: ProductArea): void {
   if (area === "lab") {
     selectLabLayer();
     void ensureCanvas();
+  } else {
+    ui = reduceUi(ui, { type: "canvas-visibility", visibility: "formal" });
   }
   updateExperienceLocation(activeCaseId, ui);
   render();
@@ -280,6 +311,13 @@ function selectCanvasLayer(layer: CanvasLayer): void {
 }
 
 
+function selectCanvasVisibility(visibility: CanvasVisibilityLayer): void {
+  if (!canvas || !canvas.renderer_policy.available_visibility_layers.includes(visibility)) return;
+  ui = reduceUi(ui, { type: "canvas-visibility", visibility });
+  render();
+}
+
+
 async function refreshCanvasContext(selected: string): Promise<void> {
   if (!canvas) return;
   ui = reduceUi(ui, { type: "canvas-select", selected, status: "loading" });
@@ -301,8 +339,50 @@ async function playNarrationSegment(index: number): Promise<void> {
 
 
 async function handleCommand(command: string): Promise<void> {
+  if (command === "manage-profiles") {
+    await openProfileManager();
+    return;
+  }
   if (command === "toggle-abu") {
     dispatch({ type: "toggle-abu" });
+    return;
+  }
+  if (command === "enter-dream") {
+    root.innerHTML = renderLoading("阿布正在带你走入雾路");
+    try {
+      let visit = await createDreamVisit(activeCaseId);
+      visit = await enterDreamVisit(visit.visit_id);
+      location.assign(`/experience/dream/visits/${encodeURIComponent(visit.visit_id)}`);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      root.innerHTML = renderUnavailable("这条梦路暂时没有开放", humanizeError(message), "回到生命世界");
+    }
+    return;
+  }
+  if (command === "grant-dream-consent") {
+    const accepted = window.confirm(
+      "确认授权当前档案以匿名生命树进入本地封闭梦境？仅展示确定性命盘与只读树象，你可以随时撤回。",
+    );
+    if (!accepted) return;
+    try {
+      await grantDreamConsent(activeCaseId);
+      await refreshDreamStatus();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      window.alert(`授权未完成：${humanizeError(message)}`);
+    }
+    return;
+  }
+  if (command === "withdraw-dream-consent") {
+    const confirmed = window.confirm("确认撤回当前档案的梦境展示授权？撤回后，这棵真人生命树会立即失去进入资格。");
+    if (!confirmed) return;
+    try {
+      await withdrawDreamConsent(activeCaseId);
+      await refreshDreamStatus();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      window.alert(`撤回未完成：${humanizeError(message)}`);
+    }
     return;
   }
   if (command === "listen") {
@@ -325,12 +405,25 @@ async function handleCommand(command: string): Promise<void> {
 }
 
 
+async function refreshDreamStatus(): Promise<void> {
+  try {
+    dreamStatus = await loadDreamStatus(activeCaseId);
+  } catch {
+    dreamStatus = null;
+  }
+  render();
+}
+
+
 function selectLabLayer(): void {
   if (!canvas) return;
   const layer = canvas.stages[ui.canvasStage].layers.find((item) => (
-    item.layer_id === "generation_control" && item.available
+    item.layer_id === "five_element" && item.available
   ));
   if (layer) ui = reduceUi(ui, { type: "canvas-layer", layer: layer.layer_id });
+  if (canvas.renderer_policy.available_visibility_layers.includes("lab_audit")) {
+    ui = reduceUi(ui, { type: "canvas-visibility", visibility: "lab_audit" });
+  }
 }
 
 
@@ -432,4 +525,239 @@ function focusAnchor(anchor: string, scroll = true): void {
 
 function delay(milliseconds: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, milliseconds));
+}
+
+
+function showAuth(error = ""): void {
+  accountError = error;
+  root.innerHTML = renderAuthSurface({ mode: authMode, busy: accountBusy, error: accountError });
+  bindAccountInteractions(root, accountInteractionHandlers());
+  history.replaceState({}, "", "/experience");
+}
+
+
+async function openProfileManager(preferredMode: ProfileEditorMode = "none"): Promise<void> {
+  root.innerHTML = renderLoading("正在打开命理档案");
+  try {
+    accountProfiles = await loadProfiles();
+    profileEditorMode = preferredMode === "none" && !accountProfiles.length ? "create" : preferredMode;
+    editingProfileId = "";
+    accountError = "";
+    renderProfileManagement();
+    history.replaceState({}, "", "/experience?manage=1");
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (message.includes("authentication_required")) showAuth();
+    else {
+      accountError = humanizeAccountError(message);
+      accountProfiles = [];
+      profileEditorMode = "create";
+      renderProfileManagement();
+    }
+  }
+}
+
+
+function renderProfileManagement(): void {
+  root.innerHTML = renderProfileManager({
+    accountName: account.display_name,
+    profiles: accountProfiles,
+    activeProfileId,
+    editorMode: profileEditorMode,
+    editingProfileId,
+    busy: accountBusy,
+    error: accountError,
+    canReturnToWorkspace: Boolean(envelope && cognition && activeCaseId),
+  });
+  bindAccountInteractions(root, accountInteractionHandlers());
+}
+
+
+function accountInteractionHandlers() {
+  return {
+    setAuthMode(mode: AuthMode) {
+      authMode = mode;
+      accountError = "";
+      showAuth();
+    },
+    submitAuth(form: HTMLFormElement) {
+      void submitAuthForm(form);
+    },
+    command(command: string) {
+      void handleAccountCommand(command);
+    },
+    useProfile(profileId: string) {
+      if (!profileId) return;
+      root.innerHTML = renderLoading("正在进入命局");
+      void openCase({ profileId });
+    },
+    editProfile(profileId: string) {
+      profileEditorMode = "edit";
+      editingProfileId = profileId;
+      accountError = "";
+      renderProfileManagement();
+    },
+    deleteProfile(profileId: string) {
+      void removeProfile(profileId);
+    },
+    submitProfile(form: HTMLFormElement) {
+      void submitProfileForm(form);
+    },
+  };
+}
+
+
+async function submitAuthForm(form: HTMLFormElement): Promise<void> {
+  const data = new FormData(form);
+  accountBusy = true;
+  accountError = "";
+  showAuth();
+  try {
+    const result = await authenticate({
+      mode: authMode,
+      email: String(data.get("email") || ""),
+      password: String(data.get("password") || ""),
+      displayName: String(data.get("display_name") || ""),
+      role: String(data.get("role") || "member"),
+    });
+    account = {
+      display_name: result.account.display_name,
+      role: result.account.role || result.account.account_role || "member",
+    };
+    accountBusy = false;
+    await openCase({});
+  } catch (error) {
+    accountBusy = false;
+    accountError = humanizeAccountError(error instanceof Error ? error.message : String(error));
+    showAuth(accountError);
+  }
+}
+
+
+async function handleAccountCommand(command: string): Promise<void> {
+  if (command === "create-profile") {
+    profileEditorMode = "create";
+    editingProfileId = "";
+    accountError = "";
+    renderProfileManagement();
+    return;
+  }
+  if (command === "cancel-profile") {
+    profileEditorMode = "none";
+    editingProfileId = "";
+    accountError = "";
+    renderProfileManagement();
+    return;
+  }
+  if (command === "return-workspace" && envelope && cognition) {
+    updateExperienceLocation(activeCaseId, ui);
+    render();
+    void loadSelectedProjection();
+    return;
+  }
+  if (command === "logout") {
+    accountBusy = true;
+    renderProfileManagement();
+    try {
+      await logout();
+    } finally {
+      timeline?.stop();
+      accountBusy = false;
+      account = { display_name: "", role: "member" };
+      accountProfiles = [];
+      activeCaseId = "";
+      activeProfileId = "";
+      workspace = null;
+      envelope = null;
+      cognition = null;
+      canvas = null;
+      narrationManifest = null;
+      showAuth();
+    }
+  }
+}
+
+
+async function submitProfileForm(form: HTMLFormElement): Promise<void> {
+  const data = new FormData(form);
+  const profileId = form.dataset.profileId || "";
+  const existing = accountProfiles.find((item) => item.profile_id === profileId);
+  accountBusy = true;
+  accountError = "";
+  renderProfileManagement();
+  try {
+    const profile = await saveProfile(profileInputFromForm(data, existing), profileId);
+    accountBusy = false;
+    root.innerHTML = renderLoading("四柱已确认，正在进入命局");
+    await openCase({ profileId: profile.profile_id });
+  } catch (error) {
+    accountBusy = false;
+    accountError = humanizeAccountError(error instanceof Error ? error.message : String(error));
+    renderProfileManagement();
+  }
+}
+
+
+async function removeProfile(profileId: string): Promise<void> {
+  const profile = accountProfiles.find((item) => item.profile_id === profileId);
+  if (!profile || !window.confirm(`确定删除“${profile.display_name}”吗？历史探索不会同时删除。`)) return;
+  accountBusy = true;
+  accountError = "";
+  renderProfileManagement();
+  try {
+    await deleteProductProfile(profileId);
+    accountProfiles = accountProfiles.filter((item) => item.profile_id !== profileId);
+    if (profileId === activeProfileId) {
+      activeCaseId = "";
+      activeProfileId = "";
+      workspace = null;
+      envelope = null;
+      cognition = null;
+      canvas = null;
+      narrationManifest = null;
+    }
+    profileEditorMode = accountProfiles.length ? "none" : "create";
+    editingProfileId = "";
+  } catch (error) {
+    accountError = humanizeAccountError(error instanceof Error ? error.message : String(error));
+  } finally {
+    accountBusy = false;
+    renderProfileManagement();
+  }
+}
+
+
+function profileInputFromForm(data: FormData, existing?: ProductProfile): BirthProfileInput {
+  const approximate = String(data.get("time_precision") || "exact") === "approximate";
+  return {
+    birth_input_id: existing?.birth_input_id || `profile-${crypto.randomUUID()}`,
+    name: String(data.get("name") || "我的命盘"),
+    gender: String(data.get("gender") || "unknown") as ProductProfile["gender"],
+    calendar_type: String(data.get("calendar_type") || "solar") as ProductProfile["calendar_type"],
+    birth_date: String(data.get("birth_date") || ""),
+    birth_time: String(data.get("birth_time") || ""),
+    birth_location: String(data.get("birth_location") || ""),
+    timezone: String(data.get("timezone") || "Asia/Seoul"),
+    true_solar_time_policy: existing?.true_solar_time_policy || "not_applied",
+    lunar_leap_month: data.get("lunar_leap_month") === "on",
+    year_pillar: "",
+    month_pillar: "",
+    day_pillar: "",
+    hour_pillar: "",
+    input_quality: approximate ? "user_confirmed_approximate" : "user_confirmed",
+    warnings: approximate ? ["birth_time_approximate"] : [],
+  };
+}
+
+
+function humanizeAccountError(message: string): string {
+  const messages: Record<string, string> = {
+    invalid_email_or_password: "邮箱或密码不正确。",
+    email_already_registered: "这个邮箱已经注册，可以直接登录。",
+    invalid_email: "请填写有效邮箱。",
+    password_too_short: "密码至少需要 8 位。",
+    profile_not_found: "没有找到这份档案。",
+    four_pillars_resolution_failed: "这组出生资料暂时无法排出完整四柱，请检查日期、时间与历法。",
+  };
+  return messages[message] || humanizeError(message);
 }

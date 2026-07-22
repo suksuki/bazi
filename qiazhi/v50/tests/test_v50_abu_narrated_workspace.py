@@ -195,23 +195,19 @@ def test_voice_version_changes_the_manifest_and_speech_asset_key(tmp_path: Path)
 
 
 def test_public_workspace_is_opt_in_and_has_bidirectional_page_anchors() -> None:
-    html = (ROOT / "apps" / "product" / "static" / "l5" / "index.html").read_text(encoding="utf-8")
-    script = (ROOT / "apps" / "product" / "static" / "l5" / "app.js").read_text(encoding="utf-8")
-    styles = (ROOT / "apps" / "product" / "static" / "l5" / "styles.css").read_text(encoding="utf-8")
+    components = (ROOT / "apps/product/experience_shell/src/components.ts").read_text(encoding="utf-8")
+    audio = (ROOT / "apps/product/experience_shell/src/audio.ts").read_text(encoding="utf-8")
+    styles = (ROOT / "apps/product/static/experience/styles.css").read_text(encoding="utf-8")
 
-    assert "20260718-voice-validation-v1" in html
-    assert "阿布同步论命" in script
-    assert "页面先到，声音由你决定" in script
-    assert "data-narration-start" in script
-    assert "data-narration-jump" in script
-    assert "data-narration-anchor" in script
-    assert "baseline?.reasoning_path" in script
-    assert "baselineWorkPath.conclusion" in script
-    assert "new Audio(audioUrl)" in script
-    assert ".play()" in script
-    assert "autoplay" not in script
+    assert "阿布同步论命" in components
+    assert 'data-command="listen"' in components
+    assert "data-play-segment" in components
+    assert "data-select-anchor" in components
+    assert "new Audio(audioUrl)" in audio
+    assert ".play()" in audio
+    assert "autoplay" not in audio
     assert "prefers-reduced-motion" in styles
-    assert ".narrated-workspace" in styles
+    assert ".narration-workspace" in styles
 
 
 class _FakeOpusTranscoder:

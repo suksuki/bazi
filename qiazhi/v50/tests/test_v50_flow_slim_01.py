@@ -5,10 +5,11 @@ import time
 from fastapi.testclient import TestClient
 
 from core.mingli_agent import ChartWorldInstance, MingliAgent
+from core.mingli_agent.model_client import OllamaCognitiveModel
 from core.mingli_agent.contracts import (
     AssertionGateReceipt,
+    BaselineCoreCognitionDraft,
     DomainCausalReading,
-    WholeChartCognitionDraft,
 )
 from product.agent_case_store import MemoryAgentCaseStore
 from product.agent_job_store import MemoryAgentJobStore
@@ -21,9 +22,16 @@ class CountingCognitiveModel(FakeCognitiveModel):
     def __init__(self) -> None:
         self.baseline_calls = 0
         self.domain_calls = 0
+        self.last_metrics = {
+            "transport_total_ms": 2400,
+            "prompt_eval_count": 1800,
+            "eval_count": 900,
+            "schema_attempts": 1,
+            "response_bytes": 6200,
+        }
 
     def generate(self, *, prompt, schema, temperature=0.2, thinking=True, max_tokens=3200):
-        if schema is WholeChartCognitionDraft:
+        if schema is BaselineCoreCognitionDraft:
             self.baseline_calls += 1
         if schema is DomainCausalReading:
             self.domain_calls += 1
@@ -36,11 +44,33 @@ class CountingCognitiveModel(FakeCognitiveModel):
         )
 
 
-def _workspace_client():
+class StreamingFailureModel(OllamaCognitiveModel):
+    def __init__(self) -> None:
+        super().__init__(base_url="http://unused.local", model="failure-model")
+        self.calls = 0
+
+    def generate(
+        self,
+        *,
+        prompt,
+        schema,
+        temperature=0.2,
+        thinking=True,
+        max_tokens=3200,
+        on_text_chunk=None,
+    ):
+        del prompt, schema, temperature, thinking, max_tokens
+        self.calls += 1
+        if on_text_chunk is not None:
+            on_text_chunk('{"first_look":"先保留已经形成的结构观察","whole_chart_thesis":')
+        raise ValueError("synthetic_baseline_failure")
+
+
+def _workspace_client(model=None):
     product_store = MemoryProductStore()
     case_store = MemoryAgentCaseStore()
     job_store = MemoryAgentJobStore()
-    model = CountingCognitiveModel()
+    model = model or CountingCognitiveModel()
     client = TestClient(create_product_app(
         product_store=product_store,
         mingli_agent=MingliAgent(model),
@@ -137,7 +167,7 @@ def test_chart_facts_and_abu_manifest_work_before_cognition() -> None:
 
 
 def test_missing_baseline_runs_once_and_topics_remain_on_demand() -> None:
-    client, _, _, model, profile_id = _workspace_client()
+    client, case_store, _, model, profile_id = _workspace_client()
     bootstrap = _bootstrap(client, profile_id)
     case_id = bootstrap["selected_case_id"]
 
@@ -152,6 +182,26 @@ def test_missing_baseline_runs_once_and_topics_remain_on_demand() -> None:
     assert job["status"] == "completed"
     assert model.baseline_calls == 1
     assert model.domain_calls == 0
+    stored = case_store.get(case_id=case_id)
+    assert stored is not None
+    metrics = stored["first_run"]["run_metrics"]
+    assert metrics["contract"] == "baseline_core_cognition_v1"
+    assert metrics["model_calls"] == 1
+    assert metrics["input_tokens"] == 1800
+    assert metrics["output_tokens"] == 900
+    assert metrics["knowledge_retrieval_count"] <= 5
+    assert metrics["max_output_tokens"] == 3200
+    assert metrics["automatic_full_reruns"] == 0
+    assert metrics["generated_sections"] == [
+        "whole_chart_structure",
+        "primary_work_path",
+        "pivots_and_support",
+        "competing_hypotheses",
+        "uncertainty",
+    ]
+    assert stored["record"]["cognition"]["portrait"] == []
+    assert stored["record"]["cognition"]["prior_predictions"] == []
+    assert stored["record"]["cognition"]["dual_lens"] is None
 
     repeated = client.post(
         f"/api/v50/experience/workspace/cases/{case_id}/baseline"
@@ -224,6 +274,49 @@ def test_stored_draft_is_reconciled_locally_without_another_model_call() -> None
     assert reconciled["record_archive"]
 
 
+def test_failed_baseline_retains_preview_and_never_automatically_reruns() -> None:
+    model = StreamingFailureModel()
+    client, case_store, job_store, _, profile_id = _workspace_client(model)
+    bootstrap = _bootstrap(client, profile_id)
+    case_id = bootstrap["selected_case_id"]
+
+    started = client.post(f"/api/v50/experience/workspace/cases/{case_id}/baseline")
+    assert started.status_code == 200, started.text
+    job = _wait_for_job(client, started.json()["job_id"])
+    assert job["status"] == "failed"
+    stored_job = job_store.get(job_id=started.json()["job_id"])
+    assert stored_job is not None
+    assert stored_job["events"][-1]["payload"]["partial_result"] == {
+        "stage": "baseline_preview_ready",
+        "first_look": "先保留已经形成的结构观察",
+    }
+
+    stored = case_store.get(case_id=case_id)
+    assert stored is not None
+    assert stored["background_cognition"]["partial_result"]["first_look"] == "先保留已经形成的结构观察"
+    assert stored["background_cognition"]["automatic_full_reruns"] == 0
+    assert stored["background_cognition"]["insight_status"] == "partial"
+    assert stored["background_cognition"]["insight_safety"] == {
+        "version": "deepbazi.formal_insight_lifecycle_state.v1",
+        "status": "partial",
+        "persistence_status": "draft",
+        "professional_release_status": "unreviewed",
+        "complete": False,
+        "active": True,
+        "formal_projection_eligible": False,
+        "role_projection_eligible": False,
+        "path_assertion_eligible": False,
+        "reminder_eligible": False,
+        "hidden_attribute_evidence_eligible": False,
+    }
+
+    repeated = client.post(f"/api/v50/experience/workspace/cases/{case_id}/baseline")
+    assert repeated.status_code == 200, repeated.text
+    assert repeated.json()["status"] == "baseline_unavailable"
+    assert repeated.json()["llm_calls_started"] == 0
+    assert model.calls == 1
+
+
 def test_birth_change_supersedes_chart_only_case_and_creates_a_new_version() -> None:
     client, case_store, _, model, profile_id = _workspace_client()
     first = _bootstrap(client, profile_id)
@@ -289,7 +382,8 @@ def test_frontend_has_no_legacy_blocking_first_reading_chain() -> None:
     data = (shell / "experience_data.ts").read_text(encoding="utf-8")
     main = (shell / "main.ts").read_text(encoding="utf-8")
     interactions = (shell / "experience_interactions.ts").read_text(encoding="utf-8")
-    legacy = (root / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
+    account = (shell / "account_components.ts").read_text(encoding="utf-8")
+    surface = (root / "apps/product/product_surface.py").read_text(encoding="utf-8")
 
     assert "/api/v50/experience/workspace/bootstrap" in api
     assert "Promise.allSettled" not in data
@@ -303,7 +397,7 @@ def test_frontend_has_no_legacy_blocking_first_reading_chain() -> None:
     assert "data-profile-select" in (shell / "components.ts").read_text(encoding="utf-8")
     assert 'querySelectorAll<HTMLSelectElement>("[data-profile-select]")' in interactions
     assert 'querySelector<HTMLSelectElement>("[data-profile-select]")' not in interactions
-    assert "window.location.assign(`/experience?profile=" in legacy
-    assert "window.location.replace(`/experience?profile=" in legacy
-    assert "PROFILE_MANAGEMENT_MODE" in legacy
-    assert "最终事实与证据检查没有通过" not in legacy
+    assert "选择档案，就是进入命局" in account
+    assert 'RedirectResponse(url=target, status_code=308)' in surface
+    assert 'FileResponse(MEDIA_DIR / "app.js"' not in surface
+    assert "最终事实与证据检查没有通过" not in main

@@ -28,14 +28,8 @@ def test_run_jump_is_a_high_definition_transparent_product_motion() -> None:
     assert poster.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
-def test_run_jump_is_random_ambient_motion_with_a_wider_stage() -> None:
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
+def test_run_jump_remains_registered_as_an_adventure_motion() -> None:
     registry = (ROOT / "apps/product/static/l5/assets/abu/motion-registry.js").read_text(encoding="utf-8")
-    stylesheet = (ROOT / "apps/product/static/l5/styles.css").read_text(encoding="utf-8")
 
     assert 'adventure: "run_jump"' in registry
     assert "/assets/abu/v7-designer-run-jump/web/abu_run_jump_v7.webp" in registry
-    assert "function chooseAbuAmbientMoment()" in javascript
-    assert "const moment = chooseAbuAmbientMoment()" in javascript
-    assert ".abu-stage { width: 164px; height: 106px; flex: 0 0 164px; }" in stylesheet
-    assert ".workspace { grid-template-columns: minmax(400px, 430px) minmax(0, 1fr); }" in stylesheet

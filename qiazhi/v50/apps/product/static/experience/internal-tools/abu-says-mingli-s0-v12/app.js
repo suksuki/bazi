@@ -44,6 +44,22 @@ const ACTIONS = {
     duration: 10,
     displayScale: 1.16,
   },
+  baseball: {
+    id: "abu_baseball_swing_v1",
+    video: "/assets/abu/v12-actor-pass/baseball-swing/web/abu_baseball_swing_v1.webm",
+    image: "/assets/abu/v12-actor-pass/baseball-swing/web/abu_baseball_swing_v1.webp",
+    poster: "/assets/abu/v12-actor-pass/baseball-swing/posters/abu_baseball_swing_v1.png",
+    duration: 9.933,
+    displayScale: 1.08,
+  },
+  pachinko: {
+    id: "abu_pachinko_jackpot_v1",
+    video: "/assets/abu/v12-actor-pass/pachinko-jackpot/web/abu_pachinko_jackpot_v1.webm",
+    image: "/assets/abu/v12-actor-pass/pachinko-jackpot/web/abu_pachinko_jackpot_v1.webp",
+    poster: "/assets/abu/v12-actor-pass/pachinko-jackpot/posters/abu_pachinko_jackpot_v1.png",
+    duration: 10,
+    displayScale: 1.04,
+  },
   breakdance: {
     id: "abu_breakdance_v9",
     image: "/assets/abu/v9-designer-breakdance/web/abu_breakdance_v9.webp",
@@ -56,11 +72,25 @@ const ACTIONS = {
     duration: 3.867,
     displayScale: 1.12,
   },
-  idle: {id: "abu_idle_blink_v4", image: "/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp"},
+  idle: {
+    id: "abu_quiet_sit_reaction_v1",
+    video: "/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webm",
+    image: "/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp",
+    poster: "/assets/abu/v12-actor-pass/quiet-sit-reaction/posters/abu_quiet_sit_reaction_v1.png",
+    duration: 10,
+    displayScale: 1.45,
+  },
   caution: {id: "abu_caution_ears_v4", image: "/assets/abu/v4-video-derived/web/abu_caution_ears_v4.webp"},
   confirm: {id: "abu_happy_tail_v4", image: "/assets/abu/v4-video-derived/web/abu_happy_tail_v4.webp"},
 };
-const FINALE_ACTIONS = ["breakdance", "faceChange", "ninja"];
+const FINALE_ACTIONS = ["breakdance", "faceChange", "ninja", "baseball", "pachinko"];
+const FINALE_ACTION_WEIGHTS = Object.freeze({
+  breakdance: 2,
+  faceChange: 1,
+  ninja: 2,
+  baseball: 3,
+  pachinko: 1,
+});
 const FINALE_SLEEP_AFTER_MS = 28000;
 const FORCE_ALPHA_IMAGE_FALLBACK = new URLSearchParams(location.search).get("actorMedia") === "webp";
 const USE_ALPHA_IMAGE_FALLBACK = FORCE_ALPHA_IMAGE_FALLBACK
@@ -323,14 +353,19 @@ function showFinaleActor(actionKey) {
   abuImage.src = `${action.image}${replayToken}`;
 }
 
+function pickRandomFinaleAction() {
+  const available = FINALE_ACTIONS.filter((key) => key !== previousFinaleActionKey);
+  const weighted = available.flatMap((key) => Array(FINALE_ACTION_WEIGHTS[key] || 1).fill(key));
+  return weighted[Math.floor(Math.random() * weighted.length)] || FINALE_ACTIONS[0];
+}
+
 function scheduleRandomFinaleAction(delay = 4200) {
   clearFinaleActionTimer();
   if (!finaleModeActive || finaleSleeping) return;
   const token = finaleActionToken;
   finaleActionTimer = window.setTimeout(() => {
     if (!finaleModeActive || finaleSleeping || token !== finaleActionToken) return;
-    const available = FINALE_ACTIONS.filter((key) => key !== previousFinaleActionKey);
-    const actionKey = available[Math.floor(Math.random() * available.length)] || FINALE_ACTIONS[0];
+    const actionKey = pickRandomFinaleAction();
     previousFinaleActionKey = actionKey;
     showFinaleActor(actionKey);
     const actionToken = finaleActionToken;

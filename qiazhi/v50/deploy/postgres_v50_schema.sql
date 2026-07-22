@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS v50_schema_version (
 INSERT INTO v50_schema_version (id, version, boundary)
 VALUES (
     'v50.schema',
-    'v50.consolidated.002',
+    'v50.consolidated.003',
     'v50_database_single_migration_owner'
 )
 ON CONFLICT (id) DO UPDATE
@@ -108,6 +108,33 @@ CREATE TABLE IF NOT EXISTS v50_mingli_agent_cases (
 
 CREATE INDEX IF NOT EXISTS idx_v50_agent_cases_user
 ON v50_mingli_agent_cases (user_id, updated_at DESC);
+
+-- Dream Bridge stores revocable projection grants and resumable experience
+-- state only. Canonical Mingli facts remain owned by v50_mingli_agent_cases.
+CREATE TABLE IF NOT EXISTS v50_dream_scene_grants (
+    grant_id TEXT PRIMARY KEY,
+    case_id TEXT NOT NULL REFERENCES v50_mingli_agent_cases(case_id) ON DELETE RESTRICT,
+    public_scene_ref TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL,
+    grant_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_scene_grants_status
+ON v50_dream_scene_grants (status, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_dream_visits (
+    visit_id TEXT PRIMARY KEY,
+    owner_user_id TEXT NOT NULL REFERENCES v50_user_accounts(user_id) ON DELETE CASCADE,
+    state TEXT NOT NULL,
+    visit_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_visits_owner
+ON v50_dream_visits (owner_user_id, updated_at DESC);
 
 CREATE TABLE IF NOT EXISTS v50_mingli_cognitive_jobs (
     job_id TEXT PRIMARY KEY,

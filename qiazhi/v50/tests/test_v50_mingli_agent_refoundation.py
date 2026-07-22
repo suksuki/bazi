@@ -18,6 +18,7 @@ from core.mingli_agent.context import _public_birth_location
 from core.mingli_agent.fact_review import repair_locked_fact_assertions
 from core.mingli_agent.reasoner import _citation_allowed, _contains_asserted_relation, _contains_role_conflict, _domain_context_payload, _forbidden_domain_tokens, _normalize_domain_reading, _normalize_prediction_probe, _prediction_stage_errors, _repair_pattern_locally, _review_hypothesis_space, _sanitize_pattern_alternatives, _sanitize_work_questions, _semantic_text_errors, sanitize_public_mingli_payload
 from core.mingli_agent.contracts import (
+    BaselineCoreCognitionDraft,
     BirthIntakeDraft,
     CaseAssertion,
     CaseTurnDraft,
@@ -83,7 +84,7 @@ class FakeCognitiveModel:
             return _probe()
         if schema is DualLensCognitionDraft:
             return _dual_lens()
-        if schema is WholeChartCognitionDraft:
+        if schema in {BaselineCoreCognitionDraft, WholeChartCognitionDraft}:
             hypotheses = [
                 CognitiveHypothesis(
                     hypothesis_id="h1",
@@ -121,13 +122,13 @@ class FakeCognitiveModel:
                     start=1,
                 )
             ]
-            return WholeChartCognitionDraft(
-                first_look="这张盘先看丁火如何作用于巳酉丑金局，而不是只看月令旺衰。",
-                whole_chart_thesis="主线是输出能力能否驾驭结构压力，酉与丁是区分不同解释的关键。",
-                salient_phenomena=[SalientPhenomenon(phenomenon_id="s1", observation="巳酉丑连接", why_it_matters="决定压力端是否闭合", evidence_refs=["F001"])],
-                hypotheses=hypotheses,
-                selected_hypothesis_id="h1",
-                work_path=WorkPathReasoning(
+            payload = {
+                "first_look": "这张盘先看丁火如何作用于巳酉丑金局，而不是只看月令旺衰。",
+                "whole_chart_thesis": "主线是输出能力能否驾驭结构压力，酉与丁是区分不同解释的关键。",
+                "salient_phenomena": [SalientPhenomenon(phenomenon_id="s1", observation="巳酉丑连接", why_it_matters="决定压力端是否闭合", evidence_refs=["F001"])],
+                "hypotheses": hypotheses,
+                "selected_hypothesis_id": "h1",
+                "work_path": WorkPathReasoning(
                     path_statement="乙木生丁火，丁火制金局压力。",
                     source=["乙木"],
                     transformations=["丁火输出"],
@@ -138,13 +139,18 @@ class FakeCognitiveModel:
                     failure_conditions=["水印压制输出"],
                     evidence_refs=["F001"],
                 ),
-                useful_god_reasoning=[UsefulGodReasoning(candidate="丁火", role="做功用神", why_useful="连接乙木与金局压力", when_harmful="泄身过度且无法制金", applicable_conditions=["金局为主要压力"], invalidating_conditions=["丁火完全失效"], evidence_refs=["F001"])],
+                "useful_god_reasoning": [UsefulGodReasoning(candidate="丁火", role="做功用神", why_useful="连接乙木与金局压力", when_harmful="泄身过度且无法制金", applicable_conditions=["金局为主要压力"], invalidating_conditions=["丁火完全失效"], evidence_refs=["F001"])],
+                "next_probe": _probe(),
+                "unresolved_questions": ["现实工作是否依赖复杂问题解决"],
+                "evidence_refs": ["F001"],
+            }
+            if schema is BaselineCoreCognitionDraft:
+                return BaselineCoreCognitionDraft(**payload)
+            return WholeChartCognitionDraft(
+                **payload,
                 portrait=[_assertion("portrait-1", "portrait", "更习惯用方法和产出处理压力。")],
                 prior_predictions=predictions,
-                next_probe=_probe(),
                 dual_lens=_dual_lens() if "紫微可用：true" in prompt else None,
-                unresolved_questions=["现实工作是否依赖复杂问题解决"],
-                evidence_refs=["F001"],
             )
         if schema is DomainCausalReading:
             domain = next(
@@ -644,11 +650,11 @@ def test_progressive_cognition_emits_real_stage_artifacts_and_can_resume_after_s
     stored = case_store.get(case_id=body["case_id"])
     assert stored["record"]["cognition"]["whole_chart_thesis"].startswith("主线是输出能力")
     assert stored["life_case"]["baseline_insight"]["status"] == "committed"
-    assert stored["first_run"] == {
-        "protocol": "single_call_baseline_v1",
-        "blocking_core_llm_calls": 1,
-        "unselected_domains_precomputed": False,
-    }
+    assert stored["first_run"]["protocol"] == "minimal_whole_chart_baseline_v1"
+    assert stored["first_run"]["blocking_core_llm_calls"] == 1
+    assert stored["first_run"]["unselected_domains_precomputed"] is False
+    assert stored["first_run"]["run_metrics"]["model_calls"] == 1
+    assert stored["first_run"]["run_metrics"]["automatic_full_reruns"] == 0
 
 
 def test_first_reading_never_runs_domain_reasoning_until_the_user_selects_a_domain():
@@ -684,9 +690,12 @@ def test_production_baseline_uses_one_model_call_and_commits_a_traceable_life_ca
     draft = build_baseline_insight(record=record, world=world)
     life_case, validation = commit_baseline_life_case(insight=draft, world=world, profile_id=None)
 
-    assert model.schemas == [WholeChartCognitionDraft]
+    assert model.schemas == [BaselineCoreCognitionDraft]
     assert [item["stage"] for item in record.stage_receipts] == ["baseline_cognition"]
     assert record.domain_explorations == {}
+    assert record.cognition.portrait == []
+    assert record.cognition.prior_predictions == []
+    assert record.cognition.dual_lens is None
     assert draft.status == "draft"
     assert validation.passed is True
     assert validation.fact_traceability_rate == 1.0
@@ -918,7 +927,7 @@ def test_product_startup_marks_jobs_from_a_stopped_worker_as_interrupted():
     assert job["events"][-1]["payload"]["failure_stage"] == "runtime_recovery"
 
 
-def test_progressive_cognition_adds_ziwei_lens_for_calendar_aligned_birth():
+def test_minimal_progressive_cognition_defers_ziwei_integration_even_when_available():
     client = TestClient(
         create_product_app(
             product_store=MemoryProductStore(),
@@ -951,8 +960,8 @@ def test_progressive_cognition_adds_ziwei_lens_for_calendar_aligned_birth():
     assert event_types.count("baseline_draft_ready") == 1
     assert "ziwei_lens_ready" not in event_types
     completed = job["events"][-1]["payload"]["reading"]
-    assert completed["lenses_available"] == {"bazi": True, "ziwei": True, "integrated": True}
-    assert completed["dual_lens"]["integrated_thesis"].startswith("长期擅长")
+    assert completed["lenses_available"] == {"bazi": True, "ziwei": True, "integrated": False}
+    assert completed["dual_lens"] is None
     assert "calculator" not in completed["ziwei_profile"]
 
 
@@ -1210,7 +1219,7 @@ def test_timeline_no_event_is_strong_counter_evidence_not_a_hidden_attribute():
     assert set(negative.hypothesis_updates.values()) == {"weaken"}
 
 
-def test_abu_intake_and_public_ui_are_conversation_first():
+def test_abu_intake_remains_available_and_public_ui_enters_unified_workspace():
     client = TestClient(
         create_product_app(
             product_store=MemoryProductStore(),
@@ -1221,9 +1230,11 @@ def test_abu_intake_and_public_ui_are_conversation_first():
     intake = client.post("/api/v50/agent/intake", json={"message": "1987年5月12日下午六点，男，上海"})
     assert intake.status_code == 200
     assert intake.json()["draft"]["ready_for_confirmation"] is True
-    html = client.get("/app").text
-    assert "先看见命局" in html
-    assert "说出出生信息" in html
+    app = client.get("/app", follow_redirects=False)
+    assert app.status_code == 308
+    assert app.headers["location"] == "/experience"
+    html = client.get("/experience").text
+    assert "DeepBeing" in html
     assert "Decision Confidence" not in html
     assert "Product Mode" not in html
     assert "Core Runtime" not in html

@@ -1,6 +1,20 @@
 {
   "schema_version": "deepbazi.six02_cplus_relation_scope_fixture.v1",
-  "authority_boundary": "boss-approved SIX-02-01 C+ regression fixture; no unresolved relation semantics are added",
+  "authority_boundary": "boss-approved SIX-02-01 C+ and SIX-02-02 position/distance regression fixture; no unresolved strength semantics are added",
+  "position_context_contract": {
+    "required": [
+      "adjacent",
+      "column_span",
+      "intervening_node_refs",
+      "direction",
+      "scene_layer"
+    ],
+    "must_not_decide": [
+      "strength",
+      "effectiveness",
+      "path_membership"
+    ]
+  },
   "relation_state_order": [
     "potential",
     "structural",
@@ -23,7 +37,8 @@
       "assertions": [
         "repeated_labels_keep_distinct_node_identity",
         "potential_relation_keys_remain_deterministic",
-        "distance_does_not_promote_potential_to_action"
+        "visible_stems_are_structural_at_any_column_span",
+        "distance_does_not_promote_structural_to_effective"
       ]
     },
     {
@@ -31,9 +46,10 @@
       "natal_pillar": "丁午",
       "luck_pillar": "庚子",
       "assertions": [
-        "stem_element_relation_remains_potential",
+        "visible_stem_relation_is_structural",
         "branch_clash_is_time_activated",
-        "temporal_same_pillar_is_structural_only"
+        "temporal_same_pillar_is_structural_only",
+        "time_entry_does_not_promote_structural_to_effective"
       ]
     }
   ]

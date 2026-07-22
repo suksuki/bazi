@@ -60,11 +60,11 @@ DOMAIN_REGISTRY = (
     LifeDomainDefinition(domain=LifeDomain.HEALTH_VITALITY, name_zh="健康与生命力", user_jobs=["理解精力节奏", "识别生活方式风险"], required_reasoning=["whole_chart", "health_context", "medical_boundary"], readiness=DomainReadiness.RESEARCH, publicly_available=False, boundary="不诊断疾病，不替代医疗建议"),
     LifeDomainDefinition(domain=LifeDomain.SOCIAL_NETWORK, name_zh="社交与合作", user_jobs=["理解合作方式", "理解竞争、边界与资源网络"], required_reasoning=["whole_chart", "peer_network", "probe"], readiness=DomainReadiness.PARTIAL, publicly_available=False),
     LifeDomainDefinition(domain=LifeDomain.MIGRATION_ENVIRONMENT, name_zh="迁移与环境", user_jobs=["理解环境适配", "比较留守、迁移与外部发展"], required_reasoning=["whole_chart", "ziwei_migration", "timing"], readiness=DomainReadiness.PARTIAL, publicly_available=False),
-    LifeDomainDefinition(domain=LifeDomain.LIFE_TIMING, name_zh="人生阶段与时机", user_jobs=["理解长期阶段", "识别行动窗口与等待条件"], required_reasoning=["base_chart", "luck", "year", "state_evolution"], readiness=DomainReadiness.PARTIAL, publicly_available=True, boundary="只输出条件性时机，不输出必然事件"),
+    LifeDomainDefinition(domain=LifeDomain.LIFE_TIMING, name_zh="人生阶段与时机", user_jobs=["理解长期阶段", "识别行动窗口与等待条件"], required_reasoning=["base_chart", "luck", "year", "state_evolution"], readiness=DomainReadiness.PARTIAL, publicly_available=False, boundary="只输出条件性时机，不输出必然事件；当前仅供命理师与 Lab 使用"),
 )
 
 
-PUBLIC_PRODUCT_DOMAINS = frozenset({LifeDomain.WHOLE_CHART, LifeDomain.CAREER, LifeDomain.WEALTH, LifeDomain.LIFE_TIMING})
+PUBLIC_PRODUCT_DOMAINS = frozenset({LifeDomain.WHOLE_CHART, LifeDomain.CAREER, LifeDomain.WEALTH})
 
 
 DOMAIN_PROTOCOLS = {

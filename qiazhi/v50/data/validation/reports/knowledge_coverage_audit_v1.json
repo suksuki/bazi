@@ -199,7 +199,7 @@
       "used_by_pipeline": true
     },
     {
-      "covered_by_fixture": false,
+      "covered_by_fixture": true,
       "domain": "Bazi Foundation Coverage",
       "knowledge_item": "十神",
       "recommended_action": "Keep covered by regression.",
@@ -569,7 +569,7 @@
       "used_by_pipeline": false
     },
     {
-      "covered_by_fixture": false,
+      "covered_by_fixture": true,
       "domain": "Bazi Topic Mapping Coverage",
       "knowledge_item": "健康",
       "recommended_action": "Add knowledge model, runtime hook, and validation fixture before user-facing use.",
@@ -997,7 +997,7 @@
     "Evidence rule coverage"
   ],
   "summary": {
-    "fixture_covered_items": 21,
+    "fixture_covered_items": 23,
     "high_risk_gaps": [
       "合冲刑害破",
       "三合 / 三会 / 六合",

@@ -39,6 +39,7 @@ from experience.product_projection import (
     CanvasContextResponse,
     CanvasLayer,
     CanvasLayerProjection,
+    CanvasVisibilityLayer,
     CanvasStageProjection,
     ExperienceCaseSummary,
     ExperienceWorkspaceBootstrapResponse,
@@ -112,6 +113,7 @@ TYPESCRIPT_ALIASES = {
     "CanvasRole": get_args(CanvasRole),
     "CanvasStage": get_args(CanvasStage),
     "CanvasLayer": get_args(CanvasLayer),
+    "CanvasVisibilityLayer": get_args(CanvasVisibilityLayer),
 }
 
 

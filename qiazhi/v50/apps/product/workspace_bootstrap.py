@@ -18,6 +18,7 @@ from experience.workspace import (
 )
 from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
+from product.formal_insight_state import cognition_background, lifecycle_from_background
 from product.product_store import ProductStore, birth_input_from_profile
 from product.theater_envelope import ProductExperienceEnvelopePort
 
@@ -164,12 +165,13 @@ class WorkspaceBootstrapService:
                 active_mode=_workspace_role(role),
             ).model_dump(mode="json"),
             "life_case": None,
-            "background_cognition": {
-                "status": "not_started",
-                "attempt_count": 0,
-                "job_id": "",
-                "reason": "valid_baseline_missing",
-            },
+            "background_cognition": cognition_background(
+                operational_status="not_started",
+                insight_status="draft",
+                attempt_count=0,
+                job_id="",
+                reason="valid_baseline_missing",
+            ),
             "status": "chart_ready",
             "entry_protocol": "flow_slim_workspace_bootstrap_v1",
         }
@@ -345,6 +347,10 @@ class WorkspaceBootstrapService:
                 message="已复用这份档案的正式整盘认知。",
                 cache_hit=True,
                 background_start_allowed=False,
+                insight=lifecycle_from_background(
+                    row.get("background_cognition"),
+                    committed=True,
+                ),
             )
         background = row.get("background_cognition")
         background = background if isinstance(background, dict) else {}
@@ -357,6 +363,7 @@ class WorkspaceBootstrapService:
                 cache_hit=False,
                 background_start_allowed=False,
                 background_job_id=job_id,
+                insight=lifecycle_from_background(background),
             )
         if row.get("record") or status in {"completed_partial", "failed"}:
             return WorkspaceCognitionState(
@@ -365,6 +372,7 @@ class WorkspaceBootstrapService:
                 cache_hit=False,
                 background_start_allowed=False,
                 background_job_id=job_id,
+                insight=lifecycle_from_background(background),
             )
         return WorkspaceCognitionState(
             status="chart_ready",
@@ -372,6 +380,7 @@ class WorkspaceBootstrapService:
             cache_hit=False,
             background_start_allowed=int(background.get("attempt_count") or 0) == 0,
             background_job_id=job_id,
+            insight=lifecycle_from_background(background),
         )
 
 
@@ -418,6 +427,8 @@ def _active_life_case(row: dict[str, Any]) -> bool:
         and chart_version.get("active") is True
         and isinstance(baseline, dict)
         and baseline.get("status") == "committed"
+        and isinstance(baseline.get("professional_review_overlay"), dict)
+        and baseline.get("professional_release_status") in {"passed", "partially_blocked"}
     )
 
 

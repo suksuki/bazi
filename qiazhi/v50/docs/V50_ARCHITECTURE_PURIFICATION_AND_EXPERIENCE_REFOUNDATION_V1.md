@@ -27,8 +27,8 @@ Core Stable
 2026-07-18 仓库实测：
 
 ```text
-apps/product/static/l5/app.js       3425 lines
-apps/product/static/l5/styles.css   2994 lines
+retired L5 JavaScript bundle        3425 lines
+retired L5 stylesheet bundle        2994 lines
 core/mingli_agent/reasoner.py       2837 lines
 apps/product/agent_api.py           2010 lines
 frontend state fields                 52

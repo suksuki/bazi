@@ -7,7 +7,9 @@ from pydantic import Field, model_validator
 from core.contracts.base import V50Model, require_non_empty, require_refs
 from core.graph.provenance import (
     RELATION_ONTOLOGY_VERSION,
+    MingliRelationState,
     RelationDirectionality,
+    RelationPositionContext,
     relation_directionality,
     stable_candidate_node_key,
     stable_candidate_path_key,
@@ -44,13 +46,6 @@ class PathEligibility(str, Enum):
     ELIGIBLE = "eligible"
     EVIDENCE_ONLY = "evidence_only"
     NOT_YET_QUALIFIED = "not_yet_qualified"
-
-
-class MingliRelationState(str, Enum):
-    POTENTIAL = "potential"
-    STRUCTURAL = "structural"
-    TIME_ACTIVATED = "time_activated"
-    EFFECTIVE = "effective"
 
 
 class PathValidationState(str, Enum):
@@ -157,7 +152,7 @@ class MingliGraphNode(V50Model):
 
 
 class MingliGraphEdge(V50Model):
-    version: str = "v50.mingli_graph_edge.v2"
+    version: str = "v50.mingli_graph_edge.v3"
     edge_id: str
     relation_key: str = ""
     reading_id: str
@@ -170,6 +165,8 @@ class MingliGraphEdge(V50Model):
     legacy_unvalidated_strength: float = Field(default=0.0, ge=0.0, le=1.0)
     relation_label: str = ""
     relation_state: MingliRelationState = MingliRelationState.STRUCTURAL
+    mechanism_ref: str = "legacy_structural_relation"
+    position_context: RelationPositionContext | None = None
     path_eligibility: PathEligibility = PathEligibility.NOT_YET_QUALIFIED
     eligibility_reason_refs: list[str] = Field(default_factory=list)
     attributes: dict[str, object] = Field(default_factory=dict)
@@ -198,6 +195,7 @@ class MingliGraphEdge(V50Model):
         object.__setattr__(self, "relation_key", expected)
         object.__setattr__(self, "participant_node_ids", participants)
         object.__setattr__(self, "directionality", directionality)
+        require_non_empty(self.mechanism_ref, "mechanism_ref")
         if (
             self.relation_state == MingliRelationState.POTENTIAL
             and self.path_eligibility != PathEligibility.NOT_YET_QUALIFIED

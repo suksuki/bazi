@@ -40,22 +40,48 @@ RELATION_LABELS = {
 }
 LAYER_DEFINITIONS = (
     (
-        "generation_control",
-        "生克",
-        "只看生、克与同气支持。",
-        {"generates", "controls", "same_element_support", "roots"},
+        "overview",
+        "总览",
+        "先看已提交主路径，以及与它直接相关的关键支持和牵制。",
+        set(),
     ),
     (
-        "combination",
-        "合",
-        "只看已经由结构工具给出的合与组合关系。",
-        {"harmonizes", "forms_half_combination", "forms_triple_combination"},
+        "five_element",
+        "五行",
+        "只看正式路径中的生、泄、克、制与同气支持。",
+        {"generates", "controls", "same_element_support"},
     ),
     (
-        "conflict",
-        "冲刑害破",
-        "只看当前正式结构中已经存在的冲突关系。",
-        {"clashes", "punishes", "harms", "breaks"},
+        "combination_conflict",
+        "合冲",
+        "只看会影响正式路径的合、冲、刑、害与破。",
+        {
+            "harmonizes",
+            "forms_half_combination",
+            "forms_triple_combination",
+            "clashes",
+            "punishes",
+            "harms",
+            "breaks",
+        },
+    ),
+    (
+        "roots_reveal",
+        "根透",
+        "查看路径节点的通根、藏干、透出与同柱承载。",
+        {"roots", "stores", "position_link"},
+    ),
+    (
+        "timing",
+        "时运",
+        "查看大运与流年如何进入当前正式结构。",
+        set(),
+    ),
+    (
+        "work_path",
+        "做功",
+        "只显示当前角色获准查看的结构化路径。",
+        set(),
     ),
 )
 CHANGE_GROUPS = (

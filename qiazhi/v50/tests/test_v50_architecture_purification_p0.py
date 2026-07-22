@@ -98,7 +98,7 @@ def test_experience_envelope_exposes_structured_four_pillars_without_reasoning()
     assert not envelope.approved_claims
 
 
-def test_new_experience_routes_are_independent_and_legacy_usage_is_counted() -> None:
+def test_new_experience_is_canonical_and_app_redirect_does_not_restore_legacy_usage() -> None:
     usage = MemoryLegacyUsageStore()
     client = TestClient(
         create_product_app(
@@ -108,8 +108,10 @@ def test_new_experience_routes_are_independent_and_legacy_usage_is_counted() -> 
         )
     )
     assert client.get("/experience").status_code == 200
-    assert client.get("/app").status_code == 200
-    assert usage.snapshot()[0]["route_key"] == "legacy-shell:index"
+    legacy = client.get("/app", follow_redirects=False)
+    assert legacy.status_code == 308
+    assert legacy.headers["location"] == "/experience"
+    assert usage.snapshot() == []
 
 
 def test_architecture_purification_machine_audit_passes() -> None:

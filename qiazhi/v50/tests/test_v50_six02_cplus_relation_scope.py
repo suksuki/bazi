@@ -12,6 +12,7 @@ from core.graph import (
     MingliRelationState,
     NodeRef,
     PathEligibility,
+    RelationPositionContext,
     build_mingli_graph_from_material_store,
 )
 from core.graph.contracts import MingliGraphEdgeType, MingliGraphNodeType
@@ -87,9 +88,14 @@ def test_six02_fixture_locks_the_four_state_order_and_three_synthetic_groups() -
 
     assert payload["relation_state_order"] == [item.value for item in MingliRelationState]
     assert len(payload["synthetic_groups"]) == 3
+    assert payload["position_context_contract"]["must_not_decide"] == [
+        "strength",
+        "effectiveness",
+        "path_membership",
+    ]
 
 
-def test_six02_generic_element_field_is_atomic_potential_and_never_a_formal_path() -> None:
+def test_six02_visible_stems_are_structural_while_hidden_stem_field_stays_potential() -> None:
     _, graph = _graph(
         reading_id="six02.atomic",
         pillars=("甲戌", "丙寅", "庚辰", "壬午"),
@@ -106,8 +112,23 @@ def test_six02_generic_element_field_is_atomic_potential_and_never_a_formal_path
     ]
 
     assert element_edges
-    assert all(item.relation_state == MingliRelationState.POTENTIAL for item in element_edges)
-    assert all(item.path_eligibility == PathEligibility.NOT_YET_QUALIFIED for item in element_edges)
+    visible_stem_edges = [
+        item
+        for item in element_edges
+        if nodes[item.from_node_id].node_type == MingliGraphNodeType.STEM
+        and nodes[item.to_node_id].node_type == MingliGraphNodeType.STEM
+    ]
+    hidden_field_edges = [item for item in element_edges if item not in visible_stem_edges]
+
+    assert visible_stem_edges
+    assert hidden_field_edges
+    assert all(item.relation_state == MingliRelationState.STRUCTURAL for item in visible_stem_edges)
+    assert all(item.path_eligibility == PathEligibility.ELIGIBLE for item in visible_stem_edges)
+    assert all(item.mechanism_ref == "visible_stem_same_layer" for item in visible_stem_edges)
+    assert all(item.position_context is not None for item in visible_stem_edges)
+    assert all(item.relation_state == MingliRelationState.POTENTIAL for item in hidden_field_edges)
+    assert all(item.path_eligibility == PathEligibility.NOT_YET_QUALIFIED for item in hidden_field_edges)
+    assert all(item.mechanism_ref == "five_element_potential_field" for item in hidden_field_edges)
     assert all(item.attributes["direct_action"] is False for item in element_edges)
     assert not any(
         {nodes[item.from_node_id].node_type, nodes[item.to_node_id].node_type}.intersection(
@@ -139,12 +160,70 @@ def test_six02_generic_element_field_is_atomic_potential_and_never_a_formal_path
         and item.attributes.get("slot") == "year"
     )
     assert position.relation_state == MingliRelationState.STRUCTURAL
+    assert position.position_context is not None
+    assert position.position_context.column_span == 0
     assert position.attributes == {
         "slot": "year",
         "mechanism": "same_pillar_bearing",
         "proximity": "same_pillar",
         "direct_action": False,
     }
+
+
+def test_six02_position_context_records_distance_without_deciding_effectiveness() -> None:
+    _, graph = _graph(
+        reading_id="six02.position",
+        pillars=("甲戌", "丙寅", "庚辰", "壬午"),
+    )
+    nodes = {item.node_id: item for item in graph.nodes}
+    visible_relations = [
+        item
+        for item in graph.edges
+        if item.mechanism_ref == "visible_stem_same_layer"
+    ]
+    adjacent = next(
+        item
+        for item in visible_relations
+        if nodes[item.from_node_id].position == "year_stem"
+        and nodes[item.to_node_id].position == "month_stem"
+    )
+    separated = next(
+        item
+        for item in visible_relations
+        if nodes[item.from_node_id].position == "day_stem"
+        and nodes[item.to_node_id].position == "year_stem"
+    )
+
+    assert adjacent.position_context is not None
+    assert adjacent.position_context.adjacent is True
+    assert adjacent.position_context.column_span == 1
+    assert adjacent.relation_state == MingliRelationState.STRUCTURAL
+    assert separated.position_context is not None
+    assert separated.position_context.adjacent is False
+    assert separated.position_context.column_span == 2
+    assert len(separated.position_context.intervening_node_refs) == 1
+    assert separated.position_context.direction == "right_to_left"
+    assert separated.relation_state == MingliRelationState.STRUCTURAL
+    assert separated.relation_state != MingliRelationState.EFFECTIVE
+
+
+def test_same_slot_name_in_natal_and_year_scopes_is_not_the_same_column() -> None:
+    context = RelationPositionContext(
+        source_scope="natal",
+        target_scope="year",
+        source_slot="year",
+        target_slot="year",
+        source_level="stem",
+        target_level="stem",
+        column_span=5,
+        intervening_node_refs=["month", "day", "hour", "luck"],
+        ref_namespace="node_ref",
+        direction="natal_to_temporal",
+        scene_layer="year_state",
+    )
+
+    assert context.column_span == 5
+    assert context.source_scope != context.target_scope
 
 
 def test_six02_repeated_labels_keep_distinct_deterministic_potential_relations() -> None:
@@ -202,6 +281,7 @@ def test_six02_member_projection_hides_potential_field_and_hidden_stem_detail() 
     practitioner = project_canvas_spec_for_role(full, "practitioner")
 
     assert not [item for item in member.relations if item.relation_state == "potential"]
+    assert not [item for item in member.relations if item.relation_state == "structural"]
     assert not [item for item in member.nodes if item.node_type == "hidden_stem"]
     assert all(not item.hidden_stems for item in member.semantic_slots)
     assert [item for item in practitioner.relations if item.relation_state == "potential"]
@@ -209,7 +289,7 @@ def test_six02_member_projection_hides_potential_field_and_hidden_stem_detail() 
     assert any(item.hidden_stems for item in practitioner.semantic_slots)
 
 
-def test_six02_temporal_entry_activates_named_branch_relation_not_generic_stem_action() -> None:
+def test_six02_temporal_visible_stems_are_structural_while_named_branch_relation_activates() -> None:
     natal_stem_ref = _node_ref(scope="natal", level="stem", component="丁")
     natal_branch_ref = _node_ref(scope="natal", level="branch", component="午")
     luck_stem_ref = _node_ref(scope="luck", level="stem", component="庚")
@@ -231,8 +311,12 @@ def test_six02_temporal_entry_activates_named_branch_relation_not_generic_stem_a
     generic = [item for item in relations if item.relation_type in {"generates", "controls", "same_element_support"}]
     clash = next(item for item in relations if item.relation_type == "clashes")
     position = next(item for item in relations if item.relation_type == "position_link")
-    assert generic and all(item.relation_state == "potential" for item in generic)
+    assert generic and all(item.relation_state == "structural" for item in generic)
     assert all(item.semantic_state == "latent" for item in generic)
+    assert all(item.mechanism_ref == "visible_stem_same_layer" for item in generic)
+    assert all(item.position_context is not None for item in generic)
+    assert all(item.position_context.scene_layer == "luck_state" for item in generic if item.position_context)
     assert clash.relation_state == "time_activated"
+    assert clash.position_context is not None
     assert position.relation_state == "structural"
     assert "不自动表示直接作用" in position.trace.uncertainty[0]

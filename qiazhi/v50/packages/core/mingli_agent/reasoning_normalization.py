@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 from core.life_domains import LifeDomain
 from core.mingli_agent.contracts import (
+    BaselineCoreCognitionDraft,
     ChartWorldInstance,
     CognitiveHypothesis,
     DiscriminatingProbe,
@@ -37,7 +38,7 @@ def _normalize_work_strategy_dimensions(work: WorkPathPortraitDraft) -> WorkPath
 
 def _normalize_baseline_cognition(
     *,
-    whole: WholeChartCognitionDraft,
+    whole: BaselineCoreCognitionDraft,
     world: ChartWorldInstance,
 ) -> tuple[MingliCognitiveDraft, PatternHypothesisDraft, list[str]]:
     pattern = PatternHypothesisDraft(
@@ -52,21 +53,20 @@ def _normalize_baseline_cognition(
         WorkPathPortraitDraft(
             work_path=whole.work_path,
             useful_god_reasoning=whole.useful_god_reasoning,
-            portrait=whole.portrait,
+            portrait=[],
             unresolved_questions=whole.unresolved_questions,
             evidence_refs=whole.evidence_refs,
         )
     )
     predictions = PredictionProbeDraft(
-        prior_predictions=whole.prior_predictions,
+        prior_predictions=[],
         next_probe=whole.next_probe,
     )
-    dual_lens = whole.dual_lens if world.ziwei_profile.get("reasoning_ready") else None
     assembled = _assemble_whole_chart(
         pattern=pattern,
         work=work,
         predictions=predictions,
-        dual_lens=dual_lens,
+        dual_lens=None,
     )
     return MingliCognitiveDraft(**assembled.model_dump(mode="json")), pattern, []
 

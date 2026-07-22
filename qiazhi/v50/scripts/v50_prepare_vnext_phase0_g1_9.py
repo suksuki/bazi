@@ -218,23 +218,35 @@ def _context_authority_audit(worlds: list[Any]) -> dict[str, Any]:
         baseline = compiler.compile(world=world, stage="baseline")
         pattern = compiler.compile(world=world, stage="pattern")
         challenge = compiler.compile(world=world, stage="work_path")
-        independent_facts = [*baseline.payload["facts"], *pattern.payload["facts"]]
+        baseline_pool_refs = [
+            *[item["fact_ref"] for item in baseline.payload["allowed_relation_pool"]],
+            *[item["path_ref"] for item in baseline.payload["allowed_path_candidates"]],
+        ]
         experimental_challenge = [
             item for item in challenge.payload["facts"] if item["authority_status"] == "experimental"
         ]
         rows.append({
             "world_id": world.world_id,
-            "independent_experimental_refs": [*baseline.experimental_tool_refs, *pattern.experimental_tool_refs],
+            "independent_experimental_refs": pattern.experimental_tool_refs,
             "independent_nonproduction_facts": [
-                item["id"] for item in independent_facts if item["authority_status"] != "production"
+                item["id"] for item in pattern.payload["facts"] if item["authority_status"] != "production"
             ],
+            "baseline_reference_pool_disclosed": (
+                baseline.reasoning_phase == "tool_challenge"
+                and baseline.experimental_tool_refs == list(dict.fromkeys(baseline_pool_refs))
+                and all(item["authority_status"] == "production" for item in baseline.payload["facts"])
+            ),
             "challenge_experimental_refs": challenge.experimental_tool_refs,
             "challenge_experimental_facts_tagged": all(
                 item.get("authority_status") == "experimental" for item in experimental_challenge
             ),
         })
     first_look = all(not row["independent_experimental_refs"] and not row["independent_nonproduction_facts"] for row in rows)
-    challenge = all(row["challenge_experimental_facts_tagged"] for row in rows)
+    challenge = all(
+        row["baseline_reference_pool_disclosed"]
+        and row["challenge_experimental_facts_tagged"]
+        for row in rows
+    )
     return {
         "independent_first_look_status": "PROVEN" if first_look else "BLOCKED",
         "challenge_pack_status": "PROVEN" if challenge else "BLOCKED",

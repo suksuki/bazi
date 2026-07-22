@@ -4,6 +4,7 @@ from typing import Any, Literal
 
 from pydantic import Field, model_validator
 
+from core.contracts import FormalInsightLifecycleState
 from experience.canvas import (
     CanvasContextPack,
     CanvasDiffSpec,
@@ -17,7 +18,29 @@ from experience.narration import NarrationManifest, SpeechAsset
 from experience.workspace import CaseWorkspaceEnvelope
 
 
-CanvasLayer = Literal["generation_control", "combination", "conflict", "work_path"]
+CanvasLayer = Literal[
+    "overview",
+    "five_element",
+    "combination_conflict",
+    "roots_reveal",
+    "timing",
+    "work_path",
+]
+CanvasVisibilityLayer = Literal["formal", "focus", "lab_audit"]
+CanvasSceneSlotState = Literal["active", "inactive", "not_loaded"]
+PathProjectionRejectionReason = Literal[
+    "none",
+    "no_cognitive_path",
+    "natural_language_only",
+    "candidate_not_committed",
+    "missing_path_ref",
+    "invalid_node_ref",
+    "invalid_relation_ref",
+    "relation_still_potential",
+    "authority_not_allowed",
+    "role_visibility_filtered",
+    "timing_scope_mismatch",
+]
 CanvasChangeType = Literal[
     "introduced",
     "removed",
@@ -53,6 +76,9 @@ class WorkspaceCognitionState(ExperienceModel):
     cache_hit: bool
     background_start_allowed: bool
     background_job_id: str = ""
+    insight: FormalInsightLifecycleState = Field(
+        default_factory=FormalInsightLifecycleState,
+    )
     llm_calls_started_by_bootstrap: Literal[0] = 0
     tts_calls_started_by_bootstrap: Literal[0] = 0
 
@@ -109,8 +135,33 @@ class CanvasLayerProjection(ExperienceModel):
     label: str
     description: str
     relation_refs: list[str]
+    formal_relation_refs: list[str]
+    path_refs: list[str]
+    formal_path_refs: list[str]
     available: bool
     count: int = Field(ge=0)
+    formal_count: int = Field(ge=0)
+
+
+class CanvasSceneSlotProjection(ExperienceModel):
+    position_index: int = Field(ge=0, le=5)
+    slot_type: Literal[
+        "natal_year",
+        "natal_month",
+        "natal_day",
+        "natal_hour",
+        "luck",
+        "year",
+    ]
+    label: str
+    state: CanvasSceneSlotState
+    slot_ref: str
+    stem_node_ref: str = ""
+    branch_node_ref: str = ""
+    stem: str = ""
+    branch: str = ""
+    hidden_stems: list[str] = Field(default_factory=list)
+    immutable: bool
 
 
 class CanvasChangeItem(ExperienceModel):
@@ -136,6 +187,7 @@ class CanvasStageProjection(ExperienceModel):
     spec: MingliCanvasSpec
     diff: CanvasDiffSpec | None
     context: CanvasContextPack
+    scene_slots: list[CanvasSceneSlotProjection]
     layers: list[CanvasLayerProjection]
     default_layer_id: CanvasLayer
     change_groups: list[CanvasChangeGroup]
@@ -160,10 +212,36 @@ class CanvasPathAvailability(ExperienceModel):
     committed_path_count: int = Field(ge=0)
     candidate_path_count: int = Field(ge=0)
     legacy_unresolved_count: int = Field(ge=0)
+    disclosure_level: Literal["public", "professional", "audit"]
+    professional_status: Literal[
+        "confirmed",
+        "not_confirmed",
+        "natural_language_unstructured",
+        "candidate_uncommitted",
+        "reference_unresolved",
+        "role_filtered",
+        "not_available",
+    ]
+    diagnostic: "PathProjectionDiagnostic | None" = None
+
+
+class PathProjectionDiagnostic(ExperienceModel):
+    cognitive_path_present: bool
+    structured_candidate_present: bool
+    path_assertion_present: bool
+    path_status: str
+    node_refs_valid: bool
+    relation_refs_valid: bool
+    authority_status: str
+    role_visible: bool
+    projection_result: Literal["projected", "rejected", "not_available"]
+    rejection_reason: PathProjectionRejectionReason
 
 
 class CanvasRendererPolicy(ExperienceModel):
     read_only: Literal[True]
+    available_visibility_layers: list[CanvasVisibilityLayer]
+    default_visibility_layer: CanvasVisibilityLayer
     allowed_interactions: list[str]
     forbidden_interactions: list[str]
 

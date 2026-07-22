@@ -6,7 +6,12 @@ from core.contracts import BirthInputCanonical
 from core.engines import normalize_birth_input
 from core.engines.bazi import build_bazi_material_store
 from core.graph import build_mingli_graph_from_material_store, explore_mingli_paths
-from core.life_case import LifeCase, node_ref_for_graph_node, relation_key_for_graph_edge
+from core.life_case import (
+    LifeCase,
+    node_ref_for_graph_node,
+    relation_key_for_graph_edge,
+    relation_path_assertions_for_case,
+)
 from core.mingli_agent.contracts import ChartWorldInstance, MingliCognitiveRecord
 from experience.canvas import CanvasLifeCaseSource, MingliCanvasCompileInput
 
@@ -14,7 +19,7 @@ from product.canvas_projection_graph import (
     active_projection_assertions,
     candidate_paths,
     chart_source,
-    committed_paths,
+    committed_path_projection,
 )
 from product.canvas_projection_shared import ReadOnlyCanvasUnavailable, parse_datetime
 from product.canvas_projection_temporal import temporal_layers
@@ -106,11 +111,19 @@ def compile_input_from_case_row(
         relation_refs=relation_refs,
         relation_assertions=relation_assertions,
     )
-    formal_paths = committed_paths(
+    _, authoritative_path_assertions = relation_path_assertions_for_case(
+        life_case=life_case,
+        world=world_model,
+    )
+    formal_paths, path_diagnostic = committed_path_projection(
         canonical_projection_payload=canonical_projection_payload,
         life_case=life_case,
+        record=record,
+        authoritative_path_assertions=authoritative_path_assertions,
         available_node_refs=set(node_refs.values()),
-        available_relation_refs=set(relation_refs.values()),
+        available_relations={
+            item.relation_ref: item for item in chart.relations
+        },
     )
     research_paths = candidate_paths(
         explored_paths=explored.paths,
@@ -135,7 +148,7 @@ def compile_input_from_case_row(
     path_message = (
         "LifeCase 已提交主路径，并以稳定身份绑定到命盘关系。"
         if path_available
-        else "LifeCase 的历史路径未能精确落到当前结构；原断言仍保留，本页不会根据文字猜线。"
+        else "尚无已提交的正式做功路径；本页不会根据自然语言猜线。"
     )
     uncertainty = list(dict.fromkeys([
         *baseline.uncertainty.reasons,
@@ -195,5 +208,6 @@ def compile_input_from_case_row(
             "committed_path_count": len(formal_paths),
             "candidate_path_count": len(research_paths),
             "legacy_unresolved_count": unresolved_count,
+            "diagnostic": path_diagnostic,
         },
     }

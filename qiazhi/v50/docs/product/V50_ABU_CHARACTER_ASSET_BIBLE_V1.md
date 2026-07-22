@@ -55,6 +55,9 @@ The page may render its own subtle grounding shadow. The asset itself contains n
 | `notice_tension` | restrained reaction to structural tension | v12 actor pass |
 | `face_change_transition` | OneCanvas-to-Xiangfa theater transition | v12 actor pass |
 | `ninja_disappear_throw` | rare playful finale interlude; transform, disappear and throw | v12 actor pass |
+| `quiet_sit_reaction` | standard cute seated companion presence | v12 actor pass |
+| `baseball_swing` | active Life World or finale interlude | v12 actor pass |
+| `pachinko_jackpot` | low-frequency arcade finale easter egg with no reading semantics | v12 actor pass |
 
 ## Motion Library Governance
 
@@ -84,6 +87,8 @@ source_hash: stored in inventory and manifest
 
 `abu_ninja_disappear_throw_v1` uses the designer's full-body seated-start variant, preserving Abu's familiar cute silhouette before the costume change. The biped standing-start source remains traceable but is held because it feels abrupt and intimidating in the quiet finale; the half-body-start source is held because it creates a visible framing jump. Ninja, breakdance and face-change are optional finale/IP moments only. They cannot interrupt professional explanation or imply a favorable, unfavorable or supernatural Mingli result.
 
+`abu_quiet_sit_reaction_v1` is the default quiet companion action. Baseball is an ambient activity, not a completion signal. Pachinko is registered as a rare arcade easter egg only: it must never be selected by wealth, fortune, payment, reading-success or professional-judgment state.
+
 ### Locomotion Rule
 
 Abu must never be translated across the stage while an idle, listening or static guidance pose is playing. Any visible horizontal move longer than one quarter of Abu's body width must use a registered locomotion action (`run_jump`, `enter_and_notice` or a future walk cycle), and the stage travel must finish inside that action's run/walk phase. The stop, look-back or notice phase stays spatially fixed.
@@ -111,7 +116,7 @@ The single runtime registry is `apps/product/static/l5/assets/abu/motion-registr
 
 `taoist_divination` loops continuously for the full duration of genuine system reasoning, so a long-running reading never freezes on its final frame. Awake idle uses a weighted, non-repeating ambient scheduler: butterfly play is most common, breakdance is occasional, and run/jump is rarer. Each ambient motion remains one-shot and returns to quiet idle before another can begin. `sad_tears` is reserved for a hard reading failure or a result blocked by the professional review gate; competing hypotheses, uncertainty and unsupported domains remain caution states. Sadness describes Abu's workflow response, never the user's fate.
 
-The S0 finale chooses one complete action at a time from breakdance, face-change and ninja, never switching mid-motion or repeating the immediately previous action. After 28 seconds without user interaction, Abu stops the ambient sequence and sleeps. Pointer, touch, keyboard or Xiangfa interaction wakes Abu and restarts the restrained finale cycle. Reduced-motion and deterministic capture modes keep the quiet idle pose instead of running the random scheduler.
+The S0 finale chooses one complete action at a time from breakdance, face-change, ninja, baseball and low-frequency pachinko, never switching mid-motion or repeating the immediately previous action. Pachinko selection is random and semantically disconnected from the Case. After 28 seconds without user interaction, Abu stops the ambient sequence and sleeps. Pointer, touch, keyboard or Xiangfa interaction wakes Abu and restarts the restrained finale cycle. Reduced-motion and deterministic capture modes keep the quiet seated pose instead of running the random scheduler.
 
 ## Next Designer Motions
 

@@ -2,6 +2,7 @@ import type {
   CaseWorkspaceState,
   CanvasLayer,
   CanvasStage,
+  CanvasVisibilityLayer,
   MingliExperienceEnvelope,
   NarrationManifest,
   NarrationStatus,
@@ -27,6 +28,7 @@ export interface UiState {
   abuMessage: string;
   canvasStage: CanvasStage;
   canvasLayer: CanvasLayer;
+  canvasVisibilityLayer: CanvasVisibilityLayer;
   selectedCanvasObject: string;
   canvasContextStatus: "idle" | "loading" | "ready" | "error";
 }
@@ -47,7 +49,8 @@ export const initialUiState: UiState = {
   narrationIndex: -1,
   abuMessage: "我先陪你看整盘重心。想听的时候，点我就好。",
   canvasStage: "natal",
-  canvasLayer: "work_path",
+  canvasLayer: "overview",
+  canvasVisibilityLayer: "formal",
   selectedCanvasObject: "",
   canvasContextStatus: "idle",
 };
@@ -61,6 +64,7 @@ export type UiAction =
   | { type: "narration"; status: UiState["narrationStatus"]; index?: number; message?: string }
   | { type: "canvas-stage"; stage: CanvasStage; layer: CanvasLayer; selected: string }
   | { type: "canvas-layer"; layer: CanvasLayer }
+  | { type: "canvas-visibility"; visibility: CanvasVisibilityLayer }
   | { type: "canvas-select"; selected: string; status: UiState["canvasContextStatus"] }
   | { type: "canvas-context-status"; status: UiState["canvasContextStatus"] };
 
@@ -99,6 +103,8 @@ export function reduceUi(state: UiState, action: UiAction): UiState {
       };
     case "canvas-layer":
       return { ...state, canvasLayer: action.layer };
+    case "canvas-visibility":
+      return { ...state, canvasVisibilityLayer: action.visibility };
     case "canvas-select":
       return {
         ...state,

@@ -1,5 +1,5 @@
 (function registerAbuMotions(global) {
-  const cacheKey = "motion-system-v16";
+  const cacheKey = "motion-system-v17";
   const asset = (path) => `${path}?v=${cacheKey}`;
 
   global.DeepBaziAbuMotionRegistry = Object.freeze({
@@ -78,6 +78,51 @@
         category: "guidance",
         facing: "front",
         gazeTarget: "semantic_object",
+      }),
+      quiet_sit_reaction: Object.freeze({
+        actionId: "abu_quiet_sit_reaction_v1",
+        animation: asset("/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp"),
+        video: asset("/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webm"),
+        poster: asset("/assets/abu/v12-actor-pass/quiet-sit-reaction/posters/abu_quiet_sit_reaction_v1.png"),
+        durationMs: 10000,
+        displayScale: 1.45,
+        stageProfile: "standard",
+        playback: "loop",
+        category: "guidance",
+        facing: "front",
+        gazeTarget: "audience",
+      }),
+      baseball_swing: Object.freeze({
+        actionId: "abu_baseball_swing_v1",
+        animation: asset("/assets/abu/v12-actor-pass/baseball-swing/web/abu_baseball_swing_v1.webp"),
+        video: asset("/assets/abu/v12-actor-pass/baseball-swing/web/abu_baseball_swing_v1.webm"),
+        poster: asset("/assets/abu/v12-actor-pass/baseball-swing/posters/abu_baseball_swing_v1.png"),
+        durationMs: 9933,
+        displayScale: 1.08,
+        stageProfile: "wide",
+        playback: "one_shot",
+        category: "ambient",
+        facing: "front",
+        gazeTarget: "activity_object",
+      }),
+      pachinko_jackpot: Object.freeze({
+        actionId: "abu_pachinko_jackpot_v1",
+        animation: asset("/assets/abu/v12-actor-pass/pachinko-jackpot/web/abu_pachinko_jackpot_v1.webp"),
+        video: asset("/assets/abu/v12-actor-pass/pachinko-jackpot/web/abu_pachinko_jackpot_v1.webm"),
+        poster: asset("/assets/abu/v12-actor-pass/pachinko-jackpot/posters/abu_pachinko_jackpot_v1.png"),
+        durationMs: 10000,
+        displayScale: 1.04,
+        stageProfile: "extra_wide",
+        playback: "one_shot",
+        category: "ambient_restricted",
+        facing: "front",
+        gazeTarget: "activity_object",
+        restrictions: Object.freeze([
+          "wealth_or_fortune_reading",
+          "reading_success",
+          "payment_or_reward_prompt",
+          "professional_explanation",
+        ]),
       }),
       face_change_transition: Object.freeze({
         actionId: "abu_face_change_transition_v1",
@@ -214,18 +259,21 @@
       }),
     }),
     stateMapping: Object.freeze({
-      idle: "idle_blink",
+      idle: "quiet_sit_reaction",
+      quiet_companion: "quiet_sit_reaction",
       welcome: "welcome_wave",
       sleep: "sleep_breathe",
       playful: "butterfly_play",
       adventure: "run_jump",
+      baseball: "baseball_swing",
+      arcade_easter_egg: "pachinko_jackpot",
       celebration: "breakdance",
       ninja: "ninja_disappear_throw",
       listening: "head_tilt",
       speaking: "head_tilt",
       blackboard_guide: "stand_point_up_right",
       parsing: "head_tilt",
-      confirming: "idle_blink",
+      confirming: "quiet_sit_reaction",
       thinking: "taoist_divination",
       probe: "head_tilt",
       completed: "happy_tail",
@@ -240,6 +288,8 @@
       Object.freeze({ state: "playful", label: "发现了一只蝴蝶", weight: 5 }),
       Object.freeze({ state: "celebration", label: "偷偷跳一小段舞", weight: 3 }),
       Object.freeze({ state: "adventure", label: "出去跑一小圈", weight: 2 }),
+      Object.freeze({ state: "baseball", label: "挥一棒活动一下", weight: 2 }),
+      Object.freeze({ state: "arcade_easter_egg", label: "偶尔玩一局弹子机", weight: 1 }),
     ]),
   });
 })(window);

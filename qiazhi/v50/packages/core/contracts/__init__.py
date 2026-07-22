@@ -16,6 +16,21 @@ from core.contracts.chart import (
     PillarConstraint,
     PillarTargetDraft,
 )
+from core.contracts.formal_insight import (
+    FormalInsightLifecycle,
+    FormalInsightLifecycleState,
+)
+from core.contracts.professional_review import (
+    AssertionSourceSpan,
+    MingliAssertion,
+    PersistenceStatus,
+    ProfessionalIntegrityIssue,
+    ProfessionalRawSourceKind,
+    ProfessionalReleaseStatus,
+    ProfessionalReviewBundle,
+    ProfessionalReviewOverlay,
+    ProfessionalScopeBlock,
+)
 from core.contracts.material import MaterialType, MingliMaterial, UnifiedMingliMaterialStore
 from core.contracts.reasoning import (
     FlowObservation,
@@ -36,6 +51,8 @@ __all__ = [
     "ChartVariant",
     "ConstraintIssue",
     "FlowObservation",
+    "FormalInsightLifecycle",
+    "FormalInsightLifecycleState",
     "Gender",
     "JudgmentCandidate",
     "JudgmentType",
@@ -46,6 +63,15 @@ __all__ = [
     "SourceEngine",
     "PillarConstraint",
     "PillarTargetDraft",
+    "PersistenceStatus",
+    "ProfessionalIntegrityIssue",
+    "ProfessionalRawSourceKind",
+    "ProfessionalReleaseStatus",
+    "ProfessionalReviewBundle",
+    "ProfessionalReviewOverlay",
+    "ProfessionalScopeBlock",
+    "AssertionSourceSpan",
+    "MingliAssertion",
     "StructureObservation",
     "StructureProfileSegment",
     "Topic",

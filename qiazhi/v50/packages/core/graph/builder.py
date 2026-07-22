@@ -14,9 +14,15 @@ from core.graph.contracts import (
     MingliRelationState,
 )
 from core.graph.path_qualification import qualify_relation_for_path
+from core.graph.provenance import (
+    RelationDirectionality,
+    RelationPositionContext,
+    relation_directionality,
+)
 
 
 POSITION_ORDER = ("year", "month", "day", "hour")
+POSITION_INDEX = {slot: index for index, slot in enumerate(POSITION_ORDER)}
 
 def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) -> MingliGraph:
     pillars = _extract_pillars(store)
@@ -40,8 +46,7 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
         branch = pillar[1]
         stem_node_id = _node_id(store.reading_id, position, "stem", stem)
         branch_node_id = _node_id(store.reading_id, position, "branch", branch)
-        nodes.append(
-            MingliGraphNode(
+        stem_node = MingliGraphNode(
                 node_id=stem_node_id,
                 reading_id=store.reading_id,
                 label=stem,
@@ -54,9 +59,7 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                 material_refs=[chart_material_ref],
                 evidence_refs=[chart_material_ref],
             )
-        )
-        nodes.append(
-            MingliGraphNode(
+        branch_node = MingliGraphNode(
                 node_id=branch_node_id,
                 reading_id=store.reading_id,
                 label=branch,
@@ -67,7 +70,7 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                 material_refs=[chart_material_ref],
                 evidence_refs=[chart_material_ref],
             )
-        )
+        nodes.extend([stem_node, branch_node])
         edges.append(
             _edge(
                 store=store,
@@ -78,6 +81,13 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                 legacy_unvalidated_strength=0.72,
                 relation_label="same_pillar_position",
                 material_refs=[chart_material_ref],
+                mechanism_ref="same_pillar_bearing",
+                position_context=_position_context(
+                    source=stem_node,
+                    target=branch_node,
+                    nodes=nodes,
+                    directionality=RelationDirectionality.SYMMETRIC,
+                ),
                 attributes={
                     "slot": position,
                     "mechanism": "same_pillar_bearing",
@@ -88,8 +98,7 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
         )
         for hidden_stem in HIDDEN_STEMS.get(branch, []):
             hidden_id = _node_id(store.reading_id, position, "hidden", hidden_stem)
-            nodes.append(
-                MingliGraphNode(
+            hidden_node = MingliGraphNode(
                     node_id=hidden_id,
                     reading_id=store.reading_id,
                     label=hidden_stem,
@@ -102,7 +111,7 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                     material_refs=[chart_material_ref],
                     evidence_refs=[chart_material_ref],
                 )
-            )
+            nodes.append(hidden_node)
             edges.append(
                 _edge(
                     store=store,
@@ -113,6 +122,13 @@ def build_mingli_graph_from_material_store(store: UnifiedMingliMaterialStore) ->
                     legacy_unvalidated_strength=0.64,
                     relation_label="branch_stores_hidden_stem",
                     material_refs=[chart_material_ref],
+                    mechanism_ref="branch_hidden_stem_containment",
+                    position_context=_position_context(
+                        source=branch_node,
+                        target=hidden_node,
+                        nodes=nodes,
+                        directionality=RelationDirectionality.DIRECTED,
+                    ),
                     attributes={"branch": branch, "hidden_stem": hidden_stem},
                 )
             )
@@ -165,11 +181,15 @@ def _edge(
     relation_state: MingliRelationState = MingliRelationState.STRUCTURAL,
     evidence_refs: list[str] | None = None,
     participant_node_ids: list[str] | None = None,
+    mechanism_ref: str = "legacy_structural_relation",
+    position_context: RelationPositionContext | None = None,
     attributes: dict[str, object] | None = None,
 ) -> MingliGraphEdge:
     path_eligibility, eligibility_reason_refs = qualify_relation_for_path(
         edge_type,
         relation_state=relation_state,
+        mechanism_ref=mechanism_ref,
+        position_context=position_context,
     )
     return MingliGraphEdge(
         edge_id=edge_id,
@@ -181,6 +201,8 @@ def _edge(
         legacy_unvalidated_strength=legacy_unvalidated_strength,
         relation_label=relation_label,
         relation_state=relation_state,
+        mechanism_ref=mechanism_ref,
+        position_context=position_context,
         path_eligibility=path_eligibility,
         eligibility_reason_refs=eligibility_reason_refs,
         attributes=attributes or {},
@@ -230,6 +252,7 @@ def _element_edges(*, store: UnifiedMingliMaterialStore, nodes: list[MingliGraph
             store,
             nodes_by_id[relation["source_ref"]],
             nodes_by_id[relation["target_ref"]],
+            nodes,
             edge_type,
             strengths[edge_type],
             chart_material_ref,
@@ -241,10 +264,25 @@ def _element_edge(
     store: UnifiedMingliMaterialStore,
     source: MingliGraphNode,
     target: MingliGraphNode,
+    nodes: list[MingliGraphNode],
     edge_type: MingliGraphEdgeType,
     legacy_unvalidated_strength: float,
     chart_material_ref: str,
 ) -> MingliGraphEdge:
+    visible_same_layer = (
+        source.node_type == MingliGraphNodeType.STEM
+        and target.node_type == MingliGraphNodeType.STEM
+    )
+    relation_state = (
+        MingliRelationState.STRUCTURAL
+        if visible_same_layer
+        else MingliRelationState.POTENTIAL
+    )
+    mechanism_ref = (
+        "visible_stem_same_layer"
+        if visible_same_layer
+        else "five_element_potential_field"
+    )
     return _edge(
         store=store,
         edge_id=f"edge:{store.reading_id}:{edge_type.value}:{source.node_id.split(':')[-3]}:{source.label}:{target.node_id.split(':')[-3]}:{target.label}",
@@ -254,15 +292,30 @@ def _element_edge(
         legacy_unvalidated_strength=legacy_unvalidated_strength,
         relation_label=edge_type.value,
         material_refs=[chart_material_ref],
-        relation_state=MingliRelationState.POTENTIAL,
+        relation_state=relation_state,
+        mechanism_ref=mechanism_ref,
+        position_context=_position_context(
+            source=source,
+            target=target,
+            nodes=nodes,
+            directionality=relation_directionality(edge_type.value),
+        ),
         attributes={
             "from_element": source.element,
             "to_element": target.element,
             "from_level": source.node_type.value,
             "to_level": target.node_type.value,
-            "relation_field": "five_element_potential",
-            "projection_scope": "practitioner_or_lab",
-            "mechanism_required": True,
+            "relation_field": (
+                "visible_stem_structural"
+                if visible_same_layer
+                else "five_element_potential"
+            ),
+            "projection_scope": (
+                "formal_support_pool"
+                if visible_same_layer
+                else "practitioner_or_lab"
+            ),
+            "mechanism_required": not visible_same_layer,
             "direct_action": False,
             "same_pillar": source.attributes.get("slot") == target.attributes.get("slot"),
         },
@@ -359,6 +412,13 @@ def _material_relation_edges(
                         relation_label=relation_id,
                         material_refs=[material.material_id],
                         evidence_refs=source_refs,
+                        mechanism_ref=f"named_branch_{relation_name}",
+                        position_context=_position_context(
+                            source=source_node,
+                            target=bridge_node,
+                            nodes=nodes,
+                            directionality=RelationDirectionality.SYMMETRIC,
+                        ),
                         attributes={
                             "source_material_type": material.material_type.value,
                             "relation_family": "branch_hyperrelation",
@@ -412,6 +472,13 @@ def _material_relation_edges(
                     ),
                     material_refs=[material.material_id],
                     evidence_refs=source_refs,
+                    mechanism_ref=f"named_branch_{relation_name}",
+                    position_context=_position_context(
+                        source=first,
+                        target=second,
+                        nodes=nodes,
+                        directionality=RelationDirectionality.SYMMETRIC,
+                    ),
                     attributes={
                         "source_material_type": material.material_type.value,
                         "relation_family": (
@@ -498,6 +565,13 @@ def _material_root_edges(
                     relation_label="day_master_root",
                     material_refs=[material.material_id],
                     evidence_refs=source_refs,
+                    mechanism_ref="day_master_root_support",
+                    position_context=_position_context(
+                        source=branch_node,
+                        target=day_stem_node,
+                        nodes=nodes,
+                        directionality=RelationDirectionality.DIRECTED,
+                    ),
                     attributes={
                         "source_material_type": material.material_type.value,
                         "relation_family": "root_support",
@@ -509,3 +583,55 @@ def _material_root_edges(
                 )
             )
     return edges
+
+
+def _position_context(
+    *,
+    source: MingliGraphNode,
+    target: MingliGraphNode,
+    nodes: list[MingliGraphNode],
+    directionality: RelationDirectionality,
+) -> RelationPositionContext:
+    source_slot = str(source.attributes.get("slot") or source.position.split("_", 1)[0])
+    target_slot = str(target.attributes.get("slot") or target.position.split("_", 1)[0])
+    source_index = POSITION_INDEX.get(source_slot)
+    target_index = POSITION_INDEX.get(target_slot)
+    span = (
+        abs(source_index - target_index)
+        if source_index is not None and target_index is not None
+        else None
+    )
+    if directionality == RelationDirectionality.SYMMETRIC:
+        direction = "symmetric"
+    elif source_slot == target_slot:
+        direction = "same_column"
+    elif source_index is not None and target_index is not None:
+        direction = "left_to_right" if source_index < target_index else "right_to_left"
+    else:
+        direction = "other"
+    intervening = []
+    if span is not None and span > 1 and source.node_type == target.node_type:
+        low, high = sorted((source_index, target_index))
+        intervening = [
+            node.node_key
+            for node in nodes
+            if node.node_type == source.node_type
+            and low < POSITION_INDEX.get(
+                str(node.attributes.get("slot") or node.position.split("_", 1)[0]),
+                -1,
+            ) < high
+        ]
+    return RelationPositionContext(
+        source_scope="natal",
+        target_scope="natal",
+        source_slot=source_slot,
+        target_slot=target_slot,
+        source_level=source.node_type.value,
+        target_level=target.node_type.value,
+        adjacent=span == 1,
+        column_span=span,
+        intervening_node_refs=intervening,
+        ref_namespace="candidate_node_key",
+        direction=direction,
+        scene_layer="natal_state",
+    )

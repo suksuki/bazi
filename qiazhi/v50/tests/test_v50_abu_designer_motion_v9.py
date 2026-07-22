@@ -94,22 +94,15 @@ def test_runtime_visual_scale_is_normalized_by_visible_character_not_canvas() ->
     assert 80 <= sleep_width <= 110
 
 
-def test_product_uses_one_motion_registry_and_smooth_state_swaps() -> None:
+def test_product_keeps_one_motion_registry_after_l5_runtime_retirement() -> None:
     registry = (ASSET_ROOT / "motion-registry.js").read_text(encoding="utf-8")
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
-    stylesheet = (ROOT / "apps/product/static/l5/styles.css").read_text(encoding="utf-8")
-    html = (ROOT / "apps/product/static/l5/index.html").read_text(encoding="utf-8")
+    surface = (ROOT / "apps/product/product_surface.py").read_text(encoding="utf-8")
 
     assert 'scaleBasis: "visible character bounds rather than source canvas size"' in registry
     assert 'thinking: "taoist_divination"' in registry
     assert 'celebration: "breakdance"' in registry
     assert 'label: "偷偷跳一小段舞"' in registry
-    assert "window.DeepBaziAbuMotionRegistry" in javascript
-    assert "function swapAbuMotion" in javascript
-    assert 'frame.classList.add("is-switching")' in javascript
-    assert "function chooseAbuAmbientMoment()" in javascript
     assert 'label: "发现了一只蝴蝶", weight: 5' in registry
     assert 'label: "偷偷跳一小段舞", weight: 3' in registry
-    assert "scale: var(--abu-motion-scale, 1)" in stylesheet
-    assert ".abu-motion-frame.is-switching" in stylesheet
-    assert "/assets/abu/motion-registry.js" in html
+    assert 'app.mount("/assets"' in surface
+    assert 'FileResponse(MEDIA_DIR / "app.js"' not in surface

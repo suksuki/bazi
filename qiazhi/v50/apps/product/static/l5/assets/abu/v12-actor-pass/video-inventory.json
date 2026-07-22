@@ -165,6 +165,42 @@
       "quality": "candidate_framing_hold",
       "limitations": ["opening half-body framing cannot join the full-body finale actor without a visible scale jump"],
       "removed_regions": ["lower_right_sparkle_mark_in_production_derivative"]
+    },
+    {
+      "source_id": "quiet_sit_reaction_cute_standard",
+      "filename": "这个阿布脸太尖了，不是以前那个，应该是可爱一点的.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_quiet_sit_reaction_source.mp4",
+      "sha256": "d9434fa516ccd47d3ecb18debbeab85e0643bbced723f725dda39b8c360737ff",
+      "background": "black_key",
+      "actions": ["sit", "blink", "head_tilt", "smile", "small_raise", "return_idle"],
+      "selected_ranges": [{"seconds": [0.0, 10.0], "action_id": "abu_quiet_sit_reaction_v1"}],
+      "quality": "selected_standard_character_motion",
+      "notes": ["designer-corrected cute facial silhouette accepted as the standard quiet companion action"],
+      "removed_regions": ["lower_right_sparkle_mark"]
+    },
+    {
+      "source_id": "baseball_swing",
+      "filename": "来一个阿布打棒球的视频，初始帧为阿布坐着，我给你阿布坐着的图.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_baseball_swing_source.mp4",
+      "sha256": "5d7598535cbe2f3dc235e5260db7ef53b372dea5df9111dcd3039f392157a548",
+      "background": "black_key",
+      "actions": ["sit", "stand", "take_bat", "swing", "celebrate", "return_idle"],
+      "selected_ranges": [{"seconds": [0.067, 10.0], "action_id": "abu_baseball_swing_v1"}],
+      "quality": "selected_after_first_frame_cleanup",
+      "notes": ["the first encoded close-up frame is excluded so the registered action begins on the full seated Abu pose"],
+      "removed_regions": ["first_mismatched_closeup_frame", "lower_right_sparkle_mark"]
+    },
+    {
+      "source_id": "pachinko_jackpot",
+      "filename": "来一个阿布打日本pachinko_，获得大奖视频，和以前一样.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_pachinko_jackpot_source.mp4",
+      "sha256": "bd70cb1b6c9f6c2d432f672310336620677445715fb3ad9f6b551fa76ecf66ce",
+      "background": "black_key",
+      "actions": ["sit_at_machine", "operate", "reels_spin", "jackpot_777", "brief_celebration", "return_idle"],
+      "selected_ranges": [{"seconds": [0.0, 10.0], "action_id": "abu_pachinko_jackpot_v1"}],
+      "quality": "selected_restricted_context",
+      "notes": ["arcade imagery is a low-frequency IP easter egg and has no permitted binding to fortune, wealth or reading outcome"],
+      "removed_regions": ["lower_right_sparkle_mark"]
     }
   ]
 }

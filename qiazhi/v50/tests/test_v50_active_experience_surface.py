@@ -74,7 +74,9 @@ def test_abu_theater_has_a_stable_entry_and_legacy_bookmark_redirects() -> None:
     product_entry = client.get("/", follow_redirects=False)
     assert product_entry.status_code == 307
     assert product_entry.headers["location"] == "/abu-theater"
-    assert client.get("/app").status_code == 200
+    app = client.get("/app", follow_redirects=False)
+    assert app.status_code == 308
+    assert app.headers["location"] == "/experience"
 
     stable = client.get("/abu-theater", follow_redirects=False)
     assert stable.status_code == 307

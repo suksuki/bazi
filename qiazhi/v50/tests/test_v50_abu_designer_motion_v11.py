@@ -42,20 +42,11 @@ def test_sad_tears_is_a_transparent_hd_failure_motion() -> None:
     assert 72 <= apparent_height <= 102
 
 
-def test_hard_failures_use_sadness_without_recasting_uncertainty_as_failure() -> None:
+def test_sad_motion_remains_registered_without_owning_workspace_failure_state() -> None:
     registry = (ASSET_ROOT / "motion-registry.js").read_text(encoding="utf-8")
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
-    html = (ROOT / "apps/product/static/l5/index.html").read_text(encoding="utf-8")
-    stylesheet = (ROOT / "apps/product/static/l5/styles.css").read_text(encoding="utf-8")
+    workspace = (ROOT / "apps/product/experience_shell/src/main.ts").read_text(encoding="utf-8")
 
     assert 'sad: "sad_tears"' in registry
     assert 'playback: "hold"' in registry
-    assert 'setAbuState("sad", "这次没能形成可靠判断")' in javascript
-    assert 'event.event_type === "domain_blocked" ? "sad" : "caution"' in javascript
-    assert 'setAbuState("sad", "这个专题暂时没有完成")' in javascript
-    assert 'setAbuState("sad", "这次看盘没有完成")' in javascript
-    assert 'setAbuState("sad", "上次判断没有通过检查")' in javascript
-    assert 'setAbuState("caution", "两种解释仍在竞争")' in javascript
-    assert 'data-abu-motion="sad_tears"' in html
-    assert ".app-shell.abu-panel-collapsed .abu-stage:focus-visible" in stylesheet
-    assert "url('/assets/valley_sunrise.jpg')" in stylesheet
+    assert "最终事实与证据检查没有通过" not in workspace
+    assert 'status: "partial"' in workspace

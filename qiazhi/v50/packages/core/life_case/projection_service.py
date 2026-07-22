@@ -7,6 +7,7 @@ from core.mingli_agent.contracts import MingliCognitiveRecord
 
 def project_life_case(life_case: LifeCase, *, role_mode: str) -> dict[str, Any]:
     baseline = life_case.baseline_insight
+    _require_professionally_released_baseline(baseline)
     latest_case_revision = next(
         (item for item in reversed(life_case.case_revisions) if item.status == "committed"),
         None,
@@ -68,6 +69,7 @@ def formal_projection_record(
     consume formal Case projections directly, during Legacy read retirement.
     """
 
+    _require_professionally_released_baseline(life_case.baseline_insight)
     payload = life_case.baseline_insight.projection_payload.get("record_projection")
     if isinstance(payload, dict):
         try:
@@ -92,3 +94,12 @@ def formal_projection_record(
             continue
         committed_domains[parsed.domain] = parsed
     return record.model_copy(update={"domain_explorations": committed_domains})
+
+
+def _require_professionally_released_baseline(baseline: Any) -> None:
+    if (
+        baseline.status != "committed"
+        or baseline.professional_review_overlay is None
+        or baseline.professional_release_status not in {"passed", "partially_blocked"}
+    ):
+        raise ValueError("life_case_professional_release_required")

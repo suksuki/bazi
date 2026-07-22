@@ -1013,9 +1013,11 @@
       "properties": {
         "layer_id": {
           "enum": [
-            "generation_control",
-            "combination",
-            "conflict",
+            "overview",
+            "five_element",
+            "combination_conflict",
+            "roots_reveal",
+            "timing",
             "work_path"
           ],
           "title": "Layer Id",
@@ -1036,6 +1038,27 @@
           "title": "Relation Refs",
           "type": "array"
         },
+        "formal_relation_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Formal Relation Refs",
+          "type": "array"
+        },
+        "path_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Path Refs",
+          "type": "array"
+        },
+        "formal_path_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Formal Path Refs",
+          "type": "array"
+        },
         "available": {
           "title": "Available",
           "type": "boolean"
@@ -1044,6 +1067,11 @@
           "minimum": 0,
           "title": "Count",
           "type": "integer"
+        },
+        "formal_count": {
+          "minimum": 0,
+          "title": "Formal Count",
+          "type": "integer"
         }
       },
       "required": [
@@ -1051,8 +1079,12 @@
         "label",
         "description",
         "relation_refs",
+        "formal_relation_refs",
+        "path_refs",
+        "formal_path_refs",
         "available",
-        "count"
+        "count",
+        "formal_count"
       ],
       "title": "CanvasLayerProjection",
       "type": "object"
@@ -1291,6 +1323,39 @@
           "minimum": 0,
           "title": "Legacy Unresolved Count",
           "type": "integer"
+        },
+        "disclosure_level": {
+          "enum": [
+            "public",
+            "professional",
+            "audit"
+          ],
+          "title": "Disclosure Level",
+          "type": "string"
+        },
+        "professional_status": {
+          "enum": [
+            "confirmed",
+            "not_confirmed",
+            "natural_language_unstructured",
+            "candidate_uncommitted",
+            "reference_unresolved",
+            "role_filtered",
+            "not_available"
+          ],
+          "title": "Professional Status",
+          "type": "string"
+        },
+        "diagnostic": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/PathProjectionDiagnostic"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         }
       },
       "required": [
@@ -1298,7 +1363,9 @@
         "message",
         "committed_path_count",
         "candidate_path_count",
-        "legacy_unresolved_count"
+        "legacy_unresolved_count",
+        "disclosure_level",
+        "professional_status"
       ],
       "title": "CanvasPathAvailability",
       "type": "object"
@@ -1396,6 +1463,23 @@
           "title": "Relation State",
           "type": "string"
         },
+        "mechanism_ref": {
+          "default": "",
+          "maxLength": 140,
+          "title": "Mechanism Ref",
+          "type": "string"
+        },
+        "position_context": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/RelationPositionContext"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "semantic_state": {
           "default": "active",
           "enum": [
@@ -1442,6 +1526,27 @@
           "title": "Read Only",
           "type": "boolean"
         },
+        "available_visibility_layers": {
+          "items": {
+            "enum": [
+              "formal",
+              "focus",
+              "lab_audit"
+            ],
+            "type": "string"
+          },
+          "title": "Available Visibility Layers",
+          "type": "array"
+        },
+        "default_visibility_layer": {
+          "enum": [
+            "formal",
+            "focus",
+            "lab_audit"
+          ],
+          "title": "Default Visibility Layer",
+          "type": "string"
+        },
         "allowed_interactions": {
           "items": {
             "type": "string"
@@ -1459,6 +1564,8 @@
       },
       "required": [
         "read_only",
+        "available_visibility_layers",
+        "default_visibility_layer",
         "allowed_interactions",
         "forbidden_interactions"
       ],
@@ -1536,6 +1643,87 @@
         "source_refs"
       ],
       "title": "CanvasSandboxMutation",
+      "type": "object"
+    },
+    "CanvasSceneSlotProjection": {
+      "additionalProperties": false,
+      "properties": {
+        "position_index": {
+          "maximum": 5,
+          "minimum": 0,
+          "title": "Position Index",
+          "type": "integer"
+        },
+        "slot_type": {
+          "enum": [
+            "natal_year",
+            "natal_month",
+            "natal_day",
+            "natal_hour",
+            "luck",
+            "year"
+          ],
+          "title": "Slot Type",
+          "type": "string"
+        },
+        "label": {
+          "title": "Label",
+          "type": "string"
+        },
+        "state": {
+          "enum": [
+            "active",
+            "inactive",
+            "not_loaded"
+          ],
+          "title": "State",
+          "type": "string"
+        },
+        "slot_ref": {
+          "title": "Slot Ref",
+          "type": "string"
+        },
+        "stem_node_ref": {
+          "default": "",
+          "title": "Stem Node Ref",
+          "type": "string"
+        },
+        "branch_node_ref": {
+          "default": "",
+          "title": "Branch Node Ref",
+          "type": "string"
+        },
+        "stem": {
+          "default": "",
+          "title": "Stem",
+          "type": "string"
+        },
+        "branch": {
+          "default": "",
+          "title": "Branch",
+          "type": "string"
+        },
+        "hidden_stems": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Hidden Stems",
+          "type": "array"
+        },
+        "immutable": {
+          "title": "Immutable",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "position_index",
+        "slot_type",
+        "label",
+        "state",
+        "slot_ref",
+        "immutable"
+      ],
+      "title": "CanvasSceneSlotProjection",
       "type": "object"
     },
     "CanvasSemanticSlot": {
@@ -1640,6 +1828,13 @@
         "context": {
           "$ref": "#/$defs/CanvasContextPack"
         },
+        "scene_slots": {
+          "items": {
+            "$ref": "#/$defs/CanvasSceneSlotProjection"
+          },
+          "title": "Scene Slots",
+          "type": "array"
+        },
         "layers": {
           "items": {
             "$ref": "#/$defs/CanvasLayerProjection"
@@ -1649,9 +1844,11 @@
         },
         "default_layer_id": {
           "enum": [
-            "generation_control",
-            "combination",
-            "conflict",
+            "overview",
+            "five_element",
+            "combination_conflict",
+            "roots_reveal",
+            "timing",
             "work_path"
           ],
           "title": "Default Layer Id",
@@ -1672,6 +1869,7 @@
         "spec",
         "diff",
         "context",
+        "scene_slots",
         "layers",
         "default_layer_id",
         "change_groups"
@@ -1870,6 +2068,83 @@
       "title": "MingliCanvasSpec",
       "type": "object"
     },
+    "PathProjectionDiagnostic": {
+      "additionalProperties": false,
+      "properties": {
+        "cognitive_path_present": {
+          "title": "Cognitive Path Present",
+          "type": "boolean"
+        },
+        "structured_candidate_present": {
+          "title": "Structured Candidate Present",
+          "type": "boolean"
+        },
+        "path_assertion_present": {
+          "title": "Path Assertion Present",
+          "type": "boolean"
+        },
+        "path_status": {
+          "title": "Path Status",
+          "type": "string"
+        },
+        "node_refs_valid": {
+          "title": "Node Refs Valid",
+          "type": "boolean"
+        },
+        "relation_refs_valid": {
+          "title": "Relation Refs Valid",
+          "type": "boolean"
+        },
+        "authority_status": {
+          "title": "Authority Status",
+          "type": "string"
+        },
+        "role_visible": {
+          "title": "Role Visible",
+          "type": "boolean"
+        },
+        "projection_result": {
+          "enum": [
+            "projected",
+            "rejected",
+            "not_available"
+          ],
+          "title": "Projection Result",
+          "type": "string"
+        },
+        "rejection_reason": {
+          "enum": [
+            "none",
+            "no_cognitive_path",
+            "natural_language_only",
+            "candidate_not_committed",
+            "missing_path_ref",
+            "invalid_node_ref",
+            "invalid_relation_ref",
+            "relation_still_potential",
+            "authority_not_allowed",
+            "role_visibility_filtered",
+            "timing_scope_mismatch"
+          ],
+          "title": "Rejection Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "cognitive_path_present",
+        "structured_candidate_present",
+        "path_assertion_present",
+        "path_status",
+        "node_refs_valid",
+        "relation_refs_valid",
+        "authority_status",
+        "role_visible",
+        "projection_result",
+        "rejection_reason"
+      ],
+      "title": "PathProjectionDiagnostic",
+      "type": "object"
+    },
     "ReadOnlyCanvasSource": {
       "additionalProperties": false,
       "properties": {
@@ -1937,6 +2212,140 @@
         "timing_publicly_supported"
       ],
       "title": "ReadOnlyCanvasSource",
+      "type": "object"
+    },
+    "RelationPositionContext": {
+      "additionalProperties": false,
+      "description": "Typed location evidence; it never decides strength or effectiveness.",
+      "properties": {
+        "version": {
+          "default": "deepbazi.relation_position_context.six02.v1",
+          "title": "Version",
+          "type": "string"
+        },
+        "source_scope": {
+          "enum": [
+            "natal",
+            "luck",
+            "year",
+            "month",
+            "other"
+          ],
+          "title": "Source Scope",
+          "type": "string"
+        },
+        "target_scope": {
+          "enum": [
+            "natal",
+            "luck",
+            "year",
+            "month",
+            "other"
+          ],
+          "title": "Target Scope",
+          "type": "string"
+        },
+        "source_slot": {
+          "title": "Source Slot",
+          "type": "string"
+        },
+        "target_slot": {
+          "title": "Target Slot",
+          "type": "string"
+        },
+        "source_level": {
+          "enum": [
+            "pillar",
+            "stem",
+            "branch",
+            "hidden_stem",
+            "other"
+          ],
+          "title": "Source Level",
+          "type": "string"
+        },
+        "target_level": {
+          "enum": [
+            "pillar",
+            "stem",
+            "branch",
+            "hidden_stem",
+            "other"
+          ],
+          "title": "Target Level",
+          "type": "string"
+        },
+        "adjacent": {
+          "default": false,
+          "title": "Adjacent",
+          "type": "boolean"
+        },
+        "column_span": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Column Span"
+        },
+        "intervening_node_refs": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Intervening Node Refs",
+          "type": "array"
+        },
+        "ref_namespace": {
+          "default": "node_ref",
+          "enum": [
+            "candidate_node_key",
+            "node_ref"
+          ],
+          "title": "Ref Namespace",
+          "type": "string"
+        },
+        "direction": {
+          "default": "other",
+          "enum": [
+            "same_column",
+            "left_to_right",
+            "right_to_left",
+            "symmetric",
+            "temporal_to_natal",
+            "natal_to_temporal",
+            "cross_temporal",
+            "other"
+          ],
+          "title": "Direction",
+          "type": "string"
+        },
+        "scene_layer": {
+          "default": "natal_state",
+          "enum": [
+            "natal_state",
+            "luck_state",
+            "year_state",
+            "month_state",
+            "mixed_temporal"
+          ],
+          "title": "Scene Layer",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_scope",
+        "target_scope",
+        "source_slot",
+        "target_slot",
+        "source_level",
+        "target_level"
+      ],
+      "title": "RelationPositionContext",
       "type": "object"
     }
   },

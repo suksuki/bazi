@@ -13,6 +13,7 @@ import type {
   WorkspaceCognitionState,
 } from "./contracts";
 import type { ProductArea, UiState, WorkspaceSurface } from "./state";
+import type { DreamFeatureStatus } from "./dream_api";
 
 export interface ExperienceViewModel {
   accountName: string;
@@ -29,6 +30,7 @@ export interface ExperienceViewModel {
   canvas: ReadOnlySixPillarCanvas | null;
   canvasContext: CanvasContextPack | null;
   ui: UiState;
+  dreamStatus: DreamFeatureStatus | null;
 }
 
 const elementLabel: Record<string, string> = {
@@ -142,7 +144,12 @@ function renderWorkbench(view: ExperienceViewModel): string {
           : "四柱骨架已经就绪",
         expanded: view.ui.expandedSections.canvas ?? true,
         body: view.canvas
-          ? renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, false)
+          ? renderReadOnlyCanvas(
+              view.canvas,
+              view.ui,
+              view.canvasContext,
+              view.cognition.status === "preparing",
+            )
           : renderDeterministicCanvasSkeleton(view.envelope, view.cognition),
       })}` : ""}
 
@@ -196,7 +203,9 @@ function renderLifeWorld(
         <div class="world-actions">
           <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "暂停阿布" : "听阿布讲"}</button>
           <button class="text-command" type="button" data-product-area="workbench">打开命盘</button>
+          ${view.dreamStatus?.enabled && view.dreamStatus.available ? `<button class="dream-entry-command" type="button" data-command="enter-dream">${view.dreamStatus.resumable ? "继续上次的梦" : "随阿布入梦"}</button>` : ""}
         </div>
+        ${renderDreamConsent(view)}
       </div>
       <div class="life-tree" aria-label="命、事、人的生命脉络">
         <span class="tree-line tree-line-left" aria-hidden="true"></span>
@@ -225,6 +234,23 @@ function renderLifeWorld(
   </div>`;
 }
 
+
+function renderDreamConsent(view: ExperienceViewModel): string {
+  const status = view.dreamStatus;
+  if (!status?.enabled || status.consent_state === "case_unavailable") return "";
+  if (status.consent_state === "active") {
+    return `<div class="dream-consent-control is-active">
+      <div><strong>当前档案已匿名授权入梦</strong><span>仅用于本地封闭三树体验，可随时撤回。</span></div>
+      <button type="button" data-command="withdraw-dream-consent">撤回授权</button>
+    </div>`;
+  }
+  const changed = status.consent_state === "source_changed";
+  return `<div class="dream-consent-control">
+    <div><strong>${changed ? "命盘版本已变化，请重新确认" : "让这棵生命树进入封闭梦境"}</strong><span>匿名展示确定性命盘与只读树象；不公开身份，不默认用于训练，授权后仍可撤回。</span></div>
+    <button type="button" data-command="grant-dream-consent">${changed ? "重新授权" : "授权当前档案"}</button>
+  </div>`;
+}
+
 function renderMingliLab(view: ExperienceViewModel): string {
   if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>四柱已经就绪</h1><span>研究镜头只在正式关系投影可用时按需展开，不会为 Lab 另算一套命盘。</span></section>`;
   const stage = view.canvas.stages[view.ui.canvasStage];
@@ -242,7 +268,7 @@ function renderMingliLab(view: ExperienceViewModel): string {
       <span><small>来源引用</small><strong>${sourceCount}</strong></span>
       <span><small>正式写入</small><strong>关闭</strong></span>
     </div>
-    <section class="lab-canvas"><p class="lab-lens-label">命理师 Lens · 潜在关系场</p>${renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, true)}</section>
+    <section class="lab-canvas"><p class="lab-lens-label">命理师 Lens · 潜在关系场</p>${renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, view.cognition.status === "preparing")}</section>
   </div>`;
 }
 
@@ -251,13 +277,13 @@ function renderProductSidebar(view: ExperienceViewModel): string {
     <a class="brand" href="/experience" aria-label="DeepBeing 首页"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
     ${renderProductNavigation(view, "sidebar")}
     <div class="sidebar-context">${renderProfileSelector(view.cases, view.activeProfileId)}<small>${escapeHtml(view.envelope.source.life_case_version || "命盘事实")}</small></div>
-    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><a href="/app?manage=1">档案</a></div>
+    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><button type="button" data-command="manage-profiles">档案</button></div>
   </aside>`;
 }
 
 function renderMobileHeader(view: ExperienceViewModel): string {
   const labels: Record<ProductArea, string> = { world: "我的生命世界", workbench: "命盘工作台", lab: "Mingli Lab" };
-  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong>${renderProfileSelector(view.cases, view.activeProfileId)}</header>`;
+  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong><div class="mobile-header-actions">${renderProfileSelector(view.cases, view.activeProfileId)}<button type="button" data-command="manage-profiles" aria-label="管理档案" title="管理档案">档</button></div></header>`;
 }
 
 function renderMobileNavigation(view: ExperienceViewModel): string {
@@ -307,29 +333,47 @@ function renderDeterministicCanvasSkeleton(
   </div>`;
 }
 
-function renderReadOnlyCanvas(
+export function renderReadOnlyCanvas(
   canvas: ReadOnlySixPillarCanvas,
   ui: UiState,
   context: CanvasContextPack | null,
-  researchLens: boolean,
+  pathTaskRunning: boolean,
 ): string {
   const stage = canvas.stages[ui.canvasStage];
-  const exposedRelations = researchLens
-    ? stage.spec.relations
-    : stage.spec.relations.filter((item) => item.relation_state !== "potential");
-  const exposedRelationRefs = new Set(exposedRelations.map((item) => item.relation_ref));
+  const allowedVisibility = canvas.renderer_policy.available_visibility_layers;
+  const requestedVisibility = ui.canvasVisibilityLayer;
+  const visibility = allowedVisibility.includes(requestedVisibility)
+    ? requestedVisibility
+    : canvas.renderer_policy.default_visibility_layer;
+  const selected = ui.selectedCanvasObject || stage.scene_slots[0]?.slot_ref || "";
   const displayLayers = stage.layers.map((item) => {
-    const relationRefs = item.relation_refs.filter((ref) => exposedRelationRefs.has(ref));
-    return { ...item, relation_refs: relationRefs, count: relationRefs.length, available: relationRefs.length > 0 };
+    const relationRefs = visibility === "lab_audit"
+      ? item.relation_refs
+      : item.formal_relation_refs;
+    const pathRefs = visibility === "lab_audit"
+      ? item.path_refs
+      : item.formal_path_refs;
+    const focusedRelationRefs = visibility === "focus"
+      ? focusRelationRefs(stage.spec, relationRefs, selected)
+      : relationRefs;
+    const focusedPathRefs = visibility === "focus"
+      ? focusPathRefs(stage.spec, pathRefs, selected)
+      : pathRefs;
+    return {
+      ...item,
+      relation_refs: focusedRelationRefs,
+      path_refs: focusedPathRefs,
+      count: focusedRelationRefs.length,
+      available: focusedRelationRefs.length > 0 || focusedPathRefs.length > 0,
+    };
   });
-  const layer = displayLayers.find((item) => item.layer_id === ui.canvasLayer && item.available)
-    || displayLayers.find((item) => item.layer_id === stage.default_layer_id && item.available)
-    || displayLayers.find((item) => item.available)
+  const layer = displayLayers.find((item) => item.layer_id === ui.canvasLayer)
+    || displayLayers.find((item) => item.layer_id === stage.default_layer_id)
     || displayLayers[0];
-  const visibleRelations = new Set(layer?.relation_refs || []);
-  const nodesByRef = new Map(stage.spec.nodes.map((item) => [item.node_ref, item]));
-  const selected = ui.selectedCanvasObject || stage.spec.semantic_slots[0]?.slot_ref || "";
-  const activeRelations = exposedRelations.filter((item) => visibleRelations.has(item.relation_ref));
+  const visibleRelationRefs = new Set(layer?.relation_refs || []);
+  const visiblePathRefs = new Set(layer?.path_refs || []);
+  const activeRelations = stage.spec.relations.filter((item) => visibleRelationRefs.has(item.relation_ref));
+  const activePaths = stage.spec.paths.filter((item) => visiblePathRefs.has(item.path_ref));
   const range = canvas.source.luck_year_range.length === 2
     ? `${canvas.source.luck_year_range[0]}–${canvas.source.luck_year_range[1]}`
     : "当前阶段";
@@ -350,18 +394,27 @@ function renderReadOnlyCanvas(
       </div>
     </div>
 
-    <div class="layer-switch" role="tablist" aria-label="关系图层">
-      ${displayLayers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available ? "" : " disabled"}>
-        <span>${escapeHtml(item.label)}</span><small>${item.count}</small>
-      </button>`).join("")}
+    <div class="canvas-lens-controls">
+      <div class="layer-switch" role="tablist" aria-label="命局观察镜头">
+        ${displayLayers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available || item.layer_id === "overview" || item.layer_id === "work_path" ? "" : " disabled"}>
+          <span>${escapeHtml(item.label)}</span>${item.count > 0 ? `<small>${item.count}</small>` : ""}
+        </button>`).join("")}
+      </div>
+      <div class="visibility-switch" role="tablist" aria-label="关系披露层">
+        ${allowedVisibility.map((item) => `<button type="button" role="tab" data-canvas-visibility="${item}" aria-selected="${item === visibility}" class="${item === visibility ? "active" : ""}">${visibilityLabel(item)}</button>`).join("")}
+      </div>
     </div>
 
-    <div class="canvas-board" data-layer="${escapeAttr(layer?.layer_id || "")}">
+    <div class="canvas-board" data-layer="${escapeAttr(layer?.layer_id || "")}" data-visibility="${escapeAttr(visibility)}">
       <div class="six-pillar-scroll">
-        <div class="six-pillar-rail" style="--pillar-count:${stage.spec.semantic_slots.length}">
-          ${stage.spec.semantic_slots.map((slot) => renderCanvasPillar(slot, nodesByRef, selected, researchLens)).join("")}
-        </div>
-        ${renderCanvasRelations(stage.spec.semantic_slots, stage.spec.nodes, activeRelations, stage.spec.paths.flatMap((item) => item.relation_refs), selected)}
+        ${renderCanonicalCanvasScene(
+          stage.scene_slots,
+          stage.spec.nodes,
+          activeRelations,
+          activePaths,
+          selected,
+          visibility === "lab_audit",
+        )}
       </div>
       <p class="layer-caption"><strong>${escapeHtml(layer?.label || "当前图层")}</strong>${escapeHtml(layer?.description || "当前没有可显示的关系。")}</p>
     </div>
@@ -372,82 +425,351 @@ function renderReadOnlyCanvas(
     </div>
 
     <div class="canvas-boundary ${canvas.path_availability.status === "available" ? "is-ready" : "is-limited"}">
-      <span>${canvas.path_availability.status === "available" ? "主路径已对齐" : "主路径未补画"}</span>
-      <p>${escapeHtml(canvas.path_availability.message)}</p>
-      <small>当前只读查看正式案例，不修改原局。</small>
+      <span>${canvas.path_availability.status === "available"
+        ? "正式路径已确认"
+        : pathTaskRunning
+          ? "正式主路径正在形成"
+          : "当前暂无已确认主路径"}</span>
+      <p>${escapeHtml(
+        canvas.path_availability.status !== "available" && pathTaskRunning
+          ? "后台正在形成最小整盘主线，已经确认的结构会自动出现。"
+          : canvas.path_availability.message,
+      )}</p>
+      ${canvas.path_availability.disclosure_level === "audit" && canvas.path_availability.diagnostic
+        ? `<small>${escapeHtml(pathDiagnosticLabel(canvas.path_availability.diagnostic.rejection_reason))}</small>`
+        : ""}
+      ${visibility === "lab_audit" && canvas.path_availability.diagnostic
+        ? `<code>${escapeHtml(canvas.path_availability.diagnostic.rejection_reason)}</code>`
+        : ""}
     </div>
   </div>`;
 }
 
-function renderCanvasPillar(
-  slot: CanvasSemanticSlot,
-  nodesByRef: Map<string, CanvasNode>,
+function renderCanonicalCanvasScene(
+  slots: ReadOnlySixPillarCanvas["stages"]["natal"]["scene_slots"],
+  nodes: CanvasNode[],
+  relations: CanvasRelation[],
+  paths: ReadOnlySixPillarCanvas["stages"]["natal"]["spec"]["paths"],
   selected: string,
   showHiddenStems: boolean,
 ): string {
-  const nodes = [...nodesByRef.values()].filter((item) => item.semantic_slot_ref === slot.slot_ref);
-  const stemNode = nodes.find((item) => item.node_type.includes("stem") && !item.node_type.includes("hidden"));
-  const branchNode = nodes.find((item) => item.node_type.includes("branch"));
-  const temporal = slot.slot_type === "luck" || slot.slot_type === "year";
-  return `<article class="canvas-pillar${temporal ? " is-temporal" : ""}${selected === slot.slot_ref ? " is-selected" : ""}" data-slot-type="${escapeAttr(slot.slot_type)}">
-    <button type="button" class="canvas-pillar-label" data-canvas-object="${escapeAttr(slot.slot_ref)}"><span>${escapeHtml(slot.label)}</span>${slot.immutable ? "<small>原局</small>" : "<small>时间</small>"}</button>
-    <button type="button" class="canvas-character element-${escapeAttr(stemNode?.element || "")}${selected === stemNode?.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(stemNode?.polarity || "")}" data-canvas-object="${escapeAttr(stemNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}天干${slot.stem}`)}">
-      <small>${escapeHtml(stemNode?.ten_god === "day_master" ? "日主" : tenGodLabel(stemNode?.ten_god || "天干"))}</small><strong>${escapeHtml(slot.stem)}</strong>
-    </button>
-    <i aria-hidden="true"></i>
-    <button type="button" class="canvas-character element-${escapeAttr(branchNode?.element || "")}${selected === branchNode?.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(branchNode?.polarity || "")}" data-canvas-object="${escapeAttr(branchNode?.node_ref || slot.slot_ref)}" aria-label="${escapeAttr(`${slot.label}地支${slot.branch}`)}">
-      <small>地支</small><strong>${escapeHtml(slot.branch)}</strong>
-    </button>
-    ${showHiddenStems ? `<div class="canvas-hidden-stems"><span>藏干</span>${slot.hidden_stems.map((item) => `<b>${escapeHtml(item)}</b>`).join("") || "<em>无</em>"}</div>` : ""}
-  </article>`;
-}
-
-function renderCanvasRelations(
-  slots: CanvasSemanticSlot[],
-  nodes: CanvasNode[],
-  relations: CanvasRelation[],
-  pathRelationRefs: string[],
-  selected: string,
-): string {
-  const slotIndex = new Map(slots.map((item, index) => [item.slot_ref, index]));
   const nodesByRef = new Map(nodes.map((item) => [item.node_ref, item]));
-  const pathRefs = new Set(pathRelationRefs);
-  const width = 1200;
-  const count = Math.max(slots.length, 1);
-  const x = (index: number): number => ((index + 0.5) * width) / count;
-  const y = (node: CanvasNode | undefined): number => node?.node_type.includes("branch") ? 132 : 44;
-  const paths = relations.flatMap((relation, index) => {
-    const source = nodesByRef.get(relation.from_node_ref);
-    const target = nodesByRef.get(relation.to_node_ref);
-    const sourceIndex = source ? slotIndex.get(source.semantic_slot_ref) : undefined;
-    const targetIndex = target ? slotIndex.get(target.semantic_slot_ref) : undefined;
-    if (sourceIndex === undefined || targetIndex === undefined) return [];
-    const x1 = x(sourceIndex);
-    const x2 = x(targetIndex);
-    const y1 = y(source);
-    const y2 = y(target);
-    const lift = 30 + (index % 4) * 15;
-    const controlY = Math.max(12, Math.min(y1, y2) - lift);
-    const d = sourceIndex === targetIndex
-      ? `M ${x1 - 7} ${y1} C ${x1 - 70} ${controlY}, ${x1 + 70} ${controlY}, ${x2 + 7} ${y2}`
-      : `M ${x1} ${y1} C ${x1} ${controlY}, ${x2} ${controlY}, ${x2} ${y2}`;
-    const midX = (x1 + x2) / 2;
+  const anchors = canvasAnchorRegistry(slots, nodes);
+  const pathRelationRefs = new Set(paths.flatMap((item) => item.relation_refs));
+  const requiredNodeRefs = new Set([
+    ...relations.flatMap((item) => [
+      item.from_node_ref,
+      item.to_node_ref,
+      ...item.participant_node_refs,
+    ]),
+    ...paths.flatMap((item) => item.node_refs),
+  ]);
+  const relationMarkup = relations.flatMap((relation, index) => {
+    const source = anchors.get(relation.from_node_ref);
+    const target = anchors.get(relation.to_node_ref);
+    if (!source || !target) return [];
+    const route = routeCanvasRelation(source, target, index);
     const classes = [
       "canvas-relation",
       `state-${relation.semantic_state}`,
-      pathRefs.has(relation.relation_ref) ? "is-work-path" : "",
+      pathRelationRefs.has(relation.relation_ref) ? "is-work-path" : "",
       selected === relation.relation_ref ? "is-selected" : "",
     ].filter(Boolean).join(" ");
     return [`<g class="${classes}">
-      <path d="${d}" marker-end="url(#canvas-arrow)" data-canvas-object="${escapeAttr(relation.relation_ref)}"></path>
-      <text x="${midX}" y="${Math.max(18, controlY - 5)}" text-anchor="middle" tabindex="0" role="button" data-canvas-object="${escapeAttr(relation.relation_ref)}" aria-label="${escapeAttr(relation.label)}">${escapeHtml(relation.label)}</text>
+      <path d="${route.d}" marker-end="url(#canvas-arrow)" data-canvas-object="${escapeAttr(relation.relation_ref)}"></path>
+      <text x="${route.labelX}" y="${route.labelY}" text-anchor="middle" tabindex="0" role="button" data-canvas-object="${escapeAttr(relation.relation_ref)}" aria-label="${escapeAttr(relation.label)}">${escapeHtml(shortRelationLabel(relation))}</text>
     </g>`];
   }).join("");
-  if (!paths) return `<div class="relation-empty"><span>此图层在当前阶段没有已披露关系</span><small>页面不会为了填满画面而补线。</small></div>`;
-  return `<svg class="relation-map" viewBox="0 0 ${width} 170" preserveAspectRatio="xMidYMid meet" aria-label="当前关系图">
-    <defs><marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker></defs>
-    ${paths}
+  const pathMarkup = paths.map((path, pathIndex) => renderCanvasPath(path, anchors, selected, pathIndex)).join("");
+  const nodeMarkup = slots.map((slot) => renderCanvasSceneSlot(
+    slot,
+    nodesByRef,
+    anchors,
+    selected,
+    showHiddenStems,
+    requiredNodeRefs,
+  )).join("");
+  return `<svg class="canonical-canvas-scene" viewBox="0 0 1320 640" preserveAspectRatio="xMidYMid meet" aria-label="六柱同一命局场景">
+    <defs>
+      <marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
+      <marker id="canvas-path-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z"></path></marker>
+    </defs>
+    <g class="canvas-scene-tracks" aria-hidden="true"><line x1="44" y1="185" x2="1276" y2="185"></line><line x1="44" y1="390" x2="1276" y2="390"></line><text x="46" y="171">天干</text><text x="46" y="376">地支</text></g>
+    <g class="canvas-scene-relations">${relationMarkup}</g>
+    <g class="canvas-scene-paths">${pathMarkup}</g>
+    <g class="canvas-scene-nodes">${nodeMarkup}</g>
+    ${!relationMarkup && !pathMarkup ? `<g class="canvas-scene-empty"><text x="660" y="292" text-anchor="middle">此镜头没有已披露关系</text><text x="660" y="315" text-anchor="middle">页面不会为了填满画面而补线</text></g>` : ""}
   </svg>`;
+}
+
+interface CanvasAnchor {
+  x: number;
+  y: number;
+  level: "stem" | "branch" | "hidden";
+  slotIndex: number;
+}
+
+function canvasAnchorRegistry(
+  slots: ReadOnlySixPillarCanvas["stages"]["natal"]["scene_slots"],
+  nodes: CanvasNode[],
+): Map<string, CanvasAnchor> {
+  const anchors = new Map<string, CanvasAnchor>();
+  slots.forEach((slot, index) => {
+    const x = 110 + (index * 220);
+    if (slot.stem_node_ref) anchors.set(slot.stem_node_ref, { x, y: 185, level: "stem", slotIndex: index });
+    if (slot.branch_node_ref) anchors.set(slot.branch_node_ref, { x, y: 390, level: "branch", slotIndex: index });
+    const hiddenNodes = orderedHiddenStemNodes(slot, nodes);
+    const offsets = hiddenNodes.length === 1
+      ? [0]
+      : hiddenNodes.length === 2
+        ? [-30, 30]
+        : [-44, 0, 44];
+    hiddenNodes.forEach((node, hiddenIndex) => {
+      anchors.set(node.node_ref, {
+        x: x + (offsets[hiddenIndex] ?? ((hiddenIndex - 1) * 44)),
+        y: 515,
+        level: "hidden",
+        slotIndex: index,
+      });
+    });
+  });
+  return anchors;
+}
+
+function orderedHiddenStemNodes(
+  slot: ReadOnlySixPillarCanvas["stages"]["natal"]["scene_slots"][number],
+  nodes: CanvasNode[],
+): CanvasNode[] {
+  return nodes
+    .filter((item) => item.node_type === "hidden_stem" && item.semantic_slot_ref === slot.slot_ref)
+    .sort((left, right) => {
+      const leftIndex = slot.hidden_stems.indexOf(left.label);
+      const rightIndex = slot.hidden_stems.indexOf(right.label);
+      if (leftIndex !== rightIndex) return leftIndex - rightIndex;
+      return left.node_ref.localeCompare(right.node_ref);
+    });
+}
+
+function renderCanvasSceneSlot(
+  slot: ReadOnlySixPillarCanvas["stages"]["natal"]["scene_slots"][number],
+  nodesByRef: Map<string, CanvasNode>,
+  anchors: Map<string, CanvasAnchor>,
+  selected: string,
+  showHiddenStems: boolean,
+  requiredNodeRefs: Set<string>,
+): string {
+  const x = 110 + (slot.position_index * 220);
+  const temporal = slot.slot_type === "luck" || slot.slot_type === "year";
+  const active = slot.state === "active";
+  const stemNode = nodesByRef.get(slot.stem_node_ref);
+  const branchNode = nodesByRef.get(slot.branch_node_ref);
+  const slotAction = active ? ` tabindex="0" role="button" data-canvas-object="${escapeAttr(slot.slot_ref)}"` : "";
+  return `<g class="canvas-scene-slot${temporal ? " is-temporal" : ""} state-${slot.state}" transform="translate(${x} 0)">
+    <g class="canvas-slot-label${selected === slot.slot_ref ? " is-selected" : ""}"${slotAction}>
+      <text x="0" y="70" text-anchor="middle">${escapeHtml(slot.label)}</text>
+      <text class="canvas-slot-state" x="0" y="91" text-anchor="middle">${slot.state === "active" ? (slot.immutable ? "原局" : "时间进入") : slot.state === "inactive" ? "尚未进入" : "未载入"}</text>
+    </g>
+    <line class="canvas-column-guide" x1="0" y1="117" x2="0" y2="548"></line>
+    ${renderCanvasSceneNode(slot, stemNode, anchors.get(slot.stem_node_ref), selected, "stem")}
+    ${renderCanvasSceneNode(slot, branchNode, anchors.get(slot.branch_node_ref), selected, "branch")}
+    ${active ? renderCanvasHiddenStemNodes(
+      slot,
+      [...nodesByRef.values()],
+      anchors,
+      selected,
+      showHiddenStems,
+      requiredNodeRefs,
+    ) : ""}
+  </g>`;
+}
+
+function renderCanvasHiddenStemNodes(
+  slot: ReadOnlySixPillarCanvas["stages"]["natal"]["scene_slots"][number],
+  nodes: CanvasNode[],
+  anchors: Map<string, CanvasAnchor>,
+  selected: string,
+  showAll: boolean,
+  requiredNodeRefs: Set<string>,
+): string {
+  const hiddenNodes = orderedHiddenStemNodes(slot, nodes)
+    .filter((item) => showAll || requiredNodeRefs.has(item.node_ref));
+  if (!hiddenNodes.length) return "";
+  const slotX = 110 + (slot.position_index * 220);
+  return `<g class="canvas-hidden-stems">
+    <text class="canvas-hidden-label" x="0" y="474" text-anchor="middle">藏干</text>
+    ${hiddenNodes.map((node) => {
+      const anchor = anchors.get(node.node_ref);
+      if (!anchor) return "";
+      return `<g class="canvas-hidden-node element-${escapeAttr(node.element)}${selected === node.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(node.polarity)}" transform="translate(${anchor.x - slotX} 515)" tabindex="0" role="button" data-canvas-object="${escapeAttr(node.node_ref)}" aria-label="${escapeAttr(`${slot.label}藏干${node.label}`)}">
+        <circle r="21"></circle>
+        <text text-anchor="middle" dominant-baseline="central">${escapeHtml(node.label)}</text>
+      </g>`;
+    }).join("")}
+  </g>`;
+}
+
+function renderCanvasSceneNode(
+  slot: ReadOnlySixPillarCanvas["stages"]["natal"]["scene_slots"][number],
+  node: CanvasNode | undefined,
+  anchor: CanvasAnchor | undefined,
+  selected: string,
+  level: "stem" | "branch",
+): string {
+  const y = level === "stem" ? 185 : 390;
+  const value = level === "stem" ? slot.stem : slot.branch;
+  if (!node || !anchor) {
+    return `<g class="canvas-scene-node is-inactive" transform="translate(0 ${y})"><text class="canvas-node-character" text-anchor="middle" dominant-baseline="central">${escapeHtml(value || "·")}</text></g>`;
+  }
+  const label = level === "stem"
+    ? node.ten_god === "day_master" ? "日主" : tenGodLabel(node.ten_god || "天干")
+    : "地支";
+  return `<g class="canvas-scene-node element-${escapeAttr(node.element)}${selected === node.node_ref ? " is-selected" : ""}" data-polarity="${escapeAttr(node.polarity)}" transform="translate(0 ${y})" tabindex="0" role="button" data-canvas-object="${escapeAttr(node.node_ref)}" aria-label="${escapeAttr(`${slot.label}${label}${value}`)}">
+    <rect x="-56" y="-58" width="112" height="116" rx="6"></rect>
+    <text class="canvas-node-role" x="0" y="-33" text-anchor="middle">${escapeHtml(label)}</text>
+    <text class="canvas-node-character" x="0" y="11" text-anchor="middle" dominant-baseline="central">${escapeHtml(value)}</text>
+  </g>`;
+}
+
+function routeCanvasRelation(source: CanvasAnchor, target: CanvasAnchor, index: number): { d: string; labelX: number; labelY: number } {
+  const lane = index % 4;
+  const sameLevel = source.level === target.level;
+  const sameSlot = source.slotIndex === target.slotIndex;
+  if (sameSlot && !sameLevel) {
+    const side = source.slotIndex % 2 === 0 ? -70 : 70;
+    const x = source.x + side;
+    return {
+      d: `M ${source.x} ${source.y} C ${x} ${source.y}, ${x} ${target.y}, ${target.x} ${target.y}`,
+      labelX: x,
+      labelY: (source.y + target.y) / 2,
+    };
+  }
+  if (sameLevel) {
+    const trackY = source.level === "stem"
+      ? 118 - (lane * 15)
+      : source.level === "branch"
+        ? 457 + (lane * 15)
+        : 570 + (lane * 15);
+    return {
+      d: `M ${source.x} ${source.y} C ${source.x} ${trackY}, ${target.x} ${trackY}, ${target.x} ${target.y}`,
+      labelX: (source.x + target.x) / 2,
+      labelY: trackY + (source.level === "stem" ? -7 : 15),
+    };
+  }
+  const middleY = ((source.y + target.y) / 2) + ((lane - 1.5) * 13);
+  return {
+    d: `M ${source.x} ${source.y} C ${source.x} ${middleY}, ${target.x} ${middleY}, ${target.x} ${target.y}`,
+    labelX: (source.x + target.x) / 2,
+    labelY: middleY - 7,
+  };
+}
+
+function renderCanvasPath(
+  path: ReadOnlySixPillarCanvas["stages"]["natal"]["spec"]["paths"][number],
+  anchors: Map<string, CanvasAnchor>,
+  selected: string,
+  pathIndex: number,
+): string {
+  const points = path.node_refs.flatMap((ref) => {
+    const anchor = anchors.get(ref);
+    return anchor ? [anchor] : [];
+  });
+  if (points.length < 2) return "";
+  const segments = points.slice(0, -1).map((source, index) => {
+    const target = points[index + 1];
+    const laneY = 286 + (pathIndex * 18);
+    return `<path d="M ${source.x} ${source.y} C ${source.x} ${laneY}, ${target.x} ${laneY}, ${target.x} ${target.y}" marker-end="url(#canvas-path-arrow)"></path>`;
+  }).join("");
+  const candidate = path.trace.epistemic_status !== "committed";
+  return `<g class="canvas-work-path${candidate ? " is-candidate" : ""}${selected === path.path_ref ? " is-selected" : ""}" tabindex="0" role="button" data-canvas-object="${escapeAttr(path.path_ref)}" aria-label="${escapeAttr(path.label)}">
+    ${segments}
+    <text x="${points[Math.floor(points.length / 2)].x}" y="${274 + (pathIndex * 18)}" text-anchor="middle">${candidate ? "候选路径" : "正式主路径"}</text>
+  </g>`;
+}
+
+function focusRelationRefs(
+  spec: ReadOnlySixPillarCanvas["stages"]["natal"]["spec"],
+  relationRefs: string[],
+  selected: string,
+): string[] {
+  if (!selected) return [];
+  const selectedRefs = focusNodeRefs(spec, selected);
+  return relationRefs.filter((ref) => {
+    const relation = spec.relations.find((item) => item.relation_ref === ref);
+    return relation && (
+      relation.relation_ref === selected
+      || relation.participant_node_refs.some((nodeRef) => selectedRefs.has(nodeRef))
+    );
+  });
+}
+
+function focusPathRefs(
+  spec: ReadOnlySixPillarCanvas["stages"]["natal"]["spec"],
+  pathRefs: string[],
+  selected: string,
+): string[] {
+  if (!selected) return [];
+  const selectedRefs = focusNodeRefs(spec, selected);
+  return pathRefs.filter((ref) => {
+    const path = spec.paths.find((item) => item.path_ref === ref);
+    return path && (
+      path.path_ref === selected
+      || path.node_refs.some((nodeRef) => selectedRefs.has(nodeRef))
+      || path.relation_refs.includes(selected)
+    );
+  });
+}
+
+function focusNodeRefs(
+  spec: ReadOnlySixPillarCanvas["stages"]["natal"]["spec"],
+  selected: string,
+): Set<string> {
+  const refs = new Set<string>();
+  const node = spec.nodes.find((item) => item.node_ref === selected);
+  if (node) refs.add(node.node_ref);
+  spec.nodes.filter((item) => item.semantic_slot_ref === selected).forEach((item) => refs.add(item.node_ref));
+  const relation = spec.relations.find((item) => item.relation_ref === selected);
+  relation?.participant_node_refs.forEach((item) => refs.add(item));
+  const path = spec.paths.find((item) => item.path_ref === selected);
+  path?.node_refs.forEach((item) => refs.add(item));
+  return refs;
+}
+
+function shortRelationLabel(relation: CanvasRelation): string {
+  return ({
+    generates: "生",
+    controls: "克",
+    same_element_support: "同气",
+    stores: "藏",
+    roots: "根",
+    forms_half_combination: "半合",
+    forms_triple_combination: "三合",
+    clashes: "冲",
+    harmonizes: "合",
+    harms: "害",
+    breaks: "破",
+    punishes: "刑",
+    position_link: "同柱",
+  } as Record<string, string>)[relation.relation_type] || relation.label;
+}
+
+function visibilityLabel(value: string): string {
+  return ({ formal: "正式", focus: "聚焦", lab_audit: "审计" } as Record<string, string>)[value] || value;
+}
+
+function pathDiagnosticLabel(value: string): string {
+  return ({
+    none: "当前路径的节点、关系与权限引用均已闭合。",
+    no_cognitive_path: "当前认知记录尚未形成做功路径。",
+    natural_language_only: "目前只有文字描述，还没有结构化路径引用。",
+    candidate_not_committed: "已有结构候选，但尚未提交为正式路径。",
+    missing_path_ref: "正式断言缺少可投影的路径身份。",
+    invalid_node_ref: "路径引用的节点未能落到当前场景。",
+    invalid_relation_ref: "路径引用的关系未能落到当前场景。",
+    relation_still_potential: "路径组成关系仍是潜在状态，不能进入正式层。",
+    authority_not_allowed: "当前路径状态没有正式投影权限。",
+    role_visibility_filtered: "正式路径不在当前角色的披露范围内。",
+    timing_scope_mismatch: "路径的时间作用域与当前阶段不一致。",
+  } as Record<string, string>)[value] || "当前没有可投影的正式路径。";
 }
 
 function renderCanvasChanges(
@@ -540,7 +862,7 @@ export function renderUnavailable(title: string, detail: string, actionLabel: st
       <p>阿布在这里</p>
       <h1>${escapeHtml(title)}</h1>
       <span>${escapeHtml(detail)}</span>
-      <a class="primary-command" href="/app?manage=1">${escapeHtml(actionLabel)}</a>
+      <a class="primary-command" href="/experience?manage=1">${escapeHtml(actionLabel)}</a>
     </main>`;
 }
 
@@ -637,7 +959,7 @@ function renderAbuDock(view: ExperienceViewModel): string {
   const isBusy = view.ui.narrationStatus === "preparing";
   return `<aside class="abu-dock${view.ui.abuExpanded ? " is-open" : ""}${isBusy ? " is-thinking" : ""}" aria-label="阿布同步论命">
     <button class="abu-avatar" type="button" data-command="toggle-abu" aria-label="${view.ui.abuExpanded ? "收起阿布" : "打开阿布"}">
-      <img src="${isBusy ? "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp" : "/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp"}" alt="阿布">
+      <img class="${isBusy ? "" : "abu-avatar-standard"}" src="${isBusy ? "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp" : "/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp"}" alt="阿布">
     </button>
     <div class="abu-bubble" role="status"><span>${segment ? escapeHtml(segment.title) : "阿布"}</span><p>${escapeHtml(view.ui.abuMessage)}</p></div>
     <div class="abu-panel"${view.ui.abuExpanded ? "" : " hidden"}>

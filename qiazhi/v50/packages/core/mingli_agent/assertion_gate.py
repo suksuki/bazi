@@ -219,6 +219,7 @@ def isolate_cognition_assertions(
             "candidate_path_refs": [],
             "competing_path_refs": [],
             "comparison_reasons": [],
+            "structured_candidate": None,
         }
 
     payload["useful_god_reasoning"] = _filter_items(

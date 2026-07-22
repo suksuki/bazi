@@ -55,11 +55,6 @@ class MingliContextCompiler:
             "candidate_node_role": 6,
             "estimated_sensitivity": 4,
             "tool_salience": 5,
-            "ziwei_source_quality": 1,
-            "ziwei_palace": 4,
-            "ziwei_star": 3,
-            "ziwei_four_transformation": 2,
-            "ziwei_palace_relation": 2,
         },
         "pattern": {"graph_relation": 28},
         "work_path": {"graph_relation": 8, "candidate_path": 5, "candidate_node_role": 5, "estimated_sensitivity": 4, "tool_salience": 4},
@@ -79,7 +74,7 @@ class MingliContextCompiler:
     }
 
     KNOWLEDGE_LIMITS: dict[ContextStage, int] = {
-        "baseline": 8,
+        "baseline": 5,
         "pattern": 6,
         "work_path": 5,
         "ziwei_integration": 3,
@@ -103,9 +98,16 @@ class MingliContextCompiler:
         immutable_ledger = _immutable_ledger(world=world, categories=self.LEDGER_CATEGORIES)
         selected_facts, attention_receipt = self._select_facts(world=world, stage=stage)
         reasoning_phase = _reasoning_phase(stage)
+        relation_pool = _allowed_relation_pool(world) if stage in {"baseline", "work_path"} else []
+        path_pool = _allowed_path_pool(world) if stage in {"baseline", "work_path"} else []
+        pool_refs = [
+            *[str(item["fact_ref"]) for item in relation_pool],
+            *[str(item["path_ref"]) for item in path_pool],
+        ]
         experimental_tool_refs = [
             item.fact_id for item in selected_facts if item.authority == "experimental_tool_observation"
         ]
+        experimental_tool_refs = list(dict.fromkeys([*experimental_tool_refs, *pool_refs]))
 
         knowledge_limit = self.KNOWLEDGE_LIMITS[stage]
         selected_knowledge = world.knowledge[:knowledge_limit]
@@ -147,6 +149,8 @@ class MingliContextCompiler:
                 for item in selected_facts
                 if item.category != "research_fixture_prior"
             ],
+            "allowed_relation_pool": relation_pool,
+            "allowed_path_candidates": path_pool,
             "knowledge": [
                 {
                     "id": item.knowledge_id,
@@ -159,7 +163,7 @@ class MingliContextCompiler:
                 for item in selected_knowledge
             ],
             "timing_context": world.timing_context if stage in {"career", "wealth", "domain", "case_turn"} else {},
-            "ziwei_profile": world.ziwei_profile if stage in {"baseline", "ziwei_integration", "domain"} else {},
+            "ziwei_profile": world.ziwei_profile if stage in {"ziwei_integration", "domain"} else {},
             "boundaries": world.boundaries,
         }
         if cognitive_state:
@@ -168,9 +172,13 @@ class MingliContextCompiler:
         return ReasoningContextPack(
             stage=stage,
             payload=payload,
-            fact_refs=[item.fact_id for item in selected_facts],
+            fact_refs=list(dict.fromkeys([*[item.fact_id for item in selected_facts], *pool_refs])),
             knowledge_refs=[item.knowledge_id for item in selected_knowledge],
-            excluded_fact_count=max(0, len(world.facts) - len(selected_facts)),
+            excluded_fact_count=max(
+                0,
+                len(world.facts)
+                - len(set([*[item.fact_id for item in selected_facts], *pool_refs])),
+            ),
             excluded_knowledge_count=max(0, len(world.knowledge) - len(selected_knowledge)),
             attention_receipt=attention_receipt,
             content_hash=hashlib.sha256(encoded).hexdigest()[:20],
@@ -258,7 +266,7 @@ class MingliContextCompiler:
     def _eligible(self, *, item: WorldFact, stage: ContextStage) -> tuple[bool, str]:
         if item.category == "research_fixture_prior":
             return False, "synthetic_expected_contract_isolated"
-        if _reasoning_phase(stage) == "independent_observation" and _authority_status(item) != "production":
+        if stage in {"baseline", "pattern"} and _authority_status(item) != "production":
             return False, "independent_first_look_authority_isolation"
         if item.category in self.LEDGER_CATEGORIES:
             return True, "immutable_ledger"
@@ -313,9 +321,9 @@ def _attention_features(*, item: WorldFact, stage: ContextStage) -> tuple[Attent
 
 
 def _reasoning_phase(stage: ContextStage) -> Literal["independent_observation", "tool_challenge", "cross_lens", "domain", "case_revision"]:
-    if stage in {"baseline", "pattern"}:
+    if stage == "pattern":
         return "independent_observation"
-    if stage in {"work_path", "prediction"}:
+    if stage in {"baseline", "work_path", "prediction"}:
         return "tool_challenge"
     if stage == "ziwei_integration":
         return "cross_lens"
@@ -352,6 +360,52 @@ def _immutable_ledger(*, world: ChartWorldInstance, categories: set[str]) -> dic
         else:
             ledger[item.category] = item.payload
     return ledger
+
+
+def _allowed_relation_pool(world: ChartWorldInstance) -> list[dict[str, Any]]:
+    """Expose only structurally qualified relations as references, never verdicts."""
+
+    output: list[dict[str, Any]] = []
+    for fact in world.facts:
+        if fact.category != "graph_relation":
+            continue
+        payload = fact.payload
+        if payload.get("relation_state") not in {"structural", "time_activated", "effective"}:
+            continue
+        if payload.get("path_eligibility") != "eligible":
+            continue
+        output.append({
+            "fact_ref": fact.fact_id,
+            "relation_key": payload.get("candidate_relation_key"),
+            "relation_type": payload.get("relation"),
+            "relation_state": payload.get("relation_state"),
+            "mechanism_ref": payload.get("mechanism_ref"),
+            "participants": payload.get("participants") or [],
+            "position_context": payload.get("position_context"),
+            "statement": fact.statement,
+        })
+    return output[:32]
+
+
+def _allowed_path_pool(world: ChartWorldInstance) -> list[dict[str, Any]]:
+    """Expose deterministic path candidates for selection, not automatic promotion."""
+
+    output: list[dict[str, Any]] = []
+    for fact in world.facts:
+        if fact.category != "candidate_path":
+            continue
+        payload = fact.payload
+        if payload.get("validation_status") not in {"qualified", "qualified_with_conditions"}:
+            continue
+        output.append({
+            "path_ref": fact.fact_id,
+            "path_key": payload.get("candidate_path_key"),
+            "node_descriptors": payload.get("node_descriptors") or [],
+            "relation_descriptors": payload.get("relation_descriptors") or [],
+            "validation_status": payload.get("validation_status"),
+            "statement": fact.statement,
+        })
+    return output[:12]
 
 
 def _element_role_ledger(ledger: dict[str, Any]) -> dict[str, str]:

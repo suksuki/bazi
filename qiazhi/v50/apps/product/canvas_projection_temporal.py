@@ -5,7 +5,7 @@ from typing import Any, Literal
 from core.engines.bazi import derive_branch_relations, derive_element_relations
 from core.engines.bazi.knowledge import BRANCH_ELEMENTS, HIDDEN_STEMS, STEM_ELEMENTS, STEM_POLARITY
 from core.engines.bazi.material_engine import resolve_ten_god
-from core.graph import NodeRef, RelationKey, canonical_scene_scope_ref
+from core.graph import NodeRef, RelationKey, RelationPositionContext, canonical_scene_scope_ref
 from core.graph.contracts import MingliGraphEdgeType, MingliRelationState, PathEligibility
 from core.graph.path_qualification import qualify_relation_for_path
 from core.graph.provenance import relation_directionality
@@ -346,25 +346,28 @@ def temporal_relations(
             fallback=relation_key.relation_key,
         )
         if relation_type in {"generates", "controls", "same_element_support"}:
-            relation_state = MingliRelationState.POTENTIAL
+            relation_state = MingliRelationState.STRUCTURAL
+            mechanism_ref = "visible_stem_same_layer"
             trace = CanvasTrace(
                 source_mode="derived",
-                epistemic_status="candidate",
+                epistemic_status="derived",
                 source_refs=relation_source_refs,
-                uncertainty=["时间柱进入不会让普通五行生克自动成为直接作用。"],
+                uncertainty=["可见天干同层关系已结构成立；时间进入不自动表示实际作用。"],
                 disclosure="practitioner",
             )
         elif relation_type == "position_link":
             relation_state = MingliRelationState.STRUCTURAL
+            mechanism_ref = "same_pillar_bearing"
             trace = CanvasTrace(
                 source_mode="derived",
                 epistemic_status="derived",
                 source_refs=relation_source_refs,
                 uncertainty=["同柱只表示承载与接近，不自动表示直接作用。"],
-                disclosure="member",
+                disclosure="practitioner",
             )
         else:
             relation_state = MingliRelationState.TIME_ACTIVATED
+            mechanism_ref = f"named_branch_{row.get('type', relation_type)}"
             trace = CanvasTrace(
                 source_mode="derived",
                 epistemic_status="derived",
@@ -390,12 +393,89 @@ def temporal_relations(
             relation_type=relation_type,
             label=label,
             relation_state=relation_state.value,
-            semantic_state="latent" if relation_state == MingliRelationState.POTENTIAL else "active",
+            mechanism_ref=mechanism_ref,
+            position_context=_temporal_position_context(
+                source=refs_by_ref[from_ref],
+                target=refs_by_ref[to_ref],
+                all_node_refs=list(refs_by_ref.values()),
+                layer_type=layer_type,
+                symmetric=relation_directionality(relation_type).value == "symmetric",
+            ),
+            semantic_state=(
+                "active"
+                if relation_state in {MingliRelationState.TIME_ACTIVATED, MingliRelationState.EFFECTIVE}
+                else "latent"
+            ),
             trace=trace,
             state_trace=trace,
             change_reason_refs=relation_source_refs,
         )
     return [relations[key] for key in sorted(relations)]
+
+
+def _temporal_position_context(
+    *,
+    source: NodeRef,
+    target: NodeRef,
+    all_node_refs: list[NodeRef],
+    layer_type: Literal["luck", "year"],
+    symmetric: bool,
+) -> RelationPositionContext:
+    source_index = _scene_column_index(source)
+    target_index = _scene_column_index(target)
+    span = abs(source_index - target_index)
+    if symmetric:
+        direction = "symmetric"
+    elif source.scope in {"luck", "year"} and target.scope == "natal":
+        direction = "temporal_to_natal"
+    elif source.scope == "natal" and target.scope in {"luck", "year"}:
+        direction = "natal_to_temporal"
+    elif source.scope in {"luck", "year"} and target.scope in {"luck", "year"}:
+        direction = "cross_temporal"
+    elif source_index < target_index:
+        direction = "left_to_right"
+    elif source_index > target_index:
+        direction = "right_to_left"
+    else:
+        direction = "same_column"
+    intervening = []
+    if span > 1 and source.level == target.level:
+        low, high = sorted((source_index, target_index))
+        intervening = [
+            item.node_ref
+            for item in all_node_refs
+            if item.level == source.level and low < _scene_column_index(item) < high
+        ]
+    scopes = {source.scope, target.scope}
+    scene_layer = (
+        "mixed_temporal"
+        if {"luck", "year"}.issubset(scopes)
+        else "year_state"
+        if layer_type == "year"
+        else "luck_state"
+    )
+    return RelationPositionContext(
+        source_scope=source.scope,
+        target_scope=target.scope,
+        source_slot=source.slot,
+        target_slot=target.slot,
+        source_level=source.level,
+        target_level=target.level,
+        adjacent=span == 1,
+        column_span=span,
+        intervening_node_refs=intervening,
+        ref_namespace="node_ref",
+        direction=direction,
+        scene_layer=scene_layer,
+    )
+
+
+def _scene_column_index(node_ref: NodeRef) -> int:
+    if node_ref.scope == "luck":
+        return 4
+    if node_ref.scope == "year":
+        return 5
+    return {"year": 0, "month": 1, "day": 2, "hour": 3}.get(node_ref.slot, 0)
 
 
 def relation_participant_refs(row: dict[str, object]) -> list[str]:

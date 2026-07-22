@@ -385,7 +385,17 @@ def _issue_canvas_spec(
                 )
                 for ref in object_refs
             ],
-            layers=["generation_control", "combination", "conflict", "work_path"],
+            layers=[
+                "generation_control",
+                "combination",
+                "conflict",
+                "overview",
+                "five_element",
+                "combination_conflict",
+                "roots_reveal",
+                "timing",
+                "work_path",
+            ],
             emphasis=[item.path_ref for item in paths if item.trace.epistemic_status == "committed"],
             narration_targets=[item.path_ref for item in paths if item.trace.epistemic_status in {"committed", "candidate"}],
         )
@@ -549,6 +559,5 @@ def _slot_order(slot_type: str) -> int:
 
 def _anchor_group(ref: str) -> str:
     return ref.split("-", 1)[0]
-
 
 

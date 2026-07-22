@@ -23,10 +23,13 @@ from core.mingli_agent import (
 )
 from core.mingli_agent.assertion_gate import isolate_cognition_assertions
 from core.mingli_agent.contracts import DomainExploration
+from core.contracts.professional_review import ProfessionalReviewBundle
+from core.mingli_agent.professional_review import review_professional_record
 from core.mingli_agent.reasoning_review import review_cognition
 from core.mingli_agent.reliability import cognition_semantic_signature
 from experience.workspace import CaseWorkspaceState, build_case_workspace_state
 from product.agent_case_store import AgentCaseStore
+from product.formal_insight_state import cognition_background
 
 
 CommandEventSink = Callable[[str, dict[str, Any]], None]
@@ -57,7 +60,9 @@ class BaselineCaseResult:
     record: MingliCognitiveRecord
     workspace: CaseBeliefState
     life_case: LifeCase | None
+    professional_review: ProfessionalReviewBundle
     validation: Any
+    metrics: dict[str, Any]
 
     @property
     def committed(self) -> bool:
@@ -77,6 +82,22 @@ class BaselineCaseCommandService:
         *,
         on_event: CommandEventSink | None = None,
     ) -> BaselineCaseResult:
+        previous = self._case_store.get(
+            case_id=command.case_id,
+            user_id=command.user_id,
+        ) or {}
+        cached = _cached_baseline_result(previous)
+        if cached is not None:
+            _emit(on_event, "baseline_cache_reused", {
+                "status": "committed" if cached.committed else "professional_unreleased",
+                "insight_id": (
+                    cached.life_case.baseline_insight.insight_id
+                    if cached.life_case is not None
+                    else ""
+                ),
+                "model_calls": 0,
+            })
+            return cached
         world = command.world or compile_chart_world(
             reading_id=command.reading_id,
             birth_input=command.birth_input,
@@ -99,7 +120,17 @@ class BaselineCaseCommandService:
             world=world,
             on_stage=on_event,
         )
-        insight_draft = build_baseline_insight(record=record, world=world)
+        run_metrics = _baseline_run_metrics(record)
+        professional_review = review_professional_record(
+            record=record,
+            world=world,
+            persistence_status="persisted",
+        )
+        insight_draft = build_baseline_insight(
+            record=record,
+            world=world,
+            professional_review=professional_review,
+        )
         _emit(on_event, "formal_insight_draft_ready", {
             "status": "draft",
             "insight_id": insight_draft.insight_id,
@@ -108,24 +139,24 @@ class BaselineCaseCommandService:
         })
         workspace = build_case_belief_state(record)
         life_case: LifeCase | None = None
-        if record.review.commit_eligible:
+        if (
+            record.review.commit_eligible
+            and professional_review.overlay.professional_release_status
+            in {"passed", "partially_blocked"}
+        ):
             life_case, validation = commit_baseline_life_case(
                 insight=insight_draft,
                 world=world,
                 profile_id=command.profile_id,
             )
             _emit(on_event, "baseline_validated", {
-                "status": "validated",
+                "status": "reviewed",
                 "validation": validation.model_dump(mode="json"),
                 "persisted": False,
             })
         else:
             validation = validate_formal_insight(insight=insight_draft, world=world)
 
-        previous = self._case_store.get(
-            case_id=command.case_id,
-            user_id=command.user_id,
-        ) or {}
         invalidated_while_running = str(previous.get("status") or "") == "superseded"
         stored_life_case = life_case
         if invalidated_while_running and life_case is not None:
@@ -142,6 +173,10 @@ class BaselineCaseCommandService:
             "birth_input": command.birth_input.model_dump(mode="json"),
             "world": world.model_dump(mode="json"),
             "record": record.model_dump(mode="json"),
+            "professional_assertions": [
+                item.model_dump(mode="json") for item in professional_review.assertions
+            ],
+            "professional_review_overlay": professional_review.overlay.model_dump(mode="json"),
             "case_belief_state": workspace.model_dump(mode="json"),
             "workspace_state": build_case_workspace_state(
                 case_id=command.case_id,
@@ -150,22 +185,29 @@ class BaselineCaseCommandService:
             "life_case": stored_life_case.model_dump(mode="json") if stored_life_case else None,
             "insight_validation": validation.model_dump(mode="json"),
             "first_run": {
-                "protocol": "single_call_baseline_v1",
+                "protocol": "minimal_whole_chart_baseline_v1",
                 "blocking_core_llm_calls": len(record.stage_receipts),
                 "unselected_domains_precomputed": False,
+                "run_metrics": run_metrics,
             },
-            "background_cognition": {
-                **(
+            "background_cognition": cognition_background(
+                (
                     previous.get("background_cognition")
                     if isinstance(previous.get("background_cognition"), dict)
-                    else {}
+                    else None
                 ),
-                "status": (
+                operational_status=(
                     "superseded"
                     if invalidated_while_running
                     else "completed" if life_case else "completed_partial"
                 ),
-                "attempt_count": max(
+                insight_status="committed" if stored_life_case else "partial",
+                persistence_status="persisted",
+                professional_release_status=(
+                    professional_review.overlay.professional_release_status
+                ),
+                active=not invalidated_while_running,
+                attempt_count=max(
                     1,
                     int(
                         (
@@ -176,11 +218,12 @@ class BaselineCaseCommandService:
                         or 0
                     ),
                 ),
-            },
+                run_metrics=run_metrics,
+            ),
             "status": (
                 "superseded"
                 if invalidated_while_running
-                else "active" if life_case else record.review.disposition
+                else "active" if life_case else "professional_blocked"
             ),
         }
         self._case_store.save(
@@ -194,7 +237,9 @@ class BaselineCaseCommandService:
             record=record,
             workspace=workspace,
             life_case=life_case,
+            professional_review=professional_review,
             validation=validation,
+            metrics=run_metrics,
         )
 
 
@@ -247,12 +292,26 @@ class BaselineAssertionReconciliationService:
             "reliability_signature": cognition_semantic_signature(cognition),
         })
         life_case: LifeCase | None = None
-        insight = build_baseline_insight(record=record, world=world)
+        professional_review = review_professional_record(
+            record=record,
+            world=world,
+            persistence_status="persisted",
+        )
+        insight = build_baseline_insight(
+            record=record,
+            world=world,
+            professional_review=professional_review,
+        )
         validation = validate_formal_insight(
             insight=insight,
             world=world,
         )
-        if review.commit_eligible and validation.passed:
+        if (
+            review.commit_eligible
+            and professional_review.overlay.professional_release_status
+            in {"passed", "partially_blocked"}
+            and validation.passed
+        ):
             life_case, validation = commit_baseline_life_case(
                 insight=insight,
                 world=world,
@@ -270,16 +329,25 @@ class BaselineAssertionReconciliationService:
         reconciled = {
             **row,
             "record": record.model_dump(mode="json"),
+            "professional_assertions": [
+                item.model_dump(mode="json") for item in professional_review.assertions
+            ],
+            "professional_review_overlay": professional_review.overlay.model_dump(mode="json"),
             "record_archive": archives[-3:],
             "life_case": life_case.model_dump(mode="json") if life_case else None,
             "insight_validation": validation.model_dump(mode="json"),
-            "background_cognition": {
-                **background,
-                "status": "completed_local" if life_case else "completed_partial",
-                "attempt_count": max(1, int(background.get("attempt_count") or 0)),
-                "local_reconciliation": "assertion_gate_v1",
-            },
-            "status": "active" if life_case else review.disposition,
+            "background_cognition": cognition_background(
+                background,
+                operational_status="completed_local" if life_case else "completed_partial",
+                insight_status="committed" if life_case else "partial",
+                persistence_status="persisted",
+                professional_release_status=(
+                    professional_review.overlay.professional_release_status
+                ),
+                attempt_count=max(1, int(background.get("attempt_count") or 0)),
+                local_reconciliation="assertion_gate_v1",
+            ),
+            "status": "active" if life_case else "professional_blocked",
         }
         return LocalBaselineReconciliationResult(
             row=reconciled,
@@ -445,3 +513,128 @@ class DomainExplorationCommandService:
 def _emit(sink: CommandEventSink | None, event_type: str, payload: dict[str, Any]) -> None:
     if sink is not None:
         sink(event_type, payload)
+
+
+def _baseline_run_metrics(record: MingliCognitiveRecord) -> dict[str, Any]:
+    receipts = list(record.stage_receipts)
+    durations = [max(0, int(item.get("duration_ms") or 0)) for item in receipts]
+    input_tokens = [
+        int(item["prompt_eval_count"])
+        for item in receipts
+        if isinstance(item.get("prompt_eval_count"), int)
+    ]
+    output_tokens = [
+        int(item["eval_count"])
+        for item in receipts
+        if isinstance(item.get("eval_count"), int)
+    ]
+    context_items = list(record.context_manifest)
+    routes = list(record.model_routes)
+    return {
+        "contract": "baseline_core_cognition_v1",
+        "model_calls": len(receipts),
+        "input_tokens": sum(input_tokens),
+        "output_tokens": sum(output_tokens),
+        "token_metrics_available": bool(input_tokens or output_tokens),
+        "knowledge_retrieval_count": sum(int(item.get("knowledge_count") or 0) for item in context_items),
+        "fact_input_count": sum(int(item.get("fact_count") or 0) for item in context_items),
+        "latency_ms": {
+            "total": sum(durations),
+            "average": round(sum(durations) / len(durations)) if durations else 0,
+            "slowest": max(durations, default=0),
+        },
+        "max_output_tokens": max((int(item.get("max_tokens") or 0) for item in routes), default=0),
+        "schema_attempts": sum(int(item.get("schema_attempts") or 1) for item in receipts),
+        "case_store_operations": {"reads": 1, "writes": 1},
+        "generated_sections": [
+            "whole_chart_structure",
+            "primary_work_path",
+            "pivots_and_support",
+            "competing_hypotheses",
+            "uncertainty",
+        ],
+        "deferred_sections": [
+            "career",
+            "wealth",
+            "relationship",
+            "health",
+            "timing",
+            "xiangfa_detail",
+            "long_form_expression",
+        ],
+        "automatic_full_reruns": 0,
+        "partial_results_retained": True,
+    }
+
+
+def _cached_baseline_result(row: dict[str, Any]) -> BaselineCaseResult | None:
+    raw_life_case = row.get("life_case")
+    raw_world = row.get("world")
+    raw_record = row.get("record")
+    if not all(isinstance(item, dict) for item in (raw_world, raw_record)):
+        return None
+    try:
+        world = ChartWorldInstance.model_validate(raw_world)
+        record = MingliCognitiveRecord.model_validate(raw_record)
+        professional_review = review_professional_record(
+            record=record,
+            world=world,
+            persistence_status="persisted",
+        )
+        life_case = (
+            LifeCase.model_validate(raw_life_case)
+            if isinstance(raw_life_case, dict)
+            else None
+        )
+        baseline = life_case.baseline_insight if life_case is not None else None
+        formally_released = bool(
+            life_case is not None
+            and life_case.status == "active"
+            and life_case.chart_version.active
+            and baseline is not None
+            and baseline.status == "committed"
+            and baseline.professional_review_overlay is not None
+            and baseline.professional_release_status in {"passed", "partially_blocked"}
+        )
+        if formally_released:
+            assert baseline is not None
+            validation = validate_formal_insight(insight=baseline, world=world)
+        else:
+            life_case = None
+            validation = validate_formal_insight(
+                insight=build_baseline_insight(
+                    record=record,
+                    world=world,
+                    professional_review=professional_review,
+                ),
+                world=world,
+            )
+        raw_workspace = row.get("case_belief_state") or row.get("workspace")
+        workspace = (
+            CaseBeliefState.model_validate(raw_workspace)
+            if isinstance(raw_workspace, dict)
+            else build_case_belief_state(record)
+        )
+    except (TypeError, ValueError):
+        return None
+    return BaselineCaseResult(
+        world=world,
+        record=record,
+        workspace=workspace,
+        life_case=life_case,
+        professional_review=professional_review,
+        validation=validation,
+        metrics={
+            "contract": "baseline_cache_reuse_v1",
+            "model_calls": 0,
+            "input_tokens": 0,
+            "output_tokens": 0,
+            "knowledge_retrieval_count": 0,
+            "fact_input_count": 0,
+            "latency_ms": {"total": 0, "average": 0, "slowest": 0},
+            "case_store_operations": {"reads": 1, "writes": 0},
+            "automatic_full_reruns": 0,
+            "partial_results_retained": True,
+            "cache_hit": True,
+        },
+    )

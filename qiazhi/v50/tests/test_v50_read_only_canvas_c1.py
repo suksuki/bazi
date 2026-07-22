@@ -59,6 +59,26 @@ def _saved_case() -> tuple[MemoryAgentCaseStore, str, str, str]:
     return store, user_id, case_id, candidate_ref
 
 
+def _natural_language_only_case(case_id: str) -> dict[str, object]:
+    payload = _case_payload(case_id)
+    record = payload["record"]
+    life_case = payload["life_case"]
+    assert isinstance(record, dict)
+    assert isinstance(life_case, dict)
+    work_path = record["cognition"]["work_path"]
+    work_path["candidate_path_refs"] = []
+    work_path["competing_path_refs"] = []
+    work_path["evidence_refs"] = []
+    life_case["relation_assertions"] = []
+    life_case["path_assertions"] = []
+    baseline = life_case["baseline_insight"]
+    baseline["basis"]["chart_fact_refs"] = []
+    baseline["projection_payload"] = {}
+    for step in baseline["reasoning_path"]:
+        step["source_refs"] = []
+    return payload
+
+
 def test_real_life_case_projects_read_only_four_five_six_pillar_stages() -> None:
     store, user_id, case_id, _ = _saved_case()
     before = deepcopy(store.get(case_id=case_id, user_id=user_id))
@@ -89,6 +109,133 @@ def test_real_life_case_projects_read_only_four_five_six_pillar_stages() -> None
     assert store.get(case_id=case_id, user_id=user_id) == before
 
 
+def test_onecanvas_r1_uses_stable_six_slots_and_six_lenses() -> None:
+    store, user_id, case_id, _ = _saved_case()
+    payload = ReadOnlySixPillarCanvasService(case_store=store).issue(
+        case_id=case_id,
+        participant_id=user_id,
+        account_role="member",
+    )
+
+    expected_lenses = [
+        "overview",
+        "five_element",
+        "combination_conflict",
+        "roots_reveal",
+        "timing",
+        "work_path",
+    ]
+    expected_slot_types = [
+        "natal_year",
+        "natal_month",
+        "natal_day",
+        "natal_hour",
+        "luck",
+        "year",
+    ]
+    expected_active = {"natal": 4, "luck": 5, "year": 6}
+    for stage_name in payload["stage_order"]:
+        stage = payload["stages"][stage_name]
+        assert [item["layer_id"] for item in stage["layers"]] == expected_lenses
+        assert stage["default_layer_id"] == "overview"
+        assert [item["slot_type"] for item in stage["scene_slots"]] == expected_slot_types
+        assert len([item for item in stage["scene_slots"] if item["state"] == "active"]) == expected_active[stage_name]
+        assert all(
+            ref in {relation["relation_ref"] for relation in stage["spec"]["relations"]}
+            for layer in stage["layers"]
+            for ref in layer["formal_relation_refs"]
+        )
+    assert payload["path_availability"]["diagnostic"] is None
+    assert payload["path_availability"]["disclosure_level"] == "public"
+    assert payload["path_availability"]["professional_status"] == "confirmed"
+    assert payload["renderer_policy"]["available_visibility_layers"] == ["formal", "focus"]
+
+
+def test_onecanvas_r1_diagnoses_natural_language_without_guessing_a_path() -> None:
+    store = MemoryAgentCaseStore()
+    case_id = "case-canvas-natural-language-only"
+    user_id = "user-canvas-natural-language-only"
+    payload = _natural_language_only_case(case_id)
+    store.save(case_id=case_id, user_id=user_id, profile_id=None, payload=payload)
+
+    service = ReadOnlySixPillarCanvasService(case_store=store)
+    member = service.issue(
+        case_id=case_id,
+        participant_id=user_id,
+        account_role="member",
+    )
+    practitioner = service.issue(
+        case_id=case_id,
+        participant_id=user_id,
+        account_role="practitioner",
+    )
+    projection = service.issue(
+        case_id=case_id,
+        participant_id=user_id,
+        account_role="research",
+    )
+
+    diagnostic = projection["path_availability"]["diagnostic"]
+    assert diagnostic is not None
+    assert projection["path_availability"]["status"] == "unavailable"
+    assert projection["path_availability"]["message"].startswith("尚无已提交的正式做功路径")
+    assert diagnostic == {
+        "cognitive_path_present": True,
+        "structured_candidate_present": False,
+        "path_assertion_present": True,
+        "path_status": "legacy_unresolved",
+        "node_refs_valid": False,
+        "relation_refs_valid": False,
+        "authority_status": "legacy_unresolved",
+        "role_visible": True,
+        "projection_result": "rejected",
+        "rejection_reason": "natural_language_only",
+    }
+    assert member["path_availability"] == {
+        "status": "unavailable",
+        "message": "当前暂无已确认的结构路径。",
+        "committed_path_count": 0,
+        "candidate_path_count": 0,
+        "legacy_unresolved_count": 0,
+        "disclosure_level": "public",
+        "professional_status": "not_confirmed",
+        "diagnostic": None,
+    }
+    assert practitioner["path_availability"]["disclosure_level"] == "professional"
+    assert practitioner["path_availability"]["professional_status"] == "natural_language_unstructured"
+    assert practitioner["path_availability"]["diagnostic"] is None
+    assert "尚未提交为结构化 PathAssertion" in practitioner["path_availability"]["message"]
+    assert "natural_language_only" not in json.dumps(member, ensure_ascii=False)
+    assert "natural_language_only" not in json.dumps(practitioner, ensure_ascii=False)
+    assert "natural_language_only" in json.dumps(projection, ensure_ascii=False)
+    assert all(not stage["spec"]["paths"] for stage in projection["stages"].values())
+
+
+def test_onecanvas_r1_keeps_potential_relations_in_lab_audit_only() -> None:
+    store, user_id, case_id, _ = _saved_case()
+    service = ReadOnlySixPillarCanvasService(case_store=store)
+
+    practitioner = service.issue(
+        case_id=case_id,
+        participant_id=user_id,
+        account_role="practitioner",
+    )
+
+    assert practitioner["renderer_policy"]["available_visibility_layers"] == [
+        "formal",
+        "focus",
+        "lab_audit",
+    ]
+    for stage in practitioner["stages"].values():
+        relations = {item["relation_ref"]: item for item in stage["spec"]["relations"]}
+        assert any(item["relation_state"] == "potential" for item in relations.values())
+        for lens in stage["layers"]:
+            assert all(
+                relations[ref]["relation_state"] != "potential"
+                for ref in lens["formal_relation_refs"]
+            )
+
+
 def test_official_luck_and_year_update_committed_paths_without_promoting_candidates() -> None:
     store, user_id, case_id, _ = _saved_case()
     service = ReadOnlySixPillarCanvasService(case_store=store)
@@ -99,13 +246,12 @@ def test_official_luck_and_year_update_committed_paths_without_promoting_candida
     assert first["stages"]["luck"]["spec"] == second["stages"]["luck"]["spec"]
     assert first["stages"]["year"]["spec"] == second["stages"]["year"]["spec"]
     expected_types = {
-        "luck": {"position_link", "forms_half_combination", "forms_triple_combination"},
-        "year": {"position_link", "harms"},
+        "luck": {"forms_half_combination", "forms_triple_combination"},
+        "year": {"harms"},
     }
     for stage in ("luck", "year"):
         spec = first["stages"][stage]["spec"]
         diff = first["stages"][stage]["diff"]
-        nodes = {item["node_ref"]: item for item in spec["nodes"]}
         temporal_slot = spec["semantic_slots"][-1]["slot_ref"]
         temporal_refs = {
             item["node_ref"]
@@ -123,15 +269,7 @@ def test_official_luck_and_year_update_committed_paths_without_promoting_candida
         assert all(temporal_refs.intersection(item["participant_node_refs"]) for item in added)
         assert all(item["trace"]["epistemic_status"] == "derived" for item in added)
         assert not any(item["relation_state"] == "potential" for item in added)
-        for relation in added:
-            levels = {
-                "stem" if nodes[ref]["node_type"].endswith("stem") else "branch"
-                for ref in relation["participant_node_refs"]
-            }
-            if len(levels) > 1:
-                assert relation["relation_type"] == "position_link"
-                assert relation["relation_state"] == "structural"
-                assert "不自动表示直接作用" in relation["trace"]["uncertainty"][0]
+        assert not any(item["relation_type"] == "position_link" for item in added)
         assert not diff["introduced_paths"]
         assert not diff["activated_paths"]
         assert not diff["blocked_paths"]
@@ -154,7 +292,8 @@ def test_member_projection_removes_practitioner_path_before_serialization() -> N
     assert candidate_ref in practitioner_json
     assert '"relation_state": "potential"' not in member_json
     assert '"relation_state": "potential"' in practitioner_json
-    assert member["path_availability"]["candidate_path_count"] == 1
+    assert member["path_availability"]["candidate_path_count"] == 0
+    assert practitioner["path_availability"]["candidate_path_count"] == 1
     assert len(member["stages"]["natal"]["spec"]["paths"]) == 1
     assert len(practitioner["stages"]["natal"]["spec"]["paths"]) == 2
     assert all(
@@ -239,9 +378,23 @@ def test_renderer_consumes_server_layer_refs_without_relation_inference() -> Non
 
     assert "layer?.relation_refs" in source
     assert "relation.relation_type ===" not in source
-    assert '<text x="${midX}"' in source
+    assert 'class="canonical-canvas-scene"' in source
+    assert "renderCanonicalCanvasScene(" in source
+    assert "canvasAnchorRegistry(" in source
+    assert 'item.node_type === "hidden_stem"' in source
+    assert 'class="canvas-hidden-node' in source
+    assert "requiredNodeRefs" in source
+    assert "renderCanvasRelations(" not in source
+    assert 'class="six-pillar-rail"' not in source
     assert 'role="button" data-canvas-object="${escapeAttr(relation.relation_ref)}"' in source
     assert "loadReadOnlyCanvas" in api
     assert "/canvas/context" in api
     assert "replace_year" not in source
     assert "sandbox" not in source.lower()
+    assert 'canvas.path_availability.disclosure_level === "audit"' in source
+    assert 'item.count > 0 ? `<small>${item.count}</small>` : ""' in source
+    assert 'view.cognition.status === "preparing"' in source
+    assert 'pathTaskRunning' in source
+    assert "正式主路径正在形成" in source
+    assert "当前暂无已确认主路径" in source
+    assert "natural_language_only" not in source.split("function pathDiagnosticLabel", 1)[0]

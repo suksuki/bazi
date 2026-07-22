@@ -281,13 +281,10 @@ def test_domain_workspace_sync_and_cache_key_cover_all_implementation_authoritie
     )
 
 
-def test_public_ui_exposes_historical_read_only_cases_and_explicit_reality_actions() -> None:
-    script = Path("apps/product/static/l5/app.js").read_text(encoding="utf-8")
+def test_legacy_l5_bundle_is_retired_while_case_history_remains_in_storage_contracts() -> None:
+    root = Path(__file__).resolve().parents[1]
+    surface = (root / "apps/product/product_surface.py").read_text(encoding="utf-8")
+    case_store = (root / "apps/product/agent_case_store_contracts.py").read_text(encoding="utf-8")
 
-    assert "/cases?include_history=true" in script
-    assert "data-historical-case-id" in script
-    assert "&historical=true" in script
-    assert "historical-read-only-notice" in script
-    assert 'document.querySelectorAll("[data-open-artifact], [data-select-domain]' in script
-    assert 'pendingComposerIntent === "reality.record"' in script
-    assert 'focusComposer("记录：", "reality.record")' in script
+    assert 'FileResponse(MEDIA_DIR / "app.js"' not in surface
+    assert "list_for_user" in case_store

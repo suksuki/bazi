@@ -1,0 +1,39 @@
+{
+  "version": "deepbazi.local_gate_03_case_pack.v1",
+  "source": "synthetic_chart_taxonomy_v2.json",
+  "purpose": "Local real-model differentiation and FormalInsight safety audit; not professional gold.",
+  "cases": [
+    {
+      "case_id": "c2.output_controls_pressure.01",
+      "audit_role": "anchor",
+      "selection_reason": "Familiar output/pressure structure with a concrete path candidate."
+    },
+    {
+      "case_id": "c2.output_to_wealth.01",
+      "audit_role": "contrast",
+      "selection_reason": "Surface output vocabulary resembles the anchor while the target should differ."
+    },
+    {
+      "case_id": "c2.month_command_dominant.01",
+      "audit_role": "ordinary",
+      "selection_reason": "Common month-environment case that should not be forced into an elaborate path."
+    },
+    {
+      "case_id": "c2.mixed_officer_killing_with_control.01",
+      "audit_role": "ambiguous",
+      "selection_reason": "Competing pressure explanations should remain visible rather than collapse into one slogan."
+    },
+    {
+      "case_id": "c2.climate_regulation_dominant.01",
+      "audit_role": "non_wood_day_master",
+      "selection_reason": "Ding-fire day master checks that the baseline is not organized around Jia/Yi defaults."
+    }
+  ],
+  "boundaries": {
+    "expert_reference_frozen": false,
+    "professional_pass_may_be_claimed": false,
+    "prompt_changes_allowed_during_run": false,
+    "model_policy_changes_allowed_during_run": false,
+    "remote_sync_allowed": false
+  }
+}

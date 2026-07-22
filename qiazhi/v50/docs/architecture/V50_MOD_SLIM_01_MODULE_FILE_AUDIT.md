@@ -49,16 +49,16 @@ high-confidence mixed-responsibility files    9 ->  0
 All nine mixed-responsibility files were separated by authority boundary. The
 remaining active files over 1,000 lines are the HTTP-only Agent router, the
 presentation-only Experience stylesheet, and three L5/old-Theater legacy
-bundles. The legacy bundles remain intact because `/app` and `/theater` are
-still explicit rollback routes; they must be retired as units after route cut,
-not subdivided into another compatibility architecture.
+bundles. FLOW-SLIM-02 later retired the L5 page, JavaScript and stylesheet as
+one unit after moving account and profile parity into the Experience Shell.
+Theater media remains independently reachable and does not restore L5 ownership.
 
 ## 2. Largest 20 Source Files
 
 | File | Lines | Responsibilities | Formal owner | Production chain | Decision | Split risk | Required regression |
 |---|---:|---:|---|---|---|---|---|
-| `apps/product/static/l5/app.js` | 3,425 | 7 | Retiring L5 presentation | Yes: `/`, `/app` | **Retire whole; do not split** after route parity | High | auth, profile, Case, Abu, narration, root rollback |
-| `apps/product/static/l5/styles.css` | 2,996 | 6 | Retiring L5 presentation | Yes: `/`, `/app` | **Retire with L5; do not redesign** | High | desktop/mobile visual parity and root rollback |
+| Retired L5 JavaScript bundle (historical Git) | 3,425 | 7 | Former L5 presentation | No | **Retired whole in FLOW-SLIM-02** | Closed | auth, profile, Case, Abu and narration parity moved to Experience Shell |
+| Retired L5 stylesheet bundle (historical Git) | 2,996 | 6 | Former L5 presentation | No | **Retired with L5 in FLOW-SLIM-02** | Closed | desktop and mobile parity moved to Experience Shell |
 | `packages/core/mingli_agent/reasoner.py` | 2,837 | 6 | `MingliAgent` cognition | Yes | **Split by responsibility**, retain one facade | Very high | model mocks, baseline/domain cognition, review, citation and full regression |
 | `apps/product/static/experience/styles.css` | 2,074 | 4 | Experience Shell presentation | Yes: `/experience` | Split only by Shell, World, Workbench/Lab and responsive ownership | Medium | desktop, 390px, visual snapshots, no overflow |
 | `apps/product/static/experience/design-studies/life-script-workspace-v1/styles.css` | 1,889 | 1 | Isolated design study | No formal runtime caller | **Retire/archive whole** after preserving approved design tokens | Low | design-study evidence only |

@@ -8,7 +8,6 @@ from core.graph.contracts import (
     MingliGraphNode,
     MingliGraphNodeType,
     MingliPath,
-    MingliRelationState,
     MingliStateLayer,
     NodeImportanceMetric,
     NodeRoleAssignment,
@@ -32,6 +31,7 @@ from core.graph.path_qualification import (
 )
 from core.graph.provenance import (
     AssertionLifecycle,
+    MingliRelationState,
     NodeRef,
     PathAssertion,
     PathKey,
@@ -39,6 +39,7 @@ from core.graph.provenance import (
     RelationAssertion,
     RelationDirectionality,
     RelationKey,
+    RelationPositionContext,
     canonical_scene_scope_ref,
     validate_assertion_history,
 )
@@ -74,6 +75,7 @@ __all__ = [
     "RelationAssertion",
     "RelationDirectionality",
     "RelationKey",
+    "RelationPositionContext",
     "analyze_mingli_graph",
     "build_mingli_graph_from_material_store",
     "canonical_scene_scope_ref",

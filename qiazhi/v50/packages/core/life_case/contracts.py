@@ -5,6 +5,11 @@ from typing import Any, Literal
 from pydantic import Field, model_validator
 
 from core.contracts.base import V50Model
+from core.contracts.professional_review import (
+    PersistenceStatus,
+    ProfessionalReleaseStatus,
+    ProfessionalReviewOverlay,
+)
 from core.graph.provenance import (
     AssertionLifecycle,
     PathAssertion,
@@ -21,9 +26,16 @@ InsightType = Literal[
     "decision_support",
     "case_revision",
 ]
-InsightStatus = Literal["draft", "validated", "committed", "superseded", "rejected"]
-
-
+InsightStatus = Literal[
+    "draft",
+    "partial",
+    "reviewed",
+    "committed",
+    "failed",
+    "superseded",
+    "rejected",
+    "validated",  # Legacy read compatibility; new runs use reviewed.
+]
 class InsightBasis(V50Model):
     chart_fact_refs: list[str] = Field(default_factory=list)
     holistic_belief_refs: list[str] = Field(default_factory=list)
@@ -76,6 +88,9 @@ class FormalInsight(V50Model):
     next_action: InsightNextAction | None = None
     provenance: InsightProvenance
     status: InsightStatus = "draft"
+    persistence_status: PersistenceStatus = "draft"
+    professional_release_status: ProfessionalReleaseStatus = "unreviewed"
+    professional_review_overlay: ProfessionalReviewOverlay | None = None
     epistemic_state: Literal["reliable", "competing", "blocked", "legacy_unreviewed"] = "legacy_unreviewed"
     source_review_gate: str = "legacy"
     source_review_issue_codes: list[str] = Field(default_factory=list)

@@ -94,8 +94,8 @@ while other authorities remain distinct:
 - Production APIs do not call either contract.
 - Abu can resolve `timeline.select_period` and `reality.record`, but both are declared
   as incomplete boundaries (`packages/core/abu_runtime/runtime.py:124`, `:174`).
-- The browser handles month switching by offering "view current stage" instead of
-  selecting a persisted temporal period (`apps/product/static/l5/app.js:275`).
+- The former L5 browser handled month switching by offering "view current stage"
+  instead of selecting a persisted temporal period (historical Git, line 275).
 
 ### 2.4 Chart invalidation is written but not enforced on read
 
@@ -110,9 +110,9 @@ invalidated conclusion as current.
 
 ### 2.5 Abu and page actions converge only for implemented domain actions
 
-- Abu domain commands and page domain buttons both reach the same client action and the
-  same `/cases/{case_id}/domains/{domain}` endpoint
-  (`apps/product/static/l5/app.js:224`, `:297`, `:1430`).
+- In the former L5 browser, Abu domain commands and page domain buttons both reached the
+  same client action and the same `/cases/{case_id}/domains/{domain}` endpoint
+  (historical Git, lines 224, 297 and 1430).
 - Timeline and reality commands currently stop at a product boundary message and do not
   reach a shared server command.
 
@@ -334,4 +334,3 @@ inputs and outputs byte-for-byte wherever possible.
 
 The next meaningful progress is not more modules. It is making each piece own exactly
 one truth.
-

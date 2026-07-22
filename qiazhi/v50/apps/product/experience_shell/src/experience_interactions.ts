@@ -1,4 +1,4 @@
-import type { CanvasLayer, CanvasStage } from "./contracts";
+import type { CanvasLayer, CanvasStage, CanvasVisibilityLayer } from "./contracts";
 import type { ProductArea, WorkspaceSurface } from "./state";
 
 
@@ -11,6 +11,7 @@ export interface ExperienceInteractionHandlers {
   playSegment(index: number): void;
   selectCanvasStage(stage: CanvasStage): void;
   selectCanvasLayer(layer: CanvasLayer): void;
+  selectCanvasVisibility(visibility: CanvasVisibilityLayer): void;
   selectCanvasObject(selected: string): void;
   selectProfile(profileId: string): void;
 }
@@ -49,7 +50,14 @@ export function bindExperienceInteractions(
   root.querySelectorAll<HTMLButtonElement>("[data-canvas-layer]").forEach((button) => {
     button.addEventListener("click", () => {
       if (!button.disabled) handlers.selectCanvasLayer(
-        (button.dataset.canvasLayer || "generation_control") as CanvasLayer,
+        (button.dataset.canvasLayer || "overview") as CanvasLayer,
+      );
+    });
+  });
+  root.querySelectorAll<HTMLButtonElement>("[data-canvas-visibility]").forEach((button) => {
+    button.addEventListener("click", () => {
+      if (!button.disabled) handlers.selectCanvasVisibility(
+        (button.dataset.canvasVisibility || "formal") as CanvasVisibilityLayer,
       );
     });
   });

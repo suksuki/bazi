@@ -1,0 +1,110 @@
+{
+  "version": "v50.abu.designer_motion.v1",
+  "status": "production",
+  "motion": "pachinko_jackpot",
+  "action_id": "abu_pachinko_jackpot_v1",
+  "action_family": "playful_arcade_cameo",
+  "product_role": "rare_finale_arcade_easter_egg",
+  "source_type": "designer_video",
+  "source": {
+    "filename": "来一个阿布打日本pachinko_，获得大奖视频，和以前一样.mp4",
+    "archived_filename": "abu_pachinko_jackpot_source.mp4",
+    "sha256": "bd70cb1b6c9f6c2d432f672310336620677445715fb3ad9f6b551fa76ecf66ce",
+    "frame_count": 240,
+    "fps": 15,
+    "segment_seconds": [
+      0.0,
+      10.0
+    ],
+    "dropped_initial_frames": 0
+  },
+  "canvas": [
+    960,
+    720
+  ],
+  "anchor": [
+    0.5,
+    0.9861111111111112
+  ],
+  "actor_contract": {
+    "facing": "front",
+    "gaze_target": "activity_object",
+    "safe_crop": "full_body_with_machine",
+    "background": "transparent",
+    "flip_horizontal": false,
+    "loop_mode": "one_shot",
+    "recommended_contexts": [
+      "theater_finale_rare",
+      "internal_motion_gallery",
+      "social_ip_easter_egg"
+    ]
+  },
+  "source_size": [
+    1280,
+    720
+  ],
+  "character_crop_box": [
+    80,
+    0,
+    1120,
+    720
+  ],
+  "transparent_background": true,
+  "fixed_character_scale": true,
+  "watermark_removed": true,
+  "removed_regions": [
+    {
+      "name": "source_lower_right_sparkle_mark",
+      "method": "painted_black_before_alpha_extraction",
+      "post_crop_box": [
+        1005,
+        485,
+        1120,
+        650
+      ]
+    }
+  ],
+  "alpha_matte": {
+    "similarity": 0.018,
+    "blend": 0.06
+  },
+  "webp": {
+    "quality": 92,
+    "method": 3,
+    "loop_count": 1
+  },
+  "runtime_display": {
+    "scale": 1.04,
+    "stage_profile": "extra_wide",
+    "playback": "one_shot",
+    "category": "ambient_restricted"
+  },
+  "animation": "web/abu_pachinko_jackpot_v1.webp",
+  "video": "web/abu_pachinko_jackpot_v1.webm",
+  "poster": "posters/abu_pachinko_jackpot_v1.png",
+  "contact_sheet": "contact-sheets/abu_pachinko_jackpot_v1_contact_sheet.png",
+  "frame_count": 150,
+  "duration_ms": 10000,
+  "delivery_bytes": {
+    "webp": 18751640,
+    "webm": 3002374
+  },
+  "usage": [
+    "theater_finale_rare",
+    "internal_motion_gallery",
+    "social_ip_easter_egg"
+  ],
+  "content_note": "Arcade-style pachinko imagery; never bind this action to a user's fortune or outcome.",
+  "boundaries": {
+    "creates_mingli_claim": false,
+    "changes_case_state": false,
+    "must_not_interrupt_professional_explanation": true,
+    "do_not_use_for": [
+      "wealth_or_fortune_reading",
+      "reading_success",
+      "payment_or_reward_prompt",
+      "professional_explanation",
+      "default_child_facing_scene"
+    ]
+  }
+}

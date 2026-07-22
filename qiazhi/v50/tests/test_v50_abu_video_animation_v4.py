@@ -26,16 +26,12 @@ def test_abu_v4_animation_pack_is_transparent_watermark_free_and_complete() -> N
         assert poster.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
-def test_public_product_uses_state_driven_abu_v4_assets() -> None:
-    index = (ROOT / "apps/product/static/l5/index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
+def test_unified_product_keeps_v4_pack_and_uses_registered_standard_idle() -> None:
+    components = (ROOT / "apps/product/experience_shell/src/components.ts").read_text(encoding="utf-8")
     registry = (ROOT / "apps/product/static/l5/assets/abu/motion-registry.js").read_text(encoding="utf-8")
 
-    assert "id=\"abuMotionFrame\"" in index
-    assert "/assets/abu/v4-video-derived/web/abu_idle_blink_v4.webp" in index
-    assert "ABU_STATE_MOTION" in javascript
+    assert "/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp" in components
+    assert 'idle: "quiet_sit_reaction"' in registry
     assert 'thinking: "taoist_divination"' in registry
     assert 'caution: "caution_ears"' in registry
     assert 'wave: "happy_tail"' in registry
-    assert "prefers-reduced-motion: reduce" in javascript
-    assert 'const ABU_MOTION_ROOT = "/assets/abu/v4-video-derived"' in javascript

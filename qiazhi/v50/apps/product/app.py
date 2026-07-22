@@ -9,6 +9,9 @@ from product.agent_case_store import AgentCaseStore, build_agent_case_store
 from product.agent_job_store import AgentJobStore, build_agent_job_store
 from product.agent_runtime import build_agent_runtime
 from product.canonical_scene_api import create_canonical_scene_router
+from product.dream_api import create_dream_router
+from product.dream_feature import DreamFeaturePolicy
+from product.dream_store import DreamStore, build_dream_store
 from product.experience_api import create_experience_router
 from product.legacy_usage import LegacyUsageStore, build_legacy_usage_store
 from product.narration_api import create_narration_router
@@ -32,6 +35,8 @@ def create_product_app(
     abu_narration_service=None,
     voice_validation_store: VoiceValidationStore | None = None,
     legacy_usage_store: LegacyUsageStore | None = None,
+    dream_store: DreamStore | None = None,
+    dream_feature_policy: DreamFeaturePolicy | None = None,
 ) -> FastAPI:
     """Compose the production Abu-led Mingli application."""
 
@@ -49,6 +54,8 @@ def create_product_app(
     )
     narration_service = abu_narration_service or AbuNarrationService.from_environment()
     resolved_legacy_usage_store = legacy_usage_store or build_legacy_usage_store()
+    resolved_dream_store = dream_store or build_dream_store()
+    resolved_dream_policy = dream_feature_policy or DreamFeaturePolicy.from_environment()
 
     app.include_router(
         create_agent_router(
@@ -116,6 +123,15 @@ def create_product_app(
             product_store=store,
             session_cookie=PRODUCT_SESSION_COOKIE,
             case_store=case_store,
+        )
+    )
+    app.include_router(
+        create_dream_router(
+            product_store=store,
+            session_cookie=PRODUCT_SESSION_COOKIE,
+            case_store=case_store,
+            dream_store=resolved_dream_store,
+            feature_policy=resolved_dream_policy,
         )
     )
     app.include_router(create_product_router(store=store, case_store=case_store))

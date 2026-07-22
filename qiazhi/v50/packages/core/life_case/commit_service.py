@@ -26,11 +26,15 @@ def commit_baseline_life_case(
     world: ChartWorldInstance,
     profile_id: str | None,
 ) -> tuple[LifeCase, InsightValidationReceipt]:
+    _require_committable_status(insight)
     receipt = validate_formal_insight(insight=insight, world=world)
     if not receipt.passed:
         raise ValueError(f"formal_insight_validation_failed:{','.join(receipt.errors)}")
     now = datetime.now(timezone.utc).isoformat()
-    committed = insight.model_copy(update={"status": "committed"})
+    committed = insight.model_copy(update={
+        "status": "committed",
+        "persistence_status": "persisted",
+    })
     life_case_id = f"life-case-{uuid4().hex[:20]}"
     chart_version = ChartVersionRef(
         version_id=f"chart-version-{uuid4().hex[:16]}",
@@ -38,12 +42,16 @@ def commit_baseline_life_case(
         chart_hash=_chart_hash(world),
         created_at=now,
     )
-    relation_assertions, path_assertions = build_committed_relation_path_assertions(
-        insight=committed,
-        world=world,
-        life_case_id=life_case_id,
-        chart_version=chart_version,
-        case_version=committed.case_version,
+    relation_assertions, path_assertions = (
+        build_committed_relation_path_assertions(
+            insight=committed,
+            world=world,
+            life_case_id=life_case_id,
+            chart_version=chart_version,
+            case_version=committed.case_version,
+        )
+        if committed.professional_release_status == "passed"
+        else ([], [])
     )
     life_case = LifeCase(
         life_case_id=life_case_id,
@@ -72,6 +80,7 @@ def commit_domain_insight(
     insight: FormalInsight,
     world: ChartWorldInstance,
 ) -> tuple[LifeCase, InsightValidationReceipt]:
+    _require_committable_status(insight)
     if insight.case_id != life_case.case_id or insight.case_version != life_case.case_version:
         raise ValueError("formal_insight_case_version_mismatch")
     baseline_reference_matches = bool(
@@ -133,6 +142,7 @@ def commit_case_revision(
     insight: FormalInsight,
     world: ChartWorldInstance,
 ) -> tuple[LifeCase, InsightValidationReceipt]:
+    _require_committable_status(insight)
     _require_active_life_case(life_case)
     if insight.type != "case_revision":
         raise ValueError("formal_insight_type_mismatch:case_revision")
@@ -190,6 +200,7 @@ def _commit_followup_insight(
     revision_kind: str,
     revision_summary: str,
 ) -> tuple[LifeCase, InsightValidationReceipt]:
+    _require_committable_status(insight)
     if insight.type != expected_type:
         raise ValueError(f"formal_insight_type_mismatch:{expected_type}")
     if insight.case_id != life_case.case_id or insight.case_version != life_case.case_version:
@@ -217,3 +228,7 @@ def _commit_followup_insight(
         "updated_at": now,
     }), receipt
 
+
+def _require_committable_status(insight: FormalInsight) -> None:
+    if insight.status not in {"draft", "reviewed", "validated"}:
+        raise ValueError(f"formal_insight_status_not_committable:{insight.status}")

@@ -3,7 +3,8 @@
 
 export type CanvasRole = "guest" | "member" | "practitioner" | "research" | "admin";
 export type CanvasStage = "natal" | "luck" | "year";
-export type CanvasLayer = "generation_control" | "combination" | "conflict" | "work_path";
+export type CanvasLayer = "overview" | "five_element" | "combination_conflict" | "roots_reveal" | "timing" | "work_path";
+export type CanvasVisibilityLayer = "formal" | "focus" | "lab_audit";
 
 export interface AllowedChartFact {
   fact_ref: string;
@@ -208,12 +209,16 @@ export interface CanvasInteractionPolicy {
 }
 
 export interface CanvasLayerProjection {
-  layer_id: "generation_control" | "combination" | "conflict" | "work_path";
+  layer_id: "overview" | "five_element" | "combination_conflict" | "roots_reveal" | "timing" | "work_path";
   label: string;
   description: string;
   relation_refs: Array<string>;
+  formal_relation_refs: Array<string>;
+  path_refs: Array<string>;
+  formal_path_refs: Array<string>;
   available: boolean;
   count: number;
+  formal_count: number;
 }
 
 export interface CanvasNode {
@@ -255,6 +260,9 @@ export interface CanvasPathAvailability {
   committed_path_count: number;
   candidate_path_count: number;
   legacy_unresolved_count: number;
+  disclosure_level: "public" | "professional" | "audit";
+  professional_status: "confirmed" | "not_confirmed" | "natural_language_unstructured" | "candidate_uncommitted" | "reference_unresolved" | "role_filtered" | "not_available";
+  diagnostic: PathProjectionDiagnostic | null;
 }
 
 export interface CanvasPresentation {
@@ -272,6 +280,8 @@ export interface CanvasRelation {
   relation_type: string;
   label: string;
   relation_state: "potential" | "structural" | "time_activated" | "effective";
+  mechanism_ref: string;
+  position_context: RelationPositionContext | null;
   semantic_state: "latent" | "active" | "reinforced" | "weakened" | "blocked";
   trace: CanvasTrace;
   state_trace: CanvasTrace;
@@ -280,6 +290,8 @@ export interface CanvasRelation {
 
 export interface CanvasRendererPolicy {
   read_only: true;
+  available_visibility_layers: Array<"formal" | "focus" | "lab_audit">;
+  default_visibility_layer: "formal" | "focus" | "lab_audit";
   allowed_interactions: Array<string>;
   forbidden_interactions: Array<string>;
 }
@@ -293,6 +305,20 @@ export interface CanvasSandboxMutation {
   base_snapshot_id: string;
   source_mode: "derived" | "hypothetical";
   source_refs: Array<string>;
+}
+
+export interface CanvasSceneSlotProjection {
+  position_index: number;
+  slot_type: "natal_year" | "natal_month" | "natal_day" | "natal_hour" | "luck" | "year";
+  label: string;
+  state: "active" | "inactive" | "not_loaded";
+  slot_ref: string;
+  stem_node_ref: string;
+  branch_node_ref: string;
+  stem: string;
+  branch: string;
+  hidden_stems: Array<string>;
+  immutable: boolean;
 }
 
 export interface CanvasSemanticSlot {
@@ -313,8 +339,9 @@ export interface CanvasStageProjection {
   spec: MingliCanvasSpec;
   diff: CanvasDiffSpec | null;
   context: CanvasContextPack;
+  scene_slots: Array<CanvasSceneSlotProjection>;
   layers: Array<CanvasLayerProjection>;
-  default_layer_id: "generation_control" | "combination" | "conflict" | "work_path";
+  default_layer_id: "overview" | "five_element" | "combination_conflict" | "roots_reveal" | "timing" | "work_path";
   change_groups: Array<CanvasChangeGroup>;
 }
 
@@ -424,6 +451,20 @@ export interface ExperienceWorkspaceBootstrapResponse {
   cognition_source: "LifeCase";
   chart_source: "ChartWorldInstance";
   legacy_report_used: false;
+}
+
+export interface FormalInsightLifecycleState {
+  version: string;
+  status: "draft" | "partial" | "reviewed" | "committed" | "failed";
+  persistence_status: "draft" | "persisted" | "failed";
+  professional_release_status: "unreviewed" | "passed" | "blocked" | "partially_blocked";
+  complete: boolean;
+  active: boolean;
+  formal_projection_eligible: boolean;
+  role_projection_eligible: boolean;
+  path_assertion_eligible: boolean;
+  reminder_eligible: boolean;
+  hidden_attribute_evidence_eligible: boolean;
 }
 
 export interface HiddenStemFact {
@@ -569,6 +610,8 @@ export interface MingliLabStudy {
   promotes_candidate: false;
 }
 
+export type MingliRelationState = "potential" | "structural" | "time_activated" | "effective";
+
 export interface MingliVisualCue {
   at_ms: number;
   action: "reveal" | "focus" | "pulse" | "flow" | "split" | "dim" | "sever" | "ghost" | "restore" | "compare";
@@ -660,6 +703,9 @@ export interface PathAssertion {
   assertion_version: string;
   status: AssertionLifecycle;
   provenance: ProvenanceRecord;
+  source_candidate_ref: string;
+  segment_validation_refs: Array<string>;
+  rejected_segment_refs: Array<string>;
   supersedes: string;
   statement: string;
   legacy_ref: string;
@@ -675,6 +721,19 @@ export interface PathKey {
   relation_keys: Array<RelationKey>;
   scope: "natal" | "luck" | "year" | "month" | "other";
   directed: true;
+}
+
+export interface PathProjectionDiagnostic {
+  cognitive_path_present: boolean;
+  structured_candidate_present: boolean;
+  path_assertion_present: boolean;
+  path_status: string;
+  node_refs_valid: boolean;
+  relation_refs_valid: boolean;
+  authority_status: string;
+  role_visible: boolean;
+  projection_result: "projected" | "rejected" | "not_available";
+  rejection_reason: "none" | "no_cognitive_path" | "natural_language_only" | "candidate_not_committed" | "missing_path_ref" | "invalid_node_ref" | "invalid_relation_ref" | "relation_still_potential" | "authority_not_allowed" | "role_visibility_filtered" | "timing_scope_mismatch";
 }
 
 export interface ProvenanceRecord {
@@ -727,6 +786,10 @@ export interface RelationAssertion {
   assertion_version: string;
   status: AssertionLifecycle;
   provenance: ProvenanceRecord;
+  relation_state: MingliRelationState;
+  mechanism_ref: string;
+  position_context: RelationPositionContext | null;
+  verification_refs: Array<string>;
   supersedes: string;
   statement: string;
 }
@@ -743,6 +806,22 @@ export interface RelationKey {
   directionality: RelationDirectionality;
   arity: number;
   scope: "natal" | "luck" | "year" | "month" | "other";
+}
+
+export interface RelationPositionContext {
+  version: string;
+  source_scope: "natal" | "luck" | "year" | "month" | "other";
+  target_scope: "natal" | "luck" | "year" | "month" | "other";
+  source_slot: string;
+  target_slot: string;
+  source_level: "pillar" | "stem" | "branch" | "hidden_stem" | "other";
+  target_level: "pillar" | "stem" | "branch" | "hidden_stem" | "other";
+  adjacent: boolean;
+  column_span: number | null;
+  intervening_node_refs: Array<string>;
+  ref_namespace: "candidate_node_key" | "node_ref";
+  direction: "same_column" | "left_to_right" | "right_to_left" | "symmetric" | "temporal_to_natal" | "natal_to_temporal" | "cross_temporal" | "other";
+  scene_layer: "natal_state" | "luck_state" | "year_state" | "month_state" | "mixed_temporal";
 }
 
 export interface SpeechAsset {
@@ -877,6 +956,7 @@ export interface WorkspaceCognitionState {
   cache_hit: boolean;
   background_start_allowed: boolean;
   background_job_id: string;
+  insight: FormalInsightLifecycleState;
   llm_calls_started_by_bootstrap: 0;
   tts_calls_started_by_bootstrap: 0;
 }

@@ -13,7 +13,7 @@ def test_six_pillar_relation_audit_tracks_ra3_completion_without_overstating_it(
         "declared_relation_types": 13,
         "builder_emitted_relation_types": 13,
         "declared_but_unemitted": 0,
-        "canvas_advertised_relation_types": 11,
+            "canvas_advertised_relation_types": 13,
         "canvas_only_relation_types": 0,
         "configured_triple_combinations": 4,
         "configured_half_triple_combinations": 8,

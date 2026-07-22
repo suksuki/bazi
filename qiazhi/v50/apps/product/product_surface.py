@@ -12,7 +12,7 @@ from product.legacy_usage import LegacyUsageStore, legacy_route_key
 from product.product_store import ProductStore
 
 
-STATIC_DIR = Path(__file__).resolve().parent / "static" / "l5"
+MEDIA_DIR = Path(__file__).resolve().parent / "static" / "l5"
 EXPERIENCE_STATIC_DIR = Path(__file__).resolve().parent / "static" / "experience"
 LOGGER = logging.getLogger(__name__)
 
@@ -38,7 +38,7 @@ def register_product_surface(
     def legacy_abu_theater_entry() -> RedirectResponse:
         return RedirectResponse(url="/abu-theater", status_code=308)
 
-    app.mount("/assets", StaticFiles(directory=STATIC_DIR / "assets"), name="product-assets")
+    app.mount("/assets", StaticFiles(directory=MEDIA_DIR / "assets"), name="product-assets")
     app.mount("/experience-static", StaticFiles(directory=EXPERIENCE_STATIC_DIR), name="experience-static")
 
     @app.middleware("http")
@@ -57,42 +57,39 @@ def register_product_surface(
         return RedirectResponse(url="/abu-theater", status_code=307)
 
     @app.get("/app", include_in_schema=False)
-    def product_index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "index.html")
+    def legacy_product_entry(request: Request) -> RedirectResponse:
+        profile_id = str(request.query_params.get("profile") or "")
+        target = "/experience"
+        if profile_id:
+            target = f"/experience?profile={profile_id}"
+        elif request.query_params.get("manage") == "1":
+            target = "/experience?manage=1"
+        return RedirectResponse(url=target, status_code=308)
 
     @app.get("/experience", include_in_schema=False)
     @app.get("/experience/", include_in_schema=False)
-    def experience_index() -> FileResponse:
+    @app.get("/experience/dream", include_in_schema=False)
+    @app.get("/experience/dream/", include_in_schema=False)
+    @app.get("/experience/dream/{dream_path:path}", include_in_schema=False)
+    def experience_index(dream_path: str = "") -> FileResponse:
         return FileResponse(EXPERIENCE_STATIC_DIR / "index.html")
 
     @app.get("/theater", include_in_schema=False)
     @app.get("/theater/studio", include_in_schema=False)
     def theater_index() -> FileResponse:
-        return FileResponse(STATIC_DIR / "theater.html")
-
-    @app.get("/visual-alpha", include_in_schema=False)
-    def retired_visual_alpha_route() -> RedirectResponse:
-        return RedirectResponse(url="/app", status_code=308)
-
-    @app.get("/app.js", include_in_schema=False)
-    def product_javascript() -> FileResponse:
-        return FileResponse(STATIC_DIR / "app.js", media_type="application/javascript")
-
-    @app.get("/styles.css", include_in_schema=False)
-    def product_styles() -> FileResponse:
-        return FileResponse(STATIC_DIR / "styles.css", media_type="text/css")
+        return FileResponse(MEDIA_DIR / "theater.html")
 
     @app.get("/theater.js", include_in_schema=False)
     def theater_javascript() -> FileResponse:
-        return FileResponse(STATIC_DIR / "theater.js", media_type="application/javascript")
+        return FileResponse(MEDIA_DIR / "theater.js", media_type="application/javascript")
 
     @app.get("/theater.css", include_in_schema=False)
     def theater_styles() -> FileResponse:
-        return FileResponse(STATIC_DIR / "theater.css", media_type="text/css")
+        return FileResponse(MEDIA_DIR / "theater.css", media_type="text/css")
 
     @app.get("/favicon.ico", include_in_schema=False)
     def product_favicon() -> FileResponse:
-        return FileResponse(STATIC_DIR / "assets" / "deepbazi_symbol.png", media_type="image/png")
+        return FileResponse(MEDIA_DIR / "assets" / "deepbazi_symbol.png", media_type="image/png")
 
     @app.get("/health", include_in_schema=False)
     def product_health() -> dict[str, object]:

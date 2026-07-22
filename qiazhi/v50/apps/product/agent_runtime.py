@@ -15,6 +15,7 @@ from product.agent_command_service import (
 )
 from product.agent_job_store import AgentJobStore
 from product.agent_jobs import AgentJobRunner
+from product.formal_insight_state import cognition_background
 from product.product_store import ProductStore
 
 
@@ -135,12 +136,14 @@ class WorkspaceBaselineCoordinator:
                 raise WorkspaceBaselineStartError("baseline_job_create_failed") from exc
             return _result("baseline_preparing", case_id, job_id=job_id)
 
-        row["background_cognition"] = {
-            "status": "queued",
-            "attempt_count": 1,
-            "job_id": job_id,
-            "reason": "valid_baseline_missing",
-        }
+        row["background_cognition"] = cognition_background(
+            background,
+            operational_status="queued",
+            insight_status="draft",
+            attempt_count=1,
+            job_id=job_id,
+            reason="valid_baseline_missing",
+        )
         self._context.save_case_row(case_id=case_id, row=row, account=account)
         self._jobs.submit_baseline(
             job_id=job_id,
@@ -205,6 +208,8 @@ def _has_committed_baseline(row: dict[str, Any]) -> bool:
         and chart_version.get("active") is True
         and isinstance(baseline, dict)
         and baseline.get("status") == "committed"
+        and isinstance(baseline.get("professional_review_overlay"), dict)
+        and baseline.get("professional_release_status") in {"passed", "partially_blocked"}
     )
 
 

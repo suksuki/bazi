@@ -1,3 +1,5 @@
+from core.contracts import FormalInsightLifecycleState
+
 from .contracts import (
     CaseRevisionCandidate,
     ChartVersionRef,
@@ -48,6 +50,7 @@ __all__ = [
     "CaseRevisionCandidate",
     "ChartVersionRef",
     "FormalInsight",
+    "FormalInsightLifecycleState",
     "InsightBasis",
     "InsightProvenance",
     "InsightUncertainty",

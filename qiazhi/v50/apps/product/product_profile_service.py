@@ -9,6 +9,7 @@ from core.contracts import BirthInputCanonical
 from core.engines import BirthCalendarResolutionError, resolve_birth_input_pillars
 from core.life_case import LifeCase, LifeCaseRevision
 from product.agent_case_store import AgentCaseStore
+from product.formal_insight_state import cognition_background
 
 
 def supersede_profile_life_cases(
@@ -45,11 +46,19 @@ def supersede_profile_life_cases(
             row["life_case"] = life_case.model_dump(mode="json")
         background = row.get("background_cognition")
         background = background if isinstance(background, dict) else {}
-        row["background_cognition"] = {
-            **background,
-            "status": "superseded",
-            "reason": "birth_profile_changed",
-        }
+        row["background_cognition"] = cognition_background(
+            background,
+            operational_status="superseded",
+            insight_status=(
+                "committed"
+                if isinstance(row.get("life_case"), dict)
+                else "partial"
+                if row.get("record")
+                else "draft"
+            ),
+            active=False,
+            reason="birth_profile_changed",
+        )
         row["status"] = "superseded"
         row["superseded_at"] = now
         case_store.save(

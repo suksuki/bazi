@@ -37,34 +37,6 @@ def test_opening_transition_has_a_clean_background_and_transparent_character() -
     assert character.getchannel("A").getbbox() is not None
 
 
-def test_opening_scene_hands_the_character_to_the_existing_abu_surface() -> None:
-    html = (ROOT / "apps/product/static/l5/index.html").read_text(encoding="utf-8")
-    javascript = (ROOT / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
-    stylesheet = (ROOT / "apps/product/static/l5/styles.css").read_text(encoding="utf-8")
-
-    assert 'id="openingSceneVideo"' in html
-    assert 'id="openingAbuFlight"' in html
-    assert "abu_opening_scene_v10.mp4" in html
-    assert "20260717-thinking-chart-v1" in html
-    assert 'const OPENING_SCENE_SESSION_KEY = "deepbazi.opening_scene_v10.seen"' in javascript
-    assert 'get("opening") === "1"' in javascript
-    assert "function openingDestinationRect()" in javascript
-    assert 'el("abuStage")?.getBoundingClientRect()' in javascript
-    assert 'setAbuSurface("peek"' in javascript
-    assert javascript.count('setAbuSurface("peek", { persist: false, message: "你好，我是阿布。我们从你的出生信息开始。" })') == 2
-    assert "flight.animate(" in javascript
-    assert ".opening-scene-video" in stylesheet
-    assert "object-fit: cover" in stylesheet
-    assert "opening-scene-mobile-pan" in stylesheet
-    assert "width: 175vw;" in stylesheet
-    assert "object-fit: contain;" in stylesheet
-    assert "mask-image: linear-gradient" in stylesheet
-    assert "30% { transform: translate(-58%, -50%); }" in stylesheet
-    assert "const renderedWidth = viewportWidth * 1.75;" in javascript
-    assert "viewportWidth * .5 - renderedWidth * .52" in javascript
-    assert ".opening-scene.is-revealing" in stylesheet
-
-
 def test_opening_builder_uses_content_aware_repair_instead_of_a_cover_patch() -> None:
     builder = (ROOT / "tools/build_abu_opening_scene_v10.py").read_text(encoding="utf-8")
 

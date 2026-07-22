@@ -5,6 +5,7 @@ from typing import Any, Literal
 
 from pydantic import Field, computed_field, model_validator
 
+from core.graph.provenance import RelationPositionContext
 from experience.compiler import canonical_hash
 from experience.contracts import ExperienceModel
 from experience.lab import MingliLabSession
@@ -95,6 +96,8 @@ class CanvasRelation(ExperienceModel):
     relation_type: str = Field(min_length=1, max_length=100)
     label: str = Field(min_length=1, max_length=140)
     relation_state: CanvasRelationState = "structural"
+    mechanism_ref: str = Field(default="", max_length=140)
+    position_context: RelationPositionContext | None = None
     semantic_state: CanvasSemanticState = "active"
     trace: CanvasTrace
     state_trace: CanvasTrace
@@ -495,4 +498,3 @@ def _unique_refs(rows: list[Any], field: str, error: str) -> dict[str, Any]:
             raise ValueError(f"{error}:{ref}")
         result[ref] = row
     return result
-

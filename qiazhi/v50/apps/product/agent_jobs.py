@@ -13,6 +13,7 @@ from core.mingli_agent import ChartWorldInstance, ProbePlanner
 from product.agent_api_context import AgentApiContext
 from product.agent_command_service import BaselineCaseCommand, BaselineCaseCommandService
 from product.agent_reading_projection import public_reading_view, reliability_outcome_payload
+from product.formal_insight_state import cognition_background
 
 
 LOGGER = logging.getLogger(__name__)
@@ -92,13 +93,34 @@ class AgentJobRunner:
         world: ChartWorldInstance | None,
     ) -> None:
         current_stage = "chart_compilation"
+        latest_partial: dict[str, Any] = {}
         try:
             with self._lock:
                 def on_command_event(
                     event_type: str,
                     stage_payload: dict[str, Any],
                 ) -> None:
-                    nonlocal current_stage
+                    nonlocal current_stage, latest_partial
+                    if event_type == "baseline_preview_ready":
+                        latest_partial = {
+                            "stage": "baseline_preview_ready",
+                            "first_look": str(stage_payload.get("preview_line") or ""),
+                        }
+                    elif event_type == "baseline_draft_ready":
+                        latest_partial = {
+                            "stage": "baseline_draft_ready",
+                            **{
+                                key: stage_payload.get(key)
+                                for key in (
+                                    "first_look",
+                                    "whole_chart_thesis",
+                                    "primary_path",
+                                    "key_condition",
+                                    "uncertainty",
+                                )
+                                if stage_payload.get(key)
+                            },
+                        }
                     self._context.append_job_event(
                         job_id=job_id,
                         event_type=event_type,
@@ -148,11 +170,17 @@ class AgentJobRunner:
                         "outcome": reliability_outcome_payload(
                             world=result.world,
                             record=result.record,
+                            professional_review=result.professional_review.overlay,
                         ),
                         "validation": result.validation.model_dump(mode="json"),
                         "persisted_as_formal_insight": False,
+                        "run_metrics": result.metrics,
                     }
-                    if result.record.review.disposition == "competing":
+                    if (
+                        result.record.review.disposition == "competing"
+                        and result.professional_review.overlay.professional_release_status
+                        != "blocked"
+                    ):
                         payload["reading"] = public_reading_view(
                             world=result.world,
                             record=result.record,
@@ -165,11 +193,19 @@ class AgentJobRunner:
                     self._context.append_job_event(
                         job_id=job_id,
                         event_type=(
-                            "baseline_competing"
+                            "baseline_professional_blocked"
+                            if result.professional_review.overlay.professional_release_status
+                            == "blocked"
+                            else "baseline_competing"
                             if result.record.review.disposition == "competing"
                             else "baseline_blocked"
                         ),
-                        epistemic_status=result.record.review.disposition,
+                        epistemic_status=(
+                            "professional_blocked"
+                            if result.professional_review.overlay.professional_release_status
+                            == "blocked"
+                            else result.record.review.disposition
+                        ),
                         job_status="completed",
                         payload=payload,
                     )
@@ -196,6 +232,7 @@ class AgentJobRunner:
                         "life_case_id": life_case.life_case_id,
                         "insight_id": life_case.baseline_insight.insight_id,
                         "blocking_core_llm_calls": len(result.record.stage_receipts),
+                        "run_metrics": result.metrics,
                     },
                 )
         except Exception as exc:  # noqa: BLE001 - partial cognition remains recoverable.
@@ -213,12 +250,14 @@ class AgentJobRunner:
                     "failure_code": f"mingli_cognition_failed:{type(exc).__name__}",
                     "failure_stage": current_stage,
                     "message": cognitive_failure_message(current_stage),
+                    "partial_result": latest_partial,
                 },
             )
             self._mark_case_cognition_failed(
                 case_id=case_id,
                 user_id=user_id,
                 job_id=job_id,
+                partial_result=latest_partial,
             )
 
     def _run_domain(
@@ -286,6 +325,7 @@ class AgentJobRunner:
         case_id: str,
         user_id: str | None,
         job_id: str,
+        partial_result: dict[str, Any],
     ) -> None:
         row = self._context.case_store.get(case_id=case_id, user_id=user_id)
         if row is None:
@@ -293,12 +333,15 @@ class AgentJobRunner:
         row.pop("workspace", None)
         background = row.get("background_cognition")
         background = background if isinstance(background, dict) else {}
-        row["background_cognition"] = {
-            **background,
-            "status": "failed",
-            "job_id": job_id,
-            "attempt_count": max(1, int(background.get("attempt_count") or 0)),
-        }
+        row["background_cognition"] = cognition_background(
+            background,
+            operational_status="failed",
+            insight_status="partial" if partial_result else "failed",
+            job_id=job_id,
+            attempt_count=max(1, int(background.get("attempt_count") or 0)),
+            partial_result=partial_result,
+            automatic_full_reruns=0,
+        )
         self._context.case_store.save(
             case_id=case_id,
             user_id=user_id,

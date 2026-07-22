@@ -20,7 +20,18 @@ from core.life_case.service_support import (
     _unique,
 )
 from core.mingli_agent.assertion_gate import accepted_assertion_refs
-from core.mingli_agent.contracts import ChartWorldInstance, DomainExploration, MingliCognitiveRecord
+from core.mingli_agent.contracts import (
+    ChartWorldInstance,
+    DomainCausalReading,
+    DomainExploration,
+    MingliCognitiveRecord,
+)
+from core.mingli_agent.professional_review import (
+    professional_projection_payload,
+    review_professional_payload,
+    review_professional_record,
+)
+from core.contracts.professional_review import ProfessionalReviewBundle
 from core.mingli_agent.reliability import cognition_semantic_signature
 
 
@@ -29,8 +40,24 @@ def build_baseline_insight(
     record: MingliCognitiveRecord,
     world: ChartWorldInstance,
     case_version: str = "v1",
+    professional_review: ProfessionalReviewBundle | None = None,
 ) -> FormalInsight:
-    cognition = record.cognition
+    professional_review = professional_review or review_professional_record(
+        record=record,
+        world=world,
+        persistence_status="persisted",
+    )
+    release_status = professional_review.overlay.professional_release_status
+    projection_record = record
+    if release_status == "partially_blocked":
+        projected = professional_projection_payload(
+            payload=record.cognition.model_dump(mode="json"),
+            bundle=professional_review,
+        )
+        projection_record = record.model_copy(update={
+            "cognition": record.cognition.model_validate(projected),
+        })
+    cognition = projection_record.cognition
     primary = next(
         (item for item in cognition.hypotheses if item.hypothesis_id == cognition.selected_hypothesis_id),
         cognition.hypotheses[0] if cognition.hypotheses else None,
@@ -86,7 +113,7 @@ def build_baseline_insight(
     strategy_dimensions: dict[str, list[dict[str, Any]]] = {}
     for item in cognition.useful_god_reasoning:
         strategy_dimensions.setdefault(item.lens, []).append(item.model_dump(mode="json"))
-    epistemic_state = (
+    epistemic_state = "blocked" if release_status == "blocked" else (
         record.reliability_disposition
         if record.reliability_disposition != "legacy_unreviewed"
         else "reliable" if record.review.passed and not any(issue.severity == "error" for issue in record.review.issues)
@@ -148,20 +175,24 @@ def build_baseline_insight(
             source_record_id=record.record_id,
         ),
         status="draft",
+        persistence_status=professional_review.overlay.persistence_status,
+        professional_release_status=release_status,
+        professional_review_overlay=professional_review.overlay,
         epistemic_state=epistemic_state,
-        source_review_gate=record.review.gate_version,
-        source_review_issue_codes=[item.code for item in record.review.issues],
+        source_review_gate=professional_review.overlay.review_version,
+        source_review_issue_codes=[item.issue_class for item in professional_review.overlay.issues],
         strategy_dimensions=strategy_dimensions,
         baseline_record_id=record.record_id,
         baseline_semantic_signature=record.reliability_signature or cognition_semantic_signature(cognition),
         projection_payload={
             "assertion_gate": formal_assertion_gate.model_dump(mode="json"),
-            "record_projection": record.model_copy(update={
+            "professional_review": professional_review.overlay.model_dump(mode="json"),
+            "record_projection": projection_record.model_copy(update={
                 "user_evidence": [],
                 "revisions": [],
                 "domain_explorations": {},
                 "assertion_gate": formal_assertion_gate,
-            }).model_dump(mode="json"),
+            }).model_dump(mode="json") if release_status != "blocked" else None,
         },
     )
 def validate_formal_insight(
@@ -178,6 +209,8 @@ def validate_formal_insight(
     traceable = [ref for ref in cited if ref in allowed]
     errors: list[str] = []
     warnings: list[str] = []
+    if insight.status not in {"draft", "reviewed", "validated", "committed"}:
+        errors.append(f"insight_status_not_formally_eligible:{insight.status}")
     if not insight.claim.strip():
         errors.append("baseline_claim_missing")
     if not insight.reasoning_path:
@@ -186,6 +219,21 @@ def validate_formal_insight(
         errors.append("chart_fact_basis_missing")
     if insight.epistemic_state not in {"reliable", "competing"}:
         errors.append(f"epistemic_state_not_committable:{insight.epistemic_state}")
+    if insight.persistence_status != "persisted":
+        errors.append(f"persistence_status_not_committable:{insight.persistence_status}")
+    if insight.professional_release_status not in {"passed", "partially_blocked"}:
+        errors.append(
+            f"professional_release_not_committable:{insight.professional_release_status}"
+        )
+    if insight.professional_review_overlay is None:
+        errors.append("professional_review_overlay_missing")
+    if insight.type == "domain_analysis" and insight.professional_review_overlay is not None:
+        domain = str(insight.scope.get("domain") or "")
+        if any(
+            block.scope == "domain" and block.scope_ref == domain
+            for block in insight.professional_review_overlay.scope_blocks
+        ):
+            errors.append(f"professional_domain_release_blocked:{domain}")
     if "mixed" in insight.strategy_dimensions:
         errors.append("ambiguous_strategy_dimension:mixed")
     if invalid_refs:
@@ -214,6 +262,24 @@ def build_domain_insight(
     case_version: str,
 ) -> FormalInsight:
     reading = exploration.reading
+    generated_at = exploration.generated_at or datetime.now(timezone.utc).isoformat()
+    stable_key = f"{record.case_id}|{case_version}|{reading.domain.value}|{generated_at}"
+    insight_suffix = hashlib.sha256(stable_key.encode("utf-8")).hexdigest()[:18]
+    professional_review = review_professional_payload(
+        payload={reading.domain.value: reading.model_dump(mode="json")},
+        world=world,
+        cognitive_record_ref=f"{record.record_id}:domain:{reading.domain.value}:{insight_suffix}",
+        persistence_status="persisted",
+    )
+    if (
+        professional_review.overlay.professional_release_status == "partially_blocked"
+        and not professional_review.overlay.scope_blocks
+    ):
+        projected = professional_projection_payload(
+            payload={reading.domain.value: reading.model_dump(mode="json")},
+            bundle=professional_review,
+        )
+        reading = DomainCausalReading.model_validate(projected[reading.domain.value])
     fact_by_id = {item.fact_id: item for item in world.facts}
     cited = _unique([
         *(ref for assertion in reading.assertions for ref in assertion.evidence_refs),
@@ -267,9 +333,6 @@ def build_domain_insight(
         else "low" if status_levels == {"supported"} and not reading.unknowns
         else "medium"
     )
-    generated_at = exploration.generated_at or datetime.now(timezone.utc).isoformat()
-    stable_key = f"{record.case_id}|{case_version}|{reading.domain.value}|{generated_at}"
-    insight_suffix = hashlib.sha256(stable_key.encode("utf-8")).hexdigest()[:18]
     return FormalInsight(
         insight_id=f"insight-domain-{insight_suffix}",
         case_id=record.case_id,
@@ -317,9 +380,12 @@ def build_domain_insight(
             source_record_id=record.record_id,
         ),
         status="draft",
+        persistence_status=professional_review.overlay.persistence_status,
+        professional_release_status=professional_review.overlay.professional_release_status,
+        professional_review_overlay=professional_review.overlay,
         epistemic_state=exploration.reliability_disposition,
-        source_review_gate=exploration.review.gate_version,
-        source_review_issue_codes=[item.code for item in exploration.review.issues],
+        source_review_gate=professional_review.overlay.review_version,
+        source_review_issue_codes=[item.issue_class for item in professional_review.overlay.issues],
         baseline_insight_id=exploration.baseline_insight_id,
         baseline_record_id=exploration.baseline_record_id,
         baseline_semantic_signature=exploration.baseline_semantic_signature,
@@ -384,6 +450,9 @@ def build_case_revision_insight(
             source_record_id=candidate.candidate_id,
         ),
         status="draft",
+        persistence_status="persisted",
+        professional_release_status=baseline.professional_release_status,
+        professional_review_overlay=baseline.professional_review_overlay,
         epistemic_state="reliable",
         source_review_gate="life_case_revision_gate_v1",
         baseline_insight_id=baseline.insight_id,

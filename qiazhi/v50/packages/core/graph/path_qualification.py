@@ -18,7 +18,7 @@ from core.graph.contracts import (
     PathTemporalCoherence,
     PathValidationState,
 )
-from core.graph.provenance import RelationDirectionality
+from core.graph.provenance import RelationDirectionality, RelationPositionContext
 
 
 PATH_QUALIFICATION_POLICY_VERSION = "deepbazi.path-qualification.ra2.v1"
@@ -27,11 +27,11 @@ _ELIGIBLE_RELATIONS = {
     MingliGraphEdgeType.GENERATES,
     MingliGraphEdgeType.CONTROLS,
     MingliGraphEdgeType.SAME_ELEMENT_SUPPORT,
-    MingliGraphEdgeType.STORES,
     MingliGraphEdgeType.FORMS_TRIPLE_COMBINATION,
 }
 
 _EVIDENCE_ONLY_RELATIONS = {
+    MingliGraphEdgeType.STORES,
     MingliGraphEdgeType.ROOTS,
     MingliGraphEdgeType.POSITION_LINK,
 }
@@ -54,26 +54,37 @@ def qualify_relation_for_path(
     relation_type: MingliGraphEdgeType,
     *,
     relation_state: MingliRelationState = MingliRelationState.STRUCTURAL,
+    mechanism_ref: str = "",
+    position_context: RelationPositionContext | None = None,
 ) -> tuple[PathEligibility, list[str]]:
+    context_refs: list[str] = []
+    if mechanism_ref:
+        context_refs.append(f"path.relation.mechanism:{mechanism_ref}")
+    if position_context is not None:
+        context_refs.append("path.relation.position_context_recorded")
     if relation_state == MingliRelationState.POTENTIAL:
         return PathEligibility.NOT_YET_QUALIFIED, [
             PATH_QUALIFICATION_POLICY_VERSION,
             "path.relation.potential_requires_named_mechanism",
             f"path.relation.state:{relation_state.value}",
+            *context_refs,
         ]
     if relation_type in _ELIGIBLE_RELATIONS:
         return PathEligibility.ELIGIBLE, [
             PATH_QUALIFICATION_POLICY_VERSION,
             f"path.relation.eligible:{relation_type.value}",
+            *context_refs,
         ]
     if relation_type in _EVIDENCE_ONLY_RELATIONS:
         return PathEligibility.EVIDENCE_ONLY, [
             PATH_QUALIFICATION_POLICY_VERSION,
             f"path.relation.evidence_only:{relation_type.value}",
+            *context_refs,
         ]
     return PathEligibility.NOT_YET_QUALIFIED, [
         PATH_QUALIFICATION_POLICY_VERSION,
         f"path.relation.requires_mechanism:{relation_type.value}",
+        *context_refs,
     ]
 
 

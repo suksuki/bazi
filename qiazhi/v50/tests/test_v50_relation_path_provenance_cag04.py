@@ -216,7 +216,7 @@ def test_life_case_rejects_dangling_or_out_of_order_assertion_history() -> None:
     world = ChartWorldInstance.model_validate(payload["world"])
     legacy_case = LifeCase.model_validate(payload["life_case"])
     committed, _ = commit_baseline_life_case(
-        insight=legacy_case.baseline_insight,
+        insight=legacy_case.baseline_insight.model_copy(update={"status": "draft"}),
         world=world,
         profile_id=None,
     )
@@ -256,7 +256,7 @@ def test_life_case_rejects_candidate_assertion_and_commit_owns_formal_assertions
     world = ChartWorldInstance.model_validate(payload["world"])
     legacy_case = LifeCase.model_validate(payload["life_case"])
     committed, receipt = commit_baseline_life_case(
-        insight=legacy_case.baseline_insight,
+        insight=legacy_case.baseline_insight.model_copy(update={"status": "draft"}),
         world=world,
         profile_id=None,
     )
