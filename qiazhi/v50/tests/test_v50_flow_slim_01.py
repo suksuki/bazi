@@ -288,6 +288,7 @@ def test_frontend_has_no_legacy_blocking_first_reading_chain() -> None:
     api = (shell / "api.ts").read_text(encoding="utf-8")
     data = (shell / "experience_data.ts").read_text(encoding="utf-8")
     main = (shell / "main.ts").read_text(encoding="utf-8")
+    interactions = (shell / "experience_interactions.ts").read_text(encoding="utf-8")
     legacy = (root / "apps/product/static/l5/app.js").read_text(encoding="utf-8")
 
     assert "/api/v50/experience/workspace/bootstrap" in api
@@ -300,6 +301,8 @@ def test_frontend_has_no_legacy_blocking_first_reading_chain() -> None:
     assert "requestEpoch !== openCaseEpoch" in main
     assert "void openCase({ profileId })" in main
     assert "data-profile-select" in (shell / "components.ts").read_text(encoding="utf-8")
+    assert 'querySelectorAll<HTMLSelectElement>("[data-profile-select]")' in interactions
+    assert 'querySelector<HTMLSelectElement>("[data-profile-select]")' not in interactions
     assert "window.location.assign(`/experience?profile=" in legacy
     assert "window.location.replace(`/experience?profile=" in legacy
     assert "PROFILE_MANAGEMENT_MODE" in legacy

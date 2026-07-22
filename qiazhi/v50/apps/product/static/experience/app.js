@@ -751,8 +751,10 @@ function bindExperienceInteractions(root2, handlers) {
       }
     });
   });
-  root2.querySelector("[data-profile-select]")?.addEventListener("change", (event) => {
-    handlers.selectProfile(event.currentTarget.value);
+  root2.querySelectorAll("[data-profile-select]").forEach((select) => {
+    select.addEventListener("change", (event) => {
+      handlers.selectProfile(event.currentTarget.value);
+    });
   });
 }
 

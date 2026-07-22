@@ -66,7 +66,9 @@ export function bindExperienceInteractions(
       }
     });
   });
-  root.querySelector<HTMLSelectElement>("[data-profile-select]")?.addEventListener("change", (event) => {
-    handlers.selectProfile((event.currentTarget as HTMLSelectElement).value);
+  root.querySelectorAll<HTMLSelectElement>("[data-profile-select]").forEach((select) => {
+    select.addEventListener("change", (event) => {
+      handlers.selectProfile((event.currentTarget as HTMLSelectElement).value);
+    });
   });
 }
