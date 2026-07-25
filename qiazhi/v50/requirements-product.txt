@@ -1,3 +1,0 @@
-# Uvicorn's HTTP server is already part of the shared qiazhi environment.
-# Living Theater requires a WebSocket transport for synchronized public events.
-websockets>=12,<16

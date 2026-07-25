@@ -1,0 +1,14 @@
+{
+  "version": "v30.runtime_pointer.v1",
+  "family": "answer_policy",
+  "active_artifact_id": "answer_policy.v30-baseline",
+  "active_artifact_version": "v30.policy_artifact.v1",
+  "previous_artifact_id": "",
+  "validation_run_id": "",
+  "promotion_reason": "baseline",
+  "env": "local",
+  "status": "active",
+  "updated_at": "2026-06-26T01:52:31.336065Z",
+  "updated_by": "system",
+  "rollback_pointer": {}
+}

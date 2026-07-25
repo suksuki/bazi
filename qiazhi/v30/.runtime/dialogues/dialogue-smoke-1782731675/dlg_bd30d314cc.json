@@ -1,0 +1,479 @@
+{
+  "version": "v30.bazi_dialogue_chain.v1",
+  "dialogue_id": "dlg_bd30d314cc",
+  "reading_id": "dialogue-smoke-1782731675",
+  "seed": {
+    "version": "v30.bazi_dialogue_seed.v1",
+    "seed_id": "dlg_seed_281a9e7705",
+    "reading_id": "dialogue-smoke-1782731675",
+    "source": "user",
+    "raw_text": "我今年财运如何？",
+    "normalized_question": "我今年财运如何？",
+    "macro_domain": "wealth",
+    "bazi_topics": [
+      "flow_year",
+      "verdict"
+    ],
+    "time_scope": "current_year",
+    "user_intent": "ask_conclusion",
+    "answer_priority": "answer_first",
+    "confidence": 0.82,
+    "evidence_binding": [],
+    "stage_id": "",
+    "boundary": "dialogue_seed_is_intent_not_chart_fact"
+  },
+  "status": "active",
+  "turn_count": 2,
+  "active_domain": "wealth",
+  "active_question_id": "dlg_q_career_a18c183e",
+  "unresolved_slots": [
+    "wealth:branch_confirmation"
+  ],
+  "memory_summary": {
+    "version": "v30.dialogue_memory.v1",
+    "answered_seed_ids": [
+      "dlg_seed_281a9e7705",
+      "dlg_seed_a2b69de835"
+    ],
+    "asked_question_ids": [
+      "dlg_q_wealth_6b3e8630",
+      "dlg_q_career_a18c183e"
+    ],
+    "selected_options": [
+      "wealth:risk"
+    ],
+    "domain_counts": {
+      "wealth": 2
+    },
+    "last_user_inputs": [
+      "我今年财运如何？",
+      "你的财务更偏主动争取、合作分配，还是保守积累？：风险边界"
+    ],
+    "summary": "最近聚焦财务，已完成2轮问答。",
+    "boundary": "dialogue_memory_records_feedback_not_chart_facts"
+  },
+  "policy_state": {
+    "version": "v30.dialogue_policy_state.v1",
+    "role_key": "user",
+    "locale": "zh",
+    "client": "web",
+    "mainline_id": "v30.bazi_context.63f383fe1707da1a:structure:primary:mainline",
+    "mainline_domain": "core_structure",
+    "chart_fact_mutation_allowed": false,
+    "answer_strategy": "answer_first_then_next_question",
+    "boundary": "dialogue_policy_state_routes_conversation_not_chart_facts",
+    "last_turn_id": "dlg_bd30d314cc:turn:2",
+    "last_seed_domain": "wealth",
+    "answer_first": true
+  },
+  "turns": [
+    {
+      "version": "v30.bazi_dialogue_turn.v1",
+      "turn_id": "dlg_bd30d314cc:turn:1",
+      "dialogue_id": "dlg_bd30d314cc",
+      "reading_id": "dialogue-smoke-1782731675",
+      "turn_index": 1,
+      "user_input": {
+        "text": "我今年财运如何？",
+        "selected_option": "",
+        "structured_payload": {},
+        "source": "user",
+        "stage_id": ""
+      },
+      "interpreted_seed": {
+        "version": "v30.bazi_dialogue_seed.v1",
+        "seed_id": "dlg_seed_281a9e7705",
+        "reading_id": "dialogue-smoke-1782731675",
+        "source": "user",
+        "raw_text": "我今年财运如何？",
+        "normalized_question": "我今年财运如何？",
+        "macro_domain": "wealth",
+        "bazi_topics": [
+          "flow_year",
+          "verdict"
+        ],
+        "time_scope": "current_year",
+        "user_intent": "ask_conclusion",
+        "answer_priority": "answer_first",
+        "confidence": 0.82,
+        "evidence_binding": [],
+        "stage_id": "",
+        "boundary": "dialogue_seed_is_intent_not_chart_fact"
+      },
+      "answer_contract": {
+        "must_answer_user_seed": true,
+        "answer_priority": "answer_first",
+        "uses_decision_verdicts": true,
+        "uses_dialogue_memory": false,
+        "llm_expression_only": true,
+        "chart_fact_mutation_allowed": false,
+        "boundary": "dialogue_answer_contract_preserves_runtime_verdict_authority"
+      },
+      "answer": {
+        "version": "v30.bazi_dialogue_answer.v1",
+        "answer_id": "dialogue-smoke-1782731675:dialogue-answer:1",
+        "status": "ready",
+        "verdict_refs": [
+          "verdict:wealth:rbd.claim.portrait:rbd.portrait.rule.v30.krp.domain_rule.outcome_language_block.domain_outcome_language_boundary",
+          "rbd.claim.path:dynamic_path.113",
+          "rbd.claim.path:dynamic_path.132",
+          "rbd.claim.path:dynamic_path.301"
+        ],
+        "conclusion_items": [
+          "今年财运不是单看收入多少，而是看财星能否通过输出、职责或资源承接形成稳定转化；今年的问题先按当前命盘主线与可用时运入口判断，缺少明确流年数据时不直接落固定事件。",
+          "财运存在分支：当前主分支是财运候选判断需要结合证据链裁决，但需要保留备选",
+          "财官印制化：财星不是单独看收入，而是先牵动责任与压力，再看资源、资质或平台如何承接。"
+        ],
+        "advice_items": [
+          "先区分主动争取、合作分配和保守积累三种财务动作。",
+          "先设风险边界，再谈收益节奏。",
+          "下一步先确认财务问题：收入增长、投资风险、现金流或合作分账。"
+        ],
+        "uncertainty_items": [
+          "当前保留相近分支，需要用用户背景或命理师选择继续拉开权重。",
+          "不能把财星路径直接说成收入结果，需要结合大运流年和实际行业/资源形态。",
+          "年份判断只绑定当前命盘与时运入口，不能直接说成固定事件。"
+        ],
+        "evidence_items": [
+          "verdict:wealth:rbd.claim.portrait:rbd.portrait.rule.v30.krp.domain_rule.outcome_language_block.domain_outcome_language_boundary",
+          "rbd.claim.path:dynamic_path.113",
+          "rbd.claim.path:dynamic_path.132",
+          "日主参照：此盘以甲木日主为中心，十神线索以伤官、劫财、正印为先。",
+          "强弱候选：强弱取偏旺为主，五行上木较突出，金较弱。"
+        ],
+        "display_text": "围绕「我今年财运如何？」，先看财务这条线。\n判断：今年财运不是单看收入多少，而是看财星能否通过输出、职责或资源承接形成稳定转化；今年的问题先按当前命盘主线与可用时运入口判断，缺少明确流年数据时不直接落固定事件。；财运存在分支：当前主分支是财运候选判断需要结合证据链裁决，但需要保留备选；财官印制化：财星不是单独看收入，而是先牵动责任与压力，再看资源、资质或平台如何承接。\n建议：先区分主动争取、合作分配和保守积累三种财务动作。；先设风险边界，再谈收益节奏。；下一步先确认财务问题：收入增长、投资风险、现金流或合作分账。\n需要保留的分支：当前保留相近分支，需要用用户背景或命理师选择继续拉开权重。；不能把财星路径直接说成收入结果，需要结合大运流年和实际行业/资源形态。；年份判断只绑定当前命盘与时运入口，不能直接说成固定事件。\n依据：verdict:wealth:rbd.claim.portrait:rbd.portrait.rule.v30.krp.domain_rule.outcome_language_block.domain_outcome_language_boundary；rbd.claim.path:dynamic_path.113；rbd.claim.path:dynamic_path.132",
+        "visual_hint": {
+          "kind": "dialogue_compass",
+          "title": "财务焦点",
+          "chips": [
+            "财务",
+            "财官印制化：财星不是单独看收入，而是"
+          ],
+          "markers": [
+            {
+              "label": "结论强度",
+              "value": 0.74
+            }
+          ],
+          "boundary": "dialogue_visual_hint_summarizes_answer_not_chart_fact"
+        },
+        "llm_metadata": {
+          "status": "not_required",
+          "provider": "structured_central_orchestrator",
+          "role": "expression_slot_reserved",
+          "reason": "dialogue_chain_uses_runtime_verdicts_first_and_can_be_rewritten_by_llm_later",
+          "boundary": "llm_expression_slot_does_not_mutate_dialogue_verdict_or_chart_facts"
+        },
+        "boundary": "dialogue_answer_projects_runtime_verdicts_not_new_chart_facts"
+      },
+      "next_question_candidates": [
+        {
+          "version": "v30.dialogue_question_candidate.v1",
+          "question_id": "dlg_q_wealth_6b3e8630",
+          "label": "你的财务更偏主动争取、合作分配，还是保守积累？",
+          "macro_domain": "wealth",
+          "user_intent": "verify_event",
+          "prompt_text": "你的财务更偏主动争取、合作分配，还是保守积累？",
+          "options": [
+            {
+              "option_id": "wealth:earning",
+              "label": "赚钱方式",
+              "value": "earning",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            },
+            {
+              "option_id": "wealth:risk",
+              "label": "风险边界",
+              "value": "risk",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            },
+            {
+              "option_id": "wealth:timing",
+              "label": "财务节奏",
+              "value": "timing",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            }
+          ],
+          "expected_information_gain": 0.72,
+          "priority": 82,
+          "reason": "延续本轮结论，补一个能提升下一轮判断质量的背景。",
+          "source": "dialogue_orchestrator",
+          "boundary": "dialogue_question_candidate_guides_next_turn_not_chart_fact"
+        },
+        {
+          "version": "v30.dialogue_question_candidate.v1",
+          "question_id": "dlg_q_career_a18c183e",
+          "label": "财务判断要不要同时看事业承接路径？",
+          "macro_domain": "career",
+          "user_intent": "ask_advice",
+          "prompt_text": "财务判断要不要同时看事业承接路径？",
+          "options": [
+            {
+              "option_id": "career:role",
+              "label": "职责压力",
+              "value": "role",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            },
+            {
+              "option_id": "career:platform",
+              "label": "平台规则",
+              "value": "platform",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            },
+            {
+              "option_id": "career:change",
+              "label": "转型机会",
+              "value": "change",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            }
+          ],
+          "expected_information_gain": 0.58,
+          "priority": 62,
+          "reason": "把单点问题接回全局测算主线。",
+          "source": "dialogue_orchestrator",
+          "boundary": "dialogue_question_candidate_guides_next_turn_not_chart_fact"
+        }
+      ],
+      "selected_next_question": {
+        "version": "v30.dialogue_question_candidate.v1",
+        "question_id": "dlg_q_wealth_6b3e8630",
+        "label": "你的财务更偏主动争取、合作分配，还是保守积累？",
+        "macro_domain": "wealth",
+        "user_intent": "verify_event",
+        "prompt_text": "你的财务更偏主动争取、合作分配，还是保守积累？",
+        "options": [
+          {
+            "option_id": "wealth:earning",
+            "label": "赚钱方式",
+            "value": "earning",
+            "option_type": "dialogue_followup",
+            "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+          },
+          {
+            "option_id": "wealth:risk",
+            "label": "风险边界",
+            "value": "risk",
+            "option_type": "dialogue_followup",
+            "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+          },
+          {
+            "option_id": "wealth:timing",
+            "label": "财务节奏",
+            "value": "timing",
+            "option_type": "dialogue_followup",
+            "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+          }
+        ],
+        "expected_information_gain": 0.72,
+        "priority": 82,
+        "reason": "延续本轮结论，补一个能提升下一轮判断质量的背景。",
+        "source": "dialogue_orchestrator",
+        "boundary": "dialogue_question_candidate_guides_next_turn_not_chart_fact"
+      },
+      "training_signal": {
+        "version": "v30.dialogue_training_signal.v1",
+        "seed_domain": "wealth",
+        "seed_intent": "ask_conclusion",
+        "answer_item_count": 6,
+        "has_next_question": true,
+        "next_question_id": "dlg_q_wealth_6b3e8630",
+        "chart_fact_mutation_allowed": false,
+        "boundary": "dialogue_training_signal_can_tune_policy_not_chart_facts"
+      },
+      "created_at": "2026-06-29T11:14:36.262025Z",
+      "boundary": "dialogue_turn_is_feedback_and_expression_not_chart_fact"
+    },
+    {
+      "version": "v30.bazi_dialogue_turn.v1",
+      "turn_id": "dlg_bd30d314cc:turn:2",
+      "dialogue_id": "dlg_bd30d314cc",
+      "reading_id": "dialogue-smoke-1782731675",
+      "turn_index": 2,
+      "user_input": {
+        "text": "你的财务更偏主动争取、合作分配，还是保守积累？：风险边界",
+        "selected_option": "wealth:risk",
+        "structured_payload": {},
+        "source": "user",
+        "stage_id": ""
+      },
+      "interpreted_seed": {
+        "version": "v30.bazi_dialogue_seed.v1",
+        "seed_id": "dlg_seed_a2b69de835",
+        "reading_id": "dialogue-smoke-1782731675",
+        "source": "user",
+        "raw_text": "你的财务更偏主动争取、合作分配，还是保守积累？：风险边界",
+        "normalized_question": "你的财务更偏主动争取、合作分配，还是保守积累？：风险边界？",
+        "macro_domain": "wealth",
+        "bazi_topics": [
+          "verdict"
+        ],
+        "time_scope": "natal",
+        "user_intent": "compare_options",
+        "answer_priority": "answer_first",
+        "confidence": 0.82,
+        "evidence_binding": [],
+        "stage_id": "",
+        "boundary": "dialogue_seed_is_intent_not_chart_fact"
+      },
+      "answer_contract": {
+        "must_answer_user_seed": true,
+        "answer_priority": "answer_first",
+        "uses_decision_verdicts": true,
+        "uses_dialogue_memory": true,
+        "llm_expression_only": true,
+        "chart_fact_mutation_allowed": false,
+        "boundary": "dialogue_answer_contract_preserves_runtime_verdict_authority"
+      },
+      "answer": {
+        "version": "v30.bazi_dialogue_answer.v1",
+        "answer_id": "dialogue-smoke-1782731675:dialogue-answer:2",
+        "status": "ready",
+        "verdict_refs": [
+          "verdict:wealth:rbd.claim.portrait:rbd.portrait.rule.v30.krp.domain_rule.outcome_language_block.domain_outcome_language_boundary",
+          "rbd.claim.path:dynamic_path.113",
+          "rbd.claim.path:dynamic_path.132",
+          "rbd.claim.path:dynamic_path.301"
+        ],
+        "conclusion_items": [
+          "财运存在分支：当前主分支是财运候选判断需要结合证据链裁决，但需要保留备选",
+          "财官印制化：财星不是单独看收入，而是先牵动责任与压力，再看资源、资质或平台如何承接。"
+        ],
+        "advice_items": [
+          "先区分主动争取、合作分配和保守积累三种财务动作。",
+          "先设风险边界，再谈收益节奏。",
+          "下一步先确认财务问题：收入增长、投资风险、现金流或合作分账。"
+        ],
+        "uncertainty_items": [
+          "当前保留相近分支，需要用用户背景或命理师选择继续拉开权重。",
+          "不能把财星路径直接说成收入结果，需要结合大运流年和实际行业/资源形态。"
+        ],
+        "evidence_items": [
+          "verdict:wealth:rbd.claim.portrait:rbd.portrait.rule.v30.krp.domain_rule.outcome_language_block.domain_outcome_language_boundary",
+          "rbd.claim.path:dynamic_path.113",
+          "rbd.claim.path:dynamic_path.132",
+          "日主参照：此盘以甲木日主为中心，十神线索以伤官、劫财、正印为先。",
+          "强弱候选：强弱取偏旺为主，五行上木较突出，金较弱。"
+        ],
+        "display_text": "围绕「你的财务更偏主动争取、合作分配，还是保守积累？：风险边界？」，先看财务这条线。\n判断：财运存在分支：当前主分支是财运候选判断需要结合证据链裁决，但需要保留备选；财官印制化：财星不是单独看收入，而是先牵动责任与压力，再看资源、资质或平台如何承接。\n建议：先区分主动争取、合作分配和保守积累三种财务动作。；先设风险边界，再谈收益节奏。；下一步先确认财务问题：收入增长、投资风险、现金流或合作分账。\n需要保留的分支：当前保留相近分支，需要用用户背景或命理师选择继续拉开权重。；不能把财星路径直接说成收入结果，需要结合大运流年和实际行业/资源形态。\n依据：verdict:wealth:rbd.claim.portrait:rbd.portrait.rule.v30.krp.domain_rule.outcome_language_block.domain_outcome_language_boundary；rbd.claim.path:dynamic_path.113；rbd.claim.path:dynamic_path.132",
+        "visual_hint": {
+          "kind": "dialogue_compass",
+          "title": "财务焦点",
+          "chips": [
+            "财务",
+            "财官印制化：财星不是单独看收入，而是"
+          ],
+          "markers": [
+            {
+              "label": "结论强度",
+              "value": 0.74
+            }
+          ],
+          "boundary": "dialogue_visual_hint_summarizes_answer_not_chart_fact"
+        },
+        "llm_metadata": {
+          "status": "not_required",
+          "provider": "structured_central_orchestrator",
+          "role": "expression_slot_reserved",
+          "reason": "dialogue_chain_uses_runtime_verdicts_first_and_can_be_rewritten_by_llm_later",
+          "boundary": "llm_expression_slot_does_not_mutate_dialogue_verdict_or_chart_facts"
+        },
+        "boundary": "dialogue_answer_projects_runtime_verdicts_not_new_chart_facts"
+      },
+      "next_question_candidates": [
+        {
+          "version": "v30.dialogue_question_candidate.v1",
+          "question_id": "dlg_q_career_a18c183e",
+          "label": "财务判断要不要同时看事业承接路径？",
+          "macro_domain": "career",
+          "user_intent": "ask_advice",
+          "prompt_text": "财务判断要不要同时看事业承接路径？",
+          "options": [
+            {
+              "option_id": "career:role",
+              "label": "职责压力",
+              "value": "role",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            },
+            {
+              "option_id": "career:platform",
+              "label": "平台规则",
+              "value": "platform",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            },
+            {
+              "option_id": "career:change",
+              "label": "转型机会",
+              "value": "change",
+              "option_type": "dialogue_followup",
+              "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+            }
+          ],
+          "expected_information_gain": 0.58,
+          "priority": 62,
+          "reason": "把单点问题接回全局测算主线。",
+          "source": "dialogue_orchestrator",
+          "boundary": "dialogue_question_candidate_guides_next_turn_not_chart_fact"
+        }
+      ],
+      "selected_next_question": {
+        "version": "v30.dialogue_question_candidate.v1",
+        "question_id": "dlg_q_career_a18c183e",
+        "label": "财务判断要不要同时看事业承接路径？",
+        "macro_domain": "career",
+        "user_intent": "ask_advice",
+        "prompt_text": "财务判断要不要同时看事业承接路径？",
+        "options": [
+          {
+            "option_id": "career:role",
+            "label": "职责压力",
+            "value": "role",
+            "option_type": "dialogue_followup",
+            "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+          },
+          {
+            "option_id": "career:platform",
+            "label": "平台规则",
+            "value": "platform",
+            "option_type": "dialogue_followup",
+            "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+          },
+          {
+            "option_id": "career:change",
+            "label": "转型机会",
+            "value": "change",
+            "option_type": "dialogue_followup",
+            "boundary": "dialogue_option_records_user_focus_not_chart_fact"
+          }
+        ],
+        "expected_information_gain": 0.58,
+        "priority": 62,
+        "reason": "把单点问题接回全局测算主线。",
+        "source": "dialogue_orchestrator",
+        "boundary": "dialogue_question_candidate_guides_next_turn_not_chart_fact"
+      },
+      "training_signal": {
+        "version": "v30.dialogue_training_signal.v1",
+        "seed_domain": "wealth",
+        "seed_intent": "compare_options",
+        "answer_item_count": 5,
+        "has_next_question": true,
+        "next_question_id": "dlg_q_career_a18c183e",
+        "chart_fact_mutation_allowed": false,
+        "boundary": "dialogue_training_signal_can_tune_policy_not_chart_facts"
+      },
+      "created_at": "2026-06-29T11:14:36.312202Z",
+      "boundary": "dialogue_turn_is_feedback_and_expression_not_chart_fact"
+    }
+  ],
+  "created_at": "2026-06-29T11:14:36.260205Z",
+  "updated_at": "2026-06-29T11:14:36.312214Z",
+  "boundary": "dialogue_session_updates_memory_not_chart_facts"
+}

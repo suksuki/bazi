@@ -1,0 +1,5484 @@
+{
+  "version": "v30.m3_core_spine_snapshot.v1",
+  "snapshot_id": "v30.m3.snapshot.20260628124951435619",
+  "created_at": "2026-06-28T12:49:51.435638+00:00",
+  "inventory": {
+    "krp_unit_count": 72,
+    "krp_unit_type_counts": {
+      "knowledge": 17,
+      "portrait": 6,
+      "rule": 49
+    },
+    "krp_domains": [
+      "branch_relation",
+      "career",
+      "chart",
+      "domain_rule",
+      "element",
+      "foundation",
+      "health",
+      "hidden_factor",
+      "relationship",
+      "romance",
+      "rule_counterevidence",
+      "structure_dynamic",
+      "structure_pattern",
+      "ten_god",
+      "time_context",
+      "useful_god",
+      "wealth"
+    ],
+    "rule_spec_count": 20,
+    "rule_domains": [
+      "branch_relation",
+      "chart",
+      "domain_rule",
+      "element",
+      "foundation",
+      "hidden_factor",
+      "romance",
+      "rule_counterevidence",
+      "structure_pattern",
+      "time_context",
+      "useful_god"
+    ],
+    "source_family_count": 6,
+    "source_family_ids": [
+      "v30.source.di_tian_sui_flow_mechanism",
+      "v30.source.qiong_tong_bao_jian_climate_review",
+      "v30.source.san_ming_tong_hui_system_catalog",
+      "v30.source.shen_feng_tong_kao_disease_medicine",
+      "v30.source.yuan_hai_zi_ping_pattern_catalog",
+      "v30.source.zi_ping_pattern_month_command"
+    ],
+    "macro_dimension_count": 7,
+    "macro_domains": [
+      "career",
+      "foundation",
+      "health",
+      "hidden_factor",
+      "relationship",
+      "romance",
+      "wealth"
+    ],
+    "portrait_asset_count": 7,
+    "portrait_dimension_count": 65,
+    "portrait_tag_count": 72
+  },
+  "missing_gaps": [
+    {
+      "gap_id": "m3.real_case_calibration_tags",
+      "status": "active_gap",
+      "description": "Need more canonical real-case tags mapped to K/R/P, rule states, dynamic paths, and portrait density."
+    },
+    {
+      "gap_id": "m3.domain_rule_depth_expansion",
+      "status": "active_gap",
+      "description": "Wealth, career, relationship, romance, and health rules are bounded but need deeper calibrated subfamilies."
+    },
+    {
+      "gap_id": "m3.training_synthetic_distribution",
+      "status": "g1_tagged",
+      "description": "M3-G1 records training and synthetic distribution tags before any K/R/P or rule-weight tuning."
+    },
+    {
+      "gap_id": "m3.source_extraction_queue",
+      "status": "g1_tagged",
+      "description": "M3-G1 records source-governed extraction queue tags from source registry records, not runtime imports."
+    },
+    {
+      "gap_id": "m3.518k_distribution_summary",
+      "status": "g1_tagged",
+      "description": "M3-G1 records 518K distribution evidence when requested; full 518K remains explicit-only."
+    }
+  ],
+  "knowledge_units": [
+    {
+      "unit_id": "v30.krp.chart.context_bound",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "chart",
+      "family": "core_runtime",
+      "title": "Chart facts are bound context and cannot be rewritten by downstream models.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "day_master",
+        "natal_pillars"
+      ],
+      "counter_context": [],
+      "condition_supports": [
+        "chart_context_bound"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "context_integrity"
+      ],
+      "portrait_tags": [
+        "chart_context_bound"
+      ],
+      "answer_guidance": [
+        "Treat day-master and pillar facts as immutable runtime context."
+      ],
+      "training_tags": [
+        "fact_boundary",
+        "llm_no_mutation"
+      ],
+      "locale_terms": {
+        "zh": "原局事实边界",
+        "en": "chart fact boundary",
+        "ko": "원국 사실 경계"
+      },
+      "boundary": "knowledge_unit_chart_fact_not_interpretation"
+    },
+    {
+      "unit_id": "v30.krp.element.day_master_context",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "element",
+      "family": "core_runtime",
+      "title": "Day-master element is deterministic context before any strength interpretation.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "day_master_element"
+      ],
+      "counter_context": [],
+      "condition_supports": [
+        "element_context_bound"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "element_context"
+      ],
+      "portrait_tags": [
+        "day_master_element_context"
+      ],
+      "answer_guidance": [
+        "Separate deterministic element context from later balance review."
+      ],
+      "training_tags": [
+        "element_context",
+        "fact_boundary"
+      ],
+      "locale_terms": {
+        "zh": "日主五行上下文",
+        "en": "day-master element context",
+        "ko": "일간 오행 맥락"
+      },
+      "boundary": "knowledge_unit_day_master_element_not_strength_verdict"
+    },
+    {
+      "unit_id": "v30.krp.ten_god.visibility_context",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "ten_god",
+      "family": "core_runtime",
+      "title": "Visible ten-god markers describe context, not personality verdicts.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "visible_stems"
+      ],
+      "counter_context": [],
+      "condition_supports": [
+        "ten_god_visibility"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "mechanism.ten_god_visibility_context"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "ten_god_visibility"
+      ],
+      "portrait_tags": [
+        "ten_god_context_marker"
+      ],
+      "answer_guidance": [
+        "Explain visible ten-god context only through bound evidence."
+      ],
+      "training_tags": [
+        "ten_god_context",
+        "no_personality_verdict"
+      ],
+      "locale_terms": {
+        "zh": "十神显性上下文",
+        "en": "visible ten-god context",
+        "ko": "드러난 십성 맥락"
+      },
+      "boundary": "knowledge_unit_no_personality_verdict"
+    },
+    {
+      "unit_id": "v30.krp.ten_god.output_expression_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "portrait",
+      "domain": "ten_god",
+      "family": "ten_god_family",
+      "title": "Output ten-god markers are expression/release context, not personality claims.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "ten_god_family:output",
+        "hidden_ten_god_family:output"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.v2"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "expression_pattern"
+      ],
+      "portrait_tags": [
+        "output_expression_context"
+      ],
+      "answer_guidance": [
+        "Explain output markers as bounded expression or release channels."
+      ],
+      "training_tags": [
+        "ten_god_family",
+        "output"
+      ],
+      "locale_terms": {},
+      "boundary": "portrait_unit_output_family_not_personality_verdict"
+    },
+    {
+      "unit_id": "v30.krp.ten_god.wealth_resource_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "portrait",
+      "domain": "ten_god",
+      "family": "ten_god_family",
+      "title": "Wealth ten-god markers require structure and timing context before outcome language.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "ten_god_family:wealth",
+        "hidden_ten_god_family:wealth"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.v2"
+      ],
+      "question_hooks": [
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "wealth_pattern"
+      ],
+      "portrait_tags": [
+        "wealth_marker_context"
+      ],
+      "answer_guidance": [
+        "Keep wealth markers as pressure/resource allocation context until structure review resolves them."
+      ],
+      "training_tags": [
+        "ten_god_family",
+        "wealth"
+      ],
+      "locale_terms": {},
+      "boundary": "portrait_unit_wealth_family_not_financial_prediction"
+    },
+    {
+      "unit_id": "v30.krp.ten_god.authority_pressure_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "ten_god",
+      "family": "ten_god_family",
+      "title": "Authority ten-god markers can pressure the day-master path and require dynamic review.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "ten_god_family:authority",
+        "hidden_ten_god_family:authority"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.v2",
+        "mechanism.branch_relation_dynamic_review"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "authority_pressure"
+      ],
+      "portrait_tags": [
+        "authority_pressure_context"
+      ],
+      "answer_guidance": [
+        "Use authority markers as pressure-path evidence, not fixed career or relationship verdicts."
+      ],
+      "training_tags": [
+        "ten_god_family",
+        "authority",
+        "dynamic_review"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_authority_family_requires_dynamic_review"
+    },
+    {
+      "unit_id": "v30.krp.ten_god.resource_support_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "ten_god",
+      "family": "ten_god_family",
+      "title": "Resource ten-god markers can support the day-master path without becoming a useful-god verdict.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "ten_god_family:resource",
+        "hidden_ten_god_family:resource"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.v2"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "resource_support"
+      ],
+      "portrait_tags": [
+        "resource_support_context"
+      ],
+      "answer_guidance": [
+        "Separate resource support context from fixed favorable/unfavorable labels."
+      ],
+      "training_tags": [
+        "ten_god_family",
+        "resource"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_resource_family_not_useful_god_verdict"
+    },
+    {
+      "unit_id": "v30.krp.ten_god.self_competition_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "ten_god",
+      "family": "ten_god_family",
+      "title": "Self/peer ten-god markers create competition context and need balancing against other paths.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "ten_god_family:self",
+        "hidden_ten_god_family:self"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.v2"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "self_peer_competition"
+      ],
+      "portrait_tags": [
+        "self_peer_context"
+      ],
+      "answer_guidance": [
+        "Treat peer markers as structure competition context, not a standalone temperament claim."
+      ],
+      "training_tags": [
+        "ten_god_family",
+        "self_peer"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_self_family_not_temperament_verdict"
+    },
+    {
+      "unit_id": "v30.krp.ten_god.hidden_stem_context",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "portrait",
+      "domain": "ten_god",
+      "family": "core_runtime",
+      "title": "Hidden-stem ten-god markers are dialogue hypotheses before calibration.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "hidden_stems"
+      ],
+      "counter_context": [
+        "user_denied_hidden_factor"
+      ],
+      "condition_supports": [
+        "hidden_stem_context"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "mechanism.hidden_factor_dialogue_probe"
+      ],
+      "question_hooks": [
+        "discover_hidden_factor_amplifier"
+      ],
+      "portrait_dimensions": [
+        "latent_pattern"
+      ],
+      "portrait_tags": [
+        "hidden_stem_hypothesis"
+      ],
+      "answer_guidance": [
+        "Present hidden-stem markers as hypotheses that need boundary-event feedback."
+      ],
+      "training_tags": [
+        "hidden_factor",
+        "dialogue_required"
+      ],
+      "locale_terms": {},
+      "boundary": "portrait_unit_hidden_stem_requires_dialogue"
+    },
+    {
+      "unit_id": "v30.krp.useful_god.candidate_gate",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "useful_god",
+      "family": "core_runtime",
+      "title": "Useful-god remains a candidate path until review evidence resolves it.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "useful_god_candidate_evidence"
+      ],
+      "counter_context": [
+        "useful_god_path_resolved"
+      ],
+      "condition_supports": [
+        "rule_useful_god_candidate_gate"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "mechanism.useful_god_candidate_gate"
+      ],
+      "question_hooks": [
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "candidate_path"
+      ],
+      "portrait_tags": [
+        "candidate_path_review"
+      ],
+      "answer_guidance": [
+        "Avoid fixed favorable/unfavorable wording before evidence path resolution."
+      ],
+      "training_tags": [
+        "useful_god_boundary",
+        "candidate_gate"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_candidate_only"
+    },
+    {
+      "unit_id": "v30.krp.useful_god.resolved_counter",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "useful_god",
+      "family": "core_runtime",
+      "title": "Resolved useful-god feedback counters the candidate gate without removing traceability.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "useful_god_path_resolved",
+        "rule_decision_state:countered"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [],
+      "portrait_tags": [
+        "useful_god_feedback_counter"
+      ],
+      "answer_guidance": [
+        "Use resolved-path feedback as bounded evidence, not untracked favorable/unfavorable wording."
+      ],
+      "training_tags": [],
+      "locale_terms": {},
+      "boundary": "rule_unit_useful_god_resolution_preserves_trace"
+    },
+    {
+      "unit_id": "v30.krp.time_context.missing_boundary",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "time_context",
+      "family": "core_runtime",
+      "title": "Missing explicit time context blocks timing and special-year claims.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "time_layer_missing"
+      ],
+      "counter_context": [
+        "explicit_luck_or_flow_layer"
+      ],
+      "condition_supports": [
+        "rule_time_boundary"
+      ],
+      "condition_weakens": [
+        "timing_claim",
+        "special_year_claim"
+      ],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "confirm_missing_time_context"
+      ],
+      "portrait_dimensions": [
+        "time_context"
+      ],
+      "portrait_tags": [
+        "time_context_missing"
+      ],
+      "answer_guidance": [
+        "Ask for luck or flow context before discussing timing or event years."
+      ],
+      "training_tags": [
+        "time_boundary",
+        "anti_timing_drift"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_no_timing_without_time_layer"
+    },
+    {
+      "unit_id": "v30.krp.time_context.activation_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "time_context",
+      "family": "core_runtime",
+      "title": "Explicit luck or flow layers activate review, not fixed event prediction.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "time_activation_review"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [],
+      "portrait_tags": [
+        "time_layer_available"
+      ],
+      "answer_guidance": [
+        "Use explicit time layers as review context, not deterministic event proof."
+      ],
+      "training_tags": [],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_time_layer_not_fixed_event"
+    },
+    {
+      "unit_id": "v30.krp.element.balance_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "element",
+      "family": "core_runtime",
+      "title": "Element distribution is a review signal, not a standalone strength verdict.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "element_balance_review"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [],
+      "portrait_tags": [
+        "element_distribution_context"
+      ],
+      "answer_guidance": [
+        "Explain element distribution with confidence and boundary wording."
+      ],
+      "training_tags": [],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_element_distribution_not_strength_verdict"
+    },
+    {
+      "unit_id": "v30.krp.strength.seasonal_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "structure_pattern",
+      "family": "strength_review",
+      "title": "Seasonal support or pressure is a strength-review input, not a final旺衰 verdict.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "strength_review_candidate",
+        "seasonal_support:day_master",
+        "seasonal_pressure:day_master",
+        "seasonal_indirect_context:day_master"
+      ],
+      "condition_weakens": [
+        "fixed_strength_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "strength_review"
+      ],
+      "portrait_tags": [
+        "seasonal_strength_review"
+      ],
+      "answer_guidance": [
+        "Describe seasonal support/pressure as a review factor and keep final strength unresolved until paths are checked."
+      ],
+      "training_tags": [
+        "strength_review",
+        "seasonal_context"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_seasonal_strength_review_not_verdict"
+    },
+    {
+      "unit_id": "v30.krp.structure.pattern_candidate_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "structure_pattern",
+      "family": "pattern_candidate",
+      "title": "Structure pattern signals are candidates until path, rule, and time context resolve them.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "structure_pattern_candidate"
+      ],
+      "condition_weakens": [
+        "fixed_geju_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "pattern_candidate"
+      ],
+      "portrait_tags": [
+        "geju_candidate_review"
+      ],
+      "answer_guidance": [
+        "Use 格局 language only as candidate review language until supporting paths are validated."
+      ],
+      "training_tags": [
+        "pattern_candidate",
+        "geju_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_pattern_candidate_not_fixed_geju"
+    },
+    {
+      "unit_id": "v30.krp.useful_god.family_candidate_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "useful_god",
+      "family": "useful_god_candidate_family",
+      "title": "Useful-god families are review candidates generated from strength and path evidence.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "useful_god_candidate_family:resource",
+        "useful_god_candidate_family:self",
+        "useful_god_candidate_family:output",
+        "useful_god_candidate_family:wealth",
+        "useful_god_candidate_family:authority",
+        "useful_god_candidate_family:balance_review"
+      ],
+      "condition_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "mechanism_hooks": [
+        "mechanism.useful_god_candidate_gate",
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "useful_god_candidate_family"
+      ],
+      "portrait_tags": [
+        "useful_god_family_candidate"
+      ],
+      "answer_guidance": [
+        "Treat candidate useful-god families as ranked review inputs, not final favorable/unfavorable output."
+      ],
+      "training_tags": [
+        "useful_god_boundary",
+        "candidate_family"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_useful_god_family_candidate_only"
+    },
+    {
+      "unit_id": "v30.krp.wealth.domain_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "wealth",
+      "family": "domain_rule",
+      "title": "Wealth paths are review candidates and cannot become fixed financial outcomes.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:wealth_pressure",
+        "domain_rule_family:wealth_competition"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "wealth_path_review"
+      ],
+      "portrait_tags": [
+        "wealth_rule_candidate"
+      ],
+      "answer_guidance": [
+        "Use wealth language only as path pressure/allocation review, not income or outcome prediction."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "wealth",
+        "anti_outcome_verdict"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_wealth_domain_path_not_financial_verdict"
+    },
+    {
+      "unit_id": "v30.krp.wealth.competition_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "wealth",
+      "family": "domain_rule",
+      "title": "Wealth competition paths require allocation review before any wealth language.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:wealth_competition"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.competition_suppression"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "wealth_competition_path"
+      ],
+      "portrait_tags": [
+        "wealth_competition_candidate"
+      ],
+      "answer_guidance": [
+        "Describe wealth competition as resource/allocation pressure, not income gain or loss."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "wealth",
+        "competition_path"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_wealth_competition_path_not_financial_verdict"
+    },
+    {
+      "unit_id": "v30.krp.wealth.output_generation_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "wealth",
+      "family": "domain_rule",
+      "title": "Output-to-wealth paths are generation candidates, not monetization outcomes.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:wealth_output_generation_path"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "wealth_output_generation_path"
+      ],
+      "portrait_tags": [
+        "wealth_output_generation_candidate"
+      ],
+      "answer_guidance": [
+        "Frame output-to-wealth as an expression/resource path that needs context confirmation."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "wealth",
+        "output_generation"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_wealth_output_generation_path_not_income_prediction"
+    },
+    {
+      "unit_id": "v30.krp.wealth.authority_bridge_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "wealth",
+      "family": "domain_rule",
+      "title": "Wealth-authority bridge paths need role-pressure review before outcome claims.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:wealth_authority_bridge_path"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim",
+        "fixed_career_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "wealth_authority_bridge_path"
+      ],
+      "portrait_tags": [
+        "wealth_authority_bridge_candidate"
+      ],
+      "answer_guidance": [
+        "Keep wealth-authority language at responsibility and pressure-review level."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "wealth",
+        "authority_bridge"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_wealth_authority_bridge_not_outcome_verdict"
+    },
+    {
+      "unit_id": "v30.krp.career.authority_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "career",
+      "family": "domain_rule",
+      "title": "Career authority paths are pressure/resolution candidates, not fixed career outcomes.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:career_authority_path",
+        "domain_rule_family:career_resource_resolution"
+      ],
+      "condition_weakens": [
+        "fixed_career_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "career_authority_path"
+      ],
+      "portrait_tags": [
+        "career_rule_candidate"
+      ],
+      "answer_guidance": [
+        "Frame authority paths as career pressure or responsibility review, not job-status prediction."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "career",
+        "authority_path"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_career_domain_path_not_outcome_verdict"
+    },
+    {
+      "unit_id": "v30.krp.career.authority_pressure_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "career",
+      "family": "domain_rule",
+      "title": "Career authority pressure is a responsibility-review path, not a job outcome.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:career_authority_pressure_path"
+      ],
+      "condition_weakens": [
+        "fixed_career_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "career_authority_pressure_path"
+      ],
+      "portrait_tags": [
+        "career_authority_pressure_candidate"
+      ],
+      "answer_guidance": [
+        "Describe authority pressure as constraint/responsibility context without predicting status."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "career",
+        "authority_pressure"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_career_authority_pressure_not_job_verdict"
+    },
+    {
+      "unit_id": "v30.krp.career.resource_resolution_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "career",
+      "family": "domain_rule",
+      "title": "Resource resolution can soften authority pressure but remains a candidate path.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:career_resource_resolution_path"
+      ],
+      "condition_weakens": [
+        "fixed_career_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "career_resource_resolution_path"
+      ],
+      "portrait_tags": [
+        "career_resource_resolution_candidate"
+      ],
+      "answer_guidance": [
+        "Use resource-resolution language as a support-path review, not promotion or role prediction."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "career",
+        "resource_resolution"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_career_resource_resolution_not_outcome_verdict"
+    },
+    {
+      "unit_id": "v30.krp.relationship.relation_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "relationship",
+      "family": "domain_rule",
+      "title": "Relationship path review requires branch relation and ten-god context before any relationship language.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:relationship_relation_path"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "relationship_relation_path"
+      ],
+      "portrait_tags": [
+        "relationship_rule_candidate"
+      ],
+      "answer_guidance": [
+        "Use relationship path language as interaction-structure review, not relationship event prediction."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "relationship",
+        "branch_relation"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_relationship_domain_path_not_event_verdict"
+    },
+    {
+      "unit_id": "v30.krp.relationship.conflict_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "relationship",
+      "family": "domain_rule",
+      "title": "Relationship conflict paths are interaction-friction candidates, not event predictions.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:relationship_conflict_path"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "relationship_conflict_path"
+      ],
+      "portrait_tags": [
+        "relationship_conflict_candidate"
+      ],
+      "answer_guidance": [
+        "Keep conflict language at interaction-pattern review and ask for context before emphasis."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "relationship",
+        "conflict_path"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_relationship_conflict_path_not_event_verdict"
+    },
+    {
+      "unit_id": "v30.krp.relationship.alignment_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "relationship",
+      "family": "domain_rule",
+      "title": "Relationship alignment paths are continuity candidates, not relationship outcome claims.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:relationship_alignment_review_path"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "relationship_alignment_path"
+      ],
+      "portrait_tags": [
+        "relationship_alignment_candidate"
+      ],
+      "answer_guidance": [
+        "Use alignment language only as branch-continuity review with clear uncertainty."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "relationship",
+        "alignment_path"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_relationship_alignment_path_not_event_verdict"
+    },
+    {
+      "unit_id": "v30.krp.relationship.marker_path_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "relationship",
+      "family": "domain_rule",
+      "title": "Relationship markers require authority/wealth context review before use.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:relationship_authority_or_wealth_marker_path"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "relationship_marker_path"
+      ],
+      "portrait_tags": [
+        "relationship_marker_candidate"
+      ],
+      "answer_guidance": [
+        "Treat authority/wealth markers as context prompts, not relationship verdicts."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "relationship",
+        "marker_path"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_relationship_marker_path_not_relationship_verdict"
+    },
+    {
+      "unit_id": "v30.krp.health.element_imbalance_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "health",
+      "family": "domain_rule",
+      "title": "Health-related element imbalance is a cautionary review signal, not a disease claim.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:health_element_imbalance_review"
+      ],
+      "condition_weakens": [
+        "fixed_health_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "health_element_review"
+      ],
+      "portrait_tags": [
+        "health_rule_candidate"
+      ],
+      "answer_guidance": [
+        "Keep health language at element-balance review level and avoid illness claims."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "health",
+        "safety_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_health_domain_path_not_medical_claim"
+    },
+    {
+      "unit_id": "v30.krp.health.excess_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "health",
+      "family": "domain_rule",
+      "title": "Element excess is only a balance-review signal and never a medical claim.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:health_element_excess_review"
+      ],
+      "condition_weakens": [
+        "fixed_health_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "health_element_excess_review"
+      ],
+      "portrait_tags": [
+        "health_excess_review_candidate"
+      ],
+      "answer_guidance": [
+        "Keep excess language as element-balance caution and avoid symptom or disease claims."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "health",
+        "element_excess"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_health_excess_review_not_medical_claim"
+    },
+    {
+      "unit_id": "v30.krp.health.thin_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "health",
+      "family": "domain_rule",
+      "title": "Element thinness is only a balance-review signal and never a medical claim.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:health_element_thin_review"
+      ],
+      "condition_weakens": [
+        "fixed_health_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "health_element_thin_review"
+      ],
+      "portrait_tags": [
+        "health_thin_review_candidate"
+      ],
+      "answer_guidance": [
+        "Keep thin-element language as bounded balance review without medical inference."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "health",
+        "element_thin"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_health_thin_review_not_medical_claim"
+    },
+    {
+      "unit_id": "v30.krp.health.conflict_pressure_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "health",
+      "family": "domain_rule",
+      "title": "Conflict pressure can inform cautionary review but cannot imply illness.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:health_conflict_pressure_review"
+      ],
+      "condition_weakens": [
+        "fixed_health_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "health_conflict_pressure_review"
+      ],
+      "portrait_tags": [
+        "health_conflict_pressure_candidate"
+      ],
+      "answer_guidance": [
+        "Frame conflict pressure as general caution and redirect medical questions to professionals."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "health",
+        "conflict_pressure"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_health_conflict_pressure_not_medical_claim"
+    },
+    {
+      "unit_id": "v30.krp.useful_god.domain_path_candidate_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "useful_god",
+      "family": "domain_rule",
+      "title": "Domain paths can rank useful-god candidates but cannot finalize useful-god.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:useful_god_candidate_path"
+      ],
+      "condition_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "useful_god_domain_path"
+      ],
+      "portrait_tags": [
+        "useful_god_domain_candidate"
+      ],
+      "answer_guidance": [
+        "Use domain paths only to prioritize useful-god review questions and evidence checks."
+      ],
+      "training_tags": [
+        "domain_rule",
+        "useful_god_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_domain_path_prioritizes_useful_god_review_only"
+    },
+    {
+      "unit_id": "v30.krp.structure.tongguan_resource_mediator_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "structure_dynamic",
+      "family": "tongguan",
+      "title": "Resource mediation can be reviewed as 通关 path evidence, not as a final resolution verdict.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:tongguan_resource_mediator_path"
+      ],
+      "condition_weakens": [
+        "fixed_tongguan_resolution_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution",
+        "dynamic_graph.tongguan_zhihua"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "tongguan_resource_mediator"
+      ],
+      "portrait_tags": [
+        "tongguan_resource_candidate"
+      ],
+      "answer_guidance": [
+        "Frame resource mediation as a path-resolution candidate and keep final resolution evidence-bound."
+      ],
+      "training_tags": [
+        "structure_dynamic",
+        "tongguan",
+        "path_resolution"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_tongguan_resource_mediator_not_final_resolution"
+    },
+    {
+      "unit_id": "v30.krp.structure.tongguan_output_wealth_bridge_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "structure_dynamic",
+      "family": "tongguan",
+      "title": "Output-to-wealth continuity can bridge a path but cannot imply wealth outcome.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:tongguan_output_wealth_bridge_path"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim",
+        "fixed_tongguan_resolution_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution",
+        "dynamic_graph.tongguan_zhihua"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "tongguan_output_wealth_bridge"
+      ],
+      "portrait_tags": [
+        "tongguan_output_wealth_candidate"
+      ],
+      "answer_guidance": [
+        "Use output-to-wealth bridge language only to explain dynamic continuity, not monetization."
+      ],
+      "training_tags": [
+        "structure_dynamic",
+        "tongguan",
+        "wealth_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_tongguan_output_wealth_bridge_not_outcome"
+    },
+    {
+      "unit_id": "v30.krp.structure.zhihua_output_authority_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "structure_dynamic",
+      "family": "zhihua",
+      "title": "Output controlling authority is 制化 review evidence, not a settled structure claim.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:zhihua_output_controls_authority_path"
+      ],
+      "condition_weakens": [
+        "fixed_zhihua_resolution_verdict",
+        "fixed_career_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution",
+        "dynamic_graph.tongguan_zhihua"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "zhihua_output_authority"
+      ],
+      "portrait_tags": [
+        "zhihua_output_authority_candidate"
+      ],
+      "answer_guidance": [
+        "Describe 制化 as candidate path transformation and require supporting path evidence."
+      ],
+      "training_tags": [
+        "structure_dynamic",
+        "zhihua",
+        "authority_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_zhihua_output_authority_not_final_resolution"
+    },
+    {
+      "unit_id": "v30.krp.structure.zhihua_wealth_authority_resource_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "structure_dynamic",
+      "family": "zhihua",
+      "title": "Wealth-authority-resource chains are 制化 candidates that still require bounded review.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:zhihua_wealth_authority_resource_path"
+      ],
+      "condition_weakens": [
+        "fixed_zhihua_resolution_verdict",
+        "fixed_useful_god_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution",
+        "dynamic_graph.tongguan_zhihua"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "zhihua_wealth_authority_resource"
+      ],
+      "portrait_tags": [
+        "zhihua_wealth_authority_resource_candidate"
+      ],
+      "answer_guidance": [
+        "Treat wealth-authority-resource chains as reviewable transformation candidates, not favorable-useful-god proof."
+      ],
+      "training_tags": [
+        "structure_dynamic",
+        "zhihua",
+        "useful_god_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_zhihua_wealth_authority_resource_not_final_resolution"
+    },
+    {
+      "unit_id": "v30.krp.chart.bound_context_no_rewrite",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "chart",
+      "family": "foundation_boundary",
+      "title": "Bound chart context is read-only evidence for every later judgment path.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_chart_fact_boundary",
+        "chart_context_bound"
+      ],
+      "condition_weakens": [
+        "chart_fact_mutation",
+        "llm_chart_fact_generation",
+        "training_chart_fact_generation"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.foundation_boundary"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "calculation_foundation"
+      ],
+      "portrait_tags": [
+        "chart_read_only_boundary"
+      ],
+      "answer_guidance": [
+        "Keep pillars, day master, and deterministic chart facts as basis text, never generated claims."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "chart_boundary",
+        "no_fact_mutation"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_chart_context_read_only_not_interpretation"
+    },
+    {
+      "unit_id": "v30.krp.chart.output_fact_basis_required",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "chart",
+      "family": "foundation_boundary",
+      "title": "Reading output must show its deterministic chart basis before interpretation.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_chart_basis_required",
+        "structure_pattern_candidate",
+        "useful_god_candidate_question"
+      ],
+      "condition_weakens": [
+        "unsupported_reading_output",
+        "fixed_bazi_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.foundation_boundary"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "calculation_basis_trace"
+      ],
+      "portrait_tags": [
+        "reading_requires_chart_basis"
+      ],
+      "answer_guidance": [
+        "Attach interpretation language to explicit chart facts and evidence paths."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "chart_basis",
+        "output_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_reading_output_requires_chart_basis"
+    },
+    {
+      "unit_id": "v30.krp.element.balance_not_strength_verdict",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "element",
+      "family": "element_review",
+      "title": "Element balance is a review input and cannot settle strength by itself.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_element_balance_review_boundary",
+        "element_balance_review"
+      ],
+      "condition_weakens": [
+        "fixed_strength_verdict",
+        "single_factor_reading"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "element_balance_review"
+      ],
+      "portrait_tags": [
+        "element_balance_not_verdict"
+      ],
+      "answer_guidance": [
+        "Use element balance as one evidence layer and keep strength candidate-bound."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "element_balance",
+        "strength_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_element_balance_not_strength_verdict"
+    },
+    {
+      "unit_id": "v30.krp.element.seasonal_counterforce_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "element",
+      "family": "seasonal_state",
+      "title": "Seasonal element state needs counterforce and path review before structure language.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_seasonal_state_counterforce_review",
+        "seasonal_state:xiang",
+        "season_element:water"
+      ],
+      "condition_weakens": [
+        "fixed_strength_verdict",
+        "fixed_geju_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "seasonal_counterforce_review"
+      ],
+      "portrait_tags": [
+        "seasonal_state_counterforce"
+      ],
+      "answer_guidance": [
+        "Pair seasonal state with counterforce and dynamic-path evidence before conclusion language."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "seasonal_state",
+        "counterforce_review"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_seasonal_state_requires_counterforce"
+    },
+    {
+      "unit_id": "v30.krp.foundation.m1_m2_m3_chain",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "foundation",
+      "family": "core_chain",
+      "title": "M1/M2 deterministic facts must precede M3 evidence and judgment paths.",
+      "source_family_ids": [
+        "v30.source.san_ming_tong_hui_system_catalog"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_foundation_m1_m2_m3_chain",
+        "chart_context_bound",
+        "element_context_bound"
+      ],
+      "condition_weakens": [
+        "chart_fact_mutation",
+        "unsupported_reading_output"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.foundation_boundary"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "core_calculation_chain"
+      ],
+      "portrait_tags": [
+        "m1_m2_m3_chain"
+      ],
+      "answer_guidance": [
+        "Explain calculation order as facts first, then evidence paths, then bounded reading."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "foundation",
+        "core_chain"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_foundation_chain_not_judgment_shortcut"
+    },
+    {
+      "unit_id": "v30.krp.foundation.module_handoff_trace",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "foundation",
+      "family": "core_chain",
+      "title": "Module handoff must preserve fact/evidence boundaries across M3, M4, M5, and M6.",
+      "source_family_ids": [
+        "v30.source.di_tian_sui_flow_mechanism"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_foundation_m1_m2_m3_chain",
+        "rule_chart_basis_required"
+      ],
+      "condition_weakens": [
+        "unsupported_reading_output",
+        "fixed_bazi_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.foundation_boundary"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "module_handoff_trace"
+      ],
+      "portrait_tags": [
+        "module_boundary_trace"
+      ],
+      "answer_guidance": [
+        "Keep each module's contribution visible without collapsing evidence into verdicts."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "foundation",
+        "module_handoff"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_module_handoff_preserves_boundaries"
+    },
+    {
+      "unit_id": "v30.krp.foundation.training_read_only_boundary",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "foundation",
+      "family": "training_boundary",
+      "title": "Training can tune M3 coverage and path priority but cannot create chart facts.",
+      "source_family_ids": [
+        "v30.source.synthetic_runtime_baseline"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_foundation_m1_m2_m3_chain",
+        "rule_chart_fact_boundary"
+      ],
+      "condition_weakens": [
+        "training_chart_fact_generation",
+        "chart_fact_mutation"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.foundation_boundary"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "training_boundary"
+      ],
+      "portrait_tags": [
+        "training_read_only_boundary"
+      ],
+      "answer_guidance": [
+        "Use training evidence only for coverage, weights, ranking, and question strategy."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "training_boundary",
+        "no_fact_mutation"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_training_tunes_coverage_not_chart_facts"
+    },
+    {
+      "unit_id": "v30.krp.romance.private_fact_boundary",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "romance",
+      "family": "domain_rule",
+      "title": "Romance signals are relationship-path evidence, not private fact claims.",
+      "source_family_ids": [
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_romance_private_fact_boundary",
+        "domain_rule_family:relationship_relation_path",
+        "palace_position_review"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim",
+        "private_relationship_fact_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "romance_private_fact_boundary"
+      ],
+      "portrait_tags": [
+        "romance_not_private_fact"
+      ],
+      "answer_guidance": [
+        "Avoid private relationship facts; use romance language only as bounded topic-path review."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "romance",
+        "privacy_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_romance_path_not_private_fact"
+    },
+    {
+      "unit_id": "v30.krp.romance.marker_context_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "portrait",
+      "domain": "romance",
+      "family": "domain_rule",
+      "title": "Romance markers need ten-god, branch, palace, and timing context before emphasis.",
+      "source_family_ids": [
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:relationship_authority_or_wealth_marker_path",
+        "palace_position_review"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "romance_marker_context"
+      ],
+      "portrait_tags": [
+        "romance_marker_review"
+      ],
+      "answer_guidance": [
+        "Treat romance markers as prompts for context, not events or relationship status."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "romance",
+        "marker_context"
+      ],
+      "locale_terms": {},
+      "boundary": "portrait_unit_romance_marker_context_not_event_claim"
+    },
+    {
+      "unit_id": "v30.krp.romance.conflict_alignment_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "romance",
+      "family": "domain_rule",
+      "title": "Romance conflict or alignment paths require branch arbitration before interpretation.",
+      "source_family_ids": [
+        "v30.source.san_ming_tong_hui_system_catalog",
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:relationship_conflict_path",
+        "domain_rule_family:relationship_alignment_review_path"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "romance_conflict_alignment"
+      ],
+      "portrait_tags": [
+        "romance_conflict_alignment_review"
+      ],
+      "answer_guidance": [
+        "Use conflict/alignment as relational dynamics evidence only after branch arbitration."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "romance",
+        "branch_arbitration"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_romance_conflict_alignment_not_event_verdict"
+    },
+    {
+      "unit_id": "v30.krp.rule_counterevidence.original_trace_required",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "rule_counterevidence",
+      "family": "counterevidence_trace",
+      "title": "Counter-evidence requires an explicit original rule trace.",
+      "source_family_ids": [
+        "v30.source.shen_feng_tong_kao_disease_medicine"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_counterevidence_trace_required",
+        "rule_decision_state:countered",
+        "rule_chart_fact_boundary"
+      ],
+      "condition_weakens": [
+        "silent_rule_override",
+        "untracked_policy_override"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.counterevidence"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "counterevidence_trace"
+      ],
+      "portrait_tags": [
+        "original_rule_trace_required"
+      ],
+      "answer_guidance": [
+        "Show the original rule, the counter-evidence, and the resulting bounded state."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "counterevidence",
+        "trace_required"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_counterevidence_requires_original_trace"
+    },
+    {
+      "unit_id": "v30.krp.rule_counterevidence.policy_override_block",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "rule_counterevidence",
+      "family": "counterevidence_trace",
+      "title": "Policy or training weights cannot silently override rule evidence.",
+      "source_family_ids": [
+        "v30.source.synthetic_runtime_baseline"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_counterevidence_trace_required",
+        "rule_chart_fact_boundary"
+      ],
+      "condition_weakens": [
+        "untracked_policy_override",
+        "training_chart_fact_generation"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.counterevidence"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "policy_override_boundary"
+      ],
+      "portrait_tags": [
+        "policy_override_requires_trace"
+      ],
+      "answer_guidance": [
+        "Use policy weights only as traceable priority hints, not hidden rule replacement."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "counterevidence",
+        "policy_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_policy_override_requires_trace"
+    },
+    {
+      "unit_id": "v30.krp.domain_rule.subfamily_gate",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "domain_rule",
+      "family": "domain_rule_gate",
+      "title": "Domain readings require subfamily evidence before customer-facing emphasis.",
+      "source_family_ids": [
+        "v30.source.di_tian_sui_flow_mechanism"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_domain_subfamily_evidence_required",
+        "domain_rule_review_candidate"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim",
+        "fixed_career_outcome_claim",
+        "fixed_relationship_outcome_claim",
+        "fixed_health_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "domain_rule_subfamily_gate"
+      ],
+      "portrait_tags": [
+        "domain_subfamily_evidence_required"
+      ],
+      "answer_guidance": [
+        "Only emphasize a domain after its subfamily evidence path is visible."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "domain_rule",
+        "subfamily_gate"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_domain_subfamily_required_before_outcome_language"
+    },
+    {
+      "unit_id": "v30.krp.domain_rule.outcome_language_block",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "domain_rule",
+      "family": "domain_rule_gate",
+      "title": "Domain paths block outcome language unless evidence and counter-evidence are cited.",
+      "source_family_ids": [
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_domain_outcome_boundary",
+        "domain_rule_review_candidate"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim",
+        "fixed_career_outcome_claim",
+        "fixed_relationship_outcome_claim",
+        "fixed_health_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "domain_outcome_language_boundary"
+      ],
+      "portrait_tags": [
+        "domain_outcome_language_block"
+      ],
+      "answer_guidance": [
+        "领域语言只作为结构路径说明，不作为具体人生结果断语。"
+      ],
+      "training_tags": [
+        "m3_g2",
+        "domain_rule",
+        "outcome_language_block"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_domain_outcome_language_block"
+    },
+    {
+      "unit_id": "v30.krp.domain_rule.cross_domain_bridge_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "domain_rule",
+      "family": "domain_rule_gate",
+      "title": "Cross-domain bridges require separate evidence for each affected domain.",
+      "source_family_ids": [
+        "v30.source.di_tian_sui_flow_mechanism",
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "domain_rule_family:wealth_authority_bridge_path",
+        "domain_rule_family:zhihua_wealth_authority_resource_path"
+      ],
+      "condition_weakens": [
+        "fixed_wealth_outcome_claim",
+        "fixed_career_outcome_claim",
+        "fixed_useful_god_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path",
+        "dynamic_graph.tongguan_zhihua"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "cross_domain_bridge_review"
+      ],
+      "portrait_tags": [
+        "cross_domain_bridge_requires_evidence"
+      ],
+      "answer_guidance": [
+        "Separate wealth, career, and useful-god implications instead of merging them into one verdict."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "domain_rule",
+        "cross_domain_bridge"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_cross_domain_bridge_not_combined_verdict"
+    },
+    {
+      "unit_id": "v30.krp.rule_counterevidence.silent_override_block",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "rule_counterevidence",
+      "family": "counterevidence_trace",
+      "title": "Silent policy overrides are blocked unless rule evidence remains traceable.",
+      "source_family_ids": [
+        "v30.source.synthetic_runtime_baseline"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_silent_policy_override_blocked",
+        "rule_counterevidence_trace_required"
+      ],
+      "condition_weakens": [
+        "silent_rule_override",
+        "untracked_policy_override",
+        "training_chart_fact_generation"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.counterevidence"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "silent_override_boundary"
+      ],
+      "portrait_tags": [
+        "silent_override_blocked"
+      ],
+      "answer_guidance": [
+        "Never hide rule-state changes behind policy or training language."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "counterevidence",
+        "silent_override_block"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_silent_policy_override_blocked"
+    },
+    {
+      "unit_id": "v30.krp.structure.pattern_success_failure_rescue_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "structure_pattern",
+      "family": "source_backed_pattern",
+      "title": "Pattern review must inspect success, failure, rescue, and counterforce paths.",
+      "source_family_ids": [
+        "v30.source.zi_ping_pattern_month_command"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_pattern_success_failure_rescue_review",
+        "month_command_review",
+        "structure_pattern_candidate"
+      ],
+      "condition_weakens": [
+        "fixed_geju_verdict",
+        "fixed_strength_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "pattern_success_failure_rescue"
+      ],
+      "portrait_tags": [
+        "pattern_rescue_counterforce_review"
+      ],
+      "answer_guidance": [
+        "Name pattern candidates only after checking failure, rescue, and counterforce evidence."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "structure_pattern",
+        "success_failure_rescue"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_pattern_success_failure_rescue_not_fixed_geju"
+    },
+    {
+      "unit_id": "v30.krp.time_context.explicit_time_layer_required",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "time_context",
+      "family": "time_layer_boundary",
+      "title": "Timing interpretation requires explicit luck, flow-year, or flow-month evidence.",
+      "source_family_ids": [
+        "v30.source.san_ming_tong_hui_system_catalog"
+      ],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_explicit_time_layer_required",
+        "rule_time_boundary"
+      ],
+      "condition_weakens": [
+        "timing_claim",
+        "special_year_claim",
+        "flow_month_claim_without_context"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.time_layer_boundary"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "time_layer_boundary"
+      ],
+      "portrait_tags": [
+        "explicit_time_layer_required"
+      ],
+      "answer_guidance": [
+        "Block timing language unless the required time layer is present and cited."
+      ],
+      "training_tags": [
+        "m3_g2",
+        "time_context",
+        "time_layer_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_time_layer_required_for_timing_language"
+    },
+    {
+      "unit_id": "v30.krp.hidden_factor.feedback_calibration",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "portrait",
+      "domain": "hidden_factor",
+      "family": "core_runtime",
+      "title": "Hidden factors require user feedback calibration before amplifier use.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "hidden_factor_user_feedback"
+      ],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_hidden_factor_dialogue_boundary",
+        "hidden_factor_user_calibrated"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "discover_hidden_factor_amplifier"
+      ],
+      "portrait_dimensions": [
+        "latent_amplifier"
+      ],
+      "portrait_tags": [
+        "hidden_factor_calibration"
+      ],
+      "answer_guidance": [
+        "Treat hidden factors as hypotheses unless feedback evidence counters the dialogue gate."
+      ],
+      "training_tags": [
+        "hidden_factor",
+        "feedback_calibration"
+      ],
+      "locale_terms": {},
+      "boundary": "portrait_unit_feedback_required"
+    },
+    {
+      "unit_id": "v30.krp.hidden_factor.dialogue_boundary",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "hidden_factor",
+      "family": "core_runtime",
+      "title": "Hidden-factor conclusions are blocked until dialogue discovers boundary events.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_hidden_factor_dialogue_boundary"
+      ],
+      "condition_weakens": [
+        "deterministic_hidden_factor_claim"
+      ],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "discover_hidden_factor_amplifier"
+      ],
+      "portrait_dimensions": [],
+      "portrait_tags": [
+        "hidden_factor_dialogue_required"
+      ],
+      "answer_guidance": [
+        "Ask for special years and repeated states before using hidden factors as amplifiers."
+      ],
+      "training_tags": [],
+      "locale_terms": {},
+      "boundary": "rule_unit_hidden_factor_dialogue_required"
+    },
+    {
+      "unit_id": "v30.krp.hidden_factor.user_calibrated_counter",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "portrait",
+      "domain": "hidden_factor",
+      "family": "core_runtime",
+      "title": "User-confirmed special events can counter the hidden-factor dialogue gate.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "hidden_factor_user_calibrated",
+        "rule_decision_state:countered"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "discover_hidden_factor_amplifier"
+      ],
+      "portrait_dimensions": [],
+      "portrait_tags": [
+        "hidden_factor_feedback_counter"
+      ],
+      "answer_guidance": [
+        "Use calibrated feedback as a hypothesis-strengthening signal, not a chart fact rewrite."
+      ],
+      "training_tags": [],
+      "locale_terms": {},
+      "boundary": "portrait_unit_feedback_counter_not_chart_fact"
+    },
+    {
+      "unit_id": "v30.krp.branch_relation.dynamic_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "branch_relation",
+      "family": "core_runtime",
+      "title": "Branch relations require layered dynamic review before single-factor reading.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "branch_relation_evidence"
+      ],
+      "counter_context": [
+        "branch_single_factor_confirmed"
+      ],
+      "condition_supports": [
+        "rule_structure_dynamic_review",
+        "structure_dynamic_review"
+      ],
+      "condition_weakens": [
+        "single_factor_reading"
+      ],
+      "mechanism_hooks": [
+        "mechanism.branch_relation_dynamic_review"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "structure_dynamic"
+      ],
+      "portrait_tags": [
+        "branch_relation_dynamic_review"
+      ],
+      "answer_guidance": [
+        "Explain branch relations through dynamic paths and counter-evidence gates."
+      ],
+      "training_tags": [
+        "branch_relation",
+        "dynamic_review"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_branch_relation_not_single_factor"
+    },
+    {
+      "unit_id": "v30.krp.branch_relation.conflict_family",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "branch_relation",
+      "family": "branch_conflict",
+      "title": "Clash, harm, break, and punishment relations are conflict-family evidence for dynamic review.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "branch_conflict_family:clash",
+        "branch_conflict_family:harm",
+        "branch_conflict_family:break",
+        "branch_conflict_family:punishment"
+      ],
+      "condition_weakens": [
+        "single_factor_reading"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "branch_conflict"
+      ],
+      "portrait_tags": [
+        "branch_conflict_family"
+      ],
+      "answer_guidance": [
+        "Name branch conflict families only as reviewed dynamics, never as isolated event predictions."
+      ],
+      "training_tags": [
+        "branch_relation",
+        "conflict_family",
+        "anti_single_factor"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_branch_conflict_family_requires_context"
+    },
+    {
+      "unit_id": "v30.krp.branch_relation.alignment_family",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "branch_relation",
+      "family": "branch_alignment",
+      "title": "Harmony and meeting relations are alignment-family evidence, not automatic good outcomes.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "branch_alignment_family:harmony",
+        "branch_alignment_family:three_harmony",
+        "branch_alignment_family:three_meeting"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "branch_alignment"
+      ],
+      "portrait_tags": [
+        "branch_alignment_family"
+      ],
+      "answer_guidance": [
+        "Use alignment relations as path-continuity context, not favorable outcome promises."
+      ],
+      "training_tags": [
+        "branch_relation",
+        "alignment_family"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_branch_alignment_not_outcome_prediction"
+    },
+    {
+      "unit_id": "v30.krp.structure.dynamic_path",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "structure_dynamic",
+      "family": "core_runtime",
+      "title": "Dynamic graph paths connect ten-god families through generate/control relations.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [
+        "dynamic_graph_path"
+      ],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_structure_dynamic_review"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.v2"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "structure_dynamic"
+      ],
+      "portrait_tags": [
+        "dynamic_path_context"
+      ],
+      "answer_guidance": [
+        "Use dynamic path scores as structure context, not single-factor verdicts."
+      ],
+      "training_tags": [
+        "structure_dynamic",
+        "path_scoring"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_dynamic_path_not_single_factor"
+    },
+    {
+      "unit_id": "v30.krp.structure.path_resolution_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "structure_dynamic",
+      "family": "path_resolution",
+      "title": "Generate/control paths can indicate resolution candidates before final structure language.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "strength_review_candidate",
+        "structure_pattern_candidate"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "path_resolution"
+      ],
+      "portrait_tags": [
+        "path_resolution_candidate"
+      ],
+      "answer_guidance": [
+        "Use path-resolution language to explain why a candidate path remains under review."
+      ],
+      "training_tags": [
+        "structure_dynamic",
+        "path_resolution",
+        "candidate_review"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_path_resolution_not_final_structure"
+    },
+    {
+      "unit_id": "v30.krp.rule.counterevidence.trace",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "rule_counterevidence",
+      "family": "core_runtime",
+      "title": "Counter-evidence changes rule state while preserving traceability.",
+      "source_family_ids": [],
+      "reference_asset_ids": [],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "rule_decision_state:countered"
+      ],
+      "condition_weakens": [],
+      "mechanism_hooks": [],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [],
+      "portrait_tags": [
+        "counterevidence_trace"
+      ],
+      "answer_guidance": [
+        "Show which evidence countered a rule instead of deleting the original rule boundary."
+      ],
+      "training_tags": [],
+      "locale_terms": {},
+      "boundary": "rule_unit_counterevidence_preserves_trace"
+    },
+    {
+      "unit_id": "v30.krp.source.month_command.pattern_gate",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "structure_pattern",
+      "family": "source_backed_pattern",
+      "title": "Month-command pattern review must precede fixed 格局 language.",
+      "source_family_ids": [
+        "v30.source.zi_ping_pattern_month_command"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "month_command_review",
+        "structure_pattern_candidate"
+      ],
+      "condition_weakens": [
+        "fixed_geju_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "month_command_pattern_review"
+      ],
+      "portrait_tags": [
+        "month_command_pattern_gate"
+      ],
+      "answer_guidance": [
+        "Name 格局 only as a candidate until month-command support, counter-force, and path evidence are reviewed."
+      ],
+      "training_tags": [
+        "source_backed",
+        "month_command",
+        "pattern_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_month_command_pattern_gate_not_fixed_geju"
+    },
+    {
+      "unit_id": "v30.krp.source.wang_xiang_strength_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "element",
+      "family": "source_backed_strength",
+      "title": "旺相休囚死 is seasonal state evidence, not a standalone strength verdict.",
+      "source_family_ids": [
+        "v30.source.san_ming_tong_hui_system_catalog"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "wang_xiang_xiu_qiu_si_review"
+      ],
+      "condition_weakens": [
+        "fixed_strength_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "seasonal_element_state"
+      ],
+      "portrait_tags": [
+        "wang_xiang_state_review"
+      ],
+      "answer_guidance": [
+        "Use 旺相休囚死 as a seasonal element-state input and keep final strength candidate-bound."
+      ],
+      "training_tags": [
+        "source_backed",
+        "seasonal_state",
+        "strength_review"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_wang_xiang_state_not_strength_verdict"
+    },
+    {
+      "unit_id": "v30.krp.source.tiaohou.climate_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "useful_god",
+      "family": "tiaohou",
+      "title": "调候 is a climate-review path and must compete with扶抑, 通关, and病药 paths.",
+      "source_family_ids": [
+        "v30.source.qiong_tong_bao_jian_climate_review"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "climate_regulation_review",
+        "tiaohou_candidate_path"
+      ],
+      "condition_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution"
+      ],
+      "question_hooks": [
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "tiaohou_path_review"
+      ],
+      "portrait_tags": [
+        "tiaohou_candidate_path"
+      ],
+      "answer_guidance": [
+        "Treat 调候 as a ranked useful-god candidate path, not the final useful-god by itself."
+      ],
+      "training_tags": [
+        "source_backed",
+        "tiaohou",
+        "useful_god_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_tiaohou_climate_review_not_final_useful_god"
+    },
+    {
+      "unit_id": "v30.krp.source.bingyao.blockage_review",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "useful_god",
+      "family": "bingyao",
+      "title": "病药 review identifies blockage and remedy candidates without overriding chart facts.",
+      "source_family_ids": [
+        "v30.source.shen_feng_tong_kao_disease_medicine"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "bingyao_blockage_review",
+        "bingyao_remedy_candidate_path"
+      ],
+      "condition_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution",
+        "dynamic_graph.tongguan_zhihua"
+      ],
+      "question_hooks": [
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "bingyao_path_review"
+      ],
+      "portrait_tags": [
+        "bingyao_remedy_candidate"
+      ],
+      "answer_guidance": [
+        "Use 病药 to explain supporting and weakening evidence for useful-god candidates."
+      ],
+      "training_tags": [
+        "source_backed",
+        "bingyao",
+        "counterevidence"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_bingyao_review_not_fixed_useful_god"
+    },
+    {
+      "unit_id": "v30.krp.source.element.flow_transform",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "structure_dynamic",
+      "family": "flow_transform",
+      "title": "五行流通、通关、制化 must be represented as dynamic paths.",
+      "source_family_ids": [
+        "v30.source.di_tian_sui_flow_mechanism"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units",
+        "v30.m3.reference.v20_structure_dynamics_graph_v2"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "element_flow_transform_review",
+        "tongguan_candidate_path",
+        "zhihua_candidate_path"
+      ],
+      "condition_weakens": [
+        "single_factor_reading"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.path_resolution",
+        "dynamic_graph.tongguan_zhihua"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "element_flow_transform"
+      ],
+      "portrait_tags": [
+        "element_flow_transform_review"
+      ],
+      "answer_guidance": [
+        "Represent flow, 通关, and 制化 as scored paths with blockage and counter-evidence."
+      ],
+      "training_tags": [
+        "source_backed",
+        "flow_transform",
+        "dynamic_path"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_element_flow_transform_requires_dynamic_path"
+    },
+    {
+      "unit_id": "v30.krp.source.branch.arbitration",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "branch_relation",
+      "family": "branch_arbitration",
+      "title": "冲合刑害破并见 must be arbitrated instead of collapsed into one relation name.",
+      "source_family_ids": [
+        "v30.source.san_ming_tong_hui_system_catalog",
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "branch_relation_arbitration_review"
+      ],
+      "condition_weakens": [
+        "single_factor_reading"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.conflict_family"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "branch_relation_arbitration"
+      ],
+      "portrait_tags": [
+        "branch_arbitration_boundary"
+      ],
+      "answer_guidance": [
+        "Separate relation type, involved branches, transformation support, interference, and source layer."
+      ],
+      "training_tags": [
+        "source_backed",
+        "branch_relation",
+        "arbitration"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_branch_arbitration_not_relation_name_verdict"
+    },
+    {
+      "unit_id": "v30.krp.source.ten_god.role_set",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "knowledge",
+      "domain": "ten_god",
+      "family": "ten_god_role_set",
+      "title": "Ten-god review must preserve the ten distinct roles and visible/hidden/position context.",
+      "source_family_ids": [
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "ten_god_role_set_review",
+        "ten_god_visibility",
+        "hidden_stem_context"
+      ],
+      "condition_weakens": [
+        "single_factor_reading"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.v2"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "ten_god_role_set"
+      ],
+      "portrait_tags": [
+        "ten_god_full_role_set"
+      ],
+      "answer_guidance": [
+        "Do not collapse wealth, authority, resource, peer, and output into one generic meaning."
+      ],
+      "training_tags": [
+        "source_backed",
+        "ten_god",
+        "role_set"
+      ],
+      "locale_terms": {},
+      "boundary": "knowledge_unit_ten_god_role_set_not_generic_personality_claim"
+    },
+    {
+      "unit_id": "v30.krp.source.palace.position_boundary",
+      "pack_id": "v30.krp.pack.core_runtime",
+      "pack_version": "2026-05-21",
+      "unit_type": "rule",
+      "domain": "relationship",
+      "family": "palace_position",
+      "title": "Palace and pillar position locate topic layers but cannot imply private facts.",
+      "source_family_ids": [
+        "v30.source.yuan_hai_zi_ping_pattern_catalog"
+      ],
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units"
+      ],
+      "required_context": [],
+      "counter_context": [],
+      "condition_supports": [
+        "palace_position_review"
+      ],
+      "condition_weakens": [
+        "fixed_relationship_outcome_claim"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.domain_path"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline"
+      ],
+      "portrait_dimensions": [
+        "palace_position_layer"
+      ],
+      "portrait_tags": [
+        "palace_position_boundary"
+      ],
+      "answer_guidance": [
+        "Use palace position as a topic locator that must be checked against ten-god, branch, capacity, and time evidence."
+      ],
+      "training_tags": [
+        "source_backed",
+        "palace",
+        "privacy_boundary"
+      ],
+      "locale_terms": {},
+      "boundary": "rule_unit_palace_position_not_private_fact"
+    }
+  ],
+  "rule_specs": [
+    {
+      "rule_id": "v30.rule.chart.bound_context_no_rewrite",
+      "domain": "chart",
+      "title": "Bound chart context blocks downstream rewriting of pillars, day master, and deterministic facts.",
+      "condition_supports": [
+        "chart_context_bound",
+        "element_context_bound"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_chart_fact_boundary"
+      ],
+      "emits_weakens": [
+        "chart_fact_mutation",
+        "llm_chart_fact_generation",
+        "training_chart_fact_generation"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_chart_context_is_read_only",
+      "decision_state": "blocked",
+      "runtime_allowed": true,
+      "base_confidence": 0.86
+    },
+    {
+      "rule_id": "v30.rule.chart.output_requires_fact_basis",
+      "domain": "chart",
+      "title": "Any public reading must keep deterministic chart facts as the calculation basis.",
+      "condition_supports": [
+        "chart_context_bound",
+        "structure_pattern_candidate",
+        "useful_god_candidate_question"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_chart_basis_required"
+      ],
+      "emits_weakens": [
+        "unsupported_reading_output",
+        "fixed_bazi_verdict"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_reading_output_requires_chart_fact_basis",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.78
+    },
+    {
+      "rule_id": "v30.rule.element.balance_context_not_strength_verdict",
+      "domain": "element",
+      "title": "Element balance and seasonal state are review inputs, not fixed strength verdicts.",
+      "condition_supports": [
+        "element_balance_review",
+        "wang_xiang_xiu_qiu_si_review"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_element_balance_review_boundary"
+      ],
+      "emits_weakens": [
+        "fixed_strength_verdict",
+        "single_factor_reading"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_element_balance_not_strength_verdict",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.76
+    },
+    {
+      "rule_id": "v30.rule.element.seasonal_state_requires_counterforce",
+      "domain": "element",
+      "title": "Seasonal element state requires counterforce and path evidence before interpretation.",
+      "condition_supports": [
+        "seasonal_state:xiang",
+        "season_element:water",
+        "seasonal_indirect_context:day_master"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_seasonal_state_counterforce_review"
+      ],
+      "emits_weakens": [
+        "fixed_strength_verdict",
+        "fixed_geju_verdict"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_seasonal_state_requires_counterforce_review",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.74
+    },
+    {
+      "rule_id": "v30.rule.foundation.core_chain_requires_m1_m2_m3",
+      "domain": "foundation",
+      "title": "The core calculation chain must preserve M1/M2 facts before M3 judgment evidence.",
+      "condition_supports": [
+        "chart_context_bound",
+        "element_context_bound",
+        "rule_chart_fact_boundary"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_foundation_m1_m2_m3_chain"
+      ],
+      "emits_weakens": [
+        "unsupported_reading_output",
+        "chart_fact_mutation"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_foundation_chain_preserves_deterministic_facts",
+      "decision_state": "blocked",
+      "runtime_allowed": true,
+      "base_confidence": 0.84
+    },
+    {
+      "rule_id": "v30.rule.time_context.blocks_timing_claim",
+      "domain": "time_context",
+      "title": "Missing explicit luck or flow context blocks timing claims.",
+      "condition_supports": [],
+      "condition_domains": [
+        "time_context"
+      ],
+      "emits_supports": [
+        "rule_time_boundary"
+      ],
+      "emits_weakens": [
+        "timing_claim",
+        "special_year_claim"
+      ],
+      "counter_weakens": [
+        "time_activation_review"
+      ],
+      "boundary": "rule_boundary_no_timing_prediction_without_explicit_time_layer",
+      "decision_state": "blocked",
+      "runtime_allowed": true,
+      "base_confidence": 0.82
+    },
+    {
+      "rule_id": "v30.rule.useful_god.candidate_gate",
+      "domain": "useful_god",
+      "title": "Useful-god remains candidate review until evidence paths are resolved.",
+      "condition_supports": [
+        "useful_god_candidate_question"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_useful_god_candidate_gate"
+      ],
+      "emits_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "counter_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "boundary": "rule_boundary_useful_god_candidate_only",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.76
+    },
+    {
+      "rule_id": "v30.rule.hidden_factor.requires_dialogue",
+      "domain": "hidden_factor",
+      "title": "Hidden stems can become amplifier hypotheses only through dialogue calibration.",
+      "condition_supports": [
+        "hidden_stem_context"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_hidden_factor_dialogue_boundary"
+      ],
+      "emits_weakens": [
+        "deterministic_hidden_factor_claim"
+      ],
+      "counter_weakens": [
+        "special_event_confirmed",
+        "hidden_factor_user_calibrated"
+      ],
+      "boundary": "rule_boundary_hidden_factor_requires_user_feedback",
+      "decision_state": "requires_dialogue",
+      "runtime_allowed": true,
+      "base_confidence": 0.72
+    },
+    {
+      "rule_id": "v30.rule.branch_relation.requires_dynamic_review",
+      "domain": "branch_relation",
+      "title": "Branch relations require dynamic structure review instead of single-factor reading.",
+      "condition_supports": [
+        "structure_dynamic_review"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_structure_dynamic_review"
+      ],
+      "emits_weakens": [
+        "single_factor_reading"
+      ],
+      "counter_weakens": [
+        "single_factor_reading"
+      ],
+      "boundary": "rule_boundary_branch_relation_requires_dynamic_review",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.7
+    },
+    {
+      "rule_id": "v30.rule.structure_pattern.month_command_candidate_gate",
+      "domain": "structure_pattern",
+      "title": "Month-command and pattern signals remain candidate review until counter-force and path evidence are checked.",
+      "condition_supports": [
+        "month_command_review",
+        "structure_pattern_candidate"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_month_command_pattern_gate"
+      ],
+      "emits_weakens": [
+        "fixed_geju_verdict",
+        "fixed_strength_verdict"
+      ],
+      "counter_weakens": [
+        "pattern_path_resolved"
+      ],
+      "boundary": "rule_boundary_month_command_pattern_candidate_only",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.74
+    },
+    {
+      "rule_id": "v30.rule.useful_god.climate_review_gate",
+      "domain": "useful_god",
+      "title": "Climate regulation can rank useful-god candidates but cannot finalize useful-god.",
+      "condition_supports": [
+        "climate_regulation_review",
+        "tiaohou_candidate_path"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_tiaohou_candidate_gate"
+      ],
+      "emits_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "counter_weakens": [
+        "useful_god_path_resolved"
+      ],
+      "boundary": "rule_boundary_tiaohou_candidate_not_final_useful_god",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.73
+    },
+    {
+      "rule_id": "v30.rule.useful_god.bingyao_review_gate",
+      "domain": "useful_god",
+      "title": "Disease-medicine review supplies support and weakening evidence without overriding chart facts.",
+      "condition_supports": [
+        "bingyao_blockage_review",
+        "bingyao_remedy_candidate_path"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_bingyao_review_gate"
+      ],
+      "emits_weakens": [
+        "fixed_useful_god_verdict"
+      ],
+      "counter_weakens": [
+        "useful_god_path_resolved"
+      ],
+      "boundary": "rule_boundary_bingyao_review_not_fixed_useful_god",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.72
+    },
+    {
+      "rule_id": "v30.rule.domain.blocks_outcome_claims",
+      "domain": "domain_rule",
+      "title": "Domain paths block wealth, career, relationship, and health outcome claims without enough evidence.",
+      "condition_supports": [
+        "domain_rule_review_candidate"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_domain_outcome_boundary"
+      ],
+      "emits_weakens": [
+        "fixed_wealth_outcome_claim",
+        "fixed_career_outcome_claim",
+        "fixed_relationship_outcome_claim",
+        "fixed_health_outcome_claim"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_domain_paths_not_life_outcome_verdicts",
+      "decision_state": "blocked",
+      "runtime_allowed": true,
+      "base_confidence": 0.76
+    },
+    {
+      "rule_id": "v30.rule.domain.requires_subfamily_evidence",
+      "domain": "domain_rule",
+      "title": "Domain reading paths require subfamily evidence before customer-facing emphasis.",
+      "condition_supports": [
+        "domain_rule_family:wealth_pressure",
+        "domain_rule_family:career_authority_path",
+        "domain_rule_family:relationship_relation_path",
+        "domain_rule_family:health_element_imbalance_review"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_domain_subfamily_evidence_required"
+      ],
+      "emits_weakens": [
+        "fixed_wealth_outcome_claim",
+        "fixed_career_outcome_claim",
+        "fixed_relationship_outcome_claim",
+        "fixed_health_outcome_claim"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_domain_subfamilies_required_before_outcome_language",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.75
+    },
+    {
+      "rule_id": "v30.rule.romance.blocks_private_fact_claims",
+      "domain": "romance",
+      "title": "Romance/relationship signals cannot become private relationship facts or event claims.",
+      "condition_supports": [
+        "domain_rule_family:relationship_relation_path",
+        "domain_rule_family:relationship_authority_or_wealth_marker_path",
+        "palace_position_review"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_romance_private_fact_boundary"
+      ],
+      "emits_weakens": [
+        "fixed_relationship_outcome_claim",
+        "private_relationship_fact_claim"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_romance_path_not_private_fact_or_event_claim",
+      "decision_state": "blocked",
+      "runtime_allowed": true,
+      "base_confidence": 0.8
+    },
+    {
+      "rule_id": "v30.rule.rule_counterevidence.requires_trace",
+      "domain": "rule_counterevidence",
+      "title": "Counter-evidence can change rule state only when the original evidence trace remains visible.",
+      "condition_supports": [
+        "rule_decision_state:countered",
+        "counter_evidence"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_counterevidence_trace_required"
+      ],
+      "emits_weakens": [
+        "silent_rule_override",
+        "untracked_policy_override"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_counterevidence_preserves_original_trace",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.78
+    },
+    {
+      "rule_id": "v30.rule.rule_counterevidence.blocks_silent_policy_override",
+      "domain": "rule_counterevidence",
+      "title": "Policy weights and training candidates cannot silently replace rule evidence.",
+      "condition_supports": [
+        "rule_counterevidence_trace_required",
+        "rule_decision_state:countered",
+        "rule_chart_fact_boundary"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_silent_policy_override_blocked"
+      ],
+      "emits_weakens": [
+        "silent_rule_override",
+        "untracked_policy_override",
+        "training_chart_fact_generation"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_policy_override_must_be_traceable",
+      "decision_state": "blocked",
+      "runtime_allowed": true,
+      "base_confidence": 0.8
+    },
+    {
+      "rule_id": "v30.rule.structure_pattern.requires_rescue_and_failure_review",
+      "domain": "structure_pattern",
+      "title": "Pattern review must check success, failure, rescue, and counterforce before naming a structure.",
+      "condition_supports": [
+        "month_command_review",
+        "structure_pattern_candidate",
+        "rule_month_command_pattern_gate"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_pattern_success_failure_rescue_review"
+      ],
+      "emits_weakens": [
+        "fixed_geju_verdict",
+        "fixed_strength_verdict"
+      ],
+      "counter_weakens": [],
+      "boundary": "rule_boundary_pattern_success_failure_rescue_before_structure_language",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.77
+    },
+    {
+      "rule_id": "v30.rule.time_context.requires_explicit_time_layer",
+      "domain": "time_context",
+      "title": "Timing language requires explicit luck, flow-year, or flow-month time-layer evidence.",
+      "condition_supports": [
+        "rule_time_boundary"
+      ],
+      "condition_domains": [
+        "time_context"
+      ],
+      "emits_supports": [
+        "rule_explicit_time_layer_required"
+      ],
+      "emits_weakens": [
+        "timing_claim",
+        "special_year_claim",
+        "flow_month_claim_without_context"
+      ],
+      "counter_weakens": [
+        "time_activation_review"
+      ],
+      "boundary": "rule_boundary_time_layer_required_for_timing_language",
+      "decision_state": "blocked",
+      "runtime_allowed": true,
+      "base_confidence": 0.82
+    },
+    {
+      "rule_id": "v30.rule.branch_relation.arbitration_gate",
+      "domain": "branch_relation",
+      "title": "Branch relations with conflict or alignment require relation arbitration before public interpretation.",
+      "condition_supports": [
+        "branch_relation_arbitration_review"
+      ],
+      "condition_domains": [],
+      "emits_supports": [
+        "rule_branch_arbitration_gate"
+      ],
+      "emits_weakens": [
+        "single_factor_reading"
+      ],
+      "counter_weakens": [
+        "single_factor_reading"
+      ],
+      "boundary": "rule_boundary_branch_relation_arbitration_required",
+      "decision_state": "requires_review",
+      "runtime_allowed": true,
+      "base_confidence": 0.72
+    }
+  ],
+  "portrait_assets": [
+    {
+      "asset_id": "v30.macro.foundation",
+      "asset_type": "macro_dimension",
+      "domain": "foundation",
+      "payload": {
+        "dimension_id": "v30.macro.foundation",
+        "label_zh": "基础八字",
+        "domain": "foundation",
+        "scope": "排盘事实、阴阳五行、十神、强弱、格局、用神、地支关系、岁运时间层。",
+        "evidence_domains": [
+          "chart",
+          "element",
+          "ten_god",
+          "branch_relation",
+          "time_context",
+          "useful_god"
+        ],
+        "structure_hooks": [
+          "dynamic_graph.v2",
+          "mechanism.ten_god_visibility_context"
+        ],
+        "question_hooks": [
+          "review_current_chart_mainline",
+          "confirm_missing_time_context"
+        ],
+        "portrait_dimensions": [
+          "context_integrity",
+          "element_context",
+          "ten_god_visibility"
+        ],
+        "training_tags": [
+          "foundation",
+          "chart_fact_boundary",
+          "ten_god_context",
+          "time_boundary"
+        ],
+        "boundaries": [
+          "ChartContext owns chart facts.",
+          "LLM and knowledge packs cannot rewrite pillars, day master, or deterministic chart context."
+        ],
+        "v20_source_hints": [
+          "v20.docs.bazi_knowledge_full_content_zh_v1:L0-L6,L9,L12",
+          "v20.knowledge.loader",
+          "v20.knowledge.directory_seeds"
+        ],
+        "public_source_hints": [
+          "public.wikipedia.four_pillars_ten_gods",
+          "public.wikipedia.zh_bazi"
+        ]
+      },
+      "dimension_id": "v30.macro.foundation",
+      "label_zh": "基础八字",
+      "scope": "排盘事实、阴阳五行、十神、强弱、格局、用神、地支关系、岁运时间层。",
+      "evidence_domains": [
+        "chart",
+        "element",
+        "ten_god",
+        "branch_relation",
+        "time_context",
+        "useful_god"
+      ],
+      "structure_hooks": [
+        "dynamic_graph.v2",
+        "mechanism.ten_god_visibility_context"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "confirm_missing_time_context"
+      ],
+      "portrait_dimensions": [
+        "context_integrity",
+        "element_context",
+        "ten_god_visibility"
+      ],
+      "training_tags": [
+        "foundation",
+        "chart_fact_boundary",
+        "ten_god_context",
+        "time_boundary"
+      ],
+      "boundaries": [
+        "ChartContext owns chart facts.",
+        "LLM and knowledge packs cannot rewrite pillars, day master, or deterministic chart context."
+      ],
+      "v20_source_hints": [
+        "v20.docs.bazi_knowledge_full_content_zh_v1:L0-L6,L9,L12",
+        "v20.knowledge.loader",
+        "v20.knowledge.directory_seeds"
+      ],
+      "public_source_hints": [
+        "public.wikipedia.four_pillars_ten_gods",
+        "public.wikipedia.zh_bazi"
+      ]
+    },
+    {
+      "asset_id": "v30.macro.wealth",
+      "asset_type": "macro_dimension",
+      "domain": "wealth",
+      "payload": {
+        "dimension_id": "v30.macro.wealth",
+        "label_zh": "财富",
+        "domain": "wealth",
+        "scope": "财星显隐、食伤生财、财库开闭、比劫分夺、承载力、现金流与资产主题。",
+        "evidence_domains": [
+          "ten_god",
+          "element",
+          "branch_relation",
+          "time_context",
+          "rule"
+        ],
+        "structure_hooks": [
+          "dynamic_graph.v2",
+          "knowledge.semantic.output_generate_wealth",
+          "knowledge.semantic.peer_competes_wealth"
+        ],
+        "question_hooks": [
+          "review_current_chart_mainline",
+          "review_useful_god_candidate_paths"
+        ],
+        "portrait_dimensions": [
+          "wealth_channel",
+          "asset_cashflow",
+          "capacity_boundary"
+        ],
+        "training_tags": [
+          "wealth",
+          "output_generate_wealth",
+          "peer_competes_wealth",
+          "cashflow_boundary"
+        ],
+        "boundaries": [
+          "Do not convert wealth-star presence into income, asset, investment, debt, or event predictions.",
+          "Wealth reading must keep source, channel, capacity, competition, and time-layer evidence separate."
+        ],
+        "v20_source_hints": [
+          "v20.knowledge.macro_dimensions:wealth",
+          "v20.knowledge.feature_model:projection.wealth",
+          "v20.knowledge.loader:v20.micro.wealth.zuogong_receive",
+          "v20.knowledge.loader:wealth.asset_cashflow.structure"
+        ],
+        "public_source_hints": []
+      },
+      "dimension_id": "v30.macro.wealth",
+      "label_zh": "财富",
+      "scope": "财星显隐、食伤生财、财库开闭、比劫分夺、承载力、现金流与资产主题。",
+      "evidence_domains": [
+        "ten_god",
+        "element",
+        "branch_relation",
+        "time_context",
+        "rule"
+      ],
+      "structure_hooks": [
+        "dynamic_graph.v2",
+        "knowledge.semantic.output_generate_wealth",
+        "knowledge.semantic.peer_competes_wealth"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "wealth_channel",
+        "asset_cashflow",
+        "capacity_boundary"
+      ],
+      "training_tags": [
+        "wealth",
+        "output_generate_wealth",
+        "peer_competes_wealth",
+        "cashflow_boundary"
+      ],
+      "boundaries": [
+        "Do not convert wealth-star presence into income, asset, investment, debt, or event predictions.",
+        "Wealth reading must keep source, channel, capacity, competition, and time-layer evidence separate."
+      ],
+      "v20_source_hints": [
+        "v20.knowledge.macro_dimensions:wealth",
+        "v20.knowledge.feature_model:projection.wealth",
+        "v20.knowledge.loader:v20.micro.wealth.zuogong_receive",
+        "v20.knowledge.loader:wealth.asset_cashflow.structure"
+      ],
+      "public_source_hints": []
+    },
+    {
+      "asset_id": "v30.macro.career",
+      "asset_type": "macro_dimension",
+      "domain": "career",
+      "payload": {
+        "dimension_id": "v30.macro.career",
+        "label_zh": "事业",
+        "domain": "career",
+        "scope": "官杀规则、印星平台、食伤表达、格局承接、学业考试、创业管理和职业结构。",
+        "evidence_domains": [
+          "ten_god",
+          "element",
+          "branch_relation",
+          "time_context",
+          "rule"
+        ],
+        "structure_hooks": [
+          "dynamic_graph.v2",
+          "knowledge.semantic.output_controls_authority",
+          "knowledge.semantic.authority_generate_resource"
+        ],
+        "question_hooks": [
+          "review_current_chart_mainline",
+          "review_useful_god_candidate_paths"
+        ],
+        "portrait_dimensions": [
+          "career_structure",
+          "authority_pressure",
+          "resource_platform"
+        ],
+        "training_tags": [
+          "career",
+          "authority",
+          "resource",
+          "output_authority_path",
+          "study_exam_boundary"
+        ],
+        "boundaries": [
+          "Do not convert authority/resource/output signals into job rank, exam result, promotion, or business outcome.",
+          "Career reading must keep role pressure, platform support, output conflict, and capacity evidence separate."
+        ],
+        "v20_source_hints": [
+          "v20.knowledge.macro_dimensions:career",
+          "v20.knowledge.feature_model:projection.career",
+          "v20.knowledge.loader:career.authority.zuogong_path",
+          "v20.knowledge.loader:career.study_exam.learning_path",
+          "v20.knowledge.loader:career.startup_management.context"
+        ],
+        "public_source_hints": []
+      },
+      "dimension_id": "v30.macro.career",
+      "label_zh": "事业",
+      "scope": "官杀规则、印星平台、食伤表达、格局承接、学业考试、创业管理和职业结构。",
+      "evidence_domains": [
+        "ten_god",
+        "element",
+        "branch_relation",
+        "time_context",
+        "rule"
+      ],
+      "structure_hooks": [
+        "dynamic_graph.v2",
+        "knowledge.semantic.output_controls_authority",
+        "knowledge.semantic.authority_generate_resource"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "portrait_dimensions": [
+        "career_structure",
+        "authority_pressure",
+        "resource_platform"
+      ],
+      "training_tags": [
+        "career",
+        "authority",
+        "resource",
+        "output_authority_path",
+        "study_exam_boundary"
+      ],
+      "boundaries": [
+        "Do not convert authority/resource/output signals into job rank, exam result, promotion, or business outcome.",
+        "Career reading must keep role pressure, platform support, output conflict, and capacity evidence separate."
+      ],
+      "v20_source_hints": [
+        "v20.knowledge.macro_dimensions:career",
+        "v20.knowledge.feature_model:projection.career",
+        "v20.knowledge.loader:career.authority.zuogong_path",
+        "v20.knowledge.loader:career.study_exam.learning_path",
+        "v20.knowledge.loader:career.startup_management.context"
+      ],
+      "public_source_hints": []
+    },
+    {
+      "asset_id": "v30.macro.relationship",
+      "asset_type": "macro_dimension",
+      "domain": "relationship",
+      "payload": {
+        "dimension_id": "v30.macro.relationship",
+        "label_zh": "关系",
+        "domain": "relationship",
+        "scope": "人际、合作、比劫互动、资源分配、宫位互动、家庭父母与子女家庭主题。",
+        "evidence_domains": [
+          "ten_god",
+          "branch_relation",
+          "time_context",
+          "rule"
+        ],
+        "structure_hooks": [
+          "dynamic_graph.v2",
+          "mechanism.branch_relation_dynamic_review"
+        ],
+        "question_hooks": [
+          "review_current_chart_mainline",
+          "discover_hidden_factor_amplifier"
+        ],
+        "portrait_dimensions": [
+          "social_peer_network",
+          "family_resource_context",
+          "palace_topic_projection"
+        ],
+        "training_tags": [
+          "relationship",
+          "peer_interaction",
+          "family_boundary",
+          "palace_boundary"
+        ],
+        "boundaries": [
+          "Do not infer family privacy, third-party facts, betrayal, litigation, pregnancy, child outcome, or exact timing.",
+          "Relationship reading must keep ten-god interaction, branch relation, palace layer, and time layer separate."
+        ],
+        "v20_source_hints": [
+          "v20.knowledge.macro_dimensions:relationship",
+          "v20.knowledge.loader:relationship.family_parent.resource_context",
+          "v20.knowledge.loader:relationship.children_family.context",
+          "v20.knowledge.loader:relationship.social_peer.network"
+        ],
+        "public_source_hints": []
+      },
+      "dimension_id": "v30.macro.relationship",
+      "label_zh": "关系",
+      "scope": "人际、合作、比劫互动、资源分配、宫位互动、家庭父母与子女家庭主题。",
+      "evidence_domains": [
+        "ten_god",
+        "branch_relation",
+        "time_context",
+        "rule"
+      ],
+      "structure_hooks": [
+        "dynamic_graph.v2",
+        "mechanism.branch_relation_dynamic_review"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "discover_hidden_factor_amplifier"
+      ],
+      "portrait_dimensions": [
+        "social_peer_network",
+        "family_resource_context",
+        "palace_topic_projection"
+      ],
+      "training_tags": [
+        "relationship",
+        "peer_interaction",
+        "family_boundary",
+        "palace_boundary"
+      ],
+      "boundaries": [
+        "Do not infer family privacy, third-party facts, betrayal, litigation, pregnancy, child outcome, or exact timing.",
+        "Relationship reading must keep ten-god interaction, branch relation, palace layer, and time layer separate."
+      ],
+      "v20_source_hints": [
+        "v20.knowledge.macro_dimensions:relationship",
+        "v20.knowledge.loader:relationship.family_parent.resource_context",
+        "v20.knowledge.loader:relationship.children_family.context",
+        "v20.knowledge.loader:relationship.social_peer.network"
+      ],
+      "public_source_hints": []
+    },
+    {
+      "asset_id": "v30.macro.romance",
+      "asset_type": "macro_dimension",
+      "domain": "romance",
+      "payload": {
+        "dimension_id": "v30.macro.romance",
+        "label_zh": "感情",
+        "domain": "romance",
+        "scope": "伴侣星、夫妻宫、日支、合冲引动、亲密关系边界和关系承接。",
+        "evidence_domains": [
+          "ten_god",
+          "branch_relation",
+          "time_context",
+          "rule"
+        ],
+        "structure_hooks": [
+          "dynamic_graph.v2",
+          "mechanism.branch_relation_dynamic_review"
+        ],
+        "question_hooks": [
+          "review_current_chart_mainline",
+          "discover_hidden_factor_amplifier"
+        ],
+        "portrait_dimensions": [
+          "romance_context",
+          "spouse_palace_context",
+          "relationship_sensitivity"
+        ],
+        "training_tags": [
+          "romance",
+          "spouse_palace",
+          "relationship_boundary"
+        ],
+        "boundaries": [
+          "Do not infer spouse facts, relationship outcome, third-party facts, marriage/divorce timing, or private events.",
+          "Romance reading remains a relationship subdomain until dedicated V30 rules are validated."
+        ],
+        "v20_source_hints": [
+          "v20.knowledge.macro_dimensions:romance",
+          "v20.knowledge.feature_model:projection.romance",
+          "v20.knowledge.loader:v20.palace.application.spouse_career_hour_boundary"
+        ],
+        "public_source_hints": []
+      },
+      "dimension_id": "v30.macro.romance",
+      "label_zh": "感情",
+      "scope": "伴侣星、夫妻宫、日支、合冲引动、亲密关系边界和关系承接。",
+      "evidence_domains": [
+        "ten_god",
+        "branch_relation",
+        "time_context",
+        "rule"
+      ],
+      "structure_hooks": [
+        "dynamic_graph.v2",
+        "mechanism.branch_relation_dynamic_review"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "discover_hidden_factor_amplifier"
+      ],
+      "portrait_dimensions": [
+        "romance_context",
+        "spouse_palace_context",
+        "relationship_sensitivity"
+      ],
+      "training_tags": [
+        "romance",
+        "spouse_palace",
+        "relationship_boundary"
+      ],
+      "boundaries": [
+        "Do not infer spouse facts, relationship outcome, third-party facts, marriage/divorce timing, or private events.",
+        "Romance reading remains a relationship subdomain until dedicated V30 rules are validated."
+      ],
+      "v20_source_hints": [
+        "v20.knowledge.macro_dimensions:romance",
+        "v20.knowledge.feature_model:projection.romance",
+        "v20.knowledge.loader:v20.palace.application.spouse_career_hour_boundary"
+      ],
+      "public_source_hints": []
+    },
+    {
+      "asset_id": "v30.macro.health",
+      "asset_type": "macro_dimension",
+      "domain": "health",
+      "payload": {
+        "dimension_id": "v30.macro.health",
+        "label_zh": "健康",
+        "domain": "health",
+        "scope": "五行偏性、寒暖燥湿、压力恢复、作息节律和医疗禁断边界。",
+        "evidence_domains": [
+          "element",
+          "branch_relation",
+          "time_context",
+          "rule"
+        ],
+        "structure_hooks": [
+          "dynamic_graph.v2"
+        ],
+        "question_hooks": [
+          "review_current_chart_mainline",
+          "confirm_missing_time_context"
+        ],
+        "portrait_dimensions": [
+          "health_rhythm_recovery",
+          "element_climate"
+        ],
+        "training_tags": [
+          "health",
+          "rhythm_recovery",
+          "medical_boundary"
+        ],
+        "boundaries": [
+          "Do not provide diagnosis, treatment, disease prediction, accident prediction, or medical advice.",
+          "Health reading only discusses structural tendency, rhythm, pressure, and recovery boundaries."
+        ],
+        "v20_source_hints": [
+          "v20.knowledge.macro_dimensions:health",
+          "v20.knowledge.feature_model:projection.health",
+          "v20.knowledge.loader:portrait.health_rhythm_recovery"
+        ],
+        "public_source_hints": []
+      },
+      "dimension_id": "v30.macro.health",
+      "label_zh": "健康",
+      "scope": "五行偏性、寒暖燥湿、压力恢复、作息节律和医疗禁断边界。",
+      "evidence_domains": [
+        "element",
+        "branch_relation",
+        "time_context",
+        "rule"
+      ],
+      "structure_hooks": [
+        "dynamic_graph.v2"
+      ],
+      "question_hooks": [
+        "review_current_chart_mainline",
+        "confirm_missing_time_context"
+      ],
+      "portrait_dimensions": [
+        "health_rhythm_recovery",
+        "element_climate"
+      ],
+      "training_tags": [
+        "health",
+        "rhythm_recovery",
+        "medical_boundary"
+      ],
+      "boundaries": [
+        "Do not provide diagnosis, treatment, disease prediction, accident prediction, or medical advice.",
+        "Health reading only discusses structural tendency, rhythm, pressure, and recovery boundaries."
+      ],
+      "v20_source_hints": [
+        "v20.knowledge.macro_dimensions:health",
+        "v20.knowledge.feature_model:projection.health",
+        "v20.knowledge.loader:portrait.health_rhythm_recovery"
+      ],
+      "public_source_hints": []
+    },
+    {
+      "asset_id": "v30.macro.hidden_factor",
+      "asset_type": "macro_dimension",
+      "domain": "hidden_factor",
+      "payload": {
+        "dimension_id": "v30.macro.hidden_factor",
+        "label_zh": "隐藏属性与放大因子",
+        "domain": "hidden_factor",
+        "scope": "隐藏属性、隐藏放大因子、特殊年份、重复状态、边界事件和用户反馈校准。",
+        "evidence_domains": [
+          "ten_god",
+          "feedback",
+          "rule",
+          "time_context"
+        ],
+        "structure_hooks": [
+          "mechanism.hidden_factor_dialogue_probe"
+        ],
+        "question_hooks": [
+          "discover_hidden_factor_amplifier",
+          "confirm_missing_time_context"
+        ],
+        "portrait_dimensions": [
+          "latent_pattern",
+          "latent_amplifier"
+        ],
+        "training_tags": [
+          "hidden_factor",
+          "feedback_calibration",
+          "special_year_boundary"
+        ],
+        "boundaries": [
+          "Hidden factor cannot be calculated into fact without dialogue feedback.",
+          "Amplifier candidates require special-year and repeated-state evidence, and denial/conflict states must remain traceable."
+        ],
+        "v20_source_hints": [
+          "v20.interaction.latent_event_calibration",
+          "v20.knowledge.loader:hidden factor and latent event records"
+        ],
+        "public_source_hints": []
+      },
+      "dimension_id": "v30.macro.hidden_factor",
+      "label_zh": "隐藏属性与放大因子",
+      "scope": "隐藏属性、隐藏放大因子、特殊年份、重复状态、边界事件和用户反馈校准。",
+      "evidence_domains": [
+        "ten_god",
+        "feedback",
+        "rule",
+        "time_context"
+      ],
+      "structure_hooks": [
+        "mechanism.hidden_factor_dialogue_probe"
+      ],
+      "question_hooks": [
+        "discover_hidden_factor_amplifier",
+        "confirm_missing_time_context"
+      ],
+      "portrait_dimensions": [
+        "latent_pattern",
+        "latent_amplifier"
+      ],
+      "training_tags": [
+        "hidden_factor",
+        "feedback_calibration",
+        "special_year_boundary"
+      ],
+      "boundaries": [
+        "Hidden factor cannot be calculated into fact without dialogue feedback.",
+        "Amplifier candidates require special-year and repeated-state evidence, and denial/conflict states must remain traceable."
+      ],
+      "v20_source_hints": [
+        "v20.interaction.latent_event_calibration",
+        "v20.knowledge.loader:hidden factor and latent event records"
+      ],
+      "public_source_hints": []
+    }
+  ],
+  "runtime_observation": {
+    "reading_id": "m3-core-spine-snapshot",
+    "trace_id": "m3-core-spine-snapshot:trace:smoke",
+    "feature_evidence_count": 33,
+    "rule_evidence_count": 18,
+    "krp_library_summary": {
+      "unit_count": 68,
+      "pack_ids": [
+        "v30.krp.pack.core_runtime"
+      ],
+      "pack_versions": [
+        "2026-05-21"
+      ],
+      "by_type": {
+        "knowledge": 16,
+        "portrait": 5,
+        "rule": 47
+      },
+      "by_domain": {
+        "branch_relation": 4,
+        "career": 3,
+        "chart": 3,
+        "domain_rule": 3,
+        "element": 5,
+        "foundation": 3,
+        "health": 4,
+        "hidden_factor": 2,
+        "relationship": 5,
+        "romance": 3,
+        "rule_counterevidence": 3,
+        "structure_dynamic": 7,
+        "structure_pattern": 4,
+        "ten_god": 8,
+        "time_context": 2,
+        "useful_god": 5,
+        "wealth": 4
+      },
+      "boundary_count": 68,
+      "portrait_tags": [
+        "authority_pressure_context",
+        "bingyao_remedy_candidate",
+        "branch_alignment_family",
+        "branch_arbitration_boundary",
+        "branch_conflict_family",
+        "branch_relation_dynamic_review",
+        "candidate_path_review",
+        "career_authority_pressure_candidate",
+        "career_resource_resolution_candidate",
+        "career_rule_candidate",
+        "chart_context_bound",
+        "chart_read_only_boundary",
+        "cross_domain_bridge_requires_evidence",
+        "day_master_element_context",
+        "domain_outcome_language_block",
+        "domain_subfamily_evidence_required",
+        "dynamic_path_context",
+        "element_balance_not_verdict",
+        "element_distribution_context",
+        "element_flow_transform_review",
+        "explicit_time_layer_required",
+        "geju_candidate_review",
+        "health_conflict_pressure_candidate",
+        "health_excess_review_candidate",
+        "health_rule_candidate",
+        "health_thin_review_candidate",
+        "hidden_factor_calibration",
+        "hidden_factor_dialogue_required",
+        "hidden_stem_hypothesis",
+        "m1_m2_m3_chain",
+        "module_boundary_trace",
+        "month_command_pattern_gate",
+        "original_rule_trace_required",
+        "output_expression_context",
+        "palace_position_boundary",
+        "path_resolution_candidate",
+        "pattern_rescue_counterforce_review",
+        "policy_override_requires_trace",
+        "reading_requires_chart_basis",
+        "relationship_alignment_candidate",
+        "relationship_conflict_candidate",
+        "relationship_marker_candidate",
+        "relationship_rule_candidate",
+        "resource_support_context",
+        "romance_conflict_alignment_review",
+        "romance_marker_review",
+        "romance_not_private_fact",
+        "seasonal_state_counterforce",
+        "seasonal_strength_review",
+        "self_peer_context",
+        "silent_override_blocked",
+        "ten_god_context_marker",
+        "ten_god_full_role_set",
+        "tiaohou_candidate_path",
+        "time_context_missing",
+        "tongguan_output_wealth_candidate",
+        "tongguan_resource_candidate",
+        "training_read_only_boundary",
+        "useful_god_domain_candidate",
+        "useful_god_family_candidate",
+        "wang_xiang_state_review",
+        "wealth_authority_bridge_candidate",
+        "wealth_competition_candidate",
+        "wealth_marker_context",
+        "wealth_output_generation_candidate",
+        "wealth_rule_candidate",
+        "zhihua_output_authority_candidate",
+        "zhihua_wealth_authority_resource_candidate"
+      ],
+      "portrait_dimensions": [
+        "authority_pressure",
+        "bingyao_path_review",
+        "branch_alignment",
+        "branch_conflict",
+        "branch_relation_arbitration",
+        "calculation_basis_trace",
+        "calculation_foundation",
+        "candidate_path",
+        "career_authority_path",
+        "career_authority_pressure_path",
+        "career_resource_resolution_path",
+        "context_integrity",
+        "core_calculation_chain",
+        "counterevidence_trace",
+        "cross_domain_bridge_review",
+        "domain_outcome_language_boundary",
+        "domain_rule_subfamily_gate",
+        "element_balance_review",
+        "element_context",
+        "element_flow_transform",
+        "expression_pattern",
+        "health_conflict_pressure_review",
+        "health_element_excess_review",
+        "health_element_review",
+        "health_element_thin_review",
+        "latent_amplifier",
+        "latent_pattern",
+        "module_handoff_trace",
+        "month_command_pattern_review",
+        "palace_position_layer",
+        "path_resolution",
+        "pattern_candidate",
+        "pattern_success_failure_rescue",
+        "policy_override_boundary",
+        "relationship_alignment_path",
+        "relationship_conflict_path",
+        "relationship_marker_path",
+        "relationship_relation_path",
+        "resource_support",
+        "romance_conflict_alignment",
+        "romance_marker_context",
+        "romance_private_fact_boundary",
+        "seasonal_counterforce_review",
+        "seasonal_element_state",
+        "self_peer_competition",
+        "silent_override_boundary",
+        "strength_review",
+        "structure_dynamic",
+        "ten_god_role_set",
+        "ten_god_visibility",
+        "tiaohou_path_review",
+        "time_context",
+        "time_layer_boundary",
+        "tongguan_output_wealth_bridge",
+        "tongguan_resource_mediator",
+        "training_boundary",
+        "useful_god_candidate_family",
+        "useful_god_domain_path",
+        "wealth_authority_bridge_path",
+        "wealth_competition_path",
+        "wealth_output_generation_path",
+        "wealth_path_review",
+        "wealth_pattern",
+        "zhihua_output_authority",
+        "zhihua_wealth_authority_resource"
+      ],
+      "question_hooks": [
+        "confirm_missing_time_context",
+        "discover_hidden_factor_amplifier",
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "mechanism_hooks": [
+        "dynamic_graph.competition_suppression",
+        "dynamic_graph.conflict_family",
+        "dynamic_graph.counterevidence",
+        "dynamic_graph.domain_path",
+        "dynamic_graph.foundation_boundary",
+        "dynamic_graph.path_resolution",
+        "dynamic_graph.time_layer_boundary",
+        "dynamic_graph.tongguan_zhihua",
+        "dynamic_graph.v2",
+        "mechanism.branch_relation_dynamic_review",
+        "mechanism.hidden_factor_dialogue_probe",
+        "mechanism.ten_god_visibility_context",
+        "mechanism.useful_god_candidate_gate"
+      ],
+      "training_tags": [
+        "alignment_family",
+        "alignment_path",
+        "anti_outcome_verdict",
+        "anti_single_factor",
+        "anti_timing_drift",
+        "arbitration",
+        "authority",
+        "authority_boundary",
+        "authority_bridge",
+        "authority_path",
+        "authority_pressure",
+        "bingyao",
+        "branch_arbitration",
+        "branch_relation",
+        "candidate_family",
+        "candidate_gate",
+        "candidate_review",
+        "career",
+        "chart_basis",
+        "chart_boundary",
+        "competition_path",
+        "conflict_family",
+        "conflict_path",
+        "conflict_pressure",
+        "core_chain",
+        "counterevidence",
+        "counterforce_review",
+        "cross_domain_bridge",
+        "dialogue_required",
+        "domain_rule",
+        "dynamic_path",
+        "dynamic_review",
+        "element_balance",
+        "element_context",
+        "element_excess",
+        "element_thin",
+        "fact_boundary",
+        "feedback_calibration",
+        "flow_transform",
+        "foundation",
+        "geju_boundary",
+        "health",
+        "hidden_factor",
+        "llm_no_mutation",
+        "m3_g2",
+        "marker_context",
+        "marker_path",
+        "module_handoff",
+        "month_command",
+        "no_fact_mutation",
+        "no_personality_verdict",
+        "outcome_language_block",
+        "output",
+        "output_boundary",
+        "output_generation",
+        "palace",
+        "path_resolution",
+        "path_scoring",
+        "pattern_boundary",
+        "pattern_candidate",
+        "policy_boundary",
+        "privacy_boundary",
+        "relationship",
+        "resource",
+        "resource_resolution",
+        "role_set",
+        "romance",
+        "safety_boundary",
+        "seasonal_context",
+        "seasonal_state",
+        "self_peer",
+        "silent_override_block",
+        "source_backed",
+        "strength_boundary",
+        "strength_review",
+        "structure_dynamic",
+        "structure_pattern",
+        "subfamily_gate",
+        "success_failure_rescue",
+        "ten_god",
+        "ten_god_context",
+        "ten_god_family",
+        "tiaohou",
+        "time_boundary",
+        "time_context",
+        "time_layer_boundary",
+        "tongguan",
+        "trace_required",
+        "training_boundary",
+        "useful_god_boundary",
+        "wealth",
+        "wealth_boundary",
+        "zhihua"
+      ],
+      "source_family_ids": [
+        "v30.source.di_tian_sui_flow_mechanism",
+        "v30.source.qiong_tong_bao_jian_climate_review",
+        "v30.source.san_ming_tong_hui_system_catalog",
+        "v30.source.shen_feng_tong_kao_disease_medicine",
+        "v30.source.synthetic_runtime_baseline",
+        "v30.source.yuan_hai_zi_ping_pattern_catalog",
+        "v30.source.zi_ping_pattern_month_command"
+      ],
+      "source_family_count": 7,
+      "reference_asset_ids": [
+        "v30.m3.reference.v20_expanded_knowledge_units",
+        "v30.m3.reference.v20_structure_dynamics_graph_v2"
+      ],
+      "reference_asset_count": 2
+    },
+    "macro_pack_summary": {
+      "pack_id": "v30.knowledge.pack.core_macro_zh_v1",
+      "pack_version": "2026-05-21",
+      "taxonomy_version": "v30.knowledge.multidimensional_taxonomy.20260521",
+      "item_count": 7,
+      "active_item_count": 7,
+      "domains": [
+        "career",
+        "foundation",
+        "health",
+        "hidden_factor",
+        "relationship",
+        "romance",
+        "wealth"
+      ],
+      "active_domains": [
+        "career",
+        "foundation",
+        "health",
+        "hidden_factor",
+        "relationship",
+        "romance",
+        "wealth"
+      ],
+      "question_hooks": [
+        "confirm_missing_time_context",
+        "discover_hidden_factor_amplifier",
+        "review_current_chart_mainline",
+        "review_useful_god_candidate_paths"
+      ],
+      "structure_hooks": [
+        "dynamic_graph.v2",
+        "knowledge.semantic.authority_generate_resource",
+        "knowledge.semantic.output_controls_authority",
+        "knowledge.semantic.output_generate_wealth",
+        "knowledge.semantic.peer_competes_wealth",
+        "mechanism.branch_relation_dynamic_review",
+        "mechanism.hidden_factor_dialogue_probe",
+        "mechanism.ten_god_visibility_context"
+      ],
+      "portrait_dimensions": [
+        "asset_cashflow",
+        "authority_pressure",
+        "capacity_boundary",
+        "career_structure",
+        "context_integrity",
+        "element_climate",
+        "element_context",
+        "family_resource_context",
+        "health_rhythm_recovery",
+        "latent_amplifier",
+        "latent_pattern",
+        "palace_topic_projection",
+        "relationship_sensitivity",
+        "resource_platform",
+        "romance_context",
+        "social_peer_network",
+        "spouse_palace_context",
+        "ten_god_visibility",
+        "wealth_channel"
+      ],
+      "training_tags": [
+        "authority",
+        "career",
+        "cashflow_boundary",
+        "chart_fact_boundary",
+        "family_boundary",
+        "feedback_calibration",
+        "foundation",
+        "health",
+        "hidden_factor",
+        "medical_boundary",
+        "output_authority_path",
+        "output_generate_wealth",
+        "palace_boundary",
+        "peer_competes_wealth",
+        "peer_interaction",
+        "relationship",
+        "relationship_boundary",
+        "resource",
+        "rhythm_recovery",
+        "romance",
+        "special_year_boundary",
+        "spouse_palace",
+        "study_exam_boundary",
+        "ten_god_context",
+        "time_boundary",
+        "wealth"
+      ],
+      "boundary_count": 14,
+      "runtime_rule": "Runtime consumes this V30 pack only; V20 assets are source hints, not imports."
+    },
+    "macro_portrait_summary": {
+      "version": "v30.portrait.macro_projection.v1",
+      "projection_count": 7,
+      "domains": [
+        "career",
+        "foundation",
+        "health",
+        "hidden_factor",
+        "relationship",
+        "romance",
+        "wealth"
+      ],
+      "portrait_dimensions": [
+        "asset_cashflow",
+        "authority_pressure",
+        "capacity_boundary",
+        "career_structure",
+        "context_integrity",
+        "element_climate",
+        "element_context",
+        "family_resource_context",
+        "health_rhythm_recovery",
+        "latent_amplifier",
+        "latent_pattern",
+        "palace_topic_projection",
+        "relationship_sensitivity",
+        "resource_platform",
+        "romance_context",
+        "social_peer_network",
+        "spouse_palace_context",
+        "ten_god_visibility",
+        "wealth_channel"
+      ],
+      "boundary_count": 14,
+      "source_policy": "portrait_is_projection_not_fact_source"
+    },
+    "structure_path_scores": {
+      "evidence_coverage": 1.0,
+      "confidence": 0.805,
+      "knowledge_signal_count": 1.0,
+      "rule_signal_count": 2.0,
+      "portrait_signal_count": 1.0,
+      "rule_evidence_count": 18.0,
+      "rule_countered_count": 0.0,
+      "rule_blocked_count": 6.0,
+      "ten_god_energy_ready": 1.0,
+      "ten_god_energy_dominant_count": 2.0,
+      "ten_god_energy_high_volatility_count": 0.0,
+      "ten_god_energy_low_stability_count": 8.0,
+      "model_signal_summary_ready": 1.0,
+      "model_signal_energy_band_count": 3.0,
+      "model_signal_volatility_alert_count": 0.0,
+      "model_signal_stability_alert_count": 8.0,
+      "model_signal_structure_path_adjustment": 0.0,
+      "structure_policy_model_signal_fusion": 1.0,
+      "top_dynamic_path_model_signal_adjusted_score": 0.717,
+      "mechanism_path_count": 4.0,
+      "top_mechanism_score": 0.85,
+      "dynamic_graph_node_count": 8.0,
+      "dynamic_graph_edge_count": 44.0,
+      "dynamic_path_count": 12.0,
+      "top_dynamic_path_score": 0.717,
+      "dynamic_competing_path_count": 7.0,
+      "dynamic_suppressed_path_count": 7.0,
+      "dynamic_blocked_path_count": 0.0,
+      "dynamic_countered_path_count": 0.0,
+      "dynamic_conflict_path_count": 0.0,
+      "dynamic_conflict_family_count": 1.0,
+      "dynamic_path_resolution_family_count": 8.0,
+      "dynamic_branch_conflict_edge_count": 7.0,
+      "dynamic_branch_alignment_edge_count": 7.0,
+      "top_dynamic_path_suppression": 0.0,
+      "strength_pattern_review_count": 2.0,
+      "dynamic_wealth_path_count": 7.0,
+      "dynamic_wealth_competition_path_count": 1.0,
+      "dynamic_wealth_output_generation_path_count": 1.0,
+      "dynamic_wealth_authority_bridge_path_count": 1.0,
+      "dynamic_career_path_count": 12.0,
+      "dynamic_career_authority_pressure_path_count": 1.0,
+      "dynamic_career_resource_resolution_path_count": 1.0,
+      "dynamic_relationship_path_count": 10.0,
+      "dynamic_relationship_conflict_path_count": 1.0,
+      "dynamic_relationship_alignment_path_count": 1.0,
+      "dynamic_relationship_marker_path_count": 1.0,
+      "dynamic_health_review_path_count": 12.0,
+      "dynamic_health_element_excess_review_count": 1.0,
+      "dynamic_health_element_thin_review_count": 0.0,
+      "dynamic_health_conflict_pressure_review_count": 1.0,
+      "dynamic_useful_god_candidate_path_count": 12.0,
+      "dynamic_useful_god_ranked_candidate_count": 1.0,
+      "dynamic_tongguan_path_count": 8.0,
+      "dynamic_tongguan_resource_mediator_path_count": 1.0,
+      "dynamic_tongguan_output_wealth_bridge_path_count": 1.0,
+      "dynamic_zhihua_path_count": 7.0,
+      "dynamic_zhihua_output_authority_path_count": 1.0,
+      "dynamic_zhihua_wealth_authority_resource_path_count": 1.0,
+      "structure_policy_weighted": 1.0
+    },
+    "boundary": "m3_runtime_observation_does_not_mutate_chart_facts"
+  },
+  "synthetic_validation": {
+    "suite_id": "v30.synthetic.m3_core_spine",
+    "passed": true,
+    "case_count": 8,
+    "passed_count": 8,
+    "failed_count": 0
+  },
+  "validation_518k": {
+    "included": false,
+    "reason": "not_requested"
+  },
+  "storage_boundary": "m3_snapshot_persists_support_data_without_promoting_policy_or_mutating_chart_facts",
+  "source_governed_calibration": {
+    "version": "v30.m3_source_governed_calibration.v1",
+    "created_at": "2026-06-28T12:49:51.435842+00:00",
+    "status": "ready",
+    "tag_groups": {
+      "real_case_calibration_tags": [
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.time_context_weight_001",
+          "case_id": "v30.synthetic.gradient.time_context_weight_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "requires_dialogue",
+              1
+            ],
+            [
+              "requires_review",
+              6
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        },
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.hidden_factor_weight_001",
+          "case_id": "v30.synthetic.gradient.hidden_factor_weight_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "requires_dialogue",
+              1
+            ],
+            [
+              "requires_review",
+              6
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        },
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.structure_mechanism_threshold_001",
+          "case_id": "v30.synthetic.gradient.structure_mechanism_threshold_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "requires_dialogue",
+              1
+            ],
+            [
+              "requires_review",
+              6
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        },
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.krp_library_expansion_001",
+          "case_id": "v30.synthetic.gradient.krp_library_expansion_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "requires_dialogue",
+              1
+            ],
+            [
+              "requires_review",
+              6
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        },
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.rule_policy_hidden_factor_001",
+          "case_id": "v30.synthetic.gradient.rule_policy_hidden_factor_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "requires_dialogue",
+              1
+            ],
+            [
+              "requires_review",
+              6
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        },
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.hidden_factor_feedback_counter_001",
+          "case_id": "v30.synthetic.gradient.hidden_factor_feedback_counter_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "countered",
+              1
+            ],
+            [
+              "requires_review",
+              6
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        },
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.useful_god_feedback_counter_001",
+          "case_id": "v30.synthetic.gradient.useful_god_feedback_counter_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "countered",
+              1
+            ],
+            [
+              "requires_dialogue",
+              1
+            ],
+            [
+              "requires_review",
+              5
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        },
+        {
+          "tag_id": "m3.real_case_calibration_tags.v30.synthetic.gradient.branch_relation_feedback_counter_001",
+          "case_id": "v30.synthetic.gradient.branch_relation_feedback_counter_001",
+          "case_passed": true,
+          "mapped_krp_domains": [
+            "branch_relation",
+            "career",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "health",
+            "hidden_factor",
+            "relationship",
+            "romance",
+            "rule_counterevidence",
+            "structure_dynamic",
+            "structure_pattern",
+            "ten_god",
+            "time_context",
+            "useful_god",
+            "wealth"
+          ],
+          "mapped_rule_states": [
+            [
+              "blocked",
+              3
+            ],
+            [
+              "countered",
+              1
+            ],
+            [
+              "requires_dialogue",
+              1
+            ],
+            [
+              "requires_review",
+              5
+            ]
+          ],
+          "dynamic_path_count": 0,
+          "portrait_domain_count": 7,
+          "calibration_state": "stable_observation",
+          "target_modules": [
+            "M3"
+          ],
+          "boundary": "real_case_calibration_tag_routes_m3_review_without_changing_chart_facts"
+        }
+      ],
+      "domain_rule_depth_expansion": [
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.branch_relation",
+          "domain": "branch_relation",
+          "krp_unit_count": 4,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 0,
+          "depth_score": 0.95,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.career",
+          "domain": "career",
+          "krp_unit_count": 3,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 1,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.chart",
+          "domain": "chart",
+          "krp_unit_count": 3,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 0,
+          "depth_score": 0.8,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.domain_rule",
+          "domain": "domain_rule",
+          "krp_unit_count": 3,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 0,
+          "depth_score": 0.8,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.element",
+          "domain": "element",
+          "krp_unit_count": 5,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 0,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.foundation",
+          "domain": "foundation",
+          "krp_unit_count": 3,
+          "rule_spec_count": 1,
+          "portrait_asset_count": 1,
+          "depth_score": 0.825,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.health",
+          "domain": "health",
+          "krp_unit_count": 4,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 1,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.hidden_factor",
+          "domain": "hidden_factor",
+          "krp_unit_count": 3,
+          "rule_spec_count": 1,
+          "portrait_asset_count": 1,
+          "depth_score": 0.825,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.relationship",
+          "domain": "relationship",
+          "krp_unit_count": 5,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 1,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.romance",
+          "domain": "romance",
+          "krp_unit_count": 3,
+          "rule_spec_count": 1,
+          "portrait_asset_count": 1,
+          "depth_score": 0.825,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.rule_counterevidence",
+          "domain": "rule_counterevidence",
+          "krp_unit_count": 4,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 0,
+          "depth_score": 0.95,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.structure_dynamic",
+          "domain": "structure_dynamic",
+          "krp_unit_count": 7,
+          "rule_spec_count": 0,
+          "portrait_asset_count": 0,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.structure_pattern",
+          "domain": "structure_pattern",
+          "krp_unit_count": 4,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 0,
+          "depth_score": 0.95,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.ten_god",
+          "domain": "ten_god",
+          "krp_unit_count": 8,
+          "rule_spec_count": 0,
+          "portrait_asset_count": 0,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.time_context",
+          "domain": "time_context",
+          "krp_unit_count": 3,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 0,
+          "depth_score": 0.8,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.useful_god",
+          "domain": "useful_god",
+          "krp_unit_count": 6,
+          "rule_spec_count": 3,
+          "portrait_asset_count": 0,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        },
+        {
+          "tag_id": "m3.domain_rule_depth_expansion.wealth",
+          "domain": "wealth",
+          "krp_unit_count": 4,
+          "rule_spec_count": 2,
+          "portrait_asset_count": 1,
+          "depth_score": 1.0,
+          "depth_state": "calibrated_depth",
+          "recommended_action": "watch_with_real_case_replay",
+          "boundary": "domain_depth_tag_expands_rule_evidence_not_fixed_life_outcome_claims"
+        }
+      ],
+      "training_synthetic_distribution": [
+        {
+          "tag_id": "m3.training_synthetic_distribution.m3_core_spine",
+          "suite_id": "v30.synthetic.m3_core_spine",
+          "case_count": 8,
+          "passed_count": 8,
+          "failed_count": 0,
+          "growth_candidate_domains": [],
+          "training_candidate_scope": [
+            "source_family_coverage",
+            "rule_state_distribution",
+            "dynamic_path_distribution",
+            "portrait_density_distribution"
+          ],
+          "chart_fact_mutation_allowed": false,
+          "boundary": "training_distribution_tags_tune_m3_coverage_not_chart_facts"
+        }
+      ],
+      "source_extraction_queue": [
+        {
+          "tag_id": "m3.source_extraction_queue.v30.source.zi_ping_pattern_month_command",
+          "source_family_id": "v30.source.zi_ping_pattern_month_command",
+          "already_referenced": true,
+          "target_domains": [
+            "branch_relation",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "hidden_factor",
+            "romance",
+            "rule_counterevidence",
+            "structure_pattern",
+            "time_context",
+            "useful_god"
+          ],
+          "queue_state": "continue_extracting",
+          "runtime_import_allowed": false,
+          "boundary": "source_queue_allows_source_governed_extraction_not_v20_runtime_import"
+        },
+        {
+          "tag_id": "m3.source_extraction_queue.v30.source.san_ming_tong_hui_system_catalog",
+          "source_family_id": "v30.source.san_ming_tong_hui_system_catalog",
+          "already_referenced": true,
+          "target_domains": [
+            "branch_relation",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "hidden_factor",
+            "romance",
+            "rule_counterevidence",
+            "structure_pattern",
+            "time_context",
+            "useful_god"
+          ],
+          "queue_state": "continue_extracting",
+          "runtime_import_allowed": false,
+          "boundary": "source_queue_allows_source_governed_extraction_not_v20_runtime_import"
+        },
+        {
+          "tag_id": "m3.source_extraction_queue.v30.source.yuan_hai_zi_ping_pattern_catalog",
+          "source_family_id": "v30.source.yuan_hai_zi_ping_pattern_catalog",
+          "already_referenced": true,
+          "target_domains": [
+            "branch_relation",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "hidden_factor",
+            "romance",
+            "rule_counterevidence",
+            "structure_pattern",
+            "time_context",
+            "useful_god"
+          ],
+          "queue_state": "continue_extracting",
+          "runtime_import_allowed": false,
+          "boundary": "source_queue_allows_source_governed_extraction_not_v20_runtime_import"
+        },
+        {
+          "tag_id": "m3.source_extraction_queue.v30.source.di_tian_sui_flow_mechanism",
+          "source_family_id": "v30.source.di_tian_sui_flow_mechanism",
+          "already_referenced": true,
+          "target_domains": [
+            "branch_relation",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "hidden_factor",
+            "romance",
+            "rule_counterevidence",
+            "structure_pattern",
+            "time_context",
+            "useful_god"
+          ],
+          "queue_state": "continue_extracting",
+          "runtime_import_allowed": false,
+          "boundary": "source_queue_allows_source_governed_extraction_not_v20_runtime_import"
+        },
+        {
+          "tag_id": "m3.source_extraction_queue.v30.source.qiong_tong_bao_jian_climate_review",
+          "source_family_id": "v30.source.qiong_tong_bao_jian_climate_review",
+          "already_referenced": true,
+          "target_domains": [
+            "branch_relation",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "hidden_factor",
+            "romance",
+            "rule_counterevidence",
+            "structure_pattern",
+            "time_context",
+            "useful_god"
+          ],
+          "queue_state": "continue_extracting",
+          "runtime_import_allowed": false,
+          "boundary": "source_queue_allows_source_governed_extraction_not_v20_runtime_import"
+        },
+        {
+          "tag_id": "m3.source_extraction_queue.v30.source.shen_feng_tong_kao_disease_medicine",
+          "source_family_id": "v30.source.shen_feng_tong_kao_disease_medicine",
+          "already_referenced": true,
+          "target_domains": [
+            "branch_relation",
+            "chart",
+            "domain_rule",
+            "element",
+            "foundation",
+            "hidden_factor",
+            "romance",
+            "rule_counterevidence",
+            "structure_pattern",
+            "time_context",
+            "useful_god"
+          ],
+          "queue_state": "continue_extracting",
+          "runtime_import_allowed": false,
+          "boundary": "source_queue_allows_source_governed_extraction_not_v20_runtime_import"
+        }
+      ],
+      "distribution_518k_summary": {
+        "tag_id": "m3.518k_distribution_summary.not_requested",
+        "included": false,
+        "reason": "not_requested",
+        "boundary": "518k_distribution_summary_is_optional_for_routine_m3_g1_validation"
+      }
+    },
+    "coverage": {
+      "tag_group_count": 5,
+      "real_case_tag_count": 8,
+      "domain_depth_tag_count": 17,
+      "training_tag_count": 1,
+      "source_queue_count": 6,
+      "has_518k_distribution": false
+    },
+    "decision_boundary": {
+      "chart_fact_mutation_allowed": false,
+      "policy_pointer_promotion_allowed": false,
+      "fixed_bazi_verdict_allowed": false,
+      "training_scope": [
+        "source_coverage_weights",
+        "rule_path_priority",
+        "portrait_density_review",
+        "dynamic_structure_path_review",
+        "question_strategy"
+      ],
+      "forbidden_training_scope": [
+        "four_pillars",
+        "luck_cycle_facts",
+        "flow_year_facts",
+        "flow_month_facts",
+        "fixed_useful_god_verdict",
+        "fixed_structure_verdict"
+      ]
+    },
+    "boundary": "m3_g1_tags_are_observational_calibration_evidence_not_chart_facts_or_pointer_promotion"
+  }
+}

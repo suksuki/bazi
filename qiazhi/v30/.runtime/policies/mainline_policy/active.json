@@ -1,0 +1,18 @@
+{
+  "version": "v30.runtime_pointer.v1",
+  "family": "mainline_policy",
+  "active_artifact_id": "mainline_policy.orchestrator-1782658364861.mainline_policy",
+  "active_artifact_version": "v30.policy_artifact.v1",
+  "previous_artifact_id": "mainline_policy.orchestrator-1782658362432.mainline_policy",
+  "validation_run_id": "v30.synthetic.promotion.mainline_policy.all+v30.518k.sample.20260628145622897911",
+  "promotion_reason": "synthetic_all_and_518k_sample_passed",
+  "env": "local",
+  "status": "active",
+  "updated_at": "2026-06-28T14:56:28.365124Z",
+  "updated_by": "v30.policy.promotion",
+  "rollback_pointer": {
+    "family": "mainline_policy",
+    "active_artifact_id": "mainline_policy.orchestrator-1782658362432.mainline_policy",
+    "active_artifact_version": "v30.policy_artifact.v1"
+  }
+}

@@ -1,0 +1,495 @@
+{
+  "comparison_id": "orchestrator-1782658365167.question_policy:question-policy-comparison",
+  "version": "v30.question_policy_comparison.v1",
+  "reading_id": "orchestrator-1782658365167.question_policy:question-policy-comparison",
+  "trace_id": "orchestrator-1782658365167.question_policy:question-policy-comparison:trace:smoke",
+  "candidate_id": "orchestrator-1782658365167.question_policy",
+  "active_question_policy_id": "question_policy.orchestrator-1782657898571.question_policy",
+  "candidate_question_policy_id": "question_policy.orchestrator-1782658365167.question_policy",
+  "active_top_question_id": "q_v30_time_context_boundary",
+  "candidate_top_question_id": "q_v30_time_context_boundary",
+  "top_question_changed": false,
+  "changed_rank_count": 4,
+  "weighted_delta_count": 0,
+  "max_score_delta": 0.0,
+  "max_policy_weight_delta": 0.0,
+  "decision_deltas": [
+    {
+      "question_id": "q_v30_time_context_boundary",
+      "active_rank": 1,
+      "candidate_rank": 1,
+      "rank_delta": 0,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.077,
+      "candidate_policy_weight": 1.077,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "missing_requirement_blocks_downstream_claims",
+        "context_completion_internal_gate",
+        "mainline_quality_gate:needs_time_context",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:foundation,health,hidden_factor",
+        "practical_reading_gap:timing",
+        "central_brain_unknown_context:time_layer_boundary",
+        "central_brain_feedback_slot:time_context_feedback",
+        "central_brain_question_strategy:context_first_question_strategy",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy",
+        "question_policy_weight:1.077"
+      ],
+      "candidate_reasons": [
+        "missing_requirement_blocks_downstream_claims",
+        "context_completion_internal_gate",
+        "mainline_quality_gate:needs_time_context",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:foundation,health,hidden_factor",
+        "practical_reading_gap:timing",
+        "central_brain_unknown_context:time_layer_boundary",
+        "central_brain_feedback_slot:time_context_feedback",
+        "central_brain_question_strategy:context_first_question_strategy",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy",
+        "question_policy_weight:1.077"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_relationship_pattern",
+      "active_rank": 2,
+      "candidate_rank": 2,
+      "rank_delta": 0,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "model_signal_question_focus:self->relationship",
+        "model_signal_question_focus:self->relationship",
+        "model_signal_question_focus:resource->relationship",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "model_signal_question_focus:self->relationship",
+        "model_signal_question_focus:self->relationship",
+        "model_signal_question_focus:resource->relationship",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_career_direction",
+      "active_rank": 3,
+      "candidate_rank": 3,
+      "rank_delta": 0,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "model_signal_question_focus:self->career",
+        "model_signal_question_focus:self->career",
+        "model_signal_question_focus:resource->career",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "model_signal_question_focus:self->career",
+        "model_signal_question_focus:self->career",
+        "model_signal_question_focus:resource->career",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_decision_blindspot",
+      "active_rank": 4,
+      "candidate_rank": 4,
+      "rank_delta": 0,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "model_signal_question_focus:self->decision",
+        "model_signal_question_focus:self->decision",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "model_signal_question_focus:self->decision",
+        "model_signal_question_focus:self->decision",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_timing_pressure",
+      "active_rank": 6,
+      "candidate_rank": 5,
+      "rank_delta": 1,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_wealth_tendency",
+      "active_rank": 7,
+      "candidate_rank": 6,
+      "rank_delta": 1,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_useful_god_candidate_review",
+      "active_rank": 8,
+      "candidate_rank": 7,
+      "rank_delta": 1,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.046,
+      "candidate_policy_weight": 1.046,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "mainline_quality_gate:needs_time_context",
+        "candidate_path_requires_evidence_review",
+        "rule_signal_blocks_fixed_useful_god",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,wealth",
+        "next_question_uncertainty:useful_god_candidate_needs_counterevidence",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy",
+        "question_policy_weight:1.046"
+      ],
+      "candidate_reasons": [
+        "mainline_quality_gate:needs_time_context",
+        "candidate_path_requires_evidence_review",
+        "rule_signal_blocks_fixed_useful_god",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,wealth",
+        "next_question_uncertainty:useful_god_candidate_needs_counterevidence",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy",
+        "question_policy_weight:1.046"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_hidden_factor_boundary_discovery",
+      "active_rank": 5,
+      "candidate_rank": 8,
+      "rank_delta": -3,
+      "active_score": 1.0,
+      "candidate_score": 1.0,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.081,
+      "candidate_policy_weight": 1.081,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "hidden_factor_requires_dialogue_discovery",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "portrait_signal_requires_feedback_calibration",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:hidden_factor,relationship,romance",
+        "central_brain_unknown_context:hidden_factor_confirmation",
+        "central_brain_feedback_slot:hidden_factor_boundary_feedback",
+        "central_brain_question_strategy:context_first_question_strategy",
+        "model_signal_question_focus:resource->hidden_factor",
+        "latent_question_strategy:ask_now:0.66",
+        "latent_question_target_domain:career",
+        "context_completion_before_latent_calibration",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy",
+        "question_policy_weight:1.081"
+      ],
+      "candidate_reasons": [
+        "hidden_factor_requires_dialogue_discovery",
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "portrait_signal_requires_feedback_calibration",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:hidden_factor,relationship,romance",
+        "central_brain_unknown_context:hidden_factor_confirmation",
+        "central_brain_feedback_slot:hidden_factor_boundary_feedback",
+        "central_brain_question_strategy:context_first_question_strategy",
+        "model_signal_question_focus:resource->hidden_factor",
+        "context_completion_before_latent_calibration",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy",
+        "question_policy_weight:1.081"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "latent_question_strategy:ask_now:0.66",
+        "latent_question_target_domain:career",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_mainline_review",
+      "active_rank": 9,
+      "candidate_rank": 9,
+      "rank_delta": 0,
+      "active_score": 0.98,
+      "candidate_score": 0.98,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.021,
+      "candidate_policy_weight": 1.021,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,foundation,health,relationship,romance,wealth",
+        "next_question_uncertainty:dynamic_structure_path_needs_review",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy",
+        "question_policy_weight:1.021"
+      ],
+      "candidate_reasons": [
+        "mainline_quality_gate:needs_time_context",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,foundation,health,relationship,romance,wealth",
+        "next_question_uncertainty:dynamic_structure_path_needs_review",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy",
+        "question_policy_weight:1.021"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_practical_domain_focus",
+      "active_rank": 10,
+      "candidate_rank": 10,
+      "rank_delta": 0,
+      "active_score": 0.88,
+      "candidate_score": 0.88,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "practical_reading_requires_domain_priority",
+        "mainline_quality_gate:needs_time_context",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "practical_reading_gap:career,health,relationship",
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ],
+      "candidate_reasons": [
+        "practical_reading_requires_domain_priority",
+        "mainline_quality_gate:needs_time_context",
+        "structure_state:partial_missing_time",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "practical_reading_gap:career,health,relationship",
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.orchestrator-1782658365167.question_policy"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.orchestrator-1782657898571.question_policy"
+      ]
+    }
+  ],
+  "summary": {
+    "active_decision_count": 10,
+    "candidate_decision_count": 10,
+    "top_question_changed": false,
+    "candidate_weight_buckets": [
+      "adaptive_question_policy",
+      "central_brain_synthesis_policy",
+      "hidden_factor_event_policy",
+      "intent_weights",
+      "interaction_followup_policy",
+      "krp_unit_weights",
+      "latent_bazi_attribute_policy",
+      "model_signal_question_policy",
+      "question_weights",
+      "stage_weights",
+      "topic_weights"
+    ],
+    "boundary": "question_policy_comparison_diagnostic_not_runtime_mutation"
+  },
+  "artifact_uri": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/question_policy_comparisons/orchestrator-1782658365167.question_policy.json",
+  "artifact_record_id": "v30.question_policy_comparison.artifact.orchestrator-1782658365167.question_policy",
+  "artifact_search_backend": "postgres",
+  "artifact_searchable": true,
+  "created_at": "2026-06-28T14:56:24.254379Z",
+  "boundaries": [
+    "question_policy_comparison_is_candidate_diagnostic_not_chart_fact",
+    "comparison_recomputes_recommendations_without_mutating_runtime_trace",
+    "promotion_still_requires_synthetic_all_and_518k_sample"
+  ]
+}

@@ -1,0 +1,17 @@
+{
+  "env": {
+    "V30_DATABASE_URL": "postgresql:///qiazhi_v30",
+    "V30_LLM_BASE_URL": "http://192.168.0.7:11434/v1",
+    "V30_LLM_ENABLED": "1",
+    "V30_LLM_EXECUTE": "1",
+    "V30_LLM_HOST": "192.168.0.7",
+    "V30_LLM_HTTP_TIMEOUT_SEC": "60.0",
+    "V30_LLM_MAX_TOKENS": "1200",
+    "V30_LLM_MODEL": "gemma4:latest",
+    "V30_LLM_PORT": "11434",
+    "V30_LLM_PROVIDER": "ollama_native",
+    "V30_LLM_TEMPERATURE": "0.2",
+    "V30_REPOSITORY": "postgres"
+  },
+  "version": "v30.admin_runtime_config.v1"
+}

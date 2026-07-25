@@ -1,0 +1,403 @@
+{
+  "comparison_id": "dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate:question-policy-comparison",
+  "version": "v30.question_policy_comparison.v1",
+  "reading_id": "ui-six-pillar-smoke",
+  "trace_id": "ui-six-pillar-smoke:trace:birth-input",
+  "candidate_id": "dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+  "active_question_policy_id": "question_policy.unified-artifact-discovery-002.question_policy",
+  "candidate_question_policy_id": "question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+  "active_top_question_id": "q_v30_hidden_factor_boundary_discovery",
+  "candidate_top_question_id": "q_v30_user_relationship_pattern",
+  "top_question_changed": true,
+  "changed_rank_count": 5,
+  "weighted_delta_count": 6,
+  "max_score_delta": 0.082,
+  "max_policy_weight_delta": 0.313,
+  "decision_deltas": [
+    {
+      "question_id": "q_v30_user_relationship_pattern",
+      "active_rank": 4,
+      "candidate_rank": 1,
+      "rank_delta": 3,
+      "active_score": 0.98,
+      "candidate_score": 1.0,
+      "score_delta": 0.02,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.313,
+      "policy_weight_delta": 0.313,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+        "question_policy_weight:1.313"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+        "question_policy_weight:1.313"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_career_direction",
+      "active_rank": 2,
+      "candidate_rank": 2,
+      "rank_delta": 0,
+      "active_score": 0.98,
+      "candidate_score": 1.0,
+      "score_delta": 0.02,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.262,
+      "policy_weight_delta": 0.262,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+        "question_policy_weight:1.262"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+        "question_policy_weight:1.262"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_wealth_tendency",
+      "active_rank": 6,
+      "candidate_rank": 3,
+      "rank_delta": 3,
+      "active_score": 0.98,
+      "candidate_score": 1.0,
+      "score_delta": 0.02,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.06,
+      "policy_weight_delta": 0.06,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+        "question_policy_weight:1.06"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+        "question_policy_weight:1.06"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_hidden_factor_boundary_discovery",
+      "active_rank": 1,
+      "candidate_rank": 4,
+      "rank_delta": -3,
+      "active_score": 1.0,
+      "candidate_score": 0.99,
+      "score_delta": -0.01,
+      "active_policy_weight": 1.084,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": -0.084,
+      "active_reasons": [
+        "hidden_factor_requires_dialogue_discovery",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "portrait_signal_requires_feedback_calibration",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:hidden_factor,relationship,romance",
+        "central_brain_unknown_context:hidden_factor_confirmation",
+        "central_brain_feedback_slot:hidden_factor_boundary_feedback",
+        "central_brain_question_strategy:context_first_question_strategy",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy",
+        "question_policy_weight:1.084"
+      ],
+      "candidate_reasons": [
+        "hidden_factor_requires_dialogue_discovery",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "portrait_signal_requires_feedback_calibration",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:hidden_factor,relationship,romance",
+        "central_brain_unknown_context:hidden_factor_confirmation",
+        "central_brain_feedback_slot:hidden_factor_boundary_feedback",
+        "central_brain_question_strategy:context_first_question_strategy",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy",
+        "question_policy_weight:1.084"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_decision_blindspot",
+      "active_rank": 3,
+      "candidate_rank": 5,
+      "rank_delta": -2,
+      "active_score": 0.98,
+      "candidate_score": 0.98,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_user_timing_pressure",
+      "active_rank": 5,
+      "candidate_rank": 6,
+      "rank_delta": -1,
+      "active_score": 0.98,
+      "candidate_score": 0.98,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ],
+      "candidate_reasons": [
+        "user_question_direct_answer_entry",
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ]
+    },
+    {
+      "question_id": "q_v30_useful_god_candidate_review",
+      "active_rank": 7,
+      "candidate_rank": 7,
+      "rank_delta": 0,
+      "active_score": 0.882,
+      "candidate_score": 0.91,
+      "score_delta": 0.028,
+      "active_policy_weight": 1.05,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": -0.05,
+      "active_reasons": [
+        "mainline_quality_gate:evidence_bound",
+        "candidate_path_requires_evidence_review",
+        "rule_signal_blocks_fixed_useful_god",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,wealth",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy",
+        "question_policy_weight:1.05"
+      ],
+      "candidate_reasons": [
+        "mainline_quality_gate:evidence_bound",
+        "candidate_path_requires_evidence_review",
+        "rule_signal_blocks_fixed_useful_god",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,wealth",
+        "next_question_uncertainty:useful_god_candidate_needs_counterevidence",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "added_reasons": [
+        "next_question_uncertainty:useful_god_candidate_needs_counterevidence",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy",
+        "question_policy_weight:1.05"
+      ]
+    },
+    {
+      "question_id": "q_v30_mainline_review",
+      "active_rank": 8,
+      "candidate_rank": 8,
+      "rank_delta": 0,
+      "active_score": 0.818,
+      "candidate_score": 0.9,
+      "score_delta": 0.082,
+      "active_policy_weight": 1.023,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": -0.023,
+      "active_reasons": [
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,foundation,health,relationship,romance,wealth",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy",
+        "question_policy_weight:1.023"
+      ],
+      "candidate_reasons": [
+        "mainline_quality_gate:evidence_bound",
+        "knowledge_signal_supports_ten_god_context",
+        "structure_dynamic_relation_present",
+        "rule_evidence_bound_to_question",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "macro_dimension_context:career,foundation,health,relationship,romance,wealth",
+        "next_question_uncertainty:dynamic_structure_path_needs_review",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "added_reasons": [
+        "next_question_uncertainty:dynamic_structure_path_needs_review",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy",
+        "question_policy_weight:1.023"
+      ]
+    },
+    {
+      "question_id": "q_v30_practical_domain_focus",
+      "active_rank": 9,
+      "candidate_rank": 9,
+      "rank_delta": 0,
+      "active_score": 0.75,
+      "candidate_score": 0.75,
+      "score_delta": 0.0,
+      "active_policy_weight": 1.0,
+      "candidate_policy_weight": 1.0,
+      "policy_weight_delta": 0.0,
+      "active_reasons": [
+        "practical_reading_requires_domain_priority",
+        "mainline_quality_gate:evidence_bound",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "practical_reading_ready_for_priority_check",
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ],
+      "candidate_reasons": [
+        "practical_reading_requires_domain_priority",
+        "mainline_quality_gate:evidence_bound",
+        "mechanism_paths_scored",
+        "dynamic_graph_paths_scored",
+        "practical_reading_ready_for_priority_check",
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "added_reasons": [
+        "question_policy:question_policy.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate"
+      ],
+      "removed_reasons": [
+        "question_policy:question_policy.unified-artifact-discovery-002.question_policy"
+      ]
+    }
+  ],
+  "summary": {
+    "active_decision_count": 9,
+    "candidate_decision_count": 9,
+    "top_question_changed": true,
+    "candidate_weight_buckets": [
+      "intent_weights",
+      "model_signal_question_policy",
+      "question_weights",
+      "stage_weights",
+      "topic_weights"
+    ],
+    "boundary": "question_policy_comparison_diagnostic_not_runtime_mutation"
+  },
+  "artifact_uri": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/question_policy_comparisons/dtc5-dialogue-operator-review-pack_dtc4_dtc3_dtc2.question_policy.candidate.json",
+  "artifact_record_id": "v30.question_policy_comparison.artifact.dtc5-dialogue-operator-review-pack:dtc4:dtc3:dtc2.question_policy.candidate",
+  "artifact_search_backend": "postgres",
+  "artifact_searchable": true,
+  "created_at": "2026-06-28T12:43:37.258092Z",
+  "boundaries": [
+    "question_policy_comparison_is_candidate_diagnostic_not_chart_fact",
+    "comparison_recomputes_recommendations_without_mutating_runtime_trace",
+    "promotion_still_requires_synthetic_all_and_518k_sample"
+  ]
+}

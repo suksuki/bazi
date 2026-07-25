@@ -1,0 +1,23 @@
+[Unit]
+Description=DeepBazi V50 Abu-led Mingli Product
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=hlsystem
+Group=hlsystem
+WorkingDirectory=/home/hlsystem/bazi/v50
+EnvironmentFile=/home/hlsystem/bazi/v50/.env.v50.production
+Environment=PYTHONPATH=/home/hlsystem/bazi/v50/packages:/home/hlsystem/bazi/v50/apps
+ExecStart=/home/hlsystem/bazi/v50/.runtime/venv/bin/python scripts/v50_run_product.py --host 127.0.0.1 --port 9050 --llm-base-url http://192.168.0.7:11434
+Restart=always
+RestartSec=3
+TimeoutStartSec=45
+TimeoutStopSec=20
+KillMode=mixed
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

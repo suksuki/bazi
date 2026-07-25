@@ -1,0 +1,229 @@
+{
+  "version": "v30.latent_attribute_admin_training_review.v1",
+  "review_id": "v30.hf.r26.20260630041859237744",
+  "reviewed_at": "2026-06-30T04:18:59.237744+00:00",
+  "status": "completed",
+  "decision": {
+    "review_ready": true,
+    "decision_status": "hf_r26_latent_attribute_admin_training_review_ready",
+    "check_count": 5,
+    "passed_check_count": 5,
+    "failed_check_ids": [],
+    "candidate_count": 3,
+    "rationale": "Latent attribute training candidates are available for Admin review only and cannot mutate chart facts or promote pointers."
+  },
+  "source_summary": {
+    "observability_version": "v30.latent_policy_observability_readiness.v1",
+    "observability_ready": true,
+    "latent_divergence_suite_id": "v30.synthetic.latent_bazi_divergence",
+    "latent_divergence_passed": true,
+    "training_signal_count": 3,
+    "latent_signal_present": true
+  },
+  "candidate_summary": {
+    "candidate_count": 3,
+    "candidate_types": [
+      "latent_individualized_projection_review",
+      "latent_question_strategy_review",
+      "latent_reverse_inference_review"
+    ],
+    "allowed_training_scope": [
+      "individualized_projection",
+      "latent_attribute_inference",
+      "question_strategy"
+    ],
+    "forbidden_training_scope": [
+      "calendar_conversion",
+      "chart_facts",
+      "fixed_structure_verdict",
+      "fixed_useful_god_verdict",
+      "flow_timing",
+      "four_pillars",
+      "luck_cycle"
+    ],
+    "auto_apply_allowed_count": 0,
+    "pointer_promotion_allowed_count": 0,
+    "chart_fact_mutation_allowed_count": 0
+  },
+  "candidates": [
+    {
+      "candidate_id": "v30.hf.r26.20260630041859237744.latent_reverse_inference_review",
+      "candidate_type": "latent_reverse_inference_review",
+      "target_domain": "latent_attribute_inference",
+      "target_domains": [
+        "latent_attribute_inference"
+      ],
+      "source_signal_id": "v30.training_signal.latent_bazi_attribute_alignment",
+      "source_observation_ids": [],
+      "source_observation_count": 0,
+      "evidence_summary": "Review reverse inference from 2 latent divergence cases; signal_strength=1.0.",
+      "recommended_review_action": "admin_review_before_any_policy_candidate",
+      "allowed_training_scope": [
+        "individualized_projection",
+        "latent_attribute_inference",
+        "question_strategy"
+      ],
+      "forbidden_training_scope": [
+        "calendar_conversion",
+        "chart_facts",
+        "fixed_structure_verdict",
+        "fixed_useful_god_verdict",
+        "flow_timing",
+        "four_pillars",
+        "luck_cycle"
+      ],
+      "requires_operator_review": true,
+      "auto_apply_allowed": false,
+      "policy_pointer_promotion_allowed": false,
+      "chart_fact_mutation_allowed": false,
+      "fixed_bazi_verdict_allowed": false,
+      "status": "review_candidate",
+      "boundary": "latent_attribute_training_candidate_is_review_only_not_policy_write"
+    },
+    {
+      "candidate_id": "v30.hf.r26.20260630041859237744.latent_question_strategy_review",
+      "candidate_type": "latent_question_strategy_review",
+      "target_domain": "question_strategy",
+      "target_domains": [
+        "question_strategy"
+      ],
+      "source_signal_id": "v30.training_signal.latent_bazi_attribute_alignment",
+      "source_observation_ids": [
+        "q_v30_hidden_factor_boundary_discovery"
+      ],
+      "source_observation_count": 1,
+      "evidence_summary": "Review latent question need from Admin-observed influenced questions: 1.",
+      "recommended_review_action": "admin_review_before_any_policy_candidate",
+      "allowed_training_scope": [
+        "individualized_projection",
+        "latent_attribute_inference",
+        "question_strategy"
+      ],
+      "forbidden_training_scope": [
+        "calendar_conversion",
+        "chart_facts",
+        "fixed_structure_verdict",
+        "fixed_useful_god_verdict",
+        "flow_timing",
+        "four_pillars",
+        "luck_cycle"
+      ],
+      "requires_operator_review": true,
+      "auto_apply_allowed": false,
+      "policy_pointer_promotion_allowed": false,
+      "chart_fact_mutation_allowed": false,
+      "fixed_bazi_verdict_allowed": false,
+      "status": "review_candidate",
+      "boundary": "latent_attribute_training_candidate_is_review_only_not_policy_write"
+    },
+    {
+      "candidate_id": "v30.hf.r26.20260630041859237744.latent_individualized_projection_review",
+      "candidate_type": "latent_individualized_projection_review",
+      "target_domain": "individualized_projection",
+      "target_domains": [
+        "individualized_projection"
+      ],
+      "source_signal_id": "v30.training_signal.latent_bazi_attribute_alignment",
+      "source_observation_ids": [],
+      "source_observation_count": 0,
+      "evidence_summary": "Review individualized projection only after latent divergence suite passed=True.",
+      "recommended_review_action": "admin_review_before_any_policy_candidate",
+      "allowed_training_scope": [
+        "individualized_projection",
+        "latent_attribute_inference",
+        "question_strategy"
+      ],
+      "forbidden_training_scope": [
+        "calendar_conversion",
+        "chart_facts",
+        "fixed_structure_verdict",
+        "fixed_useful_god_verdict",
+        "flow_timing",
+        "four_pillars",
+        "luck_cycle"
+      ],
+      "requires_operator_review": true,
+      "auto_apply_allowed": false,
+      "policy_pointer_promotion_allowed": false,
+      "chart_fact_mutation_allowed": false,
+      "fixed_bazi_verdict_allowed": false,
+      "status": "review_candidate",
+      "boundary": "latent_attribute_training_candidate_is_review_only_not_policy_write"
+    }
+  ],
+  "checks": [
+    {
+      "check_id": "hf_r25_observability_ready",
+      "passed": true,
+      "observed": {
+        "version": "v30.latent_policy_observability_readiness.v1",
+        "decision": "hf_r25_latent_policy_observability_ready"
+      }
+    },
+    {
+      "check_id": "latent_divergence_synthetic_passed",
+      "passed": true,
+      "observed": {
+        "suite_id": "v30.synthetic.latent_bazi_divergence",
+        "passed": true,
+        "passed_count": 2,
+        "case_count": 2
+      }
+    },
+    {
+      "check_id": "latent_training_signal_available",
+      "passed": true,
+      "observed": {
+        "signal_id": "v30.training_signal.latent_bazi_attribute_alignment",
+        "strength": 1.0
+      }
+    },
+    {
+      "check_id": "candidate_rows_cover_allowed_training_scope",
+      "passed": true,
+      "observed": {
+        "target_domains": [
+          "individualized_projection",
+          "latent_attribute_inference",
+          "question_strategy"
+        ]
+      }
+    },
+    {
+      "check_id": "candidate_boundaries_block_chart_fact_and_pointer_writes",
+      "passed": true,
+      "observed": {
+        "candidate_count": 3,
+        "forbidden_scope": [
+          "calendar_conversion",
+          "chart_facts",
+          "fixed_structure_verdict",
+          "fixed_useful_god_verdict",
+          "flow_timing",
+          "four_pillars",
+          "luck_cycle"
+        ]
+      }
+    }
+  ],
+  "policy_boundary": {
+    "review_only": true,
+    "auto_apply_training_allowed": false,
+    "policy_pointer_promotion_allowed": false,
+    "chart_fact_mutation_allowed": false,
+    "full_pytest_required": false,
+    "synthetic_all_required": false,
+    "full_518k_required": false,
+    "live_llm_required": false,
+    "boundary": "hf_r26_reviews_latent_training_candidates_without_promoting_policy_or_mutating_chart_facts"
+  },
+  "next_mainline_selection": {
+    "task_id": "HF-R2.7",
+    "title": "Latent Attribute Training UI Review Panel",
+    "scope": [
+      "render latent training candidates in the Admin training page",
+      "preserve manual review and no-pointer-promotion boundary"
+    ]
+  },
+  "boundary": "latent_attribute_admin_training_review_connects_observability_to_admin_training_review_only"
+}

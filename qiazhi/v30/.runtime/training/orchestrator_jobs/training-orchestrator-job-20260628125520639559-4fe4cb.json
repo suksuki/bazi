@@ -1,0 +1,456 @@
+{
+  "version": "v30.admin.training_orchestrator_job.v1",
+  "job_id": "training-orchestrator-job-20260628125520639559-4fe4cb",
+  "plan_id": "quick_validation_only",
+  "plan_label": "轻量训练管线验证",
+  "status": "completed",
+  "created_at": "2026-06-28T12:55:20.639583+00:00",
+  "started_at": "2026-06-28T12:55:20.668773+00:00",
+  "finished_at": "2026-06-28T12:56:22.775149+00:00",
+  "current_step": "completed",
+  "completed_steps": 2,
+  "total_steps": 2,
+  "progress_percent": 100,
+  "steps": [
+    "training_pipeline_synthetic",
+    "lineage_snapshot"
+  ],
+  "step_results": [
+    {
+      "step": "training_pipeline_synthetic",
+      "status": "passed",
+      "passed_count": 94,
+      "case_count": 94
+    },
+    {
+      "step": "lineage_snapshot",
+      "status": "completed",
+      "family_count": 4
+    }
+  ],
+  "progress_events": [],
+  "config": {
+    "plan_id": "quick_validation_only",
+    "training_run_id": "smoke-isolated-reaper",
+    "families": [
+      "structure_policy",
+      "mainline_policy",
+      "question_policy",
+      "rule_policy"
+    ],
+    "promotion_validation_mode": "smoke",
+    "sample_limit": 8,
+    "persist_m3_to_db": true,
+    "include_shard": false,
+    "shard_id": 7,
+    "shard_limit": 16,
+    "include_readiness_matrix": false
+  },
+  "boundary": "training_orchestrator_runs_named_training_plan_without_mutating_chart_facts",
+  "worker_pid": 86354,
+  "worker_mode": "isolated_process",
+  "log_path": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/training/orchestrator_jobs/training-orchestrator-job-20260628125520639559-4fe4cb.log",
+  "validation_result": {
+    "version": "v30.training_validation_summary.v1",
+    "suite_id": "v30.synthetic.training_pipeline",
+    "passed": true,
+    "case_count": 94,
+    "passed_count": 94,
+    "failed_count": 0,
+    "result_count": 94,
+    "failed_preview": []
+  },
+  "lineage_summary": {
+    "version": "v30.admin.policy_lineage_summary.v1",
+    "families": [
+      {
+        "lineage_id": "structure_policy:structure_policy.cbi-v2-q8-real-run.structure_policy:lineage",
+        "version": "v30.promotion_lineage.v1",
+        "family": "structure_policy",
+        "active_artifact_id": "structure_policy.cbi-v2-q8-real-run.structure_policy",
+        "previous_artifact_id": "structure_policy.v30-baseline",
+        "candidate_id": "cbi-v2-q8-real-run.structure_policy",
+        "validation_run_id": "v30.synthetic.promotion.structure_policy.all+v30.518k.sample.20260628104634383067",
+        "runtime_pointer": {
+          "version": "v30.runtime_pointer.v1",
+          "family": "structure_policy",
+          "active_artifact_id": "structure_policy.cbi-v2-q8-real-run.structure_policy",
+          "active_artifact_version": "v30.policy_artifact.v1",
+          "previous_artifact_id": "structure_policy.v30-baseline",
+          "validation_run_id": "v30.synthetic.promotion.structure_policy.all+v30.518k.sample.20260628104634383067",
+          "promotion_reason": "synthetic_all_and_518k_sample_passed",
+          "env": "local",
+          "status": "active",
+          "updated_at": "2026-06-28T10:46:35.111383Z",
+          "updated_by": "v30.policy.promotion",
+          "rollback_pointer": {
+            "family": "structure_policy",
+            "active_artifact_id": "structure_policy.v30-baseline",
+            "active_artifact_version": "v30.policy_artifact.v1"
+          }
+        },
+        "policy_artifact_summary": {
+          "artifact_id": "structure_policy.cbi-v2-q8-real-run.structure_policy",
+          "version": "v30.policy_artifact.v1",
+          "candidate_id": "cbi-v2-q8-real-run.structure_policy",
+          "family": "structure_policy",
+          "created_at": "2026-06-28T10:46:35.111361Z",
+          "metric_keys": [
+            "corpus_518k_promotion_signal",
+            "corpus_518k_sample_case_count",
+            "question_policy_comparison_changed_rank_count",
+            "question_policy_comparison_weighted_delta_count",
+            "synthetic_case_count",
+            "synthetic_passed_count"
+          ],
+          "validation_keys": [
+            "corpus_518k_sample",
+            "question_policy_comparison",
+            "synthetic"
+          ],
+          "weight_keys": [
+            "dynamic_graph.competition_suppression",
+            "dynamic_graph.conflict_family",
+            "dynamic_graph.domain_path",
+            "dynamic_graph.domain_rule_depth",
+            "dynamic_graph.model_signal_fusion",
+            "dynamic_graph.path_resolution",
+            "dynamic_graph.tongguan_zhihua",
+            "dynamic_graph.useful_god_candidate_path",
+            "dynamic_graph.v2",
+            "mechanism.branch_relation_dynamic_review",
+            "mechanism.hidden_factor_dialogue_probe",
+            "mechanism.ten_god_visibility_context",
+            "mechanism.useful_god_candidate_gate",
+            "model_signal.energy_band_calibration",
+            "model_signal.family_coverage",
+            "model_signal.stability_review",
+            "model_signal.volatility_review",
+            "ranked_decision.disputed_structure",
+            "ranked_decision.follow_structure_boundary",
+            "ranked_decision.regulation_climate_boundary",
+            "ranked_decision.special_structure_boundary",
+            "ranked_decision.useful_god_evidence"
+          ],
+          "compatible_runtime_version": "30.0.0a0"
+        },
+        "validation_artifacts": [
+          {
+            "source": "policy_artifact.validation_summary.corpus_518k_sample",
+            "family": "518k_validation",
+            "run_id": "v30.518k.sample.20260628104634383067",
+            "artifact_record_id": "v30.518k.artifact.v30.518k.sample.20260628104634383067",
+            "artifact_uri": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/518k/v30.518k.sample.20260628104634383067.json",
+            "promotion_signal": "eligible"
+          }
+        ],
+        "active_runtime_trace_summary": {
+          "reading_id": "v30-lineage-structure_policy",
+          "trace_id": "v30-lineage-structure_policy:trace:smoke",
+          "family": "structure_policy",
+          "active_policy_versions": {
+            "structure_policy": "structure_policy.cbi-v2-q8-real-run.structure_policy",
+            "mainline_policy": "mainline_policy.cbi-v2-q8-real-run.mainline_policy",
+            "question_policy": "question_policy.cbi-v2-q8-real-run.question_policy",
+            "rule_policy": "rule_policy.cbi-v2-q8-real-run.rule_policy"
+          },
+          "family_consumed": true,
+          "question_count": 10,
+          "top_question_id": "q_v30_time_context_boundary",
+          "mainline_quality_gate": "needs_time_context"
+        },
+        "rollback_pointer": {
+          "family": "structure_policy",
+          "active_artifact_id": "structure_policy.v30-baseline",
+          "active_artifact_version": "v30.policy_artifact.v1"
+        },
+        "boundaries": [
+          "promotion_lineage_is_diagnostic_not_policy_mutation",
+          "promotion_lineage_does_not_create_chart_facts",
+          "promotion_lineage_reads_existing_pointer_artifact_validation_and_trace_state"
+        ]
+      },
+      {
+        "lineage_id": "mainline_policy:mainline_policy.cbi-v2-q8-real-run.mainline_policy:lineage",
+        "version": "v30.promotion_lineage.v1",
+        "family": "mainline_policy",
+        "active_artifact_id": "mainline_policy.cbi-v2-q8-real-run.mainline_policy",
+        "previous_artifact_id": "mainline_policy.v30-baseline",
+        "candidate_id": "cbi-v2-q8-real-run.mainline_policy",
+        "validation_run_id": "v30.synthetic.promotion.mainline_policy.all+v30.518k.sample.20260628104644153662",
+        "runtime_pointer": {
+          "version": "v30.runtime_pointer.v1",
+          "family": "mainline_policy",
+          "active_artifact_id": "mainline_policy.cbi-v2-q8-real-run.mainline_policy",
+          "active_artifact_version": "v30.policy_artifact.v1",
+          "previous_artifact_id": "mainline_policy.v30-baseline",
+          "validation_run_id": "v30.synthetic.promotion.mainline_policy.all+v30.518k.sample.20260628104644153662",
+          "promotion_reason": "synthetic_all_and_518k_sample_passed",
+          "env": "local",
+          "status": "active",
+          "updated_at": "2026-06-28T10:46:44.851634Z",
+          "updated_by": "v30.policy.promotion",
+          "rollback_pointer": {
+            "family": "mainline_policy",
+            "active_artifact_id": "mainline_policy.v30-baseline",
+            "active_artifact_version": "v30.policy_artifact.v1"
+          }
+        },
+        "policy_artifact_summary": {
+          "artifact_id": "mainline_policy.cbi-v2-q8-real-run.mainline_policy",
+          "version": "v30.policy_artifact.v1",
+          "candidate_id": "cbi-v2-q8-real-run.mainline_policy",
+          "family": "mainline_policy",
+          "created_at": "2026-06-28T10:46:44.851615Z",
+          "metric_keys": [
+            "corpus_518k_promotion_signal",
+            "corpus_518k_sample_case_count",
+            "question_policy_comparison_changed_rank_count",
+            "question_policy_comparison_weighted_delta_count",
+            "synthetic_case_count",
+            "synthetic_passed_count"
+          ],
+          "validation_keys": [
+            "corpus_518k_sample",
+            "question_policy_comparison",
+            "synthetic"
+          ],
+          "weight_keys": [],
+          "compatible_runtime_version": "30.0.0a0"
+        },
+        "validation_artifacts": [
+          {
+            "source": "policy_artifact.validation_summary.corpus_518k_sample",
+            "family": "518k_validation",
+            "run_id": "v30.518k.sample.20260628104644153662",
+            "artifact_record_id": "v30.518k.artifact.v30.518k.sample.20260628104644153662",
+            "artifact_uri": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/518k/v30.518k.sample.20260628104644153662.json",
+            "promotion_signal": "eligible"
+          }
+        ],
+        "active_runtime_trace_summary": {
+          "reading_id": "v30-lineage-mainline_policy",
+          "trace_id": "v30-lineage-mainline_policy:trace:smoke",
+          "family": "mainline_policy",
+          "active_policy_versions": {
+            "structure_policy": "structure_policy.cbi-v2-q8-real-run.structure_policy",
+            "mainline_policy": "mainline_policy.cbi-v2-q8-real-run.mainline_policy",
+            "question_policy": "question_policy.cbi-v2-q8-real-run.question_policy",
+            "rule_policy": "rule_policy.cbi-v2-q8-real-run.rule_policy"
+          },
+          "family_consumed": true,
+          "question_count": 10,
+          "top_question_id": "q_v30_time_context_boundary",
+          "mainline_quality_gate": "needs_time_context"
+        },
+        "rollback_pointer": {
+          "family": "mainline_policy",
+          "active_artifact_id": "mainline_policy.v30-baseline",
+          "active_artifact_version": "v30.policy_artifact.v1"
+        },
+        "boundaries": [
+          "promotion_lineage_is_diagnostic_not_policy_mutation",
+          "promotion_lineage_does_not_create_chart_facts",
+          "promotion_lineage_reads_existing_pointer_artifact_validation_and_trace_state"
+        ]
+      },
+      {
+        "lineage_id": "question_policy:question_policy.cbi-v2-q8-real-run.question_policy:lineage",
+        "version": "v30.promotion_lineage.v1",
+        "family": "question_policy",
+        "active_artifact_id": "question_policy.cbi-v2-q8-real-run.question_policy",
+        "previous_artifact_id": "question_policy.v30-baseline",
+        "candidate_id": "cbi-v2-q8-real-run.question_policy",
+        "validation_run_id": "v30.synthetic.promotion.question_policy.all+v30.518k.sample.20260628104654160527",
+        "runtime_pointer": {
+          "version": "v30.runtime_pointer.v1",
+          "family": "question_policy",
+          "active_artifact_id": "question_policy.cbi-v2-q8-real-run.question_policy",
+          "active_artifact_version": "v30.policy_artifact.v1",
+          "previous_artifact_id": "question_policy.v30-baseline",
+          "validation_run_id": "v30.synthetic.promotion.question_policy.all+v30.518k.sample.20260628104654160527",
+          "promotion_reason": "synthetic_all_and_518k_sample_passed",
+          "env": "local",
+          "status": "active",
+          "updated_at": "2026-06-28T10:46:54.853630Z",
+          "updated_by": "v30.policy.promotion",
+          "rollback_pointer": {
+            "family": "question_policy",
+            "active_artifact_id": "question_policy.v30-baseline",
+            "active_artifact_version": "v30.policy_artifact.v1"
+          }
+        },
+        "policy_artifact_summary": {
+          "artifact_id": "question_policy.cbi-v2-q8-real-run.question_policy",
+          "version": "v30.policy_artifact.v1",
+          "candidate_id": "cbi-v2-q8-real-run.question_policy",
+          "family": "question_policy",
+          "created_at": "2026-06-28T10:46:54.853613Z",
+          "metric_keys": [
+            "corpus_518k_promotion_signal",
+            "corpus_518k_sample_case_count",
+            "question_policy_comparison_changed_rank_count",
+            "question_policy_comparison_weighted_delta_count",
+            "synthetic_case_count",
+            "synthetic_passed_count"
+          ],
+          "validation_keys": [
+            "corpus_518k_sample",
+            "question_policy_comparison",
+            "synthetic"
+          ],
+          "weight_keys": [
+            "adaptive_question_policy",
+            "central_brain_synthesis_policy",
+            "hidden_factor_event_policy",
+            "intent_weights",
+            "interaction_followup_policy",
+            "krp_unit_weights",
+            "latent_bazi_attribute_policy",
+            "model_signal_question_policy",
+            "question_weights",
+            "stage_weights",
+            "topic_weights"
+          ],
+          "compatible_runtime_version": "30.0.0a0"
+        },
+        "validation_artifacts": [
+          {
+            "source": "policy_artifact.validation_summary.corpus_518k_sample",
+            "family": "518k_validation",
+            "run_id": "v30.518k.sample.20260628104654160527",
+            "artifact_record_id": "v30.518k.artifact.v30.518k.sample.20260628104654160527",
+            "artifact_uri": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/518k/v30.518k.sample.20260628104654160527.json",
+            "promotion_signal": "eligible"
+          },
+          {
+            "source": "policy_artifact.validation_summary.question_policy_comparison",
+            "family": "question_policy_comparison",
+            "candidate_id": "cbi-v2-q8-real-run.question_policy",
+            "artifact_record_id": "v30.question_policy_comparison.artifact.cbi-v2-q8-real-run.question_policy",
+            "artifact_uri": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/question_policy_comparisons/cbi-v2-q8-real-run.question_policy.json",
+            "top_question_changed": false
+          }
+        ],
+        "active_runtime_trace_summary": {
+          "reading_id": "v30-lineage-question_policy",
+          "trace_id": "v30-lineage-question_policy:trace:smoke",
+          "family": "question_policy",
+          "active_policy_versions": {
+            "structure_policy": "structure_policy.cbi-v2-q8-real-run.structure_policy",
+            "mainline_policy": "mainline_policy.cbi-v2-q8-real-run.mainline_policy",
+            "question_policy": "question_policy.cbi-v2-q8-real-run.question_policy",
+            "rule_policy": "rule_policy.cbi-v2-q8-real-run.rule_policy"
+          },
+          "family_consumed": true,
+          "question_count": 10,
+          "top_question_id": "q_v30_time_context_boundary",
+          "mainline_quality_gate": "needs_time_context"
+        },
+        "rollback_pointer": {
+          "family": "question_policy",
+          "active_artifact_id": "question_policy.v30-baseline",
+          "active_artifact_version": "v30.policy_artifact.v1"
+        },
+        "boundaries": [
+          "promotion_lineage_is_diagnostic_not_policy_mutation",
+          "promotion_lineage_does_not_create_chart_facts",
+          "promotion_lineage_reads_existing_pointer_artifact_validation_and_trace_state"
+        ]
+      },
+      {
+        "lineage_id": "rule_policy:rule_policy.cbi-v2-q8-real-run.rule_policy:lineage",
+        "version": "v30.promotion_lineage.v1",
+        "family": "rule_policy",
+        "active_artifact_id": "rule_policy.cbi-v2-q8-real-run.rule_policy",
+        "previous_artifact_id": "rule_policy.v30-baseline",
+        "candidate_id": "cbi-v2-q8-real-run.rule_policy",
+        "validation_run_id": "v30.synthetic.promotion.rule_policy.all+v30.518k.sample.20260628104704047561",
+        "runtime_pointer": {
+          "version": "v30.runtime_pointer.v1",
+          "family": "rule_policy",
+          "active_artifact_id": "rule_policy.cbi-v2-q8-real-run.rule_policy",
+          "active_artifact_version": "v30.policy_artifact.v1",
+          "previous_artifact_id": "rule_policy.v30-baseline",
+          "validation_run_id": "v30.synthetic.promotion.rule_policy.all+v30.518k.sample.20260628104704047561",
+          "promotion_reason": "synthetic_all_and_518k_sample_passed",
+          "env": "local",
+          "status": "active",
+          "updated_at": "2026-06-28T10:47:04.765163Z",
+          "updated_by": "v30.policy.promotion",
+          "rollback_pointer": {
+            "family": "rule_policy",
+            "active_artifact_id": "rule_policy.v30-baseline",
+            "active_artifact_version": "v30.policy_artifact.v1"
+          }
+        },
+        "policy_artifact_summary": {
+          "artifact_id": "rule_policy.cbi-v2-q8-real-run.rule_policy",
+          "version": "v30.policy_artifact.v1",
+          "candidate_id": "cbi-v2-q8-real-run.rule_policy",
+          "family": "rule_policy",
+          "created_at": "2026-06-28T10:47:04.765141Z",
+          "metric_keys": [
+            "corpus_518k_promotion_signal",
+            "corpus_518k_sample_case_count",
+            "question_policy_comparison_changed_rank_count",
+            "question_policy_comparison_weighted_delta_count",
+            "synthetic_case_count",
+            "synthetic_passed_count"
+          ],
+          "validation_keys": [
+            "corpus_518k_sample",
+            "question_policy_comparison",
+            "synthetic"
+          ],
+          "weight_keys": [
+            "domain_weights",
+            "hidden_factor_event_policy",
+            "latent_bazi_attribute_policy",
+            "per_unit_parameter_policy",
+            "rule_weights"
+          ],
+          "compatible_runtime_version": "30.0.0a0"
+        },
+        "validation_artifacts": [
+          {
+            "source": "policy_artifact.validation_summary.corpus_518k_sample",
+            "family": "518k_validation",
+            "run_id": "v30.518k.sample.20260628104704047561",
+            "artifact_record_id": "v30.518k.artifact.v30.518k.sample.20260628104704047561",
+            "artifact_uri": "/Users/liujin/DEV/AIProjects/bazi/qiazhi/v30/.runtime/validation/518k/v30.518k.sample.20260628104704047561.json",
+            "promotion_signal": "eligible"
+          }
+        ],
+        "active_runtime_trace_summary": {
+          "reading_id": "v30-lineage-rule_policy",
+          "trace_id": "v30-lineage-rule_policy:trace:smoke",
+          "family": "rule_policy",
+          "active_policy_versions": {
+            "structure_policy": "structure_policy.cbi-v2-q8-real-run.structure_policy",
+            "mainline_policy": "mainline_policy.cbi-v2-q8-real-run.mainline_policy",
+            "question_policy": "question_policy.cbi-v2-q8-real-run.question_policy",
+            "rule_policy": "rule_policy.cbi-v2-q8-real-run.rule_policy"
+          },
+          "family_consumed": true,
+          "question_count": 10,
+          "top_question_id": "q_v30_time_context_boundary",
+          "mainline_quality_gate": "needs_time_context"
+        },
+        "rollback_pointer": {
+          "family": "rule_policy",
+          "active_artifact_id": "rule_policy.v30-baseline",
+          "active_artifact_version": "v30.policy_artifact.v1"
+        },
+        "boundaries": [
+          "promotion_lineage_is_diagnostic_not_policy_mutation",
+          "promotion_lineage_does_not_create_chart_facts",
+          "promotion_lineage_reads_existing_pointer_artifact_validation_and_trace_state"
+        ]
+      }
+    ],
+    "rollback_supported": true,
+    "chart_fact_mutation_allowed": false,
+    "boundary": "policy_lineage_summary_reads_runtime_pointers_and_supports_pointer_rollback_without_mutating_chart_facts"
+  }
+}

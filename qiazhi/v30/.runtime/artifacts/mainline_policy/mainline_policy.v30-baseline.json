@@ -1,0 +1,17 @@
+{
+  "artifact_id": "mainline_policy.v30-baseline",
+  "family": "mainline_policy",
+  "version": "v30.policy_artifact.v1",
+  "candidate_id": "baseline",
+  "payload": {
+    "mode": "baseline",
+    "family": "mainline_policy"
+  },
+  "checksum": "",
+  "created_at": "2026-06-26T02:24:12.105160Z",
+  "metrics": {},
+  "validation_summary": {
+    "status": "baseline"
+  },
+  "compatible_runtime_version": "30.0.0a0"
+}
