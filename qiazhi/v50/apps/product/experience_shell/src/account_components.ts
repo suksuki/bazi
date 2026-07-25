@@ -72,7 +72,7 @@ export function renderProfileManager(view: ProfileManagerView): string {
       </section>
       <section class="profile-editor" aria-live="polite">
         ${view.editorMode === "none"
-          ? `<div class="profile-editor-idle"><img src="/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp" alt="阿布"><p>阿布在这里</p><h2>选一份档案继续，或建立新的命局。</h2></div>`
+          ? `<div class="profile-editor-idle"><img src="/assets/abu/v12-actor-pass/dream-standard-cycle/web/abu_dream_standard_cycle_v1.webp" alt="阿布"><p>阿布在这里</p><h2>选一份档案继续，或建立新的命局。</h2></div>`
           : renderProfileForm(view.editorMode, editing, view.busy, view.error)}
       </section>
     </main>

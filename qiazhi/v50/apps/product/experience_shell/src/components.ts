@@ -13,7 +13,8 @@ import type {
   WorkspaceCognitionState,
 } from "./contracts";
 import type { ProductArea, UiState, WorkspaceSurface } from "./state";
-import type { DreamFeatureStatus } from "./dream_api";
+import type { DreamFeatureStatus, DreamVerificationProjection } from "./dream_api";
+import { renderDreamHomeLifeTree } from "./dream_home_portal";
 
 export interface ExperienceViewModel {
   accountName: string;
@@ -31,6 +32,7 @@ export interface ExperienceViewModel {
   canvasContext: CanvasContextPack | null;
   ui: UiState;
   dreamStatus: DreamFeatureStatus | null;
+  dreamReturnedWithSeed: boolean;
 }
 
 const elementLabel: Record<string, string> = {
@@ -203,25 +205,16 @@ function renderLifeWorld(
         <div class="world-actions">
           <button class="primary-command" type="button" data-command="listen">${view.ui.narrationStatus === "playing" ? "暂停阿布" : "听阿布讲"}</button>
           <button class="text-command" type="button" data-product-area="workbench">打开命盘</button>
-          ${view.dreamStatus?.enabled && view.dreamStatus.available ? `<button class="dream-entry-command" type="button" data-command="enter-dream">${view.dreamStatus.resumable ? "继续上次的梦" : "随阿布入梦"}</button>` : ""}
         </div>
         ${renderDreamConsent(view)}
       </div>
-      <div class="life-tree" aria-label="命、事、人的生命脉络">
-        <span class="tree-line tree-line-left" aria-hidden="true"></span>
-        <span class="tree-line tree-line-right" aria-hidden="true"></span>
-        <button type="button" class="tree-node tree-nature" data-product-area="workbench">
-          <small>命</small><strong>${escapeHtml(pillars || "四柱待确认")}</strong><span>先天底图</span>
-        </button>
-        <button type="button" class="tree-node tree-events" data-select-anchor="baseline-work-path" data-message="${escapeAttr(pathSummary)}">
-          <small>事</small><strong>${escapeHtml(firstSentence(pathSummary))}</strong><span>${escapeHtml(view.workspace?.state.selected_period || "当前阶段")}</span>
-        </button>
-        <button type="button" class="tree-node tree-growth" data-command="toggle-abu">
-          <small>人</small><strong>${escapeHtml(firstSentence(condition))}</strong><span>当前行动条件</span>
-        </button>
-        <div class="tree-trunk" aria-hidden="true"><i></i><i></i><i></i></div>
-        <img src="/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" alt="阿布在生命树旁等待">
-      </div>
+      ${renderDreamHomeLifeTree({
+        status: view.dreamStatus,
+        returnedWithSeed: view.dreamReturnedWithSeed,
+        pillars,
+        pathSummary,
+        condition,
+      })}
     </section>
     <section class="world-ledger" aria-label="生命记录">
       <header><p>生命记录</p><h2>命是起点，现实让理解继续生长</h2></header>
@@ -277,13 +270,17 @@ function renderProductSidebar(view: ExperienceViewModel): string {
     <a class="brand" href="/experience" aria-label="DeepBeing 首页"><img src="/assets/deepbazi_logo_horizontal.png" alt="DeepBazi Life Intelligence"><span>DeepBeing</span></a>
     ${renderProductNavigation(view, "sidebar")}
     <div class="sidebar-context">${renderProfileSelector(view.cases, view.activeProfileId)}<small>${escapeHtml(view.envelope.source.life_case_version || "命盘事实")}</small></div>
-    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><button type="button" data-command="manage-profiles">档案</button></div>
+    <div class="sidebar-account"><span>${escapeHtml(view.accountName)}</span><div class="sidebar-account-actions">${renderOpeningMusicControl()}<button type="button" data-command="manage-profiles">档案</button></div></div>
   </aside>`;
 }
 
 function renderMobileHeader(view: ExperienceViewModel): string {
   const labels: Record<ProductArea, string> = { world: "我的生命世界", workbench: "命盘工作台", lab: "Mingli Lab" };
-  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong><div class="mobile-header-actions">${renderProfileSelector(view.cases, view.activeProfileId)}<button type="button" data-command="manage-profiles" aria-label="管理档案" title="管理档案">档</button></div></header>`;
+  return `<header class="mobile-header"><a href="/experience"><img src="/assets/deepbazi_symbol.png" alt="DeepBazi"></a><strong>${labels[view.ui.productArea]}</strong><div class="mobile-header-actions">${renderProfileSelector(view.cases, view.activeProfileId)}${renderOpeningMusicControl("mobile")}<button type="button" data-command="manage-profiles" aria-label="管理档案" title="管理档案">档</button></div></header>`;
+}
+
+function renderOpeningMusicControl(placement: "sidebar" | "mobile" = "sidebar"): string {
+  return `<button class="opening-music-control is-${placement}" type="button" data-command="toggle-opening-music" data-opening-music-control data-music-state="armed" aria-pressed="false" aria-label="播放开场音乐；首次操作后会自动开始" title="播放开场音乐；首次操作后会自动开始"><i aria-hidden="true">♫</i></button>`;
 }
 
 function renderMobileNavigation(view: ExperienceViewModel): string {
@@ -445,6 +442,86 @@ export function renderReadOnlyCanvas(
   </div>`;
 }
 
+export function renderDreamVerificationCanvas(
+  canvas: ReadOnlySixPillarCanvas,
+  verification: DreamVerificationProjection,
+): string {
+  const stageName = verification.binding.target_stage;
+  const stage = canvas.stages[stageName] || canvas.stages[canvas.default_stage];
+  const focused = verification.state === "focused";
+  const selected = focused ? verification.target_object_ref : "";
+  const relations = focused && verification.reveal_kind === "relation"
+    ? stage.spec.relations.filter((item) => item.relation_ref === selected)
+    : [];
+  const paths = focused && verification.reveal_kind === "path"
+    ? stage.spec.paths.filter((item) => item.path_ref === selected)
+    : [];
+  const statement = focused
+    ? verification.authorized_statement
+    : "当前暂无已确认主路径";
+
+  return `<section class="dream-verification-canvas" data-verification-state="${escapeAttr(verification.state)}" data-verification-lens="${escapeAttr(verification.binding.target_lens)}">
+    <p class="sr-only">${escapeHtml(focused ? `${verification.verification_copy}${statement}` : statement)}</p>
+    <div class="dream-verification-geometry" inert>
+      ${renderCanonicalCanvasScene(
+        stage.scene_slots,
+        stage.spec.nodes,
+        relations,
+        paths,
+        selected,
+        verification.binding.target_lens === "roots_reveal",
+      )}
+    </div>
+    <div class="dream-verification-copy" aria-hidden="true">
+      ${focused ? `<span>${escapeHtml(verification.verification_copy)}</span>` : ""}
+      <strong>${escapeHtml(statement)}</strong>
+    </div>
+  </section>`;
+}
+
+interface DreamGameCandidateRelation {
+  relation_ref: string;
+  label: string;
+  source_node_ref: string;
+  target_node_ref: string;
+  formal: boolean;
+}
+
+export function renderDreamGameCanvas(
+  canvas: ReadOnlySixPillarCanvas,
+  lens: string,
+  candidateNodeRefs: string[] = [],
+  candidateRelations: DreamGameCandidateRelation[] = [],
+): string {
+  const stage = canvas.stages.natal || canvas.stages[canvas.default_stage];
+  const layer = stage.layers.find((item) => item.layer_id === lens)
+    || stage.layers.find((item) => item.layer_id === "overview")
+    || stage.layers[0];
+  const formalRelationRefs = new Set(layer?.formal_relation_refs || []);
+  const formalPathRefs = new Set(layer?.formal_path_refs || []);
+  const relations = stage.spec.relations.filter((item) => formalRelationRefs.has(item.relation_ref));
+  const paths = stage.spec.paths.filter((item) => formalPathRefs.has(item.path_ref));
+  return `<section class="dream-game-onecanvas" data-dream-game-lens="${escapeAttr(lens)}">
+    <p class="sr-only">冻结于问题发生前的同源命盘。玩家候选观察不会写入正式命理事实。</p>
+    <div class="six-pillar-scroll">
+      ${renderCanonicalCanvasScene(
+        stage.scene_slots,
+        stage.spec.nodes,
+        relations,
+        paths,
+        candidateNodeRefs[0] || "",
+        lens === "roots_reveal",
+        candidateRelations.filter((item) => !item.formal),
+        new Set(candidateNodeRefs),
+      )}
+    </div>
+    <p class="dream-game-canvas-caption"><strong>${escapeHtml(layer?.label || "总览")}</strong>${escapeHtml(layer?.description || "只显示冻结投影中已授权的结构。")}</p>
+    ${candidateRelations.some((item) => !item.formal)
+      ? `<p class="dream-game-candidate-key"><i aria-hidden="true"></i>玩家候选假说 · 非正式 PathAssertion</p>`
+      : ""}
+  </section>`;
+}
+
 function renderCanonicalCanvasScene(
   slots: ReadOnlySixPillarCanvas["stages"]["natal"]["scene_slots"],
   nodes: CanvasNode[],
@@ -452,6 +529,8 @@ function renderCanonicalCanvasScene(
   paths: ReadOnlySixPillarCanvas["stages"]["natal"]["spec"]["paths"],
   selected: string,
   showHiddenStems: boolean,
+  candidateRelations: DreamGameCandidateRelation[] = [],
+  candidateNodeRefs: Set<string> = new Set(),
 ): string {
   const nodesByRef = new Map(nodes.map((item) => [item.node_ref, item]));
   const anchors = canvasAnchorRegistry(slots, nodes);
@@ -463,6 +542,8 @@ function renderCanonicalCanvasScene(
       ...item.participant_node_refs,
     ]),
     ...paths.flatMap((item) => item.node_refs),
+    ...candidateNodeRefs,
+    ...candidateRelations.flatMap((item) => [item.source_node_ref, item.target_node_ref]),
   ]);
   const relationMarkup = relations.flatMap((relation, index) => {
     const source = anchors.get(relation.from_node_ref);
@@ -480,6 +561,16 @@ function renderCanonicalCanvasScene(
       <text x="${route.labelX}" y="${route.labelY}" text-anchor="middle" tabindex="0" role="button" data-canvas-object="${escapeAttr(relation.relation_ref)}" aria-label="${escapeAttr(relation.label)}">${escapeHtml(shortRelationLabel(relation))}</text>
     </g>`];
   }).join("");
+  const candidateMarkup = candidateRelations.map((relation, index) => {
+    const source = anchors.get(relation.source_node_ref);
+    const target = anchors.get(relation.target_node_ref);
+    if (!source || !target) return "";
+    const route = routeCanvasRelation(source, target, index + relations.length);
+    return `<g class="canvas-candidate-relation" data-candidate-relation="${escapeAttr(relation.relation_ref)}">
+      <path d="${route.d}" marker-end="url(#canvas-candidate-arrow)"></path>
+      <text x="${route.labelX}" y="${route.labelY}" text-anchor="middle">${escapeHtml(relation.label)}</text>
+    </g>`;
+  }).join("");
   const pathMarkup = paths.map((path, pathIndex) => renderCanvasPath(path, anchors, selected, pathIndex)).join("");
   const nodeMarkup = slots.map((slot) => renderCanvasSceneSlot(
     slot,
@@ -493,12 +584,14 @@ function renderCanonicalCanvasScene(
     <defs>
       <marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
       <marker id="canvas-path-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z"></path></marker>
+      <marker id="canvas-candidate-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
     </defs>
     <g class="canvas-scene-tracks" aria-hidden="true"><line x1="44" y1="185" x2="1276" y2="185"></line><line x1="44" y1="390" x2="1276" y2="390"></line><text x="46" y="171">天干</text><text x="46" y="376">地支</text></g>
     <g class="canvas-scene-relations">${relationMarkup}</g>
     <g class="canvas-scene-paths">${pathMarkup}</g>
+    <g class="canvas-scene-candidates">${candidateMarkup}</g>
     <g class="canvas-scene-nodes">${nodeMarkup}</g>
-    ${!relationMarkup && !pathMarkup ? `<g class="canvas-scene-empty"><text x="660" y="292" text-anchor="middle">此镜头没有已披露关系</text><text x="660" y="315" text-anchor="middle">页面不会为了填满画面而补线</text></g>` : ""}
+    ${!relationMarkup && !pathMarkup && !candidateMarkup ? `<g class="canvas-scene-empty"><text x="660" y="292" text-anchor="middle">此镜头没有已披露关系</text><text x="660" y="315" text-anchor="middle">页面不会为了填满画面而补线</text></g>` : ""}
   </svg>`;
 }
 
@@ -959,7 +1052,7 @@ function renderAbuDock(view: ExperienceViewModel): string {
   const isBusy = view.ui.narrationStatus === "preparing";
   return `<aside class="abu-dock${view.ui.abuExpanded ? " is-open" : ""}${isBusy ? " is-thinking" : ""}" aria-label="阿布同步论命">
     <button class="abu-avatar" type="button" data-command="toggle-abu" aria-label="${view.ui.abuExpanded ? "收起阿布" : "打开阿布"}">
-      <img class="${isBusy ? "" : "abu-avatar-standard"}" src="${isBusy ? "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp" : "/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp"}" alt="阿布">
+      <img class="${isBusy ? "" : "abu-avatar-standard"}" src="${isBusy ? "/assets/abu/v9-designer-taoist-divination/web/abu_taoist_divination_v9.webp" : "/assets/abu/v12-actor-pass/dream-standard-cycle/web/abu_dream_standard_cycle_v1.webp"}" alt="阿布">
     </button>
     <div class="abu-bubble" role="status"><span>${segment ? escapeHtml(segment.title) : "阿布"}</span><p>${escapeHtml(view.ui.abuMessage)}</p></div>
     <div class="abu-panel"${view.ui.abuExpanded ? "" : " hidden"}>

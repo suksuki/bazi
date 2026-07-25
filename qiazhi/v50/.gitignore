@@ -26,6 +26,20 @@ artifacts/abu-actor-pass-v1/source-contact-sheets/*
 !artifacts/abu-actor-pass-v1/source-contact-sheets/ninja/
 artifacts/abu-actor-pass-v1/source-contact-sheets/ninja/*
 !artifacts/abu-actor-pass-v1/source-contact-sheets/ninja/variant-review.json
+!artifacts/abu-actor-pass-v1/source-contact-sheets/dream-standard-v15/
+!artifacts/abu-actor-pass-v1/source-contact-sheets/dream-standard-v15/**
+!artifacts/abu-dream-world/
+artifacts/abu-dream-world/*
+!artifacts/abu-dream-world/director-reference/
+artifacts/abu-dream-world/director-reference/*
+!artifacts/abu-dream-world/director-reference/dream-encounter-01/
+artifacts/abu-dream-world/director-reference/dream-encounter-01/*
+!artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/
+!artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/**
+!artifacts/abu-audio/
+artifacts/abu-audio/*
+!artifacts/abu-audio/source/
+!artifacts/abu-audio/source/morning-glints-in-the-grove-source.mp3
 
 reports/*
 !reports/mingli-onecanvas-r1/

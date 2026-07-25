@@ -1,0 +1,80 @@
+{
+  "asset_set_id": "DREAM_ENCOUNTER_VISUAL_QA_REBUILD_02_DIRECTOR_V2",
+  "status": "LOCAL_REVIEW",
+  "source_registry": "artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/registry.json",
+  "assets": [
+    {
+      "file": "fog-gate-three-trees-clean.mp4",
+      "sha256": "9592d49c23fc82ad2cbf729c7c7014c68b154e6ceffb65052a62cf668b86426b",
+      "role": "fog_gate_and_three_tree_porch_transition"
+    },
+    {
+      "file": "tree-enter-clean.mp4",
+      "sha256": "573f50fbd83193b5669944565d636fadd2adaaeb0cf0bae26be1b49cbb07178f",
+      "role": "selected_tree_entry_transition"
+    },
+    {
+      "file": "flower-open-clean.mp4",
+      "sha256": "cc26039d4146be14f5c6c47b5be1662f2fe269dd3f0f210f8c505bbdd3481e44",
+      "role": "problem_flower_open_transition"
+    },
+    {
+      "file": "fruit-reveal-reference-clean.mp4",
+      "sha256": "f3fa1b1d41991eac6f077e02eb8fbae28f09d131f5dd210f421d54a23d872710",
+      "role": "dual_seal_only_fruit_transition_reference",
+      "runtime_treatment": "grayscale_fog_mask"
+    },
+    {
+      "file": "tree-observe-bud.png",
+      "sha256": "5f1027fbc5822153fc102019bfa81b45a1540a6f0b56b2ff101169efa0434472",
+      "role": "fixed_tree_pre_flower_hold_frame"
+    },
+    {
+      "file": "tree-flower-open.png",
+      "sha256": "0e4066ffdde7ac3f2a1483d614cef5af073466cd49c7a60d5967954a0ade6743",
+      "role": "fixed_tree_open_flower_hold_frame"
+    },
+    {
+      "file": "tree-observe-bud-preseal.png",
+      "sha256": "d504c70b69ba4e127d137d49f1f892ce0dd50d98f9f7328f4861f6f9f23bad5d",
+      "role": "runtime_fixed_tree_pre_flower_hold_frame",
+      "derivation": "director_frame_with_pre_seal_fruit_removed"
+    },
+    {
+      "file": "tree-question-map-full-preseal.png",
+      "sha256": "7901961ad7d6dc2d20aea1d0f1609737bc4ec121086c28e2aed7caddd0021a55",
+      "role": "runtime_fixed_tree_full_question_map_hold_frame",
+      "derivation": "approved_life_tree_director_master_at_5_seconds_with_platform_mark_masked"
+    },
+    {
+      "file": "tree-flower-open-preseal.png",
+      "sha256": "97282c5f1afc0e84b1bb983312390f699d65bd67f02916a24dcc70a57a1410ee",
+      "role": "runtime_fixed_tree_open_flower_hold_frame",
+      "derivation": "director_frame_with_pre_seal_fruit_removed"
+    },
+    {
+      "file": "fog-gate-preselection-clean.mp4",
+      "sha256": "1cd70b6e6373eedf8b2b9ab74eb585817bc60402e540280ef44e0240698c33c7",
+      "role": "runtime_fog_gate_transition",
+      "derivation": "clean_master_trimmed_before_result_symbols_enter_frame"
+    },
+    {
+      "file": "tree-observe-bud-mobile-preseal.jpg",
+      "sha256": "1caa71b1df752d2707d2e2b558cbffcdebafa12cabdb3ad5933b57e8c0f6e86e",
+      "role": "runtime_mobile_fixed_tree_pre_flower_hold_frame",
+      "derivation": "vertical_recomposition_of_the_approved_tree_director_frame_without_pre_seal_fruit"
+    },
+    {
+      "file": "tree-flower-open-mobile-preseal.jpg",
+      "sha256": "6a6fa956dbea6f9c05bd2911a92c0bd73d65d952709427cfe23c759d36f22314",
+      "role": "runtime_mobile_fixed_tree_open_flower_hold_frame",
+      "derivation": "same_vertical_tree_composition_with_only_the_problem_flower_opened"
+    }
+  ],
+  "security_boundaries": {
+    "pre_seal_fruit_visual": "FORBIDDEN",
+    "pre_seal_outcome_data": "FORBIDDEN",
+    "tree_question_answers_source": "FROZEN_PRE_OUTCOME_DREAM_PROJECTION",
+    "frontend_fact_invention": "FORBIDDEN"
+  }
+}

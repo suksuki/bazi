@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1280" height="720" viewBox="0 0 1280 720">
+  <defs>
+    <filter id="softGlow" x="-30%" y="-30%" width="160%" height="160%">
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+  </defs>
+  <g fill="none" stroke="#ffffff" stroke-linecap="round" stroke-linejoin="round">
+    <g opacity="0.30" stroke-width="14" filter="url(#softGlow)">
+      <path d="M650 706 C646 632 634 566 640 492 C646 420 637 354 628 296"/>
+      <path d="M630 316 C620 280 610 253 600 230"/>
+      <path d="M638 354 C710 346 790 326 865 310"/>
+      <path d="M630 306 C718 286 820 252 920 215"/>
+    </g>
+    <g opacity="0.76" stroke-width="3.5">
+      <path d="M650 706 C646 632 634 566 640 492 C646 420 637 354 628 296"/>
+      <path d="M630 316 C620 280 610 253 600 230"/>
+      <path d="M638 354 C710 346 790 326 865 310"/>
+      <path d="M630 306 C718 286 820 252 920 215"/>
+    </g>
+  </g>
+</svg>

@@ -352,12 +352,7 @@ def ensure_authorized_human_projection_life_case(
         raise ValueError("dream_human_chart_only_source_unavailable")
     world = ChartWorldInstance.model_validate(world_payload)
     record = MingliCognitiveRecord.model_validate(record_payload)
-    if (
-        record.case_id != case_id
-        or record.world_id != world.world_id
-        or record.reliability_disposition not in {"reliable", "competing"}
-        or record.review.disposition not in {"reliable", "competing"}
-    ):
+    if record.case_id != case_id or record.world_id != world.world_id:
         raise ValueError("dream_human_chart_only_source_unreliable")
 
     evidence_ref = next(

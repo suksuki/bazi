@@ -1,0 +1,10 @@
+{
+  "version": "v50.abu.dream_standard_source_review.v1",
+  "source_sha256": "0e70d5e6dfe3dd929f6c3f961f4d532c960b709ff3d94e701595e2b221ecaf45",
+  "decision": "owner_approved_default_character_motion",
+  "action_ids": [
+    "abu_dream_standard_cycle_v1",
+    "abu_dream_seated_observe_v1",
+    "abu_dream_stand_and_return_v1"
+  ]
+}

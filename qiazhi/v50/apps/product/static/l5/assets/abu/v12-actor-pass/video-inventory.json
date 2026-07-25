@@ -2,7 +2,10 @@
   "version": "v50.abu.video_asset_inventory.v1",
   "status": "internal_asset_review",
   "source_contract": {
-    "resolution": [1280, 720],
+    "resolution": [
+      1280,
+      720
+    ],
     "fps": 24,
     "duration_seconds": 10.005,
     "copyright_status": "designer_provided_for_deepbazi_internal_product_use",
@@ -14,7 +17,11 @@
       "filename": "这是图片吧，没问题做一系列小动画呢？晃脑袋，眨眼睛，摇尾巴.mp4",
       "sha256": "c81a3a3b071e9c08b1e44c8ccef3df933acb7f0fc7f3609bad81aa567dba54a5",
       "background": "painted_scene",
-      "actions": ["blink", "head_tilt", "tail_wag"],
+      "actions": [
+        "blink",
+        "head_tilt",
+        "tail_wag"
+      ],
       "quality": "usable_with_background_separation"
     },
     {
@@ -22,8 +29,21 @@
       "filename": "刚才那个ABU小狗动画，能否做一个纯小狗，透明背景的动画？.mp4",
       "sha256": "cd8ddfe46839cbc7082daf9f0a0be93372e01141546adf3189f532b937c00e1d",
       "background": "black_key",
-      "actions": ["head_tilt", "ears_lower", "smile", "wave"],
-      "selected_ranges": [{"seconds": [4.55, 6.55], "action_id": "abu_notice_tension_v1"}],
+      "actions": [
+        "head_tilt",
+        "ears_lower",
+        "smile",
+        "wave"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            4.55,
+            6.55
+          ],
+          "action_id": "abu_notice_tension_v1"
+        }
+      ],
       "quality": "selected"
     },
     {
@@ -31,7 +51,12 @@
       "filename": "不错，再来阿布嬉戏扑蝴蝶视频.mp4",
       "sha256": "59b5064310d0b9b3689c0c8a695059dd302f1881a730c8044110b0295ce78515",
       "background": "black_key",
-      "actions": ["notice", "pounce", "follow", "return_idle"],
+      "actions": [
+        "notice",
+        "pounce",
+        "follow",
+        "return_idle"
+      ],
       "quality": "production_existing"
     },
     {
@@ -39,8 +64,22 @@
       "filename": "来一个阿布奔跑跳跃的视频.mp4",
       "sha256": "ce349b8ce06fcebc695dd325775a21e530a756fa74fd9fac27fc8595d70a22b1",
       "background": "black_key",
-      "actions": ["run", "jump", "slow", "stop", "sit"],
-      "selected_ranges": [{"seconds": [5.5, 9.4], "action_id": "abu_enter_and_notice_v1"}],
+      "actions": [
+        "run",
+        "jump",
+        "slow",
+        "stop",
+        "sit"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            5.5,
+            9.4
+          ],
+          "action_id": "abu_enter_and_notice_v1"
+        }
+      ],
       "quality": "selected"
     },
     {
@@ -48,7 +87,12 @@
       "filename": "赶紧给我生成一个新的阿布睡觉的视频，五秒钟.mp4",
       "sha256": "76333476f95210a0c807b7fa4dbe0f3c6c04f944b05eb856af096a9f7d658526",
       "background": "black_key",
-      "actions": ["drowsy", "lie_down", "sleep_breathe", "wake"],
+      "actions": [
+        "drowsy",
+        "lie_down",
+        "sleep_breathe",
+        "wake"
+      ],
       "quality": "production_existing"
     },
     {
@@ -56,7 +100,12 @@
       "filename": "来一个阿布挑霹雳舞的视频～.mp4",
       "sha256": "04adff7578bf784582aa2285888870414c2aee528a650b5f3e97943df1c6e6d7",
       "background": "black_key",
-      "actions": ["dance_setup", "spin", "freeze", "return_idle"],
+      "actions": [
+        "dance_setup",
+        "spin",
+        "freeze",
+        "return_idle"
+      ],
       "quality": "production_existing"
     },
     {
@@ -64,7 +113,11 @@
       "filename": "很棒，再来一个，阿布成了算命师，闭眼，假模假样掐指一算，口中.mp4",
       "sha256": "2dd91480c1efab682751f0ffae8df56d270cf165bdda56aadeea4fbe046ca3ee",
       "background": "black_key",
-      "actions": ["focus", "paw_count", "release"],
+      "actions": [
+        "focus",
+        "paw_count",
+        "release"
+      ],
       "quality": "restricted_by_brand_role"
     },
     {
@@ -72,7 +125,11 @@
       "filename": "再来一个阿布扮作算命道士打扮，口中念念有词，算命的视频.mp4",
       "sha256": "a626bba26e911443c8a211642fc2e254e9453006ec858f3c8dbd1b894da84783",
       "background": "black_key",
-      "actions": ["table_gesture", "chant", "crystal_gaze"],
+      "actions": [
+        "table_gesture",
+        "chant",
+        "crystal_gaze"
+      ],
       "quality": "excluded_from_s0_brand_expression"
     },
     {
@@ -80,7 +137,11 @@
       "filename": "来一个阿布伤心掉泪的视频，透明背景，需要看到阿布伤心的内心戏.mp4",
       "sha256": "69655a4f4bd04b6d7a3a95fdc0f2b8bd54e55ad72330c7daf501b6d78b899ed4",
       "background": "black_key",
-      "actions": ["notice_failure", "tear", "wipe_tear"],
+      "actions": [
+        "notice_failure",
+        "tear",
+        "wipe_tear"
+      ],
       "quality": "production_existing_restricted_context"
     },
     {
@@ -88,7 +149,13 @@
       "filename": "来一段阿布开场动画，这次背景要是吉卜力风格，阿布，大概就是我.mp4",
       "sha256": "6f8b4c7d40ad8ca50184e9f55c9043e23879f383263e20c7595f274738728930",
       "background": "painted_scene",
-      "actions": ["jump_down", "walk", "turn", "point", "sit"],
+      "actions": [
+        "jump_down",
+        "walk",
+        "turn",
+        "point",
+        "sit"
+      ],
       "quality": "high_value_requires_background_separation"
     },
     {
@@ -96,7 +163,11 @@
       "filename": "我想让图片当中的小狗偶尔动一下脑袋，然后云雾缭绕的动画，你能.mp4",
       "sha256": "f922814a65994a19697a517c3adebedd295e0da2283ddeef48571f55685f034b",
       "background": "painted_scene",
-      "actions": ["look_forward", "look_back", "mist_idle"],
+      "actions": [
+        "look_forward",
+        "look_back",
+        "mist_idle"
+      ],
       "quality": "high_value_requires_background_separation"
     },
     {
@@ -104,8 +175,22 @@
       "filename": "你赶紧生成里面的视频.mp4",
       "sha256": "2e379f33437fffa32e5b7e5a0d8f662f6b692d3db1b77679d5a78843c94318e0",
       "background": "black_key",
-      "actions": ["wave", "blink", "head_tilt", "turn_and_point", "return_idle"],
-      "selected_ranges": [{"seconds": [5.45, 7.35], "action_id": "abu_turn_and_point_v1"}],
+      "actions": [
+        "wave",
+        "blink",
+        "head_tilt",
+        "turn_and_point",
+        "return_idle"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            5.45,
+            7.35
+          ],
+          "action_id": "abu_turn_and_point_v1"
+        }
+      ],
       "quality": "selected"
     },
     {
@@ -113,8 +198,22 @@
       "filename": "来一段会变脸戏法的阿布视频.mp4",
       "sha256": "e1a48c022adc17d18d56642bc4fa225908d7c8664527ad33c3eca413751b3113",
       "background": "black_key",
-      "actions": ["mask_reveal", "red_mask", "blue_mask", "scarf_sweep", "return_idle"],
-      "selected_ranges": [{"seconds": [0.4, 9.4], "action_id": "abu_face_change_transition_v1"}],
+      "actions": [
+        "mask_reveal",
+        "red_mask",
+        "blue_mask",
+        "scarf_sweep",
+        "return_idle"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            0.4,
+            9.4
+          ],
+          "action_id": "abu_face_change_transition_v1"
+        }
+      ],
       "quality": "selected"
     },
     {
@@ -123,14 +222,39 @@
       "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_stand_point_blackboard_source.mp4",
       "sha256": "b7fa6d2a4b91d18453f72454e706b9cffec960ef6ca2e4e89735a429f5ef0fac",
       "background": "black_key",
-      "actions": ["stand", "raise_paw", "turn_head", "point_upper_left", "point_left", "scarf_transition", "return_idle"],
+      "actions": [
+        "stand",
+        "raise_paw",
+        "turn_head",
+        "point_upper_left",
+        "point_left",
+        "scarf_transition",
+        "return_idle"
+      ],
       "selected_ranges": [
-        {"seconds": [1.05, 2.4], "action_id": "abu_stand_point_up_left_v1"},
-        {"seconds": [1.05, 2.4], "action_id": "abu_stand_point_up_right_v1", "derivative": "horizontal_mirror"}
+        {
+          "seconds": [
+            1.05,
+            2.4
+          ],
+          "action_id": "abu_stand_point_up_left_v1"
+        },
+        {
+          "seconds": [
+            1.05,
+            2.4
+          ],
+          "action_id": "abu_stand_point_up_right_v1",
+          "derivative": "horizontal_mirror"
+        }
       ],
       "quality": "selected_closeup",
-      "limitations": ["source framing crops the lower body during the pointing action"],
-      "removed_regions": ["right_side_sparkle_mark"]
+      "limitations": [
+        "source framing crops the lower body during the pointing action"
+      ],
+      "removed_regions": [
+        "right_side_sparkle_mark"
+      ]
     },
     {
       "source_id": "ninja_sitting_full_body_start",
@@ -138,11 +262,29 @@
       "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_ninja_sitting_start_source.mp4",
       "sha256": "cfaf404ed9e7441d6aa9c9bd5737e5288dacc08e8e4fff3bc0d83f0ff678effb",
       "background": "black_key",
-      "actions": ["sitting_start", "ninja_transform", "disappear", "shuriken_throw", "return_idle"],
-      "selected_ranges": [{"seconds": [0.0, 10.0], "action_id": "abu_ninja_disappear_throw_v1"}],
+      "actions": [
+        "sitting_start",
+        "ninja_transform",
+        "disappear",
+        "shuriken_throw",
+        "return_idle"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            0.0,
+            10.0
+          ],
+          "action_id": "abu_ninja_disappear_throw_v1"
+        }
+      ],
       "quality": "selected_full_body_seated",
-      "notes": ["selected over the biped standing start to preserve Abu's familiar cute silhouette"],
-      "removed_regions": ["lower_right_sparkle_mark"]
+      "notes": [
+        "selected over the biped standing start to preserve Abu's familiar cute silhouette"
+      ],
+      "removed_regions": [
+        "lower_right_sparkle_mark"
+      ]
     },
     {
       "source_id": "ninja_standing_full_body_start",
@@ -150,10 +292,20 @@
       "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_ninja_standing_start_source.mp4",
       "sha256": "dfdbb220211e2d79557a762e636160a7fe4afce270a7dafe6adfaf05923c9fcf",
       "background": "black_key",
-      "actions": ["standing_start", "ninja_transform", "disappear", "shuriken_throw", "return_idle"],
+      "actions": [
+        "standing_start",
+        "ninja_transform",
+        "disappear",
+        "shuriken_throw",
+        "return_idle"
+      ],
       "quality": "candidate_pose_hold",
-      "limitations": ["biped standing start feels abrupt and intimidating in the quiet theater finale"],
-      "removed_regions": ["lower_right_sparkle_mark_in_candidate_derivative"]
+      "limitations": [
+        "biped standing start feels abrupt and intimidating in the quiet theater finale"
+      ],
+      "removed_regions": [
+        "lower_right_sparkle_mark_in_candidate_derivative"
+      ]
     },
     {
       "source_id": "ninja_half_body_start",
@@ -161,10 +313,20 @@
       "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_ninja_half_body_start_source.mp4",
       "sha256": "253eb763a8ab40c970da366081cdbd2eafa75ef1b0a321d4d485a36f560c18e6",
       "background": "black_key",
-      "actions": ["half_body_start", "ninja_transform", "disappear", "shuriken_throw", "return_idle"],
+      "actions": [
+        "half_body_start",
+        "ninja_transform",
+        "disappear",
+        "shuriken_throw",
+        "return_idle"
+      ],
       "quality": "candidate_framing_hold",
-      "limitations": ["opening half-body framing cannot join the full-body finale actor without a visible scale jump"],
-      "removed_regions": ["lower_right_sparkle_mark_in_production_derivative"]
+      "limitations": [
+        "opening half-body framing cannot join the full-body finale actor without a visible scale jump"
+      ],
+      "removed_regions": [
+        "lower_right_sparkle_mark_in_production_derivative"
+      ]
     },
     {
       "source_id": "quiet_sit_reaction_cute_standard",
@@ -172,11 +334,30 @@
       "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_quiet_sit_reaction_source.mp4",
       "sha256": "d9434fa516ccd47d3ecb18debbeab85e0643bbced723f725dda39b8c360737ff",
       "background": "black_key",
-      "actions": ["sit", "blink", "head_tilt", "smile", "small_raise", "return_idle"],
-      "selected_ranges": [{"seconds": [0.0, 10.0], "action_id": "abu_quiet_sit_reaction_v1"}],
+      "actions": [
+        "sit",
+        "blink",
+        "head_tilt",
+        "smile",
+        "small_raise",
+        "return_idle"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            0.0,
+            10.0
+          ],
+          "action_id": "abu_quiet_sit_reaction_v1"
+        }
+      ],
       "quality": "selected_standard_character_motion",
-      "notes": ["designer-corrected cute facial silhouette accepted as the standard quiet companion action"],
-      "removed_regions": ["lower_right_sparkle_mark"]
+      "notes": [
+        "designer-corrected cute facial silhouette accepted as the standard quiet companion action"
+      ],
+      "removed_regions": [
+        "lower_right_sparkle_mark"
+      ]
     },
     {
       "source_id": "baseball_swing",
@@ -184,11 +365,31 @@
       "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_baseball_swing_source.mp4",
       "sha256": "5d7598535cbe2f3dc235e5260db7ef53b372dea5df9111dcd3039f392157a548",
       "background": "black_key",
-      "actions": ["sit", "stand", "take_bat", "swing", "celebrate", "return_idle"],
-      "selected_ranges": [{"seconds": [0.067, 10.0], "action_id": "abu_baseball_swing_v1"}],
+      "actions": [
+        "sit",
+        "stand",
+        "take_bat",
+        "swing",
+        "celebrate",
+        "return_idle"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            0.067,
+            10.0
+          ],
+          "action_id": "abu_baseball_swing_v1"
+        }
+      ],
       "quality": "selected_after_first_frame_cleanup",
-      "notes": ["the first encoded close-up frame is excluded so the registered action begins on the full seated Abu pose"],
-      "removed_regions": ["first_mismatched_closeup_frame", "lower_right_sparkle_mark"]
+      "notes": [
+        "the first encoded close-up frame is excluded so the registered action begins on the full seated Abu pose"
+      ],
+      "removed_regions": [
+        "first_mismatched_closeup_frame",
+        "lower_right_sparkle_mark"
+      ]
     },
     {
       "source_id": "pachinko_jackpot",
@@ -196,11 +397,154 @@
       "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_pachinko_jackpot_source.mp4",
       "sha256": "bd70cb1b6c9f6c2d432f672310336620677445715fb3ad9f6b551fa76ecf66ce",
       "background": "black_key",
-      "actions": ["sit_at_machine", "operate", "reels_spin", "jackpot_777", "brief_celebration", "return_idle"],
-      "selected_ranges": [{"seconds": [0.0, 10.0], "action_id": "abu_pachinko_jackpot_v1"}],
+      "actions": [
+        "sit_at_machine",
+        "operate",
+        "reels_spin",
+        "jackpot_777",
+        "brief_celebration",
+        "return_idle"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            0.0,
+            10.0
+          ],
+          "action_id": "abu_pachinko_jackpot_v1"
+        }
+      ],
       "quality": "selected_restricted_context",
-      "notes": ["arcade imagery is a low-frequency IP easter egg and has no permitted binding to fortune, wealth or reading outcome"],
-      "removed_regions": ["lower_right_sparkle_mark"]
+      "notes": [
+        "arcade imagery is a low-frequency IP easter egg and has no permitted binding to fortune, wealth or reading outcome"
+      ],
+      "removed_regions": [
+        "lower_right_sparkle_mark"
+      ]
+    },
+    {
+      "source_id": "dream_standard_cute_green",
+      "filename": "这一版阿布更可爱，来一个透明背景的，阿布坐着开始的标准视频，.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_dream_standard_green_source.mp4",
+      "sha256": "0e70d5e6dfe3dd929f6c3f961f4d532c960b709ff3d94e701595e2b221ecaf45",
+      "background": "green_screen",
+      "actions": [
+        "sit",
+        "blink",
+        "look_up",
+        "head_turn",
+        "stand",
+        "smile",
+        "return_sit"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            0.0,
+            10.0
+          ],
+          "action_id": "abu_dream_standard_cycle_v1"
+        },
+        {
+          "seconds": [
+            0.0,
+            6.25
+          ],
+          "action_id": "abu_dream_seated_observe_v1"
+        },
+        {
+          "seconds": [
+            6.25,
+            10.0
+          ],
+          "action_id": "abu_dream_stand_and_return_v1"
+        }
+      ],
+      "quality": "owner_approved_default_character_motion",
+      "notes": [
+        "Owner promoted this round-faced dream-world Abu as the default character on 2026-07-22.",
+        "Previous default remains traceable as a retired action."
+      ],
+      "removed_regions": [
+        "green_screen",
+        "source_green_sparkle_mark"
+      ]
+    },
+    {
+      "source_id": "abu_01_seated_idle_loop_v3_source",
+      "filename": "Regenerate_this_exact_animatio.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_01_seated_idle_loop_v3_source.mp4",
+      "sha256": "d5b3c64ad82aed464a201cd9e90e879e8f2cbe6abfe4fd78c08c0e8359697196",
+      "background": "green_screen",
+      "actions": [
+        "sit",
+        "blink",
+        "ear_twitch",
+        "tail_twitch",
+        "breathe"
+      ],
+      "selected_ranges": [
+        {
+          "seconds": [
+            0.0,
+            10.0
+          ],
+          "action_id": "abu_01_seated_idle_loop_v3"
+        }
+      ],
+      "quality": "owner_approved_library_ready",
+      "notes": [
+        "Character Lock, motion, camera and background passed designer review.",
+        "Audio, platform mark, anchor drift and loop seam were removed in deterministic postprocess.",
+        "Owner promoted ABU_01_SEATED_IDLE_LOOP_V3 to LIBRARY_READY on 2026-07-23.",
+        "The promoted action is runtime-addressable but does not replace the current default."
+      ],
+      "removed_regions": [
+        "green_screen",
+        "lower_right_four_point_platform_mark",
+        "aac_audio_track",
+        "scale_and_bottom_anchor_drift",
+        "first_last_loop_seam"
+      ]
+    },
+    {
+      "source_id": "abu_02_calm_follow_walk_loop_v1_source",
+      "filename": "Create_a_second_green_scree.mp4",
+      "archived_source": "artifacts/abu-actor-pass-v1/source-videos/abu_02_calm_follow_walk_loop_v1_source.mp4",
+      "sha256": "993c6d111903f7f995b23c6f5a0653f9f893b21cb678d1cea60b9475f6fbdfa8",
+      "background": "green_screen",
+      "actions": [
+        "calm_walk_in_place",
+        "breathe",
+        "tail_follow_through"
+      ],
+      "selected_ranges": [
+        {
+          "frames": [
+            6,
+            59
+          ],
+          "seconds": [
+            0.25,
+            2.5
+          ],
+          "action_id": "abu_02_calm_follow_walk_loop_v1"
+        }
+      ],
+      "quality": "library_ready_owner_approved",
+      "notes": [
+        "Character Lock, motion, camera and background passed designer review.",
+        "Frames 6-59 form the delivered cycle; frame 60 is the matched endpoint and is not duplicated.",
+        "No crossfade, frame blending or horizontal actor translation was introduced.",
+        "Owner approved runtime use for canonical Abu follow locomotion."
+      ],
+      "removed_regions": [
+        "green_screen",
+        "lower_right_four_point_platform_mark",
+        "aac_audio_track",
+        "linear_anchor_drift",
+        "non_matching_source_tail"
+      ]
     }
   ]
 }

@@ -1,0 +1,156 @@
+{
+  "schema_version": "deepbazi.matured_fruit_content_pack.source.v1",
+  "pack_id": "dream-fruit-simulated-pilot-v1",
+  "pack_version": "1",
+  "namespace": "dream-game:simulated-fixture:v1",
+  "evidence_class": "SIMULATED",
+  "content_state": "PUBLISHABLE",
+  "development_only": true,
+  "release_eligible": false,
+  "verified_real_gate_contribution": 0,
+  "explicit_authorization_ref": "",
+  "deidentification_policy_version": "simulated-no-human-source.v1",
+  "withdrawal_policy_version": "simulated-fixture-revoke.v1",
+  "created_at": "2026-07-23T00:00:00Z",
+  "original_timestamp_manifest": {
+    "source": "deterministic_simulation_fixture",
+    "contains_human_timestamp": false,
+    "fixture_clock": "UTC"
+  },
+  "cutoff_material_manifest": {
+    "policy": "pre-outcome-knowledge-cutoff.v1",
+    "materials": [
+      "canonical_scene_at_cutoff",
+      "question_context_at_cutoff",
+      "formal_relations_at_cutoff"
+    ]
+  },
+  "chain_of_custody_manifest": {
+    "custodian": "dream_game_fixture_owner",
+    "source_kind": "SIMULATED",
+    "outcome_domain": "isolated_server_store",
+    "real_world_evidence": false
+  },
+  "slots": [
+    {
+      "slot_id": "job-change-simulated-01",
+      "event_family": "JOB_CHANGE",
+      "question": {
+        "question_id": "problem-job-change-simulated-01",
+        "question_version": "1",
+        "subject_label": "一位梦境居民",
+        "neutral_question_text": "在结果窗口结束前，这位居民是否完成了正式岗位变动？",
+        "known_context": [
+          "当事人正在评估一次明确的岗位变化",
+          "结果以正式到岗或书面任命为准"
+        ],
+        "knowledge_cutoff": "2025-02-01T00:00:00Z",
+        "clock_domain": "UTC",
+        "outcome_window_start": "2025-02-02T00:00:00Z",
+        "outcome_window_end": "2025-05-31T23:59:59Z",
+        "outcome_options": {
+          "yes": "完成正式岗位变动",
+          "no": "未完成正式岗位变动",
+          "partial_or_unclear": "仅有意向、临时安排或证据不足"
+        },
+        "resolution_criteria": [
+          "存在正式到岗、调令或任命证据",
+          "事件发生在结果窗口内"
+        ],
+        "disconfirmation_definition": "只有口头讨论、面试或未执行的意向不能算完成岗位变动。",
+        "liuyao_permitted": true
+      },
+      "simulated_outcome_option_id": "yes",
+      "simulated_outcome_summary": "模拟结算显示，当事人在窗口内完成书面调动并正式到岗。",
+      "simulated_evidence_items": [
+        "SIMULATED：窗口内签发的岗位调动记录",
+        "SIMULATED：正式到岗确认"
+      ],
+      "system_outcome_option_id": "yes",
+      "system_confidence_basis_points": 6700,
+      "system_reasoning_summary": "冻结投影中的时运节点与结构变化共同支持岗位转换，但该判断只属于模拟验证场。",
+      "system_strongest_alternative": "变化可能停留在职责调整，并未形成正式岗位变动。",
+      "system_disconfirmation_condition": "窗口内没有书面任命或正式到岗证据。"
+    },
+    {
+      "slot_id": "contract-signing-simulated-01",
+      "event_family": "CONTRACT_SIGNING",
+      "question": {
+        "question_id": "problem-contract-signing-simulated-01",
+        "question_version": "1",
+        "subject_label": "一位梦境居民",
+        "neutral_question_text": "在约定期限前，这位居民是否完成了目标合同的正式签署？",
+        "known_context": [
+          "合同已进入具体条款协商",
+          "只有双方完成正式签署才算结果成立"
+        ],
+        "knowledge_cutoff": "2025-04-12T00:00:00Z",
+        "clock_domain": "UTC",
+        "outcome_window_start": "2025-04-13T00:00:00Z",
+        "outcome_window_end": "2025-06-30T23:59:59Z",
+        "outcome_options": {
+          "yes": "期限内完成正式签署",
+          "no": "期限内未完成正式签署",
+          "partial_or_unclear": "仅有草案、口头承诺或结果证据不足"
+        },
+        "resolution_criteria": [
+          "双方签署完成",
+          "签署时间处于结果窗口内"
+        ],
+        "disconfirmation_definition": "草案、邮件确认或单方签字均不能视为合同正式签署。",
+        "liuyao_permitted": true
+      },
+      "simulated_outcome_option_id": "no",
+      "simulated_outcome_summary": "模拟结算显示，双方在期限内未完成正式签署，谈判随后终止。",
+      "simulated_evidence_items": [
+        "SIMULATED：期限结束时合同仍未签署",
+        "SIMULATED：后续终止谈判记录"
+      ],
+      "system_outcome_option_id": "partial_or_unclear",
+      "system_confidence_basis_points": 5400,
+      "system_reasoning_summary": "冻结投影同时存在推进与牵制信息，系统事前选择了不确定结果。",
+      "system_strongest_alternative": "牵制占优，最终应判为未签署。",
+      "system_disconfirmation_condition": "若期限结束前没有双方签署证据，则不确定判断应让位于未完成。"
+    },
+    {
+      "slot_id": "relocation-simulated-01",
+      "event_family": "RELOCATION_OR_TRAVEL",
+      "question": {
+        "question_id": "problem-relocation-simulated-01",
+        "question_version": "1",
+        "subject_label": "一位梦境居民",
+        "neutral_question_text": "在结果窗口内，这位居民是否实际完成了跨城搬迁或持续远行？",
+        "known_context": [
+          "当事人已开始评估异地生活安排",
+          "短途往返不算完成搬迁或持续远行"
+        ],
+        "knowledge_cutoff": "2025-07-03T00:00:00Z",
+        "clock_domain": "UTC",
+        "outcome_window_start": "2025-07-04T00:00:00Z",
+        "outcome_window_end": "2025-10-31T23:59:59Z",
+        "outcome_options": {
+          "yes": "完成跨城搬迁或持续远行",
+          "no": "未完成跨城搬迁或持续远行",
+          "partial_or_unclear": "仅短途往返、准备中或证据不足"
+        },
+        "resolution_criteria": [
+          "存在实际迁居或持续异地停留事实",
+          "事件发生在结果窗口内"
+        ],
+        "disconfirmation_definition": "看房、购票、短途出差或未执行计划不能算完成搬迁。",
+        "liuyao_permitted": true
+      },
+      "simulated_outcome_option_id": "partial_or_unclear",
+      "simulated_outcome_summary": "模拟结算只形成多次短途往返，没有完成持续搬迁。",
+      "simulated_evidence_items": [
+        "SIMULATED：窗口内存在多次短途行程",
+        "SIMULATED：没有持续异地居住记录"
+      ],
+      "system_outcome_option_id": "no",
+      "system_confidence_basis_points": 6200,
+      "system_reasoning_summary": "冻结投影支持移动意向，但缺少足以形成持续迁移的连续条件。",
+      "system_strongest_alternative": "频繁短途移动可能逐步转化为正式搬迁。",
+      "system_disconfirmation_condition": "若窗口内形成连续异地居住证据，则未搬迁判断被推翻。"
+    }
+  ]
+}

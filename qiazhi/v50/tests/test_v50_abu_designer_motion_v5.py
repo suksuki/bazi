@@ -30,7 +30,7 @@ def test_designer_welcome_wave_is_a_clean_production_asset() -> None:
     assert poster.read_bytes()[:8] == b"\x89PNG\r\n\x1a\n"
 
 
-def test_welcome_motion_is_registered_and_used_by_the_unified_world() -> None:
+def test_welcome_motion_remains_registered_while_the_unified_world_uses_actor_pass() -> None:
     registry = (ROOT / "apps/product/static/l5/assets/abu/motion-registry.js").read_text(encoding="utf-8")
     components = (ROOT / "apps/product/experience_shell/src/components.ts").read_text(encoding="utf-8")
 
@@ -38,7 +38,10 @@ def test_welcome_motion_is_registered_and_used_by_the_unified_world() -> None:
     assert 'completed: "happy_tail"' in registry
     assert 'confidence_up: "happy_tail"' in registry
     assert "/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" in registry
-    assert "/assets/abu/v5-designer-welcome/web/abu_welcome_wave_v5.webp" in components
+    assert (
+        "/assets/abu/v12-actor-pass/dream-standard-cycle/web/"
+        "abu_dream_standard_cycle_v1.webp"
+    ) in components
 
 
 def test_designer_motion_builder_is_reusable_for_followup_deliveries() -> None:

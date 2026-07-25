@@ -1,0 +1,60 @@
+{
+  "asset_id": "DREAM_THREE_TREE_PORCH_V5",
+  "role": "owner_approved_clean_background_with_independent_transparent_tree_actors",
+  "status": "POSTPROCESS_COMPLETE_AWAITING_OWNER_REVIEW",
+  "visual_master": "ABU_03_DREAM_ENTRY_TRANSITION_V1",
+  "generation_mode": "built_in_image_gen_precise_object_edit_then_local_chroma_removal",
+  "background": {
+    "asset_id": "DREAM_PORCH_CLEAN_BACKGROUND_V5",
+    "status": "OWNER_APPROVED",
+    "path": "apps/product/static/l5/assets/dream/porch-v5/grove-clean-approved-v5-e97ec6b5.png",
+    "sha256": "e97ec6b5f856e15371cad08c91609b4585d55eea112ec9b1176ebfb5bd6eca54"
+  },
+  "actors": [
+    {
+      "asset_id": "dream_porch_blue_tree_actor_v5",
+      "path": "apps/product/static/l5/assets/dream/porch-v5/tree-blue-actor-v5-08170159.png",
+      "sha256": "081701597f2f4dfaf422215204f7a607d27fcb9ec05c473a7edf52180923dd85",
+      "alpha": true
+    },
+    {
+      "asset_id": "dream_porch_jade_tree_actor_v5",
+      "path": "apps/product/static/l5/assets/dream/porch-v5/tree-jade-actor-v5-9541d056.png",
+      "sha256": "9541d056857df81b6f753e99ee68e4113808c47a060bef77b65d9714f69ec6c2",
+      "alpha": true
+    },
+    {
+      "asset_id": "dream_porch_amber_tree_actor_v5",
+      "path": "apps/product/static/l5/assets/dream/porch-v5/tree-amber-actor-v5-1f98142a.png",
+      "sha256": "1f98142ad58c8f9b207c780844ab04bd0733d91a01a8c15465359910e1e7c11e",
+      "alpha": true
+    }
+  ],
+  "handoff": {
+    "center_candidate": "dream_porch_blue_tree_actor_v5",
+    "stable_background": "DREAM_PORCH_CLEAN_BACKGROUND_V5",
+    "reference": "ABU_03 final frame"
+  },
+  "constraints": {
+    "background_never_rotates": true,
+    "all_three_tree_actors_fade_together": true,
+    "runtime_controls_rotation_and_selection": true,
+    "scene_plate_masks_forbidden": true,
+    "retired_tree_assets_must_not_return": true
+  },
+  "forbidden_fallbacks": [
+    "porch-blue-single-v4-230add93.png",
+    "porch-jade-single-v4-fced62f3.png",
+    "porch-amber-single-v4-3ba7358f.png",
+    "grove-background-v1.webp",
+    "tree-mist-v1.webp",
+    "tree-brook-v1.webp",
+    "tree-ridge-v1.webp",
+    "porch-blue-v3.webp",
+    "porch-jade-v3.webp",
+    "porch-amber-v3.webp",
+    "porch-three-trees-clean-plate.png",
+    "porch-three-trees-preseal.png",
+    "porch-three-trees.png"
+  ]
+}

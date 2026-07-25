@@ -1,0 +1,16 @@
+{
+  "schema_version": "deepbazi.abu_audio_library.v1",
+  "updated_at": "2026-07-22",
+  "default_opening_theme_asset_id": "abu_mingli_opening_theme_morning_glints_v1",
+  "assets": [
+    {
+      "asset_id": "abu_mingli_opening_theme_morning_glints_v1",
+      "title": "Morning Glints In The Grove",
+      "label_zh": "林间晨光",
+      "status": "production_local",
+      "product_role": "website_opening_theme",
+      "manifest": "apps/product/static/l5/assets/audio/abu/morning-glints-in-the-grove-v1/manifest.json",
+      "manifest_sha256": "bda7b7985e99edb202cea5a331a43725bfbd86cfe8d75421e26c1cb6303cfb72"
+    }
+  ]
+}

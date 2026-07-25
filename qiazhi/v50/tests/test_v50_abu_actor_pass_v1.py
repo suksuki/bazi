@@ -29,10 +29,15 @@ def test_actor_library_exposes_reusable_actions_without_mingli_authority() -> No
         "abu_stand_point_up_right_v1",
         "abu_notice_tension_v1",
         "abu_quiet_sit_reaction_v1",
+        "abu_dream_standard_cycle_v1",
+        "abu_dream_seated_observe_v1",
+        "abu_dream_stand_and_return_v1",
         "abu_baseball_swing_v1",
         "abu_pachinko_jackpot_v1",
         "abu_ninja_disappear_throw_v1",
         "abu_face_change_transition_v1",
+        "abu_01_seated_idle_loop_v3",
+        "abu_02_calm_follow_walk_loop_v1",
     }
     assert library["calibration"]["anchor"] == "bottom_center"
     assert library["calibration"]["stage_render_fps"] == 24
@@ -43,6 +48,8 @@ def test_actor_library_exposes_reusable_actions_without_mingli_authority() -> No
         "product_reference_policy": "action_id_preferred",
         "lifecycle_states": ["candidate", "production", "retired"],
         "retired_assets_remain_traceable": True,
+        "default_action_id": "abu_dream_standard_cycle_v1",
+        "default_character_source_id": "dream_standard_cute_green",
     }
     assert library["boundaries"] == {
         "creates_mingli_claim": False,
@@ -65,20 +72,57 @@ def test_actor_library_exposes_reusable_actions_without_mingli_authority() -> No
             "abu_notice_tension_v1",
         }
     )
-    assert actions["abu_quiet_sit_reaction_v1"]["loop_mode"] == "loop"
+    assert actions["abu_quiet_sit_reaction_v1"]["status"] == "retired"
+    assert actions["abu_quiet_sit_reaction_v1"]["superseded_by"] == "abu_dream_standard_cycle_v1"
+    assert {
+        action_id
+        for action_id, action in actions.items()
+        if action["loop_mode"] == "loop"
+    } == {
+        "abu_quiet_sit_reaction_v1",
+        "abu_dream_standard_cycle_v1",
+        "abu_dream_seated_observe_v1",
+        "abu_01_seated_idle_loop_v3",
+        "abu_02_calm_follow_walk_loop_v1",
+    }
     assert all(
         action["loop_mode"] == "one_shot"
         for action_id, action in actions.items()
+        if action_id
+        not in {
+            "abu_quiet_sit_reaction_v1",
+            "abu_dream_standard_cycle_v1",
+            "abu_dream_seated_observe_v1",
+            "abu_01_seated_idle_loop_v3",
+            "abu_02_calm_follow_walk_loop_v1",
+        }
+    )
+    assert all(
+        action["status"] == "production"
+        for action_id, action in actions.items()
         if action_id != "abu_quiet_sit_reaction_v1"
     )
-    assert all(action["status"] == "production" for action in actions.values())
+    assert actions["abu_01_seated_idle_loop_v3"]["status"] == "production"
+    assert (
+        actions["abu_01_seated_idle_loop_v3"]["library_status"]
+        == "LIBRARY_READY"
+    )
+    assert actions["abu_02_calm_follow_walk_loop_v1"]["status"] == "production"
+    assert (
+        actions["abu_02_calm_follow_walk_loop_v1"]["library_status"]
+        == "LIBRARY_READY"
+    )
+    assert actions["abu_02_calm_follow_walk_loop_v1"]["runtime_registered"] is True
     assert all(action["label_zh"] for action in actions.values())
     assert all(action["description_zh"] for action in actions.values())
     assert all(action["product_role"] for action in actions.values())
     assert all(action["do_not_use_for"] for action in actions.values())
     assert actions["abu_face_change_transition_v1"]["product_role"] == "onecanvas_to_xiangfa_transition"
     assert actions["abu_ninja_disappear_throw_v1"]["product_role"] == "finale_playful_interlude"
-    assert actions["abu_quiet_sit_reaction_v1"]["product_role"] == "default_companion_presence"
+    assert actions["abu_quiet_sit_reaction_v1"]["product_role"] == "retired_previous_default_companion"
+    assert actions["abu_dream_standard_cycle_v1"]["product_role"] == "default_companion_presence"
+    assert actions["abu_dream_seated_observe_v1"]["product_role"] == "quiet_companion_presence"
+    assert actions["abu_dream_stand_and_return_v1"]["product_role"] == "gentle_acknowledgement"
     assert actions["abu_baseball_swing_v1"]["product_role"] == "ambient_active_interlude"
     assert actions["abu_pachinko_jackpot_v1"]["product_role"] == "rare_finale_arcade_easter_egg"
     assert "财富或财运判断" in actions["abu_pachinko_jackpot_v1"]["do_not_use_for"]
@@ -137,16 +181,20 @@ def test_runtime_registry_places_new_actions_without_reading_outcome_semantics()
     components = (ROOT / "apps/product/experience_shell/src/components.ts").read_text(encoding="utf-8")
     account_components = (ROOT / "apps/product/experience_shell/src/account_components.ts").read_text(encoding="utf-8")
 
-    assert 'idle: "quiet_sit_reaction"' in registry
+    assert 'idle: "dream_standard_cycle"' in registry
+    assert 'quiet_companion: "dream_seated_observe"' in registry
+    assert 'confirming: "dream_stand_and_return"' in registry
+    assert 'following: "calm_follow_walk"' in registry
+    assert 'actionId: "abu_02_calm_follow_walk_loop_v1"' in registry
     assert 'baseball: "baseball_swing"' in registry
     assert 'arcade_easter_egg: "pachinko_jackpot"' in registry
     assert 'category: "ambient_restricted"' in registry
     assert '"wealth_or_fortune_reading"' in registry
     assert 'label: "挥一棒活动一下", weight: 2' in registry
     assert 'label: "偶尔玩一局弹子机", weight: 1' in registry
-    quiet_asset = "/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp"
-    assert quiet_asset in components
-    assert quiet_asset in account_components
+    default_asset = "/assets/abu/v12-actor-pass/dream-standard-cycle/web/abu_dream_standard_cycle_v1.webp"
+    assert default_asset in components
+    assert default_asset in account_components
 
 
 def test_ninja_source_variants_are_traceable_but_only_full_body_seated_is_active() -> None:
@@ -188,11 +236,18 @@ def test_new_standard_baseball_and_pachinko_sources_are_registered_and_archived(
     assert "first_mismatched_closeup_frame" in sources["baseball_swing"]["removed_regions"]
     assert sources["pachinko_jackpot"]["quality"] == "selected_restricted_context"
     assert "fortune" in " ".join(sources["pachinko_jackpot"]["notes"])
+    assert sources["dream_standard_cute_green"]["quality"] == "owner_approved_default_character_motion"
+    assert sources["dream_standard_cute_green"]["selected_ranges"] == [
+        {"seconds": [0.0, 10.0], "action_id": "abu_dream_standard_cycle_v1"},
+        {"seconds": [0.0, 6.25], "action_id": "abu_dream_seated_observe_v1"},
+        {"seconds": [6.25, 10.0], "action_id": "abu_dream_stand_and_return_v1"},
+    ]
 
     for filename in (
         "abu_quiet_sit_reaction_source.mp4",
         "abu_baseball_swing_source.mp4",
         "abu_pachinko_jackpot_source.mp4",
+        "abu_dream_standard_green_source.mp4",
     ):
         assert (ROOT / "artifacts/abu-actor-pass-v1/source-videos" / filename).stat().st_size > 1_000_000
 
@@ -212,7 +267,7 @@ def test_s0_v12_changes_only_actor_performance_and_keeps_scene_source_locked() -
     assert "abu_notice_tension_v1" in script
     assert "abu_face_change_transition_v1" in script
     assert "abu_ninja_disappear_throw_v1" in script
-    assert "abu_quiet_sit_reaction_v1" in script
+    assert "abu_dream_standard_cycle_v1" in script
     assert "abu_baseball_swing_v1" in script
     assert "abu_pachinko_jackpot_v1" in script
     assert 'const FINALE_ACTIONS = ["breakdance", "faceChange", "ninja", "baseball", "pachinko"]' in script
@@ -246,7 +301,7 @@ def test_s0_v12_changes_only_actor_performance_and_keeps_scene_source_locked() -
     assert 'USE_ALPHA_IMAGE_FALLBACK ? "animated-webp" : "image"' in script
     assert "if (actionUsesVideo(action))" in script
     assert "background: transparent" in styles
-    assert "app.js?v=20260722-actor-v14" in html
+    assert "app.js?v=20260722-actor-v15" in html
     assert 'playbackScale: .82' in script
     assert 'position: {wide: 12, compact: 18}, travel: {duration: 1.65, from: {wide: 6, compact: 13}}' in script
     assert 'position: {wide: 1, compact: 0}, travel: {duration: 1.65}' in script

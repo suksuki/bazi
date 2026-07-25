@@ -16,6 +16,7 @@ from experience.dream import (
     DreamEncounterProjection,
     DreamFeatureStatus,
     DreamMirrorProjection,
+    DreamRevealProjection,
     DreamSceneGrant,
     DreamTreeProjection,
     DreamVisit,
@@ -24,10 +25,24 @@ from experience.dream import (
     transition_visit,
     visit_view,
 )
+from experience.dream_navigation import (
+    DreamControlCredential,
+    DreamControlLease,
+    DreamDepartureResult,
+    DreamGuestAnchorMigrationResult,
+    DreamNavigationSample,
+    DreamRecoveryCheckpoint,
+    DreamRuntimeState,
+    DreamWorldPosition,
+)
 from product.agent_case_store import AgentCaseStore
 from product.canonical_scene import CanonicalSceneOwner, CanonicalSceneUnavailable
 from product.canvas_projection import ReadOnlyCanvasUnavailable, ReadOnlySixPillarCanvasService
 from product.dream_feature import DreamFeaturePolicy
+from product.dream_navigation_service import (
+    DreamNavigationError,
+    DreamNavigationService,
+)
 from product.dream_pilot import (
     CANONICAL_NPC_IDS,
     ensure_authorized_human_projection_life_case,
@@ -210,6 +225,7 @@ class DreamJourneyService:
             clock=self.clock,
         )
         self.projection = DreamProjectionCompiler()
+        self.navigation = DreamNavigationService(store=dream_store, clock=self.clock)
 
     def feature_status(self, *, user_id: str, case_id: str = "") -> DreamFeatureStatus:
         enabled = self.feature_policy.allows(user_id)
@@ -346,7 +362,9 @@ class DreamJourneyService:
         *,
         user_id: str,
         home_case_id: str = "",
-    ) -> DreamVisit:
+        client_instance_id: str,
+        takeover: bool = False,
+    ) -> tuple[DreamVisit, DreamControlLease]:
         self._require_feature(user_id)
         composition, human_ready, npc_count = self.eligibility.pilot_composition(
             user_id=user_id,
@@ -354,13 +372,6 @@ class DreamJourneyService:
         )
         if not human_ready or npc_count != 2 or len(composition) != 3:
             raise DreamBridgeError("DREAM_ENCOUNTER_UNAVAILABLE")
-        current = self.store.find_resumable_visit(owner_user_id=user_id)
-        if current is not None and self._visit_matches(current, composition):
-            try:
-                self._validate_visit_grants(current)
-                return current
-            except DreamBridgeError:
-                pass
         human_case_id = next(
             grant.case_id for grant, _ in composition if grant.subject_kind == "authorized_human"
         )
@@ -368,6 +379,91 @@ class DreamJourneyService:
             user_id=user_id,
             requested_case_id=home_case_id or human_case_id,
         )
+        case_namespace = f"life-case:{home_ref}"
+        authorization_version = _composition_authorization_version(composition)
+        current = self.store.find_resumable_visit(owner_user_id=user_id)
+        if current is not None and self._visit_matches(current, composition):
+            try:
+                self._validate_visit_grants(current)
+            except DreamBridgeError as exc:
+                if str(exc) not in {
+                    "dream_scene_authorization_unavailable",
+                    "dream_scene_source_version_changed",
+                }:
+                    raise
+                # A withdrawn/reissued grant starts a new authorized visit. The
+                # old visit remains immutable audit history and cannot inherit
+                # the new authorization version.
+                current = None
+            else:
+                try:
+                    original_version = current.row_version
+                    if not current.case_namespace:
+                        current = current.model_copy(update={
+                            "case_namespace": case_namespace,
+                            "schema_version": "deepbazi.dream_visit.v2",
+                        })
+                    lease = self._acquire_control(
+                        viewer_id=user_id,
+                        case_namespace=current.case_namespace,
+                        client_instance_id=client_instance_id,
+                        takeover=takeover,
+                    )
+                    latest_recovery = self.store.latest_recovery_checkpoint(
+                        viewer_id=user_id,
+                        case_namespace=current.case_namespace,
+                    )
+                    returning = current.state not in {
+                        DreamVisitState.HOME_GROVE,
+                        DreamVisitState.PATH_OFFERED,
+                        DreamVisitState.DREAM_ENTERING,
+                    }
+                    current = current.model_copy(update={
+                        "control_lease_ref": lease.lease_id,
+                        "recovery_sequence": max(
+                            current.recovery_sequence,
+                            latest_recovery.recovery_sequence if latest_recovery else 0,
+                        ),
+                        "is_return_visit": returning,
+                        "runtime_state": (
+                            DreamRuntimeState.LOCAL_MIST_REENTRY
+                            if returning
+                            else current.runtime_state
+                        ),
+                        "anchor_resolution": self.navigation.resolve_anchor(
+                            viewer_id=user_id,
+                            case_namespace=current.case_namespace,
+                            prefer_recovery=True,
+                        ),
+                        "world_projection": self.navigation.bind_world_projection(
+                            viewer_id=user_id,
+                            case_namespace=current.case_namespace,
+                            authorization_version=authorization_version,
+                            projection_version=current.projection_version,
+                        ),
+                        "prepared_onecanvas_view_ref": "",
+                        "active_onecanvas_view_ref": "",
+                        "active_verification_state": "none",
+                        "tree_observation_anchor": None,
+                        "updated_at": self.clock(),
+                        "row_version": current.row_version + 1,
+                        "audit_events": [
+                            *current.audit_events,
+                            DreamAuditEvent(
+                                event_code=(
+                                    "dream_control_lease_taken_over"
+                                    if takeover
+                                    else "dream_control_lease_acquired"
+                                ),
+                                occurred_at=self.clock(),
+                            ),
+                            DreamAuditEvent(event_code="dream_anchor_resolved", occurred_at=self.clock()),
+                        ],
+                    })
+                    current = self._save(current, expected_row_version=original_version)
+                    return current, lease
+                except DreamNavigationError:
+                    raise
         selected = sorted(
             composition,
             key=lambda item: hashlib.sha256(
@@ -376,6 +472,24 @@ class DreamJourneyService:
         )[:3]
         now = self.clock()
         visit_id = f"dream-visit-{uuid4().hex}"
+        prior_visits = self.store.list_visits(
+            owner_user_id=user_id,
+            case_namespace=case_namespace,
+        )
+        is_return_visit = self.store.latest_departure_anchor(
+            viewer_id=user_id,
+            case_namespace=case_namespace,
+        ) is not None
+        latest_recovery = self.store.latest_recovery_checkpoint(
+            viewer_id=user_id,
+            case_namespace=case_namespace,
+        )
+        lease = self._acquire_control(
+            viewer_id=user_id,
+            case_namespace=case_namespace,
+            client_instance_id=client_instance_id,
+            takeover=takeover,
+        )
         encounter = EncounterSet(
             encounter_set_id=f"dream-encounter-{uuid4().hex}",
             visit_id=visit_id,
@@ -390,32 +504,139 @@ class DreamJourneyService:
             visit_id=visit_id,
             owner_user_id=user_id,
             home_life_case_ref=home_ref,
+            case_namespace=case_namespace,
+            visit_sequence=max((item.visit_sequence for item in prior_visits), default=0) + 1,
+            is_return_visit=is_return_visit,
+            runtime_state=(
+                DreamRuntimeState.LOCAL_MIST_REENTRY
+                if is_return_visit
+                else DreamRuntimeState.FIRST_VISIT
+            ),
+            world_projection=self.navigation.bind_world_projection(
+                viewer_id=user_id,
+                case_namespace=case_namespace,
+                authorization_version=authorization_version,
+                projection_version=DREAM_PROJECTION_VERSION,
+            ),
+            anchor_resolution=self.navigation.resolve_anchor(
+                viewer_id=user_id,
+                case_namespace=case_namespace,
+                prefer_recovery=False,
+            ),
+            control_lease_ref=lease.lease_id,
+            recovery_sequence=latest_recovery.recovery_sequence if latest_recovery else 0,
+            state=(
+                DreamVisitState.ENCOUNTER_READY
+                if is_return_visit
+                else DreamVisitState.HOME_GROVE
+            ),
             encounter_set=encounter,
             created_at=now,
             updated_at=now,
-            audit_events=[DreamAuditEvent(
-                event_code="dream_visit_created",
-                occurred_at=now,
-            )],
+            audit_events=[
+                DreamAuditEvent(event_code="dream_visit_created", occurred_at=now),
+                DreamAuditEvent(event_code="dream_control_lease_acquired", occurred_at=now),
+                DreamAuditEvent(event_code="dream_anchor_resolved", occurred_at=now),
+            ],
         )
-        return self.store.create_visit(visit)
+        return self.store.create_visit(visit), lease
 
-    def get_visit(self, *, user_id: str, visit_id: str) -> DreamVisit:
+    def get_visit(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        credential: DreamControlCredential | None = None,
+    ) -> DreamVisit:
         self._require_feature(user_id)
         visit = self.store.get_visit(visit_id=visit_id, owner_user_id=user_id)
         if visit is None:
             raise DreamBridgeError("dream_visit_not_found")
+        if credential is not None:
+            self._validate_control(visit=visit, credential=credential)
         return visit
 
-    def enter(self, *, user_id: str, visit_id: str) -> DreamVisit:
+    def takeover_visit_control(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        client_instance_id: str,
+    ) -> tuple[DreamVisit, DreamControlLease]:
+        """Transfer one exact Visit; never resolve through another Case namespace."""
+        self._require_feature(user_id)
         visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        if visit.state == DreamVisitState.COMPLETED:
+            raise DreamBridgeError("dream_visit_completed")
+        if not visit.case_namespace:
+            raise DreamBridgeError("dream_case_namespace_missing")
+        scenes = self._validate_visit_grants(visit)
+        lease = self._acquire_control(
+            viewer_id=user_id,
+            case_namespace=visit.case_namespace,
+            client_instance_id=client_instance_id,
+            takeover=True,
+        )
+        original_version = visit.row_version
+        next_visit = self.navigation.suspend(visit)
+        latest_recovery = self.store.latest_recovery_checkpoint(
+            viewer_id=user_id,
+            case_namespace=visit.case_namespace,
+        )
+        authorization_version = _composition_authorization_version(list(scenes.values()))
+        now = self.clock()
+        next_visit = next_visit.model_copy(update={
+            "control_lease_ref": lease.lease_id,
+            "runtime_state": DreamRuntimeState.LOCAL_MIST_REENTRY,
+            "is_return_visit": True,
+            "recovery_sequence": max(
+                visit.recovery_sequence,
+                latest_recovery.recovery_sequence if latest_recovery else 0,
+            ),
+            "anchor_resolution": self.navigation.resolve_anchor(
+                viewer_id=user_id,
+                case_namespace=visit.case_namespace,
+                prefer_recovery=True,
+            ),
+            "world_projection": self.navigation.bind_world_projection(
+                viewer_id=user_id,
+                case_namespace=visit.case_namespace,
+                authorization_version=authorization_version,
+                projection_version=visit.projection_version,
+            ),
+            "updated_at": now,
+            "row_version": max(next_visit.row_version, original_version + 1),
+            "audit_events": [
+                *next_visit.audit_events,
+                DreamAuditEvent(event_code="dream_control_lease_taken_over", occurred_at=now),
+                DreamAuditEvent(event_code="dream_anchor_resolved", occurred_at=now),
+            ],
+        })
+        return self._save(next_visit, expected_row_version=original_version), lease
+
+    def enter(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        credential: DreamControlCredential,
+    ) -> DreamVisit:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         self._validate_visit_grants(visit)
+        if visit.is_return_visit and visit.runtime_state == DreamRuntimeState.LOCAL_MIST_REENTRY:
+            original_version = visit.row_version
+            visit = self.navigation.activate_forest(visit)
+            return self._save(visit, expected_row_version=original_version)
         if visit.state in {
             DreamVisitState.ENCOUNTER_READY,
             DreamVisitState.TREE_SELECTED,
             DreamVisitState.TREE_OBSERVING,
             DreamVisitState.MIRROR_OPEN,
         }:
+            if visit.runtime_state != DreamRuntimeState.FOREST_ACTIVE:
+                original_version = visit.row_version
+                visit = self.navigation.activate_forest(visit)
+                return self._save(visit, expected_row_version=original_version)
             return visit
         if visit.state == DreamVisitState.COMPLETED:
             raise DreamBridgeError("dream_visit_completed")
@@ -430,6 +651,7 @@ class DreamJourneyService:
                 continue
             visit = transition_visit(visit, target, at=now)
         visit = visit.model_copy(update={
+            "runtime_state": DreamRuntimeState.FOREST_ACTIVE,
             "audit_events": [
                 *visit.audit_events,
                 DreamAuditEvent(event_code="dream_entry_accepted", occurred_at=now),
@@ -442,8 +664,9 @@ class DreamJourneyService:
         *,
         user_id: str,
         visit_id: str,
+        credential: DreamControlCredential,
     ) -> DreamEncounterProjection:
-        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         if visit.state not in {
             DreamVisitState.ENCOUNTER_READY,
             DreamVisitState.TREE_SELECTED,
@@ -454,21 +677,58 @@ class DreamJourneyService:
         scenes = self._validate_visit_grants(visit)
         return self.projection.encounter(visit=visit, scenes=scenes)
 
+    def game_context(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        credential: DreamControlCredential,
+    ) -> tuple[DreamVisit, dict[str, tuple[DreamSceneGrant, CanonicalScene]]]:
+        """Expose the already-authorized Visit context to bounded Dream subdomains."""
+
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
+        if visit.state == DreamVisitState.COMPLETED:
+            raise DreamBridgeError("dream_visit_completed")
+        if visit.runtime_state not in {
+            DreamRuntimeState.FOREST_ACTIVE,
+            DreamRuntimeState.MIRROR_ACTIVE,
+        }:
+            raise DreamBridgeError("dream_game_forest_not_active")
+        return visit, self._validate_visit_grants(visit)
+
     def select_tree(
         self,
         *,
         user_id: str,
         visit_id: str,
         public_scene_ref: str,
+        credential: DreamControlCredential,
     ) -> DreamVisit:
-        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         self._validate_visit_grants(visit)
         if public_scene_ref not in visit.encounter_set.scene_refs:
             raise DreamBridgeError("dream_scene_not_in_encounter")
         if visit.selected_scene_ref:
-            if visit.selected_scene_ref != public_scene_ref:
+            if visit.selected_scene_ref == public_scene_ref:
+                return visit
+            if visit.state != DreamVisitState.TREE_OBSERVING:
                 raise DreamBridgeError("dream_tree_selection_locked")
-            return visit
+            original_version = visit.row_version
+            now = self.clock()
+            visit = visit.model_copy(update={
+                "selected_scene_ref": public_scene_ref,
+                "prepared_onecanvas_view_ref": "",
+                "active_onecanvas_view_ref": "",
+                "active_verification_state": "none",
+                "audit_events": [
+                    *visit.audit_events,
+                    DreamAuditEvent(
+                        event_code="dream_tree_selection_changed",
+                        occurred_at=now,
+                    ),
+                ],
+            })
+            return self._save(visit, expected_row_version=original_version)
         if visit.state != DreamVisitState.ENCOUNTER_READY:
             raise DreamBridgeError("dream_tree_selection_not_allowed")
         original_version = visit.row_version
@@ -490,8 +750,9 @@ class DreamJourneyService:
         user_id: str,
         visit_id: str,
         public_scene_ref: str,
+        credential: DreamControlCredential,
     ) -> DreamTreeProjection:
-        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         grant, scene = self._selected_scene(
             visit=visit,
             public_scene_ref=public_scene_ref,
@@ -504,31 +765,121 @@ class DreamJourneyService:
         user_id: str,
         visit_id: str,
         public_scene_ref: str,
+        onecanvas_view_ref: str,
+        credential: DreamControlCredential,
     ) -> DreamMirrorProjection:
-        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         if visit.state != DreamVisitState.MIRROR_OPEN:
             raise DreamBridgeError("dream_mirror_not_open")
+        if (
+            not onecanvas_view_ref
+            or visit.active_onecanvas_view_ref != onecanvas_view_ref
+            or visit.active_verification_state not in {"focused", "quiet_overview"}
+        ):
+            raise DreamBridgeError("dream_mirror_reference_invalid")
         grant, scene = self._selected_scene(
             visit=visit,
             public_scene_ref=public_scene_ref,
         )
         canvas = self.truth.canvas(grant)
         return self.projection.mirror(
+            visit=visit,
             grant=grant,
             scene=scene,
             canvas=canvas,
+            onecanvas_view_ref=onecanvas_view_ref,
+            verification_state=visit.active_verification_state,
         )
 
-    def open_mirror(self, *, user_id: str, visit_id: str) -> DreamVisit:
-        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
-        self._validate_visit_grants(visit)
-        if visit.state == DreamVisitState.MIRROR_OPEN:
-            return visit
+    def reveal_projection(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        public_scene_ref: str,
+        credential: DreamControlCredential,
+    ) -> DreamRevealProjection:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         if visit.state != DreamVisitState.TREE_OBSERVING:
-            raise DreamBridgeError("dream_mirror_open_not_allowed")
+            raise DreamBridgeError("dream_tree_reveal_not_allowed")
+        grant, scene = self._selected_scene(
+            visit=visit,
+            public_scene_ref=public_scene_ref,
+        )
+        reveal = self.projection.reveal(
+            visit=visit,
+            grant=grant,
+            scene=scene,
+            canvas=self.truth.canvas(grant),
+        )
+        if visit.prepared_onecanvas_view_ref == reveal.onecanvas_view_ref:
+            return reveal
         original_version = visit.row_version
         now = self.clock()
+        visit = visit.model_copy(update={
+            "prepared_onecanvas_view_ref": reveal.onecanvas_view_ref,
+            "active_onecanvas_view_ref": "",
+            "active_verification_state": "none",
+            "updated_at": now,
+            "row_version": visit.row_version + 1,
+            "audit_events": [
+                *visit.audit_events,
+                DreamAuditEvent(event_code="dream_tree_revealed", occurred_at=now),
+            ],
+        })
+        self._save(visit, expected_row_version=original_version)
+        return reveal
+
+    def open_mirror(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        onecanvas_view_ref: str,
+        navigation_sample: DreamNavigationSample,
+        credential: DreamControlCredential,
+    ) -> DreamVisit:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
+        if visit.state == DreamVisitState.MIRROR_OPEN:
+            if visit.active_onecanvas_view_ref == onecanvas_view_ref:
+                return visit
+            raise DreamBridgeError("dream_mirror_reference_invalid")
+        if visit.state != DreamVisitState.TREE_OBSERVING:
+            raise DreamBridgeError("dream_mirror_open_not_allowed")
+        if (
+            not onecanvas_view_ref
+            or visit.prepared_onecanvas_view_ref != onecanvas_view_ref
+        ):
+            raise DreamBridgeError("dream_mirror_reference_invalid")
+        grant, scene = self._selected_scene(
+            visit=visit,
+            public_scene_ref=visit.selected_scene_ref,
+        )
+        current_reveal = self.projection.reveal(
+            visit=visit,
+            grant=grant,
+            scene=scene,
+            canvas=self.truth.canvas(grant),
+        )
+        verification_state = (
+            "focused"
+            if current_reveal.onecanvas_view_ref == onecanvas_view_ref
+            and current_reveal.reveal_kind != "none"
+            else "quiet_overview"
+        )
+        original_version = visit.row_version
+        now = self.clock()
+        visit = visit.model_copy(update={
+            "active_onecanvas_view_ref": onecanvas_view_ref,
+            "active_verification_state": verification_state,
+        })
         visit = transition_visit(visit, DreamVisitState.MIRROR_OPEN, at=now)
+        visit = self.navigation.set_tree_observation_anchor(
+            visit=visit,
+            resident_scene_ref=visit.selected_scene_ref,
+            sample=navigation_sample,
+            credential=credential,
+        )
         visit = visit.model_copy(update={
             "audit_events": [
                 *visit.audit_events,
@@ -537,15 +888,31 @@ class DreamJourneyService:
         })
         return self._save(visit, expected_row_version=original_version)
 
-    def close_mirror(self, *, user_id: str, visit_id: str) -> DreamVisit:
-        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
-        self._validate_visit_grants(visit)
+    def close_mirror(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        credential: DreamControlCredential,
+    ) -> DreamVisit:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         if visit.state == DreamVisitState.TREE_OBSERVING:
             return visit
         if visit.state != DreamVisitState.MIRROR_OPEN:
             raise DreamBridgeError("dream_mirror_close_not_allowed")
         original_version = visit.row_version
-        visit = transition_visit(visit, DreamVisitState.TREE_OBSERVING, at=self.clock())
+        now = self.clock()
+        visit = transition_visit(visit, DreamVisitState.TREE_OBSERVING, at=now)
+        visit = self.navigation.clear_tree_observation_anchor(visit)
+        visit = visit.model_copy(update={
+            "prepared_onecanvas_view_ref": "",
+            "active_onecanvas_view_ref": "",
+            "active_verification_state": "none",
+            "audit_events": [
+                *visit.audit_events,
+                DreamAuditEvent(event_code="dream_mirror_closed", occurred_at=now),
+            ],
+        })
         return self._save(visit, expected_row_version=original_version)
 
     def mirror_context(
@@ -557,8 +924,9 @@ class DreamJourneyService:
         stage: str,
         selected_object_ref: str,
         visible_layer: str,
+        credential: DreamControlCredential,
     ) -> dict[str, object]:
-        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
         if visit.state != DreamVisitState.MIRROR_OPEN:
             raise DreamBridgeError("dream_mirror_not_open")
         grant, scene = self._selected_scene(
@@ -578,6 +946,184 @@ class DreamJourneyService:
             visible_layer=visible_layer,
         )
         return self.projection.context(grant=grant, scene=scene, context=context)
+
+    def session_view(
+        self,
+        *,
+        visit: DreamVisit,
+        lease: DreamControlLease | None = None,
+        credential: DreamControlCredential | None = None,
+    ):
+        if lease is None:
+            if credential is None:
+                raise DreamBridgeError("dream_control_lease_required")
+            lease = self._validate_control(visit=visit, credential=credential)
+        return visit_view(
+            visit,
+            control_lease=self.navigation.lease_projection(lease),
+            canonical_abu=self.navigation.canonical_abu(),
+        )
+
+    def heartbeat(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        credential: DreamControlCredential,
+    ):
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        self._validate_visit_grants(visit)
+        try:
+            lease = self.navigation.heartbeat(visit=visit, credential=credential)
+        except DreamNavigationError as exc:
+            raise DreamBridgeError(str(exc)) from exc
+        return self.session_view(visit=visit, lease=lease)
+
+    def checkpoint(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        sample: DreamNavigationSample,
+        recovery_sequence: int,
+        credential: DreamControlCredential,
+    ) -> tuple[DreamVisit, DreamRecoveryCheckpoint]:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
+        self._validate_visit_grants(visit)
+        original_version = visit.row_version
+        try:
+            visit, checkpoint = self.navigation.checkpoint(
+                visit=visit,
+                sample=sample,
+                recovery_sequence=recovery_sequence,
+                credential=credential,
+            )
+        except DreamNavigationError as exc:
+            raise DreamBridgeError(str(exc)) from exc
+        return self._save(visit, expected_row_version=original_version), checkpoint
+
+    def suspend(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        sample: DreamNavigationSample,
+        recovery_sequence: int,
+        credential: DreamControlCredential,
+    ) -> DreamVisit:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
+        original_version = visit.row_version
+        try:
+            checkpointed, _ = self.navigation.checkpoint(
+                visit=visit,
+                sample=sample,
+                recovery_sequence=recovery_sequence,
+                credential=credential,
+            )
+            suspended = self.navigation.suspend(checkpointed)
+        except DreamNavigationError as exc:
+            raise DreamBridgeError(str(exc)) from exc
+        return self._save(suspended, expected_row_version=original_version)
+
+    def recover(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        credential: DreamControlCredential,
+    ) -> DreamVisit:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
+        self._validate_visit_grants(visit)
+        if visit.runtime_state not in {
+            DreamRuntimeState.VISIT_SUSPENDED,
+            DreamRuntimeState.RECOVERY_REHYDRATING,
+            DreamRuntimeState.LOCAL_MIST_REENTRY,
+        }:
+            return visit
+        original_version = visit.row_version
+        recovered = self.navigation.recover(visit)
+        return self._save(recovered, expected_row_version=original_version)
+
+    def set_departure_intent(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        active: bool,
+        credential: DreamControlCredential,
+    ) -> DreamVisit:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id, credential=credential)
+        if visit.runtime_state not in {
+            DreamRuntimeState.FOREST_ACTIVE,
+            DreamRuntimeState.DEPARTURE_INTENT,
+        }:
+            raise DreamBridgeError("dream_departure_intent_not_allowed")
+        original_version = visit.row_version
+        changed = self.navigation.departure_intent(visit, active=active)
+        return self._save(changed, expected_row_version=original_version)
+
+    def commit_departure(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        trigger: str,
+        sample: DreamNavigationSample,
+        boundary_position: DreamWorldPosition | None,
+        commit_sequence: int,
+        credential: DreamControlCredential,
+    ) -> DreamDepartureResult:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        try:
+            return self.navigation.commit_departure(
+                visit=visit,
+                trigger=trigger,
+                sample=sample,
+                boundary_position=boundary_position,
+                commit_sequence=commit_sequence,
+                credential=credential,
+            )
+        except DreamNavigationError as exc:
+            raise DreamBridgeError(str(exc)) from exc
+
+    def departure_result(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        commit_sequence: int,
+    ) -> DreamDepartureResult:
+        visit = self.get_visit(user_id=user_id, visit_id=visit_id)
+        result = self.store.departure_result(
+            viewer_id=user_id,
+            case_namespace=visit.case_namespace,
+            visit_id=visit_id,
+            commit_sequence=commit_sequence,
+        )
+        if result is None:
+            raise DreamBridgeError("dream_departure_result_not_found")
+        return result
+
+    def migrate_guest_anchor(
+        self,
+        *,
+        user_id: str,
+        case_id: str,
+        capability: str,
+        accepted: bool,
+    ) -> DreamGuestAnchorMigrationResult:
+        self._require_feature(user_id)
+        self._owned_human_case(user_id=user_id, case_id=case_id)
+        case_namespace = f"life-case:{self._home_life_case_ref(user_id=user_id, requested_case_id=case_id)}"
+        try:
+            return self.navigation.migrate_guest_anchor(
+                capability=capability,
+                target_viewer_id=user_id,
+                target_case_namespace=case_namespace,
+                accepted=accepted,
+            )
+        except DreamNavigationError as exc:
+            raise DreamBridgeError(str(exc)) from exc
 
     def _selected_scene(
         self,
@@ -717,6 +1263,35 @@ class DreamJourneyService:
         if not self.feature_policy.allows(user_id):
             raise DreamBridgeError("dream_feature_disabled")
 
+    def _acquire_control(
+        self,
+        *,
+        viewer_id: str,
+        case_namespace: str,
+        client_instance_id: str,
+        takeover: bool,
+    ) -> DreamControlLease:
+        try:
+            return self.navigation.acquire(
+                viewer_id=viewer_id,
+                case_namespace=case_namespace,
+                client_instance_id=client_instance_id,
+                takeover=takeover,
+            )
+        except DreamNavigationError as exc:
+            raise DreamBridgeError(str(exc)) from exc
+
+    def _validate_control(
+        self,
+        *,
+        visit: DreamVisit,
+        credential: DreamControlCredential,
+    ) -> DreamControlLease:
+        try:
+            return self.navigation.validate(visit=visit, credential=credential)
+        except DreamNavigationError as exc:
+            raise DreamBridgeError(str(exc)) from exc
+
     def _save(self, visit: DreamVisit, *, expected_row_version: int) -> DreamVisit:
         try:
             return self.store.update_visit(
@@ -744,3 +1319,15 @@ def _human_grant_identity(*, user_id: str, case_id: str) -> tuple[str, str, str]
         f"dream-scene-human-{digest[:32]}",
         f"authorized-human-{digest[32:56]}",
     )
+
+
+def _composition_authorization_version(
+    composition: list[tuple[DreamSceneGrant, CanonicalScene]],
+) -> str:
+    material = "|".join(
+        sorted(
+            f"{grant.public_scene_ref}:{grant.authorization_version}:{scene.identity.source_hash}"
+            for grant, scene in composition
+        )
+    )
+    return f"dream-auth-{hashlib.sha256(material.encode()).hexdigest()[:32]}"

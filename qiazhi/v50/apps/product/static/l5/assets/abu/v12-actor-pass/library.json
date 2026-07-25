@@ -1,19 +1,28 @@
 {
-  "version": "v50.abu.motion_library.actor_pass_v1",
+  "version": "v50.abu.motion_library.actor_pass_v2",
   "status": "production_candidate",
   "governance": {
     "authoritative_index": "library.json",
     "source_inventory": "video-inventory.json",
     "runtime_registry": "../motion-registry.js",
     "product_reference_policy": "action_id_preferred",
-    "lifecycle_states": ["candidate", "production", "retired"],
-    "retired_assets_remain_traceable": true
+    "lifecycle_states": [
+      "candidate",
+      "production",
+      "retired"
+    ],
+    "retired_assets_remain_traceable": true,
+    "default_action_id": "abu_dream_standard_cycle_v1",
+    "default_character_source_id": "dream_standard_cute_green"
   },
   "calibration": {
     "anchor": "bottom_center",
     "scale_basis": "visible_character_bounds",
     "character_source_fps": 15,
-    "supported_delivery": ["webm_alpha", "animated_webp"],
+    "supported_delivery": [
+      "webm_alpha",
+      "animated_webp"
+    ],
     "stage_render_fps": 24
   },
   "actions": [
@@ -24,7 +33,10 @@
       "label_zh": "奔跑进入并发现",
       "description_zh": "阿布从画外奔跑进入，在动作减速后停下并把视线交给当前命理对象，建立一段探索的开场。",
       "product_role": "opening_discovery",
-      "do_not_use_for": ["结论宣判", "庆祝结果"],
+      "do_not_use_for": [
+        "结论宣判",
+        "庆祝结果"
+      ],
       "manifest": "enter-and-notice/manifest.json",
       "video": "enter-and-notice/web/abu_enter_and_notice_v1.webm",
       "animation": "enter-and-notice/web/abu_enter_and_notice_v1.webp",
@@ -35,7 +47,10 @@
       "loop_mode": "one_shot",
       "facing": "right",
       "gaze_target": "semantic_object",
-      "recommended_contexts": ["opening_discovery", "life_script_entry"]
+      "recommended_contexts": [
+        "opening_discovery",
+        "life_script_entry"
+      ]
     },
     {
       "action_id": "abu_turn_and_point_v1",
@@ -44,7 +59,10 @@
       "label_zh": "转身观察并指引",
       "description_zh": "阿布由陪伴姿态转向结构对象，用视线与前爪提示用户关注当前节点。",
       "product_role": "semantic_guidance",
-      "do_not_use_for": ["空闲循环", "无目标装饰"],
+      "do_not_use_for": [
+        "空闲循环",
+        "无目标装饰"
+      ],
       "manifest": "turn-and-point/manifest.json",
       "video": "turn-and-point/web/abu_turn_and_point_v1.webm",
       "animation": "turn-and-point/web/abu_turn_and_point_v1.webp",
@@ -55,7 +73,11 @@
       "loop_mode": "one_shot",
       "facing": "right",
       "gaze_target": "semantic_object",
-      "recommended_contexts": ["onecanvas_reveal", "relation_focus", "xiangfa_transition"]
+      "recommended_contexts": [
+        "onecanvas_reveal",
+        "relation_focus",
+        "xiangfa_transition"
+      ]
     },
     {
       "action_id": "abu_stand_point_up_left_v1",
@@ -64,7 +86,10 @@
       "label_zh": "站立指向左上",
       "description_zh": "阿布站立并指向左上方，适合近景黑板、路径节点与解释焦点。",
       "product_role": "blackboard_focus_left",
-      "do_not_use_for": ["全身远景", "长时间循环"],
+      "do_not_use_for": [
+        "全身远景",
+        "长时间循环"
+      ],
       "manifest": "stand-point-up-left/manifest.json",
       "video": "stand-point-up-left/web/abu_stand_point_up_left_v1.webm",
       "animation": "stand-point-up-left/web/abu_stand_point_up_left_v1.webp",
@@ -76,7 +101,11 @@
       "facing": "left",
       "gaze_target": "semantic_object",
       "safe_crop": "source_half_body",
-      "recommended_contexts": ["onecanvas_blackboard_guide", "relation_path_explanation", "theater_semantic_focus"]
+      "recommended_contexts": [
+        "onecanvas_blackboard_guide",
+        "relation_path_explanation",
+        "theater_semantic_focus"
+      ]
     },
     {
       "action_id": "abu_stand_point_up_right_v1",
@@ -85,7 +114,10 @@
       "label_zh": "站立指向右上",
       "description_zh": "左向动作的受控镜像版本，用于语义对象位于阿布右上方的讲解镜头。",
       "product_role": "blackboard_focus_right",
-      "do_not_use_for": ["全身远景", "长时间循环"],
+      "do_not_use_for": [
+        "全身远景",
+        "长时间循环"
+      ],
       "manifest": "stand-point-up-right/manifest.json",
       "video": "stand-point-up-right/web/abu_stand_point_up_right_v1.webm",
       "animation": "stand-point-up-right/web/abu_stand_point_up_right_v1.webp",
@@ -98,7 +130,11 @@
       "gaze_target": "semantic_object",
       "safe_crop": "source_half_body",
       "mirrored_from": "abu_stand_point_up_left_v1",
-      "recommended_contexts": ["onecanvas_blackboard_guide", "relation_path_explanation", "theater_semantic_focus"]
+      "recommended_contexts": [
+        "onecanvas_blackboard_guide",
+        "relation_path_explanation",
+        "theater_semantic_focus"
+      ]
     },
     {
       "action_id": "abu_notice_tension_v1",
@@ -107,7 +143,10 @@
       "label_zh": "察觉结构张力",
       "description_zh": "阿布收住动作并关注受制节点，表达结构出现复杂作用，而不是宣告凶险。",
       "product_role": "structural_tension_reaction",
-      "do_not_use_for": ["命运凶吉判断", "用户情绪标签"],
+      "do_not_use_for": [
+        "命运凶吉判断",
+        "用户情绪标签"
+      ],
       "manifest": "notice-tension/manifest.json",
       "video": "notice-tension/web/abu_notice_tension_v1.webm",
       "animation": "notice-tension/web/abu_notice_tension_v1.webp",
@@ -118,16 +157,23 @@
       "loop_mode": "one_shot",
       "facing": "front",
       "gaze_target": "semantic_object",
-      "recommended_contexts": ["structural_tension", "temporal_pressure"]
+      "recommended_contexts": [
+        "structural_tension",
+        "temporal_pressure"
+      ]
     },
     {
       "action_id": "abu_quiet_sit_reaction_v1",
       "action_family": "companion_idle",
-      "status": "production",
+      "status": "retired",
       "label_zh": "标准坐姿陪伴",
       "description_zh": "阿布以标准可爱坐姿轻微转头、眨眼和微笑，动作结束后回到稳定坐姿。",
-      "product_role": "default_companion_presence",
-      "do_not_use_for": ["忙碌计算", "严重失败", "指向具体命理对象"],
+      "product_role": "retired_previous_default_companion",
+      "do_not_use_for": [
+        "忙碌计算",
+        "严重失败",
+        "指向具体命理对象"
+      ],
       "manifest": "quiet-sit-reaction/manifest.json",
       "video": "quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webm",
       "animation": "quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp",
@@ -139,7 +185,12 @@
       "facing": "front",
       "gaze_target": "audience",
       "safe_crop": "full_body",
-      "recommended_contexts": ["abu_dock_idle", "theater_finale_idle", "workspace_companion"]
+      "recommended_contexts": [
+        "abu_dock_idle",
+        "theater_finale_idle",
+        "workspace_companion"
+      ],
+      "superseded_by": "abu_dream_standard_cycle_v1"
     },
     {
       "action_id": "abu_baseball_swing_v1",
@@ -148,7 +199,11 @@
       "label_zh": "起身挥棒",
       "description_zh": "阿布从坐姿起身，拿起球棒完成一次挥击和开心反应，随后回到熟悉的坐姿。",
       "product_role": "ambient_active_interlude",
-      "do_not_use_for": ["专业讲解", "测算成功反馈", "吉凶结果暗示"],
+      "do_not_use_for": [
+        "专业讲解",
+        "测算成功反馈",
+        "吉凶结果暗示"
+      ],
       "manifest": "baseball-swing/manifest.json",
       "video": "baseball-swing/web/abu_baseball_swing_v1.webm",
       "animation": "baseball-swing/web/abu_baseball_swing_v1.webp",
@@ -160,7 +215,11 @@
       "facing": "front",
       "gaze_target": "activity_object",
       "safe_crop": "full_body_wide_action",
-      "recommended_contexts": ["life_world_ambient", "theater_finale", "social_ip_moment"]
+      "recommended_contexts": [
+        "life_world_ambient",
+        "theater_finale",
+        "social_ip_moment"
+      ]
     },
     {
       "action_id": "abu_pachinko_jackpot_v1",
@@ -169,7 +228,13 @@
       "label_zh": "弹子机趣味彩蛋",
       "description_zh": "阿布操作弹子机并遇到 777 趣味画面，短暂庆祝后回到座位；只是一段无测算含义的低频彩蛋。",
       "product_role": "rare_finale_arcade_easter_egg",
-      "do_not_use_for": ["财富或财运判断", "测算成功反馈", "支付或中奖引导", "专业讲解", "默认儿童向场景"],
+      "do_not_use_for": [
+        "财富或财运判断",
+        "测算成功反馈",
+        "支付或中奖引导",
+        "专业讲解",
+        "默认儿童向场景"
+      ],
       "manifest": "pachinko-jackpot/manifest.json",
       "video": "pachinko-jackpot/web/abu_pachinko_jackpot_v1.webm",
       "animation": "pachinko-jackpot/web/abu_pachinko_jackpot_v1.webp",
@@ -181,7 +246,11 @@
       "facing": "front",
       "gaze_target": "activity_object",
       "safe_crop": "full_body_with_machine",
-      "recommended_contexts": ["theater_finale_rare", "internal_motion_gallery", "social_ip_easter_egg"]
+      "recommended_contexts": [
+        "theater_finale_rare",
+        "internal_motion_gallery",
+        "social_ip_easter_egg"
+      ]
     },
     {
       "action_id": "abu_ninja_disappear_throw_v1",
@@ -190,7 +259,11 @@
       "label_zh": "忍者变装、消失与飞镖",
       "description_zh": "阿布从完整坐姿进入忍者变装，短暂隐去并投出飞镖，随后回到普通阿布形象。",
       "product_role": "finale_playful_interlude",
-      "do_not_use_for": ["专业判断过程", "吉凶暗示", "错误或危险反馈"],
+      "do_not_use_for": [
+        "专业判断过程",
+        "吉凶暗示",
+        "错误或危险反馈"
+      ],
       "manifest": "ninja-disappear-throw/manifest.json",
       "video": "ninja-disappear-throw/web/abu_ninja_disappear_throw_v1.webm",
       "animation": "ninja-disappear-throw/web/abu_ninja_disappear_throw_v1.webp",
@@ -202,7 +275,11 @@
       "facing": "front",
       "gaze_target": "audience",
       "safe_crop": "full_body_wide_action",
-      "recommended_contexts": ["theater_finale", "ambient_ip_moment", "scene_transition_cameo"]
+      "recommended_contexts": [
+        "theater_finale",
+        "ambient_ip_moment",
+        "scene_transition_cameo"
+      ]
     },
     {
       "action_id": "abu_face_change_transition_v1",
@@ -211,7 +288,11 @@
       "label_zh": "变脸入象转场",
       "description_zh": "阿布以变脸与围巾动作承接结构画面，随后让同一批语义对象平滑进入象法世界。",
       "product_role": "onecanvas_to_xiangfa_transition",
-      "do_not_use_for": ["通用加载", "神秘预言", "结果好坏判断"],
+      "do_not_use_for": [
+        "通用加载",
+        "神秘预言",
+        "结果好坏判断"
+      ],
       "manifest": "face-change-transition/manifest.json",
       "video": "face-change-transition/web/abu_face_change_transition_v1.webm",
       "animation": "face-change-transition/web/abu_face_change_transition_v1.webp",
@@ -222,7 +303,169 @@
       "loop_mode": "one_shot",
       "facing": "front",
       "gaze_target": "semantic_world",
-      "recommended_contexts": ["xiangfa_transition", "theater_scene_change"]
+      "recommended_contexts": [
+        "xiangfa_transition",
+        "theater_scene_change"
+      ]
+    },
+    {
+      "action_id": "abu_dream_standard_cycle_v1",
+      "action_family": "default_companion",
+      "status": "production",
+      "label_zh": "默认阿布标准循环",
+      "description_zh": "新版圆脸阿布从安静坐姿开始，观察四周、起身回应并自然回坐，作为统一产品中的默认陪伴形象。",
+      "product_role": "default_companion_presence",
+      "do_not_use_for": [
+        "专业结论宣判",
+        "命运吉凶暗示",
+        "忙碌计算状态"
+      ],
+      "manifest": "dream-standard-cycle/manifest.json",
+      "video": "dream-standard-cycle/web/abu_dream_standard_cycle_v1.webm",
+      "animation": "dream-standard-cycle/web/abu_dream_standard_cycle_v1.webp",
+      "poster": "dream-standard-cycle/posters/abu_dream_standard_cycle_v1.png",
+      "contact_sheet": "dream-standard-cycle/contact-sheets/abu_dream_standard_cycle_v1_contact_sheet.png",
+      "duration_ms": 10000,
+      "display_scale": 1.0,
+      "loop_mode": "loop",
+      "facing": "front",
+      "gaze_target": "semantic_world",
+      "safe_crop": "full_body",
+      "recommended_contexts": [
+        "workspace_companion",
+        "dream_world_companion",
+        "theater_finale_idle"
+      ]
+    },
+    {
+      "action_id": "abu_dream_seated_observe_v1",
+      "action_family": "companion_idle",
+      "status": "production",
+      "label_zh": "坐姿观察与倾听",
+      "description_zh": "阿布保持完整坐姿，轻微眨眼、抬头和转头，适合安静等待、倾听与观察梦境对象。",
+      "product_role": "quiet_companion_presence",
+      "do_not_use_for": [
+        "指向具体节点",
+        "忙碌计算状态",
+        "严重错误反馈"
+      ],
+      "manifest": "dream-seated-observe/manifest.json",
+      "video": "dream-seated-observe/web/abu_dream_seated_observe_v1.webm",
+      "animation": "dream-seated-observe/web/abu_dream_seated_observe_v1.webp",
+      "poster": "dream-seated-observe/posters/abu_dream_seated_observe_v1.png",
+      "contact_sheet": "dream-seated-observe/contact-sheets/abu_dream_seated_observe_v1_contact_sheet.png",
+      "duration_ms": 6267,
+      "display_scale": 1.0,
+      "loop_mode": "loop",
+      "facing": "front",
+      "gaze_target": "semantic_world",
+      "safe_crop": "full_body",
+      "recommended_contexts": [
+        "dream_gate_wait",
+        "tree_observation",
+        "quiet_companion"
+      ]
+    },
+    {
+      "action_id": "abu_dream_stand_and_return_v1",
+      "action_family": "companion_reaction",
+      "status": "production",
+      "label_zh": "起身回应并回坐",
+      "description_zh": "阿布由坐姿自然起身、短暂停留并带着轻松表情回到坐姿，用于一次克制的确认或相遇回应。",
+      "product_role": "gentle_acknowledgement",
+      "do_not_use_for": [
+        "专业判断成立",
+        "吉凶结果反馈",
+        "语义指向"
+      ],
+      "manifest": "dream-stand-and-return/manifest.json",
+      "video": "dream-stand-and-return/web/abu_dream_stand_and_return_v1.webm",
+      "animation": "dream-stand-and-return/web/abu_dream_stand_and_return_v1.webp",
+      "poster": "dream-stand-and-return/posters/abu_dream_stand_and_return_v1.png",
+      "contact_sheet": "dream-stand-and-return/contact-sheets/abu_dream_stand_and_return_v1_contact_sheet.png",
+      "duration_ms": 3733,
+      "display_scale": 1.0,
+      "loop_mode": "one_shot",
+      "facing": "front",
+      "gaze_target": "audience",
+      "safe_crop": "full_body",
+      "recommended_contexts": [
+        "dream_encounter_acknowledgement",
+        "gentle_confirmation"
+      ]
+    },
+    {
+      "action_id": "abu_01_seated_idle_loop_v3",
+      "catalog_id": "ABU_01_SEATED_IDLE_LOOP_V3",
+      "action_family": "companion_idle",
+      "status": "production",
+      "source_status": "SOURCE_APPROVED",
+      "library_status": "LIBRARY_READY",
+      "character_version": "ABU_CHARACTER_V1",
+      "label_zh": "阿布坐姿呼吸标准循环 V3",
+      "description_zh": "阿布全程安静坐姿、闭嘴呼吸，包含一次眨眼与克制的耳尾小动作；透明抠像、脚底锚点和无跳点循环均已通过验收。",
+      "product_role": "seated_idle_companion",
+      "do_not_use_for": [
+        "专业结论宣判",
+        "命运吉凶暗示",
+        "忙碌计算状态"
+      ],
+      "manifest": "abu-01-seated-idle-loop-v3/manifest.json",
+      "video": "abu-01-seated-idle-loop-v3/web/abu_01_seated_idle_loop_v3.webm",
+      "animation": "abu-01-seated-idle-loop-v3/web/abu_01_seated_idle_loop_v3.webp",
+      "poster": "abu-01-seated-idle-loop-v3/posters/abu_01_seated_idle_loop_v3.png",
+      "contact_sheet": "abu-01-seated-idle-loop-v3/contact-sheets/abu_01_seated_idle_loop_v3_contact_sheet.png",
+      "checkerboard_preview": "abu-01-seated-idle-loop-v3/previews/abu_01_seated_idle_loop_v3_checkerboard.mp4",
+      "duration_ms": 10000,
+      "display_scale": 1.0,
+      "loop_mode": "loop",
+      "facing": "front",
+      "gaze_target": "audience",
+      "safe_crop": "full_body",
+      "recommended_contexts": [
+        "dream_world_quiet_companion",
+        "workspace_companion_idle",
+        "theater_finale_idle"
+      ]
+    },
+    {
+      "action_id": "abu_02_calm_follow_walk_loop_v1",
+      "catalog_id": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
+      "action_family": "locomotion",
+      "semantic_state": "LOCOMOTION_FOLLOW",
+      "action_type": "LOOP",
+      "status": "production",
+      "source_status": "SOURCE_APPROVED",
+      "library_status": "LIBRARY_READY",
+      "character_version": "ABU_CHARACTER_V1",
+      "label_zh": "阿布平静跟随行走循环 V1",
+      "description_zh": "阿布闭嘴、平静原地行走的透明循环；由运行时移动角色容器，本素材只表达连续步态。",
+      "product_role": "calm_follow_walk",
+      "do_not_use_for": [
+        "独立命理推理",
+        "命理结论生成",
+        "角色瞬移或位置结算",
+        "静止等待状态"
+      ],
+      "manifest": "abu-02-calm-follow-walk-loop-v1/manifest.json",
+      "video": "abu-02-calm-follow-walk-loop-v1/web/abu_02_calm_follow_walk_loop_v1.webm",
+      "animation": "abu-02-calm-follow-walk-loop-v1/web/abu_02_calm_follow_walk_loop_v1.webp",
+      "poster": "abu-02-calm-follow-walk-loop-v1/posters/abu_02_calm_follow_walk_loop_v1.png",
+      "contact_sheet": "abu-02-calm-follow-walk-loop-v1/contact-sheets/abu_02_calm_follow_walk_loop_v1_contact_sheet.png",
+      "checkerboard_preview": "abu-02-calm-follow-walk-loop-v1/previews/abu_02_calm_follow_walk_loop_v1_checkerboard.mp4",
+      "duration_ms": 2250,
+      "display_scale": 1.0,
+      "loop_mode": "loop",
+      "facing": "right",
+      "gaze_target": "travel_direction",
+      "safe_crop": "full_body",
+      "runtime_registered": true,
+      "recommended_contexts": [
+        "dream_world_delayed_follow",
+        "tree_world_guide_transition",
+        "workspace_companion_reposition",
+        "studio_transparent_actor_composite"
+      ]
     }
   ],
   "boundaries": {
@@ -230,5 +473,6 @@
     "changes_scene_source": false,
     "changes_life_case": false,
     "used_by_s0_v12_only": false
-  }
+  },
+  "review_candidates": []
 }

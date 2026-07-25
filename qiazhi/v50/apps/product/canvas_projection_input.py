@@ -45,13 +45,26 @@ def compile_input_from_case_row(
     life_case = LifeCase.model_validate(life_case_payload)
     record = MingliCognitiveRecord.model_validate(record_payload)
     baseline = life_case.baseline_insight
+    cognitive_record_is_formal = (
+        record.reliability_disposition in {"reliable", "competing"}
+        and record.review.disposition in {"reliable", "competing"}
+    )
+    authorized_chart_facts_only = (
+        baseline.provenance.reasoner_id == "deterministic.dream_human_projection"
+        and baseline.source_review_gate == "deterministic_human_chart_only.v1"
+        and baseline.professional_release_status == "partially_blocked"
+        and baseline.projection_payload.get("identity_class") == "authorized_human"
+        and baseline.projection_payload.get("professional_path_state")
+        == "unavailable_unconfirmed"
+        and not life_case.relation_assertions
+        and not life_case.path_assertions
+    )
     if (
         life_case.status != "active"
         or not life_case.chart_version.active
         or baseline.status != "committed"
         or baseline.epistemic_state not in {"reliable", "competing"}
-        or record.reliability_disposition not in {"reliable", "competing"}
-        or record.review.disposition not in {"reliable", "competing"}
+        or not (cognitive_record_is_formal or authorized_chart_facts_only)
     ):
         raise ReadOnlyCanvasUnavailable("formal_life_case_not_available")
     source_record_id = baseline.provenance.source_record_id or baseline.baseline_record_id

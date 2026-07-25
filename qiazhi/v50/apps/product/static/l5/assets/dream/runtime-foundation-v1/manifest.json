@@ -1,0 +1,133 @@
+{
+  "schema_version": "deepbazi.dream.runtime_asset_registry.v1",
+  "asset_set_id": "ABU_DREAM_RUNTIME_FOUNDATION_05",
+  "status": "LOCAL_IMPLEMENTATION",
+  "registered_at": "2026-07-23",
+  "source_authority": {
+    "prototype_registry": "artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/registry.json",
+    "runtime_derivative_manifest": "apps/product/static/l5/assets/dream/encounter-01-v1/director-v2/manifest.json",
+    "abu_motion_registry": "apps/product/static/l5/assets/abu/v12-actor-pass/registry.json"
+  },
+  "prototype_masters": [
+    {
+      "filename": "1000056879.mp4",
+      "archived_path": "artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/sources/01-life-tree-growth-source-with-watermark.mp4",
+      "sha256": "3d2d7e5beeb6705d79ed48178a0deb89b42525beb172a545d5eefe77440b089d",
+      "runtime_intents": [
+        "home_tree",
+        "fixed_tree"
+      ]
+    },
+    {
+      "filename": "1000056881.mp4",
+      "archived_path": "artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/sources/02-abu-fog-gate-three-trees-source-with-watermark.mp4",
+      "sha256": "6d87143390acba5e3df4c5f8abec44a7a848073e6e1ba11bebd214b3acc20634",
+      "runtime_intents": [
+        "ghost_orbit_director_reference"
+      ],
+      "complete_home_entry_transition": false
+    },
+    {
+      "filename": "1000056885.mp4",
+      "archived_path": "artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/sources/03-tree-structure-response-source-with-watermark.mp4",
+      "sha256": "feb7faf1f08910894e944ebd8ae288afc5f6526b1cd677d4e4f8ade916fde137",
+      "runtime_intents": [
+        "question_bud",
+        "fruit_form"
+      ]
+    }
+  ],
+  "registered_runtime_assets": [
+    {
+      "asset_id": "dream_home_life_tree_v1",
+      "intent": "home_tree",
+      "status": "LIBRARY_READY",
+      "path": "apps/product/static/l5/assets/dream/runtime-foundation-v1/home-life-tree-no-abu-v1.png",
+      "sha256": "bbcf736264b346209a82b0234ab6540f7534c7c7df3d605f4899caac821cdbb3",
+      "derivation": {
+        "source_master": "1000056879.mp4",
+        "source_time_seconds": 3.1,
+        "purpose": "tree_formed_before_abu_enters_frame"
+      }
+    },
+    {
+      "asset_id": "ABU_01_SEATED_IDLE_LOOP_V3",
+      "intent": "ghost_orbit",
+      "status": "LIBRARY_READY",
+      "manifest": "apps/product/static/l5/assets/abu/v12-actor-pass/abu-01-seated-idle-loop-v3/manifest.json",
+      "delivery_sha256": "a63cfd680f27eae5f8fcbb317231d1a0e15ec37db52b854d9163777f769d2ec7"
+    },
+    {
+      "asset_id": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
+      "intent": "tree_commit_transition",
+      "status": "TRANSITIONAL_FALLBACK",
+      "manifest": "apps/product/static/l5/assets/abu/v12-actor-pass/abu-02-calm-follow-walk-loop-v1/manifest.json",
+      "delivery_sha256": "576094e3c291180078a08f0246ee495071b0804b76e8d2fd4b7cfdc7a1034cfd"
+    },
+    {
+      "asset_id": "dream_fog_gate_preselection_clean_v1",
+      "intent": "director_reference",
+      "status": "TRANSITIONAL_FALLBACK",
+      "path": "apps/product/static/l5/assets/dream/encounter-01-v1/director-v2/fog-gate-preselection-clean.mp4",
+      "sha256": "1cd70b6e6373eedf8b2b9ab74eb585817bc60402e540280ef44e0240698c33c7",
+      "complete_home_entry_transition": false
+    },
+    {
+      "asset_id": "ABU_03_DREAM_ENTRY_TRANSITION_V1",
+      "intent": "fog_gate",
+      "status": "POSTPROCESS_COMPLETE_AWAITING_OWNER_REVIEW",
+      "manifest": "apps/product/static/l5/assets/dream/entry-transition-v1/manifest.json",
+      "path": "apps/product/static/l5/assets/dream/entry-transition-v1/abu_03_dream_entry_transition_v1_runtime_1080p.mp4",
+      "sha256": "76e3ddf69bb9f206fd6f3fc90969f3c0ede521e1a4a93579d79f28ac8ebd615d",
+      "duration_seconds": 7.75,
+      "audio_tracks": 0
+    },
+    {
+      "asset_id": "DREAM_THREE_TREE_PORCH_V5",
+      "intent": "ghost_orbit",
+      "status": "POSTPROCESS_COMPLETE_AWAITING_OWNER_REVIEW",
+      "manifest": "apps/product/static/l5/assets/dream/porch-v5/manifest.json",
+      "visual_master": "ABU_03_DREAM_ENTRY_TRANSITION_V1"
+    },
+    {
+      "asset_id": "DREAM_PORCH_CLEAN_BACKGROUND_V5",
+      "intent": "ghost_orbit",
+      "status": "OWNER_APPROVED",
+      "path": "apps/product/static/l5/assets/dream/porch-v5/grove-clean-approved-v5-e97ec6b5.png",
+      "sha256": "e97ec6b5f856e15371cad08c91609b4585d55eea112ec9b1176ebfb5bd6eca54"
+    },
+    {
+      "asset_id": "dream_fixed_tree_bud_preseal_v1",
+      "intent": "fixed_tree",
+      "status": "LIBRARY_READY",
+      "path": "apps/product/static/l5/assets/dream/encounter-01-v1/director-v2/tree-observe-bud-preseal.png",
+      "sha256": "d504c70b69ba4e127d137d49f1f892ce0dd50d98f9f7328f4861f6f9f23bad5d"
+    },
+    {
+      "asset_id": "dream_fixed_tree_flower_preseal_v1",
+      "intent": "question_bud",
+      "status": "LIBRARY_READY",
+      "path": "apps/product/static/l5/assets/dream/encounter-01-v1/director-v2/tree-flower-open-preseal.png",
+      "sha256": "97282c5f1afc0e84b1bb983312390f699d65bd67f02916a24dcc70a57a1410ee"
+    },
+    {
+      "asset_id": "abu_mingli_opening_theme_morning_glints_v1",
+      "intent": "fog_gate",
+      "status": "LIBRARY_READY",
+      "manifest": "apps/product/static/l5/assets/audio/abu/morning-glints-in-the-grove-v1/manifest.json",
+      "delivery_sha256": "c962fc87d045b579012e2e9bd1f400ac057aff79dce9948d50e9734a66db95ef"
+    }
+  ],
+  "missing_character_lock_assets": [
+    "ABU_03_CURL_TO_SLEEP",
+    "ABU_04_SLEEP_BREATHE",
+    "ABU_05_TREE_ROOT_LEAP"
+  ],
+  "runtime_boundaries": {
+    "asset_callback_changes_business_state": false,
+    "frontend_selects_mingli_fact": false,
+    "pre_seal_fruit_visual": "FORBIDDEN",
+    "pre_seal_outcome_data": "FORBIDDEN",
+    "reduced_motion_fallback_required": true
+  }
+}

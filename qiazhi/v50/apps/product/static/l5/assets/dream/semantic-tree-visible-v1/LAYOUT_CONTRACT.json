@@ -1,0 +1,50 @@
+{
+  "schema_version": "deepbazi.semantic_tree_visible.v1",
+  "status": "OWNER_REVIEW_REQUIRED",
+  "canvas": {
+    "native_width": 1280,
+    "native_height": 720,
+    "fit": "cover",
+    "object_position_desktop": "center center",
+    "object_position_mobile": "center center",
+    "camera_motion_after_tree_entry": "forbidden"
+  },
+  "render_defaults": {
+    "trunk_backbone_opacity": 0.62,
+    "energy_flow_opacity": 0.42,
+    "energy_flow_color": "#bfffee",
+    "fruit_visible_before_dual_seal": false
+  },
+  "desktop_1440x900": {
+    "leaf_basic_01": {"x": 620, "y": 245, "display_width": 104},
+    "leaf_basic_02": {"x": 950, "y": 340, "display_width": 78},
+    "trunk_backbone_01": {"x": 674, "y": 280, "display_width": 92},
+    "flower_bud_closed": {"x": 1050, "y": 240, "display_height": 110},
+    "flower_open": {"x": 1008, "y": 200, "display_height": 145},
+    "fruit_white": {"x": 1030, "y": 250, "display_height": 95},
+    "foreground_occlusion": {"x": 1060, "y": 270, "display_width": 105},
+    "abu_character_v1": {"x": 20, "y": 776, "display_width": 144}
+  },
+  "mobile_390x844": {
+    "leaf_basic_01": {"x": 138, "y": 210, "display_width": 76},
+    "leaf_basic_02": {"x": 260, "y": 370, "display_width": 56},
+    "trunk_backbone_01": {"x": 168, "y": 280, "display_width": 52},
+    "flower_bud_closed": {"x": 286, "y": 230, "display_height": 95},
+    "flower_open": {"x": 250, "y": 210, "display_height": 120},
+    "fruit_white": {"x": 270, "y": 250, "display_height": 80},
+    "foreground_occlusion": {"x": 280, "y": 280, "display_width": 90},
+    "abu_character_v1": {"x": 4, "y": 775, "display_width": 92}
+  },
+  "z_order": [
+    "tree_base_clean",
+    "energy_flow_mask",
+    "trunk_backbone_01",
+    "leaf_basic_01",
+    "leaf_basic_02",
+    "flower_or_fruit_state",
+    "foreground_occlusion",
+    "abu_character_v1",
+    "question_band"
+  ]
+}
+

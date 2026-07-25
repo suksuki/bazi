@@ -1,0 +1,39 @@
+{
+  "schema_version": "deepbazi.semantic_tree_asset_bundle.v1",
+  "asset_bundle_id": "SEMANTIC_TREE_VISIBLE_V1",
+  "status": "OWNER_REVIEW_REQUIRED",
+  "created_at": "2026-07-24",
+  "source_pack_sha256": "475fe133ff098a216257bc56fe24585139a3312446b1b0180ce46b15835717ee",
+  "base": {
+    "path": "assets/tree_base_clean.png",
+    "width": 1280,
+    "height": 720,
+    "alpha": false,
+    "contains_baked_abu": false,
+    "contains_semantic_organs": false
+  },
+  "semantic_assets": [
+    {"id": "LEAF_BASIC_01", "path": "assets/leaf_basic_01.png", "hit_mask": "masks/leaf_basic_01_hit_mask.png", "alpha": true},
+    {"id": "LEAF_BASIC_02", "path": "assets/leaf_basic_02.png", "hit_mask": "masks/leaf_basic_02_hit_mask.png", "alpha": true},
+    {"id": "TRUNK_BACKBONE_01", "path": "assets/trunk_backbone_01.png", "hit_mask": "masks/trunk_backbone_01_hit_mask.png", "alpha": true},
+    {"id": "ENERGY_FLOW", "path": "assets/energy_flow_mask.png", "vector_source": "assets/energy_flow_mask.svg", "alpha": true},
+    {"id": "FLOWER_BUD_CLOSED", "path": "assets/flower_bud_closed.png", "hit_mask": "masks/flower_bud_closed_hit_mask.png", "alpha": true},
+    {"id": "FLOWER_OPEN", "path": "assets/flower_open.png", "hit_mask": "masks/flower_open_hit_mask.png", "alpha": true},
+    {"id": "FRUIT_WHITE", "path": "assets/fruit_white.png", "hit_mask": "masks/fruit_white_hit_mask.png", "alpha": true},
+    {"id": "FOREGROUND_OCCLUSION", "path": "assets/foreground_occlusion.png", "alpha": true}
+  ],
+  "character": {
+    "id": "ABU_CHARACTER_V1",
+    "poster": "assets/abu_character_v1_poster.png",
+    "runtime": "assets/abu_character_v1.webm",
+    "copied_unchanged": true
+  },
+  "state_constraints": {
+    "flower_unlock_authority": "server",
+    "fruit_requires_player_and_system_seal": true,
+    "frontend_answer_authority": false,
+    "legacy_fallback_allowed": false
+  },
+  "layout_contract": "LAYOUT_CONTRACT.json",
+  "sha256sums": "SHA256SUMS"
+}

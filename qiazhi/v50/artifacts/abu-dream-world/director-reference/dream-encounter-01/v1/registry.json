@@ -1,0 +1,337 @@
+{
+  "schema_version": "deepbazi.dream_director_reference.v1",
+  "collection_id": "dream-encounter-01-director-reference-v1",
+  "status": "registered_reference_only",
+  "source_type": "gemini_concept_video",
+  "abu_character_reference": {
+    "status": "candidate_not_canonical",
+    "preferred_reference_id": "dream_ref_fog_gate_three_trees_v1",
+    "traits": [
+      "round_face",
+      "short_muzzle",
+      "compact_body",
+      "soft_eye_placement",
+      "red_scarf"
+    ],
+    "note_zh": "梦境版阿布候选造型参考；尚未替代正式角色模型表。"
+  },
+  "references": [
+    {
+      "reference_id": "dream_ref_life_tree_growth_v1",
+      "label_zh": "生命树生长与阶段变化",
+      "status": "director_reference_registered",
+      "director_role": "tree_lifecycle_motion_language",
+      "source": {
+        "original_filename": "1000056879.mp4",
+        "archived_file": "sources/01-life-tree-growth-source-with-watermark.mp4",
+        "sha256": "3d2d7e5beeb6705d79ed48178a0deb89b42525beb172a545d5eefe77440b089d",
+        "watermark_present": true
+      },
+      "clean_master": {
+        "file": "clean-masters/01-life-tree-growth-clean.mp4",
+        "sha256": "14279f5108f36ebf1f63bab9683d515f9db4eda1d72a2d10ad580bb1a3e5c0e4",
+        "watermark_removed": true,
+        "probe": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "codec_type": "video",
+              "width": 1280,
+              "height": 720,
+              "r_frame_rate": "24/1"
+            },
+            {
+              "codec_name": "aac",
+              "codec_type": "audio",
+              "r_frame_rate": "0/0"
+            }
+          ],
+          "format": {
+            "duration": "10.005000",
+            "size": "3526739"
+          }
+        }
+      },
+      "contact_sheet": {
+        "file": "contact-sheets/dream_ref_life_tree_growth_v1.png",
+        "sha256": "7923414fdcc3c37a4e253bee4cfb4d161c7b348c64de2c8c92aab349f32afa70"
+      },
+      "segments": [
+        {
+          "segment_id": "root_awaken_and_sprout",
+          "seconds": [
+            0.0,
+            2.5
+          ],
+          "purpose": "根系苏醒与萌芽节奏",
+          "video": "segments/dream_ref_life_tree_growth_v1/01-root_awaken_and_sprout.mp4",
+          "video_sha256": "d1b7b8594cdfd1d23d1bcb166abf62651dacb167268998bf6ec16c5c019c3925",
+          "keyframe": "keyframes/dream_ref_life_tree_growth_v1/01-root_awaken_and_sprout.png",
+          "keyframe_sha256": "d06f83373c3b8ba709af7ea47d48ec9e01c590f66cdba226c86928c023650b4a"
+        },
+        {
+          "segment_id": "tree_emerges_abu_arrives",
+          "seconds": [
+            2.5,
+            5.0
+          ],
+          "purpose": "树体显现与阿布进入构图",
+          "video": "segments/dream_ref_life_tree_growth_v1/02-tree_emerges_abu_arrives.mp4",
+          "video_sha256": "573f50fbd83193b5669944565d636fadd2adaaeb0cf0bae26be1b49cbb07178f",
+          "keyframe": "keyframes/dream_ref_life_tree_growth_v1/02-tree_emerges_abu_arrives.png",
+          "keyframe_sha256": "bca22587e8bd5b467894f1b6619b3fa01f241adc526430e9f16a43d4ff2875f3"
+        },
+        {
+          "segment_id": "question_fruit_appears",
+          "seconds": [
+            5.0,
+            7.5
+          ],
+          "purpose": "问题意象出现的运动参考",
+          "video": "segments/dream_ref_life_tree_growth_v1/03-question_fruit_appears.mp4",
+          "video_sha256": "d2c4ae6d6f38ee594d25b89cb78b1f7f7dab834051ed24af60eb0e1be9597052",
+          "keyframe": "keyframes/dream_ref_life_tree_growth_v1/03-question_fruit_appears.png",
+          "keyframe_sha256": "2c61917a420a6df0f48350fd417e8edf1aaa222e20d5578b5adf7d889bd7f0a5"
+        },
+        {
+          "segment_id": "flowering_settles",
+          "seconds": [
+            7.5,
+            10.0
+          ],
+          "purpose": "开花与画面安定节奏",
+          "video": "segments/dream_ref_life_tree_growth_v1/04-flowering_settles.mp4",
+          "video_sha256": "4622b9531aa5e9c196a1307b9d1b0f549d8c8ca3b471cac38202300240616aad",
+          "keyframe": "keyframes/dream_ref_life_tree_growth_v1/04-flowering_settles.png",
+          "keyframe_sha256": "91e11cc05f78ae15412c1de9f6cce6cdf710b8fb73ffbe68f594f8c526aa3e7e"
+        }
+      ],
+      "recommended_use": [
+        "tree_growth_rhythm",
+        "root_light_language",
+        "tree_breathing_reference"
+      ],
+      "do_not_use_for": [
+        "shot_01_direct_runtime",
+        "formal_life_prediction",
+        "canonical_path_claim"
+      ]
+    },
+    {
+      "reference_id": "dream_ref_fog_gate_three_trees_v1",
+      "label_zh": "阿布穿雾与三树显影",
+      "status": "director_reference_registered",
+      "director_role": "shot_01_02_fog_gate_and_spatial_reveal",
+      "source": {
+        "original_filename": "1000056881.mp4",
+        "archived_file": "sources/02-abu-fog-gate-three-trees-source-with-watermark.mp4",
+        "sha256": "6d87143390acba5e3df4c5f8abec44a7a848073e6e1ba11bebd214b3acc20634",
+        "watermark_present": true
+      },
+      "clean_master": {
+        "file": "clean-masters/02-abu-fog-gate-three-trees-clean.mp4",
+        "sha256": "9592d49c23fc82ad2cbf729c7c7014c68b154e6ceffb65052a62cf668b86426b",
+        "watermark_removed": true,
+        "probe": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "codec_type": "video",
+              "width": 1280,
+              "height": 720,
+              "r_frame_rate": "24/1"
+            },
+            {
+              "codec_name": "aac",
+              "codec_type": "audio",
+              "r_frame_rate": "0/0"
+            }
+          ],
+          "format": {
+            "duration": "10.005000",
+            "size": "3569113"
+          }
+        }
+      },
+      "contact_sheet": {
+        "file": "contact-sheets/dream_ref_fog_gate_three_trees_v1.png",
+        "sha256": "f85afc52efc072033f597cf2e0ef7ceb7aa434117ee568c47c725778f275af19"
+      },
+      "segments": [
+        {
+          "segment_id": "abu_waits",
+          "seconds": [
+            0.0,
+            3.5
+          ],
+          "purpose": "阿布等待与入口停顿",
+          "video": "segments/dream_ref_fog_gate_three_trees_v1/01-abu_waits.mp4",
+          "video_sha256": "f669ba7924794806f898400f9a6c0b6d627835b663b4024ef4065f423ea48eb0",
+          "keyframe": "keyframes/dream_ref_fog_gate_three_trees_v1/01-abu_waits.png",
+          "keyframe_sha256": "a8ce3db9f43056d31b3b935c3a18bb76a5b4e22a6a765a8ef552686d9315dbfe"
+        },
+        {
+          "segment_id": "abu_turns_and_enters_fog",
+          "seconds": [
+            3.5,
+            5.5
+          ],
+          "purpose": "阿布转身并进入雾层",
+          "video": "segments/dream_ref_fog_gate_three_trees_v1/02-abu_turns_and_enters_fog.mp4",
+          "video_sha256": "29e19219794391d52097aab00df4e789833d5f39209a4a5849574c40e50ebaa5",
+          "keyframe": "keyframes/dream_ref_fog_gate_three_trees_v1/02-abu_turns_and_enters_fog.png",
+          "keyframe_sha256": "8a61453fd1d00db76d97e2654cc75ea0c8c7b2264fb180da9cfc006b78b36db9"
+        },
+        {
+          "segment_id": "fog_boundary_opens",
+          "seconds": [
+            5.5,
+            7.0
+          ],
+          "purpose": "无实体门框的雾界展开",
+          "video": "segments/dream_ref_fog_gate_three_trees_v1/03-fog_boundary_opens.mp4",
+          "video_sha256": "c728b9ddad968579a04e71df050b41544cc5608d87fed8f39c2e80fc91200361",
+          "keyframe": "keyframes/dream_ref_fog_gate_three_trees_v1/03-fog_boundary_opens.png",
+          "keyframe_sha256": "da9f0ecb8f71664b7b2107ecead16cc992f754c13447291634710924274ded11"
+        },
+        {
+          "segment_id": "three_trees_revealed",
+          "seconds": [
+            7.0,
+            10.0
+          ],
+          "purpose": "三树纵深构图与观察节奏",
+          "video": "segments/dream_ref_fog_gate_three_trees_v1/04-three_trees_revealed.mp4",
+          "video_sha256": "76c2034a6d3616ee4dc9fa7cfb4fd530554fca975eb3559c16559200df4ea549",
+          "keyframe": "keyframes/dream_ref_fog_gate_three_trees_v1/04-three_trees_revealed.png",
+          "keyframe_sha256": "c941f5e72ee46ad45203be13c8de8e779d8967e0e8a23e361decff48f55e21ba"
+        }
+      ],
+      "recommended_use": [
+        "fog_gate_camera",
+        "abu_wait_turn_walk",
+        "three_tree_depth_composition"
+      ],
+      "do_not_use_for": [
+        "three_equal_choice_ui",
+        "automatic_tree_selection",
+        "final_runtime_video"
+      ]
+    },
+    {
+      "reference_id": "dream_ref_tree_structure_response_v1",
+      "label_zh": "生命树结构回应",
+      "status": "director_reference_registered",
+      "director_role": "tree_touch_response_motion_language",
+      "source": {
+        "original_filename": "1000056885.mp4",
+        "archived_file": "sources/03-tree-structure-response-source-with-watermark.mp4",
+        "sha256": "feb7faf1f08910894e944ebd8ae288afc5f6526b1cd677d4e4f8ade916fde137",
+        "watermark_present": true
+      },
+      "clean_master": {
+        "file": "clean-masters/03-tree-structure-response-clean.mp4",
+        "sha256": "dd72d06c16af6ffd9daa6ed0e993cadcd983896368014bd1154bc77696b71f94",
+        "watermark_removed": true,
+        "probe": {
+          "programs": [],
+          "stream_groups": [],
+          "streams": [
+            {
+              "codec_name": "h264",
+              "codec_type": "video",
+              "width": 1280,
+              "height": 720,
+              "r_frame_rate": "24/1"
+            },
+            {
+              "codec_name": "aac",
+              "codec_type": "audio",
+              "r_frame_rate": "0/0"
+            }
+          ],
+          "format": {
+            "duration": "10.005000",
+            "size": "3598944"
+          }
+        }
+      },
+      "contact_sheet": {
+        "file": "contact-sheets/dream_ref_tree_structure_response_v1.png",
+        "sha256": "2646b40801779ef3d4a353974d1fe809e0ab5486bdf3c9388dc2c988118dd07f"
+      },
+      "segments": [
+        {
+          "segment_id": "abu_observes_tree",
+          "seconds": [
+            0.0,
+            2.5
+          ],
+          "purpose": "阿布观察与树的静息状态",
+          "video": "segments/dream_ref_tree_structure_response_v1/01-abu_observes_tree.mp4",
+          "video_sha256": "5a487596010c8ca8eeea8e950277e136a98dc46cf17c9d8d3873a26b0eef74a2",
+          "keyframe": "keyframes/dream_ref_tree_structure_response_v1/01-abu_observes_tree.png",
+          "keyframe_sha256": "5f1027fbc5822153fc102019bfa81b45a1540a6f0b56b2ff101169efa0434472"
+        },
+        {
+          "segment_id": "structure_light_traverses",
+          "seconds": [
+            2.5,
+            5.0
+          ],
+          "purpose": "结构光沿树体移动的节奏",
+          "video": "segments/dream_ref_tree_structure_response_v1/02-structure_light_traverses.mp4",
+          "video_sha256": "235c0321fee6c062a9e08ed0f8afe98c545196cd789d1e5b747ca88649692118",
+          "keyframe": "keyframes/dream_ref_tree_structure_response_v1/02-structure_light_traverses.png",
+          "keyframe_sha256": "eace80712b7dfe425659b0f125bc7e78cc1db0bbcdc975bff66efa1b59646f1a"
+        },
+        {
+          "segment_id": "flower_response",
+          "seconds": [
+            5.0,
+            7.5
+          ],
+          "purpose": "单一花朵回应的视觉参考",
+          "video": "segments/dream_ref_tree_structure_response_v1/03-flower_response.mp4",
+          "video_sha256": "cc26039d4146be14f5c6c47b5be1662f2fe269dd3f0f210f8c505bbdd3481e44",
+          "keyframe": "keyframes/dream_ref_tree_structure_response_v1/03-flower_response.png",
+          "keyframe_sha256": "0e4066ffdde7ac3f2a1483d614cef5af073466cd49c7a60d5967954a0ade6743"
+        },
+        {
+          "segment_id": "fruit_and_mirror_settle",
+          "seconds": [
+            7.5,
+            10.0
+          ],
+          "purpose": "复合象征收束，仅供反例审阅",
+          "video": "segments/dream_ref_tree_structure_response_v1/04-fruit_and_mirror_settle.mp4",
+          "video_sha256": "f3fa1b1d41991eac6f077e02eb8fbae28f09d131f5dd210f421d54a23d872710",
+          "keyframe": "keyframes/dream_ref_tree_structure_response_v1/04-fruit_and_mirror_settle.png",
+          "keyframe_sha256": "164c082eaa8cf78809cd241b44bd2e89485d83045a27500258d87d8956088b90"
+        }
+      ],
+      "recommended_use": [
+        "restrained_structure_response",
+        "light_travel_timing",
+        "abu_observation_pose"
+      ],
+      "do_not_use_for": [
+        "unverified_path_projection",
+        "multi_symbol_response",
+        "canonical_mingli_assertion"
+      ]
+    }
+  ],
+  "boundaries": {
+    "runtime_authorized": false,
+    "creates_mingli_claim": false,
+    "changes_canonical_scene": false,
+    "creates_path_assertion": false,
+    "final_product_video": false,
+    "use_as_animation_spec_reference": true
+  }
+}

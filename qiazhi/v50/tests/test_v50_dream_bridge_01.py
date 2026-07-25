@@ -18,6 +18,41 @@ from test_v50_mingli_structural_experiment import _case_payload
 
 
 ROOT = Path(__file__).resolve().parents[1]
+TEST_DREAM_CLIENT_ID = "dream-test-client-primary"
+_DREAM_WORLD_REFS: dict[int, str] = {}
+
+
+def _visit_request(home_case_id: str, *, client_instance_id: str = TEST_DREAM_CLIENT_ID) -> dict[str, object]:
+    return {
+        "home_case_id": home_case_id,
+        "client_instance_id": client_instance_id,
+    }
+
+
+def _activate_dream_control(client: TestClient, payload: dict[str, object]) -> None:
+    lease = payload["control_lease"]
+    assert isinstance(lease, dict)
+    client.headers.update({
+        "x-dream-client-instance": str(lease["client_instance_id"]),
+        "x-dream-lease-id": str(lease["lease_id"]),
+        "x-dream-lease-epoch": str(lease["lease_epoch"]),
+        "x-dream-fence-token": str(lease["fence_token"]),
+    })
+    _DREAM_WORLD_REFS[id(client)] = str(payload["world_projection_ref"])
+
+
+def _navigation(
+    client: TestClient,
+    *,
+    x: float = 50,
+    y: float = 72,
+    camera_heading: float = 0,
+) -> dict[str, object]:
+    return {
+        "world_projection_ref": _DREAM_WORLD_REFS[id(client)],
+        "position": {"x": x, "y": y},
+        "camera_heading": camera_heading,
+    }
 
 
 def _dream_app(
@@ -98,9 +133,11 @@ def _dream_app(
 
 
 def _enter_three_tree_visit(client: TestClient, home_case_id: str) -> tuple[str, dict[str, object]]:
-    created = client.post("/api/v50/dream/visits", json={"home_case_id": home_case_id})
+    created = client.post("/api/v50/dream/visits", json=_visit_request(home_case_id))
     assert created.status_code == 200, created.text
-    visit_id = created.json()["visit_id"]
+    created_payload = created.json()
+    _activate_dream_control(client, created_payload)
+    visit_id = created_payload["visit_id"]
     entered = client.post(f"/api/v50/dream/visits/{visit_id}/enter", json={})
     assert entered.status_code == 200, entered.text
     encounter = client.get(f"/api/v50/dream/visits/{visit_id}/encounter")
@@ -108,11 +145,40 @@ def _enter_three_tree_visit(client: TestClient, home_case_id: str) -> tuple[str,
     return visit_id, encounter.json()
 
 
+def _reveal_and_open_mirror(
+    client: TestClient,
+    *,
+    visit_id: str,
+    scene_ref: str,
+) -> tuple[dict[str, object], dict[str, object]]:
+    reveal = client.post(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/reveal",
+        json={},
+    )
+    assert reveal.status_code == 200, reveal.text
+    reveal_payload = reveal.json()
+    view_ref = reveal_payload["onecanvas_view_ref"]
+    opened = client.post(
+        f"/api/v50/dream/visits/{visit_id}/mirror/open",
+        json={
+            "onecanvas_view_ref": view_ref,
+            "navigation": _navigation(client),
+        },
+    )
+    assert opened.status_code == 200, opened.text
+    mirror = client.get(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/mirror",
+        params={"view_ref": view_ref},
+    )
+    assert mirror.status_code == 200, mirror.text
+    return reveal_payload, mirror.json()
+
+
 def test_dream_bridge_is_server_disabled_by_default_and_client_cannot_bypass() -> None:
     client, _, _, _, _, home_case_id = _dream_app(enabled=False, consent=False)
 
     status = client.get("/api/v50/dream/status")
-    bypass = client.post("/api/v50/dream/visits", json={"home_case_id": home_case_id})
+    bypass = client.post("/api/v50/dream/visits", json=_visit_request(home_case_id))
 
     assert status.status_code == 200
     assert status.json() == {
@@ -136,7 +202,7 @@ def test_dream_bridge_fails_closed_until_human_explicitly_consents() -> None:
     client, _, _, _, _, home_case_id = _dream_app(consent=False)
 
     status = client.get("/api/v50/dream/status", params={"case_id": home_case_id})
-    created = client.post("/api/v50/dream/visits", json={"home_case_id": home_case_id})
+    created = client.post("/api/v50/dream/visits", json=_visit_request(home_case_id))
 
     assert status.status_code == 200
     assert status.json()["enabled"] is True
@@ -180,6 +246,30 @@ def test_human_consent_is_owner_initiated_revocable_and_immediately_disqualifies
     assert stale_visit.json()["detail"] == "dream_scene_authorization_unavailable"
 
 
+def test_reissued_human_consent_starts_new_visit_without_reusing_old_authorization() -> None:
+    client, _, _, _, _, home_case_id = _dream_app()
+    old_visit_id, _ = _enter_three_tree_visit(client, home_case_id)
+
+    withdrawn = client.post("/api/v50/dream/consent/withdraw", json={
+        "case_id": home_case_id,
+        "confirmed": True,
+    })
+    reissued = client.post("/api/v50/dream/consent", json={
+        "case_id": home_case_id,
+        "accepted": True,
+        "consent_version": "deepbazi.dream_pilot_consent.v1",
+    })
+    fresh = client.post("/api/v50/dream/visits", json=_visit_request(home_case_id))
+
+    assert withdrawn.status_code == 200
+    assert reissued.status_code == 200
+    assert fresh.status_code == 200, fresh.text
+    assert fresh.json()["visit_id"] != old_visit_id
+    old_visit = client.get(f"/api/v50/dream/visits/{old_visit_id}/encounter")
+    assert old_visit.status_code == 409
+    assert old_visit.json()["detail"] == "dream_scene_source_version_changed"
+
+
 def test_explicit_consent_materializes_only_chart_facts_for_legacy_human_case() -> None:
     client, _, _, case_store, _, home_case_id = _dream_app(
         consent=False,
@@ -209,6 +299,43 @@ def test_explicit_consent_materializes_only_chart_facts_for_legacy_human_case() 
     assert status.json()["composition_ready"] is True
 
 
+def test_chart_only_consent_does_not_promote_a_blocked_cognitive_record() -> None:
+    client, _, _, case_store, _, home_case_id = _dream_app(
+        consent=False,
+        legacy_human=True,
+    )
+    before = case_store.get(case_id=home_case_id)
+    assert before is not None
+    blocked = deepcopy(before)
+    blocked["record"]["reliability_disposition"] = "blocked"
+    blocked["record"]["review"]["disposition"] = "blocked"
+    case_store.save(
+        case_id=home_case_id,
+        user_id=before["user_id"],
+        profile_id=before["profile_id"],
+        payload=blocked,
+    )
+
+    granted = client.post("/api/v50/dream/consent", json={
+        "case_id": home_case_id,
+        "accepted": True,
+        "consent_version": "deepbazi.dream_pilot_consent.v1",
+    })
+
+    after = case_store.get(case_id=home_case_id)
+    assert granted.status_code == 200, granted.text
+    assert after is not None
+    assert after["record"]["reliability_disposition"] == "blocked"
+    assert after["record"]["review"]["disposition"] == "blocked"
+    assert after["life_case"]["relation_assertions"] == []
+    assert after["life_case"]["path_assertions"] == []
+    assert after["life_case"]["baseline_insight"]["professional_release_status"] == "partially_blocked"
+    assert after["life_case"]["baseline_insight"]["projection_payload"] == {
+        "identity_class": "authorized_human",
+        "professional_path_state": "unavailable_unconfirmed",
+    }
+
+
 def test_canonical_npc_bootstrap_is_unique_auditable_and_projection_only() -> None:
     _, _, dream_store, case_store, _, _ = _dream_app(consent=False)
     grants = [item for item in dream_store.list_grants() if item.subject_kind == "canonical_npc"]
@@ -229,7 +356,7 @@ def test_canonical_npc_bootstrap_is_unique_auditable_and_projection_only() -> No
         assert row["life_case"]["path_assertions"] == []
 
 
-def test_three_tree_visit_is_exactly_three_deterministic_and_one_time_selectable() -> None:
+def test_three_tree_visit_is_exactly_three_deterministic_and_switchable_between_observations() -> None:
     client, _, _, _, _, home_case_id = _dream_app()
     visit_id, encounter = _enter_three_tree_visit(client, home_case_id)
 
@@ -260,15 +387,42 @@ def test_three_tree_visit_is_exactly_three_deterministic_and_one_time_selectable
     assert selected.status_code == selected_again.status_code == 200
     assert selected.json()["state"] == "TREE_OBSERVING"
     assert selected.json()["selected_scene_ref"] == first
-    assert switched.status_code == 409
-    assert switched.json()["detail"] == "dream_tree_selection_locked"
+    assert switched.status_code == 200
+    assert switched.json()["state"] == "TREE_OBSERVING"
+    assert switched.json()["selected_scene_ref"] == second
+
+    reveal = client.post(
+        f"/api/v50/dream/visits/{visit_id}/trees/{second}/reveal",
+        json={},
+    )
+    opened = client.post(
+        f"/api/v50/dream/visits/{visit_id}/mirror/open",
+        json={
+            "onecanvas_view_ref": reveal.json()["onecanvas_view_ref"],
+            "navigation": _navigation(client),
+        },
+    )
+    locked_while_open = client.post(
+        f"/api/v50/dream/visits/{visit_id}/select-tree",
+        json={"scene_ref": first},
+    )
+    assert opened.status_code == 200
+    assert locked_while_open.status_code == 409
+    assert locked_while_open.json()["detail"] == "dream_tree_selection_locked"
 
 
 def test_dream_visit_is_owner_scoped_and_resumable_without_duplicate_visit() -> None:
     client, other_client, _, _, _, home_case_id = _dream_app()
     visit_id, _ = _enter_three_tree_visit(client, home_case_id)
 
-    resumed = client.post("/api/v50/dream/visits", json={"home_case_id": home_case_id})
+    resumed = client.post("/api/v50/dream/visits", json=_visit_request(home_case_id))
+    assert resumed.status_code == 200, resumed.text
+    _activate_dream_control(client, resumed.json())
+    other_client.headers.update({
+        key: value
+        for key, value in client.headers.items()
+        if key.startswith("x-dream-")
+    })
     foreign = other_client.get(f"/api/v50/dream/visits/{visit_id}")
 
     assert resumed.status_code == 200
@@ -276,7 +430,7 @@ def test_dream_visit_is_owner_scoped_and_resumable_without_duplicate_visit() -> 
     assert foreign.status_code == 404
 
 
-def test_dream_projection_omits_private_refs_potential_relations_and_all_paths() -> None:
+def test_dream_projection_omits_private_refs_and_non_committed_content() -> None:
     client, _, _, _, _, home_case_id = _dream_app()
     visit_id, encounter = _enter_three_tree_visit(client, home_case_id)
     scene_ref = encounter["trees"][0]["scene_ref"]
@@ -287,9 +441,27 @@ def test_dream_projection_omits_private_refs_potential_relations_and_all_paths()
     assert selected.status_code == 200
 
     tree = client.get(f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}")
-    unopened = client.get(f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/mirror")
-    opened = client.post(f"/api/v50/dream/visits/{visit_id}/mirror/open", json={})
-    mirror = client.get(f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/mirror")
+    reveal = client.post(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/reveal",
+        json={},
+    )
+    assert reveal.status_code == 200, reveal.text
+    view_ref = reveal.json()["onecanvas_view_ref"]
+    unopened = client.get(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/mirror",
+        params={"view_ref": view_ref},
+    )
+    opened = client.post(
+        f"/api/v50/dream/visits/{visit_id}/mirror/open",
+        json={
+            "onecanvas_view_ref": view_ref,
+            "navigation": _navigation(client),
+        },
+    )
+    mirror = client.get(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/mirror",
+        params={"view_ref": view_ref},
+    )
 
     assert tree.status_code == 200, tree.text
     assert tree.json()["work_path_state"] == "unavailable_unconfirmed"
@@ -303,14 +475,19 @@ def test_dream_projection_omits_private_refs_potential_relations_and_all_paths()
     assert "dream-human-grant" not in serialized
     assert "dream-reader" not in serialized
     assert '"potential"' not in serialized
-    assert "legacy_unresolved" not in serialized
-    assert payload["work_path_state"] == "unavailable_unconfirmed"
-    assert payload["canvas"]["path_availability"]["message"] == "当前暂无已确认主路径"
+    assert '"status": "legacy_unresolved"' not in serialized
+    assert payload["verification"]["onecanvas_view_ref"] == view_ref
+    assert payload["verification"]["binding"]["coordinate_version"] == (
+        "canonical-six-pillar-twelve-node.v1"
+    )
     assert payload["canvas"]["renderer_policy"]["available_visibility_layers"] == [
         "formal", "focus"
     ]
     for stage in payload["canvas"]["stages"].values():
-        assert stage["spec"]["paths"] == []
+        assert all(
+            item["trace"]["epistemic_status"] == "committed"
+            for item in stage["spec"]["paths"]
+        )
         assert all(item["relation_state"] != "potential" for item in stage["spec"]["relations"])
 
 
@@ -322,8 +499,11 @@ def test_dream_mirror_reuses_six_pillar_canvas_and_opaque_context_refs() -> None
         f"/api/v50/dream/visits/{visit_id}/select-tree",
         json={"scene_ref": scene_ref},
     )
-    client.post(f"/api/v50/dream/visits/{visit_id}/mirror/open", json={})
-    mirror = client.get(f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/mirror").json()
+    _, mirror = _reveal_and_open_mirror(
+        client,
+        visit_id=visit_id,
+        scene_ref=scene_ref,
+    )
     canvas = mirror["canvas"]
 
     assert [item["slot_type"] for item in canvas["stages"]["year"]["scene_slots"]] == [
@@ -383,6 +563,85 @@ def test_revoked_or_source_changed_grant_invalidates_existing_visit() -> None:
     assert changed.json()["detail"] == "dream_scene_source_version_changed"
 
 
+def test_tree_reveal_is_server_selected_opaque_and_required_for_mirror_open() -> None:
+    client, _, _, _, _, home_case_id = _dream_app()
+    visit_id, encounter = _enter_three_tree_visit(client, home_case_id)
+    scene_ref = next(
+        item["scene_ref"]
+        for item in encounter["trees"]
+        if item["source_kind"] == "canonical_npc"
+    )
+    client.post(
+        f"/api/v50/dream/visits/{visit_id}/select-tree",
+        json={"scene_ref": scene_ref},
+    )
+
+    reveal = client.post(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/reveal",
+        json={},
+    )
+    repeated = client.post(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/reveal",
+        json={},
+    )
+    invalid = client.post(
+        f"/api/v50/dream/visits/{visit_id}/mirror/open",
+        json={
+            "onecanvas_view_ref": "dream-onecanvas-view-" + ("0" * 40),
+            "navigation": _navigation(client),
+        },
+    )
+
+    assert reveal.status_code == repeated.status_code == 200
+    payload = reveal.json()
+    assert repeated.json()["content_hash"] == payload["content_hash"]
+    assert payload["onecanvas_view_ref"].startswith("dream-onecanvas-view-")
+    assert payload["reveal_kind"] in {"path", "relation", "node", "none"}
+    serialized = json.dumps(payload, ensure_ascii=False)
+    assert "dream-pilot-npc-case" not in serialized
+    assert "npc-mist-lan" not in serialized
+    assert invalid.status_code == 409
+    assert invalid.json()["detail"] == "dream_mirror_reference_invalid"
+
+
+def test_revocation_after_reveal_fails_open_closed_and_still_allows_safe_close() -> None:
+    client, _, dream_store, _, _, home_case_id = _dream_app()
+    visit_id, encounter = _enter_three_tree_visit(client, home_case_id)
+    scene_ref = next(
+        item["scene_ref"]
+        for item in encounter["trees"]
+        if item["source_kind"] == "canonical_npc"
+    )
+    client.post(
+        f"/api/v50/dream/visits/{visit_id}/select-tree",
+        json={"scene_ref": scene_ref},
+    )
+    reveal, _ = _reveal_and_open_mirror(
+        client,
+        visit_id=visit_id,
+        scene_ref=scene_ref,
+    )
+    grant = dream_store.get_grant(public_scene_ref=scene_ref)
+    assert grant is not None
+    now = datetime.now(timezone.utc)
+    dream_store.save_grant(grant.model_copy(update={
+        "status": "withdrawn",
+        "withdrawn_at": now,
+        "updated_at": now,
+    }))
+
+    blocked = client.get(
+        f"/api/v50/dream/visits/{visit_id}/trees/{scene_ref}/mirror",
+        params={"view_ref": reveal["onecanvas_view_ref"]},
+    )
+    closed = client.post(f"/api/v50/dream/visits/{visit_id}/mirror/close", json={})
+
+    assert blocked.status_code == 409
+    assert blocked.json()["detail"] == "dream_scene_authorization_unavailable"
+    assert closed.status_code == 200
+    assert closed.json()["state"] == "TREE_OBSERVING"
+
+
 def test_dream_routes_frontend_contracts_and_schema_are_present() -> None:
     client, _, _, _, _, _ = _dream_app(consent=False)
     direct = client.get("/experience/dream/visits/visit-opaque/trees/scene-opaque/mirror")
@@ -392,12 +651,37 @@ def test_dream_routes_frontend_contracts_and_schema_are_present() -> None:
     schema = (ROOT / "deploy/postgres_v50_schema.sql").read_text(encoding="utf-8")
 
     assert direct.status_code == 200
-    assert "renderReadOnlyCanvas" in source
+    assert "renderDreamVerificationCanvas" in source
     assert "dream.path.none_confirmed" in i18n
-    assert "data-dream-select" in source
+    assert "data-dream-select" not in source
+    assert '"fog_wait"' in source
+    assert "prepareDreamReveal" in source
+    assert "hitTreeAt" in source
+    assert "getImageData" in source
+    assert "sessionStorage" in source
+    assert "localStorage" not in source
+    assert "dream-root-mirror" in source
+    assert "mirror_exit" in source
+    assert "mirrorExitGeometry" in source
+    assert "mirrorBoundaryClientY" in source
+    assert 'closest<HTMLElement>(".dream-mirror-water")' not in source
+    assert "startTapMotion" in source
+    assert "treeApproachPoint" in source
+    assert "advanceAbuFollower" in source
+    assert "dream-tree-response-root" in styles
+    assert "popstate" in source
+    assert "data-dream-a11y=\"leave-mirror\"" in source
     assert "dream.source.canonical_npc" in i18n
+    assert ".dream-first-visit" in styles
+    assert ".dream-verification-canvas" in styles
+    assert ".dream-root-mirror-reflection" in styles
+    assert ".dream-mirror-layer.is-pulling-mirror" in styles
+    assert "dream-own-root-catch" in styles
+    assert "dream-touch-trunk-carry" in styles
     assert "@media (max-width: 720px)" in styles
     assert "@media (prefers-reduced-motion: reduce)" in styles
+    assert "transition-property: opacity, filter !important" in styles
+    assert "transition-duration: 900ms !important" in styles
     assert "CREATE TABLE IF NOT EXISTS v50_dream_scene_grants" in schema
     assert "CREATE TABLE IF NOT EXISTS v50_dream_visits" in schema
     assert "DreamCase" not in schema

@@ -15,11 +15,52 @@
   ],
   "abu_motion": {
     "registry": "apps/product/static/l5/assets/abu/motion-registry.js",
-    "sha256": "0f94a3db535d9c77b1ddb4cafd552543830a65bcd4c160455355e81ecc780a40",
+    "sha256": "6922cf2207bd04b06d60caad99584f8bf6077e73590c0cf66c82e0a54084c687",
     "new_experience_assets": [
       "abu_idle_blink_v4.webp",
       "abu_taoist_divination_v9.webp",
       "abu_sad_tears_v11.webp"
-    ]
+    ],
+    "library": "apps/product/static/l5/assets/abu/v12-actor-pass/library.json",
+    "library_sha256": "3a20982c926b8feda693634e1c54342c34b53dfca3aee8552e9d349142920438",
+    "source_inventory": "apps/product/static/l5/assets/abu/v12-actor-pass/video-inventory.json",
+    "source_inventory_sha256": "e8463be5d658ae7d69602ec311c4bb1f50b1f0845688c5c926209604e16a4eab",
+    "default_action_id": "abu_dream_standard_cycle_v1"
+  },
+  "dream_director_reference": {
+    "registry": "artifacts/abu-dream-world/director-reference/dream-encounter-01/v1/registry.json",
+    "sha256": "55f0448b769e53aba47ce678dab6d7422cbb29b218dba7beff3d29254ee38310",
+    "status": "reference_only_not_runtime",
+    "runtime_authorized": false
+  },
+  "abu_dream_entry": {
+    "asset_id": "ABU_03_DREAM_ENTRY_TRANSITION_V1",
+    "status": "POSTPROCESS_COMPLETE_AWAITING_OWNER_REVIEW",
+    "source_sha256": "ca42b6e7c7ad1236cb3c35676471302d26401ae07fb2fc3550cf15fa2243e7f7",
+    "runtime": "apps/product/static/l5/assets/dream/entry-transition-v1/abu_03_dream_entry_transition_v1_runtime_1080p.mp4",
+    "runtime_sha256": "76e3ddf69bb9f206fd6f3fc90969f3c0ede521e1a4a93579d79f28ac8ebd615d",
+    "manifest": "apps/product/static/l5/assets/dream/entry-transition-v1/manifest.json",
+    "manifest_sha256": "51377d9de08cbe2d03d0cd684c31e0375a69e929bcc8305bedb5c8abd7d31b5b",
+    "interactive_destination": "DREAM_THREE_TREE_PORCH_V3",
+    "legacy_source_1000056881_is_complete_entry": false
+  },
+  "dream_three_tree_porch": {
+    "asset_set_id": "DREAM_THREE_TREE_PORCH_V3",
+    "status": "POSTPROCESS_COMPLETE_AWAITING_OWNER_REVIEW",
+    "manifest": "apps/product/static/l5/assets/dream/porch-v3/manifest.json",
+    "manifest_sha256": "c06ab177a22b38cb413bf2ac3b33a93e14f7c1ac4531612666f6628d585b652d",
+    "runtime_controls_rotation_and_selection": true,
+    "legacy_grove_and_cutout_trees_are_primary": false
+  },
+  "abu_audio": {
+    "library": "apps/product/static/l5/assets/audio/abu/library.json",
+    "library_sha256": "f68379a8f2873a48d48a0f42d57e7a7ea363f0c7bb119203bf07444cb835bfd9",
+    "default_opening_theme_asset_id": "abu_mingli_opening_theme_morning_glints_v1",
+    "manifest": "apps/product/static/l5/assets/audio/abu/morning-glints-in-the-grove-v1/manifest.json",
+    "manifest_sha256": "bda7b7985e99edb202cea5a331a43725bfbd86cfe8d75421e26c1cb6303cfb72",
+    "runtime_mp3": "apps/product/static/l5/assets/audio/abu/morning-glints-in-the-grove-v1/morning-glints-in-the-grove-opening-v1.mp3",
+    "runtime_mp3_sha256": "8b0e7699b53de587c6043b36fc947719c7bbd6337cc73ab34342f8f16d53c16d",
+    "runtime_opus": "apps/product/static/l5/assets/audio/abu/morning-glints-in-the-grove-v1/morning-glints-in-the-grove-opening-v1.opus",
+    "runtime_opus_sha256": "c962fc87d045b579012e2e9bd1f400ac057aff79dce9948d50e9734a66db95ef"
   }
 }

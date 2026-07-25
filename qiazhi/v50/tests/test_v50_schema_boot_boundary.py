@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import ast
 
 import pytest
 
@@ -178,3 +179,16 @@ def test_runtime_stores_only_call_read_only_checker() -> None:
         assert "check_product_database_schema(database_url)" in source
         assert "migrate_product_database_schema" not in source
         assert "ensure_product_database_schema" not in source
+
+
+def test_product_package_does_not_start_application_during_migration_import() -> None:
+    source = (database_schema.ROOT / "apps" / "product" / "__init__.py").read_text(
+        encoding="utf-8"
+    )
+    module = ast.parse(source)
+    eager_app_imports = [
+        node
+        for node in module.body
+        if isinstance(node, ast.ImportFrom) and node.module == "app"
+    ]
+    assert eager_app_imports == []

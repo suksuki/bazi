@@ -56,6 +56,9 @@ The page may render its own subtle grounding shadow. The asset itself contains n
 | `face_change_transition` | OneCanvas-to-Xiangfa theater transition | v12 actor pass |
 | `ninja_disappear_throw` | rare playful finale interlude; transform, disappear and throw | v12 actor pass |
 | `quiet_sit_reaction` | standard cute seated companion presence | v12 actor pass |
+| `dream_standard_cycle` | owner-approved default round-faced Abu companion cycle | v15 green-screen actor pass |
+| `dream_seated_observe` | quiet seated listening and observation | v15 green-screen actor pass |
+| `dream_stand_and_return` | restrained standing acknowledgement returning to sit | v15 green-screen actor pass |
 | `baseball_swing` | active Life World or finale interlude | v12 actor pass |
 | `pachinko_jackpot` | low-frequency arcade finale easter egg with no reading semantics | v12 actor pass |
 
@@ -87,7 +90,7 @@ source_hash: stored in inventory and manifest
 
 `abu_ninja_disappear_throw_v1` uses the designer's full-body seated-start variant, preserving Abu's familiar cute silhouette before the costume change. The biped standing-start source remains traceable but is held because it feels abrupt and intimidating in the quiet finale; the half-body-start source is held because it creates a visible framing jump. Ninja, breakdance and face-change are optional finale/IP moments only. They cannot interrupt professional explanation or imply a favorable, unfavorable or supernatural Mingli result.
 
-`abu_quiet_sit_reaction_v1` is the default quiet companion action. Baseball is an ambient activity, not a completion signal. Pachinko is registered as a rare arcade easter egg only: it must never be selected by wealth, fortune, payment, reading-success or professional-judgment state.
+`abu_dream_standard_cycle_v1` is the owner-approved default Abu action and character reference. Its round face, short muzzle, compact body and softer eye placement replace `abu_quiet_sit_reaction_v1`, which remains traceable as a retired previous default. The seated-observe and stand-and-return derivatives preserve the same source character and bottom-center anchor. Baseball is an ambient activity, not a completion signal. Pachinko is registered as a rare arcade easter egg only: it must never be selected by wealth, fortune, payment, reading-success or professional-judgment state.
 
 ### Locomotion Rule
 

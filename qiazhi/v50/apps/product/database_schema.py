@@ -9,7 +9,7 @@ from typing import Any
 
 ROOT = Path(__file__).resolve().parents[2]
 SCHEMA_PATH = ROOT / "deploy" / "postgres_v50_schema.sql"
-EXPECTED_SCHEMA_VERSION = "v50.consolidated.003"
+EXPECTED_SCHEMA_VERSION = "v50.consolidated.006"
 EXPECTED_SCHEMA_BOUNDARY = "v50_database_single_migration_owner"
 MIGRATION_COMMAND = (
     'PYTHONPATH=packages:apps python scripts/v50_migrate_product_database.py '

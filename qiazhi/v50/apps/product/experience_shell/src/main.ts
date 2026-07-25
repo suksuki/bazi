@@ -34,15 +34,23 @@ import { loadExperienceCase } from "./experience_data";
 import { applyActiveAnchor, humanizeError, updateExperienceLocation } from "./experience_dom";
 import { bindExperienceInteractions } from "./experience_interactions";
 import { createNarrationTimeline } from "./experience_timeline";
+import { OpeningMusicController } from "./opening_music";
 import {
   createDreamVisit,
   enterDreamVisit,
   grantDreamConsent,
   loadDreamStatus,
+  markDreamNavigationHandoff,
+  migrateGuestDreamAnchor,
   withdrawDreamConsent,
   type DreamFeatureStatus,
 } from "./dream_api";
 import { bootDreamExperience } from "./dream_runtime";
+import {
+  beginDreamEntryTransition,
+  resumeDreamEntryTransition,
+} from "./dream_entry_transition";
+import { consumeDreamReturnedWithSeed } from "./dream_story_runtime";
 import {
   initialUiState,
   reduceUi,
@@ -56,6 +64,7 @@ import {
 const rootElement = document.querySelector<HTMLElement>("#experienceRoot");
 if (!rootElement) throw new Error("experience_root_missing");
 const root: HTMLElement = rootElement;
+const openingMusic = new OpeningMusicController(syncOpeningMusicControls);
 
 let account = { display_name: "", role: "member" };
 let cases: ExperienceCaseSummary[] = [];
@@ -84,9 +93,14 @@ let editingProfileId = "";
 let accountBusy = false;
 let accountError = "";
 let dreamStatus: DreamFeatureStatus | null = null;
+const dreamReturnedWithSeed = consumeDreamReturnedWithSeed();
 
-if (location.pathname.startsWith("/experience/dream")) void bootDreamExperience(root);
-else void boot();
+if (location.pathname.startsWith("/experience/dream")) {
+  const entryTransition = resumeDreamEntryTransition();
+  void bootDreamExperience(root).finally(() => entryTransition?.markDestinationReady());
+} else {
+  void boot();
+}
 
 
 async function boot(): Promise<void> {
@@ -175,6 +189,7 @@ function render(): void {
     canvasContext,
     ui,
     dreamStatus,
+    dreamReturnedWithSeed,
   });
   bindExperienceInteractions(root, {
     selectArea,
@@ -203,7 +218,14 @@ function render(): void {
       void openCase({ profileId });
     },
   });
+  syncOpeningMusicControls();
+  openingMusic.arm();
   requestAnimationFrame(() => applyActiveAnchor(ui.selectedAnchor));
+}
+
+
+function syncOpeningMusicControls(): void {
+  openingMusic.syncControls(root);
 }
 
 
@@ -334,11 +356,16 @@ async function refreshCanvasContext(selected: string): Promise<void> {
 
 
 async function playNarrationSegment(index: number): Promise<void> {
+  openingMusic.pauseForNarration();
   if (await ensureNarration()) await timeline?.playSegment(index);
 }
 
 
 async function handleCommand(command: string): Promise<void> {
+  if (command === "toggle-opening-music") {
+    await openingMusic.toggle();
+    return;
+  }
   if (command === "manage-profiles") {
     await openProfileManager();
     return;
@@ -348,20 +375,37 @@ async function handleCommand(command: string): Promise<void> {
     return;
   }
   if (command === "enter-dream") {
-    root.innerHTML = renderLoading("阿布正在带你走入雾路");
+    let entryTransition: ReturnType<typeof beginDreamEntryTransition> | null = null;
     try {
+      const guestCapability = sessionStorage.getItem("deepbazi.dream.guest-anchor-capability.v1");
+      if (
+        guestCapability
+        && await confirmDreamAction(
+          "只恢复这台设备上未登录时的梦境离开位置？不会迁移命理事实、授权或访问历史。",
+          "恢复位置",
+        )
+      ) {
+        await migrateGuestDreamAnchor(activeCaseId, guestCapability, true);
+        sessionStorage.removeItem("deepbazi.dream.guest-anchor-capability.v1");
+      }
+      entryTransition = beginDreamEntryTransition();
       let visit = await createDreamVisit(activeCaseId);
       visit = await enterDreamVisit(visit.visit_id);
+      entryTransition?.bindVisit(visit.visit_id);
+      await entryTransition?.waitUntilVisible();
+      markDreamNavigationHandoff();
       location.assign(`/experience/dream/visits/${encodeURIComponent(visit.visit_id)}`);
     } catch (error) {
+      entryTransition?.cancel();
       const message = error instanceof Error ? error.message : String(error);
       root.innerHTML = renderUnavailable("这条梦路暂时没有开放", humanizeError(message), "回到生命世界");
     }
     return;
   }
   if (command === "grant-dream-consent") {
-    const accepted = window.confirm(
-      "确认授权当前档案以匿名生命树进入本地封闭梦境？仅展示确定性命盘与只读树象，你可以随时撤回。",
+    const accepted = await confirmDreamAction(
+      "授权当前档案以匿名生命树进入本地封闭梦境？仅展示确定性命盘与只读树象，你可以随时撤回。",
+      "确认授权",
     );
     if (!accepted) return;
     try {
@@ -374,7 +418,10 @@ async function handleCommand(command: string): Promise<void> {
     return;
   }
   if (command === "withdraw-dream-consent") {
-    const confirmed = window.confirm("确认撤回当前档案的梦境展示授权？撤回后，这棵真人生命树会立即失去进入资格。");
+    const confirmed = await confirmDreamAction(
+      "撤回当前档案的梦境展示授权？撤回后，这棵真人生命树会立即失去进入资格。",
+      "确认撤回",
+    );
     if (!confirmed) return;
     try {
       await withdrawDreamConsent(activeCaseId);
@@ -386,6 +433,7 @@ async function handleCommand(command: string): Promise<void> {
     return;
   }
   if (command === "listen") {
+    openingMusic.pauseForNarration();
     dispatch({ type: "toggle-abu", expanded: true });
     if (!(await ensureNarration()) || !timeline) {
       dispatch({ type: "narration", status: "error", message: "四柱已经就绪，语音暂时没有连接上。" });
@@ -402,6 +450,34 @@ async function handleCommand(command: string): Promise<void> {
     return;
   }
   if (command === "focus-pillars") focusAnchor("four-pillars");
+}
+
+
+function confirmDreamAction(message: string, confirmLabel: string): Promise<boolean> {
+  const dialog = document.createElement("dialog");
+  dialog.className = "dream-consent-dialog";
+  dialog.setAttribute("aria-labelledby", "dream-consent-dialog-title");
+  dialog.innerHTML = `<form method="dialog">
+    <p id="dream-consent-dialog-title"></p>
+    <div>
+      <button type="submit" value="cancel">暂不</button>
+      <button class="is-primary" type="submit" value="confirm"></button>
+    </div>
+  </form>`;
+  const copy = dialog.querySelector("p");
+  const confirm = dialog.querySelector<HTMLButtonElement>('button[value="confirm"]');
+  if (copy) copy.textContent = message;
+  if (confirm) confirm.textContent = confirmLabel;
+  document.body.append(dialog);
+  return new Promise((resolve) => {
+    const settle = (): void => {
+      const accepted = dialog.returnValue === "confirm";
+      dialog.remove();
+      resolve(accepted);
+    };
+    dialog.addEventListener("close", settle, { once: true });
+    dialog.showModal();
+  });
 }
 
 

@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS v50_schema_version (
 INSERT INTO v50_schema_version (id, version, boundary)
 VALUES (
     'v50.schema',
-    'v50.consolidated.003',
+    'v50.consolidated.006',
     'v50_database_single_migration_owner'
 )
 ON CONFLICT (id) DO UPDATE
@@ -135,6 +135,154 @@ CREATE TABLE IF NOT EXISTS v50_dream_visits (
 
 CREATE INDEX IF NOT EXISTS idx_v50_dream_visits_owner
 ON v50_dream_visits (owner_user_id, updated_at DESC);
+
+-- Return/departure navigation is deliberately separate from Mingli facts. These
+-- records own cross-visit anchors, device fencing, and idempotent routing only.
+CREATE TABLE IF NOT EXISTS v50_dream_navigation_records (
+    record_id TEXT PRIMARY KEY,
+    record_kind TEXT NOT NULL,
+    viewer_id TEXT NOT NULL,
+    case_namespace TEXT NOT NULL,
+    source_visit_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    idempotency_key TEXT UNIQUE,
+    migration_capability_hash TEXT UNIQUE,
+    record_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_navigation_lookup
+ON v50_dream_navigation_records
+    (viewer_id, case_namespace, record_kind, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_dream_control_leases (
+    viewer_id TEXT NOT NULL,
+    case_namespace TEXT NOT NULL,
+    lease_epoch BIGINT NOT NULL,
+    fence_token BIGINT NOT NULL,
+    lease_id TEXT NOT NULL UNIQUE,
+    client_instance_id TEXT NOT NULL,
+    status TEXT NOT NULL,
+    real_expires_at TIMESTAMPTZ NOT NULL,
+    lease_json JSONB NOT NULL,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    PRIMARY KEY (viewer_id, case_namespace)
+);
+
+CREATE TABLE IF NOT EXISTS v50_dream_projection_outbox (
+    outbox_id TEXT PRIMARY KEY,
+    aggregate_ref TEXT NOT NULL,
+    event_type TEXT NOT NULL,
+    payload_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    delivered_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_projection_outbox_pending
+ON v50_dream_projection_outbox (created_at)
+WHERE delivered_at IS NULL;
+
+-- Problem Flower and Fruit is a bounded subdomain of the existing Dream
+-- runtime. Outcome evidence is deliberately kept in a separate table so no
+-- pre-reveal projection query can accidentally return it.
+CREATE TABLE IF NOT EXISTS v50_dream_game_content_packs (
+    pack_id TEXT PRIMARY KEY,
+    evidence_class TEXT NOT NULL,
+    content_state TEXT NOT NULL,
+    release_eligible BOOLEAN NOT NULL DEFAULT false,
+    verified_real_gate_contribution INTEGER NOT NULL DEFAULT 0,
+    pack_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_game_content_gate
+ON v50_dream_game_content_packs
+    (evidence_class, content_state, release_eligible, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_dream_game_rounds (
+    round_id TEXT PRIMARY KEY,
+    pack_id TEXT NOT NULL REFERENCES v50_dream_game_content_packs(pack_id) ON DELETE RESTRICT,
+    resident_scene_ref TEXT NOT NULL,
+    content_state TEXT NOT NULL,
+    round_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_game_round_scene
+ON v50_dream_game_rounds (resident_scene_ref, content_state, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_dream_game_system_seals (
+    seal_id TEXT PRIMARY KEY,
+    round_id TEXT NOT NULL REFERENCES v50_dream_game_rounds(round_id) ON DELETE RESTRICT,
+    immutable_hash TEXT NOT NULL,
+    seal_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v50_dream_game_outcome_evidence (
+    evidence_id TEXT PRIMARY KEY,
+    round_id TEXT NOT NULL UNIQUE REFERENCES v50_dream_game_rounds(round_id) ON DELETE RESTRICT,
+    evidence_class TEXT NOT NULL,
+    verification_status TEXT NOT NULL,
+    immutable_hash TEXT NOT NULL,
+    evidence_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v50_dream_game_attempts (
+    attempt_id TEXT PRIMARY KEY,
+    round_id TEXT NOT NULL REFERENCES v50_dream_game_rounds(round_id) ON DELETE RESTRICT,
+    viewer_id TEXT NOT NULL REFERENCES v50_user_accounts(user_id) ON DELETE CASCADE,
+    visit_id TEXT NOT NULL REFERENCES v50_dream_visits(visit_id) ON DELETE CASCADE,
+    state TEXT NOT NULL,
+    row_version BIGINT NOT NULL,
+    attempt_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (round_id, viewer_id, visit_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_game_attempt_viewer
+ON v50_dream_game_attempts (viewer_id, updated_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_dream_game_flowers (
+    flower_id TEXT PRIMARY KEY,
+    round_id TEXT NOT NULL UNIQUE REFERENCES v50_dream_game_rounds(round_id) ON DELETE RESTRICT,
+    state TEXT NOT NULL,
+    row_version BIGINT NOT NULL,
+    flower_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS v50_dream_game_records (
+    record_id TEXT PRIMARY KEY,
+    record_kind TEXT NOT NULL,
+    round_id TEXT NOT NULL REFERENCES v50_dream_game_rounds(round_id) ON DELETE RESTRICT,
+    viewer_id TEXT,
+    immutable_hash TEXT NOT NULL,
+    record_json JSONB NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_game_record_lookup
+ON v50_dream_game_records (round_id, viewer_id, record_kind, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS v50_dream_game_answers (
+    round_id TEXT NOT NULL REFERENCES v50_dream_game_rounds(round_id) ON DELETE RESTRICT,
+    viewer_id TEXT NOT NULL REFERENCES v50_user_accounts(user_id) ON DELETE RESTRICT,
+    attempt_id TEXT NOT NULL REFERENCES v50_dream_game_attempts(attempt_id) ON DELETE RESTRICT,
+    seal_id TEXT NOT NULL UNIQUE REFERENCES v50_dream_game_records(record_id) ON DELETE RESTRICT,
+    immutable_hash TEXT NOT NULL,
+    sealed_at TIMESTAMPTZ NOT NULL,
+    PRIMARY KEY (round_id, viewer_id)
+);
+
+CREATE INDEX IF NOT EXISTS idx_v50_dream_game_answers_round
+ON v50_dream_game_answers (round_id, sealed_at, seal_id);
 
 CREATE TABLE IF NOT EXISTS v50_mingli_cognitive_jobs (
     job_id TEXT PRIMARY KEY,

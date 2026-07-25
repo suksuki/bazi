@@ -30,8 +30,8 @@ def test_unified_product_keeps_v4_pack_and_uses_registered_standard_idle() -> No
     components = (ROOT / "apps/product/experience_shell/src/components.ts").read_text(encoding="utf-8")
     registry = (ROOT / "apps/product/static/l5/assets/abu/motion-registry.js").read_text(encoding="utf-8")
 
-    assert "/assets/abu/v12-actor-pass/quiet-sit-reaction/web/abu_quiet_sit_reaction_v1.webp" in components
-    assert 'idle: "quiet_sit_reaction"' in registry
+    assert "/assets/abu/v12-actor-pass/dream-standard-cycle/web/abu_dream_standard_cycle_v1.webp" in components
+    assert 'idle: "dream_standard_cycle"' in registry
     assert 'thinking: "taoist_divination"' in registry
     assert 'caution: "caution_ears"' in registry
     assert 'wave: "happy_tail"' in registry
