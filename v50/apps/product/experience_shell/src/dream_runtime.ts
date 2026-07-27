@@ -1,4 +1,4 @@
-import { renderDreamGameCanvas, renderDreamVerificationCanvas } from "./components";
+import { renderDreamVerificationCanvas } from "./components";
 import {
   checkpointDreamVisit,
   closeDreamMirror,
@@ -29,16 +29,17 @@ import {
   type DreamVisitView,
 } from "./dream_api";
 import {
+  answerDreamRealityQuestion,
   answerDreamLearningQuestion,
   beginDreamGameJudgment,
   castDreamGameDivination,
   closeDreamProblemFlower,
   completeDreamGameRound,
-  DREAM_GAME_BANNER,
   loadDreamGameAttempt,
   loadDreamGameContentGate,
   loadDreamGameResult,
   loadDreamGameRounds,
+  loadDreamRealityQuestion,
   observeDreamGameLens,
   openDreamProblemFlower,
   revealDreamGameOutcome,
@@ -49,11 +50,11 @@ import {
   type DreamGameLens,
   type DreamGameResult,
   type DreamGameRoundCard,
+  type DreamRealityQuestionView,
 } from "./dream_game_api";
 import { dreamText } from "./dream_i18n";
 import {
-  buildDreamTreeQuestions,
-  renderDreamTreeQuestionMap,
+  renderDreamRealityTree,
   renderDreamTreePorch,
   treeQuestionForNode,
   type DreamTreeMediaCue,
@@ -233,7 +234,9 @@ class DreamFirstVisitRuntime {
   private visibilityReconcilePending = false;
   private forestHistoryActive = false;
   private gameRounds: DreamGameRoundCard[] = [];
+  private gameContentUnavailable = false;
   private gameAttempt: DreamGameAttemptView | null = null;
+  private gameReality: DreamRealityQuestionView | null = null;
   private gameResult: DreamGameResult | null = null;
   private gameLens: DreamGameLens = "overview";
   private gameDraft: DreamGameDraft = this.emptyGameDraft();
@@ -315,8 +318,15 @@ class DreamFirstVisitRuntime {
       this.activateForestHistory();
       this.startControlLoops();
 
-      if (this.gameRounds.length) {
+      if (this.gameRounds.length || this.gameContentUnavailable) {
         this.gameShellOpen = true;
+        if (!this.gameRounds.length) {
+          this.porchEntering = false;
+          this.phase = "free_roam";
+          this.syncSceneDom();
+          this.renderGameLayer();
+          return;
+        }
         this.porchEntering = !this.visit.is_return_visit;
         this.playAmbient();
         if (this.visit.is_return_visit || this.visit.runtime_state === "LOCAL_MIST_REENTRY") {
@@ -990,6 +1000,10 @@ class DreamFirstVisitRuntime {
             this.visit.visit_id,
             this.gameAttempt.attempt_id,
           );
+          this.gameReality = await loadDreamRealityQuestion(
+            this.visit.visit_id,
+            this.gameAttempt.round_id,
+          );
           if (["KNOWLEDGE_SEED_ISSUED", "ROUND_COMPLETE"].includes(this.gameAttempt.state)) {
             this.gameResult = await loadDreamGameResult(
               this.visit.visit_id,
@@ -1600,12 +1614,15 @@ class DreamFirstVisitRuntime {
     };
     try {
       this.gameRounds = await load();
+      this.gameContentUnavailable = this.gameRounds.length === 0;
     } catch {
       try {
         this.acceptVisit(await enterDreamVisit(this.visit.visit_id));
         this.gameRounds = await load();
+        this.gameContentUnavailable = this.gameRounds.length === 0;
       } catch {
         this.gameRounds = [];
+        this.gameContentUnavailable = true;
       }
     }
   }
@@ -1628,6 +1645,7 @@ class DreamFirstVisitRuntime {
         this.user = point;
       }
       this.gameAttempt = await startDreamGameRound(this.visit.visit_id, roundId);
+      this.gameReality = await loadDreamRealityQuestion(this.visit.visit_id, roundId);
       this.gameLens = "overview";
       if (["KNOWLEDGE_SEED_ISSUED", "ROUND_COMPLETE"].includes(this.gameAttempt.state)) {
         this.gameResult = await loadDreamGameResult(
@@ -1660,7 +1678,7 @@ class DreamFirstVisitRuntime {
       this.renderGameLayer();
       this.startGamePolling();
       this.announce(
-        `${this.gameResidentDisplayLabel(round.resident_scene_ref, round.resident_label)}的生命树已经可以观察。当前题组来自正式命盘冻结快照。`,
+        `${this.gameResidentDisplayLabel(round.resident_scene_ref, round.resident_label)}的生命树已经可以观察。`,
       );
     } catch (error) {
       this.handleGameError(error);
@@ -1675,6 +1693,10 @@ class DreamFirstVisitRuntime {
     if (!attemptId) return;
     try {
       this.gameAttempt = await loadDreamGameAttempt(this.visit.visit_id, attemptId);
+      this.gameReality = await loadDreamRealityQuestion(
+        this.visit.visit_id,
+        this.gameAttempt.round_id,
+      );
       this.gameShellOpen = true;
       this.gameLensOpen = false;
       this.porchIndex = Math.max(
@@ -1700,16 +1722,30 @@ class DreamFirstVisitRuntime {
     this.syncStoryRuntime();
     layer.classList.toggle("is-tree-world", this.gameShellOpen);
     if (!this.gameAttempt) {
-      if (!this.gameShellOpen || !this.gameRounds.length) {
+      if (!this.gameShellOpen) {
         layer.innerHTML = "";
         layer.setAttribute("aria-hidden", "true");
+        this.syncSceneDom();
+        return;
+      }
+      if (!this.gameRounds.length) {
+        layer.innerHTML = renderDreamTreePorch({
+          rounds: [],
+          activeIndex: 0,
+          banner: "",
+          entering: false,
+          mediaCue: "none",
+          focusedWhisper: "这棵树暂时没有开放新的命题。",
+          scene: this.story.scene,
+        });
+        layer.setAttribute("aria-hidden", "false");
         this.syncSceneDom();
         return;
       }
       layer.innerHTML = renderDreamTreePorch({
         rounds: this.displayGameRounds(),
         activeIndex: this.porchIndex,
-        banner: DREAM_GAME_BANNER,
+        banner: "",
         entering: this.porchEntering,
         mediaCue: this.gameMediaCue,
         focusedWhisper: this.porchWhisper,
@@ -1728,36 +1764,21 @@ class DreamFirstVisitRuntime {
 
   private renderDeferredQuestionLayer(): string {
     if (!this.gameAttempt) return "";
-    const attempt = this.gameAttempt;
-    const projection = attempt.projection;
-    const selectedRelations = projection.allowed_relations.filter(
-      (item) => this.gameDraft.relationRefs.includes(item.relation_ref),
+    const round = this.gameRounds.find(
+      (item) => item.round_id === this.gameAttempt?.round_id,
     );
-    const canvas = renderDreamGameCanvas(
-      projection.canvas,
-      this.gameLens,
-      this.gameDraft.nodeRefs,
-      selectedRelations,
-    );
-    const passedNodes = this.passedTreeQuestionNodes();
-    const flowerUnlocked = attempt.question_progress.flower_unlocked;
-    return renderDreamTreeQuestionMap({
-      attempt,
+    if (!round || !this.gameReality) {
+      return `<section class="dream-tree-world-shell is-reality-flower is-fail-closed" role="alert">
+        <p>这棵树暂时没有开放新的命题。</p>
+      </section>`;
+    }
+    return renderDreamRealityTree({
+      round,
+      reality: this.gameReality,
       residentDisplayLabel: this.gameResidentDisplayLabel(
-        projection.resident_scene_ref,
-        projection.resident_label,
+        round.resident_scene_ref,
+        round.resident_label,
       ),
-      banner: projection.banner,
-      activeLens: this.gameLens,
-      lensOpen: this.gameLensOpen,
-      canvasMarkup: canvas,
-      questionBandMarkup: this.renderGameStage(),
-      resultMarkup: this.gameResult ? this.renderGameResult() : "",
-      activeNode: this.gameTreeState.activeNode,
-      passedNodes,
-      flowerUnlocked,
-      flowerOpened: flowerUnlocked,
-      fruitVisible: Boolean(attempt.flower?.shared_fruit_visible || this.gameResult),
       mediaCue: this.gameMediaCue,
       statusMessage: this.gameStatusMessage,
       scene: this.story.scene,
@@ -2078,6 +2099,34 @@ class DreamFirstVisitRuntime {
       return;
     }
     if (!this.gameAttempt) return;
+    if (command === "reality-answer") {
+      const questionInstanceId = target.dataset.questionInstance || "";
+      const optionId = target.dataset.answerId || "";
+      if (
+        !this.gameReality?.available
+        || !this.gameReality.question
+        || this.gameReality.sealed
+        || questionInstanceId !== this.gameReality.question.question_instance_id
+        || !optionId
+      ) {
+        return;
+      }
+      await this.runGameAction(async () => {
+        this.gameReality = await answerDreamRealityQuestion(
+          this.visit!.visit_id,
+          this.gameAttempt!.round_id,
+          questionInstanceId,
+          optionId,
+          actionId("dream-reality-answer"),
+        );
+        this.gameStatusMessage = "已封存，待现实证据出现后揭晓。";
+      });
+      if (this.gameReality?.sealed) {
+        this.playGameMediaCue("fruit_forming", 1800);
+        this.announce("你的回答已经封存，问题花正在结成等待现实证据的果实。");
+      }
+      return;
+    }
     if (command === "tree-node") {
       const nodeId = target.dataset.treeNode as DreamTreeQuestionNodeId;
       const definition = nodeId === "problem_flower"
@@ -2471,13 +2520,24 @@ class DreamFirstVisitRuntime {
     if (!this.visit || !this.gameAttempt || document.visibilityState !== "visible") return;
     try {
       const next = await loadDreamGameAttempt(this.visit.visit_id, this.gameAttempt.attempt_id);
+      const nextReality = await loadDreamRealityQuestion(
+        this.visit.visit_id,
+        next.round_id,
+      );
       const flowerChanged = flowerLifecycleKey(next) !== flowerLifecycleKey(this.gameAttempt);
+      const realityChanged = (
+        nextReality.sealed !== this.gameReality?.sealed
+        || nextReality.sealed_at !== this.gameReality?.sealed_at
+        || nextReality.fruit_state !== this.gameReality?.fruit_state
+      );
       if (
         next.state !== this.gameAttempt.state
         || next.updated_at !== this.gameAttempt.updated_at
         || flowerChanged
+        || realityChanged
       ) {
         this.gameAttempt = next;
+        this.gameReality = nextReality;
         if (flowerChanged) {
           this.gameStatusMessage = next.flower?.neutral_message || "";
         }
@@ -2573,6 +2633,11 @@ class DreamFirstVisitRuntime {
   private async commitFocusedTree(): Promise<void> {
     const round = this.gameRounds[this.porchIndex];
     if (!round || this.gameAttempt || this.gameBusy) return;
+    if (!round.tree_available) {
+      this.gameStatusMessage = "这个雾位暂时没有可进入的生命树。";
+      this.renderGameLayer();
+      return;
+    }
     this.gameBusy = true;
     this.story.dispatch({ type: "COMMIT_CANDIDATE", roundId: round.round_id });
     this.gameMediaCue = "tree_enter";
@@ -2646,12 +2711,10 @@ class DreamFirstVisitRuntime {
     main.dataset.dreamSceneId = this.story.scene.sceneId;
   }
 
-  private gameResidentDisplayLabel(sceneRef: string, fallback: string): string {
-    const source = this.trees.find((tree) => tree.scene_ref === sceneRef);
-    if (source?.source_kind !== "authorized_human") return fallback;
+  private gameResidentDisplayLabel(_sceneRef: string, _fallback: string): string {
     const index = Math.max(
       0,
-      this.gameRounds.findIndex((round) => round.resident_scene_ref === sceneRef),
+      this.gameRounds.findIndex((round) => round.resident_scene_ref === _sceneRef),
     );
     return `匿名梦境居民${["一", "二", "三"][index] || ""}`;
   }
@@ -2994,6 +3057,7 @@ class DreamFirstVisitRuntime {
   ): Promise<void> {
     this.stopGamePolling();
     this.gameAttempt = null;
+    this.gameReality = null;
     this.gameResult = null;
     this.gameLensOpen = false;
     this.gameLensHistoryActive = false;
@@ -3024,6 +3088,7 @@ class DreamFirstVisitRuntime {
     this.stopGamePolling();
     this.gameShellOpen = false;
     this.gameAttempt = null;
+    this.gameReality = null;
     this.gameResult = null;
     this.gameLensOpen = false;
     this.gameLensHistoryActive = false;
@@ -3081,6 +3146,7 @@ class DreamFirstVisitRuntime {
           layer.innerHTML = `<div class="dream-game-fail-closed" role="alert">当前内容授权或梦境控制已失效，盲局内容已经收起。</div>`;
         }
         this.gameAttempt = null;
+        this.gameReality = null;
         this.gameResult = null;
       }
       if (code.includes("control_lease")) this.handleRuntimeFailure(error);
@@ -3330,6 +3396,7 @@ class DreamFirstVisitRuntime {
       this.stopControlLoops();
       this.clearSensitiveProjection();
       this.gameAttempt = null;
+      this.gameReality = null;
       this.gameResult = null;
       sessionStorage.removeItem(PENDING_GAME_ACTION_KEY);
       clearDreamControl();
@@ -3346,6 +3413,7 @@ class DreamFirstVisitRuntime {
     ) {
       this.clearSensitiveProjection();
       this.gameAttempt = null;
+      this.gameReality = null;
       this.gameResult = null;
       sessionStorage.removeItem(PENDING_GAME_ACTION_KEY);
       this.phase = "authorization_closed";
@@ -3356,6 +3424,7 @@ class DreamFirstVisitRuntime {
     this.stopControlLoops();
     this.clearSensitiveProjection();
     this.gameAttempt = null;
+    this.gameReality = null;
     this.gameResult = null;
     this.phase = "fail_closed";
     this.syncSceneDom();

@@ -356,6 +356,38 @@ def test_canonical_npc_bootstrap_is_unique_auditable_and_projection_only() -> No
         assert row["life_case"]["path_assertions"] == []
 
 
+def test_canonical_npc_world_owner_renews_only_a_stale_projection_authorization() -> None:
+    _, _, dream_store, case_store, _, _ = _dream_app(consent=False)
+    grant = next(
+        item for item in dream_store.list_grants()
+        if item.subject_kind == "canonical_npc"
+    )
+    before_hash = grant.authorized_source_hash
+    row = deepcopy(case_store.get(case_id=grant.case_id))
+    assert row is not None
+    row["life_case"]["case_version"] = "v2"
+    row["life_case"]["baseline_insight"]["case_version"] = "v2"
+    case_store.save(
+        case_id=grant.case_id,
+        user_id=None,
+        profile_id=None,
+        payload=row,
+    )
+
+    DreamCanonicalNpcBootstrapService(
+        case_store=case_store,
+        dream_store=dream_store,
+    ).ensure()
+    renewed = dream_store.get_grant(public_scene_ref=grant.public_scene_ref)
+    assert renewed is not None
+    assert renewed.case_id == grant.case_id
+    assert renewed.subject_ref == grant.subject_ref
+    assert renewed.authorized_by_ref == grant.authorized_by_ref
+    assert renewed.authorization_sequence == grant.authorization_sequence + 1
+    assert renewed.authorized_source_hash != before_hash
+    assert case_store.get(case_id=grant.case_id)["life_case"]["case_version"] == "v2"
+
+
 def test_three_tree_visit_is_exactly_three_deterministic_and_switchable_between_observations() -> None:
     client, _, _, _, _, home_case_id = _dream_app()
     visit_id, encounter = _enter_three_tree_visit(client, home_case_id)

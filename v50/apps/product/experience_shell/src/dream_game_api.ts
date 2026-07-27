@@ -64,6 +64,62 @@ export interface DreamGameRoundCard {
   banner: string;
   content_state: "PUBLISHABLE";
   knowledge_cutoff: string;
+  tree_available: boolean;
+  tree_visual_profile: DreamTreeVisualProfile;
+}
+
+export interface DreamTreeVisualProfile {
+  schema_version?: string;
+  profile_id?: string;
+  source?: string;
+  metrics?: {
+    density?: number;
+    tension?: number;
+    moisture?: number;
+    light?: number;
+    growth?: number;
+    balance?: number;
+  };
+  element_distribution?: Record<string, number>;
+  render_tokens?: {
+    scale_x?: number;
+    scale_y?: number;
+    rotation_deg?: number;
+    hue_rotate_deg?: number;
+    saturation?: number;
+    brightness?: number;
+    canopy_echo_opacity?: number;
+    ground_sheen_opacity?: number;
+  };
+  visual_metaphor_only?: boolean;
+  professional_judgment?: boolean;
+  frontend_metric_inference_allowed?: boolean;
+}
+
+export interface DreamRealityQuestionView {
+  schema_version: "deepbazi.dream-reality-question-view.v1";
+  available: boolean;
+  empty_state: string;
+  question: {
+    question_instance_id: string;
+    blueprint_id: string;
+    blueprint_version: string;
+    title: string;
+    prompt: string;
+    options: Array<{ option_id: string; label: string }>;
+    why_this_question: string;
+    observation_window: string;
+    reveal_policy: "REALITY_FEEDBACK";
+  } | null;
+  sealed: boolean;
+  selected_option_id: string;
+  sealed_at: string | null;
+  reveal_status: "NOT_STARTED" | "WAITING_REALITY_EVIDENCE";
+  fruit_state: "NONE" | "FLOWER_OPEN" | "PENDING_REALITY_EVIDENCE";
+  tree_visual_profile: DreamTreeVisualProfile;
+  source_life_case_version: string;
+  write_owner: "TopicExploration";
+  writes_life_case: false;
 }
 
 export interface DreamGameNodeOption {
@@ -302,6 +358,44 @@ export function startDreamGameRound(visitId: string, roundId: string): Promise<D
   return dreamRequest(
     gamePath(visitId, `rounds/${encodeURIComponent(roundId)}/start`),
     { method: "POST", body: "{}" },
+    visitId,
+  );
+}
+
+export function loadDreamRealityQuestion(
+  visitId: string,
+  roundId: string,
+): Promise<DreamRealityQuestionView> {
+  return dreamRequest(
+    gamePath(
+      visitId,
+      `rounds/${encodeURIComponent(roundId)}/reality-question`,
+    ),
+    undefined,
+    visitId,
+  );
+}
+
+export function answerDreamRealityQuestion(
+  visitId: string,
+  roundId: string,
+  questionInstanceId: string,
+  optionId: string,
+  idempotencyKey: string,
+): Promise<DreamRealityQuestionView> {
+  return dreamRequest(
+    gamePath(
+      visitId,
+      `rounds/${encodeURIComponent(roundId)}/reality-question/answer`,
+    ),
+    {
+      method: "POST",
+      body: JSON.stringify({
+        question_instance_id: questionInstanceId,
+        option_id: optionId,
+        idempotency_key: idempotencyKey,
+      }),
+    },
     visitId,
   );
 }

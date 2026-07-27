@@ -45,6 +45,11 @@ from product.dream_game_content import (
 )
 from product.dream_service import DreamBridgeError, DreamJourneyService
 from product.dream_store_contracts import DreamStore, DreamStoreConflict
+from product.relation_work_p0_service import (
+    RelationWorkP0Conflict,
+    RelationWorkP0Service,
+    RelationWorkP0Unavailable,
+)
 
 
 class DreamGameError(ValueError):
@@ -68,10 +73,12 @@ class DreamGameService:
         *,
         journey: DreamJourneyService,
         store: DreamStore,
+        relation_work_service: RelationWorkP0Service | None = None,
         clock: Callable[[], datetime] | None = None,
     ) -> None:
         self.journey = journey
         self.store = store
+        self.relation_work_service = relation_work_service
         self.clock = clock or (lambda: datetime.now(timezone.utc))
 
     def content_gate(
@@ -111,8 +118,19 @@ class DreamGameService:
             visit_id=visit_id,
             credential=credential,
         )
-        return [
-            BlindRoundCard(
+        _visit, scenes = self._context(
+            user_id=user_id,
+            visit_id=visit_id,
+            credential=credential,
+        )
+        cards: list[BlindRoundCard] = []
+        for index, item in enumerate(rounds):
+            tree_available, tree_visual_profile = self._tree_profile(
+                user_id=user_id,
+                round_definition=item,
+                scenes=scenes,
+            )
+            cards.append(BlindRoundCard(
                 round_id=item.round_id,
                 resident_scene_ref=item.resident_scene_ref,
                 resident_label=item.resident_label,
@@ -125,9 +143,101 @@ class DreamGameService:
                 banner=self._banner_for(item),
                 content_state=item.content_state,
                 knowledge_cutoff=item.question.knowledge_cutoff,
+                tree_available=tree_available,
+                tree_visual_profile=tree_visual_profile,
+            ))
+        return cards
+
+    def reality_question(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        round_id: str,
+        credential: DreamControlCredential,
+    ) -> dict[str, object]:
+        visit, scenes = self._context(
+            user_id=user_id,
+            visit_id=visit_id,
+            credential=credential,
+        )
+        self._ensure_v50_rounds(
+            user_id=user_id,
+            visit_id=visit_id,
+            credential=credential,
+        )
+        round_definition = self._round(round_id)
+        self._validate_round_access(
+            round_definition=round_definition,
+            scenes=scenes,
+        )
+        source_snapshot = round_definition.source_snapshot
+        if source_snapshot is None:
+            raise DreamGameError("dream_reality_question_snapshot_missing")
+        grant, _scene = scenes[round_definition.resident_scene_ref]
+        service = self._require_relation_work_service()
+        try:
+            return service.dream_reality_question_view(
+                case_id=grant.case_id,
+                participant_id=user_id,
+                account_role="member",
+                encounter_set_id=visit.encounter_set.encounter_set_id,
+                round_id=round_id,
+                expected_life_case_version=(
+                    source_snapshot.source_life_case_version
+                ),
             )
-            for index, item in enumerate(rounds)
-        ]
+        except (RelationWorkP0Conflict, RelationWorkP0Unavailable) as exc:
+            raise DreamGameError(str(exc)) from exc
+
+    def answer_reality_question(
+        self,
+        *,
+        user_id: str,
+        visit_id: str,
+        round_id: str,
+        question_instance_id: str,
+        selected_option_id: str,
+        idempotency_key: str,
+        credential: DreamControlCredential,
+    ) -> dict[str, object]:
+        visit, scenes = self._context(
+            user_id=user_id,
+            visit_id=visit_id,
+            credential=credential,
+        )
+        self._ensure_v50_rounds(
+            user_id=user_id,
+            visit_id=visit_id,
+            credential=credential,
+        )
+        round_definition = self._round(round_id)
+        self._validate_round_access(
+            round_definition=round_definition,
+            scenes=scenes,
+        )
+        source_snapshot = round_definition.source_snapshot
+        if source_snapshot is None:
+            raise DreamGameError("dream_reality_question_snapshot_missing")
+        grant, _scene = scenes[round_definition.resident_scene_ref]
+        service = self._require_relation_work_service()
+        try:
+            return service.answer_dream_reality_question(
+                case_id=grant.case_id,
+                participant_id=user_id,
+                account_role="member",
+                encounter_set_id=visit.encounter_set.encounter_set_id,
+                round_id=round_id,
+                expected_life_case_version=(
+                    source_snapshot.source_life_case_version
+                ),
+                question_instance_id=question_instance_id,
+                selected_option_id=selected_option_id,
+                idempotency_key=idempotency_key,
+                now=self.clock(),
+            )
+        except (RelationWorkP0Conflict, RelationWorkP0Unavailable) as exc:
+            raise DreamGameError(str(exc)) from exc
 
     def start_round(
         self,
@@ -975,6 +1085,38 @@ class DreamGameService:
             attempt,
             state=DreamGameState.ROUND_COMPLETE,
         ))
+
+    def _tree_profile(
+        self,
+        *,
+        user_id: str,
+        round_definition: BlindRoundDefinition,
+        scenes: dict[str, tuple[Any, Any]],
+    ) -> tuple[bool, dict[str, object]]:
+        if self.relation_work_service is None:
+            return True, {}
+        source_snapshot = round_definition.source_snapshot
+        scene_entry = scenes.get(round_definition.resident_scene_ref)
+        if source_snapshot is None or scene_entry is None:
+            return False, {}
+        grant, _scene = scene_entry
+        try:
+            profile = self.relation_work_service.dream_tree_visual_profile(
+                case_id=grant.case_id,
+                participant_id=user_id,
+                account_role="member",
+                expected_life_case_version=(
+                    source_snapshot.source_life_case_version
+                ),
+            )
+        except (RelationWorkP0Conflict, RelationWorkP0Unavailable):
+            return False, {}
+        return bool(profile.get("profile_id")), profile
+
+    def _require_relation_work_service(self) -> RelationWorkP0Service:
+        if self.relation_work_service is None:
+            raise DreamGameError("dream_reality_question_service_unavailable")
+        return self.relation_work_service
 
     def _ensure_v50_rounds(
         self,

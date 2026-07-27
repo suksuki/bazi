@@ -149,6 +149,75 @@ def test_pre_outcome_api_never_contains_outcome_or_system_seal_material() -> Non
     assert before.json()["detail"] == "dream_game_outcome_not_revealed"
 
 
+def test_real_dream_flower_is_one_click_sealed_and_restored_from_topic_exploration() -> None:
+    (
+        client,
+        _,
+        _,
+        _,
+        _,
+        _,
+        visit_id,
+        base,
+        started,
+    ) = _start_round()
+    round_id = started["round_id"]
+    url = f"{base}/rounds/{round_id}/reality-question"
+
+    initial = client.get(url)
+    assert initial.status_code == 200, initial.text
+    payload = initial.json()
+    assert payload["available"] is True
+    assert payload["sealed"] is False
+    assert payload["fruit_state"] == "FLOWER_OPEN"
+    assert payload["question"]["blueprint_id"] == "LQ-REAL-OUTPUT-DESTINATION-01"
+    assert payload["question"]["prompt"] == "这份成果最先带来的现实反馈会是什么？"
+    assert payload["write_owner"] == "TopicExploration"
+    assert payload["writes_life_case"] is False
+    serialized = json.dumps(payload, ensure_ascii=False).lower()
+    for forbidden in (
+        "correct_answer",
+        "answer_key",
+        "outcome_evidence",
+        "future_evidence",
+        "evidence_criteria",
+    ):
+        assert forbidden not in serialized
+
+    option = payload["question"]["options"][0]
+    request = {
+        "question_instance_id": payload["question"]["question_instance_id"],
+        "option_id": option["option_id"],
+        "idempotency_key": "dream-real-one-click-001",
+    }
+    sealed = client.post(f"{url}/answer", json=request)
+    assert sealed.status_code == 200, sealed.text
+    assert sealed.json()["sealed"] is True
+    assert sealed.json()["selected_option_id"] == option["option_id"]
+    assert sealed.json()["reveal_status"] == "WAITING_REALITY_EVIDENCE"
+    assert sealed.json()["fruit_state"] == "PENDING_REALITY_EVIDENCE"
+
+    repeated = client.post(f"{url}/answer", json=request)
+    assert repeated.status_code == 200
+    assert repeated.json() == sealed.json()
+    restored = client.get(url)
+    assert restored.status_code == 200
+    assert restored.json() == sealed.json()
+
+    conflict = client.post(
+        f"{url}/answer",
+        json={
+            **request,
+            "option_id": payload["question"]["options"][1]["option_id"],
+            "idempotency_key": "dream-real-one-click-conflict",
+        },
+    )
+    assert conflict.status_code == 409
+    assert client.get(
+        f"/api/v50/dream/visits/{visit_id}/game/rounds"
+    ).status_code == 200
+
+
 def test_learning_answers_are_server_authoritative_idempotent_and_restorable() -> None:
     client, _, store, _, _, _, _, base, started = _start_round()
     attempt_id = started["attempt_id"]
@@ -505,7 +574,8 @@ def test_tree_world_shell_uses_three_rounds_and_one_fixed_question_tree() -> Non
     assert "renderDreamTreeQuestionMap" in tree_world
     assert "buildDreamTreeQuestions" in tree_world
     assert "renderDreamTreePorch" in runtime
-    assert "renderDreamTreeQuestionMap" in runtime
+    assert "renderDreamRealityTree" in runtime
+    assert "renderDreamTreeQuestionMap" not in runtime
     assert "renderDreamTreeJourney" not in runtime
     assert "handleTreeWorldScroll" not in runtime
     assert 'main.classList.toggle("is-tree-world-active", this.gameShellOpen)' in runtime
@@ -513,8 +583,8 @@ def test_tree_world_shell_uses_three_rounds_and_one_fixed_question_tree() -> Non
     assert "suppressNextPorchSelection" in runtime
     assert "treeIndex: porchTree?.dataset.porchIndex" in runtime
     assert "this.focusPorchIndex(pointer.treeIndex);" in runtime
-    assert 'source_kind !== "authorized_human"' in runtime
-    assert "匿名梦境居民" in runtime
+    assert 'source_kind !== "authorized_human"' not in runtime
+    assert "return `匿名梦境居民" in runtime
     assert "${round.resident_label}的问题花" not in runtime
 
 
@@ -550,7 +620,11 @@ def test_tree_world_keeps_fruit_and_reveal_behind_the_dual_seal_state() -> None:
     assert "flower.neutral_message" in runtime
     assert 'if (flowerChanged) {' in runtime
     assert 'this.gameStatusMessage = next.flower?.neutral_message || "";' in runtime
-    assert "fruitVisible: Boolean(attempt.flower?.shared_fruit_visible || this.gameResult)" in runtime
+    assert "this.gameReality = await answerDreamRealityQuestion(" in runtime
+    assert 'this.gameStatusMessage = "已封存，待现实证据出现后揭晓。";' in runtime
+    assert "const organ = sealed" in tree_world
+    assert "? bundle.assets.fruitWhite" in tree_world
+    assert "data-fruit-state=" in tree_world
     assert "if (view.fruitVisible)" in tree_world
     assert 'data-semantic-organ="FRUIT_RESULT"' in tree_world
     assert "bundle.assets.fruitWhite" in tree_world
@@ -567,7 +641,8 @@ def test_tree_world_keeps_onecanvas_and_departure_on_existing_owners() -> None:
         / "apps/product/experience_shell/src/dream_runtime.ts"
     ).read_text(encoding="utf-8")
 
-    assert "renderDreamGameCanvas(" in runtime
+    assert "renderDreamGameCanvas(" not in runtime
+    assert "renderDreamVerificationCanvas(" in runtime
     assert "observeDreamGameLens(" in runtime
     assert 'await this.departDream("SEMANTIC_EXIT")' in runtime
     assert "commitDreamDeparture(" in runtime

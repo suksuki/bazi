@@ -17,6 +17,7 @@ from product.dream_game_service import DreamGameError, DreamGameService
 from product.dream_service import DreamBridgeError, DreamJourneyService
 from product.dream_store_contracts import DreamStore
 from product.product_store import ProductStore
+from product.relation_work_p0_service import RelationWorkP0Service
 
 
 DREAM_API_PREFIX = "/api/v50/dream"
@@ -84,6 +85,12 @@ class DreamGameLearningAnswerRequest(BaseModel):
     idempotency_key: str = Field(min_length=8, max_length=180)
 
 
+class DreamRealityQuestionAnswerRequest(BaseModel):
+    question_instance_id: str = Field(min_length=1, max_length=180)
+    option_id: str = Field(min_length=1, max_length=180)
+    idempotency_key: str = Field(min_length=8, max_length=180)
+
+
 class DreamGameJudgmentSealRequest(BaseModel):
     selected_outcome_option_id: Literal["yes", "no", "partial_or_unclear"]
     confidence_basis_points: int = Field(ge=0, le=10000)
@@ -113,6 +120,7 @@ def create_dream_router(
     case_store: AgentCaseStore,
     dream_store: DreamStore,
     feature_policy: DreamFeaturePolicy,
+    relation_work_service: RelationWorkP0Service | None = None,
 ) -> APIRouter:
     router = APIRouter(prefix=DREAM_API_PREFIX, tags=["abu-dream-bridge"])
     service = DreamJourneyService(
@@ -120,7 +128,11 @@ def create_dream_router(
         dream_store=dream_store,
         feature_policy=feature_policy,
     )
-    game_service = DreamGameService(journey=service, store=dream_store)
+    game_service = DreamGameService(
+        journey=service,
+        store=dream_store,
+        relation_work_service=relation_work_service,
+    )
 
     def user_id(request: Request) -> str:
         token = request.cookies.get(session_cookie, "")
@@ -574,6 +586,46 @@ def create_dream_router(
         except DreamGameError as exc:
             raise _game_http_error(exc) from exc
 
+    @router.get(
+        "/visits/{visit_id}/game/rounds/{round_id}/reality-question"
+    )
+    def dream_reality_question(
+        visit_id: str,
+        round_id: str,
+        request: Request,
+    ) -> dict[str, object]:
+        try:
+            return game_service.reality_question(
+                user_id=user_id(request),
+                visit_id=visit_id,
+                round_id=round_id,
+                credential=control_credential(request),
+            )
+        except DreamGameError as exc:
+            raise _game_http_error(exc) from exc
+
+    @router.post(
+        "/visits/{visit_id}/game/rounds/{round_id}/reality-question/answer"
+    )
+    def dream_reality_question_answer(
+        visit_id: str,
+        round_id: str,
+        payload: DreamRealityQuestionAnswerRequest,
+        request: Request,
+    ) -> dict[str, object]:
+        try:
+            return game_service.answer_reality_question(
+                user_id=user_id(request),
+                visit_id=visit_id,
+                round_id=round_id,
+                question_instance_id=payload.question_instance_id,
+                selected_option_id=payload.option_id,
+                idempotency_key=payload.idempotency_key,
+                credential=control_credential(request),
+            )
+        except DreamGameError as exc:
+            raise _game_http_error(exc) from exc
+
     @router.get("/visits/{visit_id}/game/attempts/{attempt_id}")
     def dream_game_read_attempt(
         visit_id: str,
@@ -856,6 +908,8 @@ def _game_http_error(error: DreamGameError) -> HTTPException:
         "dream_game_flower_already_closed",
         "dream_game_flower_version_conflict",
         "dream_game_flower_answer_set_conflict",
+        "dream_reality_question_answer_already_sealed",
+        "dream_reality_question_lifecase_version_changed",
         "dream_control_takeover_required",
         "dream_control_lease_required",
         "dream_control_lease_superseded",

@@ -18,6 +18,7 @@ from product.narration_api import create_narration_router
 from product.product_api import PRODUCT_API_PREFIX, PRODUCT_SESSION_COOKIE, create_product_router
 from product.product_store import ProductStore, build_product_store
 from product.product_surface import register_product_surface
+from product.relation_work_p0_service import RelationWorkP0Service
 from product.theater_api import create_theater_router
 from product.theater_store import build_theater_store
 from product.voice_validation_api import create_voice_validation_router
@@ -37,6 +38,7 @@ def create_product_app(
     legacy_usage_store: LegacyUsageStore | None = None,
     dream_store: DreamStore | None = None,
     dream_feature_policy: DreamFeaturePolicy | None = None,
+    relation_work_p0_service: RelationWorkP0Service | None = None,
 ) -> FastAPI:
     """Compose the production Abu-led Mingli application."""
 
@@ -68,12 +70,20 @@ def create_product_app(
             agent_injected=mingli_agent is not None,
         )
     )
+    resolved_theater_store = build_theater_store()
+    app.state.relation_work_p0_service = (
+        relation_work_p0_service
+        or RelationWorkP0Service(
+            case_store=case_store,
+            theater_store=resolved_theater_store,
+        )
+    )
     app.include_router(
         create_theater_router(
             product_store=store,
             session_cookie=PRODUCT_SESSION_COOKIE,
             case_store=case_store,
-            theater_store=build_theater_store(),
+            theater_store=resolved_theater_store,
             performance_service=theater_performance_service,
         )
     )
@@ -132,6 +142,7 @@ def create_product_app(
             case_store=case_store,
             dream_store=resolved_dream_store,
             feature_policy=resolved_dream_policy,
+            relation_work_service=app.state.relation_work_p0_service,
         )
     )
     app.include_router(create_product_router(store=store, case_store=case_store))

@@ -118,6 +118,10 @@ def test_switching_real_cases_changes_tree_and_lab_from_same_source() -> None:
     assert tree_b["tree_visual_profile"]["form"] == "wide_balanced"
     assert tree_a["tree_visual_profile"]["material"] == "sun_warmed"
     assert tree_b["tree_visual_profile"]["material"] == "dew_fed"
+    assert (
+        tree_a["tree_visual_profile"]["render_tokens"]["hue_rotate_deg"]
+        != tree_b["tree_visual_profile"]["render_tokens"]["hue_rotate_deg"]
+    )
 
 
 def test_canonical_experience_routes_own_tree_and_lab_integration() -> None:
@@ -137,7 +141,10 @@ def test_canonical_experience_routes_own_tree_and_lab_integration() -> None:
     assert tree.json()["data_source"] == "CURRENT_REAL_LIFECASE"
     assert lab.json()["data_source"] == "CURRENT_REAL_LIFECASE"
     assert tree.json()["source"] == lab.json()["relation_work"]["source"]
-    assert 3 <= tree.json()["question_count"] <= 5
+    assert tree.json()["question_count"] == 1
+    assert tree.json()["questions"][0]["blueprint_id"] == (
+        "LQ-REAL-OUTPUT-DESTINATION-01"
+    )
     assert all(
         item["purpose"] == "life_observation"
         and item["reveal_policy"] == "REALITY_FEEDBACK"
@@ -247,7 +254,7 @@ def test_real_tree_scene_progress_is_server_derived_and_never_invents_fruit() ->
     assert initial["tree_scene"]["flower_unlocked"] is True
     assert set(initial_nodes) == {"life_observation"}
     assert initial_nodes["life_observation"]["status"] == "available"
-    assert len(initial_nodes["life_observation"]["question_refs"]) == 4
+    assert len(initial_nodes["life_observation"]["question_refs"]) == 1
     assert initial["tree_scene"]["fruit"] == {
         "visible": False,
         "reason": "blindround_not_bound",

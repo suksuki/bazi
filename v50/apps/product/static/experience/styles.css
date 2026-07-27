@@ -10987,3 +10987,199 @@ html.is-dream-entry-active .dream-tree-porch-departure {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* DREAM-REAL-01: real LifeCase phenotype tokens drive the one approved tree
+   actor. The porch controls perspective; these transforms only express form. */
+.is-layered-porch-v5 .dream-tree-porch-tree.is-porch-actor > img {
+  filter:
+    hue-rotate(var(--tree-hue, 0deg))
+    saturate(var(--tree-saturation, 1))
+    brightness(var(--tree-brightness, 1))
+    drop-shadow(0 10px 8px rgba(11, 38, 29, 0.2))
+    drop-shadow(0 18px 22px rgba(7, 34, 27, 0.12));
+  transform:
+    scaleX(var(--tree-scale-x, 1))
+    scaleY(var(--tree-scale-y, 1))
+    rotate(var(--tree-rotation, 0deg));
+  transform-origin: 50% 78%;
+}
+
+.is-layered-porch-v5 .dream-tree-porch-tree.is-empty-mist {
+  cursor: default;
+}
+
+.is-layered-porch-v5 .dream-tree-porch-tree.is-empty-mist::before {
+  position: absolute;
+  top: 22%;
+  right: 22%;
+  bottom: 13%;
+  left: 22%;
+  content: "";
+  border-radius: 50%;
+  background: rgba(212, 226, 215, 0.16);
+  filter: blur(28px);
+}
+
+.dream-tree-empty-mist {
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  width: 22%;
+  height: 30%;
+  border-radius: 50%;
+  background: rgba(219, 229, 218, 0.18);
+  filter: blur(24px);
+  transform: translate(-50%, -50%);
+}
+
+.dream-tree-world-shell.is-reality-flower .dream-question-tree-master {
+  filter:
+    saturate(var(--tree-saturation, 1))
+    brightness(var(--tree-brightness, 1));
+}
+
+.dream-reality-tree-echo {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: var(--tree-canopy-echo, 0);
+  clip-path: inset(3% 17% 38% 17%);
+  filter:
+    hue-rotate(var(--tree-hue, 0deg))
+    saturate(var(--tree-saturation, 1))
+    brightness(var(--tree-brightness, 1));
+  mix-blend-mode: color;
+  transform:
+    scaleX(var(--tree-scale-x, 1))
+    scaleY(var(--tree-scale-y, 1))
+    rotate(var(--tree-rotation, 0deg));
+  transform-origin: 50% 64%;
+  pointer-events: none;
+}
+
+.dream-reality-ground-sheen {
+  position: absolute;
+  right: 31%;
+  bottom: 8%;
+  left: 31%;
+  z-index: 2;
+  height: 8%;
+  border-radius: 50%;
+  opacity: var(--tree-ground-sheen, 0);
+  background: rgba(214, 230, 196, 0.58);
+  filter: blur(18px);
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+.dream-tree-world-shell.is-reality-flower
+  .dream-question-tree-node.semantic-tree-organ.is-problem-flower {
+  pointer-events: none;
+}
+
+.dream-tree-world-shell.is-reality-flower
+  .dream-question-tree-node.semantic-tree-organ.is-problem-flower
+  .semantic-tree-organ-visual {
+  opacity: 0.98;
+  filter:
+    saturate(0.94)
+    brightness(1.02)
+    drop-shadow(0 0 10px rgba(245, 218, 174, 0.34))
+    drop-shadow(0 5px 7px rgba(48, 43, 27, 0.24));
+}
+
+.dream-tree-world-shell.is-reality-flower
+  .dream-question-tree-node.semantic-tree-organ.is-fruit-white
+  .semantic-tree-organ-visual {
+  filter:
+    saturate(0.72)
+    brightness(1.05)
+    drop-shadow(0 0 13px rgba(232, 239, 222, 0.42))
+    drop-shadow(0 5px 7px rgba(48, 43, 27, 0.2));
+}
+
+.dream-question-band.is-reality-question {
+  right: clamp(22px, 6vw, 90px);
+  bottom: max(22px, calc(env(safe-area-inset-bottom) + 12px));
+  left: clamp(150px, 18vw, 280px);
+  max-width: 780px;
+  min-height: 156px;
+  max-height: 27%;
+  background: rgba(9, 43, 35, 0.88);
+}
+
+.dream-question-band.is-reality-question > section {
+  display: grid;
+  align-content: center;
+  gap: 7px;
+  padding: 12px 16px;
+}
+
+.dream-question-band.is-reality-question small {
+  color: rgba(226, 215, 176, 0.74);
+  font-size: 11px;
+}
+
+.dream-question-band.is-reality-question h2 {
+  margin: 0;
+  color: rgba(252, 246, 226, 0.98);
+  font-size: clamp(18px, 1.55vw, 24px);
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.dream-reality-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.dream-reality-options button {
+  min-height: 43px;
+  padding: 8px 11px;
+  color: rgba(249, 243, 222, 0.94);
+  border: 1px solid rgba(235, 221, 177, 0.28);
+  border-radius: 4px;
+  background: rgba(225, 215, 179, 0.08);
+  font: inherit;
+  cursor: pointer;
+}
+
+.dream-reality-options button:is(:hover, :focus-visible) {
+  border-color: rgba(240, 221, 164, 0.72);
+  background: rgba(231, 218, 176, 0.17);
+}
+
+.dream-question-band.is-reality-question details {
+  color: rgba(240, 232, 205, 0.7);
+  font-size: 11px;
+}
+
+.dream-question-band.is-reality-question details p {
+  display: inline;
+  margin: 0 8px 0 0;
+}
+
+.dream-reality-sealed span {
+  color: rgba(232, 224, 198, 0.7);
+  font-size: 12px;
+}
+
+.dream-tree-world-shell.is-fail-closed {
+  display: grid;
+  place-items: center;
+  color: rgba(248, 240, 216, 0.9);
+  background: #173f36;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dream-reality-tree-echo,
+  .dream-reality-ground-sheen,
+  .is-layered-porch-v5 .dream-tree-porch-tree.is-porch-actor > img {
+    transition: none !important;
+  }
+}

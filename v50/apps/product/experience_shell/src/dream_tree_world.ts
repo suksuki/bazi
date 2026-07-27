@@ -2,7 +2,9 @@ import type {
   DreamGameAttemptView,
   DreamGameLearningQuestionPublic,
   DreamGameLens,
+  DreamRealityQuestionView,
   DreamGameRoundCard,
+  DreamTreeVisualProfile,
 } from "./dream_game_api";
 import { DREAM_RUNTIME_ASSETS } from "./dream_asset_registry";
 import { abuMotionFor, renderAbuActor } from "./dream_abu_motion_director";
@@ -70,6 +72,15 @@ export interface DreamTreeQuestionMapView {
   scene: DreamSceneContract;
 }
 
+export interface DreamRealityTreeView {
+  round: DreamGameRoundCard;
+  reality: DreamRealityQuestionView;
+  residentDisplayLabel: string;
+  mediaCue: DreamTreeMediaCue;
+  statusMessage: string;
+  scene: DreamSceneContract;
+}
+
 export const DREAM_TREE_DIRECTOR_ROOT = "/assets/dream/encounter-01-v1/director-v2";
 
 const LENS_META: Record<DreamGameLens, {
@@ -91,25 +102,28 @@ export function renderDreamTreePorch(view: DreamTreeWorldPorchView): string {
   const activeIndex = ((view.activeIndex % count) + count) % count;
   const active = rounds[activeIndex];
   const abu = abuMotionFor("ghost_orbit_observer", prefersReducedMotion());
-  const sceneAssets = [
-    DREAM_RUNTIME_ASSETS.porchBlue,
-    DREAM_RUNTIME_ASSETS.porchJade,
-    DREAM_RUNTIME_ASSETS.porchAmber,
-  ];
   const treeTargets = rounds.map((round, index) => {
     const activeTree = index === activeIndex;
     const forward = (index - activeIndex + count) % count;
     const orbitSlot = forward === 0 ? 0 : forward === 1 ? 1 : -1;
-    const sceneAsset = sceneAssets[index] || sceneAssets[0];
+    const sceneAsset = DREAM_RUNTIME_ASSETS.porchAmber;
+    const profileStyle = treeProfileStyle(round.tree_visual_profile);
+    const treeImage = round.tree_available
+      ? `<img src="${sceneAsset.source}" alt="" draggable="false" aria-hidden="true" decoding="async" fetchpriority="${activeTree ? "high" : "auto"}">`
+      : `<i class="dream-tree-empty-mist" aria-hidden="true"></i>`;
     return `<button
-      class="dream-tree-porch-tree is-porch-actor${activeTree ? " is-active is-dream-heart" : " is-ghost"}"
+      class="dream-tree-porch-tree is-porch-actor${activeTree ? " is-active is-dream-heart" : " is-ghost"}${round.tree_available ? "" : " is-empty-mist"}"
       type="button"
       data-dream-game-command="porch-select"
       data-porch-index="${index}"
       data-orbit-slot="${orbitSlot}"
+      data-tree-profile="${escapeAttr(round.tree_visual_profile.profile_id || "unavailable")}"
+      data-tree-available="${round.tree_available ? "true" : "false"}"
+      style="${escapeAttr(profileStyle)}"
       aria-current="${activeTree ? "true" : "false"}"
-      aria-label="${escapeAttr(activeTree ? `${round.anonymous_label}位于梦心，轻触进入` : `让${round.anonymous_label}来到梦心`)}"
-    ><img src="${sceneAsset.source}" alt="" draggable="false" aria-hidden="true" decoding="async" fetchpriority="${activeTree ? "high" : "auto"}"><span aria-hidden="true"></span></button>`;
+      aria-disabled="${round.tree_available ? "false" : "true"}"
+      aria-label="${escapeAttr(round.tree_available ? activeTree ? `${round.anonymous_label}位于梦心，轻触进入` : `让${round.anonymous_label}来到梦心` : "这个雾位暂时没有可进入的生命树")}"
+    >${treeImage}<span aria-hidden="true"></span></button>`;
   }).join("");
   const whisper = view.focusedWhisper
     ? `<p class="dream-ghost-orbit-whisper" aria-live="polite">${escapeHtml(view.focusedWhisper)}</p>`
@@ -176,6 +190,96 @@ export function renderDreamTreePorch(view: DreamTreeWorldPorchView): string {
       ><span aria-hidden="true"></span><b>沿雾径离开</b></button>
     </section>
     ${treeEnter}
+  </div>`;
+}
+
+export function renderDreamRealityTree(
+  view: DreamRealityTreeView,
+): string {
+  const bundle = SEMANTIC_TREE_SCENE_BUNDLE;
+  const abu = abuMotionFor("fixed_tree_companion", prefersReducedMotion());
+  const question = view.reality.question;
+  const sealed = view.reality.sealed;
+  const organ = sealed
+    ? bundle.assets.fruitWhite
+    : bundle.assets.flowerOpen;
+  const organLayout: "fruitWhite" | "flowerOpen" = sealed
+    ? "fruitWhite"
+    : "flowerOpen";
+  const organLabel = sealed
+    ? "等待现实证据成熟的雾白果实"
+    : "这棵树开放的现实问题花";
+  const questionBand = !view.reality.available || !question
+    ? `<section class="dream-reality-empty">
+        <p>${escapeHtml(view.reality.empty_state || "这棵树暂时没有开放新的命题")}</p>
+      </section>`
+    : sealed
+      ? `<section class="dream-reality-sealed" aria-live="polite">
+          <small>现实问题花 · 已封存</small>
+          <h2>已封存，待现实证据出现后揭晓。</h2>
+          <p>${escapeHtml(question.options.find((item) => item.option_id === view.reality.selected_option_id)?.label || "")}</p>
+          <span>这枚果实不会在证据到来前显示对错。</span>
+        </section>`
+      : `<section class="dream-reality-question">
+          <small>现实问题花</small>
+          <h2>${escapeHtml(question.prompt)}</h2>
+          <div class="dream-reality-options" role="group" aria-label="选择后立即封存">
+            ${question.options.map((option) => `<button
+              type="button"
+              data-dream-game-command="reality-answer"
+              data-question-instance="${escapeAttr(question.question_instance_id)}"
+              data-answer-id="${escapeAttr(option.option_id)}"
+            >${escapeHtml(option.label)}</button>`).join("")}
+          </div>
+          <details>
+            <summary>为什么出现这个问题</summary>
+            <p>${escapeHtml(question.why_this_question)}</p>
+            <span>${escapeHtml(question.observation_window)}</span>
+          </details>
+        </section>`;
+  return `<div
+    class="dream-tree-world-shell is-question-map is-reality-flower"
+    data-tree-world-mode="reality-flower"
+    data-dream-scene-id="${escapeAttr(view.scene.sceneId)}"
+    data-dream-business-state="${escapeAttr(view.scene.businessState)}"
+    data-dream-presentation-state="${escapeAttr(view.scene.presentationState)}"
+    data-tree-profile="${escapeAttr(view.reality.tree_visual_profile.profile_id || "")}"
+    data-fruit-state="${escapeAttr(view.reality.fruit_state)}"
+    style="${escapeAttr(treeProfileStyle(view.reality.tree_visual_profile))}"
+  >
+    <header class="dream-tree-world-header">
+      <button type="button" data-dream-game-command="return-porch" aria-label="返回梦树门廊">‹</button>
+      <div><small>阿布问果</small><strong>${escapeHtml(view.residentDisplayLabel)}</strong></div>
+      <span aria-hidden="true">现实问题花</span>
+    </header>
+    <section class="dream-question-tree-stage" aria-label="${escapeAttr(`${view.residentDisplayLabel}的生命树`)}">
+      <picture class="semantic-tree-base-layer">
+        <img class="dream-question-tree-master" src="${bundle.assets.treeBase.source}" alt="" draggable="false">
+        <img class="dream-reality-tree-echo" src="${bundle.assets.treeBase.source}" alt="" draggable="false" aria-hidden="true">
+        <span class="dream-reality-ground-sheen" aria-hidden="true"></span>
+      </picture>
+      <div class="dream-question-tree-nodes">
+        <div
+          class="dream-question-tree-node semantic-tree-organ is-problem-flower${sealed ? " is-fruit-white" : " is-open"}"
+          data-semantic-organ="${sealed ? "FRUIT_PENDING_REALITY" : "FLOWER_REALITY_QUESTION"}"
+          data-asset-sha256="${organ.sha256}"
+          style="${semanticTreeOrganStyle(organLayout)}"
+          aria-label="${escapeAttr(organLabel)}"
+        ><img class="semantic-tree-organ-visual" src="${organ.source}" alt="" draggable="false" aria-hidden="true"></div>
+      </div>
+      <img
+        class="semantic-tree-foreground-occlusion"
+        src="${bundle.assets.foregroundOcclusion.source}"
+        style="${semanticTreeOrganStyle("foregroundOcclusion")}"
+        alt=""
+        draggable="false"
+        aria-hidden="true"
+      >
+      <div class="dream-question-tree-abu" aria-hidden="true">${renderAbuActor(abu, "", "dream-question-tree-abu-actor")}</div>
+      <aside class="dream-question-band is-reality-question" aria-live="polite">${questionBand}</aside>
+    </section>
+    ${view.statusMessage ? `<p class="dream-game-status" role="status">${escapeHtml(view.statusMessage)}</p>` : ""}
+    ${renderTreeMediaTransition(view.mediaCue)}
   </div>`;
 }
 
@@ -418,6 +522,30 @@ function renderTreeMediaTransition(cue: DreamTreeMediaCue): string {
   return cue === "none" || cue === "tree_enter"
     ? ""
     : `<span class="semantic-tree-state-cue is-${cue.replaceAll("_", "-")}" data-dream-director-transition="${cue.replaceAll("_", "-")}" aria-hidden="true"></span>`;
+}
+
+
+function treeProfileStyle(profile: DreamTreeVisualProfile): string {
+  const tokens = profile.render_tokens || {};
+  const metrics = profile.metrics || {};
+  return [
+    `--tree-scale-x:${finiteNumber(tokens.scale_x, 1)}`,
+    `--tree-scale-y:${finiteNumber(tokens.scale_y, 1)}`,
+    `--tree-rotation:${finiteNumber(tokens.rotation_deg, 0)}deg`,
+    `--tree-hue:${finiteNumber(tokens.hue_rotate_deg, 0)}deg`,
+    `--tree-saturation:${finiteNumber(tokens.saturation, 1)}`,
+    `--tree-brightness:${finiteNumber(tokens.brightness, 1)}`,
+    `--tree-canopy-echo:${finiteNumber(tokens.canopy_echo_opacity, 0)}`,
+    `--tree-ground-sheen:${finiteNumber(tokens.ground_sheen_opacity, 0)}`,
+    `--tree-density:${finiteNumber(metrics.density, 0.5)}`,
+    `--tree-moisture:${finiteNumber(metrics.moisture, 0.2)}`,
+    `--tree-light:${finiteNumber(metrics.light, 0.3)}`,
+  ].join(";");
+}
+
+
+function finiteNumber(value: number | undefined, fallback: number): number {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 
 

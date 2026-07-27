@@ -15,133 +15,22 @@ QUESTION_BLUEPRINT_PROVENANCE = [
     "contract:deepbazi.relation-work-projection.p0.v1",
 ]
 RELATION_LAB_QUESTION_BANK_VERSION = "deepbazi.life-tree-question-bank.p0.v1"
+PRIMARY_REALITY_FLOWER_BLUEPRINT_ID = "LQ-REAL-OUTPUT-DESTINATION-01"
+REALITY_OUTPUT_DESTINATION_EVIDENCE_CRITERIA = (
+    "成果交付时间与可检查内容",
+    "合同、收款或可归因收入的发生时间",
+    "要求、评审或约束变化的正式记录与发生时间",
+)
 
 
 def load_life_tree_question_blueprints() -> list[QuestionBlueprint]:
-    """Reality-observation flowers admitted from current structural candidates."""
+    """One reality flower compiled from a coherent observation cluster."""
 
     return [
         _life_blueprint(
-            "LQ-REAL-OUTPUT-WEALTH-01",
-            "产出会不会真正落成收入",
-            (
-                "在你选定的下一次具体产出窗口里，这份成果最终更接近"
-                "哪一种可核验的现实结果？"
-            ),
-            life_domain="career_wealth",
-            path_labels=["食伤生财"],
-            distinguishes=[
-                "completed_with_attributable_revenue",
-                "completed_without_attributable_revenue",
-                "no_material_completion",
-            ],
-            options=[
-                (
-                    "completed_with_revenue",
-                    "成果完成，并在窗口内形成可归因收入",
-                    "封存了“产出完成且形成可归因收入”的现实观察。",
-                ),
-                (
-                    "completed_without_revenue",
-                    "成果完成，但没有形成可归因收入",
-                    "封存了“完成产出但未形成可归因收入”的现实观察。",
-                ),
-                (
-                    "no_material_completion",
-                    "窗口内没有形成可核验的完成成果",
-                    "封存了“尚未形成可核验完成成果”的现实观察。",
-                ),
-            ],
-            observation_window="绑定一项具体产出后观察 30 天；以明确开始日与截止日为准。",
-            future_evidence=[
-                "具体产出的范围、开始时间与完成记录",
-                "窗口内可归因的合同、收款或收入凭证",
-                "截止日仍未完成时的状态记录",
-            ],
-        ),
-        _life_blueprint(
-            "LQ-REAL-OUTPUT-PRESSURE-01",
-            "一次表达能否改变现实要求",
-            (
-                "面对下一项有明确要求或评审标准的任务，你提交的方案"
-                "最终会怎样改变那项要求？"
-            ),
-            life_domain="career",
-            path_labels=["食伤制杀"],
-            distinguishes=[
-                "requirement_materially_changed",
-                "requirement_partially_relaxed",
-                "requirement_not_changed",
-            ],
-            options=[
-                (
-                    "material_change",
-                    "要求被明确调整，方案成为实际执行依据",
-                    "封存了“表达或方案实质改变要求”的观察。",
-                ),
-                (
-                    "partial_change",
-                    "只缓解一部分要求，核心约束仍在",
-                    "封存了“局部缓解但核心约束仍在”的观察。",
-                ),
-                (
-                    "no_change",
-                    "没有形成可核验的要求变化",
-                    "封存了“没有形成可核验变化”的观察。",
-                ),
-            ],
-            observation_window="绑定一项有书面要求或评审标准的任务，观察至最终决定。",
-            future_evidence=[
-                "封存时的原始任务要求或评审标准",
-                "提交的方案、表达或可检查成果",
-                "最终决定及要求变更记录",
-            ],
-        ),
-        _life_blueprint(
-            "LQ-REAL-RESOURCE-RESPONSIBILITY-01",
-            "获得的资源能否承接一项责任",
-            (
-                "下一次你获得一笔明确资源并同时承担具体责任时，"
-                "这项责任最终会完成到什么程度？"
-            ),
-            life_domain="career_wealth",
-            path_labels=["财生杀"],
-            distinguishes=[
-                "resource_supports_completion",
-                "resource_supports_partial_completion",
-                "resource_does_not_support_completion",
-            ],
-            options=[
-                (
-                    "complete",
-                    "资源到位，责任按约完成",
-                    "封存了“资源对责任完成形成实际支持”的观察。",
-                ),
-                (
-                    "partial",
-                    "资源到位，但只完成一部分或过程不稳定",
-                    "封存了“有限支持且完成不稳定”的观察。",
-                ),
-                (
-                    "not_completed",
-                    "没有形成可核验的责任完成",
-                    "封存了“资源未转化为责任完成”的观察。",
-                ),
-            ],
-            observation_window="绑定一项资源与责任均可确认的事件，观察至责任截止日。",
-            future_evidence=[
-                "资源到账、授权或可使用状态的记录",
-                "责任范围、截止时间与验收条件",
-                "最终完成或未完成的验收记录",
-            ],
-        ),
-        _life_blueprint(
-            "LQ-REAL-OUTPUT-DESTINATION-01",
+            PRIMARY_REALITY_FLOWER_BLUEPRINT_ID,
             "同一份成果会先落向哪里",
-            (
-                "下一次你交付一份可检查成果时，最先出现的可核验反馈"
-                "更接近哪一种？"
-            ),
+            "这份成果最先带来的现实反馈会是什么？",
             life_domain="career",
             path_labels=["食伤生财", "食伤制杀"],
             minimum_path_count=2,
@@ -154,26 +43,24 @@ def load_life_tree_question_blueprints() -> list[QuestionBlueprint]:
             options=[
                 (
                     "revenue_first",
-                    "先形成合同、收款或可归因收入",
+                    "先形成可归因的收入",
                     "封存了“现实反馈先落向收入”的比较观察。",
                 ),
                 (
                     "requirement_change_first",
-                    "先改变要求、评审或约束条件",
+                    "先改变任务要求或评审条件",
                     "封存了“现实反馈先落向要求变化”的比较观察。",
                 ),
                 (
                     "neither",
-                    "窗口内两种反馈都没有被核验",
+                    "观察窗口内两者都没有发生",
                     "封存了“窗口内两种反馈均未核验”的观察。",
                 ),
             ],
             observation_window="绑定一次成果交付，观察其后 30 天内最先出现的正式反馈。",
-            future_evidence=[
-                "成果交付时间与可检查内容",
-                "合同、收款或可归因收入的发生时间",
-                "要求、评审或约束变化的正式记录与发生时间",
-            ],
+            future_evidence=list(
+                REALITY_OUTPUT_DESTINATION_EVIDENCE_CRITERIA
+            ),
         ),
     ]
 
@@ -662,7 +549,9 @@ def _counterfactual_options() -> list[tuple[str, str, str]]:
 
 
 __all__ = [
+    "PRIMARY_REALITY_FLOWER_BLUEPRINT_ID",
     "QUESTION_BLUEPRINT_PROVENANCE",
+    "REALITY_OUTPUT_DESTINATION_EVIDENCE_CRITERIA",
     "load_life_tree_question_blueprints",
     "load_relation_lab_question_blueprints",
 ]

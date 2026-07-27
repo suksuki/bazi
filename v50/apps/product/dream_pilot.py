@@ -153,9 +153,16 @@ class DreamCanonicalNpcBootstrapService:
                 current.case_id != seed.case_id
                 or current.subject_kind != "canonical_npc"
                 or current.subject_ref != seed.npc_id
-                or current.authorized_source_hash != scene.identity.source_hash
+                or current.authorized_by_ref != "world-governance:dream-pilot-v1"
+                or current.authorization_version != DREAM_PILOT_NPC_POLICY_VERSION
             ):
                 raise ValueError(f"canonical_npc_grant_conflict:{seed.npc_id}")
+            if current.authorized_source_hash != scene.identity.source_hash:
+                current = self.dream_store.save_grant(current.model_copy(update={
+                    "authorized_source_hash": scene.identity.source_hash,
+                    "authorization_sequence": current.authorization_sequence + 1,
+                    "updated_at": now,
+                }))
 
         return CanonicalNpcBootstrapResult(
             npc_id=seed.npc_id,

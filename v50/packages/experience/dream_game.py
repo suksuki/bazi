@@ -629,6 +629,8 @@ class BlindRoundCard(ExperienceModel):
     banner: str = Field(default=DREAM_GAME_BANNER, min_length=1, max_length=160)
     content_state: ContentState
     knowledge_cutoff: datetime
+    tree_available: bool = True
+    tree_visual_profile: dict[str, Any] = Field(default_factory=dict)
 
 
 class PreOutcomeDreamProjection(ExperienceModel):

@@ -27,6 +27,7 @@ from product.canvas_projection import (
     ReadOnlySixPillarCanvasService,
 )
 from product.life_tree_question_blueprints import (
+    PRIMARY_REALITY_FLOWER_BLUEPRINT_ID,
     load_life_tree_question_blueprints,
     load_relation_lab_question_blueprints,
 )
@@ -447,6 +448,185 @@ class RelationWorkP0Service:
             "write_boundary": _write_boundary(),
         }
 
+    def dream_tree_visual_profile(
+        self,
+        *,
+        case_id: str,
+        participant_id: str,
+        account_role: str,
+        expected_life_case_version: str = "",
+    ) -> dict[str, object]:
+        runtime = self._real_case_runtime(
+            case_id=case_id,
+            participant_id=participant_id,
+            account_role=account_role,
+        )
+        if expected_life_case_version:
+            self._require_life_case_version(
+                runtime=runtime,
+                expected_life_case_version=expected_life_case_version,
+            )
+        return _tree_visual_profile(runtime.context)
+
+    def dream_reality_question_view(
+        self,
+        *,
+        case_id: str,
+        participant_id: str,
+        account_role: str,
+        encounter_set_id: str,
+        round_id: str,
+        expected_life_case_version: str,
+    ) -> dict[str, object]:
+        runtime = self._real_case_runtime(
+            case_id=case_id,
+            participant_id=participant_id,
+            account_role=account_role,
+        )
+        self._require_life_case_version(
+            runtime=runtime,
+            expected_life_case_version=expected_life_case_version,
+        )
+        participant_run_id = _dream_real_participant_run_id(
+            participant_id=participant_id,
+            encounter_set_id=encounter_set_id,
+            round_id=round_id,
+            case_id=case_id,
+            life_case_version=expected_life_case_version,
+        )
+        question = _primary_reality_question(runtime.questions)
+        explorations = self._list_real_explorations(participant_run_id)
+        existing = (
+            next(
+                (
+                    item
+                    for item in explorations
+                    if question is not None
+                    and item.experiment_kind
+                    == "dream_reality_question_answer"
+                    and question.instance_id in item.responses
+                ),
+                None,
+            )
+            if question is not None
+            else None
+        )
+        return _dream_reality_question_payload(
+            question=question,
+            exploration=existing,
+            profile=_tree_visual_profile(runtime.context),
+            expected_life_case_version=expected_life_case_version,
+        )
+
+    def answer_dream_reality_question(
+        self,
+        *,
+        case_id: str,
+        participant_id: str,
+        account_role: str,
+        encounter_set_id: str,
+        round_id: str,
+        expected_life_case_version: str,
+        question_instance_id: str,
+        selected_option_id: str,
+        idempotency_key: str,
+        now: datetime | None = None,
+    ) -> dict[str, object]:
+        runtime = self._real_case_runtime(
+            case_id=case_id,
+            participant_id=participant_id,
+            account_role=account_role,
+        )
+        self._require_life_case_version(
+            runtime=runtime,
+            expected_life_case_version=expected_life_case_version,
+        )
+        question = _primary_reality_question(runtime.questions)
+        if question is None or question.instance_id != question_instance_id:
+            raise RelationWorkP0Unavailable(
+                "dream_reality_question_not_available_for_current_tree"
+            )
+        participant_run_id = _dream_real_participant_run_id(
+            participant_id=participant_id,
+            encounter_set_id=encounter_set_id,
+            round_id=round_id,
+            case_id=case_id,
+            life_case_version=expected_life_case_version,
+        )
+        existing = next(
+            (
+                item
+                for item in self._list_real_explorations(participant_run_id)
+                if item.experiment_kind == "dream_reality_question_answer"
+                and question.instance_id in item.responses
+            ),
+            None,
+        )
+        if existing is not None:
+            if (
+                existing.responses.get(question.instance_id)
+                != selected_option_id
+            ):
+                raise RelationWorkP0Conflict(
+                    "dream_reality_question_answer_already_sealed"
+                )
+            return _dream_reality_question_payload(
+                question=question,
+                exploration=existing,
+                profile=_tree_visual_profile(runtime.context),
+                expected_life_case_version=expected_life_case_version,
+            )
+        if not idempotency_key or len(idempotency_key) > 180:
+            raise RelationWorkP0Unavailable(
+                "dream_reality_question_idempotency_key_invalid"
+            )
+        exploration = exploration_from_life_tree_answer(
+            question=question,
+            participant_run_id=participant_run_id,
+            selected_option_id=selected_option_id,
+            created_at=now or datetime.now(timezone.utc),
+        )
+        exploration_identity = {
+            "participant_run_id": participant_run_id,
+            "question_instance_id": question.instance_id,
+        }
+        exploration = exploration.model_copy(update={
+            "exploration_id": (
+                f"exploration:{canonical_hash(exploration_identity)}"
+            ),
+            "responses": {
+                question.instance_id: selected_option_id,
+                "_encounter_set_id": encounter_set_id,
+                "_case_id": case_id,
+                "_life_case_version": expected_life_case_version,
+                "_blueprint_id": question.blueprint_id,
+                "_blueprint_version": question.blueprint_version,
+                "_idempotency_key": idempotency_key,
+                "_reveal_status": "WAITING_REALITY_EVIDENCE",
+            },
+            "observations": [
+                *exploration.observations,
+                f"encounter_set_id:{encounter_set_id}",
+                f"round_id:{round_id}",
+                f"life_case_version:{expected_life_case_version}",
+                "reveal_status:WAITING_REALITY_EVIDENCE",
+                "answer_is_immutable:true",
+            ],
+            "experiment_kind": "dream_reality_question_answer",
+            "life_case_version_observed": expected_life_case_version,
+        })
+        if self.theater_store is None:
+            raise RelationWorkP0Unavailable(
+                "real_lifecase_exploration_store_unavailable"
+            )
+        self.theater_store.save_exploration(exploration)
+        return _dream_reality_question_payload(
+            question=question,
+            exploration=exploration,
+            profile=_tree_visual_profile(runtime.context),
+            expected_life_case_version=expected_life_case_version,
+        )
+
     def answer_case_question(
         self,
         *,
@@ -505,6 +685,26 @@ class RelationWorkP0Service:
             )
         self.theater_store.save_exploration(exploration)
         return exploration
+
+    @staticmethod
+    def _require_life_case_version(
+        *,
+        runtime: RealCaseRelationWorkRuntime,
+        expected_life_case_version: str,
+    ) -> None:
+        source = runtime.context.metadata.get("source")
+        current_version = (
+            str(source.get("life_case_version") or "")
+            if isinstance(source, dict)
+            else ""
+        )
+        if (
+            not expected_life_case_version
+            or current_version != expected_life_case_version
+        ):
+            raise RelationWorkP0Conflict(
+                "dream_reality_question_lifecase_version_changed"
+            )
 
     def case_abu_observation_turn(
         self,
@@ -827,6 +1027,115 @@ class RelationWorkP0Service:
             )
 
 
+def _primary_reality_question(
+    questions: tuple[LifeTreeQuestionInstance, ...],
+) -> LifeTreeQuestionInstance | None:
+    return next(
+        (
+            item
+            for item in questions
+            if item.blueprint_id == PRIMARY_REALITY_FLOWER_BLUEPRINT_ID
+            and item.purpose == "life_observation"
+            and item.reveal_policy == "REALITY_FEEDBACK"
+        ),
+        None,
+    )
+
+
+def _dream_real_participant_run_id(
+    *,
+    participant_id: str,
+    encounter_set_id: str,
+    round_id: str,
+    case_id: str,
+    life_case_version: str,
+) -> str:
+    identity = {
+        "participant_id": participant_id,
+        "encounter_set_id": encounter_set_id,
+        "round_id": round_id,
+        "case_id": case_id,
+        "life_case_version": life_case_version,
+    }
+    return f"dream-real:{canonical_hash(identity)}"
+
+
+def _dream_reality_question_payload(
+    *,
+    question: LifeTreeQuestionInstance | None,
+    exploration: TopicExploration | None,
+    profile: dict[str, object],
+    expected_life_case_version: str,
+) -> dict[str, object]:
+    if question is None:
+        return {
+            "schema_version": "deepbazi.dream-reality-question-view.v1",
+            "available": False,
+            "empty_state": "这棵树暂时没有开放新的命题",
+            "question": None,
+            "sealed": False,
+            "selected_option_id": "",
+            "sealed_at": None,
+            "reveal_status": "NOT_STARTED",
+            "fruit_state": "NONE",
+            "tree_visual_profile": profile,
+            "source_life_case_version": expected_life_case_version,
+            "write_owner": "TopicExploration",
+            "writes_life_case": False,
+        }
+    selected_option_id = (
+        exploration.responses.get(question.instance_id, "")
+        if exploration is not None
+        else ""
+    )
+    return {
+        "schema_version": "deepbazi.dream-reality-question-view.v1",
+        "available": True,
+        "empty_state": "",
+        "question": {
+            "question_instance_id": question.instance_id,
+            "blueprint_id": question.blueprint_id,
+            "blueprint_version": question.blueprint_version,
+            "title": question.title,
+            "prompt": question.prompt,
+            "options": [
+                {
+                    "option_id": item.option_id,
+                    "label": item.label_template,
+                }
+                for item in question.options
+            ],
+            "why_this_question": question.why_this_question,
+            "observation_window": question.observation_window,
+            "reveal_policy": question.reveal_policy,
+        },
+        "sealed": exploration is not None,
+        "selected_option_id": selected_option_id,
+        "sealed_at": (
+            exploration.created_at.isoformat()
+            if exploration is not None
+            else None
+        ),
+        "reveal_status": (
+            exploration.responses.get(
+                "_reveal_status",
+                "WAITING_REALITY_EVIDENCE",
+            )
+            if exploration is not None
+            else "NOT_STARTED"
+        ),
+        "fruit_state": (
+            "PENDING_REALITY_EVIDENCE"
+            if exploration is not None
+            else "FLOWER_OPEN"
+        ),
+        "tree_visual_profile": profile,
+        "source_life_case_version": expected_life_case_version,
+        "write_owner": "TopicExploration",
+        "writes_life_case": False,
+    }
+
+
 def _validate_run_id(value: str) -> None:
     if not value or len(value) > 120:
         raise RelationWorkP0Unavailable("invalid_participant_run_id")
@@ -1051,16 +1360,24 @@ def _tree_visual_profile(
         "tall_tensed": 1.06,
         "compact_grounded": 1.0,
     }[form]
+    dominant_element = max(ratios, key=ratios.get)
     hue_rotate = {
-        "dew_fed": 8.0,
-        "sun_warmed": -24.0,
-        "mineral_cool": -7.0,
+        "wood": 72.0,
+        "fire": -12.0,
+        "earth": 0.0,
+        "metal": 52.0,
+        "water": 148.0,
+    }[dominant_element] + {
+        "dew_fed": 4.0,
+        "sun_warmed": -4.0,
+        "mineral_cool": 0.0,
     }[material]
     rotation = -1.2 if relation_counts["controls"] >= relation_counts["generates"] else 0.7
     identity = {
         "foundation_hash": context.projection.content_hash,
         "element_counts": dict(sorted(counts.items())),
         "relation_counts": dict(sorted(relation_counts.items())),
+        "dominant_element": dominant_element,
         "form": form,
         "material": material,
     }
@@ -1084,7 +1401,7 @@ def _tree_visual_profile(
             "scale_y": scale_y,
             "rotation_deg": rotation,
             "hue_rotate_deg": hue_rotate,
-            "saturation": round(0.86 + density * 0.34, 3),
+            "saturation": round(0.82 + density * 0.18, 3),
             "brightness": round(0.94 + light * 0.16, 3),
             "canopy_echo_opacity": round(0.08 + density * 0.24, 3),
             "ground_sheen_opacity": round(0.04 + moisture * 2.1, 3),
