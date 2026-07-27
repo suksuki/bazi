@@ -1,4 +1,5 @@
 import type { CanvasLayer, CanvasStage, CanvasVisibilityLayer } from "./contracts";
+import type { LifeTreeQuestionCategory } from "./relation_work_api";
 import type { ProductArea, WorkspaceSurface } from "./state";
 
 
@@ -14,6 +15,13 @@ export interface ExperienceInteractionHandlers {
   selectCanvasVisibility(visibility: CanvasVisibilityLayer): void;
   selectCanvasObject(selected: string): void;
   selectProfile(profileId: string): void;
+  selectLifeTreeQuestion(questionId: string, category: LifeTreeQuestionCategory): void;
+  selectLifeTreeOption(optionId: string): void;
+  submitLifeTreeAnswer(): void;
+  selectRelationLabMode(mode: "facts" | "candidates" | "professional"): void;
+  selectRelationPath(pathRef: string): void;
+  selectRelationFact(factRef: string): void;
+  restoreRelationNatal(): void;
 }
 
 
@@ -79,4 +87,45 @@ export function bindExperienceInteractions(
       handlers.selectProfile((event.currentTarget as HTMLSelectElement).value);
     });
   });
+  root.querySelectorAll<HTMLButtonElement>("[data-life-tree-question]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectLifeTreeQuestion(
+      button.dataset.lifeTreeQuestion || "",
+      (button.dataset.lifeTreeCategory || "factual_observation") as LifeTreeQuestionCategory,
+    ));
+  });
+  root.querySelectorAll<HTMLButtonElement>("[data-life-tree-option]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectLifeTreeOption(
+      button.dataset.lifeTreeOption || "",
+    ));
+  });
+  root.querySelector<HTMLButtonElement>("[data-life-tree-submit]")?.addEventListener(
+    "click",
+    () => handlers.submitLifeTreeAnswer(),
+  );
+  root.querySelectorAll<HTMLButtonElement>("[data-relation-lab-mode]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectRelationLabMode(
+      (button.dataset.relationLabMode || "facts") as "facts" | "candidates" | "professional",
+    ));
+  });
+  root.querySelectorAll<HTMLButtonElement>("[data-relation-path]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectRelationPath(
+      button.dataset.relationPath || "",
+    ));
+  });
+  root.querySelectorAll<HTMLElement>("[data-relation-fact]").forEach((element) => {
+    const select = () => handlers.selectRelationFact(
+      element.dataset.relationFact || "",
+    );
+    element.addEventListener("click", select);
+    element.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        select();
+      }
+    });
+  });
+  root.querySelector<HTMLButtonElement>("[data-relation-restore-natal]")?.addEventListener(
+    "click",
+    () => handlers.restoreRelationNatal(),
+  );
 }

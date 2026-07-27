@@ -52,6 +52,14 @@ import {
 } from "./dream_entry_transition";
 import { consumeDreamReturnedWithSeed } from "./dream_story_runtime";
 import {
+  answerRealLifeTreeQuestion,
+  loadRealLifeTree,
+  loadRealMingliLab,
+  type LifeTreeQuestionCategory,
+  type RealLifeTreeBootstrap,
+  type RealMingliLabBootstrap,
+} from "./relation_work_api";
+import {
   initialUiState,
   reduceUi,
   type ProductArea,
@@ -94,6 +102,19 @@ let accountBusy = false;
 let accountError = "";
 let dreamStatus: DreamFeatureStatus | null = null;
 const dreamReturnedWithSeed = consumeDreamReturnedWithSeed();
+let realLifeTree: RealLifeTreeBootstrap | null = null;
+let realLifeTreeLoading = false;
+let realLifeTreeError = "";
+let selectedLifeTreeQuestionId = "";
+let selectedLifeTreeCategory: LifeTreeQuestionCategory = "factual_observation";
+let selectedLifeTreeOptionId = "";
+let lifeTreeAnswerSaving = false;
+let realMingliLab: RealMingliLabBootstrap | null = null;
+let realMingliLabLoading = false;
+let realMingliLabError = "";
+let relationLabMode: "facts" | "candidates" | "professional" = "candidates";
+let selectedRelationPathRef = "";
+let selectedRelationFactRef = "";
 
 if (location.pathname.startsWith("/experience/dream")) {
   const entryTransition = resumeDreamEntryTransition();
@@ -152,6 +173,14 @@ async function openCase(
     narrationManifest = null;
     narrationAssets = {};
     timeline = null;
+    realLifeTree = null;
+    realLifeTreeError = "";
+    selectedLifeTreeQuestionId = "";
+    selectedLifeTreeOptionId = "";
+    realMingliLab = null;
+    realMingliLabError = "";
+    selectedRelationPathRef = "";
+    selectedRelationFactRef = "";
   }
   account = loaded.account;
   cases = loaded.cases;
@@ -165,6 +194,7 @@ async function openCase(
   ui = loaded.ui;
   updateExperienceLocation(activeCaseId, ui);
   render();
+  void ensureRealLifeTree();
   void loadSelectedProjection();
   void refreshDreamStatus();
   scheduleBackgroundCognition();
@@ -190,6 +220,19 @@ function render(): void {
     ui,
     dreamStatus,
     dreamReturnedWithSeed,
+    realLifeTree,
+    realLifeTreeLoading,
+    realLifeTreeError,
+    selectedLifeTreeQuestionId,
+    selectedLifeTreeCategory,
+    selectedLifeTreeOptionId,
+    lifeTreeAnswerSaving,
+    realMingliLab,
+    realMingliLabLoading,
+    realMingliLabError,
+    relationLabMode,
+    selectedRelationPathRef,
+    selectedRelationFactRef,
   });
   bindExperienceInteractions(root, {
     selectArea,
@@ -211,11 +254,63 @@ function render(): void {
     selectCanvasLayer,
     selectCanvasVisibility,
     selectCanvasObject(selected) {
+      selectRelationFactForNode(selected);
       void refreshCanvasContext(selected);
     },
     selectProfile(profileId) {
       root.innerHTML = renderLoading("正在切换命盘");
       void openCase({ profileId });
+    },
+    selectLifeTreeQuestion(questionId, category) {
+      selectedLifeTreeQuestionId = questionId;
+      selectedLifeTreeCategory = category;
+      selectedLifeTreeOptionId = "";
+      realLifeTreeError = "";
+      render();
+    },
+    selectLifeTreeOption(optionId) {
+      selectedLifeTreeOptionId = optionId;
+      render();
+    },
+    submitLifeTreeAnswer() {
+      void submitRealLifeTreeAnswer();
+    },
+    selectRelationLabMode(mode) {
+      relationLabMode = mode;
+      if (mode === "facts") {
+        const visible = realMingliLab?.relation_work.factual_view.find(
+          (item) => item.inventory_visible,
+        );
+        selectedRelationFactRef = visible?.fact_revision_ref || "";
+      }
+      render();
+    },
+    selectRelationPath(pathRef) {
+      selectedRelationPathRef = pathRef;
+      relationLabMode = "candidates";
+      const path = realMingliLab?.relation_work.candidate_path_view.find(
+        (item) => item.work_path_candidate_ref === pathRef,
+      );
+      selectedRelationFactRef = path?.ordered_fact_revision_refs[0] || "";
+      render();
+    },
+    selectRelationFact(factRef) {
+      selectedRelationFactRef = factRef;
+      const path = realMingliLab?.relation_work.candidate_path_view.find(
+        (item) => (
+          realMingliLab?.path_focus.visible_path_refs.includes(
+            item.work_path_candidate_ref,
+          )
+          && item.ordered_fact_revision_refs.includes(factRef)
+        ),
+      );
+      if (path && relationLabMode === "candidates") {
+        selectedRelationPathRef = path.work_path_candidate_ref;
+      }
+      render();
+    },
+    restoreRelationNatal() {
+      selectCanvasStage("natal");
     },
   });
   syncOpeningMusicControls();
@@ -235,6 +330,7 @@ function selectArea(area: ProductArea): void {
   if (area === "lab") {
     selectLabLayer();
     void ensureCanvas();
+    void ensureRealMingliLab();
   } else {
     ui = reduceUi(ui, { type: "canvas-visibility", visibility: "formal" });
   }
@@ -253,8 +349,108 @@ function selectSurface(surface: WorkspaceSurface): void {
 
 
 async function loadSelectedProjection(): Promise<void> {
-  if (ui.productArea === "lab" || ui.workspaceSurface === "onecanvas") await ensureCanvas();
+  if (ui.productArea === "lab" || ui.workspaceSurface === "onecanvas") {
+    await ensureCanvas();
+  }
+  if (ui.productArea === "lab") await ensureRealMingliLab();
   if (ui.workspaceSurface === "theater") await ensureNarration();
+}
+
+
+async function ensureRealLifeTree(): Promise<void> {
+  if (realLifeTree || realLifeTreeLoading || !activeCaseId) return;
+  realLifeTreeLoading = true;
+  realLifeTreeError = "";
+  render();
+  try {
+    realLifeTree = await loadRealLifeTree(activeCaseId);
+  } catch (error) {
+    realLifeTree = null;
+    realLifeTreeError = humanizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  } finally {
+    realLifeTreeLoading = false;
+    render();
+  }
+}
+
+
+async function submitRealLifeTreeAnswer(): Promise<void> {
+  if (
+    lifeTreeAnswerSaving
+    || !activeCaseId
+    || !selectedLifeTreeQuestionId
+    || !selectedLifeTreeOptionId
+  ) return;
+  lifeTreeAnswerSaving = true;
+  realLifeTreeError = "";
+  render();
+  try {
+    await answerRealLifeTreeQuestion(
+      activeCaseId,
+      selectedLifeTreeQuestionId,
+      selectedLifeTreeOptionId,
+    );
+    realLifeTree = await loadRealLifeTree(activeCaseId);
+    selectedLifeTreeOptionId = "";
+  } catch (error) {
+    realLifeTreeError = humanizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  } finally {
+    lifeTreeAnswerSaving = false;
+    render();
+  }
+}
+
+
+async function ensureRealMingliLab(): Promise<void> {
+  if (realMingliLab || realMingliLabLoading || !activeCaseId) return;
+  realMingliLabLoading = true;
+  realMingliLabError = "";
+  render();
+  try {
+    realMingliLab = await loadRealMingliLab(activeCaseId);
+    selectedRelationPathRef = (
+      realMingliLab.path_focus.primary_path_ref
+    );
+    const primary = realMingliLab.relation_work.candidate_path_view.find(
+      (item) => (
+        item.work_path_candidate_ref
+        === realMingliLab?.path_focus.primary_path_ref
+      ),
+    );
+    selectedRelationFactRef = primary?.ordered_fact_revision_refs[0] || "";
+  } catch (error) {
+    realMingliLab = null;
+    realMingliLabError = humanizeError(
+      error instanceof Error ? error.message : String(error),
+    );
+  } finally {
+    realMingliLabLoading = false;
+    render();
+  }
+}
+
+
+function selectRelationFactForNode(nodeRef: string): void {
+  if (ui.productArea !== "lab" || !realMingliLab) return;
+  const visiblePathRefs = new Set(realMingliLab.path_focus.visible_path_refs);
+  const visiblePathFactRefs = new Set(
+    realMingliLab.relation_work.candidate_path_view
+      .filter((path) => visiblePathRefs.has(path.work_path_candidate_ref))
+      .flatMap((path) => path.ordered_fact_revision_refs),
+  );
+  const connected = realMingliLab.relation_work.factual_view.find((fact) => (
+    fact.participant_refs.includes(nodeRef)
+    && (
+      relationLabMode === "facts"
+        ? fact.inventory_visible
+        : visiblePathFactRefs.has(fact.fact_revision_ref)
+    )
+  ));
+  if (connected) selectedRelationFactRef = connected.fact_revision_ref;
 }
 
 
@@ -494,7 +690,7 @@ async function refreshDreamStatus(): Promise<void> {
 function selectLabLayer(): void {
   if (!canvas) return;
   const layer = canvas.stages[ui.canvasStage].layers.find((item) => (
-    item.layer_id === "five_element" && item.available
+    item.layer_id === "overview" && item.available
   ));
   if (layer) ui = reduceUi(ui, { type: "canvas-layer", layer: layer.layer_id });
   if (canvas.renderer_policy.available_visibility_layers.includes("lab_audit")) {

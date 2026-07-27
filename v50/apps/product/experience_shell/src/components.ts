@@ -18,6 +18,7 @@ import { renderDreamHomeLifeTree } from "./dream_home_portal";
 import type {
   LifeTreeQuestion,
   LifeTreeQuestionCategory,
+  RelationFactProjection,
   RealLifeTreeBootstrap,
   RealMingliLabBootstrap,
   WorkPathProjection,
@@ -52,6 +53,7 @@ export interface ExperienceViewModel {
   realMingliLabError: string;
   relationLabMode: "facts" | "candidates" | "professional";
   selectedRelationPathRef: string;
+  selectedRelationFactRef: string;
 }
 
 const elementLabel: Record<string, string> = {
@@ -352,8 +354,8 @@ function renderRelationWorkControls(view: ExperienceViewModel): string {
   return `<section class="canonical-relation-work" aria-label="真实关系与候选做功">
     <header class="relation-work-toolbar">
       <nav aria-label="关系研究层">
-        ${relationModeButton("facts", "事实关系", view.relationLabMode)}
-        ${relationModeButton("candidates", "候选做功", view.relationLabMode)}
+        ${relationModeButton("candidates", "路径聚焦", view.relationLabMode)}
+        ${relationModeButton("facts", "关系库存", view.relationLabMode)}
         ${relationModeButton("professional", "专业准入", view.relationLabMode)}
       </nav>
       <button type="button" data-relation-restore-natal>恢复原局</button>
@@ -386,28 +388,52 @@ function renderRelationWorkBody(
     `).join("")}</div>`;
   }
   if (view.relationLabMode === "facts") {
-    return `<div class="relation-work-facts">${projection.factual_view.slice(0, 8).map((fact) => `
-        <article>
+    const facts = projection.factual_view.filter((fact) => fact.inventory_visible);
+    const selectedFact = selectedRelationFact(view, facts);
+    return `<div class="relation-work-audit">
+        <span>合法直连 ${lab.relation_audit.legal_direct_edges}</span>
+        <span>媒介证据 ${lab.relation_audit.legal_mediated_relations}</span>
+        <span>承载/位置 ${lab.relation_audit.containment_edges + lab.relation_audit.positional_edges}</span>
+        <span>隔离 ${lab.relation_audit.quarantined_fact_count}</span>
+      </div>
+      <div class="relation-work-facts">${facts.map((fact) => `
+        <button type="button" data-relation-fact="${escapeAttr(fact.fact_revision_ref)}" class="${fact.fact_revision_ref === selectedFact?.fact_revision_ref ? "is-selected" : ""}">
           <strong>${escapeHtml(fact.participant_coordinates.map(relationCoordinateLabel).join(" → "))}</strong>
-          <span>${escapeHtml(relationFamilyLabel(fact.relation_family))} · ${escapeHtml(relationActivationLabel(fact.activation_state))}</span>
-          <small>${fact.effect_status === "professionally_resolved" ? "作用已获准" : "关系事实成立，作用待定"}</small>
-        </article>
+          <span>${escapeHtml(relationFamilyLabel(fact.relation_family))} · ${escapeHtml(relationLegalityLabel(fact))}</span>
+          <small>${fact.effect_status === "professionally_resolved" ? "作用已获准" : "事实可见，作用待定"}</small>
+        </button>
       `).join("")}</div>
+      ${selectedFact ? renderRelationFactInspector(selectedFact) : ""}
+      <p class="relation-work-quarantine-note">未显化潜在关系与非法跨层关系不参与画线或候选路径；当前隔离 ${lab.relation_audit.quarantined_fact_count} 条。</p>
       ${renderLabLearningQuestions(lab.learning_questions)}`;
   }
-  const paths = projection.candidate_path_view;
+  const visibleRefs = new Set(lab.path_focus.visible_path_refs);
+  const paths = projection.candidate_path_view.filter(
+    (item) => visibleRefs.has(item.work_path_candidate_ref),
+  );
   const selected = paths.find(
     (item) => item.work_path_candidate_ref === view.selectedRelationPathRef,
+  ) || paths.find(
+    (item) => item.work_path_candidate_ref === lab.path_focus.primary_path_ref,
   ) || paths[0];
+  const selectedFact = selectedRelationFact(
+    view,
+    projection.factual_view.filter((fact) => (
+      selected?.ordered_fact_revision_refs.includes(fact.fact_revision_ref)
+    )),
+  );
   return `<div class="relation-work-candidates">
     <nav aria-label="当前盘支持的候选做功">
       ${paths.map((path) => `<button
         type="button"
         data-relation-path="${escapeAttr(path.work_path_candidate_ref)}"
         class="${path.work_path_candidate_ref === selected?.work_path_candidate_ref ? "is-selected" : ""}"
-      ><strong>${escapeHtml(path.label)}</strong><span>${path.ordered_fact_revision_refs.length} 段事实 · ${path.blocker_types.length} 项待定</span></button>`).join("")}
+      ><strong>${escapeHtml(path.label)}</strong><span>${path.work_path_candidate_ref === lab.path_focus.primary_path_ref ? "优先聚焦" : "竞争路径"} · ${path.ordered_fact_revision_refs.length === 1 ? "单段候选" : `${path.ordered_fact_revision_refs.length} 段候选`}</span></button>`).join("")}
     </nav>
-    ${selected ? renderWorkPathDetail(selected) : `<div class="relation-work-empty">当前 LifeCase 没有满足结构证据的候选做功。</div>`}
+    ${selected
+      ? `${renderWorkPathDetail(selected, lab.path_focus.key_blocker.message)}
+        ${selectedFact ? renderRelationFactInspector(selectedFact) : ""}`
+      : `<div class="relation-work-empty">${escapeHtml(lab.path_focus.empty_state || "当前 LifeCase 没有满足直连与溯源证据的候选做功。")}</div>`}
   </div>`;
 }
 
@@ -432,9 +458,12 @@ function renderLabLearningQuestions(
 }
 
 
-function renderWorkPathDetail(path: WorkPathProjection): string {
+function renderWorkPathDetail(
+  path: WorkPathProjection,
+  keyBlocker: string,
+): string {
   return `<article class="relation-work-path-detail">
-    <header><p>结构候选</p><h2>${escapeHtml(path.label)}</h2></header>
+    <header><p>${path.ordered_fact_revision_refs.length === 1 ? "单段候选" : "结构候选"}</p><h2>${escapeHtml(path.label)}</h2></header>
     <div class="relation-work-statuses">
       <span>结构候选</span>
       <span>作用待定</span>
@@ -446,31 +475,101 @@ function renderWorkPathDetail(path: WorkPathProjection): string {
       <dt>参与坐标</dt><dd>${escapeHtml(path.participant_coordinates.map(relationCoordinateLabel).join(" → "))}</dd>
       <dt>竞争共享</dt><dd>${escapeHtml(path.shared_resource_refs.length ? path.shared_resource_refs.map(compactRef).join("、") : "当前未发现共享参与者")}</dd>
       <dt>瓶颈</dt><dd>${escapeHtml(path.bottleneck_node_refs.length ? path.bottleneck_node_refs.map(compactRef).join("、") : "承载与效果证据仍待核验")}</dd>
-      <dt>阻断</dt><dd>${escapeHtml(path.blocker_types.length ? path.blocker_types.map(workPathBlockerLabel).join("；") : "无结构阻断")}</dd>
+      <dt>关键缺口</dt><dd>${escapeHtml(keyBlocker)}</dd>
+      <dt>阻断记录</dt><dd>${escapeHtml(path.blocker_types.length ? path.blocker_types.map(workPathBlockerLabel).join("；") : "未记录其他结构阻断")}</dd>
     </dl>
     <small>候选线只表示当前证据下的结构连续性，不表示有效做功、主功或专业排名。</small>
+  </article>`;
+}
+
+
+function selectedRelationFact(
+  view: ExperienceViewModel,
+  facts: RelationFactProjection[],
+): RelationFactProjection | undefined {
+  return facts.find(
+    (item) => item.fact_revision_ref === view.selectedRelationFactRef,
+  ) || facts[0];
+}
+
+
+function renderRelationFactInspector(
+  fact: RelationFactProjection,
+): string {
+  return `<article class="relation-fact-inspector" aria-live="polite">
+    <header><p>事实与溯源</p><strong>${escapeHtml(fact.participant_coordinates.map(relationCoordinateLabel).join(" → "))} · ${escapeHtml(relationFamilyLabel(fact.relation_family))}</strong></header>
+    <dl>
+      <dt>关系事实</dt><dd>${escapeHtml(compactRef(fact.relation_fact_id))}</dd>
+      <dt>规则</dt><dd>${escapeHtml(`${relationRuleLabel(fact.rule_id)} · ${fact.rule_version}`)}</dd>
+      <dt>参与层</dt><dd>${escapeHtml(fact.participant_kinds.join(" → "))}</dd>
+      <dt>表达方式</dt><dd>${escapeHtml(relationLegalityLabel(fact))}</dd>
+      <dt>时域</dt><dd>${escapeHtml(`${fact.source_layer} / ${fact.time_scope}`)}</dd>
+      <dt>专业阶段</dt><dd>${escapeHtml(professionalStageLabel(fact.professional_stage))}</dd>
+    </dl>
+    <details>
+      <summary>查看规则身份与证据引用</summary>
+      <dl>
+        <dt>规则 ID</dt><dd>${escapeHtml(fact.rule_id)}</dd>
+        <dt>完整事实 ID</dt><dd>${escapeHtml(fact.relation_fact_id)}</dd>
+        <dt>必要依据</dt><dd>${escapeHtml(fact.prerequisite_refs.map(compactRef).join("、") || "无")}</dd>
+        <dt>证据</dt><dd>${escapeHtml(fact.evidence_refs.map(compactRef).join("、") || "无")}</dd>
+      </dl>
+    </details>
+    ${fact.exclusion_refs.length ? `<small>排除：${escapeHtml(fact.exclusion_refs.join("；"))}</small>` : ""}
   </article>`;
 }
 
 function relationWorkCanvasOverlay(
   view: ExperienceViewModel,
 ): DreamGameCandidateRelation[] {
-  const projection = view.realMingliLab?.relation_work;
-  if (!projection || view.relationLabMode === "professional") return [];
+  const lab = view.realMingliLab;
+  const projection = lab?.relation_work;
+  if (!lab || !projection || view.relationLabMode === "professional") return [];
 
-  let facts = projection.factual_view.slice(0, 8);
-  let kind: DreamGameCandidateRelation["kind"] = "fact";
   if (view.relationLabMode === "candidates") {
-    const selected = projection.candidate_path_view.find(
-      (item) => item.work_path_candidate_ref === view.selectedRelationPathRef,
-    ) || projection.candidate_path_view[0];
-    if (!selected) return [];
-    const refs = new Set(selected.ordered_fact_revision_refs);
-    facts = projection.factual_view.filter((item) => refs.has(item.fact_revision_ref));
-    kind = "candidate";
+    const primary = projection.candidate_path_view.find(
+      (item) => item.work_path_candidate_ref === lab.path_focus.primary_path_ref,
+    );
+    const competition = projection.candidate_path_view.find(
+      (item) => item.work_path_candidate_ref === lab.path_focus.competition_path_ref,
+    );
+    return [
+      ...relationOverlayForPath(view, projection.factual_view, primary, "candidate"),
+      ...relationOverlayForPath(view, projection.factual_view, competition, "competition"),
+    ];
   }
 
-  return facts.flatMap((fact) => {
+  return projection.factual_view.filter(
+    (fact) => fact.inventory_visible,
+  ).flatMap((fact) => {
+    const source = fact.participant_coordinates[0];
+    const target = fact.participant_coordinates[1];
+    if (!source || !target) return [];
+    return [{
+      relation_ref: fact.fact_revision_ref,
+      label: relationFamilyLabel(fact.relation_family),
+      source_node_ref: source.node_ref,
+      target_node_ref: target.node_ref,
+      formal: false,
+      kind: "fact",
+      directionality: fact.directionality,
+      selected: fact.fact_revision_ref === view.selectedRelationFactRef,
+    }];
+  });
+}
+
+
+function relationOverlayForPath(
+  view: ExperienceViewModel,
+  facts: RelationFactProjection[],
+  path: WorkPathProjection | undefined,
+  kind: "candidate" | "competition",
+): DreamGameCandidateRelation[] {
+  if (!path) return [];
+  const refs = new Set(path.ordered_fact_revision_refs);
+  return facts.filter(
+    (fact) => refs.has(fact.fact_revision_ref),
+  ).flatMap((fact) => {
     const source = fact.participant_coordinates[0];
     const target = fact.participant_coordinates[1];
     if (!source || !target) return [];
@@ -482,6 +581,10 @@ function relationWorkCanvasOverlay(
       formal: false,
       kind,
       directionality: fact.directionality,
+      selected: (
+        fact.fact_revision_ref === view.selectedRelationFactRef
+        || path.work_path_candidate_ref === view.selectedRelationPathRef
+      ),
     }];
   });
 }
@@ -530,6 +633,42 @@ function relationFamilyLabel(family: string): string {
     harms: "害",
     punishes: "刑",
   } as Record<string, string>)[family] || family;
+}
+
+function relationRuleLabel(ruleId: string): string {
+  return ({
+    visible_stem_same_layer: "同层显干关系",
+    five_element_potential_field: "五行潜在场",
+    branch_relation_registered: "地支注册关系",
+    branch_contains_hidden_stem: "地支藏干承载",
+    same_pillar_position: "同柱位置关系",
+  } as Record<string, string>)[ruleId] || ruleId;
+}
+
+
+function relationLegalityLabel(
+  fact: RelationFactProjection,
+): string {
+  return ({
+    legal_direct: "合法直连",
+    legal_mediated: "经证据媒介",
+    containment: "藏干承载",
+    positional: "同柱位置",
+    unsupported: "证据不足，已隔离",
+    illegal_cross_layer: "非法跨层，已隔离",
+  } as Record<string, string>)[fact.legality_class] || fact.legality_class;
+}
+
+
+function professionalStageLabel(value: string): string {
+  return ({
+    structural_candidate: "结构候选，作用待定",
+    structural_relation: "结构关系，作用待定",
+    supporting_evidence_only: "支持证据，不独立成路径",
+    containment_evidence: "承载事实，不独立成路径",
+    positional_evidence: "位置事实，不独立成路径",
+    relation_fact_only: "关系事实层",
+  } as Record<string, string>)[value] || value;
 }
 
 
@@ -630,6 +769,7 @@ function renderMingliLab(view: ExperienceViewModel): string {
       view.canvasContext,
       view.cognition.status === "preparing",
       relationWorkCanvasOverlay(view),
+      view.relationLabMode,
     )}</section>
   </div>`;
 }
@@ -705,6 +845,7 @@ export function renderReadOnlyCanvas(
   context: CanvasContextPack | null,
   pathTaskRunning: boolean,
   relationWorkOverlay: DreamGameCandidateRelation[] = [],
+  relationWorkMode: "facts" | "candidates" | "professional" | null = null,
 ): string {
   const stage = canvas.stages[ui.canvasStage];
   const allowedVisibility = canvas.renderer_policy.available_visibility_layers;
@@ -739,8 +880,13 @@ export function renderReadOnlyCanvas(
     || displayLayers[0];
   const visibleRelationRefs = new Set(layer?.relation_refs || []);
   const visiblePathRefs = new Set(layer?.path_refs || []);
-  const activeRelations = stage.spec.relations.filter((item) => visibleRelationRefs.has(item.relation_ref));
-  const activePaths = stage.spec.paths.filter((item) => visiblePathRefs.has(item.path_ref));
+  const relationWorkManaged = relationWorkMode !== null;
+  const activeRelations = relationWorkManaged
+    ? []
+    : stage.spec.relations.filter((item) => visibleRelationRefs.has(item.relation_ref));
+  const activePaths = relationWorkManaged
+    ? []
+    : stage.spec.paths.filter((item) => visiblePathRefs.has(item.path_ref));
   const range = canvas.source.luck_year_range.length === 2
     ? `${canvas.source.luck_year_range[0]}–${canvas.source.luck_year_range[1]}`
     : "当前阶段";
@@ -761,7 +907,14 @@ export function renderReadOnlyCanvas(
       </div>
     </div>
 
-    <div class="canvas-lens-controls">
+    ${relationWorkManaged ? `<div class="lab-managed-canvas-note">
+      <strong>${relationWorkMode === "candidates" ? "路径聚焦" : relationWorkMode === "facts" ? "关系库存" : "专业准入"}</strong>
+      <span>${relationWorkMode === "candidates"
+        ? "只绘制合法性审计通过的优先候选与一条竞争路径。"
+        : relationWorkMode === "facts"
+          ? "只绘制分类后允许进入库存视图的关系事实。"
+          : "只接受已经完成专业准入的正式路径；当前不会从候选线补画结论。"}</span>
+    </div>` : `<div class="canvas-lens-controls">
       <div class="layer-switch" role="tablist" aria-label="命局观察镜头">
         ${displayLayers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available || item.layer_id === "overview" || item.layer_id === "work_path" ? "" : " disabled"}>
           <span>${escapeHtml(item.label)}</span>${item.count > 0 ? `<small>${item.count}</small>` : ""}
@@ -770,7 +923,7 @@ export function renderReadOnlyCanvas(
       <div class="visibility-switch" role="tablist" aria-label="关系披露层">
         ${allowedVisibility.map((item) => `<button type="button" role="tab" data-canvas-visibility="${item}" aria-selected="${item === visibility}" class="${item === visibility ? "active" : ""}">${visibilityLabel(item)}</button>`).join("")}
       </div>
-    </div>
+    </div>`}
 
     <div class="canvas-board" data-layer="${escapeAttr(layer?.layer_id || "")}" data-visibility="${escapeAttr(visibility)}">
       <div class="six-pillar-scroll">
@@ -788,7 +941,9 @@ export function renderReadOnlyCanvas(
           ])),
         )}
       </div>
-      <p class="layer-caption"><strong>${escapeHtml(layer?.label || "当前图层")}</strong>${escapeHtml(layer?.description || "当前没有可显示的关系。")}</p>
+      <p class="layer-caption"><strong>${escapeHtml(relationWorkManaged ? "合法关系投影" : layer?.label || "当前图层")}</strong>${escapeHtml(relationWorkManaged
+        ? "六柱坐标仍来自正式 OneCanvas；画线只来自当前 Lab 审计结果。"
+        : layer?.description || "当前没有可显示的关系。")}</p>
     </div>
 
     <div class="canvas-reading-grid">
@@ -860,8 +1015,9 @@ interface DreamGameCandidateRelation {
   source_node_ref: string;
   target_node_ref: string;
   formal: boolean;
-  kind?: "candidate" | "fact";
+  kind?: "candidate" | "competition" | "fact";
   directionality?: "directed" | "symmetric";
+  selected?: boolean;
 }
 
 export function renderDreamGameCanvas(
@@ -943,11 +1099,12 @@ function renderCanonicalCanvasScene(
     const target = anchors.get(relation.target_node_ref);
     if (!source || !target) return "";
     const route = routeCanvasRelation(source, target, index + relations.length);
-    const kind = relation.kind === "fact" ? "fact" : "candidate";
+    const kind = relation.kind || "candidate";
     const marker = relation.directionality === "symmetric"
       ? ""
       : ` marker-end="url(#canvas-${kind}-arrow)"`;
-    return `<g class="canvas-${kind}-relation" data-${kind}-relation="${escapeAttr(relation.relation_ref)}">
+    return `<g class="canvas-${kind}-relation${relation.selected ? " is-selected" : ""}" data-${kind}-relation="${escapeAttr(relation.relation_ref)}" data-relation-fact="${escapeAttr(relation.relation_ref)}" tabindex="0" role="button" aria-label="${escapeAttr(`${relation.label}，查看事实与溯源`)}">
+      <path class="canvas-relation-hit-target" d="${route.d}"></path>
       <path d="${route.d}"${marker}></path>
       <text x="${route.labelX}" y="${route.labelY}" text-anchor="middle">${escapeHtml(relation.label)}</text>
     </g>`;
@@ -966,6 +1123,7 @@ function renderCanonicalCanvasScene(
       <marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
       <marker id="canvas-path-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z"></path></marker>
       <marker id="canvas-candidate-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
+      <marker id="canvas-competition-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
       <marker id="canvas-fact-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
     </defs>
     <g class="canvas-scene-tracks" aria-hidden="true"><line x1="44" y1="185" x2="1276" y2="185"></line><line x1="44" y1="390" x2="1276" y2="390"></line><text x="46" y="171">天干</text><text x="46" y="376">地支</text></g>

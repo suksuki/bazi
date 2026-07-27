@@ -16,7 +16,9 @@ from experience.life_tree_questions import (
     select_life_tree_questions,
 )
 from experience.relation_work_projection import (
+    RelationFactProjectionItem,
     RelationWorkProjectionView,
+    WorkPathProjectionItem,
     project_relation_work_for_consumer,
 )
 from experience.store import TheaterStore
@@ -837,11 +839,15 @@ class RelationWorkP0Service:
             participant_id=participant_id,
             account_role=account_role,
         )
+        relation_audit = _relation_lab_audit(runtime.lab_projection)
+        path_focus = _relation_path_focus(runtime.lab_projection)
         return {
             "schema_version": "deepbazi.mingli-lab-lifecase.p1.v1",
             "data_source": "CURRENT_REAL_LIFECASE",
             "case_id": case_id,
             "relation_work": runtime.lab_projection.model_dump(mode="json"),
+            "relation_audit": relation_audit,
+            "path_focus": path_focus,
             "canonical_canvas": runtime.canonical_canvas,
             "canonical_timing": _canonical_timing_summary(
                 runtime.canonical_canvas
@@ -1025,6 +1031,206 @@ class RelationWorkP0Service:
             raise RelationWorkP0Unavailable(
                 "canonical_relation_work_feature_disabled"
             )
+
+
+def _relation_lab_audit(
+    projection: RelationWorkProjectionView,
+) -> dict[str, object]:
+    facts = projection.factual_view
+    class_counts = Counter(item.legality_class for item in facts)
+    quarantined = [
+        _relation_audit_fact(item)
+        for item in facts
+        if item.provenance_status in {"quarantined", "illegal", "incomplete"}
+    ]
+    return {
+        "schema_version": "deepbazi.relation-legality-audit.v1",
+        "policy_version": (
+            facts[0].legality_policy_version if facts else ""
+        ),
+        "total_relation_facts": len(facts),
+        "legal_direct_edges": class_counts["legal_direct"],
+        "legal_mediated_relations": class_counts["legal_mediated"],
+        "containment_edges": class_counts["containment"],
+        "positional_edges": class_counts["positional"],
+        "unsupported_edges": class_counts["unsupported"],
+        "illegal_cross_layer_edges": class_counts["illegal_cross_layer"],
+        "missing_rule_id": sum(
+            "rule_id" in item.missing_requirements for item in facts
+        ),
+        "missing_provenance": sum(
+            item.provenance_status == "incomplete" for item in facts
+        ),
+        "missing_participant_constraints": sum(
+            any(
+                requirement in {
+                    "manifestation_or_mediation_evidence",
+                    "registered_cross_layer_mediator",
+                    "branch_to_hidden_stem_containment_shape",
+                    "same_column_stem_branch_position_shape",
+                    "branch_relation_requires_branch_participants",
+                }
+                for requirement in item.missing_requirements
+            )
+            for item in facts
+        ),
+        "visible_inventory_fact_refs": [
+            item.fact_revision_ref for item in facts if item.inventory_visible
+        ],
+        "quarantined_fact_count": len(quarantined),
+        "quarantined_facts": quarantined,
+        "illegal_facts": [
+            item
+            for item in quarantined
+            if item["legality_class"] == "illegal_cross_layer"
+        ],
+        "default_paths_consume_quarantine": False,
+    }
+
+
+def _relation_path_focus(
+    projection: RelationWorkProjectionView,
+) -> dict[str, object]:
+    eligible_fact_refs = {
+        item.fact_revision_ref
+        for item in projection.factual_view
+        if item.default_path_eligible
+    }
+    all_paths = list(projection.candidate_path_view)
+    eligible_paths = [
+        path
+        for path in all_paths
+        if path.ordered_fact_revision_refs
+        and all(
+            fact_ref in eligible_fact_refs
+            for fact_ref in path.ordered_fact_revision_refs
+        )
+    ]
+    competition_group_counts = Counter(
+        path.competing_path_group_ref
+        for path in eligible_paths
+        if path.competing_path_group_ref
+    )
+    paths = sorted(
+        eligible_paths,
+        key=lambda path: _path_focus_sort_key(
+            path,
+            competition_group_counts=competition_group_counts,
+        ),
+    )
+    primary = paths[0] if paths else None
+    competition = None
+    if primary and primary.competing_path_group_ref:
+        competition = next(
+            (
+                item
+                for item in paths[1:]
+                if item.competing_path_group_ref
+                == primary.competing_path_group_ref
+            ),
+            None,
+        )
+    visible = [
+        item
+        for item in (primary, competition)
+        if item is not None
+    ]
+    return {
+        "schema_version": "deepbazi.lab-path-focus.v1",
+        "selection_policy": "diagnostic_structural_focus.v2",
+        "selection_is_professional_ranking": False,
+        "main_work_declared": False,
+        "primary_path_ref": (
+            primary.work_path_candidate_ref if primary else ""
+        ),
+        "competition_path_ref": (
+            competition.work_path_candidate_ref if competition else ""
+        ),
+        "visible_path_refs": [
+            item.work_path_candidate_ref for item in visible
+        ],
+        "hidden_candidate_count": max(0, len(all_paths) - len(visible)),
+        "primary_shape": (
+            "single_segment_candidate"
+            if primary and len(primary.ordered_fact_revision_refs) == 1
+            else "multi_segment_candidate"
+            if primary
+            else "none"
+        ),
+        "key_blocker": _key_path_blocker(primary),
+        "empty_state": (
+            ""
+            if primary
+            else "当前盘没有通过直连与溯源校验的结构候选。"
+        ),
+    }
+
+
+def _path_focus_sort_key(
+    path: WorkPathProjectionItem,
+    *,
+    competition_group_counts: Counter[str],
+) -> tuple[int, int, int, int, int, str]:
+    coordinates = path.participant_coordinates
+    slot_order = {
+        "year": 0,
+        "month": 1,
+        "day": 2,
+        "hour": 3,
+        "luck": 4,
+    }
+    indices = [
+        slot_order[item.get("slot", "")]
+        for item in coordinates
+        if item.get("slot", "") in slot_order
+    ]
+    span = max(indices) - min(indices) if indices else 99
+    return (
+        0
+        if competition_group_counts[path.competing_path_group_ref] >= 2
+        else 1,
+        0 if path.competing_path_group_ref else 1,
+        -len(path.ordered_fact_revision_refs),
+        len(path.blocker_types),
+        span,
+        path.work_path_candidate_ref,
+    )
+
+
+def _key_path_blocker(
+    path: WorkPathProjectionItem | None,
+) -> dict[str, str]:
+    if path is None:
+        return {
+            "blocker_type": "no_legal_candidate",
+            "message": "没有合格直连事实，不能构造候选路径。",
+        }
+    blocker = path.blocker_types[0] if path.blocker_types else (
+        "professional_effect_not_admitted"
+    )
+    return {
+        "blocker_type": blocker,
+        "message": {
+            "capacity_unresolved": "承载容量尚未核证。",
+            "effect_unresolved": "实际作用尚未获专业核证。",
+            "usability_unresolved": "现实可用性尚未核证。",
+            "professional_effect_not_admitted": "尚未通过专业作用准入。",
+        }.get(blocker, "仍有结构条件需要核证。"),
+    }
+
+
+def _relation_audit_fact(
+    fact: RelationFactProjectionItem,
+) -> dict[str, object]:
+    return {
+        "relation_fact_id": fact.relation_fact_id,
+        "relation_kind": fact.relation_kind,
+        "participant_refs": fact.participant_refs,
+        "participant_kinds": fact.participant_kinds,
+        "legality_class": fact.legality_class,
+        "provenance_status": fact.provenance_status,
+        "missing_requirements": fact.missing_requirements,
+    }
 
 
 def _primary_reality_question(

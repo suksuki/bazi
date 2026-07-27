@@ -118,16 +118,44 @@ export interface RealLifeTreeBootstrap {
 }
 
 export interface RelationFactProjection {
+  relation_fact_id: string;
   fact_revision_ref: string;
   fact_key_ref: string;
   relation_family: string;
+  relation_kind: string;
+  participant_refs: string[];
+  participant_kinds: string[];
   participant_coordinates: Array<{
     node_ref: string;
+    scope: string;
     slot: string;
     level: string;
     component: string;
+    temporal_snapshot_ref?: string;
   }>;
+  participant_roles: Record<string, string>;
   directionality: "directed" | "symmetric";
+  direct_or_mediated: "direct" | "mediated" | "not_applicable" | "unsupported" | "illegal";
+  mediator_refs: string[];
+  prerequisite_refs: string[];
+  exclusion_refs: string[];
+  source_layer: string;
+  time_scope: string;
+  professional_stage: string;
+  rule_id: string;
+  rule_version: string;
+  provenance_status: "complete" | "incomplete" | "quarantined" | "illegal";
+  legality_class:
+    | "legal_direct"
+    | "legal_mediated"
+    | "containment"
+    | "positional"
+    | "unsupported"
+    | "illegal_cross_layer";
+  legality_policy_version: string;
+  missing_requirements: string[];
+  default_path_eligible: boolean;
+  inventory_visible: boolean;
   fact_state: string;
   activation_state: string;
   temporal_stage: string;
@@ -175,6 +203,57 @@ export interface RealMingliLabBootstrap {
   data_source: "CURRENT_REAL_LIFECASE";
   case_id: string;
   relation_work: RelationWorkProjection;
+  relation_audit: {
+    schema_version: string;
+    policy_version: string;
+    total_relation_facts: number;
+    legal_direct_edges: number;
+    legal_mediated_relations: number;
+    containment_edges: number;
+    positional_edges: number;
+    unsupported_edges: number;
+    illegal_cross_layer_edges: number;
+    missing_rule_id: number;
+    missing_provenance: number;
+    missing_participant_constraints: number;
+    visible_inventory_fact_refs: string[];
+    quarantined_fact_count: number;
+    quarantined_facts: Array<{
+      relation_fact_id: string;
+      relation_kind: string;
+      participant_refs: string[];
+      participant_kinds: string[];
+      legality_class: string;
+      provenance_status: string;
+      missing_requirements: string[];
+    }>;
+    illegal_facts: Array<{
+      relation_fact_id: string;
+      relation_kind: string;
+      participant_refs: string[];
+      participant_kinds: string[];
+      legality_class: string;
+      provenance_status: string;
+      missing_requirements: string[];
+    }>;
+    default_paths_consume_quarantine: false;
+  };
+  path_focus: {
+    schema_version: string;
+    selection_policy: string;
+    selection_is_professional_ranking: false;
+    main_work_declared: false;
+    primary_path_ref: string;
+    competition_path_ref: string;
+    visible_path_refs: string[];
+    hidden_candidate_count: number;
+    primary_shape: "single_segment_candidate" | "multi_segment_candidate" | "none";
+    key_blocker: {
+      blocker_type: string;
+      message: string;
+    };
+    empty_state: string;
+  };
   canonical_timing: {
     default_stage: string;
     stages: Record<string, { summary: string }>;

@@ -846,8 +846,8 @@ function renderRelationWorkControls(view) {
   return `<section class="canonical-relation-work" aria-label="\u771F\u5B9E\u5173\u7CFB\u4E0E\u5019\u9009\u505A\u529F">
     <header class="relation-work-toolbar">
       <nav aria-label="\u5173\u7CFB\u7814\u7A76\u5C42">
-        ${relationModeButton("facts", "\u4E8B\u5B9E\u5173\u7CFB", view.relationLabMode)}
-        ${relationModeButton("candidates", "\u5019\u9009\u505A\u529F", view.relationLabMode)}
+        ${relationModeButton("candidates", "\u8DEF\u5F84\u805A\u7126", view.relationLabMode)}
+        ${relationModeButton("facts", "\u5173\u7CFB\u5E93\u5B58", view.relationLabMode)}
         ${relationModeButton("professional", "\u4E13\u4E1A\u51C6\u5165", view.relationLabMode)}
       </nav>
       <button type="button" data-relation-restore-natal>\u6062\u590D\u539F\u5C40</button>
@@ -869,28 +869,48 @@ function renderRelationWorkBody(view, lab) {
     `).join("")}</div>`;
   }
   if (view.relationLabMode === "facts") {
-    return `<div class="relation-work-facts">${projection.factual_view.slice(0, 8).map((fact) => `
-        <article>
+    const facts = projection.factual_view.filter((fact) => fact.inventory_visible);
+    const selectedFact2 = selectedRelationFact(view, facts);
+    return `<div class="relation-work-audit">
+        <span>\u5408\u6CD5\u76F4\u8FDE ${lab.relation_audit.legal_direct_edges}</span>
+        <span>\u5A92\u4ECB\u8BC1\u636E ${lab.relation_audit.legal_mediated_relations}</span>
+        <span>\u627F\u8F7D/\u4F4D\u7F6E ${lab.relation_audit.containment_edges + lab.relation_audit.positional_edges}</span>
+        <span>\u9694\u79BB ${lab.relation_audit.quarantined_fact_count}</span>
+      </div>
+      <div class="relation-work-facts">${facts.map((fact) => `
+        <button type="button" data-relation-fact="${escapeAttr4(fact.fact_revision_ref)}" class="${fact.fact_revision_ref === selectedFact2?.fact_revision_ref ? "is-selected" : ""}">
           <strong>${escapeHtml3(fact.participant_coordinates.map(relationCoordinateLabel).join(" \u2192 "))}</strong>
-          <span>${escapeHtml3(relationFamilyLabel(fact.relation_family))} \xB7 ${escapeHtml3(relationActivationLabel(fact.activation_state))}</span>
-          <small>${fact.effect_status === "professionally_resolved" ? "\u4F5C\u7528\u5DF2\u83B7\u51C6" : "\u5173\u7CFB\u4E8B\u5B9E\u6210\u7ACB\uFF0C\u4F5C\u7528\u5F85\u5B9A"}</small>
-        </article>
+          <span>${escapeHtml3(relationFamilyLabel(fact.relation_family))} \xB7 ${escapeHtml3(relationLegalityLabel(fact))}</span>
+          <small>${fact.effect_status === "professionally_resolved" ? "\u4F5C\u7528\u5DF2\u83B7\u51C6" : "\u4E8B\u5B9E\u53EF\u89C1\uFF0C\u4F5C\u7528\u5F85\u5B9A"}</small>
+        </button>
       `).join("")}</div>
+      ${selectedFact2 ? renderRelationFactInspector(selectedFact2) : ""}
+      <p class="relation-work-quarantine-note">\u672A\u663E\u5316\u6F5C\u5728\u5173\u7CFB\u4E0E\u975E\u6CD5\u8DE8\u5C42\u5173\u7CFB\u4E0D\u53C2\u4E0E\u753B\u7EBF\u6216\u5019\u9009\u8DEF\u5F84\uFF1B\u5F53\u524D\u9694\u79BB ${lab.relation_audit.quarantined_fact_count} \u6761\u3002</p>
       ${renderLabLearningQuestions(lab.learning_questions)}`;
   }
-  const paths = projection.candidate_path_view;
+  const visibleRefs = new Set(lab.path_focus.visible_path_refs);
+  const paths = projection.candidate_path_view.filter(
+    (item) => visibleRefs.has(item.work_path_candidate_ref)
+  );
   const selected = paths.find(
     (item) => item.work_path_candidate_ref === view.selectedRelationPathRef
+  ) || paths.find(
+    (item) => item.work_path_candidate_ref === lab.path_focus.primary_path_ref
   ) || paths[0];
+  const selectedFact = selectedRelationFact(
+    view,
+    projection.factual_view.filter((fact) => selected?.ordered_fact_revision_refs.includes(fact.fact_revision_ref))
+  );
   return `<div class="relation-work-candidates">
     <nav aria-label="\u5F53\u524D\u76D8\u652F\u6301\u7684\u5019\u9009\u505A\u529F">
       ${paths.map((path) => `<button
         type="button"
         data-relation-path="${escapeAttr4(path.work_path_candidate_ref)}"
         class="${path.work_path_candidate_ref === selected?.work_path_candidate_ref ? "is-selected" : ""}"
-      ><strong>${escapeHtml3(path.label)}</strong><span>${path.ordered_fact_revision_refs.length} \u6BB5\u4E8B\u5B9E \xB7 ${path.blocker_types.length} \u9879\u5F85\u5B9A</span></button>`).join("")}
+      ><strong>${escapeHtml3(path.label)}</strong><span>${path.work_path_candidate_ref === lab.path_focus.primary_path_ref ? "\u4F18\u5148\u805A\u7126" : "\u7ADE\u4E89\u8DEF\u5F84"} \xB7 ${path.ordered_fact_revision_refs.length === 1 ? "\u5355\u6BB5\u5019\u9009" : `${path.ordered_fact_revision_refs.length} \u6BB5\u5019\u9009`}</span></button>`).join("")}
     </nav>
-    ${selected ? renderWorkPathDetail(selected) : `<div class="relation-work-empty">\u5F53\u524D LifeCase \u6CA1\u6709\u6EE1\u8DB3\u7ED3\u6784\u8BC1\u636E\u7684\u5019\u9009\u505A\u529F\u3002</div>`}
+    ${selected ? `${renderWorkPathDetail(selected, lab.path_focus.key_blocker.message)}
+        ${selectedFact ? renderRelationFactInspector(selectedFact) : ""}` : `<div class="relation-work-empty">${escapeHtml3(lab.path_focus.empty_state || "\u5F53\u524D LifeCase \u6CA1\u6709\u6EE1\u8DB3\u76F4\u8FDE\u4E0E\u6EAF\u6E90\u8BC1\u636E\u7684\u5019\u9009\u505A\u529F\u3002")}</div>`}
   </div>`;
 }
 function renderLabLearningQuestions(questions) {
@@ -909,9 +929,9 @@ function renderLabLearningQuestions(questions) {
     </div>
   </section>`;
 }
-function renderWorkPathDetail(path) {
+function renderWorkPathDetail(path, keyBlocker) {
   return `<article class="relation-work-path-detail">
-    <header><p>\u7ED3\u6784\u5019\u9009</p><h2>${escapeHtml3(path.label)}</h2></header>
+    <header><p>${path.ordered_fact_revision_refs.length === 1 ? "\u5355\u6BB5\u5019\u9009" : "\u7ED3\u6784\u5019\u9009"}</p><h2>${escapeHtml3(path.label)}</h2></header>
     <div class="relation-work-statuses">
       <span>\u7ED3\u6784\u5019\u9009</span>
       <span>\u4F5C\u7528\u5F85\u5B9A</span>
@@ -923,26 +943,80 @@ function renderWorkPathDetail(path) {
       <dt>\u53C2\u4E0E\u5750\u6807</dt><dd>${escapeHtml3(path.participant_coordinates.map(relationCoordinateLabel).join(" \u2192 "))}</dd>
       <dt>\u7ADE\u4E89\u5171\u4EAB</dt><dd>${escapeHtml3(path.shared_resource_refs.length ? path.shared_resource_refs.map(compactRef).join("\u3001") : "\u5F53\u524D\u672A\u53D1\u73B0\u5171\u4EAB\u53C2\u4E0E\u8005")}</dd>
       <dt>\u74F6\u9888</dt><dd>${escapeHtml3(path.bottleneck_node_refs.length ? path.bottleneck_node_refs.map(compactRef).join("\u3001") : "\u627F\u8F7D\u4E0E\u6548\u679C\u8BC1\u636E\u4ECD\u5F85\u6838\u9A8C")}</dd>
-      <dt>\u963B\u65AD</dt><dd>${escapeHtml3(path.blocker_types.length ? path.blocker_types.map(workPathBlockerLabel).join("\uFF1B") : "\u65E0\u7ED3\u6784\u963B\u65AD")}</dd>
+      <dt>\u5173\u952E\u7F3A\u53E3</dt><dd>${escapeHtml3(keyBlocker)}</dd>
+      <dt>\u963B\u65AD\u8BB0\u5F55</dt><dd>${escapeHtml3(path.blocker_types.length ? path.blocker_types.map(workPathBlockerLabel).join("\uFF1B") : "\u672A\u8BB0\u5F55\u5176\u4ED6\u7ED3\u6784\u963B\u65AD")}</dd>
     </dl>
     <small>\u5019\u9009\u7EBF\u53EA\u8868\u793A\u5F53\u524D\u8BC1\u636E\u4E0B\u7684\u7ED3\u6784\u8FDE\u7EED\u6027\uFF0C\u4E0D\u8868\u793A\u6709\u6548\u505A\u529F\u3001\u4E3B\u529F\u6216\u4E13\u4E1A\u6392\u540D\u3002</small>
   </article>`;
 }
+function selectedRelationFact(view, facts) {
+  return facts.find(
+    (item) => item.fact_revision_ref === view.selectedRelationFactRef
+  ) || facts[0];
+}
+function renderRelationFactInspector(fact) {
+  return `<article class="relation-fact-inspector" aria-live="polite">
+    <header><p>\u4E8B\u5B9E\u4E0E\u6EAF\u6E90</p><strong>${escapeHtml3(fact.participant_coordinates.map(relationCoordinateLabel).join(" \u2192 "))} \xB7 ${escapeHtml3(relationFamilyLabel(fact.relation_family))}</strong></header>
+    <dl>
+      <dt>\u5173\u7CFB\u4E8B\u5B9E</dt><dd>${escapeHtml3(compactRef(fact.relation_fact_id))}</dd>
+      <dt>\u89C4\u5219</dt><dd>${escapeHtml3(`${relationRuleLabel(fact.rule_id)} \xB7 ${fact.rule_version}`)}</dd>
+      <dt>\u53C2\u4E0E\u5C42</dt><dd>${escapeHtml3(fact.participant_kinds.join(" \u2192 "))}</dd>
+      <dt>\u8868\u8FBE\u65B9\u5F0F</dt><dd>${escapeHtml3(relationLegalityLabel(fact))}</dd>
+      <dt>\u65F6\u57DF</dt><dd>${escapeHtml3(`${fact.source_layer} / ${fact.time_scope}`)}</dd>
+      <dt>\u4E13\u4E1A\u9636\u6BB5</dt><dd>${escapeHtml3(professionalStageLabel(fact.professional_stage))}</dd>
+    </dl>
+    <details>
+      <summary>\u67E5\u770B\u89C4\u5219\u8EAB\u4EFD\u4E0E\u8BC1\u636E\u5F15\u7528</summary>
+      <dl>
+        <dt>\u89C4\u5219 ID</dt><dd>${escapeHtml3(fact.rule_id)}</dd>
+        <dt>\u5B8C\u6574\u4E8B\u5B9E ID</dt><dd>${escapeHtml3(fact.relation_fact_id)}</dd>
+        <dt>\u5FC5\u8981\u4F9D\u636E</dt><dd>${escapeHtml3(fact.prerequisite_refs.map(compactRef).join("\u3001") || "\u65E0")}</dd>
+        <dt>\u8BC1\u636E</dt><dd>${escapeHtml3(fact.evidence_refs.map(compactRef).join("\u3001") || "\u65E0")}</dd>
+      </dl>
+    </details>
+    ${fact.exclusion_refs.length ? `<small>\u6392\u9664\uFF1A${escapeHtml3(fact.exclusion_refs.join("\uFF1B"))}</small>` : ""}
+  </article>`;
+}
 function relationWorkCanvasOverlay(view) {
-  const projection = view.realMingliLab?.relation_work;
-  if (!projection || view.relationLabMode === "professional") return [];
-  let facts = projection.factual_view.slice(0, 8);
-  let kind = "fact";
+  const lab = view.realMingliLab;
+  const projection = lab?.relation_work;
+  if (!lab || !projection || view.relationLabMode === "professional") return [];
   if (view.relationLabMode === "candidates") {
-    const selected = projection.candidate_path_view.find(
-      (item) => item.work_path_candidate_ref === view.selectedRelationPathRef
-    ) || projection.candidate_path_view[0];
-    if (!selected) return [];
-    const refs = new Set(selected.ordered_fact_revision_refs);
-    facts = projection.factual_view.filter((item) => refs.has(item.fact_revision_ref));
-    kind = "candidate";
+    const primary = projection.candidate_path_view.find(
+      (item) => item.work_path_candidate_ref === lab.path_focus.primary_path_ref
+    );
+    const competition = projection.candidate_path_view.find(
+      (item) => item.work_path_candidate_ref === lab.path_focus.competition_path_ref
+    );
+    return [
+      ...relationOverlayForPath(view, projection.factual_view, primary, "candidate"),
+      ...relationOverlayForPath(view, projection.factual_view, competition, "competition")
+    ];
   }
-  return facts.flatMap((fact) => {
+  return projection.factual_view.filter(
+    (fact) => fact.inventory_visible
+  ).flatMap((fact) => {
+    const source = fact.participant_coordinates[0];
+    const target = fact.participant_coordinates[1];
+    if (!source || !target) return [];
+    return [{
+      relation_ref: fact.fact_revision_ref,
+      label: relationFamilyLabel(fact.relation_family),
+      source_node_ref: source.node_ref,
+      target_node_ref: target.node_ref,
+      formal: false,
+      kind: "fact",
+      directionality: fact.directionality,
+      selected: fact.fact_revision_ref === view.selectedRelationFactRef
+    }];
+  });
+}
+function relationOverlayForPath(view, facts, path, kind) {
+  if (!path) return [];
+  const refs = new Set(path.ordered_fact_revision_refs);
+  return facts.filter(
+    (fact) => refs.has(fact.fact_revision_ref)
+  ).flatMap((fact) => {
     const source = fact.participant_coordinates[0];
     const target = fact.participant_coordinates[1];
     if (!source || !target) return [];
@@ -953,7 +1027,8 @@ function relationWorkCanvasOverlay(view) {
       target_node_ref: target.node_ref,
       formal: false,
       kind,
-      directionality: fact.directionality
+      directionality: fact.directionality,
+      selected: fact.fact_revision_ref === view.selectedRelationFactRef || path.work_path_candidate_ref === view.selectedRelationPathRef
     }];
   });
 }
@@ -991,12 +1066,33 @@ function relationFamilyLabel(family) {
     punishes: "\u5211"
   }[family] || family;
 }
-function relationActivationLabel(value) {
+function relationRuleLabel(ruleId) {
   return {
-    natal_present: "\u539F\u5C40\u5B58\u5728",
-    timing_present: "\u65F6\u8FD0\u51FA\u73B0",
-    activated: "\u5DF2\u6FC0\u6D3B",
-    latent: "\u6F5C\u5728"
+    visible_stem_same_layer: "\u540C\u5C42\u663E\u5E72\u5173\u7CFB",
+    five_element_potential_field: "\u4E94\u884C\u6F5C\u5728\u573A",
+    branch_relation_registered: "\u5730\u652F\u6CE8\u518C\u5173\u7CFB",
+    branch_contains_hidden_stem: "\u5730\u652F\u85CF\u5E72\u627F\u8F7D",
+    same_pillar_position: "\u540C\u67F1\u4F4D\u7F6E\u5173\u7CFB"
+  }[ruleId] || ruleId;
+}
+function relationLegalityLabel(fact) {
+  return {
+    legal_direct: "\u5408\u6CD5\u76F4\u8FDE",
+    legal_mediated: "\u7ECF\u8BC1\u636E\u5A92\u4ECB",
+    containment: "\u85CF\u5E72\u627F\u8F7D",
+    positional: "\u540C\u67F1\u4F4D\u7F6E",
+    unsupported: "\u8BC1\u636E\u4E0D\u8DB3\uFF0C\u5DF2\u9694\u79BB",
+    illegal_cross_layer: "\u975E\u6CD5\u8DE8\u5C42\uFF0C\u5DF2\u9694\u79BB"
+  }[fact.legality_class] || fact.legality_class;
+}
+function professionalStageLabel(value) {
+  return {
+    structural_candidate: "\u7ED3\u6784\u5019\u9009\uFF0C\u4F5C\u7528\u5F85\u5B9A",
+    structural_relation: "\u7ED3\u6784\u5173\u7CFB\uFF0C\u4F5C\u7528\u5F85\u5B9A",
+    supporting_evidence_only: "\u652F\u6301\u8BC1\u636E\uFF0C\u4E0D\u72EC\u7ACB\u6210\u8DEF\u5F84",
+    containment_evidence: "\u627F\u8F7D\u4E8B\u5B9E\uFF0C\u4E0D\u72EC\u7ACB\u6210\u8DEF\u5F84",
+    positional_evidence: "\u4F4D\u7F6E\u4E8B\u5B9E\uFF0C\u4E0D\u72EC\u7ACB\u6210\u8DEF\u5F84",
+    relation_fact_only: "\u5173\u7CFB\u4E8B\u5B9E\u5C42"
   }[value] || value;
 }
 function workPathBlockerLabel(value) {
@@ -1072,7 +1168,8 @@ function renderMingliLab(view) {
     view.ui,
     view.canvasContext,
     view.cognition.status === "preparing",
-    relationWorkCanvasOverlay(view)
+    relationWorkCanvasOverlay(view),
+    view.relationLabMode
   )}</section>
   </div>`;
 }
@@ -1130,7 +1227,7 @@ function renderDeterministicCanvasSkeleton(envelope2, cognition2) {
     <p><i></i>${escapeHtml3(cognition2.message)}</p>
   </div>`;
 }
-function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning, relationWorkOverlay = []) {
+function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning, relationWorkOverlay = [], relationWorkMode = null) {
   const stage = canvas2.stages[ui2.canvasStage];
   const allowedVisibility = canvas2.renderer_policy.available_visibility_layers;
   const requestedVisibility = ui2.canvasVisibilityLayer;
@@ -1152,8 +1249,9 @@ function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning, relationWo
   const layer = displayLayers.find((item) => item.layer_id === ui2.canvasLayer) || displayLayers.find((item) => item.layer_id === stage.default_layer_id) || displayLayers[0];
   const visibleRelationRefs = new Set(layer?.relation_refs || []);
   const visiblePathRefs = new Set(layer?.path_refs || []);
-  const activeRelations = stage.spec.relations.filter((item) => visibleRelationRefs.has(item.relation_ref));
-  const activePaths = stage.spec.paths.filter((item) => visiblePathRefs.has(item.path_ref));
+  const relationWorkManaged = relationWorkMode !== null;
+  const activeRelations = relationWorkManaged ? [] : stage.spec.relations.filter((item) => visibleRelationRefs.has(item.relation_ref));
+  const activePaths = relationWorkManaged ? [] : stage.spec.paths.filter((item) => visiblePathRefs.has(item.path_ref));
   const range = canvas2.source.luck_year_range.length === 2 ? `${canvas2.source.luck_year_range[0]}\u2013${canvas2.source.luck_year_range[1]}` : "\u5F53\u524D\u9636\u6BB5";
   return `<div class="temporal-viewer" data-canvas-stage-root="${escapeAttr4(ui2.canvasStage)}">
     <div class="temporal-toolbar">
@@ -1171,7 +1269,10 @@ function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning, relationWo
       </div>
     </div>
 
-    <div class="canvas-lens-controls">
+    ${relationWorkManaged ? `<div class="lab-managed-canvas-note">
+      <strong>${relationWorkMode === "candidates" ? "\u8DEF\u5F84\u805A\u7126" : relationWorkMode === "facts" ? "\u5173\u7CFB\u5E93\u5B58" : "\u4E13\u4E1A\u51C6\u5165"}</strong>
+      <span>${relationWorkMode === "candidates" ? "\u53EA\u7ED8\u5236\u5408\u6CD5\u6027\u5BA1\u8BA1\u901A\u8FC7\u7684\u4F18\u5148\u5019\u9009\u4E0E\u4E00\u6761\u7ADE\u4E89\u8DEF\u5F84\u3002" : relationWorkMode === "facts" ? "\u53EA\u7ED8\u5236\u5206\u7C7B\u540E\u5141\u8BB8\u8FDB\u5165\u5E93\u5B58\u89C6\u56FE\u7684\u5173\u7CFB\u4E8B\u5B9E\u3002" : "\u53EA\u63A5\u53D7\u5DF2\u7ECF\u5B8C\u6210\u4E13\u4E1A\u51C6\u5165\u7684\u6B63\u5F0F\u8DEF\u5F84\uFF1B\u5F53\u524D\u4E0D\u4F1A\u4ECE\u5019\u9009\u7EBF\u8865\u753B\u7ED3\u8BBA\u3002"}</span>
+    </div>` : `<div class="canvas-lens-controls">
       <div class="layer-switch" role="tablist" aria-label="\u547D\u5C40\u89C2\u5BDF\u955C\u5934">
         ${displayLayers.map((item) => `<button type="button" role="tab" data-canvas-layer="${escapeAttr4(item.layer_id)}" aria-selected="${item.layer_id === layer?.layer_id}" class="${item.layer_id === layer?.layer_id ? "active" : ""}"${item.available || item.layer_id === "overview" || item.layer_id === "work_path" ? "" : " disabled"}>
           <span>${escapeHtml3(item.label)}</span>${item.count > 0 ? `<small>${item.count}</small>` : ""}
@@ -1180,7 +1281,7 @@ function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning, relationWo
       <div class="visibility-switch" role="tablist" aria-label="\u5173\u7CFB\u62AB\u9732\u5C42">
         ${allowedVisibility.map((item) => `<button type="button" role="tab" data-canvas-visibility="${item}" aria-selected="${item === visibility}" class="${item === visibility ? "active" : ""}">${visibilityLabel(item)}</button>`).join("")}
       </div>
-    </div>
+    </div>`}
 
     <div class="canvas-board" data-layer="${escapeAttr4(layer?.layer_id || "")}" data-visibility="${escapeAttr4(visibility)}">
       <div class="six-pillar-scroll">
@@ -1198,7 +1299,7 @@ function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning, relationWo
     ]))
   )}
       </div>
-      <p class="layer-caption"><strong>${escapeHtml3(layer?.label || "\u5F53\u524D\u56FE\u5C42")}</strong>${escapeHtml3(layer?.description || "\u5F53\u524D\u6CA1\u6709\u53EF\u663E\u793A\u7684\u5173\u7CFB\u3002")}</p>
+      <p class="layer-caption"><strong>${escapeHtml3(relationWorkManaged ? "\u5408\u6CD5\u5173\u7CFB\u6295\u5F71" : layer?.label || "\u5F53\u524D\u56FE\u5C42")}</strong>${escapeHtml3(relationWorkManaged ? "\u516D\u67F1\u5750\u6807\u4ECD\u6765\u81EA\u6B63\u5F0F OneCanvas\uFF1B\u753B\u7EBF\u53EA\u6765\u81EA\u5F53\u524D Lab \u5BA1\u8BA1\u7ED3\u679C\u3002" : layer?.description || "\u5F53\u524D\u6CA1\u6709\u53EF\u663E\u793A\u7684\u5173\u7CFB\u3002")}</p>
     </div>
 
     <div class="canvas-reading-grid">
@@ -1242,31 +1343,6 @@ function renderDreamVerificationCanvas(canvas2, verification) {
     </div>
   </section>`;
 }
-function renderDreamGameCanvas(canvas2, lens, candidateNodeRefs = [], candidateRelations = []) {
-  const stage = canvas2.stages.natal || canvas2.stages[canvas2.default_stage];
-  const layer = stage.layers.find((item) => item.layer_id === lens) || stage.layers.find((item) => item.layer_id === "overview") || stage.layers[0];
-  const formalRelationRefs = new Set(layer?.formal_relation_refs || []);
-  const formalPathRefs = new Set(layer?.formal_path_refs || []);
-  const relations = stage.spec.relations.filter((item) => formalRelationRefs.has(item.relation_ref));
-  const paths = stage.spec.paths.filter((item) => formalPathRefs.has(item.path_ref));
-  return `<section class="dream-game-onecanvas" data-dream-game-lens="${escapeAttr4(lens)}">
-    <p class="sr-only">\u51BB\u7ED3\u4E8E\u95EE\u9898\u53D1\u751F\u524D\u7684\u540C\u6E90\u547D\u76D8\u3002\u73A9\u5BB6\u5019\u9009\u89C2\u5BDF\u4E0D\u4F1A\u5199\u5165\u6B63\u5F0F\u547D\u7406\u4E8B\u5B9E\u3002</p>
-    <div class="six-pillar-scroll">
-      ${renderCanonicalCanvasScene(
-    stage.scene_slots,
-    stage.spec.nodes,
-    relations,
-    paths,
-    candidateNodeRefs[0] || "",
-    lens === "roots_reveal",
-    candidateRelations.filter((item) => !item.formal),
-    new Set(candidateNodeRefs)
-  )}
-    </div>
-    <p class="dream-game-canvas-caption"><strong>${escapeHtml3(layer?.label || "\u603B\u89C8")}</strong>${escapeHtml3(layer?.description || "\u53EA\u663E\u793A\u51BB\u7ED3\u6295\u5F71\u4E2D\u5DF2\u6388\u6743\u7684\u7ED3\u6784\u3002")}</p>
-    ${candidateRelations.some((item) => !item.formal) ? `<p class="dream-game-candidate-key"><i aria-hidden="true"></i>\u73A9\u5BB6\u5019\u9009\u5047\u8BF4 \xB7 \u975E\u6B63\u5F0F PathAssertion</p>` : ""}
-  </section>`;
-}
 function renderCanonicalCanvasScene(slots, nodes, relations, paths, selected, showHiddenStems, candidateRelations = [], candidateNodeRefs = /* @__PURE__ */ new Set()) {
   const nodesByRef = new Map(nodes.map((item) => [item.node_ref, item]));
   const anchors = canvasAnchorRegistry(slots, nodes);
@@ -1302,9 +1378,10 @@ function renderCanonicalCanvasScene(slots, nodes, relations, paths, selected, sh
     const target = anchors.get(relation.target_node_ref);
     if (!source || !target) return "";
     const route = routeCanvasRelation(source, target, index + relations.length);
-    const kind = relation.kind === "fact" ? "fact" : "candidate";
+    const kind = relation.kind || "candidate";
     const marker = relation.directionality === "symmetric" ? "" : ` marker-end="url(#canvas-${kind}-arrow)"`;
-    return `<g class="canvas-${kind}-relation" data-${kind}-relation="${escapeAttr4(relation.relation_ref)}">
+    return `<g class="canvas-${kind}-relation${relation.selected ? " is-selected" : ""}" data-${kind}-relation="${escapeAttr4(relation.relation_ref)}" data-relation-fact="${escapeAttr4(relation.relation_ref)}" tabindex="0" role="button" aria-label="${escapeAttr4(`${relation.label}\uFF0C\u67E5\u770B\u4E8B\u5B9E\u4E0E\u6EAF\u6E90`)}">
+      <path class="canvas-relation-hit-target" d="${route.d}"></path>
       <path d="${route.d}"${marker}></path>
       <text x="${route.labelX}" y="${route.labelY}" text-anchor="middle">${escapeHtml3(relation.label)}</text>
     </g>`;
@@ -1323,6 +1400,7 @@ function renderCanonicalCanvasScene(slots, nodes, relations, paths, selected, sh
       <marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
       <marker id="canvas-path-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z"></path></marker>
       <marker id="canvas-candidate-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
+      <marker id="canvas-competition-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
       <marker id="canvas-fact-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
     </defs>
     <g class="canvas-scene-tracks" aria-hidden="true"><line x1="44" y1="185" x2="1276" y2="185"></line><line x1="44" y1="390" x2="1276" y2="390"></line><text x="46" y="171">\u5929\u5E72</text><text x="46" y="376">\u5730\u652F</text></g>
@@ -1908,6 +1986,18 @@ function bindExperienceInteractions(root2, handlers) {
       button.dataset.relationPath || ""
     ));
   });
+  root2.querySelectorAll("[data-relation-fact]").forEach((element) => {
+    const select = () => handlers.selectRelationFact(
+      element.dataset.relationFact || ""
+    );
+    element.addEventListener("click", select);
+    element.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
+        event.preventDefault();
+        select();
+      }
+    });
+  });
   root2.querySelector("[data-relation-restore-natal]")?.addEventListener(
     "click",
     () => handlers.restoreRelationNatal()
@@ -2420,7 +2510,6 @@ function migrateGuestDreamAnchor(caseId, guestAnchorCapability, accepted) {
 }
 
 // apps/product/experience_shell/src/dream_game_api.ts
-var DREAM_GAME_BANNER = "V50\u7ED3\u6784\u9A8C\u8BC1\u573A\uFF5C\u6B63\u5F0F\u547D\u76D8\u5FEB\u7167\uFF5C\u4E0D\u8BA1\u5165\u771F\u4EBA\u679C\u5B9E";
 function gamePath(visitId, suffix) {
   return `/api/v50/dream/visits/${encodeURIComponent(visitId)}/game/${suffix}`;
 }
@@ -2434,6 +2523,33 @@ function startDreamGameRound(visitId, roundId) {
   return dreamRequest(
     gamePath(visitId, `rounds/${encodeURIComponent(roundId)}/start`),
     { method: "POST", body: "{}" },
+    visitId
+  );
+}
+function loadDreamRealityQuestion(visitId, roundId) {
+  return dreamRequest(
+    gamePath(
+      visitId,
+      `rounds/${encodeURIComponent(roundId)}/reality-question`
+    ),
+    void 0,
+    visitId
+  );
+}
+function answerDreamRealityQuestion(visitId, roundId, questionInstanceId, optionId, idempotencyKey) {
+  return dreamRequest(
+    gamePath(
+      visitId,
+      `rounds/${encodeURIComponent(roundId)}/reality-question/answer`
+    ),
+    {
+      method: "POST",
+      body: JSON.stringify({
+        question_instance_id: questionInstanceId,
+        option_id: optionId,
+        idempotency_key: idempotencyKey
+      })
+    },
     visitId
   );
 }
@@ -2798,39 +2914,32 @@ function percentage(value, total) {
 }
 
 // apps/product/experience_shell/src/dream_tree_world.ts
-var LENS_META = {
-  overview: { label: "\u603B\u89C8", objectLabel: "\u6811\u5E72\u5E74\u8F6E" },
-  five_element: { label: "\u4E94\u884C", objectLabel: "\u53F6\u9762\u4E94\u884C" },
-  roots_reveal: { label: "\u6765\u6E90", objectLabel: "\u6765\u6E90\u5750\u6807" },
-  combination_conflict: { label: "\u5408\u51B2", objectLabel: "\u679D\u8DEF\u5206\u5408" },
-  work_path: { label: "\u505A\u529F", objectLabel: "\u4E3B\u679D\u8DEF\u5F84" },
-  timing: { label: "\u65F6\u8FD0", objectLabel: "\u53F6\u95F4\u9732\u65F6" }
-};
 function renderDreamTreePorch(view) {
   const rounds = view.rounds.slice(0, 3);
   const count = Math.max(1, rounds.length);
   const activeIndex = (view.activeIndex % count + count) % count;
   const active = rounds[activeIndex];
   const abu = abuMotionFor("ghost_orbit_observer", prefersReducedMotion2());
-  const sceneAssets = [
-    DREAM_RUNTIME_ASSETS.porchBlue,
-    DREAM_RUNTIME_ASSETS.porchJade,
-    DREAM_RUNTIME_ASSETS.porchAmber
-  ];
   const treeTargets = rounds.map((round, index) => {
     const activeTree = index === activeIndex;
     const forward = (index - activeIndex + count) % count;
     const orbitSlot = forward === 0 ? 0 : forward === 1 ? 1 : -1;
-    const sceneAsset = sceneAssets[index] || sceneAssets[0];
+    const sceneAsset = DREAM_RUNTIME_ASSETS.porchAmber;
+    const profileStyle = treeProfileStyle(round.tree_visual_profile);
+    const treeImage = round.tree_available ? `<img src="${sceneAsset.source}" alt="" draggable="false" aria-hidden="true" decoding="async" fetchpriority="${activeTree ? "high" : "auto"}">` : `<i class="dream-tree-empty-mist" aria-hidden="true"></i>`;
     return `<button
-      class="dream-tree-porch-tree is-porch-actor${activeTree ? " is-active is-dream-heart" : " is-ghost"}"
+      class="dream-tree-porch-tree is-porch-actor${activeTree ? " is-active is-dream-heart" : " is-ghost"}${round.tree_available ? "" : " is-empty-mist"}"
       type="button"
       data-dream-game-command="porch-select"
       data-porch-index="${index}"
       data-orbit-slot="${orbitSlot}"
+      data-tree-profile="${escapeAttr5(round.tree_visual_profile.profile_id || "unavailable")}"
+      data-tree-available="${round.tree_available ? "true" : "false"}"
+      style="${escapeAttr5(profileStyle)}"
       aria-current="${activeTree ? "true" : "false"}"
-      aria-label="${escapeAttr5(activeTree ? `${round.anonymous_label}\u4F4D\u4E8E\u68A6\u5FC3\uFF0C\u8F7B\u89E6\u8FDB\u5165` : `\u8BA9${round.anonymous_label}\u6765\u5230\u68A6\u5FC3`)}"
-    ><img src="${sceneAsset.source}" alt="" draggable="false" aria-hidden="true" decoding="async" fetchpriority="${activeTree ? "high" : "auto"}"><span aria-hidden="true"></span></button>`;
+      aria-disabled="${round.tree_available ? "false" : "true"}"
+      aria-label="${escapeAttr5(round.tree_available ? activeTree ? `${round.anonymous_label}\u4F4D\u4E8E\u68A6\u5FC3\uFF0C\u8F7B\u89E6\u8FDB\u5165` : `\u8BA9${round.anonymous_label}\u6765\u5230\u68A6\u5FC3` : "\u8FD9\u4E2A\u96FE\u4F4D\u6682\u65F6\u6CA1\u6709\u53EF\u8FDB\u5165\u7684\u751F\u547D\u6811")}"
+    >${treeImage}<span aria-hidden="true"></span></button>`;
   }).join("");
   const whisper = view.focusedWhisper ? `<p class="dream-ghost-orbit-whisper" aria-live="polite">${escapeHtml4(view.focusedWhisper)}</p>` : `<p class="dream-ghost-orbit-whisper" aria-hidden="true"></p>`;
   const treeEnter = view.mediaCue === "tree_enter" ? `<div class="dream-director-transition is-tree-enter" data-dream-director-transition="tree-enter">
@@ -2894,103 +3003,81 @@ function renderDreamTreePorch(view) {
     ${treeEnter}
   </div>`;
 }
-function renderDreamTreeQuestionMap(view) {
-  const passed = new Set(view.passedNodes);
+function renderDreamRealityTree(view) {
   const bundle = SEMANTIC_TREE_SCENE_BUNDLE;
   const abu = abuMotionFor("fixed_tree_companion", prefersReducedMotion2());
-  const transition = renderTreeMediaTransition(view.mediaCue);
-  const nodeMarkup = [
-    renderTreeNode({
-      id: "leaf_structure",
-      label: "\u8BFB\u53D6\u6811\u51A0\u4E2D\u7684\u663E\u73B0\u53F6",
-      active: view.activeNode === "leaf_structure",
-      passed: passed.has("leaf_structure"),
-      locked: false,
-      asset: bundle.assets.leafBasic01,
-      layout: "leafBasic01",
-      disabled: Boolean(view.resultMarkup)
-    }),
-    renderTreeNode({
-      id: "leaf_support",
-      label: "\u8BFB\u53D6\u6811\u51A0\u4E2D\u7684\u627F\u8F7D\u53F6",
-      active: view.activeNode === "leaf_support",
-      passed: passed.has("leaf_support"),
-      locked: false,
-      asset: bundle.assets.leafBasic02,
-      layout: "leafBasic02",
-      disabled: Boolean(view.resultMarkup)
-    }),
-    renderTreeNode({
-      id: "branch_path",
-      label: "\u8BFB\u53D6\u7279\u6B8A\u679D\u5E72",
-      active: view.activeNode === "branch_path",
-      passed: passed.has("branch_path"),
-      locked: !passed.has("leaf_structure") || !passed.has("leaf_support"),
-      asset: bundle.assets.trunkBackbone01,
-      layout: "trunkBackbone01",
-      disabled: Boolean(view.resultMarkup)
-    }),
-    renderFlowerOrFruit(view)
-  ].join("");
+  const question = view.reality.question;
+  const sealed = view.reality.sealed;
+  const organ = sealed ? bundle.assets.fruitWhite : bundle.assets.flowerOpen;
+  const organLayout = sealed ? "fruitWhite" : "flowerOpen";
+  const organLabel = sealed ? "\u7B49\u5F85\u73B0\u5B9E\u8BC1\u636E\u6210\u719F\u7684\u96FE\u767D\u679C\u5B9E" : "\u8FD9\u68F5\u6811\u5F00\u653E\u7684\u73B0\u5B9E\u95EE\u9898\u82B1";
+  const questionBand = !view.reality.available || !question ? `<section class="dream-reality-empty">
+        <p>${escapeHtml4(view.reality.empty_state || "\u8FD9\u68F5\u6811\u6682\u65F6\u6CA1\u6709\u5F00\u653E\u65B0\u7684\u547D\u9898")}</p>
+      </section>` : sealed ? `<section class="dream-reality-sealed" aria-live="polite">
+          <small>\u73B0\u5B9E\u95EE\u9898\u82B1 \xB7 \u5DF2\u5C01\u5B58</small>
+          <h2>\u5DF2\u5C01\u5B58\uFF0C\u5F85\u73B0\u5B9E\u8BC1\u636E\u51FA\u73B0\u540E\u63ED\u6653\u3002</h2>
+          <p>${escapeHtml4(question.options.find((item) => item.option_id === view.reality.selected_option_id)?.label || "")}</p>
+          <span>\u8FD9\u679A\u679C\u5B9E\u4E0D\u4F1A\u5728\u8BC1\u636E\u5230\u6765\u524D\u663E\u793A\u5BF9\u9519\u3002</span>
+        </section>` : `<section class="dream-reality-question">
+          <small>\u73B0\u5B9E\u95EE\u9898\u82B1</small>
+          <h2>${escapeHtml4(question.prompt)}</h2>
+          <div class="dream-reality-options" role="group" aria-label="\u9009\u62E9\u540E\u7ACB\u5373\u5C01\u5B58">
+            ${question.options.map((option) => `<button
+              type="button"
+              data-dream-game-command="reality-answer"
+              data-question-instance="${escapeAttr5(question.question_instance_id)}"
+              data-answer-id="${escapeAttr5(option.option_id)}"
+            >${escapeHtml4(option.label)}</button>`).join("")}
+          </div>
+          <details>
+            <summary>\u4E3A\u4EC0\u4E48\u51FA\u73B0\u8FD9\u4E2A\u95EE\u9898</summary>
+            <p>${escapeHtml4(question.why_this_question)}</p>
+            <span>${escapeHtml4(question.observation_window)}</span>
+          </details>
+        </section>`;
   return `<div
-    class="dream-tree-world-shell is-question-map"
-    data-tree-world-mode="question-map"
+    class="dream-tree-world-shell is-question-map is-reality-flower"
+    data-tree-world-mode="reality-flower"
     data-dream-scene-id="${escapeAttr5(view.scene.sceneId)}"
     data-dream-business-state="${escapeAttr5(view.scene.businessState)}"
     data-dream-presentation-state="${escapeAttr5(view.scene.presentationState)}"
-    data-active-node="${view.activeNode || "none"}"
-    data-semantic-tree-bundle="${bundle.bundleId}"
-    data-semantic-tree-bundle-sha256="${bundle.ownerAcceptedOuterSha256}"
-    data-semantic-tree-cue="${view.mediaCue}"
-    data-flower-state="${view.fruitVisible ? "fruit" : view.flowerUnlocked ? "open" : "bud"}"
-    data-fruit-visible="${view.fruitVisible ? "true" : "false"}"
+    data-tree-profile="${escapeAttr5(view.reality.tree_visual_profile.profile_id || "")}"
+    data-fruit-state="${escapeAttr5(view.reality.fruit_state)}"
+    style="${escapeAttr5(treeProfileStyle(view.reality.tree_visual_profile))}"
   >
     <header class="dream-tree-world-header">
       <button type="button" data-dream-game-command="return-porch" aria-label="\u8FD4\u56DE\u68A6\u6811\u95E8\u5ECA">\u2039</button>
-      <div><small>\u963F\u5E03\u95EE\u679C \xB7 \u4E09\u6811\u5C40</small><strong>${escapeHtml4(view.residentDisplayLabel)}</strong></div>
-      <span aria-hidden="true">\u7ED3\u6784\u76F2\u5C40</span>
+      <div><small>\u963F\u5E03\u95EE\u679C</small><strong>${escapeHtml4(view.residentDisplayLabel)}</strong></div>
+      <span aria-hidden="true">\u73B0\u5B9E\u95EE\u9898\u82B1</span>
     </header>
-    <p class="dream-tree-world-banner" role="status">${escapeHtml4(view.banner)}</p>
-    <section class="dream-question-tree-stage${!view.activeNode && passed.size === 0 ? " is-first-growth" : ""}" aria-label="${escapeAttr5(`${view.residentDisplayLabel}\u7684\u751F\u547D\u6811`)}">
-      <picture class="semantic-tree-base-layer"><img
-        class="dream-question-tree-master"
-        src="${bundle.assets.treeBase.source}"
-        data-asset-sha256="${bundle.assets.treeBase.sha256}"
-        alt=""
-        draggable="false"
-      ></picture>
-      <img
-        class="semantic-tree-energy-flow${view.flowerUnlocked ? " is-active" : ""}${view.mediaCue === "flower_open" ? " is-awakening" : ""}"
-        src="${bundle.assets.energyFlow.source}"
-        data-asset-sha256="${bundle.assets.energyFlow.sha256}"
-        alt=""
-        draggable="false"
-        aria-hidden="true"
-      >
-      <div class="dream-question-tree-nodes">${nodeMarkup}</div>
+    <section class="dream-question-tree-stage" aria-label="${escapeAttr5(`${view.residentDisplayLabel}\u7684\u751F\u547D\u6811`)}">
+      <picture class="semantic-tree-base-layer">
+        <img class="dream-question-tree-master" src="${bundle.assets.treeBase.source}" alt="" draggable="false">
+        <img class="dream-reality-tree-echo" src="${bundle.assets.treeBase.source}" alt="" draggable="false" aria-hidden="true">
+        <span class="dream-reality-ground-sheen" aria-hidden="true"></span>
+      </picture>
+      <div class="dream-question-tree-nodes">
+        <div
+          class="dream-question-tree-node semantic-tree-organ is-problem-flower${sealed ? " is-fruit-white" : " is-open"}"
+          data-semantic-organ="${sealed ? "FRUIT_PENDING_REALITY" : "FLOWER_REALITY_QUESTION"}"
+          data-asset-sha256="${organ.sha256}"
+          style="${semanticTreeOrganStyle(organLayout)}"
+          aria-label="${escapeAttr5(organLabel)}"
+        ><img class="semantic-tree-organ-visual" src="${organ.source}" alt="" draggable="false" aria-hidden="true"></div>
+      </div>
       <img
         class="semantic-tree-foreground-occlusion"
         src="${bundle.assets.foregroundOcclusion.source}"
-        data-asset-sha256="${bundle.assets.foregroundOcclusion.sha256}"
         style="${semanticTreeOrganStyle("foregroundOcclusion")}"
         alt=""
         draggable="false"
         aria-hidden="true"
       >
       <div class="dream-question-tree-abu" aria-hidden="true">${renderAbuActor(abu, "", "dream-question-tree-abu-actor")}</div>
-      ${view.resultMarkup}
-      ${view.questionBandMarkup && !view.resultMarkup ? `<aside class="dream-question-band" aria-live="polite">${view.questionBandMarkup}</aside>` : ""}
+      <aside class="dream-question-band is-reality-question" aria-live="polite">${questionBand}</aside>
     </section>
-    ${view.lensOpen ? `<section class="dream-tree-lens-overlay" aria-label="${escapeAttr5(LENS_META[view.activeLens].label)}\u547D\u76D8\u955C">
-      <div class="dream-tree-lens-forest-edge" aria-hidden="true"></div>
-      <header>
-        <div><small>${escapeHtml4(LENS_META[view.activeLens].objectLabel)}</small><strong>${escapeHtml4(LENS_META[view.activeLens].label)}</strong></div>
-        <button type="button" data-dream-game-command="close-lens" aria-label="\u56DE\u5230\u751F\u547D\u6811">\u56DE\u5230\u6811\u4E2D</button>
-      </header>
-      <div class="dream-tree-lens-canvas">${view.canvasMarkup}</div>
-    </section>` : ""}
     ${view.statusMessage ? `<p class="dream-game-status" role="status">${escapeHtml4(view.statusMessage)}</p>` : ""}
-    ${transition}
+    ${renderTreeMediaTransition(view.mediaCue)}
   </div>`;
 }
 function buildDreamTreeQuestions(attempt) {
@@ -3015,82 +3102,28 @@ function questionNodeId(question) {
   if (question.kind === "LEAF_BASIC_02") return "leaf_support";
   return "branch_path";
 }
-function renderTreeNode(input) {
-  return `<button
-    class="dream-question-tree-node semantic-tree-organ is-${input.id.replaceAll("_", "-")}${input.active ? " is-active" : ""}${input.passed ? " is-passed" : ""}${input.locked ? " is-locked" : ""}"
-    type="button"
-    data-dream-game-command="tree-node"
-    data-tree-node="${input.id}"
-    data-semantic-organ="${semanticOrganId(input.id)}"
-    data-semantic-hit-mask="${escapeAttr5(input.asset.hitMask || "")}"
-    data-asset-sha256="${input.asset.sha256}"
-    style="${semanticTreeOrganStyle(input.layout)}"
-    aria-pressed="${input.active}"
-    aria-disabled="${input.locked}"
-    aria-label="${escapeAttr5(input.label)}"
-    ${input.disabled ? "disabled" : ""}
-  ><img
-    class="semantic-tree-organ-visual"
-    src="${input.asset.source}"
-    alt=""
-    draggable="false"
-    aria-hidden="true"
-  >${input.asset.hitMask ? `<img
-    class="semantic-tree-organ-hit-mask"
-    src="${input.asset.hitMask}"
-    alt=""
-    draggable="false"
-    aria-hidden="true"
-  >` : ""}<span class="sr-only">${escapeHtml4(input.label)}</span></button>`;
-}
-function renderFlowerOrFruit(view) {
-  const bundle = SEMANTIC_TREE_SCENE_BUNDLE;
-  if (view.fruitVisible) {
-    const fruit = bundle.assets.fruitWhite;
-    return `<div
-      class="dream-question-tree-node semantic-tree-organ is-problem-flower is-fruit-white"
-      data-tree-node="problem_flower"
-      data-semantic-organ="FRUIT_RESULT"
-      data-semantic-anchor="FLOWER_BLINDROUND_01"
-      data-semantic-hit-mask="${escapeAttr5(fruit.hitMask || "")}"
-      data-asset-sha256="${fruit.sha256}"
-      style="${semanticTreeOrganStyle("fruitWhite")}"
-      aria-label="\u53CC\u91CD\u5C01\u5B58\u540E\u751F\u6210\u7684\u96FE\u767D\u679C\u5B9E"
-    ><img class="semantic-tree-organ-visual" src="${fruit.source}" alt="" draggable="false" aria-hidden="true"></div>`;
-  }
-  const flower = view.flowerUnlocked ? bundle.assets.flowerOpen : bundle.assets.flowerBudClosed;
-  const layout2 = view.flowerUnlocked ? "flowerOpen" : "flowerBudClosed";
-  const label = view.flowerUnlocked ? "\u67E5\u770B\u5DF2\u7ECF\u89E3\u9501\u7684\u95EE\u9898\u82B1" : "\u5C1A\u672A\u5F00\u653E\u7684\u95EE\u9898\u82B1";
-  return `<button
-    class="dream-question-tree-node semantic-tree-organ is-problem-flower${view.activeNode === "problem_flower" ? " is-active" : ""}${view.flowerOpened ? " is-passed" : ""}${view.flowerUnlocked ? " is-open" : " is-locked"}"
-    type="button"
-    data-dream-game-command="tree-node"
-    data-tree-node="problem_flower"
-    data-semantic-organ="FLOWER_BLINDROUND_01"
-    data-semantic-anchor="FLOWER_BLINDROUND_01"
-    data-semantic-hit-mask="${escapeAttr5(flower.hitMask || "")}"
-    data-asset-sha256="${flower.sha256}"
-    style="${semanticTreeOrganStyle(layout2)}"
-    aria-pressed="${view.activeNode === "problem_flower"}"
-    aria-disabled="${!view.flowerUnlocked}"
-    ${view.resultMarkup ? "disabled" : ""}
-    aria-label="${escapeAttr5(label)}"
-  ><img class="semantic-tree-organ-visual" src="${flower.source}" alt="" draggable="false" aria-hidden="true">${flower.hitMask ? `<img
-    class="semantic-tree-organ-hit-mask"
-    src="${flower.hitMask}"
-    alt=""
-    draggable="false"
-    aria-hidden="true"
-  >` : ""}<span class="sr-only">${escapeHtml4(label)}</span></button>`;
-}
-function semanticOrganId(nodeId) {
-  if (nodeId === "leaf_structure") return "LEAF_BASIC_01";
-  if (nodeId === "leaf_support") return "LEAF_BASIC_02";
-  if (nodeId === "branch_path") return "TRUNK_BACKBONE_01";
-  return "FLOWER_BLINDROUND_01";
-}
 function renderTreeMediaTransition(cue) {
   return cue === "none" || cue === "tree_enter" ? "" : `<span class="semantic-tree-state-cue is-${cue.replaceAll("_", "-")}" data-dream-director-transition="${cue.replaceAll("_", "-")}" aria-hidden="true"></span>`;
+}
+function treeProfileStyle(profile) {
+  const tokens = profile.render_tokens || {};
+  const metrics = profile.metrics || {};
+  return [
+    `--tree-scale-x:${finiteNumber2(tokens.scale_x, 1)}`,
+    `--tree-scale-y:${finiteNumber2(tokens.scale_y, 1)}`,
+    `--tree-rotation:${finiteNumber2(tokens.rotation_deg, 0)}deg`,
+    `--tree-hue:${finiteNumber2(tokens.hue_rotate_deg, 0)}deg`,
+    `--tree-saturation:${finiteNumber2(tokens.saturation, 1)}`,
+    `--tree-brightness:${finiteNumber2(tokens.brightness, 1)}`,
+    `--tree-canopy-echo:${finiteNumber2(tokens.canopy_echo_opacity, 0)}`,
+    `--tree-ground-sheen:${finiteNumber2(tokens.ground_sheen_opacity, 0)}`,
+    `--tree-density:${finiteNumber2(metrics.density, 0.5)}`,
+    `--tree-moisture:${finiteNumber2(metrics.moisture, 0.2)}`,
+    `--tree-light:${finiteNumber2(metrics.light, 0.3)}`
+  ].join(";");
+}
+function finiteNumber2(value, fallback) {
+  return typeof value === "number" && Number.isFinite(value) ? value : fallback;
 }
 function escapeHtml4(value) {
   return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#039;");
@@ -3516,6 +3549,7 @@ var DreamFirstVisitRuntime = class {
   gameRounds = [];
   gameContentUnavailable = false;
   gameAttempt = null;
+  gameReality = null;
   gameResult = null;
   gameLens = "overview";
   gameDraft = this.emptyGameDraft();
@@ -4185,6 +4219,10 @@ var DreamFirstVisitRuntime = class {
             this.visit.visit_id,
             this.gameAttempt.attempt_id
           );
+          this.gameReality = await loadDreamRealityQuestion(
+            this.visit.visit_id,
+            this.gameAttempt.round_id
+          );
           if (["KNOWLEDGE_SEED_ISSUED", "ROUND_COMPLETE"].includes(this.gameAttempt.state)) {
             this.gameResult = await loadDreamGameResult(
               this.visit.visit_id,
@@ -4739,6 +4777,7 @@ var DreamFirstVisitRuntime = class {
         this.user = point;
       }
       this.gameAttempt = await startDreamGameRound(this.visit.visit_id, roundId);
+      this.gameReality = await loadDreamRealityQuestion(this.visit.visit_id, roundId);
       this.gameLens = "overview";
       if (["KNOWLEDGE_SEED_ISSUED", "ROUND_COMPLETE"].includes(this.gameAttempt.state)) {
         this.gameResult = await loadDreamGameResult(
@@ -4768,7 +4807,7 @@ var DreamFirstVisitRuntime = class {
       this.renderGameLayer();
       this.startGamePolling();
       this.announce(
-        `${this.gameResidentDisplayLabel(round.resident_scene_ref, round.resident_label)}\u7684\u751F\u547D\u6811\u5DF2\u7ECF\u53EF\u4EE5\u89C2\u5BDF\u3002\u5F53\u524D\u9898\u7EC4\u6765\u81EA\u6B63\u5F0F\u547D\u76D8\u51BB\u7ED3\u5FEB\u7167\u3002`
+        `${this.gameResidentDisplayLabel(round.resident_scene_ref, round.resident_label)}\u7684\u751F\u547D\u6811\u5DF2\u7ECF\u53EF\u4EE5\u89C2\u5BDF\u3002`
       );
     } catch (error) {
       this.handleGameError(error);
@@ -4782,6 +4821,10 @@ var DreamFirstVisitRuntime = class {
     if (!attemptId) return;
     try {
       this.gameAttempt = await loadDreamGameAttempt(this.visit.visit_id, attemptId);
+      this.gameReality = await loadDreamRealityQuestion(
+        this.visit.visit_id,
+        this.gameAttempt.round_id
+      );
       this.gameShellOpen = true;
       this.gameLensOpen = false;
       this.porchIndex = Math.max(
@@ -4829,7 +4872,7 @@ var DreamFirstVisitRuntime = class {
       layer.innerHTML = renderDreamTreePorch({
         rounds: this.displayGameRounds(),
         activeIndex: this.porchIndex,
-        banner: DREAM_GAME_BANNER,
+        banner: "",
         entering: this.porchEntering,
         mediaCue: this.gameMediaCue,
         focusedWhisper: this.porchWhisper,
@@ -4847,36 +4890,21 @@ var DreamFirstVisitRuntime = class {
   }
   renderDeferredQuestionLayer() {
     if (!this.gameAttempt) return "";
-    const attempt = this.gameAttempt;
-    const projection = attempt.projection;
-    const selectedRelations = projection.allowed_relations.filter(
-      (item) => this.gameDraft.relationRefs.includes(item.relation_ref)
+    const round = this.gameRounds.find(
+      (item) => item.round_id === this.gameAttempt?.round_id
     );
-    const canvas2 = renderDreamGameCanvas(
-      projection.canvas,
-      this.gameLens,
-      this.gameDraft.nodeRefs,
-      selectedRelations
-    );
-    const passedNodes = this.passedTreeQuestionNodes();
-    const flowerUnlocked = attempt.question_progress.flower_unlocked;
-    return renderDreamTreeQuestionMap({
-      attempt,
+    if (!round || !this.gameReality) {
+      return `<section class="dream-tree-world-shell is-reality-flower is-fail-closed" role="alert">
+        <p>\u8FD9\u68F5\u6811\u6682\u65F6\u6CA1\u6709\u5F00\u653E\u65B0\u7684\u547D\u9898\u3002</p>
+      </section>`;
+    }
+    return renderDreamRealityTree({
+      round,
+      reality: this.gameReality,
       residentDisplayLabel: this.gameResidentDisplayLabel(
-        projection.resident_scene_ref,
-        projection.resident_label
+        round.resident_scene_ref,
+        round.resident_label
       ),
-      banner: projection.banner,
-      activeLens: this.gameLens,
-      lensOpen: this.gameLensOpen,
-      canvasMarkup: canvas2,
-      questionBandMarkup: this.renderGameStage(),
-      resultMarkup: this.gameResult ? this.renderGameResult() : "",
-      activeNode: this.gameTreeState.activeNode,
-      passedNodes,
-      flowerUnlocked,
-      flowerOpened: flowerUnlocked,
-      fruitVisible: Boolean(attempt.flower?.shared_fruit_visible || this.gameResult),
       mediaCue: this.gameMediaCue,
       statusMessage: this.gameStatusMessage,
       scene: this.story.scene
@@ -5176,6 +5204,28 @@ var DreamFirstVisitRuntime = class {
       return;
     }
     if (!this.gameAttempt) return;
+    if (command === "reality-answer") {
+      const questionInstanceId = target.dataset.questionInstance || "";
+      const optionId = target.dataset.answerId || "";
+      if (!this.gameReality?.available || !this.gameReality.question || this.gameReality.sealed || questionInstanceId !== this.gameReality.question.question_instance_id || !optionId) {
+        return;
+      }
+      await this.runGameAction(async () => {
+        this.gameReality = await answerDreamRealityQuestion(
+          this.visit.visit_id,
+          this.gameAttempt.round_id,
+          questionInstanceId,
+          optionId,
+          actionId("dream-reality-answer")
+        );
+        this.gameStatusMessage = "\u5DF2\u5C01\u5B58\uFF0C\u5F85\u73B0\u5B9E\u8BC1\u636E\u51FA\u73B0\u540E\u63ED\u6653\u3002";
+      });
+      if (this.gameReality?.sealed) {
+        this.playGameMediaCue("fruit_forming", 1800);
+        this.announce("\u4F60\u7684\u56DE\u7B54\u5DF2\u7ECF\u5C01\u5B58\uFF0C\u95EE\u9898\u82B1\u6B63\u5728\u7ED3\u6210\u7B49\u5F85\u73B0\u5B9E\u8BC1\u636E\u7684\u679C\u5B9E\u3002");
+      }
+      return;
+    }
     if (command === "tree-node") {
       const nodeId = target.dataset.treeNode;
       const definition = nodeId === "problem_flower" ? null : treeQuestionForNode(this.gameAttempt, nodeId);
@@ -5539,9 +5589,15 @@ var DreamFirstVisitRuntime = class {
     if (!this.visit || !this.gameAttempt || document.visibilityState !== "visible") return;
     try {
       const next = await loadDreamGameAttempt(this.visit.visit_id, this.gameAttempt.attempt_id);
+      const nextReality = await loadDreamRealityQuestion(
+        this.visit.visit_id,
+        next.round_id
+      );
       const flowerChanged = flowerLifecycleKey(next) !== flowerLifecycleKey(this.gameAttempt);
-      if (next.state !== this.gameAttempt.state || next.updated_at !== this.gameAttempt.updated_at || flowerChanged) {
+      const realityChanged = nextReality.sealed !== this.gameReality?.sealed || nextReality.sealed_at !== this.gameReality?.sealed_at || nextReality.fruit_state !== this.gameReality?.fruit_state;
+      if (next.state !== this.gameAttempt.state || next.updated_at !== this.gameAttempt.updated_at || flowerChanged || realityChanged) {
         this.gameAttempt = next;
+        this.gameReality = nextReality;
         if (flowerChanged) {
           this.gameStatusMessage = next.flower?.neutral_message || "";
         }
@@ -5627,6 +5683,11 @@ var DreamFirstVisitRuntime = class {
   async commitFocusedTree() {
     const round = this.gameRounds[this.porchIndex];
     if (!round || this.gameAttempt || this.gameBusy) return;
+    if (!round.tree_available) {
+      this.gameStatusMessage = "\u8FD9\u4E2A\u96FE\u4F4D\u6682\u65F6\u6CA1\u6709\u53EF\u8FDB\u5165\u7684\u751F\u547D\u6811\u3002";
+      this.renderGameLayer();
+      return;
+    }
     this.gameBusy = true;
     this.story.dispatch({ type: "COMMIT_CANDIDATE", roundId: round.round_id });
     this.gameMediaCue = "tree_enter";
@@ -5695,12 +5756,10 @@ var DreamFirstVisitRuntime = class {
     main.dataset.dreamStoryPresentation = this.story.snapshot.presentationState;
     main.dataset.dreamSceneId = this.story.scene.sceneId;
   }
-  gameResidentDisplayLabel(sceneRef, fallback) {
-    const source = this.trees.find((tree) => tree.scene_ref === sceneRef);
-    if (source?.source_kind !== "authorized_human") return fallback;
+  gameResidentDisplayLabel(_sceneRef, _fallback) {
     const index = Math.max(
       0,
-      this.gameRounds.findIndex((round) => round.resident_scene_ref === sceneRef)
+      this.gameRounds.findIndex((round) => round.resident_scene_ref === _sceneRef)
     );
     return `\u533F\u540D\u68A6\u5883\u5C45\u6C11${["\u4E00", "\u4E8C", "\u4E09"][index] || ""}`;
   }
@@ -5999,6 +6058,7 @@ var DreamFirstVisitRuntime = class {
   async returnToTreePorch(origin) {
     this.stopGamePolling();
     this.gameAttempt = null;
+    this.gameReality = null;
     this.gameResult = null;
     this.gameLensOpen = false;
     this.gameLensHistoryActive = false;
@@ -6028,6 +6088,7 @@ var DreamFirstVisitRuntime = class {
     this.stopGamePolling();
     this.gameShellOpen = false;
     this.gameAttempt = null;
+    this.gameReality = null;
     this.gameResult = null;
     this.gameLensOpen = false;
     this.gameLensHistoryActive = false;
@@ -6077,6 +6138,7 @@ var DreamFirstVisitRuntime = class {
           layer.innerHTML = `<div class="dream-game-fail-closed" role="alert">\u5F53\u524D\u5185\u5BB9\u6388\u6743\u6216\u68A6\u5883\u63A7\u5236\u5DF2\u5931\u6548\uFF0C\u76F2\u5C40\u5185\u5BB9\u5DF2\u7ECF\u6536\u8D77\u3002</div>`;
         }
         this.gameAttempt = null;
+        this.gameReality = null;
         this.gameResult = null;
       }
       if (code.includes("control_lease")) this.handleRuntimeFailure(error);
@@ -6289,6 +6351,7 @@ var DreamFirstVisitRuntime = class {
       this.stopControlLoops();
       this.clearSensitiveProjection();
       this.gameAttempt = null;
+      this.gameReality = null;
       this.gameResult = null;
       sessionStorage.removeItem(PENDING_GAME_ACTION_KEY);
       clearDreamControl();
@@ -6301,6 +6364,7 @@ var DreamFirstVisitRuntime = class {
     if (code.includes("authorization") || code.includes("source_version_changed") || code.includes("world_projection_invalid")) {
       this.clearSensitiveProjection();
       this.gameAttempt = null;
+      this.gameReality = null;
       this.gameResult = null;
       sessionStorage.removeItem(PENDING_GAME_ACTION_KEY);
       this.phase = "authorization_closed";
@@ -6311,6 +6375,7 @@ var DreamFirstVisitRuntime = class {
     this.stopControlLoops();
     this.clearSensitiveProjection();
     this.gameAttempt = null;
+    this.gameReality = null;
     this.gameResult = null;
     this.phase = "fail_closed";
     this.syncSceneDom();
@@ -6665,8 +6730,9 @@ var lifeTreeAnswerSaving = false;
 var realMingliLab = null;
 var realMingliLabLoading = false;
 var realMingliLabError = "";
-var relationLabMode = "facts";
+var relationLabMode = "candidates";
 var selectedRelationPathRef = "";
+var selectedRelationFactRef = "";
 if (location.pathname.startsWith("/experience/dream")) {
   const entryTransition = resumeDreamEntryTransition();
   void bootDreamExperience(root).finally(() => entryTransition?.markDestinationReady());
@@ -6724,6 +6790,7 @@ async function openCase(selection, preserveUi = false) {
     realMingliLab = null;
     realMingliLabError = "";
     selectedRelationPathRef = "";
+    selectedRelationFactRef = "";
   }
   account = loaded.account;
   cases = loaded.cases;
@@ -6772,7 +6839,8 @@ function render() {
     realMingliLabLoading,
     realMingliLabError,
     relationLabMode,
-    selectedRelationPathRef
+    selectedRelationPathRef,
+    selectedRelationFactRef
   });
   bindExperienceInteractions(root, {
     selectArea,
@@ -6794,6 +6862,7 @@ function render() {
     selectCanvasLayer,
     selectCanvasVisibility,
     selectCanvasObject(selected) {
+      selectRelationFactForNode(selected);
       void refreshCanvasContext(selected);
     },
     selectProfile(profileId) {
@@ -6816,11 +6885,33 @@ function render() {
     },
     selectRelationLabMode(mode) {
       relationLabMode = mode;
+      if (mode === "facts") {
+        const visible = realMingliLab?.relation_work.factual_view.find(
+          (item) => item.inventory_visible
+        );
+        selectedRelationFactRef = visible?.fact_revision_ref || "";
+      }
       render();
     },
     selectRelationPath(pathRef) {
       selectedRelationPathRef = pathRef;
       relationLabMode = "candidates";
+      const path = realMingliLab?.relation_work.candidate_path_view.find(
+        (item) => item.work_path_candidate_ref === pathRef
+      );
+      selectedRelationFactRef = path?.ordered_fact_revision_refs[0] || "";
+      render();
+    },
+    selectRelationFact(factRef) {
+      selectedRelationFactRef = factRef;
+      const path = realMingliLab?.relation_work.candidate_path_view.find(
+        (item) => realMingliLab?.path_focus.visible_path_refs.includes(
+          item.work_path_candidate_ref
+        ) && item.ordered_fact_revision_refs.includes(factRef)
+      );
+      if (path && relationLabMode === "candidates") {
+        selectedRelationPathRef = path.work_path_candidate_ref;
+      }
       render();
     },
     restoreRelationNatal() {
@@ -6907,7 +6998,11 @@ async function ensureRealMingliLab() {
   render();
   try {
     realMingliLab = await loadRealMingliLab(activeCaseId);
-    selectedRelationPathRef = realMingliLab.relation_work.candidate_path_view[0]?.work_path_candidate_ref || "";
+    selectedRelationPathRef = realMingliLab.path_focus.primary_path_ref;
+    const primary = realMingliLab.relation_work.candidate_path_view.find(
+      (item) => item.work_path_candidate_ref === realMingliLab?.path_focus.primary_path_ref
+    );
+    selectedRelationFactRef = primary?.ordered_fact_revision_refs[0] || "";
   } catch (error) {
     realMingliLab = null;
     realMingliLabError = humanizeError(
@@ -6917,6 +7012,15 @@ async function ensureRealMingliLab() {
     realMingliLabLoading = false;
     render();
   }
+}
+function selectRelationFactForNode(nodeRef) {
+  if (ui.productArea !== "lab" || !realMingliLab) return;
+  const visiblePathRefs = new Set(realMingliLab.path_focus.visible_path_refs);
+  const visiblePathFactRefs = new Set(
+    realMingliLab.relation_work.candidate_path_view.filter((path) => visiblePathRefs.has(path.work_path_candidate_ref)).flatMap((path) => path.ordered_fact_revision_refs)
+  );
+  const connected = realMingliLab.relation_work.factual_view.find((fact) => fact.participant_refs.includes(nodeRef) && (relationLabMode === "facts" ? fact.inventory_visible : visiblePathFactRefs.has(fact.fact_revision_ref)));
+  if (connected) selectedRelationFactRef = connected.fact_revision_ref;
 }
 async function ensureCanvas() {
   if (canvas || canvasLoading || !activeCaseId) return;

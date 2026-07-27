@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections import Counter
 from copy import deepcopy
 import json
 
@@ -16,7 +17,11 @@ from product.relation_work_p0_service import (
 from test_v50_read_only_canvas_c1 import _typed_real_case
 
 
-def _client_with_two_cases(*, p0_enabled: bool = True):
+def _client_with_two_cases(
+    *,
+    p0_enabled: bool = True,
+    legal_visible_stem_candidate: bool = False,
+):
     product_store = MemoryProductStore()
     case_store = MemoryAgentCaseStore()
     theater_store = MemoryTheaterStore()
@@ -47,6 +52,15 @@ def _client_with_two_cases(*, p0_enabled: bool = True):
     user_id = registered.json()["account"]["user_id"]
     first, _ = _typed_real_case("case-real-p1-a")
     second, _ = _typed_real_case("case-real-p1-b")
+    if legal_visible_stem_candidate:
+        first = deepcopy(first)
+        for key, value in {
+            "year_pillar": "癸亥",
+            "month_pillar": "乙卯",
+            "day_pillar": "戊辰",
+            "hour_pillar": "庚申",
+        }.items():
+            first["birth_input"][key] = value
     second = deepcopy(second)
     for key, value in {
         "year_pillar": "甲子",
@@ -125,7 +139,9 @@ def test_switching_real_cases_changes_tree_and_lab_from_same_source() -> None:
 
 
 def test_canonical_experience_routes_own_tree_and_lab_integration() -> None:
-    client, theater_store = _client_with_two_cases()
+    client, theater_store = _client_with_two_cases(
+        legal_visible_stem_candidate=True,
+    )
     tree_url = (
         "/api/v50/experience/cases/case-real-p1-a/life-tree/questions"
     )
@@ -160,6 +176,59 @@ def test_canonical_experience_routes_own_tree_and_lab_integration() -> None:
     }.isdisjoint(
         item["blueprint_id"] for item in lab.json()["learning_questions"]
     )
+    audit = lab.json()["relation_audit"]
+    assert audit["total_relation_facts"] == sum(
+        audit[key]
+        for key in (
+            "legal_direct_edges",
+            "legal_mediated_relations",
+            "containment_edges",
+            "positional_edges",
+            "unsupported_edges",
+            "illegal_cross_layer_edges",
+        )
+    )
+    facts_by_ref = {
+        item["fact_revision_ref"]: item
+        for item in lab.json()["relation_work"]["factual_view"]
+    }
+    visible_paths = [
+        item
+        for item in lab.json()["relation_work"]["candidate_path_view"]
+        if item["work_path_candidate_ref"]
+        in lab.json()["path_focus"]["visible_path_refs"]
+    ]
+    assert len(visible_paths) <= 2
+    assert lab.json()["path_focus"]["selection_is_professional_ranking"] is False
+    eligible_group_counts = Counter(
+        path["competing_path_group_ref"]
+        for path in lab.json()["relation_work"]["candidate_path_view"]
+        if path["competing_path_group_ref"]
+        and all(
+            facts_by_ref[fact_ref]["default_path_eligible"] is True
+            for fact_ref in path["ordered_fact_revision_refs"]
+        )
+    )
+    if any(count >= 2 for count in eligible_group_counts.values()):
+        assert lab.json()["path_focus"]["competition_path_ref"]
+        assert len(visible_paths) == 2
+    assert all(
+        all(
+            facts_by_ref[fact_ref]["default_path_eligible"] is True
+            for fact_ref in path["ordered_fact_revision_refs"]
+        )
+        for path in visible_paths
+    )
+    assert set(audit["visible_inventory_fact_refs"]).isdisjoint(
+        item["fact_revision_ref"]
+        for item in lab.json()["relation_work"]["factual_view"]
+        if item["provenance_status"] in {
+            "quarantined",
+            "illegal",
+            "incomplete",
+        }
+    )
+    assert lab.json()["path_focus"] == client.get(lab_url).json()["path_focus"]
 
     question = tree.json()["questions"][0]
     answer = client.post(
@@ -176,7 +245,9 @@ def test_canonical_experience_routes_own_tree_and_lab_integration() -> None:
 
 
 def test_real_case_answer_is_server_bound_persistent_and_conflict_safe() -> None:
-    client, theater_store = _client_with_two_cases()
+    client, theater_store = _client_with_two_cases(
+        legal_visible_stem_candidate=True,
+    )
     bootstrap = client.get(
         "/api/v50/relation-work-p0/cases/case-real-p1-a/bootstrap"
     ).json()
@@ -215,7 +286,9 @@ def test_real_case_answer_is_server_bound_persistent_and_conflict_safe() -> None
 
 
 def test_real_case_projection_does_not_disclose_answer_or_upgrade_authority() -> None:
-    client, _ = _client_with_two_cases()
+    client, _ = _client_with_two_cases(
+        legal_visible_stem_candidate=True,
+    )
     response = client.get(
         "/api/v50/relation-work-p0/cases/case-real-p1-a/bootstrap"
     )
@@ -242,7 +315,9 @@ def test_real_case_projection_does_not_disclose_answer_or_upgrade_authority() ->
 
 
 def test_real_tree_scene_progress_is_server_derived_and_never_invents_fruit() -> None:
-    client, _ = _client_with_two_cases()
+    client, _ = _client_with_two_cases(
+        legal_visible_stem_candidate=True,
+    )
     url = "/api/v50/relation-work-p0/cases/case-real-p1-a"
     initial = client.get(f"{url}/bootstrap").json()
     initial_nodes = {
@@ -280,7 +355,9 @@ def test_real_tree_scene_progress_is_server_derived_and_never_invents_fruit() ->
 
 
 def test_abu_observation_loop_is_bounded_persistent_and_idempotent() -> None:
-    client, theater_store = _client_with_two_cases()
+    client, theater_store = _client_with_two_cases(
+        legal_visible_stem_candidate=True,
+    )
     url = "/api/v50/relation-work-p0/cases/case-real-p1-a"
     bootstrap = client.get(f"{url}/bootstrap").json()
     question = next(
