@@ -27,13 +27,12 @@ const ABU_V12 = "/assets/abu/v12-actor-pass";
 
 export const DREAM_RUNTIME_ASSETS = {
   homeTree: {
-    assetId: "dream_home_life_tree_v1",
+    assetId: "semantic_tree_base_clean_v1",
     intent: "home_tree",
     kind: "image",
-    source: "/assets/dream/runtime-foundation-v1/home-life-tree-no-abu-v1.png",
-    sourceMaster: "1000056879.mp4",
-    sourceSha256: "3d2d7e5beeb6705d79ed48178a0deb89b42525beb172a545d5eefe77440b089d",
-    sourceTimeRange: [3.1, 3.1],
+    source: "/assets/dream/semantic-tree-visible-v1/assets/tree_base_clean.png",
+    sourceMaster: "SEMANTIC_TREE_VISIBLE_V1",
+    sourceSha256: "dfd661d7e1b171a77afdf75224c453de2d7984ddfe2531df06f2ae11dd187be9",
     reducedMotionSafe: true,
     mobileSafe: true,
     status: "LIBRARY_READY",

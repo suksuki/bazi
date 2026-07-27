@@ -15,6 +15,13 @@ import type {
 import type { ProductArea, UiState, WorkspaceSurface } from "./state";
 import type { DreamFeatureStatus, DreamVerificationProjection } from "./dream_api";
 import { renderDreamHomeLifeTree } from "./dream_home_portal";
+import type {
+  LifeTreeQuestion,
+  LifeTreeQuestionCategory,
+  RealLifeTreeBootstrap,
+  RealMingliLabBootstrap,
+  WorkPathProjection,
+} from "./relation_work_api";
 
 export interface ExperienceViewModel {
   accountName: string;
@@ -33,6 +40,18 @@ export interface ExperienceViewModel {
   ui: UiState;
   dreamStatus: DreamFeatureStatus | null;
   dreamReturnedWithSeed: boolean;
+  realLifeTree: RealLifeTreeBootstrap | null;
+  realLifeTreeLoading: boolean;
+  realLifeTreeError: string;
+  selectedLifeTreeQuestionId: string;
+  selectedLifeTreeCategory: LifeTreeQuestionCategory;
+  selectedLifeTreeOptionId: string;
+  lifeTreeAnswerSaving: boolean;
+  realMingliLab: RealMingliLabBootstrap | null;
+  realMingliLabLoading: boolean;
+  realMingliLabError: string;
+  relationLabMode: "facts" | "candidates" | "professional";
+  selectedRelationPathRef: string;
 }
 
 const elementLabel: Record<string, string> = {
@@ -214,7 +233,10 @@ function renderLifeWorld(
         pillars,
         pathSummary,
         condition,
+        questionNodes: lifeTreeQuestionNodes(view.realLifeTree),
+        visualProfile: view.realLifeTree?.tree_visual_profile || null,
       })}
+      ${renderLifeTreeQuestionPanel(view)}
     </section>
     <section class="world-ledger" aria-label="生命记录">
       <header><p>生命记录</p><h2>命是起点，现实让理解继续生长</h2></header>
@@ -225,6 +247,340 @@ function renderLifeWorld(
       </div>
     </section>
   </div>`;
+}
+
+
+function lifeTreeQuestionNodes(tree: RealLifeTreeBootstrap | null) {
+  if (!tree) return [];
+  const answered = new Set(
+    tree.explorations.flatMap((item) => Object.keys(item.responses)),
+  );
+  const questions = new Map(tree.questions.map((item) => [item.instance_id, item]));
+  const labels: Record<string, string> = {
+    "leaf-observation": "结构叶",
+    "leaf-timing": "时序叶",
+    "trunk-framework": "主脉",
+    "root-counterfactual": "根部",
+    "flower-question": "生命问题花",
+  };
+  return tree.tree_scene.nodes.flatMap((node) => {
+    const available = node.question_refs.flatMap((ref) => {
+      const question = questions.get(ref);
+      return question ? [question] : [];
+    });
+    if (!available.length) return [];
+    const selected = available.find((item) => !answered.has(item.instance_id))
+      || available[0];
+    return [{
+      nodeId: node.node_id,
+      questionId: selected.instance_id,
+      category: selected.category,
+      label: labels[node.node_id] || "命题",
+      status: node.status,
+      answeredCount: available.filter((item) => answered.has(item.instance_id)).length,
+      questionCount: available.length,
+    }];
+  });
+}
+
+
+function renderLifeTreeQuestionPanel(view: ExperienceViewModel): string {
+  if (view.realLifeTreeLoading) {
+    return `<section class="life-tree-question-panel is-loading"><i></i><span>正在从当前 LifeCase 生长命题</span></section>`;
+  }
+  if (view.realLifeTreeError) {
+    return `<section class="life-tree-question-panel is-empty"><strong>命题暂未开放</strong><span>${escapeHtml(view.realLifeTreeError)}</span></section>`;
+  }
+  const tree = view.realLifeTree;
+  if (!tree) return "";
+  const question = tree.questions.find(
+    (item) => item.instance_id === view.selectedLifeTreeQuestionId,
+  );
+  if (!question) {
+    return `<section class="life-tree-question-panel is-invitation">
+      <p>当前 LifeCase · ${tree.question_count} 朵现实观察花</p>
+      <strong>${escapeHtml(tree.empty_state || "触碰有微光的问题花，选择一件未来可以被现实核验的事。")}</strong>
+      <span>命盘只决定为什么值得观察，不预告结果；封存前事实不计作未来证据。</span>
+    </section>`;
+  }
+  const exploration = tree.explorations.find(
+    (item) => Object.hasOwn(item.responses, question.instance_id),
+  );
+  const selectedOption = exploration?.responses[question.instance_id]
+    || view.selectedLifeTreeOptionId;
+  const evidence = [
+    ...question.work_path_candidate_refs.map((item) => `观察缘由 ${compactRef(item)}`),
+  ];
+  return `<section class="life-tree-question-panel${exploration ? " is-explored" : ""}" aria-label="当前生命树命题">
+    <header>
+      <p>${escapeHtml(lifeTreeCategoryLabel(question.category))} · ${escapeHtml(lifeDomainLabel(question.life_domain))}</p>
+      <span>${exploration ? "观察已封存" : "等待你的判断"}</span>
+    </header>
+    <h2>${escapeHtml(question.prompt)}</h2>
+    <p class="life-tree-question-why"><strong>为什么出现</strong>${escapeHtml(question.why_this_question)}</p>
+    <p class="life-tree-question-window"><strong>观察窗口</strong>${escapeHtml(question.observation_window)}</p>
+    <div class="life-tree-question-evidence" aria-label="命题依据">
+      ${(evidence.length ? evidence : ["当前命盘冻结投影"]).map((item) => `<code>${escapeHtml(item)}</code>`).join("")}
+    </div>
+    <div class="life-tree-future-evidence" aria-label="未来揭盲需要的证据">
+      <strong>未来凭什么回看</strong>
+      ${question.future_evidence_requirements.map((item) => `<span>${escapeHtml(item)}</span>`).join("")}
+    </div>
+    <div class="life-tree-question-options" role="radiogroup" aria-label="选择一种观察">
+      ${question.options.map((option) => `<button
+        type="button"
+        data-life-tree-option="${escapeAttr(option.option_id)}"
+        aria-pressed="${selectedOption === option.option_id}"
+        class="${selectedOption === option.option_id ? "is-selected" : ""}"
+        ${exploration ? "disabled" : ""}
+      >${escapeHtml(option.label_template)}</button>`).join("")}
+    </div>
+    <footer>
+      <span>${exploration
+        ? "这次现实观察已持久保存；等待后续证据，LifeCase 未被改写。"
+        : "三个方向都允许发生；当前结构候选不会替你选择答案。"}</span>
+      ${exploration
+        ? `<strong>状态：等待现实回看</strong>`
+        : `<button type="button" data-life-tree-submit ${selectedOption && !view.lifeTreeAnswerSaving ? "" : "disabled"}>${view.lifeTreeAnswerSaving ? "正在封存" : "封存这次观察"}</button>`}
+    </footer>
+  </section>`;
+}
+
+
+function renderRelationWorkControls(view: ExperienceViewModel): string {
+  const lab = view.realMingliLab;
+  return `<section class="canonical-relation-work" aria-label="真实关系与候选做功">
+    <header class="relation-work-toolbar">
+      <nav aria-label="关系研究层">
+        ${relationModeButton("facts", "事实关系", view.relationLabMode)}
+        ${relationModeButton("candidates", "候选做功", view.relationLabMode)}
+        ${relationModeButton("professional", "专业准入", view.relationLabMode)}
+      </nav>
+      <button type="button" data-relation-restore-natal>恢复原局</button>
+    </header>
+    ${view.realMingliLabLoading
+      ? `<div class="relation-work-loading">正在读取当前 LifeCase 的关系投影</div>`
+      : view.realMingliLabError
+        ? `<div class="relation-work-empty">${escapeHtml(view.realMingliLabError)}</div>`
+        : lab
+          ? renderRelationWorkBody(view, lab)
+          : `<div class="relation-work-empty">当前关系投影尚未就绪。</div>`}
+  </section>`;
+}
+
+
+function renderRelationWorkBody(
+  view: ExperienceViewModel,
+  lab: RealMingliLabBootstrap,
+): string {
+  const projection = lab.relation_work;
+  if (view.relationLabMode === "professional") {
+    if (!projection.professionally_resolved_view.length) {
+      return `<div class="relation-work-professional-empty">
+        <strong>当前尚无通过专业准入的有效做功路径。</strong>
+        <span>事实关系与结构候选仍可在前两层查看；这里不会从邻接、线条或候选数量猜测专业主线。</span>
+      </div>`;
+    }
+    return `<div class="relation-work-professional-list">${projection.professionally_resolved_view.map((item) => `
+      <article><strong>${escapeHtml(item.resolved_effect_atoms.join(" · "))}</strong><code>${escapeHtml(compactRef(item.effect_resolution_ref))}</code></article>
+    `).join("")}</div>`;
+  }
+  if (view.relationLabMode === "facts") {
+    return `<div class="relation-work-facts">${projection.factual_view.slice(0, 8).map((fact) => `
+        <article>
+          <strong>${escapeHtml(fact.participant_coordinates.map(relationCoordinateLabel).join(" → "))}</strong>
+          <span>${escapeHtml(relationFamilyLabel(fact.relation_family))} · ${escapeHtml(relationActivationLabel(fact.activation_state))}</span>
+          <small>${fact.effect_status === "professionally_resolved" ? "作用已获准" : "关系事实成立，作用待定"}</small>
+        </article>
+      `).join("")}</div>
+      ${renderLabLearningQuestions(lab.learning_questions)}`;
+  }
+  const paths = projection.candidate_path_view;
+  const selected = paths.find(
+    (item) => item.work_path_candidate_ref === view.selectedRelationPathRef,
+  ) || paths[0];
+  return `<div class="relation-work-candidates">
+    <nav aria-label="当前盘支持的候选做功">
+      ${paths.map((path) => `<button
+        type="button"
+        data-relation-path="${escapeAttr(path.work_path_candidate_ref)}"
+        class="${path.work_path_candidate_ref === selected?.work_path_candidate_ref ? "is-selected" : ""}"
+      ><strong>${escapeHtml(path.label)}</strong><span>${path.ordered_fact_revision_refs.length} 段事实 · ${path.blocker_types.length} 项待定</span></button>`).join("")}
+    </nav>
+    ${selected ? renderWorkPathDetail(selected) : `<div class="relation-work-empty">当前 LifeCase 没有满足结构证据的候选做功。</div>`}
+  </div>`;
+}
+
+
+function renderLabLearningQuestions(
+  questions: LifeTreeQuestion[],
+): string {
+  if (!questions.length) return "";
+  return `<section class="relation-work-learning" aria-label="结构小课">
+    <header>
+      <p>结构小课</p>
+      <strong>这些问题属于 Mingli Lab，不计入生命树问题花</strong>
+    </header>
+    <div>
+      ${questions.map((question) => `<article>
+        <span>${escapeHtml(lifeTreeCategoryLabel(question.category))}</span>
+        <strong>${escapeHtml(question.prompt)}</strong>
+        <small>${escapeHtml(question.why_this_question)}</small>
+      </article>`).join("")}
+    </div>
+  </section>`;
+}
+
+
+function renderWorkPathDetail(path: WorkPathProjection): string {
+  return `<article class="relation-work-path-detail">
+    <header><p>结构候选</p><h2>${escapeHtml(path.label)}</h2></header>
+    <div class="relation-work-statuses">
+      <span>结构候选</span>
+      <span>作用待定</span>
+      <span>容量待定</span>
+      <span>可用性待定</span>
+      <span>专业准入待定</span>
+    </div>
+    <dl>
+      <dt>参与坐标</dt><dd>${escapeHtml(path.participant_coordinates.map(relationCoordinateLabel).join(" → "))}</dd>
+      <dt>竞争共享</dt><dd>${escapeHtml(path.shared_resource_refs.length ? path.shared_resource_refs.map(compactRef).join("、") : "当前未发现共享参与者")}</dd>
+      <dt>瓶颈</dt><dd>${escapeHtml(path.bottleneck_node_refs.length ? path.bottleneck_node_refs.map(compactRef).join("、") : "承载与效果证据仍待核验")}</dd>
+      <dt>阻断</dt><dd>${escapeHtml(path.blocker_types.length ? path.blocker_types.map(workPathBlockerLabel).join("；") : "无结构阻断")}</dd>
+    </dl>
+    <small>候选线只表示当前证据下的结构连续性，不表示有效做功、主功或专业排名。</small>
+  </article>`;
+}
+
+function relationWorkCanvasOverlay(
+  view: ExperienceViewModel,
+): DreamGameCandidateRelation[] {
+  const projection = view.realMingliLab?.relation_work;
+  if (!projection || view.relationLabMode === "professional") return [];
+
+  let facts = projection.factual_view.slice(0, 8);
+  let kind: DreamGameCandidateRelation["kind"] = "fact";
+  if (view.relationLabMode === "candidates") {
+    const selected = projection.candidate_path_view.find(
+      (item) => item.work_path_candidate_ref === view.selectedRelationPathRef,
+    ) || projection.candidate_path_view[0];
+    if (!selected) return [];
+    const refs = new Set(selected.ordered_fact_revision_refs);
+    facts = projection.factual_view.filter((item) => refs.has(item.fact_revision_ref));
+    kind = "candidate";
+  }
+
+  return facts.flatMap((fact) => {
+    const source = fact.participant_coordinates[0];
+    const target = fact.participant_coordinates[1];
+    if (!source || !target) return [];
+    return [{
+      relation_ref: fact.fact_revision_ref,
+      label: relationFamilyLabel(fact.relation_family),
+      source_node_ref: source.node_ref,
+      target_node_ref: target.node_ref,
+      formal: false,
+      kind,
+      directionality: fact.directionality,
+    }];
+  });
+}
+
+
+function relationModeButton(
+  mode: "facts" | "candidates" | "professional",
+  label: string,
+  current: ExperienceViewModel["relationLabMode"],
+): string {
+  return `<button type="button" data-relation-lab-mode="${mode}" aria-pressed="${mode === current}" class="${mode === current ? "is-active" : ""}">${label}</button>`;
+}
+
+
+function lifeTreeCategoryLabel(category: LifeTreeQuestion["category"]): string {
+  return ({
+    factual_observation: "结构叶",
+    temporal_change: "时序叶",
+    candidate_comparison: "主脉",
+    counterfactual: "根部追问",
+    discriminating: "问题花",
+    life_observation: "现实观察花",
+  } as Record<string, string>)[category] || "生命命题";
+}
+
+
+function lifeDomainLabel(value: string): string {
+  return ({
+    career: "事业行动",
+    career_wealth: "事业与收入",
+    relationship: "关系观察",
+    mobility: "迁移与变化",
+    self_structure: "自我结构",
+  } as Record<string, string>)[value] || "生命观察";
+}
+
+
+function relationFamilyLabel(family: string): string {
+  return ({
+    generates: "生",
+    controls: "克",
+    same_element_support: "同气支持",
+    clashes: "冲",
+    combines: "合",
+    harmonizes: "合",
+    harms: "害",
+    punishes: "刑",
+  } as Record<string, string>)[family] || family;
+}
+
+
+function relationActivationLabel(value: string): string {
+  return ({
+    natal_present: "原局存在",
+    timing_present: "时运出现",
+    activated: "已激活",
+    latent: "潜在",
+  } as Record<string, string>)[value] || value;
+}
+
+
+function workPathBlockerLabel(value: string): string {
+  return ({
+    missing_effect_resolution: "缺少作用判定",
+    capacity_unresolved: "容量待定",
+    usability_unresolved: "可用性待定",
+    structural_break: "结构断裂",
+    competition_unresolved: "竞争路径待分辨",
+    timing_unresolved: "时序待定",
+  } as Record<string, string>)[value] || value;
+}
+
+
+function slotLabel(value: string): string {
+  return ({
+    year: "年柱",
+    month: "月柱",
+    day: "日柱",
+    hour: "时柱",
+    luck: "大运",
+  } as Record<string, string>)[value] || `${value}流年`;
+}
+
+
+function relationCoordinateLabel(
+  coordinate: { slot: string; level: string; component: string },
+): string {
+  const level = ({
+    stem: "天干",
+    branch: "地支",
+    hidden_stem: "藏干",
+  } as Record<string, string>)[coordinate.level] || coordinate.level;
+  return `${slotLabel(coordinate.slot)}${level}${coordinate.component}`;
+}
+
+
+function compactRef(value: string): string {
+  if (value.length <= 22) return value;
+  return `${value.slice(0, 10)}…${value.slice(-8)}`;
 }
 
 
@@ -247,21 +603,34 @@ function renderDreamConsent(view: ExperienceViewModel): string {
 function renderMingliLab(view: ExperienceViewModel): string {
   if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>四柱已经就绪</h1><span>研究镜头只在正式关系投影可用时按需展开，不会为 Lab 另算一套命盘。</span></section>`;
   const stage = view.canvas.stages[view.ui.canvasStage];
-  const potentialCount = stage.spec.relations.filter((item) => item.relation_state === "potential").length;
-  const sourceCount = new Set(stage.spec.relations.flatMap((item) => item.trace.source_refs)).size;
+  const relationWork = view.realMingliLab?.relation_work;
+  const factCount = relationWork?.factual_view.length
+    ?? stage.spec.relations.filter((item) => item.relation_state === "potential").length;
+  const sourceCount = new Set(
+    relationWork?.factual_view.flatMap((item) => item.evidence_refs)
+      ?? stage.spec.relations.flatMap((item) => item.trace.source_refs),
+  ).size;
   const hiddenCount = stage.spec.nodes.filter((item) => item.node_type.includes("hidden")).length;
+  const candidateCount = relationWork?.candidate_path_view.length ?? 0;
   return `<div class="mingli-lab">
     <header class="lab-header">
-      <div><p>Mingli Lab · ${escapeHtml(activeCaseName(view))}</p><h1>同一命局的研究镜头</h1><span>候选关系与证据留在研究层；正式 Case 不在这里被改写。</span></div>
-      <code>${escapeHtml((view.workspace?.state.scene_source_hash || view.envelope.source.source_hash).slice(0, 18))}</code>
+      <div><p>Mingli Lab · ${escapeHtml(activeCaseName(view))}</p><h1>同一 LifeCase 的六柱事实与候选做功</h1><span>事实、结构候选和专业准入分层呈现；正式 Case 不在这里被改写。</span></div>
+      <code>${escapeHtml((relationWork?.foundation_content_hash || view.workspace?.state.scene_source_hash || view.envelope.source.source_hash).slice(0, 18))}</code>
     </header>
     <div class="lab-evidence-rail" aria-label="当前研究范围">
-      <span><small>潜在关系</small><strong>${potentialCount}</strong></span>
+      <span><small>关系事实</small><strong>${factCount}</strong></span>
       <span><small>藏干节点</small><strong>${hiddenCount}</strong></span>
-      <span><small>来源引用</small><strong>${sourceCount}</strong></span>
-      <span><small>正式写入</small><strong>关闭</strong></span>
+      <span><small>候选做功</small><strong>${candidateCount}</strong></span>
+      <span><small>证据引用</small><strong>${sourceCount}</strong></span>
     </div>
-    <section class="lab-canvas"><p class="lab-lens-label">命理师 Lens · 潜在关系场</p>${renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, view.cognition.status === "preparing")}</section>
+    ${renderRelationWorkControls(view)}
+    <section class="lab-canvas"><p class="lab-lens-label">正式 OneCanvas · 六柱十二节点</p>${renderReadOnlyCanvas(
+      view.canvas,
+      view.ui,
+      view.canvasContext,
+      view.cognition.status === "preparing",
+      relationWorkCanvasOverlay(view),
+    )}</section>
   </div>`;
 }
 
@@ -335,6 +704,7 @@ export function renderReadOnlyCanvas(
   ui: UiState,
   context: CanvasContextPack | null,
   pathTaskRunning: boolean,
+  relationWorkOverlay: DreamGameCandidateRelation[] = [],
 ): string {
   const stage = canvas.stages[ui.canvasStage];
   const allowedVisibility = canvas.renderer_policy.available_visibility_layers;
@@ -411,6 +781,11 @@ export function renderReadOnlyCanvas(
           activePaths,
           selected,
           visibility === "lab_audit",
+          relationWorkOverlay,
+          new Set(relationWorkOverlay.flatMap((item) => [
+            item.source_node_ref,
+            item.target_node_ref,
+          ])),
         )}
       </div>
       <p class="layer-caption"><strong>${escapeHtml(layer?.label || "当前图层")}</strong>${escapeHtml(layer?.description || "当前没有可显示的关系。")}</p>
@@ -485,6 +860,8 @@ interface DreamGameCandidateRelation {
   source_node_ref: string;
   target_node_ref: string;
   formal: boolean;
+  kind?: "candidate" | "fact";
+  directionality?: "directed" | "symmetric";
 }
 
 export function renderDreamGameCanvas(
@@ -566,8 +943,12 @@ function renderCanonicalCanvasScene(
     const target = anchors.get(relation.target_node_ref);
     if (!source || !target) return "";
     const route = routeCanvasRelation(source, target, index + relations.length);
-    return `<g class="canvas-candidate-relation" data-candidate-relation="${escapeAttr(relation.relation_ref)}">
-      <path d="${route.d}" marker-end="url(#canvas-candidate-arrow)"></path>
+    const kind = relation.kind === "fact" ? "fact" : "candidate";
+    const marker = relation.directionality === "symmetric"
+      ? ""
+      : ` marker-end="url(#canvas-${kind}-arrow)"`;
+    return `<g class="canvas-${kind}-relation" data-${kind}-relation="${escapeAttr(relation.relation_ref)}">
+      <path d="${route.d}"${marker}></path>
       <text x="${route.labelX}" y="${route.labelY}" text-anchor="middle">${escapeHtml(relation.label)}</text>
     </g>`;
   }).join("");
@@ -585,6 +966,7 @@ function renderCanonicalCanvasScene(
       <marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
       <marker id="canvas-path-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z"></path></marker>
       <marker id="canvas-candidate-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
+      <marker id="canvas-fact-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
     </defs>
     <g class="canvas-scene-tracks" aria-hidden="true"><line x1="44" y1="185" x2="1276" y2="185"></line><line x1="44" y1="390" x2="1276" y2="390"></line><text x="46" y="171">天干</text><text x="46" y="376">地支</text></g>
     <g class="canvas-scene-relations">${relationMarkup}</g>
@@ -833,7 +1215,9 @@ function shortRelationLabel(relation: CanvasRelation): string {
     controls: "克",
     same_element_support: "同气",
     stores: "藏",
-    roots: "根",
+    roots: "旧版",
+    source_identity_evidence: "同字来源",
+    source_element_affinity: "同五行来源",
     forms_half_combination: "半合",
     forms_triple_combination: "三合",
     clashes: "冲",

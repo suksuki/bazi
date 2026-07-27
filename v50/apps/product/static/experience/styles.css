@@ -156,6 +156,29 @@ select:focus-visible,
   min-width: 0;
 }
 
+.product-development-links {
+  display: grid;
+  gap: 6px;
+  margin: 18px 10px 0;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.product-development-links > span {
+  color: rgba(255, 255, 255, 0.46);
+  font-size: 11px;
+}
+
+.product-development-links a {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 12px;
+  text-decoration: none;
+}
+
+.product-development-links a:hover {
+  color: #fff;
+}
+
 .product-navigation strong {
   font-size: 14px;
   font-weight: 700;
@@ -2661,6 +2684,24 @@ select:focus-visible,
 .canvas-candidate-relation text {
   fill: #8b493a;
   font-size: 10px;
+}
+
+.canvas-fact-relation path {
+  fill: none;
+  stroke: rgba(37, 112, 89, 0.72);
+  stroke-width: 1.7;
+}
+
+#canvas-fact-arrow path {
+  fill: #257059;
+}
+
+.canvas-fact-relation text {
+  fill: #174e41;
+  font-size: 10px;
+  paint-order: stroke;
+  stroke: rgba(255, 253, 248, 0.92);
+  stroke-width: 4px;
 }
 
 .dream-game-flower-stage,
@@ -5641,6 +5682,276 @@ select:focus-visible,
 .lab-evidence-rail strong { display: block; }
 .lab-evidence-rail small { color: var(--muted); font-size: 9px; }
 .lab-evidence-rail strong { margin-top: 5px; color: var(--forest); font-family: var(--serif); font-size: 18px; }
+.canonical-relation-work {
+  margin: 28px 50px 0;
+  border-top: 1px solid rgba(19, 62, 53, 0.2);
+  border-bottom: 1px solid rgba(19, 62, 53, 0.16);
+  background: rgba(255, 253, 248, 0.52);
+}
+
+.relation-work-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  min-height: 54px;
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.relation-work-toolbar nav {
+  display: flex;
+  gap: 4px;
+}
+
+.relation-work-toolbar button {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.relation-work-toolbar button.is-active {
+  border-color: rgba(21, 65, 55, 0.2);
+  background: rgba(21, 65, 55, 0.08);
+  color: var(--forest);
+}
+
+.relation-work-toolbar > button {
+  color: var(--forest);
+  border-bottom-color: currentColor;
+}
+
+.relation-work-loading,
+.relation-work-empty,
+.relation-work-professional-empty {
+  padding: 28px 22px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.relation-work-professional-empty {
+  display: grid;
+  gap: 8px;
+}
+
+.relation-work-professional-empty strong {
+  color: var(--forest);
+  font-family: var(--serif);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.relation-work-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.relation-work-facts article {
+  min-height: 104px;
+  padding: 16px 14px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.relation-work-facts article:nth-child(4n) {
+  border-right: 0;
+}
+
+.relation-work-facts strong,
+.relation-work-facts span,
+.relation-work-facts small {
+  display: block;
+}
+
+.relation-work-facts strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.relation-work-facts span {
+  margin-top: 8px;
+  color: var(--forest);
+  font-size: 10px;
+}
+
+.relation-work-facts small {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 8px;
+}
+
+.relation-work-learning {
+  border-top: 1px solid var(--line);
+}
+
+.relation-work-learning > header {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 14px 16px 10px;
+}
+
+.relation-work-learning > header p {
+  margin: 0;
+  color: var(--orange);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.relation-work-learning > header strong {
+  color: var(--forest);
+  font-size: 11px;
+}
+
+.relation-work-learning > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  border-top: 1px solid var(--line);
+}
+
+.relation-work-learning article {
+  display: grid;
+  gap: 5px;
+  min-height: 94px;
+  padding: 13px 16px;
+  border-right: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.relation-work-learning article:nth-child(2n) {
+  border-right: 0;
+}
+
+.relation-work-learning article span {
+  color: var(--orange);
+  font-size: 8px;
+  font-weight: 800;
+}
+
+.relation-work-learning article strong {
+  color: var(--ink);
+  font-family: var(--serif);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.relation-work-learning article small {
+  color: var(--muted);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.relation-work-candidates {
+  display: grid;
+  grid-template-columns: 260px minmax(0, 1fr);
+  min-height: 240px;
+}
+
+.relation-work-candidates > nav {
+  display: grid;
+  align-content: start;
+  border-right: 1px solid var(--line);
+}
+
+.relation-work-candidates > nav button {
+  display: grid;
+  gap: 4px;
+  min-height: 58px;
+  padding: 11px 14px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  color: var(--muted);
+  text-align: left;
+  cursor: pointer;
+}
+
+.relation-work-candidates > nav button.is-selected {
+  background: rgba(204, 103, 70, 0.08);
+  box-shadow: inset 3px 0 0 var(--orange);
+  color: var(--ink);
+}
+
+.relation-work-candidates > nav strong {
+  font-family: var(--serif);
+  font-size: 13px;
+}
+
+.relation-work-candidates > nav span {
+  font-size: 8px;
+}
+
+.relation-work-path-detail {
+  padding: 20px 24px;
+}
+
+.relation-work-path-detail header p,
+.relation-work-path-detail header h2 {
+  margin: 0;
+}
+
+.relation-work-path-detail header p {
+  color: var(--orange);
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.relation-work-path-detail header h2 {
+  margin-top: 4px;
+  color: var(--forest);
+  font-family: var(--serif);
+  font-size: 22px;
+  font-weight: 580;
+}
+
+.relation-work-statuses {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 14px;
+}
+
+.relation-work-statuses span {
+  padding: 4px 7px;
+  color: #4b6259;
+  border: 1px solid rgba(21, 65, 55, 0.14);
+  background: rgba(255, 253, 248, 0.58);
+  font-size: 8px;
+}
+
+.relation-work-path-detail dl {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px 12px;
+  margin: 18px 0;
+  font-size: 10px;
+  line-height: 1.55;
+}
+
+.relation-work-path-detail dt {
+  color: var(--muted);
+}
+
+.relation-work-path-detail dd {
+  margin: 0;
+  color: var(--ink);
+}
+
+.relation-work-path-detail > small {
+  color: var(--muted);
+  font-size: 9px;
+}
+
 .lab-canvas { padding: 34px 50px 0; }
 .lab-lens-label { margin: 0 0 16px; color: var(--orange); font-size: 10px; font-weight: 800; }
 .lab-empty { min-height: 100vh; padding: 100px 50px; background: var(--mist); }
@@ -8547,6 +8858,17 @@ body:has(.dream-game-layer.is-tree-world) {
 /* ABU-DREAM-RUNTIME-FOUNDATION-05
    The home portal and ghost orbit are one continuous story surface. */
 .dream-home-life-tree {
+  --tree-scale-x: 1;
+  --tree-scale-y: 1;
+  --tree-rotation: 0deg;
+  --tree-hue: 0deg;
+  --tree-saturation: 1;
+  --tree-brightness: 1;
+  --tree-canopy-echo: 0;
+  --tree-ground-sheen: 0;
+  --tree-density: 0.5;
+  --tree-moisture: 0.2;
+  --tree-light: 0.3;
   width: min(520px, 42vw);
   height: auto;
   aspect-ratio: 1 / 1;
@@ -8571,7 +8893,7 @@ body:has(.dream-game-layer.is-tree-world) {
 
 .dream-home-life-tree .dream-home-tree-art {
   position: absolute;
-  z-index: 0;
+  z-index: 1;
   inset: 0;
   left: 0;
   bottom: auto;
@@ -8579,20 +8901,108 @@ body:has(.dream-game-layer.is-tree-world) {
   height: 100%;
   object-fit: cover;
   object-position: center;
-  filter: saturate(0.88) contrast(0.94);
+  filter:
+    hue-rotate(var(--tree-hue))
+    saturate(var(--tree-saturation))
+    brightness(var(--tree-brightness))
+    contrast(0.96);
+  transform:
+    translateY(1.5%)
+    scaleX(var(--tree-scale-x))
+    scaleY(var(--tree-scale-y))
+    rotate(var(--tree-rotation));
+  transform-origin: 50% 82%;
   -webkit-mask-image: radial-gradient(ellipse 72% 72% at 50% 51%, #000 58%, transparent 100%);
   mask-image: radial-gradient(ellipse 72% 72% at 50% 51%, #000 58%, transparent 100%);
 }
 
-.dream-home-canopy-light {
+.dream-home-tree-canopy-echo {
+  position: absolute;
+  z-index: 0;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center;
+  opacity: var(--tree-canopy-echo);
+  filter:
+    hue-rotate(var(--tree-hue))
+    saturate(var(--tree-saturation))
+    brightness(var(--tree-brightness));
+  clip-path: inset(0 0 39% 0);
+  transform:
+    translate(-2.4%, 1%)
+    scale(var(--tree-scale-x), var(--tree-scale-y))
+    rotate(var(--tree-rotation));
+  transform-origin: 50% 82%;
+  -webkit-mask-image: radial-gradient(ellipse 70% 60% at 50% 38%, #000 58%, transparent 100%);
+  mask-image: radial-gradient(ellipse 70% 60% at 50% 38%, #000 58%, transparent 100%);
+  pointer-events: none;
+}
+
+.dream-home-life-tree.is-tall-tensed .dream-home-tree-canopy-echo {
+  transform:
+    translate(3.6%, -1.5%)
+    scale(var(--tree-scale-x), var(--tree-scale-y))
+    rotate(var(--tree-rotation));
+}
+
+.dream-home-life-tree.is-wide-flowing .dream-home-tree-canopy-echo {
+  transform:
+    translate(-4.5%, 2%)
+    scale(var(--tree-scale-x), var(--tree-scale-y))
+    rotate(var(--tree-rotation));
+}
+
+.dream-home-life-tree.is-wide-flowing .dream-home-canopy-light {
+  width: 58%;
+  height: 32%;
+  top: 20%;
+}
+
+.dream-home-life-tree.is-tall-tensed .dream-home-canopy-light {
+  width: 34%;
+  height: 44%;
+  top: 12%;
+}
+
+.dream-home-life-tree.is-compact-grounded .dream-home-tree-canopy-echo {
+  transform:
+    translate(0, 2%)
+    scale(var(--tree-scale-x), var(--tree-scale-y));
+}
+
+.dream-home-tree-ground-sheen {
   position: absolute;
   z-index: 2;
+  left: 22%;
+  bottom: 13%;
+  width: 58%;
+  height: 18%;
+  border-radius: 50%;
+  opacity: var(--tree-ground-sheen);
+  background: radial-gradient(ellipse, rgba(86, 150, 134, 0.45), rgba(169, 204, 183, 0.16) 48%, transparent 72%);
+  filter: blur(4px);
+  transform: scaleX(calc(0.84 + var(--tree-moisture)));
+  pointer-events: none;
+}
+
+.dream-home-life-tree.is-sun-warmed .dream-home-tree-ground-sheen {
+  background: radial-gradient(ellipse, rgba(191, 145, 72, 0.34), rgba(218, 196, 133, 0.12) 48%, transparent 72%);
+}
+
+.dream-home-canopy-light {
+  position: absolute;
+  z-index: 3;
   top: 16%;
   left: 50%;
   width: 44%;
   height: 38%;
   border-radius: 50%;
   background: radial-gradient(circle, rgba(244, 225, 157, 0.22), transparent 68%);
+  opacity: calc(0.3 + var(--tree-light));
+  scale: var(--tree-scale-y);
   transform: translateX(-50%);
   pointer-events: none;
   animation: dream-home-canopy-breathe 6.8s ease-in-out infinite alternate;
@@ -8655,6 +9065,365 @@ body:has(.dream-game-layer.is-tree-world) {
 .dream-home-tree-mark.is-person {
   top: 57%;
   left: 12%;
+}
+
+.dream-home-question-organs {
+  position: absolute;
+  z-index: 5;
+  inset: 0;
+  pointer-events: none;
+}
+
+.dream-home-question-organ {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 74px;
+  height: 74px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #153f35;
+  cursor: pointer;
+  pointer-events: auto;
+  filter: drop-shadow(0 5px 8px rgba(14, 52, 42, 0.18));
+}
+
+.dream-home-question-organ::before {
+  position: absolute;
+  inset: 11%;
+  border: 1px solid rgba(229, 194, 102, 0.46);
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(245, 226, 154, 0.24), transparent 67%);
+  box-shadow: 0 0 18px rgba(229, 194, 102, 0.25);
+  content: "";
+  animation: question-organ-breathe 3.6s ease-in-out infinite alternate;
+}
+
+.dream-home-question-organ img {
+  position: relative;
+  z-index: 1;
+  display: block;
+  inset: auto;
+  object-fit: contain;
+}
+
+.dream-home-question-organ.is-leaf-observation img {
+  width: 70px;
+  height: 55px;
+}
+
+.dream-home-question-organ.is-leaf-timing img {
+  width: 55px;
+  height: 72px;
+}
+
+.dream-home-question-organ.is-trunk-framework img {
+  width: 19px;
+  height: 82px;
+}
+
+.dream-home-question-organ.is-flower-question img {
+  width: 31px;
+  height: 76px;
+}
+
+.dream-home-root-ripple {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: 76px;
+  height: 34px;
+  border: 2px solid rgba(189, 239, 212, 0.78);
+  border-top-color: transparent;
+  border-radius: 50%;
+  box-shadow:
+    inset 0 -6px 14px rgba(130, 206, 174, 0.18),
+    0 6px 16px rgba(34, 106, 81, 0.2);
+  transform: rotate(-5deg);
+}
+
+.dream-home-root-ripple::after {
+  position: absolute;
+  inset: 8px 13px 5px;
+  border-bottom: 1px solid rgba(231, 204, 125, 0.8);
+  border-radius: 50%;
+  content: "";
+}
+
+.dream-home-question-organ span,
+.dream-home-question-organ small {
+  position: absolute;
+  z-index: 2;
+  left: 50%;
+  min-width: max-content;
+  padding: 2px 5px;
+  background: rgba(248, 246, 232, 0.88);
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.dream-home-question-organ span {
+  top: 96%;
+  font-size: 9px;
+  font-weight: 800;
+}
+
+.dream-home-question-organ small {
+  top: 5%;
+  left: 91%;
+  color: #f7f1d9;
+  background: rgba(18, 62, 53, 0.9);
+  font-size: 8px;
+}
+
+.dream-home-question-organ:is(:hover, :focus-visible)::before {
+  border-color: rgba(203, 111, 71, 0.8);
+  box-shadow: 0 0 24px rgba(203, 111, 71, 0.34);
+}
+
+.dream-home-question-organ.is-explored {
+  filter: saturate(0.72) drop-shadow(0 4px 7px rgba(14, 52, 42, 0.14));
+}
+
+.dream-home-question-organ.is-explored::before {
+  opacity: 0;
+  animation: none;
+}
+
+.dream-home-question-organ:disabled {
+  cursor: default;
+  filter: grayscale(0.35) opacity(0.58);
+}
+
+.dream-home-question-organ:disabled::before {
+  opacity: 0;
+  animation: none;
+}
+
+.dream-home-question-organ.is-leaf-observation {
+  top: 22%;
+  left: 18%;
+}
+
+.dream-home-question-organ.is-leaf-timing {
+  top: 31%;
+  right: 15%;
+}
+
+.dream-home-question-organ.is-trunk-framework {
+  top: 48%;
+  left: 43%;
+  width: 82px;
+  height: 82px;
+}
+
+.dream-home-question-organ.is-root-counterfactual {
+  bottom: 14%;
+  left: 38%;
+  width: 96px;
+  height: 62px;
+}
+
+.dream-home-question-organ.is-flower-question {
+  top: 16%;
+  right: 28%;
+  width: 66px;
+  height: 76px;
+}
+
+.life-tree-question-panel {
+  z-index: 8;
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 0.8fr);
+  gap: 16px 32px;
+  width: min(1120px, 100%);
+  margin: -28px auto 0;
+  padding: 22px 26px;
+  border-top: 1px solid rgba(24, 70, 60, 0.22);
+  border-bottom: 1px solid rgba(24, 70, 60, 0.14);
+  background: rgba(248, 246, 237, 0.82);
+  box-shadow: 0 18px 38px rgba(14, 52, 42, 0.08);
+  backdrop-filter: blur(12px);
+}
+
+.life-tree-question-panel > header,
+.life-tree-question-panel > footer,
+.life-tree-question-panel > h2,
+.life-tree-question-panel > .life-tree-question-why,
+.life-tree-question-panel > .life-tree-question-window,
+.life-tree-question-panel > .life-tree-question-evidence,
+.life-tree-question-panel > .life-tree-future-evidence {
+  grid-column: 1;
+}
+
+.life-tree-question-panel header,
+.life-tree-question-panel footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.life-tree-question-panel header p,
+.life-tree-question-panel header span,
+.life-tree-question-panel h2,
+.life-tree-question-panel p {
+  margin: 0;
+}
+
+.life-tree-question-panel header p {
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.life-tree-question-panel header span {
+  color: var(--muted);
+  font-size: 9px;
+}
+
+.life-tree-question-panel h2 {
+  color: var(--forest);
+  font-family: var(--serif);
+  font-size: clamp(18px, 2vw, 24px);
+  line-height: 1.45;
+  font-weight: 580;
+}
+
+.life-tree-question-why {
+  color: #53675f;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.life-tree-question-window {
+  margin: 0;
+  color: #53675f;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.life-tree-question-window strong {
+  margin-right: 8px;
+  color: var(--ink);
+}
+
+.life-tree-question-why strong {
+  margin-right: 8px;
+  color: var(--ink);
+}
+
+.life-tree-future-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.life-tree-future-evidence strong {
+  margin-right: 3px;
+  color: var(--forest);
+  font-size: 9px;
+}
+
+.life-tree-future-evidence span {
+  padding: 4px 7px;
+  color: #486158;
+  background: rgba(40, 105, 85, 0.07);
+  font-size: 8px;
+}
+
+.life-tree-question-evidence {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.life-tree-question-evidence code {
+  padding: 4px 6px;
+  color: #496258;
+  background: rgba(24, 70, 60, 0.07);
+  font-size: 8px;
+}
+
+.life-tree-question-options {
+  grid-column: 2;
+  grid-row: 1 / span 7;
+  display: grid;
+  align-content: center;
+  gap: 7px;
+}
+
+.life-tree-question-options button {
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid rgba(24, 70, 60, 0.17);
+  background: rgba(255, 253, 248, 0.62);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.life-tree-question-options button.is-selected {
+  border-color: rgba(204, 103, 70, 0.68);
+  background: rgba(247, 225, 205, 0.68);
+}
+
+.life-tree-question-panel footer {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+.life-tree-question-panel footer button {
+  flex: 0 0 auto;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 0;
+  background: var(--forest);
+  color: #fffaf0;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.life-tree-question-panel footer button:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.life-tree-question-panel.is-invitation,
+.life-tree-question-panel.is-empty,
+.life-tree-question-panel.is-loading {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-height: 76px;
+}
+
+.life-tree-question-panel.is-invitation p {
+  color: var(--orange);
+  font-size: 10px;
+  font-weight: 800;
+}
+
+.life-tree-question-panel.is-invitation strong,
+.life-tree-question-panel.is-empty strong {
+  color: var(--forest);
+  font-family: var(--serif);
+  font-size: 16px;
+}
+
+.life-tree-question-panel.is-invitation span,
+.life-tree-question-panel.is-empty span,
+.life-tree-question-panel.is-loading span {
+  color: var(--muted);
+  font-size: 10px;
+}
+
+@keyframes question-organ-breathe {
+  from { opacity: 0.55; transform: scale(0.94); }
+  to { opacity: 1; transform: scale(1.06); }
 }
 
 .dream-home-abu-portal,

@@ -223,13 +223,12 @@ var DIRECTOR_ROOT = `${DREAM_ENCOUNTER_ASSET_ROOT}/director-v2`;
 var ABU_V12 = "/assets/abu/v12-actor-pass";
 var DREAM_RUNTIME_ASSETS = {
   homeTree: {
-    assetId: "dream_home_life_tree_v1",
+    assetId: "semantic_tree_base_clean_v1",
     intent: "home_tree",
     kind: "image",
-    source: "/assets/dream/runtime-foundation-v1/home-life-tree-no-abu-v1.png",
-    sourceMaster: "1000056879.mp4",
-    sourceSha256: "3d2d7e5beeb6705d79ed48178a0deb89b42525beb172a545d5eefe77440b089d",
-    sourceTimeRange: [3.1, 3.1],
+    source: "/assets/dream/semantic-tree-visible-v1/assets/tree_base_clean.png",
+    sourceMaster: "SEMANTIC_TREE_VISIBLE_V1",
+    sourceSha256: "dfd661d7e1b171a77afdf75224c453de2d7984ddfe2531df06f2ae11dd187be9",
     reducedMotionSafe: true,
     mobileSafe: true,
     status: "LIBRARY_READY"
@@ -470,6 +469,21 @@ function renderDreamHomeLifeTree(view) {
   const portalReady = Boolean(view.status?.enabled && view.status.available);
   const motion = abuMotionFor("home_sleeping_portal", prefersReducedMotion());
   const callState = view.returnedWithSeed ? "seed-return" : portalReady ? "portal-ready" : "quiet";
+  const visual = view.visualProfile;
+  const visualClass = visual ? ` is-${visual.form.replaceAll("_", "-")} is-${visual.material.replaceAll("_", "-")}` : "";
+  const visualStyle = visual ? [
+    `--tree-scale-x:${finiteNumber(visual.render_tokens.scale_x, 1)}`,
+    `--tree-scale-y:${finiteNumber(visual.render_tokens.scale_y, 1)}`,
+    `--tree-rotation:${finiteNumber(visual.render_tokens.rotation_deg, 0)}deg`,
+    `--tree-hue:${finiteNumber(visual.render_tokens.hue_rotate_deg, 0)}deg`,
+    `--tree-saturation:${finiteNumber(visual.render_tokens.saturation, 1)}`,
+    `--tree-brightness:${finiteNumber(visual.render_tokens.brightness, 1)}`,
+    `--tree-canopy-echo:${finiteNumber(visual.render_tokens.canopy_echo_opacity, 0)}`,
+    `--tree-ground-sheen:${finiteNumber(visual.render_tokens.ground_sheen_opacity, 0)}`,
+    `--tree-density:${finiteNumber(visual.metrics.density, 0.5)}`,
+    `--tree-moisture:${finiteNumber(visual.metrics.moisture, 0.2)}`,
+    `--tree-light:${finiteNumber(visual.metrics.light, 0.3)}`
+  ].join(";") : "";
   const portalLabel = view.status?.resumable ? "\u8F7B\u89E6\u719F\u7761\u7684\u963F\u5E03\uFF0C\u7EE7\u7EED\u4E0A\u6B21\u7684\u68A6" : "\u8F7B\u89E6\u719F\u7761\u7684\u963F\u5E03\uFF0C\u968F\u4ED6\u8FDB\u5165\u68A6\u5883";
   const abu = portalReady ? `<button
         class="dream-home-abu-portal"
@@ -482,9 +496,33 @@ function renderDreamHomeLifeTree(view) {
       </button>` : `<div class="dream-home-abu-resting" aria-hidden="true">
         <img src="${escapeAttr3(DREAM_RUNTIME_ASSETS.abuSeated.poster || DREAM_RUNTIME_ASSETS.abuSeated.source)}" alt="" draggable="false">
       </div>`;
+  const questionNodes = view.questionNodes.length ? view.questionNodes.map(renderQuestionNode).join("") : `
+      <button
+        type="button"
+        class="dream-home-tree-mark is-chart"
+        data-product-area="workbench"
+        aria-label="\u6253\u5F00\u547D\u76D8\u57FA\u7EBF"
+      ><small>\u547D</small><strong>${escapeHtml2(view.pillars || "\u56DB\u67F1\u5F85\u786E\u8BA4")}</strong></button>
+      <button
+        type="button"
+        class="dream-home-tree-mark is-path"
+        data-select-anchor="baseline-work-path"
+        data-message="${escapeAttr3(view.pathSummary)}"
+        aria-label="\u67E5\u770B\u5F53\u524D\u8BA4\u77E5"
+      ><small>\u4E8B</small><strong>${escapeHtml2(firstSentence(view.pathSummary))}</strong></button>
+      <button
+        type="button"
+        class="dream-home-tree-mark is-person"
+        data-command="toggle-abu"
+        aria-label="\u67E5\u770B\u5F53\u524D\u884C\u52A8\u6761\u4EF6"
+      ><small>\u4EBA</small><strong>${escapeHtml2(firstSentence(view.condition))}</strong></button>
+    `;
   return `<div
-    class="life-tree dream-home-life-tree"
+    class="life-tree dream-home-life-tree${visualClass}"
     data-dream-home-state="${callState}"
+    data-tree-visual-profile="${escapeAttr3(visual?.profile_id || "pending")}"
+    data-tree-visual-source="${escapeAttr3(visual?.source || "pending")}"
+    style="${escapeAttr3(visualStyle)}"
     aria-label="\u4F60\u7684\u751F\u547D\u6811"
   >
     <img
@@ -493,29 +531,44 @@ function renderDreamHomeLifeTree(view) {
       alt=""
       draggable="false"
     >
+    <img
+      class="dream-home-tree-canopy-echo"
+      src="${escapeAttr3(DREAM_RUNTIME_ASSETS.homeTree.source)}"
+      alt=""
+      aria-hidden="true"
+      draggable="false"
+    >
+    <span class="dream-home-tree-ground-sheen" aria-hidden="true"></span>
     <span class="dream-home-canopy-light" aria-hidden="true"></span>
-    <button
-      type="button"
-      class="dream-home-tree-mark is-chart"
-      data-product-area="workbench"
-      aria-label="\u6253\u5F00\u547D\u76D8\u57FA\u7EBF"
-    ><small>\u547D</small><strong>${escapeHtml2(view.pillars || "\u56DB\u67F1\u5F85\u786E\u8BA4")}</strong></button>
-    <button
-      type="button"
-      class="dream-home-tree-mark is-path"
-      data-select-anchor="baseline-work-path"
-      data-message="${escapeAttr3(view.pathSummary)}"
-      aria-label="\u67E5\u770B\u5F53\u524D\u8BA4\u77E5"
-    ><small>\u4E8B</small><strong>${escapeHtml2(firstSentence(view.pathSummary))}</strong></button>
-    <button
-      type="button"
-      class="dream-home-tree-mark is-person"
-      data-command="toggle-abu"
-      aria-label="\u67E5\u770B\u5F53\u524D\u884C\u52A8\u6761\u4EF6"
-    ><small>\u4EBA</small><strong>${escapeHtml2(firstSentence(view.condition))}</strong></button>
+    <div class="dream-home-question-organs" aria-label="\u5F53\u524D\u547D\u5C40\u751F\u957F\u51FA\u7684\u547D\u9898">${questionNodes}</div>
     ${view.returnedWithSeed ? `<span class="dream-home-seed-landing" aria-label="\u4E00\u9897\u77E5\u8BC6\u79CD\u5B50\u56DE\u5230\u4E86\u4F60\u7684\u751F\u547D\u6811\u6839"></span>` : ""}
     ${abu}
   </div>`;
+}
+function finiteNumber(value, fallback) {
+  return Number.isFinite(value) ? value : fallback;
+}
+function renderQuestionNode(node) {
+  const asset2 = {
+    "leaf-observation": "leaf_basic_01.png",
+    "leaf-timing": "leaf_basic_02.png",
+    "trunk-framework": "trunk_backbone_01.png",
+    "flower-question": node.status === "explored" ? "flower_open.png" : "flower_bud_closed.png"
+  }[node.nodeId] || "leaf_basic_01.png";
+  const disabled = !node.questionId || node.status === "locked" || node.status === "unavailable";
+  const organVisual = node.nodeId === "root-counterfactual" ? `<i class="dream-home-root-ripple" aria-hidden="true"></i>` : `<img src="/assets/dream/semantic-tree-visible-v1/assets/${asset2}" alt="" aria-hidden="true">`;
+  return `<button
+    type="button"
+    class="dream-home-question-organ is-${escapeAttr3(node.nodeId)} is-${escapeAttr3(node.status)}"
+    data-life-tree-question="${escapeAttr3(node.questionId)}"
+    data-life-tree-category="${escapeAttr3(node.category)}"
+    aria-label="${escapeAttr3(`${node.label}\uFF0C\u5DF2\u63A2\u7D22 ${node.answeredCount}/${node.questionCount}`)}"
+    ${disabled ? "disabled" : ""}
+  >
+    ${organVisual}
+    <span>${escapeHtml2(node.label)}</span>
+    <small>${node.answeredCount}/${node.questionCount}</small>
+  </button>`;
 }
 function prefersReducedMotion() {
   return typeof window !== "undefined" && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -685,8 +738,11 @@ function renderLifeWorld(view, thesis, fullThesis, pathSummary, condition, uncer
     returnedWithSeed: view.dreamReturnedWithSeed,
     pillars,
     pathSummary,
-    condition
+    condition,
+    questionNodes: lifeTreeQuestionNodes(view.realLifeTree),
+    visualProfile: view.realLifeTree?.tree_visual_profile || null
   })}
+      ${renderLifeTreeQuestionPanel(view)}
     </section>
     <section class="world-ledger" aria-label="\u751F\u547D\u8BB0\u5F55">
       <header><p>\u751F\u547D\u8BB0\u5F55</p><h2>\u547D\u662F\u8D77\u70B9\uFF0C\u73B0\u5B9E\u8BA9\u7406\u89E3\u7EE7\u7EED\u751F\u957F</h2></header>
@@ -697,6 +753,282 @@ function renderLifeWorld(view, thesis, fullThesis, pathSummary, condition, uncer
       </div>
     </section>
   </div>`;
+}
+function lifeTreeQuestionNodes(tree) {
+  if (!tree) return [];
+  const answered = new Set(
+    tree.explorations.flatMap((item) => Object.keys(item.responses))
+  );
+  const questions = new Map(tree.questions.map((item) => [item.instance_id, item]));
+  const labels = {
+    "leaf-observation": "\u7ED3\u6784\u53F6",
+    "leaf-timing": "\u65F6\u5E8F\u53F6",
+    "trunk-framework": "\u4E3B\u8109",
+    "root-counterfactual": "\u6839\u90E8",
+    "flower-question": "\u751F\u547D\u95EE\u9898\u82B1"
+  };
+  return tree.tree_scene.nodes.flatMap((node) => {
+    const available = node.question_refs.flatMap((ref) => {
+      const question = questions.get(ref);
+      return question ? [question] : [];
+    });
+    if (!available.length) return [];
+    const selected = available.find((item) => !answered.has(item.instance_id)) || available[0];
+    return [{
+      nodeId: node.node_id,
+      questionId: selected.instance_id,
+      category: selected.category,
+      label: labels[node.node_id] || "\u547D\u9898",
+      status: node.status,
+      answeredCount: available.filter((item) => answered.has(item.instance_id)).length,
+      questionCount: available.length
+    }];
+  });
+}
+function renderLifeTreeQuestionPanel(view) {
+  if (view.realLifeTreeLoading) {
+    return `<section class="life-tree-question-panel is-loading"><i></i><span>\u6B63\u5728\u4ECE\u5F53\u524D LifeCase \u751F\u957F\u547D\u9898</span></section>`;
+  }
+  if (view.realLifeTreeError) {
+    return `<section class="life-tree-question-panel is-empty"><strong>\u547D\u9898\u6682\u672A\u5F00\u653E</strong><span>${escapeHtml3(view.realLifeTreeError)}</span></section>`;
+  }
+  const tree = view.realLifeTree;
+  if (!tree) return "";
+  const question = tree.questions.find(
+    (item) => item.instance_id === view.selectedLifeTreeQuestionId
+  );
+  if (!question) {
+    return `<section class="life-tree-question-panel is-invitation">
+      <p>\u5F53\u524D LifeCase \xB7 ${tree.question_count} \u6735\u73B0\u5B9E\u89C2\u5BDF\u82B1</p>
+      <strong>${escapeHtml3(tree.empty_state || "\u89E6\u78B0\u6709\u5FAE\u5149\u7684\u95EE\u9898\u82B1\uFF0C\u9009\u62E9\u4E00\u4EF6\u672A\u6765\u53EF\u4EE5\u88AB\u73B0\u5B9E\u6838\u9A8C\u7684\u4E8B\u3002")}</strong>
+      <span>\u547D\u76D8\u53EA\u51B3\u5B9A\u4E3A\u4EC0\u4E48\u503C\u5F97\u89C2\u5BDF\uFF0C\u4E0D\u9884\u544A\u7ED3\u679C\uFF1B\u5C01\u5B58\u524D\u4E8B\u5B9E\u4E0D\u8BA1\u4F5C\u672A\u6765\u8BC1\u636E\u3002</span>
+    </section>`;
+  }
+  const exploration = tree.explorations.find(
+    (item) => Object.hasOwn(item.responses, question.instance_id)
+  );
+  const selectedOption = exploration?.responses[question.instance_id] || view.selectedLifeTreeOptionId;
+  const evidence = [
+    ...question.work_path_candidate_refs.map((item) => `\u89C2\u5BDF\u7F18\u7531 ${compactRef(item)}`)
+  ];
+  return `<section class="life-tree-question-panel${exploration ? " is-explored" : ""}" aria-label="\u5F53\u524D\u751F\u547D\u6811\u547D\u9898">
+    <header>
+      <p>${escapeHtml3(lifeTreeCategoryLabel(question.category))} \xB7 ${escapeHtml3(lifeDomainLabel(question.life_domain))}</p>
+      <span>${exploration ? "\u89C2\u5BDF\u5DF2\u5C01\u5B58" : "\u7B49\u5F85\u4F60\u7684\u5224\u65AD"}</span>
+    </header>
+    <h2>${escapeHtml3(question.prompt)}</h2>
+    <p class="life-tree-question-why"><strong>\u4E3A\u4EC0\u4E48\u51FA\u73B0</strong>${escapeHtml3(question.why_this_question)}</p>
+    <p class="life-tree-question-window"><strong>\u89C2\u5BDF\u7A97\u53E3</strong>${escapeHtml3(question.observation_window)}</p>
+    <div class="life-tree-question-evidence" aria-label="\u547D\u9898\u4F9D\u636E">
+      ${(evidence.length ? evidence : ["\u5F53\u524D\u547D\u76D8\u51BB\u7ED3\u6295\u5F71"]).map((item) => `<code>${escapeHtml3(item)}</code>`).join("")}
+    </div>
+    <div class="life-tree-future-evidence" aria-label="\u672A\u6765\u63ED\u76F2\u9700\u8981\u7684\u8BC1\u636E">
+      <strong>\u672A\u6765\u51ED\u4EC0\u4E48\u56DE\u770B</strong>
+      ${question.future_evidence_requirements.map((item) => `<span>${escapeHtml3(item)}</span>`).join("")}
+    </div>
+    <div class="life-tree-question-options" role="radiogroup" aria-label="\u9009\u62E9\u4E00\u79CD\u89C2\u5BDF">
+      ${question.options.map((option) => `<button
+        type="button"
+        data-life-tree-option="${escapeAttr4(option.option_id)}"
+        aria-pressed="${selectedOption === option.option_id}"
+        class="${selectedOption === option.option_id ? "is-selected" : ""}"
+        ${exploration ? "disabled" : ""}
+      >${escapeHtml3(option.label_template)}</button>`).join("")}
+    </div>
+    <footer>
+      <span>${exploration ? "\u8FD9\u6B21\u73B0\u5B9E\u89C2\u5BDF\u5DF2\u6301\u4E45\u4FDD\u5B58\uFF1B\u7B49\u5F85\u540E\u7EED\u8BC1\u636E\uFF0CLifeCase \u672A\u88AB\u6539\u5199\u3002" : "\u4E09\u4E2A\u65B9\u5411\u90FD\u5141\u8BB8\u53D1\u751F\uFF1B\u5F53\u524D\u7ED3\u6784\u5019\u9009\u4E0D\u4F1A\u66FF\u4F60\u9009\u62E9\u7B54\u6848\u3002"}</span>
+      ${exploration ? `<strong>\u72B6\u6001\uFF1A\u7B49\u5F85\u73B0\u5B9E\u56DE\u770B</strong>` : `<button type="button" data-life-tree-submit ${selectedOption && !view.lifeTreeAnswerSaving ? "" : "disabled"}>${view.lifeTreeAnswerSaving ? "\u6B63\u5728\u5C01\u5B58" : "\u5C01\u5B58\u8FD9\u6B21\u89C2\u5BDF"}</button>`}
+    </footer>
+  </section>`;
+}
+function renderRelationWorkControls(view) {
+  const lab = view.realMingliLab;
+  return `<section class="canonical-relation-work" aria-label="\u771F\u5B9E\u5173\u7CFB\u4E0E\u5019\u9009\u505A\u529F">
+    <header class="relation-work-toolbar">
+      <nav aria-label="\u5173\u7CFB\u7814\u7A76\u5C42">
+        ${relationModeButton("facts", "\u4E8B\u5B9E\u5173\u7CFB", view.relationLabMode)}
+        ${relationModeButton("candidates", "\u5019\u9009\u505A\u529F", view.relationLabMode)}
+        ${relationModeButton("professional", "\u4E13\u4E1A\u51C6\u5165", view.relationLabMode)}
+      </nav>
+      <button type="button" data-relation-restore-natal>\u6062\u590D\u539F\u5C40</button>
+    </header>
+    ${view.realMingliLabLoading ? `<div class="relation-work-loading">\u6B63\u5728\u8BFB\u53D6\u5F53\u524D LifeCase \u7684\u5173\u7CFB\u6295\u5F71</div>` : view.realMingliLabError ? `<div class="relation-work-empty">${escapeHtml3(view.realMingliLabError)}</div>` : lab ? renderRelationWorkBody(view, lab) : `<div class="relation-work-empty">\u5F53\u524D\u5173\u7CFB\u6295\u5F71\u5C1A\u672A\u5C31\u7EEA\u3002</div>`}
+  </section>`;
+}
+function renderRelationWorkBody(view, lab) {
+  const projection = lab.relation_work;
+  if (view.relationLabMode === "professional") {
+    if (!projection.professionally_resolved_view.length) {
+      return `<div class="relation-work-professional-empty">
+        <strong>\u5F53\u524D\u5C1A\u65E0\u901A\u8FC7\u4E13\u4E1A\u51C6\u5165\u7684\u6709\u6548\u505A\u529F\u8DEF\u5F84\u3002</strong>
+        <span>\u4E8B\u5B9E\u5173\u7CFB\u4E0E\u7ED3\u6784\u5019\u9009\u4ECD\u53EF\u5728\u524D\u4E24\u5C42\u67E5\u770B\uFF1B\u8FD9\u91CC\u4E0D\u4F1A\u4ECE\u90BB\u63A5\u3001\u7EBF\u6761\u6216\u5019\u9009\u6570\u91CF\u731C\u6D4B\u4E13\u4E1A\u4E3B\u7EBF\u3002</span>
+      </div>`;
+    }
+    return `<div class="relation-work-professional-list">${projection.professionally_resolved_view.map((item) => `
+      <article><strong>${escapeHtml3(item.resolved_effect_atoms.join(" \xB7 "))}</strong><code>${escapeHtml3(compactRef(item.effect_resolution_ref))}</code></article>
+    `).join("")}</div>`;
+  }
+  if (view.relationLabMode === "facts") {
+    return `<div class="relation-work-facts">${projection.factual_view.slice(0, 8).map((fact) => `
+        <article>
+          <strong>${escapeHtml3(fact.participant_coordinates.map(relationCoordinateLabel).join(" \u2192 "))}</strong>
+          <span>${escapeHtml3(relationFamilyLabel(fact.relation_family))} \xB7 ${escapeHtml3(relationActivationLabel(fact.activation_state))}</span>
+          <small>${fact.effect_status === "professionally_resolved" ? "\u4F5C\u7528\u5DF2\u83B7\u51C6" : "\u5173\u7CFB\u4E8B\u5B9E\u6210\u7ACB\uFF0C\u4F5C\u7528\u5F85\u5B9A"}</small>
+        </article>
+      `).join("")}</div>
+      ${renderLabLearningQuestions(lab.learning_questions)}`;
+  }
+  const paths = projection.candidate_path_view;
+  const selected = paths.find(
+    (item) => item.work_path_candidate_ref === view.selectedRelationPathRef
+  ) || paths[0];
+  return `<div class="relation-work-candidates">
+    <nav aria-label="\u5F53\u524D\u76D8\u652F\u6301\u7684\u5019\u9009\u505A\u529F">
+      ${paths.map((path) => `<button
+        type="button"
+        data-relation-path="${escapeAttr4(path.work_path_candidate_ref)}"
+        class="${path.work_path_candidate_ref === selected?.work_path_candidate_ref ? "is-selected" : ""}"
+      ><strong>${escapeHtml3(path.label)}</strong><span>${path.ordered_fact_revision_refs.length} \u6BB5\u4E8B\u5B9E \xB7 ${path.blocker_types.length} \u9879\u5F85\u5B9A</span></button>`).join("")}
+    </nav>
+    ${selected ? renderWorkPathDetail(selected) : `<div class="relation-work-empty">\u5F53\u524D LifeCase \u6CA1\u6709\u6EE1\u8DB3\u7ED3\u6784\u8BC1\u636E\u7684\u5019\u9009\u505A\u529F\u3002</div>`}
+  </div>`;
+}
+function renderLabLearningQuestions(questions) {
+  if (!questions.length) return "";
+  return `<section class="relation-work-learning" aria-label="\u7ED3\u6784\u5C0F\u8BFE">
+    <header>
+      <p>\u7ED3\u6784\u5C0F\u8BFE</p>
+      <strong>\u8FD9\u4E9B\u95EE\u9898\u5C5E\u4E8E Mingli Lab\uFF0C\u4E0D\u8BA1\u5165\u751F\u547D\u6811\u95EE\u9898\u82B1</strong>
+    </header>
+    <div>
+      ${questions.map((question) => `<article>
+        <span>${escapeHtml3(lifeTreeCategoryLabel(question.category))}</span>
+        <strong>${escapeHtml3(question.prompt)}</strong>
+        <small>${escapeHtml3(question.why_this_question)}</small>
+      </article>`).join("")}
+    </div>
+  </section>`;
+}
+function renderWorkPathDetail(path) {
+  return `<article class="relation-work-path-detail">
+    <header><p>\u7ED3\u6784\u5019\u9009</p><h2>${escapeHtml3(path.label)}</h2></header>
+    <div class="relation-work-statuses">
+      <span>\u7ED3\u6784\u5019\u9009</span>
+      <span>\u4F5C\u7528\u5F85\u5B9A</span>
+      <span>\u5BB9\u91CF\u5F85\u5B9A</span>
+      <span>\u53EF\u7528\u6027\u5F85\u5B9A</span>
+      <span>\u4E13\u4E1A\u51C6\u5165\u5F85\u5B9A</span>
+    </div>
+    <dl>
+      <dt>\u53C2\u4E0E\u5750\u6807</dt><dd>${escapeHtml3(path.participant_coordinates.map(relationCoordinateLabel).join(" \u2192 "))}</dd>
+      <dt>\u7ADE\u4E89\u5171\u4EAB</dt><dd>${escapeHtml3(path.shared_resource_refs.length ? path.shared_resource_refs.map(compactRef).join("\u3001") : "\u5F53\u524D\u672A\u53D1\u73B0\u5171\u4EAB\u53C2\u4E0E\u8005")}</dd>
+      <dt>\u74F6\u9888</dt><dd>${escapeHtml3(path.bottleneck_node_refs.length ? path.bottleneck_node_refs.map(compactRef).join("\u3001") : "\u627F\u8F7D\u4E0E\u6548\u679C\u8BC1\u636E\u4ECD\u5F85\u6838\u9A8C")}</dd>
+      <dt>\u963B\u65AD</dt><dd>${escapeHtml3(path.blocker_types.length ? path.blocker_types.map(workPathBlockerLabel).join("\uFF1B") : "\u65E0\u7ED3\u6784\u963B\u65AD")}</dd>
+    </dl>
+    <small>\u5019\u9009\u7EBF\u53EA\u8868\u793A\u5F53\u524D\u8BC1\u636E\u4E0B\u7684\u7ED3\u6784\u8FDE\u7EED\u6027\uFF0C\u4E0D\u8868\u793A\u6709\u6548\u505A\u529F\u3001\u4E3B\u529F\u6216\u4E13\u4E1A\u6392\u540D\u3002</small>
+  </article>`;
+}
+function relationWorkCanvasOverlay(view) {
+  const projection = view.realMingliLab?.relation_work;
+  if (!projection || view.relationLabMode === "professional") return [];
+  let facts = projection.factual_view.slice(0, 8);
+  let kind = "fact";
+  if (view.relationLabMode === "candidates") {
+    const selected = projection.candidate_path_view.find(
+      (item) => item.work_path_candidate_ref === view.selectedRelationPathRef
+    ) || projection.candidate_path_view[0];
+    if (!selected) return [];
+    const refs = new Set(selected.ordered_fact_revision_refs);
+    facts = projection.factual_view.filter((item) => refs.has(item.fact_revision_ref));
+    kind = "candidate";
+  }
+  return facts.flatMap((fact) => {
+    const source = fact.participant_coordinates[0];
+    const target = fact.participant_coordinates[1];
+    if (!source || !target) return [];
+    return [{
+      relation_ref: fact.fact_revision_ref,
+      label: relationFamilyLabel(fact.relation_family),
+      source_node_ref: source.node_ref,
+      target_node_ref: target.node_ref,
+      formal: false,
+      kind,
+      directionality: fact.directionality
+    }];
+  });
+}
+function relationModeButton(mode, label, current) {
+  return `<button type="button" data-relation-lab-mode="${mode}" aria-pressed="${mode === current}" class="${mode === current ? "is-active" : ""}">${label}</button>`;
+}
+function lifeTreeCategoryLabel(category) {
+  return {
+    factual_observation: "\u7ED3\u6784\u53F6",
+    temporal_change: "\u65F6\u5E8F\u53F6",
+    candidate_comparison: "\u4E3B\u8109",
+    counterfactual: "\u6839\u90E8\u8FFD\u95EE",
+    discriminating: "\u95EE\u9898\u82B1",
+    life_observation: "\u73B0\u5B9E\u89C2\u5BDF\u82B1"
+  }[category] || "\u751F\u547D\u547D\u9898";
+}
+function lifeDomainLabel(value) {
+  return {
+    career: "\u4E8B\u4E1A\u884C\u52A8",
+    career_wealth: "\u4E8B\u4E1A\u4E0E\u6536\u5165",
+    relationship: "\u5173\u7CFB\u89C2\u5BDF",
+    mobility: "\u8FC1\u79FB\u4E0E\u53D8\u5316",
+    self_structure: "\u81EA\u6211\u7ED3\u6784"
+  }[value] || "\u751F\u547D\u89C2\u5BDF";
+}
+function relationFamilyLabel(family) {
+  return {
+    generates: "\u751F",
+    controls: "\u514B",
+    same_element_support: "\u540C\u6C14\u652F\u6301",
+    clashes: "\u51B2",
+    combines: "\u5408",
+    harmonizes: "\u5408",
+    harms: "\u5BB3",
+    punishes: "\u5211"
+  }[family] || family;
+}
+function relationActivationLabel(value) {
+  return {
+    natal_present: "\u539F\u5C40\u5B58\u5728",
+    timing_present: "\u65F6\u8FD0\u51FA\u73B0",
+    activated: "\u5DF2\u6FC0\u6D3B",
+    latent: "\u6F5C\u5728"
+  }[value] || value;
+}
+function workPathBlockerLabel(value) {
+  return {
+    missing_effect_resolution: "\u7F3A\u5C11\u4F5C\u7528\u5224\u5B9A",
+    capacity_unresolved: "\u5BB9\u91CF\u5F85\u5B9A",
+    usability_unresolved: "\u53EF\u7528\u6027\u5F85\u5B9A",
+    structural_break: "\u7ED3\u6784\u65AD\u88C2",
+    competition_unresolved: "\u7ADE\u4E89\u8DEF\u5F84\u5F85\u5206\u8FA8",
+    timing_unresolved: "\u65F6\u5E8F\u5F85\u5B9A"
+  }[value] || value;
+}
+function slotLabel(value) {
+  return {
+    year: "\u5E74\u67F1",
+    month: "\u6708\u67F1",
+    day: "\u65E5\u67F1",
+    hour: "\u65F6\u67F1",
+    luck: "\u5927\u8FD0"
+  }[value] || `${value}\u6D41\u5E74`;
+}
+function relationCoordinateLabel(coordinate) {
+  const level = {
+    stem: "\u5929\u5E72",
+    branch: "\u5730\u652F",
+    hidden_stem: "\u85CF\u5E72"
+  }[coordinate.level] || coordinate.level;
+  return `${slotLabel(coordinate.slot)}${level}${coordinate.component}`;
+}
+function compactRef(value) {
+  if (value.length <= 22) return value;
+  return `${value.slice(0, 10)}\u2026${value.slice(-8)}`;
 }
 function renderDreamConsent(view) {
   const status = view.dreamStatus;
@@ -716,21 +1048,32 @@ function renderDreamConsent(view) {
 function renderMingliLab(view) {
   if (!view.canvas) return `<section class="lab-empty"><p>Mingli Lab</p><h1>\u56DB\u67F1\u5DF2\u7ECF\u5C31\u7EEA</h1><span>\u7814\u7A76\u955C\u5934\u53EA\u5728\u6B63\u5F0F\u5173\u7CFB\u6295\u5F71\u53EF\u7528\u65F6\u6309\u9700\u5C55\u5F00\uFF0C\u4E0D\u4F1A\u4E3A Lab \u53E6\u7B97\u4E00\u5957\u547D\u76D8\u3002</span></section>`;
   const stage = view.canvas.stages[view.ui.canvasStage];
-  const potentialCount = stage.spec.relations.filter((item) => item.relation_state === "potential").length;
-  const sourceCount = new Set(stage.spec.relations.flatMap((item) => item.trace.source_refs)).size;
+  const relationWork = view.realMingliLab?.relation_work;
+  const factCount = relationWork?.factual_view.length ?? stage.spec.relations.filter((item) => item.relation_state === "potential").length;
+  const sourceCount = new Set(
+    relationWork?.factual_view.flatMap((item) => item.evidence_refs) ?? stage.spec.relations.flatMap((item) => item.trace.source_refs)
+  ).size;
   const hiddenCount = stage.spec.nodes.filter((item) => item.node_type.includes("hidden")).length;
+  const candidateCount = relationWork?.candidate_path_view.length ?? 0;
   return `<div class="mingli-lab">
     <header class="lab-header">
-      <div><p>Mingli Lab \xB7 ${escapeHtml3(activeCaseName(view))}</p><h1>\u540C\u4E00\u547D\u5C40\u7684\u7814\u7A76\u955C\u5934</h1><span>\u5019\u9009\u5173\u7CFB\u4E0E\u8BC1\u636E\u7559\u5728\u7814\u7A76\u5C42\uFF1B\u6B63\u5F0F Case \u4E0D\u5728\u8FD9\u91CC\u88AB\u6539\u5199\u3002</span></div>
-      <code>${escapeHtml3((view.workspace?.state.scene_source_hash || view.envelope.source.source_hash).slice(0, 18))}</code>
+      <div><p>Mingli Lab \xB7 ${escapeHtml3(activeCaseName(view))}</p><h1>\u540C\u4E00 LifeCase \u7684\u516D\u67F1\u4E8B\u5B9E\u4E0E\u5019\u9009\u505A\u529F</h1><span>\u4E8B\u5B9E\u3001\u7ED3\u6784\u5019\u9009\u548C\u4E13\u4E1A\u51C6\u5165\u5206\u5C42\u5448\u73B0\uFF1B\u6B63\u5F0F Case \u4E0D\u5728\u8FD9\u91CC\u88AB\u6539\u5199\u3002</span></div>
+      <code>${escapeHtml3((relationWork?.foundation_content_hash || view.workspace?.state.scene_source_hash || view.envelope.source.source_hash).slice(0, 18))}</code>
     </header>
     <div class="lab-evidence-rail" aria-label="\u5F53\u524D\u7814\u7A76\u8303\u56F4">
-      <span><small>\u6F5C\u5728\u5173\u7CFB</small><strong>${potentialCount}</strong></span>
+      <span><small>\u5173\u7CFB\u4E8B\u5B9E</small><strong>${factCount}</strong></span>
       <span><small>\u85CF\u5E72\u8282\u70B9</small><strong>${hiddenCount}</strong></span>
-      <span><small>\u6765\u6E90\u5F15\u7528</small><strong>${sourceCount}</strong></span>
-      <span><small>\u6B63\u5F0F\u5199\u5165</small><strong>\u5173\u95ED</strong></span>
+      <span><small>\u5019\u9009\u505A\u529F</small><strong>${candidateCount}</strong></span>
+      <span><small>\u8BC1\u636E\u5F15\u7528</small><strong>${sourceCount}</strong></span>
     </div>
-    <section class="lab-canvas"><p class="lab-lens-label">\u547D\u7406\u5E08 Lens \xB7 \u6F5C\u5728\u5173\u7CFB\u573A</p>${renderReadOnlyCanvas(view.canvas, view.ui, view.canvasContext, view.cognition.status === "preparing")}</section>
+    ${renderRelationWorkControls(view)}
+    <section class="lab-canvas"><p class="lab-lens-label">\u6B63\u5F0F OneCanvas \xB7 \u516D\u67F1\u5341\u4E8C\u8282\u70B9</p>${renderReadOnlyCanvas(
+    view.canvas,
+    view.ui,
+    view.canvasContext,
+    view.cognition.status === "preparing",
+    relationWorkCanvasOverlay(view)
+  )}</section>
   </div>`;
 }
 function renderProductSidebar(view) {
@@ -787,7 +1130,7 @@ function renderDeterministicCanvasSkeleton(envelope2, cognition2) {
     <p><i></i>${escapeHtml3(cognition2.message)}</p>
   </div>`;
 }
-function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning) {
+function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning, relationWorkOverlay = []) {
   const stage = canvas2.stages[ui2.canvasStage];
   const allowedVisibility = canvas2.renderer_policy.available_visibility_layers;
   const requestedVisibility = ui2.canvasVisibilityLayer;
@@ -847,7 +1190,12 @@ function renderReadOnlyCanvas(canvas2, ui2, context, pathTaskRunning) {
     activeRelations,
     activePaths,
     selected,
-    visibility === "lab_audit"
+    visibility === "lab_audit",
+    relationWorkOverlay,
+    new Set(relationWorkOverlay.flatMap((item) => [
+      item.source_node_ref,
+      item.target_node_ref
+    ]))
   )}
       </div>
       <p class="layer-caption"><strong>${escapeHtml3(layer?.label || "\u5F53\u524D\u56FE\u5C42")}</strong>${escapeHtml3(layer?.description || "\u5F53\u524D\u6CA1\u6709\u53EF\u663E\u793A\u7684\u5173\u7CFB\u3002")}</p>
@@ -954,8 +1302,10 @@ function renderCanonicalCanvasScene(slots, nodes, relations, paths, selected, sh
     const target = anchors.get(relation.target_node_ref);
     if (!source || !target) return "";
     const route = routeCanvasRelation(source, target, index + relations.length);
-    return `<g class="canvas-candidate-relation" data-candidate-relation="${escapeAttr4(relation.relation_ref)}">
-      <path d="${route.d}" marker-end="url(#canvas-candidate-arrow)"></path>
+    const kind = relation.kind === "fact" ? "fact" : "candidate";
+    const marker = relation.directionality === "symmetric" ? "" : ` marker-end="url(#canvas-${kind}-arrow)"`;
+    return `<g class="canvas-${kind}-relation" data-${kind}-relation="${escapeAttr4(relation.relation_ref)}">
+      <path d="${route.d}"${marker}></path>
       <text x="${route.labelX}" y="${route.labelY}" text-anchor="middle">${escapeHtml3(relation.label)}</text>
     </g>`;
   }).join("");
@@ -973,6 +1323,7 @@ function renderCanonicalCanvasScene(slots, nodes, relations, paths, selected, sh
       <marker id="canvas-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
       <marker id="canvas-path-arrow" markerWidth="9" markerHeight="9" refX="8" refY="4.5" orient="auto"><path d="M0,0 L9,4.5 L0,9 Z"></path></marker>
       <marker id="canvas-candidate-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
+      <marker id="canvas-fact-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z"></path></marker>
     </defs>
     <g class="canvas-scene-tracks" aria-hidden="true"><line x1="44" y1="185" x2="1276" y2="185"></line><line x1="44" y1="390" x2="1276" y2="390"></line><text x="46" y="171">\u5929\u5E72</text><text x="46" y="376">\u5730\u652F</text></g>
     <g class="canvas-scene-relations">${relationMarkup}</g>
@@ -1141,7 +1492,9 @@ function shortRelationLabel(relation) {
     controls: "\u514B",
     same_element_support: "\u540C\u6C14",
     stores: "\u85CF",
-    roots: "\u6839",
+    roots: "\u65E7\u7248",
+    source_identity_evidence: "\u540C\u5B57\u6765\u6E90",
+    source_element_affinity: "\u540C\u4E94\u884C\u6765\u6E90",
     forms_half_combination: "\u534A\u5408",
     forms_triple_combination: "\u4E09\u5408",
     clashes: "\u51B2",
@@ -1530,6 +1883,35 @@ function bindExperienceInteractions(root2, handlers) {
       handlers.selectProfile(event.currentTarget.value);
     });
   });
+  root2.querySelectorAll("[data-life-tree-question]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectLifeTreeQuestion(
+      button.dataset.lifeTreeQuestion || "",
+      button.dataset.lifeTreeCategory || "factual_observation"
+    ));
+  });
+  root2.querySelectorAll("[data-life-tree-option]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectLifeTreeOption(
+      button.dataset.lifeTreeOption || ""
+    ));
+  });
+  root2.querySelector("[data-life-tree-submit]")?.addEventListener(
+    "click",
+    () => handlers.submitLifeTreeAnswer()
+  );
+  root2.querySelectorAll("[data-relation-lab-mode]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectRelationLabMode(
+      button.dataset.relationLabMode || "facts"
+    ));
+  });
+  root2.querySelectorAll("[data-relation-path]").forEach((button) => {
+    button.addEventListener("click", () => handlers.selectRelationPath(
+      button.dataset.relationPath || ""
+    ));
+  });
+  root2.querySelector("[data-relation-restore-natal]")?.addEventListener(
+    "click",
+    () => handlers.restoreRelationNatal()
+  );
 }
 
 // apps/product/experience_shell/src/audio.ts
@@ -2419,7 +2801,7 @@ function percentage(value, total) {
 var LENS_META = {
   overview: { label: "\u603B\u89C8", objectLabel: "\u6811\u5E72\u5E74\u8F6E" },
   five_element: { label: "\u4E94\u884C", objectLabel: "\u53F6\u9762\u4E94\u884C" },
-  roots_reveal: { label: "\u6839\u900F", objectLabel: "\u6839\u8109\u627F\u6258" },
+  roots_reveal: { label: "\u6765\u6E90", objectLabel: "\u6765\u6E90\u5750\u6807" },
   combination_conflict: { label: "\u5408\u51B2", objectLabel: "\u679D\u8DEF\u5206\u5408" },
   work_path: { label: "\u505A\u529F", objectLabel: "\u4E3B\u679D\u8DEF\u5F84" },
   timing: { label: "\u65F6\u8FD0", objectLabel: "\u53F6\u95F4\u9732\u65F6" }
@@ -3132,6 +3514,7 @@ var DreamFirstVisitRuntime = class {
   visibilityReconcilePending = false;
   forestHistoryActive = false;
   gameRounds = [];
+  gameContentUnavailable = false;
   gameAttempt = null;
   gameResult = null;
   gameLens = "overview";
@@ -3193,8 +3576,15 @@ var DreamFirstVisitRuntime = class {
       this.renderGrove();
       this.activateForestHistory();
       this.startControlLoops();
-      if (this.gameRounds.length) {
+      if (this.gameRounds.length || this.gameContentUnavailable) {
         this.gameShellOpen = true;
+        if (!this.gameRounds.length) {
+          this.porchEntering = false;
+          this.phase = "free_roam";
+          this.syncSceneDom();
+          this.renderGameLayer();
+          return;
+        }
         this.porchEntering = !this.visit.is_return_visit;
         this.playAmbient();
         if (this.visit.is_return_visit || this.visit.runtime_state === "LOCAL_MIST_REENTRY") {
@@ -4319,12 +4709,15 @@ var DreamFirstVisitRuntime = class {
     };
     try {
       this.gameRounds = await load();
+      this.gameContentUnavailable = this.gameRounds.length === 0;
     } catch {
       try {
         this.acceptVisit(await enterDreamVisit(this.visit.visit_id));
         this.gameRounds = await load();
+        this.gameContentUnavailable = this.gameRounds.length === 0;
       } catch {
         this.gameRounds = [];
+        this.gameContentUnavailable = true;
       }
     }
   }
@@ -4413,9 +4806,23 @@ var DreamFirstVisitRuntime = class {
     this.syncStoryRuntime();
     layer.classList.toggle("is-tree-world", this.gameShellOpen);
     if (!this.gameAttempt) {
-      if (!this.gameShellOpen || !this.gameRounds.length) {
+      if (!this.gameShellOpen) {
         layer.innerHTML = "";
         layer.setAttribute("aria-hidden", "true");
+        this.syncSceneDom();
+        return;
+      }
+      if (!this.gameRounds.length) {
+        layer.innerHTML = renderDreamTreePorch({
+          rounds: [],
+          activeIndex: 0,
+          banner: "",
+          entering: false,
+          mediaCue: "none",
+          focusedWhisper: "\u8FD9\u68F5\u6811\u6682\u65F6\u6CA1\u6709\u5F00\u653E\u65B0\u7684\u547D\u9898\u3002",
+          scene: this.story.scene
+        });
+        layer.setAttribute("aria-hidden", "false");
         this.syncSceneDom();
         return;
       }
@@ -6180,6 +6587,41 @@ function nextPaint() {
   return new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(() => resolve())));
 }
 
+// apps/product/experience_shell/src/relation_work_api.ts
+async function requestJson2(url, init) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json", ...init?.headers || {} },
+    ...init
+  });
+  if (!response.ok) {
+    const payload = await response.json().catch(() => ({ detail: response.statusText }));
+    throw new Error(String(payload.detail || `request_failed_${response.status}`));
+  }
+  return response.json();
+}
+function loadRealLifeTree(caseId) {
+  return requestJson2(
+    `/api/v50/experience/cases/${encodeURIComponent(caseId)}/life-tree/questions`
+  );
+}
+async function answerRealLifeTreeQuestion(caseId, questionId, optionId) {
+  const payload = await requestJson2(
+    `/api/v50/experience/cases/${encodeURIComponent(caseId)}/life-tree/questions/${encodeURIComponent(questionId)}/answer`,
+    {
+      method: "POST",
+      body: JSON.stringify({ selected_option_id: optionId })
+    }
+  );
+  return payload.exploration;
+}
+function loadRealMingliLab(caseId) {
+  return requestJson2(
+    `/api/v50/experience/cases/${encodeURIComponent(caseId)}/mingli-lab/relation-work`
+  );
+}
+
 // apps/product/experience_shell/src/main.ts
 var rootElement = document.querySelector("#experienceRoot");
 if (!rootElement) throw new Error("experience_root_missing");
@@ -6213,6 +6655,18 @@ var accountBusy = false;
 var accountError = "";
 var dreamStatus = null;
 var dreamReturnedWithSeed = consumeDreamReturnedWithSeed();
+var realLifeTree = null;
+var realLifeTreeLoading = false;
+var realLifeTreeError = "";
+var selectedLifeTreeQuestionId = "";
+var selectedLifeTreeCategory = "factual_observation";
+var selectedLifeTreeOptionId = "";
+var lifeTreeAnswerSaving = false;
+var realMingliLab = null;
+var realMingliLabLoading = false;
+var realMingliLabError = "";
+var relationLabMode = "facts";
+var selectedRelationPathRef = "";
 if (location.pathname.startsWith("/experience/dream")) {
   const entryTransition = resumeDreamEntryTransition();
   void bootDreamExperience(root).finally(() => entryTransition?.markDestinationReady());
@@ -6263,6 +6717,13 @@ async function openCase(selection, preserveUi = false) {
     narrationManifest = null;
     narrationAssets = {};
     timeline = null;
+    realLifeTree = null;
+    realLifeTreeError = "";
+    selectedLifeTreeQuestionId = "";
+    selectedLifeTreeOptionId = "";
+    realMingliLab = null;
+    realMingliLabError = "";
+    selectedRelationPathRef = "";
   }
   account = loaded.account;
   cases = loaded.cases;
@@ -6276,6 +6737,7 @@ async function openCase(selection, preserveUi = false) {
   ui = loaded.ui;
   updateExperienceLocation(activeCaseId, ui);
   render();
+  void ensureRealLifeTree();
   void loadSelectedProjection();
   void refreshDreamStatus();
   scheduleBackgroundCognition();
@@ -6298,7 +6760,19 @@ function render() {
     canvasContext,
     ui,
     dreamStatus,
-    dreamReturnedWithSeed
+    dreamReturnedWithSeed,
+    realLifeTree,
+    realLifeTreeLoading,
+    realLifeTreeError,
+    selectedLifeTreeQuestionId,
+    selectedLifeTreeCategory,
+    selectedLifeTreeOptionId,
+    lifeTreeAnswerSaving,
+    realMingliLab,
+    realMingliLabLoading,
+    realMingliLabError,
+    relationLabMode,
+    selectedRelationPathRef
   });
   bindExperienceInteractions(root, {
     selectArea,
@@ -6325,6 +6799,32 @@ function render() {
     selectProfile(profileId) {
       root.innerHTML = renderLoading("\u6B63\u5728\u5207\u6362\u547D\u76D8");
       void openCase({ profileId });
+    },
+    selectLifeTreeQuestion(questionId, category) {
+      selectedLifeTreeQuestionId = questionId;
+      selectedLifeTreeCategory = category;
+      selectedLifeTreeOptionId = "";
+      realLifeTreeError = "";
+      render();
+    },
+    selectLifeTreeOption(optionId) {
+      selectedLifeTreeOptionId = optionId;
+      render();
+    },
+    submitLifeTreeAnswer() {
+      void submitRealLifeTreeAnswer();
+    },
+    selectRelationLabMode(mode) {
+      relationLabMode = mode;
+      render();
+    },
+    selectRelationPath(pathRef) {
+      selectedRelationPathRef = pathRef;
+      relationLabMode = "candidates";
+      render();
+    },
+    restoreRelationNatal() {
+      selectCanvasStage("natal");
     }
   });
   syncOpeningMusicControls();
@@ -6340,6 +6840,7 @@ function selectArea(area) {
   if (area === "lab") {
     selectLabLayer();
     void ensureCanvas();
+    void ensureRealMingliLab();
   } else {
     ui = reduceUi(ui, { type: "canvas-visibility", visibility: "formal" });
   }
@@ -6354,8 +6855,68 @@ function selectSurface(surface) {
   void loadSelectedProjection();
 }
 async function loadSelectedProjection() {
-  if (ui.productArea === "lab" || ui.workspaceSurface === "onecanvas") await ensureCanvas();
+  if (ui.productArea === "lab" || ui.workspaceSurface === "onecanvas") {
+    await ensureCanvas();
+  }
+  if (ui.productArea === "lab") await ensureRealMingliLab();
   if (ui.workspaceSurface === "theater") await ensureNarration();
+}
+async function ensureRealLifeTree() {
+  if (realLifeTree || realLifeTreeLoading || !activeCaseId) return;
+  realLifeTreeLoading = true;
+  realLifeTreeError = "";
+  render();
+  try {
+    realLifeTree = await loadRealLifeTree(activeCaseId);
+  } catch (error) {
+    realLifeTree = null;
+    realLifeTreeError = humanizeError(
+      error instanceof Error ? error.message : String(error)
+    );
+  } finally {
+    realLifeTreeLoading = false;
+    render();
+  }
+}
+async function submitRealLifeTreeAnswer() {
+  if (lifeTreeAnswerSaving || !activeCaseId || !selectedLifeTreeQuestionId || !selectedLifeTreeOptionId) return;
+  lifeTreeAnswerSaving = true;
+  realLifeTreeError = "";
+  render();
+  try {
+    await answerRealLifeTreeQuestion(
+      activeCaseId,
+      selectedLifeTreeQuestionId,
+      selectedLifeTreeOptionId
+    );
+    realLifeTree = await loadRealLifeTree(activeCaseId);
+    selectedLifeTreeOptionId = "";
+  } catch (error) {
+    realLifeTreeError = humanizeError(
+      error instanceof Error ? error.message : String(error)
+    );
+  } finally {
+    lifeTreeAnswerSaving = false;
+    render();
+  }
+}
+async function ensureRealMingliLab() {
+  if (realMingliLab || realMingliLabLoading || !activeCaseId) return;
+  realMingliLabLoading = true;
+  realMingliLabError = "";
+  render();
+  try {
+    realMingliLab = await loadRealMingliLab(activeCaseId);
+    selectedRelationPathRef = realMingliLab.relation_work.candidate_path_view[0]?.work_path_candidate_ref || "";
+  } catch (error) {
+    realMingliLab = null;
+    realMingliLabError = humanizeError(
+      error instanceof Error ? error.message : String(error)
+    );
+  } finally {
+    realMingliLabLoading = false;
+    render();
+  }
 }
 async function ensureCanvas() {
   if (canvas || canvasLoading || !activeCaseId) return;
@@ -6569,7 +7130,7 @@ async function refreshDreamStatus() {
 }
 function selectLabLayer() {
   if (!canvas) return;
-  const layer = canvas.stages[ui.canvasStage].layers.find((item) => item.layer_id === "five_element" && item.available);
+  const layer = canvas.stages[ui.canvasStage].layers.find((item) => item.layer_id === "overview" && item.available);
   if (layer) ui = reduceUi(ui, { type: "canvas-layer", layer: layer.layer_id });
   if (canvas.renderer_policy.available_visibility_layers.includes("lab_audit")) {
     ui = reduceUi(ui, { type: "canvas-visibility", visibility: "lab_audit" });
