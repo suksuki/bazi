@@ -13,6 +13,12 @@ from abu_v60.knowledge.mechanism_bazi import bazi_mechanism_evidence_profile
 from abu_v60.knowledge.mechanism_contracts import BaziMechanismEvidenceProfile
 from abu_v60.knowledge.quant_bazi import bazi_quant_foundation_profile
 from abu_v60.knowledge.quant_contracts import BaziQuantFoundationProfile
+from abu_v60.knowledge.source_review_bazi import (
+    bazi_source_coordinate_review_profile,
+)
+from abu_v60.knowledge.source_review_contracts import (
+    BaziSourceCoordinateReviewProfile,
+)
 from abu_v60.knowledge.timing_bazi import bazi_timing_evidence_profile
 from abu_v60.knowledge.timing_contracts import BaziTimingEvidenceProfile
 
@@ -29,6 +35,7 @@ class KnowledgeAuthority:
         profiles: tuple[BaziFoundationProfile, ...] | None = None,
         candidate_rule_profiles: tuple[BaziCandidateQualificationProfile, ...] | None = None,
         quant_foundation_profiles: tuple[BaziQuantFoundationProfile, ...] | None = None,
+        source_review_profiles: tuple[BaziSourceCoordinateReviewProfile, ...] | None = None,
         mechanism_evidence_profiles: tuple[BaziMechanismEvidenceProfile, ...] | None = None,
         timing_evidence_profiles: tuple[BaziTimingEvidenceProfile, ...] | None = None,
         active_selection: KnowledgeProfileSelection | None = None,
@@ -55,6 +62,15 @@ class KnowledgeAuthority:
         }
         if len(self._quant_foundation_profiles) != len(admitted_quant_profiles):
             raise KnowledgeAuthorityError("quant_foundation_profile_identity_not_unique")
+        admitted_source_review_profiles = source_review_profiles or (
+            bazi_source_coordinate_review_profile(),
+        )
+        self._source_review_profiles = {
+            (profile.profile_id, profile.profile_version): profile
+            for profile in admitted_source_review_profiles
+        }
+        if len(self._source_review_profiles) != len(admitted_source_review_profiles):
+            raise KnowledgeAuthorityError("source_review_profile_identity_not_unique")
         admitted_mechanism_profiles = mechanism_evidence_profiles or (
             bazi_mechanism_evidence_profile(),
         )
@@ -64,9 +80,7 @@ class KnowledgeAuthority:
         }
         if len(self._mechanism_evidence_profiles) != len(admitted_mechanism_profiles):
             raise KnowledgeAuthorityError("mechanism_evidence_profile_identity_not_unique")
-        admitted_timing_profiles = timing_evidence_profiles or (
-            bazi_timing_evidence_profile(),
-        )
+        admitted_timing_profiles = timing_evidence_profiles or (bazi_timing_evidence_profile(),)
         self._timing_evidence_profiles = {
             (profile.profile_id, profile.profile_version): profile
             for profile in admitted_timing_profiles
@@ -77,12 +91,14 @@ class KnowledgeAuthority:
             foundation=bazi_foundation_profile(),
             candidate_rules=bazi_candidate_qualification_profile(),
             quant_foundation=bazi_quant_foundation_profile(),
+            source_review=bazi_source_coordinate_review_profile(),
             mechanism_evidence=bazi_mechanism_evidence_profile(),
             timing_evidence=bazi_timing_evidence_profile(),
         )
         self.active_foundation_profile()
         self.active_candidate_rule_profile()
         self.active_quant_foundation_profile()
+        self.active_source_review_profile()
         self.active_mechanism_evidence_profile()
         self.active_timing_evidence_profile()
 
@@ -195,6 +211,43 @@ class KnowledgeAuthority:
             )
         ]
 
+    def resolve_source_review_profile(
+        self,
+        *,
+        profile_id: str,
+        profile_version: str,
+        expected_hash: str | None = None,
+    ) -> BaziSourceCoordinateReviewProfile:
+        profile = self._source_review_profiles.get((profile_id, profile_version))
+        if profile is None:
+            raise KnowledgeAuthorityError("source_review_profile_not_admitted")
+        if expected_hash is not None and expected_hash != profile.profile_hash:
+            raise KnowledgeAuthorityError("source_review_profile_hash_mismatch")
+        return profile
+
+    def source_review_manifest(self) -> list[dict[str, object]]:
+        return [
+            {
+                "profile_id": profile.profile_id,
+                "profile_version": profile.profile_version,
+                "profile_hash": profile.profile_hash,
+                "governance_status": profile.governance_status,
+                "runtime_scope": profile.runtime_scope,
+                "professionally_reviewed": profile.professionally_reviewed,
+                "source_refs": list(profile.source_refs),
+                "rule_refs": [rule.rule_ref for rule in profile.rules],
+                "active": (
+                    profile.profile_id == self._active_selection.source_review_profile_id
+                    and profile.profile_version
+                    == self._active_selection.source_review_profile_version
+                ),
+            }
+            for profile in sorted(
+                self._source_review_profiles.values(),
+                key=lambda item: (item.profile_id, item.profile_version),
+            )
+        ]
+
     def active_foundation_profile(self) -> BaziFoundationProfile:
         return self.resolve(
             profile_id=self._active_selection.foundation_profile_id,
@@ -214,6 +267,15 @@ class KnowledgeAuthority:
             profile_id=self._active_selection.quant_foundation_profile_id,
             profile_version=self._active_selection.quant_foundation_profile_version,
             expected_hash=self._active_selection.quant_foundation_profile_hash,
+        )
+
+    def active_source_review_profile(
+        self,
+    ) -> BaziSourceCoordinateReviewProfile:
+        return self.resolve_source_review_profile(
+            profile_id=self._active_selection.source_review_profile_id,
+            profile_version=self._active_selection.source_review_profile_version,
+            expected_hash=self._active_selection.source_review_profile_hash,
         )
 
     def resolve_mechanism_evidence_profile(

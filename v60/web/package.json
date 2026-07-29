@@ -16,7 +16,8 @@
     "audit:semantic-focus": "node tools/semantic-focus-audit.mjs",
     "audit:explanation-slice": "node tools/explanation-slice-audit.mjs",
     "audit:mechanism-qualification": "node tools/mechanism-qualification-audit.mjs",
-    "audit:mechanism-evidence-depth": "node tools/mechanism-evidence-depth-audit.mjs"
+    "audit:mechanism-evidence-depth": "node tools/mechanism-evidence-depth-audit.mjs",
+    "audit:source-coordinate-review": "node tools/source-coordinate-review-audit.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

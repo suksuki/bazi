@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.037",
+        architecture_version="v60.runtime-architecture.038",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.016",
+                version="v60.mingli-cognitive-engine.017",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -50,6 +50,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "append_only_quant_vector_history",
                     "ten_god_occurrence_matrix",
                     "source_manifestation_evidence_projection",
+                    "bounded_source_coordinate_relation_review",
+                    "append_only_source_coordinate_review_history",
                     "mechanism_candidate_evidence_vector",
                     "append_only_mechanism_vector_history",
                     "deterministic_dayun_year_month_coordinates",
@@ -80,7 +82,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="knowledge",
                 kind=ModuleKind.AUTHORITY,
-                version="v60.knowledge-authority.006",
+                version="v60.knowledge-authority.007",
                 status=ModuleStatus.BOUNDED,
                 capabilities=(
                     "versioned_rule_profile_refs",
@@ -89,6 +91,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "professional_gate_boundary",
                     "explicit_active_profile_selection",
                     "hash_locked_quant_foundation_profile",
+                    "hash_locked_source_coordinate_review_profile",
                     "hash_locked_mechanism_evidence_profile",
                     "hash_locked_timing_evidence_profile",
                 ),
@@ -275,7 +278,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.010",
+                version="v60.unit-mingli.011",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context",),
                 capabilities=(
@@ -292,6 +295,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "inspectable_support_and_boundaries",
                     "candidate_evidence_completeness",
                     "candidate_evidence_contrast",
+                    "source_coordinate_review_summary",
                 ),
             ),
             RuntimeModule(
@@ -324,7 +328,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.007",
+                version="v60.unit-lab.008",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition"),
                 capabilities=(
@@ -337,6 +341,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "shared_explanation_claim_inspection",
                     "mechanism_requirement_matrix",
                     "role_source_timing_competition_inspection",
+                    "source_coordinate_relation_intersection_inspection",
                     "research_proposal_requires_knowledge_admission",
                 ),
             ),

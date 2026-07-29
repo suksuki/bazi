@@ -17,6 +17,10 @@ from abu_v60.mingli.quantitative import MingliQuantFoundationCompiler
 from abu_v60.mingli.reading import MingliReadingProjector
 from abu_v60.mingli.reading_store import MingliReadingStore
 from abu_v60.mingli.service import MingliCaseService
+from abu_v60.mingli.source_review import MingliSourceCoordinateReviewCompiler
+from abu_v60.mingli.source_review_store import (
+    MingliSourceReviewVectorStore,
+)
 from abu_v60.mingli.timing import MingliTimingEvidenceCompiler
 from abu_v60.mingli.timing_store import MingliTimingVectorStore
 from abu_v60.provenance import canonical_json, content_hash, stable_ref
@@ -38,6 +42,8 @@ class MingliCorpusQualificationService:
         self._candidates = StructuralCandidateCompiler()
         self._quant_compiler = MingliQuantFoundationCompiler()
         self._quant_store = MingliQuantVectorStore(engine)
+        self._source_review_compiler = MingliSourceCoordinateReviewCompiler()
+        self._source_review_store = MingliSourceReviewVectorStore(engine)
         self._mechanism_compiler = MingliMechanismEvidenceCompiler()
         self._mechanism_store = MingliMechanismVectorStore(engine)
         self._timing_compiler = MingliTimingEvidenceCompiler()
@@ -56,8 +62,7 @@ class MingliCorpusQualificationService:
         cases = tuple(
             item
             for item in self._cases.list_cases(account_ref=account_ref)
-            if item["status"] == "ACTIVE"
-            and item["subject_kind"] in QUALIFIED_SUBJECT_KINDS
+            if item["status"] == "ACTIVE" and item["subject_kind"] in QUALIFIED_SUBJECT_KINDS
         )
         if not cases:
             raise MingliCorpusQualificationError("mingli_corpus_has_no_qualified_cases")
@@ -180,6 +185,12 @@ class MingliCorpusQualificationService:
                 facts=facts,
             )
         )
+        source_review = self._source_review_store.ensure(
+            self._source_review_compiler.compile(
+                quant_vector=quant,
+                facts=facts,
+            )
+        )
         mechanism = self._mechanism_store.ensure(
             self._mechanism_compiler.compile(
                 quant_vector=quant,
@@ -190,12 +201,8 @@ class MingliCorpusQualificationService:
             self._timing_compiler.compile(
                 case_ref=case_ref,
                 chart_version_ref=chart_ref,
-                life_case_revision_ref=str(
-                    workspace["life_case"]["life_case_revision_ref"]
-                ),
-                birth_input=BirthInput.model_validate(
-                    workspace["profile"]["birth_input"]
-                ),
+                life_case_revision_ref=str(workspace["life_case"]["life_case_revision_ref"]),
+                birth_input=BirthInput.model_validate(workspace["profile"]["birth_input"]),
                 gender=str(workspace["profile"]["gender"]),
                 pillars=workspace["chart"]["pillars"],
                 facts=facts,
@@ -213,12 +220,11 @@ class MingliCorpusQualificationService:
             self._reading_projector.project(
                 case_ref=case_ref,
                 chart_version_ref=chart_ref,
-                life_case_revision_ref=str(
-                    workspace["life_case"]["life_case_revision_ref"]
-                ),
+                life_case_revision_ref=str(workspace["life_case"]["life_case_revision_ref"]),
                 facts=facts,
                 candidates=candidates,
                 quant_vector=quant,
+                source_review_vector=source_review,
                 mechanism_vector=mechanism,
                 timing_vector=timing,
                 life_domain_vector=domains,
@@ -228,10 +234,9 @@ class MingliCorpusQualificationService:
             "case_ref": case_ref,
             "subject_kind": subject_kind,
             "chart_version_ref": chart_ref,
-            "life_case_revision_ref": workspace["life_case"][
-                "life_case_revision_ref"
-            ],
+            "life_case_revision_ref": workspace["life_case"]["life_case_revision_ref"],
             "quant_vector_ref": quant.vector_ref,
+            "source_review_vector_ref": source_review.vector_ref,
             "mechanism_vector_ref": mechanism.vector_ref,
             "timing_vector_ref": timing.vector_ref,
             "life_domain_vector_ref": domains.vector_ref,
@@ -240,6 +245,7 @@ class MingliCorpusQualificationService:
             "structural_candidate_count": len(candidates),
             "mechanism_candidate_count": len(mechanism.candidates),
             "timing_coordinate_count": len(timing.coordinates),
+            "source_review_required_count": (source_review.review_required_count),
             "domain_signal_statuses": {
                 item.domain: item.signal_status for item in domains.observations
             },
@@ -259,27 +265,22 @@ class MingliCorpusQualificationService:
             "cases_with_timing_coordinates": sum(
                 item["timing_coordinate_count"] > 0 for item in results
             ),
+            "cases_with_source_relation_review": sum(
+                item["source_review_required_count"] > 0 for item in results
+            ),
             "domain_signal_counts": {
                 domain: {
                     status: sum(
-                        item["domain_signal_statuses"][domain] == status
-                        for item in results
+                        item["domain_signal_statuses"][domain] == status for item in results
                     )
                     for status in sorted(
-                        {
-                            item["domain_signal_statuses"][domain]
-                            for item in results
-                        }
+                        {item["domain_signal_statuses"][domain] for item in results}
                     )
                 }
                 for domain in domains
             },
             "unresolved_dimensions": sorted(
-                {
-                    dimension
-                    for item in results
-                    for dimension in item["unresolved_dimensions"]
-                }
+                {dimension for item in results for dimension in item["unresolved_dimensions"]}
             ),
             "professional_verdicts_emitted": 0,
             "probabilities_emitted": 0,

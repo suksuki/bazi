@@ -44,6 +44,15 @@ from abu_v60.knowledge.quant_contracts import (
     TenGodDefinition,
 )
 from abu_v60.knowledge.service import KnowledgeAuthority, KnowledgeAuthorityError
+from abu_v60.knowledge.source_review_bazi import (
+    SOURCE_REVIEW_PROFILE_ID,
+    SOURCE_REVIEW_PROFILE_VERSION,
+    bazi_source_coordinate_review_profile,
+)
+from abu_v60.knowledge.source_review_contracts import (
+    BaziSourceCoordinateReviewProfile,
+    SourceCoordinateReviewRule,
+)
 from abu_v60.knowledge.timing_bazi import bazi_timing_evidence_profile
 from abu_v60.knowledge.timing_contracts import (
     BaziTimingEvidenceProfile,
@@ -65,12 +74,15 @@ __all__ = [
     "SIX_CLASH",
     "SIX_HARMONY",
     "SOURCE_REF",
+    "SOURCE_REVIEW_PROFILE_ID",
+    "SOURCE_REVIEW_PROFILE_VERSION",
     "STEM_ELEMENTS",
     "STEM_POLARITY",
     "BaziCandidateQualificationProfile",
     "BaziFoundationProfile",
     "BaziMechanismEvidenceProfile",
     "BaziQuantFoundationProfile",
+    "BaziSourceCoordinateReviewProfile",
     "BaziTimingEvidenceProfile",
     "BranchDefinition",
     "BranchRelationDefinition",
@@ -81,6 +93,7 @@ __all__ = [
     "KnowledgeProfileSelection",
     "MechanismPatternDefinition",
     "MechanismRoleDefinition",
+    "SourceCoordinateReviewRule",
     "StemDefinition",
     "TenGodDefinition",
     "YunGenderCode",
@@ -88,5 +101,6 @@ __all__ = [
     "bazi_foundation_profile",
     "bazi_mechanism_evidence_profile",
     "bazi_quant_foundation_profile",
+    "bazi_source_coordinate_review_profile",
     "bazi_timing_evidence_profile",
 ]

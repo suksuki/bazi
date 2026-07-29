@@ -38,6 +38,10 @@ class MingliReadingStore:
                          quant_foundation_profile_ref,
                          quant_foundation_profile_hash,
                          quant_vector_ref, quant_vector_hash,
+                         source_review_profile_ref,
+                         source_review_profile_hash,
+                         source_review_vector_ref,
+                         source_review_vector_hash,
                          mechanism_evidence_profile_ref,
                          mechanism_evidence_profile_hash,
                          mechanism_vector_ref, mechanism_vector_hash,
@@ -55,6 +59,10 @@ class MingliReadingStore:
                          :quant_foundation_profile_ref,
                          :quant_foundation_profile_hash,
                          :quant_vector_ref, :quant_vector_hash,
+                         :source_review_profile_ref,
+                         :source_review_profile_hash,
+                         :source_review_vector_ref,
+                         :source_review_vector_hash,
                          :mechanism_evidence_profile_ref,
                          :mechanism_evidence_profile_hash,
                          :mechanism_vector_ref, :mechanism_vector_hash,
@@ -88,6 +96,18 @@ class MingliReadingStore:
                     ),
                     "quant_vector_ref": reading.quant_vector_ref,
                     "quant_vector_hash": reading.quant_vector_hash,
+                    "source_review_profile_ref": (
+                        reading.source_review_profile.profile_ref
+                        if reading.source_review_profile is not None
+                        else None
+                    ),
+                    "source_review_profile_hash": (
+                        reading.source_review_profile.profile_hash
+                        if reading.source_review_profile is not None
+                        else None
+                    ),
+                    "source_review_vector_ref": (reading.source_review_vector_ref),
+                    "source_review_vector_hash": (reading.source_review_vector_hash),
                     "mechanism_evidence_profile_ref": (
                         reading.mechanism_evidence_profile.profile_ref
                         if reading.mechanism_evidence_profile is not None
@@ -147,6 +167,10 @@ class MingliReadingStore:
                            quant_foundation_profile_ref,
                            quant_foundation_profile_hash,
                            quant_vector_ref, quant_vector_hash,
+                           source_review_profile_ref,
+                           source_review_profile_hash,
+                           source_review_vector_ref,
+                           source_review_vector_hash,
                            mechanism_evidence_profile_ref,
                            mechanism_evidence_profile_hash,
                            mechanism_vector_ref, mechanism_vector_hash,
@@ -193,6 +217,18 @@ class MingliReadingStore:
             ),
             "quant_vector_ref": expected.quant_vector_ref,
             "quant_vector_hash": expected.quant_vector_hash,
+            "source_review_profile_ref": (
+                expected.source_review_profile.profile_ref
+                if expected.source_review_profile is not None
+                else None
+            ),
+            "source_review_profile_hash": (
+                expected.source_review_profile.profile_hash
+                if expected.source_review_profile is not None
+                else None
+            ),
+            "source_review_vector_ref": expected.source_review_vector_ref,
+            "source_review_vector_hash": expected.source_review_vector_hash,
             "mechanism_evidence_profile_ref": (
                 expected.mechanism_evidence_profile.profile_ref
                 if expected.mechanism_evidence_profile is not None

@@ -9,6 +9,7 @@ import { MechanismEvidenceContrast } from "./MechanismEvidenceContrast";
 import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
 import { MingliCaseManager } from "./MingliCaseManager";
+import { SourceCoordinateReviewPanel } from "./SourceCoordinateReviewPanel";
 
 const PILLAR_LABELS: Record<string, string> = {
   year: "年柱",
@@ -103,6 +104,9 @@ export function HomeCompanionRail({
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
+            />
+            <SourceCoordinateReviewPanel
+              vector={home.mingli.source_coordinate_review}
             />
             <MechanismQualificationMatrix
               qualification={home.mingli.mechanism_qualification}
@@ -214,6 +218,10 @@ export function HomeCompanionRail({
             <MechanismEvidenceContrast
               depth={home.mingli.mechanism_evidence_depth}
               mode="detailed"
+            />
+            <SourceCoordinateReviewPanel
+              mode="detailed"
+              vector={home.mingli.source_coordinate_review}
             />
             <MechanismQualificationMatrix
               detailed

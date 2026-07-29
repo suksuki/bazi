@@ -11,14 +11,19 @@ from abu_v60.mingli.contracts import MingliCandidatePath
 from abu_v60.mingli.domain_contracts import MingliLifeDomainEvidenceVector
 from abu_v60.mingli.mechanism_contracts import MingliMechanismEvidenceVector
 from abu_v60.mingli.quant_contracts import MingliQuantFoundationVector
+from abu_v60.mingli.reading_versions import (
+    LIFE_DOMAIN_MINGLI_READING_VERSION,
+    MECHANISM_MINGLI_READING_VERSION,
+    MINGLI_READING_VERSION,
+    TIMING_MINGLI_READING_VERSION,
+    reading_hash_exclusions,
+    validate_reading_optional_fields,
+)
+from abu_v60.mingli.source_review_contracts import (
+    MingliSourceCoordinateReviewVector,
+)
 from abu_v60.mingli.timing_contracts import MingliTimingEvidenceVector
 from abu_v60.provenance import content_hash, stable_ref
-
-MINGLI_READING_VERSION = "v60.mingli-reading.005"
-TIMING_MINGLI_READING_VERSION = "v60.mingli-reading.004"
-MECHANISM_MINGLI_READING_VERSION = "v60.mingli-reading.003"
-QUANT_MINGLI_READING_VERSION = "v60.mingli-reading.002"
-LEGACY_MINGLI_READING_VERSION = "v60.mingli-reading.001"
 
 
 class MingliReadingStatus(StrEnum):
@@ -61,6 +66,13 @@ class MingliReadingEnvelope(BaseModel):
     quant_foundation_profile: KnowledgeProfileBinding | None = None
     quant_vector_ref: str | None = None
     quant_vector_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    source_review_profile: KnowledgeProfileBinding | None = None
+    source_review_vector_ref: str | None = None
+    source_review_vector_hash: str | None = Field(
+        default=None,
+        min_length=64,
+        max_length=64,
+    )
     mechanism_evidence_profile: KnowledgeProfileBinding | None = None
     mechanism_vector_ref: str | None = None
     mechanism_vector_hash: str | None = Field(
@@ -100,118 +112,12 @@ class MingliReadingEnvelope(BaseModel):
             raise ValueError("mingli_reading_refs_must_be_unique_and_sorted")
         if not self.read_only:
             raise ValueError("mingli_reading_must_be_read_only")
-        quant_fields = (
-            self.quant_foundation_profile,
-            self.quant_vector_ref,
-            self.quant_vector_hash,
+        values = self.model_dump(mode="python")
+        validate_reading_optional_fields(
+            reading_version=self.reading_version,
+            values=values,
         )
-        mechanism_fields = (
-            self.mechanism_evidence_profile,
-            self.mechanism_vector_ref,
-            self.mechanism_vector_hash,
-        )
-        timing_fields = (
-            self.timing_evidence_profile,
-            self.timing_vector_ref,
-            self.timing_vector_hash,
-        )
-        domain_fields = (
-            self.life_domain_vector_ref,
-            self.life_domain_vector_hash,
-        )
-        if self.reading_version == MINGLI_READING_VERSION:
-            if any(value is None for value in quant_fields):
-                raise ValueError("mingli_reading_v5_requires_quant_foundation")
-            if any(value is None for value in mechanism_fields):
-                raise ValueError("mingli_reading_v5_requires_mechanism_evidence")
-            if any(value is None for value in timing_fields):
-                raise ValueError("mingli_reading_v5_requires_timing_evidence")
-            if any(value is None for value in domain_fields):
-                raise ValueError("mingli_reading_v5_requires_life_domain_evidence")
-        elif self.reading_version == TIMING_MINGLI_READING_VERSION:
-            if any(value is None for value in quant_fields):
-                raise ValueError("mingli_reading_v4_requires_quant_foundation")
-            if any(value is None for value in mechanism_fields):
-                raise ValueError("mingli_reading_v4_requires_mechanism_evidence")
-            if any(value is None for value in timing_fields):
-                raise ValueError("mingli_reading_v4_requires_timing_evidence")
-            if any(value is not None for value in domain_fields):
-                raise ValueError("mingli_reading_v4_cannot_bind_life_domain_evidence")
-        elif self.reading_version == MECHANISM_MINGLI_READING_VERSION:
-            if any(value is None for value in quant_fields):
-                raise ValueError("mingli_reading_v3_requires_quant_foundation")
-            if any(value is None for value in mechanism_fields):
-                raise ValueError("mingli_reading_v3_requires_mechanism_evidence")
-            if any(value is not None for value in (*timing_fields, *domain_fields)):
-                raise ValueError("mingli_reading_v3_cannot_bind_timing_evidence")
-        elif self.reading_version == QUANT_MINGLI_READING_VERSION:
-            if any(value is None for value in quant_fields):
-                raise ValueError("mingli_reading_v2_requires_quant_foundation")
-            if any(
-                value is not None
-                for value in (*mechanism_fields, *timing_fields, *domain_fields)
-            ):
-                raise ValueError("mingli_reading_v2_cannot_bind_mechanism_evidence")
-        elif self.reading_version == LEGACY_MINGLI_READING_VERSION:
-            if any(
-                value is not None
-                for value in (
-                    *quant_fields,
-                    *mechanism_fields,
-                    *timing_fields,
-                    *domain_fields,
-                )
-            ):
-                raise ValueError("mingli_reading_v1_cannot_bind_quant_foundation")
-        else:
-            raise ValueError("mingli_reading_version_not_supported")
-        excluded = {"reading_ref", "reading_hash"}
-        if self.reading_version == TIMING_MINGLI_READING_VERSION:
-            excluded.update(
-                {
-                    "life_domain_vector_ref",
-                    "life_domain_vector_hash",
-                }
-            )
-        if self.reading_version == MECHANISM_MINGLI_READING_VERSION:
-            excluded.update(
-                {
-                    "timing_evidence_profile",
-                    "timing_vector_ref",
-                    "timing_vector_hash",
-                    "life_domain_vector_ref",
-                    "life_domain_vector_hash",
-                }
-            )
-        if self.reading_version == QUANT_MINGLI_READING_VERSION:
-            excluded.update(
-                {
-                    "mechanism_evidence_profile",
-                    "mechanism_vector_ref",
-                    "mechanism_vector_hash",
-                    "timing_evidence_profile",
-                    "timing_vector_ref",
-                    "timing_vector_hash",
-                    "life_domain_vector_ref",
-                    "life_domain_vector_hash",
-                }
-            )
-        if self.reading_version == LEGACY_MINGLI_READING_VERSION:
-            excluded.update(
-                {
-                    "quant_foundation_profile",
-                    "quant_vector_ref",
-                    "quant_vector_hash",
-                    "mechanism_evidence_profile",
-                    "mechanism_vector_ref",
-                    "mechanism_vector_hash",
-                    "timing_evidence_profile",
-                    "timing_vector_ref",
-                    "timing_vector_hash",
-                    "life_domain_vector_ref",
-                    "life_domain_vector_hash",
-                }
-            )
+        excluded = reading_hash_exclusions(self.reading_version)
         identity = self.model_dump(mode="json", exclude=excluded)
         if self.reading_hash != content_hash(identity):
             raise ValueError("mingli_reading_hash_mismatch")
@@ -235,6 +141,7 @@ class MingliReadingEnvelope(BaseModel):
             "foundation_profile",
             "candidate_rule_profile",
             "quant_foundation_profile",
+            "source_review_profile",
             "mechanism_evidence_profile",
             "timing_evidence_profile",
         ):
@@ -244,49 +151,11 @@ class MingliReadingEnvelope(BaseModel):
         status = identity["status"]
         if isinstance(status, StrEnum):
             identity["status"] = status.value
-        hash_identity = dict(identity)
-        if reading_version == TIMING_MINGLI_READING_VERSION:
-            for key in (
-                "life_domain_vector_ref",
-                "life_domain_vector_hash",
-            ):
-                hash_identity.pop(key, None)
-        elif reading_version == MECHANISM_MINGLI_READING_VERSION:
-            for key in (
-                "timing_evidence_profile",
-                "timing_vector_ref",
-                "timing_vector_hash",
-                "life_domain_vector_ref",
-                "life_domain_vector_hash",
-            ):
-                hash_identity.pop(key, None)
-        elif reading_version == QUANT_MINGLI_READING_VERSION:
-            for key in (
-                "mechanism_evidence_profile",
-                "mechanism_vector_ref",
-                "mechanism_vector_hash",
-                "timing_evidence_profile",
-                "timing_vector_ref",
-                "timing_vector_hash",
-                "life_domain_vector_ref",
-                "life_domain_vector_hash",
-            ):
-                hash_identity.pop(key, None)
-        elif reading_version == LEGACY_MINGLI_READING_VERSION:
-            for key in (
-                "quant_foundation_profile",
-                "quant_vector_ref",
-                "quant_vector_hash",
-                "mechanism_evidence_profile",
-                "mechanism_vector_ref",
-                "mechanism_vector_hash",
-                "timing_evidence_profile",
-                "timing_vector_ref",
-                "timing_vector_hash",
-                "life_domain_vector_ref",
-                "life_domain_vector_hash",
-            ):
-                hash_identity.pop(key, None)
+        hash_identity = {
+            key: value
+            for key, value in identity.items()
+            if key not in reading_hash_exclusions(reading_version)
+        }
         return cls(
             reading_ref=stable_ref("v60-mingli-reading", hash_identity),
             reading_hash=content_hash(hash_identity),
@@ -309,6 +178,7 @@ class MingliReadingProjector:
         facts: Sequence[Mapping[str, Any]],
         candidates: Sequence[MingliCandidatePath],
         quant_vector: MingliQuantFoundationVector,
+        source_review_vector: MingliSourceCoordinateReviewVector | None = None,
         mechanism_vector: MingliMechanismEvidenceVector | None = None,
         timing_vector: MingliTimingEvidenceVector | None = None,
         life_domain_vector: MingliLifeDomainEvidenceVector | None = None,
@@ -317,6 +187,7 @@ class MingliReadingProjector:
         foundation = self._authority.active_foundation_profile()
         candidate_profile = self._authority.active_candidate_rule_profile()
         quant_profile = self._authority.active_quant_foundation_profile()
+        source_review_profile = self._authority.active_source_review_profile()
         mechanism_profile = self._authority.active_mechanism_evidence_profile()
         timing_profile = self._authority.active_timing_evidence_profile()
         if mechanism_vector is None:
@@ -325,6 +196,15 @@ class MingliReadingProjector:
             )
 
             mechanism_vector = MingliMechanismEvidenceCompiler(self._authority).compile(
+                quant_vector=quant_vector,
+                facts=facts,
+            )
+        if life_domain_vector is not None and source_review_vector is None:
+            from abu_v60.mingli.source_review import (
+                MingliSourceCoordinateReviewCompiler,
+            )
+
+            source_review_vector = MingliSourceCoordinateReviewCompiler(self._authority).compile(
                 quant_vector=quant_vector,
                 facts=facts,
             )
@@ -348,6 +228,19 @@ class MingliReadingProjector:
             or mechanism_vector.mechanism_profile_hash != mechanism_profile.profile_hash
         ):
             raise ValueError("mingli_reading_mechanism_profile_mismatch")
+        if source_review_vector is not None:
+            if (
+                source_review_vector.case_ref != case_ref
+                or source_review_vector.chart_version_ref != chart_version_ref
+                or source_review_vector.quant_vector_ref != quant_vector.vector_ref
+            ):
+                raise ValueError("mingli_reading_source_review_vector_lineage_mismatch")
+            if (
+                source_review_vector.source_review_profile_ref != source_review_profile.source_ref
+                or source_review_vector.source_review_profile_hash
+                != source_review_profile.profile_hash
+            ):
+                raise ValueError("mingli_reading_source_review_profile_mismatch")
         if timing_vector is not None:
             if (
                 timing_vector.case_ref != case_ref
@@ -366,10 +259,8 @@ class MingliReadingProjector:
             if (
                 life_domain_vector.case_ref != case_ref
                 or life_domain_vector.chart_version_ref != chart_version_ref
-                or life_domain_vector.life_case_revision_ref
-                != life_case_revision_ref
-                or life_domain_vector.mechanism_vector_ref
-                != mechanism_vector.vector_ref
+                or life_domain_vector.life_case_revision_ref != life_case_revision_ref
+                or life_domain_vector.mechanism_vector_ref != mechanism_vector.vector_ref
                 or life_domain_vector.timing_vector_ref != timing_vector.vector_ref
             ):
                 raise ValueError("mingli_reading_life_domain_lineage_mismatch")
@@ -396,6 +287,8 @@ class MingliReadingProjector:
         return MingliReadingEnvelope.issue(
             reading_version=(
                 MINGLI_READING_VERSION
+                if life_domain_vector is not None and source_review_vector is not None
+                else LIFE_DOMAIN_MINGLI_READING_VERSION
                 if life_domain_vector is not None
                 else TIMING_MINGLI_READING_VERSION
                 if timing_vector is not None
@@ -409,6 +302,15 @@ class MingliReadingProjector:
             quant_foundation_profile=self._binding(quant_profile),
             quant_vector_ref=quant_vector.vector_ref,
             quant_vector_hash=quant_vector.vector_hash,
+            source_review_profile=(
+                self._binding(source_review_profile) if source_review_vector is not None else None
+            ),
+            source_review_vector_ref=(
+                source_review_vector.vector_ref if source_review_vector is not None else None
+            ),
+            source_review_vector_hash=(
+                source_review_vector.vector_hash if source_review_vector is not None else None
+            ),
             mechanism_evidence_profile=self._binding(mechanism_profile),
             mechanism_vector_ref=mechanism_vector.vector_ref,
             mechanism_vector_hash=mechanism_vector.vector_hash,
@@ -418,14 +320,10 @@ class MingliReadingProjector:
             timing_vector_ref=timing_vector.vector_ref if timing_vector is not None else None,
             timing_vector_hash=timing_vector.vector_hash if timing_vector is not None else None,
             life_domain_vector_ref=(
-                life_domain_vector.vector_ref
-                if life_domain_vector is not None
-                else None
+                life_domain_vector.vector_ref if life_domain_vector is not None else None
             ),
             life_domain_vector_hash=(
-                life_domain_vector.vector_hash
-                if life_domain_vector is not None
-                else None
+                life_domain_vector.vector_hash if life_domain_vector is not None else None
             ),
             fact_refs=tuple(sorted(str(item["fact_ref"]) for item in facts)),
             candidate_refs=candidate_refs,

@@ -12,6 +12,10 @@ import type {
   HomeMechanismQualification,
 } from "./homeQualificationTypes";
 import type { HomeReadingBrief } from "./homeReadingTypes";
+import type {
+  HomeSourceCoordinateReview,
+  HomeSourceCoordinateReviewVector,
+} from "./homeSourceReviewTypes";
 
 export type { HomeReadingBrief } from "./homeReadingTypes";
 export type { HomeMechanismQualification } from "./homeQualificationTypes";
@@ -19,6 +23,10 @@ export type {
   HomeCandidateMechanismEvidenceDepth,
   HomeMechanismEvidenceDepth,
 } from "./homeMechanismTypes";
+export type {
+  HomeSourceCoordinateReview,
+  HomeSourceCoordinateReviewVector,
+} from "./homeSourceReviewTypes";
 
 export interface HomeQuantFoundation {
   vector_ref: string;
@@ -261,6 +269,9 @@ export interface HomeSnapshot {
       quant_foundation_profile: HomeKnowledgeProfileBinding;
       quant_vector_ref: string;
       quant_vector_hash: string;
+      source_review_profile: HomeKnowledgeProfileBinding;
+      source_review_vector_ref: string;
+      source_review_vector_hash: string;
       mechanism_evidence_profile: HomeKnowledgeProfileBinding;
       mechanism_vector_ref: string;
       mechanism_vector_hash: string;
@@ -280,6 +291,7 @@ export interface HomeSnapshot {
       read_only: true;
     };
     quant_foundation: HomeQuantFoundation;
+    source_coordinate_review: HomeSourceCoordinateReviewVector;
     mechanism_evidence: HomeMechanismEvidence;
     timing_evidence: HomeTimingEvidence;
     life_domains: HomeLifeDomainEvidence;
@@ -305,11 +317,15 @@ export interface HomeSnapshot {
       foundation: HomeKnowledgeProfileBinding;
       candidate_rules: HomeKnowledgeProfileBinding;
       quant_foundation: HomeKnowledgeProfileBinding;
+      source_review: HomeKnowledgeProfileBinding;
       mechanism_evidence: HomeKnowledgeProfileBinding;
       timing_evidence: HomeKnowledgeProfileBinding;
     };
     quant_vector_ref: string;
     quant_vector_hash: string;
+    source_review_vector_ref: string;
+    source_review_vector_hash: string;
+    source_coordinate_reviews: HomeSourceCoordinateReview[];
     mechanism_vector_ref: string;
     mechanism_vector_hash: string;
     timing_vector_ref: string;

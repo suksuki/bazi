@@ -21,6 +21,8 @@ from abu_v60.mingli import (
     MingliQuantVectorStore,
     MingliReadingProjector,
     MingliReadingStore,
+    MingliSourceCoordinateReviewCompiler,
+    MingliSourceReviewVectorStore,
     MingliTimingEvidenceCompiler,
     MingliTimingVectorStore,
     StructuralCandidateCompiler,
@@ -48,6 +50,8 @@ class HomeExperienceService:
         reading_store: MingliReadingStore | None = None,
         quant_compiler: MingliQuantFoundationCompiler | None = None,
         quant_store: MingliQuantVectorStore | None = None,
+        source_review_compiler: MingliSourceCoordinateReviewCompiler | None = None,
+        source_review_store: MingliSourceReviewVectorStore | None = None,
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
         mechanism_comparison: MingliMechanismComparisonService | None = None,
@@ -67,6 +71,10 @@ class HomeExperienceService:
         self._reading_store = reading_store or MingliReadingStore(engine)
         self._quant_compiler = quant_compiler or MingliQuantFoundationCompiler()
         self._quant_store = quant_store or MingliQuantVectorStore(engine)
+        self._source_review_compiler = (
+            source_review_compiler or MingliSourceCoordinateReviewCompiler()
+        )
+        self._source_review_store = source_review_store or MingliSourceReviewVectorStore(engine)
         self._mechanism_compiler = mechanism_compiler or MingliMechanismEvidenceCompiler()
         self._mechanism_store = mechanism_store or MingliMechanismVectorStore(engine)
         self._mechanism_comparison = mechanism_comparison or MingliMechanismComparisonService(
@@ -117,6 +125,12 @@ class HomeExperienceService:
                 facts=facts,
             )
         )
+        source_review_vector = self._source_review_store.ensure(
+            self._source_review_compiler.compile(
+                quant_vector=quant_vector,
+                facts=facts,
+            )
+        )
         mechanism_vector = self._mechanism_store.ensure(
             self._mechanism_compiler.compile(
                 quant_vector=quant_vector,
@@ -154,6 +168,7 @@ class HomeExperienceService:
                 facts=facts,
                 candidates=candidate_paths,
                 quant_vector=quant_vector,
+                source_review_vector=source_review_vector,
                 mechanism_vector=mechanism_vector,
                 timing_vector=timing_vector,
                 life_domain_vector=life_domain_vector,
@@ -264,6 +279,7 @@ class HomeExperienceService:
                 "facts": facts,
                 "reading": reading.model_dump(mode="json"),
                 "quant_foundation": quant_vector.model_dump(mode="json"),
+                "source_coordinate_review": source_review_vector.model_dump(mode="json"),
                 "mechanism_evidence": mechanism_vector.model_dump(mode="json"),
                 "timing_evidence": timing_vector.model_dump(mode="json"),
                 "life_domains": life_domain_vector.model_dump(mode="json"),
@@ -297,6 +313,11 @@ class HomeExperienceService:
                         if reading.quant_foundation_profile is not None
                         else None
                     ),
+                    "source_review": (
+                        reading.source_review_profile.model_dump(mode="json")
+                        if reading.source_review_profile is not None
+                        else None
+                    ),
                     "mechanism_evidence": (
                         reading.mechanism_evidence_profile.model_dump(mode="json")
                         if reading.mechanism_evidence_profile is not None
@@ -310,6 +331,11 @@ class HomeExperienceService:
                 },
                 "quant_vector_ref": quant_vector.vector_ref,
                 "quant_vector_hash": quant_vector.vector_hash,
+                "source_review_vector_ref": source_review_vector.vector_ref,
+                "source_review_vector_hash": source_review_vector.vector_hash,
+                "source_coordinate_reviews": [
+                    item.model_dump(mode="json") for item in source_review_vector.reviews
+                ],
                 "candidate_paths": [
                     candidate.model_dump(mode="json") for candidate in candidate_paths
                 ],

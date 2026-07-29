@@ -12,12 +12,12 @@ from abu_v60.story.packages import (
 
 PRODUCT_ID: Final = "abu-knows-v60"
 PRODUCT_VERSION: Final = "0.1.0"
-FOUNDATION_VERSION: Final = "v60.foundation.012"
+FOUNDATION_VERSION: Final = "v60.foundation.013"
 EXPERIENCE_CONTEXT_VERSION: Final = "v60.experience-context.003"
 DECISION_POLICY_VERSION: Final = "v60.cognitive-decision-kernel.004"
 DREAM_GAME_ENGINE_VERSION: Final = "v60.dream-game-engine.013"
 WORLD_ENGINE_VERSION: Final = "v60.world-continuity-engine.004"
-MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.016"
+MINGLI_ENGINE_VERSION: Final = "v60.mingli-cognitive-engine.017"
 STORY_ENGINE_VERSION: Final = "v60.life-story-engine.009"
 ASSET_REGISTRY_VERSION: Final = "v60.asset-registry.002"
 MEDIA_RUNTIME_VERSION: Final = "v60.runtime-media-registry.001"
@@ -44,6 +44,7 @@ def runtime_manifest() -> dict[str, object]:
         "knowledge_profiles": knowledge.public_manifest(),
         "candidate_rule_profiles": knowledge.candidate_rule_manifest(),
         "quant_foundation_profiles": knowledge.quant_foundation_manifest(),
+        "source_review_profiles": knowledge.source_review_manifest(),
         "mechanism_evidence_profiles": knowledge.mechanism_evidence_manifest(),
         "timing_evidence_profiles": knowledge.timing_evidence_manifest(),
         "knowledge_profile_selection": knowledge.selection_manifest(),

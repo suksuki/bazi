@@ -2,6 +2,33 @@
 
 ## 2026-07-30
 
+### Source-coordinate relation review
+
+- Added one hash-locked, Owner-bounded Profile for reviewing whether a
+  deterministic source/manifestation coordinate intersects an admitted natal
+  six-clash or six-harmony membership fact.
+- Persisted the result as an append-only vector and bound new Mingli Readings,
+  Mingli Calculation and Lab to the same Ref and Hash.
+- Kept root usability, strength, relation effect, capacity, effective work,
+  probability and canonical writes explicitly unresolved.
+- The owner-facing Mingli surface now gives a compact clear/review split; Lab
+  expands the exact source and peer coordinates without recomputing them in
+  the browser.
+- Qualified 23 authorized owner/reference Cases: all contain source evidence,
+  10 have no admitted relation intersection and 13 require review. Across 188
+  source candidates, 59 intersect an admitted six-clash or six-harmony fact.
+  No professional verdict or probability was emitted.
+- Applied migration `0021_source_coordinate_review`, added a repeatable
+  desktop Chrome identity/authority audit, and preserved exact Reading v1-v5
+  replay while issuing current Readings as v6.
+- Completed 220 backend tests, Ruff, TypeScript/build, Runtime Architecture,
+  source maintainability and browser console/network verification.
+- Advanced Foundation to `v60.foundation.013`, Mingli to
+  `v60.mingli-cognitive-engine.017`, Knowledge to
+  `v60.knowledge-authority.007`, the product units to
+  `v60.unit-mingli.011` / `v60.unit-lab.008`, and Runtime Architecture to
+  `v60.runtime-architecture.038`.
+
 ### Candidate evidence-depth contrast
 
 - Added a versioned, read-only Candidate Evidence Depth projection over the

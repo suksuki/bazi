@@ -237,6 +237,10 @@ mingli_readings = Table(
     Column("quant_foundation_profile_hash", String(64), nullable=True),
     Column("quant_vector_ref", String(180), nullable=True),
     Column("quant_vector_hash", String(64), nullable=True),
+    Column("source_review_profile_ref", String(240), nullable=True),
+    Column("source_review_profile_hash", String(64), nullable=True),
+    Column("source_review_vector_ref", String(180), nullable=True),
+    Column("source_review_vector_hash", String(64), nullable=True),
     Column("mechanism_evidence_profile_ref", String(240), nullable=True),
     Column("mechanism_evidence_profile_hash", String(64), nullable=True),
     Column("mechanism_vector_ref", String(180), nullable=True),
@@ -311,5 +315,26 @@ mingli_mechanism_evidence_vectors = Table(
     Column("vector_json", JSONB, nullable=False),
     Column("vector_hash", String(64), nullable=False, unique=True),
     Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+mingli_source_coordinate_review_vectors = Table(
+    "source_coordinate_review_vectors",
+    metadata,
+    Column("vector_ref", String(180), primary_key=True),
+    Column("vector_version", String(100), nullable=False),
+    Column("case_ref", String(160), nullable=False),
+    Column("chart_version_ref", String(160), nullable=False),
+    Column("quant_vector_ref", String(180), nullable=False),
+    Column("source_review_profile_ref", String(240), nullable=False),
+    Column("source_review_profile_hash", String(64), nullable=False),
+    Column("vector_json", JSONB, nullable=False),
+    Column("vector_hash", String(64), nullable=False, unique=True),
+    Column(
+        "created_at",
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    ),
     schema="mingli",
 )

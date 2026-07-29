@@ -47,8 +47,8 @@ def test_health_binds_database_to_runtime_foundation() -> None:
     assert payload["status"] == "ready"
     assert payload["database"] == {
         "status": "ready",
-        "foundation_version": "v60.foundation.012",
-        "expected_foundation_version": "v60.foundation.012",
+        "foundation_version": "v60.foundation.013",
+        "expected_foundation_version": "v60.foundation.013",
     }
 
 

@@ -917,6 +917,44 @@ Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
   `v60.runtime-architecture.037`, `v60.unit-mingli.010` and
   `v60.unit-lab.007`.
 
+## Completed Delivery: Source-Coordinate Relation Review
+
+Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+
+- V60 now distinguishes a deterministic cross-layer source coordinate from
+  the professional question of whether that source is usable.
+- A hash-locked Owner-bounded Profile admits only two review triggers:
+  intersection with an already compiled natal six-clash membership or
+  six-harmony membership fact. It assigns no effect weight and cannot decide
+  strength, capacity, root usability, effective work or probability.
+- Every result is persisted as an append-only vector. The current Reading,
+  Mingli Calculation and Lab consume the same vector Ref and Hash; the browser
+  does not reconstruct coordinate or relation matches.
+- Mingli shows a compact split between source candidates with no admitted
+  relation intersection and coordinates requiring professional review. Lab
+  expands the exact visible stem, source branch/hidden stem and peer
+  coordinate that caused the review.
+- For the current Liu Jin Case, two source candidates have no admitted
+  six-clash or six-harmony intersection. The product says this removes one
+  kind of counter-evidence only; it does not call either source rooted or
+  usable.
+- Across 23 authorized owner/reference Cases, all 23 contain source evidence,
+  10 have no admitted relation intersection and 13 require review. The corpus
+  contains 188 source candidates, 59 of which require relation review. It
+  emits zero professional verdicts and zero probabilities.
+- Reading v6 binds the new Profile/vector identity while preserving exact
+  replay of Reading v1-v5. Migration `0021_source_coordinate_review` is
+  additive and the new vector store rejects updates and deletes.
+- Desktop Chrome evidence covers both the clear and review-required states,
+  shared Reading/Lab identity, no authority overreach, no document scroll and
+  no console or network failures.
+- Verification: `220 passed`, Ruff PASS, TypeScript/build PASS, Runtime
+  Architecture PASS and source maintainability PASS.
+- Current identities are `v60.foundation.013`,
+  `v60.mingli-cognitive-engine.017`, `v60.knowledge-authority.007`,
+  `v60.runtime-architecture.038`, `v60.unit-mingli.011` and
+  `v60.unit-lab.008`.
+
 ## Current Product Truth
 
 Already usable locally:
@@ -929,6 +967,8 @@ Already usable locally:
   candidate, including explicit next evidence and falsifiers;
 - a server-owned contrast of role carriers, source coordinates, timing
   evidence, relation context and shared-participant competition;
+- an append-only review of which source coordinates intersect admitted natal
+  six-clash or six-harmony facts, shared by Mingli and Lab;
 - bounded Gemma4 comparison when deterministic rules cannot rank candidates;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
@@ -944,11 +984,12 @@ Still honestly incomplete:
 - final picture-book Grove tree assets and the final in-tree transition
   composition currently being prepared by design.
 
-The next implementation must deepen these two product truths rather than add
-new modules: use Lab to admit one narrow professional evidence rule for
-root/source usability or relation effect, then let a new Mingli Reading consume
-that admitted version without rewriting its predecessor. Dream should receive
-the same bounded uncertainty only after that evidence boundary is stable.
+The next implementation must deepen these product truths rather than add new
+modules: admit one narrow professional rule that resolves the effect of one
+specific relation configuration, or one bounded prerequisite for source
+usability. It must consume the new review vector, produce a new immutable
+version and leave every unresolved dimension honest. Dream should receive the
+same bounded uncertainty only after that professional boundary is stable.
 
 Not active: population-scale content generation, ranking, mobile visual
 polish, Server 13 synchronization or production deployment.

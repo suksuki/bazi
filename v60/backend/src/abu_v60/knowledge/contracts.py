@@ -6,6 +6,9 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from abu_v60.knowledge.mechanism_contracts import BaziMechanismEvidenceProfile
 from abu_v60.knowledge.quant_contracts import BaziQuantFoundationProfile
+from abu_v60.knowledge.source_review_contracts import (
+    BaziSourceCoordinateReviewProfile,
+)
 from abu_v60.knowledge.timing_contracts import BaziTimingEvidenceProfile
 from abu_v60.provenance import content_hash
 
@@ -165,8 +168,8 @@ class KnowledgeProfileSelection(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    selection_version: Literal["v60.knowledge-profile-selection.004"] = (
-        "v60.knowledge-profile-selection.004"
+    selection_version: Literal["v60.knowledge-profile-selection.005"] = (
+        "v60.knowledge-profile-selection.005"
     )
     foundation_profile_id: str = Field(min_length=1)
     foundation_profile_version: str = Field(min_length=1)
@@ -177,6 +180,9 @@ class KnowledgeProfileSelection(BaseModel):
     quant_foundation_profile_id: str = Field(min_length=1)
     quant_foundation_profile_version: str = Field(min_length=1)
     quant_foundation_profile_hash: str = Field(min_length=64, max_length=64)
+    source_review_profile_id: str = Field(min_length=1)
+    source_review_profile_version: str = Field(min_length=1)
+    source_review_profile_hash: str = Field(min_length=64, max_length=64)
     mechanism_evidence_profile_id: str = Field(min_length=1)
     mechanism_evidence_profile_version: str = Field(min_length=1)
     mechanism_evidence_profile_hash: str = Field(min_length=64, max_length=64)
@@ -191,6 +197,7 @@ class KnowledgeProfileSelection(BaseModel):
         foundation: BaziFoundationProfile,
         candidate_rules: BaziCandidateQualificationProfile,
         quant_foundation: BaziQuantFoundationProfile,
+        source_review: BaziSourceCoordinateReviewProfile | None = None,
         mechanism_evidence: BaziMechanismEvidenceProfile | None = None,
         timing_evidence: BaziTimingEvidenceProfile | None = None,
     ) -> KnowledgeProfileSelection:
@@ -200,6 +207,12 @@ class KnowledgeProfileSelection(BaseModel):
             )
 
             mechanism_evidence = bazi_mechanism_evidence_profile()
+        if source_review is None:
+            from abu_v60.knowledge.source_review_bazi import (
+                bazi_source_coordinate_review_profile,
+            )
+
+            source_review = bazi_source_coordinate_review_profile()
         if timing_evidence is None:
             from abu_v60.knowledge.timing_bazi import (
                 bazi_timing_evidence_profile,
@@ -216,6 +229,9 @@ class KnowledgeProfileSelection(BaseModel):
             quant_foundation_profile_id=quant_foundation.profile_id,
             quant_foundation_profile_version=quant_foundation.profile_version,
             quant_foundation_profile_hash=quant_foundation.profile_hash,
+            source_review_profile_id=source_review.profile_id,
+            source_review_profile_version=source_review.profile_version,
+            source_review_profile_hash=source_review.profile_hash,
             mechanism_evidence_profile_id=mechanism_evidence.profile_id,
             mechanism_evidence_profile_version=mechanism_evidence.profile_version,
             mechanism_evidence_profile_hash=mechanism_evidence.profile_hash,

@@ -7,7 +7,7 @@ from abu_v60.system_manifest import runtime_manifest
 def test_runtime_architecture_has_one_owner_per_schema_and_five_units() -> None:
     architecture = runtime_architecture()
     architecture.validate_boundaries()
-    assert architecture.architecture_version == "v60.runtime-architecture.037"
+    assert architecture.architecture_version == "v60.runtime-architecture.038"
     assert architecture.product_units == (
         "unit-mingli",
         "unit-dream",
@@ -58,8 +58,15 @@ def test_manifest_exposes_world_game_and_localization_reservation() -> None:
     assert manifest["engines"]["context"] == "v60.experience-context.003"
     assert manifest["engines"]["game"] == "v60.dream-game-engine.013"
     assert manifest["engines"]["world"] == "v60.world-continuity-engine.004"
-    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.016"
+    assert manifest["engines"]["mingli"] == "v60.mingli-cognitive-engine.017"
     assert manifest["engines"]["story"] == "v60.life-story-engine.009"
+    source_review = manifest["source_review_profiles"]
+    assert len(source_review) == 1
+    assert source_review[0]["active"] is True
+    assert source_review[0]["professionally_reviewed"] is False
+    assert source_review[0]["profile_hash"] == (
+        "e21e13ff2f79dbd4c180b34ee651996c30a0ac545931d3ce95d1b96a6a5b145c"
+    )
     sources = manifest["episode_source_packages"]
     assert sources["canonical_story"]["runtime_access"] == "ADMISSION_ONLY"
     assert len(sources["canonical_story"]["packages"]) == 5
@@ -96,6 +103,8 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "append_only_quant_vector_history" in modules["mingli"].capabilities
     assert "ten_god_occurrence_matrix" in modules["mingli"].capabilities
     assert "source_manifestation_evidence_projection" in modules["mingli"].capabilities
+    assert "bounded_source_coordinate_relation_review" in modules["mingli"].capabilities
+    assert "append_only_source_coordinate_review_history" in modules["mingli"].capabilities
     assert "mechanism_candidate_evidence_vector" in modules["mingli"].capabilities
     assert "append_only_mechanism_vector_history" in modules["mingli"].capabilities
     assert "bounded_life_domain_evidence_projection" in modules["mingli"].capabilities
@@ -112,6 +121,7 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "carrier_source_timing_competition_contrast" in modules["mingli"].capabilities
     assert "explicit_active_profile_selection" in modules["knowledge"].capabilities
     assert "hash_locked_quant_foundation_profile" in modules["knowledge"].capabilities
+    assert "hash_locked_source_coordinate_review_profile" in modules["knowledge"].capabilities
     assert "hash_locked_mechanism_evidence_profile" in modules["knowledge"].capabilities
     assert "candidate_path_projection" in modules["unit-lab"].capabilities
     assert "qualification_trace" in modules["unit-lab"].capabilities
@@ -122,6 +132,7 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "inspectable_support_and_boundaries" in modules["unit-mingli"].capabilities
     assert "candidate_evidence_completeness" in modules["unit-mingli"].capabilities
     assert "candidate_evidence_contrast" in modules["unit-mingli"].capabilities
+    assert "source_coordinate_review_summary" in modules["unit-mingli"].capabilities
     assert "return_to_grove_after_reconciliation" in modules["unit-dream"].capabilities
     assert "pre_outcome_question_basis" in modules["unit-dream"].capabilities
     assert "repeatable_grove_cycle" in modules["dream-game"].capabilities
@@ -130,6 +141,10 @@ def test_lab_candidate_projection_is_read_only_and_owned_by_mingli() -> None:
     assert "shared_mechanism_qualification_identity" in modules["unit-abu"].capabilities
     assert "mechanism_requirement_matrix" in modules["unit-lab"].capabilities
     assert "role_source_timing_competition_inspection" in modules["unit-lab"].capabilities
+    assert (
+        "source_coordinate_relation_intersection_inspection"
+        in modules["unit-lab"].capabilities
+    )
     assert modules["unit-lab"].writes_canonical_state is False
     assert modules["unit-lab"].owns_schemas == ()
 
@@ -222,6 +237,7 @@ def test_bootstrap_writes_route_through_each_schema_owner() -> None:
             source_root / "mingli" / "mechanism_store.py",
             source_root / "mingli" / "quant_store.py",
             source_root / "mingli" / "reading_store.py",
+            source_root / "mingli" / "source_review_store.py",
             source_root / "mingli" / "timing_store.py",
         },
         "dream": {
