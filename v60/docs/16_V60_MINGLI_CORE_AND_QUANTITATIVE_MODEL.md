@@ -1,6 +1,6 @@
 # V60 Mingli Core and Quantitative Model
 
-Status: `TIMING_EVIDENCE_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+Status: `MECHANISM_QUALIFICATION_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
 
 ## Product decision
 
@@ -37,6 +37,7 @@ must not be reported as real-world accuracy.
 | Root usability and seasonal capacity | Missing | V50 research exists but is not admitted |
 | Relation effect and transformation | Missing | Relation membership is not effect |
 | Mechanism candidate evidence | Executable | Five versioned patterns; candidate presence only |
+| Mechanism qualification matrix | Executable | Eight explicit evidence requirements; no score or verdict |
 | Work-path effect, capacity and usability | Unresolved | Every candidate carries explicit blockers; none is effective work |
 | Dayun, annual and monthly Mingli timing | Executable | Coordinates and relation membership only; effect unresolved |
 | Whole-chart portrait and life-domain verdicts | Missing | V50 LLM drafts are not canonical facts |
@@ -403,6 +404,35 @@ Dream may consume only the public, pre-outcome baseline explaining why a
 question appeared; it cannot receive hidden evidence, a sealed outcome or a
 result label before AnswerSeal.
 
+## Mechanism evidence-completeness contract
+
+V60 now projects one immutable qualification matrix from the same Reading,
+quantitative, mechanism and timing vectors:
+
+```text
+structural roles
+source / manifestation
+timing overlap
+counter-evidence
+effect
+capacity
+usability
+professional admission
+```
+
+The matrix is not a score. Each dimension exposes its current status, bound
+evidence, required next evidence and falsifier. `PRESENT` and `PARTIAL` mean
+only that inspectable material exists. They do not contribute points and do
+not imply effective work. Effect, capacity, usability and professional
+admission remain `NOT_ADMITTED` until separately versioned rules and evidence
+are approved.
+
+Mingli Calculation, Lab and Abu consume the same qualification Ref and Hash.
+The browser cannot add missing evidence, infer a professional verdict or turn
+the matrix into a probability. Mixed Case, Chart or source-vector lineage
+fails closed. A read-only corpus test currently covers four persisted real
+owner Cases and confirms deterministic but case-sensitive projections.
+
 ## Delivery sequence
 
 1. **V50 capability inventory:** completed for the capabilities needed by the
@@ -417,12 +447,14 @@ result label before AnswerSeal.
    coordinates, natal membership evidence and unresolved mechanism overlap.
 5. **Domain Reading v1:** completed for append-only career, wealth and
    relationship attention windows with explicit unresolved boundaries.
-6. **Calibration ledger:** collect sealed predictions and authorized outcomes,
+6. **Mechanism qualification v1:** completed for explicit evidence gaps,
+   falsifiers and cross-unit identity without scores or verdict promotion.
+7. **Calibration ledger:** collect sealed predictions and authorized outcomes,
    then evaluate support scores before enabling probabilities.
-7. **Bounded Reasoner activation:** completed against the existing
+8. **Bounded Reasoner activation:** completed against the existing
    dblife-hosted Ollama service; unsupported or partial provider configuration
    still fails closed.
-8. **Product expression:** Abu explains the exact Reading, Dream makes a
+9. **Product expression:** Abu explains the exact Reading, Dream makes a
    bounded uncertainty playable, Lab exposes the evidence, and Theater adapts
    only approved source packages.
 

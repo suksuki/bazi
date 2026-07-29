@@ -2,6 +2,26 @@
 
 ## 2026-07-29
 
+### Mechanism evidence-completeness projection
+
+- Added one server-owned, versioned eight-part qualification matrix for every
+  visible mechanism candidate.
+- Each dimension now exposes present evidence, missing evidence and a concrete
+  falsifier without calculating a score.
+- Kept effect, capacity, usability and professional admission explicitly
+  unadmitted; candidates cannot become effective work or probabilities.
+- Bound Mingli Calculation, Mingli Lab and Abu to the same qualification Ref
+  and Hash.
+- Added deterministic cross-case and lineage-isolation tests over four
+  persisted real owner Cases.
+- Added a repeatable desktop audit for shared identity, evidence gaps,
+  falsifiers, no professional overreach, document dimensions and runtime
+  errors.
+- Advanced Mingli to `v60.mingli-cognitive-engine.015`, the product units to
+  `v60.unit-mingli.009`, `v60.unit-abu-says.005` and
+  `v60.unit-lab.006`, and Runtime Architecture to
+  `v60.runtime-architecture.036`. No database migration was required.
+
 ### Inspectable Mingli evidence explanations
 
 - Added one server-owned, versioned explanation for the current Reading.

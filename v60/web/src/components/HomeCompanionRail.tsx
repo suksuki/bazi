@@ -5,6 +5,7 @@ import {
   unitTitle,
 } from "../experienceUnits";
 import { HomeReadingBrief } from "./HomeReadingBrief";
+import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
 import { MingliCaseManager } from "./MingliCaseManager";
 
@@ -99,6 +100,9 @@ export function HomeCompanionRail({
               onCompare={onCompareMechanisms}
             />
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
+            <MechanismQualificationMatrix
+              qualification={home.mingli.mechanism_qualification}
+            />
             <details className="home-reading-evidence-details">
               <summary>查看命盘计量、时序与证据明细</summary>
               <QuantFoundationSummary home={home} />
@@ -133,6 +137,10 @@ export function HomeCompanionRail({
               <div>
                 <dt>接下来关注什么？</dt>
                 <dd>{home.mingli.abu_expression.next_attention}</dd>
+              </div>
+              <div>
+                <dt>证据还缺什么？</dt>
+                <dd>{home.mingli.abu_expression.evidence_gap_summary}</dd>
               </div>
               <div>
                 <dt>是否另起了一次分析？</dt>
@@ -199,6 +207,10 @@ export function HomeCompanionRail({
             ) : (
               <p>当前真实命盘没有达到本版候选路径的最低结构门槛。</p>
             )}
+            <MechanismQualificationMatrix
+              detailed
+              qualification={home.mingli.mechanism_qualification}
+            />
             <MechanismComparisonCommand
               busy={busy}
               home={home}

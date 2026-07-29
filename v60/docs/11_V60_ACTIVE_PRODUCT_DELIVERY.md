@@ -859,6 +859,33 @@ Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
   `v60.runtime-architecture.035`, `v60.unit-mingli.008`,
   `v60.unit-dream.012`, `v60.unit-abu-says.004` and `v60.unit-lab.005`.
 
+## Completed Delivery: Mechanism Evidence Completeness
+
+Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+
+- Every mechanism candidate now carries the same server-owned eight-part
+  qualification matrix: structural roles, source/manifestation, timing
+  overlap, counter-evidence, effect, capacity, usability and professional
+  admission.
+- Each requirement states what evidence is present, what remains missing and
+  what future evidence would weaken or falsify it. No hidden score is used.
+- Structural membership may be present while source and timing remain partial;
+  effect, capacity, usability and professional admission remain explicitly
+  `NOT_ADMITTED`.
+- Mingli, Lab and Abu consume the same immutable qualification identity. Lab
+  expands the evidence gaps and falsifiers, while Abu summarizes the same
+  unresolved boundary without performing another reading.
+- The projection is deterministic across four persisted real owner Cases and
+  rejects mixed Case, Chart or source-vector lineage.
+- Desktop browser evidence confirms the same `qualification_ref` across all
+  three surfaces, no professional or probability overreach, no document
+  scroll and no console or network failures.
+- Full verification: `211 passed`, Ruff PASS, TypeScript PASS, production
+  build PASS, architecture boundary PASS and source maintainability PASS.
+- Current identities are `v60.mingli-cognitive-engine.015`,
+  `v60.runtime-architecture.036`, `v60.unit-mingli.009`,
+  `v60.unit-abu-says.005` and `v60.unit-lab.006`.
+
 ## Current Product Truth
 
 Already usable locally:
@@ -867,6 +894,8 @@ Already usable locally:
 - deterministic chart and versioned evidence reading;
 - inspectable support, counter-evidence gaps and unresolved conditions for
   every displayed Mingli claim;
+- a shared eight-part evidence-completeness matrix for every visible mechanism
+  candidate, including explicit next evidence and falsifiers;
 - bounded Gemma4 comparison when deterministic rules cannot rank candidates;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
@@ -883,8 +912,9 @@ Still honestly incomplete:
   composition currently being prepared by design.
 
 The next implementation must deepen these two product truths rather than add
-new modules: professionally calibrate the Mingli decision evidence, and expand
-Dream with additional admitted stories that reuse this proven loop.
+new modules: supply versioned evidence rules for root/source usability,
+seasonal capacity, relation effect and counter-evidence; then expand Dream with
+additional admitted stories that reuse the proven loop.
 
 Not active: population-scale content generation, ranking, mobile visual
 polish, Server 13 synchronization or production deployment.

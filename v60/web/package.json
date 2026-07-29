@@ -14,7 +14,8 @@
     "audit:product-slice": "node tools/product-slice-audit.mjs",
     "audit:guide-left": "node tools/guide-left-audit.mjs",
     "audit:semantic-focus": "node tools/semantic-focus-audit.mjs",
-    "audit:explanation-slice": "node tools/explanation-slice-audit.mjs"
+    "audit:explanation-slice": "node tools/explanation-slice-audit.mjs",
+    "audit:mechanism-qualification": "node tools/mechanism-qualification-audit.mjs"
   },
   "dependencies": {
     "pixi.js": "^8.19.0",

@@ -1,8 +1,13 @@
 import { request } from "./api";
 import type { HomeAbuExpression, HomeMingliExplanation } from "./homeExplanationTypes";
+import type {
+  HomeCandidateMechanismQualification,
+  HomeMechanismQualification,
+} from "./homeQualificationTypes";
 import type { HomeReadingBrief } from "./homeReadingTypes";
 
 export type { HomeReadingBrief } from "./homeReadingTypes";
+export type { HomeMechanismQualification } from "./homeQualificationTypes";
 
 export interface HomeQuantFoundation {
   vector_ref: string;
@@ -352,6 +357,7 @@ export interface HomeSnapshot {
     life_domains: HomeLifeDomainEvidence;
     reading_brief: HomeReadingBrief;
     explanation: HomeMingliExplanation;
+    mechanism_qualification: HomeMechanismQualification;
     abu_expression: HomeAbuExpression;
     read_only: true;
   };
@@ -360,6 +366,9 @@ export interface HomeSnapshot {
     reading_hash: string;
     explanation_ref: string;
     explanation_hash: string;
+    mechanism_qualification_ref: string;
+    mechanism_qualification_hash: string;
+    mechanism_qualification_candidates: HomeCandidateMechanismQualification[];
     profile_bindings: {
       foundation: HomeKnowledgeProfileBinding;
       candidate_rules: HomeKnowledgeProfileBinding;

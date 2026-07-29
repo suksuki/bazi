@@ -1,0 +1,168 @@
+.mechanism-qualification {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(49, 90, 74, 0.18);
+}
+
+.mechanism-qualification > header,
+.mechanism-qualification > header span,
+.mechanism-qualification-list summary,
+.mechanism-qualification-checks article > header {
+  display: flex;
+}
+
+.mechanism-qualification > header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mechanism-qualification > header span {
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mechanism-qualification > header small,
+.mechanism-qualification > header em {
+  color: #8f7439;
+  font-size: 9px;
+  font-style: normal;
+  font-weight: 700;
+}
+
+.mechanism-qualification > header strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.mechanism-qualification > p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.mechanism-qualification-list {
+  border-top: 1px solid rgba(49, 90, 74, 0.1);
+}
+
+.mechanism-qualification-list > details {
+  border-bottom: 1px solid rgba(49, 90, 74, 0.1);
+}
+
+.mechanism-qualification-list summary {
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mechanism-qualification-list summary::-webkit-details-marker {
+  display: none;
+}
+
+.mechanism-qualification-list summary > span {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.mechanism-qualification-list summary strong {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.mechanism-qualification-list summary small {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.mechanism-qualification-list summary i {
+  color: rgba(49, 90, 74, 0.6);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.mechanism-qualification-list details[open] summary i {
+  transform: rotate(45deg);
+}
+
+.mechanism-qualification-checks {
+  display: grid;
+  gap: 6px;
+  padding-bottom: 12px;
+}
+
+.mechanism-qualification-checks article {
+  display: grid;
+  gap: 5px;
+  padding: 8px 9px;
+  border-left: 2px solid rgba(151, 116, 53, 0.48);
+  background: rgba(247, 243, 226, 0.58);
+}
+
+.mechanism-qualification-checks article[data-status="present"] {
+  border-left-color: #4f8167;
+  background: rgba(226, 235, 219, 0.54);
+}
+
+.mechanism-qualification-checks article[data-status="partial"] {
+  border-left-color: #b68b3f;
+}
+
+.mechanism-qualification-checks article[data-status="missing"],
+.mechanism-qualification-checks article[data-status="not_admitted"] {
+  border-left-color: rgba(123, 100, 77, 0.46);
+  background: rgba(238, 234, 226, 0.5);
+}
+
+.mechanism-qualification-checks article > header {
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.mechanism-qualification-checks article > header strong {
+  color: var(--ink);
+  font-size: 9px;
+}
+
+.mechanism-qualification-checks article > header span {
+  color: #7b6537;
+  font-size: 8px;
+}
+
+.mechanism-qualification-checks article > p,
+.mechanism-qualification-checks dd,
+.mechanism-qualification-checks article > small {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.mechanism-qualification-checks dl {
+  display: grid;
+  gap: 5px;
+  margin: 2px 0 0;
+}
+
+.mechanism-qualification-checks dl > div {
+  display: grid;
+  grid-template-columns: 52px 1fr;
+  gap: 7px;
+}
+
+.mechanism-qualification-checks dt {
+  color: #8f7439;
+  font-size: 8px;
+}
+
+.mechanism-qualification-boundary {
+  padding-left: 8px;
+  border-left: 2px solid rgba(185, 135, 50, 0.42);
+}

@@ -14,6 +14,7 @@ from abu_v60.mingli import (
     MingliLifeDomainVectorStore,
     MingliMechanismComparisonService,
     MingliMechanismEvidenceCompiler,
+    MingliMechanismQualificationProjector,
     MingliMechanismVectorStore,
     MingliQuantFoundationCompiler,
     MingliQuantVectorStore,
@@ -54,6 +55,7 @@ class HomeExperienceService:
         life_domain_compiler: MingliLifeDomainEvidenceCompiler | None = None,
         life_domain_store: MingliLifeDomainVectorStore | None = None,
         explanations: MingliExplanationProjector | None = None,
+        mechanism_qualifications: MingliMechanismQualificationProjector | None = None,
         analysis_date_provider: Callable[[str], date] | None = None,
         abu: MingliAbuExpressionProjector | None = None,
     ) -> None:
@@ -74,6 +76,9 @@ class HomeExperienceService:
         self._life_domain_compiler = life_domain_compiler or MingliLifeDomainEvidenceCompiler()
         self._life_domain_store = life_domain_store or MingliLifeDomainVectorStore(engine)
         self._explanations = explanations or MingliExplanationProjector()
+        self._mechanism_qualifications = (
+            mechanism_qualifications or MingliMechanismQualificationProjector()
+        )
         self._analysis_date_provider = analysis_date_provider or (
             lambda timezone: datetime.now(ZoneInfo(timezone)).date()
         )
@@ -165,7 +170,17 @@ class HomeExperienceService:
             life_domain_vector=life_domain_vector,
             mechanism_comparison=mechanism_comparison,
         )
-        abu_expression = self._abu.project(reading=reading, explanation=explanation)
+        mechanism_qualification = self._mechanism_qualifications.project(
+            reading=reading,
+            quant_vector=quant_vector,
+            mechanism_vector=mechanism_vector,
+            timing_vector=timing_vector,
+        )
+        abu_expression = self._abu.project(
+            reading=reading,
+            explanation=explanation,
+            qualification=mechanism_qualification,
+        )
         reading_brief = self._reading_brief.project(
             reading=reading,
             pillars=workspace["chart"]["pillars"],
@@ -244,6 +259,7 @@ class HomeExperienceService:
                 "life_domains": life_domain_vector.model_dump(mode="json"),
                 "reading_brief": reading_brief,
                 "explanation": explanation.model_dump(mode="json"),
+                "mechanism_qualification": mechanism_qualification.model_dump(mode="json"),
                 "abu_expression": abu_expression.model_dump(mode="json"),
                 "read_only": True,
             },
@@ -252,6 +268,16 @@ class HomeExperienceService:
                 "reading_hash": reading.reading_hash,
                 "explanation_ref": explanation.explanation_ref,
                 "explanation_hash": explanation.explanation_hash,
+                "mechanism_qualification_ref": (
+                    mechanism_qualification.qualification_ref
+                ),
+                "mechanism_qualification_hash": (
+                    mechanism_qualification.qualification_hash
+                ),
+                "mechanism_qualification_candidates": [
+                    item.model_dump(mode="json")
+                    for item in mechanism_qualification.candidates
+                ],
                 "profile_bindings": {
                     "foundation": reading.foundation_profile.model_dump(mode="json"),
                     "candidate_rules": reading.candidate_rule_profile.model_dump(mode="json"),

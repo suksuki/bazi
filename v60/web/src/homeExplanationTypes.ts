@@ -65,11 +65,14 @@ export interface HomeAbuExpression {
   reading_hash: string;
   explanation_ref: string | null;
   explanation_hash: string | null;
+  qualification_ref: string | null;
+  qualification_hash: string | null;
   authority: "EXPRESSION_ONLY";
   summary: string;
   known: string;
   boundary: string;
   next_attention: string;
+  evidence_gap_summary: string;
   fact_refs: string[];
   candidate_refs: string[];
   confirmed_claim_count: number;

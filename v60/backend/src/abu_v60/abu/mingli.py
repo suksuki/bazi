@@ -5,6 +5,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from abu_v60.mingli.explanation_contracts import MingliExplanationEnvelope
+from abu_v60.mingli.mechanism_qualification_contracts import (
+    MingliMechanismQualificationEnvelope,
+)
 from abu_v60.mingli.reading import MingliReadingEnvelope
 from abu_v60.provenance import content_hash, stable_ref
 
@@ -20,11 +23,14 @@ class MingliAbuExpression(BaseModel):
     reading_hash: str = Field(min_length=64, max_length=64)
     explanation_ref: str | None = None
     explanation_hash: str | None = Field(default=None, min_length=64, max_length=64)
+    qualification_ref: str | None = None
+    qualification_hash: str | None = Field(default=None, min_length=64, max_length=64)
     authority: Literal["EXPRESSION_ONLY"]
     summary: str = Field(min_length=1)
     known: str = Field(min_length=1)
     boundary: str = Field(min_length=1)
     next_attention: str = Field(min_length=1)
+    evidence_gap_summary: str = Field(min_length=1)
     fact_refs: tuple[str, ...]
     candidate_refs: tuple[str, ...]
     confirmed_claim_count: int = Field(ge=0)
@@ -42,6 +48,7 @@ class MingliAbuExpressionProjector:
         *,
         reading: MingliReadingEnvelope,
         explanation: MingliExplanationEnvelope | None = None,
+        qualification: MingliMechanismQualificationEnvelope | None = None,
     ) -> MingliAbuExpression:
         fact_count = len(reading.fact_refs)
         candidate_count = len(reading.candidate_refs)
@@ -59,6 +66,12 @@ class MingliAbuExpressionProjector:
             "reading_hash": reading.reading_hash,
             "explanation_ref": (explanation.explanation_ref if explanation is not None else None),
             "explanation_hash": (explanation.explanation_hash if explanation is not None else None),
+            "qualification_ref": (
+                qualification.qualification_ref if qualification is not None else None
+            ),
+            "qualification_hash": (
+                qualification.qualification_hash if qualification is not None else None
+            ),
             "authority": "EXPRESSION_ONLY",
             "summary": (
                 "我会把已经确认、值得追查和仍不知道的部分分开陪你看。"
@@ -74,6 +87,11 @@ class MingliAbuExpressionProjector:
             ),
             "boundary": boundary,
             "next_attention": next_attention,
+            "evidence_gap_summary": (
+                qualification.summary
+                if qualification is not None
+                else "当前没有生成同源的机制证据缺口清单。"
+            ),
             "fact_refs": reading.fact_refs,
             "candidate_refs": reading.candidate_refs,
             "confirmed_claim_count": (

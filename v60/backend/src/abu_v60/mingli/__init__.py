@@ -61,6 +61,16 @@ from abu_v60.mingli.mechanism_decision import (
     MechanismComparisonUnavailableError,
     MingliMechanismComparisonService,
 )
+from abu_v60.mingli.mechanism_qualification import (
+    MingliMechanismQualificationProjector,
+)
+from abu_v60.mingli.mechanism_qualification_contracts import (
+    MECHANISM_QUALIFICATION_DIMENSIONS,
+    MECHANISM_QUALIFICATION_VERSION,
+    CandidateMechanismQualification,
+    MechanismQualificationCheck,
+    MingliMechanismQualificationEnvelope,
+)
 from abu_v60.mingli.mechanism_store import (
     MingliMechanismVectorNotFoundError,
     MingliMechanismVectorStore,
@@ -126,11 +136,14 @@ __all__ = [
     "LIFE_DOMAIN_VECTOR_VERSION",
     "MECHANISM_COMPARISON_VERSION",
     "MECHANISM_EVIDENCE_COMPILER_VERSION",
+    "MECHANISM_QUALIFICATION_DIMENSIONS",
+    "MECHANISM_QUALIFICATION_VERSION",
     "MECHANISM_VECTOR_VERSION",
     "MINGLI_EXPLANATION_VERSION",
     "MINGLI_READING_VERSION",
     "QUANT_VECTOR_VERSION",
     "STRUCTURAL_CANDIDATE_COMPILER_VERSION",
+    "CandidateMechanismQualification",
     "CandidatePathParticipant",
     "CandidatePathStatus",
     "CandidateQualificationDimension",
@@ -143,6 +156,7 @@ __all__ = [
     "LifeDomainObservation",
     "MechanismCandidateEvidence",
     "MechanismComparisonUnavailableError",
+    "MechanismQualificationCheck",
     "MechanismRoleEvidence",
     "MingliCandidatePath",
     "MingliCaseAdmissionDefinition",
@@ -165,6 +179,8 @@ __all__ = [
     "MingliMechanismComparisonService",
     "MingliMechanismEvidenceCompiler",
     "MingliMechanismEvidenceVector",
+    "MingliMechanismQualificationEnvelope",
+    "MingliMechanismQualificationProjector",
     "MingliMechanismVectorNotFoundError",
     "MingliMechanismVectorStore",
     "MingliMechanismVectorStoreError",
