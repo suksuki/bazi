@@ -14,6 +14,7 @@ from abu_v60.mingli import (
     MingliLifeDomainVectorStore,
     MingliMechanismComparisonService,
     MingliMechanismEvidenceCompiler,
+    MingliMechanismEvidenceDepthProjector,
     MingliMechanismQualificationProjector,
     MingliMechanismVectorStore,
     MingliQuantFoundationCompiler,
@@ -50,6 +51,7 @@ class HomeExperienceService:
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
         mechanism_comparison: MingliMechanismComparisonService | None = None,
+        mechanism_depth: MingliMechanismEvidenceDepthProjector | None = None,
         timing_compiler: MingliTimingEvidenceCompiler | None = None,
         timing_store: MingliTimingVectorStore | None = None,
         life_domain_compiler: MingliLifeDomainEvidenceCompiler | None = None,
@@ -70,6 +72,7 @@ class HomeExperienceService:
         self._mechanism_comparison = mechanism_comparison or MingliMechanismComparisonService(
             engine
         )
+        self._mechanism_depth = mechanism_depth or MingliMechanismEvidenceDepthProjector()
         self._reading_brief = MingliReadingBriefProjector()
         self._timing_compiler = timing_compiler or MingliTimingEvidenceCompiler()
         self._timing_store = timing_store or MingliTimingVectorStore(engine)
@@ -176,6 +179,13 @@ class HomeExperienceService:
             mechanism_vector=mechanism_vector,
             timing_vector=timing_vector,
         )
+        mechanism_depth = self._mechanism_depth.project(
+            reading=reading,
+            quant_vector=quant_vector,
+            mechanism_vector=mechanism_vector,
+            timing_vector=timing_vector,
+            mechanism_comparison=mechanism_comparison,
+        )
         abu_expression = self._abu.project(
             reading=reading,
             explanation=explanation,
@@ -260,6 +270,7 @@ class HomeExperienceService:
                 "reading_brief": reading_brief,
                 "explanation": explanation.model_dump(mode="json"),
                 "mechanism_qualification": mechanism_qualification.model_dump(mode="json"),
+                "mechanism_evidence_depth": mechanism_depth.model_dump(mode="json"),
                 "abu_expression": abu_expression.model_dump(mode="json"),
                 "read_only": True,
             },
@@ -268,15 +279,15 @@ class HomeExperienceService:
                 "reading_hash": reading.reading_hash,
                 "explanation_ref": explanation.explanation_ref,
                 "explanation_hash": explanation.explanation_hash,
-                "mechanism_qualification_ref": (
-                    mechanism_qualification.qualification_ref
-                ),
-                "mechanism_qualification_hash": (
-                    mechanism_qualification.qualification_hash
-                ),
+                "mechanism_qualification_ref": (mechanism_qualification.qualification_ref),
+                "mechanism_qualification_hash": (mechanism_qualification.qualification_hash),
                 "mechanism_qualification_candidates": [
-                    item.model_dump(mode="json")
-                    for item in mechanism_qualification.candidates
+                    item.model_dump(mode="json") for item in mechanism_qualification.candidates
+                ],
+                "mechanism_evidence_depth_ref": mechanism_depth.depth_ref,
+                "mechanism_evidence_depth_hash": mechanism_depth.depth_hash,
+                "mechanism_evidence_depth_candidates": [
+                    item.model_dump(mode="json") for item in mechanism_depth.candidates
                 ],
                 "profile_bindings": {
                     "foundation": reading.foundation_profile.model_dump(mode="json"),

@@ -152,3 +152,147 @@
 .home-relation-context summary {
   cursor: pointer;
 }
+
+.mechanism-evidence-contrast-disclosure {
+  margin-top: 12px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.mechanism-evidence-contrast-disclosure > summary {
+  cursor: pointer;
+}
+
+.mechanism-evidence-contrast {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(30, 88, 62, 0.16);
+}
+
+.mechanism-evidence-contrast-disclosure .mechanism-evidence-contrast {
+  margin-top: 9px;
+}
+
+.mechanism-evidence-contrast-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mechanism-evidence-contrast-header span {
+  display: grid;
+  gap: 2px;
+}
+
+.mechanism-evidence-contrast-header strong {
+  color: #315a4a;
+  font-size: 11px;
+}
+
+.mechanism-evidence-contrast-header small,
+.mechanism-evidence-contrast-header em {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-style: normal;
+  line-height: 1.45;
+}
+
+.mechanism-evidence-candidate-grid {
+  display: grid;
+  gap: 8px;
+}
+
+.mechanism-evidence-candidate {
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px;
+  border: 1px solid rgba(56, 91, 68, 0.15);
+  border-left: 3px solid rgba(76, 114, 88, 0.42);
+  background: rgba(250, 249, 242, 0.76);
+}
+
+.mechanism-evidence-candidate[data-attention="PRIMARY_ATTENTION"] {
+  border-left-color: #b28b31;
+  background: rgba(249, 245, 228, 0.82);
+}
+
+.mechanism-evidence-candidate[data-attention="DIRECT_COMPETITOR"] {
+  border-left-color: #648a73;
+}
+
+.mechanism-evidence-candidate > header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.mechanism-evidence-candidate > header strong {
+  color: var(--ink);
+  font-size: 11px;
+}
+
+.mechanism-evidence-candidate > header em {
+  color: #876819;
+  font-size: 8px;
+  font-style: normal;
+}
+
+.mechanism-role-depth-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(108px, 1fr));
+  gap: 6px;
+}
+
+.mechanism-role-depth-list > div {
+  display: grid;
+  gap: 2px;
+  padding: 7px 8px;
+  background: rgba(223, 232, 216, 0.42);
+}
+
+.mechanism-role-depth-list span,
+.mechanism-role-depth-list small,
+.mechanism-role-depth-list i {
+  color: var(--ink-faint);
+  font-size: 8px;
+  font-style: normal;
+}
+
+.mechanism-role-depth-list strong {
+  color: var(--ink);
+  font-size: 10px;
+}
+
+.mechanism-role-depth-list i {
+  line-height: 1.35;
+}
+
+.mechanism-evidence-candidate > p {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  gap: 7px;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 8px;
+  line-height: 1.5;
+}
+
+.mechanism-evidence-candidate > p b {
+  color: #315a4a;
+  font-weight: 700;
+}
+
+.mechanism-evidence-candidate > p.is-empty span {
+  color: var(--ink-faint);
+}
+
+.mechanism-evidence-contrast-boundary {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 8px;
+  line-height: 1.55;
+}

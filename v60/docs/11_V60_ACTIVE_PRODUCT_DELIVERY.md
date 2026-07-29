@@ -886,6 +886,37 @@ Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
   `v60.runtime-architecture.036`, `v60.unit-mingli.009`,
   `v60.unit-abu-says.005` and `v60.unit-lab.006`.
 
+## Completed Delivery: Candidate Evidence Depth
+
+Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+
+- Added one read-only, versioned evidence-depth identity over the same Reading,
+  Quant, Mechanism and Timing vectors already used by Mingli and Lab.
+- Every role now exposes its visible/hidden carrier state, month-branch
+  coordinates, exact or same-element cross-layer source evidence and
+  same-pillar source coordinates.
+- Every candidate now exposes its actual timing-role overlaps, timing
+  relation context and shared occurrences with direct competitors.
+- An existing bounded Reasoner Decision may mark only the current attention
+  candidate. It does not produce a support score, probability, strength,
+  effective-work conclusion or professional winner.
+- The compact Mingli view answers why candidates still compete. Lab expands
+  the same projection; the browser does not reconstruct evidence.
+- Cross-corpus verification covers 23 active human owner/reference Cases,
+  including one to four candidates and genuine missing evidence channels.
+- No database migration was required and no V50 Runtime file was changed.
+- Desktop Chrome verification confirms the same evidence-depth identity in
+  Mingli and Lab, two visible competing candidates, no score/probability or
+  professional-verdict authority, no document scroll and no console or
+  network failures.
+- Full verification: `214 passed`, Ruff PASS, TypeScript PASS, production
+  build PASS, architecture boundary PASS and source maintainability PASS.
+- The frontend contract was split at its owner boundary: `homeApi.ts` is 430
+  lines and mechanism contracts live in `homeMechanismTypes.ts` (181 lines).
+- Current identities are `v60.mingli-cognitive-engine.016`,
+  `v60.runtime-architecture.037`, `v60.unit-mingli.010` and
+  `v60.unit-lab.007`.
+
 ## Current Product Truth
 
 Already usable locally:
@@ -896,6 +927,8 @@ Already usable locally:
   every displayed Mingli claim;
 - a shared eight-part evidence-completeness matrix for every visible mechanism
   candidate, including explicit next evidence and falsifiers;
+- a server-owned contrast of role carriers, source coordinates, timing
+  evidence, relation context and shared-participant competition;
 - bounded Gemma4 comparison when deterministic rules cannot rank candidates;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
@@ -912,9 +945,10 @@ Still honestly incomplete:
   composition currently being prepared by design.
 
 The next implementation must deepen these two product truths rather than add
-new modules: supply versioned evidence rules for root/source usability,
-seasonal capacity, relation effect and counter-evidence; then expand Dream with
-additional admitted stories that reuse the proven loop.
+new modules: use Lab to admit one narrow professional evidence rule for
+root/source usability or relation effect, then let a new Mingli Reading consume
+that admitted version without rewriting its predecessor. Dream should receive
+the same bounded uncertainty only after that evidence boundary is stable.
 
 Not active: population-scale content generation, ranking, mobile visual
 polish, Server 13 synchronization or production deployment.

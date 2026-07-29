@@ -1,6 +1,13 @@
 import { request } from "./api";
 import type { HomeAbuExpression, HomeMingliExplanation } from "./homeExplanationTypes";
 import type {
+  HomeCandidateMechanismEvidenceDepth,
+  HomeMechanismCandidate,
+  HomeMechanismComparison,
+  HomeMechanismEvidence,
+  HomeMechanismEvidenceDepth,
+} from "./homeMechanismTypes";
+import type {
   HomeCandidateMechanismQualification,
   HomeMechanismQualification,
 } from "./homeQualificationTypes";
@@ -8,6 +15,10 @@ import type { HomeReadingBrief } from "./homeReadingTypes";
 
 export type { HomeReadingBrief } from "./homeReadingTypes";
 export type { HomeMechanismQualification } from "./homeQualificationTypes";
+export type {
+  HomeCandidateMechanismEvidenceDepth,
+  HomeMechanismEvidenceDepth,
+} from "./homeMechanismTypes";
 
 export interface HomeQuantFoundation {
   vector_ref: string;
@@ -67,63 +78,6 @@ export interface HomeQuantFoundation {
   measurement_semantics: "DETERMINISTIC_UNWEIGHTED_STRUCTURE";
   calibration_status: "NOT_CALIBRATED";
   forbidden_conclusions: string[];
-  read_only: true;
-}
-
-export interface HomeMechanismCandidate {
-  candidate_ref: string;
-  pattern_ref: string;
-  pattern_label: string;
-  structural_statement: string;
-  forbidden_shortcut: string;
-  roles: Array<{
-    role_id: "SOURCE" | "BRIDGE" | "TARGET";
-    accepted_labels: string[];
-    occurrence_refs: string[];
-    occurrence_labels: string[];
-    participant_slots: string[];
-    direct_evidence_refs: string[];
-    manifestation_evidence_refs: string[];
-    visible_occurrence_count: number;
-    hidden_occurrence_count: number;
-  }>;
-  support_evidence_refs: string[];
-  context_evidence_refs: string[];
-  counter_evidence_refs: string[];
-  blocker_codes: string[];
-  competing_candidate_refs: string[];
-  structural_presence: "PRESENT";
-  effect_status: "UNRESOLVED";
-  capacity_status: "UNRESOLVED";
-  usability_status: "UNRESOLVED";
-  timing_activation_status: "UNRESOLVED";
-  counter_evidence_status: "NOT_ADMITTED";
-  professional_admission_status: "UNRESOLVED";
-  comparison_eligible: true;
-  professional_selection_qualified: false;
-  support_score_status: "NOT_COMPUTED_NO_ADMITTED_WEIGHTS";
-}
-
-export interface HomeMechanismEvidence {
-  vector_ref: string;
-  vector_hash: string;
-  vector_version: string;
-  case_ref: string;
-  chart_version_ref: string;
-  quant_vector_ref: string;
-  quant_vector_hash: string;
-  mechanism_profile_ref: string;
-  mechanism_profile_hash: string;
-  candidates: HomeMechanismCandidate[];
-  evidence_refs: string[];
-  comparison_status:
-    | "NO_CANDIDATE"
-    | "ONE_CANDIDATE"
-    | "MULTIPLE_CANDIDATES";
-  interpretation_authority: "BOUNDED_REASONER_ATTENTION_ONLY";
-  professional_verdict_allowed: false;
-  probability_claim_allowed: false;
-  canonical_write_allowed: false;
   read_only: true;
 }
 
@@ -225,32 +179,6 @@ export interface HomeLifeDomainEvidence {
   professional_verdict_allowed: false;
   canonical_write_allowed: false;
   read_only: true;
-}
-
-export interface HomeMechanismComparison {
-  comparison_version: string;
-  request_id: string;
-  reasoner_runtime: {
-    runtime_ref: string;
-    status: "READY" | "DISABLED" | "NOT_CONFIGURED" | "MISCONFIGURED";
-    provider: string | null;
-    model_ref: string | null;
-    prompt_ref: string;
-    network_calls_enabled: boolean;
-    structured_output_required: true;
-    canonical_domain_write_allowed: false;
-  };
-  candidate_count: number;
-  decision_ref: string | null;
-  decision_hash: string | null;
-  authority: "RULE_ENGINE" | "LLM_REASONER" | null;
-  status: "NOT_RUN" | "RESOLVED";
-  selected_candidate_ref: string | null;
-  rationale_summary: string | null;
-  evidence_refs_used: string[];
-  meaning: "ATTENTION_PRIORITY_ONLY";
-  professional_verdict: false;
-  canonical_mingli_write_allowed: false;
 }
 
 export interface HomeSnapshot {
@@ -358,6 +286,7 @@ export interface HomeSnapshot {
     reading_brief: HomeReadingBrief;
     explanation: HomeMingliExplanation;
     mechanism_qualification: HomeMechanismQualification;
+    mechanism_evidence_depth: HomeMechanismEvidenceDepth;
     abu_expression: HomeAbuExpression;
     read_only: true;
   };
@@ -369,6 +298,9 @@ export interface HomeSnapshot {
     mechanism_qualification_ref: string;
     mechanism_qualification_hash: string;
     mechanism_qualification_candidates: HomeCandidateMechanismQualification[];
+    mechanism_evidence_depth_ref: string;
+    mechanism_evidence_depth_hash: string;
+    mechanism_evidence_depth_candidates: HomeCandidateMechanismEvidenceDepth[];
     profile_bindings: {
       foundation: HomeKnowledgeProfileBinding;
       candidate_rules: HomeKnowledgeProfileBinding;

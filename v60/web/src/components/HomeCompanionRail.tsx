@@ -5,6 +5,7 @@ import {
   unitTitle,
 } from "../experienceUnits";
 import { HomeReadingBrief } from "./HomeReadingBrief";
+import { MechanismEvidenceContrast } from "./MechanismEvidenceContrast";
 import { MechanismQualificationMatrix } from "./MechanismQualificationMatrix";
 import { MingliEvidenceExplanation } from "./MingliEvidenceExplanation";
 import { MingliCaseManager } from "./MingliCaseManager";
@@ -100,6 +101,9 @@ export function HomeCompanionRail({
               onCompare={onCompareMechanisms}
             />
             <MingliEvidenceExplanation explanation={home.mingli.explanation} />
+            <MechanismEvidenceContrast
+              depth={home.mingli.mechanism_evidence_depth}
+            />
             <MechanismQualificationMatrix
               qualification={home.mingli.mechanism_qualification}
             />
@@ -207,6 +211,10 @@ export function HomeCompanionRail({
             ) : (
               <p>当前真实命盘没有达到本版候选路径的最低结构门槛。</p>
             )}
+            <MechanismEvidenceContrast
+              depth={home.mingli.mechanism_evidence_depth}
+              mode="detailed"
+            />
             <MechanismQualificationMatrix
               detailed
               qualification={home.mingli.mechanism_qualification}

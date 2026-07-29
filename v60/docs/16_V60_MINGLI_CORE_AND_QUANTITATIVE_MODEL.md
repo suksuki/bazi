@@ -1,6 +1,6 @@
 # V60 Mingli Core and Quantitative Model
 
-Status: `MECHANISM_QUALIFICATION_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+Status: `CANDIDATE_EVIDENCE_DEPTH_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
 
 ## Product decision
 
@@ -38,6 +38,7 @@ must not be reported as real-world accuracy.
 | Relation effect and transformation | Missing | Relation membership is not effect |
 | Mechanism candidate evidence | Executable | Five versioned patterns; candidate presence only |
 | Mechanism qualification matrix | Executable | Eight explicit evidence requirements; no score or verdict |
+| Candidate evidence-depth contrast | Executable | Carrier, source, month, timing, relation and competition channels; no ranking score |
 | Work-path effect, capacity and usability | Unresolved | Every candidate carries explicit blockers; none is effective work |
 | Dayun, annual and monthly Mingli timing | Executable | Coordinates and relation membership only; effect unresolved |
 | Whole-chart portrait and life-domain verdicts | Missing | V50 LLM drafts are not canonical facts |
@@ -135,6 +136,60 @@ The audit is evidence that the compiler is chart-sensitive, not evidence that
 the patterns are professionally effective. V50 remains read-only and is not a
 V60 Runtime dependency. All active V60 Cases have their own vectors persisted
 in PostgreSQL.
+
+## Implemented candidate evidence depth v1
+
+The product now organizes the existing structural evidence into one immutable,
+server-owned contrast rather than asking the browser to assemble an argument:
+
+```text
+Mingli Reading
++ Quant Foundation Vector
++ Mechanism Evidence Vector
++ Timing Evidence Vector
++ recorded attention-priority Decision, when present
+-> Candidate Evidence Depth
+-> compact Mingli contrast
+-> expanded Lab inspection
+```
+
+For every candidate role it distinguishes visible-stem carriers, hidden-stem
+members, month-branch coordinates, exact-identity cross-layer evidence,
+same-element cross-layer evidence and same-pillar source coordinates. It also
+binds timing-role overlaps, timing relations touching participating natal
+slots and exact shared occurrences between competing candidates.
+
+The projection does not count these channels into a support score. A stored
+Gemma4 Decision may label one candidate `PRIMARY_ATTENTION`; only candidates
+that share actual occurrences with it are labelled `DIRECT_COMPETITOR`.
+Neither label is a professional selection.
+
+The private V60 corpus currently contains 23 active human owner/reference
+Cases. Their latest persisted vectors contain one to four mechanism
+candidates. Across that corpus the projection preserves cases with no timing
+overlap, no timing relation context, hidden-only roles and differing
+source-coordinate evidence instead of filling those gaps.
+
+The unresolved boundary remains fixed:
+
+```text
+root usability
+seasonal capacity
+relation effect
+timing activation
+counter-evidence
+mechanism effect
+professional admission
+```
+
+No database migration was required. The projection is read-only, stable by
+source identity and rejects mixed Reading, Case, Chart or vector lineage.
+
+Desktop Chrome audits now bind the compact Mingli view and expanded Lab view
+to the same `depth_ref`. They verify visible candidate contrast, explicit
+non-authority, zero document overflow and zero console/network failures. The
+complete local suite contains 214 passing tests; Runtime Architecture and
+source maintainability audits also pass.
 
 ## Implemented timing evidence v1
 

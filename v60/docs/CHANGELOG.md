@@ -1,5 +1,31 @@
 # V60 Change Log
 
+## 2026-07-30
+
+### Candidate evidence-depth contrast
+
+- Added a versioned, read-only Candidate Evidence Depth projection over the
+  current Reading, Quant, Mechanism and Timing identities.
+- Bound visible/hidden role carriers, month-branch coordinates, exact and
+  same-element source evidence, timing overlaps, timing relations and shared
+  competing participants without deriving a support score.
+- Mingli now offers a compact explanation of why candidates remain in
+  competition; Lab expands the same server-owned projection.
+- An existing Reasoner Decision controls only attention labelling. It cannot
+  become strength, effective work, probability or professional admission.
+- Verified stable projection and lineage isolation across 23 active private
+  owner/reference Cases. No database migration or V50 Runtime change occurred.
+- Added a repeatable desktop Chrome audit for shared projection identity,
+  visible candidate contrast, no authority overreach, document dimensions and
+  console/network failures.
+- Split the frontend mechanism contracts out of `homeApi.ts`; all Runtime
+  source files remain inside the enforced maintainability budget.
+- Completed 214 backend tests, TypeScript/build, Ruff, Runtime Architecture
+  and source-maintainability verification.
+- Advanced Mingli to `v60.mingli-cognitive-engine.016`, the product units to
+  `v60.unit-mingli.010` and `v60.unit-lab.007`, and Runtime Architecture to
+  `v60.runtime-architecture.037`.
+
 ## 2026-07-29
 
 ### Mechanism evidence-completeness projection
