@@ -1,0 +1,708 @@
+{
+  "schema_version": "v60.media-library.001",
+  "schema_ref": "media/schemas/media-catalog-v1.schema.json",
+  "library_ref": "v60-media-library-main",
+  "policy": {
+    "sources_are_immutable": true,
+    "new_revision_never_overwrites_old_revision": true,
+    "runtime_registry_is_release_projection": true,
+    "source_audio_is_never_embedded_in_actor_alpha_video": true,
+    "owner_review_required_for_runtime_publication": true,
+    "watermark_work_requires_owner_authorized_source": true
+  },
+  "lifecycle": [
+    "DRAFT_REQUEST",
+    "SOURCE_RECEIVED",
+    "SOURCE_APPROVED",
+    "POSTPROCESSING",
+    "POSTPROCESS_COMPLETE",
+    "OWNER_REVIEW",
+    "LIBRARY_READY",
+    "RUNTIME_REGISTERED",
+    "RETIRED"
+  ],
+  "character_identities": [
+    {
+      "character_version": "ABU_CHARACTER_V1",
+      "display_name": "阿布",
+      "visual_style": "LEGACY_CARTOON",
+      "status": "RETAINED_COMPATIBILITY",
+      "primary_for_new_v60_generation": false,
+      "identity_reference_media_ref": null,
+      "runtime_poster_media_ref": "media.abu.seated-idle.v1",
+      "motion_media_refs": [
+        "media.abu.seated-idle.v1",
+        "media.abu.calm-follow-walk.v1"
+      ]
+    },
+    {
+      "character_version": "ABU_CHARACTER_V60_V1",
+      "display_name": "阿布",
+      "visual_style": "EASTERN_FAIRY_TALE_PICTURE_BOOK",
+      "status": "PRIMARY_V60",
+      "primary_for_new_v60_generation": true,
+      "identity_reference_media_ref": "media.abu.v60.character-reference.v1",
+      "runtime_poster_media_ref": "media.abu.v60.seated-transparent.v1",
+      "motion_media_refs": [
+        "media.abu.v60.guide-left.v1",
+        "media.abu.v60.seated-idle.v1"
+      ]
+    }
+  ],
+  "items": [
+    {
+      "media_ref": "media.abu.seated-idle.v1",
+      "asset_id": "ABU_01_SEATED_IDLE_LOOP_V3",
+      "revision": "v1",
+      "media_kind": "ACTOR_MOTION",
+      "character_version": "ABU_CHARACTER_V1",
+      "semantic_role": "QUIET_COMPANION_IDLE",
+      "action_type": "LOOP",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/ABU_01_SEATED_IDLE_LOOP_V3/v1/source.mp4",
+        "original_filename": "Regenerate_this_exact_animatio.mp4",
+        "sha256": "d5b3c64ad82aed464a201cd9e90e879e8f2cbe6abfe4fd78c08c0e8359697196",
+        "generator": "Gemini",
+        "prompt_ref": null,
+        "prompt_status": "HISTORICAL_PROMPT_NOT_RECOVERED",
+        "authorization": "OWNER_APPROVED_GENERATED_SOURCE"
+      },
+      "process_manifest_path": "media/manifests/ABU_01_SEATED_IDLE_LOOP_V3.v1.imported.json",
+      "process_manifest_sha256": "561f6f1bed0676390724278b0b4329fc583e88ffcf623ec3f73c345f16975ac8",
+      "deliveries": [
+        {
+          "asset_ref": "abu.seated.idle.v1",
+          "asset_version": "ABU_01_SEATED_IDLE_LOOP_V3",
+          "role": "VP9_ALPHA_WEBM",
+          "path": "web/public/assets/abu/abu-seated-idle-v1.webm",
+          "sha256": "a63cfd680f27eae5f8fcbb317231d1a0e15ec37db52b854d9163777f769d2ec7",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.seated.idle.webp.v1",
+          "asset_version": "ABU_01_SEATED_IDLE_LOOP_V3",
+          "role": "ANIMATED_WEBP",
+          "path": "web/public/assets/abu/abu-seated-idle-v1.webp",
+          "sha256": "3b8adb105db8749ff6da57d015e80ec8c747fc96253e32ef4f0b078de2a2aed8",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.seated.idle.poster.v1",
+          "asset_version": "ABU_01_SEATED_IDLE_LOOP_V3",
+          "role": "REDUCED_MOTION_POSTER",
+          "path": "web/public/assets/abu/abu-seated-idle-v1.png",
+          "sha256": "6aa0b95c6b7f325286087eb665c943f2aa49c2d43a0615b64102a3027b128702",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [
+        {
+          "role": "CHECKERBOARD_PREVIEW",
+          "path": "media/review/ABU_01_SEATED_IDLE_LOOP_V3/v1/checkerboard.mp4",
+          "sha256": "d98c1ea1a5f73d1b6734a104a659b4287f3ef262123be18f19c7e19affc738e1"
+        }
+      ],
+      "runtime_contract": {
+        "trigger": "quiet_companion_visible",
+        "playback": "LOOP",
+        "interruptible": true,
+        "return_action": "SELF",
+        "anchor": "BOTTOM_CENTER",
+        "reduced_motion_asset_ref": "abu.seated.idle.poster.v1"
+      }
+    },
+    {
+      "media_ref": "media.abu.calm-follow-walk.v1",
+      "asset_id": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
+      "revision": "v1",
+      "media_kind": "ACTOR_MOTION",
+      "character_version": "ABU_CHARACTER_V1",
+      "semantic_role": "LOCOMOTION_FOLLOW",
+      "action_type": "LOOP",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/ABU_02_CALM_FOLLOW_WALK_LOOP_V1/v1/source.mp4",
+        "original_filename": "Create_a_second_green_scree.mp4",
+        "sha256": "993c6d111903f7f995b23c6f5a0653f9f893b21cb678d1cea60b9475f6fbdfa8",
+        "generator": "Gemini",
+        "prompt_ref": null,
+        "prompt_status": "HISTORICAL_PROMPT_NOT_RECOVERED",
+        "authorization": "OWNER_APPROVED_GENERATED_SOURCE"
+      },
+      "process_manifest_path": "media/manifests/ABU_02_CALM_FOLLOW_WALK_LOOP_V1.v1.imported.json",
+      "process_manifest_sha256": "1d0f5a4ccd1dfa37daf87d09fc9f17a749790c468a891fd761f586878312cf18",
+      "deliveries": [
+        {
+          "asset_ref": "abu.follow.walk.v1",
+          "asset_version": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
+          "role": "VP9_ALPHA_WEBM",
+          "path": "web/public/assets/abu/abu-02-calm-follow-walk-loop-v1/actor.webm",
+          "sha256": "576094e3c291180078a08f0246ee495071b0804b76e8d2fd4b7cfdc7a1034cfd",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.follow.walk.webp.v1",
+          "asset_version": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
+          "role": "ANIMATED_WEBP",
+          "path": "web/public/assets/abu/abu-02-calm-follow-walk-loop-v1/actor.webp",
+          "sha256": "f2e8047d2dc59ea232578d0a4c63484f89b41d9d705037ecaa455075f154f218",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.follow.walk.poster.v1",
+          "asset_version": "ABU_02_CALM_FOLLOW_WALK_LOOP_V1",
+          "role": "REDUCED_MOTION_POSTER",
+          "path": "web/public/assets/abu/abu-02-calm-follow-walk-loop-v1/poster.png",
+          "sha256": "b8a3083f2534d6268a9e82e8b6f294ee019e4009f5e5895acae38f3d63b2d1d3",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [
+        {
+          "role": "CHECKERBOARD_PREVIEW",
+          "path": "media/review/ABU_02_CALM_FOLLOW_WALK_LOOP_V1/v1/checkerboard.mp4",
+          "sha256": "b98e3c3b3ea448f6b9dde4ed73ae8c5f6bf79c7125f704d60a494c33e530895c"
+        }
+      ],
+      "runtime_contract": {
+        "trigger": "canonical_abu_follow_distance_exceeded",
+        "playback": "LOOP_WHILE_CONTAINER_MOVES",
+        "interruptible": true,
+        "return_action": "media.abu.seated-idle.v1",
+        "anchor": "BOTTOM_CENTER",
+        "container_owns_translation": true,
+        "reduced_motion_asset_ref": "abu.follow.walk.poster.v1"
+      }
+    },
+    {
+      "media_ref": "media.dream.entry-transition.v1",
+      "asset_id": "ABU_03_DREAM_ENTRY_TRANSITION_V1",
+      "revision": "v1",
+      "media_kind": "SCENE_TRANSITION",
+      "character_version": "ABU_CHARACTER_V1",
+      "semantic_role": "DREAM_ENTRY_TRANSITION",
+      "action_type": "ONE_SHOT",
+      "library_status": "OWNER_REVIEW",
+      "source": {
+        "path": "media/sources/ABU_03_DREAM_ENTRY_TRANSITION_V1/v1/source.mp4",
+        "original_filename": "Create_an_second_cinematic_d.mp4",
+        "sha256": "ca42b6e7c7ad1236cb3c35676471302d26401ae07fb2fc3550cf15fa2243e7f7",
+        "generator": "Gemini",
+        "prompt_ref": null,
+        "prompt_status": "HISTORICAL_PROMPT_NOT_RECOVERED",
+        "authorization": "OWNER_APPROVED_GENERATED_SOURCE"
+      },
+      "process_manifest_path": "media/manifests/ABU_03_DREAM_ENTRY_TRANSITION_V1.v1.imported.json",
+      "process_manifest_sha256": "51377d9de08cbe2d03d0cd684c31e0375a69e929bcc8305bedb5c8abd7d31b5b",
+      "masters": [
+        {
+          "role": "CLEAN_VIDEO_MASTER",
+          "path": "media/masters/ABU_03_DREAM_ENTRY_TRANSITION_V1/v1/clean-master.mp4",
+          "sha256": "390e98d6a65a0a7fa79e4df3619c7bfae432bb443f6986c082cf65cbd5095664",
+          "alpha": false,
+          "audio": false
+        }
+      ],
+      "deliveries": [],
+      "review_artifacts": [
+        {
+          "role": "RUNTIME_CANDIDATE_1080P",
+          "path": "media/review/ABU_03_DREAM_ENTRY_TRANSITION_V1/v1/runtime-candidate-1080p.mp4",
+          "sha256": "76e3ddf69bb9f206fd6f3fc90969f3c0ede521e1a4a93579d79f28ac8ebd615d"
+        },
+        {
+          "role": "FIRST_FRAME",
+          "path": "media/review/ABU_03_DREAM_ENTRY_TRANSITION_V1/v1/first-frame.png",
+          "sha256": "9a3a63cbd3b2de77d65955b3ea9d9eebc837ffe06376772050214c854ae056d8"
+        },
+        {
+          "role": "LAST_FRAME",
+          "path": "media/review/ABU_03_DREAM_ENTRY_TRANSITION_V1/v1/last-frame.png",
+          "sha256": "31e57cde8f35b30d665d2dc918b3d091c796cba25f4bcba2d8ed8ef98532612d"
+        }
+      ],
+      "runtime_contract": {
+        "trigger": "owner_approved_dream_entry",
+        "playback": "PLAY_ONCE",
+        "interruptible": false,
+        "handoff_target": "THREE_TREE_SELECTION",
+        "runtime_publication": "BLOCKED_PENDING_V60_OWNER_REVIEW"
+      }
+    },
+    {
+      "media_ref": "media.audio.morning-glints.v1",
+      "asset_id": "AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1",
+      "revision": "v1",
+      "media_kind": "AUDIO_MUSIC",
+      "character_version": null,
+      "semantic_role": "DREAM_OPENING_AMBIENCE",
+      "action_type": "PLAY_ONCE",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1/v1/source.mp3",
+        "original_filename": "Morning_Glints_In_The_Grove.mp3",
+        "sha256": "d48faa4f0a79b7b4b61c05230cb789f0d1b178866f38f18b3ee1c45859e06908",
+        "generator": "OWNER_SUPPLIED",
+        "prompt_ref": null,
+        "prompt_status": "HISTORICAL_PROMPT_NOT_RECOVERED",
+        "authorization": "OWNER_APPROVED_FOR_ABU_OPENING_MUSIC"
+      },
+      "process_manifest_path": "media/manifests/AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1.v1.imported.json",
+      "process_manifest_sha256": "bda7b7985e99edb202cea5a331a43725bfbd86cfe8d75421e26c1cb6303cfb72",
+      "deliveries": [
+        {
+          "asset_ref": "audio.morning-glints.opening.mp3.v1",
+          "asset_version": "AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1",
+          "role": "WEB_AUDIO_MP3",
+          "path": "web/public/assets/audio/morning-glints-in-the-grove-v1/opening.mp3",
+          "sha256": "8b0e7699b53de587c6043b36fc947719c7bbd6337cc73ab34342f8f16d53c16d",
+          "alpha": false
+        },
+        {
+          "asset_ref": "audio.morning-glints.opening.opus.v1",
+          "asset_version": "AUDIO_MORNING_GLINTS_IN_THE_GROVE_V1",
+          "role": "WEB_AUDIO_OPUS",
+          "path": "web/public/assets/audio/morning-glints-in-the-grove-v1/opening.opus",
+          "sha256": "c962fc87d045b579012e2e9bd1f400ac057aff79dce9948d50e9734a66db95ef",
+          "alpha": false
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "FIRST_USER_GESTURE_IN_DREAM_ENTRY",
+        "playback": "PLAY_ONCE",
+        "audible_autoplay": false,
+        "default_volume": 0.52,
+        "narration_priority": true
+      }
+    },
+    {
+      "media_ref": "media.abu.v60.character-reference.v1",
+      "asset_id": "ABU_V60_CHARACTER_REFERENCE_V1",
+      "revision": "v1",
+      "media_kind": "CHARACTER_REFERENCE",
+      "character_version": "ABU_CHARACTER_V60_V1",
+      "semantic_role": "PRIMARY_IDENTITY_LOCK",
+      "action_type": "STATIC",
+      "library_status": "LIBRARY_READY",
+      "source": {
+        "path": "media/sources/ABU_V60_CHARACTER_REFERENCE_V1/v1/source.png",
+        "original_filename": "ChatGPT Image 2026年7月28日 12_54_41.png",
+        "sha256": "e427bf05325b7a89a456825c46bf552a2e1904f44cd1ae7c0c544eac00cbb2d4",
+        "generator": "ChatGPT-Image",
+        "prompt_ref": "OWNER_SUPPLIED_V60_CHARACTER_ART_2026-07-28",
+        "prompt_status": "OWNER_SUPPLIED_WITHOUT_PROMPT_TRANSCRIPT",
+        "authorization": "OWNER_APPROVED_V60_CHARACTER_SOURCE"
+      },
+      "process_manifest_path": "media/manifests/ABU_V60_CHARACTER_REFERENCE_V1.v1.json",
+      "process_manifest_sha256": "75892b30d465bf3a84deed206ba581054cf36d3fb1165bad0e4588206aefee78",
+      "deliveries": [],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "runtime_publication": "REFERENCE_ONLY",
+        "use": "IDENTITY_LOCK_FOR_NEW_V60_MEDIA_GENERATION"
+      }
+    },
+    {
+      "media_ref": "media.abu.v60.seated-transparent.v1",
+      "asset_id": "ABU_V60_SEATED_TRANSPARENT_V1",
+      "revision": "v1",
+      "media_kind": "ACTOR_POSTER",
+      "character_version": "ABU_CHARACTER_V60_V1",
+      "semantic_role": "QUIET_COMPANION_STATIC",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/ABU_V60_SEATED_TRANSPARENT_V1/v1/source.png",
+        "original_filename": "abuknows-v60-abu-transparent (1).png",
+        "sha256": "f8c9a9bf28ed6cfe88a1392183c4a1b628c72cdd8e750eef6306772c0d718123",
+        "generator": "ChatGPT-Image",
+        "prompt_ref": "OWNER_SUPPLIED_V60_CHARACTER_ART_2026-07-28",
+        "prompt_status": "OWNER_SUPPLIED_WITHOUT_PROMPT_TRANSCRIPT",
+        "authorization": "OWNER_APPROVED_V60_CHARACTER_SOURCE"
+      },
+      "process_manifest_path": "media/manifests/ABU_V60_SEATED_TRANSPARENT_V1.v1.json",
+      "process_manifest_sha256": "ea201b9dfb9e446ea20b64fe2874ee879109fe40ce75f38a34a5aa3dae15fd56",
+      "deliveries": [
+        {
+          "asset_ref": "abu.v60.seated.poster.v1",
+          "asset_version": "ABU_V60_SEATED_TRANSPARENT_V1",
+          "role": "TRANSPARENT_PNG_POSTER",
+          "path": "web/public/assets/abu/v60/abu-v60-seated-transparent-v1.png",
+          "sha256": "c6cf8653e245756af64b6f7fcdb9106623500588696d4b55ee01bc9076189a1b",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "ABU_VISIBLE_WITHOUT_APPROVED_V60_MOTION",
+        "playback": "STATIC",
+        "interruptible": true,
+        "anchor": "BOTTOM_CENTER",
+        "source_canvas": "1254x1254",
+        "runtime_canvas": "760x1080"
+      }
+    },
+    {
+      "media_ref": "media.v60.life-world.reference.v1",
+      "asset_id": "V60_LIFE_WORLD_BACKGROUND_REFERENCE_V1",
+      "revision": "v1",
+      "media_kind": "SCENE_REFERENCE",
+      "character_version": null,
+      "semantic_role": "V60_PROTOTYPE_LIFE_WORLD_VISUAL_LOCK",
+      "action_type": "STATIC",
+      "library_status": "LIBRARY_READY",
+      "source": {
+        "path": "media/sources/V60_LIFE_WORLD_BACKGROUND_REFERENCE_V1/v1/source.png",
+        "original_filename": "v60-life-world-bg.png",
+        "sha256": "1e7f5f82e20ad3817d67894f414fcddadfef50c89b5ed443b60d005298d45da4",
+        "generator": "CHATGPT_SITES_PROTOTYPE",
+        "prompt_ref": "PROTOTYPE_SITE_V4_ASSET",
+        "prompt_status": "APPROVED_VISUAL_REFERENCE",
+        "authorization": "OWNER_APPROVED_PROTOTYPE_SOURCE_REUSE"
+      },
+      "process_manifest_path": "media/manifests/V60_LIFE_WORLD_BACKGROUND_REFERENCE_V1.v1.json",
+      "process_manifest_sha256": "67b54b118af72507b19564dfbe57fbe504800e2ea5bda13572115bf7554783e6",
+      "deliveries": [],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "runtime_publication": "REFERENCE_ONLY",
+        "use": "V60_EASTERN_FAIRY_TALE_PICTURE_BOOK_SCENE_LOCK"
+      }
+    },
+    {
+      "media_ref": "media.v60.life-world.clean.v1",
+      "asset_id": "V60_LIFE_WORLD_BACKGROUND_CLEAN_V1",
+      "revision": "v1",
+      "media_kind": "SCENE_BACKGROUND",
+      "character_version": null,
+      "semantic_role": "V60_LIFE_TREE_WORLD_BACKGROUND",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/V60_LIFE_WORLD_BACKGROUND_CLEAN_V1/v1/source.png",
+        "original_filename": "call_FXoFd4DePC2ZJMECSR11ODZU.png",
+        "sha256": "2b9c47ee05d0c6967ce5173e3fc353c64f9de82d09e13130797738d61b874df2",
+        "generator": "OPENAI_IMAGE_EDIT",
+        "prompt_ref": "V60_PRE_FRUIT_BACKGROUND_CLEANUP_2026-07-28",
+        "prompt_status": "OWNER_APPROVED_DERIVATIVE",
+        "authorization": "OWNER_APPROVED_PROTOTYPE_STYLE_RUNTIME_REUSE"
+      },
+      "process_manifest_path": "media/manifests/V60_LIFE_WORLD_BACKGROUND_CLEAN_V1.v1.json",
+      "process_manifest_sha256": "9953c00feb65e55c501843f69e9f3a355ab9e5c9b2534b8f4fb2975e310404f6",
+      "deliveries": [
+        {
+          "asset_ref": "dream.v60.life-world.clean.v1",
+          "asset_version": "V60_LIFE_WORLD_BACKGROUND_CLEAN_V1",
+          "role": "V60_LIFE_TREE_WORLD_BACKGROUND",
+          "path": "web/public/assets/dream/v60-life-world-clean-v1.png",
+          "sha256": "2b9c47ee05d0c6967ce5173e3fc353c64f9de82d09e13130797738d61b874df2",
+          "alpha": false
+        }
+      ],
+      "review_artifacts": [],
+      "runtime_contract": {
+        "trigger": "V60_LIFE_TREE_WORLD_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "FULL_BLEED_CENTER",
+        "pre_seal_fruit_visible": false,
+        "fallback": "FAIL_CLOSED"
+      }
+    },
+    {
+      "media_ref": "media.brand.abuknows-v60.primary-logo.v1",
+      "asset_id": "ABUKNOWS_V60_LOGO_PRIMARY_V1",
+      "revision": "v1",
+      "media_kind": "BRAND_IDENTITY",
+      "character_version": null,
+      "semantic_role": "PRIMARY_V60_BRAND_LOCKUP",
+      "action_type": "STATIC",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/ABUKNOWS_V60_LOGO_PRIMARY_V1/v1/source.png",
+        "original_filename": "abuknows-logo-white-bg.png",
+        "sha256": "7f6d7c50eb9515d017676274d94cf6fd17ed760629036b7b87396e80faf65c60",
+        "generator": "OWNER_SUPPLIED",
+        "prompt_ref": "OWNER_SUPPLIED_V60_LOGO_2026-07-28",
+        "prompt_status": "OWNER_SUPPLIED_WITHOUT_PROMPT_TRANSCRIPT",
+        "authorization": "OWNER_APPROVED_V60_BRAND_SOURCE"
+      },
+      "process_manifest_path": "media/manifests/ABUKNOWS_V60_LOGO_PRIMARY_V1.v1.json",
+      "process_manifest_sha256": "2b5d3f22389d74d7f8310ca56420a8790a1c0e1f13d86d5ceebc65c5644a6474",
+      "masters": [
+        {
+          "role": "FULL_CANVAS_TRANSPARENT_MASTER",
+          "path": "media/masters/ABUKNOWS_V60_LOGO_PRIMARY_V1/v1/logo-transparent-master.png",
+          "sha256": "4b5c05fd98b27b0f5a486d93b8c45dec262a7bb61d6903599eaf8a4ffbbe2868"
+        }
+      ],
+      "deliveries": [
+        {
+          "asset_ref": "brand.abuknows-v60.logo.transparent.v1",
+          "asset_version": "ABUKNOWS_V60_LOGO_PRIMARY_V1",
+          "role": "PRIMARY_TRANSPARENT_LOGO",
+          "path": "web/public/assets/brand/abuknows-v60-logo-transparent-v1.png",
+          "sha256": "785964042396b286b98bd3ae5afdc4f94431fa35e2b216fe70baefb7bddcce05",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [
+        {
+          "role": "DARK_BACKGROUND_EDGE_PREVIEW",
+          "path": "media/review/ABUKNOWS_V60_LOGO_PRIMARY_V1/v1/dark-background-preview.png",
+          "sha256": "ec521c6abf2529353d94d9810b51a4ae09a693a32b6cf30d37ae6e73bdb3ff71"
+        }
+      ],
+      "runtime_contract": {
+        "trigger": "V60_BRAND_VISIBLE",
+        "playback": "STATIC",
+        "anchor": "CENTER",
+        "background": "TRANSPARENT",
+        "fallback": "TEXT_ONLY_BRAND_NAME"
+      }
+    },
+    {
+      "media_ref": "media.abu.v60.seated-idle.v1",
+      "asset_id": "ABU_V60_SEATED_IDLE_LOOP_V1",
+      "revision": "v1",
+      "media_kind": "ACTOR_MOTION",
+      "character_version": "ABU_CHARACTER_V60_V1",
+      "semantic_role": "QUIET_COMPANION_IDLE",
+      "action_type": "LOOP",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/ABU_V60_SEATED_IDLE_LOOP_V1/v1/source.mp4",
+        "original_filename": "使用我上传的_×_图片作为严格第一帧和唯一角.mp4",
+        "sha256": "cd0b7f6cf016bb1b7c27fae956cc9a52001578761bff36c773fa3429a343d67f",
+        "generator": "Gemini",
+        "prompt_ref": "OWNER_SUPPLIED_GEMINI_IDLE_SOURCE_2026-07-28",
+        "prompt_status": "OWNER_SUPPLIED_WITHOUT_PROMPT_TRANSCRIPT",
+        "authorization": "OWNER_APPROVED_FOR_POSTPROCESS_AND_IDLE_USE"
+      },
+      "process_manifest_path": "media/manifests/ABU_V60_SEATED_IDLE_LOOP_V1.v1.json",
+      "process_manifest_sha256": "f13a29ace6f550e30949e63be12fd553f6fb72b4595da76c2373039ba074ee6c",
+      "deliveries": [
+        {
+          "asset_ref": "abu.v60.seated.idle.v1",
+          "asset_version": "ABU_V60_SEATED_IDLE_LOOP_V1",
+          "role": "VP9_ALPHA_WEBM",
+          "path": "web/public/assets/abu/v60/abu-v60-seated-idle-loop-v1/actor.webm",
+          "sha256": "489ea475a84d74e334541264cc75c090a5c99256261df87e7e786c402fd12858",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.v60.seated.idle.webp.v1",
+          "asset_version": "ABU_V60_SEATED_IDLE_LOOP_V1",
+          "role": "ANIMATED_WEBP",
+          "path": "web/public/assets/abu/v60/abu-v60-seated-idle-loop-v1/actor.webp",
+          "sha256": "de727151efc7e5227ff3d8417121410450e1e0179b4a7ac9850dbfc8677d5ceb",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.v60.seated.idle.poster.v1",
+          "asset_version": "ABU_V60_SEATED_IDLE_LOOP_V1",
+          "role": "REDUCED_MOTION_POSTER",
+          "path": "web/public/assets/abu/v60/abu-v60-seated-idle-loop-v1/poster.png",
+          "sha256": "237bbe06922643af7708133ff278f7847b27c8f45df0b29ac8989486a52e950b",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [
+        {
+          "role": "CHECKERBOARD_PREVIEW",
+          "path": "media/review/ABU_V60_SEATED_IDLE_LOOP_V1/v1/checkerboard.mp4",
+          "sha256": "e4d2bf076d162fbbed51d5940710dc11b7a6d9d5c5a1e410651235d631abde6e"
+        },
+        {
+          "role": "CONTACT_SHEET",
+          "path": "media/review/ABU_V60_SEATED_IDLE_LOOP_V1/v1/contact-sheet.png",
+          "sha256": "5b247e2004d3e084bec399d5276bcc61e691e8c9218cf7d03feaedf39ccd5917"
+        }
+      ],
+      "runtime_contract": {
+        "trigger": "ABU_VISIBLE_IN_QUIET_COMPANION_STATE",
+        "playback": "LOOP",
+        "interruptible": true,
+        "return_action": "SELF",
+        "anchor": "BOTTOM_CENTER",
+        "reduced_motion_asset_ref": "abu.v60.seated.idle.poster.v1"
+      }
+    },
+    {
+      "media_ref": "media.abu.v60.guide-left.v1",
+      "asset_id": "ABU_V60_05_GUIDE_LEFT_ONCE_V1",
+      "revision": "v1",
+      "media_kind": "ACTOR_MOTION",
+      "character_version": "ABU_CHARACTER_V60_V1",
+      "semantic_role": "GUIDE_LEFT",
+      "action_type": "ONE_SHOT",
+      "library_status": "RUNTIME_REGISTERED",
+      "source": {
+        "path": "media/sources/ABU_V60_05_GUIDE_LEFT_ONCE_V1/v1/source.mp4",
+        "original_filename": "left.mp4",
+        "sha256": "ac45b12eb89aabfe5bc3f1f731a02b42132db3ef947756767ca8ed78d85d5e22",
+        "generator": "Gemini",
+        "prompt_ref": "V60_GEMINI_ABU_ACTOR_PROMPTS_V1",
+        "prompt_status": "OWNER_SUPPLIED_GENERATION_RESULT",
+        "authorization": "OWNER_APPROVED_FOR_POSTPROCESS_AND_GUIDE_LEFT_USE"
+      },
+      "process_manifest_path": "media/manifests/ABU_V60_05_GUIDE_LEFT_ONCE_V1.v1.json",
+      "process_manifest_sha256": "f41953061643be53c874efc3a2d2779776dce0c6b98016380b8d2614385720ca",
+      "deliveries": [
+        {
+          "asset_ref": "abu.v60.guide-left.v1",
+          "asset_version": "ABU_V60_05_GUIDE_LEFT_ONCE_V1",
+          "role": "VP9_ALPHA_WEBM",
+          "path": "web/public/assets/abu/v60/abu-v60-guide-left-once-v1/actor.webm",
+          "sha256": "3452a67fef266dc3509d7d6db74fa9224349535e06ba29a3888419855a38aa67",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.v60.guide-left.webp.v1",
+          "asset_version": "ABU_V60_05_GUIDE_LEFT_ONCE_V1",
+          "role": "ANIMATED_WEBP",
+          "path": "web/public/assets/abu/v60/abu-v60-guide-left-once-v1/actor.webp",
+          "sha256": "86530504c90e9e0f1ae0c13315bef4fefc1b4bdc80dc2bb5981b541ba8dec825",
+          "alpha": true
+        },
+        {
+          "asset_ref": "abu.v60.guide-left.poster.v1",
+          "asset_version": "ABU_V60_05_GUIDE_LEFT_ONCE_V1",
+          "role": "REDUCED_MOTION_POSTER",
+          "path": "web/public/assets/abu/v60/abu-v60-guide-left-once-v1/poster.png",
+          "sha256": "27aa1cb501f2b86e8c141af42ad1b19a57d0ed46df3019b7957eda4e20356e82",
+          "alpha": true
+        }
+      ],
+      "review_artifacts": [
+        {
+          "role": "CHECKERBOARD_PREVIEW",
+          "path": "media/review/ABU_V60_05_GUIDE_LEFT_ONCE_V1/v1/checkerboard.mp4",
+          "sha256": "1e7bc659dad7b6dc74d6aab1ce9b8b819f02b139512d76c9faa194a5e122860c"
+        },
+        {
+          "role": "CONTACT_SHEET",
+          "path": "media/review/ABU_V60_05_GUIDE_LEFT_ONCE_V1/v1/contact-sheet.png",
+          "sha256": "8df2b6bee9f5ba8109eb212e388e915b5da1a3d463f996907cb9630af1677875"
+        }
+      ],
+      "runtime_contract": {
+        "trigger": "ABU_GUIDES_TO_DESTINATION_ON_SCREEN_LEFT",
+        "playback": "PLAY_ONCE",
+        "interruptible": true,
+        "return_action": "media.abu.v60.seated-idle.v1",
+        "cooldown_ms": 1800,
+        "anchor": "BOTTOM_CENTER",
+        "preferred_screen_side": "RIGHT",
+        "direction": "SCREEN_LEFT",
+        "mirror_safe": false,
+        "mobile_suitability": true,
+        "reduced_motion_asset_ref": "abu.v60.guide-left.poster.v1"
+      }
+    }
+  ],
+  "cue_bundles": [
+    {
+      "cue_ref": "cue.dream.grove-arrival.v1",
+      "version": "v1",
+      "status": "LIBRARY_READY_NOT_RUNTIME_WIRED",
+      "trigger": "FIRST_GROVE_ARRIVAL_AFTER_USER_GESTURE",
+      "visual_media_ref": "media.abu.v60.seated-idle.v1",
+      "audio_media_refs": [
+        "media.audio.morning-glints.v1"
+      ],
+      "sync": {
+        "mode": "INDEPENDENT_AMBIENCE",
+        "visual_offset_ms": 0,
+        "audio_offset_ms": 0,
+        "visual_loop": true,
+        "audio_loop": false,
+        "end_policy": "VISUAL_CONTINUES_SILENTLY"
+      },
+      "reduced_motion": {
+        "visual_asset_ref": "abu.v60.seated.idle.poster.v1",
+        "audio_policy": "UNCHANGED_WITH_USER_CONTROL"
+      }
+    },
+    {
+      "cue_ref": "cue.dream.follow-walk.v1",
+      "version": "v1",
+      "status": "AUDIO_GAP",
+      "trigger": "CANONICAL_ABU_FOLLOW_DISTANCE_EXCEEDED",
+      "visual_media_ref": "media.abu.calm-follow-walk.v1",
+      "audio_media_refs": [],
+      "audio_gap": "DEDICATED_SUBTLE_STEP_AND_SCARF_CUE_NOT_YET_PRODUCED",
+      "sync": {
+        "mode": "VISUAL_ONLY_UNTIL_AUDIO_APPROVED",
+        "visual_offset_ms": 0,
+        "visual_loop": true,
+        "end_policy": "RETURN_TO_IDLE"
+      },
+      "reduced_motion": {
+        "visual_asset_ref": "abu.follow.walk.poster.v1",
+        "audio_policy": "NO_LOCOMOTION_AUDIO"
+      }
+    },
+    {
+      "cue_ref": "cue.dream.entry-transition.v1",
+      "version": "v1",
+      "status": "OWNER_REVIEW_REQUIRED",
+      "trigger": "HOME_SLEEPING_ABU_ENTER_DREAM",
+      "visual_media_ref": "media.dream.entry-transition.v1",
+      "audio_media_refs": [
+        "media.audio.morning-glints.v1"
+      ],
+      "sync": {
+        "mode": "TIMELINE",
+        "visual_offset_ms": 0,
+        "audio_offset_ms": 0,
+        "visual_loop": false,
+        "audio_loop": false,
+        "handoff_start_ms": 7100,
+        "handoff_duration_ms": 650,
+        "end_policy": "HANDOFF_TO_INTERACTIVE_GROVE"
+      },
+      "reduced_motion": {
+        "visual_asset_ref": null,
+        "audio_policy": "FADE_IN_AFTER_USER_GESTURE"
+      }
+    },
+    {
+      "cue_ref": "cue.dream.abu-idle.v1",
+      "version": "v1",
+      "status": "RUNTIME_REGISTERED",
+      "trigger": "ABU_VISIBLE_IN_QUIET_COMPANION_STATE",
+      "visual_media_ref": "media.abu.v60.seated-idle.v1",
+      "audio_media_refs": [],
+      "sync": {
+        "mode": "VISUAL_ONLY",
+        "visual_offset_ms": 0,
+        "visual_loop": true,
+        "end_policy": "SELF"
+      },
+      "reduced_motion": {
+        "visual_asset_ref": "abu.v60.seated.idle.poster.v1",
+        "audio_policy": "SILENT"
+      }
+    },
+    {
+      "cue_ref": "cue.dream.abu-guide-left.v1",
+      "version": "v1",
+      "status": "RUNTIME_REGISTERED",
+      "trigger": "NEW_ENCOUNTER_HAS_UNOBSERVED_LEFT_TREE_ORGAN",
+      "visual_media_ref": "media.abu.v60.guide-left.v1",
+      "audio_media_refs": [],
+      "sync": {
+        "mode": "VISUAL_ONLY",
+        "visual_offset_ms": 0,
+        "visual_loop": false,
+        "end_policy": "RETURN_TO_ABU_IDLE"
+      },
+      "reduced_motion": {
+        "visual_asset_ref": "abu.v60.guide-left.poster.v1",
+        "audio_policy": "SILENT"
+      }
+    }
+  ]
+}

@@ -1,0 +1,318 @@
+{
+  "package_version": "v60.episode-source-package.002",
+  "package_ref": "v60.episode-package.heyang-dyed-cloth.v1",
+  "binding_keys": [
+    "wealth_structure_fact_ref",
+    "wealth_life_domain_vector_ref"
+  ],
+  "definition_template": {
+    "runtime": {
+      "episode_ref": "v60-dream-episode-heyang-dyed-cloth-v1",
+      "episode_version": 1,
+      "runtime_status": "ACTIVE",
+      "gameplay_id": "life_tree_question_v1",
+      "content_key": "dream.qualification.heyang-dyed-cloth",
+      "chapter": "FIRST_VISIT",
+      "entrypoint": true,
+      "actor_ref": "v60-actor-heyang-v1",
+      "tree_ref": "v60-life-tree-heyang-v1",
+      "question_ref": "v60-question-heyang-dyed-cloth-v1",
+      "baseline_event_ref": "v60-world-event-heyang-cloth-display-v1",
+      "world_event_ref": "v60-world-event-heyang-cloth-exchange-v1",
+      "cutoff_tick": 0,
+      "due_tick": 54,
+      "resolution_rule_hash": "7a6af011a681d36ff28a611318e512ac673e2194a6f857a9424b82338e8bb7ac",
+      "runtime_metadata": {
+        "baseline_event_ref": "v60-world-event-heyang-cloth-display-v1",
+        "npc_choice_id": "limited_deposit",
+        "flower_name": "染布交换花",
+        "fruit_name": "河岸定金果",
+        "return_label": null
+      },
+      "narrative": {
+        "narrative_version": "v60.episode-narrative.001",
+        "scene_ref": "v60-theater-scene-heyang-cloth-v1",
+        "moments": [
+          {
+            "phase": "OBSERVING",
+            "content_key": "dream.qualification.heyang-dyed-cloth.observing",
+            "title": "河岸商号里的三匹新染布",
+            "status_line": "先读一片现实叶和一片命纹叶",
+            "theater_beat": "禾央把三匹新染布铺在河岸商号的木架上，掌柜只留下样品。",
+            "abu_line": "两片叶说的是已经发生的事，先别替后来下结论。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "QUESTION_OPEN",
+            "content_key": "dream.qualification.heyang-dyed-cloth.question-open",
+            "title": "询价会不会成为实际交换",
+            "status_line": "三种后续都仍然可能",
+            "theater_beat": "第一天已有客人询价，但还没有订单、定金或结算。",
+            "abu_line": "只选你此刻更相信的解释，答案会原样留在花心。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "WAITING_FOR_WORLD",
+            "content_key": "dream.qualification.heyang-dyed-cloth.waiting",
+            "title": "判断已经封进花心",
+            "status_line": "世界仍在继续，果实尚未成熟",
+            "theater_beat": "判断留在花心，事件按自己的时间继续。",
+            "abu_line": "先等一等。你的选择不会改变后来发生的事。",
+            "disclosure": "SEALED_NO_OUTCOME"
+          },
+          {
+            "phase": "REVEAL_READY",
+            "content_key": "dream.qualification.heyang-dyed-cloth.reveal-ready",
+            "title": "世界的回应已经抵达",
+            "status_line": "雾白果实已经成熟，等待你亲手打开",
+            "theater_beat": "新证据已经写进果实，但尚未展开。",
+            "abu_line": "打开它时，只拿后来发生的事实和当时的判断对照。",
+            "disclosure": "WORLD_COMMITTED_HIDDEN"
+          },
+          {
+            "phase": "REVEALED",
+            "content_key": "dream.qualification.heyang-dyed-cloth.revealed",
+            "title": "小批订单与一张定金收据",
+            "status_line": "逐项对照封存命题与后来证据",
+            "theater_beat": "询价转成了小批订单，并留下了一笔可核验的定金。",
+            "abu_line": "共同基线不计分，真正改变判断的是后来出现的两条证据。",
+            "disclosure": "OUTCOME_REVEALED"
+          },
+          {
+            "phase": "COMPLETED",
+            "content_key": "dream.qualification.heyang-dyed-cloth.completed",
+            "title": "河岸定金果已经记入生命线",
+            "status_line": "这次复盘已经完成",
+            "theater_beat": "河岸定金果记下了这次判断与现实的距离。",
+            "abu_line": "果实记住的不是输赢，而是你的判断在哪些地方经得起事实。",
+            "disclosure": "OUTCOME_REVEALED"
+          }
+        ]
+      },
+      "continuation_question_ref": null,
+      "continuation_label": null,
+      "entry_world_event": null,
+      "tree_state_on_entry": null,
+      "tree_state_after_settlement": "FIRST_FRUIT_MATURED"
+    },
+    "actor_ref": "v60-actor-heyang-v1",
+    "tree_ref": "v60-life-tree-heyang-v1",
+    "question_version": 1,
+    "prompt": "试售窗口结束时，这批新染布会形成怎样的实际交换？",
+    "options": [
+      {
+        "choice_id": "full_order",
+        "label": "商号整批下单，并完成主要货款",
+        "proposition": {
+          "order_scope": "full",
+          "payment_status": "paid"
+        }
+      },
+      {
+        "choice_id": "limited_deposit",
+        "label": "只形成小批订单，并先支付定金",
+        "proposition": {
+          "order_scope": "limited",
+          "payment_status": "deposit"
+        }
+      },
+      {
+        "choice_id": "no_exchange",
+        "label": "询价没有转成订单，也没有实际付款",
+        "proposition": {
+          "order_scope": "none",
+          "payment_status": "none"
+        }
+      }
+    ],
+    "baseline_evidence": [
+      {
+        "evidence_ref": "v60-evidence-heyang-three-bolts-v1",
+        "observed_at_tick": 0,
+        "summary": "禾央把三匹新染布交给河岸商号试售，商号只收下样品。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      },
+      {
+        "evidence_ref": "v60-evidence-heyang-first-inquiries-v1",
+        "observed_at_tick": 0,
+        "summary": "第一天已有客人询价，但还没有订单、定金或结算。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      }
+    ],
+    "resolution_rule": {
+      "rule_version": "v60.atom-reconciliation.v1",
+      "compare_atoms": [
+        "order_scope",
+        "payment_status"
+      ],
+      "baseline_evidence_credit": false,
+      "exact_match": "SUPPORTED",
+      "mixed_match": "PARTIAL",
+      "no_match": "NOT_SUPPORTED",
+      "baseline_event_ref": "v60-world-event-heyang-cloth-display-v1",
+      "npc_choice_id": "limited_deposit",
+      "flower_name": "染布交换花",
+      "fruit_name": "河岸定金果",
+      "theater_scene_ref": "v60-theater-scene-heyang-cloth-v1",
+      "theater_beat": "禾央把三匹新染布铺在河岸商号的木架上，掌柜只留下样品。",
+      "return_label": null
+    },
+    "sealed_outcome": {
+      "outcome_id": "limited_order_with_deposit",
+      "resolved_proposition": {
+        "order_scope": "limited",
+        "payment_status": "deposit"
+      },
+      "evidence": [
+        {
+          "evidence_ref": "v60-evidence-heyang-one-bolt-order-v1",
+          "summary": "商号最终只订下一匹布，用来测试下一轮客人的反应。",
+          "atom": {
+            "order_scope": "limited"
+          }
+        },
+        {
+          "evidence_ref": "v60-evidence-heyang-deposit-slip-v1",
+          "summary": "账房开出一张定金收据，余款要等交货后再结。",
+          "atom": {
+            "payment_status": "deposit"
+          }
+        }
+      ],
+      "actual_event": "询价转成了小批订单，并留下了一笔可核验的定金。"
+    },
+    "world_event_type": "DYED_CLOTH_EXCHANGE_OUTCOME",
+    "world_event_summary": "观察新染布试售是否形成可归因的订单与回款。",
+    "organ_set": {
+      "evidence_leaf_world": {
+        "organ_ref": "v60-heyang-dyed-cloth-organ-world-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          "v60-evidence-heyang-three-bolts-v1"
+        ],
+        "label": "已经发生的现实线索"
+      },
+      "evidence_leaf_structure": {
+        "organ_ref": "v60-heyang-dyed-cloth-organ-structure-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          {
+            "$binding": "wealth_structure_fact_ref"
+          },
+          {
+            "$binding": "wealth_life_domain_vector_ref"
+          }
+        ],
+        "label": "wealth命纹留下的观察线索"
+      },
+      "structure_branch": {
+        "organ_ref": "v60-heyang-dyed-cloth-organ-branch-v1",
+        "role": "STRUCTURE_BRANCH",
+        "source_refs": [
+          "v60-evidence-heyang-three-bolts-v1",
+          {
+            "$binding": "wealth_structure_fact_ref"
+          },
+          {
+            "$binding": "wealth_life_domain_vector_ref"
+          }
+        ],
+        "label": "现实行动与命纹之间的观察主脉"
+      },
+      "question_flower": {
+        "organ_ref": "v60-heyang-dyed-cloth-organ-flower-v1",
+        "role": "QUESTION_FLOWER",
+        "source_refs": [
+          "v60-question-heyang-dyed-cloth-v1"
+        ],
+        "label": "染布交换花"
+      },
+      "outcome_fruit": {
+        "organ_ref": "v60-heyang-dyed-cloth-organ-fruit-v1",
+        "role": "OUTCOME_FRUIT",
+        "source_refs": [
+          "v60-world-event-heyang-cloth-exchange-v1"
+        ],
+        "label": "河岸定金果"
+      }
+    }
+  },
+  "world_event_definitions": [
+    {
+      "world_event_ref": "v60-world-event-heyang-cloth-display-v1",
+      "world_ref": "abu-dream-world-v1",
+      "actor_ref": "v60-actor-heyang-v1",
+      "event_type": "DYED_CLOTH_EXCHANGE_OUTCOME_BASELINE",
+      "due_tick": 0,
+      "initial_status": "SETTLED",
+      "event_payload": {
+        "summary": "禾央把三匹新染布铺在河岸商号的木架上，掌柜只留下样品。",
+        "visibility": "PUBLIC_AFTER_COMMIT"
+      },
+      "sealed_outcome": {},
+      "settled_at_tick": 0,
+      "initial_evidence": [
+        {
+          "evidence_ref": "v60-evidence-heyang-three-bolts-v1",
+          "committed_at_tick": 0,
+          "payload": {
+            "evidence_ref": "v60-evidence-heyang-three-bolts-v1",
+            "observed_at_tick": 0,
+            "summary": "禾央把三匹新染布交给河岸商号试售，商号只收下样品。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          }
+        },
+        {
+          "evidence_ref": "v60-evidence-heyang-first-inquiries-v1",
+          "committed_at_tick": 0,
+          "payload": {
+            "evidence_ref": "v60-evidence-heyang-first-inquiries-v1",
+            "observed_at_tick": 0,
+            "summary": "第一天已有客人询价，但还没有订单、定金或结算。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          }
+        }
+      ]
+    },
+    {
+      "world_event_ref": "v60-world-event-heyang-cloth-exchange-v1",
+      "world_ref": "abu-dream-world-v1",
+      "actor_ref": "v60-actor-heyang-v1",
+      "event_type": "DYED_CLOTH_EXCHANGE_OUTCOME",
+      "due_tick": 54,
+      "initial_status": "SCHEDULED",
+      "event_payload": {
+        "summary": "观察新染布试售是否形成可归因的订单与回款。",
+        "due_tick": 54,
+        "resolution_owner": "V60_WORLD_ENGINE",
+        "answer_can_affect_outcome": false
+      },
+      "sealed_outcome": {
+        "outcome_id": "limited_order_with_deposit",
+        "resolved_proposition": {
+          "order_scope": "limited",
+          "payment_status": "deposit"
+        },
+        "evidence": [
+          {
+            "evidence_ref": "v60-evidence-heyang-one-bolt-order-v1",
+            "summary": "商号最终只订下一匹布，用来测试下一轮客人的反应。",
+            "atom": {
+              "order_scope": "limited"
+            }
+          },
+          {
+            "evidence_ref": "v60-evidence-heyang-deposit-slip-v1",
+            "summary": "账房开出一张定金收据，余款要等交货后再结。",
+            "atom": {
+              "payment_status": "deposit"
+            }
+          }
+        ],
+        "actual_event": "询价转成了小批订单，并留下了一笔可核验的定金。"
+      },
+      "settled_at_tick": null,
+      "initial_evidence": []
+    }
+  ]
+}

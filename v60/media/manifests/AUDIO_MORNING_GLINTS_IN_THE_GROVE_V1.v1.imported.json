@@ -1,0 +1,97 @@
+{
+  "schema_version": "deepbazi.abu_audio_asset.v1",
+  "asset_id": "abu_mingli_opening_theme_morning_glints_v1",
+  "title": "Morning Glints In The Grove",
+  "label_zh": "林间晨光",
+  "status": "production_local",
+  "product_role": "website_opening_theme",
+  "registered_at": "2026-07-22",
+  "source": {
+    "original_filename": "Morning_Glints_In_The_Grove.mp3",
+    "archived_path": "artifacts/abu-audio/source/morning-glints-in-the-grove-source.mp3",
+    "sha256": "d48faa4f0a79b7b4b61c05230cb789f0d1b178866f38f18b3ee1c45859e06908",
+    "origin": "owner_supplied_analyst_designed",
+    "use_authorization": "owner_approved_for_abu_website_opening_music",
+    "technical": {
+      "programs": [],
+      "stream_groups": [],
+      "streams": [
+        {
+          "codec_name": "mp3",
+          "sample_rate": "44100",
+          "channels": 2,
+          "channel_layout": "stereo"
+        }
+      ],
+      "format": {
+        "duration": "30.719958",
+        "size": "824334",
+        "bit_rate": "214670"
+      }
+    }
+  },
+  "web_variants": [
+    {
+      "format": "mp3",
+      "mime_type": "audio/mpeg",
+      "path": "apps/product/static/l5/assets/audio/abu/morning-glints-in-the-grove-v1/morning-glints-in-the-grove-opening-v1.mp3",
+      "sha256": "8b0e7699b53de587c6043b36fc947719c7bbd6337cc73ab34342f8f16d53c16d",
+      "technical": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "mp3",
+            "sample_rate": "48000",
+            "channels": 2,
+            "channel_layout": "stereo"
+          }
+        ],
+        "format": {
+          "duration": "30.720000",
+          "size": "738452",
+          "bit_rate": "192305"
+        }
+      }
+    },
+    {
+      "format": "opus",
+      "mime_type": "audio/ogg; codecs=opus",
+      "path": "apps/product/static/l5/assets/audio/abu/morning-glints-in-the-grove-v1/morning-glints-in-the-grove-opening-v1.opus",
+      "sha256": "c962fc87d045b579012e2e9bd1f400ac057aff79dce9948d50e9734a66db95ef",
+      "technical": {
+        "programs": [],
+        "stream_groups": [],
+        "streams": [
+          {
+            "codec_name": "opus",
+            "sample_rate": "48000",
+            "channels": 2,
+            "channel_layout": "stereo"
+          }
+        ],
+        "format": {
+          "duration": "30.806500",
+          "size": "524614",
+          "bit_rate": "136234"
+        }
+      }
+    }
+  ],
+  "web_mastering": {
+    "integrated_loudness_target_lufs": -20,
+    "true_peak_ceiling_dbtp": -2,
+    "fade_in_seconds": 1.2,
+    "fade_out_seconds": 2.6,
+    "sample_rate_hz": 48000
+  },
+  "playback_policy": {
+    "audible_autoplay": false,
+    "start_after_first_user_gesture": true,
+    "play_once_per_browser_session": true,
+    "loop": false,
+    "default_volume": 0.52,
+    "user_control_required": true,
+    "narration_priority": true
+  }
+}

@@ -1,0 +1,303 @@
+{
+  "binding_keys": [
+    "structure_fact_ref"
+  ],
+  "definition_template": {
+    "actor_ref": "v60-actor-yanzhou-v1",
+    "baseline_evidence": [
+      {
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+        "evidence_ref": "v60-evidence-yanzhou-one-stone-loosened-v1",
+        "observed_at_tick": 12,
+        "summary": "砚舟没有扩开整条水渠，只松开湿侧的一块挡水石。"
+      },
+      {
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+        "evidence_ref": "v60-evidence-yanzhou-wet-side-limited-v1",
+        "observed_at_tick": 12,
+        "summary": "上一轮的间歇水流仍只覆盖靠近石缝的一小片土层。"
+      }
+    ],
+    "options": [
+      {
+        "choice_id": "roots_expand",
+        "label": "向渠外扩展，并稳定覆盖更宽的土层",
+        "proposition": {
+          "root_spread": "expanded",
+          "support_stability": "stable"
+        }
+      },
+      {
+        "choice_id": "roots_remain_local",
+        "label": "只在原湿侧增加，范围仍然有限",
+        "proposition": {
+          "root_spread": "local",
+          "support_stability": "limited"
+        }
+      },
+      {
+        "choice_id": "roots_retract",
+        "label": "受扰动回缩，原有细根也随之减少",
+        "proposition": {
+          "root_spread": "retracted",
+          "support_stability": "declining"
+        }
+      }
+    ],
+    "organ_set": {
+      "evidence_leaf_structure": {
+        "label": "同一条命盘结构线索",
+        "organ_ref": "v60-organ-yanzhou-leaf-structure-v2",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          {
+            "$binding": "structure_fact_ref"
+          }
+        ]
+      },
+      "evidence_leaf_world": {
+        "label": "被松开的挡水石",
+        "organ_ref": "v60-organ-yanzhou-leaf-world-v2",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          "v60-evidence-yanzhou-one-stone-loosened-v1"
+        ]
+      },
+      "outcome_fruit": {
+        "label": "湿岸新芽果",
+        "organ_ref": "v60-organ-yanzhou-fruit-v2",
+        "role": "OUTCOME_FRUIT",
+        "source_refs": [
+          "v60-world-event-yanzhou-root-spread-v1"
+        ]
+      },
+      "question_flower": {
+        "label": "湿岸新芽花",
+        "organ_ref": "v60-organ-yanzhou-flower-v2",
+        "role": "QUESTION_FLOWER",
+        "source_refs": [
+          "v60-question-yanzhou-wet-bank-v1"
+        ]
+      },
+      "structure_branch": {
+        "label": "湿岸与细根之间的新主脉",
+        "organ_ref": "v60-organ-yanzhou-branch-v2",
+        "role": "STRUCTURE_BRANCH",
+        "source_refs": [
+          "v60-evidence-yanzhou-one-stone-loosened-v1",
+          {
+            "$binding": "structure_fact_ref"
+          }
+        ]
+      }
+    },
+    "prompt": "砚舟只松开湿侧的一块挡水石后，新细根会怎样改变？",
+    "question_version": 1,
+    "resolution_rule": {
+      "baseline_event_ref": "v60-world-event-yanzhou-stone-loosened-v1",
+      "baseline_evidence_credit": false,
+      "compare_atoms": [
+        "root_spread",
+        "support_stability"
+      ],
+      "exact_match": "SUPPORTED",
+      "flower_name": "湿岸新芽花",
+      "fruit_name": "湿岸新芽果",
+      "mixed_match": "PARTIAL",
+      "no_match": "NOT_SUPPORTED",
+      "npc_choice_id": "roots_retract",
+      "return_label": null,
+      "rule_version": "v60.atom-reconciliation.v1",
+      "theater_beat": "砚舟回到旧渠边，没有扩大整条水路，只松开湿侧的一块挡水石。",
+      "theater_scene_ref": "v60-theater-beat-yanzhou-wet-bank-v1"
+    },
+    "runtime": {
+      "actor_ref": "v60-actor-yanzhou-v1",
+      "baseline_event_ref": "v60-world-event-yanzhou-stone-loosened-v1",
+      "chapter": "RETURN_VISIT",
+      "content_key": "dream.yanzhou.wet_bank",
+      "continuation_label": null,
+      "continuation_question_ref": null,
+      "cutoff_tick": 12,
+      "due_tick": 24,
+      "entry_world_event": {
+        "actor_state_delta": {
+          "activity": "observing-wet-bank-after-stone-loosened",
+          "last_committed_event_ref": "v60-world-event-yanzhou-stone-loosened-v1"
+        },
+        "caused_by_event_ref": "v60-world-event-yanzhou-channel-return-v1",
+        "event_ref": "v60-world-event-yanzhou-stone-loosened-v1",
+        "event_type": "WET_BANK_STONE_LOOSENED",
+        "evidence": [
+          {
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+            "evidence_ref": "v60-evidence-yanzhou-one-stone-loosened-v1",
+            "observed_at_tick": 12,
+            "summary": "砚舟没有扩开整条水渠，只松开湿侧的一块挡水石。"
+          },
+          {
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+            "evidence_ref": "v60-evidence-yanzhou-wet-side-limited-v1",
+            "observed_at_tick": 12,
+            "summary": "上一轮的间歇水流仍只覆盖靠近石缝的一小片土层。"
+          }
+        ],
+        "summary": "砚舟回到旧渠边，只松开湿侧的一块挡水石。"
+      },
+      "entrypoint": false,
+      "episode_ref": "v60-dream-episode-yanzhou-wet-bank-v1",
+      "episode_version": 3,
+      "gameplay_id": "life_tree_question_v1",
+      "narrative": {
+        "moments": [
+          {
+            "abu_line": "这次改变很小。先看被松开的石头，再看同一条结构线索有没有新的含义。",
+            "content_key": "dream.yanzhou.wet_bank.observing",
+            "disclosure": "BASELINE_ONLY",
+            "phase": "OBSERVING",
+            "status_line": "同一棵树，出现了两条新的观察线索",
+            "theater_beat": "砚舟回到旧渠边，没有扩大整条水路，只松开湿侧的一块挡水石。",
+            "title": "湿岸边被松开的挡水石"
+          },
+          {
+            "abu_line": "别把局部变化当成已经扩大。只判断细根接下来会走到哪里。",
+            "content_key": "dream.yanzhou.wet_bank.question-open",
+            "disclosure": "BASELINE_ONLY",
+            "phase": "QUESTION_OPEN",
+            "status_line": "一块石头被松开，影响范围仍然未知",
+            "theater_beat": "湿侧的水路稍微松动，新细根是否越过原来的边界仍不可知。",
+            "title": "新细根会怎样改变"
+          },
+          {
+            "abu_line": "这次判断也已经留下。先不催它，让细根自己决定范围。",
+            "content_key": "dream.yanzhou.wet_bank.waiting",
+            "disclosure": "SEALED_NO_OUTCOME",
+            "phase": "WAITING_FOR_WORLD",
+            "status_line": "湿岸新芽花仍在等待后续事实",
+            "theater_beat": "判断留在湿岸新芽花里，松开的水路仍在独立变化。",
+            "title": "第二次判断已经封存"
+          },
+          {
+            "abu_line": "新的事实到了。打开果实前，先记得你当时判断的是范围和稳定性。",
+            "content_key": "dream.yanzhou.wet_bank.reveal-ready",
+            "disclosure": "WORLD_COMMITTED_HIDDEN",
+            "phase": "REVEAL_READY",
+            "status_line": "第二枚雾白果实等待展开",
+            "theater_beat": "细根后来的变化已经进入果实，结果仍保持遮蔽。",
+            "title": "湿岸的新证据已经抵达"
+          },
+          {
+            "abu_line": "有新根不等于范围已经扩大。现在逐项看增长位置和午后的稳定性。",
+            "content_key": "dream.yanzhou.wet_bank.revealed",
+            "disclosure": "OUTCOME_REVEALED",
+            "phase": "REVEALED",
+            "status_line": "局部增长与稳定覆盖需要分别核对",
+            "theater_beat": "新细根只在原湿侧增加，水渠的支持仍然有限。",
+            "title": "细根增加了，边界没有扩大"
+          },
+          {
+            "abu_line": "这枚果实留下了一个边界：局部出现，不等于整体成立。",
+            "content_key": "dream.yanzhou.wet_bank.completed",
+            "disclosure": "OUTCOME_REVEALED",
+            "phase": "COMPLETED",
+            "status_line": "第二次复盘完成，同一棵树继续生长",
+            "theater_beat": "湿岸新芽果记下了局部细根增加、支持范围仍有限的结果。",
+            "title": "湿岸新芽果已经记入生命线"
+          }
+        ],
+        "narrative_version": "v60.episode-narrative.001",
+        "scene_ref": "v60-theater-beat-yanzhou-wet-bank-v1"
+      },
+      "question_ref": "v60-question-yanzhou-wet-bank-v1",
+      "resolution_rule_hash": "ee7aa0dd3d09dfe148273dcdae30dbaea18f3844765429b4ff8d16a13a3c663c",
+      "runtime_metadata": {
+        "baseline_event_ref": "v60-world-event-yanzhou-stone-loosened-v1",
+        "flower_name": "湿岸新芽花",
+        "fruit_name": "湿岸新芽果",
+        "npc_choice_id": "roots_retract",
+        "return_label": null
+      },
+      "runtime_status": "ACTIVE",
+      "tree_ref": "v60-life-tree-yanzhou-v1",
+      "tree_state_after_settlement": "RETURN_FRUIT_MATURED",
+      "tree_state_on_entry": "RETURN_BASELINE_COMMITTED",
+      "world_event_ref": "v60-world-event-yanzhou-root-spread-v1"
+    },
+    "sealed_outcome": {
+      "actual_event": "新细根只在原湿侧增加，水渠的支持仍然有限。",
+      "evidence": [
+        {
+          "atom": {
+            "root_spread": "local"
+          },
+          "evidence_ref": "v60-evidence-yanzhou-local-fine-roots-v1",
+          "summary": "第五个清晨，细根在原湿侧增加，但没有越过第二块石缝。"
+        },
+        {
+          "atom": {
+            "support_stability": "limited"
+          },
+          "evidence_ref": "v60-evidence-yanzhou-afternoon-dryness-v1",
+          "summary": "午后土层仍会变干，新增细根保持稀疏，支持范围没有稳定扩大。"
+        }
+      ],
+      "outcome_id": "local_limited_root_growth",
+      "resolved_proposition": {
+        "root_spread": "local",
+        "support_stability": "limited"
+      }
+    },
+    "tree_ref": "v60-life-tree-yanzhou-v1",
+    "world_event_summary": "观察松开一块挡水石后，新细根是否扩大支持范围。",
+    "world_event_type": "WET_BANK_ROOT_SPREAD"
+  },
+  "package_ref": "v60.episode-package.yanzhou-wet-bank.v1",
+  "package_version": "v60.episode-source-package.002",
+  "world_event_definitions": [
+    {
+      "actor_ref": "v60-actor-yanzhou-v1",
+      "due_tick": 24,
+      "event_payload": {
+        "actor_state_delta": {
+          "activity": "observing-wet-bank-root-spread",
+          "last_settled_event_ref": "v60-world-event-yanzhou-root-spread-v1"
+        },
+        "answer_can_affect_outcome": false,
+        "baseline_event_ref": "v60-world-event-yanzhou-stone-loosened-v1",
+        "due_tick": 24,
+        "resolution_owner": "V60_WORLD_ENGINE",
+        "summary": "观察松开一块挡水石后，新细根是否扩大支持范围。"
+      },
+      "event_type": "WET_BANK_ROOT_SPREAD",
+      "initial_evidence": [],
+      "initial_status": "SCHEDULED",
+      "sealed_outcome": {
+        "actual_event": "新细根只在原湿侧增加，水渠的支持仍然有限。",
+        "evidence": [
+          {
+            "atom": {
+              "root_spread": "local"
+            },
+            "evidence_ref": "v60-evidence-yanzhou-local-fine-roots-v1",
+            "summary": "第五个清晨，细根在原湿侧增加，但没有越过第二块石缝。"
+          },
+          {
+            "atom": {
+              "support_stability": "limited"
+            },
+            "evidence_ref": "v60-evidence-yanzhou-afternoon-dryness-v1",
+            "summary": "午后土层仍会变干，新增细根保持稀疏，支持范围没有稳定扩大。"
+          }
+        ],
+        "outcome_id": "local_limited_root_growth",
+        "resolved_proposition": {
+          "root_spread": "local",
+          "support_stability": "limited"
+        }
+      },
+      "settled_at_tick": null,
+      "world_event_ref": "v60-world-event-yanzhou-root-spread-v1",
+      "world_ref": "abu-dream-world-v1"
+    }
+  ]
+}

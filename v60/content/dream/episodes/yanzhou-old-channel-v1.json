@@ -1,0 +1,311 @@
+{
+  "binding_keys": [
+    "structure_fact_ref"
+  ],
+  "definition_template": {
+    "actor_ref": "v60-actor-yanzhou-v1",
+    "baseline_evidence": [
+      {
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+        "evidence_ref": "v60-evidence-yanzhou-grass-returned-v1",
+        "observed_at_tick": 0,
+        "summary": "砚舟已把引水草放回旧水渠的石缝。"
+      },
+      {
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+        "evidence_ref": "v60-evidence-yanzhou-initial-water-v1",
+        "observed_at_tick": 0,
+        "summary": "渠口出现了第一段浅水痕，但持续性尚未确定。"
+      }
+    ],
+    "options": [
+      {
+        "choice_id": "flow_sustained",
+        "label": "水流会持续下来，形成稳定的根系支持",
+        "proposition": {
+          "root_support": "stable",
+          "water_continuity": "sustained"
+        }
+      },
+      {
+        "choice_id": "flow_intermit",
+        "label": "水流会间歇维持，只形成有限而不稳定的支持",
+        "proposition": {
+          "root_support": "limited",
+          "water_continuity": "intermittent"
+        }
+      },
+      {
+        "choice_id": "flow_ceases",
+        "label": "初期水痕会消失，最终不形成实际支持",
+        "proposition": {
+          "root_support": "none",
+          "water_continuity": "ceased"
+        }
+      }
+    ],
+    "organ_set": {
+      "evidence_leaf_structure": {
+        "label": "命盘中的结构线索",
+        "organ_ref": "v60-organ-yanzhou-leaf-structure-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          {
+            "$binding": "structure_fact_ref"
+          }
+        ]
+      },
+      "evidence_leaf_world": {
+        "label": "石缝里的引水草",
+        "organ_ref": "v60-organ-yanzhou-leaf-world-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          "v60-evidence-yanzhou-grass-returned-v1"
+        ]
+      },
+      "outcome_fruit": {
+        "label": "旧渠回声果",
+        "organ_ref": "v60-organ-yanzhou-fruit-v1",
+        "role": "OUTCOME_FRUIT",
+        "source_refs": [
+          "v60-world-event-yanzhou-channel-outcome-v1"
+        ]
+      },
+      "question_flower": {
+        "label": "旧渠回声花",
+        "organ_ref": "v60-organ-yanzhou-flower-v1",
+        "role": "QUESTION_FLOWER",
+        "source_refs": [
+          "v60-question-yanzhou-old-channel-v1"
+        ]
+      },
+      "structure_branch": {
+        "label": "旧渠与根系之间的主脉",
+        "organ_ref": "v60-organ-yanzhou-branch-v1",
+        "role": "STRUCTURE_BRANCH",
+        "source_refs": [
+          "v60-evidence-yanzhou-grass-returned-v1",
+          {
+            "$binding": "structure_fact_ref"
+          }
+        ]
+      }
+    },
+    "prompt": "引水草归位后，旧水渠最终会给坡下树根带来怎样的支持？",
+    "question_version": 1,
+    "resolution_rule": {
+      "baseline_event_ref": "v60-world-event-yanzhou-channel-return-v1",
+      "baseline_evidence_credit": false,
+      "compare_atoms": [
+        "water_continuity",
+        "root_support"
+      ],
+      "exact_match": "SUPPORTED",
+      "flower_name": "旧渠回声花",
+      "fruit_name": "旧渠回声果",
+      "mixed_match": "PARTIAL",
+      "no_match": "NOT_SUPPORTED",
+      "npc_choice_id": "flow_intermit",
+      "return_label": "过一段时间，再回到这棵树",
+      "rule_version": "v60.atom-reconciliation.v1",
+      "theater_beat": "砚舟蹲在旧渠边，把一缕引水草重新压进石缝。浅水痕刚刚出现。",
+      "theater_scene_ref": "v60-theater-beat-yanzhou-channel-v1"
+    },
+    "runtime": {
+      "actor_ref": "v60-actor-yanzhou-v1",
+      "baseline_event_ref": "v60-world-event-yanzhou-channel-return-v1",
+      "chapter": "FIRST_VISIT",
+      "content_key": "dream.yanzhou.old_channel",
+      "continuation_label": "过一段时间，再回到这棵树",
+      "continuation_question_ref": "v60-question-yanzhou-wet-bank-v1",
+      "cutoff_tick": 0,
+      "due_tick": 12,
+      "entry_world_event": null,
+      "entrypoint": true,
+      "episode_ref": "v60-dream-episode-yanzhou-old-channel-v1",
+      "episode_version": 3,
+      "gameplay_id": "life_tree_question_v1",
+      "narrative": {
+        "moments": [
+          {
+            "abu_line": "先看石缝里的引水草，再看另一片叶留下的结构线索。",
+            "content_key": "dream.yanzhou.old_channel.observing",
+            "disclosure": "BASELINE_ONLY",
+            "phase": "OBSERVING",
+            "status_line": "先看引水草与命盘结构留下的两条线索",
+            "theater_beat": "砚舟蹲在旧渠边，把一缕引水草重新压进石缝。浅水痕刚刚出现。",
+            "title": "旧渠边的第一段水痕"
+          },
+          {
+            "abu_line": "水刚出现，别急着替它决定结局。只判断哪一种后续更可能发生。",
+            "content_key": "dream.yanzhou.old_channel.question-open",
+            "disclosure": "BASELINE_ONLY",
+            "phase": "QUESTION_OPEN",
+            "status_line": "水刚出现，三种后续都仍有可能",
+            "theater_beat": "引水草已经归位，浅水痕沿石缝向前，但它会停留多久仍然未知。",
+            "title": "旧渠会怎样支持树根"
+          },
+          {
+            "abu_line": "你的判断已经封进花心。接下来，让旧渠和树根自己走一段。",
+            "content_key": "dream.yanzhou.old_channel.waiting",
+            "disclosure": "SEALED_NO_OUTCOME",
+            "phase": "WAITING_FOR_WORLD",
+            "status_line": "世界仍在继续，果实还没有成熟",
+            "theater_beat": "判断留在花心，旧渠仍按自己的节奏向前。",
+            "title": "判断已经封进旧渠回声花"
+          },
+          {
+            "abu_line": "世界已经回应了。打开果实时，只看后来发生的事实。",
+            "content_key": "dream.yanzhou.old_channel.reveal-ready",
+            "disclosure": "WORLD_COMMITTED_HIDDEN",
+            "phase": "REVEAL_READY",
+            "status_line": "雾白果实已经成熟，等待你亲手打开",
+            "theater_beat": "后来发生的事已经写进果实，但尚未展开。",
+            "title": "旧渠的回应已经抵达"
+          },
+          {
+            "abu_line": "水流持续性和根系支持要分开看，早先的水痕不替预测加分。",
+            "content_key": "dream.yanzhou.old_channel.revealed",
+            "disclosure": "OUTCOME_REVEALED",
+            "phase": "REVEALED",
+            "status_line": "把当时的判断与两条新证据逐项对照",
+            "theater_beat": "旧水渠恢复了间歇水流，并给坡下树根带来有限支持。",
+            "title": "间歇的水，有限的新根"
+          },
+          {
+            "abu_line": "果实记住的不是输赢，而是哪两条新事实真正改变了判断。",
+            "content_key": "dream.yanzhou.old_channel.completed",
+            "disclosure": "OUTCOME_REVEALED",
+            "phase": "COMPLETED",
+            "status_line": "这次复盘已经完成，世界仍会继续",
+            "theater_beat": "旧渠回声果记下了间歇水流与有限新根的共同结果。",
+            "title": "旧渠回声果已经记入生命线"
+          }
+        ],
+        "narrative_version": "v60.episode-narrative.001",
+        "scene_ref": "v60-theater-beat-yanzhou-channel-v1"
+      },
+      "question_ref": "v60-question-yanzhou-old-channel-v1",
+      "resolution_rule_hash": "267015390b88981f5576c4cc2ece5accb3f5424af20da518185bbc7696101380",
+      "runtime_metadata": {
+        "baseline_event_ref": "v60-world-event-yanzhou-channel-return-v1",
+        "flower_name": "旧渠回声花",
+        "fruit_name": "旧渠回声果",
+        "npc_choice_id": "flow_intermit",
+        "return_label": "过一段时间，再回到这棵树"
+      },
+      "runtime_status": "ACTIVE",
+      "tree_ref": "v60-life-tree-yanzhou-v1",
+      "tree_state_after_settlement": "FIRST_FRUIT_MATURED",
+      "tree_state_on_entry": null,
+      "world_event_ref": "v60-world-event-yanzhou-channel-outcome-v1"
+    },
+    "sealed_outcome": {
+      "actual_event": "旧水渠恢复了间歇水流，并给坡下树根带来有限支持。",
+      "evidence": [
+        {
+          "atom": {
+            "water_continuity": "intermittent"
+          },
+          "evidence_ref": "v60-evidence-yanzhou-night-water-v1",
+          "summary": "三个夜晚后，水只在湿气较重时穿过旧渠，白天会变浅。"
+        },
+        {
+          "atom": {
+            "root_support": "limited"
+          },
+          "evidence_ref": "v60-evidence-yanzhou-fine-roots-v1",
+          "summary": "靠近石缝的一侧出现少量新细根，另一侧土层仍然偏干。"
+        }
+      ],
+      "outcome_id": "intermittent_limited_support",
+      "resolved_proposition": {
+        "root_support": "limited",
+        "water_continuity": "intermittent"
+      }
+    },
+    "tree_ref": "v60-life-tree-yanzhou-v1",
+    "world_event_summary": "观察旧水渠恢复后是否持续支持坡下根系。",
+    "world_event_type": "CHANNEL_SUPPORT_OUTCOME"
+  },
+  "package_ref": "v60.episode-package.yanzhou-old-channel.v1",
+  "package_version": "v60.episode-source-package.002",
+  "world_event_definitions": [
+    {
+      "actor_ref": "v60-actor-yanzhou-v1",
+      "due_tick": 0,
+      "event_payload": {
+        "summary": "砚舟把引水草放回旧水渠石缝。",
+        "visibility": "PUBLIC_AFTER_COMMIT"
+      },
+      "event_type": "CHANNEL_GRASS_RETURNED",
+      "initial_evidence": [
+        {
+          "committed_at_tick": 0,
+          "evidence_ref": "v60-evidence-yanzhou-grass-returned-v1",
+          "payload": {
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+            "evidence_ref": "v60-evidence-yanzhou-grass-returned-v1",
+            "observed_at_tick": 0,
+            "summary": "砚舟已把引水草放回旧水渠的石缝。"
+          }
+        },
+        {
+          "committed_at_tick": 0,
+          "evidence_ref": "v60-evidence-yanzhou-initial-water-v1",
+          "payload": {
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+            "evidence_ref": "v60-evidence-yanzhou-initial-water-v1",
+            "observed_at_tick": 0,
+            "summary": "渠口出现了第一段浅水痕，但持续性尚未确定。"
+          }
+        }
+      ],
+      "initial_status": "SETTLED",
+      "sealed_outcome": {},
+      "settled_at_tick": 0,
+      "world_event_ref": "v60-world-event-yanzhou-channel-return-v1",
+      "world_ref": "abu-dream-world-v1"
+    },
+    {
+      "actor_ref": "v60-actor-yanzhou-v1",
+      "due_tick": 12,
+      "event_payload": {
+        "answer_can_affect_outcome": false,
+        "due_tick": 12,
+        "resolution_owner": "V60_WORLD_ENGINE",
+        "summary": "观察旧水渠恢复后是否持续支持坡下根系。"
+      },
+      "event_type": "CHANNEL_SUPPORT_OUTCOME",
+      "initial_evidence": [],
+      "initial_status": "SCHEDULED",
+      "sealed_outcome": {
+        "actual_event": "旧水渠恢复了间歇水流，并给坡下树根带来有限支持。",
+        "evidence": [
+          {
+            "atom": {
+              "water_continuity": "intermittent"
+            },
+            "evidence_ref": "v60-evidence-yanzhou-night-water-v1",
+            "summary": "三个夜晚后，水只在湿气较重时穿过旧渠，白天会变浅。"
+          },
+          {
+            "atom": {
+              "root_support": "limited"
+            },
+            "evidence_ref": "v60-evidence-yanzhou-fine-roots-v1",
+            "summary": "靠近石缝的一侧出现少量新细根，另一侧土层仍然偏干。"
+          }
+        ],
+        "outcome_id": "intermittent_limited_support",
+        "resolved_proposition": {
+          "root_support": "limited",
+          "water_continuity": "intermittent"
+        }
+      },
+      "settled_at_tick": null,
+      "world_event_ref": "v60-world-event-yanzhou-channel-outcome-v1",
+      "world_ref": "abu-dream-world-v1"
+    }
+  ]
+}

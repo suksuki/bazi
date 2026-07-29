@@ -1,0 +1,48 @@
+{
+  "schema_version": "v60.media-process-manifest.001",
+  "job_ref": "v60-seated-transparent-delivery-20260728",
+  "asset_id": "ABU_V60_SEATED_TRANSPARENT_V1",
+  "revision": "v1",
+  "character_version": "ABU_CHARACTER_V60_V1",
+  "source": {
+    "path": "media/sources/ABU_V60_SEATED_TRANSPARENT_V1/v1/source.png",
+    "sha256": "f8c9a9bf28ed6cfe88a1392183c4a1b628c72cdd8e750eef6306772c0d718123",
+    "width": 1254,
+    "height": 1254,
+    "alpha": true,
+    "nontransparent_bbox": {
+      "x": 394,
+      "y": 111,
+      "width": 695,
+      "height": 1014
+    }
+  },
+  "operations": [
+    {
+      "type": "TRANSPARENT_PADDING_CROP",
+      "crop": {
+        "x": 362,
+        "y": 79,
+        "width": 760,
+        "height": 1080
+      },
+      "pixel_content_changed": false,
+      "reason": "Remove excess transparent canvas while retaining 32px or more padding."
+    }
+  ],
+  "deliveries": [
+    {
+      "role": "TRANSPARENT_PNG_POSTER",
+      "path": "web/public/assets/abu/v60/abu-v60-seated-transparent-v1.png",
+      "sha256": "c6cf8653e245756af64b6f7fcdb9106623500588696d4b55ee01bc9076189a1b",
+      "width": 760,
+      "height": 1080,
+      "alpha": true,
+      "anchor": "BOTTOM_CENTER"
+    }
+  ],
+  "owner_decision": {
+    "status": "APPROVED_FOR_V60_RUNTIME_POSTER",
+    "decided_at": "2026-07-28"
+  }
+}

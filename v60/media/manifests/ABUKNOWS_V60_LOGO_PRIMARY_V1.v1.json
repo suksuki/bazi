@@ -1,0 +1,74 @@
+{
+  "schema_version": "v60.media-process-manifest.001",
+  "job_ref": "abuknows-v60-primary-logo-alpha-20260728",
+  "asset_id": "ABUKNOWS_V60_LOGO_PRIMARY_V1",
+  "revision": "v1",
+  "character_version": null,
+  "source": {
+    "path": "media/sources/ABUKNOWS_V60_LOGO_PRIMARY_V1/v1/source.png",
+    "sha256": "7f6d7c50eb9515d017676274d94cf6fd17ed760629036b7b87396e80faf65c60",
+    "width": 1254,
+    "height": 1254,
+    "alpha": false
+  },
+  "operations": [
+    {
+      "type": "DETERMINISTIC_WHITE_BACKGROUND_REMOVAL",
+      "tool": "FFmpeg",
+      "filter": "colorkey=0xFFFFFF:0.12:0.22,format=rgba",
+      "preserve": [
+        "LOGOMARK_GEOMETRY",
+        "ABUKNOWS_WORDMARK",
+        "CHINESE_WORDMARK",
+        "INK_GREEN_COLOR",
+        "ANTIQUE_GOLD_COLOR"
+      ]
+    },
+    {
+      "type": "TRANSPARENT_CANVAS_CROP",
+      "tool": "FFmpeg",
+      "filter": "crop=1044:700:128:230,format=rgba",
+      "reason": "Remove transparent outer whitespace for Runtime placement without altering artwork."
+    }
+  ],
+  "masters": [
+    {
+      "role": "FULL_CANVAS_TRANSPARENT_MASTER",
+      "path": "media/masters/ABUKNOWS_V60_LOGO_PRIMARY_V1/v1/logo-transparent-master.png",
+      "sha256": "4b5c05fd98b27b0f5a486d93b8c45dec262a7bb61d6903599eaf8a4ffbbe2868",
+      "width": 1254,
+      "height": 1254,
+      "alpha": true
+    }
+  ],
+  "deliveries": [
+    {
+      "role": "PRIMARY_TRANSPARENT_LOGO",
+      "path": "web/public/assets/brand/abuknows-v60-logo-transparent-v1.png",
+      "sha256": "785964042396b286b98bd3ae5afdc4f94431fa35e2b216fe70baefb7bddcce05",
+      "width": 1044,
+      "height": 700,
+      "alpha": true,
+      "anchor": "CENTER"
+    }
+  ],
+  "review_artifacts": [
+    {
+      "role": "DARK_BACKGROUND_EDGE_PREVIEW",
+      "path": "media/review/ABUKNOWS_V60_LOGO_PRIMARY_V1/v1/dark-background-preview.png",
+      "sha256": "ec521c6abf2529353d94d9810b51a4ae09a693a32b6cf30d37ae6e73bdb3ff71"
+    }
+  ],
+  "rejected_attempts": [
+    {
+      "tool": "OPENAI_IMAGE_EDIT",
+      "reason": "Checkerboard pixels were baked into an RGB image instead of true alpha.",
+      "runtime_eligible": false,
+      "archived": false
+    }
+  ],
+  "owner_decision": {
+    "status": "OWNER_SUPPLIED_PRIMARY_V60_LOGO",
+    "decided_at": "2026-07-28"
+  }
+}

@@ -1,0 +1,303 @@
+{
+  "binding_keys": [
+    "structure_fact_ref"
+  ],
+  "definition_template": {
+    "actor_ref": "v60-actor-yanzhou-v1",
+    "baseline_evidence": [
+      {
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+        "evidence_ref": "v60-evidence-yanzhou-water-promise-v1",
+        "observed_at_tick": 24,
+        "summary": "砚舟答应在下一次夜水到来时，把一段水流分给坡下菜圃。"
+      },
+      {
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+        "evidence_ref": "v60-evidence-yanzhou-water-marker-v1",
+        "observed_at_tick": 24,
+        "summary": "他已在分水石旁系好芦苇标记，但尚未真正打开外侧水路。"
+      }
+    ],
+    "options": [
+      {
+        "choice_id": "shared_channel_first",
+        "label": "先按约打开分水石，让坡下菜圃实际得到一夜水",
+        "proposition": {
+          "action_priority": "shared_channel",
+          "promise_status": "fulfilled"
+        }
+      },
+      {
+        "choice_id": "own_bank_first",
+        "label": "先加固自己的湿岸，把分水约定继续延后",
+        "proposition": {
+          "action_priority": "own_bank",
+          "promise_status": "delayed"
+        }
+      },
+      {
+        "choice_id": "neither_completed",
+        "label": "水量不足，两边都没有形成实际行动",
+        "proposition": {
+          "action_priority": "none",
+          "promise_status": "not_completed"
+        }
+      }
+    ],
+    "organ_set": {
+      "evidence_leaf_structure": {
+        "label": "承诺背后的命盘结构线索",
+        "organ_ref": "v60-organ-yanzhou-leaf-structure-v3",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          {
+            "$binding": "structure_fact_ref"
+          }
+        ]
+      },
+      "evidence_leaf_world": {
+        "label": "分水石旁的芦苇标记",
+        "organ_ref": "v60-organ-yanzhou-leaf-world-v3",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          "v60-evidence-yanzhou-water-promise-v1"
+        ]
+      },
+      "outcome_fruit": {
+        "label": "夜水守诺果",
+        "organ_ref": "v60-organ-yanzhou-fruit-v3",
+        "role": "OUTCOME_FRUIT",
+        "source_refs": [
+          "v60-world-event-yanzhou-water-promise-outcome-v1"
+        ]
+      },
+      "question_flower": {
+        "label": "夜水守诺花",
+        "organ_ref": "v60-organ-yanzhou-flower-v3",
+        "role": "QUESTION_FLOWER",
+        "source_refs": [
+          "v60-question-yanzhou-shared-night-water-v1"
+        ]
+      },
+      "structure_branch": {
+        "label": "承诺与行动之间的分水主脉",
+        "organ_ref": "v60-organ-yanzhou-branch-v3",
+        "role": "STRUCTURE_BRANCH",
+        "source_refs": [
+          "v60-evidence-yanzhou-water-promise-v1",
+          {
+            "$binding": "structure_fact_ref"
+          }
+        ]
+      }
+    },
+    "prompt": "下一次夜水到来时，砚舟会先怎样处理这项分水承诺？",
+    "question_version": 1,
+    "resolution_rule": {
+      "baseline_event_ref": "v60-world-event-yanzhou-water-sharing-promised-v1",
+      "baseline_evidence_credit": false,
+      "compare_atoms": [
+        "promise_status",
+        "action_priority"
+      ],
+      "exact_match": "SUPPORTED",
+      "flower_name": "夜水守诺花",
+      "fruit_name": "夜水守诺果",
+      "mixed_match": "PARTIAL",
+      "no_match": "NOT_SUPPORTED",
+      "npc_choice_id": "own_bank_first",
+      "return_label": null,
+      "rule_version": "v60.atom-reconciliation.v1",
+      "theater_beat": "砚舟在分水石旁系好一束芦苇，答应下一场夜水先分给坡下菜圃。",
+      "theater_scene_ref": "v60-theater-beat-yanzhou-shared-night-water-v1"
+    },
+    "runtime": {
+      "actor_ref": "v60-actor-yanzhou-v1",
+      "baseline_event_ref": "v60-world-event-yanzhou-water-sharing-promised-v1",
+      "chapter": "RETURN_VISIT",
+      "content_key": "dream.yanzhou.shared_night_water",
+      "continuation_label": null,
+      "continuation_question_ref": null,
+      "cutoff_tick": 24,
+      "due_tick": 36,
+      "entry_world_event": {
+        "actor_state_delta": {
+          "activity": "waiting-for-night-water-sharing",
+          "last_committed_event_ref": "v60-world-event-yanzhou-water-sharing-promised-v1"
+        },
+        "caused_by_event_ref": "v60-world-event-yanzhou-root-spread-v1",
+        "event_ref": "v60-world-event-yanzhou-water-sharing-promised-v1",
+        "event_type": "NIGHT_WATER_SHARING_PROMISED",
+        "evidence": [
+          {
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+            "evidence_ref": "v60-evidence-yanzhou-water-promise-v1",
+            "observed_at_tick": 24,
+            "summary": "砚舟答应在下一次夜水到来时，把一段水流分给坡下菜圃。"
+          },
+          {
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT",
+            "evidence_ref": "v60-evidence-yanzhou-water-marker-v1",
+            "observed_at_tick": 24,
+            "summary": "他已在分水石旁系好芦苇标记，但尚未真正打开外侧水路。"
+          }
+        ],
+        "summary": "砚舟在分水石旁留下芦苇标记，答应下一场夜水先分给坡下菜圃。"
+      },
+      "entrypoint": false,
+      "episode_ref": "v60-dream-episode-yanzhou-shared-night-water-v1",
+      "episode_version": 1,
+      "gameplay_id": "life_tree_question_v1",
+      "narrative": {
+        "moments": [
+          {
+            "abu_line": "先看芦苇标记，再看承诺背后的结构线索。答应过，不等于已经做到。",
+            "content_key": "dream.yanzhou.shared_night_water.observing",
+            "disclosure": "BASELINE_ONLY",
+            "phase": "OBSERVING",
+            "status_line": "夜水尚未来，承诺与行动之间仍留着距离",
+            "theater_beat": "砚舟在分水石旁系好一束芦苇，答应下一场夜水先分给坡下菜圃。",
+            "title": "分水石旁的新约定"
+          },
+          {
+            "abu_line": "三种后续都还可能发生。只判断夜水到来时，他会先做什么。",
+            "content_key": "dream.yanzhou.shared_night_water.question-open",
+            "disclosure": "BASELINE_ONLY",
+            "phase": "QUESTION_OPEN",
+            "status_line": "芦苇已经系好，真正的行动尚未发生",
+            "theater_beat": "分水石仍保持关闭，自己的湿岸和坡下菜圃都在等下一次夜水。",
+            "title": "砚舟会先兑现哪一边"
+          },
+          {
+            "abu_line": "判断已经封进花心。夜水会按世界自己的节奏到来。",
+            "content_key": "dream.yanzhou.shared_night_water.waiting",
+            "disclosure": "SEALED_NO_OUTCOME",
+            "phase": "WAITING_FOR_WORLD",
+            "status_line": "夜水守诺花正在等待独立发生的行动",
+            "theater_beat": "你的判断已经留下，分水石仍然没有转动。",
+            "title": "等待夜水，也等待行动"
+          },
+          {
+            "abu_line": "夜水已经过去。果实里只留下后来真正发生的两件事。",
+            "content_key": "dream.yanzhou.shared_night_water.reveal-ready",
+            "disclosure": "WORLD_COMMITTED_HIDDEN",
+            "phase": "REVEAL_READY",
+            "status_line": "夜水守诺果已经成熟，结果仍保持遮蔽",
+            "theater_beat": "天亮后，分水石和坡下湿痕都留下了新的事实。",
+            "title": "这项承诺已经有了回应"
+          },
+          {
+            "abu_line": "现在分开核对：承诺是否兑现，以及行动先落在了哪一边。",
+            "content_key": "dream.yanzhou.shared_night_water.revealed",
+            "disclosure": "OUTCOME_REVEALED",
+            "phase": "REVEALED",
+            "status_line": "承诺状态与行动优先级需要逐项对照",
+            "theater_beat": "砚舟在夜水到来时打开了分水石，坡下菜圃在天亮前得到了一段实际水流。",
+            "title": "芦苇标记旁的分水石被打开"
+          },
+          {
+            "abu_line": "这枚果实记住的，是一句承诺怎样变成了可核验的行动。",
+            "content_key": "dream.yanzhou.shared_night_water.completed",
+            "disclosure": "OUTCOME_REVEALED",
+            "phase": "COMPLETED",
+            "status_line": "第三次复盘完成，砚舟的时间线继续向前",
+            "theater_beat": "夜水守诺果记下了分水石被打开，以及坡下菜圃收到水流的事实。",
+            "title": "夜水守诺果已经记入生命线"
+          }
+        ],
+        "narrative_version": "v60.episode-narrative.001",
+        "scene_ref": "v60-theater-beat-yanzhou-shared-night-water-v1"
+      },
+      "question_ref": "v60-question-yanzhou-shared-night-water-v1",
+      "resolution_rule_hash": "017f4af551183130438e781a6421850b4f5a3261e5dcec14ff701228c6689396",
+      "runtime_metadata": {
+        "baseline_event_ref": "v60-world-event-yanzhou-water-sharing-promised-v1",
+        "flower_name": "夜水守诺花",
+        "fruit_name": "夜水守诺果",
+        "npc_choice_id": "own_bank_first",
+        "return_label": null
+      },
+      "runtime_status": "ACTIVE",
+      "tree_ref": "v60-life-tree-yanzhou-v1",
+      "tree_state_after_settlement": "SHARED_WATER_FRUIT_MATURED",
+      "tree_state_on_entry": "SHARED_WATER_PROMISE_COMMITTED",
+      "world_event_ref": "v60-world-event-yanzhou-water-promise-outcome-v1"
+    },
+    "sealed_outcome": {
+      "actual_event": "砚舟在夜水到来时打开了分水石，坡下菜圃在天亮前得到了一段实际水流。",
+      "evidence": [
+        {
+          "atom": {
+            "promise_status": "fulfilled"
+          },
+          "evidence_ref": "v60-evidence-yanzhou-stone-turned-v1",
+          "summary": "第一段夜水到达后，砚舟在加固自己的湿岸前先转开了分水石。"
+        },
+        {
+          "atom": {
+            "action_priority": "shared_channel"
+          },
+          "evidence_ref": "v60-evidence-yanzhou-lower-bank-wet-v1",
+          "summary": "天亮前，坡下菜圃的湿痕已经越过芦苇标记，形成一段可核验的实际水流。"
+        }
+      ],
+      "outcome_id": "night_water_promise_fulfilled",
+      "resolved_proposition": {
+        "action_priority": "shared_channel",
+        "promise_status": "fulfilled"
+      }
+    },
+    "tree_ref": "v60-life-tree-yanzhou-v1",
+    "world_event_summary": "观察下一场夜水到来时，砚舟是否先兑现分水承诺。",
+    "world_event_type": "NIGHT_WATER_PROMISE_OUTCOME"
+  },
+  "package_ref": "v60.episode-package.yanzhou-shared-night-water.v1",
+  "package_version": "v60.episode-source-package.002",
+  "world_event_definitions": [
+    {
+      "actor_ref": "v60-actor-yanzhou-v1",
+      "due_tick": 36,
+      "event_payload": {
+        "actor_state_delta": {
+          "activity": "shared-night-water-delivered",
+          "last_settled_event_ref": "v60-world-event-yanzhou-water-promise-outcome-v1"
+        },
+        "answer_can_affect_outcome": false,
+        "baseline_event_ref": "v60-world-event-yanzhou-water-sharing-promised-v1",
+        "due_tick": 36,
+        "resolution_owner": "V60_WORLD_ENGINE",
+        "summary": "观察下一场夜水到来时，砚舟是否先兑现分水承诺。"
+      },
+      "event_type": "NIGHT_WATER_PROMISE_OUTCOME",
+      "initial_evidence": [],
+      "initial_status": "SCHEDULED",
+      "sealed_outcome": {
+        "actual_event": "砚舟在夜水到来时打开了分水石，坡下菜圃在天亮前得到了一段实际水流。",
+        "evidence": [
+          {
+            "atom": {
+              "promise_status": "fulfilled"
+            },
+            "evidence_ref": "v60-evidence-yanzhou-stone-turned-v1",
+            "summary": "第一段夜水到达后，砚舟在加固自己的湿岸前先转开了分水石。"
+          },
+          {
+            "atom": {
+              "action_priority": "shared_channel"
+            },
+            "evidence_ref": "v60-evidence-yanzhou-lower-bank-wet-v1",
+            "summary": "天亮前，坡下菜圃的湿痕已经越过芦苇标记，形成一段可核验的实际水流。"
+          }
+        ],
+        "outcome_id": "night_water_promise_fulfilled",
+        "resolved_proposition": {
+          "action_priority": "shared_channel",
+          "promise_status": "fulfilled"
+        }
+      },
+      "settled_at_tick": null,
+      "world_event_ref": "v60-world-event-yanzhou-water-promise-outcome-v1",
+      "world_ref": "abu-dream-world-v1"
+    }
+  ]
+}

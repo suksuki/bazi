@@ -1,0 +1,113 @@
+from __future__ import annotations
+
+from abu_v60.media import (
+    load_verified_media_catalog,
+    media_library_summary,
+    runtime_media_manifest,
+)
+
+
+def test_media_library_sources_deliveries_and_cues_are_hash_locked() -> None:
+    catalog = load_verified_media_catalog()
+    summary = media_library_summary()
+
+    assert summary == {
+        "schema_version": "v60.media-library.001",
+        "schema_ref": "media/schemas/media-catalog-v1.schema.json",
+        "item_count": 11,
+        "character_identity_count": 2,
+        "primary_character_version": "ABU_CHARACTER_V60_V1",
+        "runtime_registered_count": 8,
+        "source_count": 11,
+        "cue_bundle_count": 5,
+        "audio_gap_cues": ["cue.dream.follow-walk.v1"],
+        "owner_review_items": ["media.dream.entry-transition.v1"],
+    }
+    assert {item["media_ref"] for item in catalog["items"]} == {
+        "media.abu.seated-idle.v1",
+        "media.abu.calm-follow-walk.v1",
+        "media.dream.entry-transition.v1",
+        "media.audio.morning-glints.v1",
+        "media.abu.v60.character-reference.v1",
+        "media.abu.v60.seated-transparent.v1",
+        "media.abu.v60.seated-idle.v1",
+        "media.abu.v60.guide-left.v1",
+        "media.v60.life-world.reference.v1",
+        "media.v60.life-world.clean.v1",
+        "media.brand.abuknows-v60.primary-logo.v1",
+    }
+
+
+def test_media_sources_are_local_immutable_revisions() -> None:
+    catalog = load_verified_media_catalog()
+
+    for item in catalog["items"]:
+        assert item["source"]["path"].startswith("media/sources/")
+        assert "/v1/source." in item["source"]["path"]
+        assert not item["source"]["path"].startswith("v50/")
+        assert item["source"]["authorization"].startswith("OWNER_APPROVED")
+
+
+def test_unapproved_transition_is_not_runtime_published() -> None:
+    catalog = load_verified_media_catalog()
+    transition = next(
+        item for item in catalog["items"] if item["media_ref"] == "media.dream.entry-transition.v1"
+    )
+
+    assert transition["library_status"] == "OWNER_REVIEW"
+    assert transition["deliveries"] == []
+    assert (
+        transition["runtime_contract"]["runtime_publication"] == "BLOCKED_PENDING_V60_OWNER_REVIEW"
+    )
+
+
+def test_audio_visual_pairing_is_explicit_and_honest_about_gaps() -> None:
+    catalog = load_verified_media_catalog()
+    cues = {cue["cue_ref"]: cue for cue in catalog["cue_bundles"]}
+
+    arrival = cues["cue.dream.grove-arrival.v1"]
+    assert arrival["visual_media_ref"] == "media.abu.v60.seated-idle.v1"
+    assert arrival["audio_media_refs"] == ["media.audio.morning-glints.v1"]
+
+    walk = cues["cue.dream.follow-walk.v1"]
+    assert walk["audio_media_refs"] == []
+    assert walk["status"] == "AUDIO_GAP"
+    assert "audio_gap" in walk
+    assert cues["cue.dream.abu-idle.v1"]["status"] == "RUNTIME_REGISTERED"
+    assert cues["cue.dream.abu-guide-left.v1"]["status"] == "RUNTIME_REGISTERED"
+
+
+def test_v60_character_identity_is_primary_and_legacy_cartoon_is_retained() -> None:
+    catalog = load_verified_media_catalog()
+    identities = {
+        identity["character_version"]: identity for identity in catalog["character_identities"]
+    }
+
+    assert identities["ABU_CHARACTER_V60_V1"]["status"] == "PRIMARY_V60"
+    assert identities["ABU_CHARACTER_V60_V1"]["primary_for_new_v60_generation"]
+    assert identities["ABU_CHARACTER_V60_V1"]["motion_media_refs"] == [
+        "media.abu.v60.guide-left.v1",
+        "media.abu.v60.seated-idle.v1"
+    ]
+    assert identities["ABU_CHARACTER_V1"]["status"] == "RETAINED_COMPATIBILITY"
+    assert not identities["ABU_CHARACTER_V1"]["primary_for_new_v60_generation"]
+
+
+def test_runtime_media_manifest_resolves_hash_locked_assets_and_cues() -> None:
+    manifest = runtime_media_manifest()
+
+    assert manifest["registry_version"] == "v60.runtime-media-registry.001"
+    assert manifest["assets"]["brand_logo"]["asset_ref"] == (
+        "brand.abuknows-v60.logo.transparent.v1"
+    )
+    assert manifest["assets"]["life_world_background"]["url"] == (
+        "/assets/dream/v60-life-world-clean-v1.png"
+    )
+    assert manifest["cues"]["abu_idle"]["cue_ref"] == "cue.dream.abu-idle.v1"
+    assert manifest["cues"]["abu_idle"]["playback"] == "LOOP"
+    assert manifest["cues"]["abu_guide_left"]["playback"] == "PLAY_ONCE"
+    assert manifest["cues"]["abu_guide_left"]["deliveries"][
+        "VP9_ALPHA_WEBM"
+    ]["sha256"] == (
+        "3452a67fef266dc3509d7d6db74fa9224349535e06ba29a3888419855a38aa67"
+    )

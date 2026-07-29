@@ -1,0 +1,318 @@
+{
+  "package_version": "v60.episode-source-package.002",
+  "package_ref": "v60.episode-package.wenxi-archive-trial.v1",
+  "binding_keys": [
+    "career_structure_fact_ref",
+    "career_life_domain_vector_ref"
+  ],
+  "definition_template": {
+    "runtime": {
+      "episode_ref": "v60-dream-episode-wenxi-archive-trial-v1",
+      "episode_version": 1,
+      "runtime_status": "ACTIVE",
+      "gameplay_id": "life_tree_question_v1",
+      "content_key": "dream.qualification.wenxi-archive-trial",
+      "chapter": "FIRST_VISIT",
+      "entrypoint": true,
+      "actor_ref": "v60-actor-wenxi-v1",
+      "tree_ref": "v60-life-tree-wenxi-v1",
+      "question_ref": "v60-question-wenxi-archive-trial-v1",
+      "baseline_event_ref": "v60-world-event-wenxi-archive-submit-v1",
+      "world_event_ref": "v60-world-event-wenxi-archive-role-v1",
+      "cutoff_tick": 0,
+      "due_tick": 48,
+      "resolution_rule_hash": "93271c119cf7d3399c30542d77acc48514767989201743a1096e624083d342af",
+      "runtime_metadata": {
+        "baseline_event_ref": "v60-world-event-wenxi-archive-submit-v1",
+        "npc_choice_id": "lead_named",
+        "flower_name": "馆页回声花",
+        "fruit_name": "共署页果",
+        "return_label": null
+      },
+      "narrative": {
+        "narrative_version": "v60.episode-narrative.001",
+        "scene_ref": "v60-theater-scene-wenxi-archive-v1",
+        "moments": [
+          {
+            "phase": "OBSERVING",
+            "content_key": "dream.qualification.wenxi-archive-trial.observing",
+            "title": "镇史馆长桌上的样页",
+            "status_line": "先读一片现实叶和一片命纹叶",
+            "theater_beat": "闻溪把修复样页放在镇史馆长桌上，馆员只说先看完这一批。",
+            "abu_line": "两片叶说的是已经发生的事，先别替后来下结论。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "QUESTION_OPEN",
+            "content_key": "dream.qualification.wenxi-archive-trial.question-open",
+            "title": "试案会留下怎样的职责",
+            "status_line": "三种后续都仍然可能",
+            "theater_beat": "样页通过了基础检查，但后续职责与署名方式尚未决定。",
+            "abu_line": "只选你此刻更相信的解释，答案会原样留在花心。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "WAITING_FOR_WORLD",
+            "content_key": "dream.qualification.wenxi-archive-trial.waiting",
+            "title": "判断已经封进花心",
+            "status_line": "世界仍在继续，果实尚未成熟",
+            "theater_beat": "判断留在花心，事件按自己的时间继续。",
+            "abu_line": "先等一等。你的选择不会改变后来发生的事。",
+            "disclosure": "SEALED_NO_OUTCOME"
+          },
+          {
+            "phase": "REVEAL_READY",
+            "content_key": "dream.qualification.wenxi-archive-trial.reveal-ready",
+            "title": "世界的回应已经抵达",
+            "status_line": "雾白果实已经成熟，等待你亲手打开",
+            "theater_beat": "新证据已经写进果实，但尚未展开。",
+            "abu_line": "打开它时，只拿后来发生的事实和当时的判断对照。",
+            "disclosure": "WORLD_COMMITTED_HIDDEN"
+          },
+          {
+            "phase": "REVEALED",
+            "content_key": "dream.qualification.wenxi-archive-trial.revealed",
+            "title": "共同修复，共同署名",
+            "status_line": "逐项对照封存命题与后来证据",
+            "theater_beat": "试案被保留，但闻溪获得的是共同职责与共同署名。",
+            "abu_line": "共同基线不计分，真正改变判断的是后来出现的两条证据。",
+            "disclosure": "OUTCOME_REVEALED"
+          },
+          {
+            "phase": "COMPLETED",
+            "content_key": "dream.qualification.wenxi-archive-trial.completed",
+            "title": "共署页果已经记入生命线",
+            "status_line": "这次复盘已经完成",
+            "theater_beat": "共署页果记下了这次判断与现实的距离。",
+            "abu_line": "果实记住的不是输赢，而是你的判断在哪些地方经得起事实。",
+            "disclosure": "OUTCOME_REVEALED"
+          }
+        ]
+      },
+      "continuation_question_ref": null,
+      "continuation_label": null,
+      "entry_world_event": null,
+      "tree_state_on_entry": null,
+      "tree_state_after_settlement": "FIRST_FRUIT_MATURED"
+    },
+    "actor_ref": "v60-actor-wenxi-v1",
+    "tree_ref": "v60-life-tree-wenxi-v1",
+    "question_version": 1,
+    "prompt": "试案结束时，闻溪在镇史馆的职责会落到哪一种形态？",
+    "options": [
+      {
+        "choice_id": "lead_named",
+        "label": "独立主持后续修复，并以负责人署名",
+        "proposition": {
+          "assignment_scope": "lead",
+          "recognition": "named"
+        }
+      },
+      {
+        "choice_id": "shared_support",
+        "label": "与馆员共同处理，职责和署名都保持共享",
+        "proposition": {
+          "assignment_scope": "shared",
+          "recognition": "shared"
+        }
+      },
+      {
+        "choice_id": "trial_ends",
+        "label": "试案到此结束，不形成后续职责或署名",
+        "proposition": {
+          "assignment_scope": "none",
+          "recognition": "none"
+        }
+      }
+    ],
+    "baseline_evidence": [
+      {
+        "evidence_ref": "v60-evidence-wenxi-trial-pages-v1",
+        "observed_at_tick": 0,
+        "summary": "闻溪把一套档案修复试案和第一批样页交给镇史馆。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      },
+      {
+        "evidence_ref": "v60-evidence-wenxi-provisional-review-v1",
+        "observed_at_tick": 0,
+        "summary": "样页通过了基础检查，但后续职责与署名方式尚未决定。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      }
+    ],
+    "resolution_rule": {
+      "rule_version": "v60.atom-reconciliation.v1",
+      "compare_atoms": [
+        "assignment_scope",
+        "recognition"
+      ],
+      "baseline_evidence_credit": false,
+      "exact_match": "SUPPORTED",
+      "mixed_match": "PARTIAL",
+      "no_match": "NOT_SUPPORTED",
+      "baseline_event_ref": "v60-world-event-wenxi-archive-submit-v1",
+      "npc_choice_id": "lead_named",
+      "flower_name": "馆页回声花",
+      "fruit_name": "共署页果",
+      "theater_scene_ref": "v60-theater-scene-wenxi-archive-v1",
+      "theater_beat": "闻溪把修复样页放在镇史馆长桌上，馆员只说先看完这一批。",
+      "return_label": null
+    },
+    "sealed_outcome": {
+      "outcome_id": "shared_archive_assignment",
+      "resolved_proposition": {
+        "assignment_scope": "shared",
+        "recognition": "shared"
+      },
+      "evidence": [
+        {
+          "evidence_ref": "v60-evidence-wenxi-two-volumes-v1",
+          "summary": "馆方把后续两册交给闻溪与原馆员共同处理，没有交出整批主持权。",
+          "atom": {
+            "assignment_scope": "shared"
+          }
+        },
+        {
+          "evidence_ref": "v60-evidence-wenxi-shared-credit-v1",
+          "summary": "完成记录列出闻溪与馆员共同署名，没有单独负责人名目。",
+          "atom": {
+            "recognition": "shared"
+          }
+        }
+      ],
+      "actual_event": "试案被保留，但闻溪获得的是共同职责与共同署名。"
+    },
+    "world_event_type": "ARCHIVE_TRIAL_ROLE_OUTCOME",
+    "world_event_summary": "观察档案修复试案是否改变闻溪的正式职责。",
+    "organ_set": {
+      "evidence_leaf_world": {
+        "organ_ref": "v60-wenxi-archive-trial-organ-world-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          "v60-evidence-wenxi-trial-pages-v1"
+        ],
+        "label": "已经发生的现实线索"
+      },
+      "evidence_leaf_structure": {
+        "organ_ref": "v60-wenxi-archive-trial-organ-structure-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          {
+            "$binding": "career_structure_fact_ref"
+          },
+          {
+            "$binding": "career_life_domain_vector_ref"
+          }
+        ],
+        "label": "career命纹留下的观察线索"
+      },
+      "structure_branch": {
+        "organ_ref": "v60-wenxi-archive-trial-organ-branch-v1",
+        "role": "STRUCTURE_BRANCH",
+        "source_refs": [
+          "v60-evidence-wenxi-trial-pages-v1",
+          {
+            "$binding": "career_structure_fact_ref"
+          },
+          {
+            "$binding": "career_life_domain_vector_ref"
+          }
+        ],
+        "label": "现实行动与命纹之间的观察主脉"
+      },
+      "question_flower": {
+        "organ_ref": "v60-wenxi-archive-trial-organ-flower-v1",
+        "role": "QUESTION_FLOWER",
+        "source_refs": [
+          "v60-question-wenxi-archive-trial-v1"
+        ],
+        "label": "馆页回声花"
+      },
+      "outcome_fruit": {
+        "organ_ref": "v60-wenxi-archive-trial-organ-fruit-v1",
+        "role": "OUTCOME_FRUIT",
+        "source_refs": [
+          "v60-world-event-wenxi-archive-role-v1"
+        ],
+        "label": "共署页果"
+      }
+    }
+  },
+  "world_event_definitions": [
+    {
+      "world_event_ref": "v60-world-event-wenxi-archive-submit-v1",
+      "world_ref": "abu-dream-world-v1",
+      "actor_ref": "v60-actor-wenxi-v1",
+      "event_type": "ARCHIVE_TRIAL_ROLE_OUTCOME_BASELINE",
+      "due_tick": 0,
+      "initial_status": "SETTLED",
+      "event_payload": {
+        "summary": "闻溪把修复样页放在镇史馆长桌上，馆员只说先看完这一批。",
+        "visibility": "PUBLIC_AFTER_COMMIT"
+      },
+      "sealed_outcome": {},
+      "settled_at_tick": 0,
+      "initial_evidence": [
+        {
+          "evidence_ref": "v60-evidence-wenxi-trial-pages-v1",
+          "committed_at_tick": 0,
+          "payload": {
+            "evidence_ref": "v60-evidence-wenxi-trial-pages-v1",
+            "observed_at_tick": 0,
+            "summary": "闻溪把一套档案修复试案和第一批样页交给镇史馆。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          }
+        },
+        {
+          "evidence_ref": "v60-evidence-wenxi-provisional-review-v1",
+          "committed_at_tick": 0,
+          "payload": {
+            "evidence_ref": "v60-evidence-wenxi-provisional-review-v1",
+            "observed_at_tick": 0,
+            "summary": "样页通过了基础检查，但后续职责与署名方式尚未决定。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          }
+        }
+      ]
+    },
+    {
+      "world_event_ref": "v60-world-event-wenxi-archive-role-v1",
+      "world_ref": "abu-dream-world-v1",
+      "actor_ref": "v60-actor-wenxi-v1",
+      "event_type": "ARCHIVE_TRIAL_ROLE_OUTCOME",
+      "due_tick": 48,
+      "initial_status": "SCHEDULED",
+      "event_payload": {
+        "summary": "观察档案修复试案是否改变闻溪的正式职责。",
+        "due_tick": 48,
+        "resolution_owner": "V60_WORLD_ENGINE",
+        "answer_can_affect_outcome": false
+      },
+      "sealed_outcome": {
+        "outcome_id": "shared_archive_assignment",
+        "resolved_proposition": {
+          "assignment_scope": "shared",
+          "recognition": "shared"
+        },
+        "evidence": [
+          {
+            "evidence_ref": "v60-evidence-wenxi-two-volumes-v1",
+            "summary": "馆方把后续两册交给闻溪与原馆员共同处理，没有交出整批主持权。",
+            "atom": {
+              "assignment_scope": "shared"
+            }
+          },
+          {
+            "evidence_ref": "v60-evidence-wenxi-shared-credit-v1",
+            "summary": "完成记录列出闻溪与馆员共同署名，没有单独负责人名目。",
+            "atom": {
+              "recognition": "shared"
+            }
+          }
+        ],
+        "actual_event": "试案被保留，但闻溪获得的是共同职责与共同署名。"
+      },
+      "settled_at_tick": null,
+      "initial_evidence": []
+    }
+  ]
+}

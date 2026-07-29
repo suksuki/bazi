@@ -1,0 +1,25 @@
+{
+  "schema_version": "v60.media-process-manifest.001",
+  "job_ref": "v60-character-reference-admission-20260728",
+  "asset_id": "ABU_V60_CHARACTER_REFERENCE_V1",
+  "revision": "v1",
+  "character_version": "ABU_CHARACTER_V60_V1",
+  "source": {
+    "path": "media/sources/ABU_V60_CHARACTER_REFERENCE_V1/v1/source.png",
+    "sha256": "e427bf05325b7a89a456825c46bf552a2e1904f44cd1ae7c0c544eac00cbb2d4",
+    "width": 1254,
+    "height": 1254,
+    "alpha": false
+  },
+  "operations": [],
+  "result": {
+    "role": "IDENTITY_LOCK_REFERENCE",
+    "publication_status": "LIBRARY_REFERENCE_ONLY",
+    "runtime_delivery": false
+  },
+  "owner_decision": {
+    "status": "APPROVED_AS_V60_CHARACTER_IDENTITY",
+    "decided_at": "2026-07-28",
+    "notes": "Primary V60 Eastern fairy-tale picture-book Abu identity."
+  }
+}

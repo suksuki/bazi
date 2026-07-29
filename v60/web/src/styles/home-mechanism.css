@@ -1,0 +1,154 @@
+.home-mechanism-stack {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.home-timing-lab {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(30, 88, 62, 0.16);
+}
+
+.home-timing-lab header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.home-timing-lab header span,
+.home-timing-lab p,
+.home-timing-lab li span,
+.home-timing-lab li em {
+  color: rgba(31, 70, 54, 0.66);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.home-timing-lab ul {
+  display: grid;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.home-timing-lab li {
+  display: grid;
+  grid-template-columns: minmax(110px, 0.75fr) minmax(180px, 1.3fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 9px 10px;
+  background: rgba(246, 241, 222, 0.58);
+}
+
+.home-mechanism-stack article {
+  display: grid;
+  gap: 8px;
+  padding: 11px 12px;
+  border: 1px solid rgba(56, 91, 68, 0.16);
+  background: rgba(252, 250, 243, 0.84);
+}
+
+.home-mechanism-stack article.is-selected {
+  border-color: rgba(178, 139, 49, 0.68);
+  box-shadow: inset 3px 0 0 #b28b31;
+}
+
+.home-mechanism-stack article header,
+.home-mechanism-stack article > div {
+  display: flex;
+  gap: 8px;
+}
+
+.home-mechanism-stack article header {
+  align-items: center;
+  justify-content: space-between;
+}
+
+.home-mechanism-stack article header strong {
+  font-size: 12px;
+}
+
+.home-mechanism-stack article header em {
+  color: #876819;
+  font-size: 9px;
+  font-style: normal;
+}
+
+.home-mechanism-stack article p,
+.home-mechanism-stack article > small {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.home-mechanism-stack article > div {
+  flex-wrap: wrap;
+}
+
+.home-mechanism-stack article > div span {
+  display: grid;
+  min-width: 76px;
+  gap: 2px;
+  padding: 6px 7px;
+  border-left: 2px solid rgba(55, 103, 77, 0.5);
+  background: rgba(226, 235, 219, 0.42);
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.home-mechanism-stack article > div b {
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.home-mechanism-stack article > div small {
+  color: var(--ink-faint);
+  font-size: 8px;
+}
+
+.home-mechanism-command {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.home-mechanism-command button {
+  min-height: 38px;
+  border: 1px solid #315a4a;
+  background: #315a4a;
+  color: #fffdf5;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.home-mechanism-command button:disabled {
+  border-color: rgba(49, 90, 74, 0.25);
+  background: rgba(49, 90, 74, 0.1);
+  color: var(--ink-faint);
+  cursor: not-allowed;
+}
+
+.home-mechanism-command span,
+.home-mechanism-decision {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.home-relation-context {
+  margin-top: 12px;
+  color: var(--ink-soft);
+  font-size: 10px;
+}
+
+.home-relation-context summary {
+  cursor: pointer;
+}

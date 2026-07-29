@@ -1,0 +1,315 @@
+from __future__ import annotations
+
+from sqlalchemy import (
+    BigInteger,
+    Boolean,
+    Column,
+    Date,
+    DateTime,
+    Integer,
+    MetaData,
+    String,
+    Table,
+    Text,
+    Time,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB
+
+metadata = MetaData()
+
+schema_manifest = Table(
+    "schema_manifest",
+    metadata,
+    Column("singleton_id", Integer, primary_key=True),
+    Column("foundation_version", String(80), nullable=False),
+    Column("manifest_json", JSONB, nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="platform",
+)
+
+asset_versions = Table(
+    "asset_versions",
+    metadata,
+    Column("asset_ref", String(160), primary_key=True),
+    Column("asset_version", String(80), primary_key=True),
+    Column("sha256", String(64), nullable=False),
+    Column("media_type", String(80), nullable=False),
+    Column("runtime_path", Text, nullable=False),
+    Column("source_manifest_ref", Text, nullable=False),
+    Column("source_status", String(80), nullable=False),
+    Column("v60_role", String(120), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="media",
+)
+
+decision_records = Table(
+    "decision_records",
+    metadata,
+    Column("decision_id", String(160), primary_key=True),
+    Column("decision_type", String(80), nullable=False),
+    Column("subject_ref", String(200), nullable=False),
+    Column("authority", String(80), nullable=False),
+    Column("method", String(120), nullable=False),
+    Column("status", String(80), nullable=False),
+    Column("correlation_id", String(160), nullable=False),
+    Column("causation_id", String(160), nullable=False),
+    Column("record_json", JSONB, nullable=False),
+    Column("record_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="cognition",
+)
+
+worlds = Table(
+    "worlds",
+    metadata,
+    Column("world_ref", String(160), primary_key=True),
+    Column("world_version", String(80), nullable=False),
+    Column("branch", String(80), nullable=False),
+    Column("current_epoch", BigInteger, nullable=False, server_default="0"),
+    Column("current_tick", BigInteger, nullable=False, server_default="0"),
+    Column("state_json", JSONB, nullable=False),
+    Column("updated_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="world",
+)
+
+clock_epochs = Table(
+    "clock_epochs",
+    metadata,
+    Column("world_ref", String(160), primary_key=True),
+    Column("epoch", BigInteger, primary_key=True),
+    Column("start_tick", BigInteger, nullable=False),
+    Column("rate_numerator", BigInteger, nullable=False),
+    Column("rate_denominator", BigInteger, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="world",
+)
+
+migration_batches = Table(
+    "migration_batches",
+    metadata,
+    Column("batch_ref", String(160), primary_key=True),
+    Column("source_system", String(80), nullable=False),
+    Column("source_database", String(160), nullable=False),
+    Column("status", String(80), nullable=False),
+    Column("manifest_json", JSONB, nullable=False),
+    Column("manifest_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="platform",
+)
+
+accounts = Table(
+    "accounts",
+    metadata,
+    Column("account_ref", String(160), primary_key=True),
+    Column("email", String(320), nullable=False, unique=True),
+    Column("display_name", String(160), nullable=False),
+    Column("account_role", String(80), nullable=False),
+    Column("active", Boolean, nullable=False, server_default="true"),
+    Column("password_scheme", String(120), nullable=False),
+    Column("password_hash", String(128), nullable=False),
+    Column("password_salt", String(128), nullable=False),
+    Column("source_ref", String(240), nullable=False),
+    Column("source_hash", String(64), nullable=False),
+    Column("source_batch_ref", String(160), nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="identity",
+)
+
+sessions = Table(
+    "sessions",
+    metadata,
+    Column("session_ref", String(160), primary_key=True),
+    Column("account_ref", String(160), nullable=False),
+    Column("token_hash", String(64), nullable=False, unique=True),
+    Column("expires_at", DateTime(timezone=True), nullable=False),
+    Column("revoked_at", DateTime(timezone=True), nullable=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="identity",
+)
+
+profiles = Table(
+    "profiles",
+    metadata,
+    Column("profile_ref", String(160), primary_key=True),
+    Column("account_ref", String(160), nullable=False),
+    Column("display_name", String(160), nullable=False),
+    Column("gender", String(40), nullable=False),
+    Column("calendar_type", String(40), nullable=False),
+    Column("birth_date", Date, nullable=False),
+    Column("birth_time", Time, nullable=False),
+    Column("birth_location", String(240), nullable=False),
+    Column("timezone", String(80), nullable=False),
+    Column("source_ref", String(240), nullable=False),
+    Column("source_hash", String(64), nullable=False),
+    Column("input_json", JSONB, nullable=False),
+    Column("active", Boolean, nullable=False, server_default="true"),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="identity",
+)
+
+cases = Table(
+    "cases",
+    metadata,
+    Column("case_ref", String(160), primary_key=True),
+    Column("owner_account_ref", String(160), nullable=False),
+    Column("profile_ref", String(160), nullable=False),
+    Column("subject_kind", String(80), nullable=False),
+    Column("status", String(80), nullable=False),
+    Column("case_version", BigInteger, nullable=False),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+chart_versions = Table(
+    "chart_versions",
+    metadata,
+    Column("chart_version_ref", String(160), primary_key=True),
+    Column("case_ref", String(160), nullable=False),
+    Column("version", BigInteger, nullable=False),
+    Column("birth_input_hash", String(64), nullable=False),
+    Column("pillars_json", JSONB, nullable=False),
+    Column("algorithm_version", String(120), nullable=False),
+    Column("source_manifest_json", JSONB, nullable=False),
+    Column("chart_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+facts = Table(
+    "facts",
+    metadata,
+    Column("fact_ref", String(200), primary_key=True),
+    Column("case_ref", String(160), nullable=False),
+    Column("chart_version_ref", String(160), nullable=False),
+    Column("fact_type", String(120), nullable=False),
+    Column("subject_ref", String(200), nullable=False),
+    Column("object_ref", String(200), nullable=True),
+    Column("authority", String(80), nullable=False),
+    Column("fact_json", JSONB, nullable=False),
+    Column("source_ref", String(240), nullable=False),
+    Column("fact_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+life_case_revisions = Table(
+    "life_case_revisions",
+    metadata,
+    Column("life_case_revision_ref", String(180), primary_key=True),
+    Column("case_ref", String(160), nullable=False),
+    Column("chart_version_ref", String(160), nullable=False),
+    Column("revision", BigInteger, nullable=False),
+    Column("status", String(80), nullable=False),
+    Column("payload_json", JSONB, nullable=False),
+    Column("evidence_manifest_json", JSONB, nullable=False),
+    Column("revision_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+canonical_scenes = Table(
+    "canonical_scenes",
+    metadata,
+    Column("scene_ref", String(180), primary_key=True),
+    Column("case_ref", String(160), nullable=False),
+    Column("life_case_revision_ref", String(180), nullable=False),
+    Column("scene_version", BigInteger, nullable=False),
+    Column("scene_json", JSONB, nullable=False),
+    Column("scene_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+mingli_readings = Table(
+    "readings",
+    metadata,
+    Column("reading_ref", String(180), primary_key=True),
+    Column("reading_version", String(80), nullable=False),
+    Column("case_ref", String(160), nullable=False),
+    Column("chart_version_ref", String(160), nullable=False),
+    Column("life_case_revision_ref", String(180), nullable=False),
+    Column("foundation_profile_ref", String(240), nullable=False),
+    Column("foundation_profile_hash", String(64), nullable=False),
+    Column("candidate_rule_profile_ref", String(240), nullable=False),
+    Column("candidate_rule_profile_hash", String(64), nullable=False),
+    Column("quant_foundation_profile_ref", String(240), nullable=True),
+    Column("quant_foundation_profile_hash", String(64), nullable=True),
+    Column("quant_vector_ref", String(180), nullable=True),
+    Column("quant_vector_hash", String(64), nullable=True),
+    Column("mechanism_evidence_profile_ref", String(240), nullable=True),
+    Column("mechanism_evidence_profile_hash", String(64), nullable=True),
+    Column("mechanism_vector_ref", String(180), nullable=True),
+    Column("mechanism_vector_hash", String(64), nullable=True),
+    Column("reading_json", JSONB, nullable=False),
+    Column("reading_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+corpus_qualification_runs = Table(
+    "corpus_qualification_runs",
+    metadata,
+    Column("run_ref", String(180), primary_key=True),
+    Column("run_version", String(100), nullable=False),
+    Column("account_ref", String(160), nullable=False),
+    Column("analysis_date", Date, nullable=False),
+    Column("case_count", Integer, nullable=False),
+    Column("owner_case_count", Integer, nullable=False),
+    Column("reference_case_count", Integer, nullable=False),
+    Column("case_results_json", JSONB, nullable=False),
+    Column("coverage_json", JSONB, nullable=False),
+    Column("run_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+grove_candidates = Table(
+    "grove_candidates",
+    metadata,
+    Column("candidate_ref", String(180), primary_key=True),
+    Column("pool_ref", String(180), nullable=False),
+    Column("question_ref", String(180), nullable=False),
+    Column("actor_ref", String(160), nullable=False),
+    Column("tree_ref", String(180), nullable=False),
+    Column("domain", String(40), nullable=False),
+    Column("public_alias", String(120), nullable=False),
+    Column("premise", Text, nullable=False),
+    Column("display_order", Integer, nullable=False),
+    Column("runtime_status", String(40), nullable=False),
+    Column("candidate_json", JSONB, nullable=False),
+    Column("candidate_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="dream",
+)
+
+mingli_quant_foundation_vectors = Table(
+    "quant_foundation_vectors",
+    metadata,
+    Column("vector_ref", String(180), primary_key=True),
+    Column("vector_version", String(100), nullable=False),
+    Column("case_ref", String(160), nullable=False),
+    Column("chart_version_ref", String(160), nullable=False),
+    Column("quant_profile_ref", String(240), nullable=False),
+    Column("quant_profile_hash", String(64), nullable=False),
+    Column("vector_json", JSONB, nullable=False),
+    Column("vector_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)
+
+mingli_mechanism_evidence_vectors = Table(
+    "mechanism_evidence_vectors",
+    metadata,
+    Column("vector_ref", String(180), primary_key=True),
+    Column("vector_version", String(100), nullable=False),
+    Column("case_ref", String(160), nullable=False),
+    Column("chart_version_ref", String(160), nullable=False),
+    Column("quant_vector_ref", String(180), nullable=False),
+    Column("mechanism_profile_ref", String(240), nullable=False),
+    Column("mechanism_profile_hash", String(64), nullable=False),
+    Column("vector_json", JSONB, nullable=False),
+    Column("vector_hash", String(64), nullable=False, unique=True),
+    Column("created_at", DateTime(timezone=True), nullable=False, server_default=func.now()),
+    schema="mingli",
+)

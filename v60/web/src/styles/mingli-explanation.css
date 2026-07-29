@@ -1,0 +1,173 @@
+.mingli-explanation {
+  display: grid;
+  gap: 9px;
+  margin-top: 14px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(49, 90, 74, 0.18);
+}
+
+.mingli-explanation > header,
+.mingli-explanation > header span,
+.mingli-explanation-claim summary {
+  display: flex;
+}
+
+.mingli-explanation > header {
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mingli-explanation > header span {
+  min-width: 0;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.mingli-explanation > header small {
+  color: #8f7439;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.mingli-explanation > header strong {
+  color: var(--ink);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.mingli-explanation > header em {
+  color: rgba(49, 90, 74, 0.68);
+  font-size: 8px;
+  font-style: normal;
+}
+
+.mingli-explanation-decision {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.mingli-explanation-list {
+  border-top: 1px solid rgba(49, 90, 74, 0.1);
+}
+
+.mingli-explanation-claim {
+  border-bottom: 1px solid rgba(49, 90, 74, 0.1);
+}
+
+.mingli-explanation-claim summary {
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.mingli-explanation-claim summary::-webkit-details-marker {
+  display: none;
+}
+
+.mingli-explanation-claim summary span {
+  flex: 0 0 auto;
+  min-width: 46px;
+  color: #315a4a;
+  font-size: 8px;
+}
+
+.mingli-explanation-claim[data-status="candidate"] summary span {
+  color: #9b6d23;
+}
+
+.mingli-explanation-claim[data-status="observe"] summary span {
+  color: #577281;
+}
+
+.mingli-explanation-claim summary strong {
+  min-width: 0;
+  flex: 1;
+  color: var(--ink);
+  font-size: 10px;
+  line-height: 1.35;
+}
+
+.mingli-explanation-claim summary i {
+  color: rgba(49, 90, 74, 0.6);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.mingli-explanation-claim[open] summary i {
+  transform: rotate(45deg);
+}
+
+.mingli-explanation-body {
+  display: grid;
+  gap: 10px;
+  padding: 0 0 13px 54px;
+}
+
+.mingli-explanation-body > p,
+.mingli-explanation-body section > p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.mingli-explanation-body h4 {
+  margin: 0 0 5px;
+  color: #315a4a;
+  font-size: 8px;
+}
+
+.mingli-explanation-body ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mingli-explanation-body li {
+  display: grid;
+  grid-template-columns: 7px 1fr;
+  gap: 6px;
+  color: var(--ink-soft);
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+.mingli-explanation-body li > span {
+  width: 5px;
+  height: 5px;
+  margin-top: 5px;
+  border-radius: 50%;
+  background: #4f8167;
+}
+
+.mingli-explanation-body li > span[data-evidence-status="candidate_only"],
+.mingli-explanation-body li > span[data-evidence-status="coordinate_only"] {
+  background: #bc8a39;
+}
+
+.mingli-unresolved-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.mingli-unresolved-list span {
+  padding: 3px 5px;
+  border: 1px solid rgba(155, 109, 35, 0.2);
+  color: #7c632f;
+  font-size: 8px;
+}
+
+.mingli-explanation-boundary {
+  padding-left: 8px;
+  border-left: 2px solid rgba(185, 135, 50, 0.42);
+  color: rgba(49, 90, 74, 0.7) !important;
+}

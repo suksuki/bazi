@@ -1,0 +1,163 @@
+{
+  "schema_version": "v60.actor-motion-process.001",
+  "asset_id": "ABU_V60_SEATED_IDLE_LOOP_V1",
+  "revision": "v1",
+  "character_version": "ABU_CHARACTER_V60_V1",
+  "source": {
+    "path": "media/sources/ABU_V60_SEATED_IDLE_LOOP_V1/v1/source.mp4",
+    "sha256": "cd0b7f6cf016bb1b7c27fae956cc9a52001578761bff36c773fa3429a343d67f",
+    "original_filename": "使用我上传的_×_图片作为严格第一帧和唯一角.mp4",
+    "video": {
+      "size": [
+        1280,
+        720
+      ],
+      "fps": 24,
+      "frames": 240,
+      "duration_ms": 10005
+    },
+    "audio": "AAC_48KHZ_STEREO_REMOVED"
+  },
+  "owner_decision": {
+    "status": "OWNER_APPROVED_FOR_SEGMENTED_IDLE_POSTPROCESS",
+    "whole_take_contract": "NOT_USED",
+    "selected_identity_use": "V60_QUIET_COMPANION_IDLE"
+  },
+  "identity_provenance": {
+    "character_reference_asset_id": "ABU_V60_CHARACTER_REFERENCE_V1",
+    "transparent_poster_asset_id": "ABU_V60_SEATED_TRANSPARENT_V1",
+    "character_version": "ABU_CHARACTER_V60_V1",
+    "mirror_safe": false
+  },
+  "selection": {
+    "source_start_frame_inclusive": 0,
+    "source_phase_match_frame": 54,
+    "source_end_frame_exclusive": 54,
+    "delivery_frame_count": 55,
+    "selection_window": [
+      48,
+      95
+    ],
+    "endpoint_rgba_mae_before_exact_close": 22.753072,
+    "endpoint_alpha_iou": 0.94394664,
+    "closure_method": "phase_matched_cut_then_exact_first_frame",
+    "crossfade_frames": 0,
+    "excluded_source_reason": "Later source frames contain a mouth-open reaction and are not part of the Owner-approved quiet IDLE extraction."
+  },
+  "alpha_matte": {
+    "source_key_sample": "#00bd14",
+    "similarity": 0.2,
+    "blend": 0.08,
+    "alpha_floor": 18,
+    "despill": {
+      "type": "green",
+      "mix": 0.6,
+      "expand": 0.04
+    }
+  },
+  "watermark": {
+    "removed": true,
+    "method": "exclude_before_alpha_delivery",
+    "retained_source_rect": [
+      0,
+      0,
+      1050,
+      720
+    ],
+    "excluded_source_rect": [
+      1050,
+      0,
+      1280,
+      720
+    ]
+  },
+  "canvas": [
+    960,
+    720
+  ],
+  "fps": 24,
+  "frame_count": 55,
+  "duration_ms": 2292,
+  "anchor": {
+    "type": "BOTTOM_CENTER",
+    "pixel": [
+      480,
+      704
+    ],
+    "normalized": [
+      0.5,
+      0.97777778
+    ],
+    "observed_range": [
+      704,
+      704
+    ]
+  },
+  "stabilization": {
+    "source_visible_height_range": [
+      643,
+      670
+    ],
+    "endpoint_median_heights": [
+      653.5,
+      668.0
+    ],
+    "output_bottom_anchor_range": [
+      704,
+      704
+    ],
+    "output_visible_height_range": [
+      613,
+      635
+    ]
+  },
+  "motion_contract": {
+    "semantic_state": "QUIET_COMPANION_IDLE",
+    "mouth_open_frames": 0,
+    "blink_contract_enforced": false,
+    "source_eye_motion_preserved": true,
+    "natural_breathing_preserved": true,
+    "head_or_body_translation_owned_by_runtime": false
+  },
+  "loop_validation": {
+    "first_last_rgba_mae": 0.0,
+    "first_last_png_identical": true,
+    "median_consecutive_rgba_mae": 4.608133,
+    "max_consecutive_rgba_mae": 22.893513,
+    "crossfade_frames": 0
+  },
+  "masters": {
+    "png_frame_pattern": "media/masters/ABU_V60_SEATED_IDLE_LOOP_V1/v1/frames/frame-%04d.png",
+    "aggregate_sha256": "8c3722313a58a787f0882ad1b9f74a4029555add85ef689b996bbd031ead4b1a"
+  },
+  "deliveries": {
+    "webm": {
+      "path": "web/public/assets/abu/v60/abu-v60-seated-idle-loop-v1/actor.webm",
+      "sha256": "489ea475a84d74e334541264cc75c090a5c99256261df87e7e786c402fd12858"
+    },
+    "webp": {
+      "path": "web/public/assets/abu/v60/abu-v60-seated-idle-loop-v1/actor.webp",
+      "sha256": "de727151efc7e5227ff3d8417121410450e1e0179b4a7ac9850dbfc8677d5ceb"
+    },
+    "poster": {
+      "path": "web/public/assets/abu/v60/abu-v60-seated-idle-loop-v1/poster.png",
+      "sha256": "237bbe06922643af7708133ff278f7847b27c8f45df0b29ac8989486a52e950b"
+    },
+    "checkerboard": {
+      "path": "media/review/ABU_V60_SEATED_IDLE_LOOP_V1/v1/checkerboard.mp4",
+      "sha256": "e4d2bf076d162fbbed51d5940710dc11b7a6d9d5c5a1e410651235d631abde6e"
+    },
+    "contact_sheet": {
+      "path": "media/review/ABU_V60_SEATED_IDLE_LOOP_V1/v1/contact-sheet.png",
+      "sha256": "5b247e2004d3e084bec399d5276bcc61e691e8c9218cf7d03feaedf39ccd5917"
+    }
+  },
+  "runtime_contract": {
+    "trigger": "ABU_VISIBLE_IN_QUIET_COMPANION_STATE",
+    "playback": "LOOP",
+    "interruptible": true,
+    "return_action": "SELF",
+    "anchor": "BOTTOM_CENTER",
+    "reduced_motion_asset_ref": "abu.v60.seated.idle.poster.v1"
+  }
+}

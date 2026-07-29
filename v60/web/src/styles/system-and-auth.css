@@ -1,0 +1,315 @@
+.runtime-error {
+  position: absolute;
+  z-index: 30;
+  top: 86px;
+  left: 50%;
+  max-width: min(680px, calc(100% - 32px));
+  margin: 0;
+  padding: 10px 14px;
+  transform: translateX(-50%);
+  color: #7a302a;
+  background: #fff1ef;
+  border: 1px solid #e9c4bf;
+  border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(97, 47, 42, 0.1);
+}
+
+.loading-shell {
+  place-items: center;
+  grid-template-rows: 1fr auto auto 1fr;
+}
+
+.loading-shell .brand-lockup {
+  align-self: end;
+}
+
+.loading-mark {
+  display: flex;
+  gap: 6px;
+  margin-top: 36px;
+}
+
+.loading-mark span {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #739682;
+  animation: loading-pulse 1.4s ease-in-out infinite;
+}
+
+.loading-mark span:nth-child(2) {
+  animation-delay: 160ms;
+}
+
+.loading-mark span:nth-child(3) {
+  animation-delay: 320ms;
+}
+
+.loading-line {
+  margin: 12px 0 0;
+  color: var(--ink-soft);
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 15px;
+}
+
+.login-shell {
+  grid-template-rows: 76px minmax(0, 1fr);
+}
+
+.login-header {
+  grid-template-columns: 1fr auto;
+}
+
+.login-world-mark {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 11px;
+}
+
+.login-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(340px, 0.75fr);
+  gap: 22px;
+  min-height: 0;
+  padding: 22px 28px 28px;
+}
+
+.login-visual,
+.login-panel {
+  min-height: 0;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  box-shadow: var(--shadow);
+}
+
+.login-visual {
+  position: relative;
+}
+
+.dream-canvas,
+.dream-canvas canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.dream-canvas canvas {
+  display: block;
+  filter: saturate(0.94) brightness(1.01) contrast(0.98);
+}
+
+.login-visual-wash {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  background:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 250, 0.01) 0%,
+      rgba(255, 255, 250, 0.04) 44%,
+      rgba(255, 255, 250, 0.14) 100%
+    ),
+    rgba(249, 249, 241, 0.02);
+  box-shadow:
+    inset 0 0 100px rgba(255, 255, 248, 0.12),
+    inset 0 -130px 130px rgba(40, 68, 54, 0.045);
+  pointer-events: none;
+}
+
+.login-intro {
+  position: absolute;
+  z-index: 3;
+  top: 12%;
+  left: 51%;
+  width: 42%;
+  max-width: 440px;
+  padding: 0;
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
+}
+
+.login-intro .eyebrow {
+  padding-left: 0;
+  margin-bottom: 10px;
+}
+
+.login-intro h1,
+.login-intro p {
+  margin: 0;
+}
+
+.login-intro h1 {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: clamp(32px, 3.8vw, 54px);
+  line-height: 1.18;
+}
+
+.login-intro > p:last-child {
+  max-width: 450px;
+  margin-top: 14px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.login-abu {
+  position: absolute;
+  z-index: 4;
+  right: -2%;
+  bottom: -2%;
+  width: min(56%, 480px);
+  height: auto;
+  pointer-events: none;
+  filter: drop-shadow(0 13px 16px rgba(28, 50, 40, 0.22));
+}
+
+.login-scene-note {
+  position: absolute;
+  z-index: 4;
+  bottom: 22px;
+  left: 22px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0;
+  padding: 10px 13px;
+  color: #365c4e;
+  background: rgba(255, 255, 252, 0.88);
+  border: 1px solid rgba(224, 230, 221, 0.95);
+  border-radius: 6px;
+  font-size: 11px;
+  backdrop-filter: blur(12px);
+}
+
+.login-scene-note span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #62a17f;
+  box-shadow: 0 0 0 4px rgba(98, 161, 127, 0.14);
+}
+
+.login-panel {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(34px, 4.8vw, 70px);
+}
+
+.login-panel h2,
+.login-panel p {
+  margin: 0;
+}
+
+.login-panel h2 {
+  font-family: "Noto Serif SC", "Songti SC", serif;
+  font-size: 28px;
+}
+
+.login-panel > div > p:last-child {
+  margin-top: 10px;
+  color: var(--ink-faint);
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.login-panel .eyebrow {
+  padding-left: 0;
+}
+
+.login-form {
+  display: grid;
+  gap: 15px;
+  margin-top: 28px;
+}
+
+.login-form label {
+  display: grid;
+  gap: 7px;
+  color: var(--ink-soft);
+  font-size: 11px;
+}
+
+.login-form input {
+  width: 100%;
+  height: 46px;
+  padding: 0 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 5px;
+  color: var(--ink);
+  background: #fbfcfa;
+  outline: none;
+}
+
+.login-form input:focus {
+  border-color: #779a87;
+  box-shadow: 0 0 0 3px rgba(105, 151, 126, 0.12);
+}
+
+.login-form button {
+  width: 100%;
+  margin-top: 5px;
+}
+
+.login-error {
+  color: #a34339;
+  font-size: 11px;
+}
+
+.login-boundary {
+  margin-top: 24px !important;
+  color: #98a59f;
+  font-size: 9px;
+  line-height: 1.5;
+}
+
+@keyframes organ-breathe {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@keyframes organ-halo {
+  0%,
+  100% {
+    opacity: 0.62;
+    transform: scale(0.96);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes organ-ripple {
+  0% {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+  28% {
+    opacity: 0.72;
+  }
+  78%,
+  100% {
+    opacity: 0;
+    transform: scale(1.18);
+  }
+}
+
+@keyframes loading-pulse {
+  0%,
+  100% {
+    opacity: 0.35;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-3px);
+  }
+}

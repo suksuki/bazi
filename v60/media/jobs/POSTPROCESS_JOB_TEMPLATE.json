@@ -1,0 +1,52 @@
+{
+  "schema_version": "v60.media-postprocess-job.001",
+  "job_ref": "replace-with-stable-job-ref",
+  "media_id": "REPLACE_MEDIA_ID",
+  "revision": "v1",
+  "mode": "ACTOR_GREENSCREEN_OR_SCENE_OR_AUDIO",
+  "source_path": "media/sources/REPLACE_MEDIA_ID/v1/source.mp4",
+  "source_sha256": "replace-with-source-sha256",
+  "authorized_watermark_work": true,
+  "trim": {
+    "start_frame_inclusive": 0,
+    "end_frame_exclusive": null,
+    "selection_reason": "record the visual or gait phase evidence"
+  },
+  "watermark": {
+    "method": "SAFE_CROP_OR_EXCLUDE_BEFORE_ALPHA",
+    "source_rect": null,
+    "notes": "No generative inpainting. The owner-authorized generated source is retained unchanged."
+  },
+  "video": {
+    "remove_audio_from_visual_master": true,
+    "preserve_source_audio_stem": false,
+    "key_color": "#19a61e",
+    "similarity": 0.17,
+    "blend": 0.07,
+    "despill_mix": 0.55,
+    "anchor": "BOTTOM_CENTER",
+    "stabilize_scale": true,
+    "preserve_natural_vertical_motion": true,
+    "loop_mode": "LOOP_OR_ONE_SHOT",
+    "crossfade_allowed": false
+  },
+  "audio": {
+    "master_sample_rate_hz": 48000,
+    "master_bit_depth": 24,
+    "integrated_loudness_target_lufs": -20,
+    "true_peak_ceiling_dbtp": -2,
+    "narration_priority": true
+  },
+  "deliveries": [
+    "VP9_ALPHA_WEBM",
+    "ANIMATED_WEBP",
+    "REDUCED_MOTION_PNG",
+    "PNG_MASTER_FRAMES",
+    "CHECKERBOARD_REVIEW",
+    "AUDIO_WAV_MASTER",
+    "AUDIO_OPUS",
+    "AUDIO_MP3"
+  ],
+  "cue_bundle_ref": null,
+  "publication_status": "NOT_PUBLISHED"
+}

@@ -1,0 +1,80 @@
+{
+  "packages": [
+    {
+      "package_hash": "39c72d431c94813c1404fd7d0a91eb4cdb53a9065e344e0350de68d33a28aaed",
+      "package_ref": "v60.episode-package.yanzhou-old-channel.v1",
+      "path": "yanzhou-old-channel-v1.json"
+    },
+    {
+      "package_hash": "0e6b48db2daa791ab72e4b7309b11201b456bb1be8aecc5b1668ac31fa796bda",
+      "package_ref": "v60.episode-package.yanzhou-wet-bank.v1",
+      "path": "yanzhou-wet-bank-v1.json"
+    },
+    {
+      "package_hash": "72646d1c2ad45def33b726ce4dde3bded590e3581a08e15df10f7b6cd46c4888",
+      "package_ref": "v60.episode-package.yanzhou-shared-night-water.v1",
+      "path": "yanzhou-shared-night-water-v1.json"
+    },
+    {
+      "package_hash": "7fd44db2922b1e5d486505458dbbd32f39cd7c87dd9ec4ca33595e1e77ea4361",
+      "package_ref": "v60.episode-package.yanzhou-water-record.v1",
+      "path": "yanzhou-water-record-v1.json"
+    },
+    {
+      "package_hash": "87b9dd4f823dfca5ae17582a68a9490a0a72d0905e6b0ae697c4b8f3b9492921",
+      "package_ref": "v60.episode-package.yanzhou-roster-duty.v1",
+      "path": "yanzhou-roster-duty-v1.json"
+    }
+  ],
+  "registry_version": "v60.episode-source-registry.002",
+  "transitions": [
+    {
+      "definition": {
+        "from_question_ref": "v60-question-yanzhou-old-channel-v1",
+        "label": "过一段时间，再回到这棵树",
+        "runtime_status": "ACTIVE",
+        "to_question_ref": "v60-question-yanzhou-wet-bank-v1",
+        "transition_ref": "v60-episode-transition-cff6c9c680248cf9a1c4",
+        "transition_version": 1
+      },
+      "from_package_ref": "v60.episode-package.yanzhou-old-channel.v1",
+      "to_package_ref": "v60.episode-package.yanzhou-wet-bank.v1"
+    },
+    {
+      "definition": {
+        "from_question_ref": "v60-question-yanzhou-wet-bank-v1",
+        "label": "下一个夜晚，再看看这次承诺",
+        "runtime_status": "ACTIVE",
+        "to_question_ref": "v60-question-yanzhou-shared-night-water-v1",
+        "transition_ref": "v60-episode-transition-98228c9b6543be58f6ec",
+        "transition_version": 1
+      },
+      "from_package_ref": "v60.episode-package.yanzhou-wet-bank.v1",
+      "to_package_ref": "v60.episode-package.yanzhou-shared-night-water.v1"
+    },
+    {
+      "definition": {
+        "from_question_ref": "v60-question-yanzhou-shared-night-water-v1",
+        "label": "下一次集议前，再看看那块木片",
+        "runtime_status": "ACTIVE",
+        "to_question_ref": "v60-question-yanzhou-water-record-v1",
+        "transition_ref": "v60-episode-transition-c3542deabecb97a76d25",
+        "transition_version": 1
+      },
+      "from_package_ref": "v60.episode-package.yanzhou-shared-night-water.v1",
+      "to_package_ref": "v60.episode-package.yanzhou-water-record.v1"
+    },
+    {
+      "definition": {
+        "from_question_ref": "v60-question-yanzhou-water-record-v1",
+        "label": "集议结束后，看看记录带来了什么",
+        "runtime_status": "ACTIVE",
+        "to_question_ref": "v60-question-yanzhou-roster-duty-v1",
+        "transition_ref": "v60-episode-transition-6e461f3019d35530687e",
+        "transition_version": 1
+      },
+      "from_package_ref": "v60.episode-package.yanzhou-water-record.v1",
+      "to_package_ref": "v60.episode-package.yanzhou-roster-duty.v1"
+    }
+  ]
+}

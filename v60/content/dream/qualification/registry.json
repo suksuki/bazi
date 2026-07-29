@@ -1,0 +1,21 @@
+{
+  "registry_version": "v60.episode-source-registry.002",
+  "packages": [
+    {
+      "package_ref": "v60.episode-package.wenxi-archive-trial.v1",
+      "path": "wenxi-archive-trial-v1.json",
+      "package_hash": "a978be279f7a873fe7ce877880d57c3cff58b5e7511b4c74a6741b7779058720"
+    },
+    {
+      "package_ref": "v60.episode-package.heyang-dyed-cloth.v1",
+      "path": "heyang-dyed-cloth-v1.json",
+      "package_hash": "60db976f06d87a426e114a2fbccc7c58293142ecfd169da9032d82522f5a2f99"
+    },
+    {
+      "package_ref": "v60.episode-package.zhaoning-lantern-roster.v1",
+      "path": "zhaoning-lantern-roster-v1.json",
+      "package_hash": "d8a1b21b01e5ceffa737d61ba16d232c5c38c0d28bbdb7f8c92b80096719d424"
+    }
+  ],
+  "transitions": []
+}

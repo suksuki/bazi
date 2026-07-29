@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+from typing import Any
+
+from fastapi import APIRouter, HTTPException, status
+
+from abu_v60.api.identity import SessionDependency
+from abu_v60.db import engine
+from abu_v60.decision import (
+    DecisionNotFinal,
+    ReasonerProviderError,
+    ReasonerRuntimeUnavailable,
+)
+from abu_v60.experience.home import (
+    HomeExperienceService,
+    HomeExperienceUnavailableError,
+)
+from abu_v60.mingli import MechanismComparisonUnavailableError
+
+router = APIRouter(prefix="/api/v60/experience", tags=["experience"])
+service = HomeExperienceService(engine)
+
+
+@router.get("/home")
+def home_experience(session: SessionDependency) -> dict[str, Any]:
+    try:
+        return service.snapshot(account_ref=session.account.account_ref)
+    except HomeExperienceUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+
+
+@router.post("/home/mechanism-comparison")
+def compare_home_mechanisms(session: SessionDependency) -> dict[str, Any]:
+    try:
+        return service.compare_mechanisms(
+            account_ref=session.account.account_ref,
+        )
+    except HomeExperienceUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except MechanismComparisonUnavailableError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc
+    except ReasonerRuntimeUnavailable as exc:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=str(exc),
+        ) from exc
+    except ReasonerProviderError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_502_BAD_GATEWAY,
+            detail=str(exc),
+        ) from exc
+    except DecisionNotFinal as exc:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail=str(exc),
+        ) from exc

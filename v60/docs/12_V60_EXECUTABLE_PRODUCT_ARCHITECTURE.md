@@ -1,0 +1,535 @@
+# V60 Executable Product Architecture
+
+Status: `IMPLEMENTED_LOCAL_FOUNDATION_V3`
+
+This document records the architecture that is executable in the V60
+repository. It is not a future platform diagram. Each active module below has
+Runtime code, an explicit owner boundary and an architecture-registry entry.
+
+## Product definition
+
+V60 is a Mingli-centered Life Intelligence product. Abu Dream is the
+priority game breakthrough, not the truth owner:
+
+```text
+Mingli Calculation
+  -> owns reproducible readings, evidence and explicit uncertainty
+
+Dream World
+  -> makes bounded uncertainty, judgment, waiting and consequence playable
+
+Mingli Lab
+  -> researches improvements and proposes versioned Knowledge admission
+
+Abu Says
+  -> expresses the exact current Mingli Reading without creating another one
+
+Abu Theater
+  -> directs approved material into scripts, storyboards, voice and media
+```
+
+The first four online units share one Case and one lineage. Theater is a
+relatively independent Studio workflow, but it still consumes approved source
+packages and cannot create facts, events or Mingli conclusions.
+
+## Executable module graph
+
+```text
+Identity Authority
+  -> Knowledge Authority
+      -> Mingli Cognitive Engine
+          -> Cognitive Decision Kernel
+              -> World Continuity Engine
+                  -> Life Story Engine
+                      -> Dream Game Engine
+
+Media Registry --------------------------> presentation
+Migration Boundary ----------------------> admitted V60 records
+
+One shared lineage
+  -> Experience Context Envelope
+  -> Mingli Unit
+  -> Dream Unit
+  -> Lab Unit
+  -> Abu Says Unit
+
+Approved source package
+  -> Theater Studio
+  -> in-product scene / YouTube / Douyin / other channel package
+```
+
+The machine-readable source is
+`abu_v60.architecture.registry.RUNTIME_ARCHITECTURE`. Startup validation rejects
+duplicate schema owners, unknown module dependencies and product units that
+attempt to write canonical state.
+
+## Canonical write owners
+
+| Schema or state | Unique owner | Other modules |
+| --- | --- | --- |
+| Account, session, profile, consent | Identity | Read through identity ports |
+| Admitted knowledge profile identity and content Hash | Knowledge | Read exact immutable profile |
+| ChartVersion, facts, LifeCaseRevision | Mingli | Read-only projection |
+| Decision request, gate receipt, formal decision | Cognition | Submit typed requests |
+| ClockEpoch, WorldEvent, evidence, actor timeline, outbox | World | Consume typed output |
+| QuestionInstance and ScenePlan | Story | Read committed source refs |
+| Encounter, organ progress, AnswerSeal, Fruit, Reveal | Dream Game | Issue commands |
+| Asset identity, version, hash and Runtime delivery | Media | Resolve by asset ID |
+| Import receipt and source lineage | Migration | No Runtime fallback to V50 |
+
+Product units own no database schema and cannot write canonical state.
+
+## Runtime code ownership
+
+Module ownership is reflected in source boundaries instead of accumulating in
+one application service:
+
+| Source owner | Responsibility | Explicitly does not own |
+| --- | --- | --- |
+| `dream.service.DreamService` | legal command orchestration and transaction order | public read projection, raw persistence helpers, reconciliation policy |
+| `dream.persistence.DreamRepository` | Encounter/Tree optimistic writes and immutable command receipts | command legality, story content, public copy |
+| `dream.projection.DreamSnapshotProjector` | Episode-scoped public read model | canonical writes or state transitions |
+| `dream.outcomes.DreamOutcomeCoordinator` | committed WorldEvent to Fruit/Reveal reconciliation | browser commands or World outcomes |
+| `App` | session, navigation and Runtime composition | login layout, companion-unit internals |
+| `components/*` | bounded presentation responsibilities | canonical product state |
+
+The executable source-budget audit prevents these boundaries from silently
+collapsing back into thousand-line files. It scans Runtime source only; media
+post-processing tools and generated outputs are governed by their own pipeline
+contracts.
+
+Knowledge currently owns a small code-native Registry rather than a database
+schema. It resolves exact `profile_id + profile_version + profile_hash`,
+publishes a non-sensitive manifest and exposes immutable lookup views to
+Mingli. Unknown or changed profiles fail closed. Admission does not imply
+professional review, and the Profile's forbidden-inference boundary remains
+part of the hashed content.
+
+Mingli owns rule evaluation against those admitted profiles. A qualification
+receipt proves one named evidence dimension and never grants a canonical
+write. The initial executable dimension is structure visibility only:
+
+```text
+typed relation-membership fact
+-> exact Knowledge rule Profile + Hash
+-> CandidateQualificationReceipt
+-> Lab may display structure evidence
+-> effect/capacity/usability/timing/professional admission remain UNRESOLVED
+-> Decision candidate remains unqualified
+```
+
+This boundary prevents both UI code and an LLM from promoting a visible
+relation into effective work.
+
+`ExperienceContextEnvelope` is the executable port between canonical owners
+and the five product units. It binds one Encounter/Case/World lineage and
+formal facts into a frozen Pydantic contract. Baseline evidence is committed
+no later than cutoff and carries no prediction credit. Context v3 has a
+separate post-cutoff `revealed_evidence` channel: it remains empty until a
+Reveal exists and then accepts only committed World evidence after cutoff and
+no later than the current World Tick. The two evidence sets cannot overlap.
+The Envelope emits a deterministic SHA-256 plus an explicit disclosure
+manifest for each unit. Outcome atoms, sealed outcomes, hidden NPC choices and
+pre-Reveal DecisionRefs fail validation instead of relying on projector
+convention.
+
+Experience Context v3 also carries the current
+`EpisodeNarrativeMoment`. Its phase and disclosure class must agree with
+Encounter progress. This gives Dream, Abu Says and Theater one authored story
+source while preserving their separate projection boundaries. Theater reads
+baseline evidence before Reveal and committed outcome evidence after Reveal.
+
+## Central brain and decision order
+
+`CognitiveDecisionKernel` is the routing authority, not an all-knowing model.
+It follows this order:
+
+```text
+1. deterministic fact or transition available
+   -> system decides
+
+2. admitted versioned rule available
+   -> rule qualifies candidates
+
+3. unresolved candidates and an authorized reasoning contract
+   -> bounded LLM may compare them
+
+4. consent, preference or irreversible subjective choice
+   -> human decides
+
+5. formal record requested
+   -> Epistemic Gate validates provenance and commits
+
+insufficient evidence
+   -> UNRESOLVED
+```
+
+The LLM cannot create chart facts, permissions, world outcomes or global
+knowledge. A provider-neutral bounded Reasoner Host and strict structured
+output adapter are executable, while the current local provider configuration
+remains disabled:
+
+```text
+multiple qualified candidates
+-> LLM_REASONER route
+-> exact visible Evidence/Candidate projection
+-> provider structured output
+-> bounded DecisionProposal
+-> EpistemicGate evidence/candidate validation
+-> immutable DecisionRecord
+```
+
+The Host stamps provider, model, prompt, provider-response and context
+identities, and retries first recover an existing immutable record instead of
+calling the model again. The Gate receipt permits only the DecisionRecord.
+Domain owners must still apply their own typed command, and current Runtime
+configuration exposes `NOT_CONFIGURED` rather than substituting a hidden model
+or generated answer.
+
+The executable decision path is:
+
+```text
+typed DecisionRequest
+-> CognitiveDecisionKernel
+-> CognitiveDecisionCoordinator
+-> immutable DecisionRecord
+-> owning World or Dream transaction continues
+```
+
+World settlement and Reveal reconciliation use this path today. The record
+contains the complete routed request and result, SHA-256, authority, method,
+correlation and causation. The same decision identity accepts only an exact
+replay. `decision.service` is the sole writer to the Cognition schema.
+
+Player gestures follow an equally explicit path:
+
+```text
+product gesture
+-> DreamCommandEnvelope
+-> DreamGameEngine phase and target validation
+-> Dream owner transaction
+-> committed Encounter version
+-> shared Experience Context
+```
+
+The envelope binds the Encounter identity, expected version, idempotency
+identity and exact command payload. Presentation cannot call domain mutators
+directly. The accepted envelope and its result are atomically preserved in an
+immutable `DreamCommandReceipt`. An unrecorded stale version fails closed; an
+exact receipt-backed retry returns the already committed state, while changed
+reuse of the idempotency key conflicts.
+
+`WAITING_FOR_WORLD` deliberately has no canonical client command. The browser
+cannot advance World Tick or settle an event. It polls the read-only Encounter
+projection while the Runtime host invokes the World owner from authoritative
+database time.
+
+Mutable canonical objects are not copied directly into that projection.
+`EpisodePublicProjection` applies the current Episode's disclosure horizon:
+
+```text
+before Reveal
+  -> baseline Actor event only
+  -> mutable Actor state withheld
+  -> Episode-local LifeTree state
+
+after Reveal
+  -> baseline + this Episode's outcome event
+  -> later Episode events remain excluded
+  -> current Actor state only when provably inside the same horizon
+```
+
+This prevents a late-arriving viewer from learning a future chapter merely
+because the canonical Actor or LifeTree has already advanced.
+
+## Game engine split
+
+V60 does not put all game behavior in a single scene component.
+
+### Dream Game Engine
+
+Code:
+
+- `abu_v60.game.engine.DreamGameEngine`
+- `abu_v60.game.contracts`
+- `abu_v60.game.director.DreamGameplayDirector`
+
+Owns the pure encounter state machine:
+
+```text
+OBSERVING
+-> QUESTION_OPEN
+-> WAITING_FOR_WORLD
+-> REVEAL_READY
+-> REVEALED
+-> COMPLETED
+```
+
+It validates commands, derives legal actions and projects organ visibility. It
+does not own the world clock or outcome.
+
+All mutable commands enter through the single
+`POST /api/v60/dream/command` boundary. The engine validates that the command
+is legal in the current phase and that an organ target has the required
+semantic role. This keeps React, accessibility controls and later media cues
+on one authoritative gameplay path.
+
+The Dream schema also owns the command receipt ledger. It records no new
+story fact: it proves exactly which command envelope caused which committed
+Encounter version and state Hash. This is the replay boundary for double
+clicks, delayed requests and process recovery.
+
+Authored content enters through a complete `DreamEpisodeDefinition`. Runtime
+persists the narrower `DreamEpisodeContract`, its Hash and a separately
+compiled admission manifest beside the QuestionInstance. The Director rejects
+tampering or identity disagreement before producing scene commands. All
+three active visits use this same path; Dream Service has no authored
+Question-ID branches.
+
+The complete definition is compiled from a hash-locked source package owned by
+Story. `content/dream/episodes/registry.json` binds each package identity,
+relative path, SHA-256 and explicit transition graph. Each package also carries
+the WorldEvent definitions required by its Episode. Package compilation proves
+the event Actor, type, due Tick, summary and sealed outcome match the Episode,
+then Seed submits the resulting contracts to the existing World and Story
+owners. Package templates accept only declared canonical bindings and are
+validated as a full `DreamEpisodeDefinition` before admission. These files are
+never a Runtime fallback: after admission, `DreamEpisodeCatalog` reads only
+PostgreSQL contracts and admission manifests.
+
+Episode ordering is not mutable Episode content. Story persists an independent
+`EpisodeTransitionContract` in `story.episode_transitions`. The active graph
+requires these explicit, hash-checked edges; legacy continuation fields remain
+read-only historical payload and are not a Runtime fallback.
+
+The source Registry is also the only authoring truth. Legacy Python slice
+modules resolve compatibility values by compiling the Registry package; they
+contain no authored prompts, outcomes or transitions. Seed derives navigation
+from Registry edges, and the repository exposes only a non-writing source
+audit tool.
+
+The persisted contract also owns exactly one narrative moment for every legal
+Dream phase. Application headings, status copy, Abu speech and Theater beats
+come from this contract through the shared context. React and product
+projectors do not infer narrative from chapter or status.
+
+### World Continuity Engine
+
+Code:
+
+- `abu_v60.world.admission.WorldEventAdmissionService`
+- `abu_v60.world.service.WorldContinuityEngine`
+
+The Admission Service is the only World write path for authored event
+definitions and initial evidence. It persists a deterministic authority
+receipt and rejects changed-content identity replay. `WorldContinuityEngine`
+owns integer Tick, append-only epochs, due-event settlement, actor timeline,
+later event evidence and transactional outbox. The current ClockEpoch projects
+database wall time at a rational rate; a transaction-scoped PostgreSQL
+advisory lock fences each Runtime pulse. Browser time never determines facts.
+
+### Bootstrap owner ports
+
+Code:
+
+- `abu_v60.migration.admission.MigrationBatchAdmissionService`
+- `abu_v60.identity.admission.IdentityAdmissionService`
+- `abu_v60.mingli.admission.MingliCaseAdmissionService`
+- `abu_v60.world.actor_admission.WorldActorAdmissionService`
+- `abu_v60.dream.tree_admission.LifeTreeAdmissionService`
+
+Seed and V50 migration workflows coordinate these ports but own none of their
+tables. Exact replay verifies stable identity, source and Hashes. Actor
+timeline/state and LifeTree lifecycle state are intentionally excluded from
+bootstrap rewrites, so a restart or Seed replay cannot rewind the world.
+Migration-backfilled LifeTrees are marked as such because their historical
+initial organ set cannot be reconstructed honestly.
+
+### Runtime host
+
+Code:
+
+- `abu_v60.runtime.service.WorldRuntimeCoordinator`
+- `abu_v60.runtime.service.WorldRuntimeWorker`
+
+The host owns process lifecycle only. It periodically invokes the existing
+World write port, then asks the Dream owner to catch up waiting projections.
+It owns no schema. A failed second transaction cannot lose the World result:
+the next pulse finds settled events whose Encounter projection is still
+pending and applies it idempotently.
+
+### Life Story Engine
+
+Code:
+
+- `abu_v60.story.admission.StoryEpisodeAdmissionService`
+- `abu_v60.story.admission.StoryEpisodeTransitionAdmissionService`
+- `abu_v60.story.service.LifeStoryEngine`
+
+The Admission Service is the only Story write owner for playable
+QuestionInstances. It recompiles and validates the Episode, resolves canonical
+authority, persists the immutable admission manifest and rejects identity
+conflicts. `LifeStoryEngine` then compiles already committed semantic objects
+into deterministic question metadata and ScenePlans. The Transition Admission
+Service is the only writer for append-only Episode graph edges. It validates
+endpoint identity and time order, supports exact idempotent replay and rejects
+changed-content identity reuse. None may invent a LifeEvent or world result.
+
+### Presentation engine
+
+React owns application composition and accessible interaction. PixiJS remains
+the selected 2D scene engine for spatial layers and animated scene-native
+interaction. Video and audio are resolved through the Media Registry and never
+advance canonical state by playback completion alone.
+
+The Media Runtime Resolver validates the production catalogue and asset
+registry, then exposes only named Runtime bindings through Bootstrap. Client
+components receive versioned URL/hash projections and have no direct asset
+paths. Cue admission, reduced-motion fallback and cross-identity fallback are
+therefore server-verifiable rather than component conventions.
+
+## Mingli and research boundary
+
+`MingliWorkspaceProjector` renders the formal chart workspace:
+
+- chart version;
+- four pillars;
+- typed admitted facts;
+- source references;
+- read-only LifeCase lineage.
+
+`LabProjector` renders a separate research boundary:
+
+- available formal facts;
+- structural candidates compiled from admitted relation facts;
+- effect, capacity and professional-admission status;
+- no canonical write.
+
+A relationship fact is not automatically effective work. Unknown capacity or
+professional status remains visibly `UNRESOLVED`.
+
+The executable candidate chain is:
+
+```text
+Mingli Fact
+-> StructuralCandidateCompiler
+-> MingliCandidatePath(selection_qualified=false)
+-> CognitiveDecisionKernel(llm_allowed=false)
+-> UNRESOLVED / NONE
+-> LabProjector
+```
+
+Only bounded membership facts are accepted. The compiler rejects generated,
+malformed or effect-claiming inputs. Stable candidate IDs include the compiler
+version, ChartVersionRef, relation FactRef and participants. Lab cannot write
+Mingli truth. It may produce a versioned research proposal; only Knowledge
+Authority admission can publish a new immutable Profile for later
+calculations. Existing Readings remain pinned to their original Profile.
+
+## Five product units
+
+| Unit | Reads | May do | Must never do |
+| --- | --- | --- | --- |
+| Mingli | Mingli, Knowledge, Cognition | Produce a reproducible Reading and provenance | Turn an unresolved candidate into fact |
+| Dream | Dream, World, Story, Media | Play a bounded proposition and show consequence | Invent outcome or overwrite a Reading |
+| Lab | Mingli, Knowledge, Cognition | Inspect evidence, test candidates and propose admission | Write LifeCase or self-publish a rule |
+| Abu Says | Mingli Reading, Story, Media | Explain, listen and navigate in the current Reading | Create a second analysis or decide for user |
+| Theater | Approved source package, Story, World, Media | Direct, voice, compose and distribute disclosed material | Quietly rewrite canon or act as truth source |
+
+`ExperienceProjectionComposer` produces these read models from one validated
+`ExperienceContextEnvelope`. Every unit returns its shared `context_ref`; a
+divergence is rejected before the API response. URL `view` and `focus` remain
+disposable navigation state.
+
+The in-product Theater projection is the disclosed preview surface. Full
+Theater Studio production is a separate workflow with versioned Director
+Brief, script, storyboard, voice, asset, render and channel-package records.
+Its outputs must declare whether they are canonical replay, authorized
+adaptation, simulation branch or fictional education.
+
+## Persistence and recovery
+
+- PostgreSQL is the fact source.
+- Every external command uses an idempotency key where duplication is
+  possible.
+- World settlement commits event, evidence, state and outbox atomically.
+- World settlement first validates the immutable WorldEvent admission
+  manifest under lock.
+- Bootstrap replay first validates immutable Platform, Identity, Mingli,
+  Actor and LifeTree admission boundaries and never resets evolved state.
+- World Tick continues while no browser is open and survives process restart.
+- No canonical product command can advance the World Clock. Waiting surfaces
+  may refresh read models but cannot write time or outcomes.
+- Encounter state survives refresh and process restart.
+- TreeProjection is rebuilt from committed state through the current Episode
+  horizon; the latest canonical tree version is not exposed as an earlier
+  chapter's public state.
+- URL state may restore a view or focus but cannot restore or alter facts.
+- Runtime status is read-only at `/api/v60/system/runtime-status`.
+- The same endpoint verifies the complete active Episode graph and publishes
+  its deterministic graph Hash plus the versioned Scene registry.
+- Catalog validation rechecks every admission manifest, authority binding and
+  outcome Hash; an unadmitted or drifted QuestionInstance makes Runtime
+  integrity fail closed.
+
+## Migration and legacy isolation
+
+V60 has no V50 Runtime import. Data or assets cross only through a versioned
+migration or media manifest. There is no old Provider, fixture, scenario or
+visual fallback in the canonical V60 path.
+
+The architecture audit command is:
+
+```bash
+.venv/bin/python tools/audit_runtime_architecture.py
+```
+
+It reports migration head, module owners, world clock, record counts and
+integrity defects without mutating product data.
+
+The supported local process owner is:
+
+```bash
+.venv/bin/python tools/local_runtime.py start
+```
+
+It writes only under `.runtime/`, verifies every expected core-engine version
+and full Runtime integrity before reporting ready, and refuses to terminate a
+process it did not start.
+
+## Language reservation
+
+The current product is authored in `zh-CN`.
+
+```yaml
+default_locale: zh-CN
+localization_status: RESERVED
+```
+
+IDs, hashes, evidence refs, Seals and world outcomes are language-neutral.
+V60 does not yet ship locale preferences, translation catalogues, switches or
+automatic translation.
+
+## Current honest boundary
+
+The executable architecture is ready; the content breadth is not:
+
+- one canonical authored world;
+- one canonical synthetic actor;
+- one persistent LifeTree;
+- three completed question encounters;
+- three hash-locked Episode source packages and two transitions that compile
+  to the admitted Runtime identities;
+- one bounded Mingli fact in the current slice;
+- one executable, Hash-locked Bazi foundation profile that is not yet
+  professionally reviewed;
+- no production LLM orchestration;
+- no large NPC population or content factory;
+- desktop composition validated; mobile visual design deferred;
+- further designer media still pending admission.
+
+The next work must deepen one visible playable experience through these owners,
+not add a parallel engine or another architecture layer.
+
+The game-production and episode-authoring contract is maintained in
+`docs/13_V60_GAMEPLAY_STORY_FOUNDATION.md`.

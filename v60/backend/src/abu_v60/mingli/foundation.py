@@ -1,0 +1,27 @@
+"""Compatibility exports; the executable profile is owned by Knowledge."""
+
+from abu_v60.knowledge import (
+    FORBIDDEN_INFERENCES,
+    FOUNDATION_OWNER_DECISION_HASH,
+    FOUNDATION_PROFILE_ID,
+    FOUNDATION_PROFILE_VERSION,
+    HIDDEN_STEMS,
+    SIX_CLASH,
+    SIX_HARMONY,
+    SOURCE_REF,
+    STEM_ELEMENTS,
+    STEM_POLARITY,
+)
+
+__all__ = [
+    "FORBIDDEN_INFERENCES",
+    "FOUNDATION_OWNER_DECISION_HASH",
+    "FOUNDATION_PROFILE_ID",
+    "FOUNDATION_PROFILE_VERSION",
+    "HIDDEN_STEMS",
+    "SIX_CLASH",
+    "SIX_HARMONY",
+    "SOURCE_REF",
+    "STEM_ELEMENTS",
+    "STEM_POLARITY",
+]

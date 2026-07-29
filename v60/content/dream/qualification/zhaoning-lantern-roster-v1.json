@@ -1,0 +1,318 @@
+{
+  "package_version": "v60.episode-source-package.002",
+  "package_ref": "v60.episode-package.zhaoning-lantern-roster.v1",
+  "binding_keys": [
+    "relationship_structure_fact_ref",
+    "relationship_life_domain_vector_ref"
+  ],
+  "definition_template": {
+    "runtime": {
+      "episode_ref": "v60-dream-episode-zhaoning-lantern-roster-v1",
+      "episode_version": 1,
+      "runtime_status": "ACTIVE",
+      "gameplay_id": "life_tree_question_v1",
+      "content_key": "dream.qualification.zhaoning-lantern-roster",
+      "chapter": "FIRST_VISIT",
+      "entrypoint": true,
+      "actor_ref": "v60-actor-zhaoning-v1",
+      "tree_ref": "v60-life-tree-zhaoning-v1",
+      "question_ref": "v60-question-zhaoning-lantern-roster-v1",
+      "baseline_event_ref": "v60-world-event-zhaoning-roster-agreed-v1",
+      "world_event_ref": "v60-world-event-zhaoning-roster-outcome-v1",
+      "cutoff_tick": 0,
+      "due_tick": 60,
+      "resolution_rule_hash": "54cc46b6c5fde995c8b06fbc74940d553080d5c1747103bddc37d4c33f2a030c",
+      "runtime_metadata": {
+        "baseline_event_ref": "v60-world-event-zhaoning-roster-agreed-v1",
+        "npc_choice_id": "stable_explicit",
+        "flower_name": "灯台守约花",
+        "fruit_name": "换班木牌果",
+        "return_label": null
+      },
+      "narrative": {
+        "narrative_version": "v60.episode-narrative.001",
+        "scene_ref": "v60-theater-scene-zhaoning-lantern-v1",
+        "moments": [
+          {
+            "phase": "OBSERVING",
+            "content_key": "dream.qualification.zhaoning-lantern-roster.observing",
+            "title": "山口灯台下的第一张轮值木牌",
+            "status_line": "先读一片现实叶和一片命纹叶",
+            "theater_beat": "照宁与邻居在山口灯台下写好第一张轮值木牌，第一夜都按时来了。",
+            "abu_line": "两片叶说的是已经发生的事，先别替后来下结论。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "QUESTION_OPEN",
+            "content_key": "dream.qualification.zhaoning-lantern-roster.question-open",
+            "title": "一次守约会长成怎样的协作",
+            "status_line": "三种后续都仍然可能",
+            "theater_beat": "这份约定还没经历雨夜、临时缺席或交接冲突。",
+            "abu_line": "只选你此刻更相信的解释，答案会原样留在花心。",
+            "disclosure": "BASELINE_ONLY"
+          },
+          {
+            "phase": "WAITING_FOR_WORLD",
+            "content_key": "dream.qualification.zhaoning-lantern-roster.waiting",
+            "title": "判断已经封进花心",
+            "status_line": "世界仍在继续，果实尚未成熟",
+            "theater_beat": "判断留在花心，事件按自己的时间继续。",
+            "abu_line": "先等一等。你的选择不会改变后来发生的事。",
+            "disclosure": "SEALED_NO_OUTCOME"
+          },
+          {
+            "phase": "REVEAL_READY",
+            "content_key": "dream.qualification.zhaoning-lantern-roster.reveal-ready",
+            "title": "世界的回应已经抵达",
+            "status_line": "雾白果实已经成熟，等待你亲手打开",
+            "theater_beat": "新证据已经写进果实，但尚未展开。",
+            "abu_line": "打开它时，只拿后来发生的事实和当时的判断对照。",
+            "disclosure": "WORLD_COMMITTED_HIDDEN"
+          },
+          {
+            "phase": "REVEALED",
+            "content_key": "dream.qualification.zhaoning-lantern-roster.revealed",
+            "title": "间歇的轮值，重新划清的边界",
+            "status_line": "逐项对照封存命题与后来证据",
+            "theater_beat": "轮值没有始终稳定，但双方通过重新约定边界维持了协作。",
+            "abu_line": "共同基线不计分，真正改变判断的是后来出现的两条证据。",
+            "disclosure": "OUTCOME_REVEALED"
+          },
+          {
+            "phase": "COMPLETED",
+            "content_key": "dream.qualification.zhaoning-lantern-roster.completed",
+            "title": "换班木牌果已经记入生命线",
+            "status_line": "这次复盘已经完成",
+            "theater_beat": "换班木牌果记下了这次判断与现实的距离。",
+            "abu_line": "果实记住的不是输赢，而是你的判断在哪些地方经得起事实。",
+            "disclosure": "OUTCOME_REVEALED"
+          }
+        ]
+      },
+      "continuation_question_ref": null,
+      "continuation_label": null,
+      "entry_world_event": null,
+      "tree_state_on_entry": null,
+      "tree_state_after_settlement": "FIRST_FRUIT_MATURED"
+    },
+    "actor_ref": "v60-actor-zhaoning-v1",
+    "tree_ref": "v60-life-tree-zhaoning-v1",
+    "question_version": 1,
+    "prompt": "第一个月结束时，这份灯台轮值会形成怎样的协作关系？",
+    "options": [
+      {
+        "choice_id": "stable_explicit",
+        "label": "轮值持续稳定，交接边界也保持清楚",
+        "proposition": {
+          "coordination": "stable",
+          "boundary": "explicit"
+        }
+      },
+      {
+        "choice_id": "intermittent_renegotiated",
+        "label": "协作间歇维持，并在过程中重新约定边界",
+        "proposition": {
+          "coordination": "intermittent",
+          "boundary": "renegotiated"
+        }
+      },
+      {
+        "choice_id": "ceased_unresolved",
+        "label": "轮值逐渐停止，交接边界仍然悬而未决",
+        "proposition": {
+          "coordination": "ceased",
+          "boundary": "unresolved"
+        }
+      }
+    ],
+    "baseline_evidence": [
+      {
+        "evidence_ref": "v60-evidence-zhaoning-first-night-v1",
+        "observed_at_tick": 0,
+        "summary": "照宁与邻居约定轮流照料山口灯台，第一夜双方都按时到场。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      },
+      {
+        "evidence_ref": "v60-evidence-zhaoning-untested-roster-v1",
+        "observed_at_tick": 0,
+        "summary": "这份约定还没经历雨夜、临时缺席或交接冲突。",
+        "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+      }
+    ],
+    "resolution_rule": {
+      "rule_version": "v60.atom-reconciliation.v1",
+      "compare_atoms": [
+        "coordination",
+        "boundary"
+      ],
+      "baseline_evidence_credit": false,
+      "exact_match": "SUPPORTED",
+      "mixed_match": "PARTIAL",
+      "no_match": "NOT_SUPPORTED",
+      "baseline_event_ref": "v60-world-event-zhaoning-roster-agreed-v1",
+      "npc_choice_id": "stable_explicit",
+      "flower_name": "灯台守约花",
+      "fruit_name": "换班木牌果",
+      "theater_scene_ref": "v60-theater-scene-zhaoning-lantern-v1",
+      "theater_beat": "照宁与邻居在山口灯台下写好第一张轮值木牌，第一夜都按时来了。",
+      "return_label": null
+    },
+    "sealed_outcome": {
+      "outcome_id": "intermittent_roster_renegotiated",
+      "resolved_proposition": {
+        "coordination": "intermittent",
+        "boundary": "renegotiated"
+      },
+      "evidence": [
+        {
+          "evidence_ref": "v60-evidence-zhaoning-storm-absence-v1",
+          "summary": "两次雨夜里原轮值没有按时发生，但双方都提前留下了替班消息。",
+          "atom": {
+            "coordination": "intermittent"
+          }
+        },
+        {
+          "evidence_ref": "v60-evidence-zhaoning-new-marker-v1",
+          "summary": "月底前，两人改用灯台木牌记录替班与交接，重新划清了责任。",
+          "atom": {
+            "boundary": "renegotiated"
+          }
+        }
+      ],
+      "actual_event": "轮值没有始终稳定，但双方通过重新约定边界维持了协作。"
+    },
+    "world_event_type": "LANTERN_ROSTER_RELATION_OUTCOME",
+    "world_event_summary": "观察灯台轮值是否形成持续协作与清晰边界。",
+    "organ_set": {
+      "evidence_leaf_world": {
+        "organ_ref": "v60-zhaoning-lantern-roster-organ-world-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          "v60-evidence-zhaoning-first-night-v1"
+        ],
+        "label": "已经发生的现实线索"
+      },
+      "evidence_leaf_structure": {
+        "organ_ref": "v60-zhaoning-lantern-roster-organ-structure-leaf-v1",
+        "role": "EVIDENCE_LEAF",
+        "source_refs": [
+          {
+            "$binding": "relationship_structure_fact_ref"
+          },
+          {
+            "$binding": "relationship_life_domain_vector_ref"
+          }
+        ],
+        "label": "relationship命纹留下的观察线索"
+      },
+      "structure_branch": {
+        "organ_ref": "v60-zhaoning-lantern-roster-organ-branch-v1",
+        "role": "STRUCTURE_BRANCH",
+        "source_refs": [
+          "v60-evidence-zhaoning-first-night-v1",
+          {
+            "$binding": "relationship_structure_fact_ref"
+          },
+          {
+            "$binding": "relationship_life_domain_vector_ref"
+          }
+        ],
+        "label": "现实行动与命纹之间的观察主脉"
+      },
+      "question_flower": {
+        "organ_ref": "v60-zhaoning-lantern-roster-organ-flower-v1",
+        "role": "QUESTION_FLOWER",
+        "source_refs": [
+          "v60-question-zhaoning-lantern-roster-v1"
+        ],
+        "label": "灯台守约花"
+      },
+      "outcome_fruit": {
+        "organ_ref": "v60-zhaoning-lantern-roster-organ-fruit-v1",
+        "role": "OUTCOME_FRUIT",
+        "source_refs": [
+          "v60-world-event-zhaoning-roster-outcome-v1"
+        ],
+        "label": "换班木牌果"
+      }
+    }
+  },
+  "world_event_definitions": [
+    {
+      "world_event_ref": "v60-world-event-zhaoning-roster-agreed-v1",
+      "world_ref": "abu-dream-world-v1",
+      "actor_ref": "v60-actor-zhaoning-v1",
+      "event_type": "LANTERN_ROSTER_RELATION_OUTCOME_BASELINE",
+      "due_tick": 0,
+      "initial_status": "SETTLED",
+      "event_payload": {
+        "summary": "照宁与邻居在山口灯台下写好第一张轮值木牌，第一夜都按时来了。",
+        "visibility": "PUBLIC_AFTER_COMMIT"
+      },
+      "sealed_outcome": {},
+      "settled_at_tick": 0,
+      "initial_evidence": [
+        {
+          "evidence_ref": "v60-evidence-zhaoning-first-night-v1",
+          "committed_at_tick": 0,
+          "payload": {
+            "evidence_ref": "v60-evidence-zhaoning-first-night-v1",
+            "observed_at_tick": 0,
+            "summary": "照宁与邻居约定轮流照料山口灯台，第一夜双方都按时到场。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          }
+        },
+        {
+          "evidence_ref": "v60-evidence-zhaoning-untested-roster-v1",
+          "committed_at_tick": 0,
+          "payload": {
+            "evidence_ref": "v60-evidence-zhaoning-untested-roster-v1",
+            "observed_at_tick": 0,
+            "summary": "这份约定还没经历雨夜、临时缺席或交接冲突。",
+            "epistemic_role": "DECISION_BASELINE_NO_CREDIT"
+          }
+        }
+      ]
+    },
+    {
+      "world_event_ref": "v60-world-event-zhaoning-roster-outcome-v1",
+      "world_ref": "abu-dream-world-v1",
+      "actor_ref": "v60-actor-zhaoning-v1",
+      "event_type": "LANTERN_ROSTER_RELATION_OUTCOME",
+      "due_tick": 60,
+      "initial_status": "SCHEDULED",
+      "event_payload": {
+        "summary": "观察灯台轮值是否形成持续协作与清晰边界。",
+        "due_tick": 60,
+        "resolution_owner": "V60_WORLD_ENGINE",
+        "answer_can_affect_outcome": false
+      },
+      "sealed_outcome": {
+        "outcome_id": "intermittent_roster_renegotiated",
+        "resolved_proposition": {
+          "coordination": "intermittent",
+          "boundary": "renegotiated"
+        },
+        "evidence": [
+          {
+            "evidence_ref": "v60-evidence-zhaoning-storm-absence-v1",
+            "summary": "两次雨夜里原轮值没有按时发生，但双方都提前留下了替班消息。",
+            "atom": {
+              "coordination": "intermittent"
+            }
+          },
+          {
+            "evidence_ref": "v60-evidence-zhaoning-new-marker-v1",
+            "summary": "月底前，两人改用灯台木牌记录替班与交接，重新划清了责任。",
+            "atom": {
+              "boundary": "renegotiated"
+            }
+          }
+        ],
+        "actual_event": "轮值没有始终稳定，但双方通过重新约定边界维持了协作。"
+      },
+      "settled_at_tick": null,
+      "initial_evidence": []
+    }
+  ]
+}
