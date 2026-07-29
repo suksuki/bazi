@@ -15,7 +15,7 @@ from abu_v60.architecture.contracts import (
 @lru_cache(maxsize=1)
 def runtime_architecture() -> RuntimeArchitecture:
     architecture = RuntimeArchitecture(
-        architecture_version="v60.runtime-architecture.038",
+        architecture_version="v60.runtime-architecture.039",
         modules=(
             RuntimeModule(
                 module_id="identity",
@@ -33,7 +33,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="mingli",
                 kind=ModuleKind.ENGINE,
-                version="v60.mingli-cognitive-engine.017",
+                version="v60.mingli-cognitive-engine.018",
                 status=ModuleStatus.ACTIVE,
                 owns_schemas=("mingli",),
                 reads_from=("identity",),
@@ -76,6 +76,8 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "evidence_gap_and_falsifier_matrix",
                     "versioned_candidate_evidence_depth_projection",
                     "carrier_source_timing_competition_contrast",
+                    "versioned_source_usability_prerequisite_projection",
+                    "source_scope_competition_and_evidence_gaps",
                 ),
                 writes_canonical_state=True,
             ),
@@ -278,7 +280,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-mingli",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-mingli.011",
+                version="v60.unit-mingli.012",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context",),
                 capabilities=(
@@ -296,6 +298,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "candidate_evidence_completeness",
                     "candidate_evidence_contrast",
                     "source_coordinate_review_summary",
+                    "source_usability_prerequisite_summary",
                 ),
             ),
             RuntimeModule(
@@ -328,7 +331,7 @@ def runtime_architecture() -> RuntimeArchitecture:
             RuntimeModule(
                 module_id="unit-lab",
                 kind=ModuleKind.PRODUCT_UNIT,
-                version="v60.unit-lab.008",
+                version="v60.unit-lab.009",
                 status=ModuleStatus.ACTIVE,
                 reads_from=("experience-context", "knowledge", "cognition"),
                 capabilities=(
@@ -342,6 +345,7 @@ def runtime_architecture() -> RuntimeArchitecture:
                     "mechanism_requirement_matrix",
                     "role_source_timing_competition_inspection",
                     "source_coordinate_relation_intersection_inspection",
+                    "source_scope_competition_inspection",
                     "research_proposal_requires_knowledge_admission",
                 ),
             ),

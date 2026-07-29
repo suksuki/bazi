@@ -16,6 +16,10 @@ import type {
   HomeSourceCoordinateReview,
   HomeSourceCoordinateReviewVector,
 } from "./homeSourceReviewTypes";
+import type {
+  HomeSourceUsabilityCarrier,
+  HomeSourceUsabilityPrerequisiteEnvelope,
+} from "./homeSourceUsabilityTypes";
 
 export type { HomeReadingBrief } from "./homeReadingTypes";
 export type { HomeMechanismQualification } from "./homeQualificationTypes";
@@ -27,6 +31,10 @@ export type {
   HomeSourceCoordinateReview,
   HomeSourceCoordinateReviewVector,
 } from "./homeSourceReviewTypes";
+export type {
+  HomeSourceUsabilityCarrier,
+  HomeSourceUsabilityPrerequisiteEnvelope,
+} from "./homeSourceUsabilityTypes";
 
 export interface HomeQuantFoundation {
   vector_ref: string;
@@ -292,6 +300,7 @@ export interface HomeSnapshot {
     };
     quant_foundation: HomeQuantFoundation;
     source_coordinate_review: HomeSourceCoordinateReviewVector;
+    source_usability_prerequisite: HomeSourceUsabilityPrerequisiteEnvelope;
     mechanism_evidence: HomeMechanismEvidence;
     timing_evidence: HomeTimingEvidence;
     life_domains: HomeLifeDomainEvidence;
@@ -326,6 +335,9 @@ export interface HomeSnapshot {
     source_review_vector_ref: string;
     source_review_vector_hash: string;
     source_coordinate_reviews: HomeSourceCoordinateReview[];
+    source_usability_prerequisite_ref: string;
+    source_usability_prerequisite_hash: string;
+    source_usability_prerequisite_carriers: HomeSourceUsabilityCarrier[];
     mechanism_vector_ref: string;
     mechanism_vector_hash: string;
     timing_vector_ref: string;

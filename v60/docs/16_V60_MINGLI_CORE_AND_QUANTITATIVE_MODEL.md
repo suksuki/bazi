@@ -1,6 +1,6 @@
 # V60 Mingli Core and Quantitative Model
 
-Status: `CANDIDATE_EVIDENCE_DEPTH_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+Status: `SOURCE_USABILITY_PREREQUISITE_V1_IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
 
 ## Product decision
 
@@ -34,6 +34,7 @@ must not be reported as real-world accuracy.
 | Quantitative foundation vector | Executable | Unweighted visible/hidden membership; not strength or probability |
 | Ten Gods | Executable | Complete deterministic stem matrix, profile-pinned and replayable |
 | Source / manifestation evidence | Partial executable | Exact and same-element cross-layer evidence only; effect unresolved |
+| Source usability discussion prerequisites | Executable | Competing source scopes and missing rules only; no scope selection or usability verdict |
 | Root usability and seasonal capacity | Missing | V50 research exists but is not admitted |
 | Relation effect and transformation | Missing | Relation membership is not effect |
 | Mechanism candidate evidence | Executable | Five versioned patterns; candidate presence only |
@@ -190,6 +191,50 @@ to the same `depth_ref`. They verify visible candidate contrast, explicit
 non-authority, zero document overflow and zero console/network failures. The
 complete local suite contains 214 passing tests; Runtime Architecture and
 source maintainability audits also pass.
+
+## Implemented source-usability discussion prerequisites v1
+
+The source-coordinate review proves which hidden-stem source candidate belongs
+to which visible carrier and whether that source coordinate intersects an
+admitted relation-membership fact. It still cannot decide what counts as a
+professionally usable source. V60 therefore projects the unresolved choice
+instead of hiding it:
+
+```text
+persisted Source Coordinate Review Vector
+-> group by visible stem carrier
+-> exact stem identity only
+   versus
+   exact identity + same-element/different-stem affinity
+-> missing evidence for each carrier
+-> Mingli summary + Lab inspection
+```
+
+The two scopes are research questions, not alternative scores. Neither is
+selected. Each carrier checks match scope, configuration-specific relation
+effect, seasonal capacity, multi-source aggregation, source usability and
+professional admission. A dimension that does not apply to the current
+carrier remains `NOT_TRIGGERED`; it is not counted as a current evidence gap.
+When no six-clash or six-harmony membership intersects the source, the
+relation-effect requirement has that state and does not turn the absence into
+support.
+
+For the current real review Case, the strict scope contains six sources
+(`5 clear / 1 review`) and the inclusive scope contains ten
+(`7 clear / 3 review`). Three of four visible carriers change under the two
+scopes. This difference is evidence that the scope question matters, not
+evidence that either scope is correct.
+
+The projection binds the exact Case, Chart, Quant Vector and persisted Source
+Review Vector identities. Mixed lineage or a missing/extra source-review item
+fails closed. It is immutable and read-only, creates no Decision, and permits
+no professional verdict, probability or canonical write.
+
+The complete local suite contains 224 passing tests. Ruff, the production web
+build, Runtime Architecture and source-maintainability audits pass. The real
+Chrome audit confirms the four-carrier `6/5/1` versus `10/7/3` scope contrast,
+shared Mingli/Lab identity, refresh stability, zero console/network failures
+and zero document overflow.
 
 ## Implemented timing evidence v1
 

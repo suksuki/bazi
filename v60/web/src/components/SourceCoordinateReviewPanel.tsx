@@ -2,6 +2,8 @@ import type {
   HomeSourceCoordinateReview,
   HomeSourceCoordinateReviewVector,
 } from "../homeSourceReviewTypes";
+import type { HomeSourceUsabilityPrerequisiteEnvelope } from "../homeSourceUsabilityTypes";
+import { SourceUsabilityPrerequisitePanel } from "./SourceUsabilityPrerequisitePanel";
 
 const SLOT_LABELS = {
   year: "年柱",
@@ -12,9 +14,11 @@ const SLOT_LABELS = {
 
 export function SourceCoordinateReviewPanel({
   mode = "summary",
+  readiness,
   vector,
 }: {
   mode?: "summary" | "detailed";
+  readiness: HomeSourceUsabilityPrerequisiteEnvelope;
   vector: HomeSourceCoordinateReviewVector;
 }) {
   const needsReview = vector.reviews.filter(
@@ -53,6 +57,7 @@ export function SourceCoordinateReviewPanel({
           ? `其中 ${vector.review_required_count} 个来源坐标同时被已确认的六冲或六合关系命中，必须先核验关系作用，不能直接写成“根可用”。`
           : "本盘这些来源坐标暂未被已准入的六冲、六合关系命中；这只减少一类反证，不等于已经判定有根或可用。"}
       </p>
+      <SourceUsabilityPrerequisitePanel mode={mode} readiness={readiness} />
       {mode === "detailed" && (
         <SourceReviewDetails
           needsReview={needsReview}

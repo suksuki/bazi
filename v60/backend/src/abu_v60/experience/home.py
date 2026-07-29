@@ -23,6 +23,7 @@ from abu_v60.mingli import (
     MingliReadingStore,
     MingliSourceCoordinateReviewCompiler,
     MingliSourceReviewVectorStore,
+    MingliSourceUsabilityPrerequisiteProjector,
     MingliTimingEvidenceCompiler,
     MingliTimingVectorStore,
     StructuralCandidateCompiler,
@@ -52,6 +53,7 @@ class HomeExperienceService:
         quant_store: MingliQuantVectorStore | None = None,
         source_review_compiler: MingliSourceCoordinateReviewCompiler | None = None,
         source_review_store: MingliSourceReviewVectorStore | None = None,
+        source_usability: MingliSourceUsabilityPrerequisiteProjector | None = None,
         mechanism_compiler: MingliMechanismEvidenceCompiler | None = None,
         mechanism_store: MingliMechanismVectorStore | None = None,
         mechanism_comparison: MingliMechanismComparisonService | None = None,
@@ -75,6 +77,9 @@ class HomeExperienceService:
             source_review_compiler or MingliSourceCoordinateReviewCompiler()
         )
         self._source_review_store = source_review_store or MingliSourceReviewVectorStore(engine)
+        self._source_usability = (
+            source_usability or MingliSourceUsabilityPrerequisiteProjector()
+        )
         self._mechanism_compiler = mechanism_compiler or MingliMechanismEvidenceCompiler()
         self._mechanism_store = mechanism_store or MingliMechanismVectorStore(engine)
         self._mechanism_comparison = mechanism_comparison or MingliMechanismComparisonService(
@@ -130,6 +135,10 @@ class HomeExperienceService:
                 quant_vector=quant_vector,
                 facts=facts,
             )
+        )
+        source_usability_prerequisite = self._source_usability.project(
+            quant_vector=quant_vector,
+            source_review_vector=source_review_vector,
         )
         mechanism_vector = self._mechanism_store.ensure(
             self._mechanism_compiler.compile(
@@ -280,6 +289,9 @@ class HomeExperienceService:
                 "reading": reading.model_dump(mode="json"),
                 "quant_foundation": quant_vector.model_dump(mode="json"),
                 "source_coordinate_review": source_review_vector.model_dump(mode="json"),
+                "source_usability_prerequisite": (
+                    source_usability_prerequisite.model_dump(mode="json")
+                ),
                 "mechanism_evidence": mechanism_vector.model_dump(mode="json"),
                 "timing_evidence": timing_vector.model_dump(mode="json"),
                 "life_domains": life_domain_vector.model_dump(mode="json"),
@@ -335,6 +347,16 @@ class HomeExperienceService:
                 "source_review_vector_hash": source_review_vector.vector_hash,
                 "source_coordinate_reviews": [
                     item.model_dump(mode="json") for item in source_review_vector.reviews
+                ],
+                "source_usability_prerequisite_ref": (
+                    source_usability_prerequisite.prerequisite_ref
+                ),
+                "source_usability_prerequisite_hash": (
+                    source_usability_prerequisite.prerequisite_hash
+                ),
+                "source_usability_prerequisite_carriers": [
+                    item.model_dump(mode="json")
+                    for item in source_usability_prerequisite.carriers
                 ],
                 "candidate_paths": [
                     candidate.model_dump(mode="json") for candidate in candidate_paths

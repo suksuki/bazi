@@ -144,6 +144,18 @@ from abu_v60.mingli.source_review_store import (
     MingliSourceReviewVectorStore,
     MingliSourceReviewVectorStoreError,
 )
+from abu_v60.mingli.source_usability import (
+    MingliSourceUsabilityPrerequisiteProjector,
+)
+from abu_v60.mingli.source_usability_contracts import (
+    SOURCE_USABILITY_PREREQUISITE_VERSION,
+    SOURCE_USABILITY_REQUIREMENT_ORDER,
+    SOURCE_USABILITY_SCOPE_ORDER,
+    MingliSourceUsabilityPrerequisiteEnvelope,
+    SourceCarrierUsabilityPrerequisite,
+    SourceUsabilityRequirement,
+    SourceUsabilityResearchScope,
+)
 from abu_v60.mingli.timing import MingliTimingEvidenceCompiler
 from abu_v60.mingli.timing_contracts import (
     MingliTimingEvidenceVector,
@@ -176,6 +188,9 @@ __all__ = [
     "QUANT_VECTOR_VERSION",
     "SOURCE_REVIEW_STATE_ORDER",
     "SOURCE_REVIEW_VECTOR_VERSION",
+    "SOURCE_USABILITY_PREREQUISITE_VERSION",
+    "SOURCE_USABILITY_REQUIREMENT_ORDER",
+    "SOURCE_USABILITY_SCOPE_ORDER",
     "STRUCTURAL_CANDIDATE_COMPILER_VERSION",
     "CandidateMechanismEvidenceDepth",
     "CandidateMechanismQualification",
@@ -242,6 +257,8 @@ __all__ = [
     "MingliSourceReviewVectorNotFoundError",
     "MingliSourceReviewVectorStore",
     "MingliSourceReviewVectorStoreError",
+    "MingliSourceUsabilityPrerequisiteEnvelope",
+    "MingliSourceUsabilityPrerequisiteProjector",
     "MingliTimingEvidenceCompiler",
     "MingliTimingEvidenceVector",
     "MingliTimingVectorNotFoundError",
@@ -250,9 +267,12 @@ __all__ = [
     "OwnerCaseError",
     "OwnerCaseInput",
     "PolarityMembershipMeasurement",
+    "SourceCarrierUsabilityPrerequisite",
     "SourceCoordinateReviewEvidence",
     "SourceManifestationEvidence",
     "SourceRelationIntersection",
+    "SourceUsabilityRequirement",
+    "SourceUsabilityResearchScope",
     "StructuralCandidateCompiler",
     "TenGodCount",
     "TenGodOccurrence",

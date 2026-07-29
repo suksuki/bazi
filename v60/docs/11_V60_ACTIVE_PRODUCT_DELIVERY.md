@@ -955,6 +955,46 @@ Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
   `v60.runtime-architecture.038`, `v60.unit-mingli.011` and
   `v60.unit-lab.008`.
 
+## Completed Delivery: Source-Usability Discussion Prerequisites
+
+Status: `IMPLEMENTED_AND_DESKTOP_AUDITED_LOCAL`
+
+- V60 now shows why source-coordinate facts still do not license a source
+  usability claim.
+- One immutable server projection groups the persisted source-review items by
+  visible stem carrier. It exposes `EXACT_IDENTITY_ONLY` and
+  `ELEMENT_AFFINITY_INCLUDED` as competing research scopes and selects
+  neither.
+- Every carrier checks six bounded dimensions: match scope,
+  configuration-specific relation effect, seasonal capacity, multiple-source
+  aggregation, source usability and professional admission. A dimension that
+  does not apply to the current carrier remains `NOT_TRIGGERED`; it is not
+  counted as a current evidence gap.
+- A source without an admitted six-clash or six-harmony intersection is
+  labelled only as having no current relation trigger. A relation hit remains
+  `UNRESOLVED` until an admitted effect rule supplies direction, completion
+  conditions and counter-evidence.
+- The current review Case contains four visible carriers. The strict
+  exact-identity scope contains six source candidates, five clear and one
+  requiring relation review. The inclusive same-element scope contains ten,
+  seven clear and three requiring review. Three carriers retain competing
+  scopes; zero are declared ready.
+- Mingli Calculation shows the compact strict/inclusive contrast. Lab expands
+  the same carrier-level scopes and six verification states from one Ref and
+  Hash; the browser does not regroup source candidates.
+- The projection reuses Reading v6 and the existing append-only source-review
+  vector. It writes no canonical state, adds no probability or score and
+  requires no database migration.
+- Current identities are `v60.mingli-cognitive-engine.018`,
+  `v60.runtime-architecture.039`, `v60.unit-mingli.012` and
+  `v60.unit-lab.009`. Foundation remains `v60.foundation.013`.
+- The complete backend suite has 224 passing tests. Ruff, the production web
+  build, Runtime Architecture and source-maintainability audits pass. The real
+  Chrome audit confirms the `6/5/1` versus `10/7/3` contrast, four carrier
+  disclosures, 24 requirement rows, shared Ref/Hash identity, refresh
+  stability, zero console/network failures and zero document overflow.
+  Evidence remains in `.artifacts/source-coordinate-review/`.
+
 ## Current Product Truth
 
 Already usable locally:
@@ -969,6 +1009,8 @@ Already usable locally:
   evidence, relation context and shared-participant competition;
 - an append-only review of which source coordinates intersect admitted natal
   six-clash or six-harmony facts, shared by Mingli and Lab;
+- a shared prerequisite view comparing exact-identity and same-element source
+  scopes while exposing the rules still missing before usability discussion;
 - bounded Gemma4 comparison when deterministic rules cannot rank candidates;
 - three-tree Dream selection, observation, Seal, World waiting, Reveal,
   reconciliation, return to Grove and another Encounter;
@@ -984,12 +1026,13 @@ Still honestly incomplete:
 - final picture-book Grove tree assets and the final in-tree transition
   composition currently being prepared by design.
 
-The next implementation must deepen these product truths rather than add new
-modules: admit one narrow professional rule that resolves the effect of one
-specific relation configuration, or one bounded prerequisite for source
-usability. It must consume the new review vector, produce a new immutable
-version and leave every unresolved dimension honest. Dream should receive the
-same bounded uncertainty only after that professional boundary is stable.
+The next professional step remains blocked until a sourced, versioned rule can
+state one exact relation configuration's direction, completion conditions,
+counter-evidence and multi-source aggregation behavior. Until then, the
+product should not repeat the same backend boundary in another form. The next
+visible iteration should return to Dream playability or obtain that authority;
+Dream must not receive a relation-effect conclusion before the professional
+boundary is stable.
 
 Not active: population-scale content generation, ranking, mobile visual
 polish, Server 13 synchronization or production deployment.

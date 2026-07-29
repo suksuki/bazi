@@ -230,6 +230,7 @@ def test_source_review_store_is_idempotent_and_append_only() -> None:
     )
     store = MingliSourceReviewVectorStore(engine)
     expected = snapshot["mingli"]["source_coordinate_review"]
+    prerequisite = snapshot["mingli"]["source_usability_prerequisite"]
     persisted = store.get(vector_ref=str(expected["vector_ref"]))
 
     reading = snapshot["mingli"]["reading"]
@@ -239,6 +240,20 @@ def test_source_review_store_is_idempotent_and_append_only() -> None:
     assert lab["source_review_vector_ref"] == expected["vector_ref"]
     assert lab["source_review_vector_hash"] == expected["vector_hash"]
     assert lab["source_coordinate_reviews"] == expected["reviews"]
+    assert prerequisite["source_review_vector_ref"] == expected["vector_ref"]
+    assert prerequisite["source_review_vector_hash"] == expected["vector_hash"]
+    assert lab["source_usability_prerequisite_ref"] == (
+        prerequisite["prerequisite_ref"]
+    )
+    assert lab["source_usability_prerequisite_hash"] == (
+        prerequisite["prerequisite_hash"]
+    )
+    assert lab["source_usability_prerequisite_carriers"] == (
+        prerequisite["carriers"]
+    )
+    assert prerequisite == HomeExperienceService(engine).snapshot(
+        account_ref=account_ref,
+    )["mingli"]["source_usability_prerequisite"]
     assert persisted.model_dump(mode="json") == expected
     with engine.connect() as connection:
         count = connection.execute(

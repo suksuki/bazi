@@ -2,6 +2,32 @@
 
 ## 2026-07-30
 
+### Source-usability discussion prerequisites
+
+- Added one immutable, read-only prerequisite projection over the persisted
+  source-coordinate review vector.
+- Grouped source candidates by visible carrier and exposed two unselected
+  research scopes: exact stem identity only, and exact identity plus
+  same-element/different-stem affinity.
+- Made six verification dimensions explicit before relation effect or source
+  usability may be discussed: match-scope, configuration-specific effect,
+  seasonal capacity, multi-source aggregation, usability and professional
+  admission. A dimension can remain `NOT_TRIGGERED` instead of being
+  mislabelled as a current evidence gap.
+- The current review Case now shows four visible carriers. The exact-identity
+  scope contains six sources with one relation review; the inclusive scope
+  contains ten sources with three relation reviews. Three carriers retain
+  competing scopes and zero carriers receive a usability verdict.
+- Mingli Calculation gives the compact comparison and Lab expands the same
+  server-owned carrier scopes and verification states. No browser-side grouping,
+  score, probability, effective-work claim or canonical write was added.
+- Reused Reading v6 and the existing append-only source-review Ref/Hash; no
+  database migration or V50 Runtime change was required.
+- Verified 224 backend tests, Ruff, the production web build, Runtime
+  Architecture, source maintainability and a real Chrome audit of the current
+  `6/5/1` versus `10/7/3` sample. The audit found no console/network failure,
+  document overflow or refresh identity drift.
+
 ### Source-coordinate relation review
 
 - Added one hash-locked, Owner-bounded Profile for reviewing whether a

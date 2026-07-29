@@ -106,6 +106,7 @@ export function HomeCompanionRail({
               depth={home.mingli.mechanism_evidence_depth}
             />
             <SourceCoordinateReviewPanel
+              readiness={home.mingli.source_usability_prerequisite}
               vector={home.mingli.source_coordinate_review}
             />
             <MechanismQualificationMatrix
@@ -221,6 +222,7 @@ export function HomeCompanionRail({
             />
             <SourceCoordinateReviewPanel
               mode="detailed"
+              readiness={home.mingli.source_usability_prerequisite}
               vector={home.mingli.source_coordinate_review}
             />
             <MechanismQualificationMatrix
